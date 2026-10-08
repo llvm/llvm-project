@@ -39,7 +39,7 @@ public:
       // For now we only support simple argument that don't need to be
       // pre-expanded.
       return;
-    const clang::IdentifierInfo *ClassIdent = ClassNameTok->getIdentifierInfo();
+    const IdentifierInfo *ClassIdent = ClassNameTok->getIdentifierInfo();
     if (!ClassIdent)
       return;
 

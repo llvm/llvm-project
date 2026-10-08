@@ -642,14 +642,12 @@ define i32 @wrongop(ptr nocapture readonly %pd) {
 ; CHECK-NEXT:    movw r4, #23593
 ; CHECK-NEXT:    movt r1, #163
 ; CHECK-NEXT:    ldr r0, [r0]
-; CHECK-NEXT:    movt r4, #655
-; CHECK-NEXT:    ror.w r12, r3, #4
-; CHECK-NEXT:    cmp r12, r1
-; CHECK-NEXT:    cset r1, lo
-; CHECK-NEXT:    ror.w r3, r3, #2
 ; CHECK-NEXT:    mov.w r12, #1
-; CHECK-NEXT:    cmp r3, r4
-; CHECK-NEXT:    csel r3, r1, r12, lo
+; CHECK-NEXT:    movt r4, #655
+; CHECK-NEXT:    cmp.w r1, r3, ror #4
+; CHECK-NEXT:    cset r1, hi
+; CHECK-NEXT:    cmp.w r4, r3, ror #2
+; CHECK-NEXT:    csel r3, r1, r12, hi
 ; CHECK-NEXT:    lsls.w r4, lr, #30
 ; CHECK-NEXT:    csel r1, r1, r3, ne
 ; CHECK-NEXT:    cmp r2, #1

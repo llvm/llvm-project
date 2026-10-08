@@ -12,7 +12,7 @@ define void @test(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) #
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv
   %tmp0 = load float, ptr %arrayidx, align 4
@@ -23,7 +23,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv, 1599
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -57,7 +57,7 @@ define i64 @goo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) #0 
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv
   %tmp0 = load float, ptr %arrayidx, align 4
@@ -68,7 +68,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv, 1599
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   %retval = add i64 %indvars.iv, %indvars.iv.next
   ret i64 %retval
 }

@@ -21,7 +21,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT:   liveins: $x1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM &".space 4096", 1 /* sideeffect attdialect */
+  ; CHECK-NEXT:   INLINEASM &".space 4096", sideeffect attdialect
   ; CHECK-NEXT:   BGE $x1, $x0, %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -32,7 +32,7 @@ body:             |
     PseudoBR %bb.3
   bb.1:
     liveins: $x1
-    INLINEASM &".space 4096", 1
+    INLINEASM &".space 4096", sideeffect attdialect
     BGE $x1, $x0, %bb.3
   bb.3:
     PseudoRET

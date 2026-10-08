@@ -1,0 +1,91 @@
+## Test --verbose / -v for llvm-objcopy and llvm-strip.
+
+# RUN: rm -rf %t && mkdir %t
+# RUN: yaml2obj %s --docnum=1 -o %t/input.o
+# RUN: yaml2obj %s --docnum=2 -o %t/coff.o
+
+## --verbose and -v both print to stdout.
+# RUN: llvm-objcopy --verbose %t/input.o %t/output.o 2>/dev/null \
+# RUN:   | FileCheck %s --check-prefix=OBJCOPY --implicit-check-not={{.}} \
+# RUN:     -DIN=%t/input.o -DOUT=%t/output.o
+# RUN: llvm-objcopy -v %t/input.o %t/output.o 2>/dev/null \
+# RUN:   | FileCheck %s --check-prefix=OBJCOPY --implicit-check-not={{.}} \
+# RUN:     -DIN=%t/input.o -DOUT=%t/output.o
+# OBJCOPY: copy from '[[IN]]' [elf64-x86-64] to '[[OUT]]' [elf64-x86-64]
+
+## In-place: a single positional argument means input == output.
+# RUN: cp %t/input.o %t/inplace.o
+# RUN: llvm-objcopy --verbose %t/inplace.o 2>/dev/null \
+# RUN:   | FileCheck %s --check-prefix=OBJCOPY --implicit-check-not={{.}} \
+# RUN:     -DIN=%t/inplace.o -DOUT=%t/inplace.o
+
+## The output format name reflects the requested output type, not the input.
+# RUN: llvm-objcopy --verbose -O binary %t/input.o %t/output.bin 2>/dev/null \
+# RUN:   | FileCheck %s --check-prefix=BINARY --implicit-check-not={{.}} \
+# RUN:     -DIN=%t/input.o -DOUT=%t/output.bin
+# BINARY: copy from '[[IN]]' [elf64-x86-64] to '[[OUT]]' [binary]
+
+## Explicit input/output formats (-I ihex -O srec): both format names come
+## from the command-line flags rather than the file content.
+# RUN: printf ':0100000001FE\n:00000001FF\n' > %t/input.hex
+# RUN: llvm-objcopy --verbose -I ihex -O srec %t/input.hex %t/output.srec 2>/dev/null \
+# RUN:   | FileCheck %s --check-prefix=IHEX --implicit-check-not={{.}} \
+# RUN:     -DIN=%t/input.hex -DOUT=%t/output.srec
+# IHEX: copy from '[[IN]]' [ihex] to '[[OUT]]' [srec]
+
+## Non-ELF input (COFF i386): the format name reflects the actual object type and architecture
+# RUN: llvm-objcopy --verbose %t/coff.o %t/coff.out 2>/dev/null \
+# RUN:   | FileCheck %s --check-prefix=COFF --implicit-check-not={{.}} \
+# RUN:     -DIN=%t/coff.o -DOUT=%t/coff.out
+# COFF: copy from '[[IN]]' [COFF-i386] to '[[OUT]]' [COFF-i386]
+
+## llvm-strip --verbose and -v each print one line per input file (in-place).
+# RUN: cp %t/input.o %t/strip1.o
+# RUN: cp %t/input.o %t/strip2.o
+# RUN: llvm-strip --verbose %t/strip1.o %t/strip2.o 2>/dev/null \
+# RUN:   | FileCheck %s --check-prefix=STRIP --implicit-check-not={{.}} \
+# RUN:     -DF1=%t/strip1.o -DF2=%t/strip2.o
+# RUN: cp %t/input.o %t/strip3.o
+# RUN: cp %t/input.o %t/strip4.o
+# RUN: llvm-strip -v %t/strip3.o %t/strip4.o 2>/dev/null \
+# RUN:   | FileCheck %s --check-prefix=STRIP --implicit-check-not={{.}} \
+# RUN:     -DF1=%t/strip3.o -DF2=%t/strip4.o
+# STRIP:      copy from '[[F1]]' [elf64-x86-64] to '[[F1]]' [elf64-x86-64]
+# STRIP-NEXT: copy from '[[F2]]' [elf64-x86-64] to '[[F2]]' [elf64-x86-64]
+
+## Archive: one line per member using <archive>(<member>) syntax.
+# RUN: cp %t/input.o %t/member1.o
+# RUN: cp %t/input.o %t/member2.o
+# RUN: rm -f %t/archive.a
+# RUN: llvm-ar crs %t/archive.a %t/member1.o %t/member2.o
+# RUN: llvm-objcopy --verbose %t/archive.a %t/archive.out 2>/dev/null \
+# RUN:   | FileCheck %s --check-prefix=ARCHIVE --implicit-check-not={{.}} \
+# RUN:     -DAR=%t/archive.a -DOUT=%t/archive.out \
+# RUN:     -DMEM1=member1.o -DMEM2=member2.o
+# ARCHIVE:      copy from '[[AR]]([[MEM1]])' [elf64-x86-64] to '[[OUT]]([[MEM1]])' [elf64-x86-64]
+# ARCHIVE-NEXT: copy from '[[AR]]([[MEM2]])' [elf64-x86-64] to '[[OUT]]([[MEM2]])' [elf64-x86-64]
+
+## llvm-strip on an archive modifies in-place (OUT == AR).
+# RUN: rm -f %t/strip.a
+# RUN: llvm-ar crs %t/strip.a %t/member1.o %t/member2.o
+# RUN: llvm-strip --verbose %t/strip.a 2>/dev/null \
+# RUN:   | FileCheck %s --check-prefix=ARCHIVE --implicit-check-not={{.}} \
+# RUN:     -DAR=%t/strip.a -DOUT=%t/strip.a \
+# RUN:     -DMEM1=member1.o -DMEM2=member2.o
+
+## No output without the flag.
+# RUN: llvm-objcopy %t/input.o %t/output.o 2>/dev/null | count 0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_I386
+  Characteristics: []
+sections: []
+symbols: []

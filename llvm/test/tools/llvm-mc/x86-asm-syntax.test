@@ -1,0 +1,10 @@
+# REQUIRES: x86-registered-target
+# RUN: llvm-mc -triple=x86_64 -x86-asm-syntax=intel %s | FileCheck %s --check-prefix=INTEL
+# RUN: llvm-mc -triple=x86_64 -x86-asm-syntax=intel --output-asm-variant=0 %s | FileCheck %s --check-prefix=ATT
+
+## -x86-asm-syntax=intel without --output-asm-variant defaults to Intel output.
+# INTEL: mov ebx, eax
+
+## Explicit --output-asm-variant=0 overrides to AT&T output.
+# ATT: movl %eax, %ebx
+mov ebx, eax

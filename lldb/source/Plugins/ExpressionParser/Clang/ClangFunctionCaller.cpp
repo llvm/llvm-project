@@ -188,9 +188,15 @@ ClangFunctionCaller::CompileFunction(lldb::ThreadSP thread_to_use_sp,
 
   lldb::ProcessSP jit_process_sp(m_jit_process_wp.lock());
   if (jit_process_sp) {
+    // We will be passing in unauthenticated function addresses to the
+    // FunctionCaller code, so we need to force disable pointer auth
+    // codegen for this one code snippet.
+    const bool force_disable_ptrauth_codegen = true;
     const bool generate_debug_info = true;
     auto *clang_parser = new ClangExpressionParser(
-        jit_process_sp.get(), *this, generate_debug_info, diagnostic_manager);
+        jit_process_sp.get(), *this, generate_debug_info, diagnostic_manager,
+        std::vector<std::string>(), "<clang expression>",
+        force_disable_ptrauth_codegen);
     num_errors = clang_parser->Parse(diagnostic_manager);
     m_parser.reset(clang_parser);
   } else {

@@ -43,7 +43,7 @@ body:             |
     }
     BUNDLE implicit-def dead $r0, implicit-def $d15, implicit-def $r30, implicit-def $r31, implicit-def $pc, implicit-def $r29, implicit killed $r30, implicit killed $framekey {
       $r0 = A2_tfrsi 0
-      $d15 = L4_return killed $r30, implicit-def $pc, implicit-def $r29, implicit killed $framekey, implicit-def dead $pc, implicit internal killed $r0
+      $d15 = L4_return killed $r30, implicit-def $pc, implicit-def $r29, implicit killed $framekey, implicit internal killed $r0
     }
 
 ...

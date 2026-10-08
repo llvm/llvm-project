@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu11.00 < %s | FileCheck --check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}load_fma_store
 ; GCN-NOT: scratch_store

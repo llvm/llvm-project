@@ -194,25 +194,32 @@ bool llvm::isSafeToMoveBefore(BasicBlock &BB, Instruction &InsertPoint,
 void llvm::moveInstructionsToTheBeginning(BasicBlock &FromBB, BasicBlock &ToBB,
                                           DominatorTree &DT,
                                           const PostDominatorTree &PDT,
-                                          DependenceInfo &DI) {
+                                          DependenceInfo &DI,
+                                          ScalarEvolution &SE) {
   for (Instruction &I :
        llvm::make_early_inc_range(llvm::drop_begin(llvm::reverse(FromBB)))) {
     BasicBlock::iterator MovePos = ToBB.getFirstNonPHIOrDbg();
 
-    if (isSafeToMoveBefore(I, *MovePos, DT, &PDT, &DI))
+    if (isSafeToMoveBefore(I, *MovePos, DT, &PDT, &DI)) {
+      // Update SCEV to ensure it remains valid throughout the function.
+      SE.forgetValue(&I);
       I.moveBeforePreserving(MovePos);
+    }
   }
 }
 
 void llvm::moveInstructionsToTheEnd(BasicBlock &FromBB, BasicBlock &ToBB,
                                     DominatorTree &DT,
                                     const PostDominatorTree &PDT,
-                                    DependenceInfo &DI) {
+                                    DependenceInfo &DI, ScalarEvolution &SE) {
   Instruction *MovePos = ToBB.getTerminator();
   while (FromBB.size() > 1) {
     Instruction &I = FromBB.front();
-    if (isSafeToMoveBefore(I, *MovePos, DT, &PDT, &DI))
+    if (isSafeToMoveBefore(I, *MovePos, DT, &PDT, &DI)) {
+      // Update SCEV to ensure it remains valid throughout the function.
+      SE.forgetValue(&I);
       I.moveBeforePreserving(MovePos->getIterator());
+    }
   }
 }
 

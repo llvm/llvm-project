@@ -76,7 +76,7 @@
 @ CHECK: str r9, [r10], r11       @ encoding: [0x0b,0x90,0x8a,0xe6]
 
 @ Uses printSORegImmOperand(), used by ADCrsi ADDrsi ANDrsi BICrsi EORrsi
-@ ORRrsi RSBrsi RSCrsi SBCrsi SUBrsi CMNzrsi CMPrsi MOVsi MVNsi TEQrsi TSTrsi
+@ ORRrsi RSBrsi RSCrsi SBCrsi SUBrsi CMNrsi CMPrsi MOVsi MVNsi TEQrsi TSTrsi
 
 	adc sp, lr, pc
 	adc r1, r8, r9, lsr #32

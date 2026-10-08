@@ -33,28 +33,28 @@ PPCFunctionInfo::clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
 
 MCSymbol *PPCFunctionInfo::getPICOffsetSymbol(MachineFunction &MF) const {
   const DataLayout &DL = MF.getDataLayout();
-  return MF.getContext().getOrCreateSymbol(Twine(DL.getPrivateGlobalPrefix()) +
+  return MF.getContext().getOrCreateSymbol(Twine(DL.getInternalSymbolPrefix()) +
                                            Twine(MF.getFunctionNumber()) +
                                            "$poff");
 }
 
 MCSymbol *PPCFunctionInfo::getGlobalEPSymbol(MachineFunction &MF) const {
   const DataLayout &DL = MF.getDataLayout();
-  return MF.getContext().getOrCreateSymbol(Twine(DL.getPrivateGlobalPrefix()) +
+  return MF.getContext().getOrCreateSymbol(Twine(DL.getInternalSymbolPrefix()) +
                                            "func_gep" +
                                            Twine(MF.getFunctionNumber()));
 }
 
 MCSymbol *PPCFunctionInfo::getLocalEPSymbol(MachineFunction &MF) const {
   const DataLayout &DL = MF.getDataLayout();
-  return MF.getContext().getOrCreateSymbol(Twine(DL.getPrivateGlobalPrefix()) +
+  return MF.getContext().getOrCreateSymbol(Twine(DL.getInternalSymbolPrefix()) +
                                            "func_lep" +
                                            Twine(MF.getFunctionNumber()));
 }
 
 MCSymbol *PPCFunctionInfo::getTOCOffsetSymbol(MachineFunction &MF) const {
   const DataLayout &DL = MF.getDataLayout();
-  return MF.getContext().getOrCreateSymbol(Twine(DL.getPrivateGlobalPrefix()) +
+  return MF.getContext().getOrCreateSymbol(Twine(DL.getInternalSymbolPrefix()) +
                                            "func_toc" +
                                            Twine(MF.getFunctionNumber()));
 }

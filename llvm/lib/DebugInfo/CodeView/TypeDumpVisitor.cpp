@@ -10,6 +10,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
+#include "llvm/DebugInfo/CodeView/EnumTables.h"
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
 #include "llvm/DebugInfo/CodeView/TypeCollection.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
@@ -20,133 +21,6 @@
 
 using namespace llvm;
 using namespace llvm::codeview;
-
-static const EnumEntry<TypeLeafKind> LeafTypeNames[] = {
-#define CV_TYPE(enum, val) {#enum, enum},
-#include "llvm/DebugInfo/CodeView/CodeViewTypes.def"
-};
-
-#define ENUM_ENTRY(enum_class, enum)                                           \
-  { #enum, std::underlying_type_t<enum_class>(enum_class::enum) }
-
-static const EnumEntry<uint16_t> ClassOptionNames[] = {
-    ENUM_ENTRY(ClassOptions, Packed),
-    ENUM_ENTRY(ClassOptions, HasConstructorOrDestructor),
-    ENUM_ENTRY(ClassOptions, HasOverloadedOperator),
-    ENUM_ENTRY(ClassOptions, Nested),
-    ENUM_ENTRY(ClassOptions, ContainsNestedClass),
-    ENUM_ENTRY(ClassOptions, HasOverloadedAssignmentOperator),
-    ENUM_ENTRY(ClassOptions, HasConversionOperator),
-    ENUM_ENTRY(ClassOptions, ForwardReference),
-    ENUM_ENTRY(ClassOptions, Scoped),
-    ENUM_ENTRY(ClassOptions, HasUniqueName),
-    ENUM_ENTRY(ClassOptions, Sealed),
-    ENUM_ENTRY(ClassOptions, Intrinsic),
-};
-
-static const EnumEntry<uint8_t> MemberAccessNames[] = {
-    ENUM_ENTRY(MemberAccess, None), ENUM_ENTRY(MemberAccess, Private),
-    ENUM_ENTRY(MemberAccess, Protected), ENUM_ENTRY(MemberAccess, Public),
-};
-
-static const EnumEntry<uint16_t> MethodOptionNames[] = {
-    ENUM_ENTRY(MethodOptions, Pseudo),
-    ENUM_ENTRY(MethodOptions, NoInherit),
-    ENUM_ENTRY(MethodOptions, NoConstruct),
-    ENUM_ENTRY(MethodOptions, CompilerGenerated),
-    ENUM_ENTRY(MethodOptions, Sealed),
-};
-
-static const EnumEntry<uint16_t> MemberKindNames[] = {
-    ENUM_ENTRY(MethodKind, Vanilla),
-    ENUM_ENTRY(MethodKind, Virtual),
-    ENUM_ENTRY(MethodKind, Static),
-    ENUM_ENTRY(MethodKind, Friend),
-    ENUM_ENTRY(MethodKind, IntroducingVirtual),
-    ENUM_ENTRY(MethodKind, PureVirtual),
-    ENUM_ENTRY(MethodKind, PureIntroducingVirtual),
-};
-
-static const EnumEntry<uint8_t> PtrKindNames[] = {
-    ENUM_ENTRY(PointerKind, Near16),
-    ENUM_ENTRY(PointerKind, Far16),
-    ENUM_ENTRY(PointerKind, Huge16),
-    ENUM_ENTRY(PointerKind, BasedOnSegment),
-    ENUM_ENTRY(PointerKind, BasedOnValue),
-    ENUM_ENTRY(PointerKind, BasedOnSegmentValue),
-    ENUM_ENTRY(PointerKind, BasedOnAddress),
-    ENUM_ENTRY(PointerKind, BasedOnSegmentAddress),
-    ENUM_ENTRY(PointerKind, BasedOnType),
-    ENUM_ENTRY(PointerKind, BasedOnSelf),
-    ENUM_ENTRY(PointerKind, Near32),
-    ENUM_ENTRY(PointerKind, Far32),
-    ENUM_ENTRY(PointerKind, Near64),
-};
-
-static const EnumEntry<uint8_t> PtrModeNames[] = {
-    ENUM_ENTRY(PointerMode, Pointer),
-    ENUM_ENTRY(PointerMode, LValueReference),
-    ENUM_ENTRY(PointerMode, PointerToDataMember),
-    ENUM_ENTRY(PointerMode, PointerToMemberFunction),
-    ENUM_ENTRY(PointerMode, RValueReference),
-};
-
-static const EnumEntry<uint16_t> PtrMemberRepNames[] = {
-    ENUM_ENTRY(PointerToMemberRepresentation, Unknown),
-    ENUM_ENTRY(PointerToMemberRepresentation, SingleInheritanceData),
-    ENUM_ENTRY(PointerToMemberRepresentation, MultipleInheritanceData),
-    ENUM_ENTRY(PointerToMemberRepresentation, VirtualInheritanceData),
-    ENUM_ENTRY(PointerToMemberRepresentation, GeneralData),
-    ENUM_ENTRY(PointerToMemberRepresentation, SingleInheritanceFunction),
-    ENUM_ENTRY(PointerToMemberRepresentation, MultipleInheritanceFunction),
-    ENUM_ENTRY(PointerToMemberRepresentation, VirtualInheritanceFunction),
-    ENUM_ENTRY(PointerToMemberRepresentation, GeneralFunction),
-};
-
-static const EnumEntry<uint16_t> TypeModifierNames[] = {
-    ENUM_ENTRY(ModifierOptions, Const), ENUM_ENTRY(ModifierOptions, Volatile),
-    ENUM_ENTRY(ModifierOptions, Unaligned),
-};
-
-static const EnumEntry<uint8_t> CallingConventions[] = {
-    ENUM_ENTRY(CallingConvention, NearC),
-    ENUM_ENTRY(CallingConvention, FarC),
-    ENUM_ENTRY(CallingConvention, NearPascal),
-    ENUM_ENTRY(CallingConvention, FarPascal),
-    ENUM_ENTRY(CallingConvention, NearFast),
-    ENUM_ENTRY(CallingConvention, FarFast),
-    ENUM_ENTRY(CallingConvention, NearStdCall),
-    ENUM_ENTRY(CallingConvention, FarStdCall),
-    ENUM_ENTRY(CallingConvention, NearSysCall),
-    ENUM_ENTRY(CallingConvention, FarSysCall),
-    ENUM_ENTRY(CallingConvention, ThisCall),
-    ENUM_ENTRY(CallingConvention, MipsCall),
-    ENUM_ENTRY(CallingConvention, Generic),
-    ENUM_ENTRY(CallingConvention, AlphaCall),
-    ENUM_ENTRY(CallingConvention, PpcCall),
-    ENUM_ENTRY(CallingConvention, SHCall),
-    ENUM_ENTRY(CallingConvention, ArmCall),
-    ENUM_ENTRY(CallingConvention, AM33Call),
-    ENUM_ENTRY(CallingConvention, TriCall),
-    ENUM_ENTRY(CallingConvention, SH5Call),
-    ENUM_ENTRY(CallingConvention, M32RCall),
-    ENUM_ENTRY(CallingConvention, ClrCall),
-    ENUM_ENTRY(CallingConvention, Inline),
-    ENUM_ENTRY(CallingConvention, NearVector),
-    ENUM_ENTRY(CallingConvention, Swift),
-};
-
-static const EnumEntry<uint8_t> FunctionOptionEnum[] = {
-    ENUM_ENTRY(FunctionOptions, CxxReturnUdt),
-    ENUM_ENTRY(FunctionOptions, Constructor),
-    ENUM_ENTRY(FunctionOptions, ConstructorWithVirtualBases),
-};
-
-static const EnumEntry<uint16_t> LabelTypeEnum[] = {
-    ENUM_ENTRY(LabelType, Near), ENUM_ENTRY(LabelType, Far),
-};
-
-#undef ENUM_ENTRY
 
 static StringRef getLeafTypeName(TypeLeafKind LT) {
   switch (LT) {
@@ -177,8 +51,7 @@ Error TypeDumpVisitor::visitTypeBegin(CVType &Record, TypeIndex Index) {
   W->getOStream() << " (" << HexNumber(Index.getIndex()) << ")";
   W->getOStream() << " {\n";
   W->indent();
-  W->printEnum("TypeLeafKind", unsigned(Record.kind()),
-               ArrayRef(LeafTypeNames));
+  W->printEnum("TypeLeafKind", unsigned(Record.kind()), getTypeLeafNames());
   return Error::success();
 }
 
@@ -195,7 +68,7 @@ Error TypeDumpVisitor::visitMemberBegin(CVMemberRecord &Record) {
   W->startLine() << getLeafTypeName(Record.Kind);
   W->getOStream() << " {\n";
   W->indent();
-  W->printEnum("TypeLeafKind", unsigned(Record.Kind), ArrayRef(LeafTypeNames));
+  W->printEnum("TypeLeafKind", unsigned(Record.Kind), getTypeLeafNames());
   return Error::success();
 }
 
@@ -247,7 +120,7 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, StringListRecord &Strs) {
 Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, ClassRecord &Class) {
   uint16_t Props = static_cast<uint16_t>(Class.getOptions());
   W->printNumber("MemberCount", Class.getMemberCount());
-  W->printFlags("Properties", Props, ArrayRef(ClassOptionNames));
+  W->printFlags("Properties", Props, getClassOptionNames());
   printTypeIndex("FieldList", Class.getFieldList());
   printTypeIndex("DerivedFrom", Class.getDerivationList());
   printTypeIndex("VShape", Class.getVTableShape());
@@ -261,7 +134,7 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, ClassRecord &Class) {
 Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, UnionRecord &Union) {
   uint16_t Props = static_cast<uint16_t>(Union.getOptions());
   W->printNumber("MemberCount", Union.getMemberCount());
-  W->printFlags("Properties", Props, ArrayRef(ClassOptionNames));
+  W->printFlags("Properties", Props, getClassOptionNames());
   printTypeIndex("FieldList", Union.getFieldList());
   W->printNumber("SizeOf", Union.getSize());
   W->printString("Name", Union.getName());
@@ -274,7 +147,7 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, EnumRecord &Enum) {
   uint16_t Props = static_cast<uint16_t>(Enum.getOptions());
   W->printNumber("NumEnumerators", Enum.getMemberCount());
   W->printFlags("Properties", uint16_t(Enum.getOptions()),
-                ArrayRef(ClassOptionNames));
+                getClassOptionNames());
   printTypeIndex("UnderlyingType", Enum.getUnderlyingType());
   printTypeIndex("FieldListType", Enum.getFieldList());
   W->printString("Name", Enum.getName());
@@ -311,9 +184,9 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, MemberFuncIdRecord &Id) {
 Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, ProcedureRecord &Proc) {
   printTypeIndex("ReturnType", Proc.getReturnType());
   W->printEnum("CallingConvention", uint8_t(Proc.getCallConv()),
-               ArrayRef(CallingConventions));
+               getCallingConventions());
   W->printFlags("FunctionOptions", uint8_t(Proc.getOptions()),
-                ArrayRef(FunctionOptionEnum));
+                getFunctionOptionEnum());
   W->printNumber("NumParameters", Proc.getParameterCount());
   printTypeIndex("ArgListType", Proc.getArgumentList());
   return Error::success();
@@ -324,9 +197,9 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, MemberFunctionRecord &MF) {
   printTypeIndex("ClassType", MF.getClassType());
   printTypeIndex("ThisType", MF.getThisType());
   W->printEnum("CallingConvention", uint8_t(MF.getCallConv()),
-               ArrayRef(CallingConventions));
+               getCallingConventions());
   W->printFlags("FunctionOptions", uint8_t(MF.getOptions()),
-                ArrayRef(FunctionOptionEnum));
+                getFunctionOptionEnum());
   W->printNumber("NumParameters", MF.getParameterCount());
   printTypeIndex("ArgListType", MF.getArgumentList());
   W->printNumber("ThisAdjustment", MF.getThisPointerAdjustment());
@@ -361,9 +234,8 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, TypeServer2Record &TS) {
 
 Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, PointerRecord &Ptr) {
   printTypeIndex("PointeeType", Ptr.getReferentType());
-  W->printEnum("PtrType", unsigned(Ptr.getPointerKind()),
-               ArrayRef(PtrKindNames));
-  W->printEnum("PtrMode", unsigned(Ptr.getMode()), ArrayRef(PtrModeNames));
+  W->printEnum("PtrType", unsigned(Ptr.getPointerKind()), getPtrKindNames());
+  W->printEnum("PtrMode", unsigned(Ptr.getMode()), getPtrModeNames());
 
   W->printNumber("IsFlat", Ptr.isFlat());
   W->printNumber("IsConst", Ptr.isConst());
@@ -379,7 +251,7 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, PointerRecord &Ptr) {
 
     printTypeIndex("ClassType", MI.getContainingType());
     W->printEnum("Representation", uint16_t(MI.getRepresentation()),
-                 ArrayRef(PtrMemberRepNames));
+                 getPtrMemberRepNames());
   }
 
   return Error::success();
@@ -388,7 +260,7 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, PointerRecord &Ptr) {
 Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, ModifierRecord &Mod) {
   uint16_t Mods = static_cast<uint16_t>(Mod.getModifiers());
   printTypeIndex("ModifiedType", Mod.getModifiedType());
-  W->printFlags("Modifiers", Mods, ArrayRef(TypeModifierNames));
+  W->printFlags("Modifiers", Mods, getTypeModifierNames());
 
   return Error::success();
 }
@@ -441,13 +313,12 @@ void TypeDumpVisitor::printMemberAttributes(MemberAttributes Attrs) {
 void TypeDumpVisitor::printMemberAttributes(MemberAccess Access,
                                             MethodKind Kind,
                                             MethodOptions Options) {
-  W->printEnum("AccessSpecifier", uint8_t(Access), ArrayRef(MemberAccessNames));
+  W->printEnum("AccessSpecifier", uint8_t(Access), getMemberAccessNames());
   // Data members will be vanilla. Don't try to print a method kind for them.
   if (Kind != MethodKind::Vanilla)
-    W->printEnum("MethodKind", unsigned(Kind), ArrayRef(MemberKindNames));
+    W->printEnum("MethodKind", unsigned(Kind), getMemberKindNames());
   if (Options != MethodOptions::None) {
-    W->printFlags("MethodOptions", unsigned(Options),
-                  ArrayRef(MethodOptionNames));
+    W->printFlags("MethodOptions", unsigned(Options), getMethodOptionNames());
   }
 }
 
@@ -457,7 +328,7 @@ Error TypeDumpVisitor::visitUnknownMember(CVMemberRecord &Record) {
 }
 
 Error TypeDumpVisitor::visitUnknownType(CVType &Record) {
-  W->printEnum("Kind", uint16_t(Record.kind()), ArrayRef(LeafTypeNames));
+  W->printEnum("Kind", uint16_t(Record.kind()), getTypeLeafNames());
   W->printNumber("Length", uint32_t(Record.content().size()));
   return Error::success();
 }
@@ -550,7 +421,7 @@ Error TypeDumpVisitor::visitKnownMember(CVMemberRecord &CVR,
 }
 
 Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, LabelRecord &LR) {
-  W->printEnum("Mode", uint16_t(LR.Mode), ArrayRef(LabelTypeEnum));
+  W->printEnum("Mode", uint16_t(LR.Mode), getLabelTypeEnum());
   return Error::success();
 }
 

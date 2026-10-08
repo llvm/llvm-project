@@ -24,3 +24,11 @@ entry:
   %2 = atomicrmw xchg ptr %1, i32 %v seq_cst, align 4
   ret i32 %2
 }
+
+; CHECK: .p2align 4
+; CHECK-NEXT: ldstub
+define i32 @test_fence() {
+entry:
+  fence seq_cst
+  ret i32 0
+}

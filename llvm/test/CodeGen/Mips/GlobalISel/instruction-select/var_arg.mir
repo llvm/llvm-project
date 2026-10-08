@@ -87,7 +87,7 @@ body:             |
     ; MIPS32: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     ; MIPS32: $a0 = COPY [[ADDiu3]]
     ; MIPS32: $a1 = COPY [[LW3]]
-    ; MIPS32: JAL @printf, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $v0
+    ; MIPS32: JAL @printf, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $v0
     ; MIPS32: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
     ; MIPS32: RetRA
     %0:gprb(p0) = COPY $a0
@@ -120,7 +120,7 @@ body:             |
     ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     $a0 = COPY %17(p0)
     $a1 = COPY %15(p0)
-    JAL @printf, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $v0
+    JAL @printf, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $v0
     ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
     RetRA
 

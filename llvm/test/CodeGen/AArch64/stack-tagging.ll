@@ -162,12 +162,13 @@ if.end:
 
 
 ; CHECK-LABEL: define void @DoubleEnd(
-; CHECK:  call void @llvm.aarch64.settag(
 ; CHECK:  br i1
-; CHECK-NOT: @llvm.lifetime.start
+; CHECK:  call void @llvm.lifetime.start.p0(
+; CHECK:  call void @llvm.aarch64.settag(
 ; CHECK:  call void @use8(
 ; CHECK:  call void @llvm.aarch64.settag(
-; CHECK-NOT: @llvm.lifetime.end
+; CHECK:  call void @llvm.lifetime.end.p0(
+; CHECK:  br label
 ; CHECK:  ret void
 
 

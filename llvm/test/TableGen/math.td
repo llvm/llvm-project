@@ -6,7 +6,6 @@
 // RUN: not llvm-tblgen -DERROR5 %s 2>&1 | FileCheck --check-prefix=ERROR5 %s
 // RUN: not llvm-tblgen -DERROR6 %s 2>&1 | FileCheck --check-prefix=ERROR6 %s
 // RUN: not llvm-tblgen -DERROR7 %s 2>&1 | FileCheck --check-prefix=ERROR7 %s
-// XFAIL: vg_leak
 
 // CHECK: def shifts
 // CHECK: shifted_b = 8

@@ -18,7 +18,8 @@ clangPipeline(
         projects: 'clang;clang-tools-extra',
         runtimes: 'compiler-rt',
         timeout: 120,
-        incremental: false
+        incremental: false,
+        skipTrigger: env.BRANCH_NAME?.startsWith('release/') ?: false
     ],
     testConfig: [
         test_type: 'testlong',

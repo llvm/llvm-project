@@ -10,8 +10,8 @@
 
 // Decrement iterator prior to begin.
 
-// REQUIRES: has-unix-headers, libcpp-has-abi-bounded-iterators-in-vector
-// UNSUPPORTED: libcpp-hardening-mode=none, c++03
+// REQUIRES: can-test-hardening-assertions-fast
+// REQUIRES: libcpp-has-abi-bounded-iterators-in-vector
 
 #include <vector>
 #include <cassert>

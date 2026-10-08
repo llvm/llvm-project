@@ -78,7 +78,7 @@ protected:
 
   friend class lldb_private::python::SWIGBridge;
   friend class lldb_private::lua::SWIGBridge;
-  friend class lldb_private::ScriptInterpreter;
+  friend class lldb_private::ScriptInterpreterBridge;
 
 private:
   SBFrameList(const lldb::StackFrameListSP &frame_list_sp);

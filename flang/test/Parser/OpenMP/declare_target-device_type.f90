@@ -5,9 +5,9 @@ subroutine openmp_declare_target
     integer, save :: x, y
 !CHECK: !$omp declare target device_type(host) enter(x)
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareTargetConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareTargetDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare target
-!PARSE-TREE: | OmpClauseList -> OmpClause -> DeviceType -> OmpDeviceTypeClause -> DeviceTypeDescription = Host
+!PARSE-TREE: | OmpClauseList -> OmpClause -> DeviceType -> OmpDeviceTypeClause -> OmpDeviceType = Host
 !PARSE-TREE: | OmpClause -> Enter -> OmpEnterClause
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | Flags = {}
@@ -15,9 +15,9 @@ subroutine openmp_declare_target
 
 !CHECK: !$omp declare target device_type(nohost) enter(x)
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareTargetConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareTargetDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare target
-!PARSE-TREE: | OmpClauseList -> OmpClause -> DeviceType -> OmpDeviceTypeClause -> DeviceTypeDescription = Nohost
+!PARSE-TREE: | OmpClauseList -> OmpClause -> DeviceType -> OmpDeviceTypeClause -> OmpDeviceType = Nohost
 !PARSE-TREE: | OmpClause -> Enter -> OmpEnterClause
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | Flags = {}
@@ -25,9 +25,9 @@ subroutine openmp_declare_target
 
 !CHECK: !$omp declare target device_type(any) enter(x)
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareTargetConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareTargetDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare target
-!PARSE-TREE: | OmpClauseList -> OmpClause -> DeviceType -> OmpDeviceTypeClause -> DeviceTypeDescription = Any
+!PARSE-TREE: | OmpClauseList -> OmpClause -> DeviceType -> OmpDeviceTypeClause -> OmpDeviceType = Any
 !PARSE-TREE: | OmpClause -> Enter -> OmpEnterClause
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | Flags = {}
@@ -35,9 +35,9 @@ subroutine openmp_declare_target
 
 !CHECK: !$omp declare target device_type(host) to(x)
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareTargetConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareTargetDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare target
-!PARSE-TREE: | OmpClauseList -> OmpClause -> DeviceType -> OmpDeviceTypeClause -> DeviceTypeDescription = Host
+!PARSE-TREE: | OmpClauseList -> OmpClause -> DeviceType -> OmpDeviceTypeClause -> OmpDeviceType = Host
 !PARSE-TREE: | OmpClause -> To -> OmpToClause
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | bool = 'true'
@@ -46,9 +46,9 @@ subroutine openmp_declare_target
 
 !CHECK: !$omp declare target device_type(nohost) to(x)
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareTargetConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareTargetDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare target
-!PARSE-TREE: | OmpClauseList -> OmpClause -> DeviceType -> OmpDeviceTypeClause -> DeviceTypeDescription = Nohost
+!PARSE-TREE: | OmpClauseList -> OmpClause -> DeviceType -> OmpDeviceTypeClause -> OmpDeviceType = Nohost
 !PARSE-TREE: | OmpClause -> To -> OmpToClause
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | bool = 'true'
@@ -57,9 +57,9 @@ subroutine openmp_declare_target
 
 !CHECK: !$omp declare target device_type(any) to(x)
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareTargetConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareTargetDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare target
-!PARSE-TREE: | OmpClauseList -> OmpClause -> DeviceType -> OmpDeviceTypeClause -> DeviceTypeDescription = Any
+!PARSE-TREE: | OmpClauseList -> OmpClause -> DeviceType -> OmpDeviceTypeClause -> OmpDeviceType = Any
 !PARSE-TREE: | OmpClause -> To -> OmpToClause
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | bool = 'true'
@@ -68,9 +68,9 @@ subroutine openmp_declare_target
 
 !CHECK: !$omp declare target device_type(host) enter(y) to(x)
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareTargetConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareTargetDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare target
-!PARSE-TREE: | OmpClauseList -> OmpClause -> DeviceType -> OmpDeviceTypeClause -> DeviceTypeDescription = Host
+!PARSE-TREE: | OmpClauseList -> OmpClause -> DeviceType -> OmpDeviceTypeClause -> OmpDeviceType = Host
 !PARSE-TREE: | OmpClause -> Enter -> OmpEnterClause
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'y'
 !PARSE-TREE: | OmpClause -> To -> OmpToClause
@@ -81,9 +81,9 @@ subroutine openmp_declare_target
 
 !CHECK: !$omp declare target device_type(nohost) enter(y) to(x)
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareTargetConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareTargetDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare target
-!PARSE-TREE: | OmpClauseList -> OmpClause -> DeviceType -> OmpDeviceTypeClause -> DeviceTypeDescription = Nohost
+!PARSE-TREE: | OmpClauseList -> OmpClause -> DeviceType -> OmpDeviceTypeClause -> OmpDeviceType = Nohost
 !PARSE-TREE: | OmpClause -> Enter -> OmpEnterClause
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'y'
 !PARSE-TREE: | OmpClause -> To -> OmpToClause
@@ -94,9 +94,9 @@ subroutine openmp_declare_target
 
 !CHECK: !$omp declare target device_type(any) enter(y) to(x)
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareTargetConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareTargetDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare target
-!PARSE-TREE: | OmpClauseList -> OmpClause -> DeviceType -> OmpDeviceTypeClause -> DeviceTypeDescription = Any
+!PARSE-TREE: | OmpClauseList -> OmpClause -> DeviceType -> OmpDeviceTypeClause -> OmpDeviceType = Any
 !PARSE-TREE: | OmpClause -> Enter -> OmpEnterClause
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'y'
 !PARSE-TREE: | OmpClause -> To -> OmpToClause

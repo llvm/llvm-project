@@ -13,7 +13,9 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Lexer.h"
 
-using namespace clang;
+using namespace clang::ast_matchers;
+
+namespace clang::tidy::modernize {
 
 namespace {
 
@@ -21,14 +23,10 @@ struct FindArgsResult {
   const Expr *First;
   const Expr *Last;
   const Expr *Compare;
-  SmallVector<const clang::Expr *, 2> Args;
+  SmallVector<const Expr *, 2> Args;
 };
 
 } // anonymous namespace
-
-using namespace clang::ast_matchers;
-
-namespace clang::tidy::modernize {
 
 static FindArgsResult findArgs(const CallExpr *Call) {
   FindArgsResult Result;
@@ -63,7 +61,7 @@ static FindArgsResult findArgs(const CallExpr *Call) {
     Result.Args = SmallVector<const Expr *>(Call->arguments());
   } else {
     // if it has 3 arguments then the last will be the comparison
-    Result.Compare = *(std::next(Call->arguments().begin(), 2));
+    Result.Compare = *std::next(Call->arguments().begin(), 2);
     Result.Args = SmallVector<const Expr *>(llvm::drop_end(Call->arguments()));
   }
   Result.First = Result.Args.front();
@@ -220,9 +218,9 @@ void MinMaxUseInitializerListCheck::storeOptions(
 }
 
 void MinMaxUseInitializerListCheck::registerMatchers(MatchFinder *Finder) {
-  auto CreateMatcher = [](const StringRef FunctionName) {
-    auto FuncDecl = functionDecl(hasName(FunctionName));
-    auto Expression = callExpr(callee(FuncDecl));
+  const auto CreateMatcher = [](const StringRef FunctionName) {
+    const auto FuncDecl = functionDecl(hasName(FunctionName));
+    const auto Expression = callExpr(callee(FuncDecl));
 
     return callExpr(callee(FuncDecl),
                     anyOf(hasArgument(0, Expression),

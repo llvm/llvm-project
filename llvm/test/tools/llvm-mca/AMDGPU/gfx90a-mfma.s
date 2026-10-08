@@ -1,4 +1,4 @@
-# RUN: llvm-mca -mtriple=amdgcn -mcpu=gfx90a --timeline --iterations=1 --timeline-max-cycles=0 < %s | FileCheck %s
+# RUN: llvm-mca -mtriple=amdgpu9.0a --timeline --iterations=1 --timeline-max-cycles=0 < %s | FileCheck %s
 
 # CHECK: Instruction Info:
 # CHECK-NEXT: [1]: #uOps

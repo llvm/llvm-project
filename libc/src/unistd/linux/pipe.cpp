@@ -12,7 +12,7 @@
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/sanitizer.h" // for MSAN_UNPOISON
+#include "src/__support/macros/sanitizer.h" // for LIBC_MSAN_UNPOISON
 #include <sys/syscall.h>                    // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
@@ -25,7 +25,7 @@ LLVM_LIBC_FUNCTION(int, pipe, (int pipefd[2])) {
   int ret = LIBC_NAMESPACE::syscall_impl<int>(
       SYS_pipe2, reinterpret_cast<long>(pipefd), 0);
 #endif
-  MSAN_UNPOISON(pipefd, sizeof(int) * 2);
+  LIBC_MSAN_UNPOISON(pipefd, sizeof(int) * 2);
   if (ret < 0) {
     libc_errno = -ret;
     return -1;

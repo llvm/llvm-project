@@ -22,6 +22,7 @@
 namespace llvm {
 
 class SparcTargetMachine : public CodeGenTargetMachineImpl {
+  const SparcOptions &CLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<SparcSubtarget>> SubtargetMap;
 
@@ -32,6 +33,8 @@ public:
                      std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
                      bool JIT);
   ~SparcTargetMachine() override;
+
+  const SparcOptions &getCLOpts() const { return CLOpts; }
 
   const SparcSubtarget *getSubtargetImpl(const Function &F) const override;
 

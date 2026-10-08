@@ -228,3 +228,8 @@ float *address_of_element(sx5x10_t *a) {
   return &(*a)[0][1];
   // expected-error@-1 {{address of matrix element requested}}
 }
+
+void test_triple_subscript(sx5x10_t a) {
+  float v13 = a[0][0][0];
+  // expected-error@-1 {{subscripted value is not an array, pointer, or vector}}
+}

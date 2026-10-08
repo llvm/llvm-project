@@ -375,7 +375,7 @@ struct TwoDimMultiReductionToElementWise
   }
 };
 
-/// Lowers 2D vector.multi_reduction to a squence of vector.reduction Ops
+/// Lowers 2D vector.multi_reduction to a sequence of vector.reduction Ops.
 ///
 /// The reduction dimension must be the inner-most dimension.
 ///
@@ -443,75 +443,42 @@ struct TwoDimMultiReductionToReduction
   }
 };
 
-/// Converts 1d vector.multi_reduction with a single reduction dimension to a 2d
-/// form with both a single parallel and reduction dimension.
-/// This is achieved with a simple vector.shape_cast that inserts a leading 1.
-/// The case with a single parallel dimension is a noop and folds away
-/// separately.
-struct OneDimMultiReductionToTwoDim
-    : public OpRewritePattern<vector::MultiDimReductionOp> {
-  using Base::Base;
+/// Converts 1D vector.multi_reduction directly to vector.reduction.
+///
+/// Example:
+/// ```mlir
+/// // Before
+/// %r = vector.multi_reduction <add>, %v, %acc [0] : vector<Nxf32> to f32
+///
+/// // After
+/// %r = vector.reduction <add>, %v, %acc : vector<Nxf32> into f32
+/// ```
+struct OneDimMultiReductionToReduction
+    : public vector::MaskableOpRewritePattern<vector::MultiDimReductionOp> {
+  using MaskableOpRewritePattern::MaskableOpRewritePattern;
 
-  LogicalResult matchAndRewrite(vector::MultiDimReductionOp multiReductionOp,
-                                PatternRewriter &rewriter) const override {
+  FailureOr<Value>
+  matchAndRewriteMaskableOp(vector::MultiDimReductionOp multiReductionOp,
+                            vector::MaskingOpInterface maskingOp,
+                            PatternRewriter &rewriter) const override {
     auto srcRank = multiReductionOp.getSourceVectorType().getRank();
-    // Rank-1 or bail.
     if (srcRank != 1)
       return failure();
 
-    // Vector mask setup.
-    OpBuilder::InsertionGuard guard(rewriter);
-    auto maskableOp =
-        cast<vector::MaskableOpInterface>(multiReductionOp.getOperation());
-    Operation *rootOp;
-    Value mask;
-    if (maskableOp.isMasked()) {
-      rewriter.setInsertionPoint(maskableOp.getMaskingOp());
-      rootOp = maskableOp.getMaskingOp();
-      mask = maskableOp.getMaskingOp().getMask();
-    } else {
-      rootOp = multiReductionOp;
-    }
+    if (!multiReductionOp.isReducedDim(0))
+      return failure();
 
     auto loc = multiReductionOp.getLoc();
-    auto srcVectorType = multiReductionOp.getSourceVectorType();
-    auto srcShape = srcVectorType.getShape();
-    auto castedType = VectorType::get(
-        ArrayRef<int64_t>{1, srcShape.back()}, srcVectorType.getElementType(),
-        ArrayRef<bool>{false, srcVectorType.getScalableDims().back()});
+    Value mask = maskingOp ? maskingOp.getMask() : Value();
 
-    auto accType =
-        VectorType::get(ArrayRef<int64_t>{1}, srcVectorType.getElementType());
-    assert(!llvm::isa<VectorType>(multiReductionOp.getDestType()) &&
-           "multi_reduction with a single dimension expects a scalar result");
+    Operation *reductionOp = vector::ReductionOp::create(
+        rewriter, loc, multiReductionOp.getKind(), multiReductionOp.getSource(),
+        multiReductionOp.getAcc());
 
-    // If the unique dim is reduced and we insert a parallel in front, we need a
-    // {false, true} mask.
-    SmallVector<bool, 2> reductionMask{false, true};
+    if (mask)
+      reductionOp = mlir::vector::maskOperation(rewriter, reductionOp, mask);
 
-    /// vector.extract(vector.multi_reduce(vector.shape_cast(v, 1xk)), 0)
-    Value cast = vector::ShapeCastOp::create(rewriter, loc, castedType,
-                                             multiReductionOp.getSource());
-    Value castAcc = vector::BroadcastOp::create(rewriter, loc, accType,
-                                                multiReductionOp.getAcc());
-    Value castMask;
-    if (maskableOp.isMasked()) {
-      auto maskType = llvm::cast<VectorType>(mask.getType());
-      auto castMaskType = VectorType::get(
-          ArrayRef<int64_t>{1, maskType.getShape().back()},
-          maskType.getElementType(),
-          ArrayRef<bool>{false, maskType.getScalableDims().back()});
-      castMask = vector::BroadcastOp::create(rewriter, loc, castMaskType, mask);
-    }
-
-    Operation *newOp = vector::MultiDimReductionOp::create(
-        rewriter, loc, cast, castAcc, reductionMask,
-        multiReductionOp.getKind());
-    newOp = vector::maskOperation(rewriter, newOp, castMask);
-
-    rewriter.replaceOpWithNewOp<vector::ExtractOp>(rootOp, newOp->getResult(0),
-                                                   ArrayRef<int64_t>{0});
-    return success();
+    return reductionOp->getResult(0);
   }
 };
 
@@ -527,7 +494,7 @@ struct LowerVectorMultiReductionPass
     MLIRContext *context = op->getContext();
 
     RewritePatternSet patterns(context);
-    mlir::vector::populateVectorMultiReductionReorderAndExpandPatterns(
+    mlir::vector::populateVectorMultiReductionReorderPatterns(
         patterns, this->loweringStrategy);
     if (failed(applyPatternsGreedily(op, std::move(patterns))))
       signalPassFailure();
@@ -552,10 +519,9 @@ struct LowerVectorMultiReductionPass
 
 } // namespace
 
-void mlir::vector::populateVectorMultiReductionReorderAndExpandPatterns(
+void mlir::vector::populateVectorMultiReductionReorderPatterns(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
     PatternBenefit benefit) {
-  patterns.add<OneDimMultiReductionToTwoDim>(patterns.getContext(), benefit);
   patterns.add<InnerOuterDimReductionConversion>(patterns.getContext(), options,
                                                  benefit);
 }
@@ -569,6 +535,7 @@ void mlir::vector::populateVectorMultiReductionFlatteningPatterns(
 void mlir::vector::populateVectorMultiReductionUnrollingPatterns(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
     PatternBenefit benefit) {
+  patterns.add<OneDimMultiReductionToReduction>(patterns.getContext(), benefit);
   if (options == VectorMultiReductionLowering ::InnerReduction)
     patterns.add<TwoDimMultiReductionToReduction>(patterns.getContext(),
                                                   benefit);

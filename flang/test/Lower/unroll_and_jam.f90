@@ -11,13 +11,13 @@
 subroutine unroll_and_jam_dir
   integer :: a(10)
   !dir$ unroll_and_jam
-  !CHECK: fir.do_loop {{.*}} attributes {loopAnnotation = #loop_annotation}
+  !CHECK: fir.do_loop {{.*}} <{loopAnnotation = #loop_annotation}>
   do i=1,10
      a(i)=i
   end do
 
   !dir$ unroll_and_jam 2
-  !CHECK: fir.do_loop {{.*}} attributes {loopAnnotation = #loop_annotation1}
+  !CHECK: fir.do_loop {{.*}} <{loopAnnotation = #loop_annotation1}>
   do i=1,10
      a(i)=i
   end do
@@ -29,7 +29,7 @@ subroutine intermediate_directive
   integer :: a(10)
   !dir$ unroll_and_jam
   !dir$ unknown
-  !CHECK: fir.do_loop {{.*}} attributes {loopAnnotation = #loop_annotation}
+  !CHECK: fir.do_loop {{.*}} <{loopAnnotation = #loop_annotation}>
   do i=1,10
      a(i)=i
   end do
@@ -40,7 +40,7 @@ end subroutine intermediate_directive
 subroutine nounroll_and_jam_dir
   integer :: a(10)
   !dir$ nounroll_and_jam
-  !CHECK: fir.do_loop {{.*}} attributes {loopAnnotation = #loop_annotation2}
+  !CHECK: fir.do_loop {{.*}} <{loopAnnotation = #loop_annotation2}>
   do i=1,10
      a(i)=i
   end do

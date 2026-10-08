@@ -10,6 +10,10 @@
 
 // XFAIL: availability-char8_t_support-missing
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
+// This test runs in C++20, but we have deprecated codecvt<char32_t, char8_t, mbstate_t> in C++20.
+
 // <locale>
 
 // template <> class codecvt<char32_t, char8_t, mbstate_t>

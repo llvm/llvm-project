@@ -36,22 +36,22 @@ body:             |
     successors: %bb.4(0x40000000), %bb.3(0x40000000)
     liveins: $w0, $w1
 
-    %35:gpr(s32) = G_CONSTANT i32 145185
-    G_BRCOND %35(s32), %bb.4
+    %35:gpr(i32) = G_CONSTANT i32 145185
+    G_BRCOND %35(i32), %bb.4
     G_BR %bb.3
 
   bb.3:
     successors: %bb.5(0x80000000)
 
-    %17:gpr(s32) = G_CONSTANT_FOLD_BARRIER %35
-    $w5 = COPY %17(s32)
+    %17:gpr(i32) = G_CONSTANT_FOLD_BARRIER %35
+    $w5 = COPY %17(i32)
     G_BR %bb.5
 
   bb.4:
     successors: %bb.5(0x80000000)
 
-    %23:gpr(s32) = G_ADD %35, %35
-    $w3 = COPY %23(s32)
+    %23:gpr(i32) = G_ADD %35, %35
+    $w3 = COPY %23(i32)
     G_BR %bb.5
 
   bb.5:

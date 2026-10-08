@@ -12,7 +12,7 @@ define void @test(ptr %p, i16 %load794) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext <2 x i16> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub nsw <2 x i32> [[TMP4]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nsw <2 x i32> [[TMP7]], splat (i32 3329)
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[ZEXT795]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[ZEXT795]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP12:%.*]] = mul <2 x i32> [[TMP8]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext <2 x i32> [[TMP12]] to <2 x i64>

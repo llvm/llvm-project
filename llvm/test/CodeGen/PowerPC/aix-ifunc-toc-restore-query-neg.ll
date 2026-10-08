@@ -1,4 +1,3 @@
-; REQUIRES: target=powerpc{{.*}}
 ; REQUIRES: asserts
 ; This testcase is for testing the negative return values of the
 ; TOCRestoreNeededForCallToImplementation query.
@@ -33,12 +32,12 @@ define weak void @foo_ext_weak_def() {
 entry:
   ret void
 }
-declare void @foo_ext_decl(...) 
-declare void @foo_ext_default_decl(...) 
-declare extern_weak void @foo_ext_weak_decl(...) 
-declare extern_weak hidden void @foo_ext_hidden_weak_decl(...) 
-declare extern_weak protected void @foo_ext_protected_weak_decl(...) 
-declare extern_weak void @foo_ext_default_weak_decl(...) 
+declare void @foo_ext_decl(...)
+declare void @foo_ext_default_decl(...)
+declare extern_weak void @foo_ext_weak_decl(...)
+declare extern_weak hidden void @foo_ext_hidden_weak_decl(...)
+declare extern_weak protected void @foo_ext_protected_weak_decl(...)
+declare extern_weak void @foo_ext_default_weak_decl(...)
 
 
 define internal ptr @foo_ext_decl_resolver() {

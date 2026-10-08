@@ -40,7 +40,8 @@ public:
 
   LogicalResult matchAndRewrite(spirv::GlobalVariableOp op,
                                 PatternRewriter &rewriter) const override {
-    SmallVector<NamedAttribute, 4> globalVarAttrs;
+    NamedAttrList globalVarAttrs(op->getDiscardableAttrDictionary());
+    op->getName().populateInherentAttrs(op, globalVarAttrs);
 
     auto ptrType = cast<spirv::PointerType>(op.getType());
     auto pointeeType = cast<spirv::StructType>(ptrType.getPointeeType());
@@ -53,12 +54,8 @@ public:
     auto decoratedType =
         spirv::PointerType::get(structType, ptrType.getStorageClass());
 
-    // Save all named attributes except "type" attribute.
-    for (const auto &attr : op->getAttrs()) {
-      if (attr.getName() == "type")
-        continue;
-      globalVarAttrs.push_back(attr);
-    }
+    // The new type is passed through the operation-specific builder below.
+    globalVarAttrs.erase("type");
 
     rewriter.replaceOpWithNewOp<spirv::GlobalVariableOp>(
         op, TypeAttr::get(decoratedType), globalVarAttrs);

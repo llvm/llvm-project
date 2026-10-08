@@ -1,0 +1,17 @@
+{
+  "members": [
+    {
+      "members": [],
+      "namespace": {
+        "kind": "StaticLibrary",
+        "name": "libfoo"
+      },
+      "target_triple": "arm64-apple-macosx"
+    }
+  ],
+  "namespace": {
+    "kind": "MultiArchStaticLibrary",
+    "name": "libfoo"
+  },
+  "type": "MultiArchStaticLibrary"
+}

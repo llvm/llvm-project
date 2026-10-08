@@ -10,6 +10,7 @@
 #define LLDB_UNITTESTS_TOOLS_LLDB_SERVER_TESTS_TESTBASE_H
 
 #include "TestClient.h"
+#include "TestingSupport/Host/SocketTestUtilities.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/Socket.h"
@@ -31,6 +32,11 @@ public:
     lldb_private::Socket::Terminate();
     lldb_private::HostInfo::Terminate();
     lldb_private::FileSystem::Terminate();
+  }
+
+  void SetUp() override {
+    if (!lldb_private::HostSupportsIPv4() && !lldb_private::HostSupportsIPv6())
+      GTEST_SKIP() << "TCP sockets unavailable";
   }
 
   static std::string getInferiorPath(llvm::StringRef Name) {

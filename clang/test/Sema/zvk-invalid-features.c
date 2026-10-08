@@ -3,7 +3,7 @@
 
 #include <riscv_vector.h>
 
-void test_zvk_features(vuint32m4_t vd, vuint32m4_t vs2, vuint32m4_t vs1, vuint64m1_t vs2_64, vuint64m1_t vs1_64, size_t vl) {
+void test_zvk_features(vuint32m4_t vd, vuint32m4_t vs2, vuint32m4_t vs1, vuint64m1_t vd_64, vuint64m1_t vs2_64, vuint64m1_t vs1_64, size_t vl) {
   // zvbb
   __riscv_vbrev(vs2, vl); // expected-error {{builtin requires at least one of the following extensions: zvbb}}
   __riscv_vclz(vs2, vl); // expected-error {{builtin requires at least one of the following extensions: zvbb}}
@@ -35,10 +35,15 @@ void test_zvk_features(vuint32m4_t vd, vuint32m4_t vs2, vuint32m4_t vs1, vuint64
   __riscv_vaeskf2(vd, vs2, 0, vl); // expected-error {{builtin requires at least one of the following extensions: zvkned}}
   __riscv_vaesz(vd, vs2, vl); // expected-error {{builtin requires at least one of the following extensions: zvkned}}
 
-  // zvknha or zvknhb
-  __riscv_vsha2ch(vd, vs2, vs1, vl); // expected-error {{builtin requires at least one of the following extensions: zvknha or zvknhb}}
-  __riscv_vsha2cl(vd, vs2, vs1, vl); // expected-error {{builtin requires at least one of the following extensions: zvknha or zvknhb}}
-  __riscv_vsha2ms(vd, vs2, vs1, vl); // expected-error {{builtin requires at least one of the following extensions: zvknha or zvknhb}}
+  // zvknha
+  __riscv_vsha2ch(vd, vs2, vs1, vl); // expected-error {{builtin requires at least one of the following extensions: zvknha}}
+  __riscv_vsha2cl(vd, vs2, vs1, vl); // expected-error {{builtin requires at least one of the following extensions: zvknha}}
+  __riscv_vsha2ms(vd, vs2, vs1, vl); // expected-error {{builtin requires at least one of the following extensions: zvknha}}
+
+  // zvknhb
+  __riscv_vsha2ch(vd_64, vs2_64, vs1_64, vl); // expected-error {{builtin requires at least one of the following extensions: zvknhb}}
+  __riscv_vsha2cl(vd_64, vs2_64, vs1_64, vl); // expected-error {{builtin requires at least one of the following extensions: zvknhb}}
+  __riscv_vsha2ms(vd_64, vs2_64, vs1_64, vl); // expected-error {{builtin requires at least one of the following extensions: zvknhb}}
 
   //zvksed
   __riscv_vsm4k(vs2, 0, vl); // expected-error {{builtin requires at least one of the following extensions: zvksed}}

@@ -15,10 +15,10 @@ define void @shl_lshr_same_bb(ptr %p) {
 ; CHECK-V2:       # %bb.0: # %entry
 ; CHECK-V2-NEXT:    r1 = *(u8 *)(r1 + 0)
 ; CHECK-V2-NEXT:    r5 = 1
-; CHECK-V2-NEXT:    if r1 == 0 goto LBB0_2
+; CHECK-V2-NEXT:    if r1 == 0 goto .LBB0_2
 ; CHECK-V2-NEXT:  # %bb.1: # %entry
 ; CHECK-V2-NEXT:    r5 = 0
-; CHECK-V2-NEXT:  LBB0_2: # %entry
+; CHECK-V2-NEXT:  .LBB0_2: # %entry
 ; CHECK-V2-NEXT:    r3 = r1
 ; CHECK-V2-NEXT:    r3 <<= 56
 ; CHECK-V2-NEXT:    r2 = r1
@@ -30,10 +30,10 @@ define void @shl_lshr_same_bb(ptr %p) {
 ; CHECK-V4:       # %bb.0: # %entry
 ; CHECK-V4-NEXT:    w1 = *(u8 *)(r1 + 0)
 ; CHECK-V4-NEXT:    w5 = 1
-; CHECK-V4-NEXT:    if w1 == 0 goto LBB0_2
+; CHECK-V4-NEXT:    if w1 == 0 goto .LBB0_2
 ; CHECK-V4-NEXT:  # %bb.1: # %entry
 ; CHECK-V4-NEXT:    w5 = 0
-; CHECK-V4-NEXT:  LBB0_2: # %entry
+; CHECK-V4-NEXT:  .LBB0_2: # %entry
 ; CHECK-V4-NEXT:    r3 = r1
 ; CHECK-V4-NEXT:    r3 <<= 56
 ; CHECK-V4-NEXT:    r2 = r1
@@ -57,10 +57,10 @@ define void @shl_lshr_diff_bb(ptr %p) {
 ; CHECK-V2:       # %bb.0: # %entry
 ; CHECK-V2-NEXT:    r1 = *(u16 *)(r1 + 0)
 ; CHECK-V2-NEXT:    r5 = 1
-; CHECK-V2-NEXT:    if r1 == 0 goto LBB1_2
+; CHECK-V2-NEXT:    if r1 == 0 goto .LBB1_2
 ; CHECK-V2-NEXT:  # %bb.1: # %entry
 ; CHECK-V2-NEXT:    r5 = 0
-; CHECK-V2-NEXT:  LBB1_2: # %entry
+; CHECK-V2-NEXT:  .LBB1_2: # %entry
 ; CHECK-V2-NEXT:    r3 = r1
 ; CHECK-V2-NEXT:    r3 <<= 48
 ; CHECK-V2-NEXT:    r2 = r1
@@ -72,10 +72,10 @@ define void @shl_lshr_diff_bb(ptr %p) {
 ; CHECK-V4:       # %bb.0: # %entry
 ; CHECK-V4-NEXT:    w1 = *(u16 *)(r1 + 0)
 ; CHECK-V4-NEXT:    w5 = 1
-; CHECK-V4-NEXT:    if w1 == 0 goto LBB1_2
+; CHECK-V4-NEXT:    if w1 == 0 goto .LBB1_2
 ; CHECK-V4-NEXT:  # %bb.1: # %entry
 ; CHECK-V4-NEXT:    w5 = 0
-; CHECK-V4-NEXT:  LBB1_2: # %entry
+; CHECK-V4-NEXT:  .LBB1_2: # %entry
 ; CHECK-V4-NEXT:    r3 = r1
 ; CHECK-V4-NEXT:    r3 <<= 48
 ; CHECK-V4-NEXT:    r2 = r1
@@ -105,10 +105,10 @@ define void @load_zext_same_bb(ptr %p) {
 ; CHECK-V2:       # %bb.0: # %entry
 ; CHECK-V2-NEXT:    r1 = *(u8 *)(r1 + 0)
 ; CHECK-V2-NEXT:    r2 = 1
-; CHECK-V2-NEXT:    if r1 == 0 goto LBB2_2
+; CHECK-V2-NEXT:    if r1 == 0 goto .LBB2_2
 ; CHECK-V2-NEXT:  # %bb.1: # %entry
 ; CHECK-V2-NEXT:    r2 = 0
-; CHECK-V2-NEXT:  LBB2_2: # %entry
+; CHECK-V2-NEXT:  .LBB2_2: # %entry
 ; CHECK-V2-NEXT:    call sink3
 ; CHECK-V2-NEXT:    exit
 ;
@@ -116,10 +116,10 @@ define void @load_zext_same_bb(ptr %p) {
 ; CHECK-V4:       # %bb.0: # %entry
 ; CHECK-V4-NEXT:    w1 = *(u8 *)(r1 + 0)
 ; CHECK-V4-NEXT:    w2 = 1
-; CHECK-V4-NEXT:    if w1 == 0 goto LBB2_2
+; CHECK-V4-NEXT:    if w1 == 0 goto .LBB2_2
 ; CHECK-V4-NEXT:  # %bb.1: # %entry
 ; CHECK-V4-NEXT:    w2 = 0
-; CHECK-V4-NEXT:  LBB2_2: # %entry
+; CHECK-V4-NEXT:  .LBB2_2: # %entry
 ; CHECK-V4-NEXT:    call sink3
 ; CHECK-V4-NEXT:    exit
 entry:
@@ -135,10 +135,10 @@ define void @load_zext_diff_bb(ptr %p) {
 ; CHECK-V2:       # %bb.0: # %entry
 ; CHECK-V2-NEXT:    r1 = *(u8 *)(r1 + 0)
 ; CHECK-V2-NEXT:    r2 = 1
-; CHECK-V2-NEXT:    if r1 == 0 goto LBB3_2
+; CHECK-V2-NEXT:    if r1 == 0 goto .LBB3_2
 ; CHECK-V2-NEXT:  # %bb.1: # %next
 ; CHECK-V2-NEXT:    r2 = 0
-; CHECK-V2-NEXT:  LBB3_2: # %next
+; CHECK-V2-NEXT:  .LBB3_2: # %next
 ; CHECK-V2-NEXT:    call sink3
 ; CHECK-V2-NEXT:    exit
 ;
@@ -146,10 +146,10 @@ define void @load_zext_diff_bb(ptr %p) {
 ; CHECK-V4:       # %bb.0: # %entry
 ; CHECK-V4-NEXT:    w1 = *(u8 *)(r1 + 0)
 ; CHECK-V4-NEXT:    w2 = 1
-; CHECK-V4-NEXT:    if w1 == 0 goto LBB3_2
+; CHECK-V4-NEXT:    if w1 == 0 goto .LBB3_2
 ; CHECK-V4-NEXT:  # %bb.1: # %next
 ; CHECK-V4-NEXT:    w2 = 0
-; CHECK-V4-NEXT:  LBB3_2: # %next
+; CHECK-V4-NEXT:  .LBB3_2: # %next
 ; CHECK-V4-NEXT:    call sink3
 ; CHECK-V4-NEXT:    exit
 entry:
@@ -167,10 +167,10 @@ define void @load_zext_diff_bb_2(ptr %p) {
 ; CHECK-V2:       # %bb.0: # %entry
 ; CHECK-V2-NEXT:    r1 = *(u32 *)(r1 + 0)
 ; CHECK-V2-NEXT:    r2 = 1
-; CHECK-V2-NEXT:    if r1 == 0 goto LBB4_2
+; CHECK-V2-NEXT:    if r1 == 0 goto .LBB4_2
 ; CHECK-V2-NEXT:  # %bb.1: # %next
 ; CHECK-V2-NEXT:    r2 = 0
-; CHECK-V2-NEXT:  LBB4_2: # %next
+; CHECK-V2-NEXT:  .LBB4_2: # %next
 ; CHECK-V2-NEXT:    call sink4
 ; CHECK-V2-NEXT:    exit
 ;
@@ -178,10 +178,10 @@ define void @load_zext_diff_bb_2(ptr %p) {
 ; CHECK-V4:       # %bb.0: # %entry
 ; CHECK-V4-NEXT:    w1 = *(u32 *)(r1 + 0)
 ; CHECK-V4-NEXT:    w2 = 1
-; CHECK-V4-NEXT:    if w1 == 0 goto LBB4_2
+; CHECK-V4-NEXT:    if w1 == 0 goto .LBB4_2
 ; CHECK-V4-NEXT:  # %bb.1: # %next
 ; CHECK-V4-NEXT:    w2 = 0
-; CHECK-V4-NEXT:  LBB4_2: # %next
+; CHECK-V4-NEXT:  .LBB4_2: # %next
 ; CHECK-V4-NEXT:    call sink4
 ; CHECK-V4-NEXT:    exit
 entry:

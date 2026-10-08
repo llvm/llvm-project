@@ -1,7 +1,7 @@
 ; RUN: opt -passes=loop-vectorize -force-vector-width=1 -force-vector-interleave=2 \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue -S -o - < %s | FileCheck %s
+; RUN:   -tail-folding-policy=dont-fold-tail -S -o - < %s | FileCheck %s
 ; RUN: opt -mattr=+sve -passes=loop-vectorize -force-vector-width=1 -force-vector-interleave=2 \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue -S -o - < %s | FileCheck %s
+; RUN:   -tail-folding-policy=dont-fold-tail -S -o - < %s | FileCheck %s
 
 target triple = "aarch64-unknown-linux-gnu"
 

@@ -159,8 +159,8 @@ func.func @semi_affine_layout_map(%s0: index, %s1: index) {
 
 // CHECK-LABEL: func @alignment
 func.func @alignment() {
-  %A = memref.alloc() {alignment = 32 : i64}: memref<64x128x256xf32, affine_map<(d0, d1, d2) -> (d2, d0, d1)>>
-  // CHECK-NEXT: memref.alloc() {alignment = 32 : i64} : memref<256x64x128xf32>
+  %A = memref.alloc() alignment = 32: memref<64x128x256xf32, affine_map<(d0, d1, d2) -> (d2, d0, d1)>>
+  // CHECK-NEXT: memref.alloc() alignment = 32 : memref<256x64x128xf32>
   return
 }
 

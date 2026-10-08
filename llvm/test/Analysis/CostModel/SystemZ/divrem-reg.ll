@@ -12,7 +12,7 @@
 define i64 @fun0(i64 %a, i64 %b) {
 ; CHECK-LABEL: 'fun0'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r = sdiv i64 %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i64 %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i64 %r
 ;
   %r = sdiv i64 %a, %b
   ret i64 %r
@@ -21,7 +21,7 @@ define i64 @fun0(i64 %a, i64 %b) {
 define i32 @fun1(i32 %a, i32 %b) {
 ; CHECK-LABEL: 'fun1'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r = sdiv i32 %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 %r
 ;
   %r = sdiv i32 %a, %b
   ret i32 %r
@@ -30,7 +30,7 @@ define i32 @fun1(i32 %a, i32 %b) {
 define i16 @fun2(i16 %a, i16 %b) {
 ; CHECK-LABEL: 'fun2'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r = sdiv i16 %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i16 %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i16 %r
 ;
   %r = sdiv i16 %a, %b
   ret i16 %r
@@ -39,7 +39,7 @@ define i16 @fun2(i16 %a, i16 %b) {
 define i8 @fun3(i8 %a, i8 %b) {
 ; CHECK-LABEL: 'fun3'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r = sdiv i8 %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i8 %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i8 %r
 ;
   %r = sdiv i8 %a, %b
   ret i8 %r
@@ -50,11 +50,11 @@ define i8 @fun3(i8 %a, i8 %b) {
 define <2 x i64> @fun4(<2 x i64> %a, <2 x i64> %b) {
 ; Z13-LABEL: 'fun4'
 ; Z13-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %r = sdiv <2 x i64> %a, %b
-; Z13-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i64> %r
+; Z13-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %r
 ;
 ; Z17-LABEL: 'fun4'
 ; Z17-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r = sdiv <2 x i64> %a, %b
-; Z17-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i64> %r
+; Z17-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %r
 ;
   %r = sdiv <2 x i64> %a, %b
   ret <2 x i64> %r
@@ -63,11 +63,11 @@ define <2 x i64> @fun4(<2 x i64> %a, <2 x i64> %b) {
 define <4 x i32> @fun5(<4 x i32> %a, <4 x i32> %b) {
 ; Z13-LABEL: 'fun5'
 ; Z13-NEXT:  Cost Model: Found an estimated cost of 94 for instruction: %r = sdiv <4 x i32> %a, %b
-; Z13-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %r
+; Z13-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %r
 ;
 ; Z17-LABEL: 'fun5'
 ; Z17-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r = sdiv <4 x i32> %a, %b
-; Z17-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %r
+; Z17-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %r
 ;
   %r = sdiv <4 x i32> %a, %b
   ret <4 x i32> %r
@@ -76,11 +76,11 @@ define <4 x i32> @fun5(<4 x i32> %a, <4 x i32> %b) {
 define <2 x i32> @fun6(<2 x i32> %a, <2 x i32> %b) {
 ; Z13-LABEL: 'fun6'
 ; Z13-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %r = sdiv <2 x i32> %a, %b
-; Z13-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i32> %r
+; Z13-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %r
 ;
 ; Z17-LABEL: 'fun6'
 ; Z17-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r = sdiv <2 x i32> %a, %b
-; Z17-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i32> %r
+; Z17-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %r
 ;
   %r = sdiv <2 x i32> %a, %b
   ret <2 x i32> %r
@@ -89,7 +89,7 @@ define <2 x i32> @fun6(<2 x i32> %a, <2 x i32> %b) {
 define <8 x i16> @fun7(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: 'fun7'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1000 for instruction: %r = sdiv <8 x i16> %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i16> %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i16> %r
 ;
   %r = sdiv <8 x i16> %a, %b
   ret <8 x i16> %r
@@ -98,7 +98,7 @@ define <8 x i16> @fun7(<8 x i16> %a, <8 x i16> %b) {
 define <4 x i16> @fun8(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: 'fun8'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 94 for instruction: %r = sdiv <4 x i16> %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i16> %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i16> %r
 ;
   %r = sdiv <4 x i16> %a, %b
   ret <4 x i16> %r
@@ -107,7 +107,7 @@ define <4 x i16> @fun8(<4 x i16> %a, <4 x i16> %b) {
 define <16 x i8> @fun9(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: 'fun9'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1000 for instruction: %r = sdiv <16 x i8> %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i8> %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i8> %r
 ;
   %r = sdiv <16 x i8> %a, %b
   ret <16 x i8> %r
@@ -116,7 +116,7 @@ define <16 x i8> @fun9(<16 x i8> %a, <16 x i8> %b) {
 define <8 x i8> @fun10(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: 'fun10'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1000 for instruction: %r = sdiv <8 x i8> %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i8> %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i8> %r
 ;
   %r = sdiv <8 x i8> %a, %b
   ret <8 x i8> %r
@@ -127,7 +127,7 @@ define <8 x i8> @fun10(<8 x i8> %a, <8 x i8> %b) {
 define i64 @fun11(i64 %a, i64 %b) {
 ; CHECK-LABEL: 'fun11'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r = udiv i64 %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i64 %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i64 %r
 ;
   %r = udiv i64 %a, %b
   ret i64 %r
@@ -136,7 +136,7 @@ define i64 @fun11(i64 %a, i64 %b) {
 define i32 @fun12(i32 %a, i32 %b) {
 ; CHECK-LABEL: 'fun12'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r = udiv i32 %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 %r
 ;
   %r = udiv i32 %a, %b
   ret i32 %r
@@ -145,7 +145,7 @@ define i32 @fun12(i32 %a, i32 %b) {
 define i16 @fun13(i16 %a, i16 %b) {
 ; CHECK-LABEL: 'fun13'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r = udiv i16 %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i16 %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i16 %r
 ;
   %r = udiv i16 %a, %b
   ret i16 %r
@@ -154,7 +154,7 @@ define i16 @fun13(i16 %a, i16 %b) {
 define i8 @fun14(i8 %a, i8 %b) {
 ; CHECK-LABEL: 'fun14'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r = udiv i8 %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i8 %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i8 %r
 ;
   %r = udiv i8 %a, %b
   ret i8 %r
@@ -165,11 +165,11 @@ define i8 @fun14(i8 %a, i8 %b) {
 define <2 x i64> @fun15(<2 x i64> %a, <2 x i64> %b) {
 ; Z13-LABEL: 'fun15'
 ; Z13-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %r = udiv <2 x i64> %a, %b
-; Z13-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i64> %r
+; Z13-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %r
 ;
 ; Z17-LABEL: 'fun15'
 ; Z17-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r = udiv <2 x i64> %a, %b
-; Z17-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i64> %r
+; Z17-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %r
 ;
   %r = udiv <2 x i64> %a, %b
   ret <2 x i64> %r
@@ -178,11 +178,11 @@ define <2 x i64> @fun15(<2 x i64> %a, <2 x i64> %b) {
 define <4 x i32> @fun16(<4 x i32> %a, <4 x i32> %b) {
 ; Z13-LABEL: 'fun16'
 ; Z13-NEXT:  Cost Model: Found an estimated cost of 94 for instruction: %r = udiv <4 x i32> %a, %b
-; Z13-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %r
+; Z13-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %r
 ;
 ; Z17-LABEL: 'fun16'
 ; Z17-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r = udiv <4 x i32> %a, %b
-; Z17-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %r
+; Z17-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %r
 ;
   %r = udiv <4 x i32> %a, %b
   ret <4 x i32> %r
@@ -191,11 +191,11 @@ define <4 x i32> @fun16(<4 x i32> %a, <4 x i32> %b) {
 define <2 x i32> @fun17(<2 x i32> %a, <2 x i32> %b) {
 ; Z13-LABEL: 'fun17'
 ; Z13-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %r = udiv <2 x i32> %a, %b
-; Z13-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i32> %r
+; Z13-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %r
 ;
 ; Z17-LABEL: 'fun17'
 ; Z17-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r = udiv <2 x i32> %a, %b
-; Z17-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i32> %r
+; Z17-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %r
 ;
   %r = udiv <2 x i32> %a, %b
   ret <2 x i32> %r
@@ -204,7 +204,7 @@ define <2 x i32> @fun17(<2 x i32> %a, <2 x i32> %b) {
 define <8 x i16> @fun18(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: 'fun18'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1000 for instruction: %r = udiv <8 x i16> %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i16> %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i16> %r
 ;
   %r = udiv <8 x i16> %a, %b
   ret <8 x i16> %r
@@ -213,7 +213,7 @@ define <8 x i16> @fun18(<8 x i16> %a, <8 x i16> %b) {
 define <4 x i16> @fun19(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: 'fun19'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 94 for instruction: %r = udiv <4 x i16> %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i16> %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i16> %r
 ;
   %r = udiv <4 x i16> %a, %b
   ret <4 x i16> %r
@@ -222,7 +222,7 @@ define <4 x i16> @fun19(<4 x i16> %a, <4 x i16> %b) {
 define <16 x i8> @fun20(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: 'fun20'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1000 for instruction: %r = udiv <16 x i8> %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i8> %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i8> %r
 ;
   %r = udiv <16 x i8> %a, %b
   ret <16 x i8> %r
@@ -231,7 +231,7 @@ define <16 x i8> @fun20(<16 x i8> %a, <16 x i8> %b) {
 define <8 x i8> @fun21(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: 'fun21'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1000 for instruction: %r = udiv <8 x i8> %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i8> %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i8> %r
 ;
   %r = udiv <8 x i8> %a, %b
   ret <8 x i8> %r
@@ -242,7 +242,7 @@ define <8 x i8> @fun21(<8 x i8> %a, <8 x i8> %b) {
 define i64 @fun22(i64 %a, i64 %b) {
 ; CHECK-LABEL: 'fun22'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r = srem i64 %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i64 %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i64 %r
 ;
   %r = srem i64 %a, %b
   ret i64 %r
@@ -251,7 +251,7 @@ define i64 @fun22(i64 %a, i64 %b) {
 define i32 @fun23(i32 %a, i32 %b) {
 ; CHECK-LABEL: 'fun23'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r = srem i32 %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 %r
 ;
   %r = srem i32 %a, %b
   ret i32 %r
@@ -260,7 +260,7 @@ define i32 @fun23(i32 %a, i32 %b) {
 define i16 @fun24(i16 %a, i16 %b) {
 ; CHECK-LABEL: 'fun24'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r = srem i16 %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i16 %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i16 %r
 ;
   %r = srem i16 %a, %b
   ret i16 %r
@@ -269,7 +269,7 @@ define i16 @fun24(i16 %a, i16 %b) {
 define i8 @fun25(i8 %a, i8 %b) {
 ; CHECK-LABEL: 'fun25'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r = srem i8 %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i8 %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i8 %r
 ;
   %r = srem i8 %a, %b
   ret i8 %r
@@ -280,11 +280,11 @@ define i8 @fun25(i8 %a, i8 %b) {
 define <2 x i64> @fun26(<2 x i64> %a, <2 x i64> %b) {
 ; Z13-LABEL: 'fun26'
 ; Z13-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %r = srem <2 x i64> %a, %b
-; Z13-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i64> %r
+; Z13-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %r
 ;
 ; Z17-LABEL: 'fun26'
 ; Z17-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r = srem <2 x i64> %a, %b
-; Z17-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i64> %r
+; Z17-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %r
 ;
   %r = srem <2 x i64> %a, %b
   ret <2 x i64> %r
@@ -293,11 +293,11 @@ define <2 x i64> @fun26(<2 x i64> %a, <2 x i64> %b) {
 define <4 x i32> @fun27(<4 x i32> %a, <4 x i32> %b) {
 ; Z13-LABEL: 'fun27'
 ; Z13-NEXT:  Cost Model: Found an estimated cost of 94 for instruction: %r = srem <4 x i32> %a, %b
-; Z13-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %r
+; Z13-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %r
 ;
 ; Z17-LABEL: 'fun27'
 ; Z17-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r = srem <4 x i32> %a, %b
-; Z17-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %r
+; Z17-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %r
 ;
   %r = srem <4 x i32> %a, %b
   ret <4 x i32> %r
@@ -306,11 +306,11 @@ define <4 x i32> @fun27(<4 x i32> %a, <4 x i32> %b) {
 define <2 x i32> @fun28(<2 x i32> %a, <2 x i32> %b) {
 ; Z13-LABEL: 'fun28'
 ; Z13-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %r = srem <2 x i32> %a, %b
-; Z13-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i32> %r
+; Z13-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %r
 ;
 ; Z17-LABEL: 'fun28'
 ; Z17-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r = srem <2 x i32> %a, %b
-; Z17-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i32> %r
+; Z17-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %r
 ;
   %r = srem <2 x i32> %a, %b
   ret <2 x i32> %r
@@ -319,7 +319,7 @@ define <2 x i32> @fun28(<2 x i32> %a, <2 x i32> %b) {
 define <8 x i16> @fun29(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: 'fun29'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1000 for instruction: %r = srem <8 x i16> %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i16> %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i16> %r
 ;
   %r = srem <8 x i16> %a, %b
   ret <8 x i16> %r
@@ -328,7 +328,7 @@ define <8 x i16> @fun29(<8 x i16> %a, <8 x i16> %b) {
 define <4 x i16> @fun30(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: 'fun30'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 94 for instruction: %r = srem <4 x i16> %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i16> %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i16> %r
 ;
   %r = srem <4 x i16> %a, %b
   ret <4 x i16> %r
@@ -337,7 +337,7 @@ define <4 x i16> @fun30(<4 x i16> %a, <4 x i16> %b) {
 define <16 x i8> @fun31(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: 'fun31'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1000 for instruction: %r = srem <16 x i8> %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i8> %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i8> %r
 ;
   %r = srem <16 x i8> %a, %b
   ret <16 x i8> %r
@@ -346,7 +346,7 @@ define <16 x i8> @fun31(<16 x i8> %a, <16 x i8> %b) {
 define <8 x i8> @fun32(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: 'fun32'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1000 for instruction: %r = srem <8 x i8> %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i8> %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i8> %r
 ;
   %r = srem <8 x i8> %a, %b
   ret <8 x i8> %r
@@ -357,7 +357,7 @@ define <8 x i8> @fun32(<8 x i8> %a, <8 x i8> %b) {
 define i64 @fun33(i64 %a, i64 %b) {
 ; CHECK-LABEL: 'fun33'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r = urem i64 %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i64 %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i64 %r
 ;
   %r = urem i64 %a, %b
   ret i64 %r
@@ -366,7 +366,7 @@ define i64 @fun33(i64 %a, i64 %b) {
 define i32 @fun34(i32 %a, i32 %b) {
 ; CHECK-LABEL: 'fun34'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r = urem i32 %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 %r
 ;
   %r = urem i32 %a, %b
   ret i32 %r
@@ -375,7 +375,7 @@ define i32 @fun34(i32 %a, i32 %b) {
 define i16 @fun35(i16 %a, i16 %b) {
 ; CHECK-LABEL: 'fun35'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r = urem i16 %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i16 %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i16 %r
 ;
   %r = urem i16 %a, %b
   ret i16 %r
@@ -384,7 +384,7 @@ define i16 @fun35(i16 %a, i16 %b) {
 define i8 @fun36(i8 %a, i8 %b) {
 ; CHECK-LABEL: 'fun36'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r = urem i8 %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i8 %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i8 %r
 ;
   %r = urem i8 %a, %b
   ret i8 %r
@@ -395,11 +395,11 @@ define i8 @fun36(i8 %a, i8 %b) {
 define <2 x i64> @fun37(<2 x i64> %a, <2 x i64> %b) {
 ; Z13-LABEL: 'fun37'
 ; Z13-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %r = urem <2 x i64> %a, %b
-; Z13-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i64> %r
+; Z13-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %r
 ;
 ; Z17-LABEL: 'fun37'
 ; Z17-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r = urem <2 x i64> %a, %b
-; Z17-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i64> %r
+; Z17-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %r
 ;
   %r = urem <2 x i64> %a, %b
   ret <2 x i64> %r
@@ -408,11 +408,11 @@ define <2 x i64> @fun37(<2 x i64> %a, <2 x i64> %b) {
 define <4 x i32> @fun38(<4 x i32> %a, <4 x i32> %b) {
 ; Z13-LABEL: 'fun38'
 ; Z13-NEXT:  Cost Model: Found an estimated cost of 94 for instruction: %r = urem <4 x i32> %a, %b
-; Z13-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %r
+; Z13-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %r
 ;
 ; Z17-LABEL: 'fun38'
 ; Z17-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r = urem <4 x i32> %a, %b
-; Z17-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %r
+; Z17-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %r
 ;
   %r = urem <4 x i32> %a, %b
   ret <4 x i32> %r
@@ -421,11 +421,11 @@ define <4 x i32> @fun38(<4 x i32> %a, <4 x i32> %b) {
 define <2 x i32> @fun39(<2 x i32> %a, <2 x i32> %b) {
 ; Z13-LABEL: 'fun39'
 ; Z13-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %r = urem <2 x i32> %a, %b
-; Z13-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i32> %r
+; Z13-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %r
 ;
 ; Z17-LABEL: 'fun39'
 ; Z17-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r = urem <2 x i32> %a, %b
-; Z17-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i32> %r
+; Z17-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %r
 ;
   %r = urem <2 x i32> %a, %b
   ret <2 x i32> %r
@@ -434,7 +434,7 @@ define <2 x i32> @fun39(<2 x i32> %a, <2 x i32> %b) {
 define <8 x i16> @fun40(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: 'fun40'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1000 for instruction: %r = urem <8 x i16> %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i16> %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i16> %r
 ;
   %r = urem <8 x i16> %a, %b
   ret <8 x i16> %r
@@ -443,7 +443,7 @@ define <8 x i16> @fun40(<8 x i16> %a, <8 x i16> %b) {
 define <4 x i16> @fun41(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: 'fun41'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 94 for instruction: %r = urem <4 x i16> %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i16> %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i16> %r
 ;
   %r = urem <4 x i16> %a, %b
   ret <4 x i16> %r
@@ -452,7 +452,7 @@ define <4 x i16> @fun41(<4 x i16> %a, <4 x i16> %b) {
 define <16 x i8> @fun42(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: 'fun42'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1000 for instruction: %r = urem <16 x i8> %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i8> %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i8> %r
 ;
   %r = urem <16 x i8> %a, %b
   ret <16 x i8> %r
@@ -461,7 +461,7 @@ define <16 x i8> @fun42(<16 x i8> %a, <16 x i8> %b) {
 define <8 x i8> @fun43(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: 'fun43'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1000 for instruction: %r = urem <8 x i8> %a, %b
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i8> %r
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i8> %r
 ;
   %r = urem <8 x i8> %a, %b
   ret <8 x i8> %r
@@ -471,11 +471,11 @@ define <8 x i8> @fun43(<8 x i8> %a, <8 x i8> %b) {
 define <8 x i64> @fun44(<8 x i64> %a, <8 x i64> %b) {
 ; Z13-LABEL: 'fun44'
 ; Z13-NEXT:  Cost Model: Found an estimated cost of 1000 for instruction: %r = sdiv <8 x i64> %a, %b
-; Z13-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %r
+; Z13-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i64> %r
 ;
 ; Z17-LABEL: 'fun44'
 ; Z17-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %r = sdiv <8 x i64> %a, %b
-; Z17-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %r
+; Z17-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i64> %r
 ;
   %r = sdiv <8 x i64> %a, %b
   ret <8 x i64> %r
@@ -484,11 +484,11 @@ define <8 x i64> @fun44(<8 x i64> %a, <8 x i64> %b) {
 define <8 x i32> @fun45(<8 x i32> %a, <8 x i32> %b) {
 ; Z13-LABEL: 'fun45'
 ; Z13-NEXT:  Cost Model: Found an estimated cost of 1000 for instruction: %r = urem <8 x i32> %a, %b
-; Z13-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %r
+; Z13-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %r
 ;
 ; Z17-LABEL: 'fun45'
 ; Z17-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %r = urem <8 x i32> %a, %b
-; Z17-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %r
+; Z17-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %r
 ;
   %r = urem <8 x i32> %a, %b
   ret <8 x i32> %r

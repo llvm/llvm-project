@@ -37,9 +37,9 @@ static int getMessageSelectIndex(StringRef Tag) {
   return 0;
 }
 
-llvm::SmallVector<llvm::Regex>
+SmallVector<llvm::Regex>
 ReservedIdentifierCheck::parseAllowedIdentifiers() const {
-  llvm::SmallVector<llvm::Regex> AllowedIdentifiers;
+  SmallVector<llvm::Regex> AllowedIdentifiers;
   AllowedIdentifiers.reserve(AllowedIdentifiersRaw.size());
 
   for (const auto &Identifier : AllowedIdentifiersRaw) {
@@ -102,7 +102,7 @@ static std::optional<std::string> getUnderscoreCapitalFixup(StringRef Name) {
 static bool startsWithUnderscoreInGlobalNamespace(StringRef Name,
                                                   bool IsInGlobalNamespace,
                                                   bool IsMacro) {
-  return !IsMacro && IsInGlobalNamespace && Name.starts_with("_");
+  return !IsMacro && IsInGlobalNamespace && Name.starts_with('_');
 }
 
 static std::optional<std::string>
@@ -140,7 +140,7 @@ getFailureInfoImpl(StringRef Name, bool IsInGlobalNamespace, bool IsMacro,
   using FailureInfo = RenamerClangTidyCheck::FailureInfo;
   if (!Invert) {
     std::optional<FailureInfo> Info;
-    auto AppendFailure = [&](StringRef Kind, std::string &&Fixup) {
+    const auto AppendFailure = [&](StringRef Kind, std::string &&Fixup) {
       if (!Info) {
         Info = FailureInfo{std::string(Kind), std::move(Fixup)};
       } else {
@@ -148,7 +148,7 @@ getFailureInfoImpl(StringRef Name, bool IsInGlobalNamespace, bool IsMacro,
         Info->Fixup = std::move(Fixup);
       }
     };
-    auto InProgressFixup = [&] {
+    const auto InProgressFixup = [&] {
       return llvm::transformOptional(
                  Info,
                  [](const FailureInfo &Info) { return StringRef(Info.Fixup); })

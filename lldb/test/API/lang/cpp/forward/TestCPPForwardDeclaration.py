@@ -6,7 +6,10 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class ForwardDeclarationTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def do_test(self, dictionary=None):
         """Display *bar_ptr when stopped on a function with forward declaration of struct bar."""
         self.build(dictionary=dictionary)
@@ -53,7 +56,7 @@ class ForwardDeclarationTestCase(TestBase):
         self.do_test(dict(CFLAGS_EXTRAS="-gdwarf-5 -gpubnames"))
 
     @no_debug_info_test
-    @skipIf(compiler=no_match("clang"))
+    @requireClang
     def test_simple_template_names(self):
         """Test that we are able to find complete types when using DWARF v5
         accelerator tables"""

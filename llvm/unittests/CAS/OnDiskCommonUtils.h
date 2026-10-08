@@ -17,7 +17,20 @@
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Testing/Support/Error.h"
 
+namespace llvm::cas::ondisk {
+/// Declared in the private "OnDiskCommon.h".
+Expected<uint64_t> getBootTime();
+} // namespace llvm::cas::ondisk
+
 namespace llvm::unittest::cas {
+
+/// \returns whether the boot time is known, i.e. it is supported on this
+/// platform and getting it succeeds. Validation of on-disk data is only ever
+/// skipped if it is, since otherwise it cannot be told whether the data has
+/// been validated since boot.
+inline bool isBootTimeKnown() {
+  return expectedToOptional(llvm::cas::ondisk::getBootTime()).value_or(0) != 0;
+}
 
 using namespace llvm::cas;
 using namespace llvm::cas::ondisk;

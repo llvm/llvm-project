@@ -10,6 +10,7 @@
 #include "llvm-c/Core.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/ConstantFold.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -18,7 +19,8 @@
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 
-namespace llvm {
+using namespace llvm;
+
 namespace {
 
 // Check that use count checks treat ConstantData like they have no uses.
@@ -261,9 +263,11 @@ TEST(ConstantsTest, AsInstructionsTest) {
   //        not a normal one!
   // CHECK(ConstantExpr::getGetElementPtr(Global, V, false),
   //      "getelementptr ptr, ptr @dummy, i32 1");
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   CHECK(ConstantExpr::getInBoundsGetElementPtr(PointerType::getUnqual(Context),
                                                Global, V),
         "getelementptr inbounds ptr, ptr @dummy, i32 1");
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
   CHECK(ConstantExpr::getExtractElement(P6, One),
         "extractelement <2 x i16> " P6STR ", i32 1");
@@ -290,8 +294,7 @@ TEST(ConstantsTest, ReplaceWithConstantTest) {
 
   Constant *Global =
       M->getOrInsertGlobal("dummy", PointerType::getUnqual(Context));
-  Constant *GEP = ConstantExpr::getGetElementPtr(
-      PointerType::getUnqual(Context), Global, One);
+  Constant *GEP = ConstantExpr::getPtrAdd(Global, One);
   EXPECT_DEATH(Global->replaceAllUsesWith(GEP),
                "this->replaceAllUsesWith\\(expr\\(this\\)\\) is NOT valid!");
 }
@@ -358,7 +361,7 @@ TEST(ConstantsTest, GEPReplaceWithConstant) {
   auto *C1 = ConstantInt::get(IntTy, 1);
   auto *Placeholder = new GlobalVariable(
       *M, IntTy, false, GlobalValue::ExternalWeakLinkage, nullptr);
-  auto *GEP = ConstantExpr::getGetElementPtr(IntTy, Placeholder, C1);
+  auto *GEP = ConstantExpr::getPtrAdd(Placeholder, C1);
   ASSERT_EQ(GEP->getOperand(0), Placeholder);
 
   auto *Ref =
@@ -372,6 +375,28 @@ TEST(ConstantsTest, GEPReplaceWithConstant) {
   Placeholder->replaceAllUsesWith(Alias);
   ASSERT_EQ(GEP, Ref->getInitializer());
   ASSERT_EQ(GEP->getOperand(0), Alias);
+}
+
+TEST(ConstantsTest, DSOLocalEquivalentReplaceWithAlias) {
+  LLVMContext Context;
+  std::unique_ptr<Module> M(new Module("MyModule", Context));
+
+  Type *VoidTy = Type::getVoidTy(Context);
+  FunctionType *FTy = FunctionType::get(VoidTy, false);
+  Function *F =
+      Function::Create(FTy, GlobalValue::InternalLinkage, "f", M.get());
+  auto *Equiv = DSOLocalEquivalent::get(F);
+
+  GlobalVariable *Ref = new GlobalVariable(*M, Equiv->getType(), false,
+                                           GlobalValue::ExternalLinkage, Equiv);
+  ASSERT_EQ(Equiv, Ref->getInitializer());
+
+  auto *Alias = GlobalAlias::create(FTy, 0, GlobalValue::ExternalLinkage,
+                                    "alias", F, M.get());
+  F->replaceAllUsesWith(Alias);
+
+  auto *NewEquiv = cast<DSOLocalEquivalent>(Ref->getInitializer());
+  ASSERT_EQ(NewEquiv->getGlobalValue(), Alias);
 }
 
 TEST(ConstantsTest, AliasCAPI) {
@@ -771,6 +796,34 @@ TEST(ConstantsTest, GetSplatValueRoundTrip) {
   }
 }
 
+TEST(ConstantsTest, ConstantPointerNullVectorSplat) {
+  LLVMContext Context;
+
+  PointerType *PtrTy = PointerType::getUnqual(Context);
+  Constant *ScalarNull = ConstantPointerNull::get(PtrTy);
+
+  for (unsigned Min : {1, 2, 8}) {
+    ElementCount ScalableEC = ElementCount::getScalable(Min);
+    ElementCount FixedEC = ElementCount::getFixed(Min);
+
+    for (ElementCount EC : {ScalableEC, FixedEC}) {
+      VectorType *VecTy = VectorType::get(PtrTy, EC);
+      Constant *Null = Constant::getNullValue(VecTy);
+
+      ASSERT_TRUE(isa<ConstantPointerNull>(Null));
+      EXPECT_EQ(VecTy, Null->getType());
+      EXPECT_TRUE(Null->isNullValue());
+      EXPECT_EQ(ScalarNull, Null->getSplatValue());
+      EXPECT_EQ(ScalarNull, Null->getAggregateElement(0U));
+      EXPECT_EQ(PtrTy, cast<ConstantPointerNull>(Null)->getPointerType());
+
+      Constant *Splat = ConstantVector::getSplat(EC, ScalarNull);
+      EXPECT_EQ(Null, Splat);
+      EXPECT_EQ(ScalarNull, Splat->getSplatValue());
+    }
+  }
+}
+
 TEST(ConstantsTest, ComdatUserTracking) {
   LLVMContext Context;
   Module M("MyModule", Context);
@@ -868,5 +921,109 @@ TEST(ConstantsTest, Float128Test) {
   LLVMContextDispose(C);
 }
 
+TEST(ConstantsTest, ToConstantRangeConstantByteVector) {
+  LLVMContext Context;
+  // Use 7-bit ByteType so the vector is not folded into ConstantDataVector
+  // (ConstantDataSequential only supports 8/16/32/64-bit element types).
+  ByteType *B7Ty = Type::getByteNTy(Context, 7);
+
+  ConstantByte *CB1 = ConstantByte::get(B7Ty, 10);
+  ConstantByte *CB2 = ConstantByte::get(B7Ty, 20);
+  Constant *Elts[] = {CB1, CB2};
+  Constant *CV = ConstantVector::get(Elts);
+  ASSERT_TRUE(isa<ConstantVector>(CV));
+
+  ConstantRange CR = CV->toConstantRange();
+  EXPECT_EQ(CR, ConstantRange(APInt(7, 10), APInt(7, 21)));
+
+  Constant *CVWithPoison =
+      ConstantVector::get({CB1, PoisonValue::get(B7Ty), CB2});
+  ASSERT_TRUE(isa<ConstantVector>(CVWithPoison));
+  ConstantRange CRPoison = CVWithPoison->toConstantRange();
+  EXPECT_EQ(CRPoison, ConstantRange(APInt(7, 10), APInt(7, 21)));
+}
+
+TEST(ConstantsTest, GetElementPtrDataLayout) {
+  LLVMContext Context;
+  DataLayout DL;
+  Module M("", Context);
+
+  Type *I8 = Type::getInt8Ty(Context);
+  Type *I32 = Type::getInt32Ty(Context);
+  Type *I64 = Type::getInt64Ty(Context);
+  Type *I128 = Type::getInt128Ty(Context);
+  Type *A4I32 = ArrayType::get(I32, 4);
+  Constant *I32_10 = ConstantInt::get(I32, 10);
+  Constant *I64_1 = ConstantInt::get(I64, 1);
+  Constant *I64_10 = ConstantInt::get(I64, 10);
+  Constant *I64_40 = ConstantInt::get(I64, 40);
+  Constant *I128_10 = ConstantInt::get(I128, 10);
+  Constant *V2I64_10 =
+      ConstantVector::getSplat(ElementCount::getFixed(2), I64_10);
+  Constant *V2I64_40 =
+      ConstantVector::getSplat(ElementCount::getFixed(2), I64_40);
+
+  Constant *Ptr = M.getOrInsertGlobal("dummy", I8);
+  Constant *PtrVec = ConstantVector::getSplat(ElementCount::getFixed(2), Ptr);
+  Constant *PtrToInt64 = ConstantExpr::getPtrToInt(Ptr, I64);
+  Constant *PtrToInt32 = ConstantExpr::getPtrToInt(Ptr, I32);
+
+  // No-op.
+  EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, I8, Ptr, I64_10),
+            ConstantExpr::getPtrAdd(Ptr, I64_10));
+  // Index type is canonicalized.
+  EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, I8, Ptr, I32_10),
+            ConstantExpr::getPtrAdd(Ptr, I64_10));
+  EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, I8, Ptr, I128_10),
+            ConstantExpr::getPtrAdd(Ptr, I64_10));
+  // Non-i8 base type.
+  EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, I32, Ptr, I64_10),
+            ConstantExpr::getPtrAdd(Ptr, I64_40));
+  // Multiple indices.
+  EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, A4I32, Ptr, {I64_1, I64_10}),
+            ConstantExpr::getPtrAdd(Ptr, ConstantInt::get(I64, 56)));
+  // Vector base pointer, scalar index.
+  EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, I32, PtrVec, I64_10),
+            ConstantExpr::getPtrAdd(PtrVec, I64_40));
+  // Scalar base pointer, vector index
+  EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, I32, Ptr, V2I64_10),
+            ConstantExpr::getPtrAdd(Ptr, V2I64_40));
+  // Vector base pointer, vector index.
+  EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, I32, PtrVec, V2I64_10),
+            ConstantExpr::getPtrAdd(PtrVec, V2I64_40));
+
+  // Can't represent scale * constexpr.
+  EXPECT_EQ(nullptr, ConstantExpr::getGetElementPtr(DL, I32, Ptr, PtrToInt64));
+  // Can't represent sext(constexpr).
+  EXPECT_EQ(nullptr, ConstantExpr::getGetElementPtr(DL, I8, Ptr, PtrToInt32));
+}
+
+TEST(ConstantsTest, PtrAddCAPI) {
+  LLVMContext Context;
+  DataLayout DL;
+  Module M("", Context);
+
+  Type *I8 = Type::getInt8Ty(Context);
+  Type *I32 = Type::getInt32Ty(Context);
+  Type *I64 = Type::getInt64Ty(Context);
+  Constant *Ptr = M.getOrInsertGlobal("dummy", I8);
+  Constant *PtrToInt = ConstantExpr::getPtrToInt(Ptr, I64);
+  Constant *I64_1 = ConstantInt::get(I64, 1);
+
+  EXPECT_EQ(
+      unwrap(LLVMConstPtrAdd(wrap(Ptr), wrap(I64_1), LLVMGEPFlagNUW)),
+      ConstantExpr::getPtrAdd(Ptr, I64_1, GEPNoWrapFlags::noUnsignedWrap()));
+
+  LLVMValueRef Indices[1] = {wrap(I64_1)};
+  EXPECT_EQ(unwrap(LLVMConstPtrAddFromIndices(wrap(&DL), wrap(I32), wrap(Ptr),
+                                              Indices, 1, LLVMGEPFlagInBounds)),
+            ConstantExpr::getGetElementPtr(DL, I32, Ptr, I64_1,
+                                           GEPNoWrapFlags::inBounds()));
+
+  LLVMValueRef Indices2[1] = {wrap(PtrToInt)};
+  EXPECT_EQ(unwrap(LLVMConstPtrAddFromIndices(wrap(&DL), wrap(I32), wrap(Ptr),
+                                              Indices2, 1, 0)),
+            nullptr);
+}
+
 } // end anonymous namespace
-} // end namespace llvm

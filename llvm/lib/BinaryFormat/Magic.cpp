@@ -101,6 +101,11 @@ file_magic llvm::identify_magic(StringRef Magic) {
     if (startswith(Magic, "CPCH"))
       return file_magic::clang_ast;
     break;
+  case 0x5A:
+    if (startswith(Magic,
+                   "\x5A\x4C\x81\x99\x83\x88\x6E\x15")) // "!<arch>\n" in EBCDIC
+      return file_magic::archive;
+    break;
   case '!':
     if (startswith(Magic, "!<arch>\n") || startswith(Magic, "!<thin>\n"))
       return file_magic::archive;
@@ -159,7 +164,7 @@ file_magic llvm::identify_magic(StringRef Magic) {
       else
         MinSize = sizeof(MachO::mach_header_64);
       if (Magic.size() >= MinSize)
-        type = Magic[12] << 24 | Magic[13] << 12 | Magic[14] << 8 | Magic[15];
+        type = read32be(Magic.data() + 12);
     } else if (startswith(Magic, "\xCE\xFA\xED\xFE") ||
                startswith(Magic, "\xCF\xFA\xED\xFE")) {
       /* Reverse endian */
@@ -169,7 +174,7 @@ file_magic llvm::identify_magic(StringRef Magic) {
       else
         MinSize = sizeof(MachO::mach_header_64);
       if (Magic.size() >= MinSize)
-        type = Magic[15] << 24 | Magic[14] << 12 | Magic[13] << 8 | Magic[12];
+        type = read32le(Magic.data() + 12);
     }
     switch (type) {
     default:

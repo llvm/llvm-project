@@ -174,12 +174,19 @@ define i64 @mla_i64_uses(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e) {
 }
 
 define i64 @mla_i64_mul(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e) {
-; CHECK-LABEL: mla_i64_mul:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul x8, x2, x1
-; CHECK-NEXT:    madd x9, x4, x3, x8
-; CHECK-NEXT:    add x0, x8, x9
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: mla_i64_mul:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mul x8, x4, x3
+; CHECK-SD-NEXT:    mul x9, x2, x1
+; CHECK-SD-NEXT:    add x0, x8, x9, lsl #1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: mla_i64_mul:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mul x8, x2, x1
+; CHECK-GI-NEXT:    madd x9, x4, x3, x8
+; CHECK-GI-NEXT:    add x0, x8, x9
+; CHECK-GI-NEXT:    ret
   %m1.neg = mul i64 %c, %b
   %m2.neg = mul i64 %e, %d
   %reass.add = add i64 %m2.neg, %m1.neg
@@ -266,10 +273,10 @@ define <8 x i16> @mls_v8i16_C(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c, <8 x i16
 define <8 x i16> @mla_v8i16_C(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c, <8 x i16> %d, <8 x i16> %e) {
 ; CHECK-SD-LABEL: mla_v8i16_C:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mul v1.8h, v2.8h, v1.8h
-; CHECK-SD-NEXT:    movi v0.8h, #10
-; CHECK-SD-NEXT:    mla v1.8h, v4.8h, v3.8h
-; CHECK-SD-NEXT:    add v0.8h, v1.8h, v0.8h
+; CHECK-SD-NEXT:    mul v0.8h, v2.8h, v1.8h
+; CHECK-SD-NEXT:    mla v0.8h, v4.8h, v3.8h
+; CHECK-SD-NEXT:    add z0.h, z0.h, #10 // =0xa
+; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: mla_v8i16_C:

@@ -13,9 +13,9 @@ func.func @_QPtest1(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}, %
   %c0 = arith.constant 0 : index
   %c3 = arith.constant 3 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtest1Ex"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFtest1Ex") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
   %2 = fir.shape %c3 : (index) -> !fir.shape<1>
-  %3:2 = hlfir.declare %arg1(%2) dummy_scope %0 {uniq_name = "_QFtest1Ey"} : (!fir.ref<!fir.array<3xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<3xf32>>, !fir.ref<!fir.array<3xf32>>)
+  %3:2 = hlfir.declare %arg1(%2) dummy_scope %0 uniq_name("_QFtest1Ey") : (!fir.ref<!fir.array<3xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<3xf32>>, !fir.ref<!fir.array<3xf32>>)
   %4:3 = fir.box_dims %1#0, %c0 : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
   %5 = fir.shape %4#1 : (index) -> !fir.shape<1>
   %6 = hlfir.elemental %5 unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
@@ -38,9 +38,9 @@ func.func @_QPtest1(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}, %
 func.func @_QPtest2(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}, %arg1: !fir.ref<!fir.array<3xf32>> {fir.bindc_name = "y"}) {
   %c3 = arith.constant 3 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtest2Ex"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFtest2Ex") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
   %2 = fir.shape %c3 : (index) -> !fir.shape<1>
-  %3:2 = hlfir.declare %arg1(%2) dummy_scope %0 {uniq_name = "_QFtest2Ey"} : (!fir.ref<!fir.array<3xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<3xf32>>, !fir.ref<!fir.array<3xf32>>)
+  %3:2 = hlfir.declare %arg1(%2) dummy_scope %0 uniq_name("_QFtest2Ey") : (!fir.ref<!fir.array<3xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<3xf32>>, !fir.ref<!fir.array<3xf32>>)
   %4 = hlfir.elemental %2 unordered : (!fir.shape<1>) -> !hlfir.expr<3xf32> {
   ^bb0(%arg2: index):
     %5 = hlfir.designate %3#0 (%arg2)  : (!fir.ref<!fir.array<3xf32>>, index) -> !fir.ref<f32>

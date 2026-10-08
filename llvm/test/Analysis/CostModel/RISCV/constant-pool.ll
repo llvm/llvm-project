@@ -19,15 +19,15 @@ define void @rvv_store_imm(ptr %X) {
 ; CHECK_FUSION-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'rvv_store_imm'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <2 x i8> <i8 2, i8 3>, ptr %X, align 2
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <4 x i8> <i8 2, i8 3, i8 5, i8 10>, ptr %X, align 4
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <8 x i8> <i8 2, i8 3, i8 5, i8 10, i8 11, i8 12, i8 23, i8 0>, ptr %X, align 8
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 4.5 for instruction: store <2 x i8> <i8 2, i8 3>, ptr %X, align 2
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <4 x i8> <i8 2, i8 3, i8 5, i8 10>, ptr %X, align 4
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <8 x i8> <i8 2, i8 3, i8 5, i8 10, i8 11, i8 12, i8 23, i8 0>, ptr %X, align 8
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SIZE_FUSION-LABEL: 'rvv_store_imm'
-; SIZE_FUSION-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <2 x i8> <i8 2, i8 3>, ptr %X, align 2
-; SIZE_FUSION-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <4 x i8> <i8 2, i8 3, i8 5, i8 10>, ptr %X, align 4
-; SIZE_FUSION-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <8 x i8> <i8 2, i8 3, i8 5, i8 10, i8 11, i8 12, i8 23, i8 0>, ptr %X, align 8
+; SIZE_FUSION-NEXT:  Cost Model: Found an estimated cost of 4.5 for instruction: store <2 x i8> <i8 2, i8 3>, ptr %X, align 2
+; SIZE_FUSION-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <4 x i8> <i8 2, i8 3, i8 5, i8 10>, ptr %X, align 4
+; SIZE_FUSION-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <8 x i8> <i8 2, i8 3, i8 5, i8 10, i8 11, i8 12, i8 23, i8 0>, ptr %X, align 8
 ; SIZE_FUSION-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   store <2 x i8> <i8 2, i8 3>, ptr %X

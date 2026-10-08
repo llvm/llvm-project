@@ -22,7 +22,3 @@ const ModuleChild &ModuleChild::operator=(const ModuleChild &rhs) {
 }
 
 lldb::ModuleSP ModuleChild::GetModule() const { return m_module_wp.lock(); }
-
-void ModuleChild::SetModule(const lldb::ModuleSP &module_sp) {
-  m_module_wp = module_sp;
-}

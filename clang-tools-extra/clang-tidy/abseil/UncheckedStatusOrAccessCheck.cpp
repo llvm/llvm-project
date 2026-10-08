@@ -26,7 +26,7 @@ static constexpr StringRef FuncID = "fun";
 void UncheckedStatusOrAccessCheck::registerMatchers(MatchFinder *Finder) {
   using namespace ast_matchers;
 
-  auto HasStatusOrCallDescendant =
+  const auto HasStatusOrCallDescendant =
       hasDescendant(callExpr(callee(cxxMethodDecl(ofClass(hasAnyName(
           "absl::StatusOr", "absl::internal_statusor::OperatorBase"))))));
   Finder->addMatcher(
@@ -48,7 +48,7 @@ void UncheckedStatusOrAccessCheck::check(
     return;
 
   UncheckedStatusOrAccessDiagnoser Diagnoser;
-  if (llvm::Expected<llvm::SmallVector<SourceLocation>> Locs =
+  if (llvm::Expected<SmallVector<SourceLocation>> Locs =
           dataflow::diagnoseFunction<UncheckedStatusOrAccessModel,
                                      SourceLocation>(*FuncDecl, *Result.Context,
                                                      Diagnoser))

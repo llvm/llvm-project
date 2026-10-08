@@ -12,6 +12,7 @@
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -234,6 +235,12 @@ TEST(MetadataTest, GlobalConstantMetadataUsedByDbgRecord) {
   EXPECT_EQ(DVRs[0]->getNumVariableLocationOps(), 1u);
   EXPECT_TRUE(DVRVs.size() == 1);
   EXPECT_FALSE(isa<UndefValue>(DVRs[0]->getValue(0)));
+
+  // Uses of the poison replacing @x are not tracked.
+  Value *Poison = PoisonValue::get(V->getType());
+  V->replaceAllUsesWith(Poison);
+  EXPECT_EQ(DVRVs[0]->getValue(0), Poison);
+  EXPECT_TRUE(findDVRValues(Poison).empty());
 }
 
 TEST(DbgVariableIntrinsic, EmptyMDIsKillLocation) {
@@ -526,14 +533,16 @@ TEST(DIBuilder, FixedPointType) {
   DIBuilder DIB(*M);
 
   DIFixedPointType *Ty = DIB.createBinaryFixedPointType(
-      {}, 32, 0, dwarf::DW_ATE_signed_fixed, DINode::FlagZero, -4);
+      {}, nullptr, 0, nullptr, 32, 0, dwarf::DW_ATE_signed_fixed,
+      DINode::FlagZero, -4);
   EXPECT_TRUE(Ty);
   EXPECT_TRUE(Ty->getKind() == DIFixedPointType::FixedPointBinary);
   EXPECT_TRUE(Ty->getFactor() == -4);
   EXPECT_TRUE(Ty->getEncoding() == dwarf::DW_ATE_signed_fixed);
   EXPECT_TRUE(Ty->getTag() == dwarf::DW_TAG_base_type);
 
-  Ty = DIB.createDecimalFixedPointType({}, 32, 0, dwarf::DW_ATE_unsigned_fixed,
+  Ty = DIB.createDecimalFixedPointType({}, nullptr, 0, nullptr, 32, 0,
+                                       dwarf::DW_ATE_unsigned_fixed,
                                        DINode::FlagZero, -7);
   EXPECT_TRUE(Ty);
   EXPECT_TRUE(Ty->getKind() == DIFixedPointType::FixedPointDecimal);
@@ -543,7 +552,8 @@ TEST(DIBuilder, FixedPointType) {
 
   APSInt Num(APInt(32, 1));
   APSInt Denom(APInt(33, 72));
-  Ty = DIB.createRationalFixedPointType({}, 32, 0, dwarf::DW_ATE_unsigned_fixed,
+  Ty = DIB.createRationalFixedPointType({}, nullptr, 0, nullptr, 32, 0,
+                                        dwarf::DW_ATE_unsigned_fixed,
                                         DINode::FlagZero, Num, Denom);
   EXPECT_TRUE(Ty);
   EXPECT_TRUE(Ty->getKind() == DIFixedPointType::FixedPointRational);
@@ -768,8 +778,7 @@ TEST(IRBuilder, GetSetInsertionPointWithEmptyBasicBlock) {
   Value *DIV = MetadataAsValue::get(C, (Metadata *)nullptr);
   SmallVector<Value *, 3> Args = {DIV, DIV, DIV};
   Builder.CreateCall(DbgDeclare, Args);
-  auto IP = BB->getFirstInsertionPt();
-  Builder.SetInsertPoint(BB.get(), IP);
+  Builder.SetInsertPoint(BB->getFirstInsertionPt());
 }
 
 TEST(AssignmentTrackingTest, InstrMethods) {
@@ -1033,62 +1042,63 @@ TEST(MetadataTest, ConvertDbgToDbgVariableRecord) {
   ExitBlock->createMarker(RetInst);
 
   // Insert DbgRecords into markers, order should come out DVR2, DVR1.
-  FirstInst->DebugMarker->insertDbgRecord(DVR1, false);
-  FirstInst->DebugMarker->insertDbgRecord(DVR2, true);
+  FirstInst->getDbgMarker()->insertDbgRecord(DVR1, false);
+  FirstInst->getDbgMarker()->insertDbgRecord(DVR2, true);
   unsigned int ItCount = 0;
-  for (DbgRecord &Item : FirstInst->DebugMarker->getDbgRecordRange()) {
+  for (DbgRecord &Item : FirstInst->getDbgMarker()->getDbgRecordRange()) {
     EXPECT_TRUE((&Item == DVR2 && ItCount == 0) ||
                 (&Item == DVR1 && ItCount == 1));
-    EXPECT_EQ(Item.getMarker(), FirstInst->DebugMarker);
+    EXPECT_EQ(Item.getMarker(), FirstInst->getDbgMarker());
     ++ItCount;
   }
 
   // Clone them onto the second marker -- should allocate new DVRs.
-  RetInst->DebugMarker->cloneDebugInfoFrom(FirstInst->DebugMarker, std::nullopt,
-                                           false);
-  EXPECT_EQ(RetInst->DebugMarker->StoredDbgRecords.size(), 2u);
+  RetInst->getDbgMarker()->cloneDebugInfoFrom(FirstInst->getDbgMarker(),
+                                              std::nullopt, false);
+  EXPECT_EQ(RetInst->getDbgMarker()->StoredDbgRecords.size(), 2u);
   ItCount = 0;
   // Check these things store the same information; but that they're not the same
   // objects.
   for (DbgVariableRecord &Item :
-       filterDbgVars(RetInst->DebugMarker->getDbgRecordRange())) {
+       filterDbgVars(RetInst->getDbgMarker()->getDbgRecordRange())) {
     EXPECT_TRUE(
         (Item.getRawLocation() == DVR2->getRawLocation() && ItCount == 0) ||
         (Item.getRawLocation() == DVR1->getRawLocation() && ItCount == 1));
 
-    EXPECT_EQ(Item.getMarker(), RetInst->DebugMarker);
+    EXPECT_EQ(Item.getMarker(), RetInst->getDbgMarker());
     EXPECT_NE(&Item, DVR1);
     EXPECT_NE(&Item, DVR2);
     ++ItCount;
   }
 
-  RetInst->DebugMarker->dropDbgRecords();
-  EXPECT_EQ(RetInst->DebugMarker->StoredDbgRecords.size(), 0u);
+  RetInst->getDbgMarker()->dropDbgRecords();
+  EXPECT_EQ(RetInst->getDbgMarker()->StoredDbgRecords.size(), 0u);
 
   // Try cloning one single DbgVariableRecord.
-  auto DIIt = std::next(FirstInst->DebugMarker->getDbgRecordRange().begin());
-  RetInst->DebugMarker->cloneDebugInfoFrom(FirstInst->DebugMarker, DIIt, false);
-  EXPECT_EQ(RetInst->DebugMarker->StoredDbgRecords.size(), 1u);
+  auto DIIt = std::next(FirstInst->getDbgMarker()->getDbgRecordRange().begin());
+  RetInst->getDbgMarker()->cloneDebugInfoFrom(FirstInst->getDbgMarker(), DIIt,
+                                              false);
+  EXPECT_EQ(RetInst->getDbgMarker()->StoredDbgRecords.size(), 1u);
   // The second DbgVariableRecord should have been cloned; it should have the
   // same values as DVR1.
   EXPECT_EQ(
-      cast<DbgVariableRecord>(RetInst->DebugMarker->StoredDbgRecords.begin())
+      cast<DbgVariableRecord>(RetInst->getDbgMarker()->StoredDbgRecords.begin())
           ->getRawLocation(),
       DVR1->getRawLocation());
   // We should be able to drop individual DbgRecords.
-  RetInst->DebugMarker->dropOneDbgRecord(
-      &*RetInst->DebugMarker->StoredDbgRecords.begin());
+  RetInst->getDbgMarker()->dropOneDbgRecord(
+      &*RetInst->getDbgMarker()->StoredDbgRecords.begin());
 
   // "Aborb" a DbgMarker: this means pretend that the instruction it's attached
   // to is disappearing so it needs to be transferred into "this" marker.
-  RetInst->DebugMarker->absorbDebugValues(*FirstInst->DebugMarker, true);
-  EXPECT_EQ(RetInst->DebugMarker->StoredDbgRecords.size(), 2u);
+  RetInst->getDbgMarker()->absorbDebugValues(*FirstInst->getDbgMarker(), true);
+  EXPECT_EQ(RetInst->getDbgMarker()->StoredDbgRecords.size(), 2u);
   // Should be the DVR1 and DVR2 objects.
   ItCount = 0;
-  for (DbgRecord &Item : RetInst->DebugMarker->getDbgRecordRange()) {
+  for (DbgRecord &Item : RetInst->getDbgMarker()->getDbgRecordRange()) {
     EXPECT_TRUE((&Item == DVR2 && ItCount == 0) ||
                 (&Item == DVR1 && ItCount == 1));
-    EXPECT_EQ(Item.getMarker(), RetInst->DebugMarker);
+    EXPECT_EQ(Item.getMarker(), RetInst->getDbgMarker());
     ++ItCount;
   }
 
@@ -1096,9 +1106,9 @@ TEST(MetadataTest, ConvertDbgToDbgVariableRecord) {
   // evrything in the basic block, then they should sink down into the
   // "TrailingDbgRecords" container for dangling debug-info. Future facilities
   // will restore them back when a terminator is inserted.
-  FirstInst->DebugMarker->removeMarker();
+  FirstInst->getDbgMarker()->removeMarker();
   FirstInst->eraseFromParent();
-  RetInst->DebugMarker->removeMarker();
+  RetInst->getDbgMarker()->removeMarker();
   RetInst->eraseFromParent();
 
   DbgMarker *EndMarker = ExitBlock->getTrailingDbgRecords();
@@ -1186,23 +1196,23 @@ TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
   EXPECT_EQ(BB1->size(), 2u);
   Instruction *FirstInst = &BB1->front();
   Instruction *SecondInst = FirstInst->getNextNode();
-  ASSERT_TRUE(FirstInst->DebugMarker);
-  ASSERT_TRUE(SecondInst->DebugMarker);
-  EXPECT_NE(FirstInst->DebugMarker, SecondInst->DebugMarker);
-  EXPECT_EQ(FirstInst, FirstInst->DebugMarker->MarkedInstr);
-  EXPECT_EQ(SecondInst, SecondInst->DebugMarker->MarkedInstr);
+  ASSERT_TRUE(FirstInst->getDbgMarker());
+  ASSERT_TRUE(SecondInst->getDbgMarker());
+  EXPECT_NE(FirstInst->getDbgMarker(), SecondInst->getDbgMarker());
+  EXPECT_EQ(FirstInst, FirstInst->getDbgMarker()->MarkedInstr);
+  EXPECT_EQ(SecondInst, SecondInst->getDbgMarker()->MarkedInstr);
 
-  EXPECT_EQ(FirstInst->DebugMarker->StoredDbgRecords.size(), 1u);
+  EXPECT_EQ(FirstInst->getDbgMarker()->StoredDbgRecords.size(), 1u);
   DbgVariableRecord *DVR1 = cast<DbgVariableRecord>(
-      &*FirstInst->DebugMarker->getDbgRecordRange().begin());
-  EXPECT_EQ(DVR1->getMarker(), FirstInst->DebugMarker);
+      &*FirstInst->getDbgMarker()->getDbgRecordRange().begin());
+  EXPECT_EQ(DVR1->getMarker(), FirstInst->getDbgMarker());
   // Should point at %a, an argument.
   EXPECT_TRUE(isa<Argument>(DVR1->getVariableLocationOp(0)));
 
-  EXPECT_EQ(SecondInst->DebugMarker->StoredDbgRecords.size(), 1u);
+  EXPECT_EQ(SecondInst->getDbgMarker()->StoredDbgRecords.size(), 1u);
   DbgVariableRecord *DVR2 = cast<DbgVariableRecord>(
-      &*SecondInst->DebugMarker->getDbgRecordRange().begin());
-  EXPECT_EQ(DVR2->getMarker(), SecondInst->DebugMarker);
+      &*SecondInst->getDbgMarker()->getDbgRecordRange().begin());
+  EXPECT_EQ(DVR2->getMarker(), SecondInst->getDbgMarker());
   // Should point at FirstInst.
   EXPECT_EQ(DVR2->getVariableLocationOp(0), FirstInst);
 
@@ -1211,8 +1221,8 @@ TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
   BasicBlock *BB2 = BB1->getNextNode();
   for (auto &Inst : *BB2)
     // Either there should be no marker, or it should be empty.
-    EXPECT_TRUE(!Inst.DebugMarker ||
-                Inst.DebugMarker->StoredDbgRecords.empty());
+    EXPECT_TRUE(!Inst.getDbgMarker() ||
+                Inst.getDbgMarker()->StoredDbgRecords.empty());
 
   // Validating the first block should continue to not be a problem,
   Error = verifyModule(*M, &errs(), &BrokenDebugInfo);
@@ -1226,7 +1236,7 @@ TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
   Error = verifyModule(*M, &errs(), &BrokenDebugInfo);
   EXPECT_FALSE(Error);
   EXPECT_TRUE(BrokenDebugInfo);
-  DVR1->setMarker(FirstInst->DebugMarker);
+  DVR1->setMarker(FirstInst->getDbgMarker());
 
   DILocalVariable *DLV1 = DVR1->getVariable();
   DIExpression *Expr1 = DVR1->getExpression();
@@ -1270,10 +1280,12 @@ TEST(MetadataTest, InlinedAtMethodsWithMultipleLevels) {
     !2 = !{i32 2, !"Debug Info Version", i32 3}
 
     ; Subprograms for each function in the call chain
-    !10 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 100, unit: !0)
-    !11 = distinct !DISubprogram(name: "inline1", scope: !1, file: !1, line: 200, unit: !0)
-    !12 = distinct !DISubprogram(name: "inline2", scope: !1, file: !1, line: 300, unit: !0)
-    !13 = distinct !DISubprogram(name: "inline3", scope: !1, file: !1, line: 400, unit: !0)
+    !10 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 100, type: !14, unit: !0)
+    !11 = distinct !DISubprogram(name: "inline1", scope: !1, file: !1, line: 200, type: !14, unit: !0)
+    !12 = distinct !DISubprogram(name: "inline2", scope: !1, file: !1, line: 300, type: !14, unit: !0)
+    !13 = distinct !DISubprogram(name: "inline3", scope: !1, file: !1, line: 400, type: !14, unit: !0)
+    !14 = !DISubroutineType(types: !15)
+    !15 = !{null}
 
     ; Location in inline3 (line 401), inlined at location !21
     !20 = !DILocation(line: 401, column: 5, scope: !13, inlinedAt: !21)
@@ -1415,6 +1427,68 @@ TEST(DIBuilder, CompositeTypes) {
   EXPECT_EQ(Enum->getTag(), dwarf::DW_TAG_enumeration_type);
 }
 
+TEST(DIBuilder, CompositeTypeAnnotations) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = std::make_unique<Module>("MyModule", Ctx);
+  DIBuilder DIB(*M);
+
+  DIFile *F = DIB.createFile("main.c", "/");
+  DICompileUnit *CU = DIB.createCompileUnit(
+      DISourceLanguageName(dwarf::DW_LANG_C), F, "Test", false, "", 0);
+
+  auto MakeAnnotations = [&](StringRef Tag, StringRef Value) {
+    Metadata *Ops[2] = {MDString::get(Ctx, Tag), MDString::get(Ctx, Value)};
+    SmallVector<Metadata *, 1> Nodes;
+    Nodes.push_back(MDNode::get(Ctx, Ops));
+    return DIB.getOrCreateArray(Nodes);
+  };
+
+  DINodeArray ClassAnnotations = MakeAnnotations("class_tag", "class_value");
+  DICompositeType *Class = DIB.createClassType(
+      CU, "MyClass", F, 0, 8, 8, 0, {}, nullptr, {}, 0, nullptr, nullptr,
+      "ClassUniqueIdentifier", ClassAnnotations);
+  EXPECT_EQ(Class->getAnnotations().get(), ClassAnnotations.get());
+
+  DINodeArray StructAnnotations = MakeAnnotations("struct_tag", "struct_value");
+  DICompositeType *Struct = DIB.createStructType(
+      CU, "MyStruct", F, 0, 8, 8, {}, {}, {}, 0, {}, "StructUniqueIdentifier",
+      nullptr, 0, StructAnnotations);
+  EXPECT_EQ(Struct->getAnnotations().get(), StructAnnotations.get());
+
+  DINodeArray DynStructAnnotations =
+      MakeAnnotations("dyn_struct_tag", "dyn_struct_value");
+  DIScope *SPScope = DISubprogram::getDistinct(
+      Ctx, nullptr, "", "", nullptr, 0, nullptr, 0, nullptr, 0, 0,
+      DINode::FlagZero, DISubprogram::SPFlagZero, nullptr);
+  DIVariable *Len = DIB.createAutoVariable(SPScope, "length", F, 0, nullptr,
+                                           false, DINode::FlagZero, 0);
+  DICompositeType *DynStruct = DIB.createStructType(
+      CU, "MyDynStruct", F, 0, Len, 8, DINode::FlagZero, nullptr, {}, 0,
+      nullptr, "DynStructUniqueIdentifier", nullptr, 0, DynStructAnnotations);
+  EXPECT_EQ(DynStruct->getAnnotations().get(), DynStructAnnotations.get());
+
+  DINodeArray UnionAnnotations = MakeAnnotations("union_tag", "union_value");
+  DICompositeType *Union =
+      DIB.createUnionType(CU, "MyUnion", F, 0, 8, 8, {}, {}, 0,
+                          "UnionUniqueIdentifier", UnionAnnotations);
+  EXPECT_EQ(Union->getAnnotations().get(), UnionAnnotations.get());
+
+  DICompositeType *NoAnnotClass =
+      DIB.createClassType(CU, "NoAnnotClass", F, 0, 8, 8, 0, {}, nullptr, {}, 0,
+                          nullptr, nullptr, "NoAnnotClassUniqueIdentifier");
+  EXPECT_EQ(NoAnnotClass->getAnnotations().get(), nullptr);
+
+  DICompositeType *NoAnnotStruct =
+      DIB.createStructType(CU, "NoAnnotStruct", F, 0, 8, 8, {}, {}, {}, 0, {},
+                           "NoAnnotStructUniqueIdentifier");
+  EXPECT_EQ(NoAnnotStruct->getAnnotations().get(), nullptr);
+
+  DICompositeType *NoAnnotUnion =
+      DIB.createUnionType(CU, "NoAnnotUnion", F, 0, 8, 8, {}, {}, 0,
+                          "NoAnnotUnionUniqueIdentifier");
+  EXPECT_EQ(NoAnnotUnion->getAnnotations().get(), nullptr);
+}
+
 TEST(DIBuilder, DynamicOffsetAndSize) {
   LLVMContext Ctx;
   auto M = std::make_unique<Module>("MyModule", Ctx);
@@ -1442,6 +1516,393 @@ TEST(DIBuilder, DynamicOffsetAndSize) {
 
   EXPECT_EQ(Field->getRawOffsetInBits(), Expr);
   EXPECT_EQ(Field->getRawSizeInBits(), Len);
+}
+
+// Tests for DebugLoc with intermediate location support.
+
+TEST(DebugLocTest, IntermediateLocBasics) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule", Ctx);
+  DIBuilder DIB(*M);
+  DIFile *F = DIB.createFile("source.c", "/");
+  DIFile *IntF = DIB.createFile("intermediate.ir", "/");
+  DICompileUnit *CU =
+      DIB.createCompileUnit(dwarf::DW_LANG_C, F, "test", false, "", 0);
+  DISubprogram *SP =
+      DIB.createFunction(CU, "foo", "", F, 1, DIB.createSubroutineType({}), 1,
+                         DINode::FlagZero, DISubprogram::SPFlagDefinition);
+
+  // Build a layered DILocation: a source coordinate plus one layer that hangs
+  // off the DILocation's typed `irlayers` operand.
+  MDString *Kind = MDString::get(Ctx, "IntermediateIR");
+  DILayerLoc *Layer = DILayerLoc::get(Ctx, Kind, IntF, 100, 1);
+  DILayerLocList *Layers = DILayerLocList::get(Ctx, {Layer});
+  DILocation *Loc =
+      DILocation::get(Ctx, 10, 5, SP, /*InlinedAt=*/nullptr,
+                      /*ImplicitCode=*/false, /*AtomGroup=*/0, /*AtomRank=*/0,
+                      /*IRLayers=*/Layers);
+
+  DebugLoc DL(Loc);
+  EXPECT_TRUE((bool)DL);
+  EXPECT_EQ(DL.get(), Loc);
+  EXPECT_EQ(DL.getLine(), 10u);
+  EXPECT_EQ(DL.getCol(), 5u);
+
+  // The layer list is reachable through both DebugLoc and DILocation.
+  EXPECT_EQ(DL.getRawIRLayers(), Layers);
+  ASSERT_EQ(Loc->getIRLayers(), Layers);
+  ASSERT_EQ(Loc->getNumLayers(), 1u);
+  DILayerLoc *L0 = Loc->getLayer(0);
+  ASSERT_NE(L0, nullptr);
+  EXPECT_EQ(L0->getKind(), "IntermediateIR");
+  EXPECT_EQ(L0->getFile(), IntF);
+  EXPECT_EQ(L0->getLine(), 100u);
+  EXPECT_EQ(L0->getColumn(), 1u);
+}
+
+TEST(DebugLocTest, IntermediateLocWithAndWithout) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule", Ctx);
+  DIBuilder DIB(*M);
+  DIFile *F = DIB.createFile("source.c", "/");
+  DIFile *IntF = DIB.createFile("intermediate.ir", "/");
+  DICompileUnit *CU =
+      DIB.createCompileUnit(dwarf::DW_LANG_C, F, "test", false, "", 0);
+  DISubprogram *SP =
+      DIB.createFunction(CU, "foo", "", F, 1, DIB.createSubroutineType({}), 1,
+                         DINode::FlagZero, DISubprogram::SPFlagDefinition);
+
+  // A source-only DILocation has no layers.
+  DILocation *SourceLoc = DILocation::get(Ctx, 10, 5, SP);
+  DebugLoc DLSourceOnly(SourceLoc);
+  EXPECT_EQ(SourceLoc->getRawIRLayers(), nullptr);
+  EXPECT_EQ(SourceLoc->getIRLayers(), nullptr);
+  EXPECT_EQ(SourceLoc->getNumLayers(), 0u);
+  EXPECT_EQ(DLSourceOnly.getRawIRLayers(), nullptr);
+  EXPECT_EQ(DLSourceOnly.get(), SourceLoc);
+
+  // A layered DILocation returns its list.
+  MDString *Kind = MDString::get(Ctx, "IntermediateIR");
+  DILayerLoc *Layer = DILayerLoc::get(Ctx, Kind, IntF, 100, 1);
+  DILayerLocList *Layers = DILayerLocList::get(Ctx, {Layer});
+  DILocation *LayeredLoc =
+      DILocation::get(Ctx, 10, 5, SP, /*InlinedAt=*/nullptr,
+                      /*ImplicitCode=*/false,
+                      /*AtomGroup=*/0, /*AtomRank=*/0,
+                      /*IRLayers=*/Layers);
+  DebugLoc DLWithInt(LayeredLoc);
+  EXPECT_EQ(DLWithInt.getRawIRLayers(), Layers);
+  EXPECT_EQ(LayeredLoc->getIRLayers(), Layers);
+  ASSERT_EQ(LayeredLoc->getNumLayers(), 1u);
+  EXPECT_EQ(LayeredLoc->getLayer(0)->getKind(), "IntermediateIR");
+}
+
+TEST(DebugLocTest, IntermediateLocEquality) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule", Ctx);
+  DIBuilder DIB(*M);
+  DIFile *F = DIB.createFile("source.c", "/");
+  DIFile *IntF = DIB.createFile("intermediate.ir", "/");
+  DICompileUnit *CU =
+      DIB.createCompileUnit(dwarf::DW_LANG_C, F, "test", false, "", 0);
+  DISubprogram *SP =
+      DIB.createFunction(CU, "foo", "", F, 1, DIB.createSubroutineType({}), 1,
+                         DINode::FlagZero, DISubprogram::SPFlagDefinition);
+
+  MDString *Kind = MDString::get(Ctx, "IntermediateIR");
+  DILayerLoc *LayerA = DILayerLoc::get(Ctx, Kind, IntF, 100, 1);
+  // Differs from LayerA in a single field (column only) -- a minimal structural
+  // change must still uniquify to a distinct node, so DL1 and DL2 differ.
+  DILayerLoc *LayerB = DILayerLoc::get(Ctx, Kind, IntF, 100, 2);
+  DILayerLocList *ListA = DILayerLocList::get(Ctx, {LayerA});
+  // A structurally-identical list uniques to the same node.
+  DILayerLocList *ListA2 = DILayerLocList::get(Ctx, {LayerA});
+  DILayerLocList *ListB = DILayerLocList::get(Ctx, {LayerB});
+  EXPECT_EQ(ListA, ListA2);
+  EXPECT_NE(ListA, ListB);
+
+  auto Layered = [&](DILayerLocList *L) {
+    return DILocation::get(Ctx, 10, 5, SP, /*InlinedAt=*/nullptr,
+                           /*ImplicitCode=*/false, /*AtomGroup=*/0,
+                           /*AtomRank=*/0, /*IRLayers=*/L);
+  };
+  DebugLoc DL1(Layered(ListA));
+  DebugLoc DL2(Layered(ListB));
+  DebugLoc DL3(Layered(nullptr)); // no layers
+
+  // Distinct nodes, so isSameSourceLocation cannot short-circuit on identity.
+  ASSERT_NE(DL1.get(), DL2.get());
+  ASSERT_NE(DL1.get(), DL3.get());
+  // isSameSourceLocation compares the primary position only, so differing
+  // layers and layers versus none are both the same source location.
+  EXPECT_TRUE(DL1.isSameSourceLocation(DL2));
+  EXPECT_TRUE(DL1.isSameSourceLocation(DL3));
+}
+
+TEST(DebugLocTest, MergedLocationWithIntermediate) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule", Ctx);
+  DIBuilder DIB(*M);
+  DIFile *F = DIB.createFile("source.c", "/");
+  DIFile *IntF = DIB.createFile("intermediate.ir", "/");
+  DICompileUnit *CU =
+      DIB.createCompileUnit(dwarf::DW_LANG_C, F, "test", false, "", 0);
+  DISubprogram *SP =
+      DIB.createFunction(CU, "foo", "", F, 1, DIB.createSubroutineType({}), 1,
+                         DINode::FlagZero, DISubprogram::SPFlagDefinition);
+
+  MDString *Kind = MDString::get(Ctx, "IntermediateIR");
+  // A layer shared by both locations, plus a distinct layer on each so the two
+  // DILocations are different nodes.
+  DILayerLoc *Shared = DILayerLoc::get(Ctx, Kind, IntF, 100, 1);
+  DILayerLoc *ExtraA = DILayerLoc::get(Ctx, Kind, IntF, 111, 1);
+  DILayerLoc *ExtraB = DILayerLoc::get(Ctx, Kind, IntF, 222, 1);
+  DILayerLocList *List1 = DILayerLocList::get(Ctx, {Shared, ExtraA});
+  DILayerLocList *List2 = DILayerLocList::get(Ctx, {Shared, ExtraB});
+
+  auto Layered = [&](DILayerLocList *L) {
+    return DILocation::get(Ctx, 10, 5, SP, /*InlinedAt=*/nullptr,
+                           /*ImplicitCode=*/false, /*AtomGroup=*/0,
+                           /*AtomRank=*/0, /*IRLayers=*/L);
+  };
+  DILocation *Loc1 = Layered(List1);
+  DILocation *Loc2 = Layered(List2);
+  ASSERT_NE(Loc1, Loc2);
+
+  // Merging two locations that share a DILayerLoc keeps the shared layer only.
+  DILocation *Merged = DILocation::getMergedLocation(Loc1, Loc2);
+  ASSERT_NE(Merged, nullptr);
+  EXPECT_EQ(Merged->getLine(), 10u);
+  ASSERT_NE(Merged->getIRLayers(), nullptr);
+  ASSERT_EQ(Merged->getNumLayers(), 1u);
+  EXPECT_EQ(Merged->getLayer(0), Shared);
+}
+
+TEST(DebugLocTest, MergedLocationPartialIntermediate) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule", Ctx);
+  DIBuilder DIB(*M);
+  DIFile *F = DIB.createFile("source.c", "/");
+  DIFile *IntF = DIB.createFile("intermediate.ir", "/");
+  DICompileUnit *CU =
+      DIB.createCompileUnit(dwarf::DW_LANG_C, F, "test", false, "", 0);
+  DISubprogram *SP =
+      DIB.createFunction(CU, "foo", "", F, 1, DIB.createSubroutineType({}), 1,
+                         DINode::FlagZero, DISubprogram::SPFlagDefinition);
+
+  MDString *Kind = MDString::get(Ctx, "IntermediateIR");
+  DILayerLoc *LayerA = DILayerLoc::get(Ctx, Kind, IntF, 100, 1);
+  DILayerLocList *LayersA = DILayerLocList::get(Ctx, {LayerA});
+  DILayerLoc *LayerB = DILayerLoc::get(Ctx, Kind, IntF, 200, 2);
+  DILayerLocList *LayersB = DILayerLocList::get(Ctx, {LayerB});
+
+  DILocation *Loc1 =
+      DILocation::get(Ctx, 10, 5, SP, /*InlinedAt=*/nullptr,
+                      /*ImplicitCode=*/false, /*AtomGroup=*/0, /*AtomRank=*/0,
+                      /*IRLayers=*/LayersA);
+  DILocation *Loc2 = DILocation::get(Ctx, 10, 5, SP); // no layers
+  DILocation *Loc3 =
+      DILocation::get(Ctx, 10, 5, SP, /*InlinedAt=*/nullptr,
+                      /*ImplicitCode=*/false, /*AtomGroup=*/0, /*AtomRank=*/0,
+                      /*IRLayers=*/LayersB); // disjoint layer set
+
+  // One side has no layers at all -> merged keeps none (the !LA || !LB
+  // early-out in mergeIRLayers).
+  DILocation *M12 = DILocation::getMergedLocation(Loc1, Loc2);
+  ASSERT_NE(M12, nullptr);
+  EXPECT_EQ(M12->getLine(), 10u);
+  EXPECT_EQ(M12->getRawIRLayers(), nullptr);
+
+  // Both sides have non-empty but DISJOINT layer sets -> empty intersection ->
+  // merged keeps no layers (exercises mergeIRLayers' Keep.empty() path, which
+  // must not attach an invalid empty DILayerLocList).
+  DILocation *M13 = DILocation::getMergedLocation(Loc1, Loc3);
+  ASSERT_NE(M13, nullptr);
+  EXPECT_EQ(M13->getRawIRLayers(), nullptr);
+}
+
+// Two locations inlined from different callees at the same call site have
+// only the call site in common, so merging them rebuilds the call site's
+// location. The rebuilt location keeps the call site's layers.
+TEST(DebugLocTest, MergedLocationKeepsCallSiteLayers) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule", Ctx);
+  DIBuilder DIB(*M);
+  DIFile *SrcF = DIB.createFile("source.c", "/");
+  DIFile *IntF = DIB.createFile("intermediate.ir", ".");
+  DICompileUnit *CU =
+      DIB.createCompileUnit(dwarf::DW_LANG_C, SrcF, "test", false, "", 0);
+  DISubprogram *CallerSP = DIB.createFunction(
+      CU, "caller", "", SrcF, 10, DIB.createSubroutineType({}), 10,
+      DINode::FlagZero, DISubprogram::SPFlagDefinition);
+  DISubprogram *CalleeASP = DIB.createFunction(
+      CU, "calleeA", "", SrcF, 5, DIB.createSubroutineType({}), 5,
+      DINode::FlagZero, DISubprogram::SPFlagDefinition);
+  DISubprogram *CalleeBSP = DIB.createFunction(
+      CU, "calleeB", "", SrcF, 20, DIB.createSubroutineType({}), 20,
+      DINode::FlagZero, DISubprogram::SPFlagDefinition);
+
+  MDString *Kind = MDString::get(Ctx, "IntermediateIR");
+  DILayerLoc *Layer = DILayerLoc::get(Ctx, Kind, IntF, 100, 1);
+  DILayerLocList *CallSiteLayers = DILayerLocList::get(Ctx, {Layer});
+
+  DILocation *CallSite =
+      DILocation::get(Ctx, 50, 1, CallerSP, /*InlinedAt=*/nullptr,
+                      /*ImplicitCode=*/false, /*AtomGroup=*/0, /*AtomRank=*/0,
+                      /*IRLayers=*/CallSiteLayers);
+
+  DILocation *LocA = DILocation::get(Ctx, 6, 3, CalleeASP, CallSite);
+  DILocation *LocB = DILocation::get(Ctx, 21, 3, CalleeBSP, CallSite);
+
+  DILocation *Merged = DILocation::getMergedLocation(LocA, LocB);
+  ASSERT_NE(Merged, nullptr);
+  EXPECT_EQ(Merged->getScope(), CallerSP);
+  EXPECT_EQ(Merged->getInlinedAt(), nullptr);
+  EXPECT_EQ(Merged->getIRLayers(), CallSiteLayers);
+}
+
+// Rebuilding a location with a new discriminator must carry `irlayers` over:
+// the discriminator says nothing about the intermediate-IR position. This is
+// the path AddDiscriminators, SampleProfile and loop unrolling rebuild through.
+TEST(DebugLocTest, CloneWithDiscriminatorPreservesLayers) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule", Ctx);
+  DIBuilder DIB(*M);
+  DIFile *F = DIB.createFile("source.c", "/");
+  DIFile *IntF = DIB.createFile("intermediate.ir", ".");
+  DICompileUnit *CU =
+      DIB.createCompileUnit(dwarf::DW_LANG_C, F, "test", false, "", 0);
+  DISubprogram *SP =
+      DIB.createFunction(CU, "foo", "", F, 1, DIB.createSubroutineType({}), 1,
+                         DINode::FlagZero, DISubprogram::SPFlagDefinition);
+
+  DILayerLoc *Layer =
+      DILayerLoc::get(Ctx, MDString::get(Ctx, "IntermediateIR"), IntF, 42, 5);
+  DILayerLocList *List = DILayerLocList::get(Ctx, {Layer});
+  DILocation *Loc =
+      DILocation::get(Ctx, 10, 5, SP, /*InlinedAt=*/nullptr,
+                      /*ImplicitCode=*/false, /*AtomGroup=*/0, /*AtomRank=*/0,
+                      /*IRLayers=*/List);
+  ASSERT_EQ(Loc->getIRLayers(), List);
+
+  std::optional<const DILocation *> Cloned = Loc->cloneWithBaseDiscriminator(7);
+  ASSERT_TRUE(Cloned.has_value());
+  ASSERT_NE(*Cloned, Loc);
+  EXPECT_EQ((*Cloned)->getBaseDiscriminator(), 7u);
+  EXPECT_EQ((*Cloned)->getIRLayers(), List);
+}
+
+// `distinct !DILayerLoc` is valid IR, so two structurally identical layers can
+// be different pointers. Merging must still recognize them as the same layer.
+TEST(DebugLocTest, MergedLocationDistinctLayersCompareStructurally) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule", Ctx);
+  DIBuilder DIB(*M);
+  DIFile *F = DIB.createFile("source.c", "/");
+  DIFile *IntF = DIB.createFile("intermediate.ir", ".");
+  DICompileUnit *CU =
+      DIB.createCompileUnit(dwarf::DW_LANG_C, F, "test", false, "", 0);
+  DISubprogram *SP =
+      DIB.createFunction(CU, "foo", "", F, 1, DIB.createSubroutineType({}), 1,
+                         DINode::FlagZero, DISubprogram::SPFlagDefinition);
+
+  MDString *Kind = MDString::get(Ctx, "IntermediateIR");
+  // Same fields, but each side holds its own `distinct` node, so the two shared
+  // layers are unequal pointers.
+  DILayerLoc *SharedA = DILayerLoc::getDistinct(Ctx, Kind, IntF, 100, 1);
+  DILayerLoc *SharedB = DILayerLoc::getDistinct(Ctx, Kind, IntF, 100, 1);
+  ASSERT_NE(SharedA, SharedB);
+  DILayerLoc *ExtraA = DILayerLoc::get(Ctx, Kind, IntF, 111, 1);
+  DILayerLoc *ExtraB = DILayerLoc::get(Ctx, Kind, IntF, 222, 1);
+
+  auto Layered = [&](ArrayRef<Metadata *> Layers) {
+    return DILocation::get(Ctx, 10, 5, SP, /*InlinedAt=*/nullptr,
+                           /*ImplicitCode=*/false, /*AtomGroup=*/0,
+                           /*AtomRank=*/0,
+                           /*IRLayers=*/DILayerLocList::get(Ctx, Layers));
+  };
+  DILocation *Loc1 = Layered({SharedA, ExtraA});
+  DILocation *Loc2 = Layered({SharedB, ExtraB});
+
+  DILocation *Merged = DILocation::getMergedLocation(Loc1, Loc2);
+  ASSERT_NE(Merged, nullptr);
+  // The structurally equal distinct layer survives; the divergent ones do not.
+  ASSERT_NE(Merged->getIRLayers(), nullptr);
+  ASSERT_EQ(Merged->getNumLayers(), 1u);
+  EXPECT_EQ(Merged->getLayer(0), SharedA);
+}
+
+// The layer nodes behind `irlayers` are uniqued MDNodes: structurally
+// identical DILayerLoc / DILayerLocList values map to the same pointer.
+TEST(DebugLocTest, IntermediateLocLayerUniquing) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule", Ctx);
+  DIBuilder DIB(*M);
+  DIFile *IntF = DIB.createFile("intermediate.ir", "/");
+  MDString *Kind = MDString::get(Ctx, "IntermediateIR");
+
+  // Two structurally-identical DILayerLoc::get calls return the same node.
+  DILayerLoc *L1 = DILayerLoc::get(Ctx, Kind, IntF, 100, 5);
+  DILayerLoc *L2 = DILayerLoc::get(Ctx, Kind, IntF, 100, 5);
+  EXPECT_EQ(L1, L2);
+
+  // Any differing field yields a distinct node.
+  DILayerLoc *L3 = DILayerLoc::get(Ctx, Kind, IntF, 101, 5);
+  EXPECT_NE(L1, L3);
+
+  // DILayerLocList uniques on its operands as well.
+  DILayerLocList *List1 = DILayerLocList::get(Ctx, {L1});
+  DILayerLocList *List2 = DILayerLocList::get(Ctx, {L2}); // {L2} == {L1}
+  EXPECT_EQ(List1, List2);
+
+  DILayerLocList *List3 = DILayerLocList::get(Ctx, {L1, L3});
+  EXPECT_NE(List1, List3);
+}
+
+TEST(DebugLocTest, PrintIntermediateLocWithInlinedAt) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule", Ctx);
+  DIBuilder DIB(*M);
+  DIFile *SrcF = DIB.createFile("caller.py", "/src");
+  DIFile *CalleeF = DIB.createFile("callee.py", "/src");
+  DIFile *IntF = DIB.createFile("callee.ir", "/ir");
+  DICompileUnit *CU =
+      DIB.createCompileUnit(dwarf::DW_LANG_C, SrcF, "test", false, "", 0);
+  DISubprogram *CallerSP = DIB.createFunction(
+      CU, "caller", "", SrcF, 1, DIB.createSubroutineType({}), 1,
+      DINode::FlagZero, DISubprogram::SPFlagDefinition);
+  DISubprogram *CalleeSP = DIB.createFunction(
+      CU, "callee", "", CalleeF, 1, DIB.createSubroutineType({}), 1,
+      DINode::FlagZero, DISubprogram::SPFlagDefinition);
+
+  // A DILocation carrying BOTH an inlinedAt chain and an irlayers operand.
+  DILocation *CallSiteLoc = DILocation::get(Ctx, 50, 1, CallerSP);
+  MDString *Kind = MDString::get(Ctx, "IntermediateIR");
+  DILayerLoc *Layer = DILayerLoc::get(Ctx, Kind, IntF, 100, 5);
+  DILayerLocList *Layers = DILayerLocList::get(Ctx, {Layer});
+  DILocation *Loc =
+      DILocation::get(Ctx, 10, 3, CalleeSP, CallSiteLoc,
+                      /*ImplicitCode=*/false, /*AtomGroup=*/0, /*AtomRank=*/0,
+                      /*IRLayers=*/Layers);
+
+  // Print the DILocation node itself so the typed operands are rendered.
+  std::string Result;
+  raw_string_ostream OS(Result);
+  Loc->print(OS, M.get());
+
+  // The printed node names both trailing operands.
+  EXPECT_NE(Result.find("!DILocation("), std::string::npos) << Result;
+  EXPECT_NE(Result.find("inlinedAt:"), std::string::npos) << Result;
+  EXPECT_NE(Result.find("irlayers:"), std::string::npos) << Result;
+
+  // The human-readable DebugLoc form still prints the source coordinate and its
+  // inlinedAt chain.
+  std::string DLResult;
+  raw_string_ostream DLOS(DLResult);
+  DebugLoc(Loc).print(DLOS);
+  EXPECT_NE(DLResult.find("callee.py:10:3"), std::string::npos) << DLResult;
+  EXPECT_NE(DLResult.find("@["), std::string::npos) << DLResult;
+  EXPECT_NE(DLResult.find("caller.py:50:1"), std::string::npos) << DLResult;
 }
 
 } // end namespace

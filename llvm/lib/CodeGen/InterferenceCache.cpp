@@ -129,8 +129,9 @@ bool InterferenceCache::Entry::valid(LiveIntervalUnion *LIUArray,
 }
 
 void InterferenceCache::Entry::update(unsigned MBBNum) {
+  MachineBasicBlock *MBB = MF->getBlockNumbered(MBBNum);
   SlotIndex Start, Stop;
-  std::tie(Start, Stop) = Indexes->getMBBRange(MBBNum);
+  std::tie(Start, Stop) = Indexes->getMBBRange(MBB);
 
   // Use advanceTo only when possible.
   if (PrevPos != Start) {
@@ -149,8 +150,7 @@ void InterferenceCache::Entry::update(unsigned MBBNum) {
     PrevPos = Start;
   }
 
-  MachineFunction::const_iterator MFI =
-      MF->getBlockNumbered(MBBNum)->getIterator();
+  MachineFunction::const_iterator MFI = MBB->getIterator();
   BlockInterference *BI = &Blocks[MBBNum];
   ArrayRef<SlotIndex> RegMaskSlots;
   ArrayRef<const uint32_t*> RegMaskBits;
@@ -206,7 +206,7 @@ void InterferenceCache::Entry::update(unsigned MBBNum) {
     BI = &Blocks[MBBNum];
     if (BI->Tag == Tag)
       return;
-    std::tie(Start, Stop) = Indexes->getMBBRange(MBBNum);
+    std::tie(Start, Stop) = Indexes->getMBBRange(&*MFI);
   }
 
   // Check for last interference in block.

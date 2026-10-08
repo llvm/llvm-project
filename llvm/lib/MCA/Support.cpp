@@ -14,6 +14,7 @@
 
 #include "llvm/MCA/Support.h"
 #include "llvm/MC/MCSchedule.h"
+#include "llvm/Support/Debug.h"
 #include <numeric>
 
 namespace llvm {
@@ -67,18 +68,18 @@ void computeProcResourceMasks(const MCSchedModel &SM,
     }
     ProcResourceID++;
   }
+}
 
 #ifndef NDEBUG
-  LLVM_DEBUG(dbgs() << "\nProcessor resource masks:"
-                    << "\n");
+void dumpProcResourceMasks(const MCSchedModel &SM, ArrayRef<uint64_t> Masks) {
+  dbgs() << "\nProcessor resource masks:\n";
   for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I) {
     const MCProcResourceDesc &Desc = *SM.getProcResource(I);
-    LLVM_DEBUG(dbgs() << '[' << format_decimal(I,2) << "] " << " - "
-                      << format_hex(Masks[I],16) << " - "
-                      << Desc.Name << '\n');
+    dbgs() << '[' << format_decimal(I, 2) << "] " << " - "
+           << format_hex(Masks[I], 16) << " - " << Desc.Name << '\n';
   }
-#endif
 }
+#endif
 
 double computeBlockRThroughput(const MCSchedModel &SM, unsigned DispatchWidth,
                                unsigned NumMicroOps,

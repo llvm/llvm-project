@@ -53,7 +53,7 @@ public:
   /// Ideally `FilesToRecord` should be empty.
   void checkAllFilesRecorded() {
     LLVM_DEBUG({
-      for (auto FileEntry : FilesToRecord)
+      for (const auto &FileEntry : FilesToRecord)
         llvm::dbgs() << "Did not record contents for input file: "
                      << FileEntry.getName() << "\n";
     });
@@ -88,11 +88,11 @@ ExpandModularHeadersPPCallbacks::ExpandModularHeadersPPCallbacks(
   HeaderInfo = std::make_unique<HeaderSearch>(HSOpts, Sources, Diags, LangOpts,
                                               &Compiler.getTarget());
 
-  PP = std::make_unique<clang::Preprocessor>(Compiler.getPreprocessorOpts(),
-                                             Diags, LangOpts, Sources,
-                                             *HeaderInfo, ModuleLoader,
-                                             /*IILookup=*/nullptr,
-                                             /*OwnsHeaderSearch=*/false);
+  PP = std::make_unique<Preprocessor>(Compiler.getPreprocessorOpts(), Diags,
+                                      LangOpts, Sources, *HeaderInfo,
+                                      ModuleLoader,
+                                      /*IILookup=*/nullptr,
+                                      /*OwnsHeaderSearch=*/false);
   PP->Initialize(Compiler.getTarget(), Compiler.getAuxTarget());
   InitializePreprocessor(*PP, Compiler.getPreprocessorOpts(),
                          Compiler.getPCHContainerReader(),
@@ -164,7 +164,7 @@ void ExpandModularHeadersPPCallbacks::InclusionDirective(
   if (ModuleImported) {
     serialization::ModuleFile *MF =
         Compiler.getASTReader()->getModuleManager().lookup(
-            *SuggestedModule->getASTFile());
+            *SuggestedModule->getASTFileKey());
     handleModuleFile(MF);
   }
   parseToLocation(DirectiveLoc);

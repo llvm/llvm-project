@@ -22,6 +22,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/RWMutex.h"
 #include <mutex>
 
 namespace mlir {
@@ -47,8 +48,8 @@ public:
 };
 
 /// An attribute representing a reference to a dense vector or tensor object.
-struct DenseIntOrFPElementsAttrStorage : public DenseElementsAttributeStorage {
-  DenseIntOrFPElementsAttrStorage(ShapedType ty, ArrayRef<char> data)
+struct DenseTypedElementsAttrStorage : public DenseElementsAttributeStorage {
+  DenseTypedElementsAttrStorage(ShapedType ty, ArrayRef<char> data)
       : DenseElementsAttributeStorage(ty), data(data) {}
 
   struct KeyTy {
@@ -108,7 +109,7 @@ struct DenseIntOrFPElementsAttrStorage : public DenseElementsAttributeStorage {
   }
 
   /// Construct a new storage instance.
-  static DenseIntOrFPElementsAttrStorage *
+  static DenseTypedElementsAttrStorage *
   construct(AttributeStorageAllocator &allocator, KeyTy key) {
     // If the data buffer is non-empty, we copy it into the allocator with a
     // 64-bit alignment.
@@ -120,8 +121,8 @@ struct DenseIntOrFPElementsAttrStorage : public DenseElementsAttributeStorage {
       copy = ArrayRef<char>(rawData, data.size());
     }
 
-    return new (allocator.allocate<DenseIntOrFPElementsAttrStorage>())
-        DenseIntOrFPElementsAttrStorage(key.type, copy);
+    return new (allocator.allocate<DenseTypedElementsAttrStorage>())
+        DenseTypedElementsAttrStorage(key.type, copy);
   }
 
   ArrayRef<char> data;
@@ -321,18 +322,33 @@ public:
   operator=(const DistinctAttributeAllocator &) = delete;
 
   DistinctAttrStorage *allocate(Attribute referencedAttr) {
-    std::scoped_lock<std::mutex> guard(allocatorMutex);
-    return new (allocator.Allocate<DistinctAttrStorage>())
+    llvm::sys::SmartScopedWriter<true> guard(allocatorMutex);
+    llvm::BumpPtrAllocator &alloc =
+        transientAllocator ? *transientAllocator : allocator;
+    return new (alloc.Allocate<DistinctAttrStorage>())
         DistinctAttrStorage(referencedAttr);
-  };
+  }
+
+  void beginTransientScope() {
+    assert(!transientAllocator &&
+           "distinct attribute allocator is already in a transient scope");
+    transientAllocator = std::make_unique<llvm::BumpPtrAllocator>();
+  }
+
+  void endTransientScope() { transientAllocator.reset(); }
+
+  bool isInTransientScope() const { return transientAllocator != nullptr; }
 
 private:
-  /// Used to allocate distict attribute storages. The managed memory is freed
-  /// automatically when the allocator instance is destroyed.
+  /// Used to allocate distinct attribute storages in base layer.
   llvm::BumpPtrAllocator allocator;
 
-  /// Used to lock access to the allocator.
-  std::mutex allocatorMutex;
+  /// Used to allocate distinct attribute storages in transient layer.
+  std::unique_ptr<llvm::BumpPtrAllocator> transientAllocator;
+
+  /// Used to synchronize access to the allocator. Uses a RW mutex so that
+  /// isInTransientScope() can take a cheap reader lock.
+  mutable llvm::sys::SmartRWMutex<true> allocatorMutex;
 };
 } // namespace detail
 } // namespace mlir

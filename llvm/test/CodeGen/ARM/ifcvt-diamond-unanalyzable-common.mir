@@ -36,7 +36,7 @@ body:             |
   ; CHECK-NEXT:   t2B %bb.1, 14 /* CC::al */, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect
   ; CHECK-NEXT:   $sp = t2LDMIA_RET $sp, 14 /* CC::al */, $noreg, def $r4, def $pc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.l_yes (ir-block-address-taken %ir-block.l_yes):
@@ -72,7 +72,7 @@ body:             |
     t2B %bb.3, 14, $noreg
 
   bb.3:
-    INLINEASM &"", 1
+    INLINEASM &"", sideeffect attdialect
     $sp = t2LDMIA_RET $sp, 14, $noreg, def $r4, def $pc
 
   bb.4.l_yes (ir-block-address-taken %ir-block.l_yes):

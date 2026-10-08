@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm64-unknown-unknown -o %t.o %s
-# RUN: wasm-ld -mwasm64 --experimental-pic --unresolved-symbols=import-dynamic -shared -o %t.wasm %t.o
+# RUN: wasm-ld -mwasm64 --unresolved-symbols=import-dynamic -shared -o %t.wasm %t.o
 # RUN: obj2yaml %t.wasm | FileCheck %s
 # RUN: llvm-objdump --disassemble-symbols=__wasm_call_ctors,__wasm_apply_data_relocs --no-show-raw-insn --no-leading-addr %t.wasm | FileCheck %s --check-prefixes DIS
 
@@ -130,6 +130,7 @@ get_local_func_address:
 # CHECK:      Sections:
 # CHECK-NEXT:   - Type:            CUSTOM
 # CHECK-NEXT:     Name:            dylink.0
+# CHECK-NEXT:     TargetArch:      wasm64
 # CHECK-NEXT:     MemorySize:      36
 # CHECK-NEXT:     MemoryAlignment: 2
 # CHECK-NEXT:     TableSize:       2

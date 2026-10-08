@@ -93,7 +93,7 @@ attributes #4 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 attributes #5 = { "disable-tail-calls"="true" }
 attributes #6 = { builtin }
 
-!0 = !{!1, !3, !5}
+!0 = !{!3, !5, !1}
 !1 = !{!2, !"cold"}
 !2 = !{i64 -3461278137325233666, i64 -7799663586031895603}
 !3 = !{!4, !"notcold"}

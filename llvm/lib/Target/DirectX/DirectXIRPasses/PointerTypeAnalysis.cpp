@@ -63,6 +63,10 @@ Type *classifyPointerType(const Value *V, PointerTypeMap &Map) {
       // When store value is ptr type, cannot get more type info.
       if (NewPointeeTy->isPointerTy())
         continue;
+    } else if (const auto *Inst = dyn_cast<AtomicRMWInst>(User)) {
+      NewPointeeTy = Inst->getValOperand()->getType();
+    } else if (const auto *Inst = dyn_cast<AtomicCmpXchgInst>(User)) {
+      NewPointeeTy = Inst->getNewValOperand()->getType();
     } else if (const auto *GEP = dyn_cast<GEPOperator>(User)) {
       NewPointeeTy = GEP->getSourceElementType();
     }
@@ -81,8 +85,12 @@ Type *classifyPointerType(const Value *V, PointerTypeMap &Map) {
     }
   }
   // If we were unable to determine the pointee type, set to i8
+  // If we were able to determine the pointee type as ptr, set to i8*
   if (!PointeeTy)
     PointeeTy = Type::getInt8Ty(V->getContext());
+  if (PointeeTy->isPointerTy())
+    PointeeTy = TypedPointerType::get(Type::getInt8Ty(V->getContext()),
+                                      PointeeTy->getPointerAddressSpace());
   auto *TypedPtrTy =
       TypedPointerType::get(PointeeTy, V->getType()->getPointerAddressSpace());
 
@@ -135,10 +143,11 @@ Type *classifyFunctionType(const Function &F, PointerTypeMap &Map) {
 
 static Type *classifyConstantWithOpaquePtr(const Constant *C,
                                            PointerTypeMap &Map) {
-  // FIXME: support ConstantPointerNull which could map to more than one
-  // TypedPointerType.
-  // See https://github.com/llvm/llvm-project/issues/57942.
-  if (isa<ConstantPointerNull>(C))
+  // FIXME: support ConstantPointerNull and UndefValue which could map to more
+  // than one TypedPointerType. See
+  // https://github.com/llvm/llvm-project/issues/57942.
+  if (isa<ConstantPointerNull>(C) ||
+      (isa<UndefValue>(C) && C->getType()->isPointerTy()))
     return TypedPointerType::get(Type::getInt8Ty(C->getContext()),
                                  C->getType()->getPointerAddressSpace());
 
@@ -193,7 +202,13 @@ static Type *classifyConstantWithOpaquePtr(const Constant *C,
 
 static void classifyGlobalCtorPointerType(const GlobalVariable &GV,
                                           PointerTypeMap &Map) {
-  const auto *CA = cast<ConstantArray>(GV.getInitializer());
+  const auto *CA = dyn_cast<ConstantArray>(GV.getInitializer());
+  if (!CA) {
+    // An empty global_ctors will be a zeroinitializer, so just skip it.
+    assert(isa<ConstantAggregateZero>(GV.getInitializer()) &&
+           "global_ctors should be a ConstantArray or ConstantAggregateZero");
+    return;
+  }
   // Type for global ctor should be array of { i32, void ()*, i8* }.
   Type *CtorArrayTy = classifyConstantWithOpaquePtr(CA, Map);
 

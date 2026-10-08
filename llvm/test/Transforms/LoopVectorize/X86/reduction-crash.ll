@@ -24,7 +24,7 @@ define void @pr15344(ptr noalias %ar, ptr noalias %ar2, i32 %exit.limit, i1 %con
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[EXIT_LIMIT]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[EXIT_LIMIT]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[EXIT_LIMIT]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:

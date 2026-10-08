@@ -33,7 +33,7 @@ static cl::opt<bolt::PLTCall::OptType>
                               "optimize executed (hot) PLT calls"),
                    clEnumValN(bolt::PLTCall::OT_ALL, "all",
                               "optimize all PLT calls")),
-        cl::ZeroOrMore, cl::cat(BoltOptCategory));
+        cl::cat(BoltOptCategory));
 }
 
 namespace llvm {

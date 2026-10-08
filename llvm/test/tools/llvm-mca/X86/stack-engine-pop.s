@@ -89,4 +89,4 @@ popq %r12
 # CHECK-NEXT: 3.     2     2.0    1.0    0.0       popq	%rdx
 # CHECK-NEXT: 4.     2     2.5    1.5    0.0       popq	%rbx
 # CHECK-NEXT: 5.     2     3.0    2.0    0.0       popq	%r12
-# CHECK-NEXT:        2     2.2    1.0    0.5       <total>
+# CHECK-NEXT:        12    2.2    1.0    0.5       <total>

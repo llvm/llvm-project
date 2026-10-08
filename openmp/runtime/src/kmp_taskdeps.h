@@ -96,7 +96,7 @@ extern void __kmpc_give_task(kmp_task_t *ptask, kmp_int32 start);
 
 static inline void __kmp_release_deps(kmp_int32 gtid, kmp_taskdata_t *task) {
 
-#if OMPX_TASKGRAPH
+#if OMP_TASKGRAPH_EXPERIMENTAL
   if (task->is_taskgraph && !(__kmp_tdg_is_recording(task->tdg->tdg_status))) {
     kmp_node_info_t *TaskInfo = &(task->tdg->record_map[task->td_tdg_task_id]);
 
@@ -140,7 +140,7 @@ static inline void __kmp_release_deps(kmp_int32 gtid, kmp_taskdata_t *task) {
                 gtid, task));
 
   KMP_ACQUIRE_DEPNODE(gtid, node);
-#if OMPX_TASKGRAPH
+#if OMP_TASKGRAPH_EXPERIMENTAL
   if (!task->is_taskgraph ||
       (task->is_taskgraph && !__kmp_tdg_is_recording(task->tdg->tdg_status)))
 #endif

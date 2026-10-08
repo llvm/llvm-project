@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s 2>&1 | FileCheck --check-prefix=ERROR %s
+; RUN: not llc -mtriple=amdgpu9.00-amd-amdhsa < %s 2>&1 | FileCheck --check-prefix=ERROR %s
 
 ; ERROR: error: can't parse integer attribute -1 in amdgpu-max-num-workgroups
 define amdgpu_kernel void @empty_max_num_workgroups_neg_num1() #21 {

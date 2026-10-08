@@ -1,0 +1,7 @@
+static_library("lib") {
+  output_name = "LLVMLlcDriver"
+  sources = [
+    "llcdriver.cpp",
+    "NewPMDriver.cpp",
+  ]
+}

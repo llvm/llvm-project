@@ -52,7 +52,7 @@ static cl::opt<bool> HexagonMaskedVMem("hexagon-masked-vmem", cl::init(true),
 static const unsigned FloatFactor = 4;
 
 bool HexagonTTIImpl::useHVX() const {
-  return ST.useHVXOps() && HexagonAutoHVX;
+  return ST.useHVXOps() && HexagonAutoHVX && !IsHMX;
 }
 
 bool HexagonTTIImpl::isHVXVectorType(Type *Ty) const {
@@ -115,7 +115,9 @@ unsigned HexagonTTIImpl::getNumberOfRegisters(unsigned ClassID) const {
   return 32;
 }
 
-unsigned HexagonTTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
+unsigned
+HexagonTTIImpl::getMaxInterleaveFactor(ElementCount VF,
+                                       bool HasUnorderedReductions) const {
   return useHVX() ? 2 : 1;
 }
 
@@ -174,6 +176,12 @@ InstructionCost HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                                 TTI::OperandValueInfo OpInfo,
                                                 const Instruction *I) const {
   assert(Opcode == Instruction::Load || Opcode == Instruction::Store);
+
+  // FIXME: Load latency isn't handled here
+  if (Opcode == Instruction::Load && CostKind == TTI::TCK_Latency)
+    return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
+                                  CostKind, OpInfo, I);
+
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return 1;
@@ -223,12 +231,11 @@ InstructionCost HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                 OpInfo, I);
 }
 
-InstructionCost
-HexagonTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
-                               VectorType *SrcTy, ArrayRef<int> Mask,
-                               TTI::TargetCostKind CostKind, int Index,
-                               VectorType *SubTp, ArrayRef<const Value *> Args,
-                               const Instruction *CxtI) const {
+InstructionCost HexagonTTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CtxI,
+    TTI::VectorInstrContext VIC) const {
   return 1;
 }
 
@@ -262,11 +269,11 @@ InstructionCost HexagonTTIImpl::getCmpSelInstrCost(
 InstructionCost HexagonTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info, Args, CxtI);
+                                         Op2Info, Args, CtxI);
 
   if (Ty->isVectorTy()) {
     if (!isHVXVectorType(Ty) && Ty->isFPOrFPVectorTy())
@@ -276,7 +283,7 @@ InstructionCost HexagonTTIImpl::getArithmeticInstrCost(
       return LT.first + FloatFactor * getTypeNumElements(Ty);
   }
   return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                       Args, CxtI);
+                                       Args, CtxI);
 }
 
 InstructionCost HexagonTTIImpl::getCastInstrCost(unsigned Opcode, Type *DstTy,
@@ -446,4 +453,18 @@ HexagonTTIImpl::getInstructionCost(const User *U,
 
 bool HexagonTTIImpl::shouldBuildLookupTables() const {
   return EmitLookupTables;
+}
+
+bool HexagonTTIImpl::areInlineCompatible(const Function *Caller,
+                                         const Function *Callee) const {
+  // HVX contexts are a fixed hardware resource, held by threads dedicated to
+  // HVX. HVX reaching a thread without one stalls, and deadlocks if the two
+  // then meet at a barrier.
+  if (Caller->hasFnAttribute("hexagon_hmx") !=
+      Callee->hasFnAttribute("hexagon_hmx"))
+    return false;
+  if (Callee->hasFnAttribute("hexagon_hvx") &&
+      !Caller->hasFnAttribute("hexagon_hvx"))
+    return false;
+  return BaseT::areInlineCompatible(Caller, Callee);
 }

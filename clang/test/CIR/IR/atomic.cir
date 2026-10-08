@@ -32,3 +32,17 @@ cir.func @atomic_cmpxchg(%ptr: !cir.ptr<!s32i>, %expected: !s32i, %desired: !s32
   // CHECK: cir.atomic.cmpxchg weak success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
   cir.return
 }
+
+cir.func @atomic_fetch_uinc_wrap(%ptr: !cir.ptr<!s32i>, %val: !s32i) {
+  // CHECK-LABEL: @atomic_fetch_uinc_wrap
+  %0 = cir.atomic.fetch uinc_wrap seq_cst syncscope(system) fetch_first %ptr, %val : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CHECK: cir.atomic.fetch uinc_wrap seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  cir.return
+}
+
+cir.func @atomic_fetch_udec_wrap(%ptr: !cir.ptr<!s32i>, %val: !s32i) {
+  // CHECK-LABEL: @atomic_fetch_udec_wrap
+  %0 = cir.atomic.fetch udec_wrap seq_cst syncscope(system) fetch_first %ptr, %val : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CHECK: cir.atomic.fetch udec_wrap seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  cir.return
+}

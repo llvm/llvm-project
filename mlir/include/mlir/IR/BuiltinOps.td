@@ -31,7 +31,8 @@ class Builtin_Op<string mnemonic, list<Trait> traits = []> :
 //===----------------------------------------------------------------------===//
 
 def ModuleOp : Builtin_Op<"module", [
-    AffineScope, IsolatedFromAbove, NoRegionArguments, SymbolTable, Symbol,
+    AffineScope, IsolatedFromAbove, NoRegionArguments, SymbolTable, SymbolName,
+    SymbolVisibility, Symbol,
     OpAsmOpInterface
   ] # GraphRegionNoTerminator.traits> {
   let summary = "A top level container operation";
@@ -57,7 +58,7 @@ def ModuleOp : Builtin_Op<"module", [
                        OptionalAttr<StrAttr>:$sym_visibility);
   let regions = (region SizedRegion<1>:$bodyRegion);
 
-  let assemblyFormat = "($sym_name^)? attr-dict-with-keyword $bodyRegion";
+  let assemblyFormat = "($sym_name^)? prop-dict attr-dict-with-keyword $bodyRegion";
   let builders = [OpBuilder<(ins CArg<"std::optional<StringRef>", "{}">:$name)>];
   let extraClassDeclaration = [{
     /// Construct a module from the given location with an optional name.

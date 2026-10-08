@@ -21,6 +21,8 @@
 // FIXME: Implement.
 // XFAIL: lsan, hwasan
 
+// UNSUPPORTED: rtsan
+
 int global;
 
 int main() {

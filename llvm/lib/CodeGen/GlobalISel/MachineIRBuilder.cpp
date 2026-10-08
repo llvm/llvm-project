@@ -9,6 +9,7 @@
 /// This file implements the MachineIRBuidler class.
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -108,6 +109,8 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
     return &C;
   }();
 
+  bool IsIndirect = true;
+  int64_t GlobalOffset;
   if (auto *CI = dyn_cast<ConstantInt>(NumericConstant)) {
     if (CI->getBitWidth() > 64)
       MIB.addCImm(CI);
@@ -119,12 +122,32 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
     MIB.addFPImm(CFP);
   } else if (isa<ConstantPointerNull>(NumericConstant)) {
     MIB.addImm(0);
+  } else if (const GlobalValue *GV = getDescribableGlobalAddress(
+                 NumericConstant, GlobalOffset, getMF())) {
+    // The address of a global is a direct link-time constant. A displacement
+    // from it rides along in the expression rather than in the operand.
+    MIB.addGlobalAddress(GV);
+    if (GlobalOffset) {
+      SmallVector<uint64_t, 3> Ops;
+      DIExpression::appendOffset(Ops, GlobalOffset);
+      Expr = DIExpression::appendOpsToArg(cast<DIExpression>(Expr), Ops, 0,
+                                          /*StackValue=*/false);
+    }
+    IsIndirect = false;
   } else {
     // Insert $noreg if we didn't find a usable constant and had to drop it.
     MIB.addReg(Register());
   }
 
-  MIB.addImm(0).addMetadata(Variable).addMetadata(Expr);
+  // DBG_VALUE spells an indirect location with a zero immediate offset operand
+  // and a direct one with $noreg. isIndirectDebugValue() ignores the offset for
+  // a non-register location operand, but isDebugOffsetImm() does not, and
+  // several consumers ask that instead.
+  if (IsIndirect)
+    MIB.addImm(0);
+  else
+    MIB.addReg(Register());
+  MIB.addMetadata(Variable).addMetadata(Expr);
   return insertInstr(MIB);
 }
 
@@ -248,7 +271,7 @@ MachineInstrBuilder MachineIRBuilder::buildMaskLowPtrBits(const DstOp &Res,
                                                           const SrcOp &Op0,
                                                           uint32_t NumBits) {
   LLT PtrTy = Res.getLLTTy(*getMRI());
-  LLT MaskTy = LLT::scalar(PtrTy.getSizeInBits());
+  LLT MaskTy = LLT::integer(PtrTy.getSizeInBits());
   Register MaskReg = getMRI()->createGenericVirtualRegister(MaskTy);
   buildConstant(MaskReg, maskTrailingZeros<uint64_t>(NumBits));
   return buildPtrMask(Res, Op0, MaskReg);
@@ -409,9 +432,11 @@ MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
                                                      double Val) {
   LLT DstTy = Res.getLLTTy(*getMRI());
   auto &Ctx = getMF().getFunction().getContext();
-  auto *CFP =
-      ConstantFP::get(Ctx, getAPFloatFromSize(Val, DstTy.getScalarSizeInBits()));
-  return buildFConstant(Res, *CFP);
+  APFloat APF(Val);
+  bool Ignored;
+  APF.convert(getFltSemanticForLLT(DstTy.getScalarType()),
+              APFloat::rmNearestTiesToEven, &Ignored);
+  return buildFConstant(Res, *ConstantFP::get(Ctx, APF));
 }
 
 MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
@@ -496,6 +521,20 @@ MachineInstrBuilder MachineIRBuilder::buildStore(const SrcOp &Val,
   assert(Addr.getLLTTy(*getMRI()).isPointer() && "invalid operand type");
 
   auto MIB = buildInstr(TargetOpcode::G_STORE);
+  Val.addSrcToMIB(MIB);
+  Addr.addSrcToMIB(MIB);
+  MIB.addMemOperand(&MMO);
+  return MIB;
+}
+
+MachineInstrBuilder MachineIRBuilder::buildStoreInstr(unsigned Opcode,
+                                                      const SrcOp &Val,
+                                                      const SrcOp &Addr,
+                                                      MachineMemOperand &MMO) {
+  assert(Val.getLLTTy(*getMRI()).isValid() && "invalid operand type");
+  assert(Addr.getLLTTy(*getMRI()).isPointer() && "invalid operand type");
+
+  auto MIB = buildInstr(Opcode);
   Val.addSrcToMIB(MIB);
   Addr.addSrcToMIB(MIB);
   MIB.addMemOperand(&MMO);
@@ -587,7 +626,8 @@ MachineInstrBuilder MachineIRBuilder::buildExtOrTrunc(unsigned ExtOpc,
            Op.getLLTTy(*getMRI()).getSizeInBits())
     Opcode = TargetOpcode::G_TRUNC;
   else
-    assert(Res.getLLTTy(*getMRI()) == Op.getLLTTy(*getMRI()));
+    assert(Res.getLLTTy(*getMRI()).getSizeInBits() ==
+           Op.getLLTTy(*getMRI()).getSizeInBits());
 
   return buildInstr(Opcode, Res, Op);
 }
@@ -786,7 +826,7 @@ MachineInstrBuilder MachineIRBuilder::buildShuffleSplat(const DstOp &Res,
   assert(Src.getLLTTy(*getMRI()) == DstTy.getElementType() &&
          "Expected Src to match Dst elt ty");
   auto UndefVec = buildUndef(DstTy);
-  auto Zero = buildConstant(LLT::scalar(64), 0);
+  auto Zero = buildConstant(LLT::integer(64), 0);
   auto InsElt = buildInsertVectorElement(DstTy, UndefVec, Src, Zero);
   SmallVector<int, 16> ZeroMask(DstTy.getNumElements());
   return buildShuffleVector(DstTy, InsElt, UndefVec, ZeroMask);
@@ -1431,6 +1471,65 @@ MachineIRBuilder::buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
     assert(DstOps[0].getLLTTy(*getMRI()).getElementCount() ==
                SrcOps[0].getLLTTy(*getMRI()).getElementCount() &&
            "Type mismatch");
+    break;
+  }
+  case TargetOpcode::G_INSERT_SUBVECTOR: {
+    assert(DstOps.size() == 1 && "Invalid Dst");
+    assert(SrcOps.size() == 3 && "Invalid Srcs");
+    [[maybe_unused]] LLT DstTy = DstOps[0].getLLTTy(*getMRI());
+    [[maybe_unused]] LLT BigVecTy = SrcOps[0].getLLTTy(*getMRI());
+    [[maybe_unused]] LLT SubVecTy = SrcOps[1].getLLTTy(*getMRI());
+    assert(DstTy == BigVecTy &&
+           "Dest and insert subvector source types must match!");
+    assert(DstTy.isVector() && SubVecTy.isVector() &&
+           "Insert subvector VTs must be vectors!");
+    assert(DstTy.getElementType() == SubVecTy.getElementType() &&
+           "Insert subvector VTs must have the same element type!");
+    assert((DstTy.isScalable() || !SubVecTy.isScalable()) &&
+           "Cannot insert a scalable vector into a fixed length vector!");
+    assert((DstTy.isScalable() != SubVecTy.isScalable() ||
+            DstTy.getElementCount().getKnownMinValue() >=
+                SubVecTy.getElementCount().getKnownMinValue()) &&
+           "Insert subvector must be from smaller vector to larger vector!");
+    assert(SrcOps[2].getSrcOpKind() == SrcOp::SrcType::Ty_Imm &&
+           "Insert subvector index must be constant");
+    assert((DstTy.isScalable() != SubVecTy.isScalable() ||
+            (SubVecTy.getElementCount().getKnownMinValue() +
+             (uint64_t)SrcOps[2].getImm()) <=
+                DstTy.getElementCount().getKnownMinValue()) &&
+           "Insert subvector overflow!");
+    assert((uint64_t)SrcOps[2].getImm() %
+                   SubVecTy.getElementCount().getKnownMinValue() ==
+               0 &&
+           "Insert index is not a multiple of the subvector length");
+    break;
+  }
+  case TargetOpcode::G_EXTRACT_SUBVECTOR: {
+    assert(DstOps.size() == 1 && "Invalid Dst");
+    assert(SrcOps.size() == 2 && "Invalid Srcs");
+    [[maybe_unused]] LLT DstTy = DstOps[0].getLLTTy(*getMRI());
+    [[maybe_unused]] LLT SrcVecTy = SrcOps[0].getLLTTy(*getMRI());
+    assert(DstTy.isVector() && SrcVecTy.isVector() &&
+           "Extract subvector VTs must be vectors!");
+    assert(DstTy.getElementType() == SrcVecTy.getElementType() &&
+           "Extract subvector VTs must have the same element type!");
+    assert((!DstTy.isScalable() || SrcVecTy.isScalable()) &&
+           "Cannot extract a scalable vector from a fixed length vector!");
+    assert((DstTy.isScalable() != SrcVecTy.isScalable() ||
+            DstTy.getElementCount().getKnownMinValue() <=
+                SrcVecTy.getElementCount().getKnownMinValue()) &&
+           "Extract subvector must be from larger vector to smaller vector!");
+    assert(SrcOps[1].getSrcOpKind() == SrcOp::SrcType::Ty_Imm &&
+           "Extract subvector index must be a constant");
+    assert((DstTy.isScalable() != SrcVecTy.isScalable() ||
+            (DstTy.getElementCount().getKnownMinValue() +
+             (uint64_t)SrcOps[1].getImm()) <=
+                SrcVecTy.getElementCount().getKnownMinValue()) &&
+           "Extract subvector overflow!");
+    assert((uint64_t)SrcOps[1].getImm() %
+                   DstTy.getElementCount().getKnownMinValue() ==
+               0 &&
+           "Extract index is not a multiple of the output vector length");
     break;
   }
   case TargetOpcode::G_BUILD_VECTOR: {

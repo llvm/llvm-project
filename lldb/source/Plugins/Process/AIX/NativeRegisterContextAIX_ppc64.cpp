@@ -9,6 +9,9 @@
 #if defined(__powerpc64__)
 
 #include "NativeRegisterContextAIX_ppc64.h"
+#include "NativeThreadAIX.h"
+#include "Plugins/Process/Utility/RegisterInfoPOSIX_ppc64.h"
+#include "lldb/Utility/RegisterValue.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -87,11 +90,36 @@ static const RegisterSet g_reg_sets_ppc64[k_num_register_sets] = {
     {"VSX Registers", "vsx", k_num_vsx_registers_ppc64, g_vsx_regnums_ppc64},
 };
 
+std::unique_ptr<NativeRegisterContextAIX>
+NativeRegisterContextAIX::CreateHostNativeRegisterContextAIX(
+    const ArchSpec &target_arch, NativeThreadAIX &native_thread) {
+  switch (target_arch.GetMachine()) {
+  case llvm::Triple::ppc:
+  case llvm::Triple::ppc64:
+    return std::make_unique<NativeRegisterContextAIX_ppc64>(target_arch,
+                                                            native_thread);
+  default:
+    llvm_unreachable("have no register context for architecture");
+  }
+}
+
 NativeRegisterContextAIX_ppc64::NativeRegisterContextAIX_ppc64(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
-    : NativeRegisterContextAIX(native_thread) {
-  if (target_arch.GetMachine() != llvm::Triple::ppc64)
+    : NativeRegisterContextRegisterInfo(
+          native_thread, new RegisterInfoPOSIX_ppc64(target_arch)),
+      NativeRegisterContextAIX(native_thread) {
+  switch (target_arch.GetMachine()) {
+  case llvm::Triple::ppc:
+    new (&m_gpr_storage.gpr32) GPR_PPC{};
+    m_gpr = &m_gpr_storage.gpr32;
+    break;
+  case llvm::Triple::ppc64:
+    new (&m_gpr_storage.gpr32) GPR_PPC64{};
+    m_gpr = &m_gpr_storage.gpr64;
+    break;
+  default:
     llvm_unreachable("Unhandled target architecture.");
+  }
 }
 
 uint32_t NativeRegisterContextAIX_ppc64::GetRegisterSetCount() const {
@@ -116,13 +144,56 @@ uint32_t NativeRegisterContextAIX_ppc64::GetUserRegisterCount() const {
 Status
 NativeRegisterContextAIX_ppc64::ReadRegister(const RegisterInfo *reg_info,
                                              RegisterValue &reg_value) {
-  return Status("unimplemented");
+  Status error;
+  if (!reg_info)
+    return Status::FromErrorString("reg_info NULL");
+
+  const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
+
+  if (IsGPR(reg)) {
+    error = ReadGPR();
+    if (error.Fail())
+      return error;
+
+    const uint8_t *src = reinterpret_cast<const uint8_t *>(GetGPRBuffer()) +
+                         reg_info->byte_offset;
+    reg_value.SetFromMemoryData(*reg_info, src, reg_info->byte_size,
+                                eByteOrderBig, error);
+
+    return error;
+  } else if (IsFPR(reg) || IsVSX(reg) || IsVMX(reg)) {
+    return Status::FromErrorString("unimplemented");
+  }
+
+  return Status::FromErrorString("failed - register wasn't recognized to be a "
+                                 "GPR, FPR, VSX or VMX, read strategy unknown");
 }
 
 Status
 NativeRegisterContextAIX_ppc64::WriteRegister(const RegisterInfo *reg_info,
                                               const RegisterValue &reg_value) {
-  return Status("unimplemented");
+  Status error;
+  if (!reg_info)
+    return Status::FromErrorString("reg_info NULL");
+
+  const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
+
+  if (IsGPR(reg)) {
+    error = ReadGPR();
+    if (error.Fail())
+      return error;
+
+    uint8_t *dst =
+        reinterpret_cast<uint8_t *>(GetGPRBuffer()) + reg_info->byte_offset;
+    ::memcpy(dst, reg_value.GetBytes(), reg_value.GetByteSize());
+
+    return (WriteGPR());
+  } else if (IsFPR(reg) || IsVMX(reg) || IsVSX(reg)) {
+    return Status::FromErrorString("unimplemented");
+  }
+
+  return Status::FromErrorString("failed - register wasn't recognized to be a "
+                                 "GPR, FPR, VSX or VMX, read strategy unknown");
 }
 
 Status NativeRegisterContextAIX_ppc64::ReadAllRegisterValues(

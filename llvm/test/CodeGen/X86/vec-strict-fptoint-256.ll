@@ -375,7 +375,7 @@ define <4 x i64> @strict_vector_fptoui_v4f64_to_v4i64(<4 x double> %a) #0 {
 ; AVX512F-32-NEXT:    .cfi_def_cfa_register %ebp
 ; AVX512F-32-NEXT:    pushl %ebx
 ; AVX512F-32-NEXT:    andl $-8, %esp
-; AVX512F-32-NEXT:    subl $40, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
 ; AVX512F-32-NEXT:    .cfi_offset %ebx, -12
 ; AVX512F-32-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX512F-32-NEXT:    vshufpd {{.*#+}} xmm3 = xmm2[1,0]
@@ -468,7 +468,7 @@ define <4 x i64> @strict_vector_fptoui_v4f64_to_v4i64(<4 x double> %a) #0 {
 ; AVX512VL-32-NEXT:    .cfi_def_cfa_register %ebp
 ; AVX512VL-32-NEXT:    pushl %ebx
 ; AVX512VL-32-NEXT:    andl $-8, %esp
-; AVX512VL-32-NEXT:    subl $40, %esp
+; AVX512VL-32-NEXT:    subl $32, %esp
 ; AVX512VL-32-NEXT:    .cfi_offset %ebx, -12
 ; AVX512VL-32-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX512VL-32-NEXT:    vshufpd {{.*#+}} xmm3 = xmm2[1,0]
@@ -906,7 +906,7 @@ define <4 x i64> @strict_vector_fptoui_v4f32_to_v4i64(<4 x float> %a) #0 {
 ; AVX512F-32-NEXT:    .cfi_def_cfa_register %ebp
 ; AVX512F-32-NEXT:    pushl %ebx
 ; AVX512F-32-NEXT:    andl $-8, %esp
-; AVX512F-32-NEXT:    subl $40, %esp
+; AVX512F-32-NEXT:    subl $32, %esp
 ; AVX512F-32-NEXT:    .cfi_offset %ebx, -12
 ; AVX512F-32-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[3,3,3,3]
 ; AVX512F-32-NEXT:    vmovss {{.*#+}} xmm1 = [9.22337203E+18,0.0E+0,0.0E+0,0.0E+0]
@@ -999,7 +999,7 @@ define <4 x i64> @strict_vector_fptoui_v4f32_to_v4i64(<4 x float> %a) #0 {
 ; AVX512VL-32-NEXT:    .cfi_def_cfa_register %ebp
 ; AVX512VL-32-NEXT:    pushl %ebx
 ; AVX512VL-32-NEXT:    andl $-8, %esp
-; AVX512VL-32-NEXT:    subl $40, %esp
+; AVX512VL-32-NEXT:    subl $32, %esp
 ; AVX512VL-32-NEXT:    .cfi_offset %ebx, -12
 ; AVX512VL-32-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[3,3,3,3]
 ; AVX512VL-32-NEXT:    vmovss {{.*#+}} xmm1 = [9.22337203E+18,0.0E+0,0.0E+0,0.0E+0]

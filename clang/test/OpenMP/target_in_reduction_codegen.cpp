@@ -139,7 +139,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP48:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_5]], i32 0, i32 1
 // CHECK1-NEXT:    store ptr [[VLA]], ptr [[TMP48]], align 8
 // CHECK1-NEXT:    [[TMP50:%.*]] = mul nuw i64 [[TMP2]], 2
-// CHECK1-NEXT:    [[TMP51:%.*]] = udiv exact i64 [[TMP50]], ptrtoint (ptr getelementptr (i16, ptr null, i32 1) to i64)
+// CHECK1-NEXT:    [[TMP51:%.*]] = udiv exact i64 [[TMP50]], 2
 // CHECK1-NEXT:    [[TMP52:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_5]], i32 0, i32 2
 // CHECK1-NEXT:    store i64 [[TMP50]], ptr [[TMP52]], align 8
 // CHECK1-NEXT:    [[TMP53:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASKRED_INPUT_T_0]], ptr [[DOTRD_INPUT_GEP_5]], i32 0, i32 3
@@ -474,17 +474,19 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@__omp_offloading_{{.*}}_main_l{{[0-9]+}}
-// CHECK1-SAME: (ptr nonnull align 4 dereferenceable(4) [[A:%.*]], i64 [[VLA:%.*]], ptr nonnull align 2 dereferenceable(2) [[D:%.*]], ptr [[DOTTASK_RED_:%.*]]) #[[ATTR9:[0-9]+]] {
+// CHECK1-SAME: (ptr nonnull align 4 dereferenceable(4) [[A:%.*]], i64 [[VLA:%.*]], ptr nonnull align 2 dereferenceable(2) [[D:%.*]], ptr [[DOTTASK_RED_:%.*]], ptr noalias [[DYN_PTR:%.*]]) #[[ATTR9:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[VLA_ADDR:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTTASK_RED__ADDR:%.*]] = alloca ptr, align 8
+// CHECK1-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 // CHECK1-NEXT:    store i64 [[VLA]], ptr [[VLA_ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[DOTTASK_RED_]], ptr [[DOTTASK_RED__ADDR]], align 8
+// CHECK1-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[D_ADDR]], align 8
@@ -573,7 +575,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP27:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON]], ptr [[TMP12]], i32 0, i32 2
 // CHECK1-NEXT:    [[TMP28:%.*]] = load ptr, ptr [[TMP27]], align 8
 // CHECK1-NEXT:    [[TMP29:%.*]] = load ptr, ptr [[TMP18]], align 8
-// CHECK1-NEXT:    call void @__omp_offloading_{{.*}}_main_l{{[0-9]+}}(ptr [[TMP26]], i64 [[TMP14]], ptr [[TMP28]], ptr [[TMP29]]) #[[ATTR3]]
+// CHECK1-NEXT:    call void @__omp_offloading_{{.*}}_main_l{{[0-9]+}}(ptr [[TMP26]], i64 [[TMP14]], ptr [[TMP28]], ptr [[TMP29]], ptr null) #[[ATTR3]]
 // CHECK1-NEXT:    ret i32 0
 //
 //

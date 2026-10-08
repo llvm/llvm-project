@@ -280,11 +280,12 @@ struct OpWithLayout : public Op<OpWithLayout, DataLayoutOpInterface::Trait> {
   static StringRef getOperationName() { return "dltest.op_with_layout"; }
 
   DataLayoutSpecInterface getDataLayoutSpec() {
-    return getOperation()->getAttrOfType<DataLayoutSpecInterface>(kAttrName);
+    return getOperation()->getDiscardableAttrOfType<DataLayoutSpecInterface>(
+        kAttrName);
   }
 
   TargetSystemSpecInterface getTargetSystemSpec() {
-    return getOperation()->getAttrOfType<TargetSystemSpecInterface>(
+    return getOperation()->getDiscardableAttrOfType<TargetSystemSpecInterface>(
         kTargetSystemDescAttrName);
   }
 
@@ -332,11 +333,12 @@ struct OpWith7BitByte
   static StringRef getOperationName() { return "dltest.op_with_7bit_byte"; }
 
   DataLayoutSpecInterface getDataLayoutSpec() {
-    return getOperation()->getAttrOfType<DataLayoutSpecInterface>(kAttrName);
+    return getOperation()->getDiscardableAttrOfType<DataLayoutSpecInterface>(
+        kAttrName);
   }
 
   TargetSystemSpecInterface getTargetSystemSpec() {
-    return getOperation()->getAttrOfType<TargetSystemSpecInterface>(
+    return getOperation()->getDiscardableAttrOfType<TargetSystemSpecInterface>(
         kTargetSystemDescAttrName);
   }
 
@@ -732,7 +734,7 @@ TEST(DataLayout, CacheInvalidation) {
   EXPECT_EQ(layout.getTypeSize(Float16Type::get(&ctx)), 6u);
 
   // Replace the data layout spec with a new, empty spec.
-  op->setAttr(kAttrName, CustomDataLayoutSpec::get(&ctx, {}));
+  op->setDiscardableAttr(kAttrName, CustomDataLayoutSpec::get(&ctx, {}));
 
   // Data layout is no longer valid and should trigger assertion when queried.
 #ifndef NDEBUG

@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-pc-linux -emit-llvm %s -o - | FileCheck %s
 
+// REQUIRES: x86-registered-target
+
 extern void foo_alias (void) __asm ("foo");
 inline void foo (void) {
   return foo_alias ();

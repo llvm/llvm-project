@@ -33,6 +33,9 @@
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/CommandLine.h"
 
+#include <cmath>
+#include <limits>
+
 #if defined(LLVM_HAVE_TFLITE)
 #include "llvm/Analysis/ModelUnderTrainingRunner.h"
 #include "llvm/Analysis/NoInferenceModelRunner.h"
@@ -51,6 +54,11 @@ static cl::opt<std::string> InteractiveChannelBaseName(
         "<regalloc-priority-interactive-channel-base>.out"));
 
 using CompiledModelType = NoopSavedModelImpl;
+
+static bool hasReleaseModePriorityModel() {
+  return isEmbeddedModelEvaluatorValid<CompiledModelType>() ||
+         !InteractiveChannelBaseName.empty();
+}
 
 // Options that only make sense in development mode
 #ifdef LLVM_HAVE_TFLITE
@@ -309,8 +317,7 @@ private:
 
 RegAllocPriorityAdvisorAnalysisLegacy *
 llvm::createReleaseModePriorityAdvisorAnalysis() {
-  return llvm::isEmbeddedModelEvaluatorValid<CompiledModelType>() ||
-                 !InteractiveChannelBaseName.empty()
+  return hasReleaseModePriorityModel()
              ? new ReleaseModePriorityAdvisorAnalysisLegacy()
              : nullptr;
 }
@@ -325,6 +332,17 @@ MLPriorityAdvisor::MLPriorityAdvisor(const MachineFunction &MF,
   Runner->switchContext(MF.getName());
 }
 
+// Converting a NaN or an out-of-range float advice to unsigned is undefined.
+// Saturate instead. A NaN is a model error, so also assert on it.
+static unsigned convertAdviceToPriority(double Advice) {
+  assert(!std::isnan(Advice) && "model produced a NaN priority");
+  if (!(Advice > 0.0))
+    return 0;
+  if (Advice >= static_cast<double>(std::numeric_limits<unsigned>::max()))
+    return std::numeric_limits<unsigned>::max();
+  return static_cast<unsigned>(Advice);
+}
+
 float MLPriorityAdvisor::getPriorityImpl(const LiveInterval &LI) const {
   const unsigned Size = LI.getSize();
   LiveRangeStage Stage = RA.getExtraInfo().getStage(LI);
@@ -337,7 +355,7 @@ float MLPriorityAdvisor::getPriorityImpl(const LiveInterval &LI) const {
 }
 
 unsigned MLPriorityAdvisor::getPriority(const LiveInterval &LI) const {
-  return static_cast<unsigned>(getPriorityImpl(LI));
+  return convertAdviceToPriority(getPriorityImpl(LI));
 }
 
 #ifdef LLVM_HAVE_TFLITE
@@ -348,10 +366,10 @@ llvm::createDevelopmentModePriorityAdvisorAnalysis() {
 
 unsigned
 DevelopmentModePriorityAdvisor::getPriority(const LiveInterval &LI) const {
-  double Prio = 0;
+  unsigned Prio = 0;
 
   if (isa<ModelUnderTrainingRunner>(getRunner())) {
-    Prio = MLPriorityAdvisor::getPriorityImpl(LI);
+    Prio = convertAdviceToPriority(MLPriorityAdvisor::getPriorityImpl(LI));
   } else {
     Prio = getDefaultAdvisor().getPriority(LI);
   }
@@ -385,7 +403,7 @@ DevelopmentModePriorityAdvisor::getPriority(const LiveInterval &LI) const {
   Log->logTensorValue(CurrentFeature, reinterpret_cast<const char *>(&Ret));
   Log->endObservation();
 
-  return static_cast<unsigned>(Prio);
+  return Prio;
 }
 
 RegAllocPriorityAdvisorProvider *
@@ -397,5 +415,7 @@ llvm::createDevelopmentModePriorityAdvisorProvider(LLVMContext &Ctx) {
 
 RegAllocPriorityAdvisorProvider *
 llvm::createReleaseModePriorityAdvisorProvider() {
-  return new ReleaseModePriorityAdvisorProvider();
+  return hasReleaseModePriorityModel()
+             ? new ReleaseModePriorityAdvisorProvider()
+             : nullptr;
 }

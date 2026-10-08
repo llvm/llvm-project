@@ -3,7 +3,7 @@
 ! CHECK-LABEL: func @_QPtarget_teams_workdistribute
 subroutine target_teams_workdistribute()
   integer :: aa(10), bb(10)
-  ! CHECK: omp.target
+  ! CHECK: omp.target kernel_type(generic)
   ! CHECK: omp.teams
   ! CHECK: omp.workdistribute
   !$omp target teams workdistribute

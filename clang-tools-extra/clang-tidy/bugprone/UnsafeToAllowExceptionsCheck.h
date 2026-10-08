@@ -29,7 +29,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  std::vector<llvm::StringRef> CheckedSwapFunctions;
+  std::vector<StringRef> CheckedSwapFunctions;
 };
 
 } // namespace clang::tidy::bugprone

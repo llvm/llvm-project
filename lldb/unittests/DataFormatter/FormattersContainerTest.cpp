@@ -32,7 +32,7 @@ TEST(TypeMatcherTests, ExactName) {
   for (const std::string &prefix : exact_name_prefixes) {
     SCOPED_TRACE("Prefix: " + prefix);
 
-    TypeMatcher matcher(ConstString(prefix + "Name"));
+    TypeMatcher matcher(prefix + "Name");
     EXPECT_TRUE(matcher.Matches(CandidateFromTypeName("class Name")));
     EXPECT_TRUE(matcher.Matches(CandidateFromTypeName("struct Name")));
     EXPECT_TRUE(matcher.Matches(CandidateFromTypeName("union Name")));
@@ -94,9 +94,9 @@ TEST(TypeMatcherTests, RegexMatchPart) {
 
 // GetMatchString for exact type name matchers.
 TEST(TypeMatcherTests, GetMatchStringExactName) {
-  EXPECT_EQ(TypeMatcher(ConstString("aa")).GetMatchString(), "aa");
-  EXPECT_EQ(TypeMatcher(ConstString("")).GetMatchString(), "");
-  EXPECT_EQ(TypeMatcher(ConstString("[a]")).GetMatchString(), "[a]");
+  EXPECT_EQ(TypeMatcher("aa").GetMatchString(), "aa");
+  EXPECT_EQ(TypeMatcher("").GetMatchString(), "");
+  EXPECT_EQ(TypeMatcher("[a]").GetMatchString(), "[a]");
 }
 
 // GetMatchString for regex matchers.
@@ -108,17 +108,17 @@ TEST(TypeMatcherTests, GetMatchStringRegex) {
 
 // GetMatchString for regex matchers.
 TEST(TypeMatcherTests, CreatedBySameMatchString) {
-  TypeMatcher empty_str(ConstString(""));
+  TypeMatcher empty_str("");
   TypeMatcher empty_regex(RegularExpression(""));
   EXPECT_TRUE(empty_str.CreatedBySameMatchString(empty_str));
   EXPECT_TRUE(empty_str.CreatedBySameMatchString(empty_regex));
 
-  TypeMatcher a_str(ConstString("a"));
+  TypeMatcher a_str("a");
   TypeMatcher a_regex(RegularExpression("a"));
   EXPECT_TRUE(a_str.CreatedBySameMatchString(a_str));
   EXPECT_TRUE(a_str.CreatedBySameMatchString(a_regex));
 
-  TypeMatcher digit_str(ConstString("[0-9]"));
+  TypeMatcher digit_str("[0-9]");
   TypeMatcher digit_regex(RegularExpression("[0-9]"));
   EXPECT_TRUE(digit_str.CreatedBySameMatchString(digit_str));
   EXPECT_TRUE(digit_str.CreatedBySameMatchString(digit_regex));
@@ -158,7 +158,7 @@ TEST(TypeMatcherTests, CreatedBySameMatchString) {
 TEST(TypeMatcherTests, CreatedBySameMatchStringExactNamePrefixes) {
   for (const std::string &prefix : exact_name_prefixes) {
     SCOPED_TRACE("Prefix: " + prefix);
-    TypeMatcher with_prefix(ConstString(prefix + "Name"));
+    TypeMatcher with_prefix(prefix + "Name");
     TypeMatcher without_prefix(RegularExpression(""));
 
     EXPECT_TRUE(with_prefix.CreatedBySameMatchString(with_prefix));

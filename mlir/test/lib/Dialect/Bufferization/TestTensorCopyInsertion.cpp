@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizationDialect.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Pass/Pass.h"
@@ -46,7 +46,9 @@ struct TestTensorCopyInsertionPass
     options.bufferizeFunctionBoundaries = bufferizeFunctionBoundaries;
     if (mustInferMemorySpace) {
       options.defaultMemorySpaceFn =
-          [](TensorType t) -> std::optional<Attribute> { return std::nullopt; };
+          [](bufferization::TensorLikeType t) -> std::optional<Attribute> {
+        return std::nullopt;
+      };
     }
 
     bufferization::BufferizationState bufferizationState;

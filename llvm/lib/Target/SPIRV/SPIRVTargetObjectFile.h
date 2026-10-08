@@ -19,15 +19,12 @@ class SPIRVTargetObjectFile : public TargetLoweringObjectFile {
 public:
   ~SPIRVTargetObjectFile() override;
 
-  void Initialize(MCContext &ctx, const TargetMachine &TM) override {
-    TargetLoweringObjectFile::Initialize(ctx, TM);
-  }
   // All words in a SPIR-V module (excepting the first 5 ones) are a linear
   // sequence of instructions in a specific order. We put all the instructions
   // in the single text section.
   MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
-                                   const Constant *C,
-                                   Align &Alignment) const override {
+                                   const Constant *C, Align &Alignment,
+                                   const Function *F) const override {
     return TextSection;
   }
   MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,

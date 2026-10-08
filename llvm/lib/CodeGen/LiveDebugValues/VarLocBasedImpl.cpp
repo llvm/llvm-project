@@ -326,6 +326,14 @@ private:
       bool operator!=(const WasmLoc &Other) const { return !(*this == Other); }
     };
 
+    struct GlobalAddr {
+      const GlobalValue *GV;
+      int64_t Offset;
+      bool operator==(const GlobalAddr &Other) const {
+        return GV == Other.GV && Offset == Other.Offset;
+      }
+    };
+
     /// Identity of the variable at this location.
     const DebugVariable Var;
 
@@ -341,7 +349,8 @@ private:
       RegisterKind,
       SpillLocKind,
       ImmediateKind,
-      WasmLocKind
+      WasmLocKind,
+      GlobalAddrKind
     };
 
     enum class EntryValueLocKind {
@@ -361,11 +370,12 @@ private:
       const ConstantFP *FPImm;
       const ConstantInt *CImm;
       WasmLoc WasmLocation;
+      GlobalAddr GlobalAddress;
       MachineLocValue() : Hash(0) {}
     };
 
-    /// A single machine location; its Kind is either a register, spill
-    /// location, or immediate value.
+    /// A single machine location; its Kind is a register, a spill location, an
+    /// immediate value, a WebAssembly local, or the address of a global.
     /// If the VarLoc is not a NonEntryValueKind, then it will use only a
     /// single MachineLoc of RegisterKind.
     struct MachineLoc {
@@ -379,6 +389,8 @@ private:
           return Value.SpillLocation == Other.Value.SpillLocation;
         case MachineLocKind::WasmLocKind:
           return Value.WasmLocation == Other.Value.WasmLocation;
+        case MachineLocKind::GlobalAddrKind:
+          return Value.GlobalAddress == Other.Value.GlobalAddress;
         case MachineLocKind::RegisterKind:
         case MachineLocKind::ImmediateKind:
           return Value.Hash == Other.Value.Hash;
@@ -387,25 +399,32 @@ private:
         }
       }
       bool operator<(const MachineLoc &Other) const {
+        // Order by kind first, and only then by the payload. Which union member
+        // is the active one depends on the kind, so reading either side's
+        // payload is only well defined once both kinds are known to agree.
+        if (Kind != Other.Kind)
+          return Kind < Other.Kind;
         switch (Kind) {
         case MachineLocKind::SpillLocKind:
           return std::make_tuple(
-                     Kind, Value.SpillLocation.SpillBase,
+                     Value.SpillLocation.SpillBase,
                      Value.SpillLocation.SpillOffset.getFixed(),
                      Value.SpillLocation.SpillOffset.getScalable()) <
                  std::make_tuple(
-                     Other.Kind, Other.Value.SpillLocation.SpillBase,
+                     Other.Value.SpillLocation.SpillBase,
                      Other.Value.SpillLocation.SpillOffset.getFixed(),
                      Other.Value.SpillLocation.SpillOffset.getScalable());
         case MachineLocKind::WasmLocKind:
-          return std::make_tuple(Kind, Value.WasmLocation.Index,
-                                 Value.WasmLocation.Offset) <
-                 std::make_tuple(Other.Kind, Other.Value.WasmLocation.Index,
-                                 Other.Value.WasmLocation.Offset);
+          return std::tie(Value.WasmLocation.Index, Value.WasmLocation.Offset) <
+                 std::tie(Other.Value.WasmLocation.Index,
+                          Other.Value.WasmLocation.Offset);
+        case MachineLocKind::GlobalAddrKind:
+          return std::tie(Value.GlobalAddress.GV, Value.GlobalAddress.Offset) <
+                 std::tie(Other.Value.GlobalAddress.GV,
+                          Other.Value.GlobalAddress.Offset);
         case MachineLocKind::RegisterKind:
         case MachineLocKind::ImmediateKind:
-          return std::tie(Kind, Value.Hash) <
-                 std::tie(Other.Kind, Other.Value.Hash);
+          return Value.Hash < Other.Value.Hash;
         default:
           llvm_unreachable("Invalid kind");
         }
@@ -468,6 +487,9 @@ private:
       } else if (Op.isTargetIndex()) {
         Kind = MachineLocKind::WasmLocKind;
         Loc.WasmLocation = {Op.getIndex(), Op.getOffset()};
+      } else if (Op.isGlobal()) {
+        Kind = MachineLocKind::GlobalAddrKind;
+        Loc.GlobalAddress = {Op.getGlobal(), Op.getOffset()};
       } else
         llvm_unreachable("Invalid Op kind for MachineLoc.");
       return {Kind, Loc};
@@ -601,7 +623,8 @@ private:
           MOs.push_back(Orig);
           break;
         }
-        case MachineLocKind::WasmLocKind: {
+        case MachineLocKind::WasmLocKind:
+        case MachineLocKind::GlobalAddrKind: {
           MOs.push_back(Orig);
           break;
         }
@@ -614,7 +637,8 @@ private:
 
     /// Is the Loc field a constant or constant object?
     bool isConstant(MachineLocKind Kind) const {
-      return Kind == MachineLocKind::ImmediateKind;
+      return Kind == MachineLocKind::ImmediateKind ||
+             Kind == MachineLocKind::GlobalAddrKind;
     }
 
     /// Check if the Loc field is an entry backup location.
@@ -732,6 +756,11 @@ private:
           break;
         case MachineLocKind::ImmediateKind:
           Out << MLoc.Value.Immediate;
+          break;
+        case MachineLocKind::GlobalAddrKind:
+          Out << MLoc.Value.GlobalAddress.GV->getName();
+          if (MLoc.Value.GlobalAddress.Offset)
+            Out << '+' << MLoc.Value.GlobalAddress.Offset;
           break;
         case MachineLocKind::WasmLocKind: {
           if (TII) {
@@ -986,7 +1015,7 @@ private:
   /// VarLoc correspond to entries in the universal location bucket, which every
   /// VarLoc has exactly 1 entry for. Insert collected IDs into \p Collected.
   static void collectIDsForRegs(VarLocsInRange &Collected,
-                                const DefinedRegsSet &Regs,
+                                ArrayRef<Register> Regs,
                                 const VarLocSet &CollectFrom,
                                 const VarLocMap &VarLocIDs);
 
@@ -1171,9 +1200,8 @@ void VarLocBasedLDV::OpenRangesSet::erase(const VarLocsInRange &KillSet,
 void VarLocBasedLDV::OpenRangesSet::insertFromLocSet(const VarLocSet &ToLoad,
                                                      const VarLocMap &Map) {
   VarLocsInRange UniqueVarLocIDs;
-  DefinedRegsSet Regs;
-  Regs.insert(LocIndex::kUniversalLocation);
-  collectIDsForRegs(UniqueVarLocIDs, Regs, ToLoad, Map);
+  Register UniversalLoc = LocIndex::kUniversalLocation;
+  collectIDsForRegs(UniqueVarLocIDs, UniversalLoc, ToLoad, Map);
   for (uint64_t ID : UniqueVarLocIDs) {
     LocIndex Idx = LocIndex::fromRawInteger(ID);
     const VarLoc &VarL = Map[Idx];
@@ -1202,13 +1230,14 @@ VarLocBasedLDV::OpenRangesSet::getEntryValueBackup(DebugVariable Var) {
 }
 
 void VarLocBasedLDV::collectIDsForRegs(VarLocsInRange &Collected,
-                                       const DefinedRegsSet &Regs,
+                                       ArrayRef<Register> Regs,
                                        const VarLocSet &CollectFrom,
                                        const VarLocMap &VarLocIDs) {
   assert(!Regs.empty() && "Nothing to collect");
   SmallVector<Register, 32> SortedRegs;
   append_range(SortedRegs, Regs);
-  array_pod_sort(SortedRegs.begin(), SortedRegs.end());
+  llvm::sort(SortedRegs, [](Register LHS, Register RHS) { return LHS < RHS; });
+  SortedRegs.erase(llvm::unique(SortedRegs), SortedRegs.end());
   auto It = CollectFrom.find(LocIndex::rawIndexForReg(SortedRegs.front()));
   auto End = CollectFrom.end();
   for (Register Reg : SortedRegs) {
@@ -1432,9 +1461,10 @@ void VarLocBasedLDV::transferDebugValue(const MachineInstr &MI,
 
   if (all_of(MI.debug_operands(), [](const MachineOperand &MO) {
         return (MO.isReg() && MO.getReg()) || MO.isImm() || MO.isFPImm() ||
-               MO.isCImm() || MO.isTargetIndex();
+               MO.isCImm() || MO.isTargetIndex() || MO.isGlobal();
       })) {
-    // Use normal VarLoc constructor for registers and immediates.
+    // Use the normal VarLoc constructor for every operand kind MachineLoc can
+    // hold directly: registers, immediates, WebAssembly locals and globals.
     VarLoc VL(MI);
     // End all previous ranges of VL.Var.
     OpenRanges.erase(VL);
@@ -1596,7 +1626,7 @@ void VarLocBasedLDV::transferRegisterDef(MachineInstr &MI,
   Register SP = TLI->getStackPointerRegisterToSaveRestore();
 
   // Find the regs killed by MI, and find regmasks of preserved regs.
-  DefinedRegsSet DeadRegs;
+  SmallVector<Register, 32> DeadRegs;
   SmallVector<const uint32_t *, 4> RegMasks;
   for (const MachineOperand &MO : MI.operands()) {
     // Determine whether the operand is a register def.
@@ -1604,8 +1634,7 @@ void VarLocBasedLDV::transferRegisterDef(MachineInstr &MI,
         !(MI.isCall() && MO.getReg() == SP)) {
       // Remove ranges of all aliased registers.
       for (MCRegAliasIterator RAI(MO.getReg(), TRI, true); RAI.isValid(); ++RAI)
-        // FIXME: Can we break out of this loop early if no insertion occurs?
-        DeadRegs.insert((*RAI).id());
+        DeadRegs.push_back((*RAI).id());
       RegSetInstrs.erase(MO.getReg());
       RegSetInstrs.insert({MO.getReg(), &MI});
     } else if (MO.isRegMask()) {
@@ -1633,7 +1662,7 @@ void VarLocBasedLDV::transferRegisterDef(MachineInstr &MI,
             return MachineOperand::clobbersPhysReg(RegMask, Reg);
           });
       if (AnyRegMaskKillsReg)
-        DeadRegs.insert(Reg);
+        DeadRegs.push_back(Reg);
       if (AnyRegMaskKillsReg) {
         RegSetInstrs.erase(Reg);
         RegSetInstrs.insert({Reg, &MI});

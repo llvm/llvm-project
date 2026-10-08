@@ -1093,11 +1093,29 @@ define i16 @test_bitcast_halftoi16(half %a) #0 {
 }
 
 define half @test_bitcast_i16tohalf(i16 %a) #0 {
-; CHECK-LABEL: test_bitcast_i16tohalf:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
-; CHECK-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_bitcast_i16tohalf:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    fmov s0, w0
+; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; CHECK-CVT-SD-NEXT:    ret
+;
+; CHECK-FP16-SD-LABEL: test_bitcast_i16tohalf:
+; CHECK-FP16-SD:       // %bb.0:
+; CHECK-FP16-SD-NEXT:    fmov s0, w0
+; CHECK-FP16-SD-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; CHECK-FP16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_bitcast_i16tohalf:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    fmov s0, w0
+; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-FP16-GI-LABEL: test_bitcast_i16tohalf:
+; CHECK-FP16-GI:       // %bb.0:
+; CHECK-FP16-GI-NEXT:    fmov s0, w0
+; CHECK-FP16-GI-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-FP16-GI-NEXT:    ret
   %r = bitcast i16 %a to half
   ret half %r
 }

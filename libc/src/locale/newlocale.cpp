@@ -18,7 +18,7 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(locale_t, newlocale,
                    (int category_mask, const char *locale_name, locale_t)) {
   cpp::string_view name(locale_name);
-  if (category_mask > LC_ALL || (!name.empty() && name != "C"))
+  if ((category_mask & ~LC_ALL_MASK) != 0 || (!name.empty() && name != "C"))
     return nullptr;
 
   return &c_locale;

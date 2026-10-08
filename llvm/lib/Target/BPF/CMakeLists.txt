@@ -28,6 +28,7 @@ add_llvm_target(BPFCodeGen
   BPFASpaceCastSimplifyPass.cpp
   BPFBTFDebug.cpp
   BPFCheckAndAdjustIR.cpp
+  BPFCodeGenPassBuilder.cpp
   BPFFrameLowering.cpp
   BPFInstrInfo.cpp
   BPFIRPeephole.cpp

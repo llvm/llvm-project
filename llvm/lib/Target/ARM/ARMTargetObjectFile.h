@@ -20,6 +20,8 @@ public:
   ARMElfTargetObjectFile();
   void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
 
+  void getModuleMetadata(Module &M) override;
+
   MCRegister getStaticBase() const override;
 
   const MCExpr *getIndirectSymViaGOTPCRel(const GlobalValue *GV,

@@ -172,5 +172,5 @@ struct {
   __attribute__((packed)) unsigned short c : 6;
 } ATTR t13;
 int s13 = sizeof(t13);
-// CHECK: @s13 ={{.*}} global i32 4
-// CHECK-ARM: @s13 ={{.*}} global i32 4
+// CHECK: @s13 ={{.*}} global i32 3
+// CHECK-ARM: @s13 ={{.*}} global i32 3

@@ -121,7 +121,7 @@ body:             |
   ; MIPS:   }
   ; MIPS: bb.2.iftrue:
   ; MIPS:   successors: %bb.3(0x80000000)
-  ; MIPS:   INLINEASM &".space 131068", 1
+  ; MIPS:   INLINEASM &".space 131068", sideeffect attdialect
   ; MIPS: bb.3.tail:
   ; MIPS:   PseudoReturn undef $ra {
   ; MIPS:     $zero = SLL $zero, 0
@@ -150,7 +150,7 @@ body:             |
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   PseudoReturn undef $ra {
   ; PIC:     $zero = SLL $zero, 0
@@ -165,7 +165,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -220,7 +220,7 @@ body:             |
   ; MIPS:   }
   ; MIPS: bb.2.iftrue:
   ; MIPS:   successors: %bb.3(0x80000000)
-  ; MIPS:   INLINEASM &".space 131068", 1
+  ; MIPS:   INLINEASM &".space 131068", sideeffect attdialect
   ; MIPS: bb.3.tail:
   ; MIPS:   PseudoReturn undef $ra {
   ; MIPS:     $zero = SLL $zero, 0
@@ -249,7 +249,7 @@ body:             |
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   PseudoReturn undef $ra {
   ; PIC:     $zero = SLL $zero, 0
@@ -264,7 +264,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -319,7 +319,7 @@ body:             |
   ; MIPS:   }
   ; MIPS: bb.2.iftrue:
   ; MIPS:   successors: %bb.3(0x80000000)
-  ; MIPS:   INLINEASM &".space 131068", 1
+  ; MIPS:   INLINEASM &".space 131068", sideeffect attdialect
   ; MIPS: bb.3.tail:
   ; MIPS:   PseudoReturn undef $ra {
   ; MIPS:     $zero = SLL $zero, 0
@@ -348,7 +348,7 @@ body:             |
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   PseudoReturn undef $ra {
   ; PIC:     $zero = SLL $zero, 0
@@ -363,7 +363,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -418,7 +418,7 @@ body:             |
   ; MIPS:   }
   ; MIPS: bb.2.iftrue:
   ; MIPS:   successors: %bb.3(0x80000000)
-  ; MIPS:   INLINEASM &".space 131068", 1
+  ; MIPS:   INLINEASM &".space 131068", sideeffect attdialect
   ; MIPS: bb.3.tail:
   ; MIPS:   PseudoReturn undef $ra {
   ; MIPS:     $zero = SLL $zero, 0
@@ -447,7 +447,7 @@ body:             |
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   PseudoReturn undef $ra {
   ; PIC:     $zero = SLL $zero, 0
@@ -462,7 +462,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -517,7 +517,7 @@ body:             |
   ; MIPS:   }
   ; MIPS: bb.2.iftrue:
   ; MIPS:   successors: %bb.3(0x80000000)
-  ; MIPS:   INLINEASM &".space 131068", 1
+  ; MIPS:   INLINEASM &".space 131068", sideeffect attdialect
   ; MIPS: bb.3.tail:
   ; MIPS:   PseudoReturn undef $ra {
   ; MIPS:     $zero = SLL $zero, 0
@@ -546,7 +546,7 @@ body:             |
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   PseudoReturn undef $ra {
   ; PIC:     $zero = SLL $zero, 0
@@ -561,7 +561,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -616,7 +616,7 @@ body:             |
   ; MIPS:   }
   ; MIPS: bb.2.iftrue:
   ; MIPS:   successors: %bb.3(0x80000000)
-  ; MIPS:   INLINEASM &".space 131068", 1
+  ; MIPS:   INLINEASM &".space 131068", sideeffect attdialect
   ; MIPS: bb.3.tail:
   ; MIPS:   PseudoReturn undef $ra {
   ; MIPS:     $zero = SLL $zero, 0
@@ -645,7 +645,7 @@ body:             |
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   PseudoReturn undef $ra {
   ; PIC:     $zero = SLL $zero, 0
@@ -660,7 +660,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra

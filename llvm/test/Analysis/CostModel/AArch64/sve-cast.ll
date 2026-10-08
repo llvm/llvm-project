@@ -1760,24 +1760,24 @@ define i32 @casts_with_users(i8 %a, i16 %b, i32 %c, i64 %d, i1 %e) {
 
 define i32 @bitcasts() {
 ; CHECK-LABEL: 'bitcasts'
-; CHECK-NEXT:  Cost Model: Found costs of 0 for: %a = bitcast i32 poison to i32
-; CHECK-NEXT:  Cost Model: Found costs of 0 for: %b = bitcast float poison to float
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %c = bitcast i32 poison to float
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %d = bitcast float poison to i32
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %e = bitcast i64 poison to double
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f = bitcast double poison to i64
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %g = bitcast half poison to i16
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %h = bitcast i16 poison to half
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %a = bitcast <vscale x 4 x i32> poison to <vscale x 4 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %b = bitcast <vscale x 4 x float> poison to <vscale x 4 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %c = bitcast <vscale x 4 x i32> poison to <vscale x 4 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %d = bitcast <vscale x 4 x float> poison to <vscale x 4 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %e = bitcast <vscale x 4 x i64> poison to <vscale x 4 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %f = bitcast <vscale x 4 x double> poison to <vscale x 4 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %g = bitcast <vscale x 4 x half> poison to <vscale x 4 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %h = bitcast <vscale x 4 x i16> poison to <vscale x 4 x half>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
-  %a = bitcast i32 poison to i32
-  %b = bitcast float poison to float
-  %c = bitcast i32 poison to float
-  %d = bitcast float poison to i32
-  %e = bitcast i64 poison to double
-  %f = bitcast double poison to i64
-  %g = bitcast half poison to i16
-  %h = bitcast i16 poison to half
+  %a = bitcast <vscale x 4 x i32> poison to <vscale x 4 x i32>
+  %b = bitcast <vscale x 4 x float> poison to <vscale x 4 x float>
+  %c = bitcast <vscale x 4 x i32> poison to <vscale x 4 x float>
+  %d = bitcast <vscale x 4 x float> poison to <vscale x 4 x i32>
+  %e = bitcast <vscale x 4 x i64> poison to <vscale x 4 x double>
+  %f = bitcast <vscale x 4 x double> poison to <vscale x 4 x i64>
+  %g = bitcast <vscale x 4 x half> poison to <vscale x 4 x i16>
+  %h = bitcast <vscale x 4 x i16> poison to <vscale x 4 x half>
   ret i32 undef
 }
 

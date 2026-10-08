@@ -73,7 +73,7 @@ define <vscale x 4 x i32> @test_global_array(<vscale x 4 x i64> %indxs, <vscale 
 
 define <vscale x 4 x i32> @global_struct_splat(<vscale x 4 x i1> %mask) #0 {
 ; CHECK-LABEL: @global_struct_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> align 4 shufflevector (<vscale x 4 x ptr> insertelement (<vscale x 4 x ptr> poison, ptr getelementptr ([[STRUCT_A:%.*]], ptr @c, i64 0, i32 1), i64 0), <vscale x 4 x ptr> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i1> [[MASK:%.*]], <vscale x 4 x i32> undef)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> align 4 shufflevector (<vscale x 4 x ptr> insertelement (<vscale x 4 x ptr> poison, ptr getelementptr (i8, ptr @c, i64 4), i64 0), <vscale x 4 x ptr> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i1> [[MASK:%.*]], <vscale x 4 x i32> undef)
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 ;
   %1 = insertelement <vscale x 4 x ptr> poison, ptr @c, i32 0

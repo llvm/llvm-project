@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++20 %s readability-implicit-bool-conversion %t
+// RUN: %check_clang_tidy -std=c++20-or-later %s readability-implicit-bool-conversion %t
 
 namespace std {
 struct strong_ordering {

@@ -1,0 +1,42 @@
+! Under -gpu=pinned the compiler attributes unattributed ALLOCATABLEs as
+! pinned on the user's behalf, exactly as -gpu=managed attributes them as
+! managed. A module file records that it did so, with the (IMPLICIT)
+! qualifier, so that a reader can tell such an attribute from one the user
+! wrote.
+
+! RUN: rm -rf %t && split-file %s %t
+! RUN: cd %t && bbc -emit-hlfir -fcuda -gpu=pinned def.cuf -o /dev/null
+! RUN: cat %t/m.mod | FileCheck %s --check-prefix=MODFILE
+
+! An attribute the compiler applied does not make the module a definer of CUDA
+! symbols, so a consumer without CUDA Fortran enabled is not rejected.
+! RUN: cd %t && bbc -emit-hlfir -fopenacc use_acc.cuf -o /dev/null
+
+! One the user wrote still is, and still rejects such a consumer.
+! RUN: cd %t && bbc -emit-hlfir -fcuda def_explicit.cuf -o /dev/null
+! RUN: cd %t && not bbc -emit-hlfir -fopenacc use_acc_explicit.cuf -o /dev/null 2>&1 \
+! RUN:   | FileCheck %s --check-prefix=EXPLICIT
+
+!--- def.cuf
+module m
+  real, allocatable :: implicit_var(:)
+end module
+
+! MODFILE: real(4),allocatable,pinned(implicit)::implicit_var(:)
+
+!--- use_acc.cuf
+subroutine acc_only()
+  use m
+end subroutine
+
+!--- def_explicit.cuf
+module m_explicit
+  real, allocatable, pinned :: explicit_var(:)
+end module
+
+!--- use_acc_explicit.cuf
+subroutine acc_only_explicit()
+  use m_explicit
+end subroutine
+
+! EXPLICIT: error: Cannot use module file for module 'm_explicit': CUDA is not enabled, but '{{.*}}m_explicit.mod' defines CUDA symbols

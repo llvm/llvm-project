@@ -1,0 +1,153 @@
+// RUN: %check_clang_tidy %s performance-prefer-single-char-overloads %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -check-suffix=CUSTOM %s performance-prefer-single-char-overloads %t -- \
+// RUN:   -config="{CheckOptions: \
+// RUN:             {performance-prefer-single-char-overloads.StringLikeClasses: \
+// RUN:                '::llvm::StringRef;'}}" -- -fno-delayed-template-parsing
+#include <string>
+
+namespace llvm {
+struct StringRef {
+  int find(const char *) const;
+};
+}  // namespace llvm
+
+struct NotStringRef {
+  int find(const char *);
+};
+
+template <typename T> struct Wrapper {
+  T value;
+};
+
+void StringFind() {
+  std::string Str;
+
+  Str.find("a");
+  // CHECK-MESSAGES: [[@LINE-1]]:12: warning: 'find' called with a string literal consisting of a single character; consider using the more efficient overload accepting a character [performance-prefer-single-char-overloads]
+  // CHECK-FIXES: Str.find('a');
+
+  // Works with the pos argument.
+  Str.find("a", 1);
+  // CHECK-MESSAGES: [[@LINE-1]]:12: warning: 'find' called with a string literal
+  // CHECK-FIXES: Str.find('a', 1);
+
+  // Doesn't work with strings smaller or larger than 1 char.
+  Str.find("");
+  Str.find("ab");
+
+  // Doesn't do anything with the 3 argument overload.
+  Str.find("a", 1, 1);
+
+  // Single quotes are escaped properly
+  Str.find("'");
+  // CHECK-MESSAGES: [[@LINE-1]]:12: warning: 'find' called with a string literal
+  // CHECK-FIXES: Str.find('\'');
+  Str.find("\'");
+  // CHECK-MESSAGES: [[@LINE-1]]:12: warning: 'find' called with a string literal
+  // CHECK-FIXES: Str.find('\'');
+
+  // Other methods that can also be replaced
+  Str.rfind("a");
+  // CHECK-MESSAGES: [[@LINE-1]]:13: warning: 'rfind' called with a string literal
+  // CHECK-FIXES: Str.rfind('a');
+  Str.find_first_of("a");
+  // CHECK-MESSAGES: [[@LINE-1]]:21: warning: 'find_first_of' called with a string
+  // CHECK-FIXES: Str.find_first_of('a');
+  Str.find_first_not_of("a");
+  // CHECK-MESSAGES: [[@LINE-1]]:25: warning: 'find_first_not_of' called with a
+  // CHECK-FIXES: Str.find_first_not_of('a');
+  Str.find_last_of("a");
+  // CHECK-MESSAGES: [[@LINE-1]]:20: warning: 'find_last_of' called with a string
+  // CHECK-FIXES: Str.find_last_of('a');
+  Str.find_last_not_of("a");
+  // CHECK-MESSAGES: [[@LINE-1]]:24: warning: 'find_last_not_of' called with a
+  // CHECK-FIXES: Str.find_last_not_of('a');
+  Str.starts_with("a");
+  // CHECK-MESSAGES: [[@LINE-1]]:19: warning: 'starts_with' called with a
+  // CHECK-FIXES: Str.starts_with('a');
+  Str.ends_with("a");
+  // CHECK-MESSAGES: [[@LINE-1]]:17: warning: 'ends_with' called with a string
+  // CHECK-FIXES: Str.ends_with('a');
+  Str.contains("a");
+  // CHECK-MESSAGES: [[@LINE-1]]:16: warning: 'contains' called with a
+  // CHECK-FIXES: Str.contains('a');
+  Str += "a";
+  // CHECK-MESSAGES: [[@LINE-1]]:10: warning: 'operator+=' called with a
+  // CHECK-FIXES: Str += 'a';
+  ((Str += "a") += "b") += "c";
+  // CHECK-MESSAGES: [[@LINE-1]]:12: warning: 'operator+=' called with a
+  // CHECK-MESSAGES: [[@LINE-2]]:20: warning: 'operator+=' called with a
+  // CHECK-MESSAGES: [[@LINE-3]]:28: warning: 'operator+=' called with a
+  // CHECK-FIXES: ((Str += 'a') += 'b') += 'c';
+  Str.operator+=("a");
+  // CHECK-MESSAGES: [[@LINE-1]]:18: warning: 'operator+=' called with a
+  // CHECK-FIXES: Str.operator+=('a');
+
+  // std::wstring should work.
+  std::wstring WStr;
+  WStr.find(L"n");
+  // CHECK-MESSAGES: [[@LINE-1]]:13: warning: 'find' called with a string literal
+  // CHECK-FIXES: WStr.find(L'n');
+  // Even with unicode that fits in one wide char.
+  WStr.find(L"\x3A9");
+  // CHECK-MESSAGES: [[@LINE-1]]:13: warning: 'find' called with a string literal
+  // CHECK-FIXES: WStr.find(L'\x3A9');
+
+  // std::string_view and std::wstring_view should work.
+  std::string_view StrView;
+  StrView.find("n");
+  // CHECK-MESSAGES: [[@LINE-1]]:16: warning: 'find' called with a string literal
+  // CHECK-FIXES: StrView.find('n');
+  std::wstring_view WStrView;
+
+  WStrView.find(L"n");
+  // CHECK-MESSAGES: [[@LINE-1]]:17: warning: 'find' called with a string literal
+  // CHECK-FIXES: WStrView.find(L'n');
+  WStrView.find(L"\x3A9");
+  // CHECK-MESSAGES: [[@LINE-1]]:17: warning: 'find' called with a string literal
+  // CHECK-FIXES: WStrView.find(L'\x3A9');
+
+  // Also with other types, but only if it was specified in the options.
+  llvm::StringRef sr;
+  sr.find("x");
+  // CHECK-MESSAGES-CUSTOM: [[@LINE-1]]:11: warning: 'find' called with a string literal
+  // CHECK-FIXES-CUSTOM: sr.find('x');
+  NotStringRef nsr;
+  nsr.find("x");
+}
+
+
+template <typename T>
+int FindTemplateDependent(T value) {
+  return value.find("A");
+}
+template <typename T>
+int FindTemplateDependent1(T pos) {
+  // Ignored since the type of `pos` is dependent, the call cannot be completely resolved without instantiating the template.
+  return std::string().find("A", pos);
+}
+template <typename T>
+int FindTemplateNonDependent() {
+  return std::string().find("A");
+  // CHECK-MESSAGES: [[@LINE-1]]:29: warning: 'find' called with a string literal
+  // CHECK-FIXES: return std::string().find('A');
+}
+
+int FindStr() {
+  return FindTemplateDependent(std::string()) + FindTemplateDependent1(1);
+}
+
+#define STR_MACRO(str) str.find("A")
+#define POS_MACRO(pos) std::string().find("A",pos)
+
+int Macros() {
+  return STR_MACRO(std::string()) + POS_MACRO(1);
+  // CHECK-MESSAGES: [[@LINE-1]]:10: warning: 'find' called with a string literal
+  // CHECK-MESSAGES: [[@LINE-2]]:37: warning: 'find' called with a string literal
+}
+
+void SubstitutedTemplateType() {
+  Wrapper<std::string>().value.find("a");
+  // CHECK-MESSAGES: [[@LINE-1]]:37: warning: 'find' called with a string literal
+  // CHECK-FIXES: Wrapper<std::string>().value.find('a');
+}

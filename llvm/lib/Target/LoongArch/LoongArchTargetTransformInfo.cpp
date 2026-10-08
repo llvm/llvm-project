@@ -67,7 +67,9 @@ unsigned LoongArchTTIImpl::getRegisterClassForType(bool Vector,
   return LoongArchRegisterClass::GPRRC;
 }
 
-unsigned LoongArchTTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
+unsigned
+LoongArchTTIImpl::getMaxInterleaveFactor(ElementCount VF,
+                                         bool HasUnorderedReductions) const {
   return ST->getMaxInterleaveFactor();
 }
 
@@ -119,7 +121,7 @@ LoongArchTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
     return Options;
 
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
-  Options.NumLoadsPerBlock = Options.MaxNumLoads;
+  Options.NumLoadsPerBlock = IsZeroCmp ? Options.MaxNumLoads : 1;
   Options.AllowOverlappingLoads = true;
 
   // TODO: Support for vectors.

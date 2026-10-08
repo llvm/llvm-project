@@ -20,6 +20,7 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 
 namespace llvm {
 namespace X86 {
@@ -1155,6 +1156,43 @@ inline int getMemoryOperandNo(uint64_t TSFlags) {
   }
 }
 
+/// \returns the operand index for the first field of the memory operand,
+/// adjusted with getOperandBias(), or -1 if the instruction has no memory
+/// operands.
+inline int getMemoryOperandIdx(const MCInstrDesc &Desc) {
+  int MemRefIdx = getMemoryOperandNo(Desc.TSFlags);
+  if (MemRefIdx < 0)
+    return -1;
+  return MemRefIdx + getOperandBias(Desc);
+}
+
+/// Determine if this immediate can fit in a disp8 or a compressed disp8 for
+/// EVEX instructions. \p will be set to the value to pass to the ImmOffset
+/// parameter of emitImmediate.
+inline bool isDispOrCDisp8(uint64_t TSFlags, int64_t Value,
+                           int *ImmOffset = nullptr) {
+  bool HasEVEX = (TSFlags & X86II::EncodingMask) == X86II::EVEX;
+
+  unsigned CD8_Scale =
+      (TSFlags & X86II::CD8_Scale_Mask) >> X86II::CD8_Scale_Shift;
+  CD8_Scale = CD8_Scale ? 1U << (CD8_Scale - 1) : 0U;
+  if (!HasEVEX || !CD8_Scale)
+    return isInt<8>(Value);
+
+  assert(isPowerOf2_32(CD8_Scale) && "Unexpected CD8 scale!");
+  if (Value & (CD8_Scale - 1)) // Unaligned offset
+    return false;
+
+  int64_t CDisp8 = Value / static_cast<int64_t>(CD8_Scale);
+  if (!isInt<8>(CDisp8))
+    return false;
+
+  // ImmOffset will be added to Value in emitImmediate leaving just CDisp8.
+  if (ImmOffset)
+    *ImmOffset = CDisp8 - Value;
+  return true;
+}
+
 /// \returns true if the register is a XMM.
 inline bool isXMMReg(MCRegister Reg) {
   static_assert(X86::XMM15 - X86::XMM0 == 15,
@@ -1265,14 +1303,35 @@ inline bool canUseApxExtendedReg(const MCInstrDesc &Desc) {
     return true;
 
   unsigned Opcode = Desc.Opcode;
-  // MOV32r0 is always expanded to XOR32rr
-  if (Opcode == X86::MOV32r0)
-    return true;
-  // To be conservative, egpr is not used for all pseudo instructions
-  // because we are not sure what instruction it will become.
-  // FIXME: Could we improve it in X86ExpandPseudo?
-  if (isPseudo(TSFlags))
-    return false;
+  if (isPseudo(TSFlags)) {
+    switch (Opcode) {
+    default:
+      // To be conservative, egpr is not used for all pseudo instructions
+      // because we are not sure what instruction it will become.
+      // FIXME: Could we improve it in X86ExpandPseudo?
+      return false;
+    case X86::MOV32r0:
+    case X86::MOV32r1:
+    case X86::MOV32r_1:
+      // They are always expanded to XOR32rr.
+      return true;
+    case X86::MOV32ri64:
+      // MOV32ri64 is always expanded to MOV32ri.
+      return true;
+    case X86::ADD8rr_DB:
+    case X86::ADD16rr_DB:
+    case X86::ADD32rr_DB:
+    case X86::ADD64rr_DB:
+      // They are always expanded to ORNrr.
+      return true;
+    case X86::ADD8ri_DB:
+    case X86::ADD16ri_DB:
+    case X86::ADD32ri_DB:
+    case X86::ADD64ri32_DB:
+      // They are always expanded to ORNri.
+      return true;
+    }
+  }
 
   // MAP OB/TB in legacy encoding space can always use egpr except
   // XSAVE*/XRSTOR*.

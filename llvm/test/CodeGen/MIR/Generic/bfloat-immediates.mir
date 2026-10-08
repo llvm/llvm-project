@@ -5,8 +5,8 @@
 name: bfloat_immediates
 body: |
   bb.0:
-    ; CHECK: %0:_(s16) = G_FCONSTANT bfloat 0xR3E80
-    ; CHECK: %1:_(s16) = G_FCONSTANT bfloat 0xR3E80
+    ; CHECK: %0:_(s16) = G_FCONSTANT bfloat 2.500000e-01
+    ; CHECK: %1:_(s16) = G_FCONSTANT bfloat 2.500000e-01
     %0:_(s16) = G_FCONSTANT bfloat 0xR3E80
     %1:_(s16) = G_FCONSTANT bfloat 0.25
 ...

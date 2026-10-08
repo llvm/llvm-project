@@ -147,17 +147,20 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: (lldb) expression Local2
 // CHECK-NEXT: (char) $18 = 'c'
 // CHECK-NEXT: (lldb) continue
-// CHECK-NEXT: Process {{.*}} resuming
+// CHECK: Process {{.*}} resuming
 // CHECK-NEXT: Process {{.*}} exited with status = 18 (0x00000012)
 
 // CHECK:      (lldb) target modules dump ast
-// CHECK-NEXT: Dumping clang ast for {{.*}} modules.
+// CHECK: Dumping clang ast for {{.*}} modules.
 // CHECK-NEXT: TranslationUnitDecl
 // CHECK-NEXT: |-FunctionDecl {{.*}} main 'int (int, char **)'
 // CHECK-NEXT: | |-ParmVarDecl {{.*}} argc 'int'
-// CHECK-NEXT: | `-ParmVarDecl {{.*}} argv 'char **'
+// CHECK-NEXT: | |-ParmVarDecl {{.*}} argv 'char **'
+// CHECK-NEXT: | `-AsmLabelAttr {{.*}} Implicit "$__lldb_func::{{.*}}:main"
 // CHECK-NEXT: |-FunctionDecl {{.*}} __scrt_common_main_seh 'int ()' static 
+// CHECK-NEXT: | `-AsmLabelAttr {{.*}} Implicit "$__lldb_func::{{.*}}"
 // CHECK-NEXT: |-FunctionDecl {{.*}} invoke_main 'int ()' inline
 // CHECK: `-FunctionDecl {{.*}} Function 'int (int, char)'
 // CHECK-NEXT:   |-ParmVarDecl {{.*}} Param1 'int'
-// CHECK-NEXT:   `-ParmVarDecl {{.*}} Param2 'char'
+// CHECK-NEXT:   |-ParmVarDecl {{.*}} Param2 'char'
+// CHECK-NEXT:   `-AsmLabelAttr {{.*}} Implicit "$__lldb_func::{{.*}}:?Function@@YAHHD@Z"

@@ -16,6 +16,8 @@ namespace LIBC_NAMESPACE_DECL {
 
 int snprintf(char *__restrict buffer, size_t buffsz,
              const char *__restrict format, ...);
+int __snprintf_modular(char *__restrict buffer, size_t buffsz,
+                       const char *__restrict format, ...);
 
 } // namespace LIBC_NAMESPACE_DECL
 

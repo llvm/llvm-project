@@ -1,0 +1,77 @@
+# RUN: llc -mtriple=hexagon -run-pass hexagon-peephole \
+# RUN:   -disable-hexagon-optszext=false \
+# RUN:   -disable-hexagon-opt-ext-to-64=false -o - %s | FileCheck %s
+
+# Test coverage for HexagonPeephole:
+# 1) SXTW + COPY isub_lo optimization
+# 2) A4_combineir(0, r) + COPY isub_lo optimization
+# 3) S2_lsr_i_p(d, 32) + COPY isub_lo -> COPY isub_hi
+
+--- |
+  define void @test_sxtw_copy() { ret void }
+  define void @test_combine_copy() { ret void }
+  define void @test_lsr_copy() { ret void }
+...
+
+---
+# SXTW + COPY isub_lo should be peepholed: the COPY should use the
+# original 32-bit source directly instead of extracting from the sxtw result.
+# CHECK-LABEL: name: test_sxtw_copy
+# CHECK: %2:intregs = COPY %0
+name: test_sxtw_copy
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: intregs }
+  - { id: 1, class: doubleregs }
+  - { id: 2, class: intregs }
+body: |
+  bb.0:
+    liveins: $r0
+    %0:intregs = COPY $r0
+    %1:doubleregs = A2_sxtw %0
+    %2:intregs = COPY %1.isub_lo
+    $r0 = COPY %2
+    J2_jumpr $r31, implicit-def dead $pc, implicit killed $r0
+...
+
+---
+# A4_combineir(0, r) + COPY isub_lo optimization: the COPY should use
+# the 32-bit source register directly.
+# CHECK-LABEL: name: test_combine_copy
+# CHECK: %2:intregs = COPY %0
+name: test_combine_copy
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: intregs }
+  - { id: 1, class: doubleregs }
+  - { id: 2, class: intregs }
+body: |
+  bb.0:
+    liveins: $r0
+    %0:intregs = COPY $r0
+    %1:doubleregs = A4_combineir 0, %0
+    %2:intregs = COPY %1.isub_lo
+    $r0 = COPY %2
+    J2_jumpr $r31, implicit-def dead $pc, implicit killed $r0
+...
+
+---
+# S2_lsr_i_p(d, 32) + COPY isub_lo should be transformed to
+# COPY isub_hi from the original double register.
+# CHECK-LABEL: name: test_lsr_copy
+# CHECK: %2:intregs = COPY %0.isub_hi
+name: test_lsr_copy
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: doubleregs }
+  - { id: 1, class: doubleregs }
+  - { id: 2, class: intregs }
+body: |
+  bb.0:
+    liveins: $d0
+    %0:doubleregs = COPY $d0
+    %1:doubleregs = S2_lsr_i_p %0, 32
+    %2:intregs = COPY %1.isub_lo
+    $r0 = COPY %2
+    J2_jumpr $r31, implicit-def dead $pc, implicit killed $r0
+...

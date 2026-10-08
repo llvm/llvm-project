@@ -32,6 +32,9 @@ public:
   /// Redraw the statusline.
   void Redraw(std::optional<ExecutionContextRef> exe_ctx_ref);
 
+  /// Clear the cached execution context to discard stale pointers.
+  void ClearExecutionContext();
+
   /// Inform the statusline that the terminal dimensions have changed.
   void TerminalSizeChanged();
 
@@ -45,8 +48,11 @@ private:
     ResizeStatusline,
   };
 
-  /// Set the scroll window for the given mode.
-  void UpdateScrollWindow(ScrollWindowMode mode);
+  /// Set the scroll window for the given mode. On a resize, \p prev_width and
+  /// \p prev_height are the dimensions the statusline was last drawn at, used
+  /// to clear the rows it still occupies.
+  void UpdateScrollWindow(ScrollWindowMode mode, uint64_t prev_width = 0,
+                          uint64_t prev_height = 0);
 
   Debugger &m_debugger;
 

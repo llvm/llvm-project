@@ -606,3 +606,10 @@ TEST_F(TypeIndexIteratorTest, UsingNamespace) {
   writeSymbolRecords(UN);
   checkTypeReferences(0);
 }
+
+TEST_F(TypeIndexIteratorTest, RegRelativeIndir) {
+  RegRelativeIndirSym RR(SymbolRecordKind::RegRelativeIndirSym);
+  RR.Type = TypeIndex::Int32();
+  writeSymbolRecords(RR);
+  checkTypeReferences(0, RR.Type);
+}

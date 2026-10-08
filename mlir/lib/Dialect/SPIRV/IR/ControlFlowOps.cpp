@@ -204,11 +204,11 @@ FunctionCallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 }
 
 CallInterfaceCallable FunctionCallOp::getCallableForCallee() {
-  return (*this)->getAttrOfType<SymbolRefAttr>(getCalleeAttrName());
+  return getCalleeAttr();
 }
 
 void FunctionCallOp::setCalleeFromCallable(CallInterfaceCallable callee) {
-  (*this)->setAttr(getCalleeAttrName(), cast<SymbolRefAttr>(callee));
+  setCalleeAttr(cast<FlatSymbolRefAttr>(cast<SymbolRefAttr>(callee)));
 }
 
 Operation::operand_range FunctionCallOp::getArgOperands() {
@@ -266,12 +266,14 @@ LogicalResult SwitchOp::verify() {
   if (!literals && targets.empty())
     return success();
 
-  Type selectorType = getSelector().getType();
-  Type literalType = literals->getType().getElementType();
-  if (literalType != selectorType)
-    return emitOpError() << "'selector' type (" << selectorType
-                         << ") should match literals type (" << literalType
-                         << ")";
+  if (literals) {
+    Type selectorType = getSelector().getType();
+    Type literalType = literals->getType().getElementType();
+    if (literalType != selectorType)
+      return emitOpError() << "'selector' type (" << selectorType
+                           << ") should match literals type (" << literalType
+                           << ")";
+  }
 
   if (literals && literals->size() != static_cast<int64_t>(targets.size()))
     return emitOpError() << "number of literals (" << literals->size()

@@ -64,14 +64,16 @@ namespace llvm {
     /// If a physical register, this returns the register that receives the
     /// exception address on entry to an EH pad.
     Register
-    getExceptionPointerRegister(const Constant *PersonalityFn) const override {
+    getExceptionPointerRegister(ExceptionHandling EH,
+                                const Constant *PersonalityFn) const override {
       return SP::I0;
     }
 
     /// If a physical register, this returns the register that receives the
     /// exception typeid on entry to a landing pad.
     Register
-    getExceptionSelectorRegister(const Constant *PersonalityFn) const override {
+    getExceptionSelectorRegister(ExceptionHandling EH,
+                                 const Constant *PersonalityFn) const override {
       return SP::I1;
     }
 
@@ -143,9 +145,13 @@ namespace llvm {
     SDValue LowerF128Compare(SDValue LHS, SDValue RHS, unsigned &SPCC,
                              const SDLoc &DL, SelectionDAG &DAG) const;
 
+    SDValue LowerBSWAP(SDValue Op, SelectionDAG &DAG) const;
+
     SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
 
     SDValue PerformBITCASTCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+    SDValue PerformBSWAPCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+    SDValue PerformSTORECombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
     SDValue bitcastConstantFPToInt(ConstantFPSDNode *C, const SDLoc &DL,
                                    SelectionDAG &DAG) const;

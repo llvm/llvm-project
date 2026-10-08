@@ -28,7 +28,7 @@ backedge:
   call void @foo()
   %iv.next = add i32 %iv, 1
   %cmp = icmp eq i32 %iv.next, 200
-  br i1 %cmp, label %loop, label %exit, !prof !{!"branch_weights", i32 1000, i32 1}
+  br i1 %cmp, label %exit, label %loop, !prof !{!"branch_weights", i32 1, i32 1000}
 
 exit:
   ret void

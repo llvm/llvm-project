@@ -17,8 +17,8 @@ define void @avoid_sinking_store_across_load(ptr %arr) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 1, i64 4, i64 7, i64 10>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i64> [ <i64 4, i64 7, i64 10, i64 13>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 3
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw i64 [[INDEX]], 3
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add nuw i64 1, [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <12 x i32>, ptr [[TMP3]], align 4
@@ -26,7 +26,7 @@ define void @avoid_sinking_store_across_load(ptr %arr) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[ARR]], <4 x i64> [[VEC_IND2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[ARR]], <4 x i64> [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x ptr> [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x ptr> [[TMP6]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul <4 x i32> [[STRIDED_VEC]], splat (i32 25)
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[TMP7]], <4 x ptr> align 4 [[TMP6]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[WIDE_VEC4:%.*]] = load <12 x i32>, ptr [[TMP8]], align 4

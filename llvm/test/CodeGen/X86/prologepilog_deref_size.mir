@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=prologepilog -o - %s | FileCheck %s
+# RUN: llc -run-pass=prolog-epilog -o - %s | FileCheck %s
 --- |
   ; ModuleID = 'dbg.opt.ll'
   source_filename = "dbg.c"

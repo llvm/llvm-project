@@ -284,27 +284,26 @@ namespace llvm {
   /// Emit a call to the hot/cold operator new function.
   LLVM_ABI Value *emitHotColdNew(Value *Num, IRBuilderBase &B,
                                  const TargetLibraryInfo *TLI, LibFunc NewFunc,
-                                 uint8_t HotCold);
+                                 Value *HotCold);
   LLVM_ABI Value *emitHotColdNewNoThrow(Value *Num, Value *NoThrow,
                                         IRBuilderBase &B,
                                         const TargetLibraryInfo *TLI,
-                                        LibFunc NewFunc, uint8_t HotCold);
+                                        LibFunc NewFunc, Value *HotCold);
   LLVM_ABI Value *emitHotColdNewAligned(Value *Num, Value *Align,
                                         IRBuilderBase &B,
                                         const TargetLibraryInfo *TLI,
-                                        LibFunc NewFunc, uint8_t HotCold);
+                                        LibFunc NewFunc, Value *HotCold);
   LLVM_ABI Value *emitHotColdNewAlignedNoThrow(Value *Num, Value *Align,
                                                Value *NoThrow, IRBuilderBase &B,
                                                const TargetLibraryInfo *TLI,
-                                               LibFunc NewFunc,
-                                               uint8_t HotCold);
+                                               LibFunc NewFunc, Value *HotCold);
   LLVM_ABI Value *emitHotColdSizeReturningNew(Value *Num, IRBuilderBase &B,
                                               const TargetLibraryInfo *TLI,
-                                              LibFunc NewFunc, uint8_t HotCold);
+                                              LibFunc NewFunc, Value *HotCold);
   LLVM_ABI Value *
   emitHotColdSizeReturningNewAligned(Value *Num, Value *Align, IRBuilderBase &B,
                                      const TargetLibraryInfo *TLI,
-                                     LibFunc NewFunc, uint8_t HotCold);
+                                     LibFunc NewFunc, Value *HotCold);
 }
 
 #endif

@@ -15,13 +15,10 @@ void binaryOpMatrixSubscriptExpr(int index, fx2x3_t M) {
     // CHECK-NEXT: [[row_load_zext:%.*]] = zext i32 [[row_load]] to i64
     // CHECK-NEXT: [[col_load:%.*]] = load i32, ptr %col, align 4
     // CHECK-NEXT: [[col_load_zext:%.*]] = zext i32 [[col_load]] to i64
-    // COL-CHECK-NEXT: [[col_offset:%.*]] = mul i64 [[col_load_zext]], 2
-    // COL-CHECK-NEXT: [[col_major_index:%.*]] = add i64 [[col_offset]], [[row_load_zext]]
-    // ROW-CHECK-NEXT: [[row_offset:%.*]] = mul i64 [[row_load_zext]], 3
-    // ROW-CHECK-NEXT: [[row_major_index:%.*]] = add i64 [[row_offset]], [[col_load_zext]]
+    // CHECK-NEXT: [[col_offset:%.*]] = mul i64 [[col_load_zext]], 2
+    // CHECK-NEXT: [[matrix_index:%.*]] = add i64 [[col_offset]], [[row_load_zext]]
     // CHECK-NEXT: [[matrix_as_vec:%.*]] = load <6 x float>, ptr %M.addr, align 4
-    // COL-CHECK-NEXT: %matrixext = extractelement <6 x float> [[matrix_as_vec]], i64 [[col_major_index]]
-    // ROW-CHECK-NEXT: %matrixext = extractelement <6 x float> [[matrix_as_vec]], i64 [[row_major_index]]
+    // CHECK-NEXT: %matrixext = extractelement <6 x float> [[matrix_as_vec]], i64 [[matrix_index]]
     const unsigned int COLS = 3;
     unsigned int row = index / COLS;
     unsigned int col = index % COLS;
@@ -34,13 +31,10 @@ float returnMatrixSubscriptExpr(int row, int col, fx2x3_t M) {
     // CHECK-NEXT: [[row_load_sext:%.*]] = sext i32 [[row_load]] to i64
     // CHECK-NEXT: [[col_load:%.*]] = load i32, ptr [[col_ptr:%.*]], align 4
     // CHECK-NEXT: [[col_load_sext:%.*]] = sext i32 [[col_load]] to i64
-    // COL-CHECK-NEXT: [[col_offset:%.*]] = mul i64 [[col_load_sext]], 2
-    // COL-CHECK-NEXT: [[col_major_index:%.*]] = add i64 [[col_offset]], [[row_load_sext]]
-    // ROW-CHECK-NEXT: [[row_offset:%.*]] = mul i64 [[row_load_sext]], 3
-    // ROW-CHECK-NEXT: [[row_major_index:%.*]] = add i64 [[row_offset]], [[col_load_sext]]
+    // CHECK-NEXT: [[col_offset:%.*]] = mul i64 [[col_load_sext]], 2
+    // CHECK-NEXT: [[matrix_index:%.*]] = add i64 [[col_offset]], [[row_load_sext]]
     // CHECK-NEXT: [[matrix_as_vec:%.*]] = load <6 x float>, ptr %M.addr, align 4
-    // COL-CHECK-NEXT: [[matrix_after_extract:%.*]] = extractelement <6 x float> [[matrix_as_vec]], i64 [[col_major_index]]
-    // ROW-CHECK-NEXT: [[matrix_after_extract:%.*]] = extractelement <6 x float> [[matrix_as_vec]], i64 [[row_major_index]]
+    // CHECK-NEXT: [[matrix_after_extract:%.*]] = extractelement <6 x float> [[matrix_as_vec]], i64 [[matrix_index]]
     // CHECK-NEXT: ret float [[matrix_after_extract]]
     return M[row][col];
 }

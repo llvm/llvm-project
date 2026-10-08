@@ -304,7 +304,7 @@ define float @fmaximum_nnan_f32(float %a, float %b) nounwind {
   ret float %1
 }
 
-define float @fminimum_nnan_attr_f32(float %a, float %b) nounwind "no-nans-fp-math"="true" {
+define float @fminimum_nnan_attr_f32(float %a, float %b) nounwind {
 ; RV32IF-LABEL: fminimum_nnan_attr_f32:
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    fmin.s fa0, fa0, fa1
@@ -342,7 +342,7 @@ define float @fminimum_nnan_attr_f32(float %a, float %b) nounwind "no-nans-fp-ma
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %1 = call float @llvm.minimum.f32(float %a, float %b)
+  %1 = call nnan float @llvm.minimum.f32(float %a, float %b)
   ret float %1
 }
 

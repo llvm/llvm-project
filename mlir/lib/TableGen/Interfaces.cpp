@@ -9,6 +9,7 @@
 #include "mlir/TableGen/Interfaces.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <utility>
@@ -30,8 +31,15 @@ InterfaceMethod::InterfaceMethod(const Record *def, std::string uniqueName)
     : def(def), uniqueName(uniqueName) {
   const DagInit *args = def->getValueAsDag("arguments");
   for (unsigned i = 0, e = args->getNumArgs(); i != e; ++i) {
-    arguments.push_back({cast<StringInit>(args->getArg(i))->getValue(),
-                         args->getArgNameStr(i)});
+    const Init *arg = args->getArg(i);
+    const auto *strArg = dyn_cast<StringInit>(arg);
+    if (!strArg)
+      llvm::PrintFatalError(
+          def->getLoc(),
+          "expected string type for interface method argument #" + Twine(i) +
+              " ('" + args->getArgNameStr(i) + "') in '" + def->getName() +
+              "', but got '" + arg->getAsString() + "'");
+    arguments.push_back({strArg->getValue(), args->getArgNameStr(i)});
   }
 }
 

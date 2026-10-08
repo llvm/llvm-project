@@ -162,22 +162,23 @@ bool CXXBasePaths::lookupInBases(ASTContext &Context,
     QualType BaseType =
         Context.getCanonicalType(BaseSpec.getType()).getUnqualifiedType();
 
-    bool isCurrentInstantiation = isa<InjectedClassNameType>(BaseType);
-    if (!isCurrentInstantiation) {
-      if (auto *BaseRecord = cast_if_present<CXXRecordDecl>(
-              BaseSpec.getType()->getAsRecordDecl()))
-        isCurrentInstantiation = BaseRecord->isDependentContext() &&
-                                 BaseRecord->isCurrentInstantiation(Record);
-    }
     // C++ [temp.dep]p3:
     //   In the definition of a class template or a member of a class template,
     //   if a base class of the class template depends on a template-parameter,
     //   the base class scope is not examined during unqualified name lookup
     //   either at the point of definition of the class template or member or
     //   during an instantiation of the class tem- plate or member.
-    if (!LookupInDependent &&
-        (BaseType->isDependentType() && !isCurrentInstantiation))
-      continue;
+    if (!LookupInDependent && BaseType->isDependentType()) {
+      bool isCurrentInstantiation = isa<InjectedClassNameType>(BaseType);
+      if (!isCurrentInstantiation) {
+        if (auto *BaseRecord = cast_if_present<CXXRecordDecl>(
+                BaseSpec.getType()->getAsRecordDecl()))
+          isCurrentInstantiation = BaseRecord->isDependentContext() &&
+                                   BaseRecord->isCurrentInstantiation(Record);
+      }
+      if (!isCurrentInstantiation)
+        continue;
+    }
 
     // Determine whether we need to visit this base class at all,
     // updating the count of subobjects appropriately.

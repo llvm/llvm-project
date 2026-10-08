@@ -5,7 +5,7 @@
 # CHECK-NOT: name:
 # CHECK: BUNDLE implicit-def $z3, implicit-def $q3, implicit-def $d3, implicit-def $s3, implicit-def $h3, implicit-def $b3, implicit $z19, implicit $p0, implicit $z16 {
 # CHECK:     $z3 = MOVPRFX_ZZ $z19
-# CHECK:     $z3 = FMUL_ZPmZ_S renamable $p0, killed $z3, renamable $z16
+# CHECK:     $z3 = FMUL_ZPmZ_S renamable $p0, $z3, renamable $z16
 # CHECK: }
 
 ---

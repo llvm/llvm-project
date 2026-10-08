@@ -1,0 +1,18 @@
+# RUN: llc %s --run-pass=nvptx-proxyreg-erasure -mtriple=nvptx64 -o - | FileCheck %s
+
+---
+name: test_proxy_reg
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:b32 = IMPLICIT_DEF
+    %1:b16 = IMPLICIT_DEF
+
+    ; CHECK: %2:b16 = CVT_u16_u32 %0, 0
+    ; CHECK-NEXT: %4:b16 = ADD16rr %1, %2
+    ; CHECK-NEXT: %5:b16 = ADD16rr %1, %2
+    %2:b16 = CVT_u16_u32 %0:b32, 0
+    %3:b16 = ProxyRegB16 %2:b16
+    %4:b16 = ADD16rr %1:b16, killed %3:b16
+    %5:b16 = ADD16rr %1:b16, %2:b16
+...

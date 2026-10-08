@@ -42,9 +42,9 @@ define void @f2(ptr %dst, ptr %src) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 336
 ; CHECK-NEXT:    vl %v0, 0(%r3), 3
 ; CHECK-NEXT:    lgr %r0, %r2
-; CHECK-NEXT:    la %r4, 160(%r15)
 ; CHECK-NEXT:    lghi %r2, 16
 ; CHECK-NEXT:    lgr %r3, %r0
+; CHECK-NEXT:    la %r4, 160(%r15)
 ; CHECK-NEXT:    lhi %r5, 5
 ; CHECK-NEXT:    vst %v0, 160(%r15), 3
 ; CHECK-NEXT:    brasl %r14, __atomic_store@PLT
@@ -66,9 +66,9 @@ define void @f2_fpuse(ptr %dst, ptr %src) {
 ; CHECK-NEXT:    vl %v0, 0(%r3), 3
 ; CHECK-NEXT:    wfaxb %v0, %v0, %v0
 ; CHECK-NEXT:    lgr %r0, %r2
-; CHECK-NEXT:    la %r4, 160(%r15)
 ; CHECK-NEXT:    lghi %r2, 16
 ; CHECK-NEXT:    lgr %r3, %r0
+; CHECK-NEXT:    la %r4, 160(%r15)
 ; CHECK-NEXT:    lhi %r5, 5
 ; CHECK-NEXT:    vst %v0, 160(%r15), 3
 ; CHECK-NEXT:    brasl %r14, __atomic_store@PLT

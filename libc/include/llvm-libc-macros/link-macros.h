@@ -25,6 +25,7 @@
 #include "../llvm-libc-types/Elf32_Sym.h"
 #include "../llvm-libc-types/Elf32_Word.h"
 #include "../llvm-libc-types/Elf32_Xword.h"
+#include "../llvm-libc-types/Elf32_auxv_t.h"
 #include "../llvm-libc-types/Elf64_Addr.h"
 #include "../llvm-libc-types/Elf64_Chdr.h"
 #include "../llvm-libc-types/Elf64_Dyn.h"
@@ -42,6 +43,7 @@
 #include "../llvm-libc-types/Elf64_Sym.h"
 #include "../llvm-libc-types/Elf64_Word.h"
 #include "../llvm-libc-types/Elf64_Xword.h"
+#include "../llvm-libc-types/Elf64_auxv_t.h"
 
 #ifdef __LP64__
 #define ElfW(type) Elf64_##type

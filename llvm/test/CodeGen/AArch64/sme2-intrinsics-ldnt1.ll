@@ -9,45 +9,33 @@ define <vscale x 32 x i8> @ldnt1_x2_i8_z0_z8(<vscale x 16 x i8> %unused, <vscale
 ; STRIDED-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; STRIDED-NEXT:    addvl sp, sp, #-17
 ; STRIDED-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; STRIDED-NEXT:    ptrue pn8.b
+; STRIDED-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z8.b, z9.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
 ; STRIDED-NEXT:    mov p8.b, p0.b
 ; STRIDED-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z12, [sp, #12, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z11, [sp, #13, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z10, [sp, #14, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z9, [sp, #15, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z8, [sp, #16, mul vl] // 16-byte Folded Spill
+; STRIDED-NEXT:    str z22, [sp, #16, mul vl] // 16-byte Folded Spill
 ; STRIDED-NEXT:    ldnt1b { z0.b, z8.b }, pn8/z, [x0]
 ; STRIDED-NEXT:    //APP
 ; STRIDED-NEXT:    nop
 ; STRIDED-NEXT:    //NO_APP
-; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
+; STRIDED-NEXT:    ptrue pn8.b
 ; STRIDED-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
 ; STRIDED-NEXT:    mov z1.d, z8.d
-; STRIDED-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z12, [sp, #12, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z8, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z8.b, z9.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ldr z22, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; STRIDED-NEXT:    addvl sp, sp, #17
 ; STRIDED-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; STRIDED-NEXT:    ret
@@ -57,21 +45,15 @@ define <vscale x 32 x i8> @ldnt1_x2_i8_z0_z8(<vscale x 16 x i8> %unused, <vscale
 ; CONTIGUOUS-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-16
 ; CONTIGUOUS-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
-; CONTIGUOUS-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z12, [sp, #12, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z11, [sp, #13, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z10, [sp, #14, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z9, [sp, #15, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z22.b, z23.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-2
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
 ; CONTIGUOUS-NEXT:    ldnt1b { z0.b, z1.b }, pn8/z, [x0]
@@ -83,21 +65,15 @@ define <vscale x 32 x i8> @ldnt1_x2_i8_z0_z8(<vscale x 16 x i8> %unused, <vscale
 ; CONTIGUOUS-NEXT:    ldr z0, [sp]
 ; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #2
-; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z12, [sp, #12, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z22.b, z23.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #16
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -117,45 +93,33 @@ define <vscale x 32 x i8> @ldnt1_x2_i8_z0_z8_scalar(<vscale x 16 x i8> %unused, 
 ; STRIDED-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; STRIDED-NEXT:    addvl sp, sp, #-17
 ; STRIDED-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; STRIDED-NEXT:    ptrue pn8.b
+; STRIDED-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z8.b, z9.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
 ; STRIDED-NEXT:    mov p8.b, p0.b
 ; STRIDED-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z12, [sp, #12, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z11, [sp, #13, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z10, [sp, #14, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z9, [sp, #15, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z8, [sp, #16, mul vl] // 16-byte Folded Spill
+; STRIDED-NEXT:    str z22, [sp, #16, mul vl] // 16-byte Folded Spill
 ; STRIDED-NEXT:    ldnt1b { z0.b, z8.b }, pn8/z, [x0, x1]
 ; STRIDED-NEXT:    //APP
 ; STRIDED-NEXT:    nop
 ; STRIDED-NEXT:    //NO_APP
-; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
+; STRIDED-NEXT:    ptrue pn8.b
 ; STRIDED-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
 ; STRIDED-NEXT:    mov z1.d, z8.d
-; STRIDED-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z12, [sp, #12, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z8, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z8.b, z9.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ldr z22, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; STRIDED-NEXT:    addvl sp, sp, #17
 ; STRIDED-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; STRIDED-NEXT:    ret
@@ -165,21 +129,15 @@ define <vscale x 32 x i8> @ldnt1_x2_i8_z0_z8_scalar(<vscale x 16 x i8> %unused, 
 ; CONTIGUOUS-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-16
 ; CONTIGUOUS-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
-; CONTIGUOUS-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z12, [sp, #12, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z11, [sp, #13, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z10, [sp, #14, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z9, [sp, #15, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z22.b, z23.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-2
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
 ; CONTIGUOUS-NEXT:    ldnt1b { z0.b, z1.b }, pn8/z, [x0, x1]
@@ -191,21 +149,15 @@ define <vscale x 32 x i8> @ldnt1_x2_i8_z0_z8_scalar(<vscale x 16 x i8> %unused, 
 ; CONTIGUOUS-NEXT:    ldr z0, [sp]
 ; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #2
-; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z12, [sp, #12, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z22.b, z23.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #16
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -226,45 +178,33 @@ define <vscale x 16 x i16> @ldnt1_x2_i16_z0_z8(<vscale x 8 x i16> %unused, <vsca
 ; STRIDED-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; STRIDED-NEXT:    addvl sp, sp, #-17
 ; STRIDED-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; STRIDED-NEXT:    ptrue pn8.b
+; STRIDED-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z8.b, z9.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
 ; STRIDED-NEXT:    mov p8.b, p0.b
 ; STRIDED-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z12, [sp, #12, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z11, [sp, #13, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z10, [sp, #14, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z9, [sp, #15, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z8, [sp, #16, mul vl] // 16-byte Folded Spill
+; STRIDED-NEXT:    str z22, [sp, #16, mul vl] // 16-byte Folded Spill
 ; STRIDED-NEXT:    ldnt1h { z0.h, z8.h }, pn8/z, [x0]
 ; STRIDED-NEXT:    //APP
 ; STRIDED-NEXT:    nop
 ; STRIDED-NEXT:    //NO_APP
-; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
+; STRIDED-NEXT:    ptrue pn8.b
 ; STRIDED-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
 ; STRIDED-NEXT:    mov z1.d, z8.d
-; STRIDED-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z12, [sp, #12, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z8, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z8.b, z9.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ldr z22, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; STRIDED-NEXT:    addvl sp, sp, #17
 ; STRIDED-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; STRIDED-NEXT:    ret
@@ -274,21 +214,15 @@ define <vscale x 16 x i16> @ldnt1_x2_i16_z0_z8(<vscale x 8 x i16> %unused, <vsca
 ; CONTIGUOUS-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-16
 ; CONTIGUOUS-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
-; CONTIGUOUS-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z12, [sp, #12, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z11, [sp, #13, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z10, [sp, #14, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z9, [sp, #15, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z22.b, z23.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-2
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
 ; CONTIGUOUS-NEXT:    ldnt1h { z0.h, z1.h }, pn8/z, [x0]
@@ -300,21 +234,15 @@ define <vscale x 16 x i16> @ldnt1_x2_i16_z0_z8(<vscale x 8 x i16> %unused, <vsca
 ; CONTIGUOUS-NEXT:    ldr z0, [sp]
 ; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #2
-; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z12, [sp, #12, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z22.b, z23.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #16
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -334,45 +262,33 @@ define <vscale x 16 x i16> @ldnt1_x2_i16_z0_z8_scalar(<vscale x 8 x i16> %unused
 ; STRIDED-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; STRIDED-NEXT:    addvl sp, sp, #-17
 ; STRIDED-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; STRIDED-NEXT:    ptrue pn8.b
+; STRIDED-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z8.b, z9.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
 ; STRIDED-NEXT:    mov p8.b, p0.b
 ; STRIDED-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z12, [sp, #12, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z11, [sp, #13, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z10, [sp, #14, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z9, [sp, #15, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z8, [sp, #16, mul vl] // 16-byte Folded Spill
+; STRIDED-NEXT:    str z22, [sp, #16, mul vl] // 16-byte Folded Spill
 ; STRIDED-NEXT:    ldnt1h { z0.h, z8.h }, pn8/z, [x0, x1, lsl #1]
 ; STRIDED-NEXT:    //APP
 ; STRIDED-NEXT:    nop
 ; STRIDED-NEXT:    //NO_APP
-; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
+; STRIDED-NEXT:    ptrue pn8.b
 ; STRIDED-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
 ; STRIDED-NEXT:    mov z1.d, z8.d
-; STRIDED-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z12, [sp, #12, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z8, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z8.b, z9.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ldr z22, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; STRIDED-NEXT:    addvl sp, sp, #17
 ; STRIDED-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; STRIDED-NEXT:    ret
@@ -382,21 +298,15 @@ define <vscale x 16 x i16> @ldnt1_x2_i16_z0_z8_scalar(<vscale x 8 x i16> %unused
 ; CONTIGUOUS-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-16
 ; CONTIGUOUS-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
-; CONTIGUOUS-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z12, [sp, #12, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z11, [sp, #13, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z10, [sp, #14, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z9, [sp, #15, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z22.b, z23.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-2
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
 ; CONTIGUOUS-NEXT:    ldnt1h { z0.h, z1.h }, pn8/z, [x0, x1, lsl #1]
@@ -408,21 +318,15 @@ define <vscale x 16 x i16> @ldnt1_x2_i16_z0_z8_scalar(<vscale x 8 x i16> %unused
 ; CONTIGUOUS-NEXT:    ldr z0, [sp]
 ; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #2
-; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z12, [sp, #12, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z22.b, z23.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #16
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -443,45 +347,33 @@ define <vscale x 8 x i32> @ldnt1_x2_i32_z0_z8(<vscale x 4 x i32> %unused, <vscal
 ; STRIDED-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; STRIDED-NEXT:    addvl sp, sp, #-17
 ; STRIDED-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; STRIDED-NEXT:    ptrue pn8.b
+; STRIDED-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z8.b, z9.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
 ; STRIDED-NEXT:    mov p8.b, p0.b
 ; STRIDED-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z12, [sp, #12, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z11, [sp, #13, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z10, [sp, #14, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z9, [sp, #15, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z8, [sp, #16, mul vl] // 16-byte Folded Spill
+; STRIDED-NEXT:    str z22, [sp, #16, mul vl] // 16-byte Folded Spill
 ; STRIDED-NEXT:    ldnt1w { z0.s, z8.s }, pn8/z, [x0]
 ; STRIDED-NEXT:    //APP
 ; STRIDED-NEXT:    nop
 ; STRIDED-NEXT:    //NO_APP
-; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
+; STRIDED-NEXT:    ptrue pn8.b
 ; STRIDED-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
 ; STRIDED-NEXT:    mov z1.d, z8.d
-; STRIDED-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z12, [sp, #12, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z8, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z8.b, z9.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ldr z22, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; STRIDED-NEXT:    addvl sp, sp, #17
 ; STRIDED-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; STRIDED-NEXT:    ret
@@ -491,21 +383,15 @@ define <vscale x 8 x i32> @ldnt1_x2_i32_z0_z8(<vscale x 4 x i32> %unused, <vscal
 ; CONTIGUOUS-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-16
 ; CONTIGUOUS-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
-; CONTIGUOUS-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z12, [sp, #12, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z11, [sp, #13, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z10, [sp, #14, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z9, [sp, #15, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z22.b, z23.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-2
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
 ; CONTIGUOUS-NEXT:    ldnt1w { z0.s, z1.s }, pn8/z, [x0]
@@ -517,21 +403,15 @@ define <vscale x 8 x i32> @ldnt1_x2_i32_z0_z8(<vscale x 4 x i32> %unused, <vscal
 ; CONTIGUOUS-NEXT:    ldr z0, [sp]
 ; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #2
-; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z12, [sp, #12, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z22.b, z23.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #16
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -551,45 +431,33 @@ define <vscale x 8 x i32> @ldnt1_x2_i32_z0_z8_scalar(<vscale x 4 x i32> %unused,
 ; STRIDED-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; STRIDED-NEXT:    addvl sp, sp, #-17
 ; STRIDED-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; STRIDED-NEXT:    ptrue pn8.b
+; STRIDED-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z8.b, z9.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
 ; STRIDED-NEXT:    mov p8.b, p0.b
 ; STRIDED-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z12, [sp, #12, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z11, [sp, #13, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z10, [sp, #14, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z9, [sp, #15, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z8, [sp, #16, mul vl] // 16-byte Folded Spill
+; STRIDED-NEXT:    str z22, [sp, #16, mul vl] // 16-byte Folded Spill
 ; STRIDED-NEXT:    ldnt1w { z0.s, z8.s }, pn8/z, [x0, x1, lsl #2]
 ; STRIDED-NEXT:    //APP
 ; STRIDED-NEXT:    nop
 ; STRIDED-NEXT:    //NO_APP
-; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
+; STRIDED-NEXT:    ptrue pn8.b
 ; STRIDED-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
 ; STRIDED-NEXT:    mov z1.d, z8.d
-; STRIDED-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z12, [sp, #12, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z8, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z8.b, z9.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ldr z22, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; STRIDED-NEXT:    addvl sp, sp, #17
 ; STRIDED-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; STRIDED-NEXT:    ret
@@ -599,21 +467,15 @@ define <vscale x 8 x i32> @ldnt1_x2_i32_z0_z8_scalar(<vscale x 4 x i32> %unused,
 ; CONTIGUOUS-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-16
 ; CONTIGUOUS-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
-; CONTIGUOUS-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z12, [sp, #12, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z11, [sp, #13, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z10, [sp, #14, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z9, [sp, #15, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z22.b, z23.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-2
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
 ; CONTIGUOUS-NEXT:    ldnt1w { z0.s, z1.s }, pn8/z, [x0, x1, lsl #2]
@@ -625,21 +487,15 @@ define <vscale x 8 x i32> @ldnt1_x2_i32_z0_z8_scalar(<vscale x 4 x i32> %unused,
 ; CONTIGUOUS-NEXT:    ldr z0, [sp]
 ; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #2
-; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z12, [sp, #12, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z22.b, z23.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #16
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -660,45 +516,33 @@ define <vscale x 4 x i64> @ldnt1_x2_i64_z0_z8(<vscale x 2 x i64> %unused, <vscal
 ; STRIDED-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; STRIDED-NEXT:    addvl sp, sp, #-17
 ; STRIDED-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; STRIDED-NEXT:    ptrue pn8.b
+; STRIDED-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z8.b, z9.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
 ; STRIDED-NEXT:    mov p8.b, p0.b
 ; STRIDED-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z12, [sp, #12, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z11, [sp, #13, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z10, [sp, #14, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z9, [sp, #15, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z8, [sp, #16, mul vl] // 16-byte Folded Spill
+; STRIDED-NEXT:    str z22, [sp, #16, mul vl] // 16-byte Folded Spill
 ; STRIDED-NEXT:    ldnt1d { z0.d, z8.d }, pn8/z, [x0]
 ; STRIDED-NEXT:    //APP
 ; STRIDED-NEXT:    nop
 ; STRIDED-NEXT:    //NO_APP
-; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
+; STRIDED-NEXT:    ptrue pn8.b
 ; STRIDED-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
 ; STRIDED-NEXT:    mov z1.d, z8.d
-; STRIDED-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z12, [sp, #12, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z8, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z8.b, z9.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ldr z22, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; STRIDED-NEXT:    addvl sp, sp, #17
 ; STRIDED-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; STRIDED-NEXT:    ret
@@ -708,21 +552,15 @@ define <vscale x 4 x i64> @ldnt1_x2_i64_z0_z8(<vscale x 2 x i64> %unused, <vscal
 ; CONTIGUOUS-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-16
 ; CONTIGUOUS-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
-; CONTIGUOUS-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z12, [sp, #12, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z11, [sp, #13, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z10, [sp, #14, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z9, [sp, #15, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z22.b, z23.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-2
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
 ; CONTIGUOUS-NEXT:    ldnt1d { z0.d, z1.d }, pn8/z, [x0]
@@ -734,21 +572,15 @@ define <vscale x 4 x i64> @ldnt1_x2_i64_z0_z8(<vscale x 2 x i64> %unused, <vscal
 ; CONTIGUOUS-NEXT:    ldr z0, [sp]
 ; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #2
-; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z12, [sp, #12, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z22.b, z23.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #16
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -768,45 +600,33 @@ define <vscale x 4 x i64> @ldnt1_x2_i64_z0_z8_scalar(<vscale x 2 x i64> %unused,
 ; STRIDED-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; STRIDED-NEXT:    addvl sp, sp, #-17
 ; STRIDED-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; STRIDED-NEXT:    ptrue pn8.b
+; STRIDED-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z8.b, z9.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
 ; STRIDED-NEXT:    mov p8.b, p0.b
 ; STRIDED-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z12, [sp, #12, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z11, [sp, #13, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z10, [sp, #14, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z9, [sp, #15, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z8, [sp, #16, mul vl] // 16-byte Folded Spill
+; STRIDED-NEXT:    str z22, [sp, #16, mul vl] // 16-byte Folded Spill
 ; STRIDED-NEXT:    ldnt1d { z0.d, z8.d }, pn8/z, [x0, x1, lsl #3]
 ; STRIDED-NEXT:    //APP
 ; STRIDED-NEXT:    nop
 ; STRIDED-NEXT:    //NO_APP
-; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
+; STRIDED-NEXT:    ptrue pn8.b
 ; STRIDED-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
 ; STRIDED-NEXT:    mov z1.d, z8.d
-; STRIDED-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z12, [sp, #12, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z8, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z8.b, z9.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ldr z22, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; STRIDED-NEXT:    addvl sp, sp, #17
 ; STRIDED-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; STRIDED-NEXT:    ret
@@ -816,21 +636,15 @@ define <vscale x 4 x i64> @ldnt1_x2_i64_z0_z8_scalar(<vscale x 2 x i64> %unused,
 ; CONTIGUOUS-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-16
 ; CONTIGUOUS-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
-; CONTIGUOUS-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z12, [sp, #12, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z11, [sp, #13, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z10, [sp, #14, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z9, [sp, #15, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    str z9, [sp, #1, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z22.b, z23.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-2
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
 ; CONTIGUOUS-NEXT:    ldnt1d { z0.d, z1.d }, pn8/z, [x0, x1, lsl #3]
@@ -842,21 +656,15 @@ define <vscale x 4 x i64> @ldnt1_x2_i64_z0_z8_scalar(<vscale x 2 x i64> %unused,
 ; CONTIGUOUS-NEXT:    ldr z0, [sp]
 ; CONTIGUOUS-NEXT:    ldr z1, [sp, #1, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #2
-; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z12, [sp, #12, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ptrue pn8.b
+; CONTIGUOUS-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z22.b, z23.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #16
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -877,46 +685,34 @@ define <vscale x 64 x i8> @ldnt1_x4_i8_z0_z4_z8_z12(<vscale x 16 x i8> %unused, 
 ; STRIDED-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; STRIDED-NEXT:    addvl sp, sp, #-17
 ; STRIDED-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; STRIDED-NEXT:    ptrue pn8.b
+; STRIDED-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z8.b, z9.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
 ; STRIDED-NEXT:    mov p8.b, p0.b
 ; STRIDED-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z12, [sp, #12, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z11, [sp, #13, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z10, [sp, #14, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z9, [sp, #15, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z8, [sp, #16, mul vl] // 16-byte Folded Spill
+; STRIDED-NEXT:    str z22, [sp, #16, mul vl] // 16-byte Folded Spill
 ; STRIDED-NEXT:    ldnt1b { z0.b, z4.b, z8.b, z12.b }, pn8/z, [x0]
 ; STRIDED-NEXT:    //APP
 ; STRIDED-NEXT:    nop
 ; STRIDED-NEXT:    //NO_APP
-; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
+; STRIDED-NEXT:    ptrue pn8.b
 ; STRIDED-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
 ; STRIDED-NEXT:    mov z2.d, z8.d
 ; STRIDED-NEXT:    mov z3.d, z12.d
-; STRIDED-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z12, [sp, #12, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z8, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z8.b, z9.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ldr z22, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; STRIDED-NEXT:    mov z1.d, z4.d
 ; STRIDED-NEXT:    addvl sp, sp, #17
 ; STRIDED-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -928,18 +724,13 @@ define <vscale x 64 x i8> @ldnt1_x4_i8_z0_z4_z8_z12(<vscale x 16 x i8> %unused, 
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-15
 ; CONTIGUOUS-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
-; CONTIGUOUS-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    str z13, [sp, #1, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z22.b, z23.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
 ; CONTIGUOUS-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
 ; CONTIGUOUS-NEXT:    str z9, [sp, #14, mul vl] // 16-byte Folded Spill
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-4
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
@@ -957,19 +748,14 @@ define <vscale x 64 x i8> @ldnt1_x4_i8_z0_z4_z8_z12(<vscale x 16 x i8> %unused, 
 ; CONTIGUOUS-NEXT:    ldr z3, [sp, #3, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #4
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
-; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #14, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z22.b, z23.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #15
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -993,46 +779,34 @@ define <vscale x 64 x i8> @ldnt1_x4_i8_z0_z4_z8_z12_scalar(<vscale x 16 x i8> %u
 ; STRIDED-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; STRIDED-NEXT:    addvl sp, sp, #-17
 ; STRIDED-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; STRIDED-NEXT:    ptrue pn8.b
+; STRIDED-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z8.b, z9.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
 ; STRIDED-NEXT:    mov p8.b, p0.b
 ; STRIDED-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z12, [sp, #12, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z11, [sp, #13, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z10, [sp, #14, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z9, [sp, #15, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z8, [sp, #16, mul vl] // 16-byte Folded Spill
+; STRIDED-NEXT:    str z22, [sp, #16, mul vl] // 16-byte Folded Spill
 ; STRIDED-NEXT:    ldnt1b { z0.b, z4.b, z8.b, z12.b }, pn8/z, [x0, x1]
 ; STRIDED-NEXT:    //APP
 ; STRIDED-NEXT:    nop
 ; STRIDED-NEXT:    //NO_APP
-; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
+; STRIDED-NEXT:    ptrue pn8.b
 ; STRIDED-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
 ; STRIDED-NEXT:    mov z2.d, z8.d
 ; STRIDED-NEXT:    mov z3.d, z12.d
-; STRIDED-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z12, [sp, #12, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z8, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z8.b, z9.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ldr z22, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; STRIDED-NEXT:    mov z1.d, z4.d
 ; STRIDED-NEXT:    addvl sp, sp, #17
 ; STRIDED-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -1044,18 +818,13 @@ define <vscale x 64 x i8> @ldnt1_x4_i8_z0_z4_z8_z12_scalar(<vscale x 16 x i8> %u
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-15
 ; CONTIGUOUS-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
-; CONTIGUOUS-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    str z13, [sp, #1, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z22.b, z23.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
 ; CONTIGUOUS-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
 ; CONTIGUOUS-NEXT:    str z9, [sp, #14, mul vl] // 16-byte Folded Spill
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-4
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
@@ -1073,19 +842,14 @@ define <vscale x 64 x i8> @ldnt1_x4_i8_z0_z4_z8_z12_scalar(<vscale x 16 x i8> %u
 ; CONTIGUOUS-NEXT:    ldr z3, [sp, #3, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #4
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
-; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #14, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z22.b, z23.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #15
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -1110,46 +874,34 @@ define <vscale x 32 x i16> @ldnt1_x4_i16_z0_z4_z8_z12(<vscale x 8 x i16> %unused
 ; STRIDED-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; STRIDED-NEXT:    addvl sp, sp, #-17
 ; STRIDED-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; STRIDED-NEXT:    ptrue pn8.b
+; STRIDED-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z8.b, z9.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
 ; STRIDED-NEXT:    mov p8.b, p0.b
 ; STRIDED-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z12, [sp, #12, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z11, [sp, #13, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z10, [sp, #14, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z9, [sp, #15, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z8, [sp, #16, mul vl] // 16-byte Folded Spill
+; STRIDED-NEXT:    str z22, [sp, #16, mul vl] // 16-byte Folded Spill
 ; STRIDED-NEXT:    ldnt1h { z0.h, z4.h, z8.h, z12.h }, pn8/z, [x0]
 ; STRIDED-NEXT:    //APP
 ; STRIDED-NEXT:    nop
 ; STRIDED-NEXT:    //NO_APP
-; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
+; STRIDED-NEXT:    ptrue pn8.b
 ; STRIDED-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
 ; STRIDED-NEXT:    mov z2.d, z8.d
 ; STRIDED-NEXT:    mov z3.d, z12.d
-; STRIDED-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z12, [sp, #12, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z8, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z8.b, z9.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ldr z22, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; STRIDED-NEXT:    mov z1.d, z4.d
 ; STRIDED-NEXT:    addvl sp, sp, #17
 ; STRIDED-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -1161,18 +913,13 @@ define <vscale x 32 x i16> @ldnt1_x4_i16_z0_z4_z8_z12(<vscale x 8 x i16> %unused
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-15
 ; CONTIGUOUS-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
-; CONTIGUOUS-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    str z13, [sp, #1, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z22.b, z23.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
 ; CONTIGUOUS-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
 ; CONTIGUOUS-NEXT:    str z9, [sp, #14, mul vl] // 16-byte Folded Spill
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-4
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
@@ -1190,19 +937,14 @@ define <vscale x 32 x i16> @ldnt1_x4_i16_z0_z4_z8_z12(<vscale x 8 x i16> %unused
 ; CONTIGUOUS-NEXT:    ldr z3, [sp, #3, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #4
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
-; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #14, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z22.b, z23.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #15
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -1226,46 +968,34 @@ define <vscale x 32 x i16> @ldnt1_x4_i16_z0_z4_z8_z12_scalar(<vscale x 8 x i16> 
 ; STRIDED-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; STRIDED-NEXT:    addvl sp, sp, #-17
 ; STRIDED-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; STRIDED-NEXT:    ptrue pn8.b
+; STRIDED-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z8.b, z9.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
 ; STRIDED-NEXT:    mov p8.b, p0.b
 ; STRIDED-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z12, [sp, #12, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z11, [sp, #13, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z10, [sp, #14, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z9, [sp, #15, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z8, [sp, #16, mul vl] // 16-byte Folded Spill
+; STRIDED-NEXT:    str z22, [sp, #16, mul vl] // 16-byte Folded Spill
 ; STRIDED-NEXT:    ldnt1h { z0.h, z4.h, z8.h, z12.h }, pn8/z, [x0, x1, lsl #1]
 ; STRIDED-NEXT:    //APP
 ; STRIDED-NEXT:    nop
 ; STRIDED-NEXT:    //NO_APP
-; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
+; STRIDED-NEXT:    ptrue pn8.b
 ; STRIDED-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
 ; STRIDED-NEXT:    mov z2.d, z8.d
 ; STRIDED-NEXT:    mov z3.d, z12.d
-; STRIDED-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z12, [sp, #12, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z8, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z8.b, z9.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ldr z22, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; STRIDED-NEXT:    mov z1.d, z4.d
 ; STRIDED-NEXT:    addvl sp, sp, #17
 ; STRIDED-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -1277,18 +1007,13 @@ define <vscale x 32 x i16> @ldnt1_x4_i16_z0_z4_z8_z12_scalar(<vscale x 8 x i16> 
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-15
 ; CONTIGUOUS-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
-; CONTIGUOUS-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    str z13, [sp, #1, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z22.b, z23.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
 ; CONTIGUOUS-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
 ; CONTIGUOUS-NEXT:    str z9, [sp, #14, mul vl] // 16-byte Folded Spill
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-4
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
@@ -1306,19 +1031,14 @@ define <vscale x 32 x i16> @ldnt1_x4_i16_z0_z4_z8_z12_scalar(<vscale x 8 x i16> 
 ; CONTIGUOUS-NEXT:    ldr z3, [sp, #3, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #4
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
-; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #14, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z22.b, z23.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #15
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -1343,46 +1063,34 @@ define <vscale x 16 x i32> @ldnt1_x4_i32_z0_z4_z8_z12(<vscale x 4 x i32> %unused
 ; STRIDED-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; STRIDED-NEXT:    addvl sp, sp, #-17
 ; STRIDED-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; STRIDED-NEXT:    ptrue pn8.b
+; STRIDED-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z8.b, z9.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
 ; STRIDED-NEXT:    mov p8.b, p0.b
 ; STRIDED-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z12, [sp, #12, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z11, [sp, #13, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z10, [sp, #14, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z9, [sp, #15, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z8, [sp, #16, mul vl] // 16-byte Folded Spill
+; STRIDED-NEXT:    str z22, [sp, #16, mul vl] // 16-byte Folded Spill
 ; STRIDED-NEXT:    ldnt1w { z0.s, z4.s, z8.s, z12.s }, pn8/z, [x0]
 ; STRIDED-NEXT:    //APP
 ; STRIDED-NEXT:    nop
 ; STRIDED-NEXT:    //NO_APP
-; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
+; STRIDED-NEXT:    ptrue pn8.b
 ; STRIDED-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
 ; STRIDED-NEXT:    mov z2.d, z8.d
 ; STRIDED-NEXT:    mov z3.d, z12.d
-; STRIDED-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z12, [sp, #12, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z8, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z8.b, z9.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ldr z22, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; STRIDED-NEXT:    mov z1.d, z4.d
 ; STRIDED-NEXT:    addvl sp, sp, #17
 ; STRIDED-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -1394,18 +1102,13 @@ define <vscale x 16 x i32> @ldnt1_x4_i32_z0_z4_z8_z12(<vscale x 4 x i32> %unused
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-15
 ; CONTIGUOUS-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
-; CONTIGUOUS-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    str z13, [sp, #1, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z22.b, z23.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
 ; CONTIGUOUS-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
 ; CONTIGUOUS-NEXT:    str z9, [sp, #14, mul vl] // 16-byte Folded Spill
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-4
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
@@ -1423,19 +1126,14 @@ define <vscale x 16 x i32> @ldnt1_x4_i32_z0_z4_z8_z12(<vscale x 4 x i32> %unused
 ; CONTIGUOUS-NEXT:    ldr z3, [sp, #3, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #4
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
-; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #14, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z22.b, z23.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #15
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -1459,46 +1157,34 @@ define <vscale x 16 x i32> @ldnt1_x4_i32_z0_z4_z8_z12_scalar(<vscale x 4 x i32> 
 ; STRIDED-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; STRIDED-NEXT:    addvl sp, sp, #-17
 ; STRIDED-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; STRIDED-NEXT:    ptrue pn8.b
+; STRIDED-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z8.b, z9.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
 ; STRIDED-NEXT:    mov p8.b, p0.b
 ; STRIDED-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z12, [sp, #12, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z11, [sp, #13, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z10, [sp, #14, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z9, [sp, #15, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z8, [sp, #16, mul vl] // 16-byte Folded Spill
+; STRIDED-NEXT:    str z22, [sp, #16, mul vl] // 16-byte Folded Spill
 ; STRIDED-NEXT:    ldnt1w { z0.s, z4.s, z8.s, z12.s }, pn8/z, [x0, x1, lsl #2]
 ; STRIDED-NEXT:    //APP
 ; STRIDED-NEXT:    nop
 ; STRIDED-NEXT:    //NO_APP
-; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
+; STRIDED-NEXT:    ptrue pn8.b
 ; STRIDED-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
 ; STRIDED-NEXT:    mov z2.d, z8.d
 ; STRIDED-NEXT:    mov z3.d, z12.d
-; STRIDED-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z12, [sp, #12, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z8, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z8.b, z9.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ldr z22, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; STRIDED-NEXT:    mov z1.d, z4.d
 ; STRIDED-NEXT:    addvl sp, sp, #17
 ; STRIDED-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -1510,18 +1196,13 @@ define <vscale x 16 x i32> @ldnt1_x4_i32_z0_z4_z8_z12_scalar(<vscale x 4 x i32> 
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-15
 ; CONTIGUOUS-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
-; CONTIGUOUS-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    str z13, [sp, #1, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z22.b, z23.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
 ; CONTIGUOUS-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
 ; CONTIGUOUS-NEXT:    str z9, [sp, #14, mul vl] // 16-byte Folded Spill
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-4
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
@@ -1539,19 +1220,14 @@ define <vscale x 16 x i32> @ldnt1_x4_i32_z0_z4_z8_z12_scalar(<vscale x 4 x i32> 
 ; CONTIGUOUS-NEXT:    ldr z3, [sp, #3, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #4
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
-; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #14, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z22.b, z23.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #15
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -1576,46 +1252,34 @@ define <vscale x 8 x i64> @ldnt1_x4_i64_z0_z4_z8_z12(<vscale x 2 x i64> %unused,
 ; STRIDED-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; STRIDED-NEXT:    addvl sp, sp, #-17
 ; STRIDED-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; STRIDED-NEXT:    ptrue pn8.b
+; STRIDED-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z8.b, z9.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
 ; STRIDED-NEXT:    mov p8.b, p0.b
 ; STRIDED-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z12, [sp, #12, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z11, [sp, #13, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z10, [sp, #14, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z9, [sp, #15, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z8, [sp, #16, mul vl] // 16-byte Folded Spill
+; STRIDED-NEXT:    str z22, [sp, #16, mul vl] // 16-byte Folded Spill
 ; STRIDED-NEXT:    ldnt1d { z0.d, z4.d, z8.d, z12.d }, pn8/z, [x0]
 ; STRIDED-NEXT:    //APP
 ; STRIDED-NEXT:    nop
 ; STRIDED-NEXT:    //NO_APP
-; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
+; STRIDED-NEXT:    ptrue pn8.b
 ; STRIDED-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
 ; STRIDED-NEXT:    mov z2.d, z8.d
 ; STRIDED-NEXT:    mov z3.d, z12.d
-; STRIDED-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z12, [sp, #12, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z8, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z8.b, z9.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ldr z22, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; STRIDED-NEXT:    mov z1.d, z4.d
 ; STRIDED-NEXT:    addvl sp, sp, #17
 ; STRIDED-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -1627,18 +1291,13 @@ define <vscale x 8 x i64> @ldnt1_x4_i64_z0_z4_z8_z12(<vscale x 2 x i64> %unused,
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-15
 ; CONTIGUOUS-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
-; CONTIGUOUS-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    str z13, [sp, #1, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z22.b, z23.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
 ; CONTIGUOUS-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
 ; CONTIGUOUS-NEXT:    str z9, [sp, #14, mul vl] // 16-byte Folded Spill
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-4
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
@@ -1656,19 +1315,14 @@ define <vscale x 8 x i64> @ldnt1_x4_i64_z0_z4_z8_z12(<vscale x 2 x i64> %unused,
 ; CONTIGUOUS-NEXT:    ldr z3, [sp, #3, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #4
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
-; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #14, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z22.b, z23.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #15
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -1692,46 +1346,34 @@ define <vscale x 8 x i64> @ldnt1_x4_i64_z0_z4_z8_z12_scalar(<vscale x 2 x i64> %
 ; STRIDED-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; STRIDED-NEXT:    addvl sp, sp, #-17
 ; STRIDED-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
+; STRIDED-NEXT:    ptrue pn8.b
+; STRIDED-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
+; STRIDED-NEXT:    st1b { z8.b, z9.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
 ; STRIDED-NEXT:    mov p8.b, p0.b
 ; STRIDED-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z12, [sp, #12, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z11, [sp, #13, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z10, [sp, #14, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z9, [sp, #15, mul vl] // 16-byte Folded Spill
-; STRIDED-NEXT:    str z8, [sp, #16, mul vl] // 16-byte Folded Spill
+; STRIDED-NEXT:    str z22, [sp, #16, mul vl] // 16-byte Folded Spill
 ; STRIDED-NEXT:    ldnt1d { z0.d, z4.d, z8.d, z12.d }, pn8/z, [x0, x1, lsl #3]
 ; STRIDED-NEXT:    //APP
 ; STRIDED-NEXT:    nop
 ; STRIDED-NEXT:    //NO_APP
-; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
+; STRIDED-NEXT:    ptrue pn8.b
 ; STRIDED-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
 ; STRIDED-NEXT:    mov z2.d, z8.d
 ; STRIDED-NEXT:    mov z3.d, z12.d
-; STRIDED-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z12, [sp, #12, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z11, [sp, #13, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
-; STRIDED-NEXT:    ldr z8, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ld1b { z8.b, z9.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
+; STRIDED-NEXT:    ldr z22, [sp, #16, mul vl] // 16-byte Folded Reload
+; STRIDED-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; STRIDED-NEXT:    mov z1.d, z4.d
 ; STRIDED-NEXT:    addvl sp, sp, #17
 ; STRIDED-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -1743,18 +1385,13 @@ define <vscale x 8 x i64> @ldnt1_x4_i64_z0_z4_z8_z12_scalar(<vscale x 2 x i64> %
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-15
 ; CONTIGUOUS-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
-; CONTIGUOUS-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    str z13, [sp, #1, mul vl] // 16-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z22.b, z23.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; CONTIGUOUS-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
 ; CONTIGUOUS-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z18, [sp, #6, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z17, [sp, #7, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z16, [sp, #8, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z15, [sp, #9, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z14, [sp, #10, mul vl] // 16-byte Folded Spill
-; CONTIGUOUS-NEXT:    str z13, [sp, #11, mul vl] // 16-byte Folded Spill
 ; CONTIGUOUS-NEXT:    str z9, [sp, #14, mul vl] // 16-byte Folded Spill
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #-4
 ; CONTIGUOUS-NEXT:    mov p8.b, p0.b
@@ -1772,19 +1409,14 @@ define <vscale x 8 x i64> @ldnt1_x4_i64_z0_z4_z8_z12_scalar(<vscale x 2 x i64> %
 ; CONTIGUOUS-NEXT:    ldr z3, [sp, #3, mul vl]
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #4
 ; CONTIGUOUS-NEXT:    ptrue pn8.b
-; CONTIGUOUS-NEXT:    ldr z23, [sp, #1, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z22, [sp, #2, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z21, [sp, #3, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z20, [sp, #4, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z19, [sp, #5, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z18, [sp, #6, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z17, [sp, #7, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z16, [sp, #8, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z15, [sp, #9, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z14, [sp, #10, mul vl] // 16-byte Folded Reload
-; CONTIGUOUS-NEXT:    ldr z13, [sp, #11, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ldr z13, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr z9, [sp, #14, mul vl] // 16-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z22.b, z23.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
+; CONTIGUOUS-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
 ; CONTIGUOUS-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CONTIGUOUS-NEXT:    addvl sp, sp, #15
 ; CONTIGUOUS-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload

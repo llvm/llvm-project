@@ -70,13 +70,17 @@ extern int PollyChunkSize;
 ///                           assume it.
 /// @param LoopVectDisabled   If the Loop vectorizer should be disabled for this
 ///                           loop.
+/// @param SkipVectorizeEnableMetadata
+///                           If Polly should avoid setting
+///                           llvm.loop.vectorize.enable=true for this loop.
 ///
 /// @return Value*    The newly created induction variable for this loop.
 Value *createLoop(Value *LowerBound, Value *UpperBound, Value *Stride,
                   PollyIRBuilder &Builder, LoopInfo &LI, DominatorTree &DT,
                   BasicBlock *&ExitBlock, ICmpInst::Predicate Predicate,
                   ScopAnnotator *Annotator = nullptr, bool Parallel = false,
-                  bool UseGuard = true, bool LoopVectDisabled = false);
+                  bool UseGuard = true, bool LoopVectDisabled = false,
+                  bool SkipVectorizeEnableMetadata = false);
 
 /// Create a DebugLoc representing generated instructions.
 ///

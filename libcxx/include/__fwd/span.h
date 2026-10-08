@@ -21,17 +21,17 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 inline constexpr size_t dynamic_extent = numeric_limits<size_t>::max();
 template <typename _Tp, size_t _Extent = dynamic_extent>
 class span;
 
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif
 
 _LIBCPP_POP_MACROS
 

@@ -9,6 +9,8 @@ Prerequisites:
 - [Building MLIR from source](/getting_started/)
 - [MLIR Language Reference](/docs/LangRef/)
 
+## Table of contents
+
 [TOC]
 
 ## `mlir-opt` basics
@@ -131,13 +133,13 @@ module {
 ```
 
 This pass has options that allow the user to configure its behavior.
-For example, the `fusion-compute-tolerance` option
+For example, the `compute-tolerance` option
 is described as the "fractional increase in additional computation tolerated while fusing."
 If this value is set to zero on the command line,
 the pass will not fuse the loops.
 
 ```bash
-build/bin/mlir-opt --pass-pipeline="builtin.module(affine-loop-fusion{fusion-compute-tolerance=0})" \
+build/bin/mlir-opt --pass-pipeline="builtin.module(affine-loop-fusion{compute-tolerance=0})" \
 mlir/test/Examples/mlir-opt/loop_fusion.mlir
 ```
 
@@ -269,6 +271,7 @@ For more general information on pass management, see [Pass Infrastructure](/docs
 
 ## Useful CLI flags
 
+- `--help` and `--help-hidden` show a list of flags.
 - `--debug` prints all debug information produced by `LLVM_DEBUG` calls.
 - `--debug-only="my-tag"` prints only the debug information produced by `LLVM_DEBUG`
   in files that have the macro `#define DEBUG_TYPE "my-tag"`.
@@ -277,6 +280,9 @@ For more general information on pass management, see [Pass Infrastructure](/docs
       for patterns applied with the greedy rewriter engine.
     - `"dialect-conversion"` only prints debug information
       for the dialect conversion framework.
+ - `--dump-pass-pipeline` dumps the pass pipeline that will be run to standard output.
+   This output can be directly passed to `--pass-pipeline` and is useful to
+   identify exactly which passes and options are executed.
  - `--emit-bytecode` emits MLIR in the bytecode format.
  - `--mlir-pass-statistics` print statistics about the passes run.
     These are generated via [pass statistics](/docs/PassManagement/#pass-statistics).
@@ -287,8 +293,10 @@ For more general information on pass management, see [Pass Infrastructure](/docs
       IRs to files in a directory tree, making them easier to inspect versus a
       large dump to the terminal.
  - `--mlir-timing` displays execution times of each pass.
+ - `--view-op-graph` runs a pass that generates a Graphviz DOT file representing
+   the module at the given step of a pipeline.
 
-## Further readering
+## Further reading
 
 - [List of passes](/docs/Passes/)
 - [List of dialects](/docs/Dialects/)

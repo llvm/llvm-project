@@ -76,7 +76,7 @@ define void @osfx(ptr %this) comdat personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:    .seh_save_fplr 24
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    adrp x0, .LBB0_2
-; CHECK-NEXT:    add x0, x0, .LBB0_2
+; CHECK-NEXT:    add x0, x0, :lo12:.LBB0_2
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    ldp x29, x30, [sp, #24] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_fplr 24

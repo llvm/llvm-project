@@ -100,7 +100,7 @@ declare token @llvm.experimental.gc.statepoint.p0(i64 , i32 , ptr, i32 , i32 , .
 ;CHECK:     successors: %bb.3(0x80000000)
 ;CHECK:     ADJCALLSTACKDOWN64 8, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
 ;CHECK:     MOVSDmr $rsp, 1, $noreg, 0, $noreg, %14 :: (store (s64) into stack)
-;CHECK:     dead $edi = MOV32r0 implicit-def dead $eflags, implicit-def $rdi
+;CHECK:     $edi = MOV32r0 implicit-def dead $eflags, implicit-def $rdi
 ;CHECK:     $xmm0 = COPY %68
 ;CHECK:     $xmm1 = COPY %64
 ;CHECK:     $xmm2 = COPY %6

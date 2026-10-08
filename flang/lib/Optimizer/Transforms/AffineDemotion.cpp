@@ -1,4 +1,4 @@
-//===-- AffineDemotion.cpp -----------------------------------------------===//
+//===-- AffineDemotion.cpp ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -27,10 +27,8 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/IntegerSet.h"
-#include "mlir/IR/Visitors.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 

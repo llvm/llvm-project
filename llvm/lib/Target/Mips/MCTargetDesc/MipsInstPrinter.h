@@ -12,6 +12,7 @@
 
 #ifndef LLVM_LIB_TARGET_MIPS_MCTARGETDESC_MIPSINSTPRINTER_H
 #define LLVM_LIB_TARGET_MIPS_MCTARGETDESC_MIPSINSTPRINTER_H
+#include "MipsMCTargetDesc.h"
 #include "llvm/MC/MCInstPrinter.h"
 
 namespace llvm {
@@ -83,7 +84,8 @@ public:
   getMnemonic(const MCInst &MI) const override;
   void printInstruction(const MCInst *MI, uint64_t Address,
                         const MCSubtargetInfo &STI, raw_ostream &O);
-  static const char *getRegisterName(MCRegister Reg);
+  static const char *getRegisterName(MCRegister Reg,
+                                     unsigned AltIdx = Mips::NoRegAltName);
 
   void printRegName(raw_ostream &OS, MCRegister Reg) override;
   void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,

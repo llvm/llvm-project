@@ -14,21 +14,21 @@ define void @test(ptr %p, i1 %arg) {
 entry:
   br label %for.body51
 
-for.body51:                                       ; preds = %for.body51, %entry
+for.body51:
   br i1 %arg, label %for.body51, label %for.body89.lr.ph
 
-for.cond80.loopexit:                              ; preds = %for.body89
+for.cond80.loopexit:
   %inc94.lcssa = phi i32 [ %inc94, %for.body89 ]
   br i1 %arg, label %for.body89.lr.ph, label %nrvo.skipdtor.loopexit
 
-for.body89.lr.ph:                                 ; preds = %for.cond80.loopexit, %for.body51
+for.body89.lr.ph:
   %i79.0179 = phi i32 [ %add90, %for.cond80.loopexit ], [ 0, %for.body51 ]
   %next_index.4178 = phi i32 [ %inc94.lcssa, %for.cond80.loopexit ], [ 0, %for.body51 ]
   %add90 = add nuw i32 %i79.0179, 1
   %mul91 = mul i32 %add90, 7
   br label %for.body89
 
-for.body89:                                       ; preds = %for.body89, %for.body89.lr.ph
+for.body89:
   %j.0175 = phi i32 [ 0, %for.body89.lr.ph ], [ %add92, %for.body89 ]
   %next_index.5174 = phi i32 [ %next_index.4178, %for.body89.lr.ph ], [ %inc94, %for.body89 ]
   %add92 = add nuw i32 %j.0175, 1
@@ -41,6 +41,6 @@ for.body89:                                       ; preds = %for.body89, %for.bo
   %cmp87 = icmp ult i32 %add92, 123
   br i1 %cmp87, label %for.body89, label %for.cond80.loopexit
 
-nrvo.skipdtor.loopexit:                           ; preds = %for.cond80.loopexit
+nrvo.skipdtor.loopexit:
   ret void
 }

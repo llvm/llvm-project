@@ -67,12 +67,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE FIXUPBW_NAME
 
-// Option to allow this optimization pass to have fine-grained control.
-static cl::opt<bool>
-    FixupBWInsts("fixup-byte-word-insts",
-                 cl::desc("Change byte and word instructions to larger sizes"),
-                 cl::init(true), cl::Hidden);
-
 namespace {
 class X86FixupBWInstImpl {
 public:
@@ -163,11 +157,12 @@ FunctionPass *llvm::createX86FixupBWInstsLegacyPass() {
 }
 
 bool X86FixupBWInstImpl::runOnMachineFunction(MachineFunction &MF) {
-  if (!FixupBWInsts)
+  const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
+  if (!ST.getCLOpts().fixup_byte_word_insts)
     return false;
 
   this->MF = &MF;
-  TII = MF.getSubtarget<X86Subtarget>().getInstrInfo();
+  TII = ST.getInstrInfo();
   TRI = MF.getRegInfo().getTargetRegisterInfo();
   LiveUnits.init(TII->getRegisterInfo());
 
@@ -459,7 +454,8 @@ void X86FixupBWInstImpl::processBasicBlock(MachineFunction &MF,
       MIReplacements.push_back(std::make_pair(&MI, NewMI));
 
     // We're done with this instruction, update liveness for the next one.
-    LiveUnits.stepBackward(MI);
+    if (!MI.isDebugInstr())
+      LiveUnits.stepBackward(MI);
   }
 
   while (!MIReplacements.empty()) {

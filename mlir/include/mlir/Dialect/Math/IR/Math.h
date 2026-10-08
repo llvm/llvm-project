@@ -10,7 +10,7 @@
 #define MLIR_DIALECT_MATH_IR_MATH_H_
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/IR/ArithOpInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"

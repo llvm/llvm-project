@@ -123,7 +123,7 @@ void LVObject::printAttributes(raw_ostream &OS, bool Full, StringRef Name,
   // Print the line.
   std::string TheLineNumber(Object.lineNumberAsString());
   std::string TheIndentation(Object.indentAsString());
-  OS << format(" %5s %s ", TheLineNumber.c_str(), TheIndentation.c_str());
+  OS << formatv(" {0,5} {1} ", TheLineNumber, TheIndentation);
 
   OS << Name;
   if (PrintRef && options().getAttributeOffset())

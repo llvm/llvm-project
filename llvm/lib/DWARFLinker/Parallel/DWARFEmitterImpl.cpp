@@ -7,12 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "DWARFEmitterImpl.h"
-#include "DWARFLinkerCompileUnit.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCObjectWriter.h"
-#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -55,8 +53,8 @@ Error DwarfEmitterImpl::init(Triple TheTriple,
                              "no subtarget info for target %s",
                              TripleName.c_str());
 
-  MC.reset(new MCContext(TheTriple, MAI.get(), MRI.get(), MSTI.get(), nullptr,
-                         nullptr, true, Swift5ReflectionSegmentName));
+  MC.reset(new MCContext(TheTriple, *MAI, *MRI, *MSTI, nullptr, true,
+                         Swift5ReflectionSegmentName));
   MOFI.reset(TheTarget->createMCObjectFileInfo(*MC, /*PIC=*/false, false));
   MC->setObjectFileInfo(MOFI.get());
 

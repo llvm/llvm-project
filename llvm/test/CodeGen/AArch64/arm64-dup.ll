@@ -511,14 +511,13 @@ define void @disguised_dup(<4 x float> %x, ptr %p1, ptr %p2) {
 ; CHECK-GI-LABEL: disguised_dup:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    adrp x8, .LCPI38_1
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI38_1]
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI38_1]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI38_0
-; CHECK-GI-NEXT:    tbl.16b v0, { v0, v1 }, v2
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI38_0]
-; CHECK-GI-NEXT:    tbl.16b v2, { v0, v1 }, v2
+; CHECK-GI-NEXT:    tbl.16b v0, { v0 }, v1
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI38_0]
+; CHECK-GI-NEXT:    tbl.16b v1, { v0 }, v1
 ; CHECK-GI-NEXT:    str q0, [x0]
-; CHECK-GI-NEXT:    str q2, [x1]
+; CHECK-GI-NEXT:    str q1, [x1]
 ; CHECK-GI-NEXT:    ret
   %shuf = shufflevector <4 x float> %x, <4 x float> undef, <4 x i32> <i32 1, i32 2, i32 0, i32 0>
   %dup = shufflevector <4 x float> %shuf, <4 x float> undef, <4 x i32> <i32 3, i32 2, i32 2, i32 3>

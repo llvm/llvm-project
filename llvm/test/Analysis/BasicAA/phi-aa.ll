@@ -155,8 +155,7 @@ loop:
 }
 
 ; CHECK-LABEL: phi_and_gep_unknown_size
-; CHECK: Just Mod:   call void @llvm.memset.p0.i32(ptr %g, i8 0, i32 %size, i1 false) <->   call void @llvm.memset.p0.i32(ptr %z, i8 0, i32 %size, i1 false)
-; TODO: This should be NoModRef.
+; CHECK: NoModRef:   call void @llvm.memset.p0.i32(ptr %g, i8 0, i32 %size, i1 false) <->   call void @llvm.memset.p0.i32(ptr %z, i8 0, i32 %size, i1 false)
 define void @phi_and_gep_unknown_size(i1 %c, ptr %x, ptr %y, ptr noalias %z, i32 %size) {
 entry:
   br i1 %c, label %true, label %false
@@ -172,6 +171,27 @@ exit:
   %g = getelementptr inbounds i8, ptr %p, i64 1
   call void @llvm.memset.p0.i32(ptr %g, i8 0, i32 %size, i1 false)
   call void @llvm.memset.p0.i32(ptr %z, i8 0, i32 %size, i1 false)
+  ret void
+}
+
+; If a phi arm is the other pointer, the gep may alias it.
+; CHECK-LABEL: phi_and_gep_unknown_size_may
+; CHECK: MayAlias:	i8* %g, i8* %z
+define void @phi_and_gep_unknown_size_may(i1 %c, ptr %x, ptr %z) {
+entry:
+  br i1 %c, label %true, label %false
+
+true:
+  br label %exit
+
+false:
+  br label %exit
+
+exit:
+  %p = phi ptr [ %x, %true ], [ %z, %false ]
+  %g = getelementptr inbounds i8, ptr %p, i64 1
+  store i8 0, ptr %g
+  store i8 0, ptr %z
   ret void
 }
 

@@ -53,9 +53,8 @@ entry:
 define dso_local signext i32 @test_ileus_sext_z(i16 zeroext %a) {
 ; CHECK-LABEL: test_ileus_sext_z:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cntlzw r3, r3
-; CHECK-NEXT:    srwi r3, r3, 5
-; CHECK-NEXT:    neg r3, r3
+; CHECK-NEXT:    addic r3, r3, -1
+; CHECK-NEXT:    subfe r3, r3, r3
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp ule i16 %a, 0
@@ -117,10 +116,9 @@ entry:
 define dso_local void @test_ileus_sext_z_store(i16 zeroext %a) {
 ; CHECK-LABEL: test_ileus_sext_z_store:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cntlzw r3, r3
+; CHECK-NEXT:    addic r3, r3, -1
 ; CHECK-NEXT:    addis r4, r2, glob@toc@ha
-; CHECK-NEXT:    srwi r3, r3, 5
-; CHECK-NEXT:    neg r3, r3
+; CHECK-NEXT:    subfe r3, r3, r3
 ; CHECK-NEXT:    sth r3, glob@toc@l(r4)
 ; CHECK-NEXT:    blr
 entry:

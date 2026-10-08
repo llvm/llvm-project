@@ -10,15 +10,15 @@ body: |
     ; CHECK-LABEL: name: v4s32
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %v1:_(<4 x s32>) = COPY $q0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: [[DUP:%[0-9]+]]:_(<4 x s32>) = G_DUP [[C]](s32)
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(<4 x s32>) = G_SHL %v1, [[DUP]](<4 x s32>)
-    ; CHECK-NEXT: %sext:_(<4 x s32>) = G_VASHR [[SHL]], 16
-    ; CHECK-NEXT: $q0 = COPY %sext(<4 x s32>)
+    ; CHECK-NEXT: %v1:_(<4 x i32>) = COPY $q0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[DUP:%[0-9]+]]:_(<4 x i32>) = G_DUP [[C]](i32)
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(<4 x i32>) = G_SHL %v1, [[DUP]](<4 x i32>)
+    ; CHECK-NEXT: %sext:_(<4 x i32>) = G_VASHR [[SHL]], 16
+    ; CHECK-NEXT: $q0 = COPY %sext(<4 x i32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %v1:_(<4 x s32>) = COPY $q0
-    %sext:_(<4 x s32>) = G_SEXT_INREG %v1, 16
+    %v1:_(<4 x i32>) = COPY $q0
+    %sext:_(<4 x i32>) = G_SEXT_INREG %v1, 16
     $q0 = COPY %sext
     RET_ReallyLR implicit $q0
 ...
@@ -31,12 +31,12 @@ body: |
     ; CHECK-LABEL: name: scalar_no_lower
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %v1:_(s64) = COPY $x0
-    ; CHECK-NEXT: %sext:_(s64) = G_SEXT_INREG %v1, 16
-    ; CHECK-NEXT: $x0 = COPY %sext(s64)
+    ; CHECK-NEXT: %v1:_(i64) = COPY $x0
+    ; CHECK-NEXT: %sext:_(i64) = G_SEXT_INREG %v1, 16
+    ; CHECK-NEXT: $x0 = COPY %sext(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %v1:_(s64) = COPY $x0
-    %sext:_(s64) = G_SEXT_INREG %v1, 16
+    %v1:_(i64) = COPY $x0
+    %sext:_(i64) = G_SEXT_INREG %v1, 16
     $x0 = COPY %sext
     RET_ReallyLR implicit $x0
 ...

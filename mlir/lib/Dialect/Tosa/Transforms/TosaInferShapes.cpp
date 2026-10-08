@@ -112,7 +112,13 @@ public:
           // are likely to be further up in the code due to the order in which
           // they appear in the use list.
           OpBuilder builder{value.getContext()};
-          builder.setInsertionPointAfter(value.getDefiningOp());
+          if (Operation *defOp = value.getDefiningOp()) {
+            builder.setInsertionPointAfter(defOp);
+          } else {
+            // For block arguments there is no defining op; insert at the start
+            // of the block that owns the argument.
+            builder.setInsertionPointToStart(value.getParentBlock());
+          }
           castValue =
               tensor::CastOp::create(builder, value.getLoc(), oldType, value);
         }

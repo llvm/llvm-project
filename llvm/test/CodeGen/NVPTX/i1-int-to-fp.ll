@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_90 -mattr=+ptx78 | FileCheck %s
+; RUN: %if ptxas-sm_90 && ptxas-isa-7.8 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_90 -mattr=+ptx78 | %ptxas-verify -arch=sm_90 %}
 
 ; CHECK-LABEL: foo
 ; CHECK: setp.ne.b16 %[[P:p[0-9]+]], %{{.*}}, 0;
@@ -53,4 +53,13 @@ define half @foo5(i1 %a) {
 define half @foo6(i1 %a) {
   %ret = sitofp i1 %a to half
   ret half %ret
+}
+
+; CHECK-LABEL: foo7
+; CHECK: setp.ne.b16 %[[P:p[0-9]+]], %{{.*}}, 0;
+; CHECK: selp.b32 %[[R:r[0-9]+]], -1, 0, %[[P]];
+; CHECK: cvt.rn.bf16.s32 %{{.*}}, %[[R]]
+define bfloat @foo7(i1 %a) {
+  %ret = sitofp i1 %a to bfloat
+  ret bfloat %ret
 }

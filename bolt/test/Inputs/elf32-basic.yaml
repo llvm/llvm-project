@@ -1,0 +1,12 @@
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_ARM
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Address: 0x10000
+    Content: '00000000'

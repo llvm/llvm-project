@@ -22,9 +22,12 @@
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -32,14 +35,13 @@ using namespace llvm;
 #define DEBUG_TYPE "wasm-explicit-locals"
 
 namespace {
-class WebAssemblyExplicitLocals final : public MachineFunctionPass {
+class WebAssemblyExplicitLocalsLegacy final : public MachineFunctionPass {
   StringRef getPassName() const override {
     return "WebAssembly Explicit Locals";
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -47,16 +49,16 @@ class WebAssemblyExplicitLocals final : public MachineFunctionPass {
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  WebAssemblyExplicitLocals() : MachineFunctionPass(ID) {}
+  WebAssemblyExplicitLocalsLegacy() : MachineFunctionPass(ID) {}
 };
 } // end anonymous namespace
 
-char WebAssemblyExplicitLocals::ID = 0;
-INITIALIZE_PASS(WebAssemblyExplicitLocals, DEBUG_TYPE,
+char WebAssemblyExplicitLocalsLegacy::ID = 0;
+INITIALIZE_PASS(WebAssemblyExplicitLocalsLegacy, DEBUG_TYPE,
                 "Convert registers to WebAssembly locals", false, false)
 
-FunctionPass *llvm::createWebAssemblyExplicitLocals() {
-  return new WebAssemblyExplicitLocals();
+FunctionPass *llvm::createWebAssemblyExplicitLocalsLegacyPass() {
+  return new WebAssemblyExplicitLocalsLegacy();
 }
 
 static void checkFrameBase(WebAssemblyFunctionInfo &MFI, unsigned Local,
@@ -228,7 +230,7 @@ static void removeFakeUses(MachineFunction &MF) {
     MI->eraseFromParent();
 }
 
-bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
+static bool explicitLocals(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** Make Locals Explicit **********\n"
                        "********** Function: "
                     << MF.getName() << '\n');
@@ -366,7 +368,14 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
           const TargetRegisterClass *RC = MRI.getRegClass(OldReg);
           Register NewReg = MRI.createVirtualRegister(RC);
           auto InsertPt = std::next(MI.getIterator());
-          if (UseEmpty[OldReg.virtRegIndex()]) {
+          // When libcalls are emitted for thread context, the frame base vreg
+          // has an implicit use in the DW_AT_frame_base debug info, so we
+          // should not remove it.
+          bool NeedsRegForDebug =
+              MFI.isFrameBaseVirtual() && OldReg == MFI.getFrameBaseVreg() &&
+              MF.getFunction().getSubprogram() &&
+              MF.getSubtarget<WebAssemblySubtarget>().hasLibcallThreadContext();
+          if (UseEmpty[OldReg.virtRegIndex()] && !NeedsRegForDebug) {
             unsigned Opc = getDropOpcode(RC);
             MachineInstr *Drop =
                 BuildMI(MBB, InsertPt, MI.getDebugLoc(), TII->get(Opc))
@@ -492,4 +501,17 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
 #endif
 
   return Changed;
+}
+
+bool WebAssemblyExplicitLocalsLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  return explicitLocals(MF);
+}
+
+PreservedAnalyses
+WebAssemblyExplicitLocalsPass::run(MachineFunction &MF,
+                                   MachineFunctionAnalysisManager &MFAM) {
+  return explicitLocals(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                  .preserveSet<CFGAnalyses>()
+                            : PreservedAnalyses::all();
 }

@@ -6,7 +6,7 @@ define <4 x i32> @test(<2 x i64> %v, ptr %p) {
 ; CHECK-SAME: <2 x i64> [[V:%.*]], ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i64> [[V]], <2 x i64> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x ptr> poison, ptr [[P]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x ptr> poison, ptr [[P]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x ptr> [[TMP0]], <2 x ptr> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i16, <2 x ptr> [[TMP1]], <2 x i64> [[TMP4]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i16> @llvm.masked.gather.v2i16.v2p0(<2 x ptr> align 2 [[TMP2]], <2 x i1> splat (i1 true), <2 x i16> poison)

@@ -13,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/BTFDebug.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
@@ -83,11 +85,21 @@ BTFTypeDerived::BTFTypeDerived(const DIDerivedType *DTy, unsigned Tag,
   BTFType.Info = Kind << 24;
 }
 
-/// Used by DW_TAG_pointer_type only.
+/// Used by DW_TAG_pointer_type and DW_TAG_typedef only.
 BTFTypeDerived::BTFTypeDerived(unsigned NextTypeId, unsigned Tag,
                                StringRef Name)
     : DTy(nullptr), NeedsFixup(false), Name(Name) {
-  Kind = BTF::BTF_KIND_PTR;
+  switch (Tag) {
+  case dwarf::DW_TAG_pointer_type:
+    Kind = BTF::BTF_KIND_PTR;
+    break;
+  case dwarf::DW_TAG_typedef:
+    Kind = BTF::BTF_KIND_TYPEDEF;
+    break;
+  default:
+    llvm_unreachable("Tag must be pointer or typedef");
+  }
+
   BTFType.Info = Kind << 24;
   BTFType.Type = NextTypeId;
 }
@@ -163,6 +175,7 @@ BTFTypeInt::BTFTypeInt(uint32_t Encoding, uint32_t SizeInBits,
     break;
   case dwarf::DW_ATE_unsigned:
   case dwarf::DW_ATE_unsigned_char:
+  case dwarf::DW_ATE_UTF:
     BTFEncoding = 0;
     break;
   default:
@@ -303,9 +316,11 @@ void BTFTypeArray::emitType(MCStreamer &OS) {
 }
 
 /// Represent either a struct or a union.
-BTFTypeStruct::BTFTypeStruct(const DICompositeType *STy, bool IsStruct,
+BTFTypeStruct::BTFTypeStruct(const DICompositeType *STy,
+                             ArrayRef<const DINode *> Elements, bool IsStruct,
                              bool HasBitField, uint32_t Vlen)
-    : STy(STy), HasBitField(HasBitField) {
+    : STy(STy), Elements(Elements.begin(), Elements.end()),
+      HasBitField(HasBitField) {
   Kind = IsStruct ? BTF::BTF_KIND_STRUCT : BTF::BTF_KIND_UNION;
   BTFType.Size = roundupToBytes(STy->getSizeInBits());
   BTFType.Info = (HasBitField << 31) | (Kind << 24) | Vlen;
@@ -333,7 +348,6 @@ void BTFTypeStruct::completeType(BTFDebug &BDebug) {
   }
 
   // Add struct/union members.
-  const DINodeArray Elements = STy->getElements();
   for (const auto *Element : Elements) {
     struct BTF::BTFMember BTFMember;
 
@@ -381,8 +395,12 @@ std::string BTFTypeStruct::getName() { return std::string(STy->getName()); }
 
 BTFTypeFuncProto::BTFTypeFuncProto(
     const DISubroutineType *STy, uint32_t VLen,
-    const std::unordered_map<uint32_t, StringRef> &FuncArgNames)
-    : STy(STy), FuncArgNames(FuncArgNames) {
+    const SmallDenseMap<uint32_t, StringRef> &FuncArgNames,
+    bool UseFilteredParams, ArrayRef<uint32_t> AliveParamIndices,
+    bool VoidReturn)
+    : STy(STy), FuncArgNames(FuncArgNames),
+      AliveParamIndices(AliveParamIndices),
+      UseFilteredParams(UseFilteredParams), VoidReturn(VoidReturn) {
   Kind = BTF::BTF_KIND_FUNC_PROTO;
   BTFType.Info = (Kind << 24) | VLen;
 }
@@ -393,22 +411,37 @@ void BTFTypeFuncProto::completeType(BTFDebug &BDebug) {
   IsCompleted = true;
 
   DITypeArray Elements = STy->getTypeArray();
-  auto RetType = BTFDebug::tryRemoveAtomicType(Elements[0]);
-  BTFType.Type = RetType ? BDebug.getTypeId(RetType) : 0;
+  if (VoidReturn) {
+    BTFType.Type = 0;
+  } else {
+    auto RetType = BTFDebug::tryRemoveAtomicType(Elements[0]);
+    BTFType.Type = RetType ? BDebug.getTypeId(RetType) : 0;
+  }
   BTFType.NameOff = 0;
 
-  for (unsigned I = 1, N = Elements.size(); I < N; ++I) {
+  auto EmitParam = [&](uint32_t I) {
     struct BTF::BTFParam Param;
     auto Element = BTFDebug::tryRemoveAtomicType(Elements[I]);
     if (Element) {
-      Param.NameOff = BDebug.addString(FuncArgNames[I]);
+      auto It = FuncArgNames.find(I);
+      Param.NameOff =
+          It != FuncArgNames.end() ? BDebug.addString(It->second) : 0;
       Param.Type = BDebug.getTypeId(Element);
     } else {
       Param.NameOff = 0;
       Param.Type = 0;
     }
     Parameters.push_back(Param);
+  };
+
+  if (UseFilteredParams) {
+    for (uint32_t I : AliveParamIndices)
+      EmitParam(I);
+    return;
   }
+
+  for (unsigned I = 1, N = Elements.size(); I < N; ++I)
+    EmitParam(I);
 }
 
 void BTFTypeFuncProto::emitType(MCStreamer &OS) {
@@ -587,6 +620,9 @@ void BTFDebug::visitBasicType(const DIBasicType *BTy, uint32_t &TypeId) {
   case dwarf::DW_ATE_signed_char:
   case dwarf::DW_ATE_unsigned:
   case dwarf::DW_ATE_unsigned_char:
+  case dwarf::DW_ATE_UTF:
+    // Create a BTF type instance for this DIBasicType and put it into
+    // DIToIdMap for cross-type reference check.
     TypeEntry = std::make_unique<BTFTypeInt>(
         Encoding, BTy->getSizeInBits(), BTy->getOffsetInBits(), BTy->getName());
     break;
@@ -604,22 +640,31 @@ void BTFDebug::visitBasicType(const DIBasicType *BTy, uint32_t &TypeId) {
 /// Handle subprogram or subroutine types.
 void BTFDebug::visitSubroutineType(
     const DISubroutineType *STy, bool ForSubprog,
-    const std::unordered_map<uint32_t, StringRef> &FuncArgNames,
-    uint32_t &TypeId) {
+    const SmallDenseMap<uint32_t, StringRef> &FuncArgNames, uint32_t &TypeId,
+    bool VoidReturn) {
   DITypeArray Elements = STy->getTypeArray();
   uint32_t VLen = Elements.size() - 1;
   if (VLen > BTF::MAX_VLEN)
     return;
 
-  auto TypeEntry = std::make_unique<BTFTypeFuncProto>(STy, VLen, FuncArgNames);
+  // Subprogram has a valid non-zero-length name, and the pointee of
+  // a function pointer has an empty name. The subprogram type will
+  // not be added to DIToIdMap as it should not be referenced by
+  // any other types.
+  auto TypeEntry = std::make_unique<BTFTypeFuncProto>(
+      STy, VLen, FuncArgNames, false, ArrayRef<uint32_t>(), VoidReturn);
   if (ForSubprog)
     TypeId = addType(std::move(TypeEntry)); // For subprogram
   else
     TypeId = addType(std::move(TypeEntry), STy); // For func ptr
 
   // Visit return type and func arg types.
-  for (const auto Element : Elements) {
-    visitTypeEntry(Element);
+  if (!VoidReturn) {
+    for (const auto Element : Elements)
+      visitTypeEntry(Element);
+  } else {
+    for (unsigned I = 1, N = Elements.size(); I < N; ++I)
+      visitTypeEntry(Elements[I]);
   }
 }
 
@@ -641,18 +686,26 @@ void BTFDebug::processDeclAnnotations(DINodeArray Annotations,
   }
 }
 
-uint32_t BTFDebug::processDISubprogram(const DISubprogram *SP,
-                                       uint32_t ProtoTypeId, uint8_t Scope) {
+uint32_t BTFDebug::processDISubprogram(
+    const DISubprogram *SP, uint32_t ProtoTypeId, uint8_t Scope,
+    const SmallDenseMap<uint32_t, uint32_t> *ArgIndexMap) {
   auto FuncTypeEntry =
       std::make_unique<BTFTypeFunc>(SP->getName(), ProtoTypeId, Scope);
   uint32_t FuncId = addType(std::move(FuncTypeEntry));
 
   // Process argument annotations.
-  for (const DINode *DN : SP->getRetainedNodes()) {
+  for (const MDNode *DN : SP->getRetainedNodes()) {
     if (const auto *DV = dyn_cast<DILocalVariable>(DN)) {
       uint32_t Arg = DV->getArg();
-      if (Arg)
-        processDeclAnnotations(DV->getAnnotations(), FuncId, Arg - 1);
+      if (Arg) {
+        if (ArgIndexMap) {
+          auto It = ArgIndexMap->find(Arg);
+          if (It != ArgIndexMap->end())
+            processDeclAnnotations(DV->getAnnotations(), FuncId, It->second);
+        } else {
+          processDeclAnnotations(DV->getAnnotations(), FuncId, Arg - 1);
+        }
+      }
     }
   }
   processDeclAnnotations(SP->getAnnotations(), FuncId, -1);
@@ -697,7 +750,14 @@ int BTFDebug::genBTFTypeTags(const DIDerivedType *DTy, int BaseTypeId) {
 /// Handle structure/union types.
 void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
                                uint32_t &TypeId) {
-  const DINodeArray Elements = CTy->getElements();
+  DINodeArray DIElements = CTy->getElements();
+  SmallVector<const DINode *, 8> Elements(DIElements.begin(), DIElements.end());
+  // Structure elements must have nondecreasing offsets in BTF. Preserve DI
+  // order for union and variant-part records.
+  if (CTy->getTag() == dwarf::DW_TAG_structure_type)
+    llvm::stable_sort(Elements, [](const DINode *LHS, const DINode *RHS) {
+      return getBTFRecordElementOffset(LHS) < getBTFRecordElementOffset(RHS);
+    });
   uint32_t VLen = Elements.size();
   if (CTy->getTag() == dwarf::DW_TAG_variant_part) {
     const auto *DTy = CTy->getDiscriminator();
@@ -721,8 +781,8 @@ void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
     }
   }
 
-  auto TypeEntry =
-      std::make_unique<BTFTypeStruct>(CTy, IsStruct, HasBitField, VLen);
+  auto TypeEntry = std::make_unique<BTFTypeStruct>(CTy, Elements, IsStruct,
+                                                   HasBitField, VLen);
   StructTypes.push_back(TypeEntry.get());
   TypeId = addType(std::move(TypeEntry), CTy);
 
@@ -760,6 +820,12 @@ void BTFDebug::visitArrayType(const DICompositeType *CTy, uint32_t &TypeId) {
 
   // Visit array dimensions.
   DINodeArray Elements = CTy->getElements();
+  if (Elements.size() == 0) {
+    // Rust and other languages may emit array types with no dimensions.
+    // Treat as a zero-length array so the type is still registered.
+    auto TypeEntry = std::make_unique<BTFTypeArray>(ElemTypeId, 0);
+    ElemTypeId = addType(std::move(TypeEntry), CTy);
+  }
   for (int I = Elements.size() - 1; I >= 0; --I) {
     if (auto *Element = dyn_cast_or_null<DINode>(Elements[I]))
       if (Element->getTag() == dwarf::DW_TAG_subrange_type) {
@@ -881,7 +947,7 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
     }
   }
 
-  if (Tag == dwarf::DW_TAG_pointer_type) {
+  if (Tag == dwarf::DW_TAG_pointer_type || Tag == dwarf::DW_TAG_typedef) {
     int TmpTypeId = genBTFTypeTags(DTy, -1);
     if (TmpTypeId >= 0) {
       auto TypeDEntry =
@@ -891,13 +957,13 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
       auto TypeEntry = std::make_unique<BTFTypeDerived>(DTy, Tag, false);
       TypeId = addType(std::move(TypeEntry), DTy);
     }
-  } else if (Tag == dwarf::DW_TAG_typedef || Tag == dwarf::DW_TAG_const_type ||
+    if (Tag == dwarf::DW_TAG_typedef)
+      processDeclAnnotations(DTy->getAnnotations(), TypeId, -1);
+  } else if (Tag == dwarf::DW_TAG_const_type ||
              Tag == dwarf::DW_TAG_volatile_type ||
              Tag == dwarf::DW_TAG_restrict_type) {
     auto TypeEntry = std::make_unique<BTFTypeDerived>(DTy, Tag, false);
     TypeId = addType(std::move(TypeEntry), DTy);
-    if (Tag == dwarf::DW_TAG_typedef)
-      processDeclAnnotations(DTy->getAnnotations(), TypeId, -1);
   } else if (Tag != dwarf::DW_TAG_member) {
     return;
   }
@@ -946,7 +1012,7 @@ void BTFDebug::visitTypeEntry(const DIType *Ty, uint32_t &TypeId,
   if (const auto *BTy = dyn_cast<DIBasicType>(Ty))
     visitBasicType(BTy, TypeId);
   else if (const auto *STy = dyn_cast<DISubroutineType>(Ty))
-    visitSubroutineType(STy, false, std::unordered_map<uint32_t, StringRef>(),
+    visitSubroutineType(STy, false, SmallDenseMap<uint32_t, StringRef>(),
                         TypeId);
   else if (const auto *CTy = dyn_cast<DICompositeType>(Ty))
     visitCompositeType(CTy, TypeId);
@@ -1167,8 +1233,8 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
   // Collect all types locally referenced in this function.
   // Use RetainedNodes so we can collect all argument names
   // even if the argument is not used.
-  std::unordered_map<uint32_t, StringRef> FuncArgNames;
-  for (const DINode *DN : SP->getRetainedNodes()) {
+  SmallDenseMap<uint32_t, StringRef> FuncArgNames;
+  for (const MDNode *DN : SP->getRetainedNodes()) {
     if (const auto *DV = dyn_cast<DILocalVariable>(DN)) {
       // Collect function arguments for subprogram func type.
       uint32_t Arg = DV->getArg();
@@ -1179,13 +1245,7 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
     }
   }
 
-  // Construct subprogram func proto type.
-  uint32_t ProtoTypeId;
-  visitSubroutineType(SP->getType(), true, FuncArgNames, ProtoTypeId);
-
-  // Construct subprogram func type
-  uint8_t Scope = SP->isLocalToUnit() ? BTF::FUNC_STATIC : BTF::FUNC_GLOBAL;
-  uint32_t FuncTypeId = processDISubprogram(SP, ProtoTypeId, Scope);
+  uint32_t FuncTypeId = processFunctionType(MF, SP, FuncArgNames);
 
   for (const auto &TypeEntry : TypeEntries)
     TypeEntry->completeType(*this);
@@ -1202,6 +1262,15 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
     SecNameOff = addString(".text");
   }
   FuncInfoTable[SecNameOff].push_back(FuncInfo);
+}
+
+uint32_t BTFDebug::processFunctionType(
+    const MachineFunction *MF, const DISubprogram *SP,
+    const SmallDenseMap<uint32_t, StringRef> &FuncArgNames) {
+  uint32_t ProtoTypeId;
+  visitSubroutineType(SP->getType(), true, FuncArgNames, ProtoTypeId);
+  uint8_t Scope = SP->isLocalToUnit() ? BTF::FUNC_STATIC : BTF::FUNC_GLOBAL;
+  return processDISubprogram(SP, ProtoTypeId, Scope);
 }
 
 void BTFDebug::endFunctionImpl(const MachineFunction *MF) {
@@ -1393,7 +1462,7 @@ void BTFDebug::processFuncPrototypes(const Function *F) {
     return;
 
   uint32_t ProtoTypeId;
-  const std::unordered_map<uint32_t, StringRef> FuncArgNames;
+  const SmallDenseMap<uint32_t, StringRef> FuncArgNames;
   visitSubroutineType(SP->getType(), false, FuncArgNames, ProtoTypeId);
   uint32_t FuncId = processDISubprogram(SP, ProtoTypeId, BTF::FUNC_EXTERN);
 

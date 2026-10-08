@@ -58,13 +58,13 @@ lldb::LanguageType SymbolFileOnDemand::ParseLanguage(CompileUnit &comp_unit) {
   return m_sym_file_impl->ParseLanguage(comp_unit);
 }
 
-XcodeSDK SymbolFileOnDemand::ParseXcodeSDK(CompileUnit &comp_unit) {
+XcodeSDKAndSysroot SymbolFileOnDemand::ParseXcodeSDK(CompileUnit &comp_unit) {
   if (!m_debug_info_enabled) {
     Log *log = GetLog();
     LLDB_LOG(log, "[{0}] {1} is skipped", GetSymbolFileName(), __FUNCTION__);
-    XcodeSDK defaultValue{};
+    XcodeSDKAndSysroot defaultValue{};
     if (log) {
-      XcodeSDK sdk = m_sym_file_impl->ParseXcodeSDK(comp_unit);
+      XcodeSDKAndSysroot sdk = m_sym_file_impl->ParseXcodeSDK(comp_unit);
       if (!(sdk == defaultValue))
         LLDB_LOG(log, "SDK {0} would return if hydrated.", sdk.GetString());
     }
@@ -515,10 +515,12 @@ SymbolFileOnDemand::GetParameterStackSize(const Symbol &symbol) {
     if (log) {
       llvm::Expected<lldb::addr_t> stack_size =
           m_sym_file_impl->GetParameterStackSize(symbol);
-      if (stack_size) {
+      if (stack_size)
         LLDB_LOG(log, "{0} stack size would return for symbol {1} if hydrated.",
                  *stack_size, symbol.GetName());
-      }
+      else
+        LLDB_LOG_ERROR(log, stack_size.takeError(),
+                       "failed to get parameter stack size: {0}");
     }
     return SymbolFile::GetParameterStackSize(symbol);
   }

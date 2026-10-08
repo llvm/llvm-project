@@ -1,0 +1,26 @@
+# RUN: llc -mtriple=riscv32-unknown-elf -stats -run-pass=machine-outliner -verify-machineinstrs %s -o /dev/null 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# Debug instructions between adjacent illegal instructions must not reset the
+# mapper's separator state. The two inline assembly instructions therefore map
+# to a single separator.
+# CHECK: 2 machine-outliner - Unoutlinable instructions mapped + number of sentinel values
+
+--- |
+  define void @separator_with_debug() { unreachable }
+...
+---
+name:            separator_with_debug
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x10, $x11, $x12, $x13
+    $x10 = ADDI $x10, 1
+    $x11 = ADDI $x11, 2
+    INLINEASM &"", sideeffect attdialect
+    DBG_VALUE $x10, $noreg
+    INLINEASM &"", sideeffect attdialect
+    $x12 = ADDI $x12, 3
+    $x13 = ADDI $x13, 4
+    PseudoRET implicit $x10
+...

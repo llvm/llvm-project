@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// See the llvm-project/llvm/docs/ProgrammersManual.rst to see how to use this
+// See the llvm-project/llvm/docs/ProgrammersManual.md to see how to use this
 // tool
 //
 //===----------------------------------------------------------------------===//

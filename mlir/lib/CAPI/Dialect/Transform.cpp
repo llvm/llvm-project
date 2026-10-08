@@ -299,42 +299,153 @@ void mlirTransformOpInterfaceAttachFallbackModel(
 }
 
 //===---------------------------------------------------------------------===//
+// PatternDescriptorOpInterface
+//===---------------------------------------------------------------------===//
+
+MlirTypeID mlirPatternDescriptorOpInterfaceTypeID(void) {
+  return wrap(transform::PatternDescriptorOpInterface::getInterfaceID());
+}
+
+/// Fallback model for the PatternDescriptorOpInterface that uses C API
+/// callbacks.
+class PatternDescriptorOpInterfaceFallbackModel
+    : public mlir::transform::PatternDescriptorOpInterface::FallbackModel<
+          PatternDescriptorOpInterfaceFallbackModel> {
+public:
+  /// Sets the callbacks that this FallbackModel will use.
+  /// NB: the callbacks can only be set through this method as the
+  /// RegisteredOperationName::attachInterface mechanism default-constructs
+  /// the FallbackModel without being able to provide arguments.
+  void setCallbacks(MlirPatternDescriptorOpInterfaceCallbacks callbacks) {
+    this->callbacks = callbacks;
+  }
+
+  ~PatternDescriptorOpInterfaceFallbackModel() {
+    if (callbacks.destruct)
+      callbacks.destruct(callbacks.userData);
+  }
+
+  static TypeID getInterfaceID() {
+    return transform::PatternDescriptorOpInterface::getInterfaceID();
+  }
+
+  static bool
+  classof(const mlir::transform::detail::
+              PatternDescriptorOpInterfaceInterfaceTraits::Concept *op) {
+    // Enable casting back to the FallbackModel from the Interface. This is
+    // necessary as attachInterface(...) default-constructs the FallbackModel
+    // without being able to pass in the callbacks and returns just the Concept.
+    return true;
+  }
+
+  void populatePatterns(Operation *op, RewritePatternSet &patterns) const {
+    assert(callbacks.populatePatterns && "populatePatterns callback not set");
+    callbacks.populatePatterns(wrap(op), wrap(&patterns), callbacks.userData);
+  }
+
+  void populatePatternsWithState(Operation *op, RewritePatternSet &patterns,
+                                 transform::TransformState &state) const {
+    if (callbacks.populatePatternsWithState) {
+      callbacks.populatePatternsWithState(wrap(op), wrap(&patterns),
+                                          wrap(&state), callbacks.userData);
+    } else {
+      // Default implementation: call populatePatterns without state.
+      populatePatterns(op, patterns);
+    }
+  }
+
+private:
+  MlirPatternDescriptorOpInterfaceCallbacks callbacks;
+};
+
+/// Attach a PatternDescriptorOpInterface FallbackModel to the given named
+/// operation. The FallbackModel uses the provided callbacks to implement the
+/// interface.
+void mlirPatternDescriptorOpInterfaceAttachFallbackModel(
+    MlirContext ctx, MlirStringRef opName,
+    MlirPatternDescriptorOpInterfaceCallbacks callbacks) {
+  // Look up the operation definition in the context.
+  std::optional<RegisteredOperationName> opInfo =
+      RegisteredOperationName::lookup(unwrap(opName), unwrap(ctx));
+
+  assert(opInfo.has_value() && "operation not found in context");
+
+  // NB: the following default-constructs the FallbackModel _without_ being able
+  // to provide arguments.
+  opInfo->attachInterface<PatternDescriptorOpInterfaceFallbackModel>();
+  // Cast to get the underlying FallbackModel and set the callbacks.
+  auto *model = cast<PatternDescriptorOpInterfaceFallbackModel>(
+      opInfo->getInterface<PatternDescriptorOpInterfaceFallbackModel>());
+
+  assert(model && "Failed to get PatternDescriptorOpInterfaceFallbackModel");
+  model->setCallbacks(callbacks);
+}
+
+//===---------------------------------------------------------------------===//
 // MemoryEffectsOpInterface helpers
 //===---------------------------------------------------------------------===//
 
+static void invokeMemoryEffectInstancesCallback(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects,
+    MlirMemoryEffectInstancesCallback callback, void *userData) {
+  SmallVector<MlirMemoryEffectInstance> wrappedEffects;
+  wrappedEffects.reserve(effects.size());
+  for (MemoryEffects::EffectInstance &effect : effects)
+    wrappedEffects.push_back(wrap(&effect));
+  callback(wrappedEffects.size(), wrappedEffects.data(), userData);
+}
+
 /// Set the effect for the operands to only read the transform handles.
 void mlirTransformOnlyReadsHandle(MlirOpOperand *operands, intptr_t numOperands,
-                                  MlirMemoryEffectInstancesList effects) {
-  MutableArrayRef<OpOperand> operandArray(unwrap(*operands), numOperands);
-  transform::onlyReadsHandle(operandArray, *unwrap(effects));
+                                  MlirMemoryEffectInstancesCallback callback,
+                                  void *userData) {
+  MutableArrayRef<OpOperand> operandArray;
+  if (numOperands != 0)
+    operandArray = MutableArrayRef<OpOperand>(unwrap(*operands), numOperands);
+  SmallVector<MemoryEffects::EffectInstance> effects;
+  transform::onlyReadsHandle(operandArray, effects);
+  invokeMemoryEffectInstancesCallback(effects, callback, userData);
 }
 
 /// Set the effect for the operands to consuming the transform handles.
 void mlirTransformConsumesHandle(MlirOpOperand *operands, intptr_t numOperands,
-                                 MlirMemoryEffectInstancesList effects) {
-  MutableArrayRef<OpOperand> operandArray(unwrap(*operands), numOperands);
-  transform::consumesHandle(operandArray, *unwrap(effects));
+                                 MlirMemoryEffectInstancesCallback callback,
+                                 void *userData) {
+  MutableArrayRef<OpOperand> operandArray;
+  if (numOperands != 0)
+    operandArray = MutableArrayRef<OpOperand>(unwrap(*operands), numOperands);
+  SmallVector<MemoryEffects::EffectInstance> effects;
+  transform::consumesHandle(operandArray, effects);
+  invokeMemoryEffectInstancesCallback(effects, callback, userData);
 }
 
 /// Set the effect for the results to that they produce transform handles.
 void mlirTransformProducesHandle(MlirValue *results, intptr_t numResults,
-                                 MlirMemoryEffectInstancesList effects) {
+                                 MlirMemoryEffectInstancesCallback callback,
+                                 void *userData) {
   // NB: calling `producesHandle()` `numResults` as we cannot cast array of
   // `OpResult`s to a single `ResultRange` (and neither is `ResultRange` exposed
   // to Python). `producesHandle` iterates over the given `ResultRange` anyway.
-  SmallVectorImpl<MemoryEffects::EffectInstance> &effectList = *unwrap(effects);
+  SmallVector<MemoryEffects::EffectInstance> effects;
   for (intptr_t i = 0; i < numResults; ++i) {
     auto opResult = cast<OpResult>(unwrap(results[i]));
-    transform::producesHandle(ResultRange(opResult), effectList);
+    transform::producesHandle(ResultRange(opResult), effects);
   }
+  invokeMemoryEffectInstancesCallback(effects, callback, userData);
 }
 
 /// Set the effect of potentially modifying payload IR.
-void mlirTransformModifiesPayload(MlirMemoryEffectInstancesList effects) {
-  transform::modifiesPayload(*unwrap(effects));
+void mlirTransformModifiesPayload(MlirMemoryEffectInstancesCallback callback,
+                                  void *userData) {
+  SmallVector<MemoryEffects::EffectInstance> effects;
+  transform::modifiesPayload(effects);
+  invokeMemoryEffectInstancesCallback(effects, callback, userData);
 }
 
 /// Set the effect of potentially reading payload IR.
-void mlirTransformOnlyReadsPayload(MlirMemoryEffectInstancesList effects) {
-  transform::onlyReadsPayload(*unwrap(effects));
+void mlirTransformOnlyReadsPayload(MlirMemoryEffectInstancesCallback callback,
+                                   void *userData) {
+  SmallVector<MemoryEffects::EffectInstance> effects;
+  transform::onlyReadsPayload(effects);
+  invokeMemoryEffectInstancesCallback(effects, callback, userData);
 }

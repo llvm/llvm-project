@@ -99,23 +99,11 @@ class GenericOptionalDataFormatterTestCase(TestBase):
         )
 
     @add_test_categories(["libc++"])
-    ## Clang 7.0 is the oldest Clang that can reliably parse newer libc++ versions
-    ## with -std=c++17.
-    @skipIf(
-        oslist=no_match(["macosx"]), compiler="clang", compiler_version=["<", "7.0"]
-    )
-    ## We are skipping gcc version less that 5.1 since this test requires -std=c++17
-    @skipIf(compiler="gcc", compiler_version=["<", "5.1"])
     def test_with_run_command_libcpp(self):
         self.build(dictionary={"USE_LIBCPP": 1})
         self.do_test_with_run_command()
 
     @add_test_categories(["libstdcxx"])
-    ## Clang 7.0 is the oldest Clang that can reliably parse newer libc++ versions
-    ## with -std=c++17.
-    @skipIf(compiler="clang", compiler_version=["<", "7.0"])
-    ## We are skipping gcc version less that 5.1 since this test requires -std=c++17
-    @skipIf(compiler="gcc", compiler_version=["<", "5.1"])
     def test_with_run_command_libstdcpp(self):
         self.build(dictionary={"USE_LIBSTDCPP": 1})
         self.do_test_with_run_command()

@@ -34,7 +34,8 @@ class ConstantInt;
 class DataLayout;
 class GISelCSEInfo;
 class GlobalValue;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class MachineFunction;
 class MachineInstr;
 class TargetInstrInfo;
@@ -1083,6 +1084,19 @@ public:
   MachineInstrBuilder buildStore(const SrcOp &Val, const SrcOp &Addr,
                                  MachineMemOperand &MMO);
 
+  /// Build and insert `<opcode> Val, Addr, MMO`.
+  ///
+  /// Stores the value \p Val to \p Addr.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Val must be a generic virtual register.
+  /// \pre \p Addr must be a generic virtual register with pointer type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildStoreInstr(unsigned Opcode, const SrcOp &Val,
+                                      const SrcOp &Addr,
+                                      MachineMemOperand &MMO);
+
   /// Build and insert a G_STORE instruction, while constructing the
   /// MachineMemOperand.
   MachineInstrBuilder
@@ -1781,41 +1795,6 @@ public:
                                              const SrcOp &Val,
                                              MachineMemOperand &MMO);
 
-  /// Build and insert `OldValRes<def> = G_ATOMICRMW_USUB_COND Addr, Val, MMO`.
-  ///
-  /// Atomically replace the value at \p Addr with the original value minus \p
-  /// Val if the original value is greater than or equal to \p Val, or leaves it
-  /// unchanged otherwise. Puts the original value from \p Addr in \p OldValRes.
-  ///
-  /// \pre setBasicBlock or setMI must have been called.
-  /// \pre \p OldValRes must be a generic virtual register.
-  /// \pre \p Addr must be a generic virtual register with pointer type.
-  /// \pre \p OldValRes, and \p Val must be generic virtual registers of the
-  ///      same type.
-  ///
-  /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildAtomicRMWUSubCond(const DstOp &OldValRes,
-                                             const SrcOp &Addr,
-                                             const SrcOp &Val,
-                                             MachineMemOperand &MMO);
-
-  /// Build and insert `OldValRes<def> = G_ATOMICRMW_USUB_SAT Addr, Val, MMO`.
-  ///
-  /// Atomically replace the value at \p Addr with the original value minus \p
-  /// Val, with clamping to zero if the unsigned subtraction would overflow.
-  /// Puts the original value from \p Addr in \p OldValRes.
-  ///
-  /// \pre setBasicBlock or setMI must have been called.
-  /// \pre \p OldValRes must be a generic virtual register.
-  /// \pre \p Addr must be a generic virtual register with pointer type.
-  /// \pre \p OldValRes, and \p Val must be generic virtual registers of the
-  ///      same type.
-  ///
-  /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildAtomicRMWUSubSat(const DstOp &OldValRes,
-                                            const SrcOp &Addr, const SrcOp &Val,
-                                            MachineMemOperand &MMO);
-
   /// Build and insert `G_FENCE Ordering, Scope`.
   MachineInstrBuilder buildFence(unsigned Ordering, unsigned Scope);
 
@@ -2048,9 +2027,10 @@ public:
     return buildInstr(TargetOpcode::G_CTLZ, {Dst}, {Src0});
   }
 
-  /// Build and insert \p Res = G_CTLZ_ZERO_UNDEF \p Op0, \p Src0
-  MachineInstrBuilder buildCTLZ_ZERO_UNDEF(const DstOp &Dst, const SrcOp &Src0) {
-    return buildInstr(TargetOpcode::G_CTLZ_ZERO_UNDEF, {Dst}, {Src0});
+  /// Build and insert \p Res = G_CTLZ_ZERO_POISON \p Op0, \p Src0
+  MachineInstrBuilder buildCTLZ_ZERO_POISON(const DstOp &Dst,
+                                            const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_CTLZ_ZERO_POISON, {Dst}, {Src0});
   }
 
   /// Build and insert \p Res = G_CTTZ \p Op0, \p Src0
@@ -2058,9 +2038,10 @@ public:
     return buildInstr(TargetOpcode::G_CTTZ, {Dst}, {Src0});
   }
 
-  /// Build and insert \p Res = G_CTTZ_ZERO_UNDEF \p Op0, \p Src0
-  MachineInstrBuilder buildCTTZ_ZERO_UNDEF(const DstOp &Dst, const SrcOp &Src0) {
-    return buildInstr(TargetOpcode::G_CTTZ_ZERO_UNDEF, {Dst}, {Src0});
+  /// Build and insert \p Res = G_CTTZ_ZERO_POISON \p Op0, \p Src0
+  MachineInstrBuilder buildCTTZ_ZERO_POISON(const DstOp &Dst,
+                                            const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_CTTZ_ZERO_POISON, {Dst}, {Src0});
   }
 
   /// Build and insert \p Res = G_CTLS \p Op0, \p Src0

@@ -7,18 +7,23 @@ void someFunction();
 
 namespace raw_ptr {
 void foo() {
-  CheckedObj *bar;
-  // FIXME: later on we might warn on uninitialized vars too
+  CheckedObj *bar; // A local variable in a trivial context is ignored.
 }
 
 void bar(CheckedObj *) {}
+
+void baz() {
+  CheckedObj *bar;
+  // expected-warning@-1{{Local variable 'bar' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLocalVarsChecker]}}
+  someFunction();
+}
 } // namespace raw_ptr
 
 namespace reference {
 void foo_ref() {
   CheckedObj automatic;
   CheckedObj &bar = automatic;
-  // expected-warning@-1{{Local variable 'bar' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'bar' is a raw reference to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLocalVarsChecker]}}
   someFunction();
   bar.method();
 }
@@ -41,7 +46,7 @@ void foo2() {
   CheckedPtr<CheckedObj> foo;
   // missing embedded scope here
   CheckedObj *bar = foo.get();
-  // expected-warning@-1{{Local variable 'bar' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'bar' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLocalVarsChecker]}}
   someFunction();
   bar->method();
 }
@@ -69,7 +74,7 @@ void foo5() {
 void foo6() {
   CheckedPtr<CheckedObj> foo;
   auto* bar = foo.get();
-  // expected-warning@-1{{Local variable 'bar' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'bar' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLocalVarsChecker]}}
   bar->method();
 }
 
@@ -91,17 +96,17 @@ class Foo {
 
   void evil_func() {
     CheckedObj *bar = provide_ref_ctnbl();
-    // expected-warning@-1{{Local variable 'bar' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLocalVarsChecker]}}
     auto *baz = provide_ref_ctnbl();
-    // expected-warning@-1{{Local variable 'baz' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'baz' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLocalVarsChecker]}}
     auto *baz2 = this->provide_ref_ctnbl();
-    // expected-warning@-1{{Local variable 'baz2' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'baz2' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLocalVarsChecker]}}
     [[clang::suppress]] auto *baz_suppressed = provide_ref_ctnbl(); // no-warning
   }
 
   void func() {
     CheckedObj *bar = provide_ref_ctnbl();
-    // expected-warning@-1{{Local variable 'bar' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLocalVarsChecker]}}
     if (bar)
       bar->method();
   }
@@ -162,26 +167,26 @@ void foo() {
 
 void bar() {
   if (CheckedObj *a = provide_ref_ctnbl()) {
-    // expected-warning@-1{{Local variable 'a' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'a' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLocalVarsChecker]}}
     a->method();    
   }
   for (CheckedObj *b = provide_ref_ctnbl(); b != nullptr;) {
-    // expected-warning@-1{{Local variable 'b' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'b' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLocalVarsChecker]}}
     b->method();
   }
   CheckedObj *array[1];
   for (CheckedObj *c : array) {
-    // expected-warning@-1{{Local variable 'c' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'c' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLocalVarsChecker]}}
     c->method();
   }
 
   while (CheckedObj *d = provide_ref_ctnbl()) {
-    // expected-warning@-1{{Local variable 'd' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'd' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLocalVarsChecker]}}
     d->method();
   }
   do {
     CheckedObj *e = provide_ref_ctnbl();
-    // expected-warning@-1{{Local variable 'e' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'e' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLocalVarsChecker]}}
     e->method();
   } while (1);
   someFunction();
@@ -205,7 +210,7 @@ bool bar();
 
 void foo() {
   CheckedObj *a = bar() ? nullptr : provide_checkable();
-  // expected-warning@-1{{Local variable 'a' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'a' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLocalVarsChecker]}}
   CheckedPtr<CheckedObj> b = provide_checkable();
   {
     CheckedObj* c = bar() ? nullptr : b.get();
@@ -223,14 +228,14 @@ CheckedObj *provide_checkable();
 
 void foo(CheckedObj* a) {
   CheckedObj* b = a;
-  // expected-warning@-1{{Local variable 'b' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'b' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLocalVarsChecker]}}
   if (b->trivial())
     b = provide_checkable();
 }
 
 void bar(CheckedObj* a) {
   CheckedObj* b;
-  // expected-warning@-1{{Local variable 'b' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'b' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLocalVarsChecker]}}
   b = provide_checkable();
 }
 
@@ -238,7 +243,7 @@ void baz() {
   CheckedPtr a = provide_checkable();
   {
     CheckedObj* b = a.get();
-    // expected-warning@-1{{Local variable 'b' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'b' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLocalVarsChecker]}}
     b = provide_checkable();
   }
 }
@@ -252,7 +257,7 @@ void someFunction();
 
 void foo(CheckedObj* a) {
   a = provide_checkable();
-  // expected-warning@-1{{Assignment to an unchecked parameter 'a' is unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+  // expected-warning@-1{{Parameter 'a' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLocalVarsChecker]}}
   someFunction();
   a->method();
 }
@@ -266,7 +271,7 @@ void someFunction();
 
 void foo() {
   static CheckedObj* a = nullptr;
-  // expected-warning@-1{{Static local variable 'a' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+  // expected-warning@-1{{Static local variable 'a' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLocalVarsChecker]}}
   a = provide_checkable();
   someFunction();
   a->method();
@@ -280,7 +285,7 @@ CheckedObj *provide_ref_cntbl();
 void someFunction();
 
 CheckedObj* g_a = nullptr;
-// expected-warning@-1{{Global variable 'local_assignment_to_global::g_a' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+// expected-warning@-1{{Global variable 'local_assignment_to_global::g_a' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLocalVarsChecker]}}
 
 void foo() {
   g_a = provide_ref_cntbl();
@@ -299,13 +304,13 @@ namespace member_var {
       auto *a = &checked;
       a->method();
       auto *b = &checkedRef;
-      // expected-warning@-1{{Local variable 'b' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+      // expected-warning@-1{{Local variable 'b' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLocalVarsChecker]}}
       b->method();
     }
 
     void bar(WrapperObj& wrapper) {
       CheckedObj* ptr = &wrapper.checked;
-      // expected-warning@-1{{Local variable 'ptr' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+      // expected-warning@-1{{Local variable 'ptr' is a raw pointer to CheckedPtr-capable type 'CheckedObj' [alpha.webkit.UncheckedLocalVarsChecker]}}
       ptr->method();
     }
   };
@@ -318,7 +323,7 @@ RefCountableAndCheckable* provide_obj();
 
 void local_raw_ptr() {
   RefCountableAndCheckable* a = nullptr;
-  // expected-warning@-1{{Local variable 'a' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'a' is a raw pointer to CheckedPtr-capable type 'RefCountableAndCheckable' [alpha.webkit.UncheckedLocalVarsChecker]}}
   a = provide_obj();
   a->method();
 }
@@ -341,7 +346,7 @@ void local_var_with_guardian_checked_ptr_with_assignment() {
   RefPtr<RefCountableAndCheckable> a = provide_obj();
   {
     RefCountableAndCheckable* b = a.get();
-    // expected-warning@-1{{Local variable 'b' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'b' is a raw pointer to CheckedPtr-capable type 'RefCountableAndCheckable' [alpha.webkit.UncheckedLocalVarsChecker]}}
     b = provide_obj();
     b->method();
   }
@@ -357,7 +362,7 @@ void local_var_with_guardian_checked_ref() {
 
 void static_var() {
   static RefCountableAndCheckable* a = nullptr;
-  // expected-warning@-1{{Static local variable 'a' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+  // expected-warning@-1{{Static local variable 'a' is a raw pointer to CheckedPtr-capable type 'RefCountableAndCheckable' [alpha.webkit.UncheckedLocalVarsChecker]}}
   a = provide_obj();
 }
 

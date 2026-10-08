@@ -18,7 +18,7 @@
 
 
 RUN: rm -rf %t.dir && mkdir -p %t.dir
-RUN: dsymutil -y %p/dummy-debug-map-arm64.map -oso-prepend-path=%p/../Inputs/DWARF5 -o %t.dir/dwarf5-macho.dSYM
+RUN: dsymutil --linker classic -y %p/dummy-debug-map-arm64.map -oso-prepend-path=%p/../Inputs/DWARF5 -o %t.dir/dwarf5-macho.dSYM
 RUN: llvm-dwarfdump %t.dir/dwarf5-macho.dSYM -a --verbose | FileCheck %s
 
 RUN: rm -rf %t.dir && mkdir -p %t.dir

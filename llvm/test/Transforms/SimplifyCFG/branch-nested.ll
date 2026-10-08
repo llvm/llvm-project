@@ -339,6 +339,39 @@ bb4:
   ret void
 }
 
+define void @fold_nested_branch_same_dest(i1 %cond1, i1 %cond2, i1 %cond3) {
+; CHECK-LABEL: define void @fold_nested_branch_same_dest(
+; CHECK-SAME: i1 [[COND1:%.*]], i1 [[COND2:%.*]], i1 [[COND3:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[COND2_NOT:%.*]] = xor i1 [[COND2]], true
+; CHECK-NEXT:    [[BRMERGE:%.*]] = select i1 [[COND1]], i1 true, i1 [[COND2_NOT]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %cond1, label %bb2, label %else
+
+else:
+  br i1 %cond2, label %bb0, label %common.ret
+
+bb0:
+  br i1 %cond1, label %bb1, label %bb2
+
+bb2:
+  br i1 %cond3, label %exit1, label %exit2
+
+bb1:
+  br i1 %cond3, label %exit1, label %exit2
+
+exit1:
+  br label %common.ret
+
+exit2:
+  br label %common.ret
+
+common.ret:
+  ret void
+}
+
 !0 = !{!"branch_weights", i32 1, i32 2}
 !1 = !{!"branch_weights", i32 3, i32 4}
 !2 = !{!"branch_weights", i32 5, i32 6}

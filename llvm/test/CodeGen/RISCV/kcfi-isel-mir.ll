@@ -5,7 +5,7 @@ define void @f1(ptr noundef %x) !kcfi_type !1 {
   ; CHECK: bb.0 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $x10
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gprjalr = COPY $x10
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gprjalrnonx7 = COPY $x10
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $x2, implicit $x2
   ; CHECK-NEXT:   PseudoCALLIndirect [[COPY]], csr_ilp32_lp64, implicit-def dead $x1, implicit-def $x2, cfi-type 12345678
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $x2, implicit $x2
@@ -19,7 +19,7 @@ define void @f2(ptr noundef %x) #0 {
   ; CHECK: bb.0 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $x10
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gprtc = COPY $x10
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gprtcnonx7 = COPY $x10
   ; CHECK-NEXT:   PseudoTAILIndirect [[COPY]], csr_ilp32_lp64, implicit $x2, cfi-type 12345678
   tail call void %x() [ "kcfi"(i32 12345678) ]
   ret void

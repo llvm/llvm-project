@@ -391,18 +391,18 @@ define void @fun1(ptr %Src, ptr %Dst) {
 ; CHECK-NEXT:    .cfi_offset %f9, -176
 ; CHECK-NEXT:    .cfi_offset %f10, -184
 ; CHECK-NEXT:    .cfi_offset %f11, -192
-; CHECK-NEXT:    lgh %r0, 2(%r2)
-; CHECK-NEXT:    sllg %r0, %r0, 48
-; CHECK-NEXT:    ldgr %f8, %r0
-; CHECK-NEXT:    lgh %r0, 0(%r2)
-; CHECK-NEXT:    sllg %r0, %r0, 48
-; CHECK-NEXT:    ldgr %f11, %r0
-; CHECK-NEXT:    lgh %r0, 6(%r2)
-; CHECK-NEXT:    sllg %r0, %r0, 48
-; CHECK-NEXT:    ldgr %f10, %r0
-; CHECK-NEXT:    lgh %r0, 4(%r2)
-; CHECK-NEXT:    sllg %r0, %r0, 48
+; CHECK-NEXT:    lgh %r1, 2(%r2)
 ; CHECK-NEXT:    lgr %r13, %r3
+; CHECK-NEXT:    lgh %r3, 0(%r2)
+; CHECK-NEXT:    lgh %r0, 4(%r2)
+; CHECK-NEXT:    lgh %r2, 6(%r2)
+; CHECK-NEXT:    sllg %r1, %r1, 48
+; CHECK-NEXT:    ldgr %f8, %r1
+; CHECK-NEXT:    sllg %r1, %r3, 48
+; CHECK-NEXT:    ldgr %f11, %r1
+; CHECK-NEXT:    sllg %r1, %r2, 48
+; CHECK-NEXT:    sllg %r0, %r0, 48
+; CHECK-NEXT:    ldgr %f10, %r1
 ; CHECK-NEXT:    ldgr %f0, %r0
 ; CHECK-NEXT:    # kill: def $f0h killed $f0h killed $f0d
 ; CHECK-NEXT:    brasl %r14, __extendhfsf2@PLT

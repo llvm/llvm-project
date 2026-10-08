@@ -22,7 +22,7 @@
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
-#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
+#include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Module.h"
@@ -73,8 +73,7 @@ public:
                  const std::string &FS, const SPIRVTargetMachine &TM);
   SPIRVSubtarget &initSubtargetDependencies(StringRef CPU, StringRef FS);
 
-  void initAvailableExtensions(
-      const std::set<SPIRV::Extension::Extension> &AllowedExtIds);
+  void initAvailableExtensions(const ExtensionSet &AllowedExtIds);
   void resolveEnvFromModule(const Module &M);
 
   // Parses features string setting specified subtarget options.
@@ -87,9 +86,7 @@ public:
   SPIRVEnvType getEnv() const { return Env; }
   bool isKernel() const { return getEnv() == Kernel; }
   bool isShader() const { return getEnv() == Shader; }
-  bool isLogicalSPIRV() const {
-    return TargetTriple.getArch() == Triple::spirv;
-  }
+  bool isLogicalSPIRV() const { return TargetTriple.isSPIRVLogical(); }
   bool isPhysicalSPIRV() const {
     return TargetTriple.getArch() == Triple::spirv32 ||
            TargetTriple.getArch() == Triple::spirv64;
@@ -145,9 +142,8 @@ public:
 
   // Adds known SPIR-V extensions to the global list of allowed extensions that
   // SPIRVSubtarget module owns as
-  // cl::opt<std::set<SPIRV::Extension::Extension>, ...> global variable.
-  static void
-  addExtensionsToClOpt(const std::set<SPIRV::Extension::Extension> &AllowList);
+  // cl::opt<ExtensionSet, ...> global variable.
+  static void addExtensionsToClOpt(const ExtensionSet &AllowList);
 };
 } // namespace llvm
 

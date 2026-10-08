@@ -34,7 +34,7 @@ LIBC_INLINE_VAR constexpr unsigned SPLIT = 28;
 #endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
 using LIBC_NAMESPACE::fputil::DoubleDouble;
-using Float128 = LIBC_NAMESPACE::fputil::DyadicFloat<128>;
+using DFloat128 = LIBC_NAMESPACE::fputil::DyadicFloat<128>;
 
 #define FAST_PASS_EXPONENT 16
 
@@ -256,16 +256,17 @@ struct LargeRangeReduction {
   unsigned fast(double x, DoubleDouble &u);
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-  LIBC_INLINE Float128 accurate() const {
-    constexpr Float128 PI_OVER_128_F128 = {
+  LIBC_INLINE DFloat128 accurate() const {
+    constexpr DFloat128 PI_OVER_128_F128 = {
         Sign::POS, -133, 0xc90f'daa2'2168'c234'c4c6'628b'80dc'1cd1_u128};
 
     // y_lo = x * c_lo + pm.lo
-    Float128 y_lo_0(x_reduced * ONE_TWENTY_EIGHT_OVER_PI[idx][3]);
-    Float128 y_lo_1 = fputil::quick_add(Float128(y_lo), y_lo_0);
-    Float128 y_mid_f128 = fputil::quick_add(Float128(y_mid.lo), y_lo_1);
-    Float128 y_hi_f128 = fputil::quick_add(Float128(y_hi), Float128(y_mid.hi));
-    Float128 y = fputil::quick_add(y_hi_f128, y_mid_f128);
+    DFloat128 y_lo_0(x_reduced * ONE_TWENTY_EIGHT_OVER_PI[idx][3]);
+    DFloat128 y_lo_1 = fputil::quick_add(DFloat128(y_lo), y_lo_0);
+    DFloat128 y_mid_f128 = fputil::quick_add(DFloat128(y_mid.lo), y_lo_1);
+    DFloat128 y_hi_f128 =
+        fputil::quick_add(DFloat128(y_hi), DFloat128(y_mid.hi));
+    DFloat128 y = fputil::quick_add(y_hi_f128, y_mid_f128);
 
     return fputil::quick_mul(y, PI_OVER_128_F128);
   }
@@ -284,29 +285,29 @@ private:
 };
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-LIBC_INLINE Float128 range_reduction_small_f128(double x) {
-  constexpr Float128 PI_OVER_128_F128 = {
+LIBC_INLINE DFloat128 range_reduction_small_f128(double x) {
+  constexpr DFloat128 PI_OVER_128_F128 = {
       Sign::POS, -133, 0xc90f'daa2'2168'c234'c4c6'628b'80dc'1cd1_u128};
   constexpr double ONE_TWENTY_EIGHT_OVER_PI_D = 0x1.45f306dc9c883p5;
   double prod_hi = x * ONE_TWENTY_EIGHT_OVER_PI_D;
   double kd = fputil::nearest_integer(prod_hi);
 
-  Float128 mk_f128(-kd);
-  Float128 x_f128(x);
-  Float128 p_hi =
-      fputil::quick_mul(x_f128, Float128(ONE_TWENTY_EIGHT_OVER_PI[3][0]));
-  Float128 p_mid =
-      fputil::quick_mul(x_f128, Float128(ONE_TWENTY_EIGHT_OVER_PI[3][1]));
-  Float128 p_lo =
-      fputil::quick_mul(x_f128, Float128(ONE_TWENTY_EIGHT_OVER_PI[3][2]));
-  Float128 s_hi = fputil::quick_add(p_hi, mk_f128);
-  Float128 s_lo = fputil::quick_add(p_mid, p_lo);
-  Float128 y = fputil::quick_add(s_hi, s_lo);
+  DFloat128 mk_f128(-kd);
+  DFloat128 x_f128(x);
+  DFloat128 p_hi =
+      fputil::quick_mul(x_f128, DFloat128(ONE_TWENTY_EIGHT_OVER_PI[3][0]));
+  DFloat128 p_mid =
+      fputil::quick_mul(x_f128, DFloat128(ONE_TWENTY_EIGHT_OVER_PI[3][1]));
+  DFloat128 p_lo =
+      fputil::quick_mul(x_f128, DFloat128(ONE_TWENTY_EIGHT_OVER_PI[3][2]));
+  DFloat128 s_hi = fputil::quick_add(p_hi, mk_f128);
+  DFloat128 s_lo = fputil::quick_add(p_mid, p_lo);
+  DFloat128 y = fputil::quick_add(s_hi, s_lo);
 
   return fputil::quick_mul(y, PI_OVER_128_F128);
 }
 
-LIBC_INLINE_VAR constexpr Float128 SIN_K_PI_OVER_128_F128[65] = {
+LIBC_INLINE_VAR constexpr DFloat128 SIN_K_PI_OVER_128_F128[65] = {
     {Sign::POS, 0, 0},
     {Sign::POS, -133, 0xc90a'afbd'1b33'efc9'c539'edcb'fda0'cf2c_u128},
     {Sign::POS, -132, 0xc8fb'2f88'6ec0'9f37'6a17'954b'2b7c'5171_u128},

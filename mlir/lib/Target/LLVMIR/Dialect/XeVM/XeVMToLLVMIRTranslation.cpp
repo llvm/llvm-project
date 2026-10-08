@@ -37,51 +37,15 @@ class XeVMDialectLLVMIRTranslationInterface
 public:
   using LLVMTranslationDialectInterface::LLVMTranslationDialectInterface;
 
-  /// Attaches module-level metadata for functions marked as kernels.
+  /// Empty amendOperation implementation, can be extended in the future.
   LogicalResult
   amendOperation(Operation *op, ArrayRef<llvm::Instruction *> instructions,
                  NamedAttribute attribute,
                  LLVM::ModuleTranslation &moduleTranslation) const final {
-    StringRef attrName = attribute.getName().getValue();
-    if (attrName == mlir::xevm::XeVMDialect::getCacheControlsAttrName()) {
-      auto cacheControlsArray = dyn_cast<ArrayAttr>(attribute.getValue());
-      if (cacheControlsArray.size() != 2) {
-        return op->emitOpError(
-            "Expected both L1 and L3 cache control attributes!");
-      }
-      if (instructions.size() != 1) {
-        return op->emitOpError("Expecting a single instruction");
-      }
-      return handleDecorationCacheControl(instructions.front(),
-                                          cacheControlsArray.getValue());
-    }
     return success();
   }
 
 private:
-  static LogicalResult handleDecorationCacheControl(llvm::Instruction *inst,
-                                                    ArrayRef<Attribute> attrs) {
-    SmallVector<llvm::Metadata *> decorations;
-    llvm::LLVMContext &ctx = inst->getContext();
-    llvm::Type *i32Ty = llvm::IntegerType::getInt32Ty(ctx);
-    llvm::transform(
-        attrs, std::back_inserter(decorations),
-        [&ctx, i32Ty](Attribute attr) -> llvm::Metadata * {
-          auto valuesArray = dyn_cast<ArrayAttr>(attr).getValue();
-          std::array<llvm::Metadata *, 3> metadata;
-          llvm::transform(
-              valuesArray, metadata.begin(), [i32Ty](Attribute valueAttr) {
-                return llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-                    i32Ty, cast<IntegerAttr>(valueAttr).getValue()));
-              });
-          return llvm::MDNode::get(ctx, metadata);
-        });
-    constexpr llvm::StringLiteral decorationCacheControlMDName =
-        "spirv.DecorationCacheControlINTEL";
-    inst->setMetadata(decorationCacheControlMDName,
-                      llvm::MDNode::get(ctx, decorations));
-    return success();
-  }
 };
 } // namespace
 

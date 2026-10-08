@@ -16,11 +16,11 @@ kernel void test(
     global float2 *v2f32,
     global void *v,
     global struct packed *p) {
-// CHECK-LABEL: spir_kernel void @test(
-// CHECK-SAME: ptr noundef readnone align 4 captures(none) %i32,
-// CHECK-SAME: ptr noundef readnone align 8 captures(none) %i64,
-// CHECK-SAME: ptr noundef readnone align 16 captures(none) %v4i32,
-// CHECK-SAME: ptr noundef readnone align 8 captures(none) %v2f32,
-// CHECK-SAME: ptr noundef readnone captures(none) %v,
-// CHECK-SAME: ptr noundef readnone align 1 captures(none) %p)
+// CHECK-LABEL: void @test(
+// CHECK-SAME: ptr nofree noundef readnone align 4 captures(none) %i32,
+// CHECK-SAME: ptr nofree noundef readnone align 8 captures(none) %i64,
+// CHECK-SAME: ptr nofree noundef readnone align 16 captures(none) %v4i32,
+// CHECK-SAME: ptr nofree noundef readnone align 8 captures(none) %v2f32,
+// CHECK-SAME: ptr nofree noundef readnone captures(none) %v,
+// CHECK-SAME: ptr nofree noundef readnone align 1 captures(none) %p)
 }

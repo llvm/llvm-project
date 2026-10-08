@@ -13,8 +13,12 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_unittest(LLVMFrontendTests
+  EnumSetTest.cpp
   HLSLBindingTest.cpp
   HLSLRootSignatureDumpTest.cpp
+  HLSLSemanticStagesTest.cpp
+  HLSLSemanticSignatureMetadataTest.cpp
+  HLSLSemanticSignaturePackingTest.cpp
   OpenACCTest.cpp
   OpenMPContextTest.cpp
   OpenMPIRBuilderTest.cpp

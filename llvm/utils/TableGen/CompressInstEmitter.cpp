@@ -50,11 +50,12 @@
 // bool uncompressInst(MCInst &OutInst, const MCInst &MI,
 //                     const MCSubtargetInfo &STI);
 //
-// In addition, it exports a function for checking whether
-// an instruction is compressable:
+// In addition, it exports a function that returns the compressed instruction
+// size, or zero when the instruction is not compressible:
 //
-// bool isCompressibleInst(const MachineInstr& MI,
-//                         const <TargetName>Subtarget &STI);
+// unsigned getCompressedSize(const MachineInstr &MI,
+//                            const <TargetName>Subtarget &STI);
+//
 //
 // The clients that include this auto-generated header file and
 // invoke these functions can compress an instruction before emitting
@@ -64,9 +65,12 @@
 
 //===----------------------------------------------------------------------===//
 
+#include "Common/CodeGenHwModes.h"
 #include "Common/CodeGenInstruction.h"
 #include "Common/CodeGenRegisters.h"
 #include "Common/CodeGenTarget.h"
+#include "Common/InfoByHwMode.h"
+#include "Common/SubtargetFeatureInfo.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -138,13 +142,14 @@ class CompressInstEmitter {
   void addDagOperandMapping(const Record *Rec, const DagInit *Dag,
                             const CodeGenInstruction &Inst,
                             IndexedMap<OpData> &OperandMap,
-                            StringMap<ArgData> &Operands, bool IsSourceInst);
+                            StringMap<ArgData> &Operands, bool IsSourceInst,
+                            ArrayRef<const Record *> PatPreds);
   void evaluateCompressPat(const Record *Compress);
   void emitCompressInstEmitter(raw_ostream &OS, EmitterType EType);
   bool validateTypes(const Record *DagOpType, const Record *InstOpType,
-                     bool IsSourceInst);
+                     bool IsSourceInst, ArrayRef<const Record *> PatPreds);
   bool validateRegister(const Record *Reg, const Record *RegClass,
-                        ArrayRef<SMLoc> Loc);
+                        ArrayRef<SMLoc> Loc, ArrayRef<const Record *> PatPreds);
   void checkDagOperandMapping(const Record *Rec,
                               const StringMap<ArgData> &DestOperands,
                               const DagInit *SourceDag, const DagInit *DestDag);
@@ -165,18 +170,68 @@ public:
 
 bool CompressInstEmitter::validateRegister(const Record *Reg,
                                            const Record *RegClass,
-                                           ArrayRef<SMLoc> Loc) {
+                                           ArrayRef<SMLoc> Loc,
+                                           ArrayRef<const Record *> PatPreds) {
   assert((Reg->isSubClassOf("Register") ||
           Reg->isSubClassOf("RegisterByHwMode")) &&
          "Reg record should be a Register");
   assert(RegClass->isSubClassOf("RegisterClassLike") &&
          "RegClass record should be RegisterClassLike");
+
+  if (const Record *RC =
+          Target.getHwModes().resolveModeSelect(RegClass, PatPreds))
+    RegClass = RC;
+  if (const Record *R = Target.getHwModes().resolveModeSelect(Reg, PatPreds))
+    Reg = R;
+
   return Target.getRegBank().regClassContainsReg(RegClass, Reg, Loc);
 }
 
 bool CompressInstEmitter::validateTypes(const Record *DagOpType,
                                         const Record *InstOpType,
-                                        bool IsSourceInst) {
+                                        bool IsSourceInst,
+                                        ArrayRef<const Record *> PatPreds) {
+  if (DagOpType == InstOpType)
+    return true;
+
+  const Record *ResolvedDag =
+      Target.getHwModes().resolveModeSelect(DagOpType, PatPreds);
+  const Record *ResolvedInst =
+      Target.getHwModes().resolveModeSelect(InstOpType, PatPreds);
+
+  if (ResolvedDag && ResolvedInst) {
+    DagOpType = ResolvedDag;
+    InstOpType = ResolvedInst;
+  } else if (DagOpType->isSubClassOf("RegClassByHwMode") &&
+             InstOpType->isSubClassOf("RegClassByHwMode")) {
+    RegClassByHwMode DagRC(DagOpType, Target.getRegBank());
+    RegClassByHwMode InstRC(InstOpType, Target.getRegBank());
+    const CodeGenHwModes &CGH = Target.getHwModes();
+    HwModePredicates PatPredsSet(PatPreds);
+    bool HasCompatibleMode = false;
+    for (const auto &[Mode, DagClass] : DagRC) {
+      if (CGH.getModePredicates(Mode).conflictsWith(PatPredsSet))
+        continue;
+      if (!InstRC.hasMode(Mode))
+        return false;
+      const CodeGenRegisterClass *InstClass = InstRC.get(Mode);
+      if (!InstClass->hasSubClass(DagClass))
+        return false;
+      HasCompatibleMode = true;
+    }
+    for (const auto &[Mode, InstClass] : InstRC) {
+      if (CGH.getModePredicates(Mode).conflictsWith(PatPredsSet))
+        continue;
+      if (!DagRC.hasMode(Mode))
+        return false;
+    }
+    return HasCompatibleMode;
+  } else if (DagOpType->isSubClassOf("HwModeSelect") ||
+             InstOpType->isSubClassOf("HwModeSelect")) {
+    return false;
+  }
+
+  // Concrete check (when resolved uniquely).
   if (DagOpType == InstOpType)
     return true;
 
@@ -213,12 +268,10 @@ static bool validateArgsTypes(const Init *Arg1, const Init *Arg2) {
 /// operands and fixed registers it expects the Dag operand type to be contained
 /// in the instantiated instruction operand type. For immediate operands and
 /// immediates no validation checks are enforced at pattern validation time.
-void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
-                                               const DagInit *Dag,
-                                               const CodeGenInstruction &Inst,
-                                               IndexedMap<OpData> &OperandMap,
-                                               StringMap<ArgData> &Operands,
-                                               bool IsSourceInst) {
+void CompressInstEmitter::addDagOperandMapping(
+    const Record *Rec, const DagInit *Dag, const CodeGenInstruction &Inst,
+    IndexedMap<OpData> &OperandMap, StringMap<ArgData> &Operands,
+    bool IsSourceInst, ArrayRef<const Record *> PatPreds) {
   unsigned NumMIOperands = 0;
   if (!Inst.Operands.empty())
     NumMIOperands =
@@ -258,7 +311,7 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
         if (DI->getDef()->isSubClassOf("Register") ||
             DI->getDef()->isSubClassOf("RegisterByHwMode")) {
           // Check if the fixed register belongs to the Register class.
-          if (!validateRegister(DI->getDef(), OpndRec, Rec->getLoc()))
+          if (!validateRegister(DI->getDef(), OpndRec, Rec->getLoc(), PatPreds))
             PrintFatalError(Rec->getLoc(),
                             "Error in Dag '" + Dag->getAsString() +
                                 "': Register '" + DI->getDef()->getName() +
@@ -272,7 +325,7 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
         // corresponding instruction. Operands in the input and output Dag
         // patterns are allowed to be a subclass of the type specified in the
         // corresponding instruction operand instead of being an exact match.
-        if (!validateTypes(DI->getDef(), OpndRec, IsSourceInst))
+        if (!validateTypes(DI->getDef(), OpndRec, IsSourceInst, PatPreds))
           PrintFatalError(Rec->getLoc(),
                           "Error in Dag '" + Dag->getAsString() +
                               "'. Operand '" + Dag->getArgNameStr(DAGOpNo) +
@@ -465,28 +518,6 @@ void CompressInstEmitter::evaluateCompressPat(const Record *Rec) {
             "'is not strictly smaller than the uncompressed instruction '" +
             SourceOperator->getName() + "' !");
 
-  // Fill the mapping from the source to destination instructions.
-
-  IndexedMap<OpData> SourceOperandMap;
-  // Map from arg name to DAG operand number and MI operand number.
-  StringMap<ArgData> SourceOperands;
-  // Create a mapping between source Dag operands and source Inst operands.
-  addDagOperandMapping(Rec, SourceDag, SourceInst, SourceOperandMap,
-                       SourceOperands, /*IsSourceInst*/ true);
-
-  IndexedMap<OpData> DestOperandMap;
-  // Map from arg name to DAG operand number and MI operand number.
-  StringMap<ArgData> DestOperands;
-  // Create a mapping between destination Dag operands and destination Inst
-  // operands.
-  addDagOperandMapping(Rec, DestDag, DestInst, DestOperandMap, DestOperands,
-                       /*IsSourceInst*/ false);
-
-  checkDagOperandMapping(Rec, DestOperands, SourceDag, DestDag);
-  // Create operand mapping between the source and destination instructions.
-  createInstOperandMapping(Rec, SourceDag, DestDag, SourceOperandMap,
-                           DestOperandMap, SourceOperands, DestInst);
-
   // Get the target features for the CompressPat.
   std::vector<const Record *> PatReqFeatures;
   std::vector<const Record *> RF = Rec->getValueAsListOfDefs("Predicates");
@@ -494,46 +525,31 @@ void CompressInstEmitter::evaluateCompressPat(const Record *Rec) {
     return R->getValueAsBit("AssemblerMatcherPredicate");
   });
 
+  // Fill the mapping from the source to destination instructions.
+
+  IndexedMap<OpData> SourceOperandMap;
+  // Map from arg name to DAG operand number and MI operand number.
+  StringMap<ArgData> SourceOperands;
+  // Create a mapping between source Dag operands and source Inst operands.
+  addDagOperandMapping(Rec, SourceDag, SourceInst, SourceOperandMap,
+                       SourceOperands, /*IsSourceInst*/ true, PatReqFeatures);
+
+  IndexedMap<OpData> DestOperandMap;
+  // Map from arg name to DAG operand number and MI operand number.
+  StringMap<ArgData> DestOperands;
+  // Create a mapping between destination Dag operands and destination Inst
+  // operands.
+  addDagOperandMapping(Rec, DestDag, DestInst, DestOperandMap, DestOperands,
+                       /*IsSourceInst*/ false, PatReqFeatures);
+
+  checkDagOperandMapping(Rec, DestOperands, SourceDag, DestDag);
+  // Create operand mapping between the source and destination instructions.
+  createInstOperandMapping(Rec, SourceDag, DestDag, SourceOperandMap,
+                           DestOperandMap, SourceOperands, DestInst);
+
   CompressPatterns.emplace_back(SourceInst, DestInst, std::move(PatReqFeatures),
                                 SourceOperandMap, DestOperandMap,
                                 Rec->getValueAsBit("isCompressOnly"));
-}
-
-static void
-getReqFeatures(std::set<std::pair<bool, StringRef>> &FeaturesSet,
-               std::set<std::set<std::pair<bool, StringRef>>> &AnyOfFeatureSets,
-               ArrayRef<const Record *> ReqFeatures) {
-  for (const Record *R : ReqFeatures) {
-    const DagInit *D = R->getValueAsDag("AssemblerCondDag");
-    std::string CombineType = D->getOperator()->getAsString();
-    if (CombineType != "any_of" && CombineType != "all_of")
-      PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
-    if (D->getNumArgs() == 0)
-      PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
-    bool IsOr = CombineType == "any_of";
-    std::set<std::pair<bool, StringRef>> AnyOfSet;
-
-    for (auto *Arg : D->getArgs()) {
-      bool IsNot = false;
-      if (auto *NotArg = dyn_cast<DagInit>(Arg)) {
-        if (NotArg->getOperator()->getAsString() != "not" ||
-            NotArg->getNumArgs() != 1)
-          PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
-        Arg = NotArg->getArg(0);
-        IsNot = true;
-      }
-      if (!isa<DefInit>(Arg) ||
-          !cast<DefInit>(Arg)->getDef()->isSubClassOf("SubtargetFeature"))
-        PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
-      if (IsOr)
-        AnyOfSet.emplace(IsNot, cast<DefInit>(Arg)->getDef()->getName());
-      else
-        FeaturesSet.emplace(IsNot, cast<DefInit>(Arg)->getDef()->getName());
-    }
-
-    if (IsOr)
-      AnyOfFeatureSets.insert(std::move(AnyOfSet));
-  }
 }
 
 static unsigned getPredicates(DenseMap<const Record *, unsigned> &PredicateMap,
@@ -568,10 +584,14 @@ static void printPredicates(ArrayRef<const Record *> Predicates, StringRef Name,
 }
 
 static void mergeCondAndCode(raw_ostream &CombinedStream, StringRef CondStr,
-                             StringRef CodeStr) {
+                             StringRef CodeStr, unsigned CompressedSize,
+                             bool ReturnSize) {
   CombinedStream.indent(4) << "if (" << CondStr << ") {\n";
   CombinedStream << CodeStr;
-  CombinedStream.indent(4) << "  return true;\n";
+  CombinedStream.indent(4) << "  return "
+                           << (ReturnSize ? std::to_string(CompressedSize)
+                                          : "true")
+                           << ";\n";
   CombinedStream.indent(4) << "} // if\n";
 }
 
@@ -632,8 +652,10 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
     FuncH.indent(27) << "const MCInst &MI,\n";
     FuncH.indent(27) << "const MCSubtargetInfo &STI) {\n";
   } else if (EType == EmitterType::CheckCompress) {
-    FuncH << "static bool isCompressibleInst(const MachineInstr &MI,\n";
-    FuncH.indent(31) << "const " << TargetName << "Subtarget &STI) {\n";
+    FuncH << "static unsigned getCompressedSize(const MachineInstr &MI,\n";
+    FuncH.indent(34) << "const " << TargetName << "Subtarget &STI) {\n";
+    FuncH.indent(2)
+        << "// Returns the compressed size, or zero if not compressible.\n";
   }
   // HwModeId is used if we have any RegClassByHwMode patterns
   if (!Target.getAllRegClassByHwMode().empty())
@@ -642,7 +664,9 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
 
   if (CompressPatterns.empty()) {
     OS << FH;
-    OS.indent(2) << "return false;\n}\n";
+    OS.indent(2) << "return "
+                 << (EType == EmitterType::CheckCompress ? "0" : "false")
+                 << ";\n}\n";
     return;
   }
 
@@ -651,7 +675,8 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
   StringRef PrevOp;
   StringRef CurOp;
   CaseStream << "  switch (MI.getOpcode()) {\n";
-  CaseStream << "  default: return false;\n";
+  CaseStream << "  default: return "
+             << (EType == EmitterType::CheckCompress ? "0" : "false") << ";\n";
 
   bool CompressOrCheck =
       EType == EmitterType::Compress || EType == EmitterType::CheckCompress;
@@ -693,10 +718,11 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
       CaseStream.indent(2) << "case " + TargetName + "::" + CurOp + ": {\n";
     }
 
-    std::set<std::pair<bool, StringRef>> FeaturesSet;
-    std::set<std::set<std::pair<bool, StringRef>>> AnyOfFeatureSets;
+    std::set<SubtargetFeatureLiteral> FeaturesSet;
+    std::set<std::set<SubtargetFeatureLiteral>> AnyOfFeatureSets;
     // Add CompressPat required features.
-    getReqFeatures(FeaturesSet, AnyOfFeatureSets, CompressPat.PatReqFeatures);
+    getRequiredFeatures(FeaturesSet, AnyOfFeatureSets,
+                        CompressPat.PatReqFeatures);
 
     // Add Dest instruction required features.
     std::vector<const Record *> ReqFeatures;
@@ -705,25 +731,25 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
     copy_if(RF, std::back_inserter(ReqFeatures), [](const Record *R) {
       return R->getValueAsBit("AssemblerMatcherPredicate");
     });
-    getReqFeatures(FeaturesSet, AnyOfFeatureSets, ReqFeatures);
+    getRequiredFeatures(FeaturesSet, AnyOfFeatureSets, ReqFeatures);
 
     ListSeparator CondSep(" &&\n        ");
 
     // Emit checks for all required features.
-    for (auto &Op : FeaturesSet) {
-      StringRef Not = Op.first ? "!" : "";
+    for (const auto &Op : FeaturesSet) {
+      StringRef Not = Op.IsNot ? "!" : "";
       CondStream << CondSep << Not << "STI.getFeatureBits()[" << TargetName
-                 << "::" << Op.second << "]";
+                 << "::" << Op.Feature << "]";
     }
 
     // Emit checks for all required feature groups.
-    for (auto &Set : AnyOfFeatureSets) {
+    for (const auto &Set : AnyOfFeatureSets) {
       CondStream << CondSep << "(";
-      for (auto &Op : Set) {
+      for (const auto &Op : Set) {
         bool IsLast = &Op == &*Set.rbegin();
-        StringRef Not = Op.first ? "!" : "";
+        StringRef Not = Op.IsNot ? "!" : "";
         CondStream << Not << "STI.getFeatureBits()[" << TargetName
-                   << "::" << Op.second << "]";
+                   << "::" << Op.Feature << "]";
         if (!IsLast)
           CondStream << " || ";
       }
@@ -806,7 +832,8 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
               if (EType == EmitterType::CheckCompress)
                 CondStream << " && MI.getOperand(" << OpIdx
                            << ").getReg().isPhysical()";
-              CondStream << CondSep << TargetName << "MCRegisterClasses[";
+              CondStream << CondSep << "get" << TargetName
+                         << "MCRegisterClass(";
               if (ClassRec->isSubClassOf("RegClassByHwMode")) {
                 CondStream << TargetName << "RegClassByHwModeTables[HwModeId]["
                            << TargetName << "::" << ClassRec->getName() << "]";
@@ -814,7 +841,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
                 CondStream << TargetName << "::" << ClassRec->getName()
                            << "RegClassID";
               }
-              CondStream << "].contains(MI.getOperand(" << OpIdx
+              CondStream << ").contains(MI.getOperand(" << OpIdx
                          << ").getReg())";
             }
 
@@ -902,7 +929,9 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
     }
     if (CompressOrUncompress)
       CodeStream.indent(6) << "OutInst.setLoc(MI.getLoc());\n";
-    mergeCondAndCode(CaseStream, CondString, CodeString);
+    mergeCondAndCode(CaseStream, CondString, CodeString,
+                     Dest.TheDef->getValueAsInt("Size"),
+                     EType == EmitterType::CheckCompress);
     PrevOp = CurOp;
   }
   Func << CaseString;
@@ -910,7 +939,9 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
   // Close brace for the last case.
   Func.indent(2) << "} // case " << CurOp << "\n";
   Func.indent(2) << "} // switch\n";
-  Func.indent(2) << "return false;\n}\n";
+  Func.indent(2) << "return "
+                 << (EType == EmitterType::CheckCompress ? "0" : "false")
+                 << ";\n}\n";
 
   if (!MCOpPredicates.empty()) {
     auto IndentLength = ValidatorName.size() + 13;
@@ -963,7 +994,7 @@ void CompressInstEmitter::run(raw_ostream &OS) {
   emitCompressInstEmitter(OS, EmitterType::Compress);
   // Generate uncompressInst() function.
   emitCompressInstEmitter(OS, EmitterType::Uncompress);
-  // Generate isCompressibleInst() function.
+  // Generate getCompressedSize() function.
   emitCompressInstEmitter(OS, EmitterType::CheckCompress);
 }
 

@@ -9,6 +9,11 @@
 #ifndef LLVM_LIBC_SHARED_MATH_FADDL_H
 #define LLVM_LIBC_SHARED_MATH_FADDL_H
 
+#include "shared/libc_common.h"
+#include "src/__support/macros/properties/types.h"
+
+#ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+
 #include "src/__support/math/faddl.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -18,5 +23,7 @@ using math::faddl;
 
 } // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
 
 #endif // LLVM_LIBC_SHARED_MATH_FADDL_H

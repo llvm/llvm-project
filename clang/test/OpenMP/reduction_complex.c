@@ -78,7 +78,7 @@ int foo() {
 // CHECK-NEXT:         %[[VAL_263:.*]] = or i1 %[[VAL_262]], %[[VAL_261]]
 // CHECK-NEXT:         br i1 %[[VAL_263]], label %[[VAL_264:.*]], label %[[VAL_265:.*]]
 // CHECK:       then:                                             ; preds = %[[VAL_266:.*]]
-// CHECK-NEXT:         call{{.*}}void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l{{[0-9]+}}_omp_outlined_omp_outlined_omp$reduction$reduction_func"(ptr %[[VAL_238]], ptr %[[VAL_232]]) #2
+// CHECK-NEXT:         call{{.*}}void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l{{[0-9]+}}_omp_outlined_omp_outlined_omp$reduction$reduction_func"(ptr %[[VAL_238]], ptr %[[VAL_232]]) #{{[0-9]+}}
 // CHECK-NEXT:         br label %[[VAL_267:.*]]
 // CHECK:       else:                                             ; preds = %[[VAL_266]]
 // CHECK-NEXT:         br label %[[VAL_267]]

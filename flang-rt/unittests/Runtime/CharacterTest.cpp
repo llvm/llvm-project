@@ -392,6 +392,91 @@ TYPED_TEST(SearchTests, VerifyTests) {
       "VERIFY", tests, std::get<SearchFunction<TypeParam>>(functions));
 }
 
+// Test SPLIT()
+template <typename CHAR>
+using SplitFunction = std::function<std::size_t(
+    const CHAR *, std::size_t, const CHAR *, std::size_t, std::size_t, bool)>;
+using SplitFunctions = std::tuple<SplitFunction<char>, SplitFunction<char16_t>,
+    SplitFunction<char32_t>>;
+struct SplitTestCase {
+  const char *string, *set;
+  std::size_t pos;
+  bool back;
+  std::size_t expect;
+};
+
+template <typename CHAR>
+void RunSplitTests(const char *which,
+    const std::vector<SplitTestCase> &testCases,
+    const SplitFunction<CHAR> &function) {
+  for (const auto &t : testCases) {
+    std::size_t strLen{std::strlen(t.string)}, setLen{std::strlen(t.set)};
+    std::basic_string<CHAR> str{t.string, t.string + strLen};
+    std::basic_string<CHAR> set{t.set, t.set + setLen};
+    auto got{function(str.data(), strLen, set.data(), setLen, t.pos, t.back)};
+    ASSERT_EQ(got, t.expect)
+        << which << "('" << t.string << "','" << t.set << "',pos=" << t.pos
+        << ",back=" << t.back << ") for CHARACTER(kind=" << sizeof(CHAR)
+        << "): got " << got << ", expected " << t.expect;
+  }
+}
+
+template <typename CHAR> struct SplitTests : public ::testing::Test {};
+TYPED_TEST_SUITE(SplitTests, CharacterTypes, );
+
+TYPED_TEST(SplitTests, SplitForward) {
+  static SplitFunctions functions{
+      RTNAME(Split1), RTNAME(Split2), RTNAME(Split4)};
+  static std::vector<SplitTestCase> tests{
+      // "one,two,three" with set=","
+      // Forward scanning: from pos=0, find first ',' at position 4
+      {"one,two,three", ",", 0, false, 4},
+      // From pos=4, find next ',' at position 8
+      {"one,two,three", ",", 4, false, 8},
+      // From pos=8, no more ',', return len+1=14
+      {"one,two,three", ",", 8, false, 14},
+      // Empty string
+      {"", ",", 0, false, 1},
+      // No delimiters in string
+      {"abc", ",", 0, false, 4},
+      // String is all delimiters
+      {",,", ",", 0, false, 1},
+      {",,", ",", 1, false, 2},
+      {",,", ",", 2, false, 3},
+      // pos at end of string
+      {"abc", ",", 3, false, 4},
+      // Multiple delimiter characters in set
+      {"a,b;c", ",;", 0, false, 2},
+      {"a,b;c", ",;", 2, false, 4},
+      {"a,b;c", ",;", 4, false, 6},
+  };
+  RunSplitTests(
+      "SPLIT(forward)", tests, std::get<SplitFunction<TypeParam>>(functions));
+}
+
+TYPED_TEST(SplitTests, SplitBackward) {
+  static SplitFunctions functions{
+      RTNAME(Split1), RTNAME(Split2), RTNAME(Split4)};
+  static std::vector<SplitTestCase> tests{
+      // "one,two,three" with set=","
+      // Backward scanning: from pos=14 (len+1), find last ',' at position 8
+      {"one,two,three", ",", 14, true, 8},
+      // From pos=8, find previous ',' at position 4
+      {"one,two,three", ",", 8, true, 4},
+      // From pos=4, no ',' before position 4, return 0
+      {"one,two,three", ",", 4, true, 0},
+      // Empty string
+      {"", ",", 1, true, 0},
+      // pos=0 or pos=1 should return 0
+      {"abc", ",", 0, true, 0},
+      {"abc", ",", 1, true, 0},
+      // No delimiters in string
+      {"abc", ",", 4, true, 0},
+  };
+  RunSplitTests(
+      "SPLIT(backward)", tests, std::get<SplitFunction<TypeParam>>(functions));
+}
+
 // Test REPEAT()
 template <typename CHAR> struct RepeatTests : public ::testing::Test {};
 TYPED_TEST_SUITE(RepeatTests, CharacterTypes, );

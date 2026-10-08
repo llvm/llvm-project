@@ -38,7 +38,7 @@ namespace brace_initializers {
   POD p = (POD){1, 2};
   // CHECK-NOT: CXXBindTemporaryExpr {{.*}} 'brace_initializers::POD'
   // CHECK: CompoundLiteralExpr {{.*}} 'POD'{{$}}
-  // CHECK-NEXT: InitListExpr {{.*}} 'POD'{{$}}
+  // CHECK-NEXT: InitListExpr {{.*}} 'POD' explicit{{$}}
   // CHECK-NEXT: ConstantExpr {{.*}}
   // CHECK-NEXT: IntegerLiteral {{.*}} 1{{$}}
   // CHECK-NEXT: ConstantExpr {{.*}}
@@ -49,14 +49,14 @@ namespace brace_initializers {
     // CHECK-NOT: CXXBindTemporaryExpr {{.*}} 'POD'
     // CHECK-NOT: ConstantExpr {{.*}} 'POD'
     // CHECK: CompoundLiteralExpr {{.*}} 'POD'{{$}}
-    // CHECK-NEXT: InitListExpr {{.*}} 'POD'{{$}}
+    // CHECK-NEXT: InitListExpr {{.*}} 'POD' explicit{{$}}
     // CHECK-NEXT: IntegerLiteral {{.*}} 1{{$}}
     // CHECK-NEXT: IntegerLiteral {{.*}} 2{{$}}
 
     (void)(HasDtor){1, 2};
     // CHECK: CXXBindTemporaryExpr {{.*}} 'HasDtor'
     // CHECK-NEXT: CompoundLiteralExpr {{.*}} 'HasDtor'{{$}}
-    // CHECK-NEXT: InitListExpr {{.*}} 'HasDtor'{{$}}
+    // CHECK-NEXT: InitListExpr {{.*}} 'HasDtor' explicit{{$}}
     // CHECK-NEXT: IntegerLiteral {{.*}} 1{{$}}
     // CHECK-NEXT: IntegerLiteral {{.*}} 2{{$}}
 

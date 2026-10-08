@@ -7,36 +7,53 @@ Implementation Status
    aio
    arpa/inet
    assert
+   byteswap
    complex
    cpio
    ctype
    dirent
+   dlfcn
    endian
    errno
+   fcntl
    fenv
    float
    glob
    inttypes
+   libgen
    locale
    math/index.rst
    net/if
    netinet/in
+   netinet/tcp
+   nl_types
+   poll
+   pwd
+   sched
    search
    setjmp
    signal
+   spawn
    stdbit
    stdfix
    stdio
    stdlib
    string
    strings
+   sys/ipc
    sys/mman
+   sys/msg
    sys/resource
+   sys/select
+   sys/sem
+   sys/socket
    sys/stat
    sys/statvfs
    sys/time
+   sys/uio
    sys/utsname
    sys/wait
+   syslog
    termios
    threads
    time
@@ -44,6 +61,4 @@ Implementation Status
    unistd
    wchar
    wctype
-..
-   TODO: https://github.com/llvm/llvm-project/issues/123821
    pthread

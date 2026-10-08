@@ -39,7 +39,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
     %4 = omp.map.info var_ptr(%ascast : !llvm.ptr, f32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
     %5 = omp.map.info var_ptr(%3 : !llvm.ptr, !llvm.array<10 x i32>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
     %6 = omp.map.info var_ptr(%ascast2 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr
-    omp.target map_entries(%4 -> %arg0, %5 -> %arg1, %6 -> %arg2 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
+    omp.target kernel_type(generic) map_entries(%4 -> %arg0, %5 -> %arg1, %6 -> %arg2 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
       llvm.intr.dbg.declare #var_x = %arg0 : !llvm.ptr
       llvm.intr.dbg.declare #var_arr = %arg1 : !llvm.ptr
       llvm.intr.dbg.declare #var_i = %arg2 : !llvm.ptr
@@ -56,8 +56,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 #loc4 = loc(fused<#g_var>[#loc1])
 #loc5 = loc(fused<#sp1>[#loc2])
 
-// CHECK: ![[SP:[0-9]+]] = distinct !DISubprogram(name: "target"{{.*}})
-// CHECK: !DILocalVariable(name: "dyn_ptr", arg: 1, scope: ![[SP]]{{.*}}flags: DIFlagArtificial)
-// CHECK: !DILocalVariable(name: "x", arg: 2, scope: ![[SP]]{{.*}})
-// CHECK: !DILocalVariable(name: "arr", arg: 3, scope: ![[SP]]{{.*}})
-// CHECK: !DILocalVariable(name: "i", arg: 4, scope: ![[SP]]{{.*}})
+// CHECK-DAG: ![[SP:[0-9]+]] = distinct !DISubprogram(name: "target"{{.*}})
+// CHECK-DAG: !DILocalVariable(name: "dyn_ptr", arg: 4, scope: ![[SP]]{{.*}}flags: DIFlagArtificial)
+// CHECK-DAG: !DILocalVariable(name: "x", arg: 1, scope: ![[SP]]{{.*}})
+// CHECK-DAG: !DILocalVariable(name: "arr", arg: 2, scope: ![[SP]]{{.*}})
+// CHECK-DAG: !DILocalVariable(name: "i", arg: 3, scope: ![[SP]]{{.*}})

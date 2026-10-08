@@ -161,12 +161,12 @@ define i64 @clz64(i64 %x) {
   ret i64 %a
 }
 
-; CHECK-LABEL: clz64_zero_undef:
-; CHECK-NEXT: .functype clz64_zero_undef (i64) -> (i64){{$}}
+; CHECK-LABEL: clz64_zero_poison:
+; CHECK-NEXT: .functype clz64_zero_poison (i64) -> (i64){{$}}
 ; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: i64.clz $push0=, $pop[[L0]]{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
-define i64 @clz64_zero_undef(i64 %x) {
+define i64 @clz64_zero_poison(i64 %x) {
   %a = call i64 @llvm.ctlz.i64(i64 %x, i1 true)
   ret i64 %a
 }
@@ -181,12 +181,12 @@ define i64 @ctz64(i64 %x) {
   ret i64 %a
 }
 
-; CHECK-LABEL: ctz64_zero_undef:
-; CHECK-NEXT: .functype ctz64_zero_undef (i64) -> (i64){{$}}
+; CHECK-LABEL: ctz64_zero_poison:
+; CHECK-NEXT: .functype ctz64_zero_poison (i64) -> (i64){{$}}
 ; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: i64.ctz $push0=, $pop[[L0]]{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
-define i64 @ctz64_zero_undef(i64 %x) {
+define i64 @ctz64_zero_poison(i64 %x) {
   %a = call i64 @llvm.cttz.i64(i64 %x, i1 true)
   ret i64 %a
 }

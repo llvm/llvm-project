@@ -8,8 +8,8 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
 target triple = "aarch64-unknown-linux-gnu"
 
-@a = dso_local local_unnamed_addr global [32000 x float] zeroinitializer, align 64
-@b = dso_local local_unnamed_addr global [32000 x float] zeroinitializer, align 64
+@a = global [32000 x float] zeroinitializer, align 64
+@b = global [32000 x float] zeroinitializer, align 64
 
 define void @test() #0 {
 ; CHECK-GENERIC-LABEL: define void @test(

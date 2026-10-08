@@ -5,6 +5,7 @@
     "includes": [
       "__llvm-libc-common.h",
       "llvm-libc-macros/CONST_FUNC_A.h",
+      "llvm-libc-macros/MACRO_ATTR.h",
       "llvm-libc-macros/test_more-macros.h",
       "llvm-libc-macros/test_small-macros.h",
       "llvm-libc-types/float128.h",

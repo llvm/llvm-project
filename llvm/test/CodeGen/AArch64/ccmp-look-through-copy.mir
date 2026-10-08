@@ -1,0 +1,46 @@
+# RUN: llc -o - %s -mtriple=aarch64 -run-pass=aarch64-ccmp -aarch64-stress-ccmp | FileCheck %s
+# RUN: llc -o - %s -mtriple=aarch64 -passes=aarch64-ccmp -aarch64-stress-ccmp | FileCheck %s
+---
+name: ccmp-look-through-copy
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr64 }
+  - { id: 1, class: gpr64 }
+  - { id: 4, class: gpr64 }
+  - { id: 6, class: gpr64 }
+  - { id: 7, class: gpr64 }
+  - { id: 8, class: gpr64 }
+  - { id: 9, class: gpr64 }
+body: |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $x0, $x1
+  
+    ; CHECK-LABEL: name: ccmp-look-through-copy
+    ; CHECK: bb.0:
+    ; CHECK: CCMPXr
+
+    %0:gpr64 = COPY $x0
+    %1:gpr64 = COPY $x1
+    %4:gpr64 = COPY %0
+    %7:gpr64 = COPY %4
+    %6:gpr64 = SUBSXrr %0, %1, implicit-def $nzcv
+    Bcc 11, %bb.2, implicit $nzcv
+    B %bb.1
+  
+  bb.1:
+    successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  
+    %8:gpr64 = SUBSXrr %1, %0, implicit-def $nzcv
+    Bcc 12, %bb.2, implicit $nzcv
+    B %bb.3
+  
+  bb.2:
+    %9:gpr64 = PHI %4, %bb.0, %7, %bb.1
+    $x0 = COPY %9
+    RET_ReallyLR implicit $x0
+  
+  bb.3:
+    $x0 = COPY %0
+    RET_ReallyLR implicit $x0
+...

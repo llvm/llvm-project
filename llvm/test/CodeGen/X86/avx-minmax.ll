@@ -4,7 +4,7 @@
 define <2 x double> @maxpd(<2 x double> %x, <2 x double> %y) {
 ; CHECK-LABEL: maxpd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vmaxpd %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %max_is_x = fcmp nnan oge <2 x double> %x, %y
   %max = select <2 x i1> %max_is_x, <2 x double> %x, <2 x double> %y
@@ -14,7 +14,7 @@ define <2 x double> @maxpd(<2 x double> %x, <2 x double> %y) {
 define <2 x double> @minpd(<2 x double> %x, <2 x double> %y) {
 ; CHECK-LABEL: minpd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vminpd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vminpd %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %min_is_x = fcmp nnan ole <2 x double> %x, %y
   %min = select <2 x i1> %min_is_x, <2 x double> %x, <2 x double> %y
@@ -24,7 +24,7 @@ define <2 x double> @minpd(<2 x double> %x, <2 x double> %y) {
 define <4 x float> @maxps(<4 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: maxps:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vmaxps %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %max_is_x = fcmp nnan oge <4 x float> %x, %y
   %max = select <4 x i1> %max_is_x, <4 x float> %x, <4 x float> %y
@@ -34,7 +34,7 @@ define <4 x float> @maxps(<4 x float> %x, <4 x float> %y) {
 define <4 x float> @minps(<4 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: minps:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vminps %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vminps %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %min_is_x = fcmp nnan ole <4 x float> %x, %y
   %min = select <4 x i1> %min_is_x, <4 x float> %x, <4 x float> %y
@@ -44,7 +44,7 @@ define <4 x float> @minps(<4 x float> %x, <4 x float> %y) {
 define <4 x double> @vmaxpd(<4 x double> %x, <4 x double> %y) {
 ; CHECK-LABEL: vmaxpd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmaxpd %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vmaxpd %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %max_is_x = fcmp nnan oge <4 x double> %x, %y
   %max = select <4 x i1> %max_is_x, <4 x double> %x, <4 x double> %y
@@ -54,7 +54,7 @@ define <4 x double> @vmaxpd(<4 x double> %x, <4 x double> %y) {
 define <4 x double> @vminpd(<4 x double> %x, <4 x double> %y) {
 ; CHECK-LABEL: vminpd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vminpd %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vminpd %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %min_is_x = fcmp nnan ole <4 x double> %x, %y
   %min = select <4 x i1> %min_is_x, <4 x double> %x, <4 x double> %y
@@ -64,7 +64,7 @@ define <4 x double> @vminpd(<4 x double> %x, <4 x double> %y) {
 define <8 x float> @vmaxps(<8 x float> %x, <8 x float> %y) {
 ; CHECK-LABEL: vmaxps:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmaxps %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vmaxps %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %max_is_x = fcmp nnan oge <8 x float> %x, %y
   %max = select <8 x i1> %max_is_x, <8 x float> %x, <8 x float> %y
@@ -74,7 +74,7 @@ define <8 x float> @vmaxps(<8 x float> %x, <8 x float> %y) {
 define <8 x float> @vminps(<8 x float> %x, <8 x float> %y) {
 ; CHECK-LABEL: vminps:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vminps %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vminps %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %min_is_x = fcmp nnan ole <8 x float> %x, %y
   %min = select <8 x i1> %min_is_x, <8 x float> %x, <8 x float> %y

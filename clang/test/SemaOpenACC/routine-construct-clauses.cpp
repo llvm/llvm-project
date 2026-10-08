@@ -103,6 +103,7 @@ static constexpr int One() { return 1; }
 static constexpr int Two() { return 2; }
 static constexpr int Three() { return 3; }
 static constexpr int Four() { return 4; }
+static constexpr unsigned long LargeUnsigned() { return -42; }
 };
 // 'dim' must be 1, 2, or 3.
 // expected-error@+1{{argument to 'gang' clause dimension must be 1, 2, or 3: evaluated to -5}}
@@ -114,6 +115,8 @@ static constexpr int Four() { return 4; }
 #pragma acc routine(Func) gang(dim:HasFuncs::Three())
 // expected-error@+1{{argument to 'gang' clause dimension must be 1, 2, or 3: evaluated to 4}}
 #pragma acc routine(Func) gang(dim:HasFuncs::Four())
+// expected-error-re@+1{{argument to 'gang' clause dimension must be 1, 2, or 3: evaluated to {{.*}}}}
+#pragma acc routine(Func) gang(dim:HasFuncs::LargeUnsigned())
 
 template<typename T>
 struct DependentT {
@@ -802,4 +805,15 @@ namespace OtherDupes {
   // expected-error@+1{{OpenACC 'routine' construct must have at least one 'gang', 'seq', 'vector', or 'worker' clause that applies to each 'device_type'}}
 #pragma acc routine device_type(nvidia) vector device_type(acc_device_nvidia)
   void Func3();
+}
+
+namespace GH192245 {
+  // These are fine, but we were assuming a bind-clause during checking that
+  // didnt' exist in the Func1 case.
+#pragma acc routine seq
+#pragma acc routine seq bind("asdf")
+  void Func1();
+#pragma acc routine seq bind("asdf")
+#pragma acc routine seq
+  void Func2();
 }

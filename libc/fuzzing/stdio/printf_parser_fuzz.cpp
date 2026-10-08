@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/arg_list.h"
-#include "src/stdio/printf_core/parser.h"
+#include "src/__support/printf_core/parser.h"
 
 #include <stdarg.h>
 #include <stdint.h>
@@ -34,7 +34,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   auto mock_arg_list = internal::MockArgList();
 
   auto parser =
-      printf_core::Parser<internal::MockArgList>(in_str, mock_arg_list);
+      printf_core::Parser<internal::MockArgList, char>(in_str, mock_arg_list);
 
   int str_percent_count = 0;
 

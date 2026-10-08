@@ -3,7 +3,7 @@ add_libc_fuzzer(
   SRCS
     printf_parser_fuzz.cpp
   DEPENDS
-    libc.src.stdio.printf_core.parser
+    libc.src.__support.printf_core.parser
     libc.src.errno.errno # needed for the strerror conversion
 )
 

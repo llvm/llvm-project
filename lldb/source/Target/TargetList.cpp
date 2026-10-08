@@ -135,14 +135,13 @@ Status TargetList::CreateTargetInternal(
 
     lldb::offset_t file_offset = 0;
     lldb::offset_t file_size = 0;
-    ModuleSpecList module_specs;
-    const size_t num_specs = ObjectFile::GetModuleSpecifications(
-        module_spec.GetFileSpec(), file_offset, file_size, module_specs);
+    ModuleSpecList module_specs = ObjectFile::GetModuleSpecifications(
+        module_spec.GetFileSpec(), file_offset, file_size);
 
-    if (num_specs > 0) {
+    if (module_specs.GetSize() > 0) {
       ModuleSpec matching_module_spec;
 
-      if (num_specs == 1) {
+      if (module_specs.GetSize() == 1) {
         if (module_specs.GetModuleSpecAtIndex(0, matching_module_spec)) {
           if (platform_arch.IsValid()) {
             if (platform_arch.IsCompatibleMatch(
@@ -206,7 +205,7 @@ Status TargetList::CreateTargetInternal(
             error_strm.PutCString(platform_name);
             platform_set.insert(platform_name);
           }
-          error_strm.Printf("), specify an architecture to disambiguate");
+          error_strm.PutCString("), specify an architecture to disambiguate");
           error = Status(error_strm.GetString().str());
           return error;
         }
@@ -327,7 +326,8 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
       }
       target_sp.reset(new Target(debugger, arch, platform_sp, is_dummy_target));
       debugger.GetTargetList().RegisterInProcessTarget(target_sp);
-      target_sp->SetExecutableModule(exe_module_sp, load_dependent_files);
+      target_sp->RebuildModuleListWithExecutable(exe_module_sp,
+                                                 load_dependent_files);
       if (user_exe_path_is_bundle)
         exe_module_sp->GetFileSpec().GetPath(resolved_bundle_exe_path,
                                              sizeof(resolved_bundle_exe_path));
@@ -357,7 +357,7 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
       target_sp->SetArg0(file.GetPath().c_str());
     }
   }
-  if (file.GetDirectory()) {
+  if (!file.GetDirectory().empty()) {
     FileSpec file_dir;
     file_dir.SetDirectory(file.GetDirectory());
     target_sp->AppendExecutableSearchPaths(file_dir);

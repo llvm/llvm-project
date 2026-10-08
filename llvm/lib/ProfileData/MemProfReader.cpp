@@ -275,7 +275,7 @@ std::string getBuildIdString(const SegmentEntry &Entry) {
   for (size_t I = 0; I < Entry.BuildIdSize; I++) {
     OS << format_hex_no_prefix(Entry.BuildId[I], 2);
   }
-  return OS.str();
+  return Str;
 }
 } // namespace
 
@@ -612,7 +612,7 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
           getModuleOffset(VAddr), Specifier, /*UseSymbolTable=*/false);
       if (!DIOr)
         return DIOr.takeError();
-      DIInliningInfo DI = DIOr.get();
+      DIInliningInfo &DI = DIOr.get();
 
       // Drop frames which we can't symbolize or if they belong to the runtime.
       if (DI.getFrame(0).FunctionName == DILineInfo::BadString ||

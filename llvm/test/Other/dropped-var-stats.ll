@@ -13,13 +13,15 @@ define noundef range(i32 -2147483646, -2147483648) i32 @_Z3bari(i32 noundef %y) 
 !1 = !DIFile(filename: "/tmp/dropped.cpp", directory: "/Users/shubham/Development/llvm-project")
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !7 = !{i32 7, !"frame-pointer", i32 1}
-!9 = distinct !DISubprogram( unit: !0, retainedNodes: !14)
+!9 = distinct !DISubprogram( unit: !0, retainedNodes: !14, type: !28)
 !13 = !DIBasicType()
 !14 = !{}
 !15 = !DILocalVariable( scope: !9, type: !13)
-!19 = distinct !DISubprogram( unit: !0, retainedNodes: !20)
+!19 = distinct !DISubprogram( unit: !0, retainedNodes: !20, type: !28)
 !20 = !{}
 !23 = !DILocation( scope: !9, inlinedAt: !24)
 !24 = distinct !DILocation( scope: !19)
 !25 = !DILocation( scope: !19)
 !26 = !DILocation( scope: !19)
+!27 = !{null}
+!28 = !DISubroutineType(types: !27)

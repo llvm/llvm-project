@@ -12,6 +12,7 @@
 ;; Negative tests:
 ;;
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK-SPIRV-NEGATIVE
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_no_integer_wrap_decoration %s -o - -filetype=obj | spirv-val %}
 ;; Check that backend is able to skip nsw/nuw attributes if extension is
 ;; disabled implicitly or explicitly and if max SPIR-V version is lower then 1.4
 

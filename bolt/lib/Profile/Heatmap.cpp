@@ -116,7 +116,7 @@ void Heatmap::print(raw_ostream &OS) const {
 
     changeColor(DefaultColor);
     finishLine(Start);
-    Start = alignTo(Start, BytesPerLine);
+    Start = alignTo(Start + BucketSize, BytesPerLine);
 
     uint64_t NumEmptyLines = (End - Start) / BytesPerLine;
 
@@ -216,6 +216,7 @@ void Heatmap::print(raw_ostream &OS) const {
 
   auto SectionStart = TextSections.begin();
   uint64_t PrevAddress = 0;
+  bool IsFirst = true;
   for (auto MI = Map.begin(), ME = Map.end(); MI != ME; ++MI) {
     const std::pair<const uint64_t, uint64_t> &Entry = *MI;
     uint64_t Address = Entry.first * BucketSize;
@@ -233,33 +234,34 @@ void Heatmap::print(raw_ostream &OS) const {
       Character = 'a' + ((Section - TextSections.begin()) % 26);
     }
 
-    if (PrevAddress)
-      fillRange(PrevAddress, Address);
-    else
+    if (IsFirst)
       startLine(Address);
+    else
+      fillRange(PrevAddress, Address);
 
     printValue(Entry.second, Character, /*ResetColor=*/false);
 
     PrevAddress = Address;
+    IsFirst = false;
   }
 
-  if (PrevAddress) {
+  if (!IsFirst) {
     changeColor(DefaultColor);
     finishLine(PrevAddress);
   }
 }
 
-void Heatmap::printCDF(StringRef FileName) const {
+void Heatmap::printCDF(StringRef FileName, StringRef Label) const {
   std::error_code EC;
   raw_fd_ostream OS(FileName, EC, sys::fs::OpenFlags::OF_None);
   if (EC) {
     errs() << "error opening output file: " << EC.message() << '\n';
     exit(1);
   }
-  printCDF(OS);
+  printCDF(OS, Label);
 }
 
-void Heatmap::printCDF(raw_ostream &OS) const {
+void Heatmap::printCDF(raw_ostream &OS, StringRef Label) const {
   uint64_t NumTotalCounts = 0;
   std::vector<uint64_t> Counts;
 
@@ -276,15 +278,25 @@ void Heatmap::printCDF(raw_ostream &OS) const {
   double RatioRightInPercent = 100.0 / NumTotalCounts;
   uint64_t RunningCount = 0;
 
+  // Buckets covering the cutoff share of the samples.
+  const uint64_t CutOff = opts::HeatmapCdfPct;
+  assert(CutOff <= 1000000 && "cutoff must be at most 1000000");
+  const uint64_t Target = (NumTotalCounts * CutOff) / 1000000;
+  uint64_t NumBuckets = 0;
+
   OS << "Bucket counts, Size (KB), CDF (%)\n";
   for (uint64_t I = 0; I < Counts.size(); I++) {
     RunningCount += Counts[I];
+    if (!NumBuckets && RunningCount >= Target)
+      NumBuckets = I + 1;
     OS << format("%llu", (I + 1)) << ", "
        << format("%.4f", RatioLeftInKB * (I + 1)) << ", "
        << format("%.4f", RatioRightInPercent * (RunningCount)) << "\n";
   }
 
-  Counts.clear();
+  outs() << "HEATMAP: working set @ bucket size " << Label << " p"
+         << format("%g", CutOff / 10000.0) << "/total: " << NumBuckets << "/"
+         << Counts.size() << '\n';
 }
 
 void Heatmap::printSectionHotness(StringRef FileName) const {

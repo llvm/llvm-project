@@ -105,6 +105,17 @@ int main(int, char**) {
         assert(ptr[i][2][1] == 0);
       }
     }
+    {
+      // https://llvm.org/PR169765
+      // Ensure that the allocated size is properly rounded up
+      using Array                = char[][3];
+      std::shared_ptr<Array> ptr = std::make_shared<Array>(3);
+      for (unsigned i = 0; i < 3; ++i) {
+        assert(ptr[i][0] == '\0');
+        assert(ptr[i][1] == '\0');
+        assert(ptr[i][2] == '\0');
+      }
+    }
 
     // Passing an initial value
     {

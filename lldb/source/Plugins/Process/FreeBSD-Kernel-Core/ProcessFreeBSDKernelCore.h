@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_PROCESSFREEBSDKERNELCORE_H
 
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Target/PostMortemProcess.h"
 
 #include <kvm.h>
@@ -17,7 +18,7 @@
 class ProcessFreeBSDKernelCore : public lldb_private::PostMortemProcess {
 public:
   ProcessFreeBSDKernelCore(lldb::TargetSP target_sp, lldb::ListenerSP listener,
-                           kvm_t *kvm, const lldb_private::FileSpec &core_file);
+                           const lldb_private::FileSpec &core_file);
 
   ~ProcessFreeBSDKernelCore();
 
@@ -43,6 +44,8 @@ public:
   bool CanDebug(lldb::TargetSP target_sp,
                 bool plugin_specified_by_name) override;
 
+  lldb_private::CommandObject *GetPluginCommandObject() override;
+
   lldb_private::Status DoLoadCore() override;
 
   lldb_private::DynamicLoader *GetDynamicLoader() override;
@@ -55,18 +58,33 @@ public:
                        lldb_private::Status &error) override;
 
 protected:
+  friend class CommandObjectProcessFreeBSDKernelCoreRefreshThreads;
+
   bool DoUpdateThreadList(lldb_private::ThreadList &old_thread_list,
                           lldb_private::ThreadList &new_thread_list) override;
 
-  size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                      lldb_private::Status &error) override;
+  size_t DoReadMemory(const lldb_private::ProcessAddress &addr, void *buf,
+                      size_t size, lldb_private::Status &error) override;
 
   lldb::addr_t FindSymbol(const char *name);
 
 private:
+  static inline thread_local lldb_private::Module *g_kvm_kernel_module =
+      nullptr;
+
+  static int ResolveKVMSymbol(const char *name, kvaddr_t *value);
+
+  static kvm_t *OpenKVM(const lldb::ModuleSP &kernel_module,
+                        const lldb_private::FileSpec &core_file, int flags,
+                        char *errbuf);
+
+  void SetKernelDisplacement();
+
   void PrintUnreadMessage();
 
   const char *GetError();
+
+  std::unique_ptr<lldb_private::CommandObjectMultiword> m_command_sp;
 
   bool m_printed_unread_message = false;
 

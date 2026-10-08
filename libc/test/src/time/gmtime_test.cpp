@@ -7,19 +7,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
+
 #include "hdr/types/struct_tm.h"
 #include "src/__support/CPP/limits.h" // INT_MAX, INT_MIN
 #include "src/time/gmtime.h"
 #include "src/time/time_constants.h"
+#include "src/time/time_utils.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/time/TmMatcher.h"
 
 using LlvmLibcGmTime = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
+static_assert(sizeof(time_t) == 8, "LLVM libc requires a 64-bit time_t.");
+
 TEST_F(LlvmLibcGmTime, OutOfRange) {
-  if (sizeof(time_t) < sizeof(int64_t))
-    return;
   time_t seconds =
       1 +
       INT_MAX *
@@ -27,7 +29,7 @@ TEST_F(LlvmLibcGmTime, OutOfRange) {
               LIBC_NAMESPACE::time_constants::NUMBER_OF_SECONDS_IN_LEAP_YEAR);
   struct tm *tm_data = LIBC_NAMESPACE::gmtime(&seconds);
   EXPECT_TRUE(tm_data == nullptr);
-  ASSERT_ERRNO_EQ(EOVERFLOW);
+  ASSERT_ERRNO_EQ(LIBC_NAMESPACE::time_utils::TIME_OVERFLOW);
 
   seconds =
       INT_MIN *
@@ -36,7 +38,11 @@ TEST_F(LlvmLibcGmTime, OutOfRange) {
       1;
   tm_data = LIBC_NAMESPACE::gmtime(&seconds);
   EXPECT_TRUE(tm_data == nullptr);
-  ASSERT_ERRNO_EQ(EOVERFLOW);
+  ASSERT_ERRNO_EQ(LIBC_NAMESPACE::time_utils::TIME_OVERFLOW);
+}
+
+TEST_F(LlvmLibcGmTime, NullPtr) {
+  EXPECT_DEATH([] { LIBC_NAMESPACE::gmtime(nullptr); }, WITH_SIGNAL(-1));
 }
 
 TEST_F(LlvmLibcGmTime, InvalidSeconds) {
@@ -275,8 +281,6 @@ TEST_F(LlvmLibcGmTime, EndOf32BitEpochYear) {
 }
 
 TEST_F(LlvmLibcGmTime, Max64BitYear) {
-  if (sizeof(time_t) == 4)
-    return;
   // Mon Jan 1 12:50:50 2170 (200 years from 1970),
   time_t seconds = 6311479850;
   struct tm *tm_data = LIBC_NAMESPACE::gmtime(&seconds);
@@ -306,4 +310,151 @@ TEST_F(LlvmLibcGmTime, Max64BitYear) {
           0,                                                           // yday
           0}),
       *tm_data);
+}
+
+TEST_F(LlvmLibcGmTime, LeapYearRules) {
+  time_t seconds;
+  struct tm *tm_data;
+
+  // Non-leap year 1900 (divisible by 100 but not 400) - Test March 1
+  // Feb 29, 1900 doesn't exist, so we test March 1
+  seconds = -2203891200;
+  tm_data = LIBC_NAMESPACE::gmtime(&seconds);
+  EXPECT_TM_EQ((tm{0, // sec
+                   0, // min
+                   0, // hr
+                   1, // day
+                   2, // tm_mon (March)
+                   1900 - LIBC_NAMESPACE::time_constants::TIME_YEAR_BASE,
+                   4,  // wday (Thursday)
+                   59, // yday (Jan 31 + Feb 28)
+                   0}),
+               *tm_data);
+
+  // Leap year 2000 (divisible by 400) - Feb 29 exists
+  seconds = 951782400;
+  tm_data = LIBC_NAMESPACE::gmtime(&seconds);
+  EXPECT_TM_EQ((tm{0,  // sec
+                   0,  // min
+                   0,  // hr
+                   29, // day
+                   1,  // tm_mon (February)
+                   2000 - LIBC_NAMESPACE::time_constants::TIME_YEAR_BASE,
+                   2,  // wday (Tuesday)
+                   59, // yday (Jan 31 + Feb 29 - 1)
+                   0}),
+               *tm_data);
+
+  // Leap year 2400 (divisible by 400) - Feb 29 exists
+  seconds = 13574563200LL;
+  tm_data = LIBC_NAMESPACE::gmtime(&seconds);
+  EXPECT_TM_EQ((tm{0,  // sec
+                   0,  // min
+                   0,  // hr
+                   29, // day
+                   1,  // tm_mon (February)
+                   2400 - LIBC_NAMESPACE::time_constants::TIME_YEAR_BASE,
+                   2,  // wday (Tuesday)
+                   59, // yday (Jan 31 + Feb 29 - 1)
+                   0}),
+               *tm_data);
+}
+
+TEST_F(LlvmLibcGmTime, CenturyBoundaries) {
+  time_t seconds;
+  struct tm *tm_data;
+
+  // 1900-01-01 (Monday)
+  seconds = -2208988800;
+  tm_data = LIBC_NAMESPACE::gmtime(&seconds);
+  EXPECT_TM_EQ((tm{0, // sec
+                   0, // min
+                   0, // hr
+                   1, // day
+                   0, // tm_mon (January)
+                   1900 - LIBC_NAMESPACE::time_constants::TIME_YEAR_BASE,
+                   1, // wday (Monday)
+                   0, // yday
+                   0}),
+               *tm_data);
+
+  // 2100-01-01 (Friday)
+  seconds = 4102444800;
+  tm_data = LIBC_NAMESPACE::gmtime(&seconds);
+  EXPECT_TM_EQ((tm{0, // sec
+                   0, // min
+                   0, // hr
+                   1, // day
+                   0, // tm_mon (January)
+                   2100 - LIBC_NAMESPACE::time_constants::TIME_YEAR_BASE,
+                   5, // wday (Friday)
+                   0, // yday
+                   0}),
+               *tm_data);
+}
+
+TEST_F(LlvmLibcGmTime, FarPastAndFuture) {
+  time_t seconds;
+  struct tm *tm_data;
+
+  // Far past: year 1000 (Wednesday)
+  seconds = -30610224000LL;
+  tm_data = LIBC_NAMESPACE::gmtime(&seconds);
+  EXPECT_TM_EQ((tm{0, // sec
+                   0, // min
+                   0, // hr
+                   1, // day
+                   0, // tm_mon (January)
+                   1000 - LIBC_NAMESPACE::time_constants::TIME_YEAR_BASE,
+                   3, // wday (Wednesday)
+                   0, // yday
+                   0}),
+               *tm_data);
+
+  // Far future: year 3000 (Wednesday)
+  seconds = 32503680000LL;
+  tm_data = LIBC_NAMESPACE::gmtime(&seconds);
+  EXPECT_TM_EQ((tm{0, // sec
+                   0, // min
+                   0, // hr
+                   1, // day
+                   0, // tm_mon (January)
+                   3000 - LIBC_NAMESPACE::time_constants::TIME_YEAR_BASE,
+                   3, // wday (Wednesday)
+                   0, // yday
+                   0}),
+               *tm_data);
+}
+
+TEST_F(LlvmLibcGmTime, KeyYears) {
+  // Test Jan 1 of key years to ensure calendar correctness
+  struct TestCase {
+    time_t timestamp;
+    int year;
+    int wday;
+    const char *description;
+  };
+
+  TestCase cases[] = {
+      {-2208988800, 1900, 1, "1900-01-01 Monday (non-leap century)"},
+      {0, 1970, 4, "1970-01-01 Thursday (epoch)"},
+      {915148800, 1999, 5, "1999-01-01 Friday"},
+      {946684800, 2000, 6, "2000-01-01 Saturday (leap century)"},
+      {978307200, 2001, 1, "2001-01-01 Monday"},
+      {4102444800, 2100, 5, "2100-01-01 Friday (non-leap century)"},
+      {13569465600LL, 2400, 6, "2400-01-01 Saturday (leap century)"},
+  };
+
+  for (const auto &tc : cases) {
+    time_t seconds = tc.timestamp;
+    struct tm *tm_data = LIBC_NAMESPACE::gmtime(&seconds);
+    ASSERT_NE(tm_data, nullptr) << tc.description;
+    EXPECT_EQ(tm_data->tm_year,
+              tc.year - LIBC_NAMESPACE::time_constants::TIME_YEAR_BASE)
+        << tc.description;
+    EXPECT_EQ(tm_data->tm_mon, 0) << tc.description;
+    EXPECT_EQ(tm_data->tm_mday, 1) << tc.description;
+    EXPECT_EQ(tm_data->tm_wday, tc.wday) << tc.description;
+    EXPECT_EQ(tm_data->tm_yday, 0) << tc.description;
+  }
 }

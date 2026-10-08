@@ -39,6 +39,7 @@ bool IntrinsicInst::mayLowerToFunctionCall(Intrinsic::ID IID) {
   case Intrinsic::objc_autoreleasePoolPop:
   case Intrinsic::objc_autoreleasePoolPush:
   case Intrinsic::objc_autoreleaseReturnValue:
+  case Intrinsic::objc_claimAutoreleasedReturnValue:
   case Intrinsic::objc_copyWeak:
   case Intrinsic::objc_destroyWeak:
   case Intrinsic::objc_initWeak:
@@ -262,11 +263,7 @@ Value *InstrProfIncrementInst::getStep() const {
   return ConstantInt::get(Type::getInt64Ty(Context), 1);
 }
 
-Value *InstrProfCallsite::getCallee() const {
-  if (isa<InstrProfCallsite>(this))
-    return getArgOperand(4);
-  return nullptr;
-}
+Value *InstrProfCallsite::getCallee() const { return getArgOperand(4); }
 
 void InstrProfCallsite::setCallee(Value *Callee) {
   assert(isa<InstrProfCallsite>(this));
@@ -366,8 +363,7 @@ ElementCount VPIntrinsic::getStaticVectorLength() const {
 
   Value *VPMask = getMaskParam();
   if (!VPMask) {
-    assert((getIntrinsicID() == Intrinsic::vp_merge ||
-            getIntrinsicID() == Intrinsic::vp_select) &&
+    assert((getIntrinsicID() == Intrinsic::vp_merge) &&
            "Unexpected VP intrinsic without mask operand");
     return GetVectorLengthOfType(getType());
   }
@@ -548,52 +544,6 @@ constexpr static bool doesVPHaveNoFunctionalEquivalent(Intrinsic::ID ID) {
                 getFunctionalIntrinsicIDForVP(Intrinsic::VPID));
 #include "llvm/IR/VPIntrinsics.def"
 
-// Equivalent non-predicated constrained intrinsic
-std::optional<Intrinsic::ID>
-VPIntrinsic::getConstrainedIntrinsicIDForVP(Intrinsic::ID ID) {
-  switch (ID) {
-  default:
-    break;
-#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
-#define VP_PROPERTY_CONSTRAINEDFP(CID) return Intrinsic::CID;
-#define END_REGISTER_VP_INTRINSIC(VPID) break;
-#include "llvm/IR/VPIntrinsics.def"
-  }
-  return std::nullopt;
-}
-
-Intrinsic::ID VPIntrinsic::getForOpcode(unsigned IROPC) {
-  switch (IROPC) {
-  default:
-    break;
-
-#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) break;
-#define VP_PROPERTY_FUNCTIONAL_OPC(OPC) case Instruction::OPC:
-#define END_REGISTER_VP_INTRINSIC(VPID) return Intrinsic::VPID;
-#include "llvm/IR/VPIntrinsics.def"
-  }
-  return Intrinsic::not_intrinsic;
-}
-
-constexpr static Intrinsic::ID getForIntrinsic(Intrinsic::ID Id) {
-  if (::isVPIntrinsic(Id))
-    return Id;
-
-  switch (Id) {
-  default:
-    break;
-#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) break;
-#define VP_PROPERTY_FUNCTIONAL_INTRINSIC(INTRIN) case Intrinsic::INTRIN:
-#define END_REGISTER_VP_INTRINSIC(VPID) return Intrinsic::VPID;
-#include "llvm/IR/VPIntrinsics.def"
-  }
-  return Intrinsic::not_intrinsic;
-}
-
-Intrinsic::ID VPIntrinsic::getForIntrinsic(Intrinsic::ID Id) {
-  return ::getForIntrinsic(Id);
-}
-
 bool VPIntrinsic::canIgnoreVectorLengthParam() const {
   using namespace PatternMatch;
 
@@ -644,28 +594,11 @@ Function *VPIntrinsic::getOrInsertDeclarationForParams(
     VPFunc = Intrinsic::getOrInsertDeclaration(M, VPID, OverloadTy);
     break;
   }
-  case Intrinsic::vp_trunc:
-  case Intrinsic::vp_sext:
-  case Intrinsic::vp_zext:
-  case Intrinsic::vp_fptoui:
-  case Intrinsic::vp_fptosi:
-  case Intrinsic::vp_uitofp:
-  case Intrinsic::vp_sitofp:
-  case Intrinsic::vp_fptrunc:
-  case Intrinsic::vp_fpext:
-  case Intrinsic::vp_ptrtoint:
-  case Intrinsic::vp_inttoptr:
-  case Intrinsic::vp_lrint:
-  case Intrinsic::vp_llrint:
   case Intrinsic::vp_cttz_elts:
     VPFunc = Intrinsic::getOrInsertDeclaration(
         M, VPID, {ReturnType, Params[0]->getType()});
     break;
-  case Intrinsic::vp_is_fpclass:
-    VPFunc = Intrinsic::getOrInsertDeclaration(M, VPID, {Params[0]->getType()});
-    break;
   case Intrinsic::vp_merge:
-  case Intrinsic::vp_select:
     VPFunc = Intrinsic::getOrInsertDeclaration(M, VPID, {Params[1]->getType()});
     break;
   case Intrinsic::vp_load:
@@ -723,60 +656,6 @@ bool VPReductionIntrinsic::isVPReduction(Intrinsic::ID ID) {
   default:
     return false;
   }
-}
-
-bool VPCastIntrinsic::isVPCast(Intrinsic::ID ID) {
-  // All of the vp.casts correspond to instructions
-  if (std::optional<unsigned> Opc = getFunctionalOpcodeForVP(ID))
-    return Instruction::isCast(*Opc);
-  return false;
-}
-
-bool VPCmpIntrinsic::isVPCmp(Intrinsic::ID ID) {
-  switch (ID) {
-  default:
-    return false;
-  case Intrinsic::vp_fcmp:
-  case Intrinsic::vp_icmp:
-    return true;
-  }
-}
-
-bool VPBinOpIntrinsic::isVPBinOp(Intrinsic::ID ID) {
-  switch (ID) {
-  default:
-    break;
-#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
-#define VP_PROPERTY_BINARYOP return true;
-#define END_REGISTER_VP_INTRINSIC(VPID) break;
-#include "llvm/IR/VPIntrinsics.def"
-  }
-  return false;
-}
-
-static ICmpInst::Predicate getIntPredicateFromMD(const Value *Op) {
-  Metadata *MD = cast<MetadataAsValue>(Op)->getMetadata();
-  if (!MD || !isa<MDString>(MD))
-    return ICmpInst::BAD_ICMP_PREDICATE;
-  return StringSwitch<ICmpInst::Predicate>(cast<MDString>(MD)->getString())
-      .Case("eq", ICmpInst::ICMP_EQ)
-      .Case("ne", ICmpInst::ICMP_NE)
-      .Case("ugt", ICmpInst::ICMP_UGT)
-      .Case("uge", ICmpInst::ICMP_UGE)
-      .Case("ult", ICmpInst::ICMP_ULT)
-      .Case("ule", ICmpInst::ICMP_ULE)
-      .Case("sgt", ICmpInst::ICMP_SGT)
-      .Case("sge", ICmpInst::ICMP_SGE)
-      .Case("slt", ICmpInst::ICMP_SLT)
-      .Case("sle", ICmpInst::ICMP_SLE)
-      .Default(ICmpInst::BAD_ICMP_PREDICATE);
-}
-
-CmpInst::Predicate VPCmpIntrinsic::getPredicate() const {
-  assert(isVPCmp(getIntrinsicID()));
-  return getIntrinsicID() == Intrinsic::vp_fcmp
-             ? getFPPredicateFromMD(getArgOperand(2))
-             : getIntPredicateFromMD(getArgOperand(2));
 }
 
 unsigned VPReductionIntrinsic::getVectorParamPos() const {
@@ -870,10 +749,16 @@ Value *GCRelocateInst::getBasePtr() const {
   auto Statepoint = getStatepoint();
   if (isa<UndefValue>(Statepoint))
     return UndefValue::get(Statepoint->getType());
-
+  // Handle too few (bundle) arguments to avoid crashes when printing invalid
+  // IR, e.g. in the verifier.
   auto *GCInst = cast<GCStatepointInst>(Statepoint);
-  if (auto Opt = GCInst->getOperandBundle(LLVMContext::OB_gc_live))
+  if (auto Opt = GCInst->getOperandBundle(LLVMContext::OB_gc_live)) {
+    if (getBasePtrIndex() > Opt->Inputs.size())
+      return nullptr;
     return *(Opt->Inputs.begin() + getBasePtrIndex());
+  }
+  if (getBasePtrIndex() > GCInst->arg_size())
+    return nullptr;
   return *(GCInst->arg_begin() + getBasePtrIndex());
 }
 
@@ -882,9 +767,16 @@ Value *GCRelocateInst::getDerivedPtr() const {
   if (isa<UndefValue>(Statepoint))
     return UndefValue::get(Statepoint->getType());
 
+  // Handle too few (bundle) arguments to avoid crashes when printing invalid
+  // IR, e.g. in the verifier.
   auto *GCInst = cast<GCStatepointInst>(Statepoint);
-  if (auto Opt = GCInst->getOperandBundle(LLVMContext::OB_gc_live))
+  if (auto Opt = GCInst->getOperandBundle(LLVMContext::OB_gc_live)) {
+    if (getDerivedPtrIndex() > Opt->Inputs.size())
+      return nullptr;
     return *(Opt->Inputs.begin() + getDerivedPtrIndex());
+  }
+  if (getDerivedPtrIndex() > GCInst->arg_size())
+    return nullptr;
   return *(GCInst->arg_begin() + getDerivedPtrIndex());
 }
 

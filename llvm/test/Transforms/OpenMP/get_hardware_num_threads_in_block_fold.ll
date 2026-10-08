@@ -78,7 +78,7 @@ define weak ptx_kernel void @kernel2(ptr %dyn) "kernel" #0 {
 ; CHECK-NEXT:    call void @helper0() #[[ATTR1]]
 ; CHECK-NEXT:    call void @helper1() #[[ATTR1]]
 ; CHECK-NEXT:    call void @helper2() #[[ATTR1]]
-; CHECK-NEXT:    call void @__kmpc_parallel_60(ptr null, i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0, i32 0)
+; CHECK-NEXT:    call void @__kmpc_parallel_60(ptr null, i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 0, i32 0)
 ; CHECK-NEXT:    call void @__kmpc_target_deinit()
 ; CHECK-NEXT:    ret void
 ;

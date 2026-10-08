@@ -1,4 +1,4 @@
-; RUN: llc -O0 -global-isel -stop-after=irtranslator -verify-machineinstrs %s -o - | FileCheck %s
+; RUN: llc -O0 -global-isel -stop-after=ir-translator -verify-machineinstrs %s -o - | FileCheck %s
 ; RUN: llc -O0 -fast-isel -stop-after=finalize-isel %s -o - | FileCheck %s
 ; RUN: llc -O0 -fast-isel=false -global-isel=false -stop-after=finalize-isel %s -o - | FileCheck %s
 

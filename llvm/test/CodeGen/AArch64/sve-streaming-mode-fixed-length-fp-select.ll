@@ -11,8 +11,8 @@ define <2 x half> @select_v2f16(<2 x half> %op1, <2 x half> %op2, i1 %mask) {
 ; CHECK-NEXT:    mov z2.h, w0
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    and z2.h, z2.h, #0x1
-; CHECK-NEXT:    cmpne p0.h, p0/z, z2.h, #0
-; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
+; CHECK-NEXT:    cmpne p1.h, p0/z, z2.h, #0
+; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: select_v2f16:
@@ -50,8 +50,8 @@ define <4 x half> @select_v4f16(<4 x half> %op1, <4 x half> %op2, i1 %mask) {
 ; CHECK-NEXT:    mov z2.h, w0
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    and z2.h, z2.h, #0x1
-; CHECK-NEXT:    cmpne p0.h, p0/z, z2.h, #0
-; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
+; CHECK-NEXT:    cmpne p1.h, p0/z, z2.h, #0
+; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: select_v4f16:
@@ -89,8 +89,8 @@ define <8 x half> @select_v8f16(<8 x half> %op1, <8 x half> %op2, i1 %mask) {
 ; CHECK-NEXT:    mov z2.h, w0
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    and z2.h, z2.h, #0x1
-; CHECK-NEXT:    cmpne p0.h, p0/z, z2.h, #0
-; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
+; CHECK-NEXT:    cmpne p1.h, p0/z, z2.h, #0
+; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: select_v8f16:
@@ -143,13 +143,13 @@ define void @select_v16f16(ptr %a, ptr %b, i1 %mask) {
 ; CHECK-NEXT:    mov z0.h, w2
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    and z0.h, z0.h, #0x1
-; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
+; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr q1, [x0, #16]
 ; CHECK-NEXT:    ldr q2, [x1]
 ; CHECK-NEXT:    ldr q3, [x1, #16]
-; CHECK-NEXT:    sel z0.h, p0, z0.h, z2.h
-; CHECK-NEXT:    sel z1.h, p0, z1.h, z3.h
+; CHECK-NEXT:    sel z0.h, p1, z0.h, z2.h
+; CHECK-NEXT:    sel z1.h, p1, z1.h, z3.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
 ;
@@ -246,8 +246,8 @@ define <2 x float> @select_v2f32(<2 x float> %op1, <2 x float> %op2, i1 %mask) {
 ; CHECK-NEXT:    and w8, w0, #0x1
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z2.s, w8
-; CHECK-NEXT:    cmpne p0.s, p0/z, z2.s, #0
-; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    cmpne p1.s, p0/z, z2.s, #0
+; CHECK-NEXT:    sel z0.s, p1, z0.s, z1.s
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: select_v2f32:
@@ -275,8 +275,8 @@ define <4 x float> @select_v4f32(<4 x float> %op1, <4 x float> %op2, i1 %mask) {
 ; CHECK-NEXT:    and w8, w0, #0x1
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z2.s, w8
-; CHECK-NEXT:    cmpne p0.s, p0/z, z2.s, #0
-; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    cmpne p1.s, p0/z, z2.s, #0
+; CHECK-NEXT:    sel z0.s, p1, z0.s, z1.s
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: select_v4f32:
@@ -309,13 +309,13 @@ define void @select_v8f32(ptr %a, ptr %b, i1 %mask) {
 ; CHECK-NEXT:    and w8, w2, #0x1
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z0.s, w8
-; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
+; CHECK-NEXT:    cmpne p1.s, p0/z, z0.s, #0
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr q1, [x0, #16]
 ; CHECK-NEXT:    ldr q2, [x1]
 ; CHECK-NEXT:    ldr q3, [x1, #16]
-; CHECK-NEXT:    sel z0.s, p0, z0.s, z2.s
-; CHECK-NEXT:    sel z1.s, p0, z1.s, z3.s
+; CHECK-NEXT:    sel z0.s, p1, z0.s, z2.s
+; CHECK-NEXT:    sel z1.s, p1, z1.s, z3.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
 ;
@@ -391,8 +391,8 @@ define <2 x double> @select_v2f64(<2 x double> %op1, <2 x double> %op2, i1 %mask
 ; CHECK-NEXT:    and x8, x0, #0x1
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z2.d, x8
-; CHECK-NEXT:    cmpne p0.d, p0/z, z2.d, #0
-; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    cmpne p1.d, p0/z, z2.d, #0
+; CHECK-NEXT:    sel z0.d, p1, z0.d, z1.d
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: select_v2f64:
@@ -419,13 +419,13 @@ define void @select_v4f64(ptr %a, ptr %b, i1 %mask) {
 ; CHECK-NEXT:    and x8, x2, #0x1
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z0.d, x8
-; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
+; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr q1, [x0, #16]
 ; CHECK-NEXT:    ldr q2, [x1]
 ; CHECK-NEXT:    ldr q3, [x1, #16]
-; CHECK-NEXT:    sel z0.d, p0, z0.d, z2.d
-; CHECK-NEXT:    sel z1.d, p0, z1.d, z3.d
+; CHECK-NEXT:    sel z0.d, p1, z0.d, z2.d
+; CHECK-NEXT:    sel z1.d, p1, z1.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
 ;

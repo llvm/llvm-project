@@ -75,6 +75,41 @@ private:
   PyMlirContextRef ctx;
 };
 
+/// Wrapper around MlirRewritePatternSet.
+/// The default constructor creates an owned pattern set that is destroyed
+/// in the destructor. The constructor taking MlirRewritePatternSet creates
+/// a non-owning reference.
+class PyTypeConverter;
+class MLIR_PYTHON_API_EXPORTED PyRewritePatternSet {
+public:
+  /// Create an owned pattern set.
+  PyRewritePatternSet(MlirContext ctx);
+
+  /// Create a non-owning reference to an existing pattern set.
+  PyRewritePatternSet(MlirRewritePatternSet patterns);
+
+  ~PyRewritePatternSet();
+
+  MlirRewritePatternSet get() const;
+
+  bool isOwned() const;
+
+  /// Add a new rewrite pattern to the pattern set.
+  void add(nanobind::handle root, const nanobind::callable &matchAndRewrite,
+           unsigned benefit);
+
+  /// Add a new conversion pattern to the pattern set.
+  void addConversion(nanobind::handle root,
+                     const nanobind::callable &matchAndRewrite,
+                     PyTypeConverter &typeConverter, unsigned benefit);
+
+  static void bind(nanobind::module_ &m);
+
+private:
+  MlirRewritePatternSet patterns;
+  bool owned;
+};
+
 void MLIR_PYTHON_API_EXPORTED populateRewriteSubmodule(nanobind::module_ &m);
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python

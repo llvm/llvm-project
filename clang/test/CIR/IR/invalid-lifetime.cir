@@ -1,0 +1,36 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+
+// `cir.lifetime.start` requires its pointer to be produced by a `cir.alloca`.
+cir.func @start_not_alloca(%arg0: !cir.ptr<!s32i>) {
+// expected-error @below {{operand 'ptr' must be produced by 'cir.alloca'}}
+cir.lifetime.start %arg0 : !cir.ptr<!s32i>
+cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+// `cir.lifetime.end` requires its pointer to be produced by a `cir.alloca`.
+cir.func @end_not_alloca(%arg0: !cir.ptr<!s32i>) {
+// expected-error @below {{operand 'ptr' must be produced by 'cir.alloca'}}
+cir.lifetime.end %arg0 : !cir.ptr<!s32i>
+cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.global external @g = #cir.int<0> : !s32i
+
+// The pointer has a defining op, but it is a `cir.get_global`, not a
+// `cir.alloca`, so the verifier still rejects it.
+cir.func @start_from_global() {
+%0 = cir.get_global @g : !cir.ptr<!s32i>
+// expected-error @below {{operand 'ptr' must be produced by 'cir.alloca'}}
+cir.lifetime.start %0 : !cir.ptr<!s32i>
+cir.return
+}

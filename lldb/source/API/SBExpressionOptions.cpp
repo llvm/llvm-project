@@ -151,6 +151,18 @@ void SBExpressionOptions::SetTrapExceptions(bool trap_exceptions) {
   m_opaque_up->SetTrapExceptions(trap_exceptions);
 }
 
+bool SBExpressionOptions::GetStopOnFork() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  return m_opaque_up->GetStopOnFork();
+}
+
+void SBExpressionOptions::SetStopOnFork(bool stop_on_fork) {
+  LLDB_INSTRUMENT_VA(this, stop_on_fork);
+
+  m_opaque_up->SetStopOnFork(stop_on_fork);
+}
+
 void SBExpressionOptions::SetLanguage(lldb::LanguageType language) {
   LLDB_INSTRUMENT_VA(this, language);
 
@@ -287,6 +299,18 @@ SBError SBExpressionOptions::SetBooleanLanguageOption(const char *option_name,
     error.SetErrorString(llvm::toString(std::move(err)).c_str());
 
   return error;
+}
+
+bool SBExpressionOptions::GetTryDILFirst() {
+  LLDB_INSTRUMENT_VA(this);
+
+  return m_opaque_up->GetTryDILFirst();
+}
+
+void SBExpressionOptions::SetTryDILFirst(bool b) {
+  LLDB_INSTRUMENT_VA(this, b);
+
+  m_opaque_up->SetTryDILFirst(b);
 }
 
 EvaluateExpressionOptions *SBExpressionOptions::get() const {

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_TEST_SRC_MATH_PERFORMACE_TESTING_TIMER_H
-#define LLVM_LIBC_TEST_SRC_MATH_PERFORMACE_TESTING_TIMER_H
+#ifndef LLVM_LIBC_TEST_SRC_MATH_PERFORMANCE_TESTING_TIMER_H
+#define LLVM_LIBC_TEST_SRC_MATH_PERFORMANCE_TESTING_TIMER_H
 
 #include "hdr/stdint_proxy.h"
 #include "src/__support/macros/config.h"

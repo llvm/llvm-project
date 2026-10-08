@@ -1,23 +1,23 @@
 # RUN: llvm-objdump --macho -d %p/Inputs/exeThread.macho-x86_64 --dis-symname start --no-show-raw-insn --full-leading-addr --print-imm-hex | FileCheck %s
 # RUN: llvm-otool -tV %p/Inputs/exeThread.macho-x86_64 -p start | FileCheck %s
 
-# CHECK: (__TEXT,__text) section
-# CHECK: start:
-# CHECK: 0000000100000d00	pushq	$0x0
-# CHECK: 0000000100000d02	movq	%rsp, %rbp
-# CHECK: 0000000100000d05	andq	$-0x10, %rsp
-# CHECK: 0000000100000d09	movq	0x8(%rbp), %rdi
-# CHECK: 0000000100000d0d	leaq	0x10(%rbp), %rsi
-# CHECK: 0000000100000d11	movl	%edi, %edx
-# CHECK: 0000000100000d13	addl	$0x1, %edx
-# CHECK: 0000000100000d16	shll	$0x3, %edx
-# CHECK: 0000000100000d19	addq	%rsi, %rdx
-# CHECK: 0000000100000d1c	callq	__start
-# CHECK: 0000000100000d21	hlt
+# CHECK:      (__TEXT,__text) section
+# CHECK-NEXT: start:
+# CHECK-NEXT: 0000000100000d00	pushq	$0x0
+# CHECK-NEXT: 0000000100000d02	movq	%rsp, %rbp
+# CHECK-NEXT: 0000000100000d05	andq	$-0x10, %rsp
+# CHECK-NEXT: 0000000100000d09	movq	0x8(%rbp), %rdi
+# CHECK-NEXT: 0000000100000d0d	leaq	0x10(%rbp), %rsi
+# CHECK-NEXT: 0000000100000d11	movl	%edi, %edx
+# CHECK-NEXT: 0000000100000d13	addl	$0x1, %edx
+# CHECK-NEXT: 0000000100000d16	shll	$0x3, %edx
+# CHECK-NEXT: 0000000100000d19	addq	%rsi, %rdx
+# CHECK-NEXT: 0000000100000d1c	callq	__start
+# CHECK-NEXT: 0000000100000d21	hlt
 
-# CHECK-NOT: __start:
-# CHECK-NOT: 0000000100000d22
-# CHECK-NOT: _main:
+# CHECK-NOT:  __start:
+# CHECK-NOT:  0000000100000d22
+# CHECK-NOT:  _main:
 
 # RUN: llvm-objdump --macho -d %p/Inputs/exeThread.macho-x86_64 --dis-symname _nonexistent 2>&1 | FileCheck --check-prefix BAD-OBJDUMP-NOTFOUND %s
 BAD-OBJDUMP-NOTFOUND: Can't find --dis-symname: _nonexistent

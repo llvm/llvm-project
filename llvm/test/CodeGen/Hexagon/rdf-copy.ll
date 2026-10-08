@@ -52,6 +52,7 @@ if.end:                                           ; preds = %if.end.loopexit, %e
 
 attributes #0 = { nounwind "target-features"="-packets" }
 
-!0 = !{!"any pointer", !1}
+!0 = !{!3, !3, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}
+!3 = !{!"any pointer", !1}

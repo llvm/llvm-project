@@ -151,9 +151,9 @@ RegisterContextUnifiedCore::RegisterContextUnifiedCore(
   // Put the RegisterSet names in the constant string pool,
   // to sidestep lifetime issues of char*'s.
   auto copy_regset_name = [](RegisterSet &dst, const RegisterSet &src) {
-    dst.name = ConstString(src.name).AsCString();
+    dst.name = ConstString(src.name).AsCString(nullptr);
     if (src.short_name)
-      dst.short_name = ConstString(src.short_name).AsCString();
+      dst.short_name = ConstString(src.short_name).AsCString(nullptr);
     else
       dst.short_name = nullptr;
   };

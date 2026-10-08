@@ -487,14 +487,14 @@ attributes #2 = { argmemonly nounwind }
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "str", scope: !2, file: !3, line: 18, type: !12, isLocal: true, isDefinition: true)
-!2 = distinct !DISubprogram(name: "g", linkageName: "\01?g@@YAXAEIAH@Z", scope: !3, file: !3, line: 16, type: !4, isLocal: false, isDefinition: true, scopeLine: 16, flags: DIFlagPrototyped, isOptimized: false, unit: !9, retainedNodes: !10)
+!2 = distinct !DISubprogram(name: "g", linkageName: "\01?g@@YAXAEIAH@Z", scope: !3, file: !3, line: 16, type: !4, isLocal: false, isDefinition: true, scopeLine: 16, flags: DIFlagPrototyped, isOptimized: false, unit: !9, retainedNodes: !11)
 !3 = !DIFile(filename: "m.cpp", directory: "C:\5CUsers\5CHui\5Ctmp\5Chui", checksumkind: CSK_MD5, checksum: "a8da0f4dca948db1ef1129c8728a881c")
 !4 = !DISubroutineType(types: !5)
 !5 = !{null, !6}
 !6 = !DIDerivedType(tag: DW_TAG_restrict_type, baseType: !7)
 !7 = !DIDerivedType(tag: DW_TAG_reference_type, baseType: !8, size: 64)
 !8 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-!9 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 7.0.0 ", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !10, globals: !11)
+!9 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 7.0.0 ", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !10, globals: !10)
 !10 = !{}
 !11 = !{!0}
 !12 = !DICompositeType(tag: DW_TAG_array_type, baseType: !13, size: 32, elements: !15)

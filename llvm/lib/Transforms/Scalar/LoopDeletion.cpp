@@ -488,7 +488,7 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
   // the situation of needing to be able to solve statically which exit block
   // will be branched to, or trying to preserve the branching logic in a loop
   // invariant manner.
-  if (!ExitBlock && !L->hasNoExitBlocks()) {
+  if (!ExitBlock && !LI.hasNoExitBlocks(*L)) {
     LLVM_DEBUG(dbgs() << "Deletion requires at most one exit block.\n");
     return LoopDeletionResult::Unmodified;
   }

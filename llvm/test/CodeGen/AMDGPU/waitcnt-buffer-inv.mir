@@ -1,0 +1,45 @@
+# RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -verify-machineinstrs -run-pass=si-insert-waitcnts -o - %s | FileCheck --check-prefix=GFX94 %s
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -verify-machineinstrs -run-pass=si-insert-waitcnts -o - %s | FileCheck --check-prefix=GFX94 %s
+
+---
+name:            buffer_inv_advances_vmcnt
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    liveins: $exec, $vgpr0_vgpr1
+
+    ; GFX94-LABEL: name: buffer_inv_advances_vmcnt
+    ; GFX94: $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GFX94-NEXT: $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GFX94-NEXT: BUFFER_INV 0, implicit $exec
+    ; GFX94-NEXT: $vgpr4 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GFX94-NEXT: S_WAITCNT .Vmcnt_2
+    ; GFX94-NEXT: $vgpr5 = V_MOV_B32_e32 $vgpr3, implicit $exec
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    BUFFER_INV 0, implicit $exec
+    $vgpr4 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    $vgpr5 = V_MOV_B32_e32 $vgpr3, implicit $exec
+    S_ENDPGM 0
+...
+
+---
+name:            buffer_inv_only_does_not_wait_at_return
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: false
+body:             |
+  bb.0:
+    liveins: $sgpr30_sgpr31
+
+    ; GFX94-LABEL: name: buffer_inv_only_does_not_wait_at_return
+    ; GFX94: S_WAITCNT
+    ; GFX94-NEXT: BUFFER_INV 0, implicit $exec
+    ; GFX94-NOT: S_WAITCNT
+    ; GFX94-NEXT: S_SETPC_B64_return $sgpr30_sgpr31
+    BUFFER_INV 0, implicit $exec
+    S_WAITCNT_soft 0
+    S_SETPC_B64_return $sgpr30_sgpr31
+...

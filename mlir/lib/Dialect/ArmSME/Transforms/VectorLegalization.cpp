@@ -943,7 +943,9 @@ struct LowerColumnTransferReadToLoops
     auto upperBound = createVscaleMultiple(numRows);
     auto step = arith::ConstantIndexOp::create(rewriter, loc, 1);
     Value init = arith::ConstantOp::create(
-        rewriter, loc, newResType, DenseElementsAttr::get(newResType, 0.0f));
+        rewriter, loc, newResType,
+        DenseElementsAttr::get(newResType,
+                               rewriter.getZeroAttr(resType.getElementType())));
 
     scf::ForOp loadLoop;
     {

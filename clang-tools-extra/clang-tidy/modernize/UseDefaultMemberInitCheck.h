@@ -34,12 +34,13 @@ public:
 
 private:
   void checkDefaultInit(const ast_matchers::MatchFinder::MatchResult &Result,
-                        const CXXCtorInitializer *Init);
+                        const CXXCtorInitializer *Init, bool EmitFix);
   void checkExistingInit(const ast_matchers::MatchFinder::MatchResult &Result,
                          const CXXCtorInitializer *Init);
 
   const bool UseAssignment;
   const bool IgnoreMacros;
+  const bool IgnoreNonVisibleReferences;
 };
 
 } // namespace clang::tidy::modernize

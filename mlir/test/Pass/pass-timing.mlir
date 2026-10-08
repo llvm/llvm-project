@@ -17,8 +17,8 @@
 // LIST-JSON-NOT: Execution time report
 // LIST-JSON-NOT: Total Execution Time:
 // LIST-JSON-NOT: Name
-// LIST-JSON-DAG: "name": "Canonicalizer"}
-// LIST-JSON-DAG: "name": "CSE"}
+// LIST-JSON-DAG: "name": "CanonicalizerPass"}
+// LIST-JSON-DAG: "name": "CSEPass"}
 // LIST-JSON-DAG: "name": "(A) DominanceInfo"}
 // LIST-JSON: "name": "Total"}
 
@@ -42,13 +42,13 @@
 // PIPELINE-JSON:      "name": "Parser", "passes": [
 // PIPELINE-JSON-NEXT: {}]},
 // PIPELINE-JSON-NEXT: "name": "'func.func' Pipeline", "passes": [
-// PIPELINE-JSON-NEXT: "name": "CSE", "passes": [
+// PIPELINE-JSON-NEXT: "name": "CSEPass", "passes": [
 // PIPELINE-JSON-NEXT: "name": "(A) DominanceInfo", "passes": [
 // PIPELINE-JSON-NEXT: {}]},
 // PIPELINE-JSON-NEXT: {}]},
-// PIPELINE-JSON-NEXT: "name": "Canonicalizer", "passes": [
+// PIPELINE-JSON-NEXT: "name": "CanonicalizerPass", "passes": [
 // PIPELINE-JSON-NEXT: {}]},
-// PIPELINE-JSON-NEXT: "name": "CSE", "passes": [
+// PIPELINE-JSON-NEXT: "name": "CSEPass", "passes": [
 // PIPELINE-JSON-NEXT: "name": "(A) DominanceInfo", "passes": [
 // PIPELINE-JSON-NEXT: {}]},
 // PIPELINE-JSON-NEXT: {}]},

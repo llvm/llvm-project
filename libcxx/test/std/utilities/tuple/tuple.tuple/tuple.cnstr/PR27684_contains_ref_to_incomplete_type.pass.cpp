@@ -16,6 +16,9 @@
 
 // See https://llvm.org/PR27684.
 
+// FIXME: Can we avoid instantiating type traits on incomplete types here?
+// ADDITIONAL_COMPILE_FLAGS(gcc): -Wno-sfinae-incomplete
+
 #include <tuple>
 #include <cassert>
 

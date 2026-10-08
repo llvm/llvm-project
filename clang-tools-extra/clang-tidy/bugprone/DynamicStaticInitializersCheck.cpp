@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 
 namespace {
 
-AST_MATCHER(clang::VarDecl, hasConstantDeclaration) {
+AST_MATCHER(VarDecl, hasConstantDeclaration) {
   if (Node.isConstexpr() || Node.hasAttr<ConstInitAttr>())
     return true;
   if (const VarDecl *Def = Node.getDefinition();
@@ -33,8 +33,7 @@ AST_MATCHER(clang::VarDecl, hasConstantDeclaration) {
 
 DynamicStaticInitializersCheck::DynamicStaticInitializersCheck(
     StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      HeaderFileExtensions(Context->getHeaderFileExtensions()) {}
+    : ClangTidyCheck(Name, Context) {}
 
 void DynamicStaticInitializersCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -46,8 +45,9 @@ void DynamicStaticInitializersCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Var = Result.Nodes.getNodeAs<VarDecl>("var");
   const SourceLocation Loc = Var->getLocation();
-  if (!Loc.isValid() || !utils::isPresumedLocInHeaderFile(
-                            Loc, *Result.SourceManager, HeaderFileExtensions))
+  if (!Loc.isValid() ||
+      !utils::isPresumedLocInHeaderFile(Loc, *Result.SourceManager,
+                                        getHeaderFileExtensions()))
     return;
   // If the initializer is a constant expression, then the compiler
   // doesn't have to dynamically initialize it.

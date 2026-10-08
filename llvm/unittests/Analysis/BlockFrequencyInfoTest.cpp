@@ -12,6 +12,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
@@ -27,15 +28,14 @@ namespace {
 class BlockFrequencyInfoTest : public testing::Test {
 protected:
   std::unique_ptr<BranchProbabilityInfo> BPI;
-  std::unique_ptr<DominatorTree> DT;
-  std::unique_ptr<LoopInfo> LI;
+  std::unique_ptr<CycleInfo> CI;
   LLVMContext C;
 
   BlockFrequencyInfo buildBFI(Function &F) {
-    DT.reset(new DominatorTree(F));
-    LI.reset(new LoopInfo(*DT));
-    BPI.reset(new BranchProbabilityInfo(F, *LI));
-    return BlockFrequencyInfo(F, *BPI, *LI);
+    CI.reset(new CycleInfo());
+    CI->compute(F);
+    BPI.reset(new BranchProbabilityInfo(F, *CI));
+    return BlockFrequencyInfo(F, *BPI, *CI);
   }
   std::unique_ptr<Module> makeLLVMModule() {
     const char *ModuleStrig = "define i32 @f(i32 %x) {\n"

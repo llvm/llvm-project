@@ -1,0 +1,50 @@
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-vulkan1.3 %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan1.3 %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
+
+; Test lowering to spir-v backend for various types and scalar/vector
+
+; CHECK: OpCapability GroupNonUniformQuad
+
+; CHECK-DAG:   %[[#f16:]] = OpTypeFloat 16
+; CHECK-DAG:   %[[#f32:]] = OpTypeFloat 32
+; CHECK-DAG:   %[[#uint:]] = OpTypeInt 32 0
+; CHECK-DAG:   %[[#v4_half:]] = OpTypeVector %[[#f16]] 4
+; CHECK-DAG:   %[[#scope:]] = OpConstant %[[#uint]] 3
+; CHECK-DAG:   %[[#direction:]] = OpConstant %[[#uint]] 2
+
+; CHECK-LABEL: Begin function test_float
+; CHECK:   %[[#fexpr:]] = OpFunctionParameter %[[#f32]]
+define internal float @test_float(float %fexpr) {
+entry:
+; CHECK:   %[[#fret:]] = OpGroupNonUniformQuadSwap %[[#f32]] %[[#scope]] %[[#fexpr]] %[[#direction]]
+  %0 = call float @llvm.spv.quad.read.across.diagonal.f32(float %fexpr)
+  ret float %0
+}
+
+; CHECK-LABEL: Begin function test_int
+; CHECK:   %[[#iexpr:]] = OpFunctionParameter %[[#uint]]
+define internal i32 @test_int(i32 %iexpr) {
+entry:
+; CHECK:   %[[#iret:]] = OpGroupNonUniformQuadSwap %[[#uint]] %[[#scope]] %[[#iexpr]] %[[#direction]]
+  %0 = call i32 @llvm.spv.quad.read.across.diagonal.i32(i32 %iexpr)
+  ret i32 %0
+}
+
+; CHECK-LABEL: Begin function test_vhalf
+; CHECK:   %[[#vbexpr:]] = OpFunctionParameter %[[#v4_half]]
+define internal <4 x half> @test_vhalf(<4 x half> %vbexpr) {
+entry:
+; CHECK:   %[[#vhalfret:]] = OpGroupNonUniformQuadSwap %[[#v4_half]] %[[#scope]] %[[#vbexpr]] %[[#direction]]
+  %0 = call <4 x half> @llvm.spv.quad.read.across.diagonal.v4half(<4 x half> %vbexpr)
+  ret <4 x half> %0
+}
+
+define void @main() #0 {
+  ret void
+}
+
+declare float @llvm.spv.quad.read.across.diagonal.f32(float)
+declare i32 @llvm.spv.quad.read.across.diagonal.i32(i32)
+declare <4 x half> @llvm.spv.quad.read.across.diagonal.v4half(<4 x half>)
+
+attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }

@@ -78,6 +78,8 @@ INSTR_PROF_DATA(const uint64_t, llvm::Type::getInt64Ty(Ctx), FuncHash, \
                 ConstantInt::get(llvm::Type::getInt64Ty(Ctx), \
                 Inc->getHash()->getZExtValue()))
 INSTR_PROF_DATA(const IntPtrT, IntPtrTy, CounterPtr, RelativeCounterPtr)
+INSTR_PROF_DATA(const IntPtrT, IntPtrTy, UniformCounterPtr, \
+                RelativeUniformCounterPtr)
 INSTR_PROF_DATA(const IntPtrT, IntPtrTy, BitmapPtr, RelativeBitmapPtr)
 /* This is used to map function pointers for the indirect call targets to
  * function name hashes during the conversion from raw to merged profile
@@ -91,6 +93,10 @@ INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumCounters, \
                 ConstantInt::get(llvm::Type::getInt32Ty(Ctx), NumCounters))
 INSTR_PROF_DATA(const uint16_t, Int16ArrayTy, NumValueSites[IPVK_Last+1], \
                 ConstantArray::get(Int16ArrayTy, Int16ArrayVals)) \
+INSTR_PROF_DATA(const uint16_t, llvm::Type::getInt16Ty(Ctx), \
+                OffloadDeviceWaveSize, \
+                ConstantInt::get(llvm::Type::getInt16Ty(Ctx), \
+                                 OffloadDeviceWaveSizeVal))
 INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumBitmapBytes, \
                 ConstantInt::get(llvm::Type::getInt32Ty(Ctx), NumBitmapBytes))
 #undef INSTR_PROF_DATA
@@ -142,9 +148,47 @@ INSTR_PROF_VALUE_NODE(PtrToNodeT, llvm::PointerType::getUnqual(Ctx), Next, \
 #undef INSTR_PROF_VALUE_NODE
 /* INSTR_PROF_VALUE_NODE end. */
 
+/* INSTR_PROF_GPU_SECT start. */
+/* Fields of the GPU profile section bounds structure, populated by the
+ * compiler runtime and read by the host to extract profiling data. */
+#ifndef INSTR_PROF_GPU_SECT
+#define INSTR_PROF_GPU_SECT(Type, LLVMType, Name, Initializer)
+#else
+#define INSTR_PROF_DATA_DEFINED
+#endif
+INSTR_PROF_GPU_SECT(const char *, llvm::PointerType::getUnqual(Ctx),           \
+                    NamesStart,                                                \
+                    ConstantPointerNull::get(llvm::PointerType::getUnqual(Ctx)))
+INSTR_PROF_GPU_SECT(const char *, llvm::PointerType::getUnqual(Ctx),           \
+                    NamesStop,                                                 \
+                    ConstantPointerNull::get(llvm::PointerType::getUnqual(Ctx)))
+INSTR_PROF_GPU_SECT(char *, llvm::PointerType::getUnqual(Ctx),                 \
+                    CountersStart,                                             \
+                    ConstantPointerNull::get(llvm::PointerType::getUnqual(Ctx)))
+INSTR_PROF_GPU_SECT(char *, llvm::PointerType::getUnqual(Ctx),                 \
+                    CountersStop,                                              \
+                    ConstantPointerNull::get(llvm::PointerType::getUnqual(Ctx)))
+INSTR_PROF_GPU_SECT(const __llvm_profile_data *, llvm::PointerType::getUnqual( \
+                    Ctx), DataStart,                                           \
+                    ConstantPointerNull::get(llvm::PointerType::getUnqual(Ctx)))
+INSTR_PROF_GPU_SECT(const __llvm_profile_data *, llvm::PointerType::getUnqual( \
+                    Ctx), DataStop,                                            \
+                    ConstantPointerNull::get(llvm::PointerType::getUnqual(Ctx)))
+INSTR_PROF_GPU_SECT(char *, llvm::PointerType::getUnqual(Ctx),                 \
+                    UniformCountersStart,                                      \
+                    ConstantPointerNull::get(llvm::PointerType::getUnqual(Ctx)))
+INSTR_PROF_GPU_SECT(char *, llvm::PointerType::getUnqual(Ctx),                 \
+                    UniformCountersStop,                                       \
+                    ConstantPointerNull::get(llvm::PointerType::getUnqual(Ctx)))
+INSTR_PROF_GPU_SECT(uint64_t *, llvm::PointerType::getUnqual(Ctx),             \
+                    VersionVar,                                                \
+                    ConstantPointerNull::get(llvm::PointerType::getUnqual(Ctx)))
+#undef INSTR_PROF_GPU_SECT
+/* INSTR_PROF_GPU_SECT end. */
+
 /* INSTR_PROF_RAW_HEADER  start */
 /* Definition of member fields of the raw profile header data structure. */
-/* Please update llvm/docs/InstrProfileFormat.rst as appropriate when updating
+/* Please update llvm/docs/InstrProfileFormat.md as appropriate when updating
    raw profile format. */
 #ifndef INSTR_PROF_RAW_HEADER
 #define INSTR_PROF_RAW_HEADER(Type, Name, Initializer)
@@ -160,6 +204,12 @@ INSTR_PROF_RAW_HEADER(uint64_t, NumCounters, NumCounters)
 INSTR_PROF_RAW_HEADER(uint64_t, PaddingBytesAfterCounters, PaddingBytesAfterCounters)
 INSTR_PROF_RAW_HEADER(uint64_t, NumBitmapBytes, NumBitmapBytes)
 INSTR_PROF_RAW_HEADER(uint64_t, PaddingBytesAfterBitmapBytes, PaddingBytesAfterBitmapBytes)
+INSTR_PROF_RAW_HEADER(uint64_t, NumUniformCounters, NumUniformCounters)
+INSTR_PROF_RAW_HEADER(uint64_t, PaddingBytesAfterUniformCounters, PaddingBytesAfterUniformCounters)
+INSTR_PROF_RAW_HEADER(uint64_t, UniformCountersDelta,
+                      UniformCountersBegin ? (uintptr_t)UniformCountersBegin -
+                                                 (uintptr_t)DataBegin
+                                           : 0)
 INSTR_PROF_RAW_HEADER(uint64_t, NamesSize,  NamesSize)
 INSTR_PROF_RAW_HEADER(uint64_t, CountersDelta,
                       (uintptr_t)CountersBegin - (uintptr_t)DataBegin)
@@ -324,6 +374,9 @@ INSTR_PROF_SECT_ENTRY(IPSK_data, \
 INSTR_PROF_SECT_ENTRY(IPSK_cnts, \
                       INSTR_PROF_QUOTE(INSTR_PROF_CNTS_COMMON), \
                       INSTR_PROF_CNTS_COFF, "__DATA,")
+INSTR_PROF_SECT_ENTRY(IPSK_ucnts, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_UCNTS_COMMON), \
+                      INSTR_PROF_UCNTS_COFF, "__DATA,")
 INSTR_PROF_SECT_ENTRY(IPSK_bitmap, \
                       INSTR_PROF_QUOTE(INSTR_PROF_BITS_COMMON), \
                       INSTR_PROF_BITS_COFF, "__DATA,")
@@ -720,9 +773,9 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
         (uint64_t)'f' << 16 | (uint64_t)'R' << 8 | (uint64_t)129
 
 /* Raw profile format version (start from 1). */
-#define INSTR_PROF_RAW_VERSION 10
+#define INSTR_PROF_RAW_VERSION 11
 /* Indexed profile format version (start from 1). */
-#define INSTR_PROF_INDEX_VERSION 13
+#define INSTR_PROF_INDEX_VERSION 14
 /* Coverage mapping format version (start from 0). */
 #define INSTR_PROF_COVMAP_VERSION 6
 
@@ -761,12 +814,17 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
  * specified via command line. */
 #define INSTR_PROF_PROFILE_NAME_VAR __llvm_profile_filename
 
+/* GPU profiling section bounds structure, populated by the compiler runtime
+ * and read by the host to extract profiling data. */
+#define INSTR_PROF_SECT_BOUNDS_TABLE __llvm_profile_sections
+
 /* section name strings common to all targets other
    than WIN32 */
 #define INSTR_PROF_DATA_COMMON __llvm_prf_data
 #define INSTR_PROF_NAME_COMMON __llvm_prf_names
 #define INSTR_PROF_VNAME_COMMON __llvm_prf_vns
 #define INSTR_PROF_CNTS_COMMON __llvm_prf_cnts
+#define INSTR_PROF_UCNTS_COMMON __llvm_prf_ucnts
 #define INSTR_PROF_BITS_COMMON __llvm_prf_bits
 #define INSTR_PROF_VALS_COMMON __llvm_prf_vals
 #define INSTR_PROF_VNODES_COMMON __llvm_prf_vnds
@@ -784,6 +842,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_NAME_COFF ".lprfn$M"
 #define INSTR_PROF_VNAME_COFF ".lprfvn$M"
 #define INSTR_PROF_CNTS_COFF ".lprfc$M"
+#define INSTR_PROF_UCNTS_COFF ".lprfuc$M"
 #define INSTR_PROF_BITS_COFF ".lprfb$M"
 #define INSTR_PROF_VALS_COFF ".lprfv$M"
 #define INSTR_PROF_VNODES_COFF ".lprfnd$M"
@@ -857,6 +916,9 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_VALUE_PROF_MEMOP_FUNC __llvm_profile_instrument_memop
 #define INSTR_PROF_VALUE_PROF_MEMOP_FUNC_STR                                   \
   INSTR_PROF_QUOTE(INSTR_PROF_VALUE_PROF_MEMOP_FUNC)
+#define INSTR_PROF_INSTRUMENT_GPU_FUNC __llvm_profile_instrument_gpu
+#define INSTR_PROF_INSTRUMENT_GPU_FUNC_STR                                     \
+  INSTR_PROF_QUOTE(INSTR_PROF_INSTRUMENT_GPU_FUNC)
 
 /* InstrProfile per-function control data alignment.  */
 #define INSTR_PROF_DATA_ALIGNMENT 8

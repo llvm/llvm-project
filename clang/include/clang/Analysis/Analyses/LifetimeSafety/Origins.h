@@ -20,6 +20,7 @@
 #include "clang/AST/TypeBase.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
+#include "clang/Analysis/AnalysisDeclContext.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang::lifetimes::internal {
@@ -52,10 +53,20 @@ struct Origin {
   /// Null for synthetic lvalue origins (e.g., outer origin of DeclRefExpr).
   const Type *Ty;
 
-  Origin(OriginID ID, const clang::ValueDecl *D, const Type *QT)
-      : ID(ID), Ptr(D), Ty(QT) {}
-  Origin(OriginID ID, const clang::Expr *E, const Type *QT)
-      : ID(ID), Ptr(E), Ty(QT) {}
+  /// True if this origin only holds a loan to a declaration named in scope, so
+  /// it can never hold an expired loan. For example, in
+  ///   int s = 42;
+  ///   int t = s;
+  /// the outer origin of the expression `s` holds a loan to `s`, which is alive
+  /// wherever `s` can be named.
+  bool NamesDeclStorage;
+
+  Origin(OriginID ID, const clang::ValueDecl *D, const Type *QT,
+         bool NamesDeclStorage)
+      : ID(ID), Ptr(D), Ty(QT), NamesDeclStorage(NamesDeclStorage) {}
+  Origin(OriginID ID, const clang::Expr *E, const Type *QT,
+         bool NamesDeclStorage)
+      : ID(ID), Ptr(E), Ty(QT), NamesDeclStorage(NamesDeclStorage) {}
 
   const clang::ValueDecl *getDecl() const {
     return Ptr.dyn_cast<const clang::ValueDecl *>();
@@ -117,15 +128,13 @@ private:
   OriginList *InnerList = nullptr;
 };
 
-bool hasOrigins(QualType QT);
-bool hasOrigins(const Expr *E);
 bool doesDeclHaveStorage(const ValueDecl *D);
 
 /// Manages the creation, storage, and retrieval of origins for pointer-like
 /// variables and expressions.
 class OriginManager {
 public:
-  explicit OriginManager(ASTContext &AST, const Decl *D);
+  explicit OriginManager(const AnalysisDeclContext &AC);
 
   /// Gets or creates the OriginList for a given ValueDecl.
   ///
@@ -145,6 +154,10 @@ public:
   /// \returns The OriginList, or nullptr for non-pointer rvalues.
   OriginList *getOrCreateList(const Expr *E);
 
+  /// Wraps an existing OriginID in a new single-element OriginList, so a fact
+  /// can refer to a single level of an existing OriginList.
+  OriginList *createSingleOriginList(OriginID OID);
+
   /// Returns the OriginList for the implicit 'this' parameter if the current
   /// declaration is an instance method.
   std::optional<OriginList *> getThisOrigins() const { return ThisOrigins; }
@@ -155,6 +168,31 @@ public:
 
   unsigned getNumOrigins() const { return NextOriginID.Value; }
 
+  /// Determines whether a type can carry lifetime origins.
+  ///
+  /// \param QT The type to check.
+  /// \param IntrinsicOnly If true, only consider types that can intrinsically
+  ///        carry origins. If false, also include types that are tracked due to
+  ///        context-sensitive annotations (e.g., return types of
+  ///        [[clang::lifetimebound]] functions).
+  ///
+  /// Intrinsic origin types:
+  ///   - Pointer types (int*, void*)
+  ///   - Reference types (int&, const T&)
+  ///   - gsl::Pointer annotated types (std::string_view)
+  ///   - Lambdas capturing pointer-like objects
+  ///   - Standard callable wrappers (std::function)
+  ///
+  /// TODO: Expand this list with other origin types such as: user-defined
+  /// structs with pointer-like fields.
+  ///
+  /// Contextual origin types (excluded when IntrinsicOnly=true):
+  ///   - Types appearing as return values of functions with
+  ///     [[clang::lifetimebound]] parameters, stored in
+  ///     LifetimeAnnotatedOriginTypes during function body analysis.
+  bool hasOrigins(QualType QT, bool IntrinsicOnly = false) const;
+  bool hasOrigins(const Expr *E) const;
+
   void dump(OriginID OID, llvm::raw_ostream &OS) const;
 
   /// Collects statistics about expressions that lack associated origins.
@@ -163,11 +201,22 @@ public:
 private:
   OriginID getNextOriginID() { return NextOriginID++; }
 
-  OriginList *createNode(const ValueDecl *D, QualType QT);
-  OriginList *createNode(const Expr *E, QualType QT);
+  OriginList *createNode(const ValueDecl *D, QualType QT,
+                         bool NamesDeclStorage = false);
+  OriginList *createNode(const Expr *E, QualType QT,
+                         bool NamesDeclStorage = false);
 
   template <typename T>
-  OriginList *buildListForType(QualType QT, const T *Node);
+  OriginList *buildListForType(QualType QT, const T *Node,
+                               bool NamesDeclStorage = false);
+
+  void initializeThisOrigins(const Decl *D);
+
+  /// Pre-scans the function body (and constructor init lists) to discover
+  /// return types of lifetime-annotated calls (currently
+  /// [[clang::lifetimebound]]), registering them for origin tracking.
+  void collectLifetimeAnnotatedOriginTypes(const AnalysisDeclContext &AC);
+  void registerLifetimeAnnotatedOriginType(QualType QT);
 
   ASTContext &AST;
   OriginID NextOriginID{0};
@@ -178,6 +227,10 @@ private:
   llvm::DenseMap<const clang::ValueDecl *, OriginList *> DeclToList;
   llvm::DenseMap<const clang::Expr *, OriginList *> ExprToList;
   std::optional<OriginList *> ThisOrigins;
+  /// Types that are not inherently pointer-like but require origin tracking
+  /// because of lifetime annotations (currently [[clang::lifetimebound]]) on
+  /// functions that return them.
+  llvm::DenseSet<const Type *> LifetimeAnnotatedOriginTypes;
 };
 } // namespace clang::lifetimes::internal
 

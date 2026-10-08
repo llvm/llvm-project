@@ -1,3 +1,11 @@
+//===-- unittests/Evaluate/expression.cpp ---------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/intrinsics.h"

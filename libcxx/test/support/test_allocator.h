@@ -195,8 +195,14 @@ public:
       ++stats_->destroy_count;
     p->~T();
   }
-  TEST_CONSTEXPR friend bool operator==(const test_allocator& x, const test_allocator& y) { return x.data_ == y.data_; }
-  TEST_CONSTEXPR friend bool operator!=(const test_allocator& x, const test_allocator& y) { return !(x == y); }
+  template <class U>
+  TEST_CONSTEXPR friend bool operator==(const test_allocator& x, const test_allocator<U>& y) {
+    return x.data_ == static_cast<const test_allocator&>(y).data_;
+  }
+  template <class U>
+  TEST_CONSTEXPR friend bool operator!=(const test_allocator& x, const test_allocator<U>& y) {
+    return !(x == y);
+  }
 
   TEST_CONSTEXPR int get_data() const { return data_; }
   TEST_CONSTEXPR int get_id() const { return id_; }
@@ -259,8 +265,14 @@ public:
   TEST_CONSTEXPR int get_id() const { return id_; }
   TEST_CONSTEXPR int get_data() const { return data_; }
 
-  TEST_CONSTEXPR friend bool operator==(const test_allocator& x, const test_allocator& y) { return x.data_ == y.data_; }
-  TEST_CONSTEXPR friend bool operator!=(const test_allocator& x, const test_allocator& y) { return !(x == y); }
+  template <class U>
+  TEST_CONSTEXPR friend bool operator==(const test_allocator& x, const test_allocator<U>& y) {
+    return x.data_ == static_cast<const test_allocator&>(y).data_;
+  }
+  template <class U>
+  TEST_CONSTEXPR friend bool operator!=(const test_allocator& x, const test_allocator<U>& y) {
+    return !(x == y);
+  }
 };
 
 template <class T>
@@ -284,11 +296,15 @@ public:
 
   TEST_CONSTEXPR_CXX14 other_allocator select_on_container_copy_construction() const { return other_allocator(-2); }
 
-  TEST_CONSTEXPR_CXX14 friend bool operator==(const other_allocator& x, const other_allocator& y) {
-    return x.data_ == y.data_;
+  template <class U>
+  TEST_CONSTEXPR_CXX14 friend bool operator==(const other_allocator& x, const other_allocator<U>& y) {
+    return x.data_ == y.get_data();
   }
 
-  TEST_CONSTEXPR_CXX14 friend bool operator!=(const other_allocator& x, const other_allocator& y) { return !(x == y); }
+  template <class U>
+  TEST_CONSTEXPR_CXX14 friend bool operator!=(const other_allocator& x, const other_allocator<U>& y) {
+    return !(x == y);
+  }
   TEST_CONSTEXPR int get_data() const { return data_; }
 
   typedef std::true_type propagate_on_container_copy_assignment;
@@ -361,6 +377,18 @@ public:
 
   TEST_CONSTEXPR_CXX20 T* allocate(std::size_t n) { return std::allocator<T>().allocate(n); }
   TEST_CONSTEXPR_CXX20 void deallocate(T* p, std::size_t n) { std::allocator<T>().deallocate(p, n); }
+
+  template <class U>
+  TEST_CONSTEXPR friend bool operator==(const TaggingAllocator&, const TaggingAllocator<U>&) {
+    return true;
+  }
+
+#if TEST_STD_VER < 20
+  template <class U>
+  TEST_CONSTEXPR friend bool operator!=(const TaggingAllocator&, const TaggingAllocator<U>&) {
+    return false;
+  }
+#endif
 };
 
 template <std::size_t MaxAllocs>
@@ -508,7 +536,17 @@ struct SocccAllocator {
 
   SocccAllocator select_on_container_copy_construction() const { return SocccAllocator(count_ + 1); }
 
-  bool operator==(const SocccAllocator&) const { return true; }
+  template <class U>
+  bool operator==(const SocccAllocator<U>&) const {
+    return true;
+  }
+
+#if TEST_STD_VER < 20
+  template <class U>
+  bool operator!=(const SocccAllocator<U>&) const {
+    return false;
+  }
+#endif
 
   using propagate_on_container_copy_assignment = std::false_type;
   using propagate_on_container_move_assignment = std::false_type;

@@ -14,13 +14,13 @@ body:             |
     ; CHECK-LABEL: name: shift_of_zero
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %a:_(s64) = COPY $x0
-    ; CHECK-NEXT: $x0 = COPY %a(s64)
+    ; CHECK-NEXT: %a:_(i64) = COPY $x0
+    ; CHECK-NEXT: $x0 = COPY %a(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %a:_(s64) = COPY $x0
-    %b:_(s64) = G_CONSTANT i64 0
-    %res:_(s64) = G_LSHR %a, %b
-    $x0 = COPY %res(s64)
+    %a:_(i64) = COPY $x0
+    %b:_(i64) = G_CONSTANT i64 0
+    %res:_(i64) = G_LSHR %a, %b
+    $x0 = COPY %res(i64)
     RET_ReallyLR implicit $x0
 
 ...

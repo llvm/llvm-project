@@ -11,6 +11,7 @@
 #include "gtest/gtest.h"
 
 using ::testing::HasSubstr;
+using ::testing::Not;
 using ::testing::StartsWith;
 
 namespace clang {
@@ -24,8 +25,8 @@ TEST_F(ExtractFunctionTest, FunctionTest) {
 
   // Root statements should have common parent.
   EXPECT_EQ(apply("for(;;) [[1+2; 1+2;]]"), "unavailable");
-  // Expressions aren't extracted.
-  EXPECT_EQ(apply("int x = 0; [[x++;]]"), "unavailable");
+  // Single expression-statements can be extracted.
+  EXPECT_THAT(apply("int x = 0; [[x++;]]"), HasSubstr("extracted"));
   // We don't support extraction from lambdas.
   EXPECT_EQ(apply("auto lam = [](){ [[int x;]] }; "), "unavailable");
   // Partial statements aren't extracted.
@@ -36,9 +37,17 @@ TEST_F(ExtractFunctionTest, FunctionTest) {
   // Ensure that end of Zone and Beginning of PostZone being adjacent doesn't
   // lead to break being included in the extraction zone.
   EXPECT_THAT(apply("for(;;) { [[int x;]]break; }"), HasSubstr("extracted"));
-  // FIXME: ExtractFunction should be unavailable inside loop construct
-  // initializer/condition.
+  // A loop's initializer has its value discarded just like an ordinary
+  // statement, so it remains extractable (unlike the condition; see
+  // ControlFlowConditions below).
   EXPECT_THAT(apply(" for([[int i = 0;]];);"), HasSubstr("extracted"));
+  // ...but if the declared name is used later (in the condition,
+  // increment, or body), extraction is unavailable regardless -- not
+  // because of any condition/init-specific logic, but because
+  // requiresHoisting() (checked in ExtractFunction::prepare(), independent
+  // of what kind of statement is being extracted) catches it.
+  EXPECT_EQ(apply("void use(int); for([[int i = 0;]] i < 10; ++i) use(i);"),
+            "unavailable");
   // Extract certain return
   EXPECT_THAT(apply(" if(true) [[{ return; }]] "), HasSubstr("extracted"));
   // Don't extract uncertain return
@@ -53,7 +62,10 @@ TEST_F(ExtractFunctionTest, FunctionTest) {
 }
 
 TEST_F(ExtractFunctionTest, FileTest) {
-  // Check all parameters are in order
+  // Check all parameters are in order. `a` and `ptr` are mutated in the
+  // zone (`+=` and postfix `++` respectively), so stay non-const; `b` is
+  // an unmutated scalar, so becomes a by-value parameter; `foo` is an
+  // unmutated class type, so becomes a const reference.
   std::string ParameterCheckInput = R"cpp(
 struct Foo {
   int x;
@@ -69,7 +81,7 @@ void f(int a) {
 struct Foo {
   int x;
 };
-void extracted(int &a, int &b, int * &ptr, Foo &foo) {
+void extracted(int &a, int b, int * &ptr, const Foo &foo) {
 a += foo.x + b;
   *ptr++;
 }
@@ -87,7 +99,7 @@ void f(const int c) {
   [[while(c) {}]]
 })cpp";
   std::string ConstCheckOutput = R"cpp(
-void extracted(const int &c) {
+void extracted(const int c) {
 while(c) {}
 }
 void f(const int c) {
@@ -95,7 +107,7 @@ void f(const int c) {
 })cpp";
   EXPECT_EQ(apply(ConstCheckInput), ConstCheckOutput);
 
-  // Check const qualifier with namespace
+  // Check const qualifier: kept for a by-reference non-scalar.
   std::string ConstNamespaceCheckInput = R"cpp(
 namespace X { struct Y { int z; }; }
 int f(const X::Y &y) {
@@ -192,16 +204,16 @@ F (extracted();)
   EXPECT_EQ(apply(CompoundFailInput), "unavailable");
 
   ExtraArgs.push_back("-std=c++14");
-  // FIXME: Expressions are currently not extracted
-  EXPECT_EQ(apply(R"cpp(
+  // A bare expression-statement can be extracted (the semicolon isn't part
+  // of the selection either way, since it isn't owned by any AST node).
+  EXPECT_THAT(apply(R"cpp(
                 void call() { [[1+1]]; }
             )cpp"),
-            "unavailable");
-  // FIXME: Single expression statements are currently not extracted
-  EXPECT_EQ(apply(R"cpp(
+              HasSubstr("extracted"));
+  EXPECT_THAT(apply(R"cpp(
                 void call() { [[1+1;]] }
             )cpp"),
-            "unavailable");
+              HasSubstr("extracted"));
 }
 
 TEST_F(ExtractFunctionTest, DifferentHeaderSourceTest) {
@@ -562,11 +574,10 @@ TEST_F(ExtractFunctionTest, ExistingReturnStatement) {
       }
     }
   )cpp";
-  // FIXME: min/max should be by value.
   // FIXME: avoid emitting redundant braces
   const char *After = R"cpp(
     bool lucky(int N);
-    int extracted(int &Min, int &Max) {
+    int extracted(int Min, int Max) {
 {
         for (int I = Min; I <= Max; ++I)
           if (lucky(I))
@@ -628,6 +639,409 @@ int main() {
                 extracted();
               })cpp";
   EXPECT_EQ(apply(Before), After);
+}
+
+TEST_F(ExtractFunctionTest, SingleStatement) {
+  Context = File;
+  // https://github.com/clangd/clangd/issues/698
+  // A single call-expression-statement can be extracted.
+  EXPECT_THAT(apply(R"cpp(
+    void foo(int, int);
+    void bar() {
+      [[foo(1, 2);]]
+    })cpp"),
+              HasSubstr("extracted"));
+  // https://github.com/clangd/clangd/issues/1254
+  // A single statement consisting of an overloaded binary operator call can
+  // be extracted, even though the SelectionTree marks the
+  // CXXOperatorCallExpr itself as Unselected (its operands claim all the
+  // characters).
+  EXPECT_THAT(apply(R"cpp(
+    struct Stream {};
+    Stream &operator<<(Stream &, const char *);
+    Stream stream;
+    int main() {
+      [[stream << "x";]]
+    })cpp"),
+              HasSubstr("extracted"));
+  // Selecting a subexpression of an operator call (rather than the whole
+  // statement) must not be extracted: it is not a standalone statement, and
+  // "extracting" it would replace only part of the expression.
+  EXPECT_EQ(apply(R"cpp(
+    struct Stream {};
+    Stream &operator<<(Stream &, int);
+    Stream stream;
+    void test() {
+      stream << [[3]];
+    })cpp"),
+            "unavailable");
+  // Same as above, but the selected subexpression is itself an
+  // (Unselected-but-fully-covered) CXXOperatorCallExpr nested as an argument
+  // of an outer call, rather than a Complete leaf expression.
+  EXPECT_EQ(apply(R"cpp(
+    struct Stream {};
+    Stream &operator<<(Stream &, int);
+    void foo(Stream &, int);
+    Stream stream;
+    void test() {
+      foo([[stream << 3]], 4);
+    })cpp"),
+            "unavailable");
+}
+
+TEST_F(ExtractFunctionTest, ControlFlowConditions) {
+  Context = File;
+  // The condition of an `if` is not a discardable statement -- its value is
+  // consumed by the `if` itself.
+  EXPECT_EQ(apply(R"cpp(
+    int example(int event1, bool event2, double event3) {
+      if ([[event1 == 2 && event2 && event3 == 10.3]])
+        return 1;
+      return 0;
+    })cpp"),
+            "unavailable");
+  // Same, but for other control-flow constructs' conditions.
+  EXPECT_EQ(apply("void f(int x) { while ([[x > 0]]) --x; }"), "unavailable");
+  EXPECT_EQ(apply("void f(int x) { do {} while ([[x > 0]]); }"), "unavailable");
+  EXPECT_EQ(apply("void f(int x) { for (; [[x > 0]];) ; }"), "unavailable");
+  EXPECT_EQ(apply("void f(int x) { switch ([[x + 1]]) {} }"), "unavailable");
+  // A condition-variable declaration (`if (T x = ...)`) is likewise not a
+  // discardable statement: its truthiness *is* the condition.
+  EXPECT_EQ(apply("bool cond(); void f() { if ([[bool b = cond()]]) ; }"),
+            "unavailable");
+  // Unlike the condition, a loop's initializer and increment clauses have
+  // their value discarded just like an ordinary statement, so they remain
+  // extractable (any hazard from extracting a declaration used later is
+  // already caught by ExtractionZone::requiresHoisting, independently of
+  // this).
+  EXPECT_THAT(apply("void f(int x) { for ([[x = 0]]; x < 10; ++x) ; }"),
+              HasSubstr("extracted"));
+  EXPECT_THAT(apply("void f(int x) { for (;; [[--x]]) ; }"),
+              HasSubstr("extracted"));
+  // Likewise, an `if`/`switch` init-statement (C++17) is extractable.
+  ExtraArgs.push_back("-std=c++17");
+  EXPECT_THAT(apply("void f(int x) { if ([[x = 0]]; x > 0) ; }"),
+              HasSubstr("extracted"));
+  EXPECT_THAT(apply("void f(int x) { switch ([[x = 0]]; x) {} }"),
+              HasSubstr("extracted"));
+  // Sanity check: extraction from the *body* of these constructs (as opposed
+  // to their condition) is unaffected.
+  EXPECT_THAT(apply("void f(int x) { if (x > 0) [[x = x * 2;]] }"),
+              HasSubstr("extracted"));
+}
+
+TEST_F(ExtractFunctionTest, RangeBasedFor) {
+  Context = File;
+  // The range-expression of a range-based for is consumed to build the
+  // hidden begin/end iterators, so it's not a discardable statement either
+  // (same category as an ordinary condition).
+  EXPECT_EQ(apply(R"cpp(
+    struct Vec { int *begin(); int *end(); };
+    Vec V;
+    void f() { for (auto X : [[V]]) {} }
+  )cpp"),
+            "unavailable");
+  // Extraction from the body is unaffected.
+  EXPECT_THAT(apply(R"cpp(
+    struct Vec { int *begin(); int *end(); };
+    Vec V;
+    void foo(int);
+    void f() { for (auto X : V) { [[foo(X);]] } }
+  )cpp"),
+              HasSubstr("extracted"));
+}
+
+TEST_F(ExtractFunctionTest, VarDeclInitializer) {
+  Context = File;
+  // The initializer of a variable declaration is not a discardable
+  // statement either: its value is required to initialize the variable, so
+  // replacing it with a call to a void-returning extracted function would
+  // not compile. Ascending from the initializer lands on the VarDecl itself (a
+  // Decl, not a Stmt or Expr), which the general "is this a genuine statement"
+  // check must also reject.
+  EXPECT_EQ(apply(R"cpp(
+    int func();
+    void f() { auto A = [[func()]]; }
+  )cpp"),
+            "unavailable");
+  // Same without `auto`: the type doesn't matter, only that a value is
+  // required.
+  EXPECT_EQ(apply(R"cpp(
+    int func();
+    void f() { int A = [[func()]]; }
+  )cpp"),
+            "unavailable");
+  // Sanity check: extracting the whole declaration statement (as opposed to
+  // just its initializer) is unaffected.
+  EXPECT_THAT(apply(R"cpp(
+    int func();
+    void f() { [[int A = func();]] }
+  )cpp"),
+              HasSubstr("extracted"));
+}
+
+TEST_F(ExtractFunctionTest, ConstParameters) {
+  Context = File;
+  // A captured scalar that's only read becomes a by-value parameter;
+  // non-scalars instead become a const reference (see the `S` cases
+  // below).
+  EXPECT_THAT(apply(R"cpp(
+    void use(int);
+    void f(int x) { [[use(x);]] }
+  )cpp"),
+              HasSubstr("void extracted(int x)"));
+  // Direct assignment: stays non-const.
+  EXPECT_THAT(apply("void f(int x) { [[x = 1;]] }"),
+              HasSubstr("void extracted(int &x)"));
+  // Compound assignment: stays non-const.
+  EXPECT_THAT(apply("void f(int x) { [[x += 1;]] }"),
+              HasSubstr("void extracted(int &x)"));
+  // Increment/decrement: stays non-const.
+  EXPECT_THAT(apply("void f(int x) { [[++x;]] }"),
+              HasSubstr("void extracted(int &x)"));
+  // A non-const method call may mutate the object: stays non-const.
+  EXPECT_THAT(apply(R"cpp(
+    struct S { void mutate(); };
+    void f(S s) { [[s.mutate();]] }
+  )cpp"),
+              HasSubstr("void extracted(S &s)"));
+  // A const method call cannot mutate the object: becomes const.
+  EXPECT_THAT(apply(R"cpp(
+    struct S { void inspect() const; };
+    void f(S s) { [[s.inspect();]] }
+  )cpp"),
+              HasSubstr("void extracted(const S &s)"));
+  // Passed to a parameter taking a non-const reference: stays non-const,
+  // since the callee could mutate it through that reference.
+  EXPECT_THAT(apply(R"cpp(
+    void mayMutate(int &);
+    void f(int x) { [[mayMutate(x);]] }
+  )cpp"),
+              HasSubstr("void extracted(int &x)"));
+  // Passed to a parameter taking a const reference or by value: becomes
+  // an unmutated scalar, so by value.
+  EXPECT_THAT(apply(R"cpp(
+    void readOnly(const int &);
+    void f(int x) { [[readOnly(x);]] }
+  )cpp"),
+              HasSubstr("void extracted(int x)"));
+  EXPECT_THAT(apply(R"cpp(
+    void byValue(int);
+    void f(int x) { [[byValue(x);]] }
+  )cpp"),
+              HasSubstr("void extracted(int x)"));
+  // A scalar parameter that's already declared const keeps that
+  // qualifier when passed by value: It might be relevant for overload
+  // resolution.
+  EXPECT_THAT(apply("void use(int); void f(const int x) { [[use(x);]] }"),
+              HasSubstr("void extracted(const int x)"));
+  // A non-scalar parameter that's already declared const keeps that
+  // qualifier, since it's still passed by reference.
+  EXPECT_THAT(apply(R"cpp(
+    struct S {};
+    void use(const S &);
+    void f(const S s) { [[use(s);]] }
+  )cpp"),
+              HasSubstr("void extracted(const S &s)"));
+}
+
+TEST_F(ExtractFunctionTest, ConstParametersReferenceAliasing) {
+  Context = File;
+  // A non-const reference bound to a captured variable conservatively
+  // mutates that variable too, without checking whether the reference
+  // itself is ever actually mutated -- even when the binding and a later
+  // mutation of the reference are two separate root statements of the same
+  // zone. Failing to notice this would incorrectly mark `x` const, which
+  // wouldn't compile (`int &r` can't bind to a `const int`).
+  EXPECT_THAT(apply(R"cpp(
+    void f(int x) {
+      [[int &r = x;
+      r = 2;]]
+    }
+  )cpp"),
+              HasSubstr("void extracted(int &x)"));
+}
+
+TEST_F(ExtractFunctionTest, ConstParametersConservativeAliasing) {
+  Context = File;
+  // Taking the address of a captured variable conservatively mutates it,
+  // regardless of what's later done with the pointer.
+  EXPECT_THAT(apply("void f(int x) { [[int *p = &x;]] }"),
+              HasSubstr("void extracted(int &x)"));
+  // Explicit cast to a non-const reference type: stays non-const.
+  EXPECT_THAT(apply("void f(int x) { [[static_cast<int &>(x) = 1;]] }"),
+              HasSubstr("void extracted(int &x)"));
+  // Captured by reference in a lambda: stays non-const, without checking
+  // whether the lambda actually mutates it.
+  EXPECT_THAT(apply("void f(int x) { [[auto l = [&x]() { int y = x; };]] }"),
+              HasSubstr("int &x"));
+  // Captured by value in a lambda: doesn't alias x, so it's unmutated and
+  // (being a scalar) passed by value.
+  EXPECT_THAT(apply("void f(int x) { [[auto l = [x]() { int y = x; };]] }"),
+              HasSubstr("void extracted(int x)"));
+  // Returning a captured variable is conservatively treated as a possible
+  // mutation, regardless of whether the return is actually by value (safe)
+  // or by non-const reference (not safe) -- telling these apart isn't
+  // worth the complexity here.
+  EXPECT_THAT(apply("int f(int x) { [[return x;]] }"), HasSubstr("&x"));
+  // Array-typed captures are never made const.
+  EXPECT_THAT(apply("void f() { int arr[5]; [[arr[0] = 1;]] }"),
+              Not(HasSubstr("const")));
+}
+
+TEST_F(ExtractFunctionTest, ConstParametersMemberCallArguments) {
+  Context = File;
+  // A non-const-ref argument to a member call (as opposed to the implicit
+  // object, already covered by ConstParameters) stays non-const. The
+  // method itself is const so it doesn't also mark `s` mutated, isolating
+  // the argument check from the object check.
+  EXPECT_THAT(apply(R"cpp(
+    struct S { void mayMutate(int &) const; };
+    void f(S s, int x) { [[s.mayMutate(x);]] }
+  )cpp"),
+              HasSubstr("extracted(const S &s, int &x)"));
+  // Same, but through an overloaded operator: the implicit object is
+  // args[0], so the real parameter (checked against args[1:]) must be
+  // found at the right offset.
+  EXPECT_THAT(apply(R"cpp(
+    struct S { void operator()(int &) const; };
+    void f(S s, int x) { [[s(x);]] }
+  )cpp"),
+              HasSubstr("extracted(const S &s, int &x)"));
+  // A free (non-member) operator overload has no implicit object, so all
+  // operands align directly with the callee's parameters.
+  EXPECT_THAT(apply(R"cpp(
+    struct S {};
+    void operator+(const S &, int &);
+    void f(S s, int x) { [[s + x;]] }
+  )cpp"),
+              HasSubstr("extracted(const S &s, int &x)"));
+}
+
+TEST_F(ExtractFunctionTest, ConstParametersPointerIndirection) {
+  Context = File;
+  // Mutating a member/element through a pointer only mutates the pointee,
+  // never the pointer's own binding, so the pointer itself is unmutated --
+  // unlike the same access through a value or reference (already covered
+  // by ConstParameters' `ptr` case, which is mutated directly instead).
+  // Being an unmutated scalar, it's then passed by value.
+  EXPECT_THAT(apply(R"cpp(
+    struct S { int x; };
+    void f(S *ptr) { [[ptr->x = 1;]] }
+  )cpp"),
+              HasSubstr("extracted(S * ptr)"));
+  EXPECT_THAT(apply("void f(int *p) { [[p[0] = 1;]] }"),
+              HasSubstr("extracted(int * p)"));
+  // Same for a plain dereference.
+  EXPECT_THAT(apply("void f(int *p) { [[*p = 1;]] }"),
+              HasSubstr("extracted(int * p)"));
+}
+
+TEST_F(ExtractFunctionTest, ConstParametersConditionalReferenceBinding) {
+  Context = File;
+  // A reference bound to a conditional expression could alias either
+  // branch at runtime, so both must be marked non-const -- getting only
+  // one (or neither) would let the other stay const while still being
+  // reachable through the reference, producing code that doesn't compile.
+  EXPECT_THAT(apply(R"cpp(
+    void f(bool cond, int c, int d) {
+      [[int &a = cond ? c : d;
+      a = 5;]]
+    }
+  )cpp"),
+              HasSubstr("extracted(bool cond, int &c, int &d)"));
+}
+
+TEST_F(ExtractFunctionTest, ConstParametersConditionalMutatingAccess) {
+  Context = File;
+  // Same as above, but no named LHS.
+  EXPECT_THAT(apply(R"cpp(
+    struct S { int n; };
+    void f(bool cond, S s1, S s2) {
+      [[(cond ? s1 : s2).n = 0;]]
+    }
+  )cpp"),
+              HasSubstr("extracted(bool cond, S &s1, S &s2)"));
+}
+
+TEST_F(ExtractFunctionTest, ConstParametersStaticOperatorCall) {
+  Context = File;
+  // A static operator() (or operator[], since C++23) has no implicit
+  // object at all, so calling it through `s(...)` syntax doesn't touch
+  // `s` regardless of the operator's own constness.
+  ExtraArgs.push_back("-std=c++23");
+  EXPECT_THAT(apply(R"cpp(
+    struct S { static void operator()(int); };
+    void f(S s, int x) { [[s(x);]] }
+  )cpp"),
+              HasSubstr("extracted(const S &s, int x)"));
+}
+
+TEST_F(ExtractFunctionTest, ConstParametersScalarsByValue) {
+  Context = File;
+  // An unmutated pointer is a scalar too: passed by value.
+  EXPECT_THAT(apply("void use(int *); void f(int *p) { [[use(p);]] }"),
+              HasSubstr("extracted(int * p)"));
+  // An unmutated enum: passed by value.
+  EXPECT_THAT(apply(R"cpp(
+    enum E { A, B };
+    void use(E);
+    void f(E e) { [[use(e);]] }
+  )cpp"),
+              HasSubstr("extracted(E e)"));
+  // A class type, even one that's small and trivially copyable, is never
+  // passed by value: that's deliberately out of scope for now.
+  EXPECT_THAT(apply(R"cpp(
+    struct Point { int x, y; };
+    void use(Point);
+    void f(Point p) { [[use(p);]] }
+  )cpp"),
+              HasSubstr("extracted(const Point &p)"));
+  // An unmutated array is not a scalar (even though its element type is):
+  // stays a non-const reference, per the existing array carve-out.
+  EXPECT_THAT(apply("void f() { int arr[5]; [[int x = arr[0];]] }"),
+              HasSubstr("extracted(int[5] &arr)"));
+}
+
+// Variables of reference type, const or non-const, must stay references,
+// otherwise they'd stop tracking their target.
+TEST_F(ExtractFunctionTest, ReferenceToScalar) {
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      void bar(int) {}
+      void foo() {
+      int A = 0;
+      int &B = A;
+      [[
+        A = 1;
+        bar(B);
+      ]]
+    })cpp"),
+              HasSubstr("extracted(int &A, const int &B)"));
+  EXPECT_THAT(apply(R"cpp(
+      void bar(int) {}
+      void foo() {
+      int A = 0;
+      const int &B = A;
+      [[
+        A = 1;
+        bar(B);
+      ]]
+    })cpp"),
+              HasSubstr("extracted(int &A, const int &B)"));
+}
+
+TEST_F(ExtractFunctionTest, VolatileScalar) {
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      void bar(const volatile int &, int) {}
+      void foo() {
+      volatile int V = 0;
+      [[
+        bar(V, 0);
+      ]]
+    })cpp"),
+              HasSubstr("extracted(const volatile int &V)"));
 }
 
 } // namespace

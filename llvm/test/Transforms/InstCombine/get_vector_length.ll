@@ -70,8 +70,7 @@ define i32 @cnt_known_lt_runtime_assumption(i32 %x) {
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i32 [[X]], 3
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ICMP]])
-; CHECK-NEXT:    [[Y:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[X]], i32 2, i1 false)
-; CHECK-NEXT:    ret i32 [[Y]]
+; CHECK-NEXT:    ret i32 [[X]]
 ;
   %icmp = icmp ule i32 %x, 2
   call void @llvm.assume(i1 %icmp)

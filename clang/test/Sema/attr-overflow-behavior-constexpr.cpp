@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu %s -fexperimental-overflow-behavior-types -verify -fsyntax-only -std=c++14
+// RUN: %clang_cc1 -triple x86_64-linux-gnu %s -fexperimental-overflow-behavior-types -verify -fsyntax-only -std=c++14 -fexperimental-new-constant-interpreter
 
 #define __wrap __attribute__((overflow_behavior(wrap)))
 #define __no_trap __attribute__((overflow_behavior(trap)))
@@ -11,7 +12,17 @@ constexpr wrap_int add(wrap_int a, wrap_int b) {
 }
 
 constexpr no_trap_int sub(no_trap_int a, no_trap_int b) {
-  return a - b; // expected-note {{-2147483649 is outside the range of representable values}}
+  return a - b; // expected-note {{value -2147483649 is outside the range of representable values of type 'no_trap_int' (aka '__ob_trap int')}}
+}
+
+constexpr wrap_int preinc(wrap_int a) {
+  ++a;
+  return a;
+}
+
+constexpr wrap_int postinc(wrap_int a) {
+  a++;
+  return a;
 }
 
 void constexpr_test() {
@@ -22,6 +33,12 @@ void constexpr_test() {
   constexpr no_trap_int min = -2147483648;
   constexpr no_trap_int one_nw = 1;
   constexpr no_trap_int res = sub(min, one_nw); // expected-error {{constexpr variable 'res' must be initialized by a constant expression}} expected-note {{in call to 'sub(-2147483648, 1)'}}
+
+  static_assert(preinc(max) == -2147483648, "preinc wrapping failed");
+  static_assert(postinc(max) == -2147483648, "postinc wrapping failed");
+
+  constexpr wrap_int M = -2147483648;
+  constexpr wrap_int A = -M;
 }
 
 template <typename T>

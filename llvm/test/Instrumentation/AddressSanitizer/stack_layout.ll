@@ -94,12 +94,14 @@ define void @Func5() sanitize_address #0 !dbg !11 {
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
 !1 = !DIFile(filename: "../file1.c", directory: "/")
-!11 = distinct !DISubprogram(name: "Func5", scope: !1, file: !1, line: 6, unit: !0)
+!11 = distinct !DISubprogram(name: "Func5", scope: !1, file: !1, line: 6, type: !19, unit: !0)
 !12 = !DILocation(line: 7, column: 3, scope: !11)
 !18 = !DILocation(line: 10, column: 1, scope: !11)
+!19 = !DISubroutineType(types: !20)
+!20 = !{null}
 
 !21 = !DIFile(filename: "../file2.c", directory: "/")
-!6 = distinct !DISubprogram(name: "Func4", scope: !1, file: !21, line: 2, unit: !0)
+!6 = distinct !DISubprogram(name: "Func4", scope: !1, file: !21, line: 2, type: !19, unit: !0)
 !15 = distinct !DILocation(line: 8, column: 3, scope: !11)
 !14 = !DILocation(line: 3, column: 3, scope: !6, inlinedAt: !15)
 !17 = !DILocation(line: 4, column: 1, scope: !6, inlinedAt: !15)

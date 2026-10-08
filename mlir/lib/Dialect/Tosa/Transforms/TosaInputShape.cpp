@@ -132,16 +132,18 @@ public:
       return tensorType.cloneWith(requestedShape, tensorType.getElementType());
     };
 
-    // Update argument shapes in the entry block
-    Block &entryBlock = func.getBody().front();
-    const SmallVector<Type> argTypes(entryBlock.getArgumentTypes());
-    for (const auto &[argIdx, shape] : argsParsed) {
-      FailureOr<Type> newTensorType =
-          getUpdatedTensorType(argIdx, argTypes, shape);
-      if (failed(newTensorType))
-        return signalPassFailure();
+    // Update argument shapes in the entry block if the function has body.
+    if (!func.getBody().empty()) {
+      Block &entryBlock = func.getBody().front();
+      const SmallVector<Type> argTypes(entryBlock.getArgumentTypes());
+      for (const auto &[argIdx, shape] : argsParsed) {
+        FailureOr<Type> newTensorType =
+            getUpdatedTensorType(argIdx, argTypes, shape);
+        if (failed(newTensorType))
+          return signalPassFailure();
 
-      entryBlock.getArgument(argIdx).setType(newTensorType.value());
+        entryBlock.getArgument(argIdx).setType(newTensorType.value());
+      }
     }
 
     // Get new func argument types
@@ -158,16 +160,17 @@ public:
     }
 
     // Update function signature
-    Block &lastBlock = func.getBody().back();
-    const Operation *terminator = lastBlock.getTerminator();
-    SmallVector<Type> newResults;
-    if (auto returnOp = dyn_cast_or_null<func::ReturnOp>(terminator)) {
-      const auto types = returnOp.getOperandTypes();
-      newResults.assign(types.begin(), types.end());
-    } else {
-      const auto types = oldFunctionType.getResults();
-      newResults.assign(types.begin(), types.end());
+    const auto oldResultTypes = oldFunctionType.getResults();
+    SmallVector<Type> newResults(oldResultTypes.begin(), oldResultTypes.end());
+    if (!func.getBody().empty()) {
+      Block &lastBlock = func.getBody().back();
+      const Operation *terminator = lastBlock.getTerminator();
+      if (auto returnOp = dyn_cast_or_null<func::ReturnOp>(terminator)) {
+        const auto returnTypes = returnOp.getOperandTypes();
+        newResults.assign(returnTypes.begin(), returnTypes.end());
+      }
     }
+
     const FunctionType newFunctionType =
         oldFunctionType.clone(newInputs, newResults);
     func.setFunctionType(newFunctionType);

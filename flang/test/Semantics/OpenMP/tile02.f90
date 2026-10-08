@@ -6,8 +6,9 @@ subroutine on_unroll
   implicit none
   integer i
 
-  !ERROR: OpenMP loop construct cannot apply to a fully unrolled loop
+  !ERROR: This construct requires a canonical loop nest
   !$omp tile sizes(2)
+  !BECAUSE: Fully unrolled loop does not result in a loop nest
   !$omp unroll
   do i = 1, 5
     print *, i

@@ -8,6 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@requireExpressionEvaluation
 class DeclFromSubmoduleTestCase(TestBase):
     # Requires DWARF debug info which is not retained when linking with link.exe.
     @skipIfWindows

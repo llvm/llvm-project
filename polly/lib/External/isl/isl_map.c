@@ -11590,10 +11590,9 @@ static __isl_give isl_map *map_product(__isl_take isl_map *map1,
 			struct isl_basic_map *part;
 			part = basic_map_product(isl_basic_map_copy(map1->p[i]),
 						 isl_basic_map_copy(map2->p[j]));
-			if (isl_basic_map_is_empty(part))
-				isl_basic_map_free(part);
-			else
-				result = isl_map_add_basic_map(result, part);
+			if (isl_basic_map_is_empty(part) < 0)
+				part = isl_basic_map_free(part);
+			result = isl_map_add_basic_map(result, part);
 			if (!result)
 				goto error;
 		}

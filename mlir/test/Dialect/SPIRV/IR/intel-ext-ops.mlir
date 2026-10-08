@@ -126,6 +126,140 @@ spirv.func @split_barrier() "None" {
 // spirv.INTEL.CacheControls
 //===----------------------------------------------------------------------===//
 
+//===----------------------------------------------------------------------===//
+// spirv.INTEL.MaskedGather
+//===----------------------------------------------------------------------===//
+
+spirv.func @masked_gather(
+    %ptrs : vector<4x!spirv.ptr<f32, CrossWorkgroup>>,
+    %alignment : i32,
+    %mask : vector<4xi1>,
+    %fill : vector<4xf32>) "None" {
+  // CHECK: {{%.*}} = spirv.INTEL.MaskedGather {{%.*}}, {{%.*}}, {{%.*}}, {{%.*}} : vector<4x!spirv.ptr<f32, CrossWorkgroup>>, i32, vector<4xi1>, vector<4xf32> -> vector<4xf32>
+  %0 = spirv.INTEL.MaskedGather %ptrs, %alignment, %mask, %fill
+       : vector<4x!spirv.ptr<f32, CrossWorkgroup>>, i32,
+         vector<4xi1>, vector<4xf32> -> vector<4xf32>
+  spirv.Return
+}
+
+// -----
+
+spirv.func @masked_gather_i32(
+    %ptrs : vector<4x!spirv.ptr<i32, CrossWorkgroup>>,
+    %alignment : i32,
+    %mask : vector<4xi1>,
+    %fill : vector<4xi32>) "None" {
+  // CHECK: {{%.*}} = spirv.INTEL.MaskedGather {{%.*}}, {{%.*}}, {{%.*}}, {{%.*}} : vector<4x!spirv.ptr<i32, CrossWorkgroup>>, i32, vector<4xi1>, vector<4xi32> -> vector<4xi32>
+  %0 = spirv.INTEL.MaskedGather %ptrs, %alignment, %mask, %fill
+       : vector<4x!spirv.ptr<i32, CrossWorkgroup>>, i32,
+         vector<4xi1>, vector<4xi32> -> vector<4xi32>
+  spirv.Return
+}
+
+// -----
+
+spirv.func @masked_gather_pointee_type_mismatch(
+    %ptrs : vector<4x!spirv.ptr<f32, CrossWorkgroup>>,
+    %alignment : i32,
+    %mask : vector<4xi1>,
+    %fill : vector<4xi32>) "None" {
+  // expected-error @+1 {{'spirv.INTEL.MaskedGather' op failed to verify that pointee type of ptr_vector must match result element type}}
+  %0 = spirv.INTEL.MaskedGather %ptrs, %alignment, %mask, %fill
+       : vector<4x!spirv.ptr<f32, CrossWorkgroup>>, i32,
+         vector<4xi1>, vector<4xi32> -> vector<4xi32>
+  spirv.Return
+}
+
+// -----
+
+spirv.func @masked_gather_elem_count_mismatch(
+    %ptrs : vector<2x!spirv.ptr<f32, CrossWorkgroup>>,
+    %alignment : i32,
+    %mask : vector<4xi1>,
+    %fill : vector<4xf32>) "None" {
+  // expected-error @+1 {{'spirv.INTEL.MaskedGather' op failed to verify that pointee type of ptr_vector must match result element type}}
+  %0 = spirv.INTEL.MaskedGather %ptrs, %alignment, %mask, %fill
+       : vector<2x!spirv.ptr<f32, CrossWorkgroup>>, i32,
+         vector<4xi1>, vector<4xf32> -> vector<4xf32>
+  spirv.Return
+}
+
+// -----
+
+spirv.func @masked_gather_mask_not_bool(
+    %ptrs : vector<4x!spirv.ptr<f32, CrossWorkgroup>>,
+    %alignment : i32,
+    %mask : vector<4xi8>,
+    %fill : vector<4xf32>) "None" {
+  // expected-error @+1 {{operand #2 must be fixed-length vector of bool values of length 2/3/4/8/16 of ranks 1, but got 'vector<4xi8>'}}
+  %0 = spirv.INTEL.MaskedGather %ptrs, %alignment, %mask, %fill
+       : vector<4x!spirv.ptr<f32, CrossWorkgroup>>, i32,
+         vector<4xi8>, vector<4xf32> -> vector<4xf32>
+  spirv.Return
+}
+
+// -----
+
+spirv.func @masked_gather_mask_count_mismatch(
+    %ptrs : vector<4x!spirv.ptr<f32, CrossWorkgroup>>,
+    %alignment : i32,
+    %mask : vector<2xi1>,
+    %fill : vector<4xf32>) "None" {
+  // expected-error @+1 {{'spirv.INTEL.MaskedGather' op failed to verify that mask must be a vector of i1 matching result shape}}
+  %0 = spirv.INTEL.MaskedGather %ptrs, %alignment, %mask, %fill
+       : vector<4x!spirv.ptr<f32, CrossWorkgroup>>, i32,
+         vector<2xi1>, vector<4xf32> -> vector<4xf32>
+  spirv.Return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.INTEL.MaskedScatter
+//===----------------------------------------------------------------------===//
+
+spirv.func @masked_scatter(
+    %ptrs : vector<4x!spirv.ptr<f32, CrossWorkgroup>>,
+    %alignment : i32,
+    %mask : vector<4xi1>,
+    %values : vector<4xf32>) "None" {
+  // CHECK: spirv.INTEL.MaskedScatter {{%.*}}, {{%.*}}, {{%.*}}, {{%.*}} : vector<4x!spirv.ptr<f32, CrossWorkgroup>>, i32, vector<4xi1>, vector<4xf32>
+  spirv.INTEL.MaskedScatter %ptrs, %alignment, %mask, %values
+       : vector<4x!spirv.ptr<f32, CrossWorkgroup>>, i32,
+         vector<4xi1>, vector<4xf32>
+  spirv.Return
+}
+
+// -----
+
+spirv.func @masked_scatter_pointee_mismatch(
+    %ptrs : vector<4x!spirv.ptr<i32, CrossWorkgroup>>,
+    %alignment : i32,
+    %mask : vector<4xi1>,
+    %values : vector<4xf32>) "None" {
+  // expected-error @+1 {{'spirv.INTEL.MaskedScatter' op failed to verify that pointee type of ptr_vector must match input element type}}
+  spirv.INTEL.MaskedScatter %ptrs, %alignment, %mask, %values
+       : vector<4x!spirv.ptr<i32, CrossWorkgroup>>, i32,
+         vector<4xi1>, vector<4xf32>
+  spirv.Return
+}
+
+// -----
+
+spirv.func @masked_scatter_mask_count_mismatch(
+    %ptrs : vector<4x!spirv.ptr<f32, CrossWorkgroup>>,
+    %alignment : i32,
+    %mask : vector<2xi1>,
+    %values : vector<4xf32>) "None" {
+  // expected-error @+1 {{'spirv.INTEL.MaskedScatter' op failed to verify that mask must be a vector of i1 matching input shape}}
+  spirv.INTEL.MaskedScatter %ptrs, %alignment, %mask, %values
+       : vector<4x!spirv.ptr<f32, CrossWorkgroup>>, i32,
+         vector<2xi1>, vector<4xf32>
+  spirv.Return
+}
+
+// -----
+
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [CacheControlsINTEL], [SPV_INTEL_cache_controls]> {
   spirv.func @foo() "None" {
     // CHECK: spirv.Variable {cache_control_load_intel = [#spirv.cache_control_load_intel<cache_level = 0, load_cache_control = Uncached>, #spirv.cache_control_load_intel<cache_level = 1, load_cache_control = Cached>, #spirv.cache_control_load_intel<cache_level = 2, load_cache_control = InvalidateAfterR>]} : !spirv.ptr<f32, Function>

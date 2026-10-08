@@ -232,20 +232,24 @@ FailureOr<scf::ForOp> mlir::scf::upliftWhileToForLoop(RewriterBase &rewriter,
   rewriter.setInsertionPoint(term);
   rewriter.replaceOpWithNewOp<scf::YieldOp>(term, newArgs);
 
-  // Compute induction var value after loop execution.
+  // Compute the induction variable value after loop execution, clamping the
+  // trip count at zero so loops that never execute yield lb.
   rewriter.setInsertionPointAfter(newLoop);
   Value one;
+  Value zero;
   if (isa<IndexType>(step.getType())) {
     one = arith::ConstantIndexOp::create(rewriter, loc, 1);
+    zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
   } else {
     one = arith::ConstantIntOp::create(rewriter, loc, step.getType(), 1);
+    zero = arith::ConstantIntOp::create(rewriter, loc, step.getType(), 0);
   }
 
   Value stepDec = arith::SubIOp::create(rewriter, loc, step, one);
   Value len = arith::SubIOp::create(rewriter, loc, ub, lb);
   len = arith::AddIOp::create(rewriter, loc, len, stepDec);
   len = arith::DivSIOp::create(rewriter, loc, len, step);
-  len = arith::SubIOp::create(rewriter, loc, len, one);
+  len = arith::MaxSIOp::create(rewriter, loc, len, zero);
   Value res = arith::MulIOp::create(rewriter, loc, len, step);
   res = arith::AddIOp::create(rewriter, loc, lb, res);
 

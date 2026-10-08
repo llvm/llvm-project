@@ -35,7 +35,7 @@ void foo(int n) {
 // CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
 // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]
 // CHECK:       [[FAIL]]
-// CHECK:       call void [[HVT0:@.+]]()
+// CHECK:       call void [[HVT0:@.+]](ptr null)
 // CHECK-NEXT:  br label %[[END]]
 // CHECK:       [[END]]
 #pragma omp target device(n)
@@ -48,7 +48,7 @@ void foo(int n) {
 // CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
 // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]
 // CHECK:       [[FAIL]]
-// CHECK:       call void [[HVT0:@.+]]()
+// CHECK:       call void [[HVT0:@.+]](ptr null)
 // CHECK-NEXT:  br label %[[END]]
 // CHECK:       [[END]]
 #pragma omp target device(device_num \
@@ -57,7 +57,7 @@ void foo(int n) {
 
 #ifdef OMP99
 // REV-NOT:   call i32 @__tgt_target_kernel(ptr @{{.+}},
-// REV:       call void @__omp_offloading_{{.+}}_l62()
+// REV:       call void @__omp_offloading_{{.+}}_l62(ptr null)
 // REV-NOT:   call i32 @__tgt_target_kernel(ptr @{{.+}},
 #pragma omp target device(ancestor \
                           : n)

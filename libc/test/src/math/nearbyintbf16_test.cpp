@@ -11,4 +11,4 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/nearbyintbf16.h"
 
-LIST_NEARBYINT_TESTS(bfloat16, LIBC_NAMESPACE::nearbyintbf16)
+LIST_NEARBYINT_TESTS(Nearbyintbf16, bfloat16, LIBC_NAMESPACE::nearbyintbf16)

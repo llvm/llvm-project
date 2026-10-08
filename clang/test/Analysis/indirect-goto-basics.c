@@ -1,7 +1,6 @@
 // RUN: %clang_analyze_cc1 -verify %s -analyzer-checker=core
 
-// This file tests ExprEngine::processIndirectGoto and the class
-// IndirectGotoNodeBuilder.
+// This file tests ExprEngine::processIndirectGoto.
 
 int goto_known_label_1(int x) {
   // In this example the ternary operator splits the state, the analyzer can

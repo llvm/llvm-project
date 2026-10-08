@@ -135,6 +135,10 @@ protected:
   /// replace a copy.
   bool EnableSinkAndFold = false;
 
+  /// Enable insertion of SSAMachineScheduler pass, this triggers early
+  /// computation of live intervals.
+  bool EnableSSAMachineScheduler = false;
+
   /// Require processing of functions such that callees are generated before
   /// callers.
   bool RequireCodeGenSCCOrder = false;
@@ -203,6 +207,13 @@ public:
   bool requiresCodeGenSCCOrder() const { return RequireCodeGenSCCOrder; }
   void setRequiresCodeGenSCCOrder(bool Enable = true) {
     setOpt(RequireCodeGenSCCOrder, Enable);
+  }
+
+  bool getEnableSSAMachineScheduler() const {
+    return EnableSSAMachineScheduler;
+  }
+  void setEnableSSAMachineScheduler(bool Enable) {
+    setOpt(EnableSSAMachineScheduler, Enable);
   }
 
   /// Allow the target to override a specific pass without overriding the pass
@@ -336,10 +347,6 @@ public:
   /// uses the fallback path. In other words, it will emit a diagnostic
   /// when GlobalISel failed and isGlobalISelAbortEnabled is false.
   virtual bool reportDiagnosticWhenGlobalISelFallback() const;
-
-  /// Check whether continuous CSE should be enabled in GISel passes.
-  /// By default, it's enabled for non O0 levels.
-  virtual bool isGISelCSEEnabled() const;
 
   /// Returns the CSEConfig object to use for the current optimization level.
   virtual std::unique_ptr<CSEConfigBase> getCSEConfig() const;

@@ -1,0 +1,19 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+module attributes {
+  cir.record_layouts = {
+    // expected-error @below {{failed to verify that record_align must be a non-zero power of two}}
+    S = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+                           has_trivial_dtor = true, record_align = 0>}
+} {
+}
+
+// -----
+
+module attributes {
+  cir.record_layouts = {
+    // expected-error @below {{failed to verify that record_align must be a non-zero power of two}}
+    S = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+                           has_trivial_dtor = true, record_align = 3>}
+} {
+}

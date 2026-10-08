@@ -82,7 +82,7 @@ public:
   }
 
   bool VisitAutoTypeLoc(AutoTypeLoc TL) {
-    if (auto *C = TL.getNamedConcept())
+    if (auto *C = TL.getNamedConcept().getAsTemplateDecl())
       return IndexCtx.handleReference(C, TL.getConceptNameLoc(), Parent,
                                       ParentDC);
     return true;

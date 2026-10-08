@@ -9,12 +9,12 @@ target datalayout = "e-n32"
 ; CHECK: @switch.table.test3 = private unnamed_addr constant [3 x i32] [i32 11984, i32 1143, i32 99783], align 4
 ; CHECK: @switch.table.test6 = private unnamed_addr constant [4 x i32] [i32 99783, i32 99783, i32 1143, i32 11984], align 4
 ; CHECK: @switch.table.test8 = private unnamed_addr constant [5 x i32] [i32 11984, i32 1143, i32 99783, i32 8867, i32 99783], align 4
-; CHECK: @switch.table.test9 = private unnamed_addr constant [8 x i32] [i32 99783, i32 8867, i32 99783, i32 8867, i32 8867, i32 8867, i32 11984, i32 1143], align 4
+; CHECK: @switch.table.test9 = private unnamed_addr constant [28 x i32] [i32 99783, i32 8867, i32 99783, i32 8867, i32 8867, i32 8867, i32 11984, i32 8867, i32 8867, i32 8867, i32 8867, i32 8867, i32 8867, i32 8867, i32 8867, i32 8867, i32 8867, i32 1143, i32 8867, i32 8867, i32 8867, i32 8867, i32 8867, i32 8867, i32 8867, i32 8867, i32 8867, i32 99783], align 4
 ;.
 define i32 @test1(i32 %a) !prof !0 {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[A:%.*]], 97
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.fshl.i32(i32 [[TMP1]], i32 [[TMP1]], i32 30)
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.fshl.i32(i32 [[TMP1]], i32 [[TMP1]], i32 28)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 4
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[SWITCH_LOOKUP:%.*]], label [[COMMON_RET:%.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       switch.lookup:
@@ -28,9 +28,9 @@ define i32 @test1(i32 %a) !prof !0 {
 ;
   switch i32 %a, label %def [
   i32 97, label %one
-  i32 101, label %two
-  i32 105, label %three
-  i32 109, label %three
+  i32 113, label %two
+  i32 129, label %three
+  i32 145, label %three
   ], !prof !1
 
 def:
@@ -49,9 +49,9 @@ define i128 @test2(i128 %a) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    switch i128 [[A:%.*]], label [[COMMON_RET:%.*]] [
 ; CHECK-NEXT:      i128 97, label [[ONE:%.*]]
-; CHECK-NEXT:      i128 101, label [[TWO:%.*]]
-; CHECK-NEXT:      i128 105, label [[THREE:%.*]]
-; CHECK-NEXT:      i128 109, label [[THREE]]
+; CHECK-NEXT:      i128 113, label [[TWO:%.*]]
+; CHECK-NEXT:      i128 129, label [[THREE:%.*]]
+; CHECK-NEXT:      i128 145, label [[THREE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i128 [ 99783, [[THREE]] ], [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 8867, [[TMP0:%.*]] ]
@@ -65,9 +65,9 @@ define i128 @test2(i128 %a) {
 ;
   switch i128 %a, label %def [
   i128 97, label %one
-  i128 101, label %two
-  i128 105, label %three
-  i128 109, label %three
+  i128 113, label %two
+  i128 129, label %three
+  i128 145, label %three
   ]
 
 def:
@@ -118,9 +118,9 @@ define i32 @test4(i32 %a) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    switch i32 [[A:%.*]], label [[COMMON_RET:%.*]] [
 ; CHECK-NEXT:      i32 97, label [[ONE:%.*]]
-; CHECK-NEXT:      i32 102, label [[TWO:%.*]]
-; CHECK-NEXT:      i32 105, label [[THREE:%.*]]
-; CHECK-NEXT:      i32 109, label [[THREE]]
+; CHECK-NEXT:      i32 114, label [[TWO:%.*]]
+; CHECK-NEXT:      i32 129, label [[THREE:%.*]]
+; CHECK-NEXT:      i32 145, label [[THREE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 99783, [[THREE]] ], [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 8867, [[TMP0:%.*]] ]
@@ -134,9 +134,9 @@ define i32 @test4(i32 %a) {
 ;
   switch i32 %a, label %def [
   i32 97, label %one
-  i32 102, label %two
-  i32 105, label %three
-  i32 109, label %three
+  i32 114, label %two
+  i32 129, label %three
+  i32 145, label %three
   ]
 
 def:
@@ -155,9 +155,9 @@ define i32 @test5(i32 %a) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    switch i32 [[A:%.*]], label [[COMMON_RET:%.*]] [
 ; CHECK-NEXT:      i32 97, label [[ONE:%.*]]
-; CHECK-NEXT:      i32 102, label [[TWO:%.*]]
-; CHECK-NEXT:      i32 107, label [[THREE:%.*]]
-; CHECK-NEXT:      i32 112, label [[THREE]]
+; CHECK-NEXT:      i32 112, label [[TWO:%.*]]
+; CHECK-NEXT:      i32 127, label [[THREE:%.*]]
+; CHECK-NEXT:      i32 142, label [[THREE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 99783, [[THREE]] ], [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 8867, [[TMP0:%.*]] ]
@@ -171,9 +171,9 @@ define i32 @test5(i32 %a) {
 ;
   switch i32 %a, label %def [
   i32 97, label %one
-  i32 102, label %two
-  i32 107, label %three
-  i32 112, label %three
+  i32 112, label %two
+  i32 127, label %three
+  i32 142, label %three
   ]
 
 def:
@@ -288,11 +288,11 @@ define i32 @test9(i32 %a) {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[A:%.*]], 6
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.fshl.i32(i32 [[TMP1]], i32 [[TMP1]], i32 31)
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 28
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[SWITCH_LOOKUP:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       switch.lookup:
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext nneg i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [8 x i32], ptr @switch.table.test9, i64 0, i64 [[TMP4]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [28 x i32], ptr @switch.table.test9, i64 0, i64 [[TMP4]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       common.ret:
@@ -301,9 +301,10 @@ define i32 @test9(i32 %a) {
 ;
   switch i32 %a, label %def [
   i32 18, label %one
-  i32 20, label %two
+  i32 40, label %two
   i32 6, label %three
   i32 10, label %three
+  i32 60, label %three
   ]
 
 def:
@@ -316,6 +317,110 @@ two:
 three:
   ret i32 99783
 }
+
+; Base=0 is profitable here: shifting out the common low zero bits produces a
+; dense range without subtracting the local minimum first. SimplifyCFG does not
+; form a lookup table here, so the reduced switch is tested directly.
+define void @test10(i32 %a) {
+; CHECK-LABEL: @test10(
+; CHECK-NEXT:    [[TMP:%.*]] = call i32 @llvm.fshl.i32(i32 [[A:%.*]], i32 [[A]], i32 27)
+; CHECK-NEXT:    switch i32 [[TMP]], label [[COMMON_RET:%.*]] [
+; CHECK-NEXT:      i32 1, label [[ONE:%.*]]
+; CHECK-NEXT:      i32 2, label [[TWO:%.*]]
+; CHECK-NEXT:      i32 3, label [[THREE:%.*]]
+; CHECK-NEXT:      i32 4, label [[FOUR:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       one:
+; CHECK-NEXT:    call void @side_effect(i32 32)
+; CHECK-NEXT:    br label [[COMMON_RET]]
+; CHECK:       two:
+; CHECK-NEXT:    call void @side_effect(i32 64)
+; CHECK-NEXT:    br label [[COMMON_RET]]
+; CHECK:       three:
+; CHECK-NEXT:    call void @side_effect(i32 96)
+; CHECK-NEXT:    br label [[COMMON_RET]]
+; CHECK:       four:
+; CHECK-NEXT:    call void @side_effect(i32 128)
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+  switch i32 %a, label %def [
+  i32 32, label %one
+  i32 64, label %two
+  i32 96, label %three
+  i32 128, label %four
+  ]
+
+def:
+  ret void
+
+one:
+  call void @side_effect(i32 32)
+  ret void
+two:
+  call void @side_effect(i32 64)
+  ret void
+three:
+  call void @side_effect(i32 96)
+  ret void
+four:
+  call void @side_effect(i32 128)
+  ret void
+}
+
+; Base=0 is not dense after shifting, so this should still subtract the local
+; minimum before reducing the range.
+define void @test11(i32 %a) {
+; CHECK-LABEL: @test11(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[A:%.*]], 40
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.fshl.i32(i32 [[TMP1]], i32 [[TMP1]], i32 27)
+; CHECK-NEXT:    switch i32 [[TMP2]], label [[COMMON_RET:%.*]] [
+; CHECK-NEXT:      i32 0, label [[ONE:%.*]]
+; CHECK-NEXT:      i32 1, label [[TWO:%.*]]
+; CHECK-NEXT:      i32 2, label [[THREE:%.*]]
+; CHECK-NEXT:      i32 3, label [[FOUR:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       one:
+; CHECK-NEXT:    call void @side_effect(i32 40)
+; CHECK-NEXT:    br label [[COMMON_RET]]
+; CHECK:       two:
+; CHECK-NEXT:    call void @side_effect(i32 72)
+; CHECK-NEXT:    br label [[COMMON_RET]]
+; CHECK:       three:
+; CHECK-NEXT:    call void @side_effect(i32 104)
+; CHECK-NEXT:    br label [[COMMON_RET]]
+; CHECK:       four:
+; CHECK-NEXT:    call void @side_effect(i32 136)
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+  switch i32 %a, label %def [
+  i32 40, label %one
+  i32 72, label %two
+  i32 104, label %three
+  i32 136, label %four
+  ]
+
+def:
+  ret void
+
+one:
+  call void @side_effect(i32 40)
+  ret void
+two:
+  call void @side_effect(i32 72)
+  ret void
+three:
+  call void @side_effect(i32 104)
+  ret void
+four:
+  call void @side_effect(i32 136)
+  ret void
+}
+
+declare void @side_effect(i32)
 
 !0 = !{!"function_entry_count", i32 100}
 !1 = !{!"branch_weights", i32 5, i32 7, i32 11, i32 13, i32 17}

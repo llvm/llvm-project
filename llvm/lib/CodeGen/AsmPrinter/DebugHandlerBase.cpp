@@ -58,7 +58,7 @@ DbgVariableLocation::extractFromMachineInstruction(
   while (Op != DIExpr->expr_op_end()) {
     switch (Op->getOp()) {
     case dwarf::DW_OP_constu: {
-      int Value = Op->getArg(0);
+      int Value = cast<DIExpression::ConstuOp>(*Op).getValue();
       ++Op;
       if (Op != DIExpr->expr_op_end()) {
         switch (Op->getOp()) {
@@ -74,11 +74,14 @@ DbgVariableLocation::extractFromMachineInstruction(
       }
     } break;
     case dwarf::DW_OP_plus_uconst:
-      Offset += Op->getArg(0);
+      Offset += cast<DIExpression::PlusUconstOp>(*Op).getOffset();
       break;
-    case dwarf::DW_OP_LLVM_fragment:
-      Location.FragmentInfo = {Op->getArg(1), Op->getArg(0)};
+    case dwarf::DW_OP_LLVM_fragment: {
+      auto Fragment = cast<DIExpression::FragmentOp>(*Op);
+      Location.FragmentInfo = {Fragment.getSizeInBits(),
+                               Fragment.getOffsetInBits()};
       break;
+    }
     case dwarf::DW_OP_deref:
       Location.LoadChain.push_back(Offset);
       Offset = 0;
@@ -369,8 +372,7 @@ void DebugHandlerBase::beginInstruction(const MachineInstr *MI) {
   CurMI = MI;
 
   // Insert labels where requested.
-  DenseMap<const MachineInstr *, MCSymbol *>::iterator I =
-      LabelsBeforeInsn.find(MI);
+  auto I = LabelsBeforeInsn.find(MI);
 
   // No label needed.
   if (I == LabelsBeforeInsn.end())
@@ -399,8 +401,7 @@ void DebugHandlerBase::endInstruction() {
     PrevInstBB = CurMI->getParent();
   }
 
-  DenseMap<const MachineInstr *, MCSymbol *>::iterator I =
-      LabelsAfterInsn.find(CurMI);
+  auto I = LabelsAfterInsn.find(CurMI);
 
   // No label needed or label already assigned.
   if (I == LabelsAfterInsn.end() || I->second) {

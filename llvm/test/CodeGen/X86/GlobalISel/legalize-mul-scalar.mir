@@ -130,8 +130,6 @@ registers:
 body:             |
   bb.1 (%ir-block.0):
 
-    ;
-    ;
     ; CHECK-LABEL: name: test_mul_i27
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $edx
     ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[COPY]], [[COPY]]
@@ -192,6 +190,7 @@ body:             |
     ; X64-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[COPY]], [[COPY]]
     ; X64-NEXT: $rax = COPY [[MUL]](s64)
     ; X64-NEXT: RET 0
+    ;
     ; X86-LABEL: name: test_mul_i42
     ; X86: liveins: $rdi, $rsi
     ; X86-NEXT: {{  $}}
@@ -199,11 +198,11 @@ body:             |
     ; X86-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; X86-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; X86-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[UV]], [[UV2]]
-    ; X86-NEXT: [[MUL1:%[0-9]+]]:_(s32) = G_MUL [[UV1]], [[UV2]]
-    ; X86-NEXT: [[MUL2:%[0-9]+]]:_(s32) = G_MUL [[UV]], [[UV3]]
     ; X86-NEXT: [[UMULH:%[0-9]+]]:_(s32) = G_UMULH [[UV]], [[UV2]]
-    ; X86-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[MUL1]], [[MUL2]]
-    ; X86-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[ADD]], [[UMULH]]
+    ; X86-NEXT: [[MUL1:%[0-9]+]]:_(s32) = G_MUL [[UV]], [[UV3]]
+    ; X86-NEXT: [[MUL2:%[0-9]+]]:_(s32) = G_MUL [[UV1]], [[UV2]]
+    ; X86-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[UMULH]], [[MUL1]]
+    ; X86-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[ADD]], [[MUL2]]
     ; X86-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MUL]](s32), [[ADD1]](s32)
     ; X86-NEXT: $rax = COPY [[MV]](s64)
     ; X86-NEXT: RET 0
@@ -235,6 +234,7 @@ body:             |
     ; X64-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[COPY]], [[COPY1]]
     ; X64-NEXT: $rax = COPY [[MUL]](s64)
     ; X64-NEXT: RET 0, implicit $rax
+    ;
     ; X86-LABEL: name: test_mul_i64
     ; X86: liveins: $rdi, $rsi
     ; X86-NEXT: {{  $}}
@@ -243,11 +243,11 @@ body:             |
     ; X86-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; X86-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](s64)
     ; X86-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[UV]], [[UV2]]
-    ; X86-NEXT: [[MUL1:%[0-9]+]]:_(s32) = G_MUL [[UV1]], [[UV2]]
-    ; X86-NEXT: [[MUL2:%[0-9]+]]:_(s32) = G_MUL [[UV]], [[UV3]]
     ; X86-NEXT: [[UMULH:%[0-9]+]]:_(s32) = G_UMULH [[UV]], [[UV2]]
-    ; X86-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[MUL1]], [[MUL2]]
-    ; X86-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[ADD]], [[UMULH]]
+    ; X86-NEXT: [[MUL1:%[0-9]+]]:_(s32) = G_MUL [[UV]], [[UV3]]
+    ; X86-NEXT: [[MUL2:%[0-9]+]]:_(s32) = G_MUL [[UV1]], [[UV2]]
+    ; X86-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[UMULH]], [[MUL1]]
+    ; X86-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[ADD]], [[MUL2]]
     ; X86-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MUL]](s32), [[ADD1]](s32)
     ; X86-NEXT: $rax = COPY [[MV]](s64)
     ; X86-NEXT: RET 0, implicit $rax

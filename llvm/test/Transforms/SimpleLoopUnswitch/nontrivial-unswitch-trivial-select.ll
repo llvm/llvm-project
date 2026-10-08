@@ -89,19 +89,14 @@ define i32 @unswitch_trivial_select_cmp_outside(i32 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[X:%.*]], 100
 ; CHECK-NEXT:    br i1 [[C]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
-; CHECK:       entry.split.us:
-; CHECK-NEXT:    br label [[LOOP_US:%.*]]
-; CHECK:       loop.us:
-; CHECK-NEXT:    [[P_US:%.*]] = phi i32 [ 0, [[ENTRY_SPLIT_US]] ], [ 35, [[LOOP_US]] ]
-; CHECK-NEXT:    br label [[LOOP_US]]
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 0, [[ENTRY_SPLIT]] ]
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 false, i1 true, i1 false
-; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 0, [[ENTRY_SPLIT_US]] ], [ 35, [[LOOP]] ]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 true, i1 true, i1 false
+; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[LCSSA:%.*]] = phi i32 [ [[P]], [[LOOP]] ]
+; CHECK-NEXT:    [[LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[LCSSA]]
 ;
 entry:

@@ -16,20 +16,31 @@
 #include "Shared/Debug.h"
 #include "Shared/Profile.h"
 
-#ifdef OMPT_SUPPORT
-extern void llvm::omp::target::ompt::connectLibrary();
-#endif
 using namespace llvm::omp::target::debug;
 
-static std::mutex PluginMtx;
+static std::mutex &getPluginMutex() {
+  static std::mutex Mutex;
+  return Mutex;
+}
 static uint32_t RefCount = 0;
 std::atomic<bool> RTLAlive{false};
 std::atomic<int> RTLOngoingSyncs{0};
 
+/// Check deleted and deprecated features, such as environment variables.
+static void checkRuntimeEnvironment() {
+  const char *ShmemEnvarName = "LIBOMPTARGET_SHARED_MEMORY_SIZE";
+  if (std::getenv(ShmemEnvarName))
+    MESSAGE("Warning: %s is no longer valid. Please use OpenMP clause "
+            "'dyn_groupprivate' instead.\n",
+            ShmemEnvarName);
+}
+
 void initRuntime() {
-  std::scoped_lock<decltype(PluginMtx)> Lock(PluginMtx);
+  std::scoped_lock<std::mutex> Lock(getPluginMutex());
   Profiler::get();
   TIMESCOPE();
+
+  checkRuntimeEnvironment();
 
   if (PM == nullptr)
     PM = new PluginManager();
@@ -51,7 +62,7 @@ void initRuntime() {
 }
 
 void deinitRuntime() {
-  std::scoped_lock<decltype(PluginMtx)> Lock(PluginMtx);
+  std::scoped_lock<std::mutex> Lock(getPluginMutex());
   assert(PM && "Runtime not initialized");
 
   if (RefCount == 1) {

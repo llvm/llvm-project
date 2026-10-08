@@ -159,7 +159,7 @@ LONG test_InterlockedAnd(LONG volatile *value, LONG mask) {
 LONG test_InterlockedCompareExchange(LONG volatile *Destination, LONG Exchange, LONG Comperand) {
   return _InterlockedCompareExchange(Destination, Exchange, Comperand);
 }
-// CHECK: define{{.*}}i32 @test_InterlockedCompareExchange(ptr{{[a-z_ ]*}}%Destination, i32{{[a-z_ ]*}}%Exchange, i32{{[a-z_ ]*}}%Comperand){{.*}}{
+// CHECK: define{{.*}}i32 @test_InterlockedCompareExchange(ptr{{[^%]*}}%Destination, i32{{[a-z_ ]*}}%Exchange, i32{{[a-z_ ]*}}%Comperand){{.*}}{
 // CHECK: [[TMP:%[0-9]+]] = cmpxchg volatile ptr %Destination, i32 %Comperand, i32 %Exchange seq_cst seq_cst, align 4
 // CHECK: [[RESULT:%[0-9]+]] = extractvalue { i32, i1 } [[TMP]], 0
 // CHECK: ret i32 [[RESULT]]

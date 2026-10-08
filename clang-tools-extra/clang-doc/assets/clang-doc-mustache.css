@@ -1,7 +1,7 @@
 /* css for clang-doc mustache backend */
 @import "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap";
 
-*,*::before *::after {
+*,*::before, *::after {
     box-sizing:border-box
 }
 * {
@@ -24,8 +24,8 @@ video {
     --brand-light:#ce6300;
     --text1-light:#000000;
     --text2-light:#333333;
-    --surface1-light:#ffffff;
-    --surface2-light:#f5f5f5;
+    --surface1-light:#f0f4f8;
+    --surface2-light:#d3dae0;
     --brand-dark:#de9853;
     --text1-dark:#ffffff;
     --text2-dark:#cccccc;
@@ -88,6 +88,7 @@ html, body {
     margin: 0;
     padding: 0;
     width: 100%;
+    overflow-x: scroll;
 }
 
 .container {
@@ -111,10 +112,9 @@ header {
 }
 
 .navbar {
-    background-color: var(--surface2);
+    background-color: var(--surface1);
     border-bottom: 1px solid var(--text2);
     width: 100%;
-    color: white;
     display: flex;
     flex-direction: column;
     align-items: stretch;
@@ -128,7 +128,6 @@ header {
     grid-template-columns: auto 1fr auto;
     align-items:center;
     padding:1rem;
-    color:var(--text1);
     max-width:2048px;
     margin:auto;
     width:100%
@@ -177,6 +176,13 @@ header {
     margin-left:0;
     grid-column:2;
     justify-self:center
+}
+
+#themeToggle {
+    grid-column: 3;
+    justify-self: end;
+    color: var(--text1);
+    border: none;
 }
 
 @media(max-width:768px) {
@@ -413,8 +419,13 @@ header {
 }
 
 .delimiter-container {
-    padding: 0.5rem 1rem;
     margin-bottom:1rem; 
+    border: 3px solid var(--text2-inverse);
+    border-radius: 10px;
+    background: var(--surface1);
+    margin: 14px 0;
+    overflow: hidden;
+    padding: 10px;
 }
 
 .nested-delimiter-container {
@@ -513,9 +524,9 @@ a, a:visited, a:hover, a:active {
 }
 
 .doc-card {
-  border: 3px solid rgba(0, 0, 0, 0.12);
+  border-left: 3px solid var(--brand);
   border-radius: 10px;
-  background: var(--surface1);
+  background: var(--surface2);
   margin: 14px 0;
   overflow: hidden;
   padding: 10px;
@@ -528,4 +539,12 @@ a, a:visited, a:hover, a:active {
 
 .param-container {
     display: block;
+}
+
+.paragraph-container {
+    margin-bottom: 1rem;
+}
+
+.paragraph-container:last-of-type {
+    margin-bottom: 0rem;
 }

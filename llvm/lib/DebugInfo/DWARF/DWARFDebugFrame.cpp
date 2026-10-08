@@ -23,7 +23,8 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Format.h"
+#include "llvm/Support/FormatAdapters.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cinttypes>
@@ -101,30 +102,34 @@ constexpr uint64_t getCIEId(bool IsDWARF64, bool IsEH) {
 void CIE::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   // A CIE with a zero length is a terminator entry in the .eh_frame section.
   if (DumpOpts.IsEH && Length == 0) {
-    OS << format("%08" PRIx64, Offset) << " ZERO terminator\n";
+    OS << formatv("{0:x-8}", Offset) << " ZERO terminator\n";
     return;
   }
 
-  OS << format("%08" PRIx64, Offset)
-     << format(" %0*" PRIx64, IsDWARF64 ? 16 : 8, Length)
-     << format(" %0*" PRIx64, IsDWARF64 && !DumpOpts.IsEH ? 16 : 8,
-               getCIEId(IsDWARF64, DumpOpts.IsEH))
+  OS << formatv("{0:x-8}", Offset)
+     << formatv(" {0:x-}",
+                fmt_align(Length, AlignStyle::Right, IsDWARF64 ? 16 : 8, '0'))
+     << formatv(" {0:x-}",
+                fmt_align(getCIEId(IsDWARF64, DumpOpts.IsEH), AlignStyle::Right,
+                          IsDWARF64 && !DumpOpts.IsEH ? 16 : 8, '0'))
      << " CIE\n"
      << "  Format:                " << FormatString(IsDWARF64) << "\n";
   if (DumpOpts.IsEH && Version != 1)
     OS << "WARNING: unsupported CIE version\n";
-  OS << format("  Version:               %d\n", Version)
+  OS << formatv("  Version:               {0}\n", Version)
      << "  Augmentation:          \"" << Augmentation << "\"\n";
   if (Version >= 4) {
-    OS << format("  Address size:          %u\n", (uint32_t)AddressSize);
-    OS << format("  Segment desc size:     %u\n",
-                 (uint32_t)SegmentDescriptorSize);
+    OS << formatv("  Address size:          {0}\n", (uint32_t)AddressSize);
+    OS << formatv("  Segment desc size:     {0}\n",
+                  (uint32_t)SegmentDescriptorSize);
   }
-  OS << format("  Code alignment factor: %u\n", (uint32_t)CodeAlignmentFactor);
-  OS << format("  Data alignment factor: %d\n", (int32_t)DataAlignmentFactor);
-  OS << format("  Return address column: %d\n", (int32_t)ReturnAddressRegister);
+  OS << formatv("  Code alignment factor: {0}\n",
+                (uint32_t)CodeAlignmentFactor);
+  OS << formatv("  Data alignment factor: {0}\n", (int32_t)DataAlignmentFactor);
+  OS << formatv("  Return address column: {0}\n",
+                (int32_t)ReturnAddressRegister);
   if (Personality)
-    OS << format("  Personality Address: %016" PRIx64 "\n", *Personality);
+    OS << formatv("  Personality Address: {0:x-16}\n", *Personality);
   if (!AugmentationData.empty()) {
     OS << "  Augmentation data:    ";
     for (uint8_t Byte : AugmentationData)
@@ -148,19 +153,21 @@ void CIE::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
 }
 
 void FDE::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
-  OS << format("%08" PRIx64, Offset)
-     << format(" %0*" PRIx64, IsDWARF64 ? 16 : 8, Length)
-     << format(" %0*" PRIx64, IsDWARF64 && !DumpOpts.IsEH ? 16 : 8, CIEPointer)
+  OS << formatv("{0:x-8}", Offset)
+     << formatv(" {0:x-}",
+                fmt_align(Length, AlignStyle::Right, IsDWARF64 ? 16 : 8, '0'))
+     << formatv(" {0:x-}", fmt_align(CIEPointer, AlignStyle::Right,
+                                     IsDWARF64 && !DumpOpts.IsEH ? 16 : 8, '0'))
      << " FDE cie=";
   if (LinkedCIE)
-    OS << format("%08" PRIx64, LinkedCIE->getOffset());
+    OS << formatv("{0:x-8}", LinkedCIE->getOffset());
   else
     OS << "<invalid offset>";
-  OS << format(" pc=%08" PRIx64 "...%08" PRIx64 "\n", InitialLocation,
-               InitialLocation + AddressRange);
+  OS << formatv(" pc={0:x-8}...{1:x-8}\n", InitialLocation,
+                InitialLocation + AddressRange);
   OS << "  Format:       " << FormatString(IsDWARF64) << "\n";
   if (LSDAAddress)
-    OS << format("  LSDA Address: %016" PRIx64 "\n", *LSDAAddress);
+    OS << formatv("  LSDA Address: {0:x-16}\n", *LSDAAddress);
   printCFIProgram(CFIs, OS, DumpOpts, /*IndentLevel=*/1, InitialLocation);
   OS << "\n";
 
@@ -191,9 +198,14 @@ DWARFDebugFrame::~DWARFDebugFrame() = default;
   errs() << "\n";
 }
 
-Error DWARFDebugFrame::parse(DWARFDataExtractor Data) {
+Error DWARFDebugFrame::parse(DWARFDataExtractor Data, bool ParseCFIProgram) {
   uint64_t Offset = 0;
   DenseMap<uint64_t, CIE *> CIEs;
+
+  // Retain the section contents so that the programs left undecoded below can
+  // be parsed on demand later.
+  if (!ParseCFIProgram)
+    this->Data = Data;
 
   while (Data.isValidOffset(Offset)) {
     uint64_t StartOffset = Offset;
@@ -377,6 +389,14 @@ Error DWARFDebugFrame::parse(DWARFDataExtractor Data) {
                                    LSDAAddress, Arch));
     }
 
+    if (!ParseCFIProgram) {
+      // Record where this entry's CFI instructions begin, so that the program
+      // left undecoded here can be parsed on demand later.
+      Entries.back()->markCFIProgramUnparsed(Offset);
+      Offset = EndStructureOffset;
+      continue;
+    }
+
     if (Error E =
             Entries.back()->cfis().parse(Data, &Offset, EndStructureOffset))
       return E;
@@ -399,16 +419,70 @@ FrameEntry *DWARFDebugFrame::getEntryAtOffset(uint64_t Offset) const {
   return nullptr;
 }
 
+Error DWARFDebugFrame::parseCFIProgram(FrameEntry &Entry) const {
+  std::optional<uint64_t> StartOffset = Entry.getUnparsedCFIStartOffset();
+  if (!StartOffset)
+    return Error::success();
+
+  if (!Data)
+    return createStringError(
+        errc::invalid_argument,
+        "cannot parse the instructions of the entry at 0x%" PRIx64
+        " on demand: the section contents were not retained",
+        Entry.getOffset());
+
+  uint64_t Offset = *StartOffset;
+  uint64_t EndOffset = Entry.getEndOffset();
+  assert(Offset >= Entry.getOffset() && Offset <= EndOffset &&
+         "entry does not know where its instructions begin");
+  DWARFDataExtractor EntryData = *Data;
+  // Clear previous unsuccessful parsing attempts, if any.
+  Entry.cfis().clear();
+  if (Error E = Entry.cfis().parse(EntryData, &Offset, EndOffset))
+    return E;
+
+  if (Offset != EndOffset)
+    return createStringError(errc::invalid_argument,
+                             "parsing entry instructions at 0x%" PRIx64
+                             " failed",
+                             Entry.getOffset());
+
+  // Signal we have a valid fully parsed CFI program.
+  Entry.markCFIProgramParsed();
+  return Error::success();
+}
+
+Error DWARFDebugFrame::parseAllCFIPrograms() const {
+  for (const auto &Entry : Entries)
+    if (Error E = parseCFIProgram(*Entry))
+      return E;
+  return Error::success();
+}
+
+void DWARFDebugFrame::dumpEntry(FrameEntry &Entry, raw_ostream &OS,
+                                DIDumpOptions DumpOpts) const {
+  if (const auto *Fde = dyn_cast<FDE>(&Entry))
+    if (const CIE *Cie = Fde->getLinkedCIE())
+      if (FrameEntry *CieEntry = getEntryAtOffset(Cie->getOffset()))
+        if (Error E = parseCFIProgram(*CieEntry))
+          DumpOpts.RecoverableErrorHandler(std::move(E));
+
+  if (Error E = parseCFIProgram(Entry))
+    DumpOpts.RecoverableErrorHandler(std::move(E));
+
+  Entry.dump(OS, DumpOpts);
+}
+
 void DWARFDebugFrame::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
                            std::optional<uint64_t> Offset) const {
   DumpOpts.IsEH = IsEH;
   if (Offset) {
     if (auto *Entry = getEntryAtOffset(*Offset))
-      Entry->dump(OS, DumpOpts);
+      dumpEntry(*Entry, OS, DumpOpts);
     return;
   }
 
   OS << "\n";
   for (const auto &Entry : Entries)
-    Entry->dump(OS, DumpOpts);
+    dumpEntry(*Entry, OS, DumpOpts);
 }

@@ -391,4 +391,6 @@ int main(int, char**) {
 #if TEST_STD_VER >= 11
   test_move_ctor_exceptions();
 #endif
+
+  return 0;
 }

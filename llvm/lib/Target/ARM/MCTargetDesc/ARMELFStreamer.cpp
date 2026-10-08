@@ -17,6 +17,7 @@
 #include "MCTargetDesc/ARMMCAsmInfo.h"
 #include "Utils/ARMBaseInfo.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -271,10 +272,10 @@ void ARMTargetAsmStreamer::emitCode16() { OS << "\t.code\t16\n"; }
 void ARMTargetAsmStreamer::emitCode32() { OS << "\t.code\t32\n"; }
 
 void ARMTargetAsmStreamer::emitThumbFunc(MCSymbol *Symbol) {
-  const MCAsmInfo *MAI = Streamer.getContext().getAsmInfo();
+  const MCAsmInfo &MAI = Streamer.getContext().getAsmInfo();
   OS << "\t.thumb_func";
   // Only Mach-O hasSubsectionsViaSymbols()
-  if (MAI->hasSubsectionsViaSymbols()) {
+  if (MAI.hasSubsectionsViaSymbols()) {
     OS << '\t';
     Symbol->print(OS, MAI);
   }
@@ -282,12 +283,12 @@ void ARMTargetAsmStreamer::emitThumbFunc(MCSymbol *Symbol) {
 }
 
 void ARMTargetAsmStreamer::emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) {
-  const MCAsmInfo *MAI = Streamer.getContext().getAsmInfo();
+  const MCAsmInfo &MAI = Streamer.getContext().getAsmInfo();
 
   OS << "\t.thumb_set\t";
   Symbol->print(OS, MAI);
   OS << ", ";
-  MAI->printExpr(OS, *Value);
+  MAI.printExpr(OS, *Value);
   OS << '\n';
 }
 
@@ -531,7 +532,7 @@ public:
   void emitInst(uint32_t Inst, char Suffix) {
     unsigned Size;
     char Buffer[4];
-    const bool LittleEndian = getContext().getAsmInfo()->isLittleEndian();
+    const bool LittleEndian = getContext().getAsmInfo().isLittleEndian();
 
     switch (Suffix) {
     case '\0':
@@ -602,15 +603,10 @@ public:
 
   /// Called to set any attribute on a symbol.
   ///
-  /// If this function is called for the .type directive that marks the symbol
-  /// as a function, and the label has been defined already without being typed
-  /// as a function, then this is the first opportunity we have to mark the
-  /// label as Thumb rather than Arm (if we're in Thumb mode).
-  ///
-  /// FIXME: there is a corner case where the state is changed in between the
-  /// label definition and the .type directive. This is not expected to occur
-  /// in practice, and handling it would require the backend to track IsThumb
-  /// for every label.
+  /// If this function is called for the .type directive that marks an already
+  /// defined symbol as a function, use the state in which its label was defined
+  /// to determine whether it is a Thumb function. The active state may have
+  /// changed since the label was emitted.
   ///
   /// We do not mark the symbol as Thumb due to any attributes other than
   /// setting its type to 'function', because there _are_ cases in practice
@@ -623,10 +619,9 @@ public:
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
     bool Val = MCELFStreamer::emitSymbolAttribute(Symbol, Attribute);
 
-    if (IsThumb &&
-        (Attribute == MCSA_ELF_TypeFunction ||
+    if ((Attribute == MCSA_ELF_TypeFunction ||
          Attribute == MCSA_ELF_TypeIndFunction) &&
-        Symbol->isDefined())
+        Symbol->isDefined() && ThumbLabels.contains(Symbol))
       getAssembler().setIsThumbFunc(Symbol);
 
     return Val;
@@ -722,6 +717,7 @@ private:
 
   bool IsThumb;
   bool IsAndroid;
+  DenseSet<const MCSymbol *> ThumbLabels;
 
   DenseMap<const MCSection *, std::unique_ptr<ElfMappingSymbolInfo>>
       LastMappingSymbols;
@@ -1100,6 +1096,7 @@ void ARMTargetELFStreamer::emitLabel(MCSymbol *Symbol) {
   if (!Streamer.IsThumb)
     return;
 
+  Streamer.ThumbLabels.insert(Symbol);
   Streamer.getAssembler().registerSymbol(*Symbol);
   unsigned Type = static_cast<MCSymbolELF *>(Symbol)->getType();
   if (Type == ELF::STT_FUNC || Type == ELF::STT_GNU_IFUNC)
@@ -1168,6 +1165,7 @@ void ARMELFStreamer::reset() {
   ARMTargetStreamer &ATS = static_cast<ARMTargetStreamer &>(TS);
   ATS.reset();
   MCELFStreamer::reset();
+  ThumbLabels.clear();
   LastMappingSymbols.clear();
   LastEMSInfo.reset();
   // MCELFStreamer clear's the assembler's e_flags. However, for

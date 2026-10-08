@@ -133,3 +133,18 @@ def testFunctionArgAttrs():
 
 # CHECK: func private @foo(f32 {test.foo = "bar"})
 # CHECK: func private @foo2(f32, f32  {test.baz = "qux"})
+
+
+# CHECK-LABEL: TEST: testFunctionTraits
+@constructAndPrintInModule
+def testFunctionTraits():
+    ret = func.ReturnOp([])
+
+    # CHECK: False
+    print(ret.operation.has_trait(NoTerminatorTrait))
+    # CHECK: True
+    print(ret.operation.has_trait(IsTerminatorTrait))
+    # CHECK: False
+    print(func.ReturnOp.has_trait(NoTerminatorTrait))
+    # CHECK: True
+    print(func.ReturnOp.has_trait(IsTerminatorTrait))

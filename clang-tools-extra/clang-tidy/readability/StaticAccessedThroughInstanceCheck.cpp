@@ -91,7 +91,7 @@ void StaticAccessedThroughInstanceCheck::check(
     return;
 
   SourceLocation MemberExprStartLoc = MemberExpression->getBeginLoc();
-  auto CreateFix = [&] {
+  const auto CreateFix = [&] {
     return FixItHint::CreateReplacement(
         CharSourceRange::getCharRange(MemberExprStartLoc,
                                       MemberExpression->getMemberLoc()),
@@ -99,7 +99,7 @@ void StaticAccessedThroughInstanceCheck::check(
   };
 
   {
-    auto Diag =
+    const auto Diag =
         diag(MemberExprStartLoc, "static member accessed through instance");
 
     if (getNameSpecifierNestingLevel(BaseType) > NameSpecifierNestingThreshold)

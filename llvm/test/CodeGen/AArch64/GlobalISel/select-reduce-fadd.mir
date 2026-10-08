@@ -16,9 +16,9 @@ body:             |
     ; CHECK-NEXT: [[FADDPv2i32p:%[0-9]+]]:fpr32 = nofpexcept FADDPv2i32p [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $w0 = COPY [[FADDPv2i32p]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %0:fpr(<2 x s32>) = COPY $d0
-    %1:fpr(s32) = G_VECREDUCE_FADD %0(<2 x s32>)
-    $w0 = COPY %1(s32)
+    %0:fpr(<2 x f32>) = COPY $d0
+    %1:fpr(f32) = G_VECREDUCE_FADD %0(<2 x f32>)
+    $w0 = COPY %1(f32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -38,9 +38,9 @@ body:             |
     ; CHECK-NEXT: [[FADDPv2i64p:%[0-9]+]]:fpr64 = nofpexcept FADDPv2i64p [[COPY]], implicit $fpcr
     ; CHECK-NEXT: $x0 = COPY [[FADDPv2i64p]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %0:fpr(<2 x s64>) = COPY $q0
-    %2:fpr(s64) = G_VECREDUCE_FADD %0(<2 x s64>)
-    $x0 = COPY %2(s64)
+    %0:fpr(<2 x f64>) = COPY $q0
+    %2:fpr(f64) = G_VECREDUCE_FADD %0(<2 x f64>)
+    $x0 = COPY %2(f64)
     RET_ReallyLR implicit $x0
 
 ...

@@ -1,6 +1,7 @@
-
 remove_module_flags()
 include_directories(..)
+
+find_library(SECURITY_FRAMEWORK Security)
 
 add_lldb_library(lldbHostMacOSXObjCXX NO_PLUGIN_DEPENDENCIES
   Host.mm
@@ -16,6 +17,8 @@ add_lldb_library(lldbHostMacOSXObjCXX NO_PLUGIN_DEPENDENCIES
   LINK_LIBS
     lldbUtility
     ${EXTRA_LIBS}
+    ${SECURITY_FRAMEWORK}
+  ALLOWED_INTERNAL_DEPENDENCIES lldbUtility
   )
 
 target_compile_options(lldbHostMacOSXObjCXX PRIVATE

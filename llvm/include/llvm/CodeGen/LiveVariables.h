@@ -192,11 +192,6 @@ public:
   /// machine function to be in SSA form.
   LLVM_ABI void recomputeForSingleDefVirtReg(Register Reg);
 
-  /// replaceKillInstruction - Update register kill info by replacing a kill
-  /// instruction with a new one.
-  LLVM_ABI void replaceKillInstruction(Register Reg, MachineInstr &OldMI,
-                                       MachineInstr &NewMI);
-
   /// addVirtualRegisterKilled - Add information about the fact that the
   /// specified register is killed after being used by the specified
   /// instruction. If AddIfNotFound is true, add a implicit operand if it's
@@ -310,14 +305,13 @@ public:
 };
 
 class LiveVariablesPrinterPass
-    : public PassInfoMixin<LiveVariablesPrinterPass> {
+    : public RequiredPassInfoMixin<LiveVariablesPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit LiveVariablesPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM);
-  static bool isRequired() { return true; }
 };
 
 class LLVM_ABI LiveVariablesWrapperPass : public MachineFunctionPass {

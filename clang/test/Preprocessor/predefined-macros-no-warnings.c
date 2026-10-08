@@ -97,7 +97,7 @@
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple ppc64le-openbsd
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple nvptx
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple nvptx64
-// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple amdgcn
+// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple amdgpu
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple r600
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple riscv32
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple riscv32-linux

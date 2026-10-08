@@ -314,7 +314,7 @@ CharSourceRange getFullRange(const Decl *D,
   const auto &SM = D->getASTContext().getSourceManager();
   SourceRange Full(SM.getExpansionLoc(D->getBeginLoc()), getLocForEndOfDecl(D));
   // Expand to comments that are associated with the Decl.
-  if (const auto *Comment = D->getASTContext().getRawCommentForDeclNoCache(D)) {
+  if (const auto *Comment = D->getASTContext().getRawCommentNoCache(D)) {
     if (SM.isBeforeInTranslationUnit(Full.getEnd(), Comment->getEndLoc()))
       Full.setEnd(Comment->getEndLoc());
     // FIXME: Don't delete a preceding comment, if there are no other entities

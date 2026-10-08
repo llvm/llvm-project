@@ -64,7 +64,7 @@ for.cond.cleanup:
 define void @bug53942_foo(i32 noundef %n, ptr noalias nocapture noundef writeonly %A, ptr noalias nocapture noundef %B) {
 ; CHECK-LABEL: 'bug53942_foo'
 ; CHECK-NEXT:  Src: %.pre = load double, ptr %B, align 8 --> Dst: %.pre = load double, ptr %B, align 8
-; CHECK-NEXT:    da analyze - consistent input [S]!
+; CHECK-NEXT:    da analyze - input [S]!
 ; CHECK-NEXT:  Src: %.pre = load double, ptr %B, align 8 --> Dst: store double %.pre, ptr %arrayidx2, align 8
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store double %.pre, ptr %arrayidx2, align 8 --> Dst: store double %.pre, ptr %arrayidx2, align 8

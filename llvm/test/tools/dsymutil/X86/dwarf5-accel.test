@@ -12,7 +12,8 @@
 
 ## $ clang -gdwarf-5 dwarf5-accel.cpp -c -o dwarf5-accel.o
 
-#RUN: dsymutil -accelerator=Dwarf -oso-prepend-path %p/Inputs -y %s -o %t.dSYM
+#RUN: dsymutil --linker classic -accelerator=Dwarf -oso-prepend-path %p/Inputs -y %s -o %t.dSYM
+#RUN: dsymutil --linker parallel -accelerator=Dwarf -oso-prepend-path %p/Inputs -y %s -o %t.dSYM
 #RUN: llvm-dwarfdump --verify  %t.dSYM | FileCheck %s --check-prefix VERIFY
 #RUN: llvm-dwarfdump -a --verbose  %t.dSYM | FileCheck %s
 

@@ -7,7 +7,7 @@
 
 ## Test implicit trace file name
 # RUN: %lld --time-trace --time-trace-granularity=0 -o %t1.macho %t.o
-# RUN: cat %t1.macho.time-trace \
+# RUN: cat %t1.macho.time-trace.json \
 # RUN:   | %python -c 'import json, sys; json.dump(json.loads(sys.stdin.read()), sys.stdout, sort_keys=True, indent=2)' \
 # RUN:   | FileCheck %s
 

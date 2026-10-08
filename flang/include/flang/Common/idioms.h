@@ -26,7 +26,6 @@
 #include "enum-class.h"
 #include "variant.h"
 #include "visit.h"
-#include <array>
 #include <functional>
 #include <list>
 #include <memory>

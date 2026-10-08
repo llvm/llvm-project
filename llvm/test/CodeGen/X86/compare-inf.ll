@@ -9,7 +9,7 @@ declare void @f() nounwind
 ; CHECK: ucomiss
 ; CHECK: jb
 define void @oeq_inff(float %x) nounwind {
-  %t0 = fcmp oeq float %x, 0x7FF0000000000000
+  %t0 = fcmp oeq float %x, +inf
   br i1 %t0, label %true, label %false
 
 true:
@@ -24,7 +24,7 @@ false:
 ; CHECK: ucomisd
 ; CHECK: jb
 define void @oeq_inf(double %x) nounwind {
-  %t0 = fcmp oeq double %x, 0x7FF0000000000000
+  %t0 = fcmp oeq double %x, +inf
   br i1 %t0, label %true, label %false
 
 true:
@@ -39,7 +39,7 @@ false:
 ; CHECK: ucomiss
 ; CHECK: jae
 define void @une_inff(float %x) nounwind {
-  %t0 = fcmp une float %x, 0x7FF0000000000000
+  %t0 = fcmp une float %x, +inf
   br i1 %t0, label %true, label %false
 
 true:
@@ -54,7 +54,7 @@ false:
 ; CHECK: ucomisd
 ; CHECK: jae
 define void @une_inf(double %x) nounwind {
-  %t0 = fcmp une double %x, 0x7FF0000000000000
+  %t0 = fcmp une double %x, +inf
   br i1 %t0, label %true, label %false
 
 true:
@@ -69,7 +69,7 @@ false:
 ; CHECK: ucomiss
 ; CHECK: jb
 define void @oeq_neg_inff(float %x) nounwind {
-  %t0 = fcmp oeq float %x, 0xFFF0000000000000
+  %t0 = fcmp oeq float %x, -inf
   br i1 %t0, label %true, label %false
 
 true:
@@ -84,7 +84,7 @@ false:
 ; CHECK: ucomisd
 ; CHECK: jb
 define void @oeq_neg_inf(double %x) nounwind {
-  %t0 = fcmp oeq double %x, 0xFFF0000000000000
+  %t0 = fcmp oeq double %x, -inf
   br i1 %t0, label %true, label %false
 
 true:
@@ -99,7 +99,7 @@ false:
 ; CHECK: ucomiss
 ; CHECK: jae
 define void @une_neg_inff(float %x) nounwind {
-  %t0 = fcmp une float %x, 0xFFF0000000000000
+  %t0 = fcmp une float %x, -inf
   br i1 %t0, label %true, label %false
 
 true:
@@ -114,7 +114,7 @@ false:
 ; CHECK: ucomisd
 ; CHECK: jae
 define void @une_neg_inf(double %x) nounwind {
-  %t0 = fcmp une double %x, 0xFFF0000000000000
+  %t0 = fcmp une double %x, -inf
   br i1 %t0, label %true, label %false
 
 true:

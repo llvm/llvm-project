@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/internal/clc.h>
-#include <clc/relational/relational.h>
+#include "clc/internal/clc.h"
+#include "clc/relational/relational.h"
 
 #define _CLC_RELATIONAL_OP(X, Y) (X) != (Y)
 

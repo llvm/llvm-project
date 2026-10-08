@@ -21,9 +21,9 @@
 
 // CK1-LABEL: @.__omp_offloading_{{.*}}implicit_present_scalar{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
-// CK1-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 4]
+// CK1-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 4, i64 0]
 // Map types: OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT | OMP_MAP_PRESENT = 4640
-// CK1-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 4640]
+// CK1-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 4640, i64 288]
 
 // CK1-LABEL: implicit_present_scalar{{.*}}(
 void implicit_present_scalar(int a) {
@@ -66,9 +66,9 @@ void implicit_present_scalar(int a) {
 
 // CK2-LABEL: @.__omp_offloading_{{.*}}implicit_present_aggregate{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
-// CK2-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
+// CK2-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 16, i64 0]
 // Map types: OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT | OMP_MAP_PRESENT = 4640
-// CK2-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 4640]
+// CK2-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 4640, i64 288]
 
 // CK2-LABEL: implicit_present_aggregate{{.*}}(
 void implicit_present_aggregate(int a) {
@@ -86,7 +86,7 @@ void implicit_present_aggregate(int a) {
 // CK2-DAG: store ptr [[DECL:%[^,]+]], ptr [[BP1]]
 // CK2-DAG: store ptr [[DECL]], ptr [[P1]]
 
-// CK2: call void [[KERNEL:@.+]](ptr [[DECL]])
+// CK2: call void [[KERNEL:@.+]](ptr [[DECL]], ptr null)
 #pragma omp target defaultmap(present \
                               : aggregate)
   {
@@ -117,9 +117,9 @@ void implicit_present_aggregate(int a) {
 
 // CK3-LABEL: @.__omp_offloading_{{.*}}explicit_present_pointer{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
-// CK3: [[SIZE:@.+]] = private {{.*}}constant [1 x i64] [i64 {{8|4}}]
+// CK3: [[SIZE:@.+]] = private {{.*}}constant [2 x i64] [i64 {{8|4}}, i64 0]
 // Map types: OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT | OMP_MAP_PRESENT = 4640
-// CK3: [[MTYPE:@.+]] = private {{.*}}constant [1 x i64] [i64 4640]
+// CK3: [[MTYPE:@.+]] = private {{.*}}constant [2 x i64] [i64 4640, i64 288]
 
 // CK3-LABEL: explicit_present_pointer{{.*}}(
 void explicit_present_pointer() {
@@ -165,9 +165,9 @@ void explicit_present_pointer() {
 
 // CK4-LABEL: @.__omp_offloading_{{.*}}implicit_present_double_complex{{.*}}.region_id = weak constant i8 0
 
-// CK4-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
+// CK4-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 16, i64 0]
 // Map types: OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT | OMP_MAP_PRESENT = 4640
-// CK4-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 4640]
+// CK4-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 4640, i64 288]
 
 // CK4-LABEL: implicit_present_double_complex{{.*}}(
 void implicit_present_double_complex (int a){
@@ -185,7 +185,7 @@ void implicit_present_double_complex (int a){
 // CK4-DAG: store ptr [[PTR:%[^,]+]], ptr [[BP1]]
 // CK4-DAG: store ptr [[PTR]], ptr [[P1]]
 
-// CK4: call void [[KERNEL:@.+]](ptr [[PTR]])
+// CK4: call void [[KERNEL:@.+]](ptr [[PTR]], ptr null)
 #pragma omp target defaultmap(present \
                               : scalar)
   {
@@ -193,7 +193,7 @@ void implicit_present_double_complex (int a){
   }
 }
 
-// CK4: define internal void [[KERNEL]](ptr {{.*}}[[ARG:%.+]])
+// CK4: define internal void [[KERNEL]](ptr {{.*}}[[ARG:%.+]], ptr {{[^)]*}})
 // CK4: [[ADDR:%.+]] = alloca ptr,
 // CK4: store ptr [[ARG]], ptr [[ADDR]],
 // CK4: [[REF:%.+]] = load ptr, ptr [[ADDR]],

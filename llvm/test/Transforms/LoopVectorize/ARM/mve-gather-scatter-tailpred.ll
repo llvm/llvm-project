@@ -9,7 +9,7 @@ define void @test_stride1_4i32(ptr readonly %data, ptr noalias nocapture %dst, i
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N:%.*]], 3
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -31,7 +31,7 @@ define void @test_stride1_4i32(ptr readonly %data, ptr noalias nocapture %dst, i
 ;
 entry:
   br label %for.body
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.023 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %mul = mul nuw nsw i32 %i.023, 1
   %add5 = add nuw nsw i32 %mul, 2
@@ -43,7 +43,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %inc = add nuw nsw i32 %i.023, 1
   %exitcond.not = icmp eq i32 %inc, %n
   br i1 %exitcond.not, label %end, label %for.body
-end:                                 ; preds = %end, %entry
+end:
   ret void
 }
 
@@ -53,18 +53,17 @@ define void @test_stride-1_4i32(ptr readonly %data, ptr noalias nocapture %dst, 
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N:%.*]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i32 [[INDEX]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw i32 2, [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[DATA:%.*]], i32 [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i32 -3
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP5]], align 4
-; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i32> [[WIDE_LOAD]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> splat (i32 5), [[REVERSE]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> splat (i32 5), [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -93,7 +92,7 @@ define void @test_stride-1_4i32(ptr readonly %data, ptr noalias nocapture %dst, 
 ;
 entry:
   br label %for.body
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.023 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %mul = mul nuw nsw i32 %i.023, -1
   %add5 = add nuw nsw i32 %mul, 2
@@ -105,7 +104,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %inc = add nuw nsw i32 %i.023, 1
   %exitcond.not = icmp eq i32 %inc, %n
   br i1 %exitcond.not, label %end, label %for.body
-end:                                 ; preds = %end, %entry
+end:
   ret void
 }
 
@@ -116,7 +115,7 @@ define void @test_stride2_4i32(ptr readonly %data, ptr noalias nocapture %dst, i
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[N:%.*]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i32 4, i32 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[TMP1]]
@@ -156,7 +155,7 @@ define void @test_stride2_4i32(ptr readonly %data, ptr noalias nocapture %dst, i
 ;
 entry:
   br label %for.body
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.023 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %mul = mul nuw nsw i32 %i.023, 2
   %add5 = add nuw nsw i32 %mul, 2
@@ -168,7 +167,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %inc = add nuw nsw i32 %i.023, 1
   %exitcond.not = icmp eq i32 %inc, %n
   br i1 %exitcond.not, label %end, label %for.body
-end:                                 ; preds = %end, %entry
+end:
   ret void
 }
 
@@ -178,7 +177,7 @@ define void @test_stride3_4i32(ptr readonly %data, ptr noalias nocapture %dst, i
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N:%.*]], 3
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -193,7 +192,7 @@ define void @test_stride3_4i32(ptr readonly %data, ptr noalias nocapture %dst, i
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP4]], ptr align 4 [[TMP5]], <4 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       middle.block:
@@ -203,7 +202,7 @@ define void @test_stride3_4i32(ptr readonly %data, ptr noalias nocapture %dst, i
 ;
 entry:
   br label %for.body
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.023 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %mul = mul nuw nsw i32 %i.023, 3
   %add5 = add nuw nsw i32 %mul, 2
@@ -215,7 +214,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %inc = add nuw nsw i32 %i.023, 1
   %exitcond.not = icmp eq i32 %inc, %n
   br i1 %exitcond.not, label %end, label %for.body
-end:                                 ; preds = %end, %entry
+end:
   ret void
 }
 
@@ -225,7 +224,7 @@ define void @test_stride4_4i32(ptr readonly %data, ptr noalias nocapture %dst, i
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N:%.*]], 3
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -240,7 +239,7 @@ define void @test_stride4_4i32(ptr readonly %data, ptr noalias nocapture %dst, i
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP4]], ptr align 4 [[TMP5]], <4 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
@@ -250,7 +249,7 @@ define void @test_stride4_4i32(ptr readonly %data, ptr noalias nocapture %dst, i
 ;
 entry:
   br label %for.body
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.023 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %mul = mul nuw nsw i32 %i.023, 4
   %add5 = add nuw nsw i32 %mul, 2
@@ -262,7 +261,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %inc = add nuw nsw i32 %i.023, 1
   %exitcond.not = icmp eq i32 %inc, %n
   br i1 %exitcond.not, label %end, label %for.body
-end:                                 ; preds = %end, %entry
+end:
   ret void
 }
 
@@ -275,7 +274,7 @@ define void @test_stride_loopinvar_4i32(ptr readonly %data, ptr noalias nocaptur
 ; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N:%.*]], 3
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -311,7 +310,7 @@ define void @test_stride_loopinvar_4i32(ptr readonly %data, ptr noalias nocaptur
 ;
 entry:
   br label %for.body
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.023 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %mul = mul nuw nsw i32 %i.023, %stride
   %add5 = add nuw nsw i32 %mul, 2
@@ -323,7 +322,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %inc = add nuw nsw i32 %i.023, 1
   %exitcond.not = icmp eq i32 %inc, %n
   br i1 %exitcond.not, label %end, label %for.body
-end:                                 ; preds = %end, %entry
+end:
   ret void
 }
 
@@ -333,9 +332,9 @@ define void @test_stride_noninvar_4i32(ptr readonly %data, ptr noalias nocapture
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N:%.*]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[N_VEC]], 8
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[N_VEC]], 3
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i32 3, [[TMP0]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -380,7 +379,7 @@ define void @test_stride_noninvar_4i32(ptr readonly %data, ptr noalias nocapture
 ;
 entry:
   br label %for.body
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.023 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %stride = phi i32 [ %next.stride, %for.body ], [ 3, %entry ]
   %mul = mul nuw nsw i32 %i.023, %stride
@@ -394,7 +393,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %next.stride = add nuw nsw i32 %stride, 8
   %exitcond.not = icmp eq i32 %inc, %n
   br i1 %exitcond.not, label %end, label %for.body
-end:                                 ; preds = %end, %entry
+end:
   ret void
 }
 
@@ -421,7 +420,7 @@ define void @test_stride_noninvar2_4i32(ptr readonly %data, ptr noalias nocaptur
 ;
 entry:
   br label %for.body
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.023 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %stride = phi i32 [ %next.stride, %for.body ], [ 3, %entry ]
   %mul = mul nuw nsw i32 %i.023, %stride
@@ -435,7 +434,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %next.stride = mul nuw nsw i32 %stride, 8
   %exitcond.not = icmp eq i32 %inc, %n
   br i1 %exitcond.not, label %end, label %for.body
-end:                                 ; preds = %end, %entry
+end:
   ret void
 }
 
@@ -445,7 +444,7 @@ define void @test_stride_noninvar3_4i32(ptr readonly %data, ptr noalias nocaptur
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N:%.*]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[N_VEC]], [[X:%.*]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i32 3, [[TMP0]]
@@ -499,7 +498,7 @@ define void @test_stride_noninvar3_4i32(ptr readonly %data, ptr noalias nocaptur
 ;
 entry:
   br label %for.body
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.023 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %stride = phi i32 [ %next.stride, %for.body ], [ 3, %entry ]
   %mul = mul nuw nsw i32 %i.023, %stride
@@ -513,12 +512,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %next.stride = add nuw nsw i32 %stride, %x
   %exitcond.not = icmp eq i32 %inc, %n
   br i1 %exitcond.not, label %end, label %for.body
-end:                                 ; preds = %end, %entry
+end:
   ret void
 }
 
-declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
-declare <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x i32>)
-declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32)
-declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, i32, <4 x i1>, <4 x i32>)
-declare void @llvm.masked.scatter.v4i32.v4p0(<4 x i32>, <4 x ptr>, i32, <4 x i1>)

@@ -27,7 +27,7 @@
 #define LIBC_TYPES_HAS_CFLOAT128
 #endif
 #elif defined(__GNUC__)
-#if (defined(__STDC_IEC_60559_COMPLEX__) || defined(__SIZEOF_FLOAT128__)) &&   \
+#if (defined(__STDC_IEC_60559_COMPLEX__) && defined(__SIZEOF_FLOAT128__)) &&   \
     (__GNUC__ >= 13 || (!defined(__cplusplus)))
 #define LIBC_TYPES_HAS_CFLOAT128
 #endif

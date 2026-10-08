@@ -8,7 +8,7 @@ define void @test(ptr %p, i32 %index) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[INDEX:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[INDEX]] to i64
-; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[P]], i64 [[TMP1]]
+; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr [4 x i8], ptr [[P]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[ADDR]], align 4
 ; CHECK-NEXT:    call void @use(i32 [[VAL]])
 ; CHECK-NEXT:    ret void
@@ -23,7 +23,7 @@ define void @test2(ptr %p, i32 %index) {
 ; CHECK-LABEL: define void @test2(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[INDEX:%.*]]) {
 ; CHECK-NEXT:    [[I:%.*]] = zext i32 [[INDEX]] to i64
-; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[P]], i64 [[I]]
+; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr [4 x i8], ptr [[P]], i64 [[I]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[ADDR]], align 4
 ; CHECK-NEXT:    call void @use(i32 [[VAL]])
 ; CHECK-NEXT:    ret void
@@ -43,7 +43,7 @@ define void @test3(ptr %p, i32 %index) {
 ; CHECK-NEXT:    [[ADDR_FIXED:%.*]] = getelementptr i8, ptr [[P]], i64 352
 ; CHECK-NEXT:    [[VAL_FIXED:%.*]] = load i32, ptr [[ADDR_FIXED]], align 4, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[VAL_FIXED]] to i64
-; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[ADDR_BEGIN]], i64 [[TMP1]]
+; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr [4 x i8], ptr [[ADDR_BEGIN]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[ADDR]], align 4
 ; CHECK-NEXT:    call void @use(i32 [[VAL]])
 ; CHECK-NEXT:    ret void
@@ -64,7 +64,7 @@ define void @test4(ptr %p, i32 %index) {
 ; CHECK-NEXT:    [[ADDR_FIXED:%.*]] = getelementptr i8, ptr [[P]], i64 352
 ; CHECK-NEXT:    [[VAL_FIXED:%.*]] = load i32, ptr [[ADDR_FIXED]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[I:%.*]] = zext nneg i32 [[VAL_FIXED]] to i64
-; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[ADDR_BEGIN]], i64 [[I]]
+; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr [4 x i8], ptr [[ADDR_BEGIN]], i64 [[I]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[ADDR]], align 4
 ; CHECK-NEXT:    call void @use(i32 [[VAL]])
 ; CHECK-NEXT:    ret void

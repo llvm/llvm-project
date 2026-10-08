@@ -39,22 +39,24 @@ class TestReporter : public benchmark::ConsoleReporter {
   std::vector<std::string> matched_functions;
 };
 
-}  // end namespace
-
-static void BM_NotChosen(benchmark::State& state) {
+void BM_NotChosen(benchmark::State& state) {
   assert(false && "SHOULD NOT BE CALLED");
   for (auto _ : state) {
   }
 }
 BENCHMARK(BM_NotChosen);
 
-static void BM_Chosen(benchmark::State& state) {
+void BM_Chosen(benchmark::State& state) {
   for (auto _ : state) {
   }
 }
 BENCHMARK(BM_Chosen);
 
+}  // end namespace
+
 int main(int argc, char** argv) {
+  benchmark::MaybeReenterWithoutASLR(argc, argv);
+
   const std::string flag = "BM_NotChosen";
 
   // Verify that argv specify --benchmark_filter=BM_NotChosen.

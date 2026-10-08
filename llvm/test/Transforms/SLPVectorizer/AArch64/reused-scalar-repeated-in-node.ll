@@ -24,57 +24,56 @@ define void @test() {
 ; CHECK-NEXT:    [[I74:%.*]] = load float, ptr poison, align 4
 ; CHECK-NEXT:    [[I75:%.*]] = load float, ptr poison, align 16
 ; CHECK-NEXT:    [[I76:%.*]] = load float, ptr poison, align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x float> poison, float [[I76]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x float> [[TMP1]], float [[I75]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <16 x float> [[TMP2]], float [[I74]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <16 x float> [[TMP3]], float [[I73]], i32 3
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <16 x float> [[TMP4]], float [[I71]], i32 4
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <16 x float> [[TMP5]], float [[I70]], i32 5
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <16 x float> [[TMP6]], float [[I68]], i32 6
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <16 x float> [[TMP7]], float [[I66]], i32 7
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <16 x float> [[TMP8]], float [[I72]], i32 13
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <16 x float> [[TMP9]], float [[I67]], i32 14
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <16 x float> [[TMP10]], float [[I69]], i32 15
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x float> poison, float [[I76]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x float> [[TMP1]], float [[I75]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <16 x float> [[TMP2]], float [[I74]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <16 x float> [[TMP3]], float [[I73]], i64 3
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <16 x float> [[TMP4]], float [[I71]], i64 4
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <16 x float> [[TMP5]], float [[I70]], i64 5
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <16 x float> [[TMP6]], float [[I68]], i64 6
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <16 x float> [[TMP7]], float [[I66]], i64 7
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <16 x float> [[TMP8]], float [[I72]], i64 13
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <16 x float> [[TMP9]], float [[I67]], i64 14
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <16 x float> [[TMP10]], float [[I69]], i64 15
 ; CHECK-NEXT:    br i1 poison, label %[[BB167:.*]], label %[[BB77:.*]]
 ; CHECK:       [[BB77]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <16 x float> [[TMP11]], <16 x float> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 14, i32 15, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <8 x float> poison, float [[I70]], i32 0
-; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <8 x float> [[TMP12]], <8 x float> [[TMP13]], <8 x i32> <i32 8, i32 poison, i32 poison, i32 poison, i32 4, i32 5, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x float> poison, float [[I68]], i32 0
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <2 x float> [[TMP15]], float [[I66]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <8 x float> poison, float [[I66]], i64 1
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <8 x float> [[TMP12]], float [[I70]], i64 2
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <8 x float> [[TMP13]], float [[I68]], i64 3
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <8 x float> [[TMP14]], float [[I67]], i64 6
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <8 x float> [[TMP15]], float [[I69]], i64 7
 ; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <16 x float> [[TMP0]], <16 x float> poison, <16 x i32> <i32 poison, i32 poison, i32 3, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <16 x float> [[TMP20]], <16 x float> [[TMP0]], <16 x i32> <i32 poison, i32 poison, i32 2, i32 3, i32 18, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 19, i32 poison, i32 poison>
 ; CHECK-NEXT:    br label %[[BB78:.*]]
 ; CHECK:       [[BB78]]:
-; CHECK-NEXT:    [[TMP22:%.*]] = phi <8 x float> [ [[TMP14]], %[[BB77]] ], [ [[TMP31:%.*]], %[[BB78]] ]
-; CHECK-NEXT:    [[TMP32:%.*]] = phi <2 x float> [ [[TMP16]], %[[BB77]] ], [ [[TMP37:%.*]], %[[BB78]] ]
-; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <8 x float> [[TMP22]], <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 1, i32 0, i32 3, i32 1, i32 3, i32 5, i32 3, i32 1, i32 0, i32 4, i32 5, i32 5>
-; CHECK-NEXT:    [[TMP38:%.*]] = shufflevector <8 x float> [[TMP22]], <8 x float> poison, <8 x i32> <i32 2, i32 poison, i32 0, i32 poison, i32 5, i32 4, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <2 x float> [[TMP32]], <2 x float> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP41:%.*]] = shufflevector <8 x float> [[TMP38]], <8 x float> [[TMP23]], <8 x i32> <i32 0, i32 9, i32 2, i32 8, i32 4, i32 5, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <8 x float> [[TMP41]], <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 1, i32 0, i32 3, i32 1, i32 3, i32 5, i32 3, i32 1, i32 0, i32 4, i32 5, i32 5>
+; CHECK-NEXT:    [[TMP19:%.*]] = phi <8 x float> [ [[TMP16]], %[[BB77]] ], [ [[TMP31:%.*]], %[[BB78]] ]
+; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <8 x float> [[TMP19]], <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 7, i32 6, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <16 x float> [[TMP22]], <16 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 1, i32 0, i32 3, i32 1, i32 3, i32 5, i32 3, i32 1, i32 0, i32 4, i32 5, i32 5>
 ; CHECK-NEXT:    [[TMP26:%.*]] = fmul fast <16 x float> [[TMP24]], [[TMP21]]
+; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <16 x float> [[TMP22]], <16 x float> poison, <6 x i32> <i32 2, i32 poison, i32 0, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP32:%.*]] = shufflevector <8 x float> [[TMP19]], <8 x float> poison, <6 x i32> <i32 poison, i32 4, i32 poison, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP37:%.*]] = shufflevector <6 x float> [[TMP23]], <6 x float> [[TMP32]], <6 x i32> <i32 0, i32 7, i32 2, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <6 x float> [[TMP37]], <6 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 1, i32 0, i32 3, i32 1, i32 3, i32 5, i32 3, i32 1, i32 0, i32 4, i32 5, i32 5>
 ; CHECK-NEXT:    [[TMP27:%.*]] = fmul fast <16 x float> [[TMP25]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = fadd fast <16 x float> [[TMP27]], [[TMP26]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = fadd fast <16 x float> [[TMP28]], poison
 ; CHECK-NEXT:    [[TMP30:%.*]] = fadd fast <16 x float> [[TMP29]], poison
-; CHECK-NEXT:    [[TMP31]] = shufflevector <16 x float> [[TMP30]], <16 x float> poison, <8 x i32> <i32 5, i32 11, i32 12, i32 10, i32 14, i32 15, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP37]] = shufflevector <16 x float> [[TMP30]], <16 x float> poison, <2 x i32> <i32 6, i32 7>
+; CHECK-NEXT:    [[TMP31]] = shufflevector <16 x float> [[TMP30]], <16 x float> poison, <8 x i32> <i32 12, i32 7, i32 5, i32 6, i32 11, i32 10, i32 14, i32 15>
 ; CHECK-NEXT:    br i1 poison, label %[[BB78]], label %[[BB167]]
 ; CHECK:       [[BB167]]:
-; CHECK-NEXT:    [[TMP35:%.*]] = phi <16 x float> [ [[TMP11]], %[[BB64]] ], [ [[TMP30]], %[[BB78]] ]
-; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <16 x float> [[TMP35]], i32 14
+; CHECK-NEXT:    [[TMP36:%.*]] = phi <16 x float> [ [[TMP11]], %[[BB64]] ], [ [[TMP30]], %[[BB78]] ]
+; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <16 x float> [[TMP36]], i64 14
 ; CHECK-NEXT:    store float [[TMP33]], ptr poison, align 1
-; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <16 x float> [[TMP35]], i32 13
+; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <16 x float> [[TMP36]], i64 13
 ; CHECK-NEXT:    store float [[TMP34]], ptr poison, align 1
-; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <16 x float> [[TMP35]], i32 15
+; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <16 x float> [[TMP36]], i64 15
 ; CHECK-NEXT:    br i1 poison, label %[[BB186:.*]], label %[[BB184:.*]]
 ; CHECK:       [[BB184]]:
 ; CHECK-NEXT:    br label %[[BB185:.*]]
 ; CHECK:       [[BB185]]:
 ; CHECK-NEXT:    br i1 poison, label %[[BB185]], label %[[BB186]]
 ; CHECK:       [[BB186]]:
-; CHECK-NEXT:    [[I187:%.*]] = phi nsz float [ [[TMP36]], %[[BB167]] ], [ poison, %[[BB185]] ]
+; CHECK-NEXT:    [[I187:%.*]] = phi nsz float [ [[TMP35]], %[[BB167]] ], [ poison, %[[BB185]] ]
 ; CHECK-NEXT:    ret void
 ;
 entry:

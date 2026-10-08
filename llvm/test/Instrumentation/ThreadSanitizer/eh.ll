@@ -10,7 +10,7 @@ declare void @cannot_throw() nounwind
 define i32 @func1() sanitize_thread {
 ; CHECK-EXC-LABEL: define i32 @func1
 ; CHECK-EXC-SAME: () #[[ATTR1:[0-9]+]] personality ptr @__gcc_personality_v0 {
-; CHECK-EXC-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-EXC-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-EXC-NEXT:    call void @__tsan_func_entry(ptr [[TMP1]])
 ; CHECK-EXC-NEXT:    invoke void @can_throw()
 ; CHECK-EXC-NEXT:    to label [[DOTNOEXC:%.*]] unwind label [[TSAN_CLEANUP:%.*]]
@@ -25,7 +25,7 @@ define i32 @func1() sanitize_thread {
 ;
 ; CHECK-NOEXC-LABEL: define i32 @func1
 ; CHECK-NOEXC-SAME: () #[[ATTR1:[0-9]+]] {
-; CHECK-NOEXC-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NOEXC-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NOEXC-NEXT:    call void @__tsan_func_entry(ptr [[TMP1]])
 ; CHECK-NOEXC-NEXT:    call void @can_throw()
 ; CHECK-NOEXC-NEXT:    call void @__tsan_func_exit()
@@ -38,7 +38,7 @@ define i32 @func1() sanitize_thread {
 define i32 @func2() sanitize_thread {
 ; CHECK-LABEL: define i32 @func2
 ; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    call void @__tsan_func_entry(ptr [[TMP1]])
 ; CHECK-NEXT:    call void @cannot_throw()
 ; CHECK-NEXT:    call void @__tsan_func_exit()
@@ -51,7 +51,7 @@ define i32 @func2() sanitize_thread {
 define i32 @func3(ptr %p) sanitize_thread {
 ; CHECK-LABEL: define i32 @func3
 ; CHECK-SAME: (ptr [[P:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    call void @__tsan_func_entry(ptr [[TMP1]])
 ; CHECK-NEXT:    call void @__tsan_read4(ptr [[P]])
 ; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]], align 4
@@ -65,7 +65,7 @@ define i32 @func3(ptr %p) sanitize_thread {
 define i32 @func4() sanitize_thread nounwind {
 ; CHECK-LABEL: define i32 @func4
 ; CHECK-SAME: () #[[ATTR2:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    call void @__tsan_func_entry(ptr [[TMP1]])
 ; CHECK-NEXT:    call void @can_throw()
 ; CHECK-NEXT:    call void @__tsan_func_exit()

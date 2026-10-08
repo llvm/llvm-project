@@ -17,6 +17,9 @@ func.func @core(%in: i8) {
   %d = smt.declare_fun {smt.some_attr} : !smt.sort<"uninterpreted_sort">
   // CHECK: smt.declare_fun {smt.some_attr} : !smt.func<(!smt.int, !smt.bool) !smt.bool>
   %e = smt.declare_fun {smt.some_attr} : !smt.func<(!smt.int, !smt.bool) !smt.bool>
+  // CHECK: smt.declare_fun {smt.some_attr} : !smt.func<() !smt.bool>
+  %f = smt.declare_fun {smt.some_attr} : !smt.func<() !smt.bool>
+
 
   // CHECK: smt.constant true {smt.some_attr}
   %true = smt.constant true {smt.some_attr}
@@ -104,6 +107,9 @@ func.func @core(%in: i8) {
 
   // CHECK: smt.apply_func %{{.*}}(%{{.*}}, %{{.*}}) {smt.some_attr} : !smt.func<(!smt.int, !smt.bool) !smt.bool>
   %11 = smt.apply_func %e(%c, %a) {smt.some_attr} : !smt.func<(!smt.int, !smt.bool) !smt.bool>
+
+  // CHECK: smt.apply_func %{{.*}}() {smt.some_attr} : !smt.func<() !smt.bool>
+  %12 = smt.apply_func %f() {smt.some_attr} : !smt.func<() !smt.bool>
 
   return
 }

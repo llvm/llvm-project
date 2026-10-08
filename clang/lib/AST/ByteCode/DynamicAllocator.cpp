@@ -8,7 +8,6 @@
 
 #include "DynamicAllocator.h"
 #include "InterpBlock.h"
-#include "InterpState.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -27,15 +26,7 @@ void DynamicAllocator::cleanup() {
       assert(!B->isDead());
       assert(B->isInitialized());
       B->invokeDtor();
-
-      if (B->hasPointers()) {
-        while (B->Pointers) {
-          Pointer *Next = B->Pointers->asBlockPointer().Next;
-          B->Pointers->BS.Pointee = nullptr;
-          B->Pointers = Next;
-        }
-        B->Pointers = nullptr;
-      }
+      B->removePointers();
     }
   }
 
@@ -47,9 +38,10 @@ Block *DynamicAllocator::allocate(const Expr *Source, PrimType T,
                                   Form AllocForm) {
   // Create a new descriptor for an array of the specified size and
   // element type.
-  const Descriptor *D = allocateDescriptor(
-      Source, T, Descriptor::InlineDescMD, NumElements, /*IsConst=*/false,
-      /*IsTemporary=*/false, /*IsMutable=*/false);
+  const Descriptor *D =
+      allocateDescriptor(Source, nullptr, T, NumElements, /*IsConst=*/false,
+                         /*IsTemporary=*/false, /*IsMutable=*/false,
+                         /*IsVolatile=*/false);
 
   return allocate(D, EvalID, AllocForm);
 }
@@ -57,13 +49,11 @@ Block *DynamicAllocator::allocate(const Expr *Source, PrimType T,
 Block *DynamicAllocator::allocate(const Descriptor *ElementDesc,
                                   size_t NumElements, unsigned EvalID,
                                   Form AllocForm) {
-  assert(ElementDesc->getMetadataSize() == 0);
   // Create a new descriptor for an array of the specified size and
   // element type.
   // FIXME: Pass proper element type.
   const Descriptor *D = allocateDescriptor(
-      ElementDesc->asExpr(), nullptr, ElementDesc, Descriptor::InlineDescMD,
-      NumElements,
+      ElementDesc->asExpr(), nullptr, ElementDesc, NumElements,
       /*IsConst=*/false, /*IsTemporary=*/false, /*IsMutable=*/false);
   return allocate(D, EvalID, AllocForm);
 }
@@ -79,12 +69,11 @@ Block *DynamicAllocator::allocate(const Descriptor *D, unsigned EvalID,
     return !Alloc.block()->hasPointers();
   });
 
-  auto Memory =
-      std::make_unique<std::byte[]>(sizeof(Block) + D->getAllocSize());
-  auto *B = new (Memory.get()) Block(EvalID, D, /*isStatic=*/false);
-  B->invokeCtor();
-
-  assert(D->getMetadataSize() == sizeof(InlineDescriptor));
+  auto Memory = std::make_unique<std::byte[]>(
+      sizeof(Block) + D->getAllocSize() + Block::InlineDescMD);
+  auto *B = new (Memory.get()) Block(EvalID, D, Block::InlineDescMD,
+                                     /*isStatic=*/false);
+  B->invokeCtorNoMemset();
   InlineDescriptor *ID = reinterpret_cast<InlineDescriptor *>(B->rawData());
   ID->Desc = D;
   ID->IsActive = true;
@@ -116,7 +105,7 @@ Block *DynamicAllocator::allocate(const Descriptor *D, unsigned EvalID,
 }
 
 bool DynamicAllocator::deallocate(const Expr *Source,
-                                  const Block *BlockToDelete, InterpState &S) {
+                                  const Block *BlockToDelete) {
   auto It = AllocationSites.find(Source);
   if (It == AllocationSites.end())
     return false;
@@ -129,7 +118,10 @@ bool DynamicAllocator::deallocate(const Expr *Source,
     return BlockToDelete == A.block();
   });
 
-  assert(AllocIt != Site.Allocations.end());
+  // The allocation site it fine, but this block doesn't belong to it. Must've
+  // already been deleted.
+  if (AllocIt == Site.Allocations.end())
+    return false;
 
   Block *B = AllocIt->block();
   assert(B->isInitialized());

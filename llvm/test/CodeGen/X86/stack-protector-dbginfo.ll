@@ -21,7 +21,7 @@ entry:
 define i32 @IgnoreIntrinsicTest() #1 {
 ; IGNORE_INTRIN: IgnoreIntrinsicTest:
   %1 = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata ptr %1, metadata !73, metadata !DIExpression()), !dbg !74
+  call void @llvm.dbg.declare(metadata ptr %1, metadata !73, metadata !DIExpression()), !dbg !75
   store volatile i32 1, ptr %1, align 4
   %2 = load volatile i32, ptr %1, align 4
   %3 = mul nsw i32 %2, 42

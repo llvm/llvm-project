@@ -78,7 +78,7 @@ body:             |
     ; CHECK-LABEL: name: main
     ; CHECK: %[[REG1:[0-9]+]]:gprc = LI 0
     ; CHECK: %[[REG2:[0-9]+]]:gprc = COPY %[[REG1]]
-    ; CHECK: %[[REG2]]:gprc = RLWIMI %[[REG2]], killed %2, 0, 0, 31
+    ; CHECK: %[[REG2]]:gprc = RLWIMI %[[REG2]], %2, 0, 0, 31
     %8 = RLWIMI %3, %4, 0, 0, 31
     STW %4, 0, %1 :: (store (s32) into %ir.0)
     %10 = EXTSW_32_64 %8

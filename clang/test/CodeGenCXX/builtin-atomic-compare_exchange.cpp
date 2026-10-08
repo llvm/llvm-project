@@ -43,7 +43,7 @@ struct S {
 // CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[TMP6]] to i8
 // CHECK-NEXT:    store i8 [[STOREDV]], ptr [[CMPXCHG_BOOL]], align 1
 // CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[CMPXCHG_BOOL]], align 1
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP7]] to i1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP7]], 0
 // CHECK-NEXT:    ret i1 [[LOADEDV]]
 //
 bool test_compare_exchange(_Atomic(S<3>)* a, S<3>* expected, S<3> desired) {
@@ -79,7 +79,7 @@ bool test_compare_exchange(_Atomic(S<3>)* a, S<3>* expected, S<3> desired) {
 // CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[TMP6]] to i8
 // CHECK-NEXT:    store i8 [[STOREDV]], ptr [[CMPXCHG_BOOL]], align 1
 // CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[CMPXCHG_BOOL]], align 1
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP7]] to i1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP7]], 0
 // CHECK-NEXT:    ret i1 [[LOADEDV]]
 //
 bool test_compare_exchange(_Atomic(S<4>)* a, S<4>* expected, S<4> desired) {
@@ -122,7 +122,7 @@ bool test_compare_exchange(_Atomic(S<4>)* a, S<4>* expected, S<4> desired) {
 // CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[TMP6]] to i8
 // CHECK-NEXT:    store i8 [[STOREDV]], ptr [[CMPXCHG_BOOL]], align 1
 // CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[CMPXCHG_BOOL]], align 1
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP7]] to i1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP7]], 0
 // CHECK-NEXT:    ret i1 [[LOADEDV]]
 //
 bool test_compare_exchange(_Atomic(S<6>)* a, S<6>* expected, S<6> desired) {

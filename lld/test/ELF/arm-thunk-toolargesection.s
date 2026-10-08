@@ -8,6 +8,8 @@
 // RUN: not ld.lld %t -o /dev/null 2>&1 | FileCheck %s
 // RUN: not ld.lld --be8 %t -o /dev/null 2>&1 | FileCheck %s
 
+// RUN: rm %t
+
  .syntax unified
  .balign 0x1000
  .thumb

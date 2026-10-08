@@ -782,20 +782,20 @@ define <4 x i32> @shuffle2src_v4i32(<4 x i32> %src1, <4 x i32> %src2, <4 x i32> 
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    mov r12, sp
 ; CHECK-NEXT:    vmov d6, r0, r1
-; CHECK-NEXT:    vldrw.u32 q2, [r12]
-; CHECK-NEXT:    vmov.i8 q0, #0x0
-; CHECK-NEXT:    vmov.i8 q1, #0xff
+; CHECK-NEXT:    vldrw.u32 q0, [r12]
+; CHECK-NEXT:    vmov.i8 q1, #0x0
+; CHECK-NEXT:    vmov.i8 q2, #0xff
 ; CHECK-NEXT:    vmov d7, r2, r3
-; CHECK-NEXT:    vcmp.i32 eq, q2, zr
+; CHECK-NEXT:    vcmp.i32 eq, q0, zr
 ; CHECK-NEXT:    add r0, sp, #32
-; CHECK-NEXT:    vpsel q2, q1, q0
+; CHECK-NEXT:    vpsel q0, q2, q1
 ; CHECK-NEXT:    vcmp.i32 eq, q3, zr
-; CHECK-NEXT:    vpsel q0, q1, q0
-; CHECK-NEXT:    vmov.f32 s9, s0
-; CHECK-NEXT:    vmov.f32 s11, s2
+; CHECK-NEXT:    vpsel q1, q2, q1
+; CHECK-NEXT:    vmov.f32 s1, s4
+; CHECK-NEXT:    vmov.f32 s3, s6
+; CHECK-NEXT:    vcmp.i32 ne, q0, zr
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    add r0, sp, #16
-; CHECK-NEXT:    vcmp.i32 ne, q2, zr
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    vpsel q0, q1, q0
 ; CHECK-NEXT:    vmov r0, r1, d0

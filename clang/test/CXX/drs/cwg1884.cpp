@@ -1,12 +1,12 @@
 // RUN: rm -rf %t
 // RUN: mkdir %t
 // RUN: split-file --leading-lines %s %t
-// RUN: %clang_cc1 -std=c++20 -pedantic-errors -fexceptions -fcxx-exceptions %t/cwg1884_A.cppm -triple x86_64-unknown-unknown -emit-module-interface -o %t/cwg1884_A.pcm
-// RUN: %clang_cc1 -std=c++20 -verify=since-cxx20 -pedantic-errors -fexceptions -fcxx-exceptions -triple x86_64-unknown-unknown %t/cwg1884.cpp -fmodule-file=cwg1884_A=%t/cwg1884_A.pcm
-// RUN: %clang_cc1 -std=c++23 -pedantic-errors -fexceptions -fcxx-exceptions %t/cwg1884_A.cppm -triple x86_64-unknown-unknown -emit-module-interface -o %t/cwg1884_A.pcm
-// RUN: %clang_cc1 -std=c++23 -verify=since-cxx20 -pedantic-errors -fexceptions -fcxx-exceptions -triple x86_64-unknown-unknown %t/cwg1884.cpp -fmodule-file=cwg1884_A=%t/cwg1884_A.pcm
-// RUN: %clang_cc1 -std=c++2c -pedantic-errors -fexceptions -fcxx-exceptions %t/cwg1884_A.cppm -triple x86_64-unknown-unknown -emit-module-interface -o %t/cwg1884_A.pcm
-// RUN: %clang_cc1 -std=c++2c -verify=since-cxx20 -pedantic-errors -fexceptions -fcxx-exceptions -triple x86_64-unknown-unknown %t/cwg1884.cpp -fmodule-file=cwg1884_A=%t/cwg1884_A.pcm
+// RUN: %clang_cc1 -std=c++20 -pedantic-errors -fexceptions -fcxx-exceptions -triple x86_64-unknown-unknown %t/cwg1884_A.cppm -emit-module-interface -o %t/cwg1884_A.pcm
+// RUN: %clang_cc1 -std=c++20 -pedantic-errors -fexceptions -fcxx-exceptions -triple x86_64-unknown-unknown %t/cwg1884.cpp -fmodule-file=cwg1884_A=%t/cwg1884_A.pcm -verify=since-cxx20
+// RUN: %clang_cc1 -std=c++23 -pedantic-errors -fexceptions -fcxx-exceptions -triple x86_64-unknown-unknown %t/cwg1884_A.cppm -emit-module-interface -o %t/cwg1884_A.pcm
+// RUN: %clang_cc1 -std=c++23 -pedantic-errors -fexceptions -fcxx-exceptions -triple x86_64-unknown-unknown %t/cwg1884.cpp -fmodule-file=cwg1884_A=%t/cwg1884_A.pcm -verify=since-cxx20
+// RUN: %clang_cc1 -std=c++2c -pedantic-errors -fexceptions -fcxx-exceptions -triple x86_64-unknown-unknown %t/cwg1884_A.cppm -emit-module-interface -o %t/cwg1884_A.pcm
+// RUN: %clang_cc1 -std=c++2c -pedantic-errors -fexceptions -fcxx-exceptions -triple x86_64-unknown-unknown %t/cwg1884.cpp -fmodule-file=cwg1884_A=%t/cwg1884_A.pcm -verify=since-cxx20
 
 // cwg1884: partial
 // Cases b11, e11, g3, g4 are problematic, but we handle the other 101 cases fine.

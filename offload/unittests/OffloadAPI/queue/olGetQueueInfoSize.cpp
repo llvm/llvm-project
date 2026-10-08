@@ -19,6 +19,12 @@ TEST_P(olGetQueueInfoSizeTest, SuccessDevice) {
   ASSERT_EQ(Size, sizeof(ol_device_handle_t));
 }
 
+TEST_P(olGetQueueInfoSizeTest, SuccessContext) {
+  size_t Size = 0;
+  ASSERT_SUCCESS(olGetQueueInfoSize(Queue, OL_QUEUE_INFO_CONTEXT, &Size));
+  ASSERT_EQ(Size, sizeof(ol_context_handle_t));
+}
+
 TEST_P(olGetQueueInfoSizeTest, SuccessEmpty) {
   size_t Size = 0;
   ASSERT_SUCCESS(olGetQueueInfoSize(Queue, OL_QUEUE_INFO_EMPTY, &Size));

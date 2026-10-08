@@ -6,18 +6,18 @@
 // CHECK-SAME: i32 noundef [[E:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[E_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store i32 [[E]], ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA2:![0-9]+]]
+// CHECK-NEXT:    store i32 [[E]], ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA6:![0-9]+]]
 // CHECK-NEXT:    br label %[[WHILE_COND:.*]]
 // CHECK:       [[WHILE_COND]]:
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
 // CHECK-NEXT:    [[TOBOOL_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[TOBOOL]], i1 true)
 // CHECK-NEXT:    br i1 [[TOBOOL_EXPVAL]], label %[[WHILE_BODY:.*]], label %[[WHILE_END:.*]]
 // CHECK:       [[WHILE_BODY]]:
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP1]], 1
-// CHECK-NEXT:    store i32 [[INC]], ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA2]]
-// CHECK-NEXT:    br label %[[WHILE_COND]], !llvm.loop [[LOOP6:![0-9]+]]
+// CHECK-NEXT:    store i32 [[INC]], ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA6]]
+// CHECK-NEXT:    br label %[[WHILE_COND]], !llvm.loop [[LOOP7:![0-9]+]]
 // CHECK:       [[WHILE_END]]:
 // CHECK-NEXT:    ret void
 //
@@ -29,18 +29,18 @@ void wl(int e){
 // CHECK-SAME: i32 noundef [[E:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[E_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store i32 [[E]], ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    store i32 [[E]], ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    br label %[[WHILE_COND:.*]]
 // CHECK:       [[WHILE_COND]]:
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
 // CHECK-NEXT:    [[TOBOOL_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[TOBOOL]], i1 false)
 // CHECK-NEXT:    br i1 [[TOBOOL_EXPVAL]], label %[[WHILE_BODY:.*]], label %[[WHILE_END:.*]]
 // CHECK:       [[WHILE_BODY]]:
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP1]], 1
-// CHECK-NEXT:    store i32 [[INC]], ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA2]]
-// CHECK-NEXT:    br label %[[WHILE_COND]], !llvm.loop [[LOOP9:![0-9]+]]
+// CHECK-NEXT:    store i32 [[INC]], ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA6]]
+// CHECK-NEXT:    br label %[[WHILE_COND]], !llvm.loop [[LOOP10:![0-9]+]]
 // CHECK:       [[WHILE_END]]:
 // CHECK-NEXT:    ret void
 //
@@ -52,13 +52,13 @@ void wu(int e){
 // CHECK-SAME: i32 noundef [[E:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[E_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store i32 [[E]], ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    store i32 [[E]], ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    br label %[[WHILE_BODY:.*]]
 // CHECK:       [[WHILE_BODY]]:
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    [[INC:%.*]] = add i32 [[TMP0]], 1
-// CHECK-NEXT:    store i32 [[INC]], ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA2]]
-// CHECK-NEXT:    br label %[[WHILE_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+// CHECK-NEXT:    store i32 [[INC]], ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA6]]
+// CHECK-NEXT:    br label %[[WHILE_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 //
 void w_branch_elided(unsigned e){
   // expected-warning@+2 {{attribute 'likely' has no effect when annotating an infinite loop}}
@@ -71,13 +71,13 @@ void w_branch_elided(unsigned e){
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[E_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store i32 [[E]], ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    store i32 [[E]], ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[I]]) #[[ATTR3:[0-9]+]]
-// CHECK-NEXT:    store i32 0, ptr [[I]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    store i32 0, ptr [[I]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    br label %[[FOR_COND:.*]]
 // CHECK:       [[FOR_COND]]:
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I]], align 4, !tbaa [[INT_TBAA2]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I]], align 4, !tbaa [[INT_TBAA6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP0]], [[TMP1]]
 // CHECK-NEXT:    [[CMP_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[CMP]], i1 true)
 // CHECK-NEXT:    br i1 [[CMP_EXPVAL]], label %[[FOR_BODY:.*]], label %[[FOR_COND_CLEANUP:.*]]
@@ -87,10 +87,10 @@ void w_branch_elided(unsigned e){
 // CHECK:       [[FOR_BODY]]:
 // CHECK-NEXT:    br label %[[FOR_INC:.*]]
 // CHECK:       [[FOR_INC]]:
-// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    [[INC:%.*]] = add i32 [[TMP2]], 1
-// CHECK-NEXT:    store i32 [[INC]], ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA2]]
-// CHECK-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP11:![0-9]+]]
+// CHECK-NEXT:    store i32 [[INC]], ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA6]]
+// CHECK-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP12:![0-9]+]]
 // CHECK:       [[FOR_END]]:
 // CHECK-NEXT:    ret void
 //
@@ -104,13 +104,13 @@ void fl(unsigned e)
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[E_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store i32 [[E]], ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    store i32 [[E]], ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[I]]) #[[ATTR3]]
-// CHECK-NEXT:    store i32 0, ptr [[I]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    store i32 0, ptr [[I]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    br label %[[FOR_COND:.*]]
 // CHECK:       [[FOR_COND]]:
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I]], align 4, !tbaa [[INT_TBAA2]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I]], align 4, !tbaa [[INT_TBAA6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP0]], [[TMP1]]
 // CHECK-NEXT:    [[CMP_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[CMP]], i1 false)
 // CHECK-NEXT:    br i1 [[CMP_EXPVAL]], label %[[FOR_BODY:.*]], label %[[FOR_COND_CLEANUP:.*]]
@@ -120,10 +120,10 @@ void fl(unsigned e)
 // CHECK:       [[FOR_BODY]]:
 // CHECK-NEXT:    br label %[[FOR_INC:.*]]
 // CHECK:       [[FOR_INC]]:
-// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP2]], 1
-// CHECK-NEXT:    store i32 [[INC]], ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA2]]
-// CHECK-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP12:![0-9]+]]
+// CHECK-NEXT:    store i32 [[INC]], ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA6]]
+// CHECK-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP13:![0-9]+]]
 // CHECK:       [[FOR_END]]:
 // CHECK-NEXT:    ret void
 //
@@ -137,7 +137,7 @@ void fu(int e)
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    br label %[[FOR_COND:.*]]
 // CHECK:       [[FOR_COND]]:
-// CHECK-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP13:![0-9]+]]
+// CHECK-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP14:![0-9]+]]
 //
 void f_branch_elided()
 {
@@ -152,23 +152,23 @@ void f_branch_elided()
 // CHECK-NEXT:    [[__BEGIN1:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[__END1:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store ptr [[E]], ptr [[E_ADDR]], align 8, !tbaa [[INTPTR_TBAA14:![0-9]+]]
+// CHECK-NEXT:    store ptr [[E]], ptr [[E_ADDR]], align 8, !tbaa [[INTPTR_TBAA15:![0-9]+]]
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[__RANGE1]]) #[[ATTR3]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[E_ADDR]], align 8, !tbaa [[INTPTR_TBAA14]], !nonnull [[META17:![0-9]+]], !align [[META18:![0-9]+]]
-// CHECK-NEXT:    store ptr [[TMP0]], ptr [[__RANGE1]], align 8, !tbaa [[INTPTR_TBAA14]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[E_ADDR]], align 8, !tbaa [[INTPTR_TBAA15]], !nonnull [[META18:![0-9]+]], !align [[META19:![0-9]+]]
+// CHECK-NEXT:    store ptr [[TMP0]], ptr [[__RANGE1]], align 8, !tbaa [[INTPTR_TBAA15]]
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[__BEGIN1]]) #[[ATTR3]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[__RANGE1]], align 8, !tbaa [[INTPTR_TBAA14]], !nonnull [[META17]], !align [[META18]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[__RANGE1]], align 8, !tbaa [[INTPTR_TBAA15]], !nonnull [[META18]], !align [[META19]]
 // CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [4 x i32], ptr [[TMP1]], i64 0, i64 0
-// CHECK-NEXT:    store ptr [[ARRAYDECAY]], ptr [[__BEGIN1]], align 8, !tbaa [[INTPTR_TBAA14]]
+// CHECK-NEXT:    store ptr [[ARRAYDECAY]], ptr [[__BEGIN1]], align 8, !tbaa [[INTPTR_TBAA15]]
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[__END1]]) #[[ATTR3]]
-// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[__RANGE1]], align 8, !tbaa [[INTPTR_TBAA14]], !nonnull [[META17]], !align [[META18]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[__RANGE1]], align 8, !tbaa [[INTPTR_TBAA15]], !nonnull [[META18]], !align [[META19]]
 // CHECK-NEXT:    [[ARRAYDECAY1:%.*]] = getelementptr inbounds [4 x i32], ptr [[TMP2]], i64 0, i64 0
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAYDECAY1]], i64 4
-// CHECK-NEXT:    store ptr [[ADD_PTR]], ptr [[__END1]], align 8, !tbaa [[INTPTR_TBAA14]]
+// CHECK-NEXT:    store ptr [[ADD_PTR]], ptr [[__END1]], align 8, !tbaa [[INTPTR_TBAA15]]
 // CHECK-NEXT:    br label %[[FOR_COND:.*]]
 // CHECK:       [[FOR_COND]]:
-// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[__BEGIN1]], align 8, !tbaa [[INTPTR_TBAA14]]
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[__END1]], align 8, !tbaa [[INTPTR_TBAA14]]
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[__BEGIN1]], align 8, !tbaa [[INTPTR_TBAA15]]
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[__END1]], align 8, !tbaa [[INTPTR_TBAA15]]
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[TMP3]], [[TMP4]]
 // CHECK-NEXT:    [[CMP_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[CMP]], i1 true)
 // CHECK-NEXT:    br i1 [[CMP_EXPVAL]], label %[[FOR_BODY:.*]], label %[[FOR_COND_CLEANUP:.*]]
@@ -179,16 +179,16 @@ void f_branch_elided()
 // CHECK-NEXT:    br label %[[FOR_END:.*]]
 // CHECK:       [[FOR_BODY]]:
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[I]]) #[[ATTR3]]
-// CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[__BEGIN1]], align 8, !tbaa [[INTPTR_TBAA14]]
-// CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4, !tbaa [[INT_TBAA2]]
-// CHECK-NEXT:    store i32 [[TMP6]], ptr [[I]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[__BEGIN1]], align 8, !tbaa [[INTPTR_TBAA15]]
+// CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4, !tbaa [[INT_TBAA6]]
+// CHECK-NEXT:    store i32 [[TMP6]], ptr [[I]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[I]]) #[[ATTR3]]
 // CHECK-NEXT:    br label %[[FOR_INC:.*]]
 // CHECK:       [[FOR_INC]]:
-// CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[__BEGIN1]], align 8, !tbaa [[INTPTR_TBAA14]]
+// CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[__BEGIN1]], align 8, !tbaa [[INTPTR_TBAA15]]
 // CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP7]], i32 1
-// CHECK-NEXT:    store ptr [[INCDEC_PTR]], ptr [[__BEGIN1]], align 8, !tbaa [[INTPTR_TBAA14]]
-// CHECK-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP19:![0-9]+]]
+// CHECK-NEXT:    store ptr [[INCDEC_PTR]], ptr [[__BEGIN1]], align 8, !tbaa [[INTPTR_TBAA15]]
+// CHECK-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP20:![0-9]+]]
 // CHECK:       [[FOR_END]]:
 // CHECK-NEXT:    ret void
 //
@@ -205,23 +205,23 @@ void frl(int (&&e) [4])
 // CHECK-NEXT:    [[__BEGIN1:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[__END1:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store ptr [[E]], ptr [[E_ADDR]], align 8, !tbaa [[INTPTR_TBAA14]]
+// CHECK-NEXT:    store ptr [[E]], ptr [[E_ADDR]], align 8, !tbaa [[INTPTR_TBAA15]]
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[__RANGE1]]) #[[ATTR3]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[E_ADDR]], align 8, !tbaa [[INTPTR_TBAA14]], !nonnull [[META17]], !align [[META18]]
-// CHECK-NEXT:    store ptr [[TMP0]], ptr [[__RANGE1]], align 8, !tbaa [[INTPTR_TBAA14]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[E_ADDR]], align 8, !tbaa [[INTPTR_TBAA15]], !nonnull [[META18]], !align [[META19]]
+// CHECK-NEXT:    store ptr [[TMP0]], ptr [[__RANGE1]], align 8, !tbaa [[INTPTR_TBAA15]]
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[__BEGIN1]]) #[[ATTR3]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[__RANGE1]], align 8, !tbaa [[INTPTR_TBAA14]], !nonnull [[META17]], !align [[META18]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[__RANGE1]], align 8, !tbaa [[INTPTR_TBAA15]], !nonnull [[META18]], !align [[META19]]
 // CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [4 x i32], ptr [[TMP1]], i64 0, i64 0
-// CHECK-NEXT:    store ptr [[ARRAYDECAY]], ptr [[__BEGIN1]], align 8, !tbaa [[INTPTR_TBAA14]]
+// CHECK-NEXT:    store ptr [[ARRAYDECAY]], ptr [[__BEGIN1]], align 8, !tbaa [[INTPTR_TBAA15]]
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[__END1]]) #[[ATTR3]]
-// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[__RANGE1]], align 8, !tbaa [[INTPTR_TBAA14]], !nonnull [[META17]], !align [[META18]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[__RANGE1]], align 8, !tbaa [[INTPTR_TBAA15]], !nonnull [[META18]], !align [[META19]]
 // CHECK-NEXT:    [[ARRAYDECAY1:%.*]] = getelementptr inbounds [4 x i32], ptr [[TMP2]], i64 0, i64 0
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAYDECAY1]], i64 4
-// CHECK-NEXT:    store ptr [[ADD_PTR]], ptr [[__END1]], align 8, !tbaa [[INTPTR_TBAA14]]
+// CHECK-NEXT:    store ptr [[ADD_PTR]], ptr [[__END1]], align 8, !tbaa [[INTPTR_TBAA15]]
 // CHECK-NEXT:    br label %[[FOR_COND:.*]]
 // CHECK:       [[FOR_COND]]:
-// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[__BEGIN1]], align 8, !tbaa [[INTPTR_TBAA14]]
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[__END1]], align 8, !tbaa [[INTPTR_TBAA14]]
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[__BEGIN1]], align 8, !tbaa [[INTPTR_TBAA15]]
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[__END1]], align 8, !tbaa [[INTPTR_TBAA15]]
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[TMP3]], [[TMP4]]
 // CHECK-NEXT:    [[CMP_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[CMP]], i1 false)
 // CHECK-NEXT:    br i1 [[CMP_EXPVAL]], label %[[FOR_BODY:.*]], label %[[FOR_COND_CLEANUP:.*]]
@@ -232,16 +232,16 @@ void frl(int (&&e) [4])
 // CHECK-NEXT:    br label %[[FOR_END:.*]]
 // CHECK:       [[FOR_BODY]]:
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[I]]) #[[ATTR3]]
-// CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[__BEGIN1]], align 8, !tbaa [[INTPTR_TBAA14]]
-// CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4, !tbaa [[INT_TBAA2]]
-// CHECK-NEXT:    store i32 [[TMP6]], ptr [[I]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[__BEGIN1]], align 8, !tbaa [[INTPTR_TBAA15]]
+// CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4, !tbaa [[INT_TBAA6]]
+// CHECK-NEXT:    store i32 [[TMP6]], ptr [[I]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[I]]) #[[ATTR3]]
 // CHECK-NEXT:    br label %[[FOR_INC:.*]]
 // CHECK:       [[FOR_INC]]:
-// CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[__BEGIN1]], align 8, !tbaa [[INTPTR_TBAA14]]
+// CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[__BEGIN1]], align 8, !tbaa [[INTPTR_TBAA15]]
 // CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP7]], i32 1
-// CHECK-NEXT:    store ptr [[INCDEC_PTR]], ptr [[__BEGIN1]], align 8, !tbaa [[INTPTR_TBAA14]]
-// CHECK-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP20:![0-9]+]]
+// CHECK-NEXT:    store ptr [[INCDEC_PTR]], ptr [[__BEGIN1]], align 8, !tbaa [[INTPTR_TBAA15]]
+// CHECK-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP21:![0-9]+]]
 // CHECK:       [[FOR_END]]:
 // CHECK-NEXT:    ret void
 //
@@ -250,23 +250,23 @@ void fru(int (&&e) [4])
   for(int i : e) [[unlikely]];
 }
 //.
-// CHECK: [[INT_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// CHECK: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}
+// CHECK: [[META3:![0-9]+]] = !{!"int", [[META4:![0-9]+]], i64 0}
 // CHECK: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // CHECK: [[META5]] = !{!"Simple C++ TBAA"}
-// CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META7:![0-9]+]], [[META8:![0-9]+]]}
-// CHECK: [[META7]] = !{!"llvm.loop.mustprogress"}
-// CHECK: [[META8]] = !{!"llvm.loop.unroll.disable"}
-// CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META7]], [[META8]]}
-// CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META7]], [[META8]]}
-// CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META7]], [[META8]]}
-// CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META7]], [[META8]]}
-// CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META7]], [[META8]]}
-// CHECK: [[INTPTR_TBAA14]] = !{[[META15:![0-9]+]], [[META15]], i64 0}
-// CHECK: [[META15]] = !{!"p1 int", [[META16:![0-9]+]], i64 0}
-// CHECK: [[META16]] = !{!"any pointer", [[META4]], i64 0}
-// CHECK: [[META17]] = !{}
-// CHECK: [[META18]] = !{i64 4}
-// CHECK: [[LOOP19]] = distinct !{[[LOOP19]], [[META8]]}
-// CHECK: [[LOOP20]] = distinct !{[[LOOP20]], [[META8]]}
+// CHECK: [[INT_TBAA6]] = !{[[META3]], [[META3]], i64 0}
+// CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META8:![0-9]+]], [[META9:![0-9]+]]}
+// CHECK: [[META8]] = !{!"llvm.loop.mustprogress"}
+// CHECK: [[META9]] = !{!"llvm.loop.unroll.disable"}
+// CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META8]], [[META9]]}
+// CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META8]], [[META9]]}
+// CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META8]], [[META9]]}
+// CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META8]], [[META9]]}
+// CHECK: [[LOOP14]] = distinct !{[[LOOP14]], [[META8]], [[META9]]}
+// CHECK: [[INTPTR_TBAA15]] = !{[[META16:![0-9]+]], [[META16]], i64 0}
+// CHECK: [[META16]] = !{!"p1 int", [[META17:![0-9]+]], i64 0}
+// CHECK: [[META17]] = !{!"any pointer", [[META4]], i64 0}
+// CHECK: [[META18]] = !{}
+// CHECK: [[META19]] = !{i64 4}
+// CHECK: [[LOOP20]] = distinct !{[[LOOP20]], [[META9]]}
+// CHECK: [[LOOP21]] = distinct !{[[LOOP21]], [[META9]]}
 //.

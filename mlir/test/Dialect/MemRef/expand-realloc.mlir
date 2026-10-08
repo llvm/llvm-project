@@ -3,7 +3,7 @@
 
 func.func @reallow_lowering_example(%init_size: index, %new_size: index) -> memref<?xf32> {
   %alloc = memref.alloc(%init_size) : memref<?xf32>
-  %realloc = memref.realloc %alloc (%new_size) {alignment = 8}: memref<?xf32> to memref<?xf32>
+  %realloc = memref.realloc %alloc (%new_size) alignment = 8: memref<?xf32> to memref<?xf32>
   return %realloc : memref<?xf32>
 }
 
@@ -14,7 +14,7 @@ func.func @reallow_lowering_example(%init_size: index, %new_size: index) -> memr
 //  CHECK-NEXT:   [[CURR_SIZE:%.+]] = memref.dim [[OLD_ALLOC]], [[C0]]
 //  CHECK-NEXT:   [[COND:%.+]] = arith.cmpi ult, [[CURR_SIZE]], [[NEW_SIZE]]
 //  CHECK-NEXT:   [[REALLOC:%.+]] = scf.if [[COND]]
-//  CHECK-NEXT:     [[NEW_ALLOC:%.+]] = memref.alloc([[NEW_SIZE]]) {alignment = 8 : i64} : memref<?xf32>
+//  CHECK-NEXT:     [[NEW_ALLOC:%.+]] = memref.alloc([[NEW_SIZE]]) alignment = 8 : memref<?xf32>
 //  CHECK-NEXT:     [[SUBVIEW:%.+]] = memref.subview [[NEW_ALLOC]][0] [[[CURR_SIZE]]] [1]
 //  CHECK-NEXT:     memref.copy [[OLD_ALLOC]], [[SUBVIEW]]
 //  CHECK-NEXT:     memref.dealloc [[OLD_ALLOC]]
@@ -30,7 +30,7 @@ func.func @reallow_lowering_example(%init_size: index, %new_size: index) -> memr
 
 func.func @reallow_lowering_example() -> memref<4xf32> {
   %alloc = memref.alloc() : memref<2xf32>
-  %realloc = memref.realloc %alloc {alignment = 8}: memref<2xf32> to memref<4xf32>
+  %realloc = memref.realloc %alloc alignment = 8: memref<2xf32> to memref<4xf32>
   return %realloc : memref<4xf32>
 }
 
@@ -40,7 +40,7 @@ func.func @reallow_lowering_example() -> memref<4xf32> {
 //  CHECK-NEXT:   [[NEW_SIZE:%.+]] = arith.constant 4
 //  CHECK-NEXT:   [[COND:%.+]] = arith.cmpi ult, [[CURR_SIZE]], [[NEW_SIZE]]
 //  CHECK-NEXT:   [[REALLOC:%.+]] = scf.if [[COND]]
-//  CHECK-NEXT:     [[NEW_ALLOC:%.+]] = memref.alloc() {alignment = 8 : i64} : memref<4xf32>
+//  CHECK-NEXT:     [[NEW_ALLOC:%.+]] = memref.alloc() alignment = 8 : memref<4xf32>
 //  CHECK-NEXT:     [[SUBVIEW:%.+]] = memref.subview [[NEW_ALLOC]][0] [2] [1]
 //  CHECK-NEXT:     memref.copy [[OLD_ALLOC]], [[SUBVIEW]]
 //  CHECK-NEXT:     memref.dealloc [[OLD_ALLOC]]

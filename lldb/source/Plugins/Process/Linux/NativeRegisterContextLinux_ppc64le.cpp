@@ -13,6 +13,10 @@
 
 #include "NativeRegisterContextLinux_ppc64le.h"
 
+#include "Plugins/Process/Linux/NativeProcessLinux.h"
+#include "Plugins/Process/Linux/Procfs.h"
+#include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
+#include "Plugins/Process/Utility/RegisterInfoPOSIX_ppc64le.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -20,16 +24,11 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 
-#include "Plugins/Process/Linux/NativeProcessLinux.h"
-#include "Plugins/Process/Linux/Procfs.h"
-#include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_ppc64le.h"
-
 // System includes - They have to be included after framework includes because
 // they define some macros which collide with variable names in other modules
-#include <sys/socket.h>
-#include <elf.h>
 #include <asm/ptrace.h>
+#include <elf.h>
+#include <sys/socket.h>
 
 #define REG_CONTEXT_SIZE                                                       \
   (GetGPRSize() + GetFPRSize() + sizeof(m_vmx_ppc64le) + sizeof(m_vsx_ppc64le))
@@ -142,7 +141,6 @@ NativeRegisterContextLinux_ppc64le::NativeRegisterContextLinux_ppc64le(
   ::memset(&m_fpr_ppc64le, 0, sizeof(m_fpr_ppc64le));
   ::memset(&m_vmx_ppc64le, 0, sizeof(m_vmx_ppc64le));
   ::memset(&m_vsx_ppc64le, 0, sizeof(m_vsx_ppc64le));
-  ::memset(&m_hwp_regs, 0, sizeof(m_hwp_regs));
 }
 
 uint32_t NativeRegisterContextLinux_ppc64le::GetRegisterSetCount() const {

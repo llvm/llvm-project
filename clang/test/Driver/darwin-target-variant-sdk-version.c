@@ -7,6 +7,10 @@
 // RUN: %clang -target x86_64-apple-ios13.1-macabi -isysroot %S/Inputs/MacOSX10.15.sdk -c -### %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-MACCATALYST %s
 
+// Check that the -target-variant alias for -darwin-target-variant behaves identically.
+// RUN: %clang -target x86_64-apple-macosx10.15 -target-variant x86_64-apple-ios13.1-macabi -isysroot %S/Inputs/MacOSX10.15.sdk -c -### %s 2>&1 \
+// RUN:   | FileCheck %s
+
 // CHECK: "-target-sdk-version=10.15" "-darwin-target-variant-sdk-version=13.1"
 // CHECK-SWAPPED: "-target-sdk-version=13.1" "-darwin-target-variant-sdk-version=10.15"
 // CHECK-MACCATALYST: "-target-sdk-version=13.1"

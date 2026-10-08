@@ -56,13 +56,13 @@ bool SBLanguageRuntime::SupportsExceptionBreakpointsOnCatch(
 const char *
 SBLanguageRuntime::GetThrowKeywordForLanguage(lldb::LanguageType language) {
   if (Language *lang_plugin = Language::FindPlugin(language))
-    return ConstString(lang_plugin->GetThrowKeyword()).AsCString();
+    return ConstString(lang_plugin->GetThrowKeyword()).AsCString(nullptr);
   return nullptr;
 }
 
 const char *
 SBLanguageRuntime::GetCatchKeywordForLanguage(lldb::LanguageType language) {
   if (Language *lang_plugin = Language::FindPlugin(language))
-    return ConstString(lang_plugin->GetCatchKeyword()).AsCString();
+    return ConstString(lang_plugin->GetCatchKeyword()).AsCString(nullptr);
   return nullptr;
 }

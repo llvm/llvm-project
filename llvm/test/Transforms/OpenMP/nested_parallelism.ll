@@ -107,7 +107,7 @@ define hidden void @_Z3fooi(i32 noundef %i1) local_unnamed_addr #1 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [1 x ptr], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @__kmpc_global_thread_num(ptr nonnull @[[GLOB1]]) #[[ATTR2]]
-; CHECK-NEXT:    [[I:%.*]] = tail call align 16 dereferenceable_or_null(4) ptr @__kmpc_alloc_shared(i64 4) #[[ATTR2]]
+; CHECK-NEXT:    [[I:%.*]] = tail call align 16 dereferenceable_or_null(4) ptr @__kmpc_alloc_shared(i64 4)
 ; CHECK-NEXT:    store i32 [[I1:%.*]], ptr [[I]], align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[CAPTURED_VARS_ADDRS]] to ptr addrspace(5)
 ; CHECK-NEXT:    store ptr [[I]], ptr addrspace(5) [[TMP1]], align 8
@@ -175,7 +175,7 @@ define hidden void @_Z4foo1i(i32 noundef %i1) local_unnamed_addr #1 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [1 x ptr], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @__kmpc_global_thread_num(ptr nonnull @[[GLOB1]]) #[[ATTR2]]
-; CHECK-NEXT:    [[I:%.*]] = tail call align 16 dereferenceable_or_null(4) ptr @__kmpc_alloc_shared(i64 4) #[[ATTR2]]
+; CHECK-NEXT:    [[I:%.*]] = tail call align 16 dereferenceable_or_null(4) ptr @__kmpc_alloc_shared(i64 4)
 ; CHECK-NEXT:    store i32 [[I1:%.*]], ptr [[I]], align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[CAPTURED_VARS_ADDRS]] to ptr addrspace(5)
 ; CHECK-NEXT:    store ptr [[I]], ptr addrspace(5) [[TMP1]], align 8
@@ -203,7 +203,7 @@ define internal void @__omp_outlined__(ptr noalias nocapture readnone %.global_t
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I:%.*]], align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[CAPTURED_VARS_ADDRS_I]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @__kmpc_global_thread_num(ptr nonnull @[[GLOB1]]) #[[ATTR2]]
-; CHECK-NEXT:    [[I_I:%.*]] = tail call align 16 dereferenceable_or_null(4) ptr @__kmpc_alloc_shared(i64 4) #[[ATTR2]]
+; CHECK-NEXT:    [[I_I:%.*]] = tail call align 16 dereferenceable_or_null(4) ptr @__kmpc_alloc_shared(i64 4)
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr [[I_I]], align 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[CAPTURED_VARS_ADDRS_I]] to ptr addrspace(5)
 ; CHECK-NEXT:    store ptr [[I_I]], ptr addrspace(5) [[TMP2]], align 8
@@ -238,7 +238,7 @@ define internal void @__omp_outlined___wrapper(i16 zeroext %0, i32 %1) #5 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[CAPTURED_VARS_ADDRS_I_I]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @__kmpc_global_thread_num(ptr nonnull @[[GLOB1]]) #[[ATTR2]]
-; CHECK-NEXT:    [[I_I_I:%.*]] = call align 16 dereferenceable_or_null(4) ptr @__kmpc_alloc_shared(i64 4) #[[ATTR2]]
+; CHECK-NEXT:    [[I_I_I:%.*]] = call align 16 dereferenceable_or_null(4) ptr @__kmpc_alloc_shared(i64 4)
 ; CHECK-NEXT:    store i32 [[TMP4]], ptr [[I_I_I]], align 16
 ; CHECK-NEXT:    [[TMP7:%.*]] = addrspacecast ptr [[CAPTURED_VARS_ADDRS_I_I]] to ptr addrspace(5)
 ; CHECK-NEXT:    store ptr [[I_I_I]], ptr addrspace(5) [[TMP7]], align 8
@@ -331,10 +331,10 @@ declare void @llvm.lifetime.end.p0(ptr nocapture) #11
 !5 = !{i32 7, !"openmp-device", i32 50}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { "kernel" }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nosync nounwind allocsize(0) }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nosync nounwind allockind("alloc,uninitialized") allocsize(0) "alloc-family"="__kmpc_alloc_shared" }
 ; CHECK: attributes #[[ATTR2]] = { nounwind }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { alwaysinline }
-; CHECK: attributes #[[ATTR4:[0-9]+]] = { nosync nounwind }
+; CHECK: attributes #[[ATTR4:[0-9]+]] = { nosync nounwind allockind("free") "alloc-family"="__kmpc_alloc_shared" }
 ; CHECK: attributes #[[ATTR5:[0-9]+]] = { convergent nounwind }
 ; CHECK: attributes #[[ATTR6:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ;.

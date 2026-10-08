@@ -13,6 +13,7 @@
 
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 
+#include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
@@ -133,6 +134,18 @@ static SmallVector<Value> flattenValues(ArrayRef<ValueRange> values) {
   return result;
 }
 
+/// Set attributes on an operation using its inherent/discardable split.
+static void setConvertedAttrs(Operation *op, DictionaryAttr attrs) {
+  SmallVector<NamedAttribute> discardableAttrs;
+  for (NamedAttribute attr : attrs) {
+    if (op->getInherentAttr(attr.getName()).has_value())
+      op->setInherentAttr(attr.getName(), attr.getValue());
+    else
+      discardableAttrs.push_back(attr);
+  }
+  op->setDiscardableAttrs(discardableAttrs);
+}
+
 /// Convert the destination block signature (if necessary) and lower the branch
 /// op to llvm.br.
 struct BranchOpLowering : public ConvertOpToLLVMPattern<cf::BranchOp> {
@@ -148,12 +161,14 @@ struct BranchOpLowering : public ConvertOpToLLVMPattern<cf::BranchOp> {
                           TypeRange(ValueRange(flattenedAdaptor)));
     if (failed(convertedBlock))
       return failure();
-    DictionaryAttr attrs = op->getAttrDictionary();
+    DictionaryAttr attrs = op->getDiscardableAttrDictionary();
+    auto loopAnnotation = op->getAttrOfType<LLVM::LoopAnnotationAttr>(
+        LLVM::getLoopAnnotationAttrName());
     Operation *newOp = rewriter.replaceOpWithNewOp<LLVM::BrOp>(
-        op, flattenedAdaptor, *convertedBlock);
+        op, flattenedAdaptor, loopAnnotation, *convertedBlock);
     // TODO: We should not just forward all attributes like that. But there are
     // existing Flang tests that depend on this behavior.
-    newOp->setAttrs(attrs);
+    setConvertedAttrs(newOp, attrs);
     return success();
   }
 };
@@ -185,13 +200,15 @@ struct CondBranchOpLowering : public ConvertOpToLLVMPattern<cf::CondBranchOp> {
     if (failed(convertedFalseBlock))
       return failure();
     DictionaryAttr attrs = op->getDiscardableAttrDictionary();
+    auto loopAnnotation = op->getAttrOfType<LLVM::LoopAnnotationAttr>(
+        LLVM::getLoopAnnotationAttrName());
     auto newOp = rewriter.replaceOpWithNewOp<LLVM::CondBrOp>(
         op, llvm::getSingleElement(adaptor.getCondition()),
         flattenedAdaptorTrue, flattenedAdaptorFalse, op.getBranchWeightsAttr(),
-        *convertedTrueBlock, *convertedFalseBlock);
+        loopAnnotation, *convertedTrueBlock, *convertedFalseBlock);
     // TODO: We should not just forward all attributes like that. But there are
     // existing Flang tests that depend on this behavior.
-    newOp->setDiscardableAttrs(attrs);
+    setConvertedAttrs(newOp, attrs);
     return success();
   }
 };
@@ -273,11 +290,13 @@ struct ConvertControlFlowToLLVM
              ctx->getLoadedDialect<cf::ControlFlowDialect>();
     });
 
-    LowerToLLVMOptions options(ctx);
+    const auto &dataLayoutAnalysis = getAnalysis<DataLayoutAnalysis>();
+    LowerToLLVMOptions options(ctx,
+                               dataLayoutAnalysis.getAtOrAbove(getOperation()));
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
 
-    LLVMTypeConverter converter(ctx, options);
+    LLVMTypeConverter converter(ctx, options, &dataLayoutAnalysis);
     RewritePatternSet patterns(ctx);
     mlir::cf::populateControlFlowToLLVMConversionPatterns(converter, patterns);
     mlir::cf::populateAssertToLLVMConversionPattern(converter, patterns);
@@ -297,7 +316,9 @@ namespace {
 /// Implement the interface to convert MemRef to LLVM.
 struct ControlFlowToLLVMDialectInterface
     : public ConvertToLLVMPatternInterface {
-  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  ControlFlowToLLVMDialectInterface(Dialect *dialect)
+      : ConvertToLLVMPatternInterface(dialect) {}
+
   void loadDependentDialects(MLIRContext *context) const final {
     context->loadDialect<LLVM::LLVMDialect>();
   }

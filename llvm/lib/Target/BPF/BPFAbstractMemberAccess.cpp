@@ -77,6 +77,8 @@
 #include "BPF.h"
 #include "BPFCORE.h"
 #include "BPFTargetMachine.h"
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/BTF/BTF.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -149,7 +151,8 @@ private:
   // A map to hold all the base preserve_*_access_index intrinsic calls.
   // The base call is not an input of any other preserve_*
   // intrinsics.
-  std::map<CallInst *, CallInfo> BaseAICalls;
+  // Iterated below, so the order can't come from the addresses.
+  SmallMapVector<CallInst *, CallInfo, 4> BaseAICalls;
   // A map to hold <AnonRecord, TypeDef> relationships
   std::map<DICompositeType *, DIDerivedType *> AnonRecords;
 
@@ -208,7 +211,7 @@ bool BPFAbstractMemberAccess::run(Function &F) {
   if (SP && SP->isDefinition()) {
     for (DIType *Ty: SP->getType()->getTypeArray())
       CheckAnonRecordType(nullptr, Ty);
-    for (const DINode *DN : SP->getRetainedNodes()) {
+    for (const MDNode *DN : SP->getRetainedNodes()) {
       if (const auto *DV = dyn_cast<DILocalVariable>(DN))
         CheckAnonRecordType(nullptr, DV->getType());
     }
@@ -958,11 +961,26 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
 
     // Access Index
     uint64_t AccessIndex = CInfo.AccessIndex;
-    AccessKey += ":" + std::to_string(AccessIndex);
-
     MDNode *MDN = CInfo.Metadata;
     // At this stage, it cannot be pointer type.
     auto *CTy = cast<DICompositeType>(stripQualifiers(cast<DIType>(MDN)));
+
+    uint64_t BTFIndex = AccessIndex;
+    if (CTy->getTag() == dwarf::DW_TAG_structure_type) {
+      DINodeArray Elements = CTy->getElements();
+      uint64_t Offset = getBTFRecordElementOffset(Elements[AccessIndex]);
+      // Find this element's position in the stable offset order without
+      // sorting the whole record for every CO-RE access.
+      BTFIndex = 0;
+      for (unsigned I = 0; I < Elements.size(); ++I) {
+        uint64_t ElementOffset = getBTFRecordElementOffset(Elements[I]);
+        if (ElementOffset < Offset ||
+            (ElementOffset == Offset && I < AccessIndex))
+          ++BTFIndex;
+      }
+    }
+    AccessKey += ":" + std::to_string(BTFIndex);
+
     PatchImm = GetFieldInfo(InfoKind, CTy, AccessIndex, PatchImm,
                             CInfo.RecordAlignment);
   }

@@ -8,9 +8,9 @@ define <vscale x 8 x i8> @u_nxv8i8(<vscale x 8 x i8> %a, <vscale x 8 x i8> %b) {
 ; CHECK-NEXT:    and z1.h, z1.h, #0xff
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    cmphi p1.h, p0/z, z0.h, z1.h
-; CHECK-NEXT:    cmphi p0.h, p0/z, z1.h, z0.h
+; CHECK-NEXT:    cmphi p2.h, p0/z, z1.h, z0.h
 ; CHECK-NEXT:    mov z0.h, p1/z, #1 // =0x1
-; CHECK-NEXT:    mov z0.h, p0/m, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z0.h, p2/m, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    ret
 entry:
   %c = call <vscale x 8 x i8> @llvm.ucmp(<vscale x 8 x i8> %a, <vscale x 8 x i8> %b)
@@ -22,9 +22,9 @@ define <vscale x 16 x i8> @u_nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cmphi p1.b, p0/z, z0.b, z1.b
-; CHECK-NEXT:    cmphi p0.b, p0/z, z1.b, z0.b
+; CHECK-NEXT:    cmphi p2.b, p0/z, z1.b, z0.b
 ; CHECK-NEXT:    mov z0.b, p1/z, #1 // =0x1
-; CHECK-NEXT:    mov z0.b, p0/m, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z0.b, p2/m, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    ret
 entry:
   %c = call <vscale x 16 x i8> @llvm.ucmp(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
@@ -38,9 +38,9 @@ define <vscale x 4 x i16> @u_nxv4i16(<vscale x 4 x i16> %a, <vscale x 4 x i16> %
 ; CHECK-NEXT:    and z1.s, z1.s, #0xffff
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    cmphi p1.s, p0/z, z0.s, z1.s
-; CHECK-NEXT:    cmphi p0.s, p0/z, z1.s, z0.s
+; CHECK-NEXT:    cmphi p2.s, p0/z, z1.s, z0.s
 ; CHECK-NEXT:    mov z0.s, p1/z, #1 // =0x1
-; CHECK-NEXT:    mov z0.s, p0/m, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z0.s, p2/m, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    ret
 entry:
   %c = call <vscale x 4 x i16> @llvm.ucmp(<vscale x 4 x i16> %a, <vscale x 4 x i16> %b)
@@ -52,9 +52,9 @@ define <vscale x 8 x i16> @u_nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    cmphi p1.h, p0/z, z0.h, z1.h
-; CHECK-NEXT:    cmphi p0.h, p0/z, z1.h, z0.h
+; CHECK-NEXT:    cmphi p2.h, p0/z, z1.h, z0.h
 ; CHECK-NEXT:    mov z0.h, p1/z, #1 // =0x1
-; CHECK-NEXT:    mov z0.h, p0/m, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z0.h, p2/m, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    ret
 entry:
   %c = call <vscale x 8 x i16> @llvm.ucmp(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
@@ -86,9 +86,9 @@ define <vscale x 2 x i32> @u_nxv2i32(<vscale x 2 x i32> %a, <vscale x 2 x i32> %
 ; CHECK-NEXT:    and z1.d, z1.d, #0xffffffff
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    cmphi p1.d, p0/z, z0.d, z1.d
-; CHECK-NEXT:    cmphi p0.d, p0/z, z1.d, z0.d
+; CHECK-NEXT:    cmphi p2.d, p0/z, z1.d, z0.d
 ; CHECK-NEXT:    mov z0.d, p1/z, #1 // =0x1
-; CHECK-NEXT:    mov z0.d, p0/m, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z0.d, p2/m, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    ret
 entry:
   %c = call <vscale x 2 x i32> @llvm.ucmp(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b)
@@ -100,9 +100,9 @@ define <vscale x 4 x i32> @u_nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    cmphi p1.s, p0/z, z0.s, z1.s
-; CHECK-NEXT:    cmphi p0.s, p0/z, z1.s, z0.s
+; CHECK-NEXT:    cmphi p2.s, p0/z, z1.s, z0.s
 ; CHECK-NEXT:    mov z0.s, p1/z, #1 // =0x1
-; CHECK-NEXT:    mov z0.s, p0/m, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z0.s, p2/m, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    ret
 entry:
   %c = call <vscale x 4 x i32> @llvm.ucmp(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
@@ -132,9 +132,9 @@ define <vscale x 2 x i64> @u_nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    cmphi p1.d, p0/z, z0.d, z1.d
-; CHECK-NEXT:    cmphi p0.d, p0/z, z1.d, z0.d
+; CHECK-NEXT:    cmphi p2.d, p0/z, z1.d, z0.d
 ; CHECK-NEXT:    mov z0.d, p1/z, #1 // =0x1
-; CHECK-NEXT:    mov z0.d, p0/m, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z0.d, p2/m, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    ret
 entry:
   %c = call <vscale x 2 x i64> @llvm.ucmp(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b)

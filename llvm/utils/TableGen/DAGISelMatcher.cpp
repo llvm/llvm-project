@@ -11,13 +11,14 @@
 #include "Common/CodeGenInstruction.h"
 #include "Common/CodeGenRegisters.h"
 #include "Common/CodeGenTarget.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Record.h"
 using namespace llvm;
 
 void Matcher::anchor() {}
 
-void Matcher::dump() const { printOne(errs()); }
+void Matcher::dump() const { printOne(dbgs()); }
 
 void Matcher::printOne(raw_ostream &OS, indent Indent) const {
   printImpl(OS, indent(0));
@@ -187,6 +188,10 @@ void CheckImmAllOnesVMatcher::printImpl(raw_ostream &OS, indent Indent) const {
 
 void CheckImmAllZerosVMatcher::printImpl(raw_ostream &OS, indent Indent) const {
   OS << Indent << "CheckAllZerosV\n";
+}
+
+void CheckUndefMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "CheckUndef\n";
 }
 
 void EmitIntegerMatcher::printImpl(raw_ostream &OS, indent Indent) const {
@@ -413,6 +418,16 @@ bool CheckImmAllZerosVMatcher::isContradictoryImpl(const Matcher *M) const {
   return isa<CheckImmAllOnesVMatcher>(M);
 }
 
+bool CheckUndefMatcher::isContradictoryImpl(const Matcher *M) const {
+  if (const auto *COM = dyn_cast<CheckOpcodeMatcher>(M)) {
+    // If the opcode is neither UNDEF nor POISON, then it is contradictory with
+    // a check that the node is undef/poison.
+    StringRef Opcode = COM->getOpcode().getEnumName();
+    return Opcode != "ISD::UNDEF" && Opcode != "ISD::POISON";
+  }
+  return false;
+}
+
 bool CheckCondCodeMatcher::isContradictoryImpl(const Matcher *M) const {
   if (const auto *CCCM = dyn_cast<CheckCondCodeMatcher>(M))
     return CCCM->getCondCodeName() != getCondCodeName();
@@ -430,4 +445,4 @@ void MatcherList::print(raw_ostream &OS, indent Indent) const {
     M->printOne(OS, Indent);
 }
 
-void MatcherList::dump() const { print(errs()); }
+void MatcherList::dump() const { print(dbgs()); }

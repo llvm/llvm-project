@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}short_char:
 ; GCN: global_store_byte v

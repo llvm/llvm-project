@@ -17,6 +17,7 @@
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Listener.h"
 #include "lldb/Utility/ScriptedMetadata.h"
 
@@ -210,7 +211,8 @@ void SBLaunchInfo::Clear() {
 const char *SBLaunchInfo::GetWorkingDirectory() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return m_opaque_sp->GetWorkingDirectory().GetPathAsConstString().AsCString();
+  return ConstString(m_opaque_sp->GetWorkingDirectory().GetPath())
+      .AsCString(nullptr);
 }
 
 void SBLaunchInfo::SetWorkingDirectory(const char *working_dir) {
@@ -248,8 +250,8 @@ const char *SBLaunchInfo::GetShell() {
 
   // Constify this string so that it is saved in the string pool.  Otherwise it
   // would be freed when this function goes out of scope.
-  ConstString shell(m_opaque_sp->GetShell().GetPath().c_str());
-  return shell.AsCString();
+  ConstString shell(m_opaque_sp->GetShell().GetPath());
+  return shell.AsCString(nullptr);
 }
 
 void SBLaunchInfo::SetShell(const char *path) {
@@ -341,8 +343,8 @@ const char *SBLaunchInfo::GetScriptedProcessClassName() const {
 
   // Constify this string so that it is saved in the string pool.  Otherwise it
   // would be freed when this function goes out of scope.
-  ConstString class_name(metadata_sp->GetClassName().data());
-  return class_name.AsCString();
+  ConstString class_name(metadata_sp->GetClassName());
+  return class_name.AsCString(nullptr);
 }
 
 void SBLaunchInfo::SetScriptedProcessClassName(const char *class_name) {

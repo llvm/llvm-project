@@ -7,7 +7,7 @@
 
 # RUN: %lldb -b -o 'image dump symtab' %t.obj 2>&1 | FileCheck %s
 
-# CHECK: warning: (x86_64) {{.*}}.obj An error occurred while decompression the section .gnu_debugdata: lzma_stream_buffer_decode()=lzma error: LZMA_DATA_ERROR
+# CHECK: warning: (x86_64) {{.*}}.obj an error occurred while decompressing the section .gnu_debugdata: lzma_stream_buffer_decode()=lzma error: LZMA_DATA_ERROR
 
 --- !ELF
 FileHeader:

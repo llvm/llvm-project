@@ -9,9 +9,7 @@
 #ifndef FORTRAN_LOWER_HOSTASSOCIATIONS_H
 #define FORTRAN_LOWER_HOSTASSOCIATIONS_H
 
-#include "mlir/IR/Location.h"
 #include "mlir/IR/Types.h"
-#include "mlir/IR/Value.h"
 #include "llvm/ADT/SetVector.h"
 
 namespace Fortran {

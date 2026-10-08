@@ -10,21 +10,17 @@
 #include "definable.h"
 #include "pointer-assignment.h"
 #include "flang/Common/idioms.h"
-#include "flang/Common/restorer.h"
 #include "flang/Evaluate/characteristics.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/message.h"
-#include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include <optional>
-#include <set>
 #include <string>
-#include <type_traits>
 
 using namespace Fortran::parser::literals;
 
@@ -215,8 +211,7 @@ SemanticsContext &AssignmentChecker::context() {
 AssignmentChecker::AssignmentChecker(SemanticsContext &context)
     : context_{new AssignmentContext{context}} {}
 
-void AssignmentChecker::Enter(
-    const parser::OpenMPDeclareReductionConstruct &x) {
+void AssignmentChecker::Enter(const parser::OmpDeclareReductionDirective &x) {
   context().set_location(x.source);
 }
 void AssignmentChecker::Enter(const parser::AssignmentStmt &x) {

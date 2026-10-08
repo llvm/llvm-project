@@ -17,7 +17,6 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/PassRegistry.h"
 #include "llvm/Support/GraphWriter.h"
 
 using namespace llvm;
@@ -56,11 +55,11 @@ static void writeMCFGToDotFile(MachineFunction &MF) {
 
 namespace {
 
-class MachineCFGPrinter : public MachineFunctionPass {
+class MachineCFGPrinterLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  MachineCFGPrinter();
+  MachineCFGPrinterLegacy();
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -72,17 +71,17 @@ public:
 
 } // namespace
 
-char MachineCFGPrinter::ID = 0;
+char MachineCFGPrinterLegacy::ID = 0;
 
-char &llvm::MachineCFGPrinterID = MachineCFGPrinter::ID;
+char &llvm::MachineCFGPrinterID = MachineCFGPrinterLegacy::ID;
 
-INITIALIZE_PASS(MachineCFGPrinter, DEBUG_TYPE, "Machine CFG Printer Pass",
+INITIALIZE_PASS(MachineCFGPrinterLegacy, DEBUG_TYPE, "Machine CFG Printer Pass",
                 false, true)
 
 /// Default construct and initialize the pass.
-MachineCFGPrinter::MachineCFGPrinter() : MachineFunctionPass(ID) {}
+MachineCFGPrinterLegacy::MachineCFGPrinterLegacy() : MachineFunctionPass(ID) {}
 
-bool MachineCFGPrinter::runOnMachineFunction(MachineFunction &MF) {
+bool MachineCFGPrinterLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (!MCFGFuncName.empty() && !MF.getName().contains(MCFGFuncName))
     return false;
   errs() << "Writing Machine CFG for function ";
@@ -90,4 +89,16 @@ bool MachineCFGPrinter::runOnMachineFunction(MachineFunction &MF) {
 
   writeMCFGToDotFile(MF);
   return false;
+}
+
+PreservedAnalyses
+MachineCFGPrinterPass::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &MFAM) {
+  if (!MCFGFuncName.empty() && !MF.getName().contains(MCFGFuncName))
+    return PreservedAnalyses::all();
+  errs() << "Writing Machine CFG for function ";
+  errs().write_escaped(MF.getName()) << '\n';
+
+  writeMCFGToDotFile(MF);
+  return PreservedAnalyses::all();
 }

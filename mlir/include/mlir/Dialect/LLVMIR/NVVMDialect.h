@@ -18,6 +18,7 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialectDecl.h"
 #include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h"
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/Dialect.h"
@@ -69,7 +70,5 @@ std::pair<mlir::Type, unsigned> inferMMAType(mlir::NVVM::MMATypes type,
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/LLVMIR/NVVMOps.h.inc"
-
-#include "mlir/Dialect/LLVMIR/NVVMOpsDialect.h.inc"
 
 #endif /* MLIR_DIALECT_LLVMIR_NVVMDIALECT_H_ */

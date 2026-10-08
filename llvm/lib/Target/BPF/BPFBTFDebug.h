@@ -49,6 +49,9 @@ class BPFBTFDebug : public BTFDebug {
   void processGlobals() override;
 
 protected:
+  uint32_t processFunctionType(
+      const MachineFunction *MF, const DISubprogram *SP,
+      const SmallDenseMap<uint32_t, StringRef> &FuncArgNames) override;
   void beginFunctionImpl(const MachineFunction *MF) override;
 
 public:

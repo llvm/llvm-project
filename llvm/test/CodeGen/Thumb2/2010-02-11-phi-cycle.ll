@@ -13,6 +13,7 @@ define i32 @test(i32 %n) nounwind {
 ; CHECK-NEXT:  .LBB0_1: @ %bb
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    bl f
+; CHECK-NEXT:    @ implicit-def: $r1
 ; CHECK-NEXT:    bl g
 ; CHECK-NEXT:    subs r4, #1
 ; CHECK-NEXT:    bne .LBB0_1
@@ -58,6 +59,7 @@ define i32 @test_dead_cycle(i32 %n) nounwind {
 ; CHECK-NEXT:  @ %bb.2: @ %bb1
 ; CHECK-NEXT:    @ in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    bl f
+; CHECK-NEXT:    @ implicit-def: $r1
 ; CHECK-NEXT:    bl g
 ; CHECK-NEXT:  .LBB1_3: @ %bb2
 ; CHECK-NEXT:    @ in Loop: Header=BB1_1 Depth=1

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple i686-windows %s -fms-extensions -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple i686-windows %s -fms-extensions -fwchar-type=int -fsigned-wchar -emit-llvm -o - | FileCheck %s
 //
 // Test that LLVM optimizations leave these intrinsics alone, for the most part.
 // RUN: %clang_cc1 -O2 -triple i686-windows %s -fms-extensions -emit-llvm -o - | FileCheck %s

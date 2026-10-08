@@ -52,3 +52,32 @@ captures or ensuring the lambda closure object has a guaranteed lifetime.
 
 Following these guidelines can help ensure the safe and reliable use of
 coroutine lambdas in C++ code.
+
+Options
+-------
+
+.. option:: AllowExplicitObjectParameters
+
+  When set to `true`, lambda coroutines that use C++23 "deducing this"
+  (explicit object parameter, e.g. ``this auto``) are not flagged by this
+  check, because the captures are moved into the coroutine frame, decoupling
+  their lifetime from the lambda object.
+
+  Default is `false`.
+
+  The example from above can be made safe and will pass this check with the
+  following change:
+
+  .. code-block:: c++
+
+    int value = get_value();
+    std::shared_ptr<Foo> sharedFoo = get_foo();
+    {
+        // Pass "this auto" as the first argument to the lambda
+        const auto lambda = [value, sharedFoo](this auto) -> std::future<void>
+        {
+            co_await something();
+        };
+        lambda();
+    } // the lambda closure object has now gone out of scope, but captures are
+      // no longer coupled to its lifetime

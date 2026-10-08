@@ -844,7 +844,7 @@ ldr       s0, #8
 ldr       d0, #1048572
 ldr       q0, #-1048576
 prfm      pldl1strm, #0
-prfm      #22, #0
+prfm      #25, #0
 
 #------------------------------------------------------------------------------
 # Load/store exclusive
@@ -2106,7 +2106,7 @@ drps
 # CHECK-NEXT:  1      4     1.00    *                   ldr	d0, #1048572
 # CHECK-NEXT:  1      4     1.00    *                   ldr	q0, #-1048576
 # CHECK-NEXT:  1      4     1.00                  U     prfm	pldl1strm, #0
-# CHECK-NEXT:  1      4     1.00                  U     prfm	#22, #0
+# CHECK-NEXT:  1      4     1.00                  U     prfm	#25, #0
 # CHECK-NEXT:  2      5     2.00    *      *      U     stxrb	w18, w8, [sp]
 # CHECK-NEXT:  2      5     2.00    *      *      U     stxrh	w24, w15, [x16]
 # CHECK-NEXT:  2      5     2.00    *      *      U     stxr	w5, w6, [x17]
@@ -2137,18 +2137,18 @@ drps
 # CHECK-NEXT:  2      4     2.00    *      *      U     ldaxp	w5, w18, [sp]
 # CHECK-NEXT:  2      4     2.00    *      *      U     ldaxp	x6, x19, [x22]
 # CHECK-NEXT:  2      4     2.00    *      *      U     ldaxp	x6, x19, [x22]
-# CHECK-NEXT:  1      1     1.00           *      U     stlrb	w24, [sp]
-# CHECK-NEXT:  1      1     1.00           *      U     stlrh	w25, [x30]
-# CHECK-NEXT:  1      1     1.00           *      U     stlr	w26, [x29]
-# CHECK-NEXT:  1      1     1.00           *      U     stlr	x27, [x28]
-# CHECK-NEXT:  1      1     1.00           *      U     stlr	x27, [x28]
-# CHECK-NEXT:  1      1     1.00           *      U     stlr	x27, [x28]
-# CHECK-NEXT:  1      4     1.00    *             U     ldarb	w23, [sp]
-# CHECK-NEXT:  1      4     1.00    *             U     ldarh	w22, [x30]
-# CHECK-NEXT:  1      4     1.00    *             U     ldar	wzr, [x29]
-# CHECK-NEXT:  1      4     1.00    *             U     ldar	x21, [x28]
-# CHECK-NEXT:  1      4     1.00    *             U     ldar	x21, [x28]
-# CHECK-NEXT:  1      4     1.00    *             U     ldar	x21, [x28]
+# CHECK-NEXT:  1      1     1.00           *            stlrb	w24, [sp]
+# CHECK-NEXT:  1      1     1.00           *            stlrh	w25, [x30]
+# CHECK-NEXT:  1      1     1.00           *            stlr	w26, [x29]
+# CHECK-NEXT:  1      1     1.00           *            stlr	x27, [x28]
+# CHECK-NEXT:  1      1     1.00           *            stlr	x27, [x28]
+# CHECK-NEXT:  1      1     1.00           *            stlr	x27, [x28]
+# CHECK-NEXT:  1      4     1.00    *                   ldarb	w23, [sp]
+# CHECK-NEXT:  1      4     1.00    *                   ldarh	w22, [x30]
+# CHECK-NEXT:  1      4     1.00    *                   ldar	wzr, [x29]
+# CHECK-NEXT:  1      4     1.00    *                   ldar	x21, [x28]
+# CHECK-NEXT:  1      4     1.00    *                   ldar	x21, [x28]
+# CHECK-NEXT:  1      4     1.00    *                   ldar	x21, [x28]
 # CHECK-NEXT:  1      1     1.00           *            sturb	w9, [sp]
 # CHECK-NEXT:  1      1     1.00           *            sturh	wzr, [x12, #255]
 # CHECK-NEXT:  1      1     1.00           *            stur	w16, [x0, #-256]
@@ -3286,7 +3286,7 @@ drps
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -     ldr	d0, #1048572
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -     ldr	q0, #-1048576
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -     prfm	pldl1strm, #0
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -     prfm	#22, #0
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -     prfm	#25, #0
 # CHECK-NEXT:  -      -      -     2.00    -      -      -      -      -     stxrb	w18, w8, [sp]
 # CHECK-NEXT:  -      -      -     2.00    -      -      -      -      -     stxrh	w24, w15, [x16]
 # CHECK-NEXT:  -      -      -     2.00    -      -      -      -      -     stxr	w5, w6, [x17]
