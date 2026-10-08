@@ -1210,6 +1210,12 @@ static VPValue *simplifyLogicalRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
   if (match(Def, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X))))
     return X;
 
+  // X != false -> X
+  if (match(Def, m_SpecificICmp(CmpInst::ICMP_NE, m_VPValue(X), m_False()))) {
+    assert(X->getScalarType()->isIntegerTy(1) && "must have boolean operands");
+    return X;
+  }
+
   return nullptr;
 }
 
@@ -1292,7 +1298,7 @@ static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
   if (match(Def, m_ExtractLastLane(m_VPValue(A)))) {
     if (match(A, m_BuildVector())) {
       auto *BuildVector = cast<VPInstruction>(A);
-      return BuildVector->getOperand(BuildVector->getNumOperands() - 1);
+      return BuildVector->getLastOperand();
     }
 
     if (match(A, m_Broadcast(m_VPValue(B))))
@@ -3233,7 +3239,7 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
 
     VPValue *Op1, *Op2;
     // Walk back through recipes until we find at least one load from memory.
-    if (match(V, m_ICmp(m_VPValue(Op1), m_VPValue(Op2)))) {
+    if (match(V, m_Cmp(m_VPValue(Op1), m_VPValue(Op2)))) {
       Worklist.push_back(Op1);
       Worklist.push_back(Op2);
       Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
@@ -5168,8 +5174,7 @@ createPartialReductionExpression(VPReductionRecipe *Red) {
   // -> VPExpressionRecipe(op, sub/neg, red)
   if (match(VecOp, m_AnyNeg(m_WidenAnyExtend(m_VPValue())))) {
     auto *Neg = cast<VPWidenRecipe>(VecOp);
-    auto *Ext =
-        cast<VPWidenCastRecipe>(Neg->getOperand(Neg->getNumOperands() - 1));
+    auto *Ext = cast<VPWidenCastRecipe>(Neg->getLastOperand());
     return new VPExpressionRecipe(Ext, Neg, Red);
   }
 

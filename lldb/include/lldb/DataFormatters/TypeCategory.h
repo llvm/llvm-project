@@ -70,7 +70,7 @@ public:
   bool Delete(ConstString name) {
     bool success = false;
     for (auto sc : m_subcontainers)
-      success = sc->Delete(name) || success;
+      success = sc->Delete(name.GetStringRef().str()) || success;
     return success;
   }
 
@@ -128,7 +128,7 @@ public:
     MapValueType retval;
     if (type_specifier_sp) {
       m_subcontainers[type_specifier_sp->GetMatchType()]->GetExact(
-          ConstString(type_specifier_sp->GetName()), retval);
+          llvm::StringRef(type_specifier_sp->GetName()).str(), retval);
     }
     return retval;
   }
