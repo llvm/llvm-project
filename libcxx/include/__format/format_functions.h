@@ -505,7 +505,7 @@ template <class = void>
 [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_ALWAYS_INLINE inline _LIBCPP_HIDE_FROM_ABI string
 vformat(string_view __fmt, format_args __args) {
   // P3391R2: We don't need constant folding runtime optimizations in the scope of a constant evaluation.
-  // `if !consteval` is only present since C++23. 
+  // `if !consteval` is only present since C++23, so we use !__libcpp_is_constant_evaluated(). 
   if (!__libcpp_is_constant_evaluated()) {
     auto __result = __format::__try_constant_folding(__fmt, __args);
     if (__result.has_value())
