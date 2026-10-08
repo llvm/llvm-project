@@ -713,6 +713,9 @@ void link_MachO_arm64(std::unique_ptr<LinkGraph> G,
     Config.PreFixupPasses.push_back([CompactUnwindMgr](LinkGraph &G) {
       return CompactUnwindMgr->writeUnwindInfo(G);
     });
+
+    // Add GOT/Stubs optimizer pass.
+    Config.PreFixupPasses.push_back(aarch64::optimizeGOTAndStubAccesses);
   }
 
   if (auto Err = Ctx->modifyPassConfig(*G, Config))
