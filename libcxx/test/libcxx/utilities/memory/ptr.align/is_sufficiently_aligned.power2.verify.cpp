@@ -17,8 +17,8 @@
 
 void f() {
   int* p = nullptr;
-  (void)std::is_sufficiently_aligned<0>(p);  // expected-error@*:* {{_Alignment should be a power of two.}}
-  (void)std::is_sufficiently_aligned<3>(p);  // expected-error@*:* {{_Alignment should be a power of two.}}
-  (void)std::is_sufficiently_aligned<5>(p);  // expected-error@*:* {{_Alignment should be a power of two.}}
-  (void)std::is_sufficiently_aligned<33>(p); // expected-error@*:* {{_Alignment should be a power of two.}}
+  (void)std::is_sufficiently_aligned<0>(p);  // expected-error@*:* {{alignment must be a power of two.}}
+  (void)std::is_sufficiently_aligned<3>(p);  // expected-error@*:* {{alignment must be a power of two.}}
+  (void)std::is_sufficiently_aligned<5>(p);  // expected-error@*:* {{alignment must be a power of two.}}
+  (void)std::is_sufficiently_aligned<33>(p); // expected-error@*:* {{alignment must be a power of two.}}
 }
