@@ -4,6 +4,10 @@
 
 include "APIDefs.td"
 
+// CHECK: #include <type_traits>
+// CHECK-NOT: #include <ostream>
+// CHECK-NOT: #include <llvm/Support/raw_ostream.h>
+
 def my_enum_t : Enum {
   let desc = "An example enum";
   let etors =[
@@ -14,7 +18,7 @@ def my_enum_t : Enum {
   ];
 }
 
-// CHECK: inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, enum my_enum_t value)
+// CHECK: inline offload::detail::print_ostream &operator<<(offload::detail::print_ostream &os, enum my_enum_t value)
 // CHECK: switch (value) {
 // CHECK: case MY_ENUM_VALUE_ONE:
 // CHECK:   os << "MY_ENUM_VALUE_ONE";
