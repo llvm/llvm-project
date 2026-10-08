@@ -5680,9 +5680,9 @@ bool AMDGPUAsmParser::validateWMMA(const MCInst &Inst,
   int AFmtIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::matrix_a_fmt);
   if (AFmtIdx == -1)
     return true;
-  unsigned AFmt = static_cast<unsigned>(Inst.getOperand(AFmtIdx).getImm());
+  unsigned AFmt = Inst.getOperand(AFmtIdx).getImm();
   int BFmtIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::matrix_b_fmt);
-  unsigned BFmt = static_cast<unsigned>(Inst.getOperand(BFmtIdx).getImm());
+  unsigned BFmt = Inst.getOperand(BFmtIdx).getImm();
 
   auto validateFmt = [&](unsigned Fmt, AMDGPU::OpName SrcOp) -> bool {
     int SrcIdx = AMDGPU::getNamedOperandIdx(Opc, SrcOp);
@@ -5707,10 +5707,10 @@ bool AMDGPUAsmParser::validateWMMA(const MCInst &Inst,
       AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::matrix_a_scale_fmt);
   if (AScaleIdx == -1)
     return true;
-  unsigned AScale = static_cast<unsigned>(Inst.getOperand(AScaleIdx).getImm());
+  unsigned AScale = Inst.getOperand(AScaleIdx).getImm();
   int BScaleIdx =
       AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::matrix_b_scale_fmt);
-  unsigned BScale = static_cast<unsigned>(Inst.getOperand(BScaleIdx).getImm());
+  unsigned BScale = Inst.getOperand(BScaleIdx).getImm();
   if (!isValidWMMAScaleFmtCombination(AFmt, AScale, BFmt, BScale)) {
     Error(getImmLoc(AMDGPUOperand::ImmTyMatrixAFMT, Operands),
           "invalid matrix and scale format combination");
