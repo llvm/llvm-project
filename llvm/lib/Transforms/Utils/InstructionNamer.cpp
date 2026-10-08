@@ -22,21 +22,16 @@
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
-#include <atomic>
 #include <cstdint>
-#include <memory>
 #include <string>
 
 using namespace llvm;
 
-static void nameInstructions(Function &F,
-                             std::atomic<uint64_t> *NextID = nullptr) {
+static void nameInstructions(Function &F, uint64_t *NextID = nullptr) {
   auto getName = [NextID](StringRef Prefix) -> std::string {
     if (!NextID)
       return Prefix.str();
-    return (Twine(Prefix) + "." +
-            Twine(NextID->fetch_add(1, std::memory_order_relaxed)))
-        .str();
+    return (Twine(Prefix) + "." + Twine((*NextID)++)).str();
   };
 
   for (Argument &Arg : F.args()) {
@@ -61,7 +56,7 @@ PreservedAnalyses InstructionNamerPass::run(Function &F,
   return PreservedAnalyses::all();
 }
 
-static void nameIRUnit(IRUnitRef IR, std::atomic<uint64_t> &NextID) {
+static void nameIRUnit(IRUnitRef IR, uint64_t &NextID) {
   if (const auto *M = dyn_cast<Module>(IR)) {
     for (Function &F : *const_cast<Module *>(M))
       nameInstructions(F, &NextID);
@@ -75,15 +70,14 @@ static void nameIRUnit(IRUnitRef IR, std::atomic<uint64_t> &NextID) {
   }
 }
 
-void InstructionNamerPass::registerCallbacks(
-    PassInstrumentationCallbacks &PIC) {
+void InstructionNamerPass::registerCallbacks(PassInstrumentationCallbacks &PIC,
+                                             uint64_t &NextID) {
   // The symbol table only detects collisions with live values. Keep an ID
   // across callbacks so deleting a value does not reuse its generated ID.
-  auto NextID = std::make_shared<std::atomic<uint64_t>>(0);
   PIC.registerBeforeNonSkippedPassCallback(
-      [NextID](StringRef, IRUnitRef IR) { nameIRUnit(IR, *NextID); });
+      [&NextID](StringRef, IRUnitRef IR) { nameIRUnit(IR, NextID); });
   PIC.registerAfterPassCallback(
-      [NextID](StringRef, IRUnitRef IR, const PreservedAnalyses &) {
-        nameIRUnit(IR, *NextID);
+      [&NextID](StringRef, IRUnitRef IR, const PreservedAnalyses &) {
+        nameIRUnit(IR, NextID);
       });
 }

@@ -2497,7 +2497,7 @@ void StandardInstrumentations::registerCallbacks(
     PassInstrumentationCallbacks &PIC, ModuleAnalysisManager *MAM,
     ExtendedIRContext *IRContext) {
   if (PassesOptions::Global.instnamer_after_each_pass)
-    InstructionNamerPass::registerCallbacks(PIC);
+    InstructionNamerPass::registerCallbacks(PIC, InstNamerNextID);
   PrintIR.registerCallbacks(PIC, IRContext);
   PrintPass.registerCallbacks(PIC, IRContext);
   TimePasses.registerCallbacks(PIC);
