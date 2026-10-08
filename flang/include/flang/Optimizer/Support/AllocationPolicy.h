@@ -21,14 +21,19 @@
 #ifndef FORTRAN_OPTIMIZER_SUPPORT_ALLOCATIONPOLICY_H
 #define FORTRAN_OPTIMIZER_SUPPORT_ALLOCATIONPOLICY_H
 
+#include "flang/Optimizer/Dialect/Support/FIRContext.h"
+#include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Optimizer/Support/DataLayout.h"
 #include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <optional>
 
 namespace mlir {
+class Location;
 class ModuleOp;
 class Operation;
+class Type;
 } // namespace mlir
 
 namespace fir {
@@ -79,7 +84,27 @@ struct PendingAllocationInfo {
   bool isDynamic = false;
   /// The constant size of the allocation in bytes, if it can be determined.
   std::optional<std::int64_t> byteSize;
+  /// An operation at the point where the allocation lives or will be inserted,
+  /// used for context dependent decisions such as code that runs on a device.
+  /// Optional: without it the offload region rule is not applied.
+  mlir::Operation *context = nullptr;
 };
+
+/// Module-level information needed to compute constant allocation sizes.
+struct AllocationSizeContext {
+  std::optional<mlir::DataLayout> dataLayout;
+  std::optional<fir::KindMapping> kindMap;
+};
+
+/// Gather the module-level information needed to compute allocation sizes.
+AllocationSizeContext getAllocationSizeContext(mlir::Operation *op);
+
+/// Return true if a copy-in buffer should be allocated on the stack. Unlike
+/// general array allocation placement, copy-in buffers with dynamic size are
+/// kept on the heap even under -fstack-arrays.
+bool shouldUseStackForCopyin(mlir::Location loc, mlir::Type sequenceType,
+                             const AllocationPolicy &policy,
+                             const AllocationSizeContext &sizeContext);
 
 /// Facts about a single existing array allocation used to decide its placement.
 struct AllocationInfo : PendingAllocationInfo {
@@ -92,7 +117,9 @@ struct AllocationInfo : PendingAllocationInfo {
 /// Size-based placement policy, usable before the allocation is created.
 /// Decides whether an allocation described by \p info should live on the stack,
 /// given the \p policy in effect and the per-function stack bytes already
-/// committed to the stack (\p stackBytesUsed).
+/// committed to the stack (\p stackBytesUsed). When \p info carries a context
+/// inside an offload region, -fstack-arrays is not honored there and only the
+/// size based rules apply, as for a device procedure.
 bool shouldAllocateOnStack(const PendingAllocationInfo &info,
                            const AllocationPolicy &policy,
                            std::size_t stackBytesUsed);

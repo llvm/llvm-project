@@ -1,0 +1,34 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!u8i = !cir.int<u, 8>
+
+module attributes {cir.cu.device_binary = "abc" : !cir.array<!u8i x 3>} {
+}
+
+// -----
+
+// expected-error@+1 {{expects 'cir.cu.device_binary' to be a string typed as an array of its length}}
+module attributes {cir.cu.device_binary = "abc"} {
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+
+// expected-error@+1 {{expects 'cir.cu.device_binary' to be a string typed as an array of its length}}
+module attributes {cir.cu.device_binary = "abc" : !cir.array<!u8i x 4>} {
+}
+
+// -----
+
+!u16i = !cir.int<u, 16>
+
+// expected-error@+1 {{expects !cir.int<u, 8> element type}}
+module attributes {cir.cu.device_binary = "abc" : !cir.array<!u16i x 3>} {
+}
+
+// -----
+
+// expected-error@+1 {{expects 'cir.cu.device_binary' to be a string typed as an array of its length}}
+module attributes {cir.cu.device_binary = 42 : i32} {
+}

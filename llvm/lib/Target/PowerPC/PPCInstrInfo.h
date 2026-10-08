@@ -17,7 +17,6 @@
 #include "PPC.h"
 #include "PPCRegisterInfo.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
 #define GET_INSTRINFO_HEADER
@@ -381,6 +380,9 @@ public:
   ///
   const PPCRegisterInfo &getRegisterInfo() const { return RI; }
 
+  const TargetRegisterClass *
+  getInlineAsmMemoryOperandRegClass(InlineAsm::ConstraintCode C) const override;
+
   bool isXFormMemOp(unsigned Opcode) const {
     return get(Opcode).TSFlags & PPCII::XFormMemOp;
   }
@@ -667,8 +669,7 @@ public:
   /// loaded/stored (e.g. 1, 2, 4, 8).
   bool getMemOperandWithOffsetWidth(const MachineInstr &LdSt,
                                     const MachineOperand *&BaseOp,
-                                    int64_t &Offset, LocationSize &Width,
-                                    const TargetRegisterInfo *TRI) const;
+                                    int64_t &Offset, LocationSize &Width) const;
 
   bool optimizeCmpPostRA(MachineInstr &MI) const;
 
@@ -677,8 +678,7 @@ public:
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &LdSt,
       SmallVectorImpl<const MachineOperand *> &BaseOps, int64_t &Offset,
-      bool &OffsetIsScalable, LocationSize &Width,
-      const TargetRegisterInfo *TRI) const override;
+      bool &OffsetIsScalable, LocationSize &Width) const override;
 
   /// Returns true if the two given memory operations should be scheduled
   /// adjacent.
@@ -740,8 +740,7 @@ public:
   }
   void promoteInstr32To64ForElimEXTSW(const Register &Reg,
                                       MachineRegisterInfo *MRI,
-                                      unsigned BinOpDepth,
-                                      LiveVariables *LV) const;
+                                      unsigned BinOpDepth) const;
 
   bool convertToImmediateForm(MachineInstr &MI,
                               SmallSet<Register, 4> &RegsToUpdate,

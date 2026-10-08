@@ -1,7 +1,7 @@
 !RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
 !CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.type<[[ONE_LAYER_TY:_QFdtype_alloca_map_op_blockTone_layer{i:f32,scalar:!fir.box<!fir.heap<i32>>,array_i:!fir.array<10xi32>,j:f32,array_j:!fir.box<!fir.heap<!fir.array<\?xi32>>>,k:i32}]]> {{.*}}
-!CHECK: %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]] {{{.*}}} : (!fir.ref<!fir.type<[[ONE_LAYER_TY]]>>) -> (!fir.ref<!fir.type<[[ONE_LAYER_TY]]>>, !fir.ref<!fir.type<[[ONE_LAYER_TY]]>>)
+!CHECK: %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]] {{.*}} : (!fir.ref<!fir.type<[[ONE_LAYER_TY]]>>) -> (!fir.ref<!fir.type<[[ONE_LAYER_TY]]>>, !fir.ref<!fir.type<[[ONE_LAYER_TY]]>>)
 !CHECK: %[[BOUNDS:.*]] = omp.map.bounds lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}}) stride_in_bytes(true)
 !CHECK: %[[MEMBER_COORD:.*]] = fir.coordinate_of %[[DECLARE]]#0, array_j : (!fir.ref<!fir.type<[[ONE_LAYER_TY]]>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 !CHECK: %[[MEMBER_BASE_ADDR:.*]] = fir.box_offset %[[MEMBER_COORD]] base_addr : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
@@ -10,7 +10,7 @@
 !CHECK: %[[MAP_MEMBER_ATTACH:.*]] = omp.map.info var_ptr(%[[MEMBER_COORD]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr({{.*}} : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32) bounds({{.*}}) name("one_l%array_j") -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 !CHECK: %[[MAP_PARENT:.*]] = omp.map.info var_ptr(%[[DECLARE]]#1 : !fir.ref<!fir.type<[[ONE_LAYER_TY]]>>, !fir.type<[[ONE_LAYER_TY]]>) map_clauses(storage) capture(ByRef) members(%[[MAP_MEMBER_DESCRIPTOR]], %[[MAP_MEMBER_BASE_ADDR]] : [4], [4, 0] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) name("one_l") partial_map(true) -> !fir.ref<!fir.type<[[ONE_LAYER_TY]]>>
 !CHECK:   omp.target kernel_type(generic) map_entries(%[[MAP_PARENT]] -> %[[ARG0:.*]], %[[MAP_MEMBER_DESCRIPTOR]] -> %[[ARG1:.*]], %[[MAP_MEMBER_ATTACH]] -> %[[ARG2:.*]], %[[MAP_MEMBER_BASE_ADDR]] -> %[[ARG3:.*]] : !fir.ref<!fir.type<[[ONE_LAYER_TY]]>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) {
-!CHECK:        %{{.*}}:2 = hlfir.declare %[[ARG0]] {{{.*}}} : (!fir.ref<!fir.type<[[ONE_LAYER_TY]]>>) -> (!fir.ref<!fir.type<[[ONE_LAYER_TY]]>>, !fir.ref<!fir.type<[[ONE_LAYER_TY]]>>)
+!CHECK:        %{{.*}}:2 = hlfir.declare %[[ARG0]] {{.*}} : (!fir.ref<!fir.type<[[ONE_LAYER_TY]]>>) -> (!fir.ref<!fir.type<[[ONE_LAYER_TY]]>>, !fir.ref<!fir.type<[[ONE_LAYER_TY]]>>)
 subroutine dtype_alloca_map_op_block()
     type :: one_layer
     real(4) :: i
@@ -31,7 +31,7 @@ subroutine dtype_alloca_map_op_block()
 end subroutine
 
 !CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.box<!fir.heap<!fir.type<[[REC_TY:_QFalloca_dtype_op_block_addTone_layer{i:f32,scalar:!fir.box<!fir.heap<i32>>,array_i:!fir.array<10xi32>,j:f32,array_j:!fir.box<!fir.heap<!fir.array<\?xi32>>>,k:i32}]]>>> {{.*}}
-!CHECK: %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]] {{{.*}}} : (!fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>>, !fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>>)
+!CHECK: %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]] {{.*}} : (!fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>>, !fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>>)
 !CHECK: %[[BOUNDS:.*]] = omp.map.bounds lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}}) stride_in_bytes(true)
 !CHECK: %[[LOAD_DTYPE:.*]] = fir.load %[[DECLARE]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>>
 !CHECK: %[[MEMBER_COORD:.*]] = fir.coordinate_of %[[LOAD_DTYPE]], array_j : (!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
@@ -47,7 +47,7 @@ end subroutine
 !CHECK: %[[MAP_DTYPE_DESC:.*]] = omp.map.info var_ptr(%[[DECLARE]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>>, !fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>) map_clauses(always, to) capture(ByRef) members(%[[MAP_DTYPE_BASE_ADDR]], %[[MAP_MEMBER_DESC]], %[[MAP_MEMBER_BASE_ADDR]], %[[MAP_REGULAR_MEMBER]] : [0], [0, 4], [0, 4, 0], [0, 5] : !fir.llvm_ptr<!fir.ref<!fir.type<[[REC_TY]]>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, !fir.ref<i32>) name("one_l") -> !fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>>
 !CHECK: %[[MAP_DTYPE_DESC_ATTACH:.*]] = omp.map.info var_ptr(%[[DECLARE]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>>, !fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%[[DTYPE_BASE_ADDR]] : !fir.llvm_ptr<!fir.ref<!fir.type<[[REC_TY]]>>>, !fir.type<[[REC_TY]]>) name("one_l") -> !fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>>
 !CHECK: omp.target kernel_type(generic) map_entries(%[[MAP_DTYPE_DESC]] -> %[[ARG0:.*]], %[[MAP_MEMBER_DESC]] -> %[[ARG1:.*]], %[[MAP_REGULAR_MEMBER]] -> %[[ARG2:.*]], %[[MAP_MEMBER_ATTACH]] -> %[[ARG3:.*]], %[[MAP_DTYPE_DESC_ATTACH]] -> %[[ARG4:.*]], %[[MAP_DTYPE_BASE_ADDR]] -> %[[ARG5:.*]], %[[MAP_MEMBER_BASE_ADDR]] -> %[[ARG6:.*]] : !fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<i32>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>>, !fir.llvm_ptr<!fir.ref<!fir.type<[[REC_TY]]>>>, !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) {
-!CHECK:  %{{.*}}:2 = hlfir.declare %[[ARG0]] {{{.*}}} : (!fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>>, !fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>>)
+!CHECK:  %{{.*}}:2 = hlfir.declare %[[ARG0]] {{.*}} : (!fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>>, !fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>>)
 subroutine alloca_dtype_op_block_add()
     type :: one_layer
     real(4) :: i

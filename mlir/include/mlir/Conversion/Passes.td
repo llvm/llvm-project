@@ -130,9 +130,18 @@ def ConvertAMDGPUToROCDLPass : Pass<"convert-amdgpu-to-rocdl"> {
     "LLVM::LLVMDialect",
     "ROCDL::ROCDLDialect",
   ];
-  let options = [Option<"chipset", "chipset", "std::string",
-                        /*default=*/"\"gfx000\"",
-                        "Chipset that these operations will run on">];
+  let options = [
+    Option<"arch", "arch", "std::string",
+           /*default=*/"\"invalid\"",
+           "Target architecture, as in Clang, with optional target-ID "
+           "modifiers. New-style triples such as amdgpu9.42-amd-amdhsa are "
+           "preferred, and can be extended to a full target ID like "
+           "amdgpu9.42-amd-amdhsa--gfx942:xnack+:sramecc-. Bare chip names "
+           "like gfx1250 or gfx942:xnack- are also supported. Defaults to an "
+           "invalid target so that one must be given explicitly">,
+    Option<"chipset", "chipset", "std::string", /*default=*/"\"\"",
+           "Deprecated alias for 'arch'.">,
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -150,9 +159,16 @@ def ArithToAMDGPUConversionPass : Pass<"convert-arith-to-amdgpu"> {
   let dependentDialects = ["amdgpu::AMDGPUDialect", "vector::VectorDialect"];
 
   let options = [
-    Option<"chipset", "chipset", "std::string",
-                        /*default=*/"\"gfx000\"",
-                        "Chipset that these operations will run on">,
+    Option<"arch", "arch", "std::string",
+           /*default=*/"\"invalid\"",
+           "Target architecture, as in Clang, with optional target-ID "
+           "modifiers. New-style triples such as amdgpu9.42-amd-amdhsa are "
+           "preferred, and can be extended to a full target ID like "
+           "amdgpu9.42-amd-amdhsa--gfx942:xnack+:sramecc-. Bare chip names "
+           "like gfx1250 or gfx942:xnack- are also supported. Defaults to an "
+           "invalid target so that one must be given explicitly">,
+    Option<"chipset", "chipset", "std::string", /*default=*/"\"\"",
+           "Deprecated alias for 'arch'.">,
     Option<"saturateFP8Truncf", "saturate-fp8-truncf", "bool",
            /*default=*/"false",
            "Use saturating truncation for 8-bit float types">,
@@ -684,9 +700,19 @@ def ConvertGpuOpsToROCDLOps : Pass<"convert-gpu-to-rocdl", "gpu::GPUModuleOp"> {
     "memref::MemRefDialect",
   ];
   let options = [
-    Option<"chipset", "chipset", "std::string",
-           /*default=*/"\"gfx000\"",
-           "Chipset that these operations will run on">,
+    Option<"arch", "arch", "std::string",
+           /*default=*/"\"invalid\"",
+           "Target architecture, as in Clang, with optional target-ID "
+           "modifiers. New-style triples such as amdgpu9.42-amd-amdhsa are "
+           "preferred, and can be extended to a full target ID like "
+           "amdgpu9.42-amd-amdhsa--gfx942:xnack+:sramecc-. Bare chip names "
+           "like gfx1250 or gfx942:xnack- are also supported. Defaults to an "
+           "invalid target so that one must be given explicitly">,
+    Option<"chipset", "chipset", "std::string", /*default=*/"\"\"",
+           "Deprecated alias for 'arch'.">,
+    Option<"waveSize", "wavesize", "unsigned", /*default=*/"0",
+           "Wavefront size (32 or 64) for targets that run at either, or 0 to "
+           "use the architecture's default">,
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
            /*default=kDeriveIndexBitwidthFromDataLayout*/ "0",
            "Bitwidth of the index type, 0 to use size of machine word">,
@@ -851,9 +877,9 @@ def ConvertMathToROCDL : Pass<"convert-math-to-rocdl", "ModuleOp"> {
   let description = [{
     This pass converts supported Math ops to ROCDL library calls.
 
-    The chipset option specifies the target AMDGPU architecture. If the chipset
-    is empty, none of the chipset-dependent patterns are added, and the pass
-    will not attempt to parse the chipset.
+    The `arch` option specifies the target AMDGPU architecture. If it is empty,
+    none of the target-dependent patterns are added and the pass does not
+    resolve a target.
   }];
   let dependentDialects = [
     "arith::ArithDialect",
@@ -861,9 +887,14 @@ def ConvertMathToROCDL : Pass<"convert-math-to-rocdl", "ModuleOp"> {
     "ROCDL::ROCDLDialect",
     "vector::VectorDialect",
   ];
-  let options = [Option<"chipset", "chipset", "std::string",
-                        /*default=*/"\"\"",
-                        "Chipset that these operations will run on">];
+  let options = [
+    Option<"arch", "arch", "std::string", /*default=*/"\"\"",
+           "Target architecture, as in Clang, with optional target-ID "
+           "modifiers (e.g. amdgpu9.42-amd-amdhsa, gfx942, gfx942:xnack-). "
+           "If empty, no target-dependent patterns are added">,
+    Option<"chipset", "chipset", "std::string", /*default=*/"\"\"",
+           "Deprecated alias for 'arch'.">,
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -909,6 +940,12 @@ def ConvertMathToXeVM : Pass<"convert-math-to-xevm"> {
     *   Every other op becomes a call to the precise OpenCL intrinsic from the
         `__spirv_ocl_` extended instruction set. Set the `convertToOCL` flag to
         `false` to leave these ops alone instead.
+
+    Algebraic simplifications run ahead of the lowering, so the cheaper form is
+    what reaches the intrinsics: `math.powf %x, 2.0` becomes a multiply instead
+    of a call to `__spirv_ocl_native_powr`, and `exp(a) / exp(b)` becomes a
+    single `exp(a - b)` when the division may be reassociated (`arcp` or
+    `reassoc`). Ops these simplifications cannot rewrite are left as they are.
   }];
   let options = [
     Option<"convertArith", "convert-arith", "bool", /*default=*/"true",
@@ -1420,7 +1457,14 @@ def TosaToLinalg
            "Disable tosa decompositions pass">,
     Option<"aggressiveReduceConstant", "aggressive-reduce-constant",
            "bool", /*default=*/"false",
-           "Always perform the reduce constant optimization">
+           "Always perform the reduce constant optimization">,
+    Option<"allowNonFinites", "allow-non-finites", "bool",
+           /*default=*/"false",
+           "When enabled, float min/max reductions are seeded with the "
+           "infinite identity mandated by the TOSA specification. When "
+           "disabled (default), the largest finite value is used instead. "
+           "This controls only compiler-generated identity values; NaN "
+           "results required by nan_mode are unaffected.">
   ];
 }
 

@@ -136,8 +136,9 @@ private:
       // The AccessModifierOffset may be overridden by IndentAccessModifiers,
       // in which case we take a negative value of the IndentWidth to simulate
       // the upper indent level.
-      return Style.IndentAccessModifiers ? -Style.IndentWidth
-                                         : Style.AccessModifierOffset;
+      return Style.IndentAccessModifiers != FormatStyle::IAMS_Never
+                 ? -Style.IndentWidth
+                 : Style.AccessModifierOffset;
     }
     return 0;
   }
@@ -1657,7 +1658,7 @@ static auto computeNewlines(const AnnotatedLine &Line,
       (!RootToken.Next ||
        (RootToken.Next->is(tok::semi) && !RootToken.Next->Next)) &&
       // Do not remove empty lines before namespace closing "}".
-      !getNamespaceToken(&Line, Lines)) {
+      !getNamespaceToken(&Line, Lines) && !Style.KeepEmptyLines.AtEndOfBlock) {
     Newlines = std::min(Newlines, 1u);
   }
   // Remove empty lines at the start of nested blocks (lambdas/arrow functions)

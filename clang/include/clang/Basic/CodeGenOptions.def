@@ -298,6 +298,8 @@ CODEGENOPT(SanitizeCfiICallNormalizeIntegers, 1, 0, Benign) ///< Normalize integ
 CODEGENOPT(SanitizeCfiCanonicalJumpTables, 1, 0, Benign) ///< Make jump table symbols canonical
                                                          ///< instead of creating a local jump table.
 CODEGENOPT(SanitizeKcfiArity, 1, 0, Benign) ///< Embed arity in KCFI patchable function prefix
+CODEGENOPT(CopyProf, 1, 0, Benign) ///< Enable CopyProf instrumentation
+VALUE_CODEGENOPT(CopyProfStaticSizeThreshold, 32, 16, Benign) ///< Set threshold for CopyProf instrumentation
 CODEGENOPT(SanitizeCoverageType, 2, 0, Benign) ///< Type of sanitizer coverage
                                                ///< instrumentation.
 CODEGENOPT(SanitizeCoverageIndirectCalls, 1, 0, Benign) ///< Enable sanitizer coverage

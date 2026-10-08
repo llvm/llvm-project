@@ -88,7 +88,8 @@ struct PassInfoMixin : detail::InfoMixin<DerivedT> {
   }
 };
 
-bool shouldSkipOptimizationForOptBisect(IRUnitRef IR, StringRef PassName);
+LLVM_ABI bool shouldSkipOptimizationForOptBisect(IRUnitRef IR,
+                                                 StringRef PassName);
 } // namespace detail
 
 class Function;
@@ -384,11 +385,11 @@ public:
       return IMapI->second;
     }
 
-    Invalidator(SmallDenseMap<AnalysisKey *, bool, 8> &IsResultInvalidated,
+    Invalidator(SmallDenseMap<AnalysisKey *, bool, 32> &IsResultInvalidated,
                 const AnalysisResultMapT &Results)
         : IsResultInvalidated(IsResultInvalidated), Results(Results) {}
 
-    SmallDenseMap<AnalysisKey *, bool, 8> &IsResultInvalidated;
+    SmallDenseMap<AnalysisKey *, bool, 32> &IsResultInvalidated;
     const AnalysisResultMapT &Results;
   };
 
@@ -470,7 +471,7 @@ public:
   template <typename PassT>
   void verifyNotInvalidated(IRUnitT &IR, typename PassT::Result *Result) const {
     PreservedAnalyses PA = PreservedAnalyses::none();
-    SmallDenseMap<AnalysisKey *, bool, 8> IsResultInvalidated;
+    SmallDenseMap<AnalysisKey *, bool, 32> IsResultInvalidated;
     Invalidator Inv(IsResultInvalidated, AnalysisResults);
     assert(!Result->invalidate(IR, PA, Inv) &&
            "Cached result cannot be invalidated");

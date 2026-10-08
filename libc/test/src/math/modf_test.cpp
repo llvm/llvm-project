@@ -10,4 +10,4 @@
 
 #include "src/math/modf.h"
 
-LIST_MODF_TESTS(double, LIBC_NAMESPACE::modf)
+LIST_MODF_TESTS(Modf, double, LIBC_NAMESPACE::modf)

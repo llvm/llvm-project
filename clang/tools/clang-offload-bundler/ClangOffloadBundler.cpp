@@ -62,8 +62,6 @@ static void PrintVersion(raw_ostream &OS) {
 
 int main(int argc, const char **argv) {
 
-  cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
-
   // Mark all our options with this category, everything else (except for
   // -version and -help) will be hidden.
   cl::OptionCategory
@@ -147,7 +145,7 @@ int main(int argc, const char **argv) {
                         cl::init(false), cl::cat(ClangOffloadBundlerCategory));
   cl::opt<int> CompressionLevel(
       "compression-level", cl::desc("Specify the compression level (integer)"),
-      cl::value_desc("n"), cl::Optional, cl::cat(ClangOffloadBundlerCategory));
+      cl::value_desc("n"), cl::cat(ClangOffloadBundlerCategory));
 
   // Process commandline options and report errors
   sys::PrintStackTraceOnErrorSignal(argv[0]);
@@ -160,11 +158,6 @@ int main(int argc, const char **argv) {
       "referring to the same source file but different targets into a single \n"
       "one. The resulting file can also be unbundled into different files by \n"
       "this tool if -unbundle is provided.\n");
-
-  if (Help) {
-    cl::PrintHelpMessage();
-    return 0;
-  }
 
   /// Class to store bundler options in standard (non-cl::opt) data structures
   // Avoid using cl::opt variables after these assignments when possible
@@ -349,8 +342,8 @@ int main(int argc, const char **argv) {
   unsigned HostTargetNum = 0u;
   bool HIPOnly = true;
   llvm::DenseSet<StringRef> ParsedTargets;
-  // Map {offload-kind}-{triple} to its device triple and target IDs.
-  std::map<std::string, std::pair<llvm::Triple, std::set<StringRef>>> TargetIDs;
+  // Map {offload-kind}-{triple} to target IDs.
+  std::map<std::string, std::set<StringRef>> TargetIDs;
   // Standardize target names to include env field
   std::vector<std::string> StandardizedTargetNames;
   for (StringRef Target : TargetNames) {
@@ -385,10 +378,8 @@ int main(int argc, const char **argv) {
       return reportError(createStringError(errc::invalid_argument, Msg.str()));
     }
 
-    auto &Entry = TargetIDs[OffloadInfo.OffloadKind.str() + "-" +
-                            OffloadInfo.Triple.str()];
-    Entry.first = OffloadInfo.Triple;
-    Entry.second.insert(OffloadInfo.TargetID);
+    TargetIDs[OffloadInfo.OffloadKind.str() + "-" + OffloadInfo.Triple.str()]
+        .insert(OffloadInfo.TargetID);
     if (KindIsValid && OffloadInfo.hasHostKind()) {
       ++HostTargetNum;
       // Save the index of the input that refers to the host.
@@ -404,17 +395,14 @@ int main(int argc, const char **argv) {
   BundlerConfig.TargetNames.assign(StandardizedTargetNames.begin(),
                                    StandardizedTargetNames.end());
 
-  for (const auto &[Key, TripleAndIDs] : TargetIDs) {
-    const auto &[Triple, IDs] = TripleAndIDs;
-    llvm::SmallVector<clang::TargetIDEntry> Entries;
-    for (StringRef ID : IDs)
-      Entries.emplace_back(Triple, ID);
-    if (auto ConflictingTID = clang::getConflictTargetIDCombination(Entries)) {
+  for (const auto &TargetID : TargetIDs) {
+    if (auto ConflictingTID =
+            clang::getConflictTargetIDCombination(TargetID.second)) {
       SmallVector<char, 128u> Buf;
       raw_svector_ostream Msg(Buf);
       Msg << "Cannot bundle inputs with conflicting targets: '"
-          << Key + "-" + ConflictingTID->first << "' and '"
-          << Key + "-" + ConflictingTID->second << "'";
+          << TargetID.first + "-" + ConflictingTID->first << "' and '"
+          << TargetID.first + "-" + ConflictingTID->second << "'";
       return reportError(createStringError(errc::invalid_argument, Msg.str()));
     }
   }

@@ -17,8 +17,12 @@
 
 #include "BedrockTestUtils.h"
 #include "CommonTestUtils.h"
+#include "ErrorMatchers.h"
 
 using namespace orc_rt;
+using namespace orc_rt::test;
+
+using ::testing::HasSubstr;
 
 TEST(BootstrapInfoTest, ExplicitConstruction) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
@@ -34,7 +38,7 @@ TEST(BootstrapInfoTest, ExplicitConstructionWithSymbolsAndValues) {
   SimpleSymbolTable Symbols;
   std::pair<SymbolNameSpec, void *> Syms[] = {
       {SymbolNameSpec::linker("orc_rt_X"), &X}};
-  cantFail(Symbols.addUnique(Syms));
+  EXPECT_THAT_ERROR(Symbols.addUnique(Syms), Succeeded());
 
   BootstrapInfo::ValueMap Values;
   Values["key"] = "value";
@@ -55,45 +59,51 @@ TEST(BootstrapInfoTest, ProcessInfoDelegates) {
 
 TEST(BootstrapInfoTest, CreateDefaultSucceeds) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  auto BI = cantFail(BootstrapInfo::CreateDefault(S));
-  EXPECT_EQ(&BI.session(), &S);
+  auto BI = BootstrapInfo::CreateDefault(S);
+  ASSERT_THAT_EXPECTED(BI, Succeeded());
+  EXPECT_EQ(&BI->session(), &S);
 }
 
 TEST(BootstrapInfoTest, CreateDefaultContainsSessionSymbol) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  auto BI = cantFail(BootstrapInfo::CreateDefault(S));
+  auto BI = BootstrapInfo::CreateDefault(S);
+  ASSERT_THAT_EXPECTED(BI, Succeeded());
   auto SessionName = SymbolNameSpec::c("orc_rt_Session_Instance");
-  ASSERT_TRUE(BI.symbols().count(SessionName));
-  EXPECT_EQ(BI.symbols().at(SessionName), static_cast<const void *>(&S));
+  ASSERT_TRUE(BI->symbols().count(SessionName));
+  EXPECT_EQ(BI->symbols().at(SessionName), static_cast<const void *>(&S));
 }
 
 TEST(BootstrapInfoTest, CreateDefaultContainsSPSCISymbols) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  auto BI = cantFail(BootstrapInfo::CreateDefault(S));
+  auto BI = BootstrapInfo::CreateDefault(S);
+  ASSERT_THAT_EXPECTED(BI, Succeeded());
   // The default addAll should have registered SPS CI symbols.
-  EXPECT_TRUE(BI.symbols().count(
+  EXPECT_TRUE(BI->symbols().count(
       SymbolNameSpec::c("orc_rt_ci_sps_SimpleNativeMemoryMap_reserve")));
 }
 
 TEST(BootstrapInfoTest, CreateDefaultWithNoSymbolsBuilder) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  auto BI = cantFail(BootstrapInfo::CreateDefault(S, /*AddInitialSymbols=*/{},
-                                                  /*AddInitialValues=*/{}));
+  auto BI = BootstrapInfo::CreateDefault(S, /*AddInitialSymbols=*/{},
+                                         /*AddInitialValues=*/{});
+  ASSERT_THAT_EXPECTED(BI, Succeeded());
   // Should still contain the session symbol (added unconditionally).
-  ASSERT_TRUE(BI.symbols().count(SymbolNameSpec::c("orc_rt_Session_Instance")));
+  ASSERT_TRUE(
+      BI->symbols().count(SymbolNameSpec::c("orc_rt_Session_Instance")));
   // But no SPS CI symbols.
-  EXPECT_FALSE(BI.symbols().count(
+  EXPECT_FALSE(BI->symbols().count(
       SymbolNameSpec::c("orc_rt_ci_sps_SimpleNativeMemoryMap_reserve")));
 }
 
 TEST(BootstrapInfoTest, CreateDefaultWithCustomValuesBuilder) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  auto BI = cantFail(BootstrapInfo::CreateDefault(
+  auto BI = BootstrapInfo::CreateDefault(
       S, sps_ci::addAll, [](BootstrapInfo::ValueMap &Values) -> Error {
         Values["test_key"] = "test_value";
         return Error::success();
-      }));
-  EXPECT_EQ(BI.values().at("test_key"), "test_value");
+      });
+  ASSERT_THAT_EXPECTED(BI, Succeeded());
+  EXPECT_EQ(BI->values().at("test_key"), "test_value");
 }
 
 TEST(BootstrapInfoTest, CreateDefaultSymbolsBuilderError) {
@@ -101,9 +111,8 @@ TEST(BootstrapInfoTest, CreateDefaultSymbolsBuilderError) {
   auto BI = BootstrapInfo::CreateDefault(S, [](SimpleSymbolTable &) -> Error {
     return make_error<StringError>("symbols builder failed");
   });
-  EXPECT_FALSE(!!BI);
-  auto ErrMsg = toString(BI.takeError());
-  EXPECT_NE(ErrMsg.find("symbols builder failed"), std::string::npos);
+  EXPECT_THAT_EXPECTED(BI,
+                       FailedWithMessage(HasSubstr("symbols builder failed")));
 }
 
 TEST(BootstrapInfoTest, CreateDefaultValuesBuilderError) {
@@ -112,9 +121,8 @@ TEST(BootstrapInfoTest, CreateDefaultValuesBuilderError) {
       S, sps_ci::addAll, [](BootstrapInfo::ValueMap &) -> Error {
         return make_error<StringError>("values builder failed");
       });
-  EXPECT_FALSE(!!BI);
-  auto ErrMsg = toString(BI.takeError());
-  EXPECT_NE(ErrMsg.find("values builder failed"), std::string::npos);
+  EXPECT_THAT_EXPECTED(BI,
+                       FailedWithMessage(HasSubstr("values builder failed")));
 }
 
 TEST(BootstrapInfoTest, MutableSymbolsAndValues) {
@@ -124,7 +132,7 @@ TEST(BootstrapInfoTest, MutableSymbolsAndValues) {
   int X = 0;
   std::pair<SymbolNameSpec, void *> Syms[] = {
       {SymbolNameSpec::linker("orc_rt_X"), &X}};
-  cantFail(BI.symbols().addUnique(Syms));
+  EXPECT_THAT_ERROR(BI.symbols().addUnique(Syms), Succeeded());
   BI.values()["key"] = "value";
 
   EXPECT_EQ(BI.symbols().size(), 1U);
@@ -133,8 +141,9 @@ TEST(BootstrapInfoTest, MutableSymbolsAndValues) {
 
 TEST(BootstrapInfoTest, CreateDefaultContainsSubtargetFeatures) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  auto BI = cantFail(BootstrapInfo::CreateDefault(S));
-  ASSERT_TRUE(BI.values().count("orc-rt.Executor.SubtargetFeatures"));
-  EXPECT_EQ(BI.values().at("orc-rt.Executor.SubtargetFeatures"),
+  auto BI = BootstrapInfo::CreateDefault(S);
+  ASSERT_THAT_EXPECTED(BI, Succeeded());
+  ASSERT_TRUE(BI->values().count("orc-rt.Executor.SubtargetFeatures"));
+  EXPECT_EQ(BI->values().at("orc-rt.Executor.SubtargetFeatures"),
             S.processInfo().targetCPUFeatures());
 }

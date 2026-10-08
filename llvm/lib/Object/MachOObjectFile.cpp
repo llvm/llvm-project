@@ -2699,11 +2699,9 @@ basic_symbol_iterator MachOObjectFile::symbol_end() const {
   if (!SymtabLoadCmd || Symtab.nsyms == 0)
     return basic_symbol_iterator(SymbolRef(DRI, this));
 
-  unsigned SymbolTableEntrySize = is64Bit() ?
-    sizeof(MachO::nlist_64) :
-    sizeof(MachO::nlist);
-  unsigned Offset = Symtab.symoff +
-    Symtab.nsyms * SymbolTableEntrySize;
+  uint64_t SymbolTableEntrySize =
+      is64Bit() ? sizeof(MachO::nlist_64) : sizeof(MachO::nlist);
+  uint64_t Offset = Symtab.symoff + Symtab.nsyms * SymbolTableEntrySize;
   DRI.p = reinterpret_cast<uintptr_t>(getPtr(*this, Offset));
   return basic_symbol_iterator(SymbolRef(DRI, this));
 }
@@ -2712,8 +2710,8 @@ symbol_iterator MachOObjectFile::getSymbolByIndex(unsigned Index) const {
   MachO::symtab_command Symtab = getSymtabLoadCommand();
   if (!SymtabLoadCmd || Index >= Symtab.nsyms)
     report_fatal_error("Requested symbol index is out of range.");
-  unsigned SymbolTableEntrySize =
-    is64Bit() ? sizeof(MachO::nlist_64) : sizeof(MachO::nlist);
+  uint64_t SymbolTableEntrySize =
+      is64Bit() ? sizeof(MachO::nlist_64) : sizeof(MachO::nlist);
   DataRefImpl DRI;
   DRI.p = reinterpret_cast<uintptr_t>(getPtr(*this, Symtab.symoff));
   DRI.p += Index * SymbolTableEntrySize;

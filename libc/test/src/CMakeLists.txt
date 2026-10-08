@@ -1,7 +1,7 @@
 function(add_fp_unittest name)
   cmake_parse_arguments(
     "MATH_UNITTEST"
-    "NEED_MPFR;NEED_MPFR_F128;NEED_MPC;FULL_BUILD_ONLY;OVERLAY_BUILD_ONLY" # Optional arguments
+    "NEED_MPFR;NEED_MPFR_F80;NEED_MPFR_F128;NEED_MPC;FULL_BUILD_ONLY;OVERLAY_BUILD_ONLY" # Optional arguments
     "" # Single value arguments
     "LINK_LIBRARIES;DEPENDS" # Multi-value arguments
     ${ARGN}
@@ -14,6 +14,14 @@ function(add_fp_unittest name)
       return()
     endif()
     list(APPEND MATH_UNITTEST_LINK_LIBRARIES libcMPCWrapper)
+  endif()
+
+  if(MATH_UNITTEST_NEED_MPFR_F80)
+    set(MATH_UNITTEST_NEED_MPFR TRUE)
+    if(NOT LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
+      message(VERBOSE "Math test ${name} will be skipped as float80 support in MPFR is not available.")
+      return()
+    endif()
   endif()
 
   # TODO: To be removed when we find a workaround to run MPFR tests for
@@ -100,6 +108,7 @@ add_subdirectory(inttypes)
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(err)
   add_subdirectory(fcntl)
+  add_subdirectory(grp)
   add_subdirectory(poll)
   add_subdirectory(sched)
   add_subdirectory(sys)

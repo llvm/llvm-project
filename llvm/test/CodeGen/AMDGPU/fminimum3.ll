@@ -1619,7 +1619,6 @@ define amdgpu_ps i32 @s_fminimum3_f16(half inreg %a, half inreg %b, half inreg %
 ; GFX950-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX950-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX950-NEXT:    v_pk_minimum3_f16 v0, s0, v0, v1
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_readfirstlane_b32 s0, v0
@@ -3025,9 +3024,9 @@ define <3 x half> @v_fminimum3_v3f16__fabs_all(<3 x half> %a, <3 x half> %b, <3 
 ; GFX942-NEXT:    v_cndmask_b32_e32 v0, v12, v6, vcc
 ; GFX942-NEXT:    v_perm_b32 v2, v7, v0, s0
 ; GFX942-NEXT:    v_pk_min_f16 v2, v2, v11
-; GFX942-NEXT:    v_cmp_o_f16_sdwa vcc, v7, |v4| src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v6, 16, v2
-; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    v_cmp_o_f16_sdwa vcc, v7, |v4| src0_sel:DWORD src1_sel:WORD_1
+; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v6, v12, v6, vcc
 ; GFX942-NEXT:    v_cmp_o_f16_e64 vcc, v1, |v5|
 ; GFX942-NEXT:    s_nop 1
@@ -3467,8 +3466,8 @@ define <4 x half> @v_fminimum3_v4f16__fabs_all(<4 x half> %a, <4 x half> %b, <4 
 ; GFX942-NEXT:    v_and_b32_e32 v7, 0x7fff7fff, v0
 ; GFX942-NEXT:    v_and_b32_e32 v9, 0x7fff7fff, v2
 ; GFX942-NEXT:    v_pk_min_f16 v7, v7, v9
-; GFX942-NEXT:    v_mov_b32_e32 v12, 0x7e00
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v9, 16, v7
+; GFX942-NEXT:    v_mov_b32_e32 v12, 0x7e00
 ; GFX942-NEXT:    v_cmp_o_f16_sdwa vcc, |v0|, |v2| src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_b32_e32 v6, 0x7fff7fff, v1
 ; GFX942-NEXT:    v_and_b32_e32 v8, 0x7fff7fff, v3
@@ -4643,7 +4642,6 @@ define <2 x half> @v_no_fminimum3_f16__multi_use(half %a, half %b, half %c) {
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_pk_minimum3_f16 v3, v0, v1, v1
 ; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, v1, v2
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_pack_b32_f16 v0, v3, v0
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call half @llvm.minimum.f16(half %a, half %b)

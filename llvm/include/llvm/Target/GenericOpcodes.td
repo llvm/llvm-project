@@ -600,6 +600,16 @@ def G_CLMULH : GenericInstruction {
   let isCommutable = true;
 }
 
+// Generic reversed carry-less multiplication.
+// For N-bit operands, compute the 2N-bit polynomial product over GF(2) and
+// return bits [2N-2:N-1].
+def G_CLMULR : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = false;
+  let isCommutable = true;
+}
+
 
 //------------------------------------------------------------------------------
 // Overflow ops

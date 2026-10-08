@@ -655,7 +655,7 @@ bool AMDGPUCallLowering::lowerFormalArguments(
   // The infrastructure for normal calling convention lowering is essentially
   // useless for kernels. We want to avoid any kind of legalization or argument
   // splitting.
-  if (CC == CallingConv::AMDGPU_KERNEL)
+  if (AMDGPU::isKernel(CC))
     return lowerFormalArgumentsKernel(B, F, VRegs);
 
   const bool IsGraphics = AMDGPU::isGraphics(CC);
@@ -1654,7 +1654,7 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                Info.CallConv);
 
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
-  MIB.addDef(TRI->getReturnAddressReg(MF));
+  MIB.addDef(TRI->getReturnAddressReg(MF), RegState::Dead);
 
   if (!Info.IsConvergent)
     MIB.setMIFlag(MachineInstr::NoConvergent);

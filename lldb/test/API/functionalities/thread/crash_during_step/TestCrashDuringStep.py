@@ -20,23 +20,9 @@ class CrashDuringStepTestCase(TestBase):
     def test_step_inst_with(self):
         """Test thread creation during step-inst handling."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target and target.IsValid(), "Target is valid")
-
-        self.bp_num = lldbutil.run_break_set_by_file_and_line(
-            self, "main.cpp", self.breakpoint, num_expected_locations=1
+        _, process, thread, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec("main.cpp"), self.breakpoint
         )
-
-        # Run the program.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process and process.IsValid(), PROCESS_IS_VALID)
-
-        # The stop reason should be breakpoint.
-        self.assertEqual(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(thread.IsValid(), STOPPED_DUE_TO_BREAKPOINT)
 
         # Keep stepping until the inferior crashes
         while (

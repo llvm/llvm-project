@@ -101,6 +101,12 @@ add_header(
 )
 
 add_header(
+  sys_xattr_macros
+  HDR
+    sys-xattr-macros.h
+)
+
+add_header(
   sys_sysmacros_macros
   HDR
     sys-sysmacros-macros.h

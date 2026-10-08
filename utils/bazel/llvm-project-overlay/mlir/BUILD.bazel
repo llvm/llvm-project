@@ -450,6 +450,7 @@ cc_library(
     hdrs = glob([
         "include/mlir/IR/*.h",
     ]) + [
+        "include/mlir/Dialect/Utils/StaticValueUtils.h",
         "include/mlir/IR/PDLPatternMatch.h.inc",
         "include/mlir/Interfaces/CallInterfaces.h",
         "include/mlir/Interfaces/FoldInterfaces.h",
@@ -1849,6 +1850,7 @@ cc_library(
         ":MemRefDialect",
         ":MemRefUtils",
         ":Pass",
+        ":ROCDLDialect",
         ":SCFDialect",
         ":Support",
         ":TransformUtils",
@@ -5860,6 +5862,7 @@ cc_library(
         ":NVGPUToNVVM",
         ":NVVMToLLVM",
         ":Pass",
+        ":ROCDLDialect",
         ":ReconcileUnrealizedCasts",
         ":SCFToControlFlow",
         ":Transforms",
@@ -6748,6 +6751,7 @@ cc_library(
     srcs = [
         "lib/Dialect/LLVMIR/IR/ROCDLDialect.cpp",
         "lib/Dialect/LLVMIR/IR/ROCDLOps.h",
+        "lib/Dialect/LLVMIR/IR/ROCDLTargetInfo.cpp",
     ] + gentbl_sharded_op_defs(
         name = "ROCDLOps_sharded_defs",
         shard_count = 8,
@@ -6756,6 +6760,7 @@ cc_library(
     hdrs = [
         "include/mlir/Dialect/LLVMIR/ROCDLDialect.h",
         "include/mlir/Dialect/LLVMIR/ROCDLDialectDecl.h",
+        "include/mlir/Dialect/LLVMIR/ROCDLTargetInfo.h",
     ],
     includes = [
         "include",
@@ -6770,9 +6775,11 @@ cc_library(
         ":LLVMDialect",
         ":ROCDLOpsIncGen",
         ":SideEffectInterfaces",
+        ":Support",
         "//llvm:AsmParser",
         "//llvm:Core",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -7554,7 +7561,9 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":MathDialect",
+        ":MathTransforms",
         ":Pass",
+        ":TransformUtils",
         ":Transforms",
         ":VectorDialect",
         ":XeVMDialect",
@@ -8716,6 +8725,7 @@ cc_library(
     hdrs = ["include/mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"],
     includes = ["include"],
     deps = [
+        ":Analysis",
         ":ControlFlowDialect",
         ":ConversionPassIncGen",
         ":ConvertToLLVMInterface",
@@ -8950,6 +8960,7 @@ cc_library(
     hdrs = glob(["include/mlir/Conversion/ArithToLLVM/*.h"]),
     includes = ["include"],
     deps = [
+        ":Analysis",
         ":ArithAttrToLLVMConversion",
         ":ArithDialect",
         ":ArithTransforms",
@@ -9510,6 +9521,7 @@ cc_library(
         ":LLVMIntrinsicConversionIncGen",
         ":Support",
         ":ToLLVMIRTranslation",
+        "//llvm:Analysis",
         "//llvm:Core",
         "//llvm:Support",
     ],
@@ -12199,6 +12211,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":Analysis",
         ":ArithAttrToLLVMConversion",
         ":ArithDialect",
         ":ArithUtils",
@@ -13831,6 +13844,7 @@ cc_library(
         ":MemRefDialect",
         ":MemRefPassIncGen",
         ":MemRefUtils",
+        ":MemorySlotInterfaces",
         ":Pass",
         ":RuntimeVerifiableOpInterface",
         ":SCFDialect",

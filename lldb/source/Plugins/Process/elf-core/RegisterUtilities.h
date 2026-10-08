@@ -89,7 +89,7 @@ enum {
   //
   //    namesz
   //
-  //        Length of the note name (including NUL terminator). For
+  //        Length of the note name (including null terminator). For
   //        'NT_CSREGMAP'the note name is the usual core dump note name (e.g.
   //        "CORE" for OS-generated core files).
   //

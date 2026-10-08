@@ -2111,6 +2111,7 @@ static PrintingPolicy getCompletionPrintingPolicy(const ASTContext &Context,
   Policy.SuppressStrongLifetime = true;
   Policy.SuppressUnwrittenScope = true;
   Policy.CleanUglifiedParameters = true;
+  Policy.ResolveDecltype = true;
   return Policy;
 }
 

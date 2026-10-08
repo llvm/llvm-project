@@ -51,6 +51,7 @@ const Scope *FindModuleOrSubmoduleContaining(const Scope &);
 const Scope *FindModuleFileContaining(const Scope &);
 const Scope *FindPureProcedureContaining(const Scope &);
 const Scope *FindOpenACCConstructContaining(const Scope *);
+bool IsOpenACCMapped(const Symbol &, const Scope &);
 bool HasOpenACCRoutineDirective(const Scope *);
 
 const Symbol *FindInterface(const Symbol &);
@@ -723,8 +724,8 @@ public:
 private:
   SemanticsContext &context_;
   std::set<parser::Label> labels_;
-  parser::CharBlock currentStatementSourcePosition_{nullptr};
-  parser::CharBlock constructSourcePosition_{nullptr};
+  parser::CharBlock currentStatementSourcePosition_;
+  parser::CharBlock constructSourcePosition_;
   const char *construct_{nullptr};
 
   parser::MessageFormattedText GetEnclosingConstructMsg();

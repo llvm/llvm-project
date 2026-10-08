@@ -66,7 +66,7 @@ void NonConstParameterCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       stmt(anyOf(unaryOperator(hasAnyOperatorName("++", "--")),
                  binaryOperator(), callExpr(), returnStmt(), cxxConstructExpr(),
-                 cxxUnresolvedConstructExpr()))
+                 cxxUnresolvedConstructExpr(), atomicExpr()))
           .bind("Mark"),
       this);
   Finder->addMatcher(varDecl(hasOwnInitializer(anything())).bind("Mark"), this);
@@ -113,6 +113,13 @@ void NonConstParameterCheck::check(const MatchFinder::MatchResult &Result) {
           markCanNotBeConst(Arg->IgnoreParenCasts(), false);
         }
       }
+    } else if (const auto *AE = dyn_cast<AtomicExpr>(S)) {
+      // Atomic builtins may write through their pointer operands, such as the
+      // 'expected' operand of a compare-exchange, which receives the old value
+      // when the exchange fails.
+      for (const Expr *SubExpr :
+           llvm::ArrayRef(AE->getSubExprs(), AE->getNumSubExprs()))
+        markCanNotBeConst(SubExpr->IgnoreParenCasts(), true);
     } else if (const auto *CE = dyn_cast<CXXConstructExpr>(S)) {
       for (const auto *Arg : CE->arguments())
         markCanNotBeConst(Arg->IgnoreParenCasts(), true);

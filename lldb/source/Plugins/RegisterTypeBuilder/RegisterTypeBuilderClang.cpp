@@ -178,6 +178,7 @@ RegisterTypeBuilderClang::BuildVectorType(const RegisterTypeVector *vector_type,
     break;
   case RegisterType::eRegisterTypeKindEnum:
   case RegisterType::eRegisterTypeKindFlags:
+  case RegisterType::eRegisterTypeKindUnion:
     return {};
   }
   if (!element_type.IsValid())
@@ -250,6 +251,8 @@ RegisterTypeBuilderClang::GetRegisterType(const RegisterInfo &reg_info) {
     return BuildVectorType(
         llvm::cast<RegisterTypeVector>(reg_info.register_type),
         reg_info.byte_size, type_system);
+  case RegisterType::eRegisterTypeKindUnion:
+    return {};
   }
 }
 

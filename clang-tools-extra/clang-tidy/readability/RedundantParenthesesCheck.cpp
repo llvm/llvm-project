@@ -10,6 +10,7 @@
 #include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
@@ -31,6 +32,14 @@ AST_MATCHER(ParenExpr, isInMacro) {
   const Expr *E = Node.getSubExpr();
   return Node.getLParen().isMacroID() || Node.getRParen().isMacroID() ||
          E->getBeginLoc().isMacroID() || E->getEndLoc().isMacroID();
+}
+
+AST_MATCHER(ParenExpr, isWritten) {
+  return Node.getLParen() != Node.getRParen();
+}
+
+AST_MATCHER(TypeLoc, isTypeOfExprTypeLoc) {
+  return !Node.getUnqualifiedLoc().getAs<TypeOfExprTypeLoc>().isNull();
 }
 
 } // namespace
@@ -77,9 +86,12 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
                     callExpr(unless(cxxOperatorCallExpr(
                         unless(hasAnyOperatorName("()", "[]"))))),
                     arraySubscriptExpr())),
+                isWritten(),
                 unless(anyOf(isInMacro(),
                              // sizeof(...) is common used.
-                             hasParent(unaryExprOrTypeTraitExpr()))))
+                             hasParent(unaryExprOrTypeTraitExpr()),
+                             // typeof(...) parentheses are required syntax.
+                             hasParent(typeLoc(isTypeOfExprTypeLoc())))))
           .bind("dup"),
       this);
 }

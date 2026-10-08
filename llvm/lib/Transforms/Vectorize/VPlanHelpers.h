@@ -32,6 +32,7 @@ class AssumptionCache;
 class BasicBlock;
 class CallInst;
 class DominatorTree;
+class Function;
 class InnerLoopVectorizer;
 class IRBuilderBase;
 class LoopInfo;
@@ -209,9 +210,10 @@ struct VPTransformState {
     DenseMap<const VPValue *, SmallVector<Value *, 4>> VPV2Scalars;
   } Data;
 
-  /// Get the generated vector Value for a given VPValue \p Def if \p IsScalar
-  /// is false, otherwise return the generated scalar. \See set.
-  Value *get(const VPValue *Def, bool IsScalar = false);
+  /// Get the generated vector Value for a given VPValue \p Def if
+  /// \p NeedsSingleScalar is false, otherwise return the generated scalar.
+  /// \See set.
+  Value *get(const VPValue *Def, bool NeedsSingleScalar = false);
 
   /// Get the generated Value for a given VPValue and given Part and Lane.
   Value *get(const VPValue *Def, const VPLane &Lane);
@@ -240,12 +242,6 @@ struct VPTransformState {
     Data.VPV2Vector[Def] = V;
   }
 
-  /// Reset an existing vector value for \p Def and a given \p Part.
-  void reset(const VPValue *Def, Value *V) {
-    assert(Data.VPV2Vector.contains(Def) && "need to overwrite existing value");
-    Data.VPV2Vector[Def] = V;
-  }
-
   /// Set the generated scalar \p V for \p Def and the given \p Lane.
   void set(const VPValue *Def, Value *V, const VPLane &Lane) {
     auto &Scalars = Data.VPV2Scalars[Def];
@@ -256,24 +252,8 @@ struct VPTransformState {
     Scalars[CacheIdx] = V;
   }
 
-  /// Reset an existing scalar value for \p Def and a given \p Lane.
-  void reset(const VPValue *Def, Value *V, const VPLane &Lane) {
-    auto Iter = Data.VPV2Scalars.find(Def);
-    assert(Iter != Data.VPV2Scalars.end() &&
-           "need to overwrite existing value");
-    unsigned CacheIdx = Lane.mapToCacheIndex(VF);
-    assert(CacheIdx < Iter->second.size() &&
-           "need to overwrite existing value");
-    Iter->second[CacheIdx] = V;
-  }
-
   /// Set the debug location in the builder using the debug location \p DL.
   void setDebugLocFrom(DebugLoc DL);
-
-  /// Insert the scalar value of \p Def at \p Lane into \p Lane of \p WideValue
-  /// and return the resulting value.
-  Value *packScalarIntoVectorizedValue(const VPValue *Def, Value *WideValue,
-                                       const VPLane &Lane);
 
   /// Add the backedge (latch) incoming value to the canonical, reduction and
   /// first-order recurrence phis in all loop headers state's plan, after
@@ -356,9 +336,9 @@ struct VPCostContext {
   /// transform replaced the original recipe.
   void invalidateWideningDecision(Instruction *I, ElementCount VF);
 
-  /// \returns how much the cost of the block predicated by replicate region
-  /// \p Region should be divided by.
-  uint64_t getReplicateRegionCostDivisor(const VPRegionBlock *Region) const;
+  /// \returns how much the cost of a block executing with recorded frequency
+  /// \p Freq should be divided by.
+  uint64_t getCostDivisor(std::optional<VPExecutionFrequency> Freq) const;
 
   /// Returns true if \p I is known to be scalarized at \p VF.
   bool willBeScalarized(Instruction *I, ElementCount VF) const;
@@ -432,20 +412,25 @@ class VPSlotTracker {
   /// Cached metadata kind names from the Module's LLVMContext.
   SmallVector<StringRef> MDNames;
 
-  /// Cached Module pointer for printing metadata.
-  const Module *M = nullptr;
+  /// Cached Function pointer for printing names and metadata.
+  const Function *F = nullptr;
 
   void assignName(const VPValue *V);
   LLVM_ABI_FOR_TEST void assignNames(const VPlan &Plan);
   void assignNames(const VPBasicBlock *VPBB);
   std::string getName(const Value *V);
 
+  /// Lazily create the ModuleSlotTracker.
+  ModuleSlotTracker &getOrCreateMST();
+
 public:
   VPSlotTracker(const VPlan *Plan = nullptr) {
     if (Plan) {
+      if (auto *ScalarHeader = Plan->getScalarHeader()) {
+        const BasicBlock *ScalarHeaderIRBB = ScalarHeader->getIRBasicBlock();
+        F = ScalarHeaderIRBB->getParent();
+      }
       assignNames(*Plan);
-      if (auto *ScalarHeader = Plan->getScalarHeader())
-        M = ScalarHeader->getIRBasicBlock()->getModule();
     }
   }
 
@@ -456,13 +441,17 @@ public:
 
   /// Returns the cached metadata kind names.
   ArrayRef<StringRef> getMDNames() {
+    const Module *M = getModule();
     if (MDNames.empty() && M)
       M->getContext().getMDKindNames(MDNames);
     return MDNames;
   }
 
-  /// Returns the cached Module pointer.
-  const Module *getModule() const { return M; }
+  /// Print a reference to metadata node \p N to \p O.
+  void printMetadataAsOperand(raw_ostream &O, const MDNode *N);
+
+  /// Returns the module the plan operates on, if any.
+  const Module *getModule() const { return F ? F->getParent() : nullptr; }
 };
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

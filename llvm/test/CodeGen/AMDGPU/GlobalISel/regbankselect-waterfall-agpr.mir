@@ -34,13 +34,13 @@ body:             |
     ; CHECK-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[COPY1]](s32), implicit $exec
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[V_READFIRSTLANE_B32_]](s32), [[COPY1]]
     ; CHECK-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[ICMP]](s1)
-    ; CHECK-NEXT: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
+    ; CHECK-NEXT: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT]](s64), implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: .2:
     ; CHECK-NEXT: successors: %bb.3(0x40000000), %bb.1(0x40000000)
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: G_AMDGPU_BUFFER_STORE %val(s32), %rsrc(<4 x s32>), [[COPY]](i32), %voffset, [[V_READFIRSTLANE_B32_]], 0, 0, 0 :: (dereferenceable store (s32), addrspace 4)
-    ; CHECK-NEXT: $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
+    ; CHECK-NEXT: $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def dead $scc
     ; CHECK-NEXT: SI_WATERFALL_LOOP %bb.1, implicit $exec
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: .3:
@@ -102,13 +102,13 @@ body:             |
     ; CHECK-NEXT: [[ICMP3:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV15]](s64), [[UV11]]
     ; CHECK-NEXT: [[AND2:%[0-9]+]]:vcc(s1) = G_AND [[AND1]], [[ICMP3]]
     ; CHECK-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND2]](s1)
-    ; CHECK-NEXT: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
+    ; CHECK-NEXT: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT]](s64), implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: .2:
     ; CHECK-NEXT: successors: %bb.3(0x40000000), %bb.1(0x40000000)
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, [[COPY1]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable load (<4 x s32>))
-    ; CHECK-NEXT: $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
+    ; CHECK-NEXT: $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def dead $scc
     ; CHECK-NEXT: SI_WATERFALL_LOOP %bb.1, implicit $exec
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: .3:

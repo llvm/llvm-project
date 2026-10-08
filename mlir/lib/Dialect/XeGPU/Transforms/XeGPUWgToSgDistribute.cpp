@@ -828,14 +828,12 @@ struct WgToSgLoadGatherOp : public OpConversionPattern<xegpu::LoadGatherOp> {
     }
 
     SmallVector<Value> newLoadOps;
-    auto chunkSizeAttr =
-        rewriter.getI64IntegerAttr(op.getChunkSize().value_or(1));
     VectorType newTy = VectorType::get(sgShape, resultType.getElementType());
     for (auto [offsets, mask] :
          llvm::zip(adaptor.getOffsets(), adaptor.getMask())) {
       auto newLayout = layout.dropSgLayoutAndData();
       auto newLoadOp = xegpu::LoadGatherOp::create(
-          rewriter, loc, newTy, op.getSource(), offsets, mask, chunkSizeAttr,
+          rewriter, loc, newTy, op.getSource(), offsets, mask,
           op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr(), newLayout,
           /*contiguity=*/nullptr);
       newLoadOps.push_back(newLoadOp);
@@ -875,16 +873,12 @@ struct WgToSgStoreScatterOp
                                          "offsets have not been distributed");
     }
 
-    auto chunkSizeOpt = op.getChunkSize();
-    int64_t chunkSize = chunkSizeOpt ? static_cast<int64_t>(*chunkSizeOpt) : 1;
-    auto chunkSizeAttr = rewriter.getI64IntegerAttr(chunkSize);
     for (auto [val, offs, mask] : llvm::zip(
              adaptor.getValue(), adaptor.getOffsets(), adaptor.getMask())) {
-      xegpu::StoreScatterOp::create(rewriter, loc, val, op.getDest(), offs,
-                                    mask, chunkSizeAttr, op.getL1HintAttr(),
-                                    op.getL2HintAttr(), op.getL3HintAttr(),
-                                    layout.dropSgLayoutAndData(),
-                                    /*contiguity=*/nullptr);
+      xegpu::StoreScatterOp::create(
+          rewriter, loc, val, op.getDest(), offs, mask, op.getL1HintAttr(),
+          op.getL2HintAttr(), op.getL3HintAttr(), layout.dropSgLayoutAndData(),
+          /*contiguity=*/nullptr);
     }
     rewriter.eraseOp(op);
     return success();

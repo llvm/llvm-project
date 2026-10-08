@@ -22,30 +22,13 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CodeGenUtils/CodeGenUtils.h"
+#include "clang/CodeGenUtils/FunctionUtils.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/IR/FPEnv.h"
 
 #include <cassert>
 
 namespace clang::CIRGen {
-
-/// shouldEmitLifetimeMarkers - Decide whether we need emit the life-time
-/// markers. Mirror of CodeGenFunction::shouldEmitLifetimeMarkers.
-static bool shouldEmitLifetimeMarkers(const CodeGenOptions &cgOpts,
-                                      const LangOptions &langOpts) {
-
-  if (cgOpts.DisableLifetimeMarkers)
-    return false;
-
-  // Sanitizers may use markers.
-  if (cgOpts.SanitizeAddressUseAfterScope ||
-      langOpts.Sanitize.has(SanitizerKind::HWAddress) ||
-      langOpts.Sanitize.has(SanitizerKind::Memory) ||
-      langOpts.Sanitize.has(SanitizerKind::MemtagStack))
-    return true;
-
-  return cgOpts.OptimizationLevel != 0;
-}
 
 /// Does the statement tree rooted at \p s contain a label, switch, or indirect
 /// goto that could bypass a local's initialization? A coarse stand-in for
@@ -66,7 +49,7 @@ CIRGenFunction::CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
     : CIRGenTypeCache(cgm), cgm{cgm}, builder(builder),
       curFPFeatures(cgm.getLangOpts()) {
   ehStack.setCGF(this);
-  shouldEmitLifetimeMarkers = CIRGen::shouldEmitLifetimeMarkers(
+  shouldEmitLifetimeMarkers = CodeGenUtils::shouldEmitLifetimeMarkers(
       cgm.getCodeGenOpts(), getContext().getLangOpts());
 }
 
@@ -513,7 +496,8 @@ void CIRGenFunction::emitFunctionProlog(const FunctionArgList &args,
     // Location of the store to the param storage tracked as beginning of
     // the function body.
     mlir::Location fnBodyBegin = getLoc(bodyBeginLoc);
-    builder.CIRBaseBuilderTy::createStore(fnBodyBegin, paramVal, addrVal);
+    builder.CIRBaseBuilderTy::createStore(fnBodyBegin, paramVal,
+                                          addr.getPointer());
   }
   assert(builder.getInsertionBlock() && "Should be valid");
 }
@@ -534,6 +518,15 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
   curFuncDecl = (d ? d->getNonClosureContext() : nullptr);
 
+  // Recursion is disallowed for C++ main, OpenCL, HLSL, SYCL device code and
+  // CUDA/HIP kernels.
+  if (fd &&
+      ((getLangOpts().CPlusPlus && fd->isMain()) || getLangOpts().OpenCL ||
+       getLangOpts().HLSL || getLangOpts().SYCLIsDevice ||
+       (getLangOpts().CUDA && fd->hasAttr<CUDAGlobalAttr>())))
+    fn->setAttr(cir::CIRDialect::getNoRecurseAttrName(),
+                mlir::UnitAttr::get(fn.getContext()));
+
   // This is an artifact of the legacy handling of constrained floating-point
   // modes. The rounding mode and exception behavior tracked in
   // clang::LangOptions don't correspond directly to the representation we
@@ -552,10 +545,14 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
     fn->setAttr(cir::CIRDialect::getStrictFPAttrName(),
                 mlir::UnitAttr::get(fn.getContext()));
   }
-  prologueCleanupDepth = ehStack.stable_begin();
-
   mlir::Block *entryBB = &fn.getBlocks().front();
   builder.setInsertionPointToStart(entryBB);
+
+  // Wrap the rest of the function in a filter try when this declaration has
+  // a dynamic exception specification. Parameter cleanups are pushed after
+  // this so they nest inside the specification, matching classic codegen.
+  emitStartEHSpec(d);
+  prologueCleanupDepth = ehStack.stable_begin();
 
   // Determine the function body begin location for the prolog.
   // If fd is null or has no body, use startLoc as fallback.
@@ -600,22 +597,19 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
     }
   }
 
-  // Only implicit-object member functions (without an explicit `this`
-  // parameter) receive an implicit `this` argument that the CXXABI prolog has
-  // to set up. C++23 explicit-object members (P0847R7) carry their object via a
-  // regular parameter and use the standard parameter prolog instead.
-  if (isa_and_nonnull<CXXMethodDecl>(d) &&
-      cast<CXXMethodDecl>(d)->isImplicitObjectMemberFunction()) {
-    cgm.getCXXABI().emitInstanceFunctionProlog(loc, *this);
+  if (const auto *md = dyn_cast_if_present<CXXMethodDecl>(d);
+      md && !md->isStatic()) {
+    bool isInLambda =
+        md->getParent()->isLambda() && md->getOverloadedOperator() == OO_Call;
 
-    const auto *md = cast<CXXMethodDecl>(d);
-    if (md->getParent()->isLambda() && md->getOverloadedOperator() == OO_Call) {
-      // We're in a lambda.
-      auto fn = dyn_cast<cir::FuncOp>(curFn);
-      assert(fn && "lambda in non-function region");
+    if (md->isImplicitObjectMemberFunction())
+      cgm.getCXXABI().emitInstanceFunctionProlog(loc, *this);
+
+    if (isInLambda) {
+      // We're in a lambda; figure out the captures.
+      auto fn = cast<cir::FuncOp>(curFn);
       fn.setLambda(true);
 
-      // Figure out the captures.
       md->getParent()->getCaptureFields(lambdaCaptureFields,
                                         lambdaThisCaptureField);
       if (lambdaThisCaptureField) {
@@ -642,7 +636,7 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
         if (fd->hasCapturedVLAType())
           cgm.errorNYI(loc, "lambda captured VLA type");
       }
-    } else {
+    } else if (md->isImplicitObjectMemberFunction()) {
       // Not in a lambda; just use 'this' from the method.
       // FIXME: Should we generate a new load for each use of 'this'? The fast
       // register allocator would be happier...
@@ -688,6 +682,8 @@ void CIRGenFunction::finishFunction(SourceLocation endLoc) {
   assert(deferredConditionalCleanupStack.empty() &&
          "deferred conditional cleanups were not consumed by a "
          "FullExprCleanupScope");
+
+  emitEndEHSpec(curCodeDecl);
 }
 
 mlir::LogicalResult CIRGenFunction::emitFunctionBody(const clang::Stmt *body) {
@@ -793,6 +789,10 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
     if (body && isa_and_nonnull<CoroutineBodyStmt>(body))
       llvm::append_range(fnArgs, funcDecl->parameters());
 
+    if (checkIfFunctionMustProgress())
+      fn->setAttr(cir::CIRDialect::getMustProgressAttrName(),
+                  mlir::UnitAttr::get(&getMLIRContext()));
+
     if (shouldEmitLifetimeMarkers)
       fnHasBypassStmt = functionMightHaveBypass(body);
 
@@ -825,10 +825,12 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
       llvm_unreachable("no definition for normal function");
     }
 
+    // Finish the function (including closing a dynamic exception
+    // specification try) before verifying so the try body is terminated.
+    finishFunction(bodyRange.getEnd());
+
     if (mlir::failed(fn.verifyBody()))
       return nullptr;
-
-    finishFunction(bodyRange.getEnd());
   }
 
   if (getLangOpts().OpenCL && funcDecl->hasAttr<DeviceKernelAttr>())
@@ -889,7 +891,8 @@ void CIRGenFunction::emitConstructorBody(FunctionArgList &args) {
 
   ctorTryBodyEmitter emitter{ctor, ctorType, args, isTryBody, body};
   mlir::LogicalResult bodyRes =
-      isTryBody ? emitCXXTryStmt(*cast<CXXTryStmt>(body), emitter)
+      isTryBody ? emitCXXTryStmt(*cast<CXXTryStmt>(body), emitter,
+                                 /*isFnTryBlock=*/true)
                 : emitter(*this);
 
   // TODO(cir): propagate this result via mlir::logical result. Just
@@ -927,13 +930,25 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   if (dtorType == Dtor_Deleting || dtorType == Dtor_VectorDeleting) {
     if (cxxStructorImplicitParamValue && dtorType == Dtor_VectorDeleting)
       cgm.errorNYI(dtor->getSourceRange(), "emitConditionalArrayDtorCall");
+
+    // A destroying operator delete destroys the object and deallocates its
+    // storage, so the deleting destructor only calls the operator delete.
+    const FunctionDecl *operatorDelete = dtor->getOperatorDelete();
+    if (operatorDelete->isDestroyingOperatorDelete()) {
+      if (cxxStructorImplicitParamValue) {
+        // The implicit parameter of a deleting destructor is the Microsoft ABI.
+        cgm.errorNYI(dtor->getSourceRange(), "emitConditionalArrayDtorCall");
+      }
+      emitDeleteCall(operatorDelete, loadThisForDtorDelete(dtor),
+                     getContext().getCanonicalTagType(dtor->getParent()));
+      return;
+    }
+
     RunCleanupsScope dtorEpilogue(*this);
     enterDtorCleanups(dtor, Dtor_Deleting);
-    if (haveInsertPoint()) {
-      QualType thisTy = dtor->getFunctionObjectParameterType();
-      emitCXXDestructorCall(dtor, Dtor_Complete, /*forVirtualBase=*/false,
-                            /*delegating=*/false, loadCXXThisAddress(), thisTy);
-    }
+    QualType thisTy = dtor->getFunctionObjectParameterType();
+    emitCXXDestructorCall(dtor, Dtor_Complete, /*forVirtualBase=*/false,
+                          /*delegating=*/false, loadCXXThisAddress(), thisTy);
     return;
   }
 
@@ -1212,9 +1227,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   case Expr::UserDefinedLiteralClass:
     return emitCallExprLValue(cast<CallExpr>(e));
   case Expr::CXXRewrittenBinaryOperatorClass:
-    getCIRGenModule().errorNYI(e->getSourceRange(),
-                               "emitLValue: CXXRewrittenBinaryOperator");
-    return LValue();
+    assert(!cir::MissingFeatures::addressIsKnownNonNull());
+    return emitLValue(cast<CXXRewrittenBinaryOperator>(e)->getSemanticForm());
   case Expr::VAArgExprClass:
     getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: VAArgExpr");
     return LValue();
@@ -1314,8 +1328,7 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
                                "emitLValue: MatrixElementExpr");
     return LValue();
   case Expr::CXXThisExprClass:
-    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: CXXThisExpr");
-    return LValue();
+    return makeAddrLValue(loadCXXThisAddress(), e->getType());
   case Expr::MemberExprClass:
     return emitMemberExpr(cast<MemberExpr>(e));
   case Expr::CompoundLiteralExprClass:
@@ -1354,9 +1367,7 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: CoyieldExpr");
     return LValue();
   case Expr::PackIndexingExprClass:
-    getCIRGenModule().errorNYI(e->getSourceRange(),
-                               "emitLValue: PackIndexingExpr");
-    return LValue();
+    return emitLValue(cast<PackIndexingExpr>(e)->getSelectedExpr());
   case Expr::HLSLOutArgExprClass:
     llvm_unreachable("cannot emit a HLSL out argument directly");
   }
@@ -1393,7 +1404,7 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
   const CharUnits size = getContext().getTypeSizeInChars(ty);
   if (size.isZero()) {
     // But note that getTypeInfo returns 0 for a VLA.
-    if (isa<VariableArrayType>(getContext().getAsArrayType(ty))) {
+    if (isa_and_nonnull<VariableArrayType>(getContext().getAsArrayType(ty))) {
       cgm.errorNYI(loc,
                    "emitNullInitialization for zero size VariableArrayType");
     } else {

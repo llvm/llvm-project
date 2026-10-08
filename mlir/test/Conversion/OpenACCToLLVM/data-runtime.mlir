@@ -466,12 +466,12 @@ func.func @mapping_names(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
 // -----
 
 // create allocates without a copy, copyin_readonly copies to the device, and
-// attach/detach state the attachment address as PTR_AND_OBJ.
+// attach/detach state the attachment address, and the attach clause.
 // CHECK-LABEL: llvm.func @create_readonly_detach
 // CHECK-DAG: %[[TO:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK-DAG: %[[PTR_AND_OBJ:.*]] = llvm.mlir.constant(16 : i64) : i64
+// CHECK-DAG: %[[ATTACH:.*]] = llvm.mlir.constant(8388624 : i64) : i64
 // CHECK-DAG: llvm.store %[[TO]], %{{.*}} : i64, !llvm.ptr
-// CHECK-DAG: llvm.store %[[PTR_AND_OBJ]], %{{.*}} : i64, !llvm.ptr
+// CHECK-DAG: llvm.store %[[ATTACH]], %{{.*}} : i64, !llvm.ptr
 // CHECK-NOT: llvm.mlir.constant(3 : i64)
 // CHECK: llvm.call @__tgt_acc_data_begin
 func.func @create_readonly_detach(%arg0: !llvm.ptr, %arg1: !llvm.ptr,

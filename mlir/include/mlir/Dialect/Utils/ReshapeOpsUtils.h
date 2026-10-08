@@ -19,6 +19,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include <optional>
 
@@ -82,6 +83,17 @@ getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
 /// index of the offending reassociation map.
 bool isReassociationValid(ArrayRef<AffineMap> reassociation,
                           int *invalidIndex = nullptr);
+
+/// Verify that none of the reassociation groups is empty.
+template <typename ReshapeOpTy>
+LogicalResult verifyReassociationIndicesNotEmpty(ReshapeOpTy op) {
+  if (llvm::any_of(
+          op.getReassociationIndices(),
+          [](const ReassociationIndices &group) { return group.empty(); })) {
+    return op.emitOpError("reassociation indices must not be empty");
+  }
+  return success();
+}
 
 template <typename ReshapeOpTy, typename InverseReshapeOpTy>
 OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,

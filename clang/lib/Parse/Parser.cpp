@@ -48,12 +48,25 @@ public:
 };
 } // end anonymous namespace
 
-IdentifierInfo *Parser::getSEHExceptKeyword() {
-  // __except is accepted as a (contextual) keyword
+bool Parser::isTokenSEHExcept() {
+  if (!Tok.is(tok::identifier))
+    return false;
+
   if (!Ident__except && (getLangOpts().MicrosoftExt || getLangOpts().Borland))
     Ident__except = PP.getIdentifierInfo("__except");
 
-  return Ident__except;
+  const IdentifierInfo *Identifier = Tok.getIdentifierInfo();
+  if (Identifier == Ident__except)
+    return true;
+
+  if (getLangOpts().MSVCCompat) {
+    if (!Ident_except)
+      Ident_except = PP.getIdentifierInfo("_except");
+    if (Identifier == Ident_except)
+      return true;
+  }
+
+  return false;
 }
 
 Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
@@ -61,11 +74,10 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
       PreferredType(&actions.getASTContext(), pp.isCodeCompletionEnabled()),
       Actions(actions), Diags(PP.getDiagnostics()), StackHandler(Diags),
       GreaterThanIsOperator(true), ColonIsSacred(false),
-      InMessageExpression(false), ParsingInObjCContainer(false),
-      TemplateParameterDepth(0) {
+      ParsingGenericAssociationType(false), InMessageExpression(false),
+      ParsingInObjCContainer(false), TemplateParameterDepth(0) {
   SkipFunctionBodies = pp.isCodeCompletionEnabled() || skipFunctionBodies;
-  Tok.startToken();
-  Tok.setKind(tok::eof);
+  Tok = Token::createEof();
   Actions.CurScope = nullptr;
   NumCachedScopes = 0;
   CurParsedObjCImpl = nullptr;
@@ -548,6 +560,7 @@ void Parser::Initialize() {
       nullptr;
 
   Ident__except = nullptr;
+  Ident_except = nullptr;
 
   Ident__exception_code = Ident__exception_info = nullptr;
   Ident__abnormal_termination = Ident___exception_code = nullptr;
@@ -2370,12 +2383,15 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
     SourceLocation PrivateLoc = ConsumeToken();
     DiagnoseAndSkipCXX11Attributes();
     ExpectAndConsumeSemi(diag::err_private_module_fragment_expected_semi);
-    ImportState = ImportState == Sema::ModuleImportState::ImportAllowed
-                      ? Sema::ModuleImportState::PrivateFragmentImportAllowed
-                      : Sema::ModuleImportState::PrivateFragmentImportFinished;
-    return Actions.ActOnPrivateModuleFragmentDecl(ModuleLoc, PrivateLoc);
+    auto Result = Actions.ActOnPrivateModuleFragmentDecl(ModuleLoc, PrivateLoc);
+    if (Result) {
+      ImportState =
+          ImportState == Sema::ModuleImportState::ImportAllowed
+              ? Sema::ModuleImportState::PrivateFragmentImportAllowed
+              : Sema::ModuleImportState::PrivateFragmentImportFinished;
+    }
+    return nullptr;
   }
-
   SmallVector<IdentifierLoc, 2> Path;
   if (ParseModuleName(ModuleLoc, Path, /*IsImport*/ false))
     return nullptr;

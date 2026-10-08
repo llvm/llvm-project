@@ -759,15 +759,12 @@ The available directives are as follows:
 
 *   `attr-dict`
 
-    -   Represents the attribute dictionary of the operation.
-    -   Any inherent attributes that are not used elsewhere in the format are
-        printed as part of the attribute dictionary unless a `prop-dict` is
-        present.
-    -   Discardable attributes are always part of the `attr-dict`.
-    -   For dialects that set `useStrictPropertiesInAssemblyFormat`,
-        `attr-dict` only carries discardable attributes for property-backed
-        operations. Inherent attributes must be bound directly in the format or
-        covered by `prop-dict`.
+    -   Represents the attribute dictionary of the operation. Under the
+        default strict format rules, it contains only discardable attributes.
+        Inherent attributes must be bound directly in the format or covered by
+        `prop-dict`. The deprecated `useStrictPropertiesInAssemblyFormat = 0`
+        setting temporarily allows inherent attributes to mix with discardable
+        attributes in `attr-dict`.
 
 *   `attr-dict-with-keyword`
 
@@ -1142,9 +1139,8 @@ to:
     directives.
 1.  Unless all non-attribute properties appear in the format, the `prop-dict`
     directive must be present.
-1.  For dialects that set `useStrictPropertiesInAssemblyFormat`, every inherent
-    attribute and property must either appear in the format or be covered by the
-    `prop-dict` directive.
+1.  Every inherent attribute and property must either appear in the format or
+    be covered by the `prop-dict` directive.
 1.  The `attr-dict` directive must always be present.
 1.  Must not contain overlapping information; e.g. multiple instances of
     'attr-dict', types, operands, etc.

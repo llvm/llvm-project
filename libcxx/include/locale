@@ -200,6 +200,7 @@ template <class charT> class messages_byname;
 #    include <__locale_dir/wbuffer_convert.h>
 #    include <__locale_dir/wstring_convert.h>
 #    include <ios>
+#    include <streambuf>
 #    include <version>
 
 #    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

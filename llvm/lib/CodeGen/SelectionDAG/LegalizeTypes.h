@@ -286,6 +286,7 @@ private:
   SDValue PromoteIntRes_VECTOR_REVERSE(SDNode *N);
   SDValue PromoteIntRes_VECTOR_SHUFFLE(SDNode *N);
   SDValue PromoteIntRes_VECTOR_SPLICE(SDNode *N);
+  SDValue PromoteIntRes_VECTOR_REPEAT(SDNode *N);
   SDValue PromoteIntRes_VECTOR_INTERLEAVE_DEINTERLEAVE(SDNode *N);
   SDValue PromoteIntRes_BUILD_VECTOR(SDNode *N);
   SDValue PromoteIntRes_ScalarOp(SDNode *N);
@@ -419,6 +420,7 @@ private:
   SDValue PromoteIntOp_GET_ACTIVE_LANE_MASK(SDNode *N);
   SDValue PromoteIntOp_VECTOR_MATCH(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_PARTIAL_REDUCE_MLA(SDNode *N);
+  SDValue PromoteIntOp_VECTOR_REPEAT(SDNode *N);
   SDValue PromoteIntOp_LOOP_DEPENDENCE_MASK(SDNode *N);
   SDValue PromoteIntOp_MaskedBinOp(SDNode *N, unsigned OpNo);
 
@@ -668,6 +670,7 @@ private:
   // Float Result Expansion.
   void ExpandFloatResult(SDNode *N, unsigned ResNo);
   void ExpandFloatRes_ConstantFP(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandFloatRes_NoLibcall(SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_Unary(SDNode *N, RTLIB::Libcall LC,
                             SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_Binary(SDNode *N, RTLIB::Libcall LC,
@@ -835,12 +838,13 @@ private:
 
   SDValue ScalarizeVecRes_ADDRSPACECAST(SDNode *N);
   SDValue ScalarizeVecRes_BITCAST(SDNode *N);
-  SDValue ScalarizeVecRes_BUILD_VECTOR(SDNode *N);
+  SDValue ScalarizeVecRes_BUILD_VECTOR_OR_SPLAT(SDNode *N);
   SDValue ScalarizeVecRes_EXTRACT_SUBVECTOR(SDNode *N);
   SDValue ScalarizeVecRes_FP_ROUND(SDNode *N);
   SDValue ScalarizeVecRes_CONVERT_FROM_ARBITRARY_FP(SDNode *N);
   SDValue ScalarizeVecRes_CONVERT_TO_ARBITRARY_FP(SDNode *N);
   SDValue ScalarizeVecRes_UnaryOpWithExtraInput(SDNode *N);
+  SDValue ScalarizeVecRes_FPOp_MultiType(SDNode *N);
   SDValue ScalarizeVecRes_INSERT_VECTOR_ELT(SDNode *N);
   SDValue ScalarizeVecRes_LOAD(LoadSDNode *N);
   SDValue ScalarizeVecRes_ATOMIC_LOAD(AtomicSDNode *N);
@@ -952,6 +956,7 @@ private:
   void SplitVecRes_ScalarOp(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_STEP_VECTOR(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_SETCC(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void SplitVecRes_VECTOR_REPEAT(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_VECTOR_REVERSE(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N, SDValue &Lo,
                                   SDValue &Hi);
@@ -1100,6 +1105,7 @@ private:
   bool WidenVectorOperand(SDNode *N, unsigned OpNo);
   SDValue WidenVecOp_BITCAST(SDNode *N);
   SDValue WidenVecOp_CONCAT_VECTORS(SDNode *N);
+  SDValue WidenVecOp_VECTOR_REPEAT(SDNode *N);
   SDValue WidenVecOp_EXTEND(SDNode *N);
   SDValue WidenVecOp_CMP(SDNode *N);
   SDValue WidenVecOp_EXTRACT_VECTOR_ELT(SDNode *N);
@@ -1167,9 +1173,34 @@ private:
   /// By default, the vector will be widened with undefined values.
   SDValue ModifyToType(SDValue InOp, EVT NVT, bool FillWithZeroes = false);
 
+  /// Adjust element width (sign-extend/truncate) and element count
+  /// (extract/concat) of Mask to match ToMaskVT.
+  SDValue adjustMaskToType(SDValue Mask, EVT ToMaskVT);
+
+  /// Pick an intermediate VT and adjust both operands to it, minimizing
+  /// extend/truncate overhead given the final target ToVT.
+  ///
+  /// IsOpLenient flags retain information on whether the corresponding
+  /// Op can be cheaply materialized to whatever type. If one of the
+  /// operands lenient, we force cast it to match other operand's type.
+  EVT unifyMaskTypes(SDValue &Op0, bool IsOpLenient0, SDValue &Op1,
+                     bool IsOpLenient1, EVT ToVT);
+
   /// Return a mask of vector type MaskVT to replace InMask. Also adjust
   /// MaskVT to ToMaskVT if needed with vector extension or truncation.
   SDValue convertMask(SDValue InMask, EVT MaskVT, EVT ToMaskVT);
+
+  /// Recursively convert a mask expression tree to ToVT, walking through
+  /// mask-preserving operations down to SETCC leaves. Avoids redundant
+  /// extend/truncate chains that arise when each node is converted
+  /// independently. Returns SDValue() if the tree cannot be converted.
+  SDValue convertMaskTree(SDValue V, EVT ToVT);
+
+  /// Recursive implementation of convertMaskTree.
+  /// In addition to the value returns a boolean flag signifying whether the
+  /// tree can be materialized with any type.
+  std::pair<SDValue, bool> convertMaskTreeImpl(SDValue V, EVT ToVT,
+                                               unsigned Depth = 0);
 
   //===--------------------------------------------------------------------===//
   // Generic Splitting: LegalizeTypesGeneric.cpp

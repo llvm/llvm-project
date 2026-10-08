@@ -1015,8 +1015,7 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
     // the same way, except that we change the IRBuilder insert point for each
     // load/store pair so that each one is inserted before the previous one
     // instead of after it.
-    IRBuilder<> BwdResBuilder(CopyBackwardsBB,
-                              CopyBackwardsBB->getFirstNonPHIIt());
+    IRBuilder<> BwdResBuilder(CopyBackwardsBB->getFirstNonPHIIt());
     BwdResBuilder.SetCurrentDebugLocation(DbgLoc);
     SmallVector<Type *, 5> RemainingOps;
     TTI.getMemcpyLoopResidualLoweringType(RemainingOps, Ctx, RemainingBytes,
@@ -1024,8 +1023,7 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
                                           PartDstAlign);
     for (auto *OpTy : RemainingOps) {
       // reverse the order of the emitted operations
-      BwdResBuilder.SetInsertPoint(CopyBackwardsBB,
-                                   CopyBackwardsBB->getFirstNonPHIIt());
+      BwdResBuilder.SetInsertPoint(CopyBackwardsBB->getFirstNonPHIIt());
       GenerateResidualLdStPair(OpTy, BwdResBuilder, BytesCopied);
     }
   }

@@ -817,7 +817,7 @@ declare void @perror(ptr)
 ; CHECK: declare noalias noundef ptr @popen(ptr noundef readonly captures(none), ptr noundef readonly captures(none)) [[NOFREE_NOUNWIND]]
 declare ptr @popen(ptr, ptr)
 
-; CHECK: declare i32 @posix_memalign(ptr, i64, i64) [[NOFREE]]
+; CHECK: declare noundef i32 @posix_memalign(ptr noundef writeonly captures(none), i64 noundef, i64 noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare i32 @posix_memalign(ptr, i64, i64)
 
 ; CHECK: declare double @pow(double, double) [[ERRNOMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
@@ -1250,6 +1250,7 @@ declare void @memset_pattern16(ptr, ptr, i64)
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMORERRNOMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_REALLOC_ALLOCSIZE1_FAMILY_MALLOC]] = { mustprogress nounwind willreturn allockind("realloc") allocsize(1) memory(argmem: readwrite, inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMORERRNOMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_REALLOC_ALLOCSIZE12_FAMILY_MALLOC]] = { mustprogress nounwind willreturn allockind("realloc") allocsize(1,2) memory(argmem: readwrite, inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMORERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC]] = { mustprogress nofree nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
+; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]] = { mustprogress nofree nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; CHECK-DAG: attributes [[NOFREE_COLD_NORETURN_NOUNWIND]] = { cold nofree noreturn nounwind }
 ; CHECK-DAG: attributes [[NOFREE_COLD_NORETURN]] = { cold nofree noreturn }
 ; CHECK-DAG: attributes [[COLD_NORETURN]] = { cold noreturn }

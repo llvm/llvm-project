@@ -563,9 +563,6 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   SFrameSection =
       Ctx->getELFSection(".sframe", ELF::SHT_GNU_SFRAME, ELF::SHF_ALLOC);
 
-  CallGraphSection =
-      Ctx->getELFSection(".llvm.callgraph", ELF::SHT_LLVM_CALL_GRAPH, 0);
-
   StackSizesSection = Ctx->getELFSection(".stack_sizes", ELF::SHT_PROGBITS, 0);
 
   PseudoProbeSection = Ctx->getELFSection(".pseudo_probe", DebugSecType, 0);
@@ -587,11 +584,11 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
                    GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_1, 0},
       RootSDSection);
   ADAEDSection->setAlignment(Align(16)); // Quadword
-  ADASection = Ctx->getGOFFSection(SectionKind::getData(), "#S",
-                                   GOFF::PRAttr{false, GOFF::ESD_EXE_DATA,
-                                                GOFF::ESD_LT_XPLink,
-                                                GOFF::ESD_BSC_Section, 0},
-                                   ADAEDSection);
+  ADASection = Ctx->getGOFFSection(
+      SectionKind::getData(), "#S",
+      GOFF::PRAttr{false, GOFF::ESD_EXE_DATA, GOFF::ESD_BST_Strong,
+                   GOFF::ESD_LT_XPLink, GOFF::ESD_BSC_Section, 0},
+      ADAEDSection);
 
   TextSection = Ctx->getGOFFSection(
       SectionKind::getText(), GOFF::CLASS_CODE,
@@ -608,11 +605,11 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
                    GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0, 0},
       RootSDSection);
   PPA2ListEDSection->setAlignment(Align(8)); // Doubleword
-  PPA2ListSection = Ctx->getGOFFSection(SectionKind::getData(), ".&ppa2",
-                                        GOFF::PRAttr{true, GOFF::ESD_EXE_DATA,
-                                                     GOFF::ESD_LT_OS,
-                                                     GOFF::ESD_BSC_Section, 0},
-                                        PPA2ListEDSection);
+  PPA2ListSection = Ctx->getGOFFSection(
+      SectionKind::getData(), ".&ppa2",
+      GOFF::PRAttr{true, GOFF::ESD_EXE_DATA, GOFF::ESD_BST_Strong,
+                   GOFF::ESD_LT_OS, GOFF::ESD_BSC_Section, 0},
+      PPA2ListEDSection);
 
   IDRLSection = Ctx->getGOFFSection(
       SectionKind::getData(), "B_IDRL",
@@ -1257,7 +1254,7 @@ MCSection *MCObjectFileInfo::getDwarfComdatSection(const char *Name,
 MCSection *
 MCObjectFileInfo::getCallGraphSection(const MCSection &TextSec) const {
   if (Ctx->getObjectFileType() != MCContext::IsELF)
-    return CallGraphSection;
+    return nullptr;
 
   const MCSectionELF &ElfSec = static_cast<const MCSectionELF &>(TextSec);
   unsigned Flags = ELF::SHF_LINK_ORDER;

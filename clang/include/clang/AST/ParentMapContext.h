@@ -62,7 +62,14 @@ public:
 
   const Expr *traverseIgnored(const Expr *E) const;
   Expr *traverseIgnored(Expr *E) const;
-  DynTypedNode traverseIgnored(const DynTypedNode &N) const;
+  DynTypedNode traverseIgnored(const DynTypedNode &N) const {
+    // Fast path: Nothing is ignored in the default traversal mode TK_AsIs.
+    if (Traversal == TK_AsIs)
+      return N;
+    if (const auto *E = N.get<Expr>())
+      return DynTypedNode::create(*traverseIgnored(E));
+    return N;
+  }
 
   class ParentMap;
 

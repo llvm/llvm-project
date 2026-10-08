@@ -20,3 +20,9 @@ unsigned long garr2 = (unsigned long)&arr[2];
 unsigned long gf = (unsigned long)&f;
 // CIR: cir.global external @gf = #cir.global_view<@f> : !u64i
 // LLVM: @gf = global i64 ptrtoint (ptr @f to i64), align 8
+
+long arr_with_addr[] = { 1L, (long)&x };
+// CIR: cir.global external @arr_with_addr =
+// CIR-SAME: #cir.const_array<[#cir.int<1> : !s64i, #cir.global_view<@x> : !s64i]>
+// CIR-SAME: : !cir.array<!s64i x 2>
+// LLVM: @arr_with_addr = global [2 x i64] [i64 1, i64 ptrtoint (ptr @x to i64)]

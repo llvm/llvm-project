@@ -565,7 +565,7 @@ static void DoInitialMatch(const SCEV *S, Loop *L,
     DoInitialMatch(Start, L, Good, Bad, SE);
     DoInitialMatch(SE.getAddRecExpr(SE.getConstant(S->getType(), 0), Step,
                                     // FIXME: AR->getNoWrapFlags()
-                                    ARLoop, SCEV::FlagAnyWrap),
+                                    ARLoop, SCEV::FlagNone),
                    L, Good, Bad, SE);
     return;
   }
@@ -868,7 +868,7 @@ static const SCEV *getExactSDiv(const SCEV *LHS, const SCEV *RHS,
       // FlagNW is independent of the start value, step direction, and is
       // preserved with smaller magnitude steps.
       // FIXME: AR->getNoWrapFlags(SCEV::FlagNW)
-      return SE.getAddRecExpr(Start, Step, AR->getLoop(), SCEV::FlagAnyWrap);
+      return SE.getAddRecExpr(Start, Step, AR->getLoop(), SCEV::FlagNone);
     }
     return nullptr;
   }
@@ -988,7 +988,7 @@ static Immediate ExtractImmediate(SCEVUse &S, ScalarEvolution &SE,
     if (Result.isNonZero())
       S = SE.getAddRecExpr(NewOps, AR->getLoop(),
                            // FIXME: AR->getNoWrapFlags(SCEV::FlagNW)
-                           SCEV::FlagAnyWrap);
+                           SCEV::FlagNone);
     return Result;
   }
   return ExtractImmediateOperand({S}, SE, PreferScalable);
@@ -1014,7 +1014,7 @@ static GlobalValue *ExtractSymbol(SCEVUse &S, ScalarEvolution &SE) {
     if (Result)
       S = SE.getAddRecExpr(NewOps, AR->getLoop(),
                            // FIXME: AR->getNoWrapFlags(SCEV::FlagNW)
-                           SCEV::FlagAnyWrap);
+                           SCEV::FlagNone);
     return Result;
   }
   return nullptr;
@@ -3942,7 +3942,7 @@ static const SCEV *CollectSubexprs(const SCEV *S, const SCEVConstant *C,
       return SE.getAddRecExpr(Remainder, Step,
                               cast<SCEVAddRecExpr>(S)->getLoop(),
                               // FIXME: AR->getNoWrapFlags(SCEV::FlagNW)
-                              SCEV::FlagAnyWrap);
+                              SCEV::FlagNone);
     }
   } else if (match(S, m_scev_Mul(m_SCEVConstant(Op0), m_SCEV(Op1)))) {
     // Break (C * (a + b + c)) into C*a + C*b + C*c.

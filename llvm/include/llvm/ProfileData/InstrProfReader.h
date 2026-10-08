@@ -32,6 +32,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/OnDiskHashTable.h"
 #include "llvm/Support/SwapByteOrder.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -44,10 +45,6 @@
 namespace llvm {
 
 class InstrProfReader;
-
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 
 /// A file format agnostic iterator over profiling data.
 template <class record_type = NamedInstrProfRecord,

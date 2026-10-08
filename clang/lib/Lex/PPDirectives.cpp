@@ -1997,11 +1997,7 @@ void Preprocessor::EnterAnnotationToken(SourceRange Range,
   // FIXME: Produce this as the current token directly, rather than
   // allocating a new token for it.
   auto Tok = std::make_unique<Token[]>(1);
-  Tok[0].startToken();
-  Tok[0].setKind(Kind);
-  Tok[0].setLocation(Range.getBegin());
-  Tok[0].setAnnotationEndLoc(Range.getEnd());
-  Tok[0].setAnnotationValue(AnnotationVal);
+  Tok[0] = Token::createAnnotation(Kind, Range, AnnotationVal);
   EnterTokenStream(std::move(Tok), 1, true, /*IsReinject*/ false);
 }
 
@@ -4063,10 +4059,7 @@ void Preprocessor::HandleEmbedDirectiveImpl(
   Data->BinaryData = BinaryContents;
   Data->FileName = FileName;
 
-  Toks[CurIdx].startToken();
-  Toks[CurIdx].setKind(tok::annot_embed);
-  Toks[CurIdx].setAnnotationRange(HashLoc);
-  Toks[CurIdx++].setAnnotationValue(Data);
+  Toks[CurIdx++] = Token::createAnnotation(tok::annot_embed, HashLoc, Data);
 
   // Now add the suffix tokens, if any.
   if (Params.MaybeSuffixParam) {
@@ -4292,12 +4285,8 @@ void Preprocessor::HandleCXXImportDirective(Token ImportTok) {
 
     case ImportAction::ModuleBegin:
       // Let the parser know we're textually entering the module.
-      DirToks.emplace_back();
-      DirToks.back().startToken();
-      DirToks.back().setKind(tok::annot_module_begin);
-      DirToks.back().setLocation(SemiLoc);
-      DirToks.back().setAnnotationEndLoc(SemiLoc);
-      DirToks.back().setAnnotationValue(Action.ModuleForHeader);
+      DirToks.push_back(Token::createAnnotation(
+          tok::annot_module_begin, SemiLoc, Action.ModuleForHeader));
       [[fallthrough]];
 
     case ImportAction::ModuleImport:

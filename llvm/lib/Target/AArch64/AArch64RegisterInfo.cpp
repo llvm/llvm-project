@@ -606,11 +606,6 @@ bool AArch64RegisterInfo::isAsmClobberable(const MachineFunction &MF,
 }
 
 const TargetRegisterClass *
-AArch64RegisterInfo::getPointerRegClass(unsigned Kind) const {
-  return &AArch64::GPR64spRegClass;
-}
-
-const TargetRegisterClass *
 AArch64RegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
   if (RC == &AArch64::CCRRegClass)
     return &AArch64::GPR64RegClass; // Only MSR & MRS copy NZCV.
@@ -1116,7 +1111,7 @@ unsigned AArch64RegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
 
 static bool HandleDestructivePredicateHint(
     Register VirtReg, ArrayRef<MCPhysReg> Order,
-    SmallVectorImpl<MCPhysReg> &Hints, const VirtRegMap *VRM,
+    SmallSetVector<MCPhysReg, 16> &Hints, const VirtRegMap *VRM,
     const MachineRegisterInfo &MRI, const TargetInstrInfo &TII,
     const AArch64Subtarget &ST, const LiveRegMatrix *Matrix) {
   const TargetRegisterClass *RegRC = MRI.getRegClass(VirtReg);
@@ -1155,15 +1150,17 @@ static bool HandleDestructivePredicateHint(
       CSRs.insert(R);
   }
 
-  Hints.append(Order.begin(), Order.end());
+  Hints.insert_range(Order);
   auto CanUseReg = [&](Register R) {
     return !CSRs.contains(R) || !MRI.def_empty(R) || Matrix->isPhysRegUsed(R);
   };
-  llvm::stable_sort(Hints, [&](Register A, Register B) {
+  SmallVector<MCPhysReg, 16> SortedHints = Hints.takeVector();
+  llvm::stable_sort(SortedHints, [&](Register A, Register B) {
     bool PrefA = (A != Op1Reg) && CanUseReg(A);
     bool PrefB = (B != Op1Reg) && CanUseReg(B);
     return PrefA && !PrefB;
   });
+  Hints.insert_range(SortedHints);
   return true;
 }
 
@@ -1189,7 +1186,7 @@ static bool HandleDestructivePredicateHint(
 //   begins with $z24 (i.e. $z24_z25_z26_z27).
 bool AArch64RegisterInfo::getRegAllocationHints(
     Register VirtReg, ArrayRef<MCPhysReg> Order,
-    SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
+    SmallSetVector<MCPhysReg, 16> &Hints, const MachineFunction &MF,
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   auto &ST = MF.getSubtarget<AArch64Subtarget>();
   const AArch64InstrInfo *TII =
@@ -1224,7 +1221,7 @@ bool AArch64RegisterInfo::getRegAllocationHints(
             PhysReg = getSubReg(PhysReg, MO.getSubReg());
           if (PhysReg != R)
             return false;
-          Hints.push_back(R);
+          Hints.insert(R);
           return true;
         };
 
@@ -1265,8 +1262,7 @@ bool AArch64RegisterInfo::getRegAllocationHints(
     return ConsiderOnlyHints;
 
   if (!ST.hasSME() || !ST.isStreaming())
-    return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
-                                                     VRM);
+    return ConsiderOnlyHints;
 
   // The SVE calling convention preserves registers Z8-Z23. As a result, there
   // are no ZPR2Strided or ZPR4Strided registers that do not overlap with the
@@ -1385,7 +1381,7 @@ bool AArch64RegisterInfo::getRegAllocationHints(
                    !Matrix->isPhysRegUsed(R);
           };
           if (all_of(seq(0U, TupleSize), IsFreeConsecutiveReg))
-            Hints.push_back(Reg);
+            Hints.insert(Reg);
         }
       } else {
         // At least copy already has a physical register assigned to its source.
@@ -1404,12 +1400,11 @@ bool AArch64RegisterInfo::getRegAllocationHints(
 
         for (unsigned I = 0; I < StridedOrder.size(); ++I)
           if (getSubReg(StridedOrder[I], AArch64::zsub0) == TargetStartReg)
-            Hints.push_back(StridedOrder[I]);
+            Hints.insert(StridedOrder[I]);
       }
 
       if (!Hints.empty())
-        return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints,
-                                                         MF, VRM);
+        return ConsiderOnlyHints;
     }
   }
 
@@ -1436,12 +1431,11 @@ bool AArch64RegisterInfo::getRegAllocationHints(
     // Try to pick a tuple register for Dst with Src as a member.
     for (MCPhysReg R : Order) {
       if (getSubReg(R, Dst.getSubReg()) == SrcZPR)
-        Hints.push_back(R);
+        Hints.insert(R);
     }
   }
 
-  return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
-                                                   VRM);
+  return ConsiderOnlyHints;
 }
 
 unsigned AArch64RegisterInfo::getLocalAddressRegister(

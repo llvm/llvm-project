@@ -20,6 +20,7 @@
 #include "Common/Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -53,6 +54,16 @@ using namespace llvm;
 #define DEBUG_TYPE "asm-writer-emitter"
 
 namespace {
+
+/// A group of instructions that share identical printing logic except for at
+/// most one differing operand.
+struct InstructionGroup {
+  AsmWriterInst FirstInst;
+  std::vector<AsmWriterInst> SimilarInsts;
+  unsigned DifferingOperand = ~0;
+
+  InstructionGroup(AsmWriterInst FirstInst) : FirstInst(std::move(FirstInst)) {}
+};
 
 class AsmWriterEmitter {
   const RecordKeeper &Records;
@@ -105,52 +116,54 @@ PrintCases(std::vector<std::pair<std::string, AsmWriterOperand>> &OpsToPrint,
   O << "\n      break;\n";
 }
 
-/// EmitInstructions - Emit the last instruction in the vector and any other
-/// instructions that are suitably similar to it.
-static void EmitInstructions(std::vector<AsmWriterInst> &Insts, raw_ostream &O,
-                             bool PassSubtarget) {
-  AsmWriterInst FirstInst = Insts.back();
-  Insts.pop_back();
+/// Group instructions by similarity.  When ExactMatch is true, only group
+/// instructions with identical operand sequences (for the bytecode path).
+static std::vector<InstructionGroup>
+groupInstructions(std::vector<AsmWriterInst> &Insts, bool ExactMatch = false) {
+  std::vector<InstructionGroup> Groups;
+  while (!Insts.empty()) {
+    InstructionGroup &G = Groups.emplace_back(std::move(Insts.back()));
+    Insts.pop_back();
 
-  std::vector<AsmWriterInst> SimilarInsts;
-  unsigned DifferingOperand = ~0;
-  for (unsigned i = Insts.size(); i != 0; --i) {
-    unsigned DiffOp = Insts[i - 1].MatchesAllButOneOp(FirstInst);
-    if (DiffOp != ~1U) {
-      if (DifferingOperand == ~0U) // First match!
-        DifferingOperand = DiffOp;
+    for (unsigned I = Insts.size(); I != 0; --I) {
+      unsigned DiffOp = Insts[I - 1].MatchesAllButOneOp(G.FirstInst);
+      if (DiffOp == ~0U || (!ExactMatch && DiffOp != ~1U)) {
+        if (G.DifferingOperand == ~0U) // First match!
+          G.DifferingOperand = DiffOp;
 
-      // If this differs in the same operand as the rest of the instructions in
-      // this class, move it to the SimilarInsts list.
-      if (DifferingOperand == DiffOp || DiffOp == ~0U) {
-        SimilarInsts.push_back(Insts[i - 1]);
-        Insts.erase(Insts.begin() + i - 1);
+        // If this differs in the same operand as the rest of the instructions
+        // in this class, move it to the SimilarInsts list.
+        if (G.DifferingOperand == DiffOp || DiffOp == ~0U) {
+          G.SimilarInsts.push_back(Insts[I - 1]);
+          Insts.erase(Insts.begin() + I - 1);
+        }
       }
     }
   }
+  return Groups;
+}
 
-  O << "  case " << FirstInst.CGI->Namespace << "::" << FirstInst.CGI->getName()
-    << ":\n";
-  for (const AsmWriterInst &AWI : SimilarInsts)
-    O << "  case " << AWI.CGI->Namespace << "::" << AWI.CGI->getName() << ":\n";
-  for (unsigned i = 0, e = FirstInst.Operands.size(); i != e; ++i) {
-    if (i != DifferingOperand) {
+/// Emit operand printing code for an instruction group.
+static void emitInstructionOperands(const InstructionGroup &G, raw_ostream &O,
+                                    bool PassSubtarget) {
+  for (unsigned I = 0, E = G.FirstInst.Operands.size(); I != E; ++I) {
+    if (I != G.DifferingOperand) {
       // If the operand is the same for all instructions, just print it.
-      O << "    " << FirstInst.Operands[i].getCode(PassSubtarget);
+      O << "    " << G.FirstInst.Operands[I].getCode(PassSubtarget);
     } else {
       // If this is the operand that varies between all of the instructions,
       // emit a switch for just this operand now.
       O << "    switch (MI->getOpcode()) {\n";
       O << "    default: llvm_unreachable(\"Unexpected opcode.\");\n";
       std::vector<std::pair<std::string, AsmWriterOperand>> OpsToPrint;
-      OpsToPrint.emplace_back(FirstInst.CGI->Namespace.str() +
-                                  "::" + FirstInst.CGI->getName().str(),
-                              FirstInst.Operands[i]);
+      OpsToPrint.emplace_back(G.FirstInst.CGI->Namespace.str() +
+                                  "::" + G.FirstInst.CGI->getName().str(),
+                              G.FirstInst.Operands[I]);
 
-      for (const AsmWriterInst &AWI : SimilarInsts) {
+      for (const AsmWriterInst &AWI : G.SimilarInsts) {
         OpsToPrint.emplace_back(AWI.CGI->Namespace.str() +
                                     "::" + AWI.CGI->getName().str(),
-                                AWI.Operands[i]);
+                                AWI.Operands[I]);
       }
       std::reverse(OpsToPrint.begin(), OpsToPrint.end());
       while (!OpsToPrint.empty())
@@ -159,7 +172,84 @@ static void EmitInstructions(std::vector<AsmWriterInst> &Insts, raw_ostream &O,
     }
     O << "\n";
   }
+}
+
+/// Emit the case labels and operand printing code for an instruction group.
+static void emitInstructions(const InstructionGroup &G, raw_ostream &O,
+                             bool PassSubtarget) {
+  O << "  case " << G.FirstInst.CGI->Namespace
+    << "::" << G.FirstInst.CGI->getName() << ":\n";
+  for (const AsmWriterInst &AWI : G.SimilarInsts)
+    O << "  case " << AWI.CGI->Namespace << "::" << AWI.CGI->getName() << ":\n";
+  emitInstructionOperands(G, O, PassSubtarget);
   O << "    break;\n";
+}
+
+/// Emit the bytecode tables and interpreter loop for overflow instructions.
+/// Instructions with identical operand sequences share the same offset (via
+/// groupInstructions with ExactMatch=true).  Tables are emitted as static const
+/// arrays inside printInstruction() so that local variables remain in scope.
+static void
+EmitOverflowBytecodeSection(raw_ostream &O, StringRef TargetName,
+                            const std::vector<InstructionGroup> &Groups,
+                            ArrayRef<const CodeGenInstruction *> NumberedInsts,
+                            bool PassSubtarget) {
+  // Bytecode 0 = unexpected-opcode sentinel, 1 = return terminator (already
+  // the last operand of every AsmWriterInst).
+  // Pre-seeding ensures AWI.Operands' trailing "return;" maps to index 1.
+  MapVector<std::string, unsigned, StringMap<unsigned>> Commands;
+  Commands.insert({"llvm_unreachable(\"Unexpected opcode.\");", 0});
+  Commands.insert({"return;", 1});
+
+  // OpcodeToOffset[opcode] = starting index in OverflowProgram.
+  // Offset 0 is the unreachable sentinel for non-overflow opcodes.
+  // Real sequences start at offset 1.
+  std::vector<unsigned> OpcodeToOffset(NumberedInsts.size(), 0);
+  unsigned TotalSize = 1; // slot 0 = sentinel
+  for (const InstructionGroup &G : Groups) {
+    OpcodeToOffset[G.FirstInst.CGIIndex] = TotalSize;
+    for (const AsmWriterInst &AWI : G.SimilarInsts)
+      OpcodeToOffset[AWI.CGIIndex] = TotalSize;
+    TotalSize += G.FirstInst.Operands.size();
+    for (const AsmWriterOperand &Op : G.FirstInst.Operands)
+      Commands.try_emplace(Op.getCode(PassSubtarget), Commands.size());
+  }
+
+  StringRef OffsetType = getMinimalTypeForRange(TotalSize - 1);
+  StringRef StmtType = getMinimalTypeForRange(Commands.size() - 1);
+
+  O << "  static const " << OffsetType << " OpcodeToOffset[] = {\n";
+  for (unsigned I = 0; I < NumberedInsts.size(); ++I)
+    O << "    " << OpcodeToOffset[I] << ",\t// " << NumberedInsts[I]->getName()
+      << "\n";
+  O << "  };\n";
+
+  O << "  static const " << StmtType << " OverflowProgram[] = {\n"
+    << "    /* 0 */ 0,\n"; // sentinel
+  unsigned Offset = 1;
+  for (const InstructionGroup &G : Groups) {
+    O << "    /* " << Offset << " */";
+    for (const AsmWriterOperand &Op : G.FirstInst.Operands)
+      O << " " << Commands.lookup(Op.getCode(PassSubtarget)) << ",";
+    O << "\n";
+    Offset += G.FirstInst.Operands.size();
+  }
+  O << "  };\n";
+
+  O << "  for (" << OffsetType
+    << " Idx = OpcodeToOffset[MI->getOpcode()];; ++Idx) {\n"
+    << "    switch (OverflowProgram[Idx]) {\n"
+    << "    default: llvm_unreachable(\"Unexpected bytecode command.\");\n";
+  for (auto &[Stmt, Idx] : Commands) {
+    O << "    case " << Idx << ":\n      " << Stmt << "\n";
+    if (Idx != 1) // bytecode 1 is the "return;" sequence terminator
+      O << "      break;\n";
+  }
+  O << "    }\n  }\n";
+
+  LLVM_DEBUG(dbgs() << "[AsmWriter] " << TargetName << ": " << Groups.size()
+                    << " unique sequences, " << Commands.size()
+                    << " unique statements\n");
 }
 
 void AsmWriterEmitter::FindUniqueOperandCommands(
@@ -441,15 +531,16 @@ void AsmWriterEmitter::EmitGetMnemonic(
   BitsOS << "  uint" << ((BitsLeft < (OpcodeInfoBits - 32)) ? 64 : 32)
          << "_t Bits = 0;\n";
   while (BytesNeeded != 0) {
-    // Figure out how big this table section needs to be, but no bigger than 4.
-    unsigned TableSize = std::min(llvm::bit_floor(BytesNeeded), 4u);
+    // Figure out how big this table section needs to be.
+    unsigned TableSize = llvm::bit_floor(BytesNeeded);
     BytesNeeded -= TableSize;
     TableSize *= 8; // Convert to bits;
-    uint64_t Mask = (1ULL << TableSize) - 1;
+    uint64_t Mask = maskTrailingOnes<uint64_t>(TableSize);
     O << "  static const uint" << TableSize << "_t OpInfo" << Table
       << "[] = {\n";
+    StringRef Suffix = TableSize == 64 ? "ULL" : "U";
     for (unsigned i = 0, e = NumberedInstructions.size(); i != e; ++i) {
-      O << "    " << ((OpcodeInfo[i] >> Shift) & Mask) << "U,\t// "
+      O << "    " << ((OpcodeInfo[i] >> Shift) & Mask) << Suffix << ",\t// "
         << NumberedInstructions[i]->getName() << '\n';
     }
     O << "  };\n\n";
@@ -489,6 +580,7 @@ void AsmWriterEmitter::EmitPrintInstruction(
   const Record *AsmWriter = Target.getAsmWriter();
   StringRef ClassName = AsmWriter->getValueAsString("AsmWriterClassName");
   bool PassSubtarget = AsmWriter->getValueAsInt("PassSubtarget");
+  bool UseBytecode = AsmWriter->getValueAsBit("UseBytecode");
 
   // This function has some huge switch statements that causing excessive
   // compile time in LLVM profile instrumenation build. This print function
@@ -554,26 +646,33 @@ void AsmWriterEmitter::EmitPrintInstruction(
     BitsLeft -= NumBits;
   }
 
-  // Okay, delete instructions with no operand info left.
-  llvm::erase_if(Instructions,
-                 [](AsmWriterInst &Inst) { return Inst.Operands.empty(); });
-
-  // Because this is a vector, we want to emit from the end.  Reverse all of the
-  // elements in the vector.
-  std::reverse(Instructions.begin(), Instructions.end());
-
   // Now that we've emitted all of the operand info that fit into 64 bits, emit
   // information for those instructions that are left.  This is a less dense
   // encoding, but we expect the main 64-bit table to handle the majority of
   // instructions.
-  if (!Instructions.empty()) {
-    // Find the opcode # of inline asm.
-    O << "  switch (MI->getOpcode()) {\n";
-    O << "  default: llvm_unreachable(\"Unexpected opcode.\");\n";
-    while (!Instructions.empty())
-      EmitInstructions(Instructions, O, PassSubtarget);
+  // Delete instructions with no operand info left so that the emptiness check
+  // below only considers overflow instructions.
+  llvm::erase_if(Instructions,
+                 [](AsmWriterInst &Inst) { return Inst.Operands.empty(); });
 
-    O << "  }\n";
+  if (!Instructions.empty()) {
+    // Because this is a vector, we want to emit from the end.  Reverse all
+    // of the elements in the vector.
+    std::reverse(Instructions.begin(), Instructions.end());
+
+    std::vector<InstructionGroup> Groups =
+        groupInstructions(Instructions, UseBytecode);
+    if (UseBytecode) {
+      EmitOverflowBytecodeSection(O, Target.getName(), Groups,
+                                  NumberedInstructions, PassSubtarget);
+    } else {
+      O << "  switch (MI->getOpcode()) {\n";
+      O << "  default: llvm_unreachable(\"Unexpected opcode.\");\n";
+      for (const InstructionGroup &G : Groups)
+        emitInstructions(G, O, PassSubtarget);
+
+      O << "  }\n";
+    }
   }
 
   O << "}\n";

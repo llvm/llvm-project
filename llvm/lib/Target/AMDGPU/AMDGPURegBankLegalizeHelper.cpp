@@ -269,7 +269,8 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
   // Update EXEC, save the original EXEC value to SavedExec.
   B.buildInstr(LMC.AndSaveExecOpc)
       .addDef(SavedExec)
-      .addReg(CondRegLM, RegState::Kill);
+      .addReg(CondRegLM, RegState::Kill)
+      .setOperandDead(3);
   MRI.setSimpleHint(SavedExec, CondRegLM);
 
   B.setInsertPt(*BodyBB, BodyBB->end());
@@ -278,7 +279,8 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
   B.buildInstr(LMC.XorTermOpc)
       .addDef(LMC.ExecReg)
       .addReg(LMC.ExecReg)
-      .addReg(SavedExec);
+      .addReg(SavedExec)
+      .setOperandDead(3);
 
   // XXX - s_xor_b64 sets scc to 1 if the result is nonzero, so can we use
   // s_cbranch_scc0?
@@ -769,9 +771,13 @@ bool RegBankLegalizeHelper::lowerV_BFE(MachineInstr &MI) {
     }
     B.buildMergeLikeInstr(Dst, {Lo, Hi});
   } else {
-    auto Amt = B.buildConstant(VgprRB_I32, WidthImm - 32);
     // SHRSrc Hi|Lo: ??????sy|yyyyyyyl -> sssssssy|yyyyyyyl
-    auto Hi = B.buildInstr(BFXOpc, {VgprRB_I32}, {SHRSrcHi, Zero, Amt});
+    Register Hi = SHRSrcHi;
+    // V_BFE masks its width to 5 bits, so 64 would extract zero bits.
+    if (WidthImm < 64) {
+      auto Amt = B.buildConstant(VgprRB_I32, WidthImm - 32);
+      Hi = B.buildInstr(BFXOpc, {VgprRB_I32}, {SHRSrcHi, Zero, Amt}).getReg(0);
+    }
     B.buildMergeLikeInstr(Dst, {SHRSrcLo, Hi});
   }
 
@@ -1485,7 +1491,7 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
   }
   case VgprToVccCopy: {
     Register Src = MI.getOperand(1).getReg();
-    LLT Ty = LLT::integer(MRI.getType(Src).getSizeInBits());
+    LLT Ty = MRI.getType(Src);
     // Take lowest bit from each lane and put it in lane mask.
     // Lowering via compare, but we need to clean high bits first as compare
     // compares all bits in register.

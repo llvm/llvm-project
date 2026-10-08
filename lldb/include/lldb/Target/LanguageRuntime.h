@@ -136,6 +136,13 @@ public:
   virtual TypeAndOrName FixUpDynamicType(const TypeAndOrName &type_and_or_name,
                                          ValueObject &static_value) = 0;
 
+  /// This allows a language runtime to adjust the location of \p variable
+  /// computed from its debug info, for storage whose indirection is only
+  /// known at runtime.
+  virtual llvm::Error FixupVariableLocation(Variable &variable, Value &value) {
+    return llvm::Error::success();
+  }
+
   virtual void SetExceptionBreakpoints() {}
 
   virtual void ClearExceptionBreakpoints() {}

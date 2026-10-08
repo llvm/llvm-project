@@ -3907,7 +3907,7 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
                             const AAMemoryBehavior &MemBehaviorAA,
                             const CallBase &CB, unsigned OtherArgNo) {
     // We do not need to worry about aliasing with the underlying IRP.
-    if (this->getCalleeArgNo() == (int)OtherArgNo)
+    if (this->getCallSiteArgNo() == (int)OtherArgNo)
       return false;
 
     // If it is not a pointer or pointer vector we do not alias.
@@ -4673,6 +4673,9 @@ struct AAIsDeadFunction : public AAIsDead {
     if (!AssumedLiveBlocks.insert(&BB).second)
       return false;
 
+    if (!A.isDuringDeduction())
+      return true;
+
     // We assume that all of BB is (probably) live now and if there are calls to
     // internal functions we will assume that those are now live as well. This
     // is a performance optimization for blocks with calls to a lot of internal
@@ -4680,8 +4683,16 @@ struct AAIsDeadFunction : public AAIsDead {
     for (const Instruction &I : BB)
       if (const auto *CB = dyn_cast<CallBase>(&I))
         if (auto *F = dyn_cast_if_present<Function>(CB->getCalledOperand()))
-          if (F->hasLocalLinkage())
+          if (F->hasLocalLinkage()) {
+            LLVM_DEBUG({
+              dbgs() << "[AAIsDead] Seeding live internal callee ";
+              F->printAsOperand(dbgs(), /*PrintType=*/false);
+              dbgs() << " from ";
+              BB.getParent()->printAsOperand(dbgs(), /*PrintType=*/false);
+              dbgs() << "\n";
+            });
             A.markLiveInternalFunction(*F);
+          }
     return true;
   }
 
@@ -6923,9 +6934,8 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
       if (SizeAPI) {
         Size = ConstantInt::get(AI.CB->getContext(), *SizeAPI);
       } else {
-        LLVMContext &Ctx = AI.CB->getContext();
         ObjectSizeOpts Opts;
-        ObjectSizeOffsetEvaluator Eval(DL, TLI, Ctx, Opts);
+        ObjectSizeOffsetEvaluator Eval(*AI.CB->getModule(), TLI, Opts);
         SizeOffsetValue SizeOffsetPair = Eval.compute(AI.CB);
         assert(SizeOffsetPair != ObjectSizeOffsetEvaluator::unknown() &&
                cast<ConstantInt>(SizeOffsetPair.Offset)->isZero());
@@ -7650,7 +7660,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
                                    unsigned ArgNo, BasicBlock::iterator IP) {
     assert(PrivType && "Expected privatizable type!");
 
-    IRBuilder<NoFolder> IRB(IP->getParent(), IP);
+    IRBuilder<NoFolder> IRB(IP);
     const DataLayout &DL = F.getDataLayout();
 
     // Traverse the type, build GEPs and stores.
@@ -12239,6 +12249,11 @@ struct AAGlobalValueInfoFloating : public AAGlobalValueInfo {
                 SmallVectorImpl<const Value *> &Worklist) {
     Instruction *UInst = dyn_cast<Instruction>(U.getUser());
     if (!UInst) {
+      // Outside a closed world, code outside the module can read an
+      // externally visible global, so the value escapes through it.
+      if (auto *GV = dyn_cast<GlobalValue>(U.getUser()))
+        if (!GV->hasLocalLinkage() && !A.isClosedWorldModule())
+          return false;
       Follow = true;
       return true;
     }

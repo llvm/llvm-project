@@ -665,6 +665,10 @@ def FeatureNoSVEFPLD1R : SubtargetFeature<"no-sve-fp-ld1r",
   "NoSVEFPLD1R", "true", "Avoid using LD1RX instructions for FP",
   [], InlineIgnore>;
 
+def FeatureDontPreferPredicatedLD1R : SubtargetFeature <
+    "dont-prefer-predicated-ld1r", "NoPredicatedLD1R", "true",
+    "Don't prefer predicated SVE LD1R over sign-extended-load + NEON dup", [], InlineIgnore>;
+
 def FeatureZCRegMoveGPR64 : SubtargetFeature<"zcm-gpr64", "HasZeroCycleRegMoveGPR64", "true",
                                         "Has zero-cycle register moves for GPR64 registers",
                                         [], InlineIgnore>;

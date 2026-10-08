@@ -81,9 +81,9 @@ bool isAllowedNonPowerOf2VF(unsigned NumElts, bool AllowNonPowerOf2);
 /// phase. If the type is going to be scalarized or does not use whole
 /// registers, returns 1.
 unsigned
-getNumberOfParts(const TargetTransformInfo &TTI, Type *VecTy, Type *ScalarTy,
-                 bool ReVec,
-                 unsigned Limit = std::numeric_limits<unsigned>::max());
+getNumberOfPartsOrRegs(bool QueryNumParts, const TargetTransformInfo &TTI,
+                       Type *VecTy, Type *ScalarTy, bool ReVec,
+                       unsigned Limit = std::numeric_limits<unsigned>::max());
 
 } // namespace llvm::slpvectorizer
 

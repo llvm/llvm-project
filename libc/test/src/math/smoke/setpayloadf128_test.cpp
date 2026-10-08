@@ -10,4 +10,4 @@
 
 #include "src/math/setpayloadf128.h"
 
-LIST_SETPAYLOAD_TESTS(float128, LIBC_NAMESPACE::setpayloadf128)
+LIST_SETPAYLOAD_TESTS(Setpayloadf128, float128, LIBC_NAMESPACE::setpayloadf128)

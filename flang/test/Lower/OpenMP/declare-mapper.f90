@@ -33,8 +33,8 @@ subroutine declare_mapper_1
    real                   :: x, y(nvals)
    !CHECK:omp.declare_mapper @[[MY_TYPE_MAPPER:_QQFdeclare_mapper_1my_type_omp_default_mapper]] : [[MY_TYPE:!fir\.type<_QFdeclare_mapper_1Tmy_type\{num_vals:i32,values:!fir\.box<!fir\.heap<!fir\.array<\?xi32>>>\}>]] {
    !CHECK:      ^bb0(%[[VAL_0:.*]]: !fir.ref<[[MY_TYPE]]>):
-   !CHECK:        %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFdeclare_mapper_1Evar"} : (!fir.ref<[[MY_TYPE]]>) -> (!fir.ref<[[MY_TYPE]]>, !fir.ref<[[MY_TYPE]]>)
-   !CHECK:        %[[VAL_2:.*]] = hlfir.designate %[[VAL_1]]#0{"values"}   {fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<[[MY_TYPE]]>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+   !CHECK:        %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFdeclare_mapper_1Evar") : (!fir.ref<[[MY_TYPE]]>) -> (!fir.ref<[[MY_TYPE]]>, !fir.ref<[[MY_TYPE]]>)
+   !CHECK:        %[[VAL_2:.*]] = hlfir.designate %[[VAL_1]]#0{"values"}   fortran_attrs<allocatable> : (!fir.ref<[[MY_TYPE]]>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
    !CHECK:        %[[VAL_3:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
    !CHECK:        %[[VAL_4:.*]] = fir.box_addr %[[VAL_3]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
    !CHECK:        %[[VAL_5:.*]] = arith.constant 0 : index
@@ -78,7 +78,7 @@ subroutine declare_mapper_2
    real                  :: x, y(nvals)
    !CHECK:omp.declare_mapper @[[MY_TYPE_MAPPER:_QQFdeclare_mapper_2my_mapper]] : [[MY_TYPE:!fir\.type<_QFdeclare_mapper_2Tmy_type2\{my_type_var:!fir\.type<_QFdeclare_mapper_2Tmy_type\{num_vals:i32,values:!fir\.box<!fir\.heap<!fir\.array<\?xi32>>>\}>,temp:!fir\.type<_QFdeclare_mapper_2Tmy_type\{num_vals:i32,values:!fir\.box<!fir\.heap<!fir\.array<\?xi32>>>\}>,unmapped:!fir\.array<250xf32>,arr:!fir\.array<250xf32>\}>]] {
    !CHECK:      ^bb0(%[[VAL_0:.*]]: !fir.ref<[[MY_TYPE]]>):
-   !CHECK:        %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFdeclare_mapper_2Ev"} : (!fir.ref<[[MY_TYPE]]>) -> (!fir.ref<[[MY_TYPE]]>, !fir.ref<[[MY_TYPE]]>)
+   !CHECK:        %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFdeclare_mapper_2Ev") : (!fir.ref<[[MY_TYPE]]>) -> (!fir.ref<[[MY_TYPE]]>, !fir.ref<[[MY_TYPE]]>)
    !CHECK:        %[[VAL_2:.*]] = arith.constant 250 : index
    !CHECK:        %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
    !CHECK:        %[[VAL_4:.*]] = hlfir.designate %[[VAL_1]]#0{"arr"}   shape %[[VAL_3]] : (!fir.ref<[[MY_TYPE]]>, !fir.shape<1>) -> !fir.ref<!fir.array<250xf32>>
@@ -88,7 +88,7 @@ subroutine declare_mapper_2
    !CHECK:        %[[VAL_8:.*]] = omp.map.bounds lower_bound(%[[VAL_6]] : index) upper_bound(%[[VAL_7]] : index) extent(%[[VAL_2]] : index) stride(%[[VAL_5]] : index) start_idx(%[[VAL_5]] : index)
    !CHECK:        %[[VAL_9:.*]] = omp.map.info var_ptr(%[[VAL_4]] : !fir.ref<!fir.array<250xf32>>, !fir.array<250xf32>) map_clauses(tofrom) capture(ByRef) bounds(%[[VAL_8]]) name("v%[[VAL_10:.*]]") -> !fir.ref<!fir.array<250xf32>>
    !CHECK:        %[[VAL_11:.*]] = hlfir.designate %[[VAL_1]]#0{"temp"}   : (!fir.ref<[[MY_TYPE]]>) -> !fir.ref<!fir.type<_QFdeclare_mapper_2Tmy_type{num_vals:i32,values:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
-   !CHECK:        %[[VAL_12:.*]] = omp.map.info var_ptr(%[[VAL_11]] : !fir.ref<!fir.type<_QFdeclare_mapper_2Tmy_type{num_vals:i32,values:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>, !fir.type<_QFdeclare_mapper_2Tmy_type{num_vals:i32,values:!fir.box<!fir.heap<!fir.array<?xi32>>>}>) map_clauses(storage) capture(ByRef) name("v%[[VAL_13:.*]]") -> !fir.ref<!fir.type<_QFdeclare_mapper_2Tmy_type{num_vals:i32,values:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
+   !CHECK:        %[[VAL_12:.*]] = omp.map.info var_ptr(%[[VAL_11]] : !fir.ref<!fir.type<_QFdeclare_mapper_2Tmy_type{num_vals:i32,values:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>, !fir.type<_QFdeclare_mapper_2Tmy_type{num_vals:i32,values:!fir.box<!fir.heap<!fir.array<?xi32>>>}>) map_clauses(storage) capture(ByRef) mapper(@_QQFdeclare_mapper_2my_type_omp_default_mapper) name("v%[[VAL_13:.*]]") -> !fir.ref<!fir.type<_QFdeclare_mapper_2Tmy_type{num_vals:i32,values:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
    !CHECK:        %[[VAL_14:.*]] = omp.map.info var_ptr(%[[VAL_1]]#1 : !fir.ref<[[MY_TYPE]]>, [[MY_TYPE]]) map_clauses(storage) capture(ByRef) members(%[[VAL_9]], %[[VAL_12]] : [3], [1] : !fir.ref<!fir.array<250xf32>>, !fir.ref<!fir.type<_QFdeclare_mapper_2Tmy_type{num_vals:i32,values:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) name("v") partial_map(true) -> !fir.ref<[[MY_TYPE]]>
    !CHECK:        omp.declare_mapper.info map_entries(%[[VAL_14]], %[[VAL_9]], %[[VAL_12]] : !fir.ref<[[MY_TYPE]]>, !fir.ref<!fir.array<250xf32>>, !fir.ref<!fir.type<_QFdeclare_mapper_2Tmy_type{num_vals:i32,values:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>)
    !CHECK:      }
@@ -109,7 +109,7 @@ subroutine declare_mapper_3
 
    !CHECK:  omp.declare_mapper @[[MY_TYPE_MAPPER2:_QQFdeclare_mapper_3my_mapper2]] : [[MY_TYPE2:!fir\.type<_QFdeclare_mapper_3Tmy_type2\{my_type_var:!fir\.type<_QFdeclare_mapper_3Tmy_type\{num_vals:i32,values:!fir\.box<!fir\.heap<!fir\.array<\?xi32>>>}>,arr:!fir\.array<250xf32>}>]] {
    !CHECK:   ^bb0(%[[VAL_0:.*]]: !fir.ref<[[MY_TYPE2]]>):
-   !CHECK:     %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFdeclare_mapper_3Ev"} : (!fir.ref<[[MY_TYPE2]]>) -> (!fir.ref<[[MY_TYPE2]]>, !fir.ref<[[MY_TYPE2]]>)
+   !CHECK:     %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFdeclare_mapper_3Ev") : (!fir.ref<[[MY_TYPE2]]>) -> (!fir.ref<[[MY_TYPE2]]>, !fir.ref<[[MY_TYPE2]]>)
    !CHECK:     %[[VAL_2:.*]] = hlfir.designate %[[VAL_1]]#0{"my_type_var"}   : (!fir.ref<[[MY_TYPE2]]>) -> !fir.ref<[[MY_TYPE:!fir\.type<_QFdeclare_mapper_3Tmy_type\{num_vals:i32,values:!fir\.box<!fir\.heap<!fir\.array<\?xi32>>>}>]]>
    !CHECK:     %[[VAL_3:.*]] = omp.map.info var_ptr(%[[VAL_2]] : !fir.ref<[[MY_TYPE]]>, [[MY_TYPE]]) map_clauses(tofrom) capture(ByRef) mapper(@[[MY_TYPE_MAPPER:_QQFdeclare_mapper_3my_mapper]]) name("v%[[VAL_4:.*]]") -> !fir.ref<[[MY_TYPE]]>
    !CHECK:     %[[VAL_5:.*]] = arith.constant 250 : index
@@ -126,8 +126,8 @@ subroutine declare_mapper_3
 
    !CHECK:  omp.declare_mapper @[[MY_TYPE_MAPPER]] : [[MY_TYPE]] {
    !CHECK:   ^bb0(%[[VAL_0:.*]]: !fir.ref<[[MY_TYPE]]>):
-   !CHECK:     %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFdeclare_mapper_3Evar"} : (!fir.ref<[[MY_TYPE]]>) -> (!fir.ref<[[MY_TYPE]]>, !fir.ref<[[MY_TYPE]]>)
-   !CHECK:     %[[VAL_2:.*]] = hlfir.designate %[[VAL_1]]#0{"values"}   {fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<[[MY_TYPE]]>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+   !CHECK:     %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFdeclare_mapper_3Evar") : (!fir.ref<[[MY_TYPE]]>) -> (!fir.ref<[[MY_TYPE]]>, !fir.ref<[[MY_TYPE]]>)
+   !CHECK:     %[[VAL_2:.*]] = hlfir.designate %[[VAL_1]]#0{"values"}   fortran_attrs<allocatable> : (!fir.ref<[[MY_TYPE]]>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
    !CHECK:     %[[VAL_3:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
    !CHECK:     %[[VAL_4:.*]] = fir.box_addr %[[VAL_3]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
    !CHECK:     %[[VAL_5:.*]] = arith.constant 0 : index

@@ -1190,6 +1190,7 @@ LegalizerHelper::createFCMPLibcall(MachineInstr &MI,
   const Register DstReg = Cmp->getReg(0);
   LLT DstTy = MRI.getType(DstReg);
   const auto Cond = Cmp->getCond();
+  Type *RetTy = EVT(TLI.getCmpLibcallReturnType()).getTypeForEVT(Ctx);
 
   // Reference:
   // https://gcc.gnu.org/onlinedocs/gccint/Soft-float-library-routines.html#Comparison-functions-1
@@ -1197,12 +1198,12 @@ LegalizerHelper::createFCMPLibcall(MachineInstr &MI,
   const auto BuildLibcall = [&](const RTLIB::Libcall Libcall,
                                 const CmpInst::Predicate ICmpPred,
                                 const DstOp &Res) -> Register {
-    // FCMP libcall always returns an i32, and needs an ICMP with #0.
-    LLT TempLLT = LLT::integer(32);
+    // FCMP libcall returns an integer, and needs an ICMP with #0.
+    LLT TempLLT = LLT::integer(RetTy->getIntegerBitWidth());
     Register Temp = MRI.createGenericVirtualRegister(TempLLT);
     // Generate libcall, holding result in Temp
     const auto Status = createLibcall(
-        Libcall, {Temp, Type::getInt32Ty(Ctx), 0},
+        Libcall, {Temp, RetTy, 0},
         {{Cmp->getLHSReg(), OpType, 0}, {Cmp->getRHSReg(), OpType, 1}},
         LocObserver, &MI);
     if (Status != Legalized)
@@ -4375,15 +4376,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
   LLT PtrTy = MRI.getType(PtrReg);
   unsigned AnyExtSize = PowerOf2Ceil(DstTy.getSizeInBits());
 
-  LLT AnyExtTy;
-  LLT OffsetCstRes;
-  if (EltTy.isPointer()) {
-    AnyExtTy = LLT::scalar(AnyExtSize);
-    OffsetCstRes = LLT::scalar(PtrTy.getSizeInBits());
-  } else {
-    AnyExtTy = DstTy.changeElementSize(AnyExtSize);
-    OffsetCstRes = DstTy.changeElementSize(PtrTy.getSizeInBits());
-  }
+  LLT AnyExtTy = LLT::integer(AnyExtSize);
+  LLT OffsetCstRes = LLT::integer(PtrTy.getSizeInBits());
 
   auto LargeLoad = MIRBuilder.buildLoadInstr(TargetOpcode::G_ZEXTLOAD, AnyExtTy,
                                              PtrReg, *LargeMMO);
@@ -4401,14 +4395,22 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
     MIRBuilder.buildOr(DstReg, Shift, LargeLoad);
   else if (AnyExtTy.getSizeInBits() != DstTy.getSizeInBits()) {
     auto Or = MIRBuilder.buildOr(AnyExtTy, Shift, LargeLoad);
-    MIRBuilder.buildTrunc(DstReg, {Or});
-  } else {
-    assert(DstTy.isPointer() && "expected pointer");
+    LLT IntDstTy = DstTy.changeToInteger();
+    if (IntDstTy == DstTy) {
+      MIRBuilder.buildTrunc(DstReg, {Or});
+    } else {
+      auto Trunc = MIRBuilder.buildTrunc(IntDstTy, Or);
+      MIRBuilder.buildBitcast(DstReg, Trunc);
+    }
+  } else if (DstTy.isPointer()) {
     auto Or = MIRBuilder.buildOr(AnyExtTy, Shift, LargeLoad);
 
     // FIXME: We currently consider this to be illegal for non-integral address
     // spaces, but we need still need a way to reinterpret the bits.
     MIRBuilder.buildIntToPtr(DstReg, Or);
+  } else {
+    auto Or = MIRBuilder.buildOr(AnyExtTy, Shift, LargeLoad);
+    MIRBuilder.buildBitcast(DstReg, Or);
   }
 
   LoadMI.eraseFromParent();
@@ -7503,9 +7505,10 @@ LegalizerHelper::narrowScalarFPTOI(MachineInstr &MI, unsigned TypeIdx,
   LLT SrcTy = MRI.getType(Src);
 
   // If all finite floats fit into the narrowed integer type, we can just swap
-  // out the result type. This is practically only useful for conversions from
-  // half to at least 16-bits, so just handle the one case.
-  if (SrcTy.getScalarType() != LLT::scalar(16) ||
+  // out the result type. Only IEEE half qualifies: bfloat is also 16 bits wide
+  // but has float's exponent range. LLT::float16() is equivalent to
+  // LLT::scalar(16) on targets without extended LLTs.
+  if (SrcTy.getScalarType() != LLT::float16() ||
       NarrowTy.getScalarSizeInBits() < (IsSigned ? 17u : 16u))
     return UnableToLegalize;
 
@@ -7636,8 +7639,7 @@ LegalizerHelper::narrowScalarInsert(MachineInstr &MI, unsigned TypeIdx,
     } else {
       InsertOffset = OpStart - DstStart;
       ExtractOffset = 0;
-      SegSize =
-        std::min(NarrowSize - InsertOffset, OpStart + OpSize - DstStart);
+      SegSize = std::min(NarrowSize - InsertOffset, OpSize);
     }
 
     Register SegReg = OpReg;

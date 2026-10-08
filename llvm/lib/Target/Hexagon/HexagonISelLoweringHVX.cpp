@@ -175,9 +175,8 @@ HexagonTargetLowering::initializeHVXLowering() {
 
     // BUILD_VECTOR with f16 operands cannot be promoted without
     // promoting the result, so lower the node to vsplat or constant pool
-    setOperationAction(ISD::BUILD_VECTOR,      MVT::f16, Custom);
-    setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::f16, Custom);
-    setOperationAction(ISD::SPLAT_VECTOR,      MVT::f16, Custom);
+    setOperationAction(ISD::BUILD_VECTOR, MVT::f16, Custom);
+    setOperationAction(ISD::SPLAT_VECTOR, MVT::f16, Custom);
 
     // Vector shuffle is always promoted to ByteV and a bitcast to f16 is
     // generated.
@@ -224,7 +223,6 @@ HexagonTargetLowering::initializeHVXLowering() {
       setOperationAction(ISD::CONCAT_VECTORS, MVT::v128bf16, Custom);
 
       setOperationAction(ISD::SPLAT_VECTOR, MVT::bf16, Custom);
-      setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::bf16, Custom);
       setOperationAction(ISD::BUILD_VECTOR, MVT::bf16, Custom);
     }
 
@@ -1954,21 +1952,12 @@ SDValue
 HexagonTargetLowering::LowerHvxInsertElement(SDValue Op, SelectionDAG &DAG)
       const {
   const SDLoc &dl(Op);
-  MVT VecTy = ty(Op);
   SDValue VecV = Op.getOperand(0);
   SDValue ValV = Op.getOperand(1);
   SDValue IdxV = Op.getOperand(2);
   MVT ElemTy = ty(VecV).getVectorElementType();
   if (ElemTy == MVT::i1)
     return insertHvxElementPred(VecV, IdxV, ValV, dl, DAG);
-
-  if (ElemTy == MVT::f16 || ElemTy == MVT::bf16) {
-    SDValue T0 = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl,
-        tyVector(VecTy, MVT::i16),
-        DAG.getBitcast(tyVector(VecTy, MVT::i16), VecV),
-        DAG.getBitcast(MVT::i16, ValV), IdxV);
-    return DAG.getBitcast(tyVector(VecTy, ElemTy), T0);
-  }
 
   return insertHvxElementReg(VecV, IdxV, ValV, dl, DAG);
 }

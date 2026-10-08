@@ -87,8 +87,7 @@ public:
   }
   bool hasAtomAddF64() const { return hasFeature(NVPTX::SM60); }
   bool hasAtomScope() const { return hasFeature(NVPTX::SM60); }
-  bool hasAtomBitwise64() const { return hasFeature(NVPTX::SM32); }
-  bool hasAtomMinMax64() const { return hasFeature(NVPTX::SM32); }
+  bool hasAtomMinMaxAndOrXor() const { return hasFeature(NVPTX::SM32); }
   bool hasAtomCas16() const {
     return hasFeature(NVPTX::SM70) && hasFeature(NVPTX::PTX63);
   }
@@ -119,6 +118,7 @@ public:
   bool hasRelaxedMMIO() const {
     return hasFeature(NVPTX::SM70) && hasFeature(NVPTX::PTX82);
   }
+  bool hasLocalVolatile() const { return hasFeature(NVPTX::PTX91); }
   bool hasDotInstructions() const { return hasFeature(NVPTX::SM61); }
   bool hasCLMAD() const {
     return hasFeature(NVPTX::SM80) && hasFeature(NVPTX::PTX93);

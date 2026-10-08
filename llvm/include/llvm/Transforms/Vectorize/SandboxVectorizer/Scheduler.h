@@ -406,7 +406,7 @@ public:
   /// dependencies among \p Instrs. This function may involve scheduling
   /// intermediate instructions or canceling and re-scheduling if needed.
   /// \Returns true on success, false otherwise.
-  LLVM_ABI bool trySchedule(ArrayRef<Instruction *> Instrs);
+  LLVM_ABI bool trySchedule(BndlRef<Instruction *> Instrs);
   /// Clear the scheduler's state, including the DAG.
   void clear() {
     Bndls.clear();

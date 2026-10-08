@@ -365,7 +365,6 @@ struct Config {
   bool fixCortexA53Errata843419;
   bool fixCortexA8;
   bool formatBinary = false;
-  bool fortranCommon;
   bool gcSections;
   bool gdbIndex;
   bool gnuHash = false;
@@ -442,6 +441,7 @@ struct Config {
   bool zKeepDataSectionPrefix;
   bool zKeepTextSectionPrefix;
   bool zLrodataAfterBss;
+  bool zMarkPlt;
   bool zNoBtCfi;
   bool zNodefaultlib;
   bool zNodelete;

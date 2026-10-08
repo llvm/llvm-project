@@ -123,6 +123,10 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::ucmp:
   case Intrinsic::scmp:
   case Intrinsic::clmul:
+  case Intrinsic::pdep:
+  case Intrinsic::pext:
+  case Intrinsic::smulh:
+  case Intrinsic::umulh:
     return true;
   default:
     return false;
@@ -1326,7 +1330,7 @@ void InterleavedAccessInfo::collectConstStrideAccesses(
                                     /*ShouldCheckWrap=*/false, Predicates)
                            .value_or(0);
 
-      const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, Strides, Ptr);
+      const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, TheLoop, Strides, Ptr);
       AccessStrideInfo[&I] = StrideDescriptor(Stride, Scev, Size,
                                               getLoadStoreAlignment(&I));
     }

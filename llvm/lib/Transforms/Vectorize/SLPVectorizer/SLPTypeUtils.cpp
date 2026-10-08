@@ -129,11 +129,13 @@ bool isAllowedNonPowerOf2VF(unsigned NumElts, bool AllowNonPowerOf2) {
   return AllowNonPowerOf2 && has_single_bit(NumElts + 1);
 }
 
-unsigned getNumberOfParts(const TargetTransformInfo &TTI, Type *VecTy,
-                          Type *ScalarTy, bool ReVec, unsigned Limit) {
+unsigned getNumberOfPartsOrRegs(bool QueryNumParts,
+                                const TargetTransformInfo &TTI, Type *VecTy,
+                                Type *ScalarTy, bool ReVec, unsigned Limit) {
   if (isa<StructType>(VecTy))
     return 1;
-  unsigned NumParts = TTI.getNumberOfParts(VecTy);
+  unsigned NumParts = QueryNumParts ? TTI.getNumberOfParts(VecTy)
+                                    : TTI.getRegUsageForType(VecTy);
   if (NumParts == 0 || NumParts >= Limit)
     return 1;
   unsigned Sz = getNumElements(VecTy);

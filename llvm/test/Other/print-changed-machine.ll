@@ -5,7 +5,7 @@
 ; RUN:     --implicit-check-not='(cseinfo)' --implicit-check-not='Free MachineFunction'
 ; RUN: llc -filetype=null -mtriple=aarch64 -O0 -print-changed -filter-print-funcs=foo %s 2>&1 | FileCheck %s --check-prefixes=VERBOSE,NO-BAR
 
-; VERBOSE:       *** IR Dump After IRTranslator (irtranslator) on foo ***
+; VERBOSE:       *** IR Dump After IRTranslator (ir-translator) on foo ***
 ; VERBOSE-NEXT:  # Machine code for function foo: IsSSA, TracksLiveness{{$}}
 ; VERBOSE-NEXT:  Function Live Ins: $w0
 ; VERBOSE-EMPTY:
@@ -17,29 +17,29 @@
 ; VERBOSE-EMPTY:
 ; VERBOSE-NEXT:  bb.1.entry:
 
-; VERBOSE-BAR:   *** IR Dump After IRTranslator (irtranslator) on bar ***
+; VERBOSE-BAR:   *** IR Dump After IRTranslator (ir-translator) on bar ***
 ; NO-BAR-NOT:    on bar ***
 
 ; RUN: llc -filetype=null -mtriple=aarch64 -O0 -print-changed=quiet %s 2>&1 | FileCheck %s --check-prefix=QUIET
 
-; QUIET:         *** IR Dump After IRTranslator (irtranslator) on foo ***
+; QUIET:         *** IR Dump After IRTranslator (ir-translator) on foo ***
 ; QUIET-NOT:     ***
 ; QUIET:         *** IR Dump After Localizer (localizer) on foo ***
 
-; RUN: llc -filetype=null -mtriple=aarch64 -O0 -print-changed -filter-passes=irtranslator,legalizer %s 2>&1 | \
+; RUN: llc -filetype=null -mtriple=aarch64 -O0 -print-changed -filter-passes=ir-translator,legalizer %s 2>&1 | \
 ; RUN:   FileCheck %s --check-prefixes=VERBOSE-FILTER
-; RUN: llc -filetype=null -mtriple=aarch64 -O0 -print-changed=quiet -filter-passes=irtranslator %s 2>&1 | \
+; RUN: llc -filetype=null -mtriple=aarch64 -O0 -print-changed=quiet -filter-passes=ir-translator %s 2>&1 | \
 ; RUN:   FileCheck %s --check-prefixes=QUIET-FILTER --implicit-check-not='IR Dump'
 
-; VERBOSE-FILTER:      *** IR Dump After IRTranslator (irtranslator) on foo ***
+; VERBOSE-FILTER:      *** IR Dump After IRTranslator (ir-translator) on foo ***
 ; VERBOSE-FILTER:      *** IR Dump After AArch64O0PreLegalizerCombiner (aarch64-O0-prelegalizer-combiner) on foo filtered out ***
 ; VERBOSE-FILTER:      *** IR Dump After Legalizer (legalizer) on foo ***
 ; VERBOSE-FILTER-NOT:  *** IR Dump After {{.*}} () on
 
-; QUIET-FILTER: *** IR Dump After IRTranslator (irtranslator) on foo ***
-; QUIET-FILTER: *** IR Dump After IRTranslator (irtranslator) on bar ***
-; QUIET-FILTER: *** IR Dump After IRTranslator (irtranslator) on atomic_load ***
-; QUIET-FILTER: *** IR Dump After IRTranslator (irtranslator) on lr ***
+; QUIET-FILTER: *** IR Dump After IRTranslator (ir-translator) on foo ***
+; QUIET-FILTER: *** IR Dump After IRTranslator (ir-translator) on bar ***
+; QUIET-FILTER: *** IR Dump After IRTranslator (ir-translator) on atomic_load ***
+; QUIET-FILTER: *** IR Dump After IRTranslator (ir-translator) on lr ***
 
 ;; dot-cfg/dot-cfg-quiet are unimplemented. Currently they behave like 'quiet'.
 ; RUN: llc -filetype=null -mtriple=aarch64 -O0 -print-changed=dot-cfg %s 2>&1 | FileCheck %s --check-prefix=QUIET

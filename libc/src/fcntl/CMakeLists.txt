@@ -17,6 +17,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fallocate
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.fallocate
+)
+
+add_entrypoint_object(
   open
   ALIAS
   DEPENDS
@@ -42,4 +49,11 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.posix_fadvise64
+)
+
+add_entrypoint_object(
+  posix_fallocate
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.posix_fallocate
 )

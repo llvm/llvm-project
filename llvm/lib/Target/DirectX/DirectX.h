@@ -11,7 +11,13 @@
 #ifndef LLVM_LIB_TARGET_DIRECTX_DIRECTX_H
 #define LLVM_LIB_TARGET_DIRECTX_DIRECTX_H
 
+#include "llvm/Support/CommandLine.h"
+
 namespace llvm {
+namespace dxil {
+extern cl::opt<bool> PdbInPrivate;
+} // namespace dxil
+
 class AttributeMask;
 class FunctionPass;
 class ModulePass;

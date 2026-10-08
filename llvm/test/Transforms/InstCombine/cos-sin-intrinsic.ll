@@ -92,6 +92,16 @@ define <2 x float> @unary_fneg_cos_fmf(<2 x float> %x){
   ret <2 x float> %r
 }
 
+define <2 x float> @unary_fneg_cos_positivezero(<2 x float> %x) denormal_fpenv(positivezero|positivezero) {
+; CHECK-LABEL: @unary_fneg_cos_positivezero(
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.cos.v2f32(<2 x float> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %negx = fneg <2 x float> %x
+  %r = call <2 x float> @llvm.cos.v2f32(<2 x float> %negx)
+  ret <2 x float> %r
+}
+
 define float @fabs_f32(float %x) {
 ; CHECK-LABEL: @fabs_f32(
 ; CHECK-NEXT:    [[COS:%.*]] = call float @llvm.cos.f32(float [[X:%.*]])
@@ -211,6 +221,52 @@ define <2 x float> @unary_fneg_sin_fmf(<2 x float> %x){
 ;
   %negx = fneg fast <2 x float> %x
   %r = call nnan arcp afn <2 x float> @llvm.sin.v2f32(<2 x float> %negx)
+  ret <2 x float> %r
+}
+
+; sin(-x) -> -sin(x) is invalid if denormals may be flushed to +0.0.
+
+define <2 x float> @unary_fneg_sin_dapz(<2 x float> %x) denormal_fpenv(ieee|positivezero) {
+; CHECK-LABEL: @unary_fneg_sin_dapz(
+; CHECK-NEXT:    [[NEGX:%.*]] = fneg <2 x float> [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.sin.v2f32(<2 x float> [[NEGX]])
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %negx = fneg <2 x float> %x
+  %r = call <2 x float> @llvm.sin.v2f32(<2 x float> %negx)
+  ret <2 x float> %r
+}
+
+define <2 x float> @unary_fneg_sin_ftpz(<2 x float> %x) denormal_fpenv(positivezero|ieee) {
+; CHECK-LABEL: @unary_fneg_sin_ftpz(
+; CHECK-NEXT:    [[NEGX:%.*]] = fneg <2 x float> [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.sin.v2f32(<2 x float> [[NEGX]])
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %negx = fneg <2 x float> %x
+  %r = call <2 x float> @llvm.sin.v2f32(<2 x float> %negx)
+  ret <2 x float> %r
+}
+
+define <2 x float> @unary_fneg_sin_dynamic(<2 x float> %x) denormal_fpenv(dynamic|dynamic) {
+; CHECK-LABEL: @unary_fneg_sin_dynamic(
+; CHECK-NEXT:    [[NEGX:%.*]] = fneg <2 x float> [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.sin.v2f32(<2 x float> [[NEGX]])
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %negx = fneg <2 x float> %x
+  %r = call <2 x float> @llvm.sin.v2f32(<2 x float> %negx)
+  ret <2 x float> %r
+}
+
+define <2 x float> @unary_fneg_sin_ftz_daz(<2 x float> %x) denormal_fpenv(preservesign|preservesign) {
+; CHECK-LABEL: @unary_fneg_sin_ftz_daz(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.sin.v2f32(<2 x float> [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fneg <2 x float> [[TMP1]]
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %negx = fneg <2 x float> %x
+  %r = call <2 x float> @llvm.sin.v2f32(<2 x float> %negx)
   ret <2 x float> %r
 }
 

@@ -9,10 +9,13 @@
 #include "Boolean.h"
 #include "Char.h"
 #include "EvalEmitter.h"
+#include "Interp.h"
 #include "InterpBuiltinBitCast.h"
 #include "InterpHelpers.h"
 #include "PrimType.h"
 #include "Program.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/InferAlloc.h"
 #include "clang/AST/OSLog.h"
 #include "clang/AST/RecordLayout.h"
@@ -21,7 +24,9 @@
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/AllocToken.h"
+#include "llvm/Support/CRC.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SipHash.h"
 
 namespace clang {
@@ -819,15 +824,8 @@ static bool interp__builtin_ia32_crc32(InterpState &S, CodePtr OpPC,
   // CRC32C polynomial (iSCSI polynomial, bit-reversed)
   static const uint32_t CRC32C_POLY = 0x82F63B78;
 
-  // Process each byte
-  uint32_t Result = static_cast<uint32_t>(CRCVal);
-  for (unsigned I = 0; I != DataBytes; ++I) {
-    uint8_t Byte = static_cast<uint8_t>((DataVal >> (I * 8)) & 0xFF);
-    Result ^= Byte;
-    for (int J = 0; J != 8; ++J) {
-      Result = (Result >> 1) ^ ((Result & 1) ? CRC32C_POLY : 0);
-    }
-  }
+  uint32_t Result = llvm::calculateReflectedCRC32(
+      static_cast<uint32_t>(CRCVal), DataVal, DataBytes, CRC32C_POLY);
 
   pushInteger(S, Result, Call->getType());
   return true;
@@ -861,11 +859,9 @@ static bool interp__builtin_expect(InterpState &S, CodePtr OpPC,
   if (NumArgs == 3)
     S.Stk.discard<Floating>();
   discard(S.Stk, ArgT);
+  // Top of the stack is now the first paramter. Leave it there as the return
+  // value.
 
-  APSInt Val;
-  if (!popToAPSInt(S.Stk, ArgT, Val))
-    return false;
-  pushInteger(S, Val, Call->getType());
   return true;
 }
 
@@ -1321,6 +1317,22 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
   }
   assert(FirstArgT == PT_Ptr);
   const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  // Null pointers are always aligned. Preserve null pointers for
+  // align_up/align_down and return true for is_aligned.
+  if (Ptr.isZero()) {
+    if (BuiltinOp == Builtin::BI__builtin_is_aligned) {
+      S.Stk.push<Boolean>(true);
+      return true;
+    }
+
+    assert(BuiltinOp == Builtin::BI__builtin_align_up ||
+           BuiltinOp == Builtin::BI__builtin_align_down);
+
+    S.Stk.push<Pointer>(Ptr);
+    return true;
+  }
+
   if (!Ptr.isBlockPointer() && !Ptr.isOpaquePointer()) {
     S.FFDiag(Call->getArg(0), diag::note_constexpr_alignment_compute)
         << Alignment;
@@ -1444,7 +1456,9 @@ static bool interp__builtin_assume_aligned(InterpState &S, CodePtr OpPC,
   // If there is a base object, then it must have the correct alignment.
   if (Ptr.isBlockPointer() || Ptr.isOpaquePointer()) {
     CharUnits BaseAlignment;
-    if (const auto *VD = Ptr.getRootVarDecl())
+    if (Ptr.isBlockPointer() && Ptr.block()->isDynamic())
+      BaseAlignment = Ptr.getDeclDesc()->computeAlignForDynamicAlloc(ASTCtx);
+    else if (const auto *VD = Ptr.getRootVarDecl())
       BaseAlignment = ASTCtx.getDeclAlign(VD);
     else if (const auto *E = Ptr.getRootExpr())
       BaseAlignment = GetAlignOfExpr(ASTCtx, E, UETT_AlignOf);
@@ -2125,6 +2139,68 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
 /// sizeof(T) == 1.
 static bool isOneByteCharacterType(QualType T) {
   return T->isCharType() || T->isChar8Type();
+}
+
+// stdc_memreverse8(size_t N, unsigned char *P)
+static bool interp__builtin_stdc_memreverse8(InterpState &S, CodePtr OpPC,
+                                             const InterpFrame *Frame,
+                                             const CallExpr *Call) {
+  Pointer Ptr = S.Stk.pop<Pointer>();
+
+  uint64_t NElems;
+  if (!popToUInt64(S, Call->getArg(0), NElems))
+    return false;
+
+  if (Ptr.isZero()) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_null)
+        << AK_Assign;
+    return false;
+  }
+
+  if (!isReadable(Ptr) && !Ptr.isOnePastEnd())
+    return false;
+
+  const Descriptor *Desc = Ptr.getFieldDesc();
+  bool IsArray = Desc->isArray();
+  QualType ElemTy = IsArray ? Desc->getElemQualType() : Desc->getType();
+
+  if (IsArray)
+    Ptr = Ptr.expand();
+
+  uint64_t BaseIdx = Ptr.getIndex();
+  uint64_t ArraySize = Ptr.getNumElems();
+  uint64_t RemainingElems = ArraySize - BaseIdx;
+  if (NElems > RemainingElems) {
+    uint64_t LastIndex = llvm::SaturatingAdd(BaseIdx, NElems - 1);
+    if (IsArray)
+      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
+          << LastIndex << /*array*/ 0 << ArraySize;
+    else
+      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
+          << LastIndex << /*non-array*/ 1;
+    return false;
+  }
+
+  if (NElems <= 1)
+    return true;
+
+  PrimType ElemT = *S.getContext().classify(ElemTy);
+
+  for (uint64_t I = 0, Half = NElems / 2; I < Half; ++I) {
+    Pointer LoPtr = Ptr.atIndex(BaseIdx + I);
+    Pointer HiPtr = Ptr.atIndex(BaseIdx + NElems - 1 - I);
+
+    if (!CheckLoad(S, OpPC, LoPtr, AK_Read) ||
+        !CheckLoad(S, OpPC, HiPtr, AK_Read) || !CheckStore(S, OpPC, LoPtr) ||
+        !CheckStore(S, OpPC, HiPtr))
+      return false;
+
+    INT_TYPE_SWITCH_NO_BOOL(ElemT,
+                            { std::swap(LoPtr.deref<T>(), HiPtr.deref<T>()); });
+    LoPtr.initialize();
+    HiPtr.initialize();
+  }
+  return true;
 }
 
 static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
@@ -3692,9 +3768,9 @@ static bool evalICmpImm(uint8_t Imm, const APSInt &A, const APSInt &B,
   case 0x04: // _MM_CMPINT_NE
     return (A != B);
   case 0x05: // _MM_CMPINT_NLT
-    return IsUnsigned ? A.ugt(B) : A.sgt(B);
-  case 0x06: // _MM_CMPINT_NLE
     return IsUnsigned ? A.uge(B) : A.sge(B);
+  case 0x06: // _MM_CMPINT_NLE
+    return IsUnsigned ? A.ugt(B) : A.sgt(B);
   case 0x07: // _MM_CMPINT_TRUE
     return true;
   default:
@@ -4602,21 +4678,6 @@ static bool interp_builtin_ia32_cvt_vector_to_int(InterpState &S, CodePtr OpPC,
 
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
-  const ASTContext &ASTCtx = S.getASTContext();
-
-  // BuiltinID is the raw ID baked into the bytecode. The "is constant
-  // evaluated" gate needs the raw ID so that auxiliary-target IDs resolve into
-  // the correct (aux-target) builtin records.
-  if (!ASTCtx.BuiltinInfo.isConstantEvaluated(BuiltinID))
-    return Invalid(S, OpPC);
-
-  // Convert an auxiliary x86 target builtin ID to its canonical X86::BI* value
-  // so the target-specific cases below (and the handlers they call) match. This
-  // is a cheap integer operation (a single comparison for the common,
-  // target-independent case); we deliberately avoid re-deriving the ID from the
-  // call expression, which is comparatively slow.
-  BuiltinID = ConvertBuiltinIDToX86BuiltinID(ASTCtx, BuiltinID);
-
   const InterpFrame *Frame = S.Current;
   switch (BuiltinID) {
   case Builtin::BI__builtin_is_constant_evaluated:
@@ -5145,6 +5206,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BIstdc_memreverse8u32:
   case Builtin::BIstdc_memreverse8u64:
     return interp__builtin_bswap(S, OpPC, Frame, Call);
+
+  case Builtin::BIstdc_memreverse8:
+  case Builtin::BI__builtin_stdc_memreverse8:
+    return interp__builtin_stdc_memreverse8(S, OpPC, Frame, Call);
 
   case Builtin::BI__atomic_always_lock_free:
   case Builtin::BI__atomic_is_lock_free:
@@ -6725,11 +6790,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_cvttps2dq256:
     return interp_builtin_ia32_cvt_vector_to_int(S, OpPC, Call);
   default:
-    S.FFDiag(S.Current->getLocation(OpPC),
-             diag::note_invalid_subexpr_in_const_expr)
-        << S.Current->getRange(OpPC);
-
-    return false;
+    return Invalid(S, OpPC);
   }
 
   llvm_unreachable("Unhandled builtin ID");

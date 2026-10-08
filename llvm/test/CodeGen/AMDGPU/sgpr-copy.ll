@@ -206,13 +206,13 @@ ENDIF:                                            ; preds = %LOOP
 ; an assertion failure.
 
 ; CHECK-LABEL: {{^}}sample_v3:
-; CHECK-DAG: v_mov_b32_e32 v[[SAMPLE_LO:[0-9]+]], 5
-; CHECK-DAG: v_mov_b32_e32 v[[SAMPLE_HI:[0-9]+]], 7
-; CHECK: image_sample v{{\[[0-9]+:[0-9]+\]}}, v[[[SAMPLE_LO]]:[[SAMPLE_HI]]]
-; CHECK: s_cbranch
-
 ; CHECK-DAG: v_mov_b32_e32 v[[SAMPLE_LO:[0-9]+]], 11
 ; CHECK-DAG: v_mov_b32_e32 v[[SAMPLE_HI:[0-9]+]], 13
+; CHECK: s_branch
+
+; CHECK-DAG: v_mov_b32_e32 v[[SAMPLE_LO:[0-9]+]], 5
+; CHECK-DAG: v_mov_b32_e32 v[[SAMPLE_HI:[0-9]+]], 7
+
 ; CHECK: image_sample v{{\[[0-9]+:[0-9]+\]}}, v[[[SAMPLE_LO]]:[[SAMPLE_HI]]]
 ; CHECK: exp
 ; CHECK: s_endpgm
@@ -306,13 +306,10 @@ ENDIF69:                                          ; preds = %LOOP68
 ; CHECK-LABEL:{{^}}sample_rsrc
 
 ; CHECK: s_cmp_eq_u32
-; CHECK: s_cbranch_scc1
+; CHECK: s_cbranch_scc0
 
 ; CHECK: v_add_{{[iu]}}32_e32 v[[ADD:[0-9]+]], vcc, 1, v{{[0-9]+}}
 ; CHECK: image_sample v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+}}:[[ADD]]]
-; CHECK: s_cbranch_scc1
-
-; CHECK: image_sample v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}
 ; CHECK: s_endpgm
 define amdgpu_ps void @sample_rsrc(ptr addrspace(4) inreg %arg, ptr addrspace(4) inreg %arg1, ptr addrspace(4) inreg %arg2, ptr addrspace(4) inreg %arg3, float inreg %arg4, i32 inreg %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <3 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, <2 x i32> %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, i32 %arg19, float %arg20, float %arg21) #0 {
 bb:

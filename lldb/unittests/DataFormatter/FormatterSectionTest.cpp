@@ -16,6 +16,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/FormatterBytecode.h"
+#include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/Platform.h"
@@ -58,6 +59,16 @@ static void AppendRecord(std::vector<uint8_t> &section, uint64_t version,
   AppendULEB(section, version);
   AppendULEB(section, record_size_override.value_or(body.size()));
   AppendBytes(section, llvm::ArrayRef<uint8_t>(body));
+}
+
+/// Append a formatter method, its signature followed by its bytecode, to a
+/// record's entry.
+static void AppendMethod(std::vector<uint8_t> &entry,
+                         FormatterBytecode::Signatures sig,
+                         std::vector<uint8_t> code) {
+  entry.push_back(sig);
+  AppendULEB(entry, code.size());
+  AppendBytes(entry, code);
 }
 
 /// Build a minimal ELF binary with a single named section with the given
@@ -233,7 +244,7 @@ TEST_F(FormatterSectionTest, MalformedULEBAtStart) {
   EXPECT_EQ(category->GetCount(), 0u);
 }
 
-/// A record whose version isn't 1 is unsupported and should be skipped.
+/// A record whose version isn't 1 or 2 is unsupported and should be skipped.
 TEST_F(FormatterSectionTest, SkipsRecordWithUnsupportedVersion) {
   std::vector<uint8_t> entry;
   AppendULEB(entry, /*flags=*/0);
@@ -242,7 +253,7 @@ TEST_F(FormatterSectionTest, SkipsRecordWithUnsupportedVersion) {
   AppendBytes(entry, llvm::ArrayRef<uint8_t>({0xAA, 0xBB}));
 
   std::vector<uint8_t> section;
-  AppendRecord(section, /*version=*/2, "Bogus", entry);
+  AppendRecord(section, /*version=*/3, "Bogus", entry);
   AppendRecord(section, /*version=*/1, "Good", entry);
 
   auto ExpectedFile =
@@ -261,6 +272,182 @@ TEST_F(FormatterSectionTest, SkipsRecordWithUnsupportedVersion) {
   EXPECT_NE(category->GetSummaryForType(std::make_shared<TypeNameSpecifierImpl>(
                 "Good", lldb::eFormatterMatchExact)),
             nullptr);
+}
+
+/// Selectors return Integer in version 2 records, and UInt in version 1.
+TEST_F(FormatterSectionTest, Version2SelectorsReturnInteger) {
+  using namespace FormatterBytecode;
+  // Adding a literal of the other integer type would be a type error.
+  std::vector<uint8_t> v1;
+  AppendULEB(v1, /*flags=*/0);
+  AppendMethod(v1, sig_summary,
+               {op_drop, op_lit_string, 5, 'h', 'e', 'l', 'l', 'o',
+                op_lit_selector, sel_strlen, op_call, op_lit_uint, 0, op_plus});
+  std::vector<uint8_t> v2;
+  AppendULEB(v2, /*flags=*/0);
+  AppendMethod(v2, sig_summary,
+               {op_drop, op_lit_string, 5, 'h', 'e', 'l', 'l', 'o',
+                op_lit_selector, sel_strlen, op_call, op_lit_integer, 0,
+                op_plus});
+
+  std::vector<uint8_t> section;
+  AppendRecord(section, /*version=*/1, "V1", v1);
+  AppendRecord(section, /*version=*/2, "V2", v2);
+
+  auto ExpectedFile =
+      TestFile::fromYaml(BuildBinaryYaml(".lldbformatters", section));
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+  auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
+
+  LoadFormattersForModule(module_sp);
+
+  TypeCategoryImplSP category;
+  DataVisualization::Categories::GetCategory(ConstString("default"), category);
+  ASSERT_TRUE(category != nullptr);
+
+  Scalar val;
+  ValueObjectSP valobj = ValueObjectConstResult::CreateValueObjectFromScalar(
+      ExecutionContext(m_target_sp.get(), false), val, CompilerType(), "mock");
+  for (const char *type_name : {"V1", "V2"}) {
+    SCOPED_TRACE(type_name);
+    TypeSummaryImplSP summary_sp =
+        category->GetSummaryForType(std::make_shared<TypeNameSpecifierImpl>(
+            type_name, lldb::eFormatterMatchExact));
+    ASSERT_TRUE(summary_sp != nullptr);
+    std::string dest;
+    EXPECT_TRUE(
+        summary_sp->FormatObject(valobj.get(), dest, TypeSummaryOptions()))
+        << dest;
+    EXPECT_EQ(dest, "5");
+  }
+}
+
+/// Under version 2, the runtime passes the same `self` Dictionary to every
+/// method, which modify it in place.
+TEST_F(FormatterSectionTest, LoadsVersion2SyntheticChildren) {
+  using namespace FormatterBytecode;
+  // @init: (self Object -> ), sets self["n"] = 5.
+  std::vector<uint8_t> init = {op_drop, op_lit_string, 1, 'n', op_lit_integer,
+                               5,       op_dict_set};
+  // @update: (self -> Integer), sets self["n"] = 7, replies "reuse".
+  std::vector<uint8_t> update = {
+      op_lit_string, 1, 'n', op_lit_integer, 7, op_dict_set, op_lit_integer, 1};
+  // @update: (self -> ), with the required reply missing.
+  std::vector<uint8_t> update_no_reply = {op_drop};
+  // @get_num_children: (self -> Integer), returns self["n"].
+  std::vector<uint8_t> num_children = {op_lit_string, 1, 'n', op_dict_get};
+  // @get_child_at_index: (self Integer -> ), sets self["n"] = index + 0,
+  // which fails unless the index is an Integer.
+  std::vector<uint8_t> child_at_index = {
+      op_lit_integer, 0, op_plus, op_lit_string, 1, 'n', op_swap, op_dict_set};
+  // @get_child_index: (self String -> Integer), returns 2.
+  std::vector<uint8_t> child_index = {op_drop, op_drop, op_lit_integer, 2};
+
+  std::vector<uint8_t> widget;
+  AppendULEB(widget, /*flags=*/0);
+  AppendMethod(widget, sig_init, init);
+  AppendMethod(widget, sig_get_num_children, num_children);
+
+  std::vector<uint8_t> gadget;
+  AppendULEB(gadget, /*flags=*/0);
+  AppendMethod(gadget, sig_init, init);
+  AppendMethod(gadget, sig_update, update);
+  AppendMethod(gadget, sig_get_num_children, num_children);
+
+  std::vector<uint8_t> gizmo;
+  AppendULEB(gizmo, /*flags=*/0);
+  AppendMethod(gizmo, sig_update, update_no_reply);
+
+  std::vector<uint8_t> indexed;
+  AppendULEB(indexed, /*flags=*/0);
+  AppendMethod(indexed, sig_get_num_children, num_children);
+  AppendMethod(indexed, sig_get_child_at_index, child_at_index);
+  AppendMethod(indexed, sig_get_child_index, child_index);
+
+  // Zero children, and a child index of zero.
+  std::vector<uint8_t> empty;
+  AppendULEB(empty, /*flags=*/0);
+  AppendMethod(empty, sig_get_num_children, {op_drop, op_lit_integer, 0});
+  AppendMethod(empty, sig_get_child_index, {op_drop, op_drop, op_lit_int, 0});
+
+  // Without @init, self["valobj"] is the Object.
+  std::vector<uint8_t> implicit_init;
+  AppendULEB(implicit_init, /*flags=*/0);
+  AppendMethod(implicit_init, sig_get_num_children,
+               {op_lit_string, 6, 'v', 'a', 'l', 'o', 'b', 'j', op_dict_get,
+                op_is_null});
+
+  std::vector<uint8_t> section;
+  for (auto [name, entry] :
+       {std::pair{"Widget", &widget}, std::pair{"Gadget", &gadget},
+        std::pair{"Gizmo", &gizmo}, std::pair{"Indexed", &indexed},
+        std::pair{"Empty", &empty}, std::pair{"ImplicitInit", &implicit_init}})
+    AppendRecord(section, /*version=*/2, name, *entry);
+
+  auto ExpectedFile =
+      TestFile::fromYaml(BuildBinaryYaml(".lldbformatters", section));
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+  auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
+
+  LoadFormattersForModule(module_sp);
+
+  TypeCategoryImplSP category;
+  DataVisualization::Categories::GetCategory(ConstString("default"), category);
+  ASSERT_TRUE(category != nullptr);
+
+  Scalar val;
+  ValueObjectSP valobj = ValueObjectConstResult::CreateValueObjectFromScalar(
+      ExecutionContext(m_target_sp.get(), false), val, CompilerType(), "mock");
+  auto GetFrontEnd = [&](const char *type_name) {
+    SyntheticChildrenSP synthetic_sp =
+        category->GetSyntheticForType(std::make_shared<TypeNameSpecifierImpl>(
+            type_name, lldb::eFormatterMatchExact));
+    return synthetic_sp ? synthetic_sp->GetFrontEnd(*valobj) : nullptr;
+  };
+
+  // @init's modification of self is visible to @get_num_children.
+  auto widget_fe = GetFrontEnd("Widget");
+  ASSERT_TRUE(widget_fe != nullptr);
+  EXPECT_EQ(widget_fe->Update(), lldb::ChildCacheState::eReuse);
+  EXPECT_THAT_EXPECTED(widget_fe->CalculateNumChildren(), llvm::HasValue(5u));
+  // Without @get_child_index, looking up a child by name is an error.
+  EXPECT_THAT_EXPECTED(widget_fe->GetIndexOfChildWithName(ConstString("x")),
+                       llvm::Failed());
+
+  // @update's modification of self is visible to @get_num_children.
+  auto gadget_fe = GetFrontEnd("Gadget");
+  ASSERT_TRUE(gadget_fe != nullptr);
+  EXPECT_EQ(gadget_fe->Update(), lldb::ChildCacheState::eReuse);
+  EXPECT_THAT_EXPECTED(gadget_fe->CalculateNumChildren(), llvm::HasValue(7u));
+
+  // Without a reply from @update, the children must be refetched.
+  auto gizmo_fe = GetFrontEnd("Gizmo");
+  ASSERT_TRUE(gizmo_fe != nullptr);
+  EXPECT_EQ(gizmo_fe->Update(), lldb::ChildCacheState::eRefetch);
+
+  // @get_child_at_index is passed an Integer index.
+  auto indexed_fe = GetFrontEnd("Indexed");
+  ASSERT_TRUE(indexed_fe != nullptr);
+  indexed_fe->Update();
+  indexed_fe->GetChildAtIndex(3);
+  EXPECT_THAT_EXPECTED(indexed_fe->CalculateNumChildren(), llvm::HasValue(3u));
+  EXPECT_THAT_EXPECTED(indexed_fe->GetIndexOfChildWithName(ConstString("x")),
+                       llvm::HasValue(2u));
+
+  // Zero is a valid number of children, and a valid child index.
+  auto empty_fe = GetFrontEnd("Empty");
+  ASSERT_TRUE(empty_fe != nullptr);
+  empty_fe->Update();
+  EXPECT_THAT_EXPECTED(empty_fe->CalculateNumChildren(), llvm::HasValue(0u));
+  EXPECT_THAT_EXPECTED(empty_fe->GetIndexOfChildWithName(ConstString("x")),
+                       llvm::HasValue(0u));
+
+  // Without @init, self["valobj"] is set to the (non-null) Object.
+  auto implicit_init_fe = GetFrontEnd("ImplicitInit");
+  ASSERT_TRUE(implicit_init_fe != nullptr);
+  implicit_init_fe->Update();
+  EXPECT_THAT_EXPECTED(implicit_init_fe->CalculateNumChildren(),
+                       llvm::HasValue(0u));
 }
 
 /// Test mismatch of decalred type name size and actual length of type name.

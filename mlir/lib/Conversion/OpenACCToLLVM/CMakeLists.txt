@@ -3,6 +3,7 @@ add_mlir_conversion_library(MLIROpenACCToLLVM
   ACCDataDirectivePatterns.cpp
   ACCDataRuntime.cpp
   ACCExecutableDirectivePatterns.cpp
+  ACCHostDataPatterns.cpp
   ACCToLLVMUtils.cpp
   ACCToLLVM.cpp
 

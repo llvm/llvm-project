@@ -9,6 +9,7 @@ add_lldb_unittest(LLDBPlatformTests
   PlatformWasmTest.cpp
 
   LINK_COMPONENTS
+    Option
     Support
   LINK_LIBS
     lldbPluginPlatformEmscripten

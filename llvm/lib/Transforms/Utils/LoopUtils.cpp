@@ -1435,7 +1435,7 @@ Value *llvm::expandReductionViaLoop(IRBuilderBase &Builder, Value *Vec,
     NewLoop->addBasicBlockToLoop(LoopBB, *LI);
   }
 
-  Builder.SetInsertPoint(ExitBB, ExitBB->begin());
+  Builder.SetInsertPoint(ExitBB->begin());
   return Res;
 }
 
@@ -1496,36 +1496,6 @@ Value *llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src,
   }
   // The result is in the first element of the vector.
   return Builder.CreateExtractElement(TmpVec, Builder.getInt32(0));
-}
-
-Value *llvm::createAnyOfReduction(IRBuilderBase &Builder, Value *Src,
-                                  Value *InitVal, PHINode *OrigPhi) {
-  Value *NewVal = nullptr;
-
-  // First use the original phi to determine the new value we're trying to
-  // select from in the loop.
-  SelectInst *SI = nullptr;
-  for (auto *U : OrigPhi->users()) {
-    if ((SI = dyn_cast<SelectInst>(U)))
-      break;
-  }
-  assert(SI && "One user of the original phi should be a select");
-
-  if (SI->getTrueValue() == OrigPhi)
-    NewVal = SI->getFalseValue();
-  else {
-    assert(SI->getFalseValue() == OrigPhi &&
-           "At least one input to the select should be the original Phi");
-    NewVal = SI->getTrueValue();
-  }
-
-  // If any predicate is true it means that we want to select the new value.
-  Value *AnyOf =
-      Src->getType()->isVectorTy() ? Builder.CreateOrReduce(Src) : Src;
-  // The compares in the loop may yield poison, which propagates through the
-  // bitwise ORs. Freeze it here before the condition is used.
-  AnyOf = Builder.CreateFreeze(AnyOf);
-  return Builder.CreateSelect(AnyOf, NewVal, InitVal, "rdx.select");
 }
 
 Value *llvm::getReductionIdentity(Intrinsic::ID RdxID, Type *Ty,
@@ -1883,9 +1853,11 @@ static bool checkIsIndPhi(PHINode *Phi, Loop *L, ScalarEvolution *SE,
 }
 
 static bool collectOperandExitValues(Instruction *Inst, Loop *L,
-                                     BasicBlock *Preheader, ScalarEvolution *SE,
+                                     BasicBlock *ExitingBlock,
+                                     ScalarEvolution *SE,
                                      SCEVExpander &Rewriter,
                                      OperandExitValueList &ExitValues) {
+  BasicBlock *Preheader = L->getLoopPreheader();
   if (!Preheader || !isa<ICmpInst>(Inst))
     return false;
 
@@ -1895,7 +1867,7 @@ static bool collectOperandExitValues(Instruction *Inst, Loop *L,
       continue;
     if (!SE->isSCEVable(Op->getType()))
       return false;
-    SCEVUse ExitValue = SE->getSCEVAtScope(Op, L->getParentLoop());
+    SCEVUse ExitValue = SE->getSCEVAtExit(Op, L, ExitingBlock);
     if (isa<SCEVCouldNotCompute>(ExitValue) ||
         !SE->isLoopInvariant(ExitValue, L) ||
         !Rewriter.isSafeToExpandAt(ExitValue, Preheader->getTerminator()))
@@ -2002,25 +1974,13 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         // expressions which are true for all exits (so as to maximize
         // expression reuse by the SCEVExpander), but resort to per-exit
         // evaluation if that fails.
-        SCEVUse ExitValue = SE->getSCEVAtScope(Inst, L->getParentLoop());
+        BasicBlock *ExitingBlock = PN->getIncomingBlock(i);
+        SCEVUse ExitValue = SE->getSCEVAtExit(Inst, L, ExitingBlock);
         OperandExitValueList OperandExitValues;
-        if (isa<SCEVCouldNotCompute>(ExitValue) ||
-            !SE->isLoopInvariant(ExitValue, L) ||
+        if (!SE->isLoopInvariant(ExitValue, L) ||
             !Rewriter.isSafeToExpand(ExitValue)) {
-          // TODO: This should probably be sunk into SCEV in some way; maybe a
-          // getSCEVForExit(SCEV*, L, ExitingBB)?  It can be generalized for
-          // most SCEV expressions and other recurrence types (e.g. shift
-          // recurrences).  Is there existing code we can reuse?
-          const SCEV *ExitCount = SE->getExitCount(L, PN->getIncomingBlock(i));
-          if (!isa<SCEVCouldNotCompute>(ExitCount))
-            if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(Inst)))
-              if (AddRec->getLoop() == L)
-                ExitValue = AddRec->evaluateAtIteration(ExitCount, *SE);
-          if ((isa<SCEVCouldNotCompute>(ExitValue) ||
-               !SE->isLoopInvariant(ExitValue, L) ||
-               !Rewriter.isSafeToExpand(ExitValue)) &&
-              !collectOperandExitValues(Inst, L, L->getLoopPreheader(), SE,
-                                        Rewriter, OperandExitValues))
+          if (!collectOperandExitValues(Inst, L, ExitingBlock, SE, Rewriter,
+                                        OperandExitValues))
             continue;
         }
 
@@ -2320,9 +2280,8 @@ Value *llvm::addRuntimeChecks(
   auto ExpandedChecks =
       expandBounds(PointerChecks, TheLoop, Loc, Exp, HoistRuntimeChecks);
 
-  LLVMContext &Ctx = Loc->getContext();
-  IRBuilder ChkBuilder(Ctx, InstSimplifyFolder(Loc->getDataLayout()));
-  ChkBuilder.SetInsertPoint(Loc);
+  IRBuilder ChkBuilder(Loc->getIterator(),
+                       InstSimplifyFolder(Loc->getDataLayout()));
   // Our instructions might fold to a constant.
   Value *MemoryRuntimeCheck = nullptr;
 
@@ -2375,9 +2334,8 @@ Value *llvm::addDiffRuntimeChecks(Instruction *Loc,
                                   SCEVExpander &Expander, ElementCount VF,
                                   unsigned IC) {
 
-  LLVMContext &Ctx = Loc->getContext();
-  IRBuilder ChkBuilder(Ctx, InstSimplifyFolder(Loc->getDataLayout()));
-  ChkBuilder.SetInsertPoint(Loc);
+  IRBuilder ChkBuilder(Loc->getIterator(),
+                       InstSimplifyFolder(Loc->getDataLayout()));
   // Our instructions might fold to a constant.
   Value *MemoryRuntimeCheck = nullptr;
 

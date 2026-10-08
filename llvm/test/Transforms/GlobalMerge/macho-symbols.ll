@@ -18,11 +18,11 @@ target triple = "x86_64-apple-macos11"
 define void @use() {
   ; CHECK: load i32, ptr @_MergedGlobals,
   %x = load i32, ptr @a
-  ; CHECK: load i32, ptr getelementptr inbounds (<{ i32, i32, i32, i32 }>, ptr @_MergedGlobals, i32 0, i32 1)
+  ; CHECK: load i32, ptr getelementptr inbounds (i8, ptr @_MergedGlobals, i64 4)
   %y = load i32, ptr @b
-  ; CHECK: load i32, ptr getelementptr inbounds (<{ i32, i32, i32, i32 }>, ptr @_MergedGlobals, i32 0, i32 2)
+  ; CHECK: load i32, ptr getelementptr inbounds (i8, ptr @_MergedGlobals, i64 8)
   %z1 = load i32, ptr @c
-  ; CHECK: load i32, ptr getelementptr inbounds (<{ i32, i32, i32, i32 }>, ptr @_MergedGlobals, i32 0, i32 3)
+  ; CHECK: load i32, ptr getelementptr inbounds (i8, ptr @_MergedGlobals, i64 12)
   %z2 = load i32, ptr @d
   ret void
 }

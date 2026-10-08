@@ -228,7 +228,8 @@ static void rewriteScalarizableFunction(func::FuncOp func,
     rewriter.setInsertionPoint(directCall);
     func::CallOp newDirectCall = func::CallOp::create(
         rewriter, directCall.getLoc(), func, directCall.getOperands());
-    newDirectCall->setAttrs(directCall->getAttrs());
+    newDirectCall->setDiscardableAttrs(
+        directCall->getDiscardableAttrDictionary());
 
     if (!directCall.getResult(0).use_empty()) {
       Value wrappedResult = tensor::FromElementsOp::create(

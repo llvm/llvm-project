@@ -131,6 +131,8 @@ public:
       return cir::ZeroAttr::get(arrTy);
     if (auto vecTy = mlir::dyn_cast<cir::VectorType>(ty))
       return cir::ZeroAttr::get(vecTy);
+    if (auto matrixTy = mlir::dyn_cast<cir::MatrixType>(ty))
+      return cir::ZeroAttr::get(matrixTy);
     if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(ty))
       return getConstNullPtrAttr(ptrTy);
     if (auto recordTy = mlir::dyn_cast<cir::RecordType>(ty))
@@ -489,10 +491,10 @@ public:
 
   cir::GetGlobalOp createGetGlobal(mlir::Location loc, cir::GlobalOp global,
                                    bool threadLocal = false) {
-    assert(!cir::MissingFeatures::addressSpace());
-    return cir::GetGlobalOp::create(*this, loc,
-                                    getPointerTo(global.getSymType()),
-                                    global.getSymNameAttr(), threadLocal);
+    return cir::GetGlobalOp::create(
+        *this, loc,
+        getPointerTo(global.getSymType(), global.getAddrSpaceAttr()),
+        global.getSymNameAttr(), threadLocal);
   }
 
   cir::GetGlobalOp createGetGlobal(cir::GlobalOp global,

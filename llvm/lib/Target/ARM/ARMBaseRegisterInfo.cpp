@@ -260,6 +260,17 @@ getReservedRegs(const MachineFunction &MF) const {
 
 bool ARMBaseRegisterInfo::
 isAsmClobberable(const MachineFunction &MF, MCRegister PhysReg) const {
+  const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
+  if (!STI.hasD32())
+    // D16-D31 are only reserved because they don't exist without d32, but a
+    // function without d32 can be inlined into a function with d32.
+    //
+    // It is safe for frontends to mark these registers as clobbered.
+    // The Arm ABI does not require D16-D31 to be preserved across a function
+    // call. When the registers don't exist, the clobber is just ignored.
+    for (unsigned R = 0; R < 16; ++R)
+      if (regsOverlap(PhysReg, ARM::D16 + R))
+        return true;
   return !getReservedRegs(MF).test(PhysReg);
 }
 
@@ -307,11 +318,6 @@ ARMBaseRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
     SuperID = (I != E) ? *I++ : ~0U;
   } while (SuperID != ~0U);
   return RC;
-}
-
-const TargetRegisterClass *
-ARMBaseRegisterInfo::getPointerRegClass(unsigned Kind) const {
-  return &ARM::GPRRegClass;
 }
 
 const TargetRegisterClass *
@@ -363,7 +369,7 @@ static MCRegister getPairedGPR(MCRegister Reg, bool Odd,
 // Resolve the RegPairEven / RegPairOdd register allocator hints.
 bool ARMBaseRegisterInfo::getRegAllocationHints(
     Register VirtReg, ArrayRef<MCPhysReg> Order,
-    SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
+    SmallSetVector<MCPhysReg, 16> &Hints, const MachineFunction &MF,
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   std::pair<unsigned, Register> Hint = MRI.getRegAllocationHint(VirtReg);
@@ -379,7 +385,7 @@ bool ARMBaseRegisterInfo::getRegAllocationHints(
   case ARMRI::RegLR:
     TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF, VRM);
     if (MRI.getRegClass(VirtReg)->contains(ARM::LR))
-      Hints.push_back(ARM::LR);
+      Hints.insert(ARM::LR);
     return false;
   default:
     return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF, VRM);
@@ -401,7 +407,7 @@ bool ARMBaseRegisterInfo::getRegAllocationHints(
 
   // First prefer the paired physreg.
   if (PairedPhys && is_contained(Order, PairedPhys))
-    Hints.push_back(PairedPhys);
+    Hints.insert(PairedPhys);
 
   // Then prefer even or odd registers.
   for (MCPhysReg Reg : Order) {
@@ -411,7 +417,7 @@ bool ARMBaseRegisterInfo::getRegAllocationHints(
     MCRegister Paired = getPairedGPR(Reg, !Odd, this);
     if (!Paired || MRI.isReserved(Paired))
       continue;
-    Hints.push_back(Reg);
+    Hints.insert(Reg);
   }
   return false;
 }

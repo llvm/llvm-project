@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/SipHash.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 
@@ -35,26 +36,8 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_TARGET_DESC
 #include "AArch64GenSubtargetInfo.inc"
 
-static cl::opt<bool>
-EnableEarlyIfConvert("aarch64-early-ifcvt", cl::desc("Enable the early if "
-                     "converter pass"), cl::init(true), cl::Hidden);
-
-// If OS supports TBI, use this flag to enable it.
-static cl::opt<bool>
-UseAddressTopByteIgnored("aarch64-use-tbi", cl::desc("Assume that top byte of "
-                         "an address is ignored"), cl::init(false), cl::Hidden);
-
-static cl::opt<bool> MachOUseNonLazyBind(
-    "aarch64-macho-enable-nonlazybind",
-    cl::desc("Call nonlazybind functions via direct GOT load for Mach-O"),
-    cl::Hidden);
-
-static cl::opt<bool> UseAA("aarch64-use-aa", cl::init(true),
-                           cl::desc("Enable the use of AA during codegen."));
-
-static cl::opt<unsigned> OverrideVectorInsertExtractBaseCost(
-    "aarch64-insert-extract-base-cost",
-    cl::desc("Base cost of vector insert/extract element"), cl::Hidden);
+#define OPTIONS_STRUCT_DEFS
+#include "AArch64Options.inc"
 
 // Reserve a list of X# registers, so they are unavailable for register
 // allocator, but can still be used as ABI requests, such as passing arguments
@@ -65,46 +48,8 @@ ReservedRegsForRA("reserve-regs-for-regalloc", cl::desc("Reserve physical "
                   "Should only be used for testing register allocator."),
                   cl::CommaSeparated, cl::Hidden);
 
-static cl::opt<AArch64PAuth::AuthCheckMethod>
-    AuthenticatedLRCheckMethod("aarch64-authenticated-lr-check-method",
-                               cl::Hidden,
-                               cl::desc("Override the variant of check applied "
-                                        "to authenticated LR during tail call"),
-                               cl::values(AUTH_CHECK_METHOD_CL_VALUES_LR));
-
-static cl::opt<unsigned> AArch64MinimumJumpTableEntries(
-    "aarch64-min-jump-table-entries", cl::init(10), cl::Hidden,
-    cl::desc("Set minimum number of entries to use a jump table on AArch64"));
-
-static cl::opt<unsigned> AArch64StreamingHazardSize(
-    "aarch64-streaming-hazard-size",
-    cl::desc("Hazard size for streaming mode memory accesses. 0 = disabled."),
-    cl::init(0), cl::Hidden);
-
-static cl::alias AArch64StreamingStackHazardSize(
-    "aarch64-stack-hazard-size",
-    cl::desc("alias for -aarch64-streaming-hazard-size"),
-    cl::aliasopt(AArch64StreamingHazardSize));
-
-static cl::opt<unsigned>
-    VScaleForTuningOpt("sve-vscale-for-tuning", cl::Hidden,
-                       cl::desc("Force a vscale for tuning factor for SVE"));
-
-// Subreg liveness tracking is disabled by default for now until all issues
-// are ironed out. This option allows the feature to be used in tests.
-static cl::opt<bool>
-    EnableSubregLivenessTracking("aarch64-enable-subreg-liveness-tracking",
-                                 cl::init(false), cl::Hidden,
-                                 cl::desc("Enable subreg liveness tracking"));
-
-static cl::opt<bool>
-    UseScalarIncVL("sve-use-scalar-inc-vl", cl::init(false), cl::Hidden,
-                   cl::desc("Prefer add+cnt over addvl/inc/dec"));
-
 unsigned AArch64Subtarget::getVectorInsertExtractBaseCost() const {
-  if (OverrideVectorInsertExtractBaseCost.getNumOccurrences() > 0)
-    return OverrideVectorInsertExtractBaseCost;
-  return VectorInsertExtractBaseCost;
+  return CLOpts.insert_extract_base_cost.value_or(VectorInsertExtractBaseCost);
 }
 
 AArch64Subtarget &AArch64Subtarget::initializeSubtargetDependencies(
@@ -342,10 +287,10 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     break;
   }
 
-  if (AArch64MinimumJumpTableEntries.getNumOccurrences() > 0 || !HasMinSize)
-    MinimumJumpTableEntries = AArch64MinimumJumpTableEntries;
-  if (VScaleForTuningOpt.getNumOccurrences() > 0)
-    VScaleForTuning = VScaleForTuningOpt;
+  if (CLOpts.min_jump_table_entries || !HasMinSize)
+    MinimumJumpTableEntries = CLOpts.min_jump_table_entries.value_or(10);
+  if (CLOpts.sve_vscale_for_tuning)
+    VScaleForTuning = *CLOpts.sve_vscale_for_tuning;
 }
 
 AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
@@ -357,15 +302,12 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
                                    bool HasMinSize,
                                    bool EnableSRLTSubregToRegMitigation)
     : AArch64GenSubtargetInfo(TT, CPU, TuneCPU, FS),
+      CLOpts(static_cast<const AArch64TargetMachine &>(TM).getCLOpts()),
       ReserveXRegister(AArch64::GPR64commonRegClass.getNumRegs()),
       ReserveXRegisterForRA(AArch64::GPR64commonRegClass.getNumRegs()),
       CustomCallSavedXRegs(AArch64::GPR64commonRegClass.getNumRegs()),
       IsLittle(LittleEndian), IsStreaming(IsStreaming),
       IsStreamingCompatible(IsStreamingCompatible),
-      StreamingHazardSize(
-          AArch64StreamingHazardSize.getNumOccurrences() > 0
-              ? std::optional<unsigned>(AArch64StreamingHazardSize)
-              : std::nullopt),
       MinSVEVectorSizeInBits(MinSVEVectorSizeInBitsOverride),
       MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride),
       EnableSRLTSubregToRegMitigation(EnableSRLTSubregToRegMitigation),
@@ -376,7 +318,8 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
       //  https://github.com/llvm/llvm-project/pull/174188
       // and:
       //  https://github.com/llvm/llvm-project/pull/168353
-      EnableSubregLiveness(IsStreaming || EnableSubregLivenessTracking),
+      EnableSubregLiveness(IsStreaming ||
+                           CLOpts.enable_subreg_liveness_tracking),
       TargetTriple(TT),
       InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU, HasMinSize)),
       TLInfo(TM, *this) {
@@ -484,7 +427,7 @@ unsigned AArch64Subtarget::classifyGlobalFunctionReference(
 
   // NonLazyBind goes via GOT unless we know it's available locally.
   auto *F = dyn_cast<Function>(GV);
-  if ((!isTargetMachO() || MachOUseNonLazyBind) && F &&
+  if ((!isTargetMachO() || CLOpts.macho_enable_nonlazybind) && F &&
       F->hasFnAttribute(Attribute::NonLazyBind) && !TM.shouldAssumeDSOLocal(GV))
     return AArch64II::MO_GOT;
 
@@ -562,11 +505,11 @@ void AArch64Subtarget::adjustSchedDependency(
 }
 
 bool AArch64Subtarget::enableEarlyIfConversion() const {
-  return EnableEarlyIfConvert;
+  return CLOpts.early_ifcvt;
 }
 
 bool AArch64Subtarget::supportsAddressTopByteIgnored() const {
-  if (!UseAddressTopByteIgnored)
+  if (!CLOpts.use_tbi)
     return false;
 
   if (TargetTriple.isDriverKit())
@@ -593,14 +536,12 @@ void AArch64Subtarget::mirFileLoaded(MachineFunction &MF) const {
     MFI.computeMaxCallFrameSize(MF);
 }
 
-bool AArch64Subtarget::useAA() const { return UseAA; }
+bool AArch64Subtarget::useAA() const { return CLOpts.use_aa; }
 
 bool AArch64Subtarget::useScalarIncVL() const {
-  // If SVE2 or SME is present (we are not SVE-1 only) and UseScalarIncVL
-  // is not otherwise set, enable it by default.
-  if (UseScalarIncVL.getNumOccurrences())
-    return UseScalarIncVL;
-  return hasSVE2() || hasSME();
+  // If SVE2 or SME is present (we are not SVE-1 only) and
+  // -sve-use-scalar-inc-vl is not otherwise set, enable it by default.
+  return valueOr(CLOpts.sve_use_scalar_inc_vl, hasSVE2() || hasSME());
 }
 
 // If return address signing is enabled, tail calls are emitted as follows:
@@ -623,12 +564,10 @@ AArch64PAuth::AuthCheckMethod AArch64Subtarget::getAuthenticatedLRCheckMethod(
   if (MF.getFunction().hasFnAttribute("ptrauth-returns") &&
       MF.getFunction().hasFnAttribute("ptrauth-auth-traps"))
     return AArch64PAuth::AuthCheckMethod::HighBitsNoTBI;
-  if (AuthenticatedLRCheckMethod.getNumOccurrences())
-    return AuthenticatedLRCheckMethod;
-
   // At now, use None by default because checks may introduce an unexpected
   // performance regression or incompatibility with execute-only mappings.
-  return AArch64PAuth::AuthCheckMethod::None;
+  return CLOpts.authenticated_lr_check_method.value_or(
+      AArch64PAuth::AuthCheckMethod::None);
 }
 
 std::optional<uint16_t>

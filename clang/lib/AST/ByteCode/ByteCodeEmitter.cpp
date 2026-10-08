@@ -26,6 +26,17 @@ void ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
   assert(Func);
   assert(FuncDecl->isThisDeclarationADefinition());
 
+  Func->setDefined(true);
+  // Lambda static invokers are a special case that we emit custom code for.
+  bool IsEligibleForCompilation = Func->isLambdaStaticInvoker() ||
+                                  FuncDecl->isConstexpr() ||
+                                  FuncDecl->hasAttr<MSConstexprAttr>();
+
+  if (!IsEligibleForCompilation) {
+    Func->setIsFullyCompiled(true);
+    return;
+  }
+
   // Set up lambda captures.
   if (Func->isLambdaCallOperator()) {
     // Set up lambda capture to closure record field mapping.
@@ -59,15 +70,8 @@ void ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
     this->Params.insert({PD, {ParamIndex, Ctx.canClassify(PD->getType())}});
   }
 
-  Func->setDefined(true);
-
-  // Lambda static invokers are a special case that we emit custom code for.
-  bool IsEligibleForCompilation = Func->isLambdaStaticInvoker() ||
-                                  FuncDecl->isConstexpr() ||
-                                  FuncDecl->hasAttr<MSConstexprAttr>();
-
   // Compile the function body.
-  if (!IsEligibleForCompilation || !visitFunc(FuncDecl)) {
+  if (!visitFunc(FuncDecl)) {
     Func->setIsFullyCompiled(true);
     return;
   }

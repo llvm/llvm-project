@@ -1761,3 +1761,39 @@ func.func @do_not_fuse_distinct_dynamic_bounds(%A: memref<16xf32>,
 // CHECK-LABEL: func @do_not_fuse_distinct_dynamic_bounds
 // CHECK:        scf.parallel
 // CHECK:        scf.parallel
+
+// -----
+
+func.func @fuse_unsigned_loops() {
+  %c2 = arith.constant 2 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  scf.parallel unsigned (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+    scf.reduce
+  }
+  scf.parallel unsigned (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+    scf.reduce
+  }
+  return
+}
+// CHECK-LABEL: func @fuse_unsigned_loops
+// CHECK:        scf.parallel unsigned (
+// CHECK-NOT:    scf.parallel
+
+// -----
+
+func.func @do_not_fuse_mixed_signedness() {
+  %c2 = arith.constant 2 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  scf.parallel unsigned (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+    scf.reduce
+  }
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c2) step (%c1, %c1) {
+    scf.reduce
+  }
+  return
+}
+// CHECK-LABEL: func @do_not_fuse_mixed_signedness
+// CHECK:        scf.parallel unsigned (
+// CHECK:        scf.parallel (

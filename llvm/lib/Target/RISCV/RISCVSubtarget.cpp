@@ -59,10 +59,10 @@ namespace llvm::RISCVTuneInfoTable {
 #include "RISCVGenSearchableTables.inc"
 } // namespace llvm::RISCVTuneInfoTable
 
-static cl::opt<bool> RISCVDisableUsingConstantPoolForLargeInts(
-    "riscv-disable-using-constant-pool-for-large-ints",
-    cl::desc("Disable using constant pool for large integers."),
-    cl::init(false), cl::Hidden);
+static cl::opt<bool> RISCVConstantPoolForLargeInts(
+    "riscv-constant-pool-for-large-ints",
+    cl::desc("Enable using constant pool for large integers."), cl::init(true),
+    cl::Hidden);
 
 static cl::opt<unsigned> RISCVMaxBuildIntsCost(
     "riscv-max-build-ints-cost",
@@ -77,11 +77,11 @@ static cl::opt<unsigned> RISCVMinimumJumpTableEntries(
     cl::desc("Set minimum number of entries to use a jump table on RISCV"));
 
 static cl::opt<bool> UseMIPSLoadStorePairsOpt(
-    "use-riscv-mips-load-store-pairs",
+    "riscv-mips-load-store-pairs",
     cl::desc("Enable the load/store pair optimization pass"), cl::init(false),
     cl::Hidden);
 
-static cl::opt<bool> UseMIPSCCMovInsn("use-riscv-mips-ccmov",
+static cl::opt<bool> UseMIPSCCMovInsn("riscv-mips-ccmov",
                                       cl::desc("Use 'mips.ccmov' instruction"),
                                       cl::init(true), cl::Hidden);
 
@@ -186,7 +186,7 @@ const RISCVRegisterBankInfo *RISCVSubtarget::getRegBankInfo() const {
 }
 
 bool RISCVSubtarget::useConstantPoolForLargeInts() const {
-  return !RISCVDisableUsingConstantPoolForLargeInts;
+  return RISCVConstantPoolForLargeInts;
 }
 
 // Returns true if VT is a P extension packed SIMD type.
@@ -259,12 +259,6 @@ unsigned RISCVSubtarget::getMinRVVVectorSizeInBits() const {
                        "than the Zvl*b limitation");
 
   return RVVVectorBitsMin;
-}
-
-unsigned RISCVSubtarget::getMaxLMULForFixedLengthVectors() const {
-  assert(hasVInstructions() &&
-         "Tried to get vector length without Zve or V extension support!");
-  return 8;
 }
 
 bool RISCVSubtarget::useRVVForFixedLengthVectors() const {

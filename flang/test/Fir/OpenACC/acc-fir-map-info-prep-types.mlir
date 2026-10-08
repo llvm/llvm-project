@@ -124,7 +124,7 @@ func.func @cptr_copyin() {
 // CHECK: acc.map_info varPtr(%[[SLOT]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
 // CHECK-SAME: elementSize(4)
 // CHECK-SAME: descKind(cfi)
-// CHECK-SAME: mapFlags(ptr_and_obj)
+// CHECK-SAME: mapFlags(ptr_and_obj,attach)
 // CHECK-NOT: acc.attach
 // CHECK: acc.data
 func.func @attach_pointer() {

@@ -75,6 +75,7 @@ public:
                        Status &error) override;
   lldb::addr_t DoAllocateMemory(size_t size, uint32_t permissions,
                                 Status &error) override;
+  bool DoCanAllocateMemory() override { return true; }
   Status DoDeallocateMemory(lldb::addr_t ptr) override;
 
   lldb::addr_t GetImageInfoAddress() override;

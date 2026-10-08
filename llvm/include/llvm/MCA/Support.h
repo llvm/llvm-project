@@ -42,6 +42,7 @@ public:
 };
 
 template <typename T> char InstructionError<T>::ID;
+extern template class LLVM_TEMPLATE_ABI InstructionError<MCInst>;
 
 /// This class represents the number of cycles per resource (fractions of
 /// cycles).  That quantity is managed here as a ratio, and accessed via the

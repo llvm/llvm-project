@@ -1531,3 +1531,16 @@ namespace SubPtr {
   }
   static_assert(dynAlloc() == 1);
 }
+
+namespace InvalidVirtualCall {
+  struct A {
+    virtual void foo(); // both-note {{overridden virtual function is here}}
+  };
+
+  struct B : A {
+    constexpr void bar() { foo(); } // both-error {{never produces a constant expression}} \
+                                    // both-note {{non-constexpr function 'foo' cannot be used in a constant expression}}
+    static void foo(); // both-error {{'static' member function 'foo' overrides a virtual function in a base class}} \
+                       // both-note {{declared here}}
+  };
+}

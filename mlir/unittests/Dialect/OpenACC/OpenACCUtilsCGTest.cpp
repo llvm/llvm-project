@@ -278,6 +278,22 @@ TEST_F(OpenACCUtilsCGTest, activeParDimsOperationAttributes) {
   EXPECT_EQ(getActiveParDimsAttr(op), threadAttr);
 }
 
+TEST_F(OpenACCUtilsCGTest, chunkSizeAttribute) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  Operation *op = module->getOperation();
+
+  EXPECT_FALSE(hasChunkSizeAttr(op));
+  EXPECT_FALSE(getChunkSize(op).has_value());
+
+  setChunkSizeAttr(op, 32);
+  EXPECT_TRUE(hasChunkSizeAttr(op));
+  EXPECT_EQ(getChunkSize(op), 32);
+  EXPECT_EQ(getChunkSizeAttr(op).getChunkSize(), 32);
+
+  setChunkSizeAttr(op, ChunkSizeAttr::get(&context, 64));
+  EXPECT_EQ(getChunkSize(op), 64);
+}
+
 //===----------------------------------------------------------------------===//
 // buildComputeRegion Tests
 //===----------------------------------------------------------------------===//

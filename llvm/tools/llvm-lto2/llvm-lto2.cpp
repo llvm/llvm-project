@@ -208,8 +208,7 @@ static cl::list<std::string>
                 cl::desc("Load passes from plugin library"));
 
 static cl::opt<LTO::LTOKind> UnifiedLTOMode(
-    "unified-lto", cl::Optional,
-    cl::desc("Set LTO mode with the following options:"),
+    "unified-lto", cl::desc("Set LTO mode with the following options:"),
     cl::values(clEnumValN(LTO::LTOK_UnifiedThin, "thin",
                           "ThinLTO with Unified LTO enabled"),
                clEnumValN(LTO::LTOK_UnifiedRegular, "full",

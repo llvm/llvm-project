@@ -17,25 +17,25 @@ define i64 @eq_or_with_dom_abs(i64 %x) nounwind {
 ; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    sarl $31, %eax
 ; X86-NEXT:    xorl %eax, %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    xorl %eax, %esi
-; X86-NEXT:    subl %eax, %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    xorl %eax, %ecx
+; X86-NEXT:    subl %eax, %ecx
 ; X86-NEXT:    sbbl %eax, %edx
-; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    xorl $12312, %eax # imm = 0x3018
-; X86-NEXT:    xorl $64, %esi
-; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    orl %edx, %esi
-; X86-NEXT:    sete %bl
+; X86-NEXT:    xorl $64, %ecx
+; X86-NEXT:    xorl %ebx, %ebx
+; X86-NEXT:    orl %edx, %ecx
+; X86-NEXT:    sete %cl
 ; X86-NEXT:    xorl %esi, %esi
 ; X86-NEXT:    movl $2344, %edi # imm = 0x928
 ; X86-NEXT:    cmpl %eax, %edi
 ; X86-NEXT:    sbbl %edx, %esi
 ; X86-NEXT:    jb .LBB0_2
 ; X86-NEXT:  # %bb.1:
-; X86-NEXT:    movb %bl, %cl
+; X86-NEXT:    movb %cl, %bl
 ; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    movl %ebx, %eax
 ; X86-NEXT:  .LBB0_2:
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi

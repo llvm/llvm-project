@@ -80,12 +80,12 @@ public:
   }
 };
 
-#define LIST_FMAX_TESTS(T, func)                                               \
-  using LlvmLibcFMaxTest = FMaxTest<T>;                                        \
-  TEST_F(LlvmLibcFMaxTest, NaN) { testNaN(&func); }                            \
-  TEST_F(LlvmLibcFMaxTest, InfArg) { testInfArg(&func); }                      \
-  TEST_F(LlvmLibcFMaxTest, NegInfArg) { testNegInfArg(&func); }                \
-  TEST_F(LlvmLibcFMaxTest, BothZero) { testBothZero(&func); }                  \
-  TEST_F(LlvmLibcFMaxTest, Range) { testRange(&func); }
+#define LIST_FMAX_TESTS(Name, T, func)                                         \
+  using LlvmLibc##Name##Test = FMaxTest<T>;                                    \
+  TEST_F(LlvmLibc##Name##Test, NaN) { testNaN(&func); }                        \
+  TEST_F(LlvmLibc##Name##Test, InfArg) { testInfArg(&func); }                  \
+  TEST_F(LlvmLibc##Name##Test, NegInfArg) { testNegInfArg(&func); }            \
+  TEST_F(LlvmLibc##Name##Test, BothZero) { testBothZero(&func); }              \
+  TEST_F(LlvmLibc##Name##Test, Range) { testRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMAXTEST_H

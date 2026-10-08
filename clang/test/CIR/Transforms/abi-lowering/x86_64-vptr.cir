@@ -167,8 +167,10 @@ module attributes {
   }
 
   // CHECK: cir.func{{.*}} @ret_vp_long() -> !rec_anon_struct
-  // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_VPLong>
-  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_VPLong> -> !cir.ptr<!rec_anon_struct>
+  // CHECK:   %[[SLOT:.*]] = cir.alloca "r" align(8) : !cir.ptr<!rec_VPLong>
+  // CHECK-NEXT:   %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_VPLong> -> !cir.ptr<!rec_anon_struct>
+  // CHECK-NEXT:   %[[RET:.*]] = cir.load align(8) %[[CAST]] : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
+  // CHECK-NEXT:   cir.return %[[RET]] : !rec_anon_struct
   // LLVM: define { ptr, i64 } @ret_vp_long()
 
   // A single eightbyte comes back in the one return register holding it.

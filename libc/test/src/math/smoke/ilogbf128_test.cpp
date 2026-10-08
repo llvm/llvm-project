@@ -10,4 +10,4 @@
 
 #include "src/math/ilogbf128.h"
 
-LIST_INTLOGB_TESTS(int, float128, LIBC_NAMESPACE::ilogbf128);
+LIST_INTLOGB_TESTS(Ilogbf128, int, float128, LIBC_NAMESPACE::ilogbf128);

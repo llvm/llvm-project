@@ -364,9 +364,8 @@ bool ExpandVariadics::runOnModule(Module &M) {
   if (!ABI->enableForTarget())
     return Changed;
 
-  auto &Ctx = M.getContext();
   const DataLayout &DL = M.getDataLayout();
-  IRBuilder<> Builder(Ctx);
+  IRBuilder<> Builder(M);
 
   // Lowering needs to run on all functions exactly once.
   // Optimize could run on functions containing va_start exactly once.

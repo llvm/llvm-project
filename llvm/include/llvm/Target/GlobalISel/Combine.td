@@ -174,6 +174,10 @@ def GIReplaceReg : GIBuiltinInst;
 //
 // TODO: Allow using this directly, like (apply GIEraseRoot)
 def GIEraseRoot : GIBuiltinInst;
+/// Check that the first result of an instruction has only one use.
+/// Used as a standalone predicate referencing a defined register:
+///   (G_MUL $mul, $x, $y), (GIHasOneUse $mul)
+def GIHasOneUse : GIBuiltinInst;
 
 //===----------------------------------------------------------------------===//
 // Pattern MIFlags
@@ -193,7 +197,10 @@ def FmReassoc   : MIFlagEnum<"FmReassoc">;
 def IsExact     : MIFlagEnum<"IsExact">;
 def NoSWrap     : MIFlagEnum<"NoSWrap">;
 def NoUWrap     : MIFlagEnum<"NoUWrap">;
+def NoUSWrap    : MIFlagEnum<"NoUSWrap">;
+def Disjoint    : MIFlagEnum<"Disjoint">;
 def NonNeg      : MIFlagEnum<"NonNeg">;
+def SameSign    : MIFlagEnum<"SameSign">;
 def InBounds    : MIFlagEnum<"InBounds">;
 
 def MIFlags;
@@ -405,7 +412,7 @@ def sub_of_mul_const : GICombineRule<
   (match (G_CONSTANT $c, $imm),
          (G_MUL $mul, $x, $c),
          (G_SUB $d, $a, $mul),
-         [{ return MRI.hasOneNonDBGUse(${mul}.getReg()); }]),
+         (GIHasOneUse $mul)),
   (apply (G_SUB $negc, 0, $c),
          (G_MUL $newmul, $x, $negc),
          (G_ADD $d, $a, $newmul))>;

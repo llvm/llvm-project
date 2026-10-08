@@ -318,6 +318,11 @@ public:
   static bool classof(const Type *From) {
     return isa<llvm::PointerType>(From->LLVMTy);
   }
+
+  /// Return the address space of the Pointer type.
+  inline unsigned getAddressSpace() const {
+    return cast<llvm::PointerType>(LLVMTy)->getAddressSpace();
+  }
 };
 
 class ArrayType : public Type {

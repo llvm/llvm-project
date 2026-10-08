@@ -438,6 +438,7 @@ module LLVM_Utils {
     // These are intended for textual inclusion.
     textual header "llvm/TargetParser/ARMTargetParser.def"
     textual header "llvm/TargetParser/CSKYTargetParser.def"
+    textual header "llvm/TargetParser/IntelGPUTargetParser.def"
     textual header "llvm/TargetParser/X86TargetParser.def"
     textual header "llvm/TargetParser/LoongArchTargetParser.def"
     textual header "llvm/TargetParser/NVPTXTargetParser.def"

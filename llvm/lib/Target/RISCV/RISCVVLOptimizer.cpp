@@ -95,6 +95,14 @@ private:
              RISCVRegisterInfo::isRVVRegClass(MRI->getRegClass(MO.getReg()));
     });
   }
+
+  /// \returns all vector virtual registers that \p MI defines.
+  auto virtual_vec_defs(const MachineInstr &MI) const {
+    return make_filter_range(MI.all_defs(), [this](const MachineOperand &MO) {
+      return MO.getReg().isVirtual() &&
+             RISCVRegisterInfo::isRVVRegClass(MRI->getRegClass(MO.getReg()));
+    });
+  }
 };
 
 class RISCVVLOptimizerLegacy : public MachineFunctionPass {
@@ -1402,13 +1410,17 @@ bool RISCVVLOptimizerImpl::run(MachineFunction &MF) {
 
   assert(DemandedVLs.empty());
 
-  // For each instruction that defines a vector, propagate the VL it
+  // For each instruction that defines or uses a vector, propagate the VL it
   // uses to its inputs.
   for (MachineBasicBlock *MBB : post_order(&MF)) {
     assert(MDT->isReachableFromEntry(MBB));
-    for (MachineInstr &MI : reverse(*MBB))
-      if (!MI.isDebugInstr())
-        Worklist.insert(&MI);
+    for (MachineInstr &MI : reverse(*MBB)) {
+      if (MI.isDebugInstr())
+        continue;
+      if (virtual_vec_defs(MI).empty() && virtual_vec_uses(MI).empty())
+        continue;
+      Worklist.insert(&MI);
+    }
   }
 
   while (!Worklist.empty()) {

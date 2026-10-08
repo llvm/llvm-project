@@ -13,6 +13,7 @@
 #ifndef OMPTARGET_PLUGIN_MANAGER_H
 #define OMPTARGET_PLUGIN_MANAGER_H
 
+#include "OffloadAPI.h"
 #include "PluginInterface.h"
 
 #include "DeviceImage.h"
@@ -119,11 +120,9 @@ struct PluginManager {
     return Devices.getExclusiveAccessor();
   }
 
-  /// Initialize \p Plugin. Returns true on success.
-  bool initializePlugin(GenericPluginTy &Plugin);
-
-  /// Initialize device \p DeviceNo of \p Plugin. Returns true on success.
-  bool initializeDevice(GenericPluginTy &Plugin, int32_t DeviceId);
+  /// Initialize device \p DeviceHandle as on OpenMP device. Returns true on
+  /// success.
+  bool initializeDevice(ol_device_handle_t DeviceHandle);
 
   /// Eagerly initialize all plugins and their devices.
   void initializeAllDevices();
@@ -155,11 +154,10 @@ private:
   llvm::SmallVector<__tgt_bin_desc *> DelayedBinDesc;
 
   // List of all plugins, in use or not.
-  llvm::SmallVector<std::unique_ptr<GenericPluginTy>> Plugins;
+  llvm::SmallVector<GenericPluginTy *> Plugins;
 
-  // Mapping of plugins to the OpenMP device identifier.
-  llvm::DenseMap<std::pair<const GenericPluginTy *, int32_t>, int32_t>
-      DeviceIds;
+  // Mapping of device handles to the OpenMP device identifier.
+  llvm::DenseMap<ol_device_handle_t, int32_t> DeviceIds;
 
   // Set of all device images currently in use.
   llvm::DenseSet<const __tgt_device_image *> UsedImages;
@@ -181,6 +179,14 @@ private:
   std::list<llvm::SmallVector<__tgt_device_image, 0>> LegacyImages;
   llvm::DenseMap<__tgt_bin_desc *, __tgt_bin_desc> UpgradedDescriptors;
   __tgt_bin_desc *upgradeLegacyEntries(__tgt_bin_desc *Desc);
+
+  /// Register the image \p Img from \p Desc on the compatible device
+  /// \p DeviceHandle, unless the device is already in \p UsedDevices. Returns
+  /// true if the image was registered.
+  bool
+  registerImageOnDevice(ol_device_handle_t DeviceHandle, __tgt_bin_desc *Desc,
+                        __tgt_device_image *Img,
+                        llvm::SmallVectorImpl<ol_device_handle_t> &UsedDevices);
 };
 
 /// Initialize the plugin manager and OpenMP runtime.
@@ -192,4 +198,19 @@ void deinitRuntime();
 extern PluginManager *PM;
 extern std::atomic<bool> RTLAlive; // Indicates if the RTL has been initialized
 extern std::atomic<int> RTLOngoingSyncs; // Counts ongoing external syncs
+
+// Helper function to iterate over all devices and invoke the provided callback.
+template <typename CallbackTy> llvm::Error iterateDevices(CallbackTy Callback) {
+  ol_device_iterate_cb_t Wrapper = [](ol_device_handle_t Device,
+                                      void *UserData) -> bool {
+    CallbackTy *Unwrapped = static_cast<CallbackTy *>(UserData);
+    (*Unwrapped)(Device);
+    return true;
+  };
+  if (auto Res = olIterateDevices(Wrapper, &Callback))
+    return error::createOffloadError(error::ErrorCode::BACKEND_FAILURE,
+                                     "Failed to iterate devices: %s",
+                                     Res->Details);
+  return llvm::Error::success();
+}
 #endif // OMPTARGET_PLUGIN_MANAGER_H
