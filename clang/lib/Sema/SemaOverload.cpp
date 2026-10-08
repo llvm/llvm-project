@@ -6350,9 +6350,10 @@ ExprResult Sema::PerformImplicitObjectArgumentInitialization(
     QualType CastType = From->getType().getLocalUnqualifiedType();
     if (FromAS == LangAS::hlsl_constant)
       CastType = CastType.withConst();
-    
+
     From = ImplicitCastExpr::Create(Context, CastType, CK_LValueToRValue, From,
-        /*BasePath=*/nullptr, VK_PRValue, FPOptionsOverride());
+                                    /*BasePath=*/nullptr, VK_PRValue,
+                                    FPOptionsOverride());
   }
 
   Expr::Classification FromClassification;
