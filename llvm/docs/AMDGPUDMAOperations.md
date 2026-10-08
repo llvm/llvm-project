@@ -24,7 +24,7 @@ ensures completion before their side-effects are used.
 GFX9 DMA instructions implement volatile (via `aux/cpol` bit 31) and
 nontemporal (via metadata) as if they were loads from the global address space.
 
-**Flat/Global Addressing**
+#### Flat/Global Addressing
 
 ```llvm
 void @llvm.amdgcn.load[.async].to.lds.pN(
@@ -59,7 +59,7 @@ void @llvm.amdgcn.global.load[.async].lds(
 
 This is identical to `@llvm.amdgcn.load[.async].to.lds.p1`.
 
-**Buffer Addressing**
+#### Buffer Addressing
 
 ```llvm
 void @llvm.amdgcn.{raw|struct}[.ptr].buffer.load[.async].lds(
@@ -91,7 +91,7 @@ GFX1250 LDS DMA instructions implement nontemporal (via metadata) as if they
 were loads from the global address space. Tensor DMA instructions do not support
 volatile or nontemporal.
 
-**Global Addressing**
+#### Global Addressing
 
 ```llvm
 void @llvm.amdgcn.{global|cluster}.load.async.to.lds.b<N>(
@@ -102,56 +102,8 @@ void @llvm.amdgcn.{global|cluster}.load.async.to.lds.b<N>(
     [i32 %mask])                ; workgroup multicast mask, cluster variants only (wave-uniform, in M0)
 ```
 
-The bit-size encoded in the name can be 8, 32, 64 or 128.
-
 Loads data from global memory to LDS. The `%offset` is applied to both the
 global and LDS addresses.
-
-(amdgpu-cluster-multicast-dma)=
-
-**Cluster Multicast Loads**
-
-The `cluster` variants let several workgroups in a {ref}`workgroup cluster
-<amdgpu-clusters>` share a single fetch from global memory when they are all
-loading the same data to their respective LDS. The `%mask` argument identifies
-the group of workgroups whose requests may be combined, and controls the request
-timeout. The mask is wave-uniform and passed in the `M0` register:
-
-- Bits `[15:0]` are the *workgroup multicast mask*: bit `i` corresponds to the
-  workgroup with cluster index `i`. Each workgroup that wants to participate in
-  the combined fetch must set its own bit and all participating workgroups must
-  supply an identical mask (and the same address). If the mask is all-zero, the
-  operation behaves like an ordinary, non-cluster load: it returns only to the
-  requesting workgroup.
-- Bit `[16]` selects the timeout behavior. When clear, a target-defined timeout
-  is used: requests may be combined if they arrive within that window. When set,
-  an *early timeout* is used: as soon as the L2 cache supplies the data, it is
-  returned to whichever waves have already issued their requests.
-
-Each participating workgroup issues its own request, with one wave per
-workgroup. When requests are combined, they share a single L2 fetch, and a copy
-of the loaded data is written into the LDS of each requesting workgroup.
-Workgroups that issue their request later make a separate request, which may
-combine with other later requests. The data is written at the same LDS location
-(`%lds_base` plus `%offset`) in each participating workgroup.
-
-Because each wave's request only ever writes to its own workgroup's LDS, this is
-an ordinary `addrspace(3)` access with scope "workgroup", exactly like a
-non-cluster variant of this load. Completion is tracked independently for each
-request using the requesting wave's own
-{ref}`asyncmarks<amdgpu-async-operations>`; there is no signal that tells a wave
-when the *other* participating workgroups have completed their own requests.
-Applications that need every participating workgroup to observe the shared data
-must synchronize separately across those workgroups.
-
-The `cluster` variants are only available on targets that have the
-`mcast-load-insts` subtarget feature (e.g., GFX1250). Using them on any other
-target is not supported. Note that this feature is distinct from workgroup
-cluster support itself: a target may support clusters without providing these
-multicast load instructions.
-
-On the `gfx1250-strict` subtarget, the mask is always forced to zero and no
-multicast occurs, regardless of the value supplied.
 
 ```llvm
 void @llvm.amdgcn.global.store.async.from.lds.b<N>(
@@ -163,7 +115,71 @@ void @llvm.amdgcn.global.store.async.from.lds.b<N>(
 
 Stores data from LDS to global memory.
 
-**Tensor Addressing**
+The bit-size encoded in the name can be 8, 32, 64 or 128.
+
+(amdgpu-cluster-multicast-dma)=
+
+#### Cluster Multicast Loads
+
+The `.cluster` variant is a *multicast load* that allows workgroups in a
+{ref}`cluster <amdgpu-clusters>` to share a load of the same data from global
+memory into their respective LDS. Each lane in a wave supplies its own global
+source address and LDS destination address.
+
+The mask is wave-uniform and passed in the `M0` register:
+
+- Bits `[15:0]` are the *workgroup multicast mask*: bit `i` indicates the
+  workgroup with cluster index `i`. Each workgroup that wants to participate in
+  the multicast must set its own bit and all participating workgroups must
+  supply an identical mask (and the same address). If the mask is all-zero, the
+  operation behaves like an ordinary, non-cluster load: it returns only to the
+  requesting workgroup.
+- Bit `[16]` selects the timeout behavior. When clear, a target-defined timeout
+  is used: requests may be combined if they arrive within that window. When set,
+  an *early timeout* is used: as soon as data is available, it is returned to
+  whichever waves have already issued their requests.
+
+Each participating thread receives a copy of the loaded data into its own
+workgroup's LDS at `%lds_base` plus `%offset`. This is an ordinary
+`addrspace(3)` access with scope "workgroup", exactly like a non-cluster variant
+of this load.
+
+**Combining multicast requests**
+
+[This section is informational]
+
+Two multicast requests are candidates for combining only if they satisfy the
+following conditions:
+- Both specify the same global source location.
+- Either both requests originate from converged dynamic instances in the same
+  wave, or they originate from different participating workgroups.
+
+Actual combining depends on implementation-specific details such as the
+target-defined request matching criteria, timeout, availability of tracking
+slots, etc.
+
+A request that does not join a combined load can proceed separately and may
+combine with other requests. All requests complete eventually.
+
+Completion is tracked using {ref}`asyncmarks<amdgpu-async-operations>`.
+Completion of a multicast load does not establish any synchronization with
+participating workgroups. The application must separately synchronize across the
+participating workgroups if required.
+
+**Target-specific notes**
+
+[This section is informational]
+
+The `cluster` variants are only available on targets that have the
+`mcast-load-insts` subtarget feature (e.g., GFX1250). Using them on any other
+target is not supported. Note that this feature is distinct from workgroup
+cluster support itself: a target may support clusters without providing these
+multicast load instructions.
+
+On the `gfx1250-strict` subtarget, the mask is always forced to zero and no
+multicast occurs, regardless of the value supplied.
+
+#### Tensor Addressing
 
 ```llvm
 void @llvm.amdgcn.tensor.{load.to|store.from}.lds(

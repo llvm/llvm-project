@@ -1474,11 +1474,10 @@ is the same size.
 
 Within a cluster, several workgroups can combine matching load requests via
 :ref:`cluster multicast DMA operations <amdgpu-cluster-multicast-dma>` so that
-each populates its own LDS from a single shared fetch of global memory. The
-``cluster`` memory scope (see
-:ref:`amdgpu-memory-scopes`) synchronizes operations performed by threads in
-workgroups of the same cluster. On targets that do not support clusters,
-``cluster`` scope behaves like ``agent`` scope.
+each populates its own LDS through a shared load of the same data. The
+``cluster`` memory scope (see :ref:`amdgpu-memory-scopes`) synchronizes
+operations performed by threads in workgroups of the same cluster. On targets
+that do not support clusters, ``cluster`` scope behaves like ``agent`` scope.
 
 A workgroup can query its position within the grid and its cluster using the
 following intrinsics:
