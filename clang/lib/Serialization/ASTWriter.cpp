@@ -2954,10 +2954,12 @@ void ASTWriter::WritePreprocessorDetail(PreprocessingRecord &PPRec,
   if (SkippedRanges.size() > 0) {
     std::vector<PPSkippedRange> SerializedSkippedRanges;
     SerializedSkippedRanges.reserve(SkippedRanges.size());
-    for (auto const& Range : SkippedRanges)
+    for (auto const &Range : SkippedRanges) {
+      SourceRange R = getAdjustedRange(Range);
       SerializedSkippedRanges.emplace_back(
-          getRawSourceLocationEncoding(Range.getBegin()),
-          getRawSourceLocationEncoding(Range.getEnd()));
+          getRawSourceLocationEncoding(R.getBegin()),
+          getRawSourceLocationEncoding(R.getEnd()));
+    }
 
     using namespace llvm;
     auto Abbrev = std::make_shared<BitCodeAbbrev>();
