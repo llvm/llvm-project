@@ -159,6 +159,55 @@ static bool hasIncompleteRecordByValue(mlir::Type ty) {
   return false;
 }
 
+/// Whether \p ty has the x87 80-bit format, wrapped in LongDoubleType or not.
+static bool isX87LongDouble(mlir::Type ty) {
+  auto fpTy = dyn_cast<cir::FPTypeInterface>(ty);
+  return fpTy &&
+         &fpTy.getFloatSemantics() == &llvm::APFloat::x87DoubleExtended();
+}
+
+/// Whether \p ty is, or holds by value, an x87 long double, alone or as the
+/// element of a _Complex or a vector.
+static bool holdsX87LongDouble(mlir::Type ty) {
+  if (isa<cir::FPTypeInterface>(ty))
+    return isX87LongDouble(ty);
+  if (auto complexTy = dyn_cast<cir::ComplexType>(ty))
+    return holdsX87LongDouble(complexTy.getElementType());
+  if (auto vecTy = dyn_cast<cir::VectorType>(ty))
+    return holdsX87LongDouble(vecTy.getElementType());
+  if (auto arrTy = dyn_cast<cir::ArrayType>(ty))
+    return arrTy.getSize() && holdsX87LongDouble(arrTy.getElementType());
+  if (auto recTy = dyn_cast<cir::RecordType>(ty))
+    return llvm::any_of(recTy.getMembers(), holdsX87LongDouble);
+  return false;
+}
+
+/// Returns how many bytes from the start of \p ty a value of it reaches.  A
+/// scalar reaches the end of its storage, a record the furthest end of its
+/// non-padding members, and an array the end of its last element, so padding
+/// at the end of a record does not count.
+static uint64_t getDataExtentInBytes(mlir::Type ty, const DataLayout &dl) {
+  if (auto recTy = dyn_cast<cir::RecordType>(ty)) {
+    uint64_t extent = 0;
+    for (auto [idx, memberTy, kind] :
+         llvm::enumerate(recTy.getMembers(), recTy.getMemberKinds())) {
+      if (kind == cir::RecordMemberKind::Pad)
+        continue;
+      extent = std::max(extent, recTy.getElementOffset(dl, idx) +
+                                    getDataExtentInBytes(memberTy, dl));
+    }
+    return extent;
+  }
+  if (auto arrTy = dyn_cast<cir::ArrayType>(ty)) {
+    if (!arrTy.getSize())
+      return 0;
+    mlir::Type elemTy = arrTy.getElementType();
+    return (arrTy.getSize() - 1) * dl.getTypeSize(elemTy).getFixedValue() +
+           getDataExtentInBytes(elemTy, dl);
+  }
+  return dl.getTypeSize(ty).getFixedValue();
+}
+
 /// The CIR types the x86_64 bridge handles.  Scalars: an integer up to 128
 /// bits (including `__int128`), a `_BitInt` of any width, pointer, vtable
 /// pointer, bool, void, or any floating-point type.  Aggregates: a complete
@@ -205,24 +254,20 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
     // x86_64 has no calling convention for one.
     if (vecTy.getIsScalable())
       return false;
-    // The classifier sizes a vector as element count times element width, so
-    // an element is only usable where that width is the one clang gives it.
-    // It is not for bool (a bit to clang, a byte here), for a _BitInt narrower
-    // than a byte (clang rounds to the storage container), or for x87 long
-    // double (80 bits here against clang's 128).
+    // The classifier and clang have to agree on the vector's size, which they
+    // do not for a bool element (a bit to clang, a byte to the classifier).
+    // A _BitInt element narrower than a byte has no memory representation in
+    // CIR's lowering to LLVM.
     mlir::Type elemTy = vecTy.getElementType();
     if (auto elemInt = dyn_cast<cir::IntType>(elemTy)) {
       if (elemInt.getWidth() % 8)
         return false;
-    } else if (auto elemFp = dyn_cast<cir::FPTypeInterface>(elemTy)) {
-      if (&elemFp.getFloatSemantics() == &llvm::APFloat::x87DoubleExtended())
-        return false;
-    } else {
+    } else if (!isa<cir::FPTypeInterface>(elemTy)) {
       return false;
     }
-    // Clang also rounds the vector's own width up to a power of two, and the
-    // classifier branches on the exact width, so a three-char vector would be
-    // classified at 24 bits where clang uses 32.
+    // The classifier rounds the vector's own width up to a power of two, as
+    // clang does, and the CIR data layout does not, so a three-char vector
+    // would get a 32-bit coercion for a value CIR gives 24 bits.
     if (!llvm::isPowerOf2_64(dl.getTypeSizeInBits(ty).getFixedValue()))
       return false;
     return isSupportedType(elemTy, dl);
@@ -261,6 +306,26 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
       // there is no member here to build the Indirect coercion from.
       if (members.empty() && recordBits > 128)
         return false;
+      // A union is moved as a value of its storage type, and an x87 value
+      // stores fewer bytes than it occupies, so the bytes another member
+      // holds past them would be lost.  A long double stores its first 10
+      // bytes, so it can share a union with other long double members and
+      // with members whose data ends within those bytes, provided it is the
+      // storage type.  An x87 value held any other way, in a _Complex, a
+      // vector, a record or an array, is measured at its full storage, which
+      // reaches past them.
+      if (members.size() > 1 && llvm::any_of(members, holdsX87LongDouble)) {
+        uint64_t x87StoreBytes = llvm::APFloat::semanticsSizeInBits(
+                                     llvm::APFloat::x87DoubleExtended()) /
+                                 8;
+        if (!isX87LongDouble(
+                mlir::cast<cir::UnionType>(recTy).getUnionStorageType(dl)) ||
+            !llvm::all_of(members, [&](mlir::Type m) {
+              return isX87LongDouble(m) ||
+                     getDataExtentInBytes(m, dl) <= x87StoreBytes;
+            }))
+          return false;
+      }
       // A `_BitInt` access unit past an eightbyte has byte-array storage in
       // CIR and integer storage in classic CodeGen, so the narrowing walk
       // finds an i8 in the second eightbyte where classic keeps an i64.
@@ -340,6 +405,19 @@ static mlir::Type abiTypeToCIR(const llvm::abi::Type *ty, MLIRContext *ctx) {
             /*is_class=*/false, cir::RecordType::getAllDataKinds(fieldTypes));
       })
       .Default([](const llvm::abi::Type *) -> mlir::Type { return nullptr; });
+}
+
+/// Returns \p ty with a LongDoubleType vector element replaced by its
+/// underlying format, which is the element abiTypeToCIR builds for the same
+/// float.
+static mlir::Type unwrapLongDoubleVectorElement(mlir::Type ty) {
+  if (auto vecTy = dyn_cast<cir::VectorType>(ty)) {
+    if (auto longDoubleTy =
+            dyn_cast<cir::LongDoubleType>(vecTy.getElementType()))
+      return cir::VectorType::get(longDoubleTy.getUnderlying(), vecTy.getSize(),
+                                  vecTy.getIsScalable());
+  }
+  return ty;
 }
 
 /// Map a CIR type to an llvm::abi::Type.  classifyX86_64Function pre-filters
@@ -605,13 +683,14 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
     mlir::Type coerced = abiTypeToCIR(coerceAbi, ctx);
     if (!coerced)
       return std::nullopt;
+    bool coerceIsNatural = coerced == unwrapLongDoubleVectorElement(origTy);
     // An offset would be lost here, since a coercion to the value's own type
     // is indistinguishable from no coercion at all.
-    if (offset && coerced == origTy)
+    if (offset && coerceIsNatural)
       return std::nullopt;
     // Coercing a value to the type it already has would add a memory round
     // trip for nothing.
-    if (comparesAgainstCoerce && coerced == origTy)
+    if (comparesAgainstCoerce && coerceIsNatural)
       return ArgClassification::getDirect();
     ArgClassification classified =
         ArgClassification::getDirect(coerced, offset);

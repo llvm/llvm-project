@@ -1428,8 +1428,10 @@ public:
       mlir::Value rhs = Visit(e->getRHS());
 
       auto cmpOpKind = cir::CmpOpKind::ne;
-      lhs = builder.createVecCompare(loc, cmpOpKind, lhs, zeroVec);
-      rhs = builder.createVecCompare(loc, cmpOpKind, rhs, zeroVec);
+      auto resultTy =
+          mlir::cast<cir::VectorType>(cgf.convertType(e->getType()));
+      lhs = builder.createVecCompare(loc, resultTy, cmpOpKind, lhs, zeroVec);
+      rhs = builder.createVecCompare(loc, resultTy, cmpOpKind, rhs, zeroVec);
       return builder.createAnd(loc, lhs, rhs);
     }
 
@@ -1474,8 +1476,10 @@ public:
       mlir::Value rhs = Visit(e->getRHS());
 
       auto cmpOpKind = cir::CmpOpKind::ne;
-      lhs = builder.createVecCompare(loc, cmpOpKind, lhs, zeroVec);
-      rhs = builder.createVecCompare(loc, cmpOpKind, rhs, zeroVec);
+      auto resultTy =
+          mlir::cast<cir::VectorType>(cgf.convertType(e->getType()));
+      lhs = builder.createVecCompare(loc, resultTy, cmpOpKind, lhs, zeroVec);
+      rhs = builder.createVecCompare(loc, resultTy, cmpOpKind, rhs, zeroVec);
       return builder.createOr(loc, lhs, rhs);
     }
 
@@ -3005,7 +3009,9 @@ mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *e) {
     mlir::Location loc = cgf.getLoc(e->getExprLoc());
     auto operVecTy = mlir::cast<cir::VectorType>(oper.getType());
     mlir::Value zeroVec = builder.getNullValue(operVecTy, loc);
-    return builder.createVecCompare(loc, cir::CmpOpKind::eq, oper, zeroVec);
+    auto resultTy = mlir::cast<cir::VectorType>(cgf.convertType(e->getType()));
+    return builder.createVecCompare(loc, resultTy, cir::CmpOpKind::eq, oper,
+                                    zeroVec);
   }
 
   // Compare operand to zero.
