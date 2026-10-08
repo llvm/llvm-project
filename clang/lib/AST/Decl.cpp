@@ -3312,7 +3312,7 @@ FunctionDecl::getDefaultedFunctionKind() const {
   case OO_MinusMinus: {
     // Only the postfix forms can be defaulted. They are distinguished from the
     // prefix forms by their trailing 'int' parameter, so they have exactly two
-    // parameters once the implicit object parameter (if any) is counted.
+    // parameters including implicit or explicit 'this'.
     unsigned NumParams = getNumParams();
     if (const auto *MD = dyn_cast<CXXMethodDecl>(this);
         MD && MD->isImplicitObjectMemberFunction())
