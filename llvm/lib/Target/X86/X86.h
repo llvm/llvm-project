@@ -370,7 +370,7 @@ FunctionPass *createX86PartialReductionLegacyPass();
 /// Return a pass that inserts sfence intrinsics between non-temporal stores and
 /// potential synchronization points (or function returns).
 class X86FenceNonTemporalStoresPass
-    : public OptionalPassInfoMixin<X86FenceNonTemporalStoresPass> {
+    : public RequiredPassInfoMixin<X86FenceNonTemporalStoresPass> {
 private:
   const X86TargetMachine *TM;
 
