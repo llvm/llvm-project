@@ -1,6 +1,5 @@
 ; RUN: opt -passes=loop-vectorize -S -pass-remarks-analysis=loop-vectorize < %s 2>&1 | FileCheck %s
 
-target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "arm64-apple-macosx"
 
 ; CHECK: remark: <unknown>:0:0: loop not vectorized: runtime checks are known to fail, so we will never enter the vector loop
