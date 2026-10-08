@@ -184,6 +184,21 @@ define <4 x float> @load_f32_insert_v4f32_may_free(ptr align 16 dereferenceable(
   ret <4 x float> %r
 }
 
+define <4 x float> @load_f32_insert_v4f32_may_free_prior_access(ptr %p) {
+; CHECK-LABEL: @load_f32_insert_v4f32_may_free_prior_access(
+; CHECK-NEXT:    store <4 x float> zeroinitializer, ptr [[P:%.*]], align 16
+; CHECK-NEXT:    call void @may_free()
+; CHECK-NEXT:    [[S:%.*]] = load float, ptr [[P]], align 4
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> poison, float [[S]], i32 0
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  store <4 x float> zeroinitializer, ptr %p, align 16
+  call void @may_free()
+  %s = load float, ptr %p, align 4
+  %r = insertelement <4 x float> poison, float %s, i32 0
+  ret <4 x float> %r
+}
+
 define <4 x float> @casted_load_f32_insert_v4f32(ptr align 4 dereferenceable(16) %p) {
 ; CHECK-LABEL: @casted_load_f32_insert_v4f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 4
