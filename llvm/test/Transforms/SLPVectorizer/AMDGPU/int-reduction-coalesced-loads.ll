@@ -9,10 +9,8 @@
 ; the arithmetic. The scalar byte loads already coalesce into one wide
 ; load per pointer, so a vector load bundle saves nothing, and once that
 ; saving is charged neither the dot product nor the sum is profitable.
-; Vectorized on gfx90a, the dot product of eight sign extended bytes grew
-; from 8 to 23 instructions and the sum of four zero extended bytes from
-; 8 to 14. The and reduction stays vectorized because its zero extension
-; folds away and the vector form works on the bytes as loaded.
+; The and reduction stays vectorized because its zero extension folds away
+; and the vector form works on the bytes as loaded.
 ; Lanes of 16 bits are packed two to a register, so the sum into i16 lanes
 ; and the dot product of i16 loads keep their saving and stay vectorized.
 
@@ -266,8 +264,7 @@ entry:
 
 ; The same sum over LDS with every byte load aligned to one byte. The backend
 ; keeps these byte loads apart, so their load saving stays and the sum is
-; vectorized. The vector form reads the bytes through one misaligned dword
-; load and takes 14 or 15 instructions against 10 for the scalar form.
+; vectorized.
 define i32 @sum4_zext_i8_lds_a1(ptr addrspace(3) %a) {
 ; CHECK-LABEL: define i32 @sum4_zext_i8_lds_a1(
 ; CHECK-SAME: ptr addrspace(3) [[A:%.*]]) {
@@ -302,8 +299,7 @@ entry:
 ; load of each pointer aligned to 16. The byte loads coalesce into one load
 ; per pointer, and a bundle of them is judged by the best alignment among
 ; its loads, so a bundle starting at the second byte coalesces as well. The
-; dot product stays scalar. Vectorized on gfx90a it took 23 instructions
-; against 8 for the scalar form.
+; dot product stays scalar.
 define i32 @dot8_sext_i8_lds_a16(ptr addrspace(3) %a, ptr addrspace(3) %b) {
 ; CHECK-LABEL: define i32 @dot8_sext_i8_lds_a16(
 ; CHECK-SAME: ptr addrspace(3) [[A:%.*]], ptr addrspace(3) [[B:%.*]]) {
@@ -395,8 +391,6 @@ entry:
 
 ; The sum of four sign extended bytes into i16 lanes. Two i16 lanes fit one
 ; register, so the byte loads keep their saving and the sum stays vectorized.
-; On gfx1250 the scalar form takes 24 instructions against 18 for the vector
-; form.
 define i16 @sum4_sext_i8_i16(ptr addrspace(1) %a) {
 ; CHECK-LABEL: define i16 @sum4_sext_i8_i16(
 ; CHECK-SAME: ptr addrspace(1) [[A:%.*]]) {
@@ -427,8 +421,7 @@ entry:
 }
 
 ; The dot product of eight zero extended i16 loads. The i16 loads keep their
-; saving and the dot product stays vectorized. On gfx1250 the vector form
-; saves three VALU instructions, the gfx9 and gfx10 targets spend one more.
+; saving and the dot product stays vectorized.
 define i32 @dot8_zext_i16(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; CHECK-LABEL: define i32 @dot8_zext_i16(
 ; CHECK-SAME: ptr addrspace(1) [[A:%.*]], ptr addrspace(1) [[B:%.*]]) {

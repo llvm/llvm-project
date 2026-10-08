@@ -392,8 +392,7 @@ exit:
 
 ; Eight bytes are converted to half and stored. Two half lanes fit one
 ; register, so the byte loads keep their saving and the loads, the conversions
-; and the stores stay vectorized. On gfx1250 the scalar form takes 37
-; instructions against 27 for the vector form.
+; and the stores stay vectorized.
 define void @store8_sitofp_half(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; CHECK-LABEL: define void @store8_sitofp_half(
 ; CHECK-SAME: ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
