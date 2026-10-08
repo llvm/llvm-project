@@ -861,8 +861,8 @@ bool MachineSinking::run(MachineFunction &MF) {
     MachineDomTreeUpdater MDTU(DT, PDT,
                                MachineDomTreeUpdater::UpdateStrategy::Lazy);
     for (const auto &Pair : ToSplit) {
-      auto NewSucc = Pair.first->SplitCriticalEdge(Pair.second, {LIS, SI, MLI},
-                                                   nullptr, &MDTU);
+      auto NewSucc =
+          Pair.first->SplitCriticalEdge(Pair.second, {LIS, SI, MLI}, &MDTU);
       if (NewSucc != nullptr) {
         LLVM_DEBUG(dbgs() << " *** Splitting critical edge: "
                           << printMBBReference(*Pair.first) << " -- "

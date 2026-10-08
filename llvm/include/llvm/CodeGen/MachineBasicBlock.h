@@ -1012,30 +1012,26 @@ public:
 
   MachineBasicBlock *
   SplitCriticalEdge(MachineBasicBlock *Succ, Pass &P,
-                    std::vector<SparseBitVector<>> *LiveInSets = nullptr,
                     MachineDomTreeUpdater *MDTU = nullptr) {
-    return SplitCriticalEdge(Succ, &P, nullptr, LiveInSets, MDTU);
+    return SplitCriticalEdge(Succ, &P, nullptr, MDTU);
   }
 
   MachineBasicBlock *
   SplitCriticalEdge(MachineBasicBlock *Succ,
                     MachineFunctionAnalysisManager &MFAM,
-                    std::vector<SparseBitVector<>> *LiveInSets = nullptr,
                     MachineDomTreeUpdater *MDTU = nullptr) {
-    return SplitCriticalEdge(Succ, nullptr, &MFAM, LiveInSets, MDTU);
+    return SplitCriticalEdge(Succ, nullptr, &MFAM, MDTU);
   }
 
   // Helper method for new pass manager migration.
   LLVM_ABI MachineBasicBlock *
   SplitCriticalEdge(MachineBasicBlock *Succ,
                     const SplitCriticalEdgeAnalyses &Analyses,
-                    std::vector<SparseBitVector<>> *LiveInSets = nullptr,
                     MachineDomTreeUpdater *MDTU = nullptr);
 
   LLVM_ABI MachineBasicBlock *
   SplitCriticalEdge(MachineBasicBlock *Succ, Pass *P,
                     MachineFunctionAnalysisManager *MFAM,
-                    std::vector<SparseBitVector<>> *LiveInSets = nullptr,
                     MachineDomTreeUpdater *MDTU = nullptr);
 
   /// Check if the edge between this block and the given successor \p

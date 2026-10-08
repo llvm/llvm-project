@@ -1182,9 +1182,10 @@ public:
   }
 };
 
-MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
-    MachineBasicBlock *Succ, Pass *P, MachineFunctionAnalysisManager *MFAM,
-    std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU) {
+MachineBasicBlock *
+MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ, Pass *P,
+                                     MachineFunctionAnalysisManager *MFAM,
+                                     MachineDomTreeUpdater *MDTU) {
 #define GET_RESULT(RESULT, GETTER, INFIX)                                      \
   [MF, P, MFAM]() {                                                            \
     if (P) {                                                                   \
@@ -1199,13 +1200,14 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
   LiveIntervals *LIS = GET_RESULT(LiveIntervals, getLIS, );
   SlotIndexes *Indexes = GET_RESULT(SlotIndexes, getSI, );
   MachineLoopInfo *MLI = GET_RESULT(MachineLoop, getLI, Info);
-  return SplitCriticalEdge(Succ, {LIS, Indexes, MLI}, LiveInSets, MDTU);
+  return SplitCriticalEdge(Succ, {LIS, Indexes, MLI}, MDTU);
 #undef GET_RESULT
 }
 
-MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
-    MachineBasicBlock *Succ, const SplitCriticalEdgeAnalyses &Analyses,
-    std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU) {
+MachineBasicBlock *
+MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
+                                     const SplitCriticalEdgeAnalyses &Analyses,
+                                     MachineDomTreeUpdater *MDTU) {
   if (!canSplitCriticalEdge(Succ, Analyses.MLI))
     return nullptr;
 
