@@ -4369,11 +4369,17 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::Concat &x) {
 // Otherwise report the error in messages.
 MaybeExpr ExpressionAnalyzer::AnalyzeDefinedOp(const parser::Name &name,
     ActualArguments &&actuals, const Symbol *&symbol) {
+  // Reference checks such as F2018 C1595 (a procedure referenced in a
+  // pure subprogram must be pure) must be applied at the use site
+  parser::CharBlock callSite{GetContextualMessages().at()};
+  if (callSite.empty()) {
+    callSite = name.source;
+  }
   if (auto callee{GetCalleeAndArguments(name, std::move(actuals))}) {
     auto &proc{std::get<evaluate::ProcedureDesignator>(callee->u)};
     symbol = proc.GetSymbol();
     return MakeFunctionRef(
-        name.source, std::move(proc), std::move(callee->arguments));
+        callSite, std::move(proc), std::move(callee->arguments));
   } else {
     return std::nullopt;
   }
