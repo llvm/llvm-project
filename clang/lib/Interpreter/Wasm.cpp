@@ -62,34 +62,20 @@ bool link(llvm::ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
 
 namespace clang {
 
-IncrementalExecutorBuilder::~IncrementalExecutorBuilder() = default;
+std::unique_ptr<IncrementalExecutorBuilder>
+IncrementalExecutorBuilder::createDefault() {
+  return std::make_unique<WasmIncrementalExecutorBuilder>();
+}
 
 llvm::Expected<std::unique_ptr<IncrementalExecutor>>
-IncrementalExecutorBuilder::create(llvm::orc::ThreadSafeContext &TSC,
-                                   const clang::TargetInfo &TI) {
-  if (IE)
-    return std::move(IE);
-
-  if (IsOutOfProcess)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Out-of-process execution is not supported "
-                                   "by the WebAssembly executor");
-
+WasmIncrementalExecutorBuilder::createExecutor(
+    llvm::orc::ThreadSafeContext &TSC, const clang::TargetInfo &TI) {
   llvm::Error Err = llvm::Error::success();
   std::unique_ptr<IncrementalExecutor> Executor =
       std::make_unique<WasmIncrementalExecutor>(Err, LLVMArgs);
   if (Err)
     return std::move(Err);
   return std::move(Executor);
-}
-
-llvm::Error IncrementalExecutorBuilder::UpdateOrcRuntimePath(
-    const clang::driver::Compilation &C) {
-  if (IsOutOfProcess)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Out-of-process execution is not supported "
-                                   "by the WebAssembly executor");
-  return llvm::Error::success();
 }
 
 WasmIncrementalExecutor::WasmIncrementalExecutor(

@@ -16,8 +16,8 @@
 #include "clang/Config/config.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/CodeCompletion.h"
-#include "clang/Interpreter/IncrementalExecutor.h"
 #include "clang/Interpreter/Interpreter.h"
+#include "clang/Interpreter/OrcIncrementalExecutorBuilder.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Sema.h"
 
@@ -294,7 +294,7 @@ int main(int argc, const char **argv) {
   clang::IncrementalCompilerBuilder CB;
   CB.SetCompilerArgs(ClangArgv);
 
-  auto IEB = std::make_unique<clang::IncrementalExecutorBuilder>();
+  auto IEB = std::make_unique<clang::OrcIncrementalExecutorBuilder>();
   IEB->IsOutOfProcess = !OOPExecutor.empty() || !OOPExecutorConnect.empty();
   IEB->OOPExecutor = OOPExecutor;
   if (!OrcRuntimePath.empty())
