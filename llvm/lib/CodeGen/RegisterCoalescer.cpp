@@ -3378,10 +3378,15 @@ void JoinVals::pruneValues(JoinVals &Other,
         // computeAssignment(), the value that was originally copied could have
         // been replaced.
         Val &OtherV = Other.Vals[Vals[i].OtherVNI->id];
-        bool EraseImpDef =
-            OtherV.ErasableImplicitDef && OtherV.Resolution == CR_Keep;
-        // If the source is an erasable IMPLICIT_DEF, the pruned endpoint is
-        // the next def boundary, not a real use — discard it.
+        // If the source is an erasable IMPLICIT_DEF without any defined lanes,
+        // the pruned endpoints only read undefined values, so discard them. A
+        // partial IMPLICIT_DEF without <read-undef> still carries the lanes of
+        // the value it redefines (its ValidLanes). Without lane information we
+        // cannot tell which endpoints read those lanes, so keep all of them and
+        // restore the live range.
+        bool EraseImpDef = OtherV.ErasableImplicitDef &&
+                           OtherV.Resolution == CR_Keep &&
+                           OtherV.ValidLanes.none();
         LIS->pruneValue(LR, Def, EraseImpDef ? nullptr : &EndPoints);
         LLVM_DEBUG(dbgs() << "\t\tpruned all of " << printReg(Reg) << " at "
                           << Def << ": " << LR << '\n');
