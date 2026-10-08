@@ -19,7 +19,7 @@ define void @test1(ptr %a, i8 %value) nounwind {
 define void @regular_memset_calls_external_function(ptr %a, i8 %value) nounwind {
 ; CHECK-LABEL: regular_memset_calls_external_function:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzbl %sil, %esi
+; CHECK-NEXT:    movsbl %sil, %esi
 ; CHECK-NEXT:    movl $1024, %edx # imm = 0x400
 ; CHECK-NEXT:    jmp memset@PLT # TAILCALL
   tail call void @llvm.memset.p0.i64(ptr %a, i8 %value, i64 1024, i1 0)

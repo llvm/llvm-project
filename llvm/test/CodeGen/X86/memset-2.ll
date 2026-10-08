@@ -20,9 +20,8 @@ define fastcc void @t2(ptr nocapture %s, i8 signext %c) nounwind {
 ; CHECK-LABEL: t2:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    subl $16, %esp
-; CHECK-NEXT:    movzbl %dl, %eax
 ; CHECK-NEXT:    pushl $76
-; CHECK-NEXT:    pushl %eax
+; CHECK-NEXT:    pushl %edx
 ; CHECK-NEXT:    pushl %ecx
 ; CHECK-NEXT:    calll _memset
 ; CHECK-NEXT:    addl $16, %esp

@@ -666,7 +666,7 @@ define void @memset_10000(ptr %dst, i32 %value) {
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    .cfi_def_cfa_offset 16
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    .cfi_offset w30, -16
-; SDAG-WITHOUT-MOPS-O2-NEXT:    and w1, w1, #0xff
+; SDAG-WITHOUT-MOPS-O2-NEXT:    sxtb w1, w1
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    mov w2, #10000 // =0x2710
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    bl memset
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -733,7 +733,7 @@ define void @memset_10000_volatile(ptr %dst, i32 %value) {
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    .cfi_def_cfa_offset 16
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    .cfi_offset w30, -16
-; SDAG-WITHOUT-MOPS-O2-NEXT:    and w1, w1, #0xff
+; SDAG-WITHOUT-MOPS-O2-NEXT:    sxtb w1, w1
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    mov w2, #10000 // =0x2710
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    bl memset
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -803,7 +803,7 @@ define void @memset_size(ptr %dst, i64 %size, i32 %value) {
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    .cfi_def_cfa_offset 16
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    .cfi_offset w30, -16
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    mov x8, x1
-; SDAG-WITHOUT-MOPS-O2-NEXT:    and w1, w2, #0xff
+; SDAG-WITHOUT-MOPS-O2-NEXT:    sxtb w1, w2
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    mov x2, x8
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    bl memset
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -872,7 +872,7 @@ define void @memset_size_volatile(ptr %dst, i64 %size, i32 %value) {
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    .cfi_def_cfa_offset 16
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    .cfi_offset w30, -16
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    mov x8, x1
-; SDAG-WITHOUT-MOPS-O2-NEXT:    and w1, w2, #0xff
+; SDAG-WITHOUT-MOPS-O2-NEXT:    sxtb w1, w2
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    mov x2, x8
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    bl memset
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -2892,9 +2892,9 @@ define void @memset_size_i32(ptr %dst, i32 %size, i32 %value) {
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    .cfi_def_cfa_offset 16
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    .cfi_offset w30, -16
-; SDAG-WITHOUT-MOPS-O2-NEXT:    mov w8, w1
-; SDAG-WITHOUT-MOPS-O2-NEXT:    and w1, w2, #0xff
-; SDAG-WITHOUT-MOPS-O2-NEXT:    mov x2, x8
+; SDAG-WITHOUT-MOPS-O2-NEXT:    sxtb w8, w2
+; SDAG-WITHOUT-MOPS-O2-NEXT:    mov w2, w1
+; SDAG-WITHOUT-MOPS-O2-NEXT:    mov w1, w8
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    bl memset
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    ret

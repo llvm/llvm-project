@@ -39,8 +39,10 @@ define void @lower_bulk_memory(i8 %val) #0 {
 ; CHECK-NEXT:    i32.const 12
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const 255
-; CHECK-NEXT:    i32.and
+; CHECK-NEXT:    i32.const 24
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    i32.const 24
+; CHECK-NEXT:    i32.shr_s
 ; CHECK-NEXT:    i32.const 100
 ; CHECK-NEXT:    call memset
 ; CHECK-NEXT:    drop

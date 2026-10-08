@@ -54,10 +54,12 @@ define ptr @set_yes(ptr %dst, i8 %src, i32 %len) {
 ; CHECK-LABEL: set_yes:
 ; CHECK:         .functype set_yes (i32, i32, i32) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const $push0=, 255
-; CHECK-NEXT:    i32.and $push1=, $1, $pop0
-; CHECK-NEXT:    call $push2=, memset, $0, $pop1, $2
-; CHECK-NEXT:    return $pop2
+; CHECK-NEXT:    i32.const $push0=, 24
+; CHECK-NEXT:    i32.shl $push1=, $1, $pop0
+; CHECK-NEXT:    i32.const $push4=, 24
+; CHECK-NEXT:    i32.shr_s $push2=, $pop1, $pop4
+; CHECK-NEXT:    call $push3=, memset, $0, $pop2, $2
+; CHECK-NEXT:    return $pop3
   call void @llvm.memset.p0.i32(ptr %dst, i8 %src, i32 %len, i1 false)
   ret ptr %dst
 }
@@ -66,9 +68,11 @@ define void @set_no(ptr %dst, i8 %src, i32 %len) {
 ; CHECK-LABEL: set_no:
 ; CHECK:         .functype set_no (i32, i32, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const $push0=, 255
-; CHECK-NEXT:    i32.and $push1=, $1, $pop0
-; CHECK-NEXT:    call $drop=, memset, $0, $pop1, $2
+; CHECK-NEXT:    i32.const $push0=, 24
+; CHECK-NEXT:    i32.shl $push1=, $1, $pop0
+; CHECK-NEXT:    i32.const $push3=, 24
+; CHECK-NEXT:    i32.shr_s $push2=, $pop1, $pop3
+; CHECK-NEXT:    call $drop=, memset, $0, $pop2, $2
 ; CHECK-NEXT:    return
   call void @llvm.memset.p0.i32(ptr %dst, i8 %src, i32 %len, i1 false)
   ret void
@@ -119,9 +123,11 @@ define ptr @drop_result(ptr %arg, i8 %arg1, i32 %arg2, i32 %arg3, i32 %arg4) {
 ; CHECK-NEXT:  # %bb.1: # %bb5
 ; CHECK-NEXT:    br_if 1, $4 # 1: down to label0
 ; CHECK-NEXT:  # %bb.2: # %bb7
-; CHECK-NEXT:    i32.const $push0=, 255
-; CHECK-NEXT:    i32.and $push1=, $1, $pop0
-; CHECK-NEXT:    call $drop=, memset, $0, $pop1, $2
+; CHECK-NEXT:    i32.const $push0=, 24
+; CHECK-NEXT:    i32.shl $push1=, $1, $pop0
+; CHECK-NEXT:    i32.const $push3=, 24
+; CHECK-NEXT:    i32.shr_s $push2=, $pop1, $pop3
+; CHECK-NEXT:    call $drop=, memset, $0, $pop2, $2
 ; CHECK-NEXT:    call block_tail_dup
 ; CHECK-NEXT:    return $0
 ; CHECK-NEXT:  .LBB7_3: # %bb9
@@ -169,10 +175,12 @@ define ptr @tail_dup_to_reuse_result(ptr %arg, i8 %arg1, i32 %arg2, i32 %arg3, i
 ; CHECK-NEXT:  # %bb.1: # %bb5
 ; CHECK-NEXT:    br_if 1, $4 # 1: down to label2
 ; CHECK-NEXT:  # %bb.2: # %bb7
-; CHECK-NEXT:    i32.const $push0=, 255
-; CHECK-NEXT:    i32.and $push1=, $1, $pop0
-; CHECK-NEXT:    call $push2=, memset, $0, $pop1, $2
-; CHECK-NEXT:    return $pop2
+; CHECK-NEXT:    i32.const $push0=, 24
+; CHECK-NEXT:    i32.shl $push1=, $1, $pop0
+; CHECK-NEXT:    i32.const $push4=, 24
+; CHECK-NEXT:    i32.shr_s $push2=, $pop1, $pop4
+; CHECK-NEXT:    call $push3=, memset, $0, $pop2, $2
+; CHECK-NEXT:    return $pop3
 ; CHECK-NEXT:  .LBB8_3: # %bb9
 ; CHECK-NEXT:    end_block # label3:
 ; CHECK-NEXT:    call $0=, def

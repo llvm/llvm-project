@@ -212,7 +212,7 @@ define void @foo(ptr %r, i32 %s, i32 %w, i32 %x, ptr %j, i32 %d) nounwind {
 ; CHECK-NEXT:    sarl %eax
 ; CHECK-NEXT:    subl $4, %esp
 ; CHECK-NEXT:    pushl %eax
-; CHECK-NEXT:    pushl $128
+; CHECK-NEXT:    pushl $-128
 ; CHECK-NEXT:    pushl %edx
 ; CHECK-NEXT:    calll _memset
 ; CHECK-NEXT:    addl $44, %esp
@@ -612,7 +612,7 @@ define void @bar(ptr %r, i32 %s, i32 %w, i32 %x, ptr %j, i32 %d) nounwind {
 ; CHECK-NEXT:    shrl %ecx
 ; CHECK-NEXT:    subl $4, %esp
 ; CHECK-NEXT:    pushl %ecx
-; CHECK-NEXT:    pushl $128
+; CHECK-NEXT:    pushl $-128
 ; CHECK-NEXT:    pushl %edx
 ; CHECK-NEXT:    jmp LBB1_23
 ; CHECK-NEXT:  LBB1_19: ## %bb29
@@ -647,7 +647,7 @@ define void @bar(ptr %r, i32 %s, i32 %w, i32 %x, ptr %j, i32 %d) nounwind {
 ; CHECK-NEXT:    shrl %eax
 ; CHECK-NEXT:    subl $4, %esp
 ; CHECK-NEXT:    pushl %eax
-; CHECK-NEXT:    pushl $128
+; CHECK-NEXT:    pushl $-128
 ; CHECK-NEXT:    pushl %ecx
 ; CHECK-NEXT:  LBB1_23: ## %bb33
 ; CHECK-NEXT:    calll _memset

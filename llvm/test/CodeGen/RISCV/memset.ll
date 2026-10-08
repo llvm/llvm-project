@@ -7,7 +7,8 @@ define void @memset_i32_var(ptr %dest, i8 %val, i32 %n) nounwind {
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    zext.b a1, a1
+; RV32-NEXT:    slli a1, a1, 24
+; RV32-NEXT:    srai a1, a1, 24
 ; RV32-NEXT:    call memset
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
@@ -17,8 +18,9 @@ define void @memset_i32_var(ptr %dest, i8 %val, i32 %n) nounwind {
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    zext.b a1, a1
+; RV64-NEXT:    slli a1, a1, 56
 ; RV64-NEXT:    slli a2, a2, 32
+; RV64-NEXT:    srai a1, a1, 56
 ; RV64-NEXT:    srli a2, a2, 32
 ; RV64-NEXT:    call memset
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -34,7 +36,8 @@ define void @memset_i32_2147483648(ptr %dest, i8 %val) nounwind {
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    zext.b a1, a1
+; RV32-NEXT:    slli a1, a1, 24
+; RV32-NEXT:    srai a1, a1, 24
 ; RV32-NEXT:    lui a2, 524288
 ; RV32-NEXT:    call memset
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -45,8 +48,9 @@ define void @memset_i32_2147483648(ptr %dest, i8 %val) nounwind {
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    zext.b a1, a1
+; RV64-NEXT:    slli a1, a1, 56
 ; RV64-NEXT:    li a2, 1
+; RV64-NEXT:    srai a1, a1, 56
 ; RV64-NEXT:    slli a2, a2, 31
 ; RV64-NEXT:    call memset
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -90,7 +94,8 @@ define void @memset_i64_var(ptr %dest, i8 %val, i64 %n) nounwind {
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    zext.b a1, a1
+; RV32-NEXT:    slli a1, a1, 24
+; RV32-NEXT:    srai a1, a1, 24
 ; RV32-NEXT:    call memset
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
@@ -100,7 +105,8 @@ define void @memset_i64_var(ptr %dest, i8 %val, i64 %n) nounwind {
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    zext.b a1, a1
+; RV64-NEXT:    slli a1, a1, 56
+; RV64-NEXT:    srai a1, a1, 56
 ; RV64-NEXT:    call memset
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 16
@@ -119,8 +125,9 @@ define void @memset_i64_4294967296(ptr %dest, i8 %val) nounwind {
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    zext.b a1, a1
+; RV64-NEXT:    slli a1, a1, 56
 ; RV64-NEXT:    li a2, 1
+; RV64-NEXT:    srai a1, a1, 56
 ; RV64-NEXT:    slli a2, a2, 32
 ; RV64-NEXT:    call memset
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload

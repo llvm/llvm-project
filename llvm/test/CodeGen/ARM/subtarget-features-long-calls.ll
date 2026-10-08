@@ -247,7 +247,7 @@ define void @test_memset(ptr %dst, i8 %val, i32 %len) {
 ; NO-OPTION-LABEL: test_memset:
 ; NO-OPTION:       @ %bb.0: @ %entry
 ; NO-OPTION-NEXT:    push {r7, lr}
-; NO-OPTION-NEXT:    uxtb r1, r1
+; NO-OPTION-NEXT:    sxtb r1, r1
 ; NO-OPTION-NEXT:    bl memset
 ; NO-OPTION-NEXT:    pop {r7, pc}
 ;
@@ -255,7 +255,7 @@ define void @test_memset(ptr %dst, i8 %val, i32 %len) {
 ; LONGCALL:       @ %bb.0: @ %entry
 ; LONGCALL-NEXT:    push {r7, lr}
 ; LONGCALL-NEXT:    ldr r3, .LCPI4_0
-; LONGCALL-NEXT:    uxtb r1, r1
+; LONGCALL-NEXT:    sxtb r1, r1
 ; LONGCALL-NEXT:    blx r3
 ; LONGCALL-NEXT:    pop {r7, pc}
 ; LONGCALL-NEXT:    .p2align 2
@@ -266,14 +266,14 @@ define void @test_memset(ptr %dst, i8 %val, i32 %len) {
 ; NO-LONGCALL-LABEL: test_memset:
 ; NO-LONGCALL:       @ %bb.0: @ %entry
 ; NO-LONGCALL-NEXT:    push {r7, lr}
-; NO-LONGCALL-NEXT:    uxtb r1, r1
+; NO-LONGCALL-NEXT:    sxtb r1, r1
 ; NO-LONGCALL-NEXT:    bl memset
 ; NO-LONGCALL-NEXT:    pop {r7, pc}
 ;
 ; LONGCALL-O0-LABEL: test_memset:
 ; LONGCALL-O0:       @ %bb.0: @ %entry
 ; LONGCALL-O0-NEXT:    push {r7, lr}
-; LONGCALL-O0-NEXT:    uxtb r1, r1
+; LONGCALL-O0-NEXT:    sxtb r1, r1
 ; LONGCALL-O0-NEXT:    ldr r3, .LCPI4_0
 ; LONGCALL-O0-NEXT:    blx r3
 ; LONGCALL-O0-NEXT:    pop {r7, pc}
@@ -287,7 +287,7 @@ define void @test_memset(ptr %dst, i8 %val, i32 %len) {
 ; XO-LONGCALL-NEXT:    .save {r11, lr}
 ; XO-LONGCALL-NEXT:    push {r11, lr}
 ; XO-LONGCALL-NEXT:    movw r3, :lower16:memset
-; XO-LONGCALL-NEXT:    uxtb r1, r1
+; XO-LONGCALL-NEXT:    sxtb r1, r1
 ; XO-LONGCALL-NEXT:    movt r3, :upper16:memset
 ; XO-LONGCALL-NEXT:    blx r3
 ; XO-LONGCALL-NEXT:    pop {r11, pc}
@@ -297,7 +297,7 @@ define void @test_memset(ptr %dst, i8 %val, i32 %len) {
 ; PIC-LONGCALL-NEXT:    .save {r11, lr}
 ; PIC-LONGCALL-NEXT:    push {r11, lr}
 ; PIC-LONGCALL-NEXT:    ldr r3, .LCPI4_0
-; PIC-LONGCALL-NEXT:    uxtb r1, r1
+; PIC-LONGCALL-NEXT:    sxtb r1, r1
 ; PIC-LONGCALL-NEXT:  .LPC4_0:
 ; PIC-LONGCALL-NEXT:    ldr r3, [pc, r3]
 ; PIC-LONGCALL-NEXT:    blx r3
