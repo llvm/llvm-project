@@ -873,7 +873,8 @@ def simplify_add_to_sub : GICombineRule <
 class constant_fold_unary_fp_op_rule<Instruction opcode> : GICombineRule <
   (defs root:$dst),
   (match (opcode $dst, $src0):$root, (G_FCONSTANT $src0, $cst)),
-  (apply [{ Helper.applyCombineConstantFoldFpUnary(*${root}, ${cst}.getFPImm()); }])
+  (apply [{ return Helper.tryCombineConstantFoldFpUnary(
+                      *${root}, ${cst}.getFPImm()); }])
 >;
 
 def constant_fold_fneg : constant_fold_unary_fp_op_rule<G_FNEG>;

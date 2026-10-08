@@ -26,6 +26,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FPFold.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -5799,21 +5800,13 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
     ConstantFPSDNode *N1CFP = dyn_cast<ConstantFPSDNode>(N1);
     ConstantFPSDNode *N2CFP = dyn_cast<ConstantFPSDNode>(N2);
     if (N0CFP && N1CFP && N2CFP) {
-      const auto FTZ = [](const APFloat &V) {
-        if (V.isDenormal()) {
-          APFloat Zero(V.getSemantics(), 0);
-          return V.isNegative() ? -Zero : Zero;
-        }
-        return V;
-      };
-
-      APFloat V0 = FTZ(N0CFP->getValueAPF());
-      APFloat V1 = FTZ(N1CFP->getValueAPF());
-      APFloat V2 = FTZ(N2CFP->getValueAPF());
-      V0.multiply(V1, APFloat::rmNearestTiesToEven);
-      V0 = FTZ(V0);
-      V0.add(V2, APFloat::rmNearestTiesToEven);
-      return DAG.getConstantFP(FTZ(V0), DL, VT);
+      const APFloat &V0 = N0CFP->getValueAPF();
+      const APFloat &V1 = N1CFP->getValueAPF();
+      const APFloat &V2 = N2CFP->getValueAPF();
+      DenormalMode Denormals = DenormalMode::getPreserveSign();
+      if (auto Mul = tryFoldFP(FPOp::Mul, {V0, V1}, Denormals))
+        if (auto Add = tryFoldFP(FPOp::Add, {Mul->Value, V2}, Denormals))
+          return DAG.getConstantFP(Add->Value, DL, VT);
     }
     break;
   }

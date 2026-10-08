@@ -30,8 +30,23 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FPFold.h"
 using namespace llvm;
 using namespace llvm::PatternMatch;
+
+ConstantFP *llvm::tryFoldFPConst(Type *Ty, FPOp Opcode, ArrayRef<APFloat> Args,
+                                 DenormalMode Denorms, bool AvoidFoldingToNaN) {
+  auto Result = tryFoldFP(Opcode, Args, Denorms, AvoidFoldingToNaN);
+  return Result ? ConstantFP::get(Ty, Result->Value) : nullptr;
+}
+
+ConstantFP *llvm::tryFoldFPConstWithRM(Type *Ty, FPOp Opcode,
+                                       ArrayRef<APFloat> Args, RoundingMode RM,
+                                       DenormalMode Denorms,
+                                       bool AvoidFoldingToNaN) {
+  auto Result = tryFoldFPWithRM(Opcode, Args, RM, Denorms, AvoidFoldingToNaN);
+  return Result ? ConstantFP::get(Ty, Result->Value) : nullptr;
+}
 
 //===----------------------------------------------------------------------===//
 //                ConstantFold*Instruction Implementations
@@ -635,20 +650,25 @@ Constant *llvm::ConstantFoldUnaryInstruction(unsigned Opcode, Constant *C) {
 }
 
 Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
-                                              Constant *C2) {
+                                              Constant *C2,
+                                              DenormalMode Denormals,
+                                              bool AvoidFoldingToNaN) {
   assert(Instruction::isBinaryOp(Opcode) && "Non-binary instruction detected");
 
-  // Simplify BinOps with their identity values first. They are no-ops and we
-  // can always return the other value, including undef or poison values.
+  // Floating-point identities must account for denormal handling and NaN
+  // folding policy. Returning undef remains valid for every denormal mode.
+  bool IsFP = C1->getType()->isFPOrFPVectorTy();
+  bool CanFoldIdentity =
+      !IsFP || (Denormals == DenormalMode::getIEEE() && !AvoidFoldingToNaN);
   if (Constant *Identity = ConstantExpr::getBinOpIdentity(
           Opcode, C1->getType(), /*AllowRHSIdentity*/ false)) {
-    if (C1 == Identity)
+    if (C1 == Identity && (CanFoldIdentity || isa<UndefValue>(C2)))
       return C2;
-    if (C2 == Identity)
+    if (C2 == Identity && (CanFoldIdentity || isa<UndefValue>(C1)))
       return C1;
   } else if (Constant *Identity = ConstantExpr::getBinOpIdentity(
                  Opcode, C1->getType(), /*AllowRHSIdentity*/ true)) {
-    if (C2 == Identity)
+    if (C2 == Identity && (CanFoldIdentity || isa<UndefValue>(C1)))
       return C1;
   }
 
@@ -748,7 +768,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
       // would allow returning undef sometimes. But it is always safe to fold to
       // NaN because we can choose the undef operand as NaN, and any FP opcode
       // with a NaN operand will propagate NaN.
-      return ConstantFP::getNaN(C1->getType());
+      return AvoidFoldingToNaN ? nullptr : ConstantFP::getNaN(C1->getType());
     case Instruction::BinaryOpsEnd:
       llvm_unreachable("Invalid BinaryOp");
     }
@@ -824,7 +844,8 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
     if (Instruction::isCommutative(Opcode))
       return ConstantExpr::isDesirableBinOp(Opcode)
                  ? ConstantExpr::get(Opcode, C2, C1)
-                 : ConstantFoldBinaryInstruction(Opcode, C2, C1);
+                 : ConstantFoldBinaryInstruction(Opcode, C2, C1, Denormals,
+                                                 AvoidFoldingToNaN);
   }
 
   if (ConstantInt *CI1 = dyn_cast<ConstantInt>(C1)) {
@@ -884,26 +905,33 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
     if (ConstantFP *CFP2 = dyn_cast<ConstantFP>(C2)) {
       const APFloat &C1V = CFP1->getValueAPF();
       const APFloat &C2V = CFP2->getValueAPF();
-      APFloat C3V = C1V;  // copy for modification
+      ConstantFP *Result = nullptr;
       switch (Opcode) {
       default:
         break;
       case Instruction::FAdd:
-        (void)C3V.add(C2V, APFloat::rmNearestTiesToEven);
-        return ConstantFP::get(C1->getType(), C3V);
+        Result = tryFoldFPConst(C1->getType(), FPOp::Add, {C1V, C2V}, Denormals,
+                                AvoidFoldingToNaN);
+        break;
       case Instruction::FSub:
-        (void)C3V.subtract(C2V, APFloat::rmNearestTiesToEven);
-        return ConstantFP::get(C1->getType(), C3V);
+        Result = tryFoldFPConst(C1->getType(), FPOp::Sub, {C1V, C2V}, Denormals,
+                                AvoidFoldingToNaN);
+        break;
       case Instruction::FMul:
-        (void)C3V.multiply(C2V, APFloat::rmNearestTiesToEven);
-        return ConstantFP::get(C1->getType(), C3V);
+        Result = tryFoldFPConst(C1->getType(), FPOp::Mul, {C1V, C2V}, Denormals,
+                                AvoidFoldingToNaN);
+        break;
       case Instruction::FDiv:
-        (void)C3V.divide(C2V, APFloat::rmNearestTiesToEven);
-        return ConstantFP::get(C1->getType(), C3V);
+        Result = tryFoldFPConst(C1->getType(), FPOp::Div, {C1V, C2V}, Denormals,
+                                AvoidFoldingToNaN);
+        break;
       case Instruction::FRem:
-        (void)C3V.mod(C2V);
-        return ConstantFP::get(C1->getType(), C3V);
+        Result = tryFoldFPConst(C1->getType(), FPOp::FRem, {C1V, C2V},
+                                Denormals, AvoidFoldingToNaN);
+        break;
       }
+      if (Result)
+        return Result;
     }
   }
 
@@ -916,7 +944,8 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
         Constant *Res =
             ConstantExpr::isDesirableBinOp(Opcode)
                 ? ConstantExpr::get(Opcode, C1Splat, C2Splat)
-                : ConstantFoldBinaryInstruction(Opcode, C1Splat, C2Splat);
+                : ConstantFoldBinaryInstruction(Opcode, C1Splat, C2Splat,
+                                                Denormals, AvoidFoldingToNaN);
         if (!Res)
           return nullptr;
         return ConstantVector::getSplat(VTy->getElementCount(), Res);
@@ -931,9 +960,11 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
         Constant *ExtractIdx = ConstantInt::get(Ty, i);
         Constant *LHS = ConstantExpr::getExtractElement(C1, ExtractIdx);
         Constant *RHS = ConstantExpr::getExtractElement(C2, ExtractIdx);
-        Constant *Res = ConstantExpr::isDesirableBinOp(Opcode)
-                            ? ConstantExpr::get(Opcode, LHS, RHS)
-                            : ConstantFoldBinaryInstruction(Opcode, LHS, RHS);
+        Constant *Res =
+            ConstantExpr::isDesirableBinOp(Opcode)
+                ? ConstantExpr::get(Opcode, LHS, RHS)
+                : ConstantFoldBinaryInstruction(Opcode, LHS, RHS, Denormals,
+                                                AvoidFoldingToNaN);
         if (!Res)
           return nullptr;
         Result.push_back(Res);
@@ -959,7 +990,8 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
     // If C2 is a constant expr and C1 isn't, flop them around and fold the
     // other way if possible.
     if (Instruction::isCommutative(Opcode))
-      return ConstantFoldBinaryInstruction(Opcode, C2, C1);
+      return ConstantFoldBinaryInstruction(Opcode, C2, C1, Denormals,
+                                           AvoidFoldingToNaN);
   }
 
   // i1 can be simplified in many cases.
@@ -1135,7 +1167,8 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2) {
 }
 
 Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
-                                               Constant *C1, Constant *C2) {
+                                               Constant *C1, Constant *C2,
+                                               DenormalMode Denormals) {
   Type *ResultTy;
   if (VectorType *VT = dyn_cast<VectorType>(C1->getType()))
     ResultTy = VectorType::get(Type::getInt1Ty(C1->getContext()),
@@ -1204,14 +1237,17 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
   } else if (isa<ConstantFP>(C1) && isa<ConstantFP>(C2)) {
     const APFloat &C1V = cast<ConstantFP>(C1)->getValueAPF();
     const APFloat &C2V = cast<ConstantFP>(C2)->getValueAPF();
-    return ConstantInt::get(ResultTy, FCmpInst::compare(C1V, C2V, Predicate));
+    auto Result = tryFoldFCmp(C1V, C2V, Denormals);
+    if (!Result)
+      return nullptr;
+    return ConstantInt::get(ResultTy, FCmpInst::compare(*Result, Predicate));
   } else if (auto *C1VTy = dyn_cast<VectorType>(C1->getType())) {
 
     // Fast path for splatted constants.
     if (Constant *C1Splat = C1->getSplatValue())
       if (Constant *C2Splat = C2->getSplatValue())
-        if (Constant *Elt =
-                ConstantFoldCompareInstruction(Predicate, C1Splat, C2Splat))
+        if (Constant *Elt = ConstantFoldCompareInstruction(Predicate, C1Splat,
+                                                           C2Splat, Denormals))
           return ConstantVector::getSplat(C1VTy->getElementCount(), Elt);
 
     // Do not iterate on scalable vector. The number of elements is unknown at
@@ -1230,7 +1266,8 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
           ConstantExpr::getExtractElement(C1, ConstantInt::get(Ty, I));
       Constant *C2E =
           ConstantExpr::getExtractElement(C2, ConstantInt::get(Ty, I));
-      Constant *Elt = ConstantFoldCompareInstruction(Predicate, C1E, C2E);
+      Constant *Elt =
+          ConstantFoldCompareInstruction(Predicate, C1E, C2E, Denormals);
       if (!Elt)
         return nullptr;
 
@@ -1342,7 +1379,7 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
       // other way if possible.
       // Also, if C1 is null and C2 isn't, flip them around.
       Predicate = ICmpInst::getSwappedPredicate(Predicate);
-      return ConstantFoldCompareInstruction(Predicate, C2, C1);
+      return ConstantFoldCompareInstruction(Predicate, C2, C1, Denormals);
     }
   }
   return nullptr;

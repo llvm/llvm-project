@@ -436,9 +436,9 @@ public:
   LLVM_ABI bool matchCombineUnmergeZExtToZExt(MachineInstr &MI) const;
   LLVM_ABI void applyCombineUnmergeZExtToZExt(MachineInstr &MI) const;
 
-  /// Transform fp_instr(cst) to constant result of the fp operation.
-  LLVM_ABI void applyCombineConstantFoldFpUnary(MachineInstr &MI,
-                                                const ConstantFP *Cst) const;
+  /// Try to fold fp_instr(cst) to the constant result of the operation.
+  LLVM_ABI bool tryCombineConstantFoldFpUnary(MachineInstr &MI,
+                                              const ConstantFP *Cst) const;
 
   /// Constant fold a unary integer op (G_CTLZ, G_CTTZ, G_CTPOP and their
   /// _ZERO_POISON variants, G_ABS, G_BSWAP, G_BITREVERSE) when the operand is

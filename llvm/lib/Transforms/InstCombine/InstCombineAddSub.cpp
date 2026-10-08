@@ -29,6 +29,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/FPFold.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <cassert>
@@ -64,7 +65,7 @@ namespace {
     // If possible, don't define operator+/operator- etc because these
     // operators inevitably call FAddendCoef's constructor which is not cheap.
     void operator=(const FAddendCoef &A);
-    void operator+=(const FAddendCoef &A);
+    bool add(const FAddendCoef &A, DenormalMode DM);
     void operator*=(const FAddendCoef &S);
 
     void set(short C) {
@@ -135,9 +136,9 @@ namespace {
   public:
     FAddend() = default;
 
-    void operator+=(const FAddend &T) {
+    bool add(const FAddend &T, DenormalMode DM) {
       assert((Val == T.Val) && "Symbolic-values disagree");
-      Coeff += T.Coeff;
+      return Coeff.add(T.Coeff, DM);
     }
 
     Value *getSymVal() const { return Val; }
@@ -275,25 +276,22 @@ void FAddendCoef::operator=(const FAddendCoef &That) {
     set(That.getFpVal());
 }
 
-void FAddendCoef::operator+=(const FAddendCoef &That) {
-  RoundingMode RndMode = RoundingMode::NearestTiesToEven;
-  if (isInt() == That.isInt()) {
-    if (isInt())
-      IntVal += That.IntVal;
-    else
-      getFpVal().add(That.getFpVal(), RndMode);
-    return;
+bool FAddendCoef::add(const FAddendCoef &That, DenormalMode DM) {
+  if (isInt() && That.isInt()) {
+    IntVal += That.IntVal;
+    return true;
   }
 
-  if (isInt()) {
-    const APFloat &T = That.getFpVal();
-    convertToFpType(T.getSemantics());
-    getFpVal().add(T, RndMode);
-    return;
+  const fltSemantics &Sem =
+      isInt() ? That.getFpVal().getSemantics() : getFpVal().getSemantics();
+  APFloat LHS = isInt() ? createAPFloatFromInt(Sem, IntVal) : getFpVal();
+  APFloat RHS =
+      That.isInt() ? createAPFloatFromInt(Sem, That.IntVal) : That.getFpVal();
+  if (auto Res = tryFoldFP(FPOp::Add, {LHS, RHS}, DM)) {
+    set(Res->Value);
+    return true;
   }
-
-  APFloat &T = getFpVal();
-  T.add(createAPFloatFromInt(T.getSemantics(), That.IntVal), RndMode);
+  return false;
 }
 
 void FAddendCoef::operator*=(const FAddendCoef &That) {
@@ -519,6 +517,7 @@ Value *FAddCombine::simplify(Instruction *I) {
 Value *FAddCombine::simplifyFAdd(AddendVect& Addends, unsigned InstrQuota) {
   unsigned AddendNum = Addends.size();
   assert(AddendNum <= 4 && "Too many addends");
+  auto DM = getDenormMode(Instr);
 
   // For saving intermediate results;
   unsigned NextTmpIdx = 0;
@@ -571,7 +570,8 @@ Value *FAddCombine::simplifyFAdd(AddendVect& Addends, unsigned InstrQuota) {
       FAddend &R = TmpResult[NextTmpIdx ++];
       R = *SimpVect[StartIdx];
       for (unsigned Idx = StartIdx + 1; Idx < SimpVect.size(); Idx++)
-        R += *SimpVect[Idx];
+        if (!R.add(*SimpVect[Idx], DM))
+          return nullptr;
 
       // Pop all addends being folded and push the resulting folded addend.
       SimpVect.resize(StartIdx);
@@ -2111,8 +2111,21 @@ static Instruction *factorizeFAddFSub(BinaryOperator &I,
   // (X / Z) + (Y / Z) --> (X + Y) / Z
   // (X / Z) - (Y / Z) --> (X - Y) / Z
   bool IsFAdd = I.getOpcode() == Instruction::FAdd;
-  Value *XY = IsFAdd ? Builder.CreateFAddFMF(X, Y, &I)
-                     : Builder.CreateFSubFMF(X, Y, &I);
+  Value *XY;
+  auto *CX = dyn_cast<Constant>(X);
+  auto *CY = dyn_cast<Constant>(Y);
+  if (CX && CY) {
+    DenormalMode Denormals = I.getFunction()->getDenormalMode(
+        I.getType()->getScalarType()->getFltSemantics());
+    XY = ConstantFoldBinaryOpOperands(IsFAdd ? Instruction::FAdd
+                                             : Instruction::FSub,
+                                      CX, CY, I.getDataLayout(), Denormals);
+    if (!XY)
+      return nullptr;
+  } else {
+    XY = IsFAdd ? Builder.CreateFAddFMF(X, Y, &I)
+                : Builder.CreateFSubFMF(X, Y, &I);
+  }
 
   // Bail out if we just created a denormal constant.
   // TODO: This is copied from a previous implementation. Is it necessary?
@@ -2217,7 +2230,9 @@ Instruction *InstCombinerImpl::visitFAdd(BinaryOperator &I) {
     if (match(&I, m_c_FAdd(m_FMul(m_Value(X), m_ImmConstant(MulC)),
                            m_Deferred(X)))) {
       if (Constant *NewMulC = ConstantFoldBinaryOpOperands(
-              Instruction::FAdd, MulC, ConstantFP::get(I.getType(), 1.0), DL))
+              Instruction::FAdd, MulC, ConstantFP::get(I.getType(), 1.0), DL,
+              I.getFunction()->getDenormalMode(
+                  I.getType()->getScalarType()->getFltSemantics())))
         return BinaryOperator::CreateFMulFMF(X, NewMulC, &I);
     }
 
@@ -3414,13 +3429,17 @@ Instruction *InstCombinerImpl::visitFSub(BinaryOperator &I) {
     // (X * C) - X --> X * (C - 1.0)
     if (match(Op0, m_FMul(m_Specific(Op1), m_Constant(C)))) {
       if (Constant *CSubOne = ConstantFoldBinaryOpOperands(
-              Instruction::FSub, C, ConstantFP::get(Ty, 1.0), DL))
+              Instruction::FSub, C, ConstantFP::get(Ty, 1.0), DL,
+              I.getFunction()->getDenormalMode(
+                  Ty->getScalarType()->getFltSemantics())))
         return BinaryOperator::CreateFMulFMF(Op1, CSubOne, &I);
     }
     // X - (X * C) --> X * (1.0 - C)
     if (match(Op1, m_FMul(m_Specific(Op0), m_Constant(C)))) {
       if (Constant *OneSubC = ConstantFoldBinaryOpOperands(
-              Instruction::FSub, ConstantFP::get(Ty, 1.0), C, DL))
+              Instruction::FSub, ConstantFP::get(Ty, 1.0), C, DL,
+              I.getFunction()->getDenormalMode(
+                  Ty->getScalarType()->getFltSemantics())))
         return BinaryOperator::CreateFMulFMF(Op0, OneSubC, &I);
     }
 

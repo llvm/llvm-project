@@ -64,6 +64,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FPFold.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
@@ -3101,34 +3102,38 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
             match(M->getArgOperand(1), m_APFloat(C2))) ||
            (match(M->getArgOperand(1), m_Value(X)) &&
             match(M->getArgOperand(0), m_APFloat(C2))))) {
-        APFloat Res(0.0);
+        DenormalMode Denormals =
+            CI.getFunction()->getDenormalMode(C1->getSemantics());
+        std::optional<FPFoldResult> Result;
         switch (IID) {
         case Intrinsic::maxnum:
-          Res = maxnum(*C1, *C2);
+          Result = tryFoldFP(FPOp::MaxNum, {*C1, *C2}, Denormals);
           break;
         case Intrinsic::minnum:
-          Res = minnum(*C1, *C2);
+          Result = tryFoldFP(FPOp::MinNum, {*C1, *C2}, Denormals);
           break;
         case Intrinsic::maximumnum:
-          Res = maximumnum(*C1, *C2);
+          Result = tryFoldFP(FPOp::MaximumNum, {*C1, *C2}, Denormals);
           break;
         case Intrinsic::minimumnum:
-          Res = minimumnum(*C1, *C2);
+          Result = tryFoldFP(FPOp::MinimumNum, {*C1, *C2}, Denormals);
           break;
         case Intrinsic::maximum:
-          Res = maximum(*C1, *C2);
+          Result = tryFoldFP(FPOp::Maximum, {*C1, *C2}, Denormals);
           break;
         case Intrinsic::minimum:
-          Res = minimum(*C1, *C2);
+          Result = tryFoldFP(FPOp::Minimum, {*C1, *C2}, Denormals);
           break;
         default:
           llvm_unreachable("unexpected intrinsic ID");
         }
+        if (!Result)
+          break;
         // TODO: Conservatively intersecting FMF. If Res == C2, the transform
         //       was a simplification (so Arg0 and its original flags could
         //       propagate?)
         Value *V = Builder.CreateBinaryIntrinsic(
-            IID, X, ConstantFP::get(Arg0->getType(), Res),
+            IID, X, ConstantFP::get(Arg0->getType(), Result->Value),
             FMFSource::intersect(II, M));
         return replaceInstUsesWith(*II, V);
       }

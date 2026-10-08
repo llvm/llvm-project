@@ -599,11 +599,12 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
       // if C1 and C2 are constants.
       Value *A, *B;
       Constant *C1, *C2, *CRes;
-      if (Op0 && Op1 &&
-          Op0->getOpcode() == Opcode && Op1->getOpcode() == Opcode &&
+      DenormalMode DM = getDenormMode(I);
+      if (Op0 && Op1 && Op0->getOpcode() == Opcode &&
+          Op1->getOpcode() == Opcode &&
           match(Op0, m_OneUse(m_BinOp(m_Value(A), m_Constant(C1)))) &&
           match(Op1, m_OneUse(m_BinOp(m_Value(B), m_Constant(C2)))) &&
-          (CRes = ConstantFoldBinaryOpOperands(Opcode, C1, C2, DL))) {
+          (CRes = ConstantFoldBinaryOpOperands(Opcode, C1, C2, DL, DM))) {
         bool IsNUW = hasNoUnsignedWrap(I) &&
            hasNoUnsignedWrap(*Op0) &&
            hasNoUnsignedWrap(*Op1);
@@ -1888,17 +1889,18 @@ Instruction *InstCombinerImpl::foldBinOpSelectBinOp(BinaryOperator &Op) {
   Value *FV = SI->getFalseValue();
   Value *Input, *NewTV, *NewFV;
   Constant *Const2;
+  DenormalMode DM = getDenormMode(Op);
 
   if (TV->hasOneUse() && match(TV, m_BinOp(Op.getOpcode(), m_Specific(FV),
                                            m_ImmConstant(Const2)))) {
-    NewTV = ConstantFoldBinaryInstruction(Op.getOpcode(), Const, Const2);
+    NewTV = ConstantFoldBinaryInstruction(Op.getOpcode(), Const, Const2, DM);
     NewFV = Const;
     Input = FV;
   } else if (FV->hasOneUse() &&
              match(FV, m_BinOp(Op.getOpcode(), m_Specific(TV),
                                m_ImmConstant(Const2)))) {
     NewTV = Const;
-    NewFV = ConstantFoldBinaryInstruction(Op.getOpcode(), Const, Const2);
+    NewFV = ConstantFoldBinaryInstruction(Op.getOpcode(), Const, Const2, DM);
     Input = TV;
   } else
     return nullptr;
@@ -2116,8 +2118,9 @@ Instruction *InstCombinerImpl::foldBinopWithRecurrence(BinaryOperator &BO) {
     return nullptr;
 
   // Fold the recurrence constants.
-  auto *Init = ConstantFoldBinaryInstruction(Opc, Init0, Init1);
-  auto *C = ConstantFoldBinaryInstruction(Opc, C0, C1);
+  DenormalMode DM = getDenormMode(BO);
+  auto *Init = ConstantFoldBinaryInstruction(Opc, Init0, Init1, DM);
+  auto *C = ConstantFoldBinaryInstruction(Opc, C0, C1, DM);
   if (!Init || !C)
     return nullptr;
 
@@ -2276,7 +2279,8 @@ Instruction *InstCombinerImpl::foldBinopWithPhiOperands(BinaryOperator &BO) {
       return nullptr;
 
   // Fold constants for the predecessor block with constant incoming values.
-  Constant *NewC = ConstantFoldBinaryOpOperands(BO.getOpcode(), C0, C1, DL);
+  DenormalMode DM = getDenormMode(BO);
+  Constant *NewC = ConstantFoldBinaryOpOperands(BO.getOpcode(), C0, C1, DL, DM);
   if (!NewC)
     return nullptr;
 
@@ -2373,13 +2377,14 @@ Constant *InstCombinerImpl::unshuffleConstant(ArrayRef<int> ShMask, Constant *C,
 // Get the result of `Vector Op Splat` (or Splat Op Vector if \p SplatLHS).
 static Constant *constantFoldBinOpWithSplat(unsigned Opcode, Constant *Vector,
                                             Constant *Splat, bool SplatLHS,
-                                            const DataLayout &DL) {
+                                            const DataLayout &DL,
+                                            DenormalMode DM) {
   ElementCount EC = cast<VectorType>(Vector->getType())->getElementCount();
   Constant *LHS = ConstantVector::getSplat(EC, Splat);
   Constant *RHS = Vector;
   if (!SplatLHS)
     std::swap(LHS, RHS);
-  return ConstantFoldBinaryOpOperands(Opcode, LHS, RHS, DL);
+  return ConstantFoldBinaryOpOperands(Opcode, LHS, RHS, DL, DM);
 }
 
 template <Intrinsic::ID SpliceID>
@@ -2430,6 +2435,7 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
 
   BinaryOperator::BinaryOps Opcode = Inst.getOpcode();
   Value *LHS = Inst.getOperand(0), *RHS = Inst.getOperand(1);
+  DenormalMode DM = getDenormMode(Inst);
   assert(cast<VectorType>(LHS->getType())->getElementCount() ==
          cast<VectorType>(Inst.getType())->getElementCount());
   assert(cast<VectorType>(RHS->getType())->getElementCount() ==
@@ -2446,8 +2452,8 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
                               m_Value(Idx))))
       return nullptr;
     SubVector =
-        constantFoldBinOpWithSplat(Opcode, SubVector, Splat, SplatLHS, DL);
-    Dest = constantFoldBinOpWithSplat(Opcode, Dest, Splat, SplatLHS, DL);
+        constantFoldBinOpWithSplat(Opcode, SubVector, Splat, SplatLHS, DL, DM);
+    Dest = constantFoldBinOpWithSplat(Opcode, Dest, Splat, SplatLHS, DL, DM);
     if (!SubVector || !Dest)
       return nullptr;
     auto *InsertVector =

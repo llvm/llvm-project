@@ -158,6 +158,7 @@ add_llvm_component_library(LLVMSupport
   AMDGPUMetadata.cpp
   APFixedPoint.cpp
   APFloat.cpp
+  FPFold.cpp
   APInt.cpp
   APSInt.cpp
   ARMBuildAttributes.cpp

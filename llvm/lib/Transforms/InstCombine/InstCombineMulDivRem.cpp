@@ -834,11 +834,12 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
       match(Op0, m_AllowReassoc(m_BinOp(Op0BinOp)))) {
     // Everything in this scope folds I with Op0, intersecting their FMF.
     FastMathFlags FMF = I.getFastMathFlags() & Op0BinOp->getFastMathFlags();
+    auto DM = getDenormMode(I);
     Constant *C1;
     if (match(Op0, m_OneUse(m_FDiv(m_Constant(C1), m_Value(X))))) {
       // (C1 / X) * C --> (C * C1) / X
       Constant *CC1 =
-          ConstantFoldBinaryOpOperands(Instruction::FMul, C, C1, DL);
+          ConstantFoldBinaryOpOperands(Instruction::FMul, C, C1, DL, DM);
       if (CC1 && CC1->isNormalFP())
         return BinaryOperator::CreateFDivFMF(CC1, X, FMF);
     }
@@ -846,14 +847,14 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
       // FIXME: This seems like it should also be checking for arcp
       // (X / C1) * C --> X * (C / C1)
       Constant *CDivC1 =
-          ConstantFoldBinaryOpOperands(Instruction::FDiv, C, C1, DL);
+          ConstantFoldBinaryOpOperands(Instruction::FDiv, C, C1, DL, DM);
       if (CDivC1 && CDivC1->isNormalFP())
         return BinaryOperator::CreateFMulFMF(X, CDivC1, FMF);
 
       // If the constant was a denormal, try reassociating differently.
       // (X / C1) * C --> X / (C1 / C)
       Constant *C1DivC =
-          ConstantFoldBinaryOpOperands(Instruction::FDiv, C1, C, DL);
+          ConstantFoldBinaryOpOperands(Instruction::FDiv, C1, C, DL, DM);
       if (C1DivC && Op0->hasOneUse() && C1DivC->isNormalFP())
         return BinaryOperator::CreateFDivFMF(X, C1DivC, FMF);
     }
@@ -864,7 +865,7 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
     if (match(Op0, m_OneUse(m_FAdd(m_Value(X), m_Constant(C1))))) {
       // (X + C1) * C --> (X * C) + (C * C1)
       if (Constant *CC1 =
-              ConstantFoldBinaryOpOperands(Instruction::FMul, C, C1, DL)) {
+              ConstantFoldBinaryOpOperands(Instruction::FMul, C, C1, DL, DM)) {
         Value *XC = Builder.CreateFMulFMF(X, C, FMF);
         return BinaryOperator::CreateFAddFMF(XC, CC1, FMF);
       }
@@ -872,7 +873,7 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
     if (match(Op0, m_OneUse(m_FSub(m_Constant(C1), m_Value(X))))) {
       // (C1 - X) * C --> (C * C1) - (X * C)
       if (Constant *CC1 =
-              ConstantFoldBinaryOpOperands(Instruction::FMul, C, C1, DL)) {
+              ConstantFoldBinaryOpOperands(Instruction::FMul, C, C1, DL, DM)) {
         Value *XC = Builder.CreateFMulFMF(X, C, FMF);
         return BinaryOperator::CreateFSubFMF(CC1, XC, FMF);
       }
@@ -2069,13 +2070,12 @@ Instruction *InstCombinerImpl::foldFDivConstantDivisor(BinaryOperator &I) {
   if (!(C->hasExactInverseFP() || (I.hasAllowReciprocal() && C->isNormalFP())))
     return nullptr;
 
-  // Disallow denormal constants because we don't know what would happen
-  // on all targets.
-  // TODO: Use Intrinsic::canonicalize or let function attributes tell us that
-  // denorms are flushed?
+  auto DM = getDenormMode(I);
   auto *RecipC = ConstantFoldBinaryOpOperands(
-      Instruction::FDiv, ConstantFP::get(I.getType(), 1.0), C, DL);
-  if (!RecipC || !RecipC->isNormalFP())
+      Instruction::FDiv, ConstantFP::get(I.getType(), 1.0), C, DL, DM);
+  // The reciprocal must survive both folding and the multiply's input handling.
+  if (!RecipC || !RecipC->isFiniteNonZeroFP() ||
+      (DM.Input != DenormalMode::IEEE && !RecipC->isNormalFP()))
     return nullptr;
 
   // X / C --> X * (1 / C)
@@ -2099,13 +2099,14 @@ static Instruction *foldFDivConstantDividend(BinaryOperator &I) {
     return nullptr;
 
   // Try to reassociate C / X expressions where X includes another constant.
+  auto DM = getDenormMode(I);
   Constant *C2, *NewC = nullptr;
   if (match(I.getOperand(1), m_FMul(m_Value(X), m_Constant(C2)))) {
     // C / (X * C2) --> (C / C2) / X
-    NewC = ConstantFoldBinaryOpOperands(Instruction::FDiv, C, C2, DL);
+    NewC = ConstantFoldBinaryOpOperands(Instruction::FDiv, C, C2, DL, DM);
   } else if (match(I.getOperand(1), m_FDiv(m_Value(X), m_Constant(C2)))) {
     // C / (X / C2) --> (C * C2) / X
-    NewC = ConstantFoldBinaryOpOperands(Instruction::FMul, C, C2, DL);
+    NewC = ConstantFoldBinaryOpOperands(Instruction::FMul, C, C2, DL, DM);
   }
   // Disallow denormal constants because we don't know what would happen
   // on all targets.

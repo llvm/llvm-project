@@ -30,12 +30,14 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/IR/ConstantFold.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DivisionByConstantInfo.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FPFold.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cmath>
@@ -1742,10 +1744,11 @@ bool CombinerHelper::tryCombineMemCpyFamily(MachineInstr &MI,
          LegalizerHelper::LegalizeResult::Legalized;
 }
 
-static APFloat constantFoldFpUnary(const MachineInstr &MI,
-                                   const MachineRegisterInfo &MRI,
-                                   const APFloat &Val) {
+static std::optional<APFloat>
+constantFoldFpUnary(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                    const APFloat &Val) {
   APFloat Result(Val);
+  auto DM = MI.getMF()->getDenormalMode(Val.getSemantics());
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unexpected opcode!");
@@ -1758,25 +1761,18 @@ static APFloat constantFoldFpUnary(const MachineInstr &MI,
     return Result;
   }
   case TargetOpcode::G_FCEIL:
-    Result.roundToIntegral(APFloat::rmTowardPositive);
-    return Result;
+    return getFPValue(tryFoldFP(FPOp::Ceil, {Val}, DM));
   case TargetOpcode::G_FFLOOR:
-    Result.roundToIntegral(APFloat::rmTowardNegative);
-    return Result;
+    return getFPValue(tryFoldFP(FPOp::Floor, {Val}, DM));
   case TargetOpcode::G_INTRINSIC_TRUNC:
-    Result.roundToIntegral(APFloat::rmTowardZero);
-    return Result;
+    return getFPValue(tryFoldFP(FPOp::Trunc, {Val}, DM));
   case TargetOpcode::G_INTRINSIC_ROUND:
-    Result.roundToIntegral(APFloat::rmNearestTiesToAway);
-    return Result;
+    return getFPValue(tryFoldFP(FPOp::Round, {Val}, DM));
   case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
-    Result.roundToIntegral(APFloat::rmNearestTiesToEven);
-    return Result;
+    return getFPValue(tryFoldFP(FPOp::RoundEven, {Val}, DM));
   case TargetOpcode::G_FRINT:
   case TargetOpcode::G_FNEARBYINT:
-    // Use default rounding mode (round to nearest, ties to even)
-    Result.roundToIntegral(APFloat::rmNearestTiesToEven);
-    return Result;
+    return getFPValue(tryFoldFP(FPOp::RoundEven, {Val}, DM));
   case TargetOpcode::G_FPEXT:
   case TargetOpcode::G_FPTRUNC: {
     bool Unused;
@@ -1808,12 +1804,14 @@ static APFloat constantFoldFpUnary(const MachineInstr &MI,
   return Result;
 }
 
-void CombinerHelper::applyCombineConstantFoldFpUnary(
+bool CombinerHelper::tryCombineConstantFoldFpUnary(
     MachineInstr &MI, const ConstantFP *Cst) const {
-  APFloat Folded = constantFoldFpUnary(MI, MRI, Cst->getValue());
-  const ConstantFP *NewCst = ConstantFP::get(Builder.getContext(), Folded);
-  Builder.buildFConstant(MI.getOperand(0), *NewCst);
-  MI.eraseFromParent();
+  if (auto Folded = constantFoldFpUnary(MI, MRI, Cst->getValue())) {
+    Builder.buildFConstant(MI.getOperand(0), *Folded);
+    MI.eraseFromParent();
+    return true;
+  }
+  return false;
 }
 
 bool CombinerHelper::matchPtrAddImmedChain(MachineInstr &MI,
@@ -5263,11 +5261,11 @@ bool CombinerHelper::matchConstantFoldFMA(MachineInstr &MI,
   if (!Op1Cst)
     return false;
 
-  APFloat Op1F = Op1Cst->getValueAPF();
-  Op1F.fusedMultiplyAdd(Op2Cst->getValueAPF(), Op3Cst->getValueAPF(),
-                        APFloat::rmNearestTiesToEven);
-  MatchInfo = ConstantFP::get(MI.getMF()->getFunction().getContext(), Op1F);
-  return true;
+  APFloat Args[] = {Op1Cst->getValueAPF(), Op2Cst->getValueAPF(),
+                    Op3Cst->getValueAPF()};
+  auto DM = MI.getMF()->getDenormalMode(Args[0].getSemantics());
+  MatchInfo = tryFoldFPConst(Op1Cst->getType(), FPOp::FMA, Args, DM);
+  return MatchInfo != nullptr;
 }
 
 bool CombinerHelper::matchNarrowBinopFeedingAnd(

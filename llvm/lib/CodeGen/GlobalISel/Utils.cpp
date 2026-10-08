@@ -34,6 +34,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/Support/FPFold.h"
 #include "llvm/Support/UndefPoison.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
@@ -740,37 +741,33 @@ llvm::ConstantFoldFPBinOp(unsigned Opcode, const Register Op1,
 
   APFloat C1 = Op1Cst->getValueAPF();
   const APFloat &C2 = Op2Cst->getValueAPF();
+  DenormalMode Denormals = MRI.getMF().getDenormalMode(C1.getSemantics());
   switch (Opcode) {
   case TargetOpcode::G_FADD:
-    C1.add(C2, APFloat::rmNearestTiesToEven);
-    return C1;
+    return getFPValue(tryFoldFP(FPOp::Add, {C1, C2}, Denormals));
   case TargetOpcode::G_FSUB:
-    C1.subtract(C2, APFloat::rmNearestTiesToEven);
-    return C1;
+    return getFPValue(tryFoldFP(FPOp::Sub, {C1, C2}, Denormals));
   case TargetOpcode::G_FMUL:
-    C1.multiply(C2, APFloat::rmNearestTiesToEven);
-    return C1;
+    return getFPValue(tryFoldFP(FPOp::Mul, {C1, C2}, Denormals));
   case TargetOpcode::G_FDIV:
-    C1.divide(C2, APFloat::rmNearestTiesToEven);
-    return C1;
+    return getFPValue(tryFoldFP(FPOp::Div, {C1, C2}, Denormals));
   case TargetOpcode::G_FREM:
-    C1.mod(C2);
-    return C1;
+    return getFPValue(tryFoldFP(FPOp::FRem, {C1, C2}, Denormals));
   case TargetOpcode::G_FCOPYSIGN:
     C1.copySign(C2);
     return C1;
   case TargetOpcode::G_FMINNUM:
-    return minnum(C1, C2);
+    return getFPValue(tryFoldFP(FPOp::MinNum, {C1, C2}, Denormals));
   case TargetOpcode::G_FMAXNUM:
-    return maxnum(C1, C2);
+    return getFPValue(tryFoldFP(FPOp::MaxNum, {C1, C2}, Denormals));
   case TargetOpcode::G_FMINIMUM:
-    return minimum(C1, C2);
+    return getFPValue(tryFoldFP(FPOp::Minimum, {C1, C2}, Denormals));
   case TargetOpcode::G_FMAXIMUM:
-    return maximum(C1, C2);
+    return getFPValue(tryFoldFP(FPOp::Maximum, {C1, C2}, Denormals));
   case TargetOpcode::G_FMINIMUMNUM:
-    return minimumnum(C1, C2);
+    return getFPValue(tryFoldFP(FPOp::MinimumNum, {C1, C2}, Denormals));
   case TargetOpcode::G_FMAXIMUMNUM:
-    return maximumnum(C1, C2);
+    return getFPValue(tryFoldFP(FPOp::MaximumNum, {C1, C2}, Denormals));
   case TargetOpcode::G_FMINNUM_IEEE:
   case TargetOpcode::G_FMAXNUM_IEEE:
     // FIXME: These operations were unfortunately named. fminnum/fmaxnum do not

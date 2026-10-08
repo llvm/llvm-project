@@ -2321,12 +2321,14 @@ Value *InstCombinerImpl::foldSelectWithConstOpToBinOp(ICmpInst *Cmp,
   Value *RHS;
   SelectPatternFlavor SPF;
   const DataLayout &DL = Cmp->getDataLayout();
+  auto DM = getDenormMode(C1->getType(), Cmp);
   auto Flipped = getFlippedStrictnessPredicateAndConstant(Predicate, C1);
 
   auto FoldBinaryOpOrIntrinsic = [&](Constant *LHS, Constant *RHS) {
     return IsIntrinsic
-               ? ConstantFoldIntrinsic(Opcode, {LHS, RHS}, LHS->getType(), DL)
-               : ConstantFoldBinaryOpOperands(Opcode, LHS, RHS, DL);
+               ? ConstantFoldIntrinsic(Opcode, {LHS, RHS}, LHS->getType(), DL,
+                                       Cmp->getFunction())
+               : ConstantFoldBinaryOpOperands(Opcode, LHS, RHS, DL, DM);
   };
 
   if (C3 == FoldBinaryOpOrIntrinsic(C1, C2)) {

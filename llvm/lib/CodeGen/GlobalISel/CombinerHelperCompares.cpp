@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/FPFold.h"
 
 #define DEBUG_TYPE "gi-combiner"
 
@@ -73,7 +74,11 @@ bool CombinerHelper::constantFoldFCmp(const GFCmp &FCmp,
   APFloat LHS = LHSCst.getScalarValue();
   APFloat RHS = RHSCst.getScalarValue();
 
-  bool Result = FCmpInst::compare(LHS, RHS, Pred);
+  auto DM = MRI.getMF().getDenormalMode(LHS.getSemantics());
+  auto CompareResult = tryFoldFCmp(LHS, RHS, DM);
+  if (!CompareResult)
+    return false;
+  bool Result = FCmpInst::compare(*CompareResult, Pred);
 
   MatchInfo = [=](MachineIRBuilder &B) {
     if (Result)

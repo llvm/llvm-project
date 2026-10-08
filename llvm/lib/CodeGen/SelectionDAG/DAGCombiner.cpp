@@ -63,6 +63,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FPFold.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -20232,20 +20233,22 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
   if (auto *N1CFP = isConstOrConstSplatFP(N1, true)) {
     // Compute the reciprocal 1.0 / c2.
     const APFloat &N1APF = N1CFP->getValueAPF();
-    APFloat Recip = APFloat::getOne(N1APF.getSemantics());
-    APFloat::opStatus st = Recip.divide(N1APF, APFloat::rmNearestTiesToEven);
+    APFloat One = APFloat::getOne(N1APF.getSemantics());
+    auto Recip = tryFoldFP(FPOp::Div, {One, N1APF}, DAG.getDenormalMode(VT));
+    APFloat::opStatus st = Recip ? Recip->Status : APFloat::opInvalidOp;
     // Only do the transform if the reciprocal is a legal fp immediate that
     // isn't too nasty (eg NaN, denormal, ...).
-    if (((st == APFloat::opOK && !Recip.isDenormal()) ||
+    if (Recip && Recip->Value.isNormal() &&
+        (st == APFloat::opOK ||
          (st == APFloat::opInexact && Flags.hasAllowReciprocal())) &&
         (!LegalOperations ||
          // FIXME: custom lowering of ConstantFP might fail (see e.g. ARM
          // backend)... we should handle this gracefully after Legalize.
          // TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT) ||
          TLI.isOperationLegal(ISD::ConstantFP, VT) ||
-         TLI.isFPImmLegal(Recip, VT, ForCodeSize)))
+         TLI.isFPImmLegal(Recip->Value, VT, ForCodeSize)))
       return DAG.getNode(ISD::FMUL, DL, VT, N0,
-                         DAG.getConstantFP(Recip, DL, VT));
+                         DAG.getConstantFP(Recip->Value, DL, VT));
   }
 
   if (Flags.hasAllowReciprocal()) {

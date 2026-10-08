@@ -225,8 +225,7 @@ define float @test_rcp_rm_f_neg_subnorm() {
 
 define float @test_rcp_rm_ftz_f_neg_subnorm() {
 ; CHECK-LABEL: define float @test_rcp_rm_ftz_f_neg_subnorm() {
-; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.rcp.rm.ftz.f(float f0x807FFFFF)
-; CHECK-NEXT:    ret float [[RES]]
+; CHECK-NEXT:    ret float -inf
 ;
   %res = call float @llvm.nvvm.rcp.rm.ftz.f(float 0xB80FFFFFC0000000)
   ret float %res
@@ -277,8 +276,7 @@ define float @test_rcp_rn_f_neg_subnorm() {
 
 define float @test_rcp_rn_ftz_f_neg_subnorm() {
 ; CHECK-LABEL: define float @test_rcp_rn_ftz_f_neg_subnorm() {
-; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.rcp.rn.ftz.f(float f0x807FFFFF)
-; CHECK-NEXT:    ret float [[RES]]
+; CHECK-NEXT:    ret float -inf
 ;
   %res = call float @llvm.nvvm.rcp.rn.ftz.f(float 0xB80FFFFFC0000000)
   ret float %res
@@ -329,8 +327,7 @@ define float @test_rcp_rp_f_neg_subnorm() {
 
 define float @test_rcp_rp_ftz_f_neg_subnorm() {
 ; CHECK-LABEL: define float @test_rcp_rp_ftz_f_neg_subnorm() {
-; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.rcp.rp.ftz.f(float f0x807FFFFF)
-; CHECK-NEXT:    ret float [[RES]]
+; CHECK-NEXT:    ret float -inf
 ;
   %res = call float @llvm.nvvm.rcp.rp.ftz.f(float 0xB80FFFFFC0000000)
   ret float %res
@@ -381,8 +378,7 @@ define float @test_rcp_rz_f_neg_subnorm() {
 
 define float @test_rcp_rz_ftz_f_neg_subnorm() {
 ; CHECK-LABEL: define float @test_rcp_rz_ftz_f_neg_subnorm() {
-; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.rcp.rz.ftz.f(float f0x807FFFFF)
-; CHECK-NEXT:    ret float [[RES]]
+; CHECK-NEXT:    ret float -inf
 ;
   %res = call float @llvm.nvvm.rcp.rz.ftz.f(float 0xB80FFFFFC0000000)
   ret float %res
