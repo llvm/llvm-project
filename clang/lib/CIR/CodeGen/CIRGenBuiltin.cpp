@@ -1831,8 +1831,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
         builder.createIntCast(result, convertType(e->getType())));
   }
   case Builtin::BI__builtin_coro_align:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_align NYI");
-    return getUndefRValue(e->getType());
+    return RValue::get(emitCoroAlignBuiltinCall(e).getResult());
 
   case Builtin::BI__builtin_coro_frame: {
     return emitCoroutineFrame();
