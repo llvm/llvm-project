@@ -1332,11 +1332,11 @@ MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
     MachineRegisterInfo *MRI = &getParent()->getRegInfo();
     for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
       Register Reg = Register::index2VirtReg(i);
-      if (PHISrcRegs.count(Reg) || !LIS->hasInterval(Reg))
+      if (!LIS->hasInterval(Reg))
         continue;
 
       LiveInterval &LI = LIS->getInterval(Reg);
-      if (!LI.liveAt(PrevIndex))
+      if (!LI.liveAt(PrevIndex) || PHISrcRegs.count(Reg))
         continue;
 
       bool isLiveOut = LI.liveAt(LIS->getMBBStartIdx(Succ));
