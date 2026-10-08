@@ -121,6 +121,9 @@ infrastructure are described first, followed by tool-specific sections.
   user config) by default. Pass `--enable-config=false` to restore the previous
   behavior.
 
+- Added support for loading dynamic plugins via the `-load` command-line
+  option.
+
 ### Improvements to clang-doc
 
 ### Improvements to clang-query
@@ -294,6 +297,11 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/performance/inefficient-vector-operation>` by adding the
   {option}`ForRangeLoopClasses` to configure container classes that can be used
   as sources in range-based `for` loops.
+
+- Improved {doc}`performance-prefer-single-char-overloads
+  <clang-tidy/checks/performance/prefer-single-char-overloads>` check to
+  avoid offering fix-its for string literals originating from macro
+  expansions.
 
 - Improved {doc}`readability-convert-member-functions-to-static
   <clang-tidy/checks/readability/convert-member-functions-to-static>` check by

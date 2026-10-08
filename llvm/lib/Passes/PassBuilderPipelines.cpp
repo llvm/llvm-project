@@ -329,6 +329,24 @@ static CoroConditionalWrapper buildCoroWrapper(ThinOrFullLTOPhase Phase) {
   return CoroConditionalWrapper(std::move(CoroPM));
 }
 
+static InlineParams getInlineParamsFromOptLevel(OptimizationLevel Level) {
+  return getInlineParamsFromOptLevel(static_cast<unsigned>(Level));
+}
+
+static void addModuleInlinerPass(ModulePassManager &MPM,
+                                 const PassesOptions &Opts,
+                                 OptimizationLevel Level,
+                                 ThinOrFullLTOPhase Phase) {
+  InlineParams IP = ::getInlineParamsFromOptLevel(Level);
+  if (Opts.enable_module_inliner)
+    MPM.addPass(ModuleInlinerPass(IP, Opts.enable_ml_inliner, Phase));
+  else
+    MPM.addPass(ModuleInlinerWrapperPass(
+        IP,
+        /* MandatoryFirst */ true,
+        InlineContext{Phase, InlinePass::CGSCCInliner}));
+}
+
 // TODO: Investigate the cost/benefit of tail call elimination on debugging.
 FunctionPassManager
 PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
@@ -802,10 +820,6 @@ void PassBuilder::addPGOInstrPassesForO0(ModulePassManager &MPM,
   Options.UseBFIInPromotion = IsCS;
   Options.Atomic = AtomicCounterUpdate;
   MPM.addPass(InstrProfilingLoweringPass(Options, IsCS));
-}
-
-static InlineParams getInlineParamsFromOptLevel(OptimizationLevel Level) {
-  return getInlineParamsFromOptLevel(static_cast<unsigned>(Level));
 }
 
 ModuleInlinerWrapperPass
@@ -1582,16 +1596,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
     // Also, we can't run devirtualization before inlining because the
     // devirtualization depends on the passes optimizing/eliminating vtable GVs
     // and those passes are only effective after inlining.
-    if (Opts.enable_module_inliner) {
-      MPM.addPass(ModuleInlinerPass(::getInlineParamsFromOptLevel(Level),
-                                    Opts.enable_ml_inliner,
-                                    ThinOrFullLTOPhase::None));
-    } else {
-      MPM.addPass(ModuleInlinerWrapperPass(
-          ::getInlineParamsFromOptLevel(Level),
-          /* MandatoryFirst */ true,
-          InlineContext{ThinOrFullLTOPhase::None, InlinePass::CGSCCInliner}));
-    }
+    addModuleInlinerPass(MPM, Opts, Level, ThinOrFullLTOPhase::None);
   }
 
   // Attach !implicit.ref metadata from all functions to copyright strings.
@@ -2044,17 +2049,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // valuable as the inliner doesn't currently care whether it is inlining an
   // invoke or a call.
   // Run the inliner now.
-  if (Opts.enable_module_inliner) {
-    MPM.addPass(ModuleInlinerPass(::getInlineParamsFromOptLevel(Level),
-                                  Opts.enable_ml_inliner,
-                                  ThinOrFullLTOPhase::FullLTOPostLink));
-  } else {
-    MPM.addPass(ModuleInlinerWrapperPass(
-        ::getInlineParamsFromOptLevel(Level),
-        /* MandatoryFirst */ true,
-        InlineContext{ThinOrFullLTOPhase::FullLTOPostLink,
-                      InlinePass::CGSCCInliner}));
-  }
+  addModuleInlinerPass(MPM, Opts, Level, ThinOrFullLTOPhase::FullLTOPostLink);
 
   // Perform context disambiguation after inlining, since that would reduce the
   // amount of additional cloning required to distinguish the allocation
