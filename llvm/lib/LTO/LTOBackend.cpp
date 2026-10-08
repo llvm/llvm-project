@@ -715,7 +715,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   // When linking an ELF shared object, dso_local should be dropped. We
   // conservatively do this for -fpic.
   bool ClearDSOLocalOnDeclarations =
-      TM->getTargetTriple().isOSBinFormatELF() &&
+      Mod.getTargetTriple().isOSBinFormatELF() &&
       TM->getRelocationModel() != Reloc::Static &&
       Mod.getPIELevel() == PIELevel::Default;
   renameModuleForThinLTO(Mod, CombinedIndex, ClearDSOLocalOnDeclarations);

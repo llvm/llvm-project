@@ -102,7 +102,7 @@ private:
   };
 
   SocketSimpleRemoteCA(Session &S, SocketHandle Sock, SocketHandle WakeRead,
-                       SocketHandle WakeWrite)
+                       SocketHandle WakeWrite) noexcept
       : SimpleRemoteCA(S), Sock(std::move(Sock)), WakeRead(std::move(WakeRead)),
         WakeWrite(std::move(WakeWrite)) {}
 

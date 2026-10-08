@@ -32,6 +32,7 @@
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "clang/CodeGenUtils/ExprUtils.h"
+#include "clang/CodeGenUtils/RecordLayoutUtils.h"
 #include <optional>
 
 using namespace clang;
@@ -77,7 +78,7 @@ Address CIRGenFunction::emitAddrOfFieldStorage(Address base,
   bool addressedByFieldIndex =
       field->isPotentiallyOverlapping()
           ? layout.hasCIRField(field)
-          : !isEmptyFieldForLayout(getContext(), field);
+          : !CodeGenUtils::isEmptyFieldForLayout(getContext(), field);
   if (!addressedByFieldIndex)
     return emitAddrOfZeroSizeField(*this, base, field);
 
@@ -173,7 +174,9 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
             convertTypeForMem(expr->getType()->getPointeeType());
         addr = getBuilder().createElementBitCast(getLoc(expr->getSourceRange()),
                                                  addr, eltTy);
-        assert(!cir::MissingFeatures::addressSpace());
+        if (ce->getCastKind() == CK_AddressSpaceConversion)
+          addr = addr.withPointer(performAddrSpaceCast(
+              addr.getPointer(), convertType(expr->getType())));
 
         return addr;
       }
@@ -983,8 +986,26 @@ static LValue emitFunctionDeclLValue(CIRGenFunction &cgf, const Expr *e,
 
   mlir::Type fnTy = funcOp.getFunctionType();
   mlir::Type ptrTy = cir::PointerType::get(fnTy);
-  mlir::Value addr = cir::GetGlobalOp::create(cgf.getBuilder(), loc, ptrTy,
-                                              funcOp.getSymName());
+  mlir::Value addr;
+
+  // On the HIP host, a reference to a __global__ kernel must resolve to the
+  // address of the kernel handle registered with the offload runtime, not
+  // the device stub's own address. CUDA uses the device stub itself as the
+  // kernel handle.
+  if (cgf.cgm.getLangOpts().HIP && !cgf.cgm.getLangOpts().CUDAIsDevice &&
+      fd->hasAttr<CUDAGlobalAttr>()) {
+    auto handle = mlir::cast<cir::GlobalOp>(
+        cgf.cgm.getCUDARuntime().getKernelHandle(funcOp, gd));
+    cir::PointerType handlePtrTy = cir::PointerType::get(handle.getSymType());
+    mlir::Value handleAddr = cir::GetGlobalOp::create(
+        cgf.getBuilder(), loc, handlePtrTy, handle.getSymName());
+    addr = cir::CastOp::create(cgf.getBuilder(), loc, ptrTy,
+                               cir::CastKind::bitcast, handleAddr);
+  }
+
+  if (!addr)
+    addr = cir::GetGlobalOp::create(cgf.getBuilder(), loc, ptrTy,
+                                    funcOp.getSymName());
 
   if (funcOp.getFunctionType() != cgf.convertType(fd->getType())) {
     fnTy = cgf.convertType(fd->getType());
@@ -1144,7 +1165,7 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
           cgm.getOrCreateStaticVarDecl(*vd, cgm.getCIRLinkageVarDefinition(vd));
       mlir::Value getGlobVal = builder.createGetGlobal(var);
       auto getGlob = getGlobVal.getDefiningOp<cir::GetGlobalOp>();
-      getGlob.setStaticLocal(var.getStaticLocalGuard().has_value());
+      getGlob.setStaticLocal(var.getDynamicInitGuard().has_value());
       getGlob.setTls(vd->getTLSKind() != VarDecl::TLS_None);
       addr = Address(cgm.castGlobalToDeclAddrSpace(getGlob, *vd),
                      convertTypeForMem(vd->getType()),
@@ -2446,7 +2467,24 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
   }
 
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
-  assert(!cir::MissingFeatures::hip());
+
+  // HIP function pointer contains kernel handle when it is used in triple
+  // chevron. The kernel stub needs to be loaded from kernel handle and used
+  // as callee.
+  const clang::Decl *targetDecl =
+      origCallee.getAbstractInfo().getCalleeDecl().getDecl();
+  if (getLangOpts().HIP && !getLangOpts().CUDAIsDevice &&
+      isa<CUDAKernelCallExpr>(e) &&
+      (!targetDecl || !isa<FunctionDecl>(targetDecl))) {
+    mlir::Value handleAddr = callee.getFunctionPointer()->getResult(0);
+    mlir::Location loc = getLoc(e->getSourceRange());
+    auto handlePtrTy = mlir::cast<cir::PointerType>(handleAddr.getType());
+    mlir::Value handleAddrAddr =
+        builder.createBitcast(handleAddr, cir::PointerType::get(handlePtrTy));
+    cir::LoadOp stub = builder.createLoad(
+        loc, Address(handleAddrAddr, handlePtrTy, getPointerAlign()));
+    callee.setFunctionPointer(stub.getOperation());
+  }
 
   cir::CIRCallOpInterface callOp;
   RValue callResult = emitCall(funcInfo, callee, returnValue, args, &callOp,
@@ -2913,6 +2951,15 @@ Address CIRGenFunction::maybeCastStackAddressSpace(
   if (!destAddrSpace)
     destAddrSpace = cir::toCIRAddressSpaceAttr(
         getMLIRContext(), cgm.getLangTempAllocaAddressSpace());
+
+  // Resolve the default address space through getTargetAddressSpace, as
+  // classic CodeGen does and as CIRGenTypes::getPointerAddressSpace does for
+  // default pointer types. This is only non-zero for targets where the default
+  // address space is not 0 (e.g. generic for SYCL device code).
+  if (!cir::normalizeDefaultAddressSpace(destAddrSpace))
+    if (unsigned targetAS = getContext().getTargetAddressSpace(LangAS::Default))
+      destAddrSpace =
+          cir::TargetAddressSpaceAttr::get(&getMLIRContext(), targetAS);
 
   mlir::ptr::MemorySpaceAttrInterface srcAddrSpace = getCIRAllocaAddressSpace();
   // Alloca always returns a pointer in alloca address space, which may

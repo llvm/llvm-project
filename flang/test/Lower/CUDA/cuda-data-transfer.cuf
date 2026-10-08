@@ -520,12 +520,13 @@ end subroutine
 ! CHECK: %[[ALLOC_D:.*]] = cuf.alloc !fir.array<?x?x?xf16>, %{{.*}}, %{{.*}}, %{{.*}} : index, index, index uniq_name("_QFsub26Ed") bindc_name("d") data_attr(device) -> !fir.ref<!fir.array<?x?x?xf16>>
 ! CHECK: %[[D:.*]]:2 = hlfir.declare %[[ALLOC_D]](%{{.*}}) uniq_name("_QFsub26Ed") data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.array<?x?x?xf16>>, !fir.shape<3>) -> (!fir.box<!fir.array<?x?x?xf16>>, !fir.ref<!fir.array<?x?x?xf16>>)
 ! CHECK: %[[HD:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFsub26Ehd") : (!fir.ref<!fir.array<?x?x?xf32>>, !fir.shape<3>) -> (!fir.box<!fir.array<?x?x?xf32>>, !fir.ref<!fir.array<?x?x?xf32>>)
-! CHECK: %[[ALLOC:.*]] = fir.allocmem !fir.array<?x?x?xf16>, %8, %13, %18 <{bindc_name = ".tmp", uniq_name = ""}>
+! CHECK: %[[ALLOC:.*]] = fir.allocmem !fir.array<?x?x?xf16>, %{{.*}}, %{{.*}}, %{{.*}} <{bindc_name = ".tmp", uniq_name = ""}>
 ! CHECK: %[[TEMP:.*]]:2 = hlfir.declare %[[ALLOC]](%{{.*}}) uniq_name(".tmp") : (!fir.heap<!fir.array<?x?x?xf16>>, !fir.shape<3>) -> (!fir.box<!fir.array<?x?x?xf16>>, !fir.heap<!fir.array<?x?x?xf16>>)
-! CHECK: cuf.data_transfer %[[D]]#0 to %[[TEMP]]#0 transfer_kind(device_host) : !fir.box<!fir.array<?x?x?xf16>>, !fir.box<!fir.array<?x?x?xf16>>
+! CHECK: %[[TEMP_D:.*]]:2 = hlfir.declare %[[TEMP]]#1(%{{.*}}) uniq_name("_QFsub26Ed") data_attr(#cuf.cuda<device>) : (!fir.heap<!fir.array<?x?x?xf16>>, !fir.shape<3>) -> (!fir.box<!fir.array<?x?x?xf16>>, !fir.heap<!fir.array<?x?x?xf16>>)
+! CHECK: cuf.data_transfer %[[D]]#1 to %[[TEMP]]#0 transfer_kind(device_host) : !fir.ref<!fir.array<?x?x?xf16>>, !fir.box<!fir.array<?x?x?xf16>>
 ! CHECK: %[[ELE:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<3>) -> !hlfir.expr<?x?x?xf32> {
 ! CHECK: ^bb0(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index):
-! CHECK: %[[DESIGNATE:.*]] = hlfir.designate %[[TEMP]]#0 (%{{.*}}, %{{.*}}, %{{.*}})  : (!fir.box<!fir.array<?x?x?xf16>>, index, index, index) -> !fir.ref<f16>
+! CHECK: %[[DESIGNATE:.*]] = hlfir.designate %[[TEMP_D]]#0 (%{{.*}}, %{{.*}}, %{{.*}})  : (!fir.box<!fir.array<?x?x?xf16>>, index, index, index) -> !fir.ref<f16>
 ! CHECK: %[[LOAD:.*]] = fir.load %[[DESIGNATE]] : !fir.ref<f16>
 ! CHECK: %[[CONV:.*]] = fir.convert %[[LOAD]] : (f16) -> f32
 ! CHECK: hlfir.yield_element %[[CONV]] : f32
@@ -546,10 +547,11 @@ end subroutine
 ! CHECK: %[[HD:.*]]:2 = hlfir.declare %[[ALLOC_HD]](%{{.*}}) uniq_name("_QFsub27Ehd") : (!fir.ref<!fir.array<10x20x30xf32>>, !fir.shape<3>) -> (!fir.ref<!fir.array<10x20x30xf32>>, !fir.ref<!fir.array<10x20x30xf32>>)
 ! CHECK: %[[ALLOC_TEMP:.*]] = fir.allocmem !fir.array<10x20x30xf16> <{bindc_name = ".tmp", uniq_name = ""}>
 ! CHECK: %[[TEMP:.*]]:2 = hlfir.declare %[[ALLOC_TEMP]](%{{.*}}) uniq_name(".tmp") : (!fir.heap<!fir.array<10x20x30xf16>>, !fir.shape<3>) -> (!fir.heap<!fir.array<10x20x30xf16>>, !fir.heap<!fir.array<10x20x30xf16>>)
+! CHECK: %[[TEMP_D:.*]]:2 = hlfir.declare %[[TEMP]]#0(%{{.*}}) uniq_name("_QFsub27Ed") data_attr(#cuf.cuda<device>) : (!fir.heap<!fir.array<10x20x30xf16>>, !fir.shape<3>) -> (!fir.heap<!fir.array<10x20x30xf16>>, !fir.heap<!fir.array<10x20x30xf16>>)
 ! CHECK: cuf.data_transfer %[[D]]#0 to %[[TEMP]]#0 transfer_kind(device_host) : !fir.ref<!fir.array<10x20x30xf16>>, !fir.heap<!fir.array<10x20x30xf16>>
 ! CHECK: %[[ELE:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<3>) -> !hlfir.expr<10x20x30xf32> {
 ! CHECK: ^bb0(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index):
-! CHECK: %[[DESIGNATE:.*]] = hlfir.designate %[[TEMP]]#0 (%{{.*}}, %{{.*}}, %{{.*}})  : (!fir.heap<!fir.array<10x20x30xf16>>, index, index, index) -> !fir.ref<f16>
+! CHECK: %[[DESIGNATE:.*]] = hlfir.designate %[[TEMP_D]]#0 (%{{.*}}, %{{.*}}, %{{.*}})  : (!fir.heap<!fir.array<10x20x30xf16>>, index, index, index) -> !fir.ref<f16>
 ! CHECK: %[[LOAD:.*]] = fir.load %[[DESIGNATE]] : !fir.ref<f16>
 ! CHECK: %[[CONV:.*]] = fir.convert %[[LOAD]] : (f16) -> f32
 ! CHECK: hlfir.yield_element %[[CONV]] : f32
@@ -741,9 +743,14 @@ subroutine sub42()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPsub42()
-! CHECK: %[[RES:.*]] = arith.mulf
-! CHECK: fir.store %[[RES]] to %{{.*}} : !fir.ref<f32>
-! CHECK-NOT: cuf.data_transfer
+! CHECK: %[[C1:.*]]:2 = hlfir.declare %4 uniq_name("_QMmod1Ec1") data_attr(#cuf.cuda<constant>) : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK: %[[TMP:.*]]:2 = hlfir.declare %0 uniq_name(".tmp") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK: %[[TMP_C1:.*]]:2 = hlfir.declare %19#0 uniq_name("_QMmod1Ec1") data_attr(#cuf.cuda<constant>) : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK: cuf.data_transfer %[[C1]]#0 to %[[TMP]]#0 transfer_kind(device_host) : !fir.ref<f32>, !fir.ref<f32>
+! CHECK: %[[LHS:.*]] = fir.load %[[TMP_C1]]#0 : !fir.ref<f32>
+! CHECK: %[[RHS:.*]] = fir.load %[[TMP_C1]]#0 : !fir.ref<f32>
+! CHECK: %[[RES:.*]] = arith.mulf %[[LHS]], %[[RHS]]
+! CHECK: hlfir.assign %[[RES]] to %{{.*}} : f32, !fir.ref<f32>
 
 subroutine sub43()
   use mod1
@@ -752,9 +759,14 @@ subroutine sub43()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPsub43()
-! CHECK: %[[RES:.*]] = arith.mulf
-! CHECK: fir.store %[[RES]] to %{{.*}} : !fir.ref<f32>
-! CHECK-NOT: cuf.data_transfer
+! CHECK: %[[D1:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMmod1Ed1") data_attr(#cuf.cuda<device>) : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK: %[[TMP:.*]]:2 = hlfir.declare %{{.*}} uniq_name(".tmp") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK: %[[TMP_D1:.*]]:2 = hlfir.declare %[[TMP]]#0 uniq_name("_QMmod1Ed1") data_attr(#cuf.cuda<device>) : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK: cuf.data_transfer %[[D1]]#0 to %[[TMP]]#0 transfer_kind(device_host) : !fir.ref<f32>, !fir.ref<f32>
+! CHECK: %[[LHS:.*]] = fir.load %[[TMP_D1]]#0 : !fir.ref<f32>
+! CHECK: %[[RHS:.*]] = fir.load %[[TMP_D1]]#0 : !fir.ref<f32>
+! CHECK: %[[RES:.*]] = arith.mulf %[[LHS]], %[[RHS]]
+! CHECK: hlfir.assign %[[RES]] to %{{.*}} : f32, !fir.ref<f32>
 
 subroutine sub44()
   use mod1
@@ -763,8 +775,13 @@ subroutine sub44()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPsub44()
-! CHECK: arith.negf
-! CHECK-NOT: cuf.data_transfer
+! CHECK: %[[D1:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMmod1Ed1") data_attr(#cuf.cuda<device>) : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK: %[[TMP:.*]]:2 = hlfir.declare %{{.*}} uniq_name(".tmp") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK: %[[TMP_D1:.*]]:2 = hlfir.declare %[[TMP]]#0 uniq_name("_QMmod1Ed1") data_attr(#cuf.cuda<device>) : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK: cuf.data_transfer %[[D1]]#0 to %[[TMP]]#0 transfer_kind(device_host) : !fir.ref<f32>, !fir.ref<f32>
+! CHECK: %[[VAL:.*]] = fir.load %[[TMP_D1]]#0 : !fir.ref<f32>
+! CHECK: %[[RES:.*]] = arith.negf %[[VAL]]
+! CHECK: hlfir.assign %[[RES]] to %{{.*}} : f32, !fir.ref<f32>
 
 subroutine sub45(c0_d, n)
   implicit none
@@ -795,3 +812,68 @@ end subroutine
 ! CHECK: arith.divf
 ! CHECK: hlfir.assign
 ! CHECK: cuf.data_transfer
+
+subroutine sub47(h, a)
+  double precision :: h
+  double precision, device :: a(10)
+  ! Implicit data transfer of a and then multiplication on the host
+  h = a(3) * a(4)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub47
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFsub47Ea") data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.array<10xf64>>)
+! CHECK: %[[TMP:.*]]:2 = hlfir.declare %{{.*}} uniq_name(".tmp") : (!fir.heap<!fir.array<10xf64>>, !fir.shape<1>) -> (!fir.heap<!fir.array<10xf64>>, !fir.heap<!fir.array<10xf64>>)
+! CHECK: %[[TMP_A:.*]]:2 = hlfir.declare %[[TMP]]#0(%{{.*}}) uniq_name("_QFsub47Ea") data_attr(#cuf.cuda<device>) : (!fir.heap<!fir.array<10xf64>>, !fir.shape<1>) -> (!fir.heap<!fir.array<10xf64>>, !fir.heap<!fir.array<10xf64>>)
+! CHECK: cuf.data_transfer %[[A]]#0 to %[[TMP]]#0 transfer_kind(device_host) : !fir.ref<!fir.array<10xf64>>, !fir.heap<!fir.array<10xf64>>
+! CHECK: hlfir.designate %[[TMP_A]]#0 (%c3{{.*}})
+! CHECK: hlfir.designate %[[TMP_A]]#0 (%c4{{.*}})
+! CHECK: arith.mulf
+! CHECK-NOT: hlfir.designate %[[A]]#0
+
+subroutine sub48(h, a)
+  double precision :: h
+  double precision, device :: a(10)
+  ! Implicit data transfer of a and then negation on the host
+  h = -a(3)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub48
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFsub48Ea") data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.array<10xf64>>)
+! CHECK: %[[TMP:.*]]:2 = hlfir.declare %{{.*}} uniq_name(".tmp") : (!fir.heap<!fir.array<10xf64>>, !fir.shape<1>) -> (!fir.heap<!fir.array<10xf64>>, !fir.heap<!fir.array<10xf64>>)
+! CHECK: %[[TMP_A:.*]]:2 = hlfir.declare %[[TMP]]#0(%{{.*}}) uniq_name("_QFsub48Ea") data_attr(#cuf.cuda<device>) : (!fir.heap<!fir.array<10xf64>>, !fir.shape<1>) -> (!fir.heap<!fir.array<10xf64>>, !fir.heap<!fir.array<10xf64>>)
+! CHECK: cuf.data_transfer %[[A]]#0 to %[[TMP]]#0 transfer_kind(device_host) : !fir.ref<!fir.array<10xf64>>, !fir.heap<!fir.array<10xf64>>
+! CHECK: hlfir.designate %[[TMP_A]]#0 (%c3{{.*}})
+! CHECK: arith.negf
+! CHECK-NOT: hlfir.designate %[[A]]#0
+
+subroutine sub49(h, a)
+  real :: h
+  double precision, device :: a(10)
+  ! Implicit data transfer of a and then conversion on the host
+  h = a(3)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub49
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFsub49Ea") data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.array<10xf64>>)
+! CHECK: %[[TMP:.*]]:2 = hlfir.declare %{{.*}} uniq_name(".tmp") : (!fir.heap<!fir.array<10xf64>>, !fir.shape<1>) -> (!fir.heap<!fir.array<10xf64>>, !fir.heap<!fir.array<10xf64>>)
+! CHECK: %[[TMP_A:.*]]:2 = hlfir.declare %[[TMP]]#0(%{{.*}}) uniq_name("_QFsub49Ea") data_attr(#cuf.cuda<device>) : (!fir.heap<!fir.array<10xf64>>, !fir.shape<1>) -> (!fir.heap<!fir.array<10xf64>>, !fir.heap<!fir.array<10xf64>>)
+! CHECK: cuf.data_transfer %[[A]]#0 to %[[TMP]]#0 transfer_kind(device_host) : !fir.ref<!fir.array<10xf64>>, !fir.heap<!fir.array<10xf64>>
+! CHECK: hlfir.designate %[[TMP_A]]#0 (%c3{{.*}})
+! CHECK: fir.convert %{{.*}} : (f64) -> f32
+! CHECK-NOT: hlfir.designate %[[A]]#0
+
+subroutine sub50(h, a)
+  double precision :: h(10)
+  double precision, device :: a(10)
+  ! Implicit data transfer of a and then negation on the host
+  h = -a
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub50
+! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFsub50Ea") data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.array<10xf64>>)
+! CHECK: %[[TMP:.*]]:2 = hlfir.declare %{{.*}} uniq_name(".tmp") : (!fir.heap<!fir.array<10xf64>>, !fir.shape<1>) -> (!fir.heap<!fir.array<10xf64>>, !fir.heap<!fir.array<10xf64>>)
+! CHECK: %[[TMP_A:.*]]:2 = hlfir.declare %[[TMP]]#0(%{{.*}}) uniq_name("_QFsub50Ea") data_attr(#cuf.cuda<device>) : (!fir.heap<!fir.array<10xf64>>, !fir.shape<1>) -> (!fir.heap<!fir.array<10xf64>>, !fir.heap<!fir.array<10xf64>>)
+! CHECK: cuf.data_transfer %[[A]]#0 to %[[TMP]]#0 transfer_kind(device_host) : !fir.ref<!fir.array<10xf64>>, !fir.heap<!fir.array<10xf64>>
+! CHECK: hlfir.elemental
+! CHECK: arith.negf
+! CHECK: hlfir.assign

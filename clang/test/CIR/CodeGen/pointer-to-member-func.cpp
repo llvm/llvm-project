@@ -52,7 +52,7 @@ void (Foo::*m2_ptr)(int) = &Foo::m2;
 
 // Self-referencing PMF causes a null method.
 long (Foo::*pmf1)(int) = pmf1;
-// CIR-BEFORE: @pmf1 = ctor : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i) -> !s64i> in !rec_Foo> {
+// CIR-BEFORE: @pmf1 = #cir.method<null> : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i) -> !s64i> in !rec_Foo> ctor {
 // CIR-AFTER: cir.global external @pmf1 = #cir.const_record<{#cir.int<0> : !s64i, #cir.int<0> : !s64i}> 
 // LLVM: @pmf1 = global { i64, i64 } zeroinitializer, align 8 
 // OGCG: @pmf1 = global { i64, i64 } zeroinitializer, align 8 
