@@ -2162,11 +2162,14 @@ Instruction *InstCombinerImpl::visitFAdd(BinaryOperator &I) {
   }
   // (-X / Y) + Z --> Z - (X / Y) [2 commuted variants]
   // (X / -Y) + Z --> Z - (X / Y) [2 commuted variants]
-  if (match(&I, m_c_FAdd(m_OneUse(m_FDiv(m_FNeg(m_Value(X)), m_Value(Y))),
-                         m_Value(Z))) ||
-      match(&I, m_c_FAdd(m_OneUse(m_FDiv(m_Value(X), m_FNeg(m_Value(Y)))),
-                         m_Value(Z)))) {
-    Value *XY = Builder.CreateFDivFMF(X, Y, &I);
+  BinaryOperator *Div;
+  if ((match(&I, m_FAdd(m_OneUse(m_BinOp(Div)), m_Value(Z))) &&
+       (match(Div, m_FDiv(m_FNeg(m_Value(X)), m_Value(Y))) ||
+        match(Div, m_FDiv(m_Value(X), m_FNeg(m_Value(Y)))))) ||
+      (match(&I, m_FAdd(m_Value(Z), m_OneUse(m_BinOp(Div)))) &&
+       (match(Div, m_FDiv(m_FNeg(m_Value(X)), m_Value(Y))) ||
+        match(Div, m_FDiv(m_Value(X), m_FNeg(m_Value(Y))))))) {
+    Value *XY = Builder.CreateFDivFMF(X, Y, Div);
     return BinaryOperator::CreateFSubFMF(Z, XY, &I);
   }
 

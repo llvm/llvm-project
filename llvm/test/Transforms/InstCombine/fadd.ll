@@ -74,7 +74,7 @@ define double @fdiv_fneg1_fdiv(double %x, double %y, double %z) {
 ; Negative test: ninf of fadd shouldn't propagate to fdiv.
 define double @fdiv_fneg1_ninf_does_not_propagate_to_fdiv(double %x, double %y, double %z) {
 ; CHECK-LABEL: @fdiv_fneg1_ninf_does_not_propagate_to_fdiv(
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv ninf double [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv double [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = fsub ninf double [[Z:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
@@ -144,7 +144,7 @@ define double @fdiv_fneg2_fdiv(double %x, double %y, double %z) {
 ; Negative test: ninf of fadd shouldn't propagate to fdiv.
 define double @fdiv_fneg2_ninf_does_not_propagate_to_fdiv(double %x, double %y, double %z) {
 ; CHECK-LABEL: @fdiv_fneg2_ninf_does_not_propagate_to_fdiv(
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv ninf double [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv double [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = fsub ninf double [[Z:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
@@ -248,7 +248,7 @@ define double @fdiv_fneg1_commute_fdiv(double %x, double %y, double %z) {
 ; Negative test: ninf of fadd shouldn't propagate to fdiv.
 define double @fdiv_fneg1_commute_ninf_does_not_propagate_to_fdiv(double %x, double %y, double %z) {
 ; CHECK-LABEL: @fdiv_fneg1_commute_ninf_does_not_propagate_to_fdiv(
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv ninf double [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv double [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = fsub ninf double [[Z:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
@@ -318,7 +318,7 @@ define double @fdiv_fneg2_commute_fdiv(double %x, double %y, double %z) {
 ; Negative test: ninf of fadd shouldn't propagate to fdiv.
 define double @fdiv_fneg2_commute_ninf_does_not_propagate_to_fdiv(double %x, double %y, double %z) {
 ; CHECK-LABEL: @fdiv_fneg2_commute_ninf_does_not_propagate_to_fdiv(
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv ninf double [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv double [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = fsub ninf double [[Z:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
