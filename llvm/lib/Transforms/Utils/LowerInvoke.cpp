@@ -16,7 +16,6 @@
 #include "llvm/Transforms/Utils/LowerInvoke.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils.h"
@@ -44,12 +43,6 @@ INITIALIZE_PASS(LowerInvokeLegacyPass, "lowerinvoke",
                 false, false)
 
 static bool runImpl(Function &F) {
-  // The WebAssembly models keep invokes through isel, so lowering them here
-  // would destroy the exception handling the module asked for.
-  ExceptionHandling EH = F.getParent()->getExceptionModel();
-  if (EH == ExceptionHandling::Wasm || EH == ExceptionHandling::Emscripten)
-    return false;
-
   bool Changed = false;
   for (BasicBlock &BB : F)
     if (InvokeInst *II = dyn_cast<InvokeInst>(BB.getTerminator())) {

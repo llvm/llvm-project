@@ -917,9 +917,29 @@ static void nullifySetjmp(Function *F) {
 bool WebAssemblyLowerEmscriptenEHSjLjImpl::runOnModule(Module &M) {
   LLVM_DEBUG(dbgs() << "********** Lower Emscripten EH & SjLj **********\n");
 
-  EnableEmEH = M.getExceptionModel() == ExceptionHandling::Emscripten;
+  ExceptionHandling EH = M.getExceptionModel();
+  EnableEmEH = EH == ExceptionHandling::Emscripten;
   assert((!EnableEmEH || !EnableWasmSjLj) &&
          "Wasm SjLj should be only used with Wasm EH");
+
+  bool Changed = false;
+
+  // Only the wasm model keeps invokes. Lower the rest before the setjmp/longjmp
+  // handling, which does not expect invokes or dead blocks.
+  if (EH != ExceptionHandling::Wasm && !EnableEmEH) {
+    for (Function &F : M) {
+      if (F.isDeclaration())
+        continue;
+      for (BasicBlock &BB : F) {
+        if (auto *II = dyn_cast<InvokeInst>(BB.getTerminator())) {
+          changeToCall(II);
+          Changed = true;
+        }
+      }
+
+      Changed |= removeUnreachableBlocks(F);
+    }
+  }
 
   IRBuilder<> IRB(M);
 
@@ -965,8 +985,6 @@ bool WebAssemblyLowerEmscriptenEHSjLjImpl::runOnModule(Module &M) {
                   "setTempRet0", &M);
   GetTempRet0F->setDoesNotThrow();
   SetTempRet0F->setDoesNotThrow();
-
-  bool Changed = false;
 
   // Function registration for exception handling
   if (EnableEmEH) {
