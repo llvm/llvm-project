@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
   return ((int)e1 != -1) & ((int)e2 != -1) &
          // CHECK: error: load of value 4294967295, which is not a valid value for type 'E'
          ((int)e3 != -1) & ((int)e4 == 1) &
-         // CHECK: error: load of value <unknown>, which is not a valid value for type 'enum EBool'
+         // CHECK: error: load of value 255, which is not a valid value for type 'enum EBool'
          ((int)e5 == 2) & ((int)e6 == 1) &
          // CHECK: error: load of value 2, which is not a valid value for type 'EEmpty'
          ((int)e7 == 2);
