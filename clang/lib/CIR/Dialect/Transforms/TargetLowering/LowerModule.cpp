@@ -85,7 +85,6 @@ createLowerModule(mlir::ModuleOp module,
   // If the triple is not present, e.g. CIR modules parsed from text, we
   // cannot init LowerModule properly.
   assert(!cir::MissingFeatures::makeTripleAlwaysPresent());
-  // TODO(triple) what this line do? ^^^
   if (!module->hasAttr(cir::CIRDialect::getTripleAttrName())) {
     if (emitDiag)
       emitDiag() << "module is missing " << cir::CIRDialect::getTripleAttrName()
