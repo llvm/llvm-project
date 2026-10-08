@@ -173,7 +173,6 @@ infrastructure are described first, followed by tool-specific sections.
   Finds explicit zero initializers of arrays that can be replaced with empty
   braces.
 
-
 #### New check aliases
 
 #### Changes in existing checks
@@ -245,7 +244,7 @@ infrastructure are described first, followed by tool-specific sections.
 
   - No longer diagnoses variables declared with `decltype(auto)`, where the
     suggested `const` does not compile.
-
+    
   - No longer diagnoses parameters of `main`, whose signature is fixed by the
     standard.
 
@@ -389,7 +388,7 @@ infrastructure are described first, followed by tool-specific sections.
   - Ignored preprocessor directives such as `#endif` that appear immediately
     before an enum's closing brace, which previously produced a false positive
     and a fix-it that inserted a comma after the directive.
-
+    
   - Fixed a false positive on empty brace initializers of types with default
     member initializers.
 
