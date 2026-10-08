@@ -890,6 +890,10 @@ public:
   /// base classes in reverse order of their construction.
   void enterDtorCleanups(const CXXDestructorDecl *dtor, CXXDtorType type);
 
+  /// Return the pointer to pass to the operator delete of the given
+  /// destructor, converted to the type of its first parameter if needed.
+  mlir::Value loadThisForDtorDelete(const CXXDestructorDecl *dd);
+
   /// Determines whether an EH cleanup is required to destroy a type
   /// with the given destruction kind.
   /// TODO(cir): could be shared with Clang LLVM codegen
@@ -2054,6 +2058,7 @@ public:
   cir::CoroResumeOp emitCoroResumeBuiltinCall(const CallExpr *e);
   cir::CoroDestroyOp emitCoroDestroyBuiltinCall(const CallExpr *e);
   cir::CoroNoopOp emitCoroNoopBuiltinCall(const CallExpr *e);
+  cir::CoroSuspendOp emitCoroSuspendBuiltinCall(const CallExpr *e);
 
   cir::CoroSizeOp emitCoroSizeBuiltinCall(const CallExpr *e);
   cir::CoroFreeOp emitCoroFreeBuiltin(const CallExpr *e);

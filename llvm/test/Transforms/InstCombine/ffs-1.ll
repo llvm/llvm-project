@@ -147,13 +147,13 @@ define i32 @test_simplify12() {
 
 ; Check ffs(x) -> x != 0 ? (i32)llvm.cttz(x) + 1 : 0.
 
-define i32 @test_simplify13(i32 %x) {
+define i32 @test_simplify13(i32 %x) !prof !0 {
 ; ALL-LABEL: define i32 @test_simplify13(
-; ALL-SAME: i32 [[X:%.*]]) {
+; ALL-SAME: i32 [[X:%.*]]) !prof [[PROF0:![0-9]+]] {
 ; ALL-NEXT:    [[CTTZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X]], i1 true)
 ; ALL-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[CTTZ]], 1
 ; ALL-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[X]], 0
-; ALL-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 0, i32 [[TMP1]]
+; ALL-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 0, i32 [[TMP1]], !prof [[PROF1:![0-9]+]]
 ; ALL-NEXT:    ret i32 [[TMP3]]
 ;
   %ret = call i32 @ffs(i32 %x)
@@ -171,7 +171,7 @@ define i32 @test_simplify14(i32 %x) {
 ; TARGET-NEXT:    [[CTTZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X]], i1 true)
 ; TARGET-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[CTTZ]], 1
 ; TARGET-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[X]], 0
-; TARGET-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 0, i32 [[TMP1]]
+; TARGET-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 0, i32 [[TMP1]], !prof [[PROF1]]
 ; TARGET-NEXT:    ret i32 [[TMP3]]
 ;
   %ret = call i32 @ffsl(i32 %x)
@@ -190,10 +190,18 @@ define i32 @test_simplify15(i64 %x) {
 ; TARGET-NEXT:    [[TMP1:%.*]] = trunc nuw nsw i64 [[CTTZ]] to i32
 ; TARGET-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[TMP1]], 1
 ; TARGET-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[X]], 0
-; TARGET-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 0, i32 [[TMP2]]
+; TARGET-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 0, i32 [[TMP2]], !prof [[PROF1]]
 ; TARGET-NEXT:    ret i32 [[TMP4]]
 ;
   %ret = call i32 @ffsll(i64 %x)
   ret i32 %ret
 }
 
+!0 = !{!"function_entry_count", i32 1819569520}
+;.
+; GENERIC: [[PROF0]] = !{!"function_entry_count", i32 1819569520}
+; GENERIC: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
+;.
+; TARGET: [[PROF0]] = !{!"function_entry_count", i32 1819569520}
+; TARGET: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
+;.
