@@ -1,5 +1,5 @@
 ! Test default initialization of global variables (static init)
-! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s --check-prefixes=%if target={{.*-aix.*|sparc.*}} %{"CHECK","CHECK-BE"%} \
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s --check-prefixes=%if target={{.*-aix.*|sparc.*|s390x.*|systemz.*}} %{"CHECK","CHECK-BE"%} \
 ! RUN:                                         %else %{"CHECK","CHECK-LE"%}
 
 module tinit

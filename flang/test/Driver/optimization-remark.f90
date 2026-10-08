@@ -20,19 +20,19 @@
 
 ! Check valid -Rpass-missed regex
 ! UNSUPPORTED: target=riscv{{.*}}
-! RUN: %flang %s -O2 -Rpass-missed=loop -S %{output} 2>&1 | FileCheck %s --check-prefix=MISSED-REGEX-LOOP-ONLY
+! RUN: %if !target=s390x{{.*}} %{ %flang %s -O2 -Rpass-missed=loop -S %{output} 2>&1 | FileCheck %s --check-prefix=MISSED-REGEX-LOOP-ONLY %}
 
 ! Check valid -Rpass-analysis regex
-! RUN: %flang %s -O2 -Rpass-analysis=loop -S %{output} 2>&1 | FileCheck %s --check-prefix=ANALYSIS-REGEX-LOOP-ONLY
+! RUN: %if !target=s390x{{.*}} %{ %flang %s -O2 -Rpass-analysis=loop -S %{output} 2>&1 | FileCheck %s --check-prefix=ANALYSIS-REGEX-LOOP-ONLY %}
 
 ! Check full -Rpass message is emitted
 ! RUN: %flang %s -O2 -Rpass -S %{output} 2>&1 | FileCheck %s --check-prefix=PASS
 
 ! Check full -Rpass-missed message is emitted
-! RUN: %flang %s -O2 -Rpass-missed -S %{output} 2>&1 | FileCheck %s --check-prefix=MISSED
+! RUN: %if !target=s390x{{.*}} %{ %flang %s -O2 -Rpass-missed -S %{output} 2>&1 | FileCheck %s --check-prefix=MISSED %}
 
 ! Check full -Rpass-analysis message is emitted
-! RUN: %flang %s -O2 -Rpass-analysis -S -o /dev/null 2>&1 | FileCheck %s --check-prefix=ANALYSIS
+! RUN: %if !target=s390x{{.*}} %{ %flang %s -O2 -Rpass-analysis -S -o /dev/null 2>&1 | FileCheck %s --check-prefix=ANALYSIS %}
 
 ! REMARKS: remark:
 ! NO-REMARKS-NOT: remark:
