@@ -295,12 +295,12 @@ protected:
         size_t reg_name_right_align_at = 0;
 
         for (auto &entry : command) {
+          RegisterArgument argument;
+          argument.expression = entry.ref().str();
+
           llvm::StringRef expression = entry.ref();
           expression.consume_front("$");
-
-          RegisterArgument argument;
-          argument.expression = expression.str();
-          std::string variable_path = "$" + argument.expression;
+          std::string variable_path = "$" + expression.str();
           VariableSP variable_sp;
           argument.value_sp = frame->GetValueForVariableExpressionPath(
               variable_path, eNoDynamicValues,
