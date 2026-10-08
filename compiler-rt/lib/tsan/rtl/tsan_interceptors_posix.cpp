@@ -1471,6 +1471,43 @@ INTERCEPTOR(int, pthread_cond_destroy, void *c) {
   return res;
 }
 
+#if SANITIZER_INTERCEPT_C11_THREADS
+TSAN_INTERCEPTOR(int, cnd_init, void* c) {
+  SCOPED_TSAN_INTERCEPTOR(cnd_init, c);
+  MemoryAccessRange(thr, pc, (uptr)c, sizeof(uptr), true);
+  return REAL(cnd_init)(c);
+}
+
+TSAN_INTERCEPTOR(int, cnd_wait, void* c, void* m) {
+  SCOPED_TSAN_INTERCEPTOR(cnd_wait, c, m);
+  return cond_wait(thr, pc, &si, [=]() { return REAL(cnd_wait)(c, m); }, c, m);
+}
+
+TSAN_INTERCEPTOR(int, cnd_timedwait, void* c, void* m, void* ts) {
+  SCOPED_TSAN_INTERCEPTOR(cnd_timedwait, c, m, ts);
+  return cond_wait(
+      thr, pc, &si, [=]() { return REAL(cnd_timedwait)(c, m, ts); }, c, m);
+}
+
+TSAN_INTERCEPTOR(int, cnd_signal, void* c) {
+  SCOPED_TSAN_INTERCEPTOR(cnd_signal, c);
+  MemoryAccessRange(thr, pc, (uptr)c, sizeof(uptr), false);
+  return REAL(cnd_signal)(c);
+}
+
+TSAN_INTERCEPTOR(int, cnd_broadcast, void* c) {
+  SCOPED_TSAN_INTERCEPTOR(cnd_broadcast, c);
+  MemoryAccessRange(thr, pc, (uptr)c, sizeof(uptr), false);
+  return REAL(cnd_broadcast)(c);
+}
+
+TSAN_INTERCEPTOR(void, cnd_destroy, void* c) {
+  SCOPED_TSAN_INTERCEPTOR(cnd_destroy, c);
+  MemoryAccessRange(thr, pc, (uptr)c, sizeof(uptr), true);
+  REAL(cnd_destroy)(c);
+}
+#endif  // SANITIZER_INTERCEPT_C11_THREADS
+
 TSAN_INTERCEPTOR(int, pthread_mutex_init, void *m, void *a) {
   SCOPED_TSAN_INTERCEPTOR(pthread_mutex_init, m, a);
   int res = REAL(pthread_mutex_init)(m, a);
@@ -3249,6 +3286,14 @@ void InitializeInterceptors() {
 #endif
 
   TSAN_MAYBE_PTHREAD_COND_CLOCKWAIT;
+#if SANITIZER_INTERCEPT_C11_THREADS
+  TSAN_INTERCEPT(cnd_init);
+  TSAN_INTERCEPT(cnd_signal);
+  TSAN_INTERCEPT(cnd_broadcast);
+  TSAN_INTERCEPT(cnd_wait);
+  TSAN_INTERCEPT(cnd_timedwait);
+  TSAN_INTERCEPT(cnd_destroy);
+#endif
 
   TSAN_INTERCEPT(pthread_mutex_init);
   TSAN_INTERCEPT(pthread_mutex_destroy);
