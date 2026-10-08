@@ -344,7 +344,7 @@ private:
 
   std::vector<Defined *> symbols;
   // Total byte size of all stubs added so far.
-  size_t stubsSize = 0;
+  size_t stubsSectionSize = 0;
   Symbol *objcMsgSend = nullptr;
 };
 

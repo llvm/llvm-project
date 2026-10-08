@@ -903,13 +903,13 @@ void ObjCStubsSection::addEntry(Symbol *sym) {
   size_t stubSize = getStubSize();
   Defined *newSym = replaceSymbol<Defined>(
       sym, sym->getName(), nullptr, isec,
-      /*value=*/stubsSize,
+      /*value=*/stubsSectionSize,
       /*size=*/stubSize,
       /*isWeakDef=*/false, /*isExternal=*/true, /*isPrivateExtern=*/true,
       /*includeInSymtab=*/true, /*isReferencedDynamically=*/false,
       /*noDeadStrip=*/false);
   symbols.push_back(newSym);
-  stubsSize += stubSize;
+  stubsSectionSize += stubSize;
 }
 
 void ObjCStubsSection::setUp() {
@@ -933,7 +933,7 @@ void ObjCStubsSection::setUp() {
   }
 }
 
-uint64_t ObjCStubsSection::getSize() const { return stubsSize; }
+uint64_t ObjCStubsSection::getSize() const { return stubsSectionSize; }
 
 void ObjCStubsSection::sortSymbols(
     const llvm::DenseMap<const Symbol *, int> &priorities) {
@@ -948,8 +948,9 @@ void ObjCStubsSection::sortSymbols(
   size_t stubOffset = 0;
   for (Defined *sym : symbols) {
     sym->value = stubOffset;
-    stubOffset += getStubSize();
+    stubOffset += sym->size;
   }
+  assert(stubOffset == stubsSectionSize);
 }
 
 void ObjCStubsSection::writeTo(uint8_t *buf) const {
