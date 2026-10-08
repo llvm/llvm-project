@@ -50,6 +50,8 @@ add_header(
   sys_inotify_macros
   HDR
     sys-inotify-macros.h
+  DEPENDS
+    .fcntl_macros
 )
 
 add_header(

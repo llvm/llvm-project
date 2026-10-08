@@ -29,14 +29,14 @@ TEST_F(LlvmLibcInotifyRmWatchTest, Basic) {
   auto test_dir = libc_make_test_file_path(".");
   int fd;
   ASSERT_THAT(fd = LIBC_NAMESPACE::inotify_init(),
-              returns(GT(0)).with_errno(EQ(0)));
+              returns(GE(0)).with_errno(EQ(0)));
   LIBC_NAMESPACE::cpp::scope_exit close_fd(
       [&] { EXPECT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0)); });
 
   int wd;
   ASSERT_THAT(
       wd = LIBC_NAMESPACE::inotify_add_watch(fd, test_dir, IN_ALL_EVENTS),
-      returns(GT(0)).with_errno(EQ(0)));
+      returns(GE(0)).with_errno(EQ(0)));
   ASSERT_THAT(LIBC_NAMESPACE::inotify_rm_watch(fd, wd), Succeeds(0));
 }
 

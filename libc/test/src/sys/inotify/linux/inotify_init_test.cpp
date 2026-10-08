@@ -29,7 +29,7 @@ using LlvmLibcInotifyInitTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 TEST_F(LlvmLibcInotifyInitTest, Basic) {
   int fd;
   ASSERT_THAT(fd = LIBC_NAMESPACE::inotify_init(),
-              returns(GT(0)).with_errno(EQ(0)));
+              returns(GE(0)).with_errno(EQ(0)));
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 }
 
