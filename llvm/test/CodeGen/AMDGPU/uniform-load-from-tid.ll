@@ -170,13 +170,10 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}divergent_mask_threadid:
-; W64: global_load_dword
-; W32: v_readfirstlane_b32 [[OFFSET:s[0-9]+]], v0
-; W32: s_load_dword s{{[0-9]+}}, s[{{[0-9:]+}}], [[OFFSET]]
+; GCN: global_load_dword
 
 ; OPT-LABEL: @divergent_mask_threadid
-; OPT-W64: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4{{$}}
-; OPT-W32: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4, !amdgpu.uniform
+; OPT: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4{{$}}
 define amdgpu_kernel void @divergent_mask_threadid(ptr addrspace(1) align 4 %in, ptr addrspace(1) align 4 %out) "amdgpu-flat-work-group-size"="64,64" !reqd_work_group_size !0 {
 entry:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
