@@ -57,6 +57,7 @@ public:
                                  const MCAssembler *) const override {
     return false;
   }
+  bool usesCompInstByteOrder(const MCSubtargetInfo &STI) const override;
 };
 
 class ARMCOFFMCAsmInfoMicrosoft : public MCAsmInfoMicrosoft {

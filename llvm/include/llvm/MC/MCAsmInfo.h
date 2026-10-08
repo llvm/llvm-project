@@ -761,6 +761,11 @@ public:
   }
   virtual bool evaluateAsRelocatableImpl(const MCSpecifierExpr &, MCValue &Res,
                                          const MCAssembler *Asm) const;
+
+  /// True if the target uses compressed half-word instruction byte ordering
+  virtual bool usesCompInstByteOrder(const MCSubtargetInfo &STI) const {
+    return false;
+  }
 };
 
 } // end namespace llvm
