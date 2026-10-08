@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -fblocks -verify %s
 
-// GH229694
+// GH55686
 int size_tab(void);
 int main(void) {
   __auto_type tab = (int(*)[size_tab()])0; // expected-note {{size expression is evaluated here}}

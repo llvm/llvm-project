@@ -7017,6 +7017,15 @@ Sema::CheckTypedefForVariablyModifiedType(Scope *S, TypedefNameDecl *NewTD) {
   // that redeclarations will match.
   TypeSourceInfo *TInfo = NewTD->getTypeSourceInfo();
   QualType T = TInfo->getType();
+
+  // A member typedef cannot name a variably modified type whose bound is
+  // evaluated in an enclosing function.
+  if (NewTD->getDeclContext()->isRecord() &&
+      !CheckVariablyModifiedTypeUse(T, TInfo->getTypeLoc().getBeginLoc())) {
+    NewTD->setInvalidDecl();
+    return;
+  }
+
   if (T->isVariablyModifiedType()) {
     setFunctionHasBranchProtectedScope();
 

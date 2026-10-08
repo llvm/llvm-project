@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -Wno-vla-cxx-extension -verify %s
 
-// GH229694
+// GH55686
 int foo();
 
 void ctor() {
@@ -34,6 +34,21 @@ template <typename T> void in_template() {
   using X = int[foo()]; // expected-note {{size expression is evaluated here}}
   struct S { S() { X x; } }; // expected-error {{cannot be used in a local class}}
 }
+
+namespace GH55686 {
+void f(int n) {
+  using T = int[n]; // expected-note 2 {{size expression is evaluated here}}
+  struct A {
+    using U = T; // expected-error {{cannot be used in a local class}}
+    void f() { U u; }
+    void g() { T t; } // expected-error {{cannot be used in a local class}}
+  };
+  A::U u;
+  A a;
+  a.f();
+  a.g();
+}
+} // namespace GH55686
 
 // Valid: no diagnostics.
 int same_function() {

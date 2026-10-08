@@ -4847,6 +4847,11 @@ bool Sema::CheckVariablyModifiedTypeUse(QualType T, SourceLocation Loc) {
   if (!BadSize)
     return true;
 
+  // A member typedef naming such a type has already been diagnosed.
+  if (const auto *TT = T->getAs<TypedefType>();
+      TT && TT->getDecl()->isInvalidDecl())
+    return false;
+
   Diag(Loc, diag::err_vm_type_from_enclosing_function) << T << *Barrier;
   Diag(BadSize->getBeginLoc(), diag::note_vm_type_size_evaluated_here);
   return false;
