@@ -2923,6 +2923,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       I.setDesc(TII.get(IsGOTSigned ? AArch64::LOADgotAUTH : AArch64::LOADgot));
       I.getOperand(1).setTargetFlags(OpFlags);
       I.addImplicitDefUseOperands(MF);
+      I.setImplicitPhysRegDefsDead();
     } else if (TM.getCodeModel() == CodeModel::Large &&
                !TM.isPositionIndependent()) {
       // Materialize the global using movz/movk instructions.
@@ -6889,6 +6890,8 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
         .addImm(PACConstDiscC)
         .addUse(PACAddrDisc)
         .addImm(Addend)
+        .setOperandDead(8) // implicit-def $x17
+        .setOperandDead(9) // implicit-def $nzcv
         .constrainAllUses(TII, TRI, RBI);
     MIB.buildCopy({DstReg}, Register(AArch64::X16));
 
@@ -6935,6 +6938,8 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
         .addImm(PACKey)
         .addImm(PACConstDiscC)
         .addUse(PACAddrDisc)
+        .setOperandDead(7) // implicit-def $x17
+        .setOperandDead(8) // implicit-def $nzcv
         .constrainAllUses(TII, TRI, RBI);
     MIB.buildCopy({DstReg}, Register(AArch64::X16));
 
@@ -6971,6 +6976,9 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
         .addImm(PACKey)
         .addImm(PACConstDiscC)
         .addUse(PACAddrDisc)
+        .setOperandDead(5) // implicit-def $x15
+        .setOperandDead(6) // implicit-def $x16
+        .setOperandDead(7) // implicit-def $nzcv
         .constrainAllUses(TII, TRI, RBI);
 
     MIB.buildCopy({DstReg}, Register(AArch64::X17));
@@ -6995,19 +7003,22 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
           .addImm(AUTKey)
           .addImm(AUTConstDiscC)
           .addUse(AUTAddrDisc)
+          .setOperandDead(4) // implicit-def $x17
+          .setOperandDead(5) // implicit-def $nzcv
           .constrainAllUses(TII, TRI, RBI);
       MIB.buildCopy({DstReg}, Register(AArch64::X16));
     } else {
       Register ScratchReg =
           MRI.createVirtualRegister(&AArch64::GPR64commonRegClass);
-      MIB.buildInstr(AArch64::AUTxMxN)
-          .addDef(DstReg)
-          .addDef(ScratchReg)
-          .addUse(ValReg)
-          .addImm(AUTKey)
-          .addImm(AUTConstDiscC)
-          .addUse(AUTAddrDisc)
-          .constrainAllUses(TII, TRI, RBI);
+      auto Auth = MIB.buildInstr(AArch64::AUTxMxN)
+                      .addDef(DstReg)
+                      .addDef(ScratchReg)
+                      .addUse(ValReg)
+                      .addImm(AUTKey)
+                      .addImm(AUTConstDiscC)
+                      .addUse(AUTAddrDisc);
+      Auth->setImplicitPhysRegDefsDead();
+      Auth.constrainAllUses(TII, TRI, RBI);
     }
 
     RBI.constrainGenericRegister(DstReg, AArch64::GPR64RegClass, MRI);
@@ -7368,6 +7379,30 @@ AArch64InstructionSelector::selectShiftMask(MachineOperand &Root) const {
                        .addReg(SubSrcReg);
       constrainSelectedInstRegOperands(*NegMI, TII, TRI, RBI);
       MIB.addReg(NegReg);
+    }}};
+  }
+
+  // If shifting by N-X where N == -1 mod ShiftWidth, then just shift by ~X
+  // to generate a NOT (MVN) instead of a SUB from a constant.
+  Register NotSrcReg;
+  int64_t NotImm;
+  if (MRI.hasOneUse(ShAmtReg) &&
+      mi_match(ShAmtReg, MRI, m_GSub(m_ICst(NotImm), m_Reg(NotSrcReg))) &&
+      (NotImm % ShiftWidth == ShiftWidth - 1)) {
+    return {{[=](MachineInstrBuilder &MIB) {
+      MachineInstr *I = MIB.getInstr();
+      MachineRegisterInfo &MRI2 = I->getMF()->getRegInfo();
+      const TargetRegisterClass &RC =
+          ShiftWidth == 32 ? AArch64::GPR32RegClass : AArch64::GPR64RegClass;
+      unsigned NotOpc = ShiftWidth == 32 ? AArch64::ORNWrr : AArch64::ORNXrr;
+      Register ZeroReg = ShiftWidth == 32 ? AArch64::WZR : AArch64::XZR;
+      Register NotReg = MRI2.createVirtualRegister(&RC);
+      auto NotMI = BuildMI(*I->getParent(), *I, I->getDebugLoc(),
+                           TII.get(NotOpc), NotReg)
+                       .addReg(ZeroReg)
+                       .addReg(NotSrcReg);
+      constrainSelectedInstRegOperands(*NotMI, TII, TRI, RBI);
+      MIB.addReg(NotReg);
     }}};
   }
 

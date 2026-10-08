@@ -3050,9 +3050,6 @@ static bool findLoopIncrementValue(const MachineInstr &MI,
 
   const TargetInstrInfo *TII =
       LoopBB->getParent()->getSubtarget().getInstrInfo();
-  const TargetRegisterInfo *TRI =
-      LoopBB->getParent()->getSubtarget().getRegisterInfo();
-
   MachineInstr *Phi = nullptr;
   MachineInstr *Increment = nullptr;
 
@@ -3091,8 +3088,8 @@ static bool findLoopIncrementValue(const MachineInstr &MI,
       const MachineOperand *BaseOp;
       int64_t Offset;
       bool OffsetIsScalable;
-      if (TII->getMemOperandWithOffset(*Def, BaseOp, Offset, OffsetIsScalable,
-                                       TRI)) {
+      if (TII->getMemOperandWithOffset(*Def, BaseOp, Offset,
+                                       OffsetIsScalable)) {
         // Pre/post increment instruction
         CurReg = BaseOp->getReg();
       } else {
@@ -3119,11 +3116,10 @@ static bool findLoopIncrementValue(const MachineInstr &MI,
 /// Return true if we can compute the amount the instruction changes
 /// during each iteration. Set Delta to the amount of the change.
 bool SwingSchedulerDAG::computeDelta(const MachineInstr &MI, int &Delta) const {
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   const MachineOperand *BaseOp;
   int64_t Offset;
   bool OffsetIsScalable;
-  if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable, TRI))
+  if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable))
     return false;
 
   // FIXME: This algorithm assumes instructions have fixed-size offsets.
@@ -3264,11 +3260,10 @@ bool SwingSchedulerDAG::mayOverlapInLaterIter(
   const MachineOperand *BaseOpB, *BaseOpO;
   int64_t OffsetB, OffsetO;
   bool OffsetBIsScalable, OffsetOIsScalable;
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   if (!TII->getMemOperandWithOffset(*BaseMI, BaseOpB, OffsetB,
-                                    OffsetBIsScalable, TRI) ||
+                                    OffsetBIsScalable) ||
       !TII->getMemOperandWithOffset(*OtherMI, BaseOpO, OffsetO,
-                                    OffsetOIsScalable, TRI))
+                                    OffsetOIsScalable))
     return true;
 
   if (OffsetBIsScalable || OffsetOIsScalable)

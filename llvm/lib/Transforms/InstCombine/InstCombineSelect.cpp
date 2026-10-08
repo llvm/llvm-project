@@ -3525,7 +3525,35 @@ foldSelectOfOrderedFAbsCmpOfNaNScrubbedValue(SelectInst &SI,
   Value *NewCmp =
       IC.Builder.CreateFCmpFMF(Pred, NewAbs, Cmp1, FMFSource(NewCmpFMF));
   Value *NewSel = IC.Builder.CreateSelectFMF(NewCmp, X, Y, &SI);
-  return IC.replaceInstUsesWith(SI, NewSel);
+
+  Instruction *NewSelUsesReplaced = IC.replaceInstUsesWith(SI, NewSel);
+
+  uint64_t WeightNotNaN, WeightNaN, WeightComparisonTrue,
+      WeightComparisonFalse = 0;
+  bool HasProfile = extractBranchWeights(*cast<SelectInst>(InnerSel),
+                                         WeightNotNaN, WeightNaN);
+  HasProfile &=
+      extractBranchWeights(SI, WeightComparisonTrue, WeightComparisonFalse);
+  if (!HasProfile || !isa<SelectInst>(NewSel))
+    return NewSelUsesReplaced;
+  // The branch weights for the new select will be the same as before, except
+  // they will additionally account for the probability of NaN values which was
+  // previously handled with the inner select. For the true arm the new
+  // probability is P(not Nan) * P(fcmp true). For the false arm, the new
+  // probability is P(NaN) + (P(not NaN) * P(fcmp false)). We can assume the
+  // probabilities are independent given the first select only checks for NaNs
+  // and the second select's condition will never see NaNs because of the first
+  // select. The code below uses some algebraic simplifications on top of those
+  // formulas.
+  uint64_t WeightNewSelTrue = WeightNotNaN * WeightComparisonTrue;
+  uint64_t WeightNewSelFalse =
+      WeightNaN * (WeightComparisonTrue + WeightComparisonFalse) +
+      WeightNotNaN * WeightComparisonFalse;
+  if (!ProfcheckDisableMetadataFixes)
+    setFittedBranchWeights(*cast<SelectInst>(NewSel),
+                           {WeightNewSelTrue, WeightNewSelFalse},
+                           /*IsExpected*/ false);
+  return NewSelUsesReplaced;
 }
 
 // Match the following IR pattern:
@@ -3676,8 +3704,11 @@ static Instruction *foldNestedSelects(SelectInst &OuterSelVal,
     return nullptr;
 
   // Canonicalize inversion of the innermost `select`'s condition.
-  if (match(InnerSel.Cond, m_Not(m_Value(InnerSel.Cond))))
+  bool SwapInnerSelCond = false;
+  if (match(InnerSel.Cond, m_Not(m_Value(InnerSel.Cond)))) {
     std::swap(InnerSel.TrueVal, InnerSel.FalseVal);
+    SwapInnerSelCond = !SwapInnerSelCond;
+  }
 
   Value *AltCond = nullptr;
   auto matchOuterCond = [OuterSel, IsAndVariant, &AltCond](auto m_InnerCond) {
@@ -3702,16 +3733,25 @@ static Instruction *foldNestedSelects(SelectInst &OuterSelVal,
     // Done!
     std::swap(InnerSel.TrueVal, InnerSel.FalseVal);
     InnerSel.Cond = NotInnerCond;
+    SwapInnerSelCond = !SwapInnerSelCond;
   } else // Not the pattern we were looking for.
     return nullptr;
 
-  Value *SelInner = Builder.CreateSelect(
+  // We mark the select with AltCond as having an unknown profile given the
+  // condition is derived from an and/or. We might have profile information on
+  // the operands of the and/or, but there is no guarantee that they are
+  // independent.
+  Value *SelInner = Builder.CreateSelectWithUnknownProfile(
       AltCond, IsAndVariant ? OuterSel.TrueVal : InnerSel.FalseVal,
-      IsAndVariant ? InnerSel.TrueVal : OuterSel.FalseVal);
+      IsAndVariant ? InnerSel.TrueVal : OuterSel.FalseVal, DEBUG_TYPE);
   SelInner->takeName(InnerSelVal);
-  return SelectInst::Create(InnerSel.Cond,
-                            IsAndVariant ? SelInner : InnerSel.TrueVal,
-                            !IsAndVariant ? SelInner : InnerSel.FalseVal);
+  SelectInst *SI = SelectInst::Create(
+      InnerSel.Cond, IsAndVariant ? SelInner : InnerSel.TrueVal,
+      !IsAndVariant ? SelInner : InnerSel.FalseVal, "", nullptr,
+      ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(InnerSelVal));
+  if (SwapInnerSelCond)
+    SI->swapProfMetadata();
+  return SI;
 }
 
 /// Return true if V is poison or \p Expected given that ValAssumedPoison is

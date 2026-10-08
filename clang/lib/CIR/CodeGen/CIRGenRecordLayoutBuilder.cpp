@@ -134,10 +134,6 @@ struct CIRRecordLowering final {
   /// Helper function to check if the target machine is BigEndian.
   bool isBigEndian() const { return astContext.getTargetInfo().isBigEndian(); }
 
-  // Recursively searches all of the bases to find out if a vbase is
-  // not the primary vbase of some base class.
-  bool hasOwnStorage(const CXXRecordDecl *decl, const CXXRecordDecl *query);
-
   CharUnits bitsToCharUnits(uint64_t bitOffset) {
     return astContext.toCharUnitsFromBits(bitOffset);
   }
@@ -1112,17 +1108,6 @@ void CIRRecordLowering::lowerUnion(bool nonVirtualBaseType) {
   packed = !layoutSize.isMultipleOf(getMemberAlignment(storageType));
 }
 
-bool CIRRecordLowering::hasOwnStorage(const CXXRecordDecl *decl,
-                                      const CXXRecordDecl *query) {
-  const ASTRecordLayout &declLayout = astContext.getASTRecordLayout(decl);
-  if (declLayout.isPrimaryBaseVirtual() && declLayout.getPrimaryBase() == query)
-    return false;
-  for (const auto &base : decl->bases())
-    if (!hasOwnStorage(base.getType()->getAsCXXRecordDecl(), query))
-      return false;
-  return true;
-}
-
 /// The AAPCS that defines that, when possible, bit-fields should
 /// be accessed using containers of the declared type width:
 /// When a volatile bit-field is read, and its container does not overlap with
@@ -1278,7 +1263,7 @@ void CIRRecordLowering::accumulateVBases() {
     // get its own storage location but instead lives inside of that base.
     if (CodeGenUtils::isOverlappingVBaseABI(astContext) &&
         astContext.isNearlyEmpty(baseDecl) &&
-        !hasOwnStorage(cxxRecordDecl, baseDecl)) {
+        !CodeGenUtils::hasOwnStorage(astContext, cxxRecordDecl, baseDecl)) {
       members.push_back(MemberInfo(offset, MemberInfo::InfoKind::VBase, nullptr,
                                    cir::RecordMemberKind::Data, baseDecl));
       continue;
