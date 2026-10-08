@@ -9049,20 +9049,25 @@ static void lookupOperatorsForDefaultedComparison(Sema &Self, Scope *S,
   }
 }
 
+static void captureDefaultedComparisonLookups(Sema &Self, Scope *S,
+                                              FunctionDecl *FD) {
+  UnresolvedSet<32> Operators;
+  lookupOperatorsForDefaultedComparison(Self, S, Operators,
+                                        FD->getOverloadedOperator());
+  // An empty set also records that lookup has already been performed.
+  FD->setDefaultedOrDeletedInfo(
+      FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
+          Self.Context, Operators.pairs(), Self.CurFPFeatureOverrides()));
+}
+
 bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
                                               DefaultedComparisonKind DCK) {
   assert(DCK != DefaultedComparisonKind::None && "not a defaulted comparison");
 
   // Perform any unqualified lookups we're going to need to default this
   // function.
-  if (S) {
-    UnresolvedSet<32> Operators;
-    lookupOperatorsForDefaultedComparison(*this, S, Operators,
-                                          FD->getOverloadedOperator());
-    FD->setDefaultedOrDeletedInfo(
-        FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
-            Context, Operators.pairs(), CurFPFeatureOverrides()));
-  }
+  if (S && !FD->getDefaultedOrDeletedInfo())
+    captureDefaultedComparisonLookups(*this, S, FD);
 
   // C++2a [class.compare.default]p1:
   //   A defaulted comparison operator function for some class C shall be a
@@ -9261,7 +9266,13 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
   DefaultedComparisonInfo Info =
       DefaultedComparisonAnalyzer(*this, RD, FD, DCK).visit();
 
-  bool First = FD == FD->getCanonicalDecl();
+  // Function-body instantiation updates a declaration in place. Its canonical
+  // identity and lexical context need not describe the written definition.
+  const FunctionDecl *DeclAsWritten = FD;
+  if (const FunctionDecl *Pattern = FD->getTemplateInstantiationPattern())
+    if (const FunctionDecl *Definition = Pattern->getDefinition())
+      DeclAsWritten = Definition;
+  bool First = DeclAsWritten == DeclAsWritten->getCanonicalDecl();
 
   if (!First) {
     if (Info.Deleted) {
@@ -9278,13 +9289,13 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
           .visit();
       return true;
     }
-    if (isa<CXXRecordDecl>(FD->getLexicalDeclContext())) {
+    if (isa<CXXRecordDecl>(DeclAsWritten->getLexicalDeclContext())) {
       // C++20 [class.compare.default]p1:
       //   [...] A definition of a comparison operator as defaulted that appears
       //   in a class shall be the first declaration of that function.
       Diag(FD->getLocation(), diag::err_non_first_default_compare_in_class)
           << (int)DCK;
-      Diag(FD->getCanonicalDecl()->getLocation(),
+      Diag(DeclAsWritten->getCanonicalDecl()->getLocation(),
            diag::note_previous_declaration);
       return true;
     }
@@ -19019,6 +19030,12 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc, Scope *S) {
   FD->setExplicitlyDefaulted();
   FD->setDefaultLoc(DefaultLoc);
 
+  // Save out-of-class comparison lookup while its function-body scope is
+  // available, even if checking and synthesis must wait for instantiation.
+  // In-class comparisons still perform lookup when the class is complete.
+  if (S && DefKind.isComparison() && !FD->getDefaultedOrDeletedInfo())
+    captureDefaultedComparisonLookups(*this, S, FD);
+
   // Defer checking functions that are defaulted in a dependent context.
   if (FD->isDependentContext())
     return;
@@ -19051,9 +19068,9 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc, Scope *S) {
 
   // Only allocate DefaultedOrDeletedFunctionInfo if we actually have
   // non-default FP features to stash. This avoids memory overhead for
-  // the vast majority of defaulted functions. Comparisons with a scope save
-  // these features along with their unqualified lookups below.
-  if (!FD->getDefaultedOrDeletedInfo() && (!DefKind.isComparison() || !S) &&
+  // the vast majority of defaulted functions. Scoped comparisons have already
+  // saved these features along with their unqualified lookups.
+  if (!FD->getDefaultedOrDeletedInfo() &&
       CurFPFeatureOverrides().requiresTrailingStorage()) {
     FD->setDefaultedOrDeletedInfo(
         FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
