@@ -4997,6 +4997,18 @@ Instruction *InstCombinerImpl::foldPtrAuthConstantCallee(CallBase &Call) {
   return NewCall;
 }
 
+// malloc and calloc return a pointer that is aligned for any scalar type that
+// fits in the allocated size, even if the C library doesn't guarantee more
+// (C23, WG14 N2293). Returns the alignment of the largest integer type that
+// fits, which is at most 8 bytes. See
+// https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2293.htm
+static Align getWeakMallocAlign(uint64_t Size, const DataLayout &DL,
+                                LLVMContext &Ctx) {
+  assert(Size != 0 && "Expected a non-zero size");
+  uint64_t Bytes = std::min<uint64_t>(bit_floor(Size), 8);
+  return DL.getABITypeAlign(Type::getIntNTy(Ctx, Bytes * 8));
+}
+
 bool InstCombinerImpl::annotateAnyAllocSite(CallBase &Call,
                                             const TargetLibraryInfo *TLI) {
   // Note: We only handle cases which can't be driven from generic attributes
@@ -5020,6 +5032,19 @@ bool InstCombinerImpl::annotateAnyAllocSite(CallBase &Call,
       Changed = !Call.hasRetAttr(Attribute::DereferenceableOrNull);
       Call.addRetAttr(Attribute::getWithDereferenceableOrNullBytes(
           Call.getContext(), Size->getLimitedValue()));
+    }
+
+    LibFunc TheLibFunc = TLI ? TLI->getLibFunc(Call) : NotLibFunc;
+    if (TheLibFunc == LibFunc_malloc || TheLibFunc == LibFunc_calloc) {
+      Align ExistingAlign = Call.getRetAlign().valueOrOne();
+      Align NewAlign = std::min(
+          getWeakMallocAlign(Size->getLimitedValue(), DL, Call.getContext()),
+          TLI->getMaxAlignTAlignment(*Call.getModule()));
+      if (NewAlign > ExistingAlign) {
+        Call.addRetAttr(
+            Attribute::getWithAlignment(Call.getContext(), NewAlign));
+        Changed = true;
+      }
     }
   }
 

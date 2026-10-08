@@ -154,9 +154,9 @@ entry:
 define ptr @test5(i32 %n) nounwind ssp {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call noalias dereferenceable_or_null(20) ptr @malloc(i32 20) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call noalias align 4 dereferenceable_or_null(20) ptr @malloc(i32 20) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr @s, align 8
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(10) [[TMP0]], ptr noundef nonnull align 1 dereferenceable(10) [[TMP1]], i32 10, i1 false) #[[ATTR0]]
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 4 dereferenceable(10) [[TMP0]], ptr noundef nonnull align 1 dereferenceable(10) [[TMP1]], i32 10, i1 false) #[[ATTR0]]
 ; CHECK-NEXT:    ret ptr [[TMP0]]
 ;
 entry:
@@ -170,7 +170,7 @@ entry:
 define void @test6(i32 %n) nounwind ssp {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call noalias dereferenceable_or_null(20) ptr @malloc(i32 20) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call noalias align 4 dereferenceable_or_null(20) ptr @malloc(i32 20) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr @s, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call ptr @__memcpy_chk(ptr [[TMP0]], ptr [[TMP1]], i32 30, i32 20) #[[ATTR0]]
 ; CHECK-NEXT:    ret void
@@ -189,7 +189,7 @@ declare noalias ptr @malloc(i32) nounwind allockind("alloc,uninitialized") alloc
 
 define i32 @test7(ptr %esc) {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    [[ALLOC:%.*]] = call noalias dereferenceable_or_null(48) ptr @malloc(i32 48) #[[ATTR0]]
+; CHECK-NEXT:    [[ALLOC:%.*]] = call noalias align 4 dereferenceable_or_null(48) ptr @malloc(i32 48) #[[ATTR0]]
 ; CHECK-NEXT:    store ptr [[ALLOC]], ptr [[ESC:%.*]], align 4
 ; CHECK-NEXT:    ret i32 32
 ;
@@ -204,7 +204,7 @@ declare noalias ptr @calloc(i32, i32) nounwind allockind("alloc,zeroed") allocsi
 
 define i32 @test8(ptr %esc) {
 ; CHECK-LABEL: @test8(
-; CHECK-NEXT:    [[ALLOC:%.*]] = call noalias dereferenceable_or_null(35) ptr @calloc(i32 5, i32 7) #[[ATTR0]]
+; CHECK-NEXT:    [[ALLOC:%.*]] = call noalias align 4 dereferenceable_or_null(35) ptr @calloc(i32 5, i32 7) #[[ATTR0]]
 ; CHECK-NEXT:    store ptr [[ALLOC]], ptr [[ESC:%.*]], align 4
 ; CHECK-NEXT:    ret i32 30
 ;
