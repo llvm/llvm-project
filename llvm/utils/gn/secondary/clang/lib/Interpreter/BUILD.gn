@@ -27,7 +27,6 @@ static_library("Interpreter") {
     "CodeCompletion.cpp",
     "DeviceOffload.cpp",
     "IncrementalAction.cpp",
-    "IncrementalExecutor.cpp",
     "IncrementalParser.cpp",
     "Interpreter.cpp",
     "InterpreterUtils.cpp",
