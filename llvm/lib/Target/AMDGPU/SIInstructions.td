@@ -630,6 +630,7 @@ def SI_LOOP : CFPseudoInstSI <
 def SI_END_CF : CFPseudoInstSI <
   (outs), (ins SReg_1:$saved), [], 1, 1> {
   let Size = 4;
+  let hasPostISelHook = 1; // Sets MachineInstr::BBProlog.
   let isAsCheapAsAMove = 1;
   let isReMaterializable = 1;
   let hasSideEffects = 1;

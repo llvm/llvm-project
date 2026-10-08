@@ -641,7 +641,8 @@ void RegAllocFastImpl::spill(MachineBasicBlock::iterator Before,
   LLVM_DEBUG(dbgs() << " to stack slot #" << FI << '\n');
 
   const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
-  TII->storeRegToStackSlot(*MBB, Before, AssignedReg, Kill, FI, &RC, VirtReg);
+  TII->storeRegToStackSlot(*MBB, Before, AssignedReg, Kill, FI, &RC, VirtReg,
+                           MBB->getBBPrologFlag(Before));
   ++NumStores;
 
   MachineBasicBlock::iterator FirstTerm = MBB->getFirstTerminator();
@@ -698,7 +699,8 @@ void RegAllocFastImpl::reload(MachineBasicBlock::iterator Before,
                     << printReg(PhysReg, TRI) << '\n');
   int FI = getStackSpaceFor(VirtReg);
   const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
-  TII->loadRegFromStackSlot(*MBB, Before, PhysReg, FI, &RC, VirtReg);
+  TII->loadRegFromStackSlot(*MBB, Before, PhysReg, FI, &RC, VirtReg,
+                            /*SubReg=*/0, MBB->getBBPrologFlag(Before));
   ++NumLoads;
 }
 
@@ -716,7 +718,7 @@ MachineBasicBlock::iterator RegAllocFastImpl::getMBBBeginInsertionPoint(
     }
 
     // Skip prologues and inlineasm_br spills to place reloads afterwards.
-    if (!TII->isBasicBlockPrologue(*I) && !mayBeSpillFromInlineAsmBr(*I))
+    if (!I->getFlag(MachineInstr::BBProlog) && !mayBeSpillFromInlineAsmBr(*I))
       break;
 
     // However if a prolog instruction reads a register that needs to be
@@ -1159,7 +1161,8 @@ bool RegAllocFastImpl::defineLiveThroughVirtReg(MachineInstr &MI,
                         << printReg(PrevReg, TRI) << '\n');
       BuildMI(*MBB, InsertBefore, MI.getDebugLoc(),
               TII->get(TargetOpcode::COPY), PrevReg)
-          .addReg(LRI->PhysReg, llvm::RegState::Kill);
+          .addReg(LRI->PhysReg, llvm::RegState::Kill)
+          .setMIFlag(MBB->getBBPrologFlag(InsertBefore));
     }
     MachineOperand &MO = MI.getOperand(OpNum);
     if (MO.getSubReg() && !MO.isUndef()) {
@@ -1225,7 +1228,8 @@ bool RegAllocFastImpl::defineVirtReg(MachineInstr &MI, unsigned OpNum,
           if (MO.isMBB()) {
             MachineBasicBlock *Succ = MO.getMBB();
             TII->storeRegToStackSlot(*Succ, Succ->begin(), PhysReg, Kill, FI,
-                                     &RC, VirtReg);
+                                     &RC, VirtReg,
+                                     Succ->getBBPrologFlag(Succ->begin()));
             ++NumStores;
             Succ->addLiveIn(PhysReg);
           }

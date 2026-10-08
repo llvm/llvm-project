@@ -457,7 +457,7 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   MachineBasicBlock *MBB = DefMBB;
   MachineBasicBlock::iterator MII;
   if (SrcVNI->isPHIDef())
-    MII = MBB->SkipPHIsLabelsAndDebug(MBB->begin(), SrcReg);
+    MII = MBB->SkipPHIsLabelsAndDebug(MBB->begin());
   else {
     MachineInstr *DefMI = LIS.getInstructionFromIndex(SrcVNI->def);
     assert(DefMI && "Defining instruction disappeared");
@@ -499,7 +499,8 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   MachineInstrSpan MIS(MII, MBB);
   // Insert spill without kill flag immediately after def.
   TII.storeRegToStackSlot(*MBB, MII, SrcReg, false, StackSlot,
-                          MRI.getRegClass(SrcReg), Register());
+                          MRI.getRegClass(SrcReg), Register(),
+                          MBB->getBBPrologFlag(MII));
   LIS.InsertMachineInstrRangeInMaps(MIS.begin(), MII);
   for (const MachineInstr &MI : make_range(MIS.begin(), MII))
     getVDefInterval(MI, LIS);
@@ -1251,7 +1252,8 @@ void InlineSpiller::insertReload(Register NewVReg,
 
   MachineInstrSpan MIS(MI, &MBB);
   TII.loadRegFromStackSlot(MBB, MI, NewVReg, StackSlot,
-                           MRI.getRegClass(NewVReg), Register());
+                           MRI.getRegClass(NewVReg), Register(), /*SubReg=*/0,
+                           MBB.getBBPrologFlag(MI));
 
   LIS.InsertMachineInstrRangeInMaps(MIS.begin(), MI);
 
@@ -1285,16 +1287,19 @@ void InlineSpiller::insertSpill(Register NewVReg, bool isKill,
   MachineBasicBlock::iterator SpillBefore = std::next(MI);
   bool IsRealSpill = isRealSpill(*MI);
 
+  MachineInstr::MIFlag PrologFlag = MBB.getBBPrologFlag(SpillBefore);
+
   if (IsRealSpill)
     TII.storeRegToStackSlot(MBB, SpillBefore, NewVReg, isKill, StackSlot,
-                            MRI.getRegClass(NewVReg), Register());
+                            MRI.getRegClass(NewVReg), Register(), PrologFlag);
   else
     // Don't spill undef value.
     // Anything works for undef, in particular keeping the memory
     // uninitialized is a viable option and it saves code size and
     // run time.
     BuildMI(MBB, SpillBefore, MI->getDebugLoc(), TII.get(TargetOpcode::KILL))
-        .addReg(NewVReg, getKillRegState(isKill));
+        .addReg(NewVReg, getKillRegState(isKill))
+        .setMIFlag(PrologFlag);
 
   MachineBasicBlock::iterator Spill = std::next(MI);
   LIS.InsertMachineInstrRangeInMaps(Spill, MIS.end());
@@ -1867,7 +1872,8 @@ void HoistSpillHelper::hoistAllSpills() {
       MachineBasicBlock::iterator MII = IPA.getLastInsertPointIter(OrigLI, *BB);
       MachineInstrSpan MIS(MII, BB);
       TII.storeRegToStackSlot(*BB, MII, LiveReg, false, Slot,
-                              MRI.getRegClass(LiveReg), Register());
+                              MRI.getRegClass(LiveReg), Register(),
+                              BB->getBBPrologFlag(MII));
       LIS.InsertMachineInstrRangeInMaps(MIS.begin(), MII);
       for (const MachineInstr &MI : make_range(MIS.begin(), MII))
         getVDefInterval(MI, LIS);

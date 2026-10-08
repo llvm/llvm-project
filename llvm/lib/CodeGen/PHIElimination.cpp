@@ -440,6 +440,7 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
     PHICopy = TII->createPHIDestinationCopy(
         MBB, AfterPHIsIt, MPhi->getDebugLoc(), IncomingReg, DestReg);
   }
+  PHICopy->setFlag(MBB.getBBPrologFlag(std::next(PHICopy->getIterator())));
 
   if (MPhi->peekDebugInstrNum() && IncomingReg) {
     // If referred to by debug-info, store where this PHI was.

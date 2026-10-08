@@ -903,18 +903,41 @@ public:
     return const_cast<MachineBasicBlock *>(this)->getFirstNonPHI();
   }
 
-  /// Return the first instruction in MBB after I that is not a PHI or a label.
-  /// This is the correct point to insert lowered copies at the beginning of a
-  /// basic block that must be before any debugging information.
+  /// Return the first instruction in MBB after I that is not a PHI, a label or
+  /// a block prolog instruction. This is the correct point to insert lowered
+  /// copies at the beginning of a basic block that must be before any debugging
+  /// information.
   LLVM_ABI iterator SkipPHIsAndLabels(iterator I);
 
-  /// Return the first instruction in MBB after I that is not a PHI, label or
-  /// debug.  This is the correct point to insert copies at the beginning of a
-  /// basic block. \p Reg is the register being used by a spill or defined for a
-  /// restore/split during register allocation.
+  /// Return the first instruction in MBB after I that is not a PHI, label,
+  /// debug or block prolog instruction. This is the correct point to insert
+  /// copies at the beginning of a basic block.
   LLVM_ABI iterator SkipPHIsLabelsAndDebug(iterator I,
-                                           Register Reg = Register(),
                                            bool SkipPseudoOp = true);
+
+  /// Return true if an instruction inserted before \p I is part of the block
+  /// prolog, i.e. the next instruction that is not a label, debug instruction
+  /// or pseudo probe is a prolog instruction (MachineInstr::BBProlog).
+  LLVM_ABI bool isInBBProlog(const_instr_iterator I) const;
+  bool isInBBProlog(const_iterator I) const {
+    return isInBBProlog(I.getInstrIterator());
+  }
+
+  /// The flag for an instruction inserted before \p I: MachineInstr::BBProlog
+  /// if that is inside the block prolog.
+  MachineInstr::MIFlag getBBPrologFlag(const_instr_iterator I) const {
+    return isInBBProlog(I) ? MachineInstr::BBProlog : MachineInstr::NoFlags;
+  }
+  MachineInstr::MIFlag getBBPrologFlag(const_iterator I) const {
+    return getBBPrologFlag(I.getInstrIterator());
+  }
+
+  /// Mark the instructions in [\p Begin, \p End) as block prolog instructions,
+  /// except labels, debug instructions and pseudo probes.
+  LLVM_ABI void setBBPrologFlag(instr_iterator Begin, instr_iterator End);
+  void setBBPrologFlag(iterator Begin, iterator End) {
+    setBBPrologFlag(Begin.getInstrIterator(), End.getInstrIterator());
+  }
 
   /// Returns an iterator to the first terminator instruction of this basic
   /// block. If a terminator does not exist, it returns end().

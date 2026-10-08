@@ -1234,6 +1234,7 @@ void SIWholeQuadMode::toExact(MachineBasicBlock &MBB,
              .setOperandDead(3);
   }
 
+  SIInstrInfo::setBBPrologIfAtBlockStart(*MI);
   LIS->InsertMachineInstrInMaps(*MI);
   LIS->removeAllRegUnitsForPhysReg(AMDGPU::EXEC);
   StateTransition[MI] = StateExact;
@@ -1254,6 +1255,7 @@ void SIWholeQuadMode::toWQM(MachineBasicBlock &MBB,
              .setOperandDead(2);
   }
 
+  SIInstrInfo::setBBPrologIfAtBlockStart(*MI);
   LIS->InsertMachineInstrInMaps(*MI);
   StateTransition[MI] = StateWQM;
 }
@@ -1277,6 +1279,7 @@ void SIWholeQuadMode::toStrictMode(MachineBasicBlock &MBB,
              .addImm(-1)
              .setOperandDead(3);
   }
+  SIInstrInfo::setBBPrologIfAtBlockStart(*MI);
   LIS->InsertMachineInstrInMaps(*MI);
   StateTransition[MI] = StrictStateNeeded;
 }
@@ -1302,6 +1305,7 @@ void SIWholeQuadMode::fromStrictMode(MachineBasicBlock &MBB,
         BuildMI(MBB, Before, DL, TII->get(AMDGPU::EXIT_STRICT_WQM), LMC.ExecReg)
             .addReg(SavedOrig);
   }
+  SIInstrInfo::setBBPrologIfAtBlockStart(*MI);
   LIS->InsertMachineInstrInMaps(*MI);
   StateTransition[MI] = NonStrictState;
 }
@@ -1622,7 +1626,8 @@ void SIWholeQuadMode::lowerInitExec(MachineInstr &MI) {
     MachineInstr *SaveExec = BuildMI(*MBB, MBB->begin(), MI.getDebugLoc(),
                                      TII->get(LMC.OrSaveExecOpc), EntryExec)
                                  .addImm(-1)
-                                 .setOperandDead(3);
+                                 .setOperandDead(3)
+                                 .setMIFlag(MachineInstr::BBProlog);
 
     // Replace all uses of MI's destination reg with EntryExec.
     MRI->replaceRegWith(MI.getOperand(0).getReg(), EntryExec);
@@ -1644,7 +1649,8 @@ void SIWholeQuadMode::lowerInitExec(MachineInstr &MI) {
     // This should be before all vector instructions.
     MachineInstr *InitMI = BuildMI(*MBB, MBB->begin(), MI.getDebugLoc(),
                                    TII->get(LMC.MovOpc), LMC.ExecReg)
-                               .addImm(MI.getOperand(0).getImm());
+                               .addImm(MI.getOperand(0).getImm())
+                               .setMIFlag(MachineInstr::BBProlog);
     if (LIS) {
       LIS->RemoveMachineInstrFromMaps(MI);
       LIS->InsertMachineInstrInMaps(*InitMI);
@@ -1677,6 +1683,8 @@ void SIWholeQuadMode::lowerInitExec(MachineInstr &MI) {
         // If first instruction is definition then move pointer after it.
         FirstMI = &*std::next(FirstMI->getIterator());
       }
+      // The input copy feeds the exec setup below.
+      DefInstr->setFlag(MachineInstr::BBProlog);
     }
   }
 
@@ -1697,6 +1705,8 @@ void SIWholeQuadMode::lowerInitExec(MachineInstr &MI) {
                    .addImm(WavefrontSize);
   auto CmovMI =
       BuildMI(*MBB, FirstMI, DL, TII->get(LMC.CMovOpc), LMC.ExecReg).addImm(-1);
+  for (MachineInstr *I : {&*BfeMI, &*BfmMI, &*CmpMI, &*CmovMI})
+    I->setFlag(MachineInstr::BBProlog);
 
   if (!LIS) {
     MI.eraseFromParent();
@@ -1769,6 +1779,7 @@ bool SIWholeQuadMode::run(MachineFunction &MF) {
     MachineInstr *MI =
         BuildMI(Entry, EntryMI, DebugLoc(), TII->get(AMDGPU::COPY), LiveMaskReg)
             .addReg(LMC.ExecReg);
+    SIInstrInfo::setBBPrologIfAtBlockStart(*MI);
     LIS->InsertMachineInstrInMaps(*MI);
     Changed = true;
   }
@@ -1803,6 +1814,7 @@ bool SIWholeQuadMode::run(MachineFunction &MF) {
         BuildMI(Entry, EntryMI, DebugLoc(), TII->get(LMC.WQMOpc), LMC.ExecReg)
             .addReg(LMC.ExecReg)
             .setOperandDead(2);
+    SIInstrInfo::setBBPrologIfAtBlockStart(*MI);
     LIS->InsertMachineInstrInMaps(*MI);
     lowerKillInstrs(true);
     Changed = true;

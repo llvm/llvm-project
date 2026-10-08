@@ -2168,6 +2168,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
          "undef spill should have been deleted earlier");
 
   SGPRSpillBuilder SB(*this, *ST.getInstrInfo(), isWave32, MI, Index, RS);
+  MachineInstrSpan MIS(MI, MI->getParent());
 
   ArrayRef<SpilledReg> VGPRSpills =
       SpillToPhysVGPRLane ? SB.MFI.getSGPRSpillToPhysicalVGPRLanes(Index)
@@ -2312,6 +2313,9 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
     SB.restore();
   }
 
+  // The expansion replaces MI.
+  if (MI->getParent()->isInBBProlog(MI))
+    MI->getParent()->setBBPrologFlag(MIS.begin(), MI);
   MI->eraseFromParent();
   SB.MFI.addToSpilledSGPRs(SB.NumSubRegs);
 
@@ -2326,6 +2330,7 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI, int Index,
                                  LiveIntervals *LIS, bool OnlyToVGPR,
                                  bool SpillToPhysVGPRLane) const {
   SGPRSpillBuilder SB(*this, *ST.getInstrInfo(), isWave32, MI, Index, RS);
+  MachineInstrSpan MIS(MI, MI->getParent());
 
   ArrayRef<SpilledReg> VGPRSpills =
       SpillToPhysVGPRLane ? SB.MFI.getSGPRSpillToPhysicalVGPRLanes(Index)
@@ -2393,6 +2398,9 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI, int Index,
     SB.restore();
   }
 
+  // The expansion replaces MI.
+  if (MI->getParent()->isInBBProlog(MI))
+    MI->getParent()->setBBPrologFlag(MIS.begin(), MI);
   MI->eraseFromParent();
 
   if (LIS)
