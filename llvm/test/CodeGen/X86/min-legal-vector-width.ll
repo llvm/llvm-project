@@ -1960,6 +1960,7 @@ define <32 x i8> @splatvar_rotate_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind "mi
 ; CHECK-LABEL: splatvar_rotate_v32i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpunpckhbw {{.*#+}} ymm2 = ymm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
+; CHECK-NEXT:    vpbroadcastb %xmm1, %xmm1
 ; CHECK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; CHECK-NEXT:    vpsllw %xmm1, %ymm2, %ymm2
 ; CHECK-NEXT:    vpsrlw $8, %ymm2, %ymm2
