@@ -289,17 +289,24 @@ extern "C" void foo10(data_t data) {
 // CHECK1:       for.end17:
 // CHECK1-NEXT:    [[TMP22:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK1-NEXT:    [[TMP23:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_1]], align 4
+// CHECK1-NEXT:    [[CMP18:%.*]] = icmp slt i32 [[TMP22]], [[TMP23]]
+// CHECK1-NEXT:    br i1 [[CMP18]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+// CHECK1:       if.then:
 // CHECK1-NEXT:    [[TMP24:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK1-NEXT:    [[SUB18:%.*]] = sub i32 [[TMP23]], [[TMP24]]
-// CHECK1-NEXT:    [[SUB19:%.*]] = sub i32 [[SUB18]], 1
-// CHECK1-NEXT:    [[TMP25:%.*]] = load i32, ptr [[DOTNEW_STEP]], align 4
-// CHECK1-NEXT:    [[ADD20:%.*]] = add i32 [[SUB19]], [[TMP25]]
-// CHECK1-NEXT:    [[TMP26:%.*]] = load i32, ptr [[DOTNEW_STEP]], align 4
-// CHECK1-NEXT:    [[DIV21:%.*]] = udiv i32 [[ADD20]], [[TMP26]]
+// CHECK1-NEXT:    [[TMP25:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_1]], align 4
+// CHECK1-NEXT:    [[TMP26:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK1-NEXT:    [[SUB19:%.*]] = sub i32 [[TMP25]], [[TMP26]]
+// CHECK1-NEXT:    [[SUB20:%.*]] = sub i32 [[SUB19]], 1
 // CHECK1-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTNEW_STEP]], align 4
-// CHECK1-NEXT:    [[MUL22:%.*]] = mul i32 [[DIV21]], [[TMP27]]
-// CHECK1-NEXT:    [[ADD23:%.*]] = add i32 [[TMP22]], [[MUL22]]
-// CHECK1-NEXT:    store i32 [[ADD23]], ptr [[I]], align 4
+// CHECK1-NEXT:    [[ADD21:%.*]] = add i32 [[SUB20]], [[TMP27]]
+// CHECK1-NEXT:    [[TMP28:%.*]] = load i32, ptr [[DOTNEW_STEP]], align 4
+// CHECK1-NEXT:    [[DIV22:%.*]] = udiv i32 [[ADD21]], [[TMP28]]
+// CHECK1-NEXT:    [[TMP29:%.*]] = load i32, ptr [[DOTNEW_STEP]], align 4
+// CHECK1-NEXT:    [[MUL23:%.*]] = mul i32 [[DIV22]], [[TMP29]]
+// CHECK1-NEXT:    [[ADD24:%.*]] = add i32 [[TMP24]], [[MUL23]]
+// CHECK1-NEXT:    store i32 [[ADD24]], ptr [[I]], align 4
+// CHECK1-NEXT:    br label [[IF_END]]
+// CHECK1:       if.end:
 // CHECK1-NEXT:    ret void
 //
 //
@@ -1013,14 +1020,21 @@ extern "C" void foo10(data_t data) {
 // CHECK1:       for.end17:
 // CHECK1-NEXT:    [[TMP18:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK1-NEXT:    [[TMP19:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_1]], align 4
+// CHECK1-NEXT:    [[CMP18:%.*]] = icmp slt i32 [[TMP18]], [[TMP19]]
+// CHECK1-NEXT:    br i1 [[CMP18]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+// CHECK1:       if.then:
 // CHECK1-NEXT:    [[TMP20:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK1-NEXT:    [[SUB18:%.*]] = sub i32 [[TMP19]], [[TMP20]]
-// CHECK1-NEXT:    [[SUB19:%.*]] = sub i32 [[SUB18]], 1
-// CHECK1-NEXT:    [[ADD20:%.*]] = add i32 [[SUB19]], 3
-// CHECK1-NEXT:    [[DIV21:%.*]] = udiv i32 [[ADD20]], 3
-// CHECK1-NEXT:    [[MUL22:%.*]] = mul i32 [[DIV21]], 3
-// CHECK1-NEXT:    [[ADD23:%.*]] = add i32 [[TMP18]], [[MUL22]]
-// CHECK1-NEXT:    store i32 [[ADD23]], ptr [[I]], align 4
+// CHECK1-NEXT:    [[TMP21:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_1]], align 4
+// CHECK1-NEXT:    [[TMP22:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK1-NEXT:    [[SUB19:%.*]] = sub i32 [[TMP21]], [[TMP22]]
+// CHECK1-NEXT:    [[SUB20:%.*]] = sub i32 [[SUB19]], 1
+// CHECK1-NEXT:    [[ADD21:%.*]] = add i32 [[SUB20]], 3
+// CHECK1-NEXT:    [[DIV22:%.*]] = udiv i32 [[ADD21]], 3
+// CHECK1-NEXT:    [[MUL23:%.*]] = mul i32 [[DIV22]], 3
+// CHECK1-NEXT:    [[ADD24:%.*]] = add i32 [[TMP20]], [[MUL23]]
+// CHECK1-NEXT:    store i32 [[ADD24]], ptr [[I]], align 4
+// CHECK1-NEXT:    br label [[IF_END]]
+// CHECK1:       if.end:
 // CHECK1-NEXT:    ret void
 //
 //
@@ -1210,17 +1224,24 @@ extern "C" void foo10(data_t data) {
 // CHECK1:       for.end18:
 // CHECK1-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
 // CHECK1-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_3]], align 8
+// CHECK1-NEXT:    [[CMP19:%.*]] = icmp ult ptr [[TMP21]], [[TMP22]]
+// CHECK1-NEXT:    br i1 [[CMP19]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+// CHECK1:       if.then:
 // CHECK1-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
-// CHECK1-NEXT:    [[SUB_PTR_LHS_CAST19:%.*]] = ptrtoaddr ptr [[TMP22]] to i64
-// CHECK1-NEXT:    [[SUB_PTR_RHS_CAST20:%.*]] = ptrtoaddr ptr [[TMP23]] to i64
-// CHECK1-NEXT:    [[SUB_PTR_SUB21:%.*]] = sub i64 [[SUB_PTR_LHS_CAST19]], [[SUB_PTR_RHS_CAST20]]
-// CHECK1-NEXT:    [[SUB_PTR_DIV22:%.*]] = sdiv exact i64 [[SUB_PTR_SUB21]], 8
-// CHECK1-NEXT:    [[SUB23:%.*]] = sub nsw i64 [[SUB_PTR_DIV22]], 1
-// CHECK1-NEXT:    [[ADD24:%.*]] = add nsw i64 [[SUB23]], 1
-// CHECK1-NEXT:    [[DIV25:%.*]] = sdiv i64 [[ADD24]], 1
-// CHECK1-NEXT:    [[MUL26:%.*]] = mul nsw i64 [[DIV25]], 1
-// CHECK1-NEXT:    [[ADD_PTR27:%.*]] = getelementptr inbounds double, ptr [[TMP21]], i64 [[MUL26]]
-// CHECK1-NEXT:    store ptr [[ADD_PTR27]], ptr [[__BEGIN2]], align 8
+// CHECK1-NEXT:    [[TMP24:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_3]], align 8
+// CHECK1-NEXT:    [[TMP25:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
+// CHECK1-NEXT:    [[SUB_PTR_LHS_CAST20:%.*]] = ptrtoaddr ptr [[TMP24]] to i64
+// CHECK1-NEXT:    [[SUB_PTR_RHS_CAST21:%.*]] = ptrtoaddr ptr [[TMP25]] to i64
+// CHECK1-NEXT:    [[SUB_PTR_SUB22:%.*]] = sub i64 [[SUB_PTR_LHS_CAST20]], [[SUB_PTR_RHS_CAST21]]
+// CHECK1-NEXT:    [[SUB_PTR_DIV23:%.*]] = sdiv exact i64 [[SUB_PTR_SUB22]], 8
+// CHECK1-NEXT:    [[SUB24:%.*]] = sub nsw i64 [[SUB_PTR_DIV23]], 1
+// CHECK1-NEXT:    [[ADD25:%.*]] = add nsw i64 [[SUB24]], 1
+// CHECK1-NEXT:    [[DIV26:%.*]] = sdiv i64 [[ADD25]], 1
+// CHECK1-NEXT:    [[MUL27:%.*]] = mul nsw i64 [[DIV26]], 1
+// CHECK1-NEXT:    [[ADD_PTR28:%.*]] = getelementptr inbounds double, ptr [[TMP23]], i64 [[MUL27]]
+// CHECK1-NEXT:    store ptr [[ADD_PTR28]], ptr [[__BEGIN2]], align 8
+// CHECK1-NEXT:    br label [[IF_END]]
+// CHECK1:       if.end:
 // CHECK1-NEXT:    ret void
 //
 //
@@ -1323,17 +1344,24 @@ extern "C" void foo10(data_t data) {
 // CHECK1:       for.end18:
 // CHECK1-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
 // CHECK1-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_3]], align 8
+// CHECK1-NEXT:    [[CMP19:%.*]] = icmp ult ptr [[TMP22]], [[TMP23]]
+// CHECK1-NEXT:    br i1 [[CMP19]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+// CHECK1:       if.then:
 // CHECK1-NEXT:    [[TMP24:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
-// CHECK1-NEXT:    [[SUB_PTR_LHS_CAST19:%.*]] = ptrtoaddr ptr [[TMP23]] to i64
-// CHECK1-NEXT:    [[SUB_PTR_RHS_CAST20:%.*]] = ptrtoaddr ptr [[TMP24]] to i64
-// CHECK1-NEXT:    [[SUB_PTR_SUB21:%.*]] = sub i64 [[SUB_PTR_LHS_CAST19]], [[SUB_PTR_RHS_CAST20]]
-// CHECK1-NEXT:    [[SUB_PTR_DIV22:%.*]] = sdiv exact i64 [[SUB_PTR_SUB21]], 8
-// CHECK1-NEXT:    [[SUB23:%.*]] = sub nsw i64 [[SUB_PTR_DIV22]], 1
-// CHECK1-NEXT:    [[ADD24:%.*]] = add nsw i64 [[SUB23]], 1
-// CHECK1-NEXT:    [[DIV25:%.*]] = sdiv i64 [[ADD24]], 1
-// CHECK1-NEXT:    [[MUL26:%.*]] = mul nsw i64 [[DIV25]], 1
-// CHECK1-NEXT:    [[ADD_PTR27:%.*]] = getelementptr inbounds double, ptr [[TMP22]], i64 [[MUL26]]
-// CHECK1-NEXT:    store ptr [[ADD_PTR27]], ptr [[__BEGIN2]], align 8
+// CHECK1-NEXT:    [[TMP25:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_3]], align 8
+// CHECK1-NEXT:    [[TMP26:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
+// CHECK1-NEXT:    [[SUB_PTR_LHS_CAST20:%.*]] = ptrtoaddr ptr [[TMP25]] to i64
+// CHECK1-NEXT:    [[SUB_PTR_RHS_CAST21:%.*]] = ptrtoaddr ptr [[TMP26]] to i64
+// CHECK1-NEXT:    [[SUB_PTR_SUB22:%.*]] = sub i64 [[SUB_PTR_LHS_CAST20]], [[SUB_PTR_RHS_CAST21]]
+// CHECK1-NEXT:    [[SUB_PTR_DIV23:%.*]] = sdiv exact i64 [[SUB_PTR_SUB22]], 8
+// CHECK1-NEXT:    [[SUB24:%.*]] = sub nsw i64 [[SUB_PTR_DIV23]], 1
+// CHECK1-NEXT:    [[ADD25:%.*]] = add nsw i64 [[SUB24]], 1
+// CHECK1-NEXT:    [[DIV26:%.*]] = sdiv i64 [[ADD25]], 1
+// CHECK1-NEXT:    [[MUL27:%.*]] = mul nsw i64 [[DIV26]], 1
+// CHECK1-NEXT:    [[ADD_PTR28:%.*]] = getelementptr inbounds double, ptr [[TMP24]], i64 [[MUL27]]
+// CHECK1-NEXT:    store ptr [[ADD_PTR28]], ptr [[__BEGIN2]], align 8
+// CHECK1-NEXT:    br label [[IF_END]]
+// CHECK1:       if.end:
 // CHECK1-NEXT:    ret void
 //
 //
@@ -1525,17 +1553,24 @@ extern "C" void foo10(data_t data) {
 // CHECK2:       for.end17:
 // CHECK2-NEXT:    [[TMP22:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK2-NEXT:    [[TMP23:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_1]], align 4
+// CHECK2-NEXT:    [[CMP18:%.*]] = icmp slt i32 [[TMP22]], [[TMP23]]
+// CHECK2-NEXT:    br i1 [[CMP18]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+// CHECK2:       if.then:
 // CHECK2-NEXT:    [[TMP24:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK2-NEXT:    [[SUB18:%.*]] = sub i32 [[TMP23]], [[TMP24]]
-// CHECK2-NEXT:    [[SUB19:%.*]] = sub i32 [[SUB18]], 1
-// CHECK2-NEXT:    [[TMP25:%.*]] = load i32, ptr [[DOTNEW_STEP]], align 4
-// CHECK2-NEXT:    [[ADD20:%.*]] = add i32 [[SUB19]], [[TMP25]]
-// CHECK2-NEXT:    [[TMP26:%.*]] = load i32, ptr [[DOTNEW_STEP]], align 4
-// CHECK2-NEXT:    [[DIV21:%.*]] = udiv i32 [[ADD20]], [[TMP26]]
+// CHECK2-NEXT:    [[TMP25:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_1]], align 4
+// CHECK2-NEXT:    [[TMP26:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK2-NEXT:    [[SUB19:%.*]] = sub i32 [[TMP25]], [[TMP26]]
+// CHECK2-NEXT:    [[SUB20:%.*]] = sub i32 [[SUB19]], 1
 // CHECK2-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTNEW_STEP]], align 4
-// CHECK2-NEXT:    [[MUL22:%.*]] = mul i32 [[DIV21]], [[TMP27]]
-// CHECK2-NEXT:    [[ADD23:%.*]] = add i32 [[TMP22]], [[MUL22]]
-// CHECK2-NEXT:    store i32 [[ADD23]], ptr [[I]], align 4
+// CHECK2-NEXT:    [[ADD21:%.*]] = add i32 [[SUB20]], [[TMP27]]
+// CHECK2-NEXT:    [[TMP28:%.*]] = load i32, ptr [[DOTNEW_STEP]], align 4
+// CHECK2-NEXT:    [[DIV22:%.*]] = udiv i32 [[ADD21]], [[TMP28]]
+// CHECK2-NEXT:    [[TMP29:%.*]] = load i32, ptr [[DOTNEW_STEP]], align 4
+// CHECK2-NEXT:    [[MUL23:%.*]] = mul i32 [[DIV22]], [[TMP29]]
+// CHECK2-NEXT:    [[ADD24:%.*]] = add i32 [[TMP24]], [[MUL23]]
+// CHECK2-NEXT:    store i32 [[ADD24]], ptr [[I]], align 4
+// CHECK2-NEXT:    br label [[IF_END]]
+// CHECK2:       if.end:
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1638,17 +1673,24 @@ extern "C" void foo10(data_t data) {
 // CHECK2:       for.end18:
 // CHECK2-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
 // CHECK2-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_3]], align 8
+// CHECK2-NEXT:    [[CMP19:%.*]] = icmp ult ptr [[TMP22]], [[TMP23]]
+// CHECK2-NEXT:    br i1 [[CMP19]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+// CHECK2:       if.then:
 // CHECK2-NEXT:    [[TMP24:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
-// CHECK2-NEXT:    [[SUB_PTR_LHS_CAST19:%.*]] = ptrtoaddr ptr [[TMP23]] to i64
-// CHECK2-NEXT:    [[SUB_PTR_RHS_CAST20:%.*]] = ptrtoaddr ptr [[TMP24]] to i64
-// CHECK2-NEXT:    [[SUB_PTR_SUB21:%.*]] = sub i64 [[SUB_PTR_LHS_CAST19]], [[SUB_PTR_RHS_CAST20]]
-// CHECK2-NEXT:    [[SUB_PTR_DIV22:%.*]] = sdiv exact i64 [[SUB_PTR_SUB21]], 8
-// CHECK2-NEXT:    [[SUB23:%.*]] = sub nsw i64 [[SUB_PTR_DIV22]], 1
-// CHECK2-NEXT:    [[ADD24:%.*]] = add nsw i64 [[SUB23]], 1
-// CHECK2-NEXT:    [[DIV25:%.*]] = sdiv i64 [[ADD24]], 1
-// CHECK2-NEXT:    [[MUL26:%.*]] = mul nsw i64 [[DIV25]], 1
-// CHECK2-NEXT:    [[ADD_PTR27:%.*]] = getelementptr inbounds double, ptr [[TMP22]], i64 [[MUL26]]
-// CHECK2-NEXT:    store ptr [[ADD_PTR27]], ptr [[__BEGIN2]], align 8
+// CHECK2-NEXT:    [[TMP25:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_3]], align 8
+// CHECK2-NEXT:    [[TMP26:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
+// CHECK2-NEXT:    [[SUB_PTR_LHS_CAST20:%.*]] = ptrtoaddr ptr [[TMP25]] to i64
+// CHECK2-NEXT:    [[SUB_PTR_RHS_CAST21:%.*]] = ptrtoaddr ptr [[TMP26]] to i64
+// CHECK2-NEXT:    [[SUB_PTR_SUB22:%.*]] = sub i64 [[SUB_PTR_LHS_CAST20]], [[SUB_PTR_RHS_CAST21]]
+// CHECK2-NEXT:    [[SUB_PTR_DIV23:%.*]] = sdiv exact i64 [[SUB_PTR_SUB22]], 8
+// CHECK2-NEXT:    [[SUB24:%.*]] = sub nsw i64 [[SUB_PTR_DIV23]], 1
+// CHECK2-NEXT:    [[ADD25:%.*]] = add nsw i64 [[SUB24]], 1
+// CHECK2-NEXT:    [[DIV26:%.*]] = sdiv i64 [[ADD25]], 1
+// CHECK2-NEXT:    [[MUL27:%.*]] = mul nsw i64 [[DIV26]], 1
+// CHECK2-NEXT:    [[ADD_PTR28:%.*]] = getelementptr inbounds double, ptr [[TMP24]], i64 [[MUL27]]
+// CHECK2-NEXT:    store ptr [[ADD_PTR28]], ptr [[__BEGIN2]], align 8
+// CHECK2-NEXT:    br label [[IF_END]]
+// CHECK2:       if.end:
 // CHECK2-NEXT:    ret void
 //
 //
@@ -2458,17 +2500,24 @@ extern "C" void foo10(data_t data) {
 // CHECK2:       for.end18:
 // CHECK2-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
 // CHECK2-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_3]], align 8
+// CHECK2-NEXT:    [[CMP19:%.*]] = icmp ult ptr [[TMP21]], [[TMP22]]
+// CHECK2-NEXT:    br i1 [[CMP19]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+// CHECK2:       if.then:
 // CHECK2-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
-// CHECK2-NEXT:    [[SUB_PTR_LHS_CAST19:%.*]] = ptrtoaddr ptr [[TMP22]] to i64
-// CHECK2-NEXT:    [[SUB_PTR_RHS_CAST20:%.*]] = ptrtoaddr ptr [[TMP23]] to i64
-// CHECK2-NEXT:    [[SUB_PTR_SUB21:%.*]] = sub i64 [[SUB_PTR_LHS_CAST19]], [[SUB_PTR_RHS_CAST20]]
-// CHECK2-NEXT:    [[SUB_PTR_DIV22:%.*]] = sdiv exact i64 [[SUB_PTR_SUB21]], 8
-// CHECK2-NEXT:    [[SUB23:%.*]] = sub nsw i64 [[SUB_PTR_DIV22]], 1
-// CHECK2-NEXT:    [[ADD24:%.*]] = add nsw i64 [[SUB23]], 1
-// CHECK2-NEXT:    [[DIV25:%.*]] = sdiv i64 [[ADD24]], 1
-// CHECK2-NEXT:    [[MUL26:%.*]] = mul nsw i64 [[DIV25]], 1
-// CHECK2-NEXT:    [[ADD_PTR27:%.*]] = getelementptr inbounds double, ptr [[TMP21]], i64 [[MUL26]]
-// CHECK2-NEXT:    store ptr [[ADD_PTR27]], ptr [[__BEGIN2]], align 8
+// CHECK2-NEXT:    [[TMP24:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_3]], align 8
+// CHECK2-NEXT:    [[TMP25:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_]], align 8
+// CHECK2-NEXT:    [[SUB_PTR_LHS_CAST20:%.*]] = ptrtoaddr ptr [[TMP24]] to i64
+// CHECK2-NEXT:    [[SUB_PTR_RHS_CAST21:%.*]] = ptrtoaddr ptr [[TMP25]] to i64
+// CHECK2-NEXT:    [[SUB_PTR_SUB22:%.*]] = sub i64 [[SUB_PTR_LHS_CAST20]], [[SUB_PTR_RHS_CAST21]]
+// CHECK2-NEXT:    [[SUB_PTR_DIV23:%.*]] = sdiv exact i64 [[SUB_PTR_SUB22]], 8
+// CHECK2-NEXT:    [[SUB24:%.*]] = sub nsw i64 [[SUB_PTR_DIV23]], 1
+// CHECK2-NEXT:    [[ADD25:%.*]] = add nsw i64 [[SUB24]], 1
+// CHECK2-NEXT:    [[DIV26:%.*]] = sdiv i64 [[ADD25]], 1
+// CHECK2-NEXT:    [[MUL27:%.*]] = mul nsw i64 [[DIV26]], 1
+// CHECK2-NEXT:    [[ADD_PTR28:%.*]] = getelementptr inbounds double, ptr [[TMP23]], i64 [[MUL27]]
+// CHECK2-NEXT:    store ptr [[ADD_PTR28]], ptr [[__BEGIN2]], align 8
+// CHECK2-NEXT:    br label [[IF_END]]
+// CHECK2:       if.end:
 // CHECK2-NEXT:    ret void
 //
 //
@@ -2562,14 +2611,21 @@ extern "C" void foo10(data_t data) {
 // CHECK2:       for.end17:
 // CHECK2-NEXT:    [[TMP18:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // CHECK2-NEXT:    [[TMP19:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_1]], align 4
+// CHECK2-NEXT:    [[CMP18:%.*]] = icmp slt i32 [[TMP18]], [[TMP19]]
+// CHECK2-NEXT:    br i1 [[CMP18]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+// CHECK2:       if.then:
 // CHECK2-NEXT:    [[TMP20:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK2-NEXT:    [[SUB18:%.*]] = sub i32 [[TMP19]], [[TMP20]]
-// CHECK2-NEXT:    [[SUB19:%.*]] = sub i32 [[SUB18]], 1
-// CHECK2-NEXT:    [[ADD20:%.*]] = add i32 [[SUB19]], 3
-// CHECK2-NEXT:    [[DIV21:%.*]] = udiv i32 [[ADD20]], 3
-// CHECK2-NEXT:    [[MUL22:%.*]] = mul i32 [[DIV21]], 3
-// CHECK2-NEXT:    [[ADD23:%.*]] = add i32 [[TMP18]], [[MUL22]]
-// CHECK2-NEXT:    store i32 [[ADD23]], ptr [[I]], align 4
+// CHECK2-NEXT:    [[TMP21:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_1]], align 4
+// CHECK2-NEXT:    [[TMP22:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK2-NEXT:    [[SUB19:%.*]] = sub i32 [[TMP21]], [[TMP22]]
+// CHECK2-NEXT:    [[SUB20:%.*]] = sub i32 [[SUB19]], 1
+// CHECK2-NEXT:    [[ADD21:%.*]] = add i32 [[SUB20]], 3
+// CHECK2-NEXT:    [[DIV22:%.*]] = udiv i32 [[ADD21]], 3
+// CHECK2-NEXT:    [[MUL23:%.*]] = mul i32 [[DIV22]], 3
+// CHECK2-NEXT:    [[ADD24:%.*]] = add i32 [[TMP20]], [[MUL23]]
+// CHECK2-NEXT:    store i32 [[ADD24]], ptr [[I]], align 4
+// CHECK2-NEXT:    br label [[IF_END]]
+// CHECK2:       if.end:
 // CHECK2-NEXT:    ret void
 //
 //

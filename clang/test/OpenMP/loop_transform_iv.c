@@ -136,6 +136,11 @@ void test_pointer_tile(void) {
     *p = 0;
   }
   // CHECK: for.end{{.*}}:
+  // CHECK: [[PRESTART:%.*]] = load ptr, ptr %.capture_expr.
+  // CHECK: [[PREEND:%.*]] = load ptr, ptr %.capture_expr.{{[0-9]+}}
+  // CHECK: [[PRECOND:%.*]] = icmp ult ptr [[PRESTART]], [[PREEND]]
+  // CHECK: br i1 [[PRECOND]], label %[[IFTHEN:.*]], label %[[IFEND:.*]]
+  // CHECK: [[IFTHEN]]:
   // CHECK: [[START:%.*]] = load ptr, ptr %.capture_expr.
   // CHECK: [[END:%.*]] = load ptr, ptr %.capture_expr.{{[0-9]+}}
   // CHECK: [[STARTDUP:%.*]] = load ptr, ptr %.capture_expr.
@@ -149,6 +154,8 @@ void test_pointer_tile(void) {
   // CHECK: [[OFFSET:%.*]] = mul nsw i64 [[DIV]], 1
   // CHECK: [[FINALPTR:%.*]] = getelementptr inbounds i32, ptr [[START]], i64 [[OFFSET]]
   // CHECK: store ptr [[FINALPTR]], ptr %p
+  // CHECK: br label %[[IFEND]]
+  // CHECK: [[IFEND]]:
   // After loop: p should point to arr + 20 (loop-exit value)
 }
 

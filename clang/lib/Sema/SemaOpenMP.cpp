@@ -8427,8 +8427,6 @@ struct LoopIterationSpace final {
   /// check that the number of iterations for this particular counter must be
   /// finished.
   Expr *FinalCondition = nullptr;
-  /// True if this iteration space corresponds to a range-based for loop.
-  bool IsRangeFor = false;
 };
 
 /// Scan an AST subtree, checking that no decls in the CollapsedLoopVarDecls
@@ -10201,7 +10199,6 @@ static bool checkOpenMPIterationSpace(
   ResultIterSpaces[CurrentNestedLoopCount].Subtract = ISC.shouldSubtractStep();
   ResultIterSpaces[CurrentNestedLoopCount].IsStrictCompare =
       ISC.isStrictTestOp();
-  ResultIterSpaces[CurrentNestedLoopCount].IsRangeFor = (CXXFor != nullptr);
   std::tie(ResultIterSpaces[CurrentNestedLoopCount].MinValue,
            ResultIterSpaces[CurrentNestedLoopCount].MaxValue) =
       ISC.buildMinMaxValues(DSA.getCurScope(), Captures);
@@ -11231,6 +11228,8 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
           !IS.CounterVar->getType()->isArithmeticType() &&
           !IS.CounterVar->getType()->isPointerType();
       if (IsClassIteratorLoop && isOpenMPLoopTransformationDirective(DKind)) {
+        // FIXME: finalize class-type iterators too (random-access arithmetic
+        // is available per the canonical loop form).
         Final = nullptr;
       } else {
         Final =
@@ -15739,7 +15738,10 @@ static Stmt *buildLoopFinalization(
   for (size_t I : llvm::seq<size_t>(LoopHelpers.size())) {
     for (auto *Final : LoopHelpers[I].Finals)
       if (Final)
-        FinalizationStmts.push_back(Final);
+        FinalizationStmts.push_back(IfStmt::Create(
+            Context, SourceLocation(), IfStatementKind::Ordinary, nullptr,
+            nullptr, LoopHelpers[I].PreCond, SourceLocation(), SourceLocation(),
+            Final, SourceLocation(), nullptr));
   }
 
   return FinalizationStmts.empty()
