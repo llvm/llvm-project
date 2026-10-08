@@ -1,8 +1,8 @@
-; RUN: opt < %s -passes=instcombine -S -mtriple x86_64-unknown-linux-gnu | FileCheck %s --check-prefixes=CHECK,LINUX,ISC99
-; RUN: opt < %s -passes=instcombine -S -mtriple x86_64-pc-win32          | FileCheck %s --check-prefixes=CHECK,ISC99
-; RUN: opt < %s -passes=instcombine -S -mtriple x86_64-pc-windows-msvc16 | FileCheck %s --check-prefixes=CHECK,MS64,ISC89
-; RUN: opt < %s -passes=instcombine -S -mtriple i386-pc-windows-msvc     | FileCheck %s --check-prefixes=CHECK,ISC99
-; RUN: opt < %s -passes=instcombine -S -mtriple i686-pc-windows-msvc17   | FileCheck %s --check-prefixes=CHECK,MS32,ISC89
+; RUN: opt %s -passes=instcombine -S -mtriple x86_64-unknown-linux-gnu | FileCheck %s --check-prefixes=CHECK,LINUX,ISC99
+; RUN: opt %s -passes=instcombine -S -mtriple x86_64-pc-win32          | FileCheck %s --check-prefixes=CHECK,WIN32,ISC99
+; RUN: opt %s -passes=instcombine -S -mtriple x86_64-pc-windows-msvc16 | FileCheck %s --check-prefixes=CHECK,MS64,ISC89
+; RUN: opt %s -passes=instcombine -S -mtriple i386-pc-windows-msvc     | FileCheck %s --check-prefixes=CHECK,I386,ISC99
+; RUN: opt %s -passes=instcombine -S -mtriple i686-pc-windows-msvc17   | FileCheck %s --check-prefixes=CHECK,MS32,ISC89
 
 ; Check for and against shrinkage when using the
 ; unsafe-fp-math function attribute on a math lib
@@ -253,10 +253,20 @@ define float @log_test1(float %f)   {
 ; LINUX-NEXT:    [[LOGF:%.*]] = call fast float @llvm.log.f32(float [[F]])
 ; LINUX-NEXT:    ret float [[LOGF]]
 ;
+; WIN32-LABEL: define float @log_test1(
+; WIN32-SAME: float [[F:%.*]]) {
+; WIN32-NEXT:    [[LOGF:%.*]] = call fast float @llvm.log.f32(float [[F]])
+; WIN32-NEXT:    ret float [[LOGF]]
+;
 ; MS64-LABEL: define float @log_test1(
 ; MS64-SAME: float [[F:%.*]]) {
 ; MS64-NEXT:    [[LOGF:%.*]] = call fast float @llvm.log.f32(float [[F]])
 ; MS64-NEXT:    ret float [[LOGF]]
+;
+; I386-LABEL: define float @log_test1(
+; I386-SAME: float [[F:%.*]]) {
+; I386-NEXT:    [[TMP1:%.*]] = call fast float @llvm.log.f32(float [[F]])
+; I386-NEXT:    ret float [[TMP1]]
 ;
 ; MS32-LABEL: define float @log_test1(
 ; MS32-SAME: float [[F:%.*]]) {
@@ -286,10 +296,20 @@ define float @log10_test1(float %f)   {
 ; LINUX-NEXT:    [[LOG10F:%.*]] = call fast float @llvm.log10.f32(float [[F]])
 ; LINUX-NEXT:    ret float [[LOG10F]]
 ;
+; WIN32-LABEL: define float @log10_test1(
+; WIN32-SAME: float [[F:%.*]]) {
+; WIN32-NEXT:    [[LOG10F:%.*]] = call fast float @llvm.log10.f32(float [[F]])
+; WIN32-NEXT:    ret float [[LOG10F]]
+;
 ; MS64-LABEL: define float @log10_test1(
 ; MS64-SAME: float [[F:%.*]]) {
 ; MS64-NEXT:    [[LOG10F:%.*]] = call fast float @llvm.log10.f32(float [[F]])
 ; MS64-NEXT:    ret float [[LOG10F]]
+;
+; I386-LABEL: define float @log10_test1(
+; I386-SAME: float [[F:%.*]]) {
+; I386-NEXT:    [[TMP1:%.*]] = call fast float @llvm.log10.f32(float [[F]])
+; I386-NEXT:    ret float [[TMP1]]
 ;
 ; MS32-LABEL: define float @log10_test1(
 ; MS32-SAME: float [[F:%.*]]) {
