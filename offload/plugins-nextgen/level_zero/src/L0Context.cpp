@@ -95,9 +95,8 @@ Error L0ContextTy::init() {
   LaunchKernelWithArguments.loadExperimental(
       zeDriver, "zeCommandListAppendLaunchKernelWithArguments");
 
-  if (!CommandListAppendHostFunction)
-    CommandListAppendHostFunction.loadExperimental(
-        zeDriver, "zeCommandListAppendHostFunction");
+  CommandListAppendHostFunction.loadExperimental(
+      zeDriver, "zeCommandListAppendHostFunction");
   if (!CommandListAppendHostFunction)
     // Try again with a name used in compute runtime 25.35 to 25.48
     CommandListAppendHostFunction.loadExperimental(
