@@ -7270,11 +7270,8 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
   if (Chain)
     Args.add(RValue::get(Chain), CGM.getContext().VoidPtrTy);
 
-  // C++17 requires that we evaluate arguments to a call using assignment syntax
-  // right-to-left, and that we evaluate arguments to certain other operators
-  // left-to-right. Note that we allow this to override the order dictated by
-  // the calling convention on the MS ABI, which means that parameter
-  // destruction order is not necessarily reverse construction order.
+  // Operator notation follows the language's operand order. On the MS ABI,
+  // this can make parameter destruction differ from reverse construction order.
   // FIXME: Revisit this based on C++ committee response to unimplementability.
   EvaluationOrder Order = EvaluationOrder::Default;
   bool StaticOperator = false;
@@ -7289,7 +7286,11 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
       case OO_PipePipe:
       case OO_Comma:
       case OO_ArrowStar:
+      case OO_Subscript:
         Order = EvaluationOrder::ForceLeftToRight;
+        break;
+      case OO_Call:
+        Order = EvaluationOrder::ForceFirstBeforeRest;
         break;
       default:
         break;
@@ -7304,8 +7305,9 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
 
   auto Arguments = E->arguments();
   if (StaticOperator) {
-    // If we're calling a static operator, we need to emit the object argument
-    // and ignore it.
+    // A static operator evaluates and discards the object before the call.
+    if (Order == EvaluationOrder::ForceFirstBeforeRest)
+      Order = EvaluationOrder::Default;
     EmitIgnoredExpr(E->getArg(0));
     Arguments = drop_begin(Arguments, 1);
   }
