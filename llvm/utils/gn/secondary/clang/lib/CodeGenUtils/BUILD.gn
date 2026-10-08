@@ -16,6 +16,7 @@ static_library("CodeGenUtils") {
     "FunctionUtils.cpp",
     "ItaniumCXXABIUtils.cpp",
     "ModuleUtils.cpp",
+    "RecordLayoutUtils.cpp",
     "StmtUtils.cpp",
   ]
 }

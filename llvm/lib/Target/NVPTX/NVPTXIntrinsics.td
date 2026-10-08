@@ -1642,6 +1642,16 @@ def PREFETCH_GLOBAL_L2_EVICT_NORMAL : PREFETCH_INTRS<"prefetch.global.L2::evict_
 def PREFETCH_GLOBAL_L2_EVICT_LAST : PREFETCH_INTRS<"prefetch.global.L2::evict_last",
                                     int_nvvm_prefetch_global_L2_evict_last>;
 
+class PREFETCH_SIZE_INTR<NVPTXAddressSpace as>
+  : BasicNVPTXInst<(outs),
+                   (ins ADDR:$addr),
+                   "prefetch" # as.Suffix # ".L1::32B.valid_addr",
+                   [(IntrinsicInAS<int_nvvm_prefetch_L1_32B_valid_addr, as> addr:$addr)]>,
+    Requires<[PTX94, SM90]>;
+
+def PREFETCH_GLOBAL_L1_32B : PREFETCH_SIZE_INTR<AddrSpaceGlobal>;
+def PREFETCH_GENERIC_L1_32B : PREFETCH_SIZE_INTR<AddrSpaceGeneric>;
+
 //Applypriority intrinsics
 class APPLYPRIORITY_L2_INTRS<string addrspace> :
           BasicNVPTXInst<(outs), (ins ADDR:$addr, B64:$size),
@@ -2974,11 +2984,11 @@ def : Pat<(int_nvvm_ui2f_rp i32:$a), (CVT_f32_u32 $a, CvtRP)>;
 
 // Utility to look up base and satfinite variants of a conversion intrinsic.
 // Missing variants are left unset so this can be used when only one exists.
-class ToCvtIntrinsics<string suffix> {
-  Intrinsic base = !if(!exists<Intrinsic>("int_nvvm_" # suffix),
-                       !cast<Intrinsic>("int_nvvm_" # suffix), ?);
-  Intrinsic sf = !if(!exists<Intrinsic>("int_nvvm_" # suffix # "_satfinite"),
-                     !cast<Intrinsic>("int_nvvm_" # suffix # "_satfinite"), ?);
+class ToCvtIntrinsics<string suffix, string scale_suffix = ""> {
+  Intrinsic base = !if(!exists<Intrinsic>("int_nvvm_" # suffix # scale_suffix),
+                       !cast<Intrinsic>("int_nvvm_" # suffix # scale_suffix), ?);
+  Intrinsic sf = !if(!exists<Intrinsic>("int_nvvm_" # suffix # "_satfinite" # scale_suffix),
+                     !cast<Intrinsic>("int_nvvm_" # suffix # "_satfinite" # scale_suffix), ?);
 }
 
 foreach rnd = ["rn", "rz"] in {
@@ -3105,6 +3115,9 @@ foreach dst = ["e4m3x2", "e5m2x2"] in {
       defvar F32X2    = ToCvtIntrinsics<"ff_to_" # Suffix>;
       defvar F16X2    = ToCvtIntrinsics<"f16x2_to_" # Suffix>;
       defvar BF16X2   = ToCvtIntrinsics<"bf16x2_to_" # Suffix>;
+      defvar F32Scale = ToCvtIntrinsics<"ff_to_" # Suffix, "_scale_n1_ue8m0">;
+      defvar F16Scale = ToCvtIntrinsics<"f16x2_to_" # Suffix, "_scale_n1_ue8m0">;
+      defvar BF16Scale = ToCvtIntrinsics<"bf16x2_to_" # Suffix, "_scale_n1_ue8m0">;
 
       foreach pzo = [0, 1] in {
         defvar PZO = !if(pzo, -1, 0);
@@ -3121,6 +3134,16 @@ foreach dst = ["e4m3x2", "e5m2x2"] in {
               Requires<F32X2Preds>;
         def : Pat<(BF16X2.sf v2bf16:$a, PZO), (!cast<NVPTXInst>("CVT_" # dst # "_bf16x2") $a, Mode)>,
               Requires<BF16X2Preds>;
+
+        def : Pat<(F32Scale.base f32:$a, f32:$b, i16:$s, PZO),
+                  (!cast<NVPTXInst>("CVT_" # dst # "_f32_scale_n1") $a, $b, $s, Mode)>,
+              Requires<[hasRubinFamilySupport]>;
+        def : Pat<(F16Scale.base v2f16:$a, i16:$s, PZO),
+                  (!cast<NVPTXInst>("CVT_" # dst # "_f16x2_scale_n1") $a, $s, Mode)>,
+              Requires<[hasRubinFamilySupport]>;
+        def : Pat<(BF16Scale.sf v2bf16:$a, i16:$s, PZO),
+                  (!cast<NVPTXInst>("CVT_" # dst # "_bf16x2_scale_n1") $a, $s, Mode)>,
+              Requires<[hasRubinFamilySupport]>;
       }
     }
   }
@@ -3182,6 +3205,9 @@ foreach dst = ["e2m3x2", "e3m2x2"] in {
       defvar F32X2    = ToCvtIntrinsics<"ff_to_" # Suffix>;
       defvar F16X2    = ToCvtIntrinsics<"f16x2_to_" # Suffix>;
       defvar BF16X2   = ToCvtIntrinsics<"bf16x2_to_" # Suffix>;
+      defvar F32Scale = ToCvtIntrinsics<"ff_to_" # Suffix, "_scale_n1_ue8m0">;
+      defvar F16Scale = ToCvtIntrinsics<"f16x2_to_" # Suffix, "_scale_n1_ue8m0">;
+      defvar BF16Scale = ToCvtIntrinsics<"bf16x2_to_" # Suffix, "_scale_n1_ue8m0">;
 
       foreach pzo = [0, 1] in {
         defvar PZO = !if(pzo, -1, 0);
@@ -3198,6 +3224,16 @@ foreach dst = ["e2m3x2", "e3m2x2"] in {
               Requires<FPX2Preds>;
         def : Pat<(BF16X2.sf v2bf16:$a, PZO), (!cast<NVPTXInst>("CVT_" # dst # "_bf16x2_sf") $a, Mode)>,
               Requires<FPX2Preds>;
+
+        def : Pat<(F32Scale.sf f32:$a, f32:$b, i16:$s, PZO),
+                  (!cast<NVPTXInst>("CVT_" # dst # "_f32_sf_scale_n1") $a, $b, $s, Mode)>,
+              Requires<[hasRubinFamilySupport]>;
+        def : Pat<(F16Scale.sf v2f16:$a, i16:$s, PZO),
+                  (!cast<NVPTXInst>("CVT_" # dst # "_f16x2_sf_scale_n1") $a, $s, Mode)>,
+              Requires<[hasRubinFamilySupport]>;
+        def : Pat<(BF16Scale.sf v2bf16:$a, i16:$s, PZO),
+                  (!cast<NVPTXInst>("CVT_" # dst # "_bf16x2_sf_scale_n1") $a, $s, Mode)>,
+              Requires<[hasRubinFamilySupport]>;
       }
     }
   }
@@ -3235,6 +3271,9 @@ foreach relu = ["", "relu"] in {
     defvar F32X2    = ToCvtIntrinsics<"ff_to_" # Suffix>;
     defvar F16X2    = ToCvtIntrinsics<"f16x2_to_" # Suffix>;
     defvar BF16X2   = ToCvtIntrinsics<"bf16x2_to_" # Suffix>;
+    defvar F32Scale = ToCvtIntrinsics<"ff_to_" # Suffix, "_scale_n1_ue8m0">;
+    defvar F16Scale = ToCvtIntrinsics<"f16x2_to_" # Suffix, "_scale_n1_ue8m0">;
+    defvar BF16Scale = ToCvtIntrinsics<"bf16x2_to_" # Suffix, "_scale_n1_ue8m0">;
 
     foreach pzo = [0, 1] in {
       defvar PZO = !if(pzo, -1, 0);
@@ -3251,6 +3290,13 @@ foreach relu = ["", "relu"] in {
             Requires<FPX2Preds>;
       def : Pat<(BF16X2.sf v2bf16:$a, PZO), (CVT_e2m1x2_bf16x2_sf $a, Mode)>,
             Requires<FPX2Preds>;
+
+      def : Pat<(F32Scale.sf f32:$a, f32:$b, i16:$s, PZO), (CVT_e2m1x2_f32_sf_scale_n1 $a, $b, $s, Mode)>,
+            Requires<[hasRubinFamilySupport]>;
+      def : Pat<(F16Scale.sf v2f16:$a, i16:$s, PZO), (CVT_e2m1x2_f16x2_sf_scale_n1 $a, $s, Mode)>,
+            Requires<[hasRubinFamilySupport]>;
+      def : Pat<(BF16Scale.sf v2bf16:$a, i16:$s, PZO), (CVT_e2m1x2_bf16x2_sf_scale_n1 $a, $s, Mode)>,
+            Requires<[hasRubinFamilySupport]>;
     }
   }
 }
@@ -3398,28 +3444,16 @@ def : Pat<(i16 (CVT_F32X4_TO_FPX4_RS_SF_NODE<"E2M1",
 // FNS
 //
 
-class INT_FNS_MBO<dag ins, dag Operands>
-  : BasicNVPTXInst<(outs B32:$dst), ins,
-               "fns.b32",
-               [(set i32:$dst, Operands)]>,
+def INT_FNS
+  : BasicNVPTXInst<(outs B32:$dst),
+                  (ins B32Op:$mask, B32Op:$base, B32Op:$offset),
+                  "fns.b32">,
     Requires<[PTX60, SM30]>;
 
-def INT_FNS_rrr : INT_FNS_MBO<(ins B32:$mask, B32:$base, B32:$offset),
-                     (int_nvvm_fns i32:$mask, i32:$base, i32:$offset)>;
-def INT_FNS_rri : INT_FNS_MBO<(ins B32:$mask, B32:$base,    i32imm:$offset),
-                     (int_nvvm_fns i32:$mask, i32:$base,       imm:$offset)>;
-def INT_FNS_rir : INT_FNS_MBO<(ins B32:$mask,    i32imm:$base, B32:$offset),
-                     (int_nvvm_fns i32:$mask,       imm:$base, i32:$offset)>;
-def INT_FNS_rii : INT_FNS_MBO<(ins B32:$mask,    i32imm:$base,    i32imm:$offset),
-                     (int_nvvm_fns i32:$mask,       imm:$base,       imm:$offset)>;
-def INT_FNS_irr : INT_FNS_MBO<(ins    i32imm:$mask, B32:$base, B32:$offset),
-                     (int_nvvm_fns       imm:$mask, i32:$base, i32:$offset)>;
-def INT_FNS_iri : INT_FNS_MBO<(ins    i32imm:$mask, B32:$base,    i32imm:$offset),
-                     (int_nvvm_fns       imm:$mask, i32:$base,       imm:$offset)>;
-def INT_FNS_iir : INT_FNS_MBO<(ins    i32imm:$mask,    i32imm:$base, B32:$offset),
-                     (int_nvvm_fns       imm:$mask,       imm:$base, i32:$offset)>;
-def INT_FNS_iii : INT_FNS_MBO<(ins    i32imm:$mask,    i32imm:$base,    i32imm:$offset),
-                     (int_nvvm_fns       imm:$mask,       imm:$base,       imm:$offset)>;
+let Predicates = [PTX60, SM30] in
+  def : Pat<(int_nvvm_fns i32:$mask, i32:$base, i32:$offset),
+            (INT_FNS (i32 reg_or_imm:$mask), (i32 reg_or_imm:$base),
+                     (i32 reg_or_imm:$offset))>;
 
 //-----------------------------------
 // Atomic Functions
@@ -7705,6 +7739,146 @@ foreach space = ["tensor", "shared"] in {
     } // collector_usage_a
   } // cta_group
 } // space
+
+class SPRegList<int NumRegs, string Prefix, int Offset = 0> {
+  list<string> Names =
+      !foreach(RegIdx, !range(NumRegs), Prefix # !add(Offset, RegIdx));
+  dag Outs = !dag(outs, !listsplat(B32, NumRegs), Names);
+  dag Ins = !dag(ins, !listsplat(B32, NumRegs), Names);
+  dag Set = !dag(set, !listsplat(B32, NumRegs), Names);
+  string Asm = "{{$" # !interleave(Names, ", $") # "}}";
+}
+
+class SPLayout<int NumMetadataRegs, int NumCompressedDataRegs,
+               int NumDataRegs, bit Compress> {
+  int MetadataSize = NumMetadataRegs;
+  int CompressedDataSize = NumCompressedDataRegs;
+  int DataSize = NumDataRegs;
+  int NumResultRegs = !if(Compress, !add(NumMetadataRegs, NumCompressedDataRegs),
+                                    NumDataRegs);
+  int NumInputRegs = !if(Compress, !add(NumDataRegs, 1),
+                                   !add(NumMetadataRegs, NumCompressedDataRegs));
+  bit IsCompress = Compress;
+}
+
+class SPCeilDiv<int Numerator, int Denominator> {
+  int Value = !div(!add(Numerator, !sub(Denominator, 1)), Denominator);
+}
+
+defvar SPQualifierNames =
+    ["elem_size", "idx_size", "repeat_factor", "num_src", "num_tgt"];
+
+class SPTypeProfile<SPLayout Layout>
+    : SDTypeProfile<
+          Layout.NumResultRegs, -1,
+          !foreach(OpIdx,
+                   !range(!add(Layout.NumResultRegs, !size(SPQualifierNames),
+                               Layout.NumInputRegs)),
+                   SDTCisVT<OpIdx, i32>)>;
+
+// Nodes with the same result count may have different input counts.
+class SPExactMatch<dag Operands, dag Fragment, int NumOperands>
+    : PatFrag<Operands, Fragment,
+              [{ return N->getNumOperands() == }]
+                  # !cast<string>(NumOperands) # [{; }]>;
+
+class SPInst<string Op, SPLayout Layout>
+    : NVPTXInst<(outs), (ins), "?", []> {
+  defvar Results = SPRegList<Layout.NumResultRegs, "r">;
+  defvar Inputs = SPRegList<Layout.NumInputRegs, "i">;
+  defvar NumQualifiers = !size(SPQualifierNames);
+  defvar OperandNames = !listconcat(SPQualifierNames, Inputs.Names);
+  defvar NumOperands = !size(OperandNames);
+  defvar Opcode = SDNode<"NVPTXISD::" # !toupper(Op) # "_R"
+                             # Layout.NumResultRegs,
+                         SPTypeProfile<Layout>>;
+  defvar Match = SPExactMatch<
+      !dag(ops, !listsplat(node, NumOperands), OperandNames),
+      !dag(Opcode, !listsplat(node, NumOperands), OperandNames), NumOperands>;
+  defvar Ins =
+      !con(!dag(ins, !listsplat(i32imm, NumQualifiers), SPQualifierNames),
+           Inputs.Ins);
+  defvar Args = !if(Layout.IsCompress,
+                    [SPRegList<Layout.MetadataSize, "r">.Asm,
+                     SPRegList<Layout.CompressedDataSize, "r",
+                               Layout.MetadataSize>.Asm,
+                     SPRegList<Layout.DataSize, "i">.Asm,
+                     "$i" # Layout.DataSize],
+                    [SPRegList<Layout.DataSize, "r">.Asm,
+                     SPRegList<Layout.MetadataSize, "i">.Asm,
+                     SPRegList<Layout.CompressedDataSize, "i",
+                               Layout.MetadataSize>.Asm]);
+
+  dag IntrinsicPattern = BuildPattern<Match, Ins>.ret;
+
+  let OutOperandList = Results.Outs;
+  let InOperandList = Ins;
+  let AsmString = Op
+                  # ".b$elem_size.b$idx_size.sp::$num_src:$num_tgt"
+                    ".x$repeat_factor "
+                  # !interleave(Args, ", ") # ";";
+  let Pattern = [!con(Results.Set, (set IntrinsicPattern))];
+  let Predicates = [hasSPCompress];
+}
+
+defvar SPElemSizes = [8, 16];
+defvar SPIdxSizes = [2, 4];
+defvar SPRepeatFactors = [1, 2, 4, 8, 16, 32, 64];
+
+// Different qualifier combinations may share a register layout, and thus an
+// instruction, so define each layout only once.
+// mdata = ceil(repeat_factor * idx_size / elem_size);
+// cdata = repeat_factor; data = 2 * repeat_factor.
+foreach ElemSize = SPElemSizes in {
+  foreach IdxSize = SPIdxSizes in {
+    foreach RepeatFactor = SPRepeatFactors in {
+      defvar MetadataSize =
+          SPCeilDiv<!mul(RepeatFactor, IdxSize), ElemSize>.Value;
+      defvar DataSize = !mul(2, RepeatFactor);
+      defvar Name = "SPCOMPRESS_M" # MetadataSize # "_C" # RepeatFactor
+                    # "_D" # DataSize;
+      if !not(!exists<NVPTXInst>(Name)) then
+        def Name : SPInst<"spcompress",
+                          SPLayout<MetadataSize, RepeatFactor, DataSize,
+                                   true>>;
+    } // RepeatFactor
+  } // IdxSize
+} // ElemSize
+
+defvar SPNumSrcs = [1, 2, 4];
+defvar SPNumTgts = [2, 4, 8, 16];
+
+// data = ceil(num_tgt * elem_size * repeat_factor / 32);
+// mdata = ceil(num_src * idx_size * repeat_factor / 32);
+// cdata = ceil(num_src * elem_size * repeat_factor / 32).
+foreach NumSrc = SPNumSrcs in {
+  foreach NumTgt = SPNumTgts in {
+    foreach ElemSize = SPElemSizes in {
+      foreach IdxSize = SPIdxSizes in {
+        foreach RepeatFactor = SPRepeatFactors in {
+          defvar DataBits = !mul(NumTgt, ElemSize, RepeatFactor);
+          defvar IsExpanding = !lt(NumSrc, NumTgt);
+          defvar IdxCoversTgt = !le(NumTgt, !shl(1, IdxSize));
+          defvar SrcFitsReg = !le(!mul(NumSrc, ElemSize), 32);
+          defvar DataFitsRegs = !and(!ge(DataBits, 32), !le(DataBits, 4096));
+          if !and(IsExpanding, IdxCoversTgt, SrcFitsReg, DataFitsRegs) then {
+            defvar MetadataSize =
+                SPCeilDiv<!mul(NumSrc, IdxSize, RepeatFactor), 32>.Value;
+            defvar CompressedDataSize =
+                SPCeilDiv<!mul(NumSrc, ElemSize, RepeatFactor), 32>.Value;
+            defvar DataSize = SPCeilDiv<DataBits, 32>.Value;
+            defvar Name = "SPDECOMPRESS_M" # MetadataSize # "_C"
+                          # CompressedDataSize # "_D" # DataSize;
+            if !not(!exists<NVPTXInst>(Name)) then
+              def Name : SPInst<"spdecompress",
+                                SPLayout<MetadataSize, CompressedDataSize,
+                                         DataSize, false>>;
+          }
+        } // RepeatFactor
+      } // IdxSize
+    } // ElemSize
+  } // NumTgt
+} // NumSrc
 
 //
 // tensormap.replace Instructions
