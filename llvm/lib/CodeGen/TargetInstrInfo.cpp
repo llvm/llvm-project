@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/CommandLine.h"
@@ -482,7 +483,7 @@ TargetInstrInfo::duplicate(MachineBasicBlock &MBB,
   // CFI instructions are marked as non-duplicable, because Darwin compact
   // unwind info emission can't handle multiple prologue setups.
   assert((!Orig.isNotDuplicable() ||
-          (!MF.getTarget().getTargetTriple().isOSDarwin() &&
+          (!MF.getFunction().getParent()->getTargetTriple().isOSDarwin() &&
            Orig.isCFIInstruction())) &&
          "Instruction cannot be duplicated");
 
@@ -889,8 +890,7 @@ static void transferImplicitOperands(MachineInstr *MI,
   }
 }
 
-void TargetInstrInfo::lowerCopy(
-    MachineInstr *MI, const TargetRegisterInfo * /*Remove me*/) const {
+void TargetInstrInfo::lowerCopy(MachineInstr *MI) const {
   if (MI->allDefsAreDead()) {
     MI->setDesc(get(TargetOpcode::KILL));
     return;
@@ -2107,13 +2107,14 @@ CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
 }
 
 // Default implementation of getMemOperandWithOffset.
-bool TargetInstrInfo::getMemOperandWithOffset(
-    const MachineInstr &MI, const MachineOperand *&BaseOp, int64_t &Offset,
-    bool &OffsetIsScalable, const TargetRegisterInfo * /*RemoveMe*/) const {
+bool TargetInstrInfo::getMemOperandWithOffset(const MachineInstr &MI,
+                                              const MachineOperand *&BaseOp,
+                                              int64_t &Offset,
+                                              bool &OffsetIsScalable) const {
   SmallVector<const MachineOperand *, 4> BaseOps;
   LocationSize Width = LocationSize::precise(0);
   if (!getMemOperandsWithOffsetWidth(MI, BaseOps, Offset, OffsetIsScalable,
-                                     Width, &TRI) ||
+                                     Width) ||
       BaseOps.size() != 1)
     return false;
   BaseOp = BaseOps.front();
@@ -2275,7 +2276,7 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
       return std::nullopt;
 
     const MachineOperand *BaseOp;
-    if (!getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable, &TRI))
+    if (!getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable))
       return std::nullopt;
 
     // FIXME: Scalable offsets are not yet handled in the offset code below.
@@ -2412,9 +2413,9 @@ bool TargetInstrInfo::getInsertSubregInputs(
 }
 
 // Returns a MIRPrinter comment for this machine operand.
-std::string TargetInstrInfo::createMIROperandComment(
-    const MachineInstr &MI, const MachineOperand &Op, unsigned OpIdx,
-    const TargetRegisterInfo * /*RemoveMe*/) const {
+std::string TargetInstrInfo::createMIROperandComment(const MachineInstr &MI,
+                                                     const MachineOperand &Op,
+                                                     unsigned OpIdx) const {
 
   if (!MI.isInlineAsm())
     return "";

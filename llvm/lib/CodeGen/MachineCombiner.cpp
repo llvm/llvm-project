@@ -640,7 +640,7 @@ bool MachineCombinerImpl::combineInstructions(MachineBasicBlock *MBB) {
       if (DoRegPressureReduce &&
           getCombinerObjective(P) ==
               CombinerObjective::MustReduceRegisterPressure) {
-        if (MBB->size() > inc_threshold) {
+        if (MBB->sizeWithoutDebugLargerThan(inc_threshold)) {
           // Use incremental depth updates for basic blocks above threshold
           IncrementalUpdate = true;
           LastUpdate = BlockIter;
@@ -686,7 +686,7 @@ bool MachineCombinerImpl::combineInstructions(MachineBasicBlock *MBB) {
                                     InstrIdxForVirtReg, P,
                                     !IncrementalUpdate) &&
             preservesResourceLen(MBB, BlockTrace, InsInstrs, DelInstrs)) {
-          if (MBB->size() > inc_threshold) {
+          if (MBB->sizeWithoutDebugLargerThan(inc_threshold)) {
             // Use incremental depth updates for basic blocks above treshold
             IncrementalUpdate = true;
             LastUpdate = BlockIter;

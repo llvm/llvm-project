@@ -25,6 +25,9 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
+static constexpr llvm::StringRef kCudaDeviceSynchronizeName =
+    "cudadevicesynchronize_";
+
 namespace fir {
 #define GEN_PASS_DEF_CUFOPCONVERSIONLATE
 #include "flang/Optimizer/Transforms/Passes.h.inc"
@@ -150,6 +153,41 @@ struct CUFDeviceIsActiveOpConversion
   }
 };
 
+struct CUFDeviceSynchronizeOpConversion
+    : public mlir::OpRewritePattern<cuf::DeviceSynchronizeOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cuf::DeviceSynchronizeOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    mlir::Location loc = op.getLoc();
+    if (op->getParentOfType<mlir::gpu::GPUModuleOp>() ||
+        cuf::isCUDADeviceContext(op.getOperation())) {
+      rewriter.eraseOp(op);
+      return mlir::success();
+    }
+    auto mod = op->getParentOfType<mlir::ModuleOp>();
+    fir::FirOpBuilder builder(rewriter, mod);
+    mlir::func::FuncOp func =
+        builder.getNamedFunction(kCudaDeviceSynchronizeName);
+    if (!func) {
+      mlir::FunctionType funcType = mlir::FunctionType::get(
+          builder.getContext(), {}, {builder.getI32Type()});
+      func = builder.createFunction(loc, kCudaDeviceSynchronizeName, funcType);
+      func->setAttr(
+          fir::getFortranProcedureFlagsAttrName(),
+          fir::FortranProcedureFlagsEnumAttr::get(
+              builder.getContext(), fir::FortranProcedureFlagsEnum::intrinsic));
+      func.setPrivate();
+    }
+    auto call = fir::CallOp::create(builder, loc, func, mlir::ValueRange{});
+    call.setProcedureAttrsAttr(fir::FortranProcedureFlagsEnumAttr::get(
+        builder.getContext(), fir::FortranProcedureFlagsEnum::intrinsic));
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+};
+
 class CUFOpConversionLate
     : public fir::impl::CUFOpConversionLateBase<CUFOpConversionLate> {
   using CUFOpConversionLateBase::CUFOpConversionLateBase;
@@ -169,8 +207,8 @@ public:
     target.addIllegalOp<cuf::OnDeviceOp>();
     patterns.insert<CUFDeviceAddressOpConversion>(patterns.getContext(),
                                                   symtab);
-    patterns.insert<CUFOnDeviceOpConversion, CUFDeviceIsActiveOpConversion>(
-        patterns.getContext());
+    patterns.insert<CUFOnDeviceOpConversion, CUFDeviceIsActiveOpConversion,
+                    CUFDeviceSynchronizeOpConversion>(patterns.getContext());
     if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,
                                                   std::move(patterns)))) {
       mlir::emitError(mlir::UnknownLoc::get(ctx),

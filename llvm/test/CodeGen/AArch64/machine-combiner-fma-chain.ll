@@ -55,11 +55,10 @@ define void @fadd_chain_loop(ptr %py, ptr %pa, i64 %n, double %x0, double %x1, d
 ; CHECK-NEXT:    ldp d17, d18, [x1, #16]
 ; CHECK-NEXT:    fmadd d6, d7, d0, d6
 ; CHECK-NEXT:    fmul d7, d20, d5
+; CHECK-NEXT:    fmadd d7, d18, d3, d7
 ; CHECK-NEXT:    fmadd d6, d16, d1, d6
-; CHECK-NEXT:    fmul d16, d18, d3
-; CHECK-NEXT:    fmadd d16, d19, d4, d16
+; CHECK-NEXT:    fmadd d7, d19, d4, d7
 ; CHECK-NEXT:    fmadd d6, d17, d2, d6
-; CHECK-NEXT:    fadd d7, d16, d7
 ; CHECK-NEXT:    fadd d6, d6, d7
 ; CHECK-NEXT:    str d6, [x0]
 ; CHECK-NEXT:    cmp x8, x2

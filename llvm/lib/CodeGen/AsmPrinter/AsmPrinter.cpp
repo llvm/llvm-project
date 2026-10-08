@@ -195,8 +195,6 @@ static cl::opt<std::string>
                    cl::desc("Output filename for stack usage information"),
                    cl::value_desc("filename"), cl::Hidden);
 
-extern cl::opt<bool> EmitBBHash;
-
 STATISTIC(EmittedInsts, "Number of machine instrs printed");
 
 char AsmPrinter::ID = 0;
@@ -512,7 +510,7 @@ void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<GCModuleInfo>();
   AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
   AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
-  if (EmitBBHash)
+  if (shouldEmitBBHash())
     AU.addRequired<MachineBlockHashInfo>();
   AU.addUsedIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>();
 }
@@ -1516,7 +1514,7 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
           MF.hasBBSections() && NumMBBSectionRanges > 1,
           // Use static_cast to avoid breakage of tests on windows.
           static_cast<bool>(BBAddrMapSkipEmitBBEntries), HasCalls,
-          static_cast<bool>(EmitBBHash), PostLinkCfgEnabled};
+          shouldEmitBBHash(), PostLinkCfgEnabled};
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
@@ -2001,7 +1999,8 @@ void AsmPrinter::handleCallsiteForCallgraph(
     const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
     const MachineInstr &MI) {
   assert(MI.isCall() && "This method is meant for call instructions only.");
-  const MachineOperand &CalleeOperand = MI.getOperand(0);
+  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
+  const MachineOperand &CalleeOperand = TII->getCalleeOperand(MI);
   if (CalleeOperand.isGlobal() || CalleeOperand.isSymbol()) {
     // Handle direct calls.
     MCSymbol *CalleeSymbol = nullptr;
@@ -2866,8 +2865,7 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
 
 static uint64_t globalSize(const llvm::GlobalVariable &G) {
   const Constant *Initializer = G.getInitializer();
-  return G.getParent()->getDataLayout().getTypeAllocSize(
-      Initializer->getType());
+  return G.getDataLayout().getTypeAllocSize(Initializer->getType());
 }
 
 static bool shouldTagGlobal(const llvm::GlobalVariable &G) {

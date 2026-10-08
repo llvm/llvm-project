@@ -59,6 +59,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRefDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRefMemorySlot.h"
 #include "mlir/Dialect/MemRef/IR/ValueBoundsOpInterfaceImpl.h"
+#include "mlir/Dialect/MemRef/Transforms//MemorySlotOpInterfaceImpl.h"
 #include "mlir/Dialect/MemRef/Transforms/AllocationOpInterfaceImpl.h"
 #include "mlir/Dialect/MemRef/Transforms/BufferViewFlowOpInterfaceImpl.h"
 #include "mlir/Dialect/MemRef/Transforms/RuntimeOpVerification.h"
@@ -187,7 +188,8 @@ void mlir::registerAllDialects(DialectRegistry &registry) {
   memref::registerBufferViewFlowOpInterfaceExternalModels(registry);
   memref::registerRuntimeVerifiableOpInterfaceExternalModels(registry);
   memref::registerValueBoundsOpInterfaceExternalModels(registry);
-  memref::registerMemorySlotExternalModels(registry);
+  memref::registerDestructurableTypeExternalModels(registry);
+  memref::registerMemorySlotOpInterfaceExternalModels(registry);
   ml_program::registerBufferizableOpInterfaceExternalModels(registry);
   nvgpu::registerMemoryAccessOpInterfacesExternalModels(registry);
   scf::registerBufferDeallocationOpInterfaceExternalModels(registry);
@@ -205,7 +207,7 @@ void mlir::registerAllDialects(DialectRegistry &registry) {
   tosa::registerShardingInterfaceExternalModels(registry);
   vector::registerBufferizableOpInterfaceExternalModels(registry);
   vector::registerIndexedAccessOpInterfaceExternalModels(registry);
-  vector::registerMemorySlotOpInterfaceExternalModels(registry);
+  vector::registerMemorySlotExternalModels(registry);
   vector::registerSubsetOpInterfaceExternalModels(registry);
   vector::registerValueBoundsOpInterfaceExternalModels(registry);
   NVVM::registerNVVMTargetInterfaceExternalModels(registry);
