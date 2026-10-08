@@ -3,11 +3,11 @@
 define void @sink_add_mul(ptr %s1, i32 %x, ptr %d, i32 %n) {
 ; CHECK-LABEL: @sink_add_mul(
 ; CHECK:    vector.ph:
-; CHECK-NOT:  %{{.*}} = insertelement <4 x i32> undef, i32 %{{.*}}, i32 0
-; CHECK-NOT:  %{{.*}} = shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NOT:  %{{.*}} = insertelement <4 x i32> poison, i32 %{{.*}}, i32 0
+; CHECK-NOT:  %{{.*}} = shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK:    vector.body:
-; CHECK:      [[TMP2:%.*]] = insertelement <4 x i32> undef, i32 [[X:%.*]], i32 0
-; CHECK:      [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK:      [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[X:%.*]], i32 0
+; CHECK:      [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
 ;
 entry:
   %cmp6 = icmp sgt i32 %n, 0
@@ -15,8 +15,8 @@ entry:
 
 vector.ph:                                        ; preds = %for.body.preheader
   %n.vec = and i32 %n, -4
-  %broadcast.splatinsert8 = insertelement <4 x i32> undef, i32 %x, i32 0
-  %broadcast.splat9 = shufflevector <4 x i32> %broadcast.splatinsert8, <4 x i32> undef, <4 x i32> zeroinitializer
+  %broadcast.splatinsert8 = insertelement <4 x i32> poison, i32 %x, i32 0
+  %broadcast.splat9 = shufflevector <4 x i32> %broadcast.splatinsert8, <4 x i32> poison, <4 x i32> zeroinitializer
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -39,14 +39,13 @@ for.cond.cleanup:                                 ; preds = %for.body, %middle.b
 define void @sink_add_mul_multiple(ptr %s1, ptr %s2, i32 %x, ptr %d, ptr %d2, i32 %n) {
 ; CHECK-LABEL: @sink_add_mul_multiple(
 ; CHECK:    vector.ph:
-; CHECK-NOT:  %{{.*}} = insertelement <4 x i32> undef, i32 %{{.*}}, i32 0
-; CHECK-NOT:  %{{.*}} = shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NOT:  %{{.*}} = insertelement <4 x i32> poison, i32 %{{.*}}, i32 0
+; CHECK-NOT:  %{{.*}} = shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK:    vector.body:
-; CHECK:      [[TMP2:%.*]] = insertelement <4 x i32> undef, i32 %x, i32 0
-; CHECK:      [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK:      [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 %x, i32 0
+; CHECK:      [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK:      mul nsw <4 x i32> %wide.load, [[TMP3]]
-; CHECK:      [[TMP2b:%.*]] = insertelement <4 x i32> undef, i32 %x, i32 0
-; CHECK:      [[TMP3b:%.*]] = shufflevector <4 x i32> [[TMP2b]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK:      [[TMP3b:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK:      mul nsw <4 x i32> %wide.load18, [[TMP3b]]
 ;
 entry:
@@ -55,8 +54,8 @@ entry:
 
 vector.ph:                                        ; preds = %for.body.preheader
   %n.vec = and i32 %n, -4
-  %broadcast.splatinsert15 = insertelement <4 x i32> undef, i32 %x, i32 0
-  %broadcast.splat16 = shufflevector <4 x i32> %broadcast.splatinsert15, <4 x i32> undef, <4 x i32> zeroinitializer
+  %broadcast.splatinsert15 = insertelement <4 x i32> poison, i32 %x, i32 0
+  %broadcast.splat16 = shufflevector <4 x i32> %broadcast.splatinsert15, <4 x i32> poison, <4 x i32> zeroinitializer
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -91,8 +90,8 @@ define void @sink_add_sub_unsinkable(ptr %s1, ptr %s2, i32 %x, ptr %d, ptr %d2, 
 ; CHECK-NEXT:    br i1 [[CMP13]], label [[VECTOR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N]], -4
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT15:%.*]] = insertelement <4 x i32> undef, i32 [[X:%.*]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT16:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT15]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT15:%.*]] = insertelement <4 x i32> poison, i32 [[X:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT16:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT15]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ;
 entry:
@@ -101,8 +100,8 @@ entry:
 
 vector.ph:                                        ; preds = %for.body.preheader
   %n.vec = and i32 %n, -4
-  %broadcast.splatinsert15 = insertelement <4 x i32> undef, i32 %x, i32 0
-  %broadcast.splat16 = shufflevector <4 x i32> %broadcast.splatinsert15, <4 x i32> undef, <4 x i32> zeroinitializer
+  %broadcast.splatinsert15 = insertelement <4 x i32> poison, i32 %x, i32 0
+  %broadcast.splat16 = shufflevector <4 x i32> %broadcast.splatinsert15, <4 x i32> poison, <4 x i32> zeroinitializer
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -132,11 +131,11 @@ for.cond.cleanup:                                 ; preds = %for.body, %middle.b
 define void @sink_sub(ptr %s1, i32 %x, ptr %d, i32 %n) {
 ; CHECK-LABEL: @sink_sub(
 ; CHECK:    vector.ph:
-; CHECK-NOT:  %{{.*}} = insertelement <4 x i32> undef, i32 %{{.*}}, i32 0
-; CHECK-NOT:  %{{.*}} = shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NOT:  %{{.*}} = insertelement <4 x i32> poison, i32 %{{.*}}, i32 0
+; CHECK-NOT:  %{{.*}} = shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK:    vector.body:
-; CHECK:      [[TMP2:%.*]] = insertelement <4 x i32> undef, i32 [[X:%.*]], i32 0
-; CHECK:      [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK:      [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[X:%.*]], i32 0
+; CHECK:      [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
 ;
 entry:
   %cmp6 = icmp sgt i32 %n, 0
@@ -144,8 +143,8 @@ entry:
 
 vector.ph:                                        ; preds = %for.body.preheader
   %n.vec = and i32 %n, -4
-  %broadcast.splatinsert8 = insertelement <4 x i32> undef, i32 %x, i32 0
-  %broadcast.splat9 = shufflevector <4 x i32> %broadcast.splatinsert8, <4 x i32> undef, <4 x i32> zeroinitializer
+  %broadcast.splatinsert8 = insertelement <4 x i32> poison, i32 %x, i32 0
+  %broadcast.splat9 = shufflevector <4 x i32> %broadcast.splatinsert8, <4 x i32> poison, <4 x i32> zeroinitializer
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -168,20 +167,20 @@ entry:
 ; CHECK-LABEL: @sink_sub_unsinkable(
 ; CHECK:      vector.ph:
 ; CHECK-NEXT:   [[N_VEC:%.*]] = and i32 [[N]], -4
-; CHECK-NEXT:   [[BROADCAST_SPLATINSERT15:%.*]] = insertelement <4 x i32> undef, i32 [[X:%.*]], i32 0
-; CHECK-NEXT:   [[BROADCAST_SPLAT16:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT15]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:   [[BROADCAST_SPLATINSERT15:%.*]] = insertelement <4 x i32> poison, i32 [[X:%.*]], i32 0
+; CHECK-NEXT:   [[BROADCAST_SPLAT16:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT15]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:   br label [[VECTOR_BODY:%.*]]
 ; CHECK:      vector.body:
-; CHECK-NOT:    %{{.*}} = insertelement <4 x i32> undef, i32 %{{.*}}, i32 0
-; CHECK-NOT:    %{{.*}} = shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NOT:    %{{.*}} = insertelement <4 x i32> poison, i32 %{{.*}}, i32 0
+; CHECK-NOT:    %{{.*}} = shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> zeroinitializer
 ;
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %vector.ph, label %for.cond.cleanup
 
 vector.ph:                                        ; preds = %for.body.preheader
   %n.vec = and i32 %n, -4
-  %broadcast.splatinsert8 = insertelement <4 x i32> undef, i32 %x, i32 0
-  %broadcast.splat9 = shufflevector <4 x i32> %broadcast.splatinsert8, <4 x i32> undef, <4 x i32> zeroinitializer
+  %broadcast.splatinsert8 = insertelement <4 x i32> poison, i32 %x, i32 0
+  %broadcast.splat9 = shufflevector <4 x i32> %broadcast.splatinsert8, <4 x i32> poison, <4 x i32> zeroinitializer
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
