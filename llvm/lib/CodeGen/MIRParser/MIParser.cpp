@@ -64,6 +64,7 @@
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
@@ -2723,6 +2724,34 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createLLVMDefAspaceCfa(
         nullptr, Reg, Offset, AddressSpace, SMLoc()));
     break;
+  case MIToken::kw_cfi_llvm_def_cfa_address_constant:
+    if (parseCFIAddressSpace(AddressSpace) ||
+        expectAndConsume(MIToken::comma) || parseCFIOffset(Offset))
+      return true;
+    CFIIndex =
+        MF.addFrameInst(MCCFIInstruction::createLLVMDefCfaAddressConstant(
+            nullptr, AddressSpace, Offset));
+    break;
+  case MIToken::kw_cfi_llvm_def_cfa_address_scaled: {
+    unsigned Register, DerefSize, Scale;
+    if (parseCFIAddressSpace(AddressSpace) ||
+        expectAndConsume(MIToken::comma) || parseCFIOffset(Offset) ||
+        expectAndConsume(MIToken::comma) || parseCFIRegister(Register) ||
+        expectAndConsume(MIToken::comma))
+      return true;
+    auto DerefSizeLoc = Token.location();
+    if (parseCFIUnsigned(DerefSize) || expectAndConsume(MIToken::comma) ||
+        parseCFIUnsigned(Scale))
+      return true;
+    if (!isUInt<8>(DerefSize))
+      return error(DerefSizeLoc, "expected an 8-bit CFA dereference size");
+    if (DerefSize == 0)
+      return error(DerefSizeLoc, "expected a nonzero CFA dereference size");
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::createLLVMDefCfaAddressScaled(
+        nullptr, AddressSpace, Offset, Register, DerefSize, Scale));
+
+    break;
+  }
   case MIToken::kw_cfi_remember_state:
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createRememberState(nullptr));
     break;
@@ -3218,6 +3247,8 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
   case MIToken::kw_cfi_escape:
   case MIToken::kw_cfi_def_cfa:
   case MIToken::kw_cfi_llvm_def_aspace_cfa:
+  case MIToken::kw_cfi_llvm_def_cfa_address_constant:
+  case MIToken::kw_cfi_llvm_def_cfa_address_scaled:
   case MIToken::kw_cfi_register:
   case MIToken::kw_cfi_remember_state:
   case MIToken::kw_cfi_restore:

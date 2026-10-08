@@ -1312,6 +1312,8 @@ void MCCFIInstruction::replaceRegister(unsigned FromReg, unsigned ToReg) {
         ReplaceReg(F.Register2);
       },
       [](EscapeFields &) {}, [](LabelFields &) {},
+      [](CfaAddressConstantFields &) {},
+      [=](CfaAddressScaledFields &F) { ReplaceReg(F.Register); },
       [=](RegisterPairFields &F) {
         ReplaceReg(F.Register);
         ReplaceReg(F.Reg1);
@@ -1420,14 +1422,47 @@ static void emitEncodingByte(MCObjectStreamer &Streamer, unsigned Encoding) {
   Streamer.emitInt8(Encoding);
 }
 
-static void encodeDwarfRegisterLocation(int DwarfReg, raw_ostream &OS) {
-  assert(DwarfReg >= 0);
+static void encodeDwarfRegisterLocation(unsigned DwarfReg, raw_ostream &OS) {
   if (DwarfReg < 32) {
     OS << uint8_t(dwarf::DW_OP_reg0 + DwarfReg);
   } else {
     OS << uint8_t(dwarf::DW_OP_regx);
     encodeULEB128(DwarfReg, OS);
   }
+}
+
+static void encodeDwarfUnsignedConstant(uint64_t Value, raw_ostream &OS) {
+  if (Value <= 31) {
+    OS << uint8_t(dwarf::DW_OP_lit0 + Value);
+    return;
+  }
+  OS << uint8_t(dwarf::DW_OP_constu);
+  encodeULEB128(Value, OS);
+}
+
+static void encodeDwarfAspaceAddress(unsigned AddressSpace, raw_ostream &OS) {
+  encodeDwarfUnsignedConstant(AddressSpace, OS);
+  OS << uint8_t(dwarf::DW_OP_LLVM_user)
+     << uint8_t(dwarf::DW_OP_LLVM_form_aspace_address);
+}
+
+static void encodeDwarfSignedConstant(int64_t Value, raw_ostream &OS) {
+  if (Value >= 0) {
+    encodeDwarfUnsignedConstant(Value, OS);
+    return;
+  }
+  OS << uint8_t(dwarf::DW_OP_consts);
+  encodeSLEB128(Value, OS);
+}
+
+static void emitDwarfCfaAddress(MCObjectStreamer &Streamer,
+                                unsigned AddressSpace,
+                                raw_svector_ostream &OS) {
+  encodeDwarfAspaceAddress(AddressSpace, OS);
+  StringRef Block = OS.str();
+  Streamer.emitInt8(dwarf::DW_CFA_def_cfa_expression);
+  Streamer.emitULEB128IntValue(Block.size());
+  Streamer.emitBinaryData(Block);
 }
 
 void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
@@ -1613,6 +1648,38 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
       Streamer.emitULEB128IntValue(Reg);
       Streamer.emitULEB128IntValue(Offset);
     }
+    return;
+  }
+  case MCCFIInstruction::OpLLVMDefCfaAddressConstant: {
+    const auto &Fields =
+        Instr.getExtraFields<MCCFIInstruction::CfaAddressConstantFields>();
+    SmallString<16> Block;
+    raw_svector_ostream OSBlock(Block);
+    encodeDwarfSignedConstant(Fields.Offset, OSBlock);
+    emitDwarfCfaAddress(Streamer, Fields.AddressSpace, OSBlock);
+    return;
+  }
+  case MCCFIInstruction::OpLLVMDefCfaAddressScaled: {
+    const auto &Fields =
+        Instr.getExtraFields<MCCFIInstruction::CfaAddressScaledFields>();
+    SmallString<16> Block;
+    raw_svector_ostream OSBlock(Block);
+    encodeDwarfRegisterLocation(Fields.Register, OSBlock);
+    OSBlock << uint8_t(dwarf::DW_OP_deref_size) << uint8_t(Fields.DerefSize);
+    if (Fields.Scale != 1) {
+      bool IsPowerOfTwo = isPowerOf2_32(Fields.Scale);
+      encodeDwarfUnsignedConstant(
+          IsPowerOfTwo ? Log2_32(Fields.Scale) : Fields.Scale, OSBlock);
+      OSBlock << uint8_t(IsPowerOfTwo ? dwarf::DW_OP_shl : dwarf::DW_OP_mul);
+    }
+    if (Fields.Offset > 0) {
+      OSBlock << uint8_t(dwarf::DW_OP_plus_uconst);
+      encodeULEB128(Fields.Offset, OSBlock);
+    } else if (Fields.Offset < 0) {
+      encodeDwarfSignedConstant(Fields.Offset, OSBlock);
+      OSBlock << uint8_t(dwarf::DW_OP_plus);
+    }
+    emitDwarfCfaAddress(Streamer, Fields.AddressSpace, OSBlock);
     return;
   }
   case MCCFIInstruction::OpLLVMRegisterPair: {

@@ -5,15 +5,38 @@
 # Verify we can parse and emit these CFI pseudos.
 
 # CHECK-LABEL: name: test
-# CHECK: CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+# CHECK: CFI_INSTRUCTION llvm_def_cfa_address_constant 6, 128{{$}}
+# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_constant 6, -17, debug-location !DILocation(line: 1, scope: !{{[0-9]+}})
+# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_scaled 6, 128, $sgpr32, 4, 32, debug-location !DILocation(line: 1, scope: !{{[0-9]+}})
+# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_scaled 0, 0, $sgpr0, 1, 0{{$}}
+# CHECK-NEXT: CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
 # CHECK-NEXT: CFI_INSTRUCTION llvm_vector_registers $sgpr4, $vgpr3, 0, 32
 # CHECK-NEXT: CFI_INSTRUCTION llvm_vector_registers $pc_reg, $vgpr62, 0, 32, $vgpr62, 1, 32
 # CHECK-NEXT: CFI_INSTRUCTION llvm_vector_offset $vgpr41, 32, $exec, 64, 100
 # CHECK-NEXT: CFI_INSTRUCTION llvm_vector_register_mask $agpr1, $vgpr1, 32, $exec, 64
 
+--- |
+  define void @test() !dbg !1 {
+    ret void
+  }
+  !llvm.dbg.cu = !{!5}
+  !llvm.module.flags = !{!6}
+  !0 = !DILocation(line: 1, scope: !1)
+  !1 = distinct !DISubprogram(name: "test", scope: !2, file: !2, line: 1, type: !3, spFlags: DISPFlagDefinition, unit: !5)
+  !2 = !DIFile(filename: "test.c", directory: "/tmp")
+  !3 = !DISubroutineType(types: !4)
+  !4 = !{null}
+  !5 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug)
+  !6 = !{i32 2, !"Debug Info Version", i32 3}
+...
+---
 name: test
 body: |
   bb.0:
+    CFI_INSTRUCTION llvm_def_cfa_address_constant 6, 128
+    CFI_INSTRUCTION llvm_def_cfa_address_constant 6, -17, debug-location !0
+    CFI_INSTRUCTION llvm_def_cfa_address_scaled 6, 128, $sgpr32, 4, 32, debug-location !0
+    CFI_INSTRUCTION llvm_def_cfa_address_scaled 0, 0, $sgpr0, 1, 0
     CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     CFI_INSTRUCTION llvm_vector_registers $sgpr4, $vgpr3, 0, 32
     CFI_INSTRUCTION llvm_vector_registers $pc_reg, $vgpr62, 0, 32, $vgpr62, 1, 32
