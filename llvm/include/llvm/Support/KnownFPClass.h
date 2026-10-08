@@ -297,6 +297,11 @@ struct KnownFPClass {
     return Known;
   }
 
+  // Special cases of fmul -x, x and fmul x, -x.
+  LLVM_ABI static KnownFPClass
+  neg_square(const KnownFPClass &Src,
+             DenormalMode Mode = DenormalMode::getDynamic());
+
   LLVM_ABI static KnownFPClass
   fmul(const KnownFPClass &LHS, const APFloat &RHS,
        DenormalMode Mode = DenormalMode::getDynamic());
@@ -331,6 +336,11 @@ struct KnownFPClass {
   LLVM_ABI static KnownFPClass
   fma_square(const KnownFPClass &Squared, const KnownFPClass &Addend,
              DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Report known values for fma (-x, x, addend) and fma (x, -x, addend)
+  LLVM_ABI static KnownFPClass
+  fma_neg_square(const KnownFPClass &Squared, const KnownFPClass &Addend,
+                 DenormalMode Mode = DenormalMode::getDynamic());
 
   /// Propagate known class for sqrt
   LLVM_ABI static KnownFPClass

@@ -571,6 +571,21 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
   return Known;
 }
 
+KnownFPClass KnownFPClass::neg_square(const KnownFPClass &Src,
+                                      DenormalMode Mode) {
+  KnownFPClass Known = fmul(fneg(Src), Src, Mode);
+
+  // -X * X is always negative, zero, or a NaN.
+  Known.knownNot(fcPosSubnormal | fcPosNormal | fcPosInf);
+
+  // Zero results are -0 unless a denormal is flushed to +0.
+  if (!Mode.inputsMayBePositiveZero() && !Mode.outputsMayBePositiveZero())
+    Known.knownNot(fcPosZero);
+
+  Known.propagateNonNaN(Src);
+  return Known;
+}
+
 // TODO: This generalizes to known ranges
 KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
                                 const APFloat &CRHS, DenormalMode Mode) {
@@ -753,6 +768,20 @@ KnownFPClass KnownFPClass::fma_square(const KnownFPClass &KnownSquared,
 
   Known.propagateNonSNaN(KnownSquared, KnownAddend);
 
+  return Known;
+}
+
+KnownFPClass KnownFPClass::fma_neg_square(const KnownFPClass &KnownSquared,
+                                          const KnownFPClass &KnownAddend,
+                                          DenormalMode Mode) {
+  KnownFPClass NegSquared = neg_square(KnownSquared, Mode);
+  KnownFPClass Known = fadd_impl(NegSquared, KnownAddend, Mode);
+
+  if (KnownAddend.isKnownNever(fcPosInf | fcNan) &&
+      NegSquared.isKnownNever(fcNan))
+    Known.knownNot(fcNan);
+
+  Known.propagateNonSNaN(KnownSquared, KnownAddend);
   return Known;
 }
 

@@ -5429,16 +5429,32 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     }
     case Intrinsic::fma:
     case Intrinsic::fmuladd: {
-      if ((InterestedClasses & fcNegative) == fcNone)
+      Value *A0 = II->getArgOperand(0), *A1 = II->getArgOperand(1);
+      Value *NegSrc = nullptr;
+      if (match(A0, m_FNeg(m_Specific(A1))))
+        NegSrc = A1;
+      else if (match(A1, m_FNeg(m_Specific(A0))))
+        NegSrc = A0;
+
+      // Result is non-positive or NaN for -x * x and x * -x.
+      if (NegSrc && (InterestedClasses & (fcPositive | fcNan)) == fcNone) {
         break;
+      }
+
+      // For x * x, result is positive or NaN.
+      if (!NegSrc && (InterestedClasses & fcNegative) == fcNone) {
+        break;
+      }
 
       // FIXME: This should check isGuaranteedNotToBeUndef
-      if (II->getArgOperand(0) == II->getArgOperand(1)) {
+      if (A0 == A1 || NegSrc) {
+        const Value *Src = NegSrc ? NegSrc : A0;
+
         KnownFPClass KnownSrc, KnownAddend;
         computeKnownFPClass(II->getArgOperand(2), DemandedElts,
                             InterestedClasses, KnownAddend, Q, Depth + 1);
-        computeKnownFPClass(II->getArgOperand(0), DemandedElts,
-                            InterestedClasses, KnownSrc, Q, Depth + 1);
+        computeKnownFPClass(Src, DemandedElts, InterestedClasses, KnownSrc, Q,
+                            Depth + 1);
 
         const Function *F = II->getFunction();
         const fltSemantics &FltSem =
@@ -5450,13 +5466,14 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           KnownSrc.knownNot(fcNan);
           KnownAddend.knownNot(fcNan);
         }
-
         if (KnownNotFromFlags & fcInf) {
           KnownSrc.knownNot(fcInf);
           KnownAddend.knownNot(fcInf);
         }
 
-        Known = KnownFPClass::fma_square(KnownSrc, KnownAddend, Mode);
+        Known = NegSrc
+                    ? KnownFPClass::fma_neg_square(KnownSrc, KnownAddend, Mode)
+                    : KnownFPClass::fma_square(KnownSrc, KnownAddend, Mode);
         break;
       }
 
@@ -6072,6 +6089,23 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       computeKnownFPClass(LHS, DemandedElts, fcAllFlags, KnownSrc, Q,
                           Depth + 1);
       Known = KnownFPClass::square(KnownSrc, Mode);
+      break;
+    }
+
+    // Handling the -X * X and X * -X cases
+    Value *Src = nullptr;
+
+    if (match(LHS, m_FNeg(m_Specific(RHS)))) {
+      Src = RHS;
+    } else if (match(RHS, m_FNeg(m_Specific(LHS)))) {
+      Src = LHS;
+    }
+
+    if (Src) {
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(Src, DemandedElts, fcAllFlags, KnownSrc, Q,
+                          Depth + 1);
+      Known = KnownFPClass::neg_square(KnownSrc, Mode);
       break;
     }
 
