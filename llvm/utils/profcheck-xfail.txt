@@ -21,7 +21,6 @@ Transforms/IndVarSimplify/preserving-debugloc-rem-div.ll
 Transforms/IndirectBrExpand/basic.ll
 Transforms/InstCombine/fmul.ll
 Transforms/InstCombine/ldexp.ll
-Transforms/InstCombine/logical-select.ll
 Transforms/InstCombine/memrchr-3.ll
 Transforms/InstCombine/memrchr-4.ll
 Transforms/InstCombine/minmax-fold.ll
