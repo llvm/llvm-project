@@ -617,8 +617,8 @@ protected:
 
   // Generate the pdf file into \p Dir / \p PDFFileName using \p DotFile as
   // input and return the html <a> tag with \Text as the content.
-  static std::string genHTML(StringRef Text, StringRef DotFile,
-                             StringRef PDFFileName);
+  std::string genHTML(StringRef Text, StringRef DotFile,
+                      StringRef PDFFileName) const;
 
   void handleFunctionCompare(StringRef Name, StringRef Prefix, StringRef PassID,
                              StringRef Divider, bool InModule, unsigned Minor,
@@ -626,6 +626,8 @@ protected:
                              const FuncDataT<DCData> &After);
 
   unsigned N = 0;
+  // -dot-cfg-dir with ~ expanded, made absolute.
+  std::string OutputDir;
   std::unique_ptr<raw_fd_ostream> HTML;
 };
 

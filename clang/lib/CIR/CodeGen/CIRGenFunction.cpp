@@ -1494,6 +1494,33 @@ CIRGenFunction::CIRGenFPOptionsRAII::~CIRGenFPOptionsRAII() {
   cgf.builder.setDefaultConstrainedRounding(oldRounding);
 }
 
+cir::FastMathFlags CIRGenFunction::getCurrentFastMathFlags() const {
+  cir::FastMathFlags flags = cir::FastMathFlags::none;
+  if (curFPFeatures.getAllowFPReassociate())
+    flags |= cir::FastMathFlags::reassoc;
+  if (curFPFeatures.getNoHonorNaNs())
+    flags |= cir::FastMathFlags::nnan;
+  if (curFPFeatures.getNoHonorInfs())
+    flags |= cir::FastMathFlags::ninf;
+  if (curFPFeatures.getNoSignedZero())
+    flags |= cir::FastMathFlags::nsz;
+  if (curFPFeatures.getAllowReciprocal())
+    flags |= cir::FastMathFlags::arcp;
+  if (curFPFeatures.getAllowApproxFunc())
+    flags |= cir::FastMathFlags::afn;
+  if (curFPFeatures.allowFPContractAcrossStatement())
+    flags |= cir::FastMathFlags::contract;
+
+  return flags;
+}
+
+cir::FastMathFlagsAttr
+CIRGenFunction::getFastMathFlagsAttr(cir::FastMathFlags fastMathFlags) {
+  if (fastMathFlags == cir::FastMathFlags::none)
+    return {};
+  return cir::FastMathFlagsAttr::get(&getMLIRContext(), fastMathFlags);
+}
+
 // TODO(cir): should be shared with LLVM codegen.
 bool CIRGenFunction::shouldNullCheckClassCastValue(const CastExpr *ce) {
   const Expr *e = ce->getSubExpr();

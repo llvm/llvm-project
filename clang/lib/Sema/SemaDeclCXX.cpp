@@ -9668,7 +9668,7 @@ bool SpecialMemberDeletionInfo::isAccessible(Subobject Subobj,
   /// type of this special member.
   CanQualType objectTy;
   AccessSpecifier access = target->getAccess();
-  if (CXXBaseSpecifier *base = Subobj.dyn_cast<CXXBaseSpecifier*>()) {
+  if (CXXBaseSpecifier *base = dyn_cast<CXXBaseSpecifier *>(Subobj)) {
     objectTy = S.Context.getCanonicalTagType(MD->getParent());
     access = CXXRecordDecl::MergeAccess(base->getAccessSpecifier(), access);
 
@@ -9687,7 +9687,7 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
     Subobject Subobj, Sema::SpecialMemberOverloadResult SMOR,
     bool IsDtorCallInCtor) {
   CXXMethodDecl *Decl = SMOR.getMethod();
-  FieldDecl *Field = Subobj.dyn_cast<FieldDecl*>();
+  FieldDecl *Field = dyn_cast<FieldDecl *>(Subobj);
 
   enum {
     NotSet = -1,
@@ -9766,7 +9766,7 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
 /// direct or virtual base class or non-static data member of class type M.
 bool SpecialMemberDeletionInfo::shouldDeleteForClassSubobject(
     CXXRecordDecl *Class, Subobject Subobj, unsigned Quals) {
-  FieldDecl *Field = Subobj.dyn_cast<FieldDecl*>();
+  FieldDecl *Field = dyn_cast<FieldDecl *>(Subobj);
   bool IsMutable = Field && Field->isMutable();
 
   // C++11 [class.ctor]p5:
@@ -14165,7 +14165,7 @@ bool SpecialMemberExceptionSpecInfo::visitField(FieldDecl *FD) {
 void SpecialMemberExceptionSpecInfo::visitClassSubobject(CXXRecordDecl *Class,
                                                          Subobject Subobj,
                                                          unsigned Quals) {
-  FieldDecl *Field = Subobj.dyn_cast<FieldDecl*>();
+  FieldDecl *Field = dyn_cast<FieldDecl *>(Subobj);
   bool IsMutable = Field && Field->isMutable();
   visitSubobjectCall(Subobj, lookupIn(Class, Quals, IsMutable));
 }
