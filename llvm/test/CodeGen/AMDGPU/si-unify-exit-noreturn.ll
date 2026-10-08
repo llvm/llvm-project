@@ -20,14 +20,13 @@ define amdgpu_kernel void @divergent_check_in_loop(ptr addrspace(1) %p, i32 %n) 
 ; CHECK-NEXT:    br i1 [[BAD]], label %[[FAIL:.*]], label %[[CONT]]
 ; CHECK:       [[FAIL]]:
 ; CHECK-NEXT:    call void @report()
-; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
-; CHECK-NEXT:    br label %[[UNIFIEDRETURNBLOCK:.*]]
+; CHECK-NEXT:    br label %[[CONT]]
 ; CHECK:       [[CONT]]:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[P]], i32 [[I]]
 ; CHECK-NEXT:    store i32 [[I]], ptr addrspace(1) [[GEP]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[I_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[DONE]], label %[[UNIFIEDRETURNBLOCK]], label %[[LOOP]]
+; CHECK-NEXT:    br i1 [[DONE]], label %[[UNIFIEDRETURNBLOCK:.*]], label %[[LOOP]]
 ; CHECK:       [[UNIFIEDRETURNBLOCK]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -68,8 +67,7 @@ define amdgpu_kernel void @uniform_check_with_divergent_exit(ptr addrspace(1) %p
 ; CHECK-NEXT:    br i1 [[BAD]], label %[[FAIL:.*]], label %[[CONT:.*]]
 ; CHECK:       [[FAIL]]:
 ; CHECK-NEXT:    call void @report()
-; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
-; CHECK-NEXT:    br label %[[UNIFIEDRETURNBLOCK]]
+; CHECK-NEXT:    br label %[[CONT]]
 ; CHECK:       [[CONT]]:
 ; CHECK-NEXT:    store i32 [[TID]], ptr addrspace(1) [[P]], align 4
 ; CHECK-NEXT:    br label %[[UNIFIEDRETURNBLOCK]]
@@ -101,19 +99,15 @@ define amdgpu_kernel void @phi_in_continuation(ptr addrspace(1) %p, i32 %x) {
 ;
 ; CHECK-LABEL: define amdgpu_kernel void @phi_in_continuation(
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]], i32 [[X:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[BAD:%.*]] = icmp eq i32 [[TID]], [[X]]
 ; CHECK-NEXT:    br i1 [[BAD]], label %[[FAIL:.*]], label %[[CONT:.*]]
 ; CHECK:       [[FAIL]]:
 ; CHECK-NEXT:    call void @report()
-; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
-; CHECK-NEXT:    br label %[[UNIFIEDRETURNBLOCK:.*]]
+; CHECK-NEXT:    br label %[[CONT]]
 ; CHECK:       [[CONT]]:
-; CHECK-NEXT:    [[V:%.*]] = phi i32 [ [[TID]], %[[ENTRY]] ]
-; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[P]], align 4
-; CHECK-NEXT:    br label %[[UNIFIEDRETURNBLOCK]]
-; CHECK:       [[UNIFIEDRETURNBLOCK]]:
+; CHECK-NEXT:    store i32 [[TID]], ptr addrspace(1) [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -300,11 +294,9 @@ define amdgpu_kernel void @continuation_with_other_return(ptr addrspace(1) %p, i
 ; CHECK-NEXT:    br i1 [[BAD]], label %[[FAIL:.*]], label %[[CONT:.*]]
 ; CHECK:       [[FAIL]]:
 ; CHECK-NEXT:    call void @report()
-; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
-; CHECK-NEXT:    br label %[[UNIFIEDRETURNBLOCK]]
+; CHECK-NEXT:    br label %[[CONT]]
 ; CHECK:       [[CONT]]:
-; CHECK-NEXT:    [[Q:%.*]] = phi ptr addrspace(1) [ [[P]], %[[CHECK]] ]
-; CHECK-NEXT:    store i32 [[TID]], ptr addrspace(1) [[Q]], align 4
+; CHECK-NEXT:    store i32 [[TID]], ptr addrspace(1) [[P]], align 4
 ; CHECK-NEXT:    br label %[[UNIFIEDRETURNBLOCK]]
 ; CHECK:       [[UNIFIEDRETURNBLOCK]]:
 ; CHECK-NEXT:    ret void
