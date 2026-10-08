@@ -8570,7 +8570,8 @@ ExprResult InitializationSequence::Perform(Sema &S,
         return ExprError();
       CurInit = CurInitExprRes;
 
-      if (S.getLangOpts().C23 && initializingConstexprVariable(Entity)) {
+      if (S.getLangOpts().C23 && initializingConstexprVariable(Entity) &&
+          !CurInit.get()->containsErrors()) {
         CheckC23ConstexprInitConversion(S, SourceType, Entity.getType(),
                                         CurInit.get());
 
@@ -8581,7 +8582,6 @@ ExprResult InitializationSequence::Perform(Sema &S,
         // respectively.
         Expr::EvalResult ER;
         if (Entity.getType()->getAs<PointerType>() &&
-            !CurInit.get()->isValueDependent() &&
             CurInit.get()->EvaluateAsRValue(ER, S.Context) &&
             (ER.Val.isLValue() && !ER.Val.isNullPointer())) {
           S.Diag(Kind.getLocation(), diag::err_c23_constexpr_pointer_not_null);
