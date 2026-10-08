@@ -5,13 +5,13 @@
 
 define void @int_induction(ptr noalias %dst, i64 %n) {
 ; VF2-LABEL: 'int_induction'
-; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF2:  Cost of 0 for VF 2: vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3:%[0-9]+]]>, ir<1>, vp<[[VP0]]>
 ; VF2:  Cost of 1 for VF 2: canonical IV increment
 ; VF2:  Cost for VF 2: 6 (Estimated cost per lane: 3)
 ;
 ; VF4-LABEL: 'int_induction'
-; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF4:  Cost of 0 for VF 4: vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3:%[0-9]+]]>, ir<1>, vp<[[VP0]]>
 ; VF4:  Cost of 1 for VF 4: canonical IV increment
 ; VF4:  Cost for VF 4: 6 (Estimated cost per lane: 1.5)
@@ -94,14 +94,14 @@ exit:
 
 define void @trunc_and_wide_induction(ptr noalias %dst, ptr noalias %dst2, i64 %n) {
 ; VF2-LABEL: 'trunc_and_wide_induction'
-; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF2:  Cost of 2 for VF 2: ir<%iv>.1 = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]> (truncated to i32)
 ; VF2:  Cost of 0 for VF 2: vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3:%[0-9]+]]>, ir<1>, vp<[[VP0]]>
 ; VF2:  Cost of 1 for VF 2: canonical IV increment
 ; VF2:  Cost for VF 2: 9 (Estimated cost per lane: 4.5)
 ;
 ; VF4-LABEL: 'trunc_and_wide_induction'
-; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF4:  Cost of 2 for VF 4: ir<%iv>.1 = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]> (truncated to i32)
 ; VF4:  Cost of 0 for VF 4: vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3:%[0-9]+]]>, ir<1>, vp<[[VP0]]>
 ; VF4:  Cost of 1 for VF 4: canonical IV increment
@@ -129,7 +129,7 @@ exit:
 ; and the scalar steps materialize one FAdd per lane, except for the first.
 define void @fp_induction_scalar_users(ptr noalias %dst, i64 %n) {
 ; VF2-LABEL: 'fp_induction_scalar_users'
-; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF2:  Cost of 1 for VF 2: vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<0.000000e+00> + vp<[[VP4:%[0-9]+]]> * ir<1.000000e+00>
 ; VF2:  Cost of 1 for VF 2: vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1.000000e+00>, vp<[[VP0]]>
 ; VF2:  Cost of 1 for VF 2: canonical IV increment
@@ -137,7 +137,7 @@ define void @fp_induction_scalar_users(ptr noalias %dst, i64 %n) {
 ; VF2:  Cost for VF 2: 10 (Estimated cost per lane: 5)
 ;
 ; VF4-LABEL: 'fp_induction_scalar_users'
-; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF4:  Cost of 1 for VF 4: vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<0.000000e+00> + vp<[[VP4:%[0-9]+]]> * ir<1.000000e+00>
 ; VF4:  Cost of 3 for VF 4: vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1.000000e+00>, vp<[[VP0]]>
 ; VF4:  Cost of 1 for VF 4: canonical IV increment
@@ -166,7 +166,7 @@ exit:
 ; FSub to compute the per-lane values.
 define void @fp_induction_fsub_scalar_users(ptr noalias %dst, i64 %n) {
 ; VF2-LABEL: 'fp_induction_fsub_scalar_users'
-; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF2:  Cost of 2 for VF 2: vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<1.000000e+02> + vp<[[VP4:%[0-9]+]]> * ir<1.000000e+00>
 ; VF2:  Cost of 1 for VF 2: vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1.000000e+00>, vp<[[VP0]]>
 ; VF2:  Cost of 1 for VF 2: canonical IV increment
@@ -174,7 +174,7 @@ define void @fp_induction_fsub_scalar_users(ptr noalias %dst, i64 %n) {
 ; VF2:  Cost for VF 2: 11 (Estimated cost per lane: 5.5)
 ;
 ; VF4-LABEL: 'fp_induction_fsub_scalar_users'
-; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF4:  Cost of 2 for VF 4: vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<1.000000e+02> + vp<[[VP4:%[0-9]+]]> * ir<1.000000e+00>
 ; VF4:  Cost of 3 for VF 4: vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1.000000e+00>, vp<[[VP0]]>
 ; VF4:  Cost of 1 for VF 4: canonical IV increment
@@ -202,7 +202,7 @@ exit:
 ; Same as @fp_induction_scalar_users, but with a loop-invariant step.
 define void @fp_induction_invariant_step_scalar_users(ptr noalias %dst, float %step, i64 %n) {
 ; VF2-LABEL: 'fp_induction_invariant_step_scalar_users'
-; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF2:  Cost of 3 for VF 2: vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<0.000000e+00> + vp<[[VP4:%[0-9]+]]> * ir<%step>
 ; VF2:  Cost of 1 for VF 2: vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<%step>, vp<[[VP0]]>
 ; VF2:  Cost of 1 for VF 2: canonical IV increment
@@ -210,7 +210,7 @@ define void @fp_induction_invariant_step_scalar_users(ptr noalias %dst, float %s
 ; VF2:  Cost for VF 2: 12 (Estimated cost per lane: 6)
 ;
 ; VF4-LABEL: 'fp_induction_invariant_step_scalar_users'
-; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF4:  Cost of 3 for VF 4: vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<0.000000e+00> + vp<[[VP4:%[0-9]+]]> * ir<%step>
 ; VF4:  Cost of 3 for VF 4: vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<%step>, vp<[[VP0]]>
 ; VF4:  Cost of 1 for VF 4: canonical IV increment
@@ -242,7 +242,7 @@ exit:
 ; regardless of fast-math flags.
 define void @fp_induction_no_fastmath_unit_step_zero_start(ptr noalias %dst, i64 %n) {
 ; VF2-LABEL: 'fp_induction_no_fastmath_unit_step_zero_start'
-; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF2:  Cost of 1 for VF 2: vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<0.000000e+00> + vp<[[VP4:%[0-9]+]]> * ir<1.000000e+00>
 ; VF2:  Cost of 1 for VF 2: vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1.000000e+00>, vp<[[VP0]]>
 ; VF2:  Cost of 1 for VF 2: canonical IV increment
@@ -250,7 +250,7 @@ define void @fp_induction_no_fastmath_unit_step_zero_start(ptr noalias %dst, i64
 ; VF2:  Cost for VF 2: 10 (Estimated cost per lane: 5)
 ;
 ; VF4-LABEL: 'fp_induction_no_fastmath_unit_step_zero_start'
-; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF4:  Cost of 1 for VF 4: vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<0.000000e+00> + vp<[[VP4:%[0-9]+]]> * ir<1.000000e+00>
 ; VF4:  Cost of 3 for VF 4: vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1.000000e+00>, vp<[[VP0]]>
 ; VF4:  Cost of 1 for VF 4: canonical IV increment
@@ -282,7 +282,7 @@ exit:
 ; it may be -0.0, and "fadd 0.0, X" doesn't fold to X in that case.
 define void @fp_induction_no_fastmath_zero_start_invariant_step(ptr noalias %dst, float %step, i64 %n) {
 ; VF2-LABEL: 'fp_induction_no_fastmath_zero_start_invariant_step'
-; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF2:  Cost of 3 for VF 2: vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<0.000000e+00> + vp<[[VP4:%[0-9]+]]> * ir<%step>
 ; VF2:  Cost of 1 for VF 2: vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<%step>, vp<[[VP0]]>
 ; VF2:  Cost of 1 for VF 2: canonical IV increment
@@ -290,7 +290,7 @@ define void @fp_induction_no_fastmath_zero_start_invariant_step(ptr noalias %dst
 ; VF2:  Cost for VF 2: 12 (Estimated cost per lane: 6)
 ;
 ; VF4-LABEL: 'fp_induction_no_fastmath_zero_start_invariant_step'
-; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF4:  Cost of 3 for VF 4: vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<0.000000e+00> + vp<[[VP4:%[0-9]+]]> * ir<%step>
 ; VF4:  Cost of 3 for VF 4: vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<%step>, vp<[[VP0]]>
 ; VF4:  Cost of 1 for VF 4: canonical IV increment
@@ -320,7 +320,7 @@ exit:
 ; instruction.
 define void @fp_induction_fsub_zero_start(ptr noalias %dst, i64 %n) {
 ; VF2-LABEL: 'fp_induction_fsub_zero_start'
-; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF2:  Cost of 2 for VF 2: vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<0.000000e+00> + vp<[[VP4:%[0-9]+]]> * ir<1.000000e+00>
 ; VF2:  Cost of 1 for VF 2: vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1.000000e+00>, vp<[[VP0]]>
 ; VF2:  Cost of 1 for VF 2: canonical IV increment
@@ -328,7 +328,7 @@ define void @fp_induction_fsub_zero_start(ptr noalias %dst, i64 %n) {
 ; VF2:  Cost for VF 2: 11 (Estimated cost per lane: 5.5)
 ;
 ; VF4-LABEL: 'fp_induction_fsub_zero_start'
-; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF4:  Cost of 2 for VF 4: vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<0.000000e+00> + vp<[[VP4:%[0-9]+]]> * ir<1.000000e+00>
 ; VF4:  Cost of 3 for VF 4: vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1.000000e+00>, vp<[[VP0]]>
 ; VF4:  Cost of 1 for VF 4: canonical IV increment
@@ -356,7 +356,7 @@ exit:
 ; Start of -0.0 so the FAdd can be folded.
 define void @fp_induction_neg_zero_start_neg_step(ptr noalias %dst, i64 %n) {
 ; VF2-LABEL: 'fp_induction_neg_zero_start_neg_step'
-; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF2:  Cost of 2 for VF 2: vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<-0.000000e+00> + vp<[[VP4:%[0-9]+]]> * ir<-2.000000e+00>
 ; VF2:  Cost of 1 for VF 2: vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<-2.000000e+00>, vp<[[VP0]]>
 ; VF2:  Cost of 1 for VF 2: canonical IV increment
@@ -364,7 +364,7 @@ define void @fp_induction_neg_zero_start_neg_step(ptr noalias %dst, i64 %n) {
 ; VF2:  Cost for VF 2: 11 (Estimated cost per lane: 5.5)
 ;
 ; VF4-LABEL: 'fp_induction_neg_zero_start_neg_step'
-; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF4:  Cost of 2 for VF 4: vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<-0.000000e+00> + vp<[[VP4:%[0-9]+]]> * ir<-2.000000e+00>
 ; VF4:  Cost of 3 for VF 4: vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<-2.000000e+00>, vp<[[VP0]]>
 ; VF4:  Cost of 1 for VF 4: canonical IV increment
@@ -393,7 +393,7 @@ exit:
 ; FAdd cannot be folded.
 define void @fp_induction_pos_zero_start_neg_step(ptr noalias %dst, i64 %n) {
 ; VF2-LABEL: 'fp_induction_pos_zero_start_neg_step'
-; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF2:  Cost of 3 for VF 2: vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<0.000000e+00> + vp<[[VP4:%[0-9]+]]> * ir<-2.000000e+00>
 ; VF2:  Cost of 1 for VF 2: vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<-2.000000e+00>, vp<[[VP0]]>
 ; VF2:  Cost of 1 for VF 2: canonical IV increment
@@ -401,7 +401,7 @@ define void @fp_induction_pos_zero_start_neg_step(ptr noalias %dst, i64 %n) {
 ; VF2:  Cost for VF 2: 12 (Estimated cost per lane: 6)
 ;
 ; VF4-LABEL: 'fp_induction_pos_zero_start_neg_step'
-; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF4:  Cost of 3 for VF 4: vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<0.000000e+00> + vp<[[VP4:%[0-9]+]]> * ir<-2.000000e+00>
 ; VF4:  Cost of 3 for VF 4: vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<-2.000000e+00>, vp<[[VP0]]>
 ; VF4:  Cost of 1 for VF 4: canonical IV increment
@@ -429,7 +429,7 @@ exit:
 ; Same as @fp_induction_pos_zero_start_neg_step, but with a positive step.
 define void @fp_induction_pos_zero_start_pos_step(ptr noalias %dst, i64 %n) {
 ; VF2-LABEL: 'fp_induction_pos_zero_start_pos_step'
-; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF2:  Cost of 3 for VF 2: vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<0.000000e+00> + vp<[[VP4:%[0-9]+]]> * ir<2.000000e+00>
 ; VF2:  Cost of 1 for VF 2: vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<2.000000e+00>, vp<[[VP0]]>
 ; VF2:  Cost of 1 for VF 2: canonical IV increment
@@ -437,7 +437,7 @@ define void @fp_induction_pos_zero_start_pos_step(ptr noalias %dst, i64 %n) {
 ; VF2:  Cost for VF 2: 12 (Estimated cost per lane: 6)
 ;
 ; VF4-LABEL: 'fp_induction_pos_zero_start_pos_step'
-; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF4:  Cost of 3 for VF 4: vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<0.000000e+00> + vp<[[VP4:%[0-9]+]]> * ir<2.000000e+00>
 ; VF4:  Cost of 3 for VF 4: vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<2.000000e+00>, vp<[[VP0]]>
 ; VF4:  Cost of 1 for VF 4: canonical IV increment
@@ -466,7 +466,7 @@ exit:
 ; unit step folds the FMul away.
 define void @fp_induction_invariant_start(ptr noalias %dst, float %start, i64 %n) {
 ; VF2-LABEL: 'fp_induction_invariant_start'
-; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF2:  Cost of 2 for VF 2: vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<%start> + vp<[[VP4:%[0-9]+]]> * ir<1.000000e+00>
 ; VF2:  Cost of 1 for VF 2: vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1.000000e+00>, vp<[[VP0]]>
 ; VF2:  Cost of 1 for VF 2: canonical IV increment
@@ -474,7 +474,7 @@ define void @fp_induction_invariant_start(ptr noalias %dst, float %start, i64 %n
 ; VF2:  Cost for VF 2: 11 (Estimated cost per lane: 5.5)
 ;
 ; VF4-LABEL: 'fp_induction_invariant_start'
-; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF4:  Cost of 2 for VF 4: vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<%start> + vp<[[VP4:%[0-9]+]]> * ir<1.000000e+00>
 ; VF4:  Cost of 3 for VF 4: vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1.000000e+00>, vp<[[VP0]]>
 ; VF4:  Cost of 1 for VF 4: canonical IV increment
@@ -503,13 +503,13 @@ exit:
 ; loop and nothing is charged for it.
 define float @fp_induction_used_outside_loop_only(ptr noalias %dst, i64 %n) {
 ; VF2-LABEL: 'fp_induction_used_outside_loop_only'
-; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF2:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4:%[0-9]+]]>, ir<1>, vp<[[VP0]]>
 ; VF2:  Cost of 1 for VF 2: canonical IV increment
 ; VF2:  Cost for VF 2: 8 (Estimated cost per lane: 4)
 ;
 ; VF4-LABEL: 'fp_induction_used_outside_loop_only'
-; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF4:  Cost of 0 for VF 4: vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4:%[0-9]+]]>, ir<1>, vp<[[VP0]]>
 ; VF4:  Cost of 1 for VF 4: canonical IV increment
 ; VF4:  Cost for VF 4: 8 (Estimated cost per lane: 2)
@@ -535,7 +535,7 @@ exit:
 ; and the scalar steps are generated and need to be accounted for.
 define void @fp_induction_wide_and_scalar_users(ptr noalias %dst, ptr noalias %dst2, i64 %n) {
 ; VF2-LABEL: 'fp_induction_wide_and_scalar_users'
-; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF2:  Cost of 2 for VF 2: ir<%fp.iv> = WIDEN-INDUCTION fast ir<0.000000e+00>, ir<1.000000e+00>, vp<[[VP0]]>
 ; VF2:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4:%[0-9]+]]>, ir<1>, vp<[[VP0]]>
 ; VF2:  Cost of 1 for VF 2: vp<[[VP6:%[0-9]+]]> = DERIVED-IV ir<0.000000e+00> + vp<[[VP4]]> * ir<1.000000e+00>
@@ -545,7 +545,7 @@ define void @fp_induction_wide_and_scalar_users(ptr noalias %dst, ptr noalias %d
 ; VF2:  Cost for VF 2: 13 (Estimated cost per lane: 6.5)
 ;
 ; VF4-LABEL: 'fp_induction_wide_and_scalar_users'
-; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF4:  Cost of 2 for VF 4: ir<%fp.iv> = WIDEN-INDUCTION fast ir<0.000000e+00>, ir<1.000000e+00>, vp<[[VP0]]>
 ; VF4:  Cost of 0 for VF 4: vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4:%[0-9]+]]>, ir<1>, vp<[[VP0]]>
 ; VF4:  Cost of 1 for VF 4: vp<[[VP6:%[0-9]+]]> = DERIVED-IV ir<0.000000e+00> + vp<[[VP4]]> * ir<1.000000e+00>
@@ -580,7 +580,7 @@ define void @fp_induction_predicated(ptr noalias %dst, ptr noalias %cond, i64 %n
 ; VF2-LABEL: 'fp_induction_predicated'
 ; VF2:  Cost of 1 for VF 2: profitable to scalarize store float %fp.iv, ptr %gep, align 4
 ; VF2:  Precomputed costs for VF 2: 3
-; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF2:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4:%[0-9]+]]>, ir<1>, vp<[[VP0]]>
 ; VF2:  Cost of 1 for VF 2: vp<[[VP6:%[0-9]+]]> = DERIVED-IV ir<0.000000e+00> + vp<[[VP4]]> * ir<1.000000e+00>
 ; VF2:  Cost of 0.5 for VF 2: vp<[[VP8:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<1.000000e+00>, vp<[[VP0]]>
@@ -591,7 +591,7 @@ define void @fp_induction_predicated(ptr noalias %dst, ptr noalias %cond, i64 %n
 ; VF4-LABEL: 'fp_induction_predicated'
 ; VF4:  Cost of 2 for VF 4: profitable to scalarize store float %fp.iv, ptr %gep, align 4
 ; VF4:  Precomputed costs for VF 4: 6
-; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF4:  Cost of 0 for VF 4: vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4:%[0-9]+]]>, ir<1>, vp<[[VP0]]>
 ; VF4:  Cost of 1 for VF 4: vp<[[VP6:%[0-9]+]]> = DERIVED-IV ir<0.000000e+00> + vp<[[VP4]]> * ir<1.000000e+00>
 ; VF4:  Cost of 1.5 for VF 4: vp<[[VP8:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<1.000000e+00>, vp<[[VP0]]>

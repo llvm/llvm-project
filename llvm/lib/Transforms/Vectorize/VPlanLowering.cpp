@@ -60,7 +60,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
         Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
         CanIVTy, Plan.getZero(CanIVTy), Plan.getConstantInt(CanIVTy, 1),
         WideCanIV->getDebugLoc(), Builder,
-        WideCanIV->getNoWrapFlags().withoutNoSignedWrap()));
+        WideCanIV->getNoWrapFlags().toSpeculativeNoSignedWrap()));
     WideCanIV->eraseFromParent();
     return;
   }
@@ -269,7 +269,9 @@ void VPlanTransforms::materializeHeaderMask(
 ///    No successors
 ///  }
 static void
-expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR) {
+expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
+                              ElementCount VFxUF,
+                              std::optional<unsigned> MaxVScale) {
   VPlan *Plan = WidenIVR->getParent()->getPlan();
   VPValue *Start = WidenIVR->getStartValue();
   VPValue *Step = WidenIVR->getStepValue();
@@ -283,13 +285,30 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR) {
   const InductionDescriptor &ID = WidenIVR->getInductionDescriptor();
   Instruction::BinaryOps AddOp;
   Instruction::BinaryOps MulOp;
-  VPIRFlags Flags = *WidenIVR;
+  VPIRFlags Flags;
   if (ID.getKind() == InductionDescriptor::IK_IntInduction) {
     AddOp = Instruction::Add;
     MulOp = Instruction::Mul;
+    VPIRFlags::WrapFlagsTy NWFlags = WidenIVR->getNoWrapFlags();
+
+    // Turn a speculative nsw into a concrete one.
+    const APInt *Step;
+    if (NWFlags.HasSpeculativeNSW &&
+        match(WidenIVR->getStepValue(), m_APInt(Step)) &&
+        (!VFxUF.isScalable() || MaxVScale)) {
+      bool Overflow;
+      unsigned Multiplier =
+          VFxUF.getKnownMinValue() * (VFxUF.isScalable() ? *MaxVScale : 1);
+      (void)Step->smul_ov(APInt(Step->getBitWidth(), Multiplier), Overflow);
+      if (!Overflow)
+        NWFlags = NWFlags.fromSpeculativeNoSignedWrap();
+    }
+
+    Flags = NWFlags;
   } else {
     AddOp = ID.getInductionOpcode();
     MulOp = Instruction::FMul;
+    Flags = *WidenIVR;
   }
 
   // If the phi is truncated, truncate the start and step values.
@@ -539,7 +558,8 @@ void VPlanTransforms::expandBranchOnTwoConds(VPlan &Plan) {
   }
 }
 
-void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
+void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
+                                               ElementCount VFxUF) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
@@ -552,7 +572,8 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
       }
 
       if (auto *WidenIVR = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
-        expandVPWidenIntOrFpInduction(WidenIVR);
+        expandVPWidenIntOrFpInduction(WidenIVR, VFxUF,
+                                      getMaxVScale(*Plan.getIRFunction()));
         WidenIVR->eraseFromParent();
         continue;
       }

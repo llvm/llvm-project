@@ -703,14 +703,51 @@ class VPIRFlags {
   };
 
 public:
+  /// Enum to represent presence of no-signed-wrap, as well as speculative
+  /// version that can be turned into the concrete version late, when VF and IC
+  /// are available.
+  enum class VPNoSignedWrap {
+    None = 0,
+    ConcreteNSW = (1 << 0),
+    SpeculativeNSW = (1 << 1)
+  };
+
   struct WrapFlagsTy {
     char HasNUW : 1;
     char HasNSW : 1;
+    char HasSpeculativeNSW : 1;
 
-    WrapFlagsTy(bool HasNUW, bool HasNSW) : HasNUW(HasNUW), HasNSW(HasNSW) {}
+    WrapFlagsTy(bool HasNUW, VPNoSignedWrap HasNSW)
+        : HasNUW(HasNUW), HasNSW(HasNSW == VPNoSignedWrap::ConcreteNSW),
+          HasSpeculativeNSW(HasNSW == VPNoSignedWrap::SpeculativeNSW) {}
+    WrapFlagsTy(bool HasNUW, bool HasNSW)
+        : WrapFlagsTy(HasNUW, HasNSW ? VPNoSignedWrap::ConcreteNSW
+                                     : VPNoSignedWrap::None) {}
     WrapFlagsTy() : HasNUW(false), HasNSW(false) {}
-    WrapFlagsTy withoutNoSignedWrap() {
-      return {static_cast<bool>(HasNUW), false};
+    VPNoSignedWrap getNoSignedWrap() const {
+      if (HasNSW)
+        return VPNoSignedWrap::ConcreteNSW;
+      if (HasSpeculativeNSW)
+        return VPNoSignedWrap::SpeculativeNSW;
+      return VPNoSignedWrap::None;
+    }
+    bool hasNoUnsignedWrap() const { return HasNUW; }
+    WrapFlagsTy withNoUnsignedWrapIf(bool Cond) const {
+      return {hasNoUnsignedWrap() && Cond, getNoSignedWrap()};
+    }
+
+    /// Turn a concrete nsw into a speculative one, effectively dropping it
+    /// unless the speculative nsw is turned back into a concrete nsw.
+    WrapFlagsTy toSpeculativeNoSignedWrap() const {
+      return {hasNoUnsignedWrap(),
+              HasNSW ? VPNoSignedWrap::SpeculativeNSW : VPNoSignedWrap::None};
+    }
+
+    /// Turn a speculative nsw into a concrete one.
+    WrapFlagsTy fromSpeculativeNoSignedWrap() const {
+      return {hasNoUnsignedWrap(), HasSpeculativeNSW
+                                       ? VPNoSignedWrap::ConcreteNSW
+                                       : VPNoSignedWrap::None};
     }
   };
 
@@ -1014,6 +1051,7 @@ public:
   WrapFlagsTy getNoWrapFlagsOrNone() const {
     switch (OpType) {
     case OperationType::OverflowingBinOp:
+      return {WrapFlags.hasNoUnsignedWrap(), WrapFlags.getNoSignedWrap()};
     case OperationType::Trunc:
       return {hasNoUnsignedWrap(), hasNoSignedWrap()};
     default:
@@ -1022,7 +1060,14 @@ public:
   }
 
   WrapFlagsTy getNoWrapFlags() const {
-    return {hasNoUnsignedWrap(), hasNoSignedWrap()};
+    switch (OpType) {
+    case OperationType::OverflowingBinOp:
+      return {WrapFlags.hasNoUnsignedWrap(), WrapFlags.getNoSignedWrap()};
+    case OperationType::Trunc:
+      return {hasNoUnsignedWrap(), hasNoSignedWrap()};
+    default:
+      llvm_unreachable("Recipe does not have wrap flags");
+    }
   }
 
   bool isDisjoint() const {

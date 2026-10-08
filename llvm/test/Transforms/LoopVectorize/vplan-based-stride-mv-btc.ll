@@ -145,7 +145,7 @@ define void @non_constant_btc(ptr noalias %p.out, ptr %p, i64 %stride, i64 %n) v
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[TMP28:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[INDEX]]
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP27]], ptr align 8 [[TMP28]], <4 x i1> [[TMP1]])
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
-; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    br i1 [[TMP26]], label %[[SCALAR_PH:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; COMPARE-NO-MV-FOLD-TAIL:       [[SCALAR_PH]]:
@@ -399,7 +399,7 @@ define void @stride_as_btc(ptr noalias %p.out, ptr %p, i64 %stride) vscale_range
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[TMP28:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[INDEX]]
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP27]], ptr align 8 [[TMP28]], <4 x i1> [[TMP1]])
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
-; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    br i1 [[TMP26]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; COMPARE-NO-MV-FOLD-TAIL:       [[MIDDLE_BLOCK]]:
@@ -615,7 +615,7 @@ define void @stride_dependent_btc(ptr noalias %p.out, ptr %p, i64 %stride) vscal
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[INDEX]]
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[WIDE_MASKED_GATHER]], ptr align 8 [[TMP4]], <4 x i1> [[TMP2]])
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
-; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    br i1 [[TMP5]], label %[[SCALAR_PH:.*]], label %[[MIDDLE_BLOCK]], !llvm.loop [[LOOP4:![0-9]+]]
 ; COMPARE-NO-MV-FOLD-TAIL:       [[SCALAR_PH]]:
@@ -860,7 +860,7 @@ define void @stride_btc_checks_order(ptr noalias %p.out, ptr %p, i64 %stride, i6
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[TMP28:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[INDEX]]
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP27]], ptr align 8 [[TMP28]], <4 x i1> [[TMP1]])
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
-; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    br i1 [[TMP26]], label %[[SCALAR_PH:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; COMPARE-NO-MV-FOLD-TAIL:       [[SCALAR_PH]]:
@@ -1133,7 +1133,7 @@ define void @stride_dependent_btc_non_preventive(ptr noalias %p.out, ptr %p, i64
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[INDEX]]
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[WIDE_MASKED_GATHER]], ptr align 8 [[TMP4]], <4 x i1> [[TMP2]])
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
-; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    br i1 [[TMP5]], label %[[SCALAR_PH:.*]], label %[[MIDDLE_BLOCK]], !llvm.loop [[LOOP6:![0-9]+]]
 ; COMPARE-NO-MV-FOLD-TAIL:       [[SCALAR_PH]]:
@@ -1576,7 +1576,7 @@ define void @stride_btc_independent_memdep_triple_check(ptr %p, ptr noalias %p2,
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[TMP7:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[INDEX]]
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP47]], ptr align 8 [[TMP7]], <4 x i1> [[TMP3]])
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
-; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; COMPARE-NO-MV-FOLD-TAIL-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; COMPARE-NO-MV-FOLD-TAIL:       [[MIDDLE_BLOCK]]:
