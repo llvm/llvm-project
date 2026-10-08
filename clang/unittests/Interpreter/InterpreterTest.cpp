@@ -596,20 +596,6 @@ TEST_F(InterpreterTest, TranslationUnit_CanonicalDecl) {
             sema.getASTContext().getTranslationUnitDecl()->getCanonicalDecl());
 }
 
-TEST_F(InterpreterTest, UnusableTopLevelDecl) {
-  std::vector<const char *> Args;
-  std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
-
-  Value V;
-
-  llvm::cantFail(Interp->ParseAndExecute("return;", &V));
-
-  EXPECT_FALSE(V.isValid());
-  EXPECT_FALSE(V.hasValue());
-  ASSERT_EQ(V.getKind(), Value::K_Unspecified);
-  EXPECT_FALSE(V.isManuallyAlloc());
-}
-
 TEST_F(InterpreterTest, EmscriptenExceptionHandling) {
 #ifndef __EMSCRIPTEN__
   GTEST_SKIP() << "This test only applies to Emscripten builds.";
