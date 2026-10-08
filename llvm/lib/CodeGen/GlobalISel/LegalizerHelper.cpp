@@ -11240,6 +11240,10 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
     Register StorePtr = Dst;
     if (CurrOffset != 0) {
       LLT DstTy = MRI.getType(Dst);
+      if (MRI.getType(Offset).getSizeInBits() != DstTy.getSizeInBits())
+        Offset =
+            MIB.buildConstant(LLT::integer(DstTy.getSizeInBits()), CurrOffset)
+                .getReg(0);
       StorePtr = MIB.buildObjectPtrOffset(DstTy, Dst, Offset).getReg(0);
     }
     MIB.buildStore(LdVal, StorePtr, *StoreMMO);
