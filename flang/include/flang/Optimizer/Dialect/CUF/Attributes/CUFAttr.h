@@ -64,12 +64,6 @@ static constexpr llvm::StringRef getClusterDimsAttrName() {
   return "cuf.cluster_dims";
 }
 
-/// Attribute to carry a kernel directive's launch configuration as written
-/// (a cuf::LaunchConfigAttr).
-static constexpr llvm::StringRef getLaunchConfigAttrName() {
-  return "cuf.launch_config";
-}
-
 inline cuf::DataAttributeAttr
 getDataAttribute(mlir::MLIRContext *mlirContext,
                  std::optional<Fortran::common::CUDADataAttr> cudaAttr) {
