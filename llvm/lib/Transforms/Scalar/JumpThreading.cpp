@@ -584,6 +584,16 @@ static bool shouldThreadImpliedEdge(BasicBlock *PredBB, BasicBlock *BB) {
         return isa<CallBase>(I) && !isAssumeLikeIntrinsic(&I);
       }))
     return false;
+  // Threading the edge duplicates BB's stores, which can split the overwrite
+  // of an earlier store across paths so DSE no longer removes it:
+  //
+  //   Pre:    store/memset ptr %p    ; earlier store
+  //           br %c, PredBB, Other
+  //   PredBB: br ..., BB, ...
+  //   BB:     store ptr %p           ; overwrites it on all paths: DSE
+  //                                  ; removes the earlier store.
+  if (any_of(*BB, [](const Instruction &I) { return isa<StoreInst>(I); }))
+    return false;
   // Don't prevent if-conversion by threading:
   //
   //   PP:     br %c1, PredBB, BB     ; PP and PredBB both reach BB, so
