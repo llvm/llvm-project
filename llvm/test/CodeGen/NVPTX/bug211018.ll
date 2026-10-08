@@ -1,8 +1,6 @@
 ; RUN: llc < %s | FileCheck %s
 
-; Keep the wide-vector reproducer to exercise the scheduler's long dependency
-; path. Compile-time comparisons are performed separately because a timing
-; threshold would be host-dependent.
+; Exercise the scheduler's long dependency path with a wide ordered reduction.
 ; https://github.com/llvm/llvm-project/issues/211018
 
 target triple = "nvptx64-nvidia-cuda"
