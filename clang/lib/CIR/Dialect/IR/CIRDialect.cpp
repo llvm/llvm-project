@@ -272,8 +272,7 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
     if (!clang::TargetCXXABI::isABI(abival))
       return op->emitOpError() << "unknown C++ ABI '" << abi.getValue() << "'";
 
-    clang::TargetCXXABI::Kind kind =
-        clang::TargetCXXABI::getKind(abival);
+    clang::TargetCXXABI::Kind kind = clang::TargetCXXABI::getKind(abival);
     if (auto triple = op->getAttrOfType<mlir::StringAttr>(getTripleAttrName()))
       if (!clang::TargetCXXABI::isSupportedCXXABI(
               llvm::Triple(triple.getValue()), kind))
