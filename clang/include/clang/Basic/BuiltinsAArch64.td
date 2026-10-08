@@ -48,6 +48,12 @@ def sev     : AArch64Builtin<"void ()">;
 def sevl    : AArch64Builtin<"void ()">;
 def chkfeat : AArch64Builtin<"uint64_t (uint64_t)">;
 
+let Attributes = [NoThrow, RequireDeclaration], Header = "arm_vector_types.h" in {
+        def __arm_set_fpm_lscale  : AArch64NoPrefixTargetLibBuiltin<"uint64_t (uint64_t, uint64_t)">;
+        def __arm_set_fpm_nscale  : AArch64NoPrefixTargetLibBuiltin<"uint64_t (uint64_t, int64_t)">;
+        def __arm_set_fpm_lscale2 : AArch64NoPrefixTargetLibBuiltin<"uint64_t (uint64_t, uint64_t)">;
+}
+
 let Attributes = [RequireDeclaration], Languages = "ALL_LANGUAGES", Header = "arm_acle.h" in {
 	def __yield : AArch64NoPrefixTargetLibBuiltin<"void ()">;
 	def __wfe   : AArch64NoPrefixTargetLibBuiltin<"void ()">;
@@ -169,6 +175,10 @@ let Attributes = [NoThrow], Features = "ls64" in {
 	def st64b   : AArch64TargetBuiltin<"void (void *, uint64_t const *)">;
 	def st64bv  : AArch64TargetBuiltin<"uint64_t (void *, uint64_t const *)">;
 	def st64bv0 : AArch64TargetBuiltin<"uint64_t (void *, uint64_t const *)">;
+}
+
+let Attributes = [NoThrow, CustomTypeChecking] in {
+  def atomic_store_with_hint : AArch64Builtin<"void(...)">;
 }
 
 // Armv9.3-A Guarded Control Stack

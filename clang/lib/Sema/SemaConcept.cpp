@@ -404,6 +404,15 @@ public:
     return inherited::TraverseType(TT->desugar());
   }
 
+  bool TraversePackIndexingType(PackIndexingType *T, bool TraverseQualifier) {
+    {
+      Sema::ArgPackSubstIndexRAII _(SemaRef, std::nullopt);
+      if (!TraverseType(T->getPattern()))
+        return false;
+    }
+    return TraverseStmt(T->getIndexExpr());
+  }
+
   bool TraverseDecl(Decl *D) {
     if (auto *VD = dyn_cast<ValueDecl>(D)) {
       if (auto *Var = dyn_cast<VarDecl>(VD))
@@ -1295,7 +1304,7 @@ bool Sema::CheckConstraintSatisfaction(
     OutSatisfaction.IsSatisfied = true;
     return false;
   }
-  const auto *Template = Entity.dyn_cast<const NamedDecl *>();
+  const auto *Template = dyn_cast_if_present<const NamedDecl *>(Entity);
   if (!Template) {
     return ::CheckConstraintSatisfaction(
         *this, nullptr, AssociatedConstraints, TemplateArgsLists,
@@ -1392,6 +1401,98 @@ SubstituteConceptsInConstraintExpression(Sema &S, const NamedDecl *D,
                                          MLTAL);
 }
 
+bool Sema::SetupConstraintScope(
+    FunctionDecl *FD, std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
+    const MultiLevelTemplateArgumentList &MLTAL,
+    LocalInstantiationScope &Scope) {
+  assert(!isLambdaCallOperator(FD) &&
+         "Use LambdaScopeForCallOperatorInstantiationRAII to handle lambda "
+         "instantiations");
+  if (FD->isTemplateInstantiation() && FD->getPrimaryTemplate()) {
+    FunctionTemplateDecl *PrimaryTemplate = FD->getPrimaryTemplate();
+    InstantiatingTemplate Inst(
+        *this, FD->getPointOfInstantiation(),
+        Sema::InstantiatingTemplate::ConstraintsCheck{}, PrimaryTemplate,
+        TemplateArgs ? *TemplateArgs : ArrayRef<TemplateArgument>{},
+        SourceRange());
+    if (Inst.isInvalid())
+      return true;
+
+    // addInstantiatedParametersToScope creates a map of 'uninstantiated' to
+    // 'instantiated' parameters and adds it to the context. For the case where
+    // this function is a template being instantiated NOW, we also need to add
+    // the list of current template arguments to the list so that they also can
+    // be picked out of the map.
+    if (auto *SpecArgs = FD->getTemplateSpecializationArgs()) {
+      MultiLevelTemplateArgumentList JustTemplArgs(FD, SpecArgs->asArray(),
+                                                   /*Final=*/false);
+      if (addInstantiatedParametersToScope(
+              FD, PrimaryTemplate->getTemplatedDecl(), Scope, JustTemplArgs))
+        return true;
+    }
+
+    // If this is a member function, make sure we get the parameters that
+    // reference the original primary template.
+    if (FunctionTemplateDecl *FromMemTempl =
+            PrimaryTemplate->getInstantiatedFromMemberTemplate()) {
+      if (addInstantiatedParametersToScope(FD, FromMemTempl->getTemplatedDecl(),
+                                           Scope, MLTAL))
+        return true;
+    }
+
+    return false;
+  }
+
+  if (FD->getTemplatedKind() == FunctionDecl::TK_MemberSpecialization ||
+      FD->getTemplatedKind() == FunctionDecl::TK_DependentNonTemplate) {
+    FunctionDecl *InstantiatedFrom =
+        FD->getTemplatedKind() == FunctionDecl::TK_MemberSpecialization
+            ? FD->getInstantiatedFromMemberFunction()
+            : FD->getInstantiatedFromDecl();
+
+    InstantiatingTemplate Inst(
+        *this, FD->getPointOfInstantiation(),
+        Sema::InstantiatingTemplate::ConstraintsCheck{}, InstantiatedFrom,
+        TemplateArgs ? *TemplateArgs : ArrayRef<TemplateArgument>{},
+        SourceRange());
+    if (Inst.isInvalid())
+      return true;
+
+    // Case where this was not a template, but instantiated as a
+    // child-function.
+    if (addInstantiatedParametersToScope(FD, InstantiatedFrom, Scope, MLTAL))
+      return true;
+  }
+
+  return false;
+}
+
+// This function collects all of the template arguments for the purposes of
+// constraint-instantiation and checking.
+std::optional<MultiLevelTemplateArgumentList>
+Sema::SetupConstraintCheckingTemplateArgumentsAndScope(
+    FunctionDecl *FD, std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
+    LocalInstantiationScope &Scope) {
+  MultiLevelTemplateArgumentList MLTAL;
+
+  // Collect the list of template arguments relative to the 'primary' template.
+  // We need the entire list, since the constraint is completely uninstantiated
+  // at this point.
+  MLTAL =
+      getTemplateInstantiationArgs(FD, FD->getLexicalDeclContext(),
+                                   /*Final=*/false, /*Innermost=*/std::nullopt,
+                                   /*RelativeToPrimary=*/true,
+                                   /*Pattern=*/nullptr,
+                                   /*ForConstraintInstantiation=*/true);
+  // Lambdas are handled by LambdaScopeForCallOperatorInstantiationRAII.
+  if (isLambdaCallOperator(FD))
+    return MLTAL;
+  if (SetupConstraintScope(FD, TemplateArgs, MLTAL, Scope))
+    return std::nullopt;
+
+  return MLTAL;
+}
+
 bool Sema::CheckFunctionConstraints(const FunctionDecl *FD,
                                     ConstraintSatisfaction &Satisfaction,
                                     SourceLocation UsageLoc,
@@ -1431,12 +1532,12 @@ bool Sema::CheckFunctionConstraints(const FunctionDecl *FD,
 
   ContextRAII SavedContext{*this, CtxToSave};
   LocalInstantiationScope Scope(*this, !ForOverloadResolution);
-  MultiLevelTemplateArgumentList MLTAL =
-      getTemplateInstantiationArgs(FD, FD->getLexicalDeclContext(),
-                                   /*Final=*/false, /*Innermost=*/std::nullopt,
-                                   /*RelativeToPrimary=*/true,
-                                   /*Pattern=*/nullptr,
-                                   /*ForConstraintInstantiation=*/true);
+  std::optional<MultiLevelTemplateArgumentList> MLTAL =
+      SetupConstraintCheckingTemplateArgumentsAndScope(
+          const_cast<FunctionDecl *>(FD), {}, Scope);
+
+  if (!MLTAL)
+    return true;
 
   Qualifiers ThisQuals;
   CXXRecordDecl *Record = nullptr;
@@ -1447,11 +1548,11 @@ bool Sema::CheckFunctionConstraints(const FunctionDecl *FD,
   CXXThisScopeRAII ThisScope(*this, Record, ThisQuals, Record != nullptr);
 
   LambdaScopeForCallOperatorInstantiationRAII LambdaScope(
-      *this, const_cast<FunctionDecl *>(FD), MLTAL, Scope,
+      *this, const_cast<FunctionDecl *>(FD), *MLTAL, Scope,
       ForOverloadResolution);
 
   return CheckConstraintSatisfaction(
-      FD, FD->getTrailingRequiresClause(), MLTAL,
+      FD, FD->getTrailingRequiresClause(), *MLTAL,
       SourceRange(UsageLoc.isValid() ? UsageLoc : FD->getLocation()),
       Satisfaction);
 }
@@ -1684,12 +1785,12 @@ bool Sema::CheckFunctionTemplateConstraints(
   Sema::ContextRAII savedContext(*this, Decl);
   LocalInstantiationScope Scope(*this);
 
-  MultiLevelTemplateArgumentList MLTAL =
-      getTemplateInstantiationArgs(Decl, Decl->getLexicalDeclContext(),
-                                   /*Final=*/false, /*Innermost=*/std::nullopt,
-                                   /*RelativeToPrimary=*/true,
-                                   /*Pattern=*/nullptr,
-                                   /*ForConstraintInstantiation=*/true);
+  std::optional<MultiLevelTemplateArgumentList> MLTAL =
+      SetupConstraintCheckingTemplateArgumentsAndScope(Decl, TemplateArgs,
+                                                       Scope);
+
+  if (!MLTAL)
+    return true;
 
   Qualifiers ThisQuals;
   CXXRecordDecl *Record = nullptr;
@@ -1699,10 +1800,10 @@ bool Sema::CheckFunctionTemplateConstraints(
   }
 
   CXXThisScopeRAII ThisScope(*this, Record, ThisQuals, Record != nullptr);
-  LambdaScopeForCallOperatorInstantiationRAII LambdaScope(*this, Decl, MLTAL,
+  LambdaScopeForCallOperatorInstantiationRAII LambdaScope(*this, Decl, *MLTAL,
                                                           Scope);
 
-  return CheckConstraintSatisfaction(Template, TemplateAC, MLTAL,
+  return CheckConstraintSatisfaction(Template, TemplateAC, *MLTAL,
                                      PointOfInstantiation, Satisfaction);
 }
 
@@ -1917,9 +2018,7 @@ static void diagnoseWellFormedUnsatisfiedConstraintExpr(Sema &S,
 static void diagnoseUnsatisfiedConstraintExpr(
     Sema &S, const UnsatisfiedConstraintRecord &Record, SourceLocation Loc,
     bool First, concepts::NestedRequirement *Req) {
-  if (auto *Diag =
-          Record
-              .template dyn_cast<const ConstraintSubstitutionDiagnostic *>()) {
+  if (auto *Diag = dyn_cast<const ConstraintSubstitutionDiagnostic *>(Record)) {
     if (Req)
       S.Diag(Diag->first, diag::note_nested_requirement_substitution_error)
           << (int)First << Req->getInvalidConstraintEntity() << Diag->second;
@@ -2437,25 +2536,35 @@ const NormalizedConstraint *Sema::getNormalizedAssociatedConstraints(
   }
 
   // FIXME: ConstrainedDeclOrNestedReq is never a NestedRequirement!
-  const NamedDecl *ND =
-      ConstrainedDeclOrNestedReq.dyn_cast<const NamedDecl *>();
-  auto CacheEntry = NormalizationCache.find(ConstrainedDeclOrNestedReq);
-  if (CacheEntry == NormalizationCache.end()) {
-    auto *Normalized = NormalizedConstraint::fromAssociatedConstraints(
-        *this, ND, AssociatedConstraints);
-    if (!Normalized) {
-      NormalizationCache.try_emplace(ConstrainedDeclOrNestedReq, nullptr);
-      return nullptr;
+  const NamedDecl *ND = dyn_cast<const NamedDecl *>(ConstrainedDeclOrNestedReq);
+  // The normal form only depends on the constraint expressions, and the
+  // members of all specializations of a class template share the
+  // (uninstantiated) constraint expressions of the member they were
+  // instantiated from. Cache the normal form of each expression to not
+  // normalize the same expression once per class template specialization.
+  NormalizedConstraint *Normalized = nullptr;
+  for (const AssociatedConstraint &AC : AssociatedConstraints) {
+    std::pair<const Expr *, unsigned> Key(
+        AC.ConstraintExpr, AC.ArgPackSubstIndex.toInternalRepresentation());
+    NormalizedConstraint *Next;
+    if (auto It = NormalizedConstraintExprCache.find(Key);
+        It != NormalizedConstraintExprCache.end()) {
+      Next = It->second;
+    } else {
+      Next = NormalizedConstraint::fromAssociatedConstraints(*this, ND, AC);
+      // substitute() can invalidate iterators of NormalizedConstraintExprCache.
+      if (Next && SubstituteParameterMappings(*this).substitute(*Next))
+        Next = nullptr;
+      NormalizedConstraintExprCache.try_emplace(Key, Next);
     }
-    // substitute() can invalidate iterators of NormalizationCache.
-    bool Failed = SubstituteParameterMappings(*this).substitute(*Normalized);
-    CacheEntry =
-        NormalizationCache.try_emplace(ConstrainedDeclOrNestedReq, Normalized)
-            .first;
-    if (Failed)
+    if (!Next)
       return nullptr;
+    Normalized =
+        Normalized
+            ? CompoundConstraint::CreateConjunction(Context, Normalized, Next)
+            : Next;
   }
-  return CacheEntry->second;
+  return Normalized;
 }
 
 bool FoldExpandedConstraint::AreCompatibleForSubsumption(
