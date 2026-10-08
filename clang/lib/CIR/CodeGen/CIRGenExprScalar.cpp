@@ -2415,17 +2415,11 @@ mlir::Value ScalarExprEmitter::emitAdd(const BinOpInfo &ops) {
   if (ops.fullType->isConstantMatrixType()) {
     // Like llvm::MatrixBuilder::CreateAdd, splat a scalar operand to the matrix
     // type before adding.
-    mlir::Value lhs = ops.lhs;
-    mlir::Value rhs = ops.rhs;
-    if (!mlir::isa<cir::MatrixType>(lhs.getType()))
-      lhs = cir::VecSplatOp::create(builder, loc, rhs.getType(), lhs);
-
-    if (!mlir::isa<cir::MatrixType>(rhs.getType()))
-      rhs = cir::VecSplatOp::create(builder, loc, lhs.getType(), rhs);
+    auto [lhs, rhs] =
+        builder.splatMatrixOpOperandsIfNecessary(loc, ops.lhs, ops.rhs);
 
     CIRGenFunction::CIRGenFPOptionsRAII fpOptsRAII(cgf, ops.fpFeatures);
-    if (cir::isAnyFloatingPointType(
-            mlir::cast<cir::MatrixType>(lhs.getType()).getElementType()))
+    if (cir::isFPOrVectorOrMatrixOfFPType(lhs.getType()))
       return builder.createFAdd(loc, lhs, rhs);
     return builder.createAdd(loc, lhs, rhs);
   }
