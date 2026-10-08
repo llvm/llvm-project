@@ -162,6 +162,18 @@ define half @fptrunc_contract(double %d) #0 {
   ret half %r
 }
 
+define half @fptrunc_contract_twostep(double %d) #0 {
+; ALL-LABEL: fptrunc_contract_twostep:
+; ALL:       # %bb.0:
+; ALL-NEXT:    pushq %rax
+; ALL-NEXT:    callq __truncdfhf2@PLT
+; ALL-NEXT:    popq %rax
+; ALL-NEXT:    retq
+  %f = fptrunc contract double %d to float
+  %r = fptrunc contract float %f to half
+  ret half %r
+}
+
 declare i16 @llvm.convert.to.fp16.f64(double)
 declare i16 @llvm.convert.to.fp16.f80(x86_fp80)
 
