@@ -55,6 +55,9 @@ AMDGPUMachineFunctionInfo::AMDGPUMachineFunctionInfo(const Function &F,
   Attribute WaveLimitAttr = F.getFnAttribute("amdgpu-wave-limiter");
   WaveLimiter = WaveLimitAttr.getValueAsBool();
 
+  Attribute LDSContentionAttr = F.getFnAttribute("amdgpu-lds-contention");
+  LDSContention = LDSContentionAttr.getValueAsBool();
+
   // FIXME: How is this attribute supposed to interact with statically known
   // global sizes?
   StringRef S = F.getFnAttribute("amdgpu-gds-size").getValueAsString();

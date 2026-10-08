@@ -270,6 +270,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   bool IsChainFunction = false;
   bool MemoryBound = false;
   bool WaveLimiter = false;
+  bool LDSContention = false;
   bool HasSpilledSGPRs = false;
   bool HasSpilledVGPRs = false;
   bool HasNoWWMPoolSGPRSpillFallback = false;
@@ -333,6 +334,7 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("isChainFunction", MFI.IsChainFunction, false);
     YamlIO.mapOptional("memoryBound", MFI.MemoryBound, false);
     YamlIO.mapOptional("waveLimiter", MFI.WaveLimiter, false);
+    YamlIO.mapOptional("hasLDSContention", MFI.LDSContention, false);
     YamlIO.mapOptional("hasSpilledSGPRs", MFI.HasSpilledSGPRs, false);
     YamlIO.mapOptional("hasSpilledVGPRs", MFI.HasSpilledVGPRs, false);
     YamlIO.mapOptional("hasNoWWMPoolSGPRSpillFallback",

@@ -14,6 +14,7 @@
 ; CHECK-NEXT: isChainFunction: false
 ; CHECK-NEXT: memoryBound: false
 ; CHECK-NEXT: waveLimiter: false
+; CHECK-NEXT: hasLDSContention: false
 ; CHECK-NEXT: hasSpilledSGPRs: false
 ; CHECK-NEXT: hasSpilledVGPRs: false
 ; CHECK-NEXT: hasNoWWMPoolSGPRSpillFallback: false

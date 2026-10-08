@@ -1261,6 +1261,23 @@ public:
     return Opcode == AMDGPU::SCHED_GROUP_BARRIER || Opcode == AMDGPU::IGLP_OPT;
   }
 
+  /// The latency of an individual DS load/store instruction is variable.
+  /// Some of the major sources that cause this variation are hard
+  /// to model at compile time.
+  ///
+  /// Given these complexities, we do not attempt to model the latency, and
+  /// rather use a reasonable latency multiplier when there is LDS contention in
+  /// the kernel. While there are overrides to this multiplier, it is expected
+  /// that users can design kernels in such a way to acheive this latency on HW.
+  /// The compiler uses a simple heuristic to detect if the kernel has LDS
+  /// contention.
+  ///
+  /// Returns the DS latency multiplier as a percentage. If LDS contention was
+  /// detected by AMDGPUPerfHintAnalysis and using coexec scheduler, returns
+  /// amdgpu-lds-contention-multiplier (default 300 = 3x). Otherwise returns
+  /// 100 (no scaling).
+  static unsigned getDSLatencyMultiplier(const MachineFunction &MF);
+
   static unsigned getNonSoftWaitcntOpcode(unsigned Opcode) {
     switch (Opcode) {
     case AMDGPU::S_WAITCNT_soft:
@@ -1801,11 +1818,18 @@ public:
                                       LiveIntervals *LIS = nullptr,
                                       VirtRegMap *VRM = nullptr) const override;
 
+  // Silence a hidden overloaded virtual function warning.
+  using TargetInstrInfo::getInstrLatency;
+
   unsigned getInstrLatency(const InstrItineraryData *ItinData,
                            const MachineInstr &MI,
                            unsigned *PredCost = nullptr) const override;
 
   unsigned getBlockingCycles(const MachineInstr &MI) const;
+  /// \returns the latency of a given instruction \p MI. This implements custom
+  /// overrides for certain cases (e.g. increased LDS latency when contention
+  /// is detected).
+  unsigned getInstrLatency(const MachineInstr &MI) const;
 
   /// GFX1250 blocking-cycles table lookup with no occupancy subtarget gate.
   /// Returns 0 if \p MI is not in the table. Used as a multi-pass VALU denylist

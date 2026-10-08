@@ -15,6 +15,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPULaneMaskUtils.h"
+#include "AMDGPUTargetMachine.h"
 #include "GCNHazardRecognizer.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
@@ -69,6 +70,32 @@ static cl::opt<bool> Fix16BitCopies(
   cl::desc("Fix copies between 32 and 16 bit registers by extending to 32 bit"),
   cl::init(true),
   cl::ReallyHidden);
+
+namespace {
+
+struct LDSContentionMultiplierParser : public cl::parser<unsigned> {
+  LDSContentionMultiplierParser(cl::Option &O) : cl::parser<unsigned>(O) {}
+
+  bool parse(cl::Option &O, StringRef ArgName, StringRef Arg, unsigned &Value) {
+    if (Arg.getAsInteger(0, Value))
+      return O.error("'" + Arg + "' value invalid for uint argument!");
+
+    if (Value == 0)
+      return O.error("'" + Arg + "' value must be greater than 0!");
+
+    return false;
+  }
+};
+
+} // end anonymous namespace
+
+static cl::opt<unsigned, false, LDSContentionMultiplierParser>
+    LDSContentionMultiplier("amdgpu-lds-contention-multiplier",
+                            cl::ReallyHidden, cl::init(300),
+                            cl::desc("How much to scale the latency of LDS "
+                                     "instructions in kernels with high LDS "
+                                     "contention. Specified as a percent "
+                                     "(e.g. 300 = 3x, 50 = 0.5x)"));
 
 SIInstrInfo::SIInstrInfo(const GCNSubtarget &ST)
     : AMDGPUGenInstrInfo(ST, RI, AMDGPU::ADJCALLSTACKUP,
@@ -11232,12 +11259,26 @@ unsigned SIInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
     unsigned Lat = 0, Count = 0;
     for (++I; I != E && I->isBundledWithPred(); ++I) {
       ++Count;
-      Lat = std::max(Lat, SchedModel.computeInstrLatency(&*I));
+      Lat = std::max(Lat, getInstrLatency(*I));
     }
     return Lat + Count - 1;
   }
 
-  return SchedModel.computeInstrLatency(&MI);
+  return getInstrLatency(MI);
+}
+
+unsigned SIInstrInfo::getInstrLatency(const MachineInstr &MI) const {
+  if (SchedModel.hasInstrSchedModel()) {
+    unsigned Latency = SchedModel.computeInstrLatency(&MI);
+    if (isDS(MI)) {
+      unsigned Multiplier = getDSLatencyMultiplier(*MI.getMF());
+      if (Multiplier != 100)
+        Latency = Latency * Multiplier / 100;
+    }
+    return Latency;
+  }
+
+  return 0;
 }
 
 unsigned SIInstrInfo::getBlockingCycles(const MachineInstr &MI) const {
@@ -11981,4 +12022,21 @@ bool SIInstrInfo::isXDL(const MachineInstr &MI) const {
     return true;
 
   return AMDGPU::getMAIIsGFX940XDL(Opcode);
+}
+
+unsigned SIInstrInfo::getDSLatencyMultiplier(const MachineFunction &MF) {
+  const Function &F = MF.getFunction();
+
+  // Only apply latency multiplier for coexec scheduler
+  if (AMDGPU::getSchedStrategy(F) != "coexec" &&
+      !LDSContentionMultiplier.getNumOccurrences())
+    return 100;
+
+  // Check for LDS contention detected by AMDGPUPerfHintAnalysis
+  const AMDGPUMachineFunctionInfo *MFI =
+      MF.getInfo<AMDGPUMachineFunctionInfo>();
+  if (MFI->hasLDSContention())
+    return LDSContentionMultiplier;
+
+  return 100;
 }
