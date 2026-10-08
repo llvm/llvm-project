@@ -733,55 +733,56 @@ transformToReduceLoop(Block *loopHeader, Block *exitBlock,
       return iter->second;
     };
 
+    // Returns true if `use` is outside the loop body.
+    auto isEscapingUse = [&](OpOperand &use) {
+      // Go through all the parent blocks and find the one part of the region
+      // of the loop. If the block is part of the loop, then the value does
+      // not escape the loop through this use.
+      Block *currBlock = use.getOwner()->getBlock();
+      while (currBlock && currBlock->getParent() != loopHeader->getParent())
+        currBlock = currBlock->getParentOp()->getBlock();
+      return !loopBlocks.contains(currBlock);
+    };
+
     auto checkValue = [&](Value value) {
-      Value blockArgument;
-      for (OpOperand &use : llvm::make_early_inc_range(value.getUses())) {
-        // Go through all the parent blocks and find the one part of the region
-        // of the loop. If the block is part of the loop, then the value does
-        // not escape the loop through this use.
-        Block *currBlock = use.getOwner()->getBlock();
-        while (currBlock && currBlock->getParent() != loopHeader->getParent())
-          currBlock = currBlock->getParentOp()->getBlock();
-        if (loopBlocks.contains(currBlock))
-          continue;
+      // Block arguments are only created if the value escapes the loop.
+      if (llvm::none_of(value.getUses(), isEscapingUse))
+        return;
 
-        // Block argument is only created the first time it is required.
-        if (!blockArgument) {
-          blockArgument =
-              exitBlock->addArgument(value.getType(), value.getLoc());
-          loopHeader->addArgument(value.getType(), value.getLoc());
+      Value blockArgument =
+          exitBlock->addArgument(value.getType(), value.getLoc());
+      loopHeader->addArgument(value.getType(), value.getLoc());
 
-          // `value` might be defined in a block that does not dominate `latch`
-          // but previously dominated an exit block with a use.
-          // In this case, add a block argument to the latch and go through all
-          // predecessors. If the value dominates the predecessor, pass the
-          // value as a successor operand, otherwise pass poison.
-          // The above is unnecessary if the value is a block argument of the
-          // latch or if `value` dominates all predecessors.
-          Value argument = value;
-          if (value.getParentBlock() != latch &&
-              llvm::any_of(latch->getPredecessors(), [&](Block *pred) {
-                return !loopBlockDominates(pred);
-              })) {
-            argument = latch->addArgument(value.getType(), value.getLoc());
-            for (auto iter = latch->pred_begin(); iter != latch->pred_end();
-                 ++iter) {
-              Value succOperand = value;
-              if (!loopBlockDominates(*iter))
-                succOperand = getUndefValue(value.getType());
+      // `value` might be defined in a block that does not dominate `latch`
+      // but previously dominated an exit block with a use.
+      // In this case, add a block argument to the latch and go through all
+      // predecessors. If the value dominates the predecessor, pass the
+      // value as a successor operand, otherwise pass poison.
+      // The above is unnecessary if the value is a block argument of the
+      // latch or if `value` dominates all predecessors.
+      Value argument = value;
+      if (value.getParentBlock() != latch &&
+          llvm::any_of(latch->getPredecessors(), [&](Block *pred) {
+            return !loopBlockDominates(pred);
+          })) {
+        argument = latch->addArgument(value.getType(), value.getLoc());
+        for (auto iter = latch->pred_begin(); iter != latch->pred_end();
+             ++iter) {
+          Value succOperand = value;
+          if (!loopBlockDominates(*iter))
+            succOperand = getUndefValue(value.getType());
 
-              getMutableSuccessorOperands(*iter, iter.getSuccessorIndex())
-                  .append(succOperand);
-            }
-          }
-
-          loopHeaderSuccessorOperands.push_back(argument);
-          for (Edge edge : successorEdges(latch))
-            edge.getMutableSuccessorOperands().append(argument);
+          getMutableSuccessorOperands(*iter, iter.getSuccessorIndex())
+              .append(succOperand);
         }
-
-        use.set(blockArgument);
       }
+
+      loopHeaderSuccessorOperands.push_back(argument);
+      for (Edge edge : successorEdges(latch))
+        edge.getMutableSuccessorOperands().append(argument);
+
+      // Replace all uses outside the loop body with the exit block argument.
+      value.replaceUsesWithIf(blockArgument, isEscapingUse);
     };
 
     if (loopBlock == latch)
