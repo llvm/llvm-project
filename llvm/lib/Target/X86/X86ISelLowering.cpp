@@ -37664,7 +37664,8 @@ X86TargetLowering::EmitLoweredSelect(MachineInstr &MI,
       NextMIIt->getOpcode() == MI.getOpcode() &&
       NextMIIt->getOperand(2).getReg() == MI.getOperand(2).getReg() &&
       NextMIIt->getOperand(1).getReg() == MI.getOperand(0).getReg() &&
-      NextMIIt->getOperand(1).isKill()) {
+      ThisMBB->getParent()->getRegInfo().hasOneNonDBGUse(
+          MI.getOperand(0).getReg())) {
     return EmitLoweredCascadedSelect(MI, *NextMIIt, ThisMBB);
   }
 
