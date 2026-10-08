@@ -306,7 +306,7 @@ define i64 @early_exit_countdown_iv_via_latch_phi(i64 %n, i64 %mask) {
 ; CHECK-NEXT:  vp<[[VP5:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<%n>, ir<-1>, vp<[[VP0]]>
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION snsw ir<%n>, ir<-1>, vp<[[VP0]]>
 ; CHECK-NEXT:      WIDEN ir<%iv.next> = add nsw ir<%iv>, ir<-1>
 ; CHECK-NEXT:      WIDEN ir<%hi> = shl nsw ir<-1>, ir<%iv.next>
 ; CHECK-NEXT:      WIDEN ir<%or> = or ir<%hi>, ir<%mask>
@@ -389,8 +389,8 @@ define i32 @early_exit_two_ivs_via_latch_phis(i32 %n, i32 %w, ptr %count.out) {
 ; CHECK-NEXT:  vp<[[VP5:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      ir<%cnt> = WIDEN-INDUCTION nsw ir<%n>, ir<-1>, vp<[[VP0]]>
-; CHECK-NEXT:      ir<%x> = WIDEN-INDUCTION nsw ir<0>, ir<4>, vp<[[VP0]]>
+; CHECK-NEXT:      ir<%cnt> = WIDEN-INDUCTION snsw ir<%n>, ir<-1>, vp<[[VP0]]>
+; CHECK-NEXT:      ir<%x> = WIDEN-INDUCTION snsw ir<0>, ir<4>, vp<[[VP0]]>
 ; CHECK-NEXT:      WIDEN ir<%x.next> = add nsw ir<%x>, ir<4>
 ; CHECK-NEXT:      WIDEN ir<%c> = icmp sge ir<%x.next>, ir<%w>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = freeze ir<%c>

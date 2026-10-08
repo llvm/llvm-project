@@ -19,7 +19,7 @@ define void @narrow_iv_user_chain(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION snsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP3]]> * ir<1>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%and> = and vp<[[VP5]]>, ir<-4>
@@ -74,7 +74,7 @@ define void @narrow_iv_user_chain_multiple_levels(ptr noalias %A, ptr noalias %B
 ; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION snsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP3]]> * ir<1>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%and> = and vp<[[VP5]]>, ir<-4>
@@ -130,7 +130,7 @@ define void @no_narrowing_if_all_lanes_used(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION snsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP3]]> * ir<1>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%gep.ld> = getelementptr inbounds ir<%A>, vp<[[VP5]]>

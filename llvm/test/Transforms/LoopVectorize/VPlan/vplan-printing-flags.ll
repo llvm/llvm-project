@@ -28,9 +28,9 @@ define void @cast_flags_mixed(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:  vp<[[VP7:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>, vp<[[VP5]]>, vp<%step.add>
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION snsw ir<0>, ir<1>, vp<[[VP0]]>, vp<[[VP5]]>, vp<%step.add>
 ; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = WIDEN-INDUCTION nuw ir<0>, ir<1>, vp<[[VP0]]>, vp<[[VP6]]>, vp<%step.add>.1
-; CHECK-NEXT:      EMIT vp<%step.add> = add nsw ir<%iv>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT vp<%step.add> = add snsw ir<%iv>, vp<[[VP5]]>
 ; CHECK-NEXT:      EMIT vp<%step.add>.1 = add nuw vp<[[VP9]]>, vp<[[VP6]]>
 ; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = icmp ule vp<[[VP9]]>, vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = icmp ule vp<%step.add>.1, vp<[[VP4]]>

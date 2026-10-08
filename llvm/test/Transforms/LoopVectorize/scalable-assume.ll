@@ -166,7 +166,7 @@ define void @predicated_assume(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-NEXT:    store <vscale x 2 x float> [[TMP15]], ptr [[TMP17]], align 4
 ; CHECK-NEXT:    store <vscale x 2 x float> [[TMP16]], ptr [[TMP20]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[STEP_ADD]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <vscale x 2 x i64> [[STEP_ADD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

@@ -21,8 +21,8 @@ define void @test(ptr %base_a, ptr %base_b, i32 %ntypes) {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i64> poison, i64 [[N]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT1]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw <4 x i64> <i64 0, i64 1, i64 2, i64 3>, [[BROADCAST_SPLAT2]]
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[N]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw <4 x i64> <i64 0, i64 1, i64 2, i64 3>, [[BROADCAST_SPLAT2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[N]], 2
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x i64> poison, i64 [[TMP1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT3]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -35,7 +35,7 @@ define void @test(ptr %base_a, ptr %base_b, i32 %ntypes) {
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [8 x i8], ptr [[BASE_B]], i64 [[TMP20]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v4p0.p0(<4 x ptr> [[TMP3]], ptr align 8 [[TMP23]], <4 x i1> [[TMP0]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP20]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND1]], [[BROADCAST_SPLAT4]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <4 x i64> [[VEC_IND1]], [[BROADCAST_SPLAT4]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT6]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

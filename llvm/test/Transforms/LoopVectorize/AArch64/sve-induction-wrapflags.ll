@@ -18,9 +18,9 @@ define void @i8_induction_vf_may_exceed_signed_max(ptr noalias %dst, i64 %n) #0 
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[N_VEC]] to i8
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i8 0, [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 8 x i8> @llvm.stepvector.nxv8i8()
-; CHECK-NEXT:    [[TMP5:%.*]] = sub nsw <vscale x 8 x i8> zeroinitializer, [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub <vscale x 8 x i8> zeroinitializer, [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP1]] to i8
-; CHECK-NEXT:    [[TMP7:%.*]] = sub nsw i8 0, [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i8 0, [[TMP6]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i8> poison, i8 [[TMP7]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -30,7 +30,7 @@ define void @i8_induction_vf_may_exceed_signed_max(ptr noalias %dst, i64 %n) #0 
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <vscale x 8 x i8> [[VEC_IND]], ptr [[TMP8]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <vscale x 8 x i8> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 8 x i8> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -69,9 +69,9 @@ define void @i8_induction_unknown_max_vscale(ptr noalias %dst, i64 %n) #1 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[N_VEC]] to i8
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i8 0, [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 8 x i8> @llvm.stepvector.nxv8i8()
-; CHECK-NEXT:    [[TMP5:%.*]] = sub nsw <vscale x 8 x i8> zeroinitializer, [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub <vscale x 8 x i8> zeroinitializer, [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP1]] to i8
-; CHECK-NEXT:    [[TMP7:%.*]] = sub nsw i8 0, [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i8 0, [[TMP6]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i8> poison, i8 [[TMP7]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -81,7 +81,7 @@ define void @i8_induction_unknown_max_vscale(ptr noalias %dst, i64 %n) #1 {
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <vscale x 8 x i8> [[VEC_IND]], ptr [[TMP8]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <vscale x 8 x i8> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 8 x i8> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

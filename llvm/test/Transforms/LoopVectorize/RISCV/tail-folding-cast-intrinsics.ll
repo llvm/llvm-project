@@ -1162,9 +1162,9 @@ exit:
   ret void
 }
 
-define void @vp_ptrtoint(ptr %a, ptr %b, i64 %N) {
+define void @vp_ptrtoint(ptr %a, ptr %b, i64 %N) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: define void @vp_ptrtoint(
-; IF-EVL-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; IF-EVL-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR1:[0-9]+]] {
 ; IF-EVL-NEXT:  [[ENTRY:.*:]]
 ; IF-EVL-NEXT:    br label %[[VECTOR_PH:.*]]
 ; IF-EVL:       [[VECTOR_PH]]:
@@ -1193,12 +1193,11 @@ define void @vp_ptrtoint(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT:    ret void
 ;
 ; NO-VP-LABEL: define void @vp_ptrtoint(
-; NO-VP-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; NO-VP-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR1:[0-9]+]] {
 ; NO-VP-NEXT:  [[ENTRY:.*]]:
 ; NO-VP-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP13]], 1
-; NO-VP-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 4)
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[UMAX]]
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]

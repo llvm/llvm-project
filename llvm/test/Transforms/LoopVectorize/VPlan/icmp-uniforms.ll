@@ -8,7 +8,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ; recognized as uniform and is vectorized.
 ;
 define i32 @more_than_one_use(ptr %a, i64 %n) {
-; CHECK-LABEL: VPlan for loop in 'more_than_one_use' after printOptimizedVPlan
+; CHECK-LABEL: VPlan for loop in 'more_than_one_use'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -27,7 +27,7 @@ define i32 @more_than_one_use(ptr %a, i64 %n) {
 ; CHECK-NEXT:  vp<[[VP5:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      ir<%i> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      ir<%i> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%r> = phi (add) vp<[[VP4]]>, ir<%tmp3>
 ; CHECK-NEXT:      WIDEN ir<%i.next> = add nuw nsw ir<%i>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%cond> = icmp sge ir<%i.next>, ir<%n>
@@ -108,7 +108,7 @@ define void @test(ptr %ptr) {
 ; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = icmp ule vp<[[VP6]]>, vp<[[VP3]]>
 ; CHECK-NEXT:      WIDEN ir<%cond0> = icmp ult ir<%iv>, ir<13>
