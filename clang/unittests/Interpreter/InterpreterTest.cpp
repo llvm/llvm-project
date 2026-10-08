@@ -608,6 +608,7 @@ TEST_F(InterpreterTest, UnusableTopLevelDecl) {
   EXPECT_FALSE(V.hasValue());
   ASSERT_EQ(V.getKind(), Value::K_Unspecified);
   EXPECT_FALSE(V.isManuallyAlloc());
+}
 
 TEST_F(InterpreterTest, EmscriptenExceptionHandling) {
 #ifndef __EMSCRIPTEN__
