@@ -106,7 +106,8 @@ struct MemTransferInfo {
   ConstantInt *DestIndex = nullptr;
 };
 
-// Per-alloca record produced while scanning a single alloca's users
+// AllocaUsesInfo tracks the uses of each alloca and whether it may be linked by
+// phi/select with other allocas.
 struct AllocaUsesInfo {
   AllocaInst *Alloca;
   SmallSetVector<Use *, 8> Uses;

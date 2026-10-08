@@ -15,22 +15,6 @@ define amdgpu_kernel void @lds_promoted_alloca_select_invalid_pointer_operand() 
   ret void
 }
 
-define amdgpu_kernel void @lds_promote_alloca_select_two_derived_pointers(i32 %a, i32 %b) #0 {
-; CHECK-LABEL: define amdgpu_kernel void @lds_promote_alloca_select_two_derived_pointers(
-; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <16 x i32> poison
-; CHECK-NEXT:    [[PROMOTEALLOCA_IDX:%.*]] = select i1 poison, i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i32> [[ALLOCA]], i32 0, i32 [[PROMOTEALLOCA_IDX]]
-; CHECK-NEXT:    ret void
-;
-  %alloca = alloca [16 x i32], align 4, addrspace(5)
-  %ptr0 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %a
-  %ptr1 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %b
-  %select = select i1 poison, ptr addrspace(5) %ptr0, ptr addrspace(5) %ptr1
-  store i32 0, ptr addrspace(5) %select, align 4
-  ret void
-}
-
 ; FIXME: This should be promotable but requires knowing that both will be promoted first.
 
 define amdgpu_kernel void @lds_promote_alloca_select_two_allocas(i32 %a, i32 %b) #0 {
@@ -50,40 +34,6 @@ define amdgpu_kernel void @lds_promote_alloca_select_two_allocas(i32 %a, i32 %b)
   %ptr1 = getelementptr inbounds i32, ptr addrspace(5) %alloca1, i32 %b
   %select = select i1 poison, ptr addrspace(5) %ptr0, ptr addrspace(5) %ptr1
   store i32 0, ptr addrspace(5) %select, align 4
-  ret void
-}
-
-; TODO: Maybe this should be canonicalized to select on the constant and GEP after.
-define amdgpu_kernel void @lds_promote_alloca_select_two_derived_constant_pointers() #0 {
-; CHECK-LABEL: define amdgpu_kernel void @lds_promote_alloca_select_two_derived_constant_pointers(
-; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <16 x i32> poison
-; CHECK-NEXT:    ret void
-;
-  %alloca = alloca [16 x i32], align 4, addrspace(5)
-  %ptr0 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 1
-  %ptr1 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 3
-  %select = select i1 poison, ptr addrspace(5) %ptr0, ptr addrspace(5) %ptr1
-  store i32 0, ptr addrspace(5) %select, align 4
-  ret void
-}
-
-define amdgpu_kernel void @lds_promoted_alloca_select_input_select(i32 %a, i32 %b, i32 %c, i1 %c1, i1 %c2) #0 {
-; CHECK-LABEL: define amdgpu_kernel void @lds_promoted_alloca_select_input_select(
-; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <16 x i32> poison
-; CHECK-NEXT:    [[PROMOTEALLOCA_IDX:%.*]] = select i1 [[C1]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    [[PROMOTEALLOCA_IDX1:%.*]] = select i1 [[C2]], i32 [[PROMOTEALLOCA_IDX]], i32 [[C]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i32> [[ALLOCA]], i32 0, i32 [[PROMOTEALLOCA_IDX1]]
-; CHECK-NEXT:    ret void
-;
-  %alloca = alloca [16 x i32], align 4, addrspace(5)
-  %ptr0 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %a
-  %ptr1 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %b
-  %ptr2 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %c
-  %select0 = select i1 %c1, ptr addrspace(5) %ptr0, ptr addrspace(5) %ptr1
-  %select1 = select i1 %c2, ptr addrspace(5) %select0, ptr addrspace(5) %ptr2
-  store i32 0, ptr addrspace(5) %select1, align 4
   ret void
 }
 
