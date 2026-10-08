@@ -34,6 +34,7 @@
 #include "llvm/ADT/SmallVector.h"
 
 #include "GlobalHandler.h"
+#include "OffloadAPI.h"
 #include "PluginInterface.h"
 
 using GenericPluginTy = llvm::omp::target::plugin::GenericPluginTy;
@@ -49,6 +50,7 @@ struct KernelLaunchInfoTy {
   uint32_t MaxNumThreads = 0;
   uint32_t PreferredNumThreads = 0;
   uint32_t ReductionDataSize = 0;
+  uint32_t StaticBlockMemSize = 0;
   llvm::omp::OMPTgtExecModeFlags Mode = llvm::omp::OMP_TGT_EXEC_MODE_BARE;
 
   bool isBareMode() const { return Mode == llvm::omp::OMP_TGT_EXEC_MODE_BARE; }
@@ -88,8 +90,10 @@ struct DeviceTy {
   int32_t DeviceID;
   GenericPluginTy *RTL;
   int32_t RTLDeviceID;
+  ol_device_handle_t DeviceHandle;
 
-  DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID);
+  DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID,
+           ol_device_handle_t DeviceHandle);
   // DeviceTy is not copyable
   DeviceTy(const DeviceTy &D) = delete;
   DeviceTy &operator=(const DeviceTy &D) = delete;
@@ -170,9 +174,6 @@ struct DeviceTy {
   /// completed and AsyncInfo.isDone() returns true.
   int32_t queryAsync(AsyncInfoTy &AsyncInfo);
 
-  /// Calls the corresponding print device info function in the plugin.
-  bool printDeviceInfo();
-
   /// Event related interfaces.
   /// {
   /// Create an event.
@@ -212,16 +213,11 @@ struct DeviceTy {
 
   /// Get information from the device.
   template <typename T> T getInfo(DeviceInfo Info) const {
-    InfoTreeNode DevInfo = RTL->obtain_device_info(RTLDeviceID);
-
-    auto EntryOpt = DevInfo.get(Info);
-    if (!EntryOpt)
-      return 0;
-
-    auto Entry = *EntryOpt;
-    if (!std::holds_alternative<T>(Entry->Value))
+    T Value{};
+    if (olGetDeviceInfo(DeviceHandle, static_cast<ol_device_info_t>(Info),
+                        sizeof(Value), &Value))
       return T{};
-    return std::get<T>(Entry->Value);
+    return Value;
   }
 
   /// Record the launch-geometry properties for the kernel at \p KernelPtr,

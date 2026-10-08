@@ -77,7 +77,7 @@ namespace {
 /// executed here.
 static CallInst *createPrintfCall(IRBuilder<> &Builder, StringRef FormatStr,
                                   ArrayRef<Value *> Values) {
-  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Module *M = Builder.getModule();
 
   GlobalVariable *GV = Builder.CreateGlobalString(FormatStr, "", 0, M);
 
@@ -2411,7 +2411,7 @@ TEST_P(OpenMPIRBuilderTestWithNeedsBarrier, StaticWorkshareLoopTarget) {
   BasicBlock *Exit = CLI->getExit();
   Value *TripCount = CLI->getTripCount();
 
-  Builder.SetInsertPoint(BB, BB->getFirstInsertionPt());
+  Builder.SetInsertPoint(BB->getFirstInsertionPt());
 
   ASSERT_EXPECTED_INIT(OpenMPIRBuilder::InsertPointTy, AfterIP,
                        OMPBuilder.applyWorkshareLoop(
@@ -2495,7 +2495,7 @@ TEST_F(OpenMPIRBuilderTest, StaticWorkShareLoop) {
   Value *IV = CLI->getIndVar();
   BasicBlock *ExitBlock = CLI->getExit();
 
-  Builder.SetInsertPoint(BB, BB->getFirstInsertionPt());
+  Builder.SetInsertPoint(BB->getFirstInsertionPt());
   InsertPointTy AllocaIP = Builder.saveIP();
 
   ASSERT_THAT_EXPECTED(OMPBuilder.applyWorkshareLoop(DL, CLI, AllocaIP,
@@ -2693,7 +2693,7 @@ TEST_P(OpenMPIRBuilderTestWithParams, DynamicWorkShareLoop) {
                            Loc, LoopBodyGen, StartVal, StopVal, StepVal,
                            /*IsSigned=*/false, /*InclusiveStop=*/false));
 
-  Builder.SetInsertPoint(BB, BB->getFirstInsertionPt());
+  Builder.SetInsertPoint(BB->getFirstInsertionPt());
   InsertPointTy AllocaIP = Builder.saveIP();
 
   // Collect all the info from CLI, as it isn't usable after the call to
@@ -2839,7 +2839,7 @@ TEST_F(OpenMPIRBuilderTest, DynamicWorkShareLoopOrdered) {
                            Loc, LoopBodyGen, StartVal, StopVal, StepVal,
                            /*IsSigned=*/false, /*InclusiveStop=*/false));
 
-  Builder.SetInsertPoint(BB, BB->getFirstInsertionPt());
+  Builder.SetInsertPoint(BB->getFirstInsertionPt());
   InsertPointTy AllocaIP = Builder.saveIP();
 
   // Collect all the info from CLI, as it isn't usable after the call to
@@ -5178,7 +5178,7 @@ static bool findGEPZeroOne(Value *Ptr, Value *&Zero, Value *&One) {
 static OpenMPIRBuilder::InsertPointTy
 sumReduction(OpenMPIRBuilder::InsertPointTy IP, Value *LHS, Value *RHS,
              Value *&Result) {
-  IRBuilder<> Builder(IP.getNodeParent(), IP);
+  IRBuilder<> Builder(IP);
   Result = Builder.CreateFAdd(LHS, RHS, "red.add");
   return Builder.saveIP();
 }
@@ -5186,7 +5186,7 @@ sumReduction(OpenMPIRBuilder::InsertPointTy IP, Value *LHS, Value *RHS,
 static OpenMPIRBuilder::InsertPointTy
 sumAtomicReduction(OpenMPIRBuilder::InsertPointTy IP, Type *Ty, Value *LHS,
                    Value *RHS) {
-  IRBuilder<> Builder(IP.getNodeParent(), IP);
+  IRBuilder<> Builder(IP);
   Value *Partial = Builder.CreateLoad(Ty, RHS, "red.partial");
   Builder.CreateAtomicRMW(AtomicRMWInst::FAdd, LHS, Partial, std::nullopt,
                           AtomicOrdering::Monotonic);
@@ -5196,7 +5196,7 @@ sumAtomicReduction(OpenMPIRBuilder::InsertPointTy IP, Type *Ty, Value *LHS,
 static OpenMPIRBuilder::InsertPointTy
 xorReduction(OpenMPIRBuilder::InsertPointTy IP, Value *LHS, Value *RHS,
              Value *&Result) {
-  IRBuilder<> Builder(IP.getNodeParent(), IP);
+  IRBuilder<> Builder(IP);
   Result = Builder.CreateXor(LHS, RHS, "red.xor");
   return Builder.saveIP();
 }
@@ -5204,7 +5204,7 @@ xorReduction(OpenMPIRBuilder::InsertPointTy IP, Value *LHS, Value *RHS,
 static OpenMPIRBuilder::InsertPointTy
 xorAtomicReduction(OpenMPIRBuilder::InsertPointTy IP, Type *Ty, Value *LHS,
                    Value *RHS) {
-  IRBuilder<> Builder(IP.getNodeParent(), IP);
+  IRBuilder<> Builder(IP);
   Value *Partial = Builder.CreateLoad(Ty, RHS, "red.partial");
   Builder.CreateAtomicRMW(AtomicRMWInst::Xor, LHS, Partial, std::nullopt,
                           AtomicOrdering::Monotonic);
@@ -5455,6 +5455,80 @@ TEST_F(OpenMPIRBuilderTest, CreateReductions) {
   Value *FirstRHS;
   Value *SecondRHS;
   EXPECT_TRUE(findGEPZeroOne(ReductionFn->getArg(1), FirstRHS, SecondRHS));
+}
+
+TEST_F(OpenMPIRBuilderTest, GPUTeamsReductionRuntimeCallHasDebugLoc) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.Config.IsTargetDevice = true;
+  OMPBuilder.Config.setIsGPU(true);
+  OMPBuilder.initialize();
+
+  IRBuilder<> Builder(BB);
+  Instruction *AllocaInsertPt =
+      new BitCastInst(PoisonValue::get(Builder.getInt32Ty()),
+                      Builder.getInt32Ty(), "allocapt", BB);
+  Builder.SetInsertPoint(BB);
+  Builder.SetCurrentDebugLocation(DL);
+  InsertPointTy AllocaIP(AllocaInsertPt->getIterator());
+  Value *Original;
+  Value *Private;
+  {
+    IRBuilder<>::InsertPointGuard Guard(Builder);
+    Builder.restoreIP(AllocaIP);
+    Original = Builder.CreateAlloca(Builder.getFloatTy(), nullptr, "original");
+    Private = Builder.CreateAlloca(Builder.getFloatTy(), nullptr, "private");
+  }
+
+  auto ReductionGen = [](InsertPointTy IP, unsigned, Value **LHSPtr,
+                         Value **RHSPtr, Function *) {
+    IRBuilder<> Builder(IP);
+    *LHSPtr = Builder.CreateAlloca(Builder.getFloatTy());
+    *RHSPtr = Builder.CreateAlloca(Builder.getFloatTy());
+    Builder.CreateLoad(Builder.getFloatTy(), *LHSPtr);
+    Builder.CreateLoad(Builder.getFloatTy(), *RHSPtr);
+    return Builder.saveIP();
+  };
+  OpenMPIRBuilder::ReductionInfo ReductionInfos[] = {
+      {Builder.getFloatTy(), Original, Private,
+       /*EvaluationKind=*/OpenMPIRBuilder::EvalKind::Scalar,
+       /*ReductionGen=*/nullptr, ReductionGen,
+       /*AtomicReductionGen=*/nullptr, /*DataPtrPtrGen=*/nullptr}};
+  bool IsByRef[] = {false};
+
+  ASSERT_EXPECTED_INIT(
+      InsertPointTy, AfterIP,
+      OMPBuilder.createReductionsGPU(
+          {Builder.saveIP(), DL}, AllocaIP, Builder.saveIP(), ReductionInfos,
+          IsByRef,
+          /*IsNoWait=*/false, /*IsTeamsReduction=*/true, /*IsSPMD=*/true,
+          OpenMPIRBuilder::ReductionGenCBKind::Clang, omp::NVPTXGridValues));
+  Builder.restoreIP(AfterIP);
+
+  ASSERT_EXPECTED_INIT(
+      InsertPointTy, AfterParallelReductionIP,
+      OMPBuilder.createReductionsGPU(
+          {Builder.saveIP(), DL}, AllocaIP, Builder.saveIP(), ReductionInfos,
+          IsByRef,
+          /*IsNoWait=*/false, /*IsTeamsReduction=*/false, /*IsSPMD=*/true,
+          OpenMPIRBuilder::ReductionGenCBKind::Clang, omp::NVPTXGridValues));
+  Builder.restoreIP(AfterParallelReductionIP);
+
+  Builder.CreateRetVoid();
+
+  CallInst *Calls[] = {
+      findSingleCall(F, RuntimeFunction::OMPRTL___kmpc_gpu_xteam_reduce_nowait,
+                     OMPBuilder),
+      findSingleCall(
+          F, RuntimeFunction::OMPRTL___kmpc_nvptx_parallel_reduce_nowait_v2,
+          OMPBuilder)};
+  for (CallInst *Call : Calls) {
+    ASSERT_TRUE(Call->getDebugLoc());
+    EXPECT_EQ(Call->getDebugLoc()->getScope()->getSubprogram(),
+              F->getSubprogram());
+  }
+
+  EXPECT_FALSE(verifyModule(*M));
 }
 
 static void createScan(llvm::Value *scanVar, llvm::Type *scanType,
@@ -8355,11 +8429,11 @@ TEST_F(OpenMPIRBuilderTest, splitBB) {
 
   Builder.SetCurrentDebugLocation(DL);
   AllocaInst *alloc = Builder.CreateAlloca(Builder.getInt32Ty());
-  EXPECT_TRUE(DL == alloc->getStableDebugLoc());
+  EXPECT_TRUE(DL == alloc->getDebugLoc());
   BasicBlock *AllocaBB = Builder.GetInsertBlock();
   splitBB(Builder, /*CreateBranch=*/true, "test");
   if (AllocaBB->getTerminator())
-    EXPECT_TRUE(DL == AllocaBB->getTerminator()->getStableDebugLoc());
+    EXPECT_TRUE(DL == AllocaBB->getTerminator()->getDebugLoc());
 }
 
 TEST_F(OpenMPIRBuilderTest, spliceBBWithEmptyBB) {

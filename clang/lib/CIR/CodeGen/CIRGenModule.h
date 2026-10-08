@@ -724,6 +724,10 @@ public:
 
   mlir::TypedAttr emitNullConstantAttr(QualType t);
 
+  /// Get target specific null pointer.
+  mlir::Value getNullPointer(cir::PointerType ptrTy, QualType qt,
+                             mlir::Location loc);
+
   /// Return a null constant appropriate for zero-initializing a base class with
   /// the given type. This is usually, but not always, an LLVM null constant.
   mlir::TypedAttr emitNullConstantForBase(const CXXRecordDecl *record);

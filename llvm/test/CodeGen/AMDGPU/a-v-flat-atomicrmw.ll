@@ -11581,7 +11581,6 @@ define void @flat_atomic_fmax_v2f16_ret_a_a(ptr %ptr) #0 {
 ; GFX950-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_pk_max_f16 v2, v3, v3
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_pk_max_f16 v2, v2, v4
 ; GFX950-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:40 sc0
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -11647,7 +11646,6 @@ define void @flat_atomic_fmax_v2f16_ret_av_av(ptr %ptr) #0 {
 ; GFX950-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_pk_max_f16 v2, v3, v3
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_pk_max_f16 v2, v2, v4
 ; GFX950-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:40 sc0
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -11715,7 +11713,6 @@ define void @flat_atomic_fmin_v2f16_ret_a_a(ptr %ptr) #0 {
 ; GFX950-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_pk_max_f16 v2, v3, v3
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_pk_min_f16 v2, v2, v4
 ; GFX950-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:40 sc0
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -11781,7 +11778,6 @@ define void @flat_atomic_fmin_v2f16_ret_av_av(ptr %ptr) #0 {
 ; GFX950-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_pk_max_f16 v2, v3, v3
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_pk_min_f16 v2, v2, v4
 ; GFX950-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:40 sc0
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -19549,7 +19545,6 @@ define void @flat_atomic_fmax_v2f16_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_pk_max_f16 v0, v1, v1
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_pk_max_f16 v0, v0, v4
 ; GFX950-NEXT:    flat_atomic_cmpswap v0, v[2:3], v[0:1] offset:40 sc0
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -19619,7 +19614,6 @@ define void @flat_atomic_fmax_v2f16_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_pk_max_f16 v0, v1, v1
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_pk_max_f16 v0, v0, v4
 ; GFX950-NEXT:    flat_atomic_cmpswap v0, v[2:3], v[0:1] offset:40 sc0
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -19691,7 +19685,6 @@ define void @flat_atomic_fmin_v2f16_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_pk_max_f16 v0, v1, v1
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_pk_min_f16 v0, v0, v4
 ; GFX950-NEXT:    flat_atomic_cmpswap v0, v[2:3], v[0:1] offset:40 sc0
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -19761,7 +19754,6 @@ define void @flat_atomic_fmin_v2f16_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_pk_max_f16 v0, v1, v1
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_pk_min_f16 v0, v0, v4
 ; GFX950-NEXT:    flat_atomic_cmpswap v0, v[2:3], v[0:1] offset:40 sc0
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)

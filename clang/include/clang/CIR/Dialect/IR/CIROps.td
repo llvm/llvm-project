@@ -3410,10 +3410,11 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
     Symbol visibility in `sym_visibility` is defined in terms of MLIR's visibility
     and verified to be in accordance to `linkage`.
 
-    The `static_local_guard` attribute indicates that this global represents a
-    function-local static variable that requires guarded initialization
-    (e.g., C++ static local variables with non-constant initializers).
-    It contains the mangled name of the guard variable.
+    The `dynamic_init_guard` attribute indicates that this global requires
+    guarded dynamic initialization via the Itanium `__cxa_guard_*` protocol
+    (e.g., C++ static local variables with non-constant initializers, or
+    namespace-scope variables with vague linkage such as weak/linkonce_odr
+    inline variables). It contains the mangled name of the guard variable.
 
     The `strictfp` attribute indicates that the dynamic initialization emitted
     into the `ctorRegion`/`dtorRegion` runs under a constrained floating-point
@@ -3442,16 +3443,13 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
                        OptionalAttr<CIR_TLSModelAttr>:$tls_model,
                        OptionalAttr<CIR_ThreadLocalGlobalWrapperInitAttr>:$tls_refs,
                        OptionalAttr<AnyAttr>:$initial_value,
-                       // FIXME(cir): This eventually needs to become a
-                       // stringattr like FuncOp to allow customization of the
-                       // group name.
-                       UnitProp:$comdat,
+                       OptionalAttr<StrAttr>:$comdat,
                        UnitProp:$constant,
                        UnitProp:$dso_local,
-                       OptionalAttr<CIR_StaticLocalGuardAttr>:$static_local_guard,
+                       OptionalAttr<CIR_DynamicInitGuardAttr>:$dynamic_init_guard,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<ASTVarDeclInterface>:$ast,
-                       OptionalAttr<CIR_StaticLocalInfoAttr>:$static_local_info,
+                       OptionalAttr<CIR_DynamicInitInfoAttr>:$dynamic_init_info,
                        OptionalAttr<StrAttr>:$section,
                        OptionalAttr<CIR_AnnotationArrayAttr>:$annotations,
                        OptionalAttr<FlatSymbolRefAttr>:$aliasee,
@@ -3459,19 +3457,19 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
                        OptionalAttr<I32Attr>:$init_priority
                        );
 
-  let regions = (region AnyRegion:$ctorRegion,
-                        AnyRegion:$dtorRegion);
+  let regions = (region MaxSizedRegion<1>:$ctorRegion,
+                        MaxSizedRegion<1>:$dtorRegion);
 
   let assemblyFormat = [{
     ($sym_visibility^)?
     ($global_visibility^)?
     (`constant` $constant^)?
     enum($linkage)
-    (`comdat` $comdat^)?
+    custom<ComdatName>($comdat)
     (`tls_model` `=` enum($tls_model)^)?
     (`tls_refs` `=` $tls_refs^)?
     (`dso_local` $dso_local^)?
-    (`static_local_guard` `` $static_local_guard^)?
+    (`dynamic_init_guard` `` $dynamic_init_guard^)?
     (` ` custom<GlobalMemorySpace>($addr_space)^ )?
     $sym_name
     (`alias` `(` $aliasee^ `)`)?
@@ -3480,7 +3478,7 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
     ($annotations^)?
     (`align` `(` $alignment^ `)`)?
     (`ast` `(` $ast^ `)`)?
-    (`static_local_info` `` $static_local_info^)?
+    (`dynamic_init_info` `` $dynamic_init_info^)?
     (`section` `(` $section^ `)`)?
     (`strictfp` $strictfp^)?
     (`init_priority` `(` $init_priority^ `)`)?
@@ -4358,7 +4356,8 @@ def CIR_FuncOp : CIR_Op<"func", [
     CIR_OptionalPriorityAttr:$global_ctor_priority,
     CIR_OptionalPriorityAttr:$global_dtor_priority,
     OptionalAttr<CIR_FuncInfoAttr>:$func_info,
-    OptionalAttr<CIR_AnnotationArrayAttr>:$annotations
+    OptionalAttr<CIR_AnnotationArrayAttr>:$annotations,
+    OptionalAttr<CIR_UnwindTableKindAttr>:$uwtable
   );
 
   let regions = (region AnyRegion:$body);
@@ -4392,10 +4391,6 @@ def CIR_FuncOp : CIR_Op<"func", [
     /// returing void)
     llvm::ArrayRef<mlir::Type> getResultTypes() {
        return getFunctionType().getReturnTypes();
-    }
-
-    void setComdat(bool) {
-      setComdat(llvm::StringRef(""));
     }
 
     //===------------------------------------------------------------------===//
@@ -5134,13 +5129,54 @@ def CIR_CoroFreeOp : CIR_CoroIntrinsicOp<"free",
 // Coroutine intrinsic SizeOp
 //===----------------------------------------------------------------------===//
 
-def CIR_CoroSizeOp : CIR_CoroIntrinsicOp<"size", (ins),
-    (outs CIR_UInt64:$result)> {
+def CIR_CoroSizeOp
+    : CIR_CoroIntrinsicOp<"size", (ins),
+                          (outs CIR_AnyFundamentalUIntType:$result)> {
   let summary = "Represents llvm.coro.size";
   let description = [{
     Returns the size, in bytes, of the coroutine frame.
   }];
   let llvmOp = "CoroSizeOp";
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic AlignOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroAlignOp
+    : CIR_CoroIntrinsicOp<"align", (ins),
+                          (outs CIR_AnyFundamentalUIntType:$result)> {
+  let summary = "Represents llvm.coro.align";
+  let description = [{
+    Returns the alignment requirement, in bytes, of the coroutine frame.
+  }];
+  let llvmOp = "CoroAlignOp";
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic SuspendOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroSuspendOp : CIR_CoroIntrinsicOp<"suspend",
+    (ins Token:$save, CIR_AnyBoolType: $final),
+    (outs CIR_SInt8:$result), [TokenConsumerTrait]> {
+  let summary = "Represents llvm.coro.suspend";
+  let description = [{
+    `cir.coro.intrinsic.suspend` represents the `llvm.coro.suspend` intrinsic.
+
+    It marks the point where execution of a switched-resume coroutine is
+    suspended and control returns to the caller. The result value indicates
+    how the coroutine should proceed: -1 if suspended, 0 if resumed, or 1
+    if destroyed.
+
+    The `id` operand is the token produced by a `cir.coro.save` that marks
+    the point when the coroutine state is prepared for suspension.
+
+    The `final` operand indicates whether this is a final suspend point.
+    If more than one suspend point is marked final, the resume and destroy
+    branches must lead to the same basic blocks.
+  }];
+  let llvmOp = "CoroSuspendOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -5240,6 +5276,19 @@ def CIR_CoroSuspendPoint : CIR_Op<"coro.suspend_point", [
   }];
 
   let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic NoopOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroNoopOp : CIR_CoroIntrinsicOp<"noop", (ins),
+    (outs CIR_VoidPtrType:$result)> {
+  let summary = "Represents llvm.coro.noop";
+  let description = [{
+    Returns a coroutine handle to a no-op coroutine.
+  }];
+  let llvmOp = "CoroNoopOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -5655,7 +5704,8 @@ def CIR_AsmFlavor : CIR_I32Enum<"AsmFlavor", "ATT or Intel",
 
 def CIR_AsmFlavorAttr : CIR_EnumAttr<CIR_AsmFlavor, "asm_flavor">;
 
-def CIR_InlineAsmOp : CIR_Op<"asm", [RecursiveMemoryEffects]> {
+def CIR_InlineAsmOp : CIR_Op<"asm",
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let description = [{
     The `cir.asm` operation represents C/C++ asm inline.
 
@@ -6364,6 +6414,96 @@ def CIR_VecSplatOp : CIR_Op<"vec.splat", [
 
   let assemblyFormat = [{
     $value `:` type($value) `,` qualified(type($result)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MatrixColumnMajorLoadOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MatrixColumnMajorLoadOp : CIR_Op<"matrix.column_major_load", [
+  DeclareOpInterfaceMethods<PromotableMemOpInterface>,
+]> {
+  let summary = "Matrix column major load";
+  let description = [{
+    The `cir.matrix.column_major_load` operation provides a representation for
+    the `__builtin_matrix_column_major_load` builtin and corresponds to the
+    `llvm.matrix.column.major.load` intrinsic in LLVM IR.
+
+    This operation performs a load of any matrix type with a stride to compute
+    the start address of the different columns.
+
+    The `stride` argument is the column stride which much be greater than or equal 
+    to `row`, giving the following 2x3 matrix `[[1, 2, 3], [4, 5, 6]]` with a 
+    stride of 2, the result matrix will be `[[1, 3, 5], [2, 4, 6]]`.
+
+    ```
+    %result = cir.matrix.column_major_load %ptr : <!cir.float>, %stride : !u64i, 
+      !cir.matrix<2 x 3 x !cir.float>
+
+    %result = cir.matrix.column_major_load %ptr : <!cir.double>, %stride : !u64i,
+      !cir.matrix<5 x 5 x !cir.double>
+
+    %result = cir.matrix.column_major_load %ptr : <!cir.double>, %stride : !u64i
+      volatile, !cir.matrix<5 x 5 x !cir.double>
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PointerType, "the address to load from", [MemRead]>:$value,
+    CIR_IntType:$stride,
+    UnitAttr:$is_volatile
+  );
+
+  let results = (outs CIR_MatrixType:$result);
+
+  let assemblyFormat = [{
+    $value `:` type($value) `,`
+    $stride `:` type($stride)
+    (`volatile` $is_volatile^)?
+    `,` qualified(type($result)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MatrixColumnMajorStoreOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MatrixColumnMajorStoreOp : CIR_Op<"matrix.column_major_store", [
+  DeclareOpInterfaceMethods<PromotableMemOpInterface>,
+]> {
+  let summary = "Matrix column major store";
+  let description = [{
+    The `cir.matrix.column_major_store` operation provides a representation for
+    the `__builtin_matrix_column_major_store` builtin and corresponds to the
+    `llvm.matrix.column.major.store` intrinsic in LLVM IR.
+
+    This operation performs a store of data from matrix type with a stride to
+    compute the start address of the different columns.
+
+    The `stride` argument is the column stride which much be greater than or equal 
+    to `row`, giving the following 2x3 matrix `[[1, 2, 3], [4, 5, 6]]` with a 
+    stride of 2, the stored data will be `[1, 3, 5, 2, 4, 6]`.
+
+    ```
+    cir.matrix.column_major_store %matrix : <3 x 3 x !cir.float>, 
+      %data : <!cir.float>, %stribe : !u64i
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_MatrixType:$matrix,
+    Arg<CIR_PointerType, "the address to store the value", [MemWrite]>:$value,
+    CIR_IntType:$stride,
+    UnitAttr:$is_volatile
+  );
+
+  let assemblyFormat = [{
+    $matrix `:` type($matrix) `,`
+    $value `:` type($value) `,`
+    $stride `:` type($stride)
+    (`volatile` $is_volatile^)?
+    attr-dict
   }];
 }
 
@@ -8601,7 +8741,7 @@ def CIR_TryOp : CIR_RegionBranchOpBase<"try", [
     }]>
   ];
 
-  let hasVerifier = 1;
+  let hasRegionVerifier = 1;
   let hasLLVMLowering = false;
 }
 
@@ -9188,6 +9328,8 @@ def CIR_InitCatchKind : CIR_I32Enum<
     I32EnumCase<"Objc", 3, "objc">,
     I32EnumCase<"TrivialCopy", 4, "trivial_copy">,
     I32EnumCase<"NonTrivialCopy", 5, "non_trivial_copy">,
+    I32EnumCase<"ReferenceToPointer", 6, "reference_to_pointer">,
+    I32EnumCase<"ReferenceToRecordPointer", 7, "reference_to_record_pointer">,
 ]>;
 
 def CIR_InitCatchKindAttr : CIR_EnumAttr<CIR_InitCatchKind, "init_catch">;
@@ -9205,6 +9347,16 @@ def CIR_InitCatchParamOp : CIR_Op<"init_catch_param"> {
     the Itanium C++ ABI may emit a load and store for scalar/pointer catch
     types, an aggregate copy for record types, or a call to a copy
     constructor when one is required).
+
+    A catch parameter that is a reference to a pointer uses the
+    `reference_to_record_pointer` kind when the pointer's source-level pointee
+    type is a record (class, struct, or union), and `reference_to_pointer`
+    otherwise. A reference to any other type uses `reference`.
+
+    A `reference_to_pointer` or `non_trivial_copy` operation requires its catch
+    handler to start with a `cir.construct_catch_param` of the same kind on the
+    same parameter. When the handler starts with a `cir.construct_catch_param`
+    on the parameter of the operation, the two must have the same kind.
 
     Example:
 
@@ -9228,6 +9380,7 @@ def CIR_InitCatchParamOp : CIR_Op<"init_catch_param"> {
       qualified(type($exn_ptr)) `,` qualified(type($param_addr)) attr-dict
   }];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
@@ -9251,9 +9404,11 @@ def CIR_ConstructCatchParamOp : CIR_Op<"construct_catch_param", [
     copy of the object before `__cxa_begin_catch` is invoked.
 
     This operation takes a `!cir.eh_token` that represents the in-flight
-    exception and the alloca value that is used for the local copy of the
-    exception object. The `copy_fn` attribute is a flat symbol reference to a
-    `cir.func` thunk that copies the exception object to a local alloca value.
+    exception and the alloca value for the catch parameter. The optional
+    `copy_fn` attribute, present for `non_trivial_copy`, is a flat symbol
+    reference to a `cir.func` thunk that copies the exception object to a
+    local alloca value. For `reference_to_pointer`, the operation binds the
+    reference to the exception object itself.
 
     This operation is replaced with a target-specific representation during
     the EHABI lowering pass. For some targets, such as the Microsoft ABI,
@@ -9279,6 +9434,7 @@ def CIR_ConstructCatchParamOp : CIR_Op<"construct_catch_param", [
       qualified(type($param_addr)) attr-dict
   }];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 

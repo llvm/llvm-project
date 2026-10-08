@@ -2008,6 +2008,16 @@ let TargetPrefix = "riscv" in {
                             [IntrNoMem]>, RISCVVIntrinsic {
       let VLOperand = 2;
     }
+
+    // Input: (passthru, vector_in, mask, vl, policy)
+    def "int_riscv_" # NAME # "_mask" :
+      DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, llvm_anyvector_ty,
+                             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                             llvm_anyint_ty, LLVMMatchType<2>],
+                            [ImmArg<ArgIndex<4>>, IntrNoMem]>, RISCVVIntrinsic {
+      let VLOperand = 3;
+    }
   }
 
   defm vzip    : RISCVZip;
@@ -2088,6 +2098,15 @@ class RVPBinaryIntrinsic
                               [IntrNoMem, IntrSpeculatable]>;
   def int_riscv_pwsll : RVPWideningShiftIntrinsic;
   def int_riscv_pwsla : RVPWideningShiftIntrinsic;
+
+  // Packed Narrowing Shifts.
+  class RVPNarrowingShiftIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [llvm_anyvector_ty, llvm_i32_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pnsrl  : RVPNarrowingShiftIntrinsic;
+  def int_riscv_pnsra  : RVPNarrowingShiftIntrinsic;
+  def int_riscv_pnsrar : RVPNarrowingShiftIntrinsic;
 
   // Packed Saturation.
   class RVPSaturationIntrinsic

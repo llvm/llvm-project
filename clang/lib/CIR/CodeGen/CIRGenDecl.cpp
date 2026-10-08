@@ -387,8 +387,8 @@ void CIRGenFunction::emitAutoVarDecl(const VarDecl &d) {
   emitAutoVarCleanups(emission);
 }
 
-void CIRGenFunction::emitLoopConditionVariable(
-    const VarDecl &d, DeferredLoopConditionCleanup &condCleanup) {
+void CIRGenFunction::emitLoopConditionVariable(const VarDecl &d,
+                                               CapturedCleanups &condCleanup) {
   // A condition variable always has automatic storage duration, so this
   // mirrors the auto-var path of emitVarDecl/emitAutoVarDecl. Capture the
   // lifetime-end cleanup pushed while emitting the alloca, but emit the
@@ -406,7 +406,7 @@ void CIRGenFunction::emitLoopConditionVariable(
 
   CIRGenFunction::VarDeclContext varDeclCtx{*this, &d};
   CIRGenFunction::AutoVarEmission emission = [&] {
-    DeferredLoopConditionCleanup::CaptureScope capture(condCleanup);
+    CapturedCleanups::CaptureScope capture(condCleanup);
     return emitAutoVarAlloca(d);
   }();
 
@@ -439,7 +439,7 @@ void CIRGenFunction::emitLoopConditionVariable(
   }
 
   {
-    DeferredLoopConditionCleanup::CaptureScope capture(condCleanup);
+    CapturedCleanups::CaptureScope capture(condCleanup);
     emitAutoVarCleanups(emission);
   }
 
@@ -536,7 +536,7 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
       d.hasAttr<CUDASharedAttr>() || d.hasAttr<LoaderUninitializedAttr>())
     init = cir::UndefAttr::get(lty);
   else
-    init = builder.getZeroInitAttr(convertType(ty));
+    init = emitNullConstantAttr(ty);
 
   mlir::ptr::MemorySpaceAttrInterface addrSpace = cir::toCIRAddressSpaceAttr(
       getMLIRContext(), getGlobalVarAddressSpace(&d));
@@ -551,7 +551,7 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   gv.setAlignment(getASTContext().getDeclAlign(&d).getAsAlign().value());
 
   if (supportsCOMDAT() && gv.isWeakForLinker())
-    gv.setComdat(true);
+    gv.setSelfComdat();
 
   if (d.getTLSKind())
     setTLSMode(gv, d);
