@@ -12,7 +12,6 @@
 #include <__config>
 #include <__cstddef/size_t.h>
 #include <cstdlib>
-#include <wchar.h>
 #if _LIBCPP_HAS_WIDE_CHARACTERS
 #  include <cwchar>
 #endif
