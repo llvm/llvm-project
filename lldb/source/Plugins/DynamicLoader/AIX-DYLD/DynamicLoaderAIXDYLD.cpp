@@ -234,7 +234,7 @@ void DynamicLoaderAIXDYLD::ResolveExecutableModule(
     return;
   }
 
-  target.SetExecutableModule(module_sp, eLoadDependentsNo);
+  target.RebuildModuleListWithExecutable(module_sp, eLoadDependentsNo);
 }
 
 bool DynamicLoaderAIXDYLD::IsCoreFile() const {

@@ -65,6 +65,9 @@ enum DiagnosticClass {
   CLASS_TRAP = DiagnosticIDs::CLASS_TRAP,
 };
 
+#ifdef _AIX
+#pragma pack(push, 1)
+#endif
 struct StaticDiagInfoRec {
   uint16_t DiagID;
   LLVM_PREFERRED_TYPE(diag::Severity)
@@ -129,6 +132,9 @@ struct StaticDiagInfoRec {
     return DiagID < RHS.DiagID;
   }
 };
+#ifdef _AIX
+#pragma pack(pop)
+#endif
 static_assert(sizeof(StaticDiagInfoRec) == 10);
 static_assert(static_cast<unsigned>(diag::Group::NUM_GROUPS) < (1U << 14),
               "too many diagnostic groups for StaticDiagInfoRec");

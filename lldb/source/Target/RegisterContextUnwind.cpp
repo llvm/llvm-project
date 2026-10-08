@@ -958,7 +958,7 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
         if (auto unwind_plan_sp =
                 platform->GetTrapHandlerUnwindPlan(arch, pc_addr)) {
           UNWIND_LOG(log, "AIX address-range path: returning plan \"{0}\"",
-                     unwind_plan_sp->GetSourceName().GetCString());
+                     unwind_plan_sp->GetSourceName());
           return unwind_plan_sp;
         }
       }

@@ -446,7 +446,7 @@ Status ProcessAIXCore::DoLoadCore() {
         exe_module_sp = 
             GetTarget().GetOrCreateModule(exe_module_spec, true /* notify */);
         if (exe_module_sp)
-            GetTarget().SetExecutableModule(exe_module_sp, eLoadDependentsNo);
+            GetTarget().RebuildModuleListWithExecutable(exe_module_sp, eLoadDependentsNo);
     }
     
     return error;
