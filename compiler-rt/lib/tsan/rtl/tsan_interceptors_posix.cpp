@@ -1260,6 +1260,44 @@ TSAN_INTERCEPTOR(int, pthread_timedjoin_np, void *th, void **ret,
 }
 #endif
 
+#if SANITIZER_INTERCEPT_C11_THREADS
+extern "C" int __tsan_c11_thread_start_func(void* arg) {
+  ThreadParam* p = (ThreadParam*)arg;
+  int (*callback)(void*) = (int (*)(void*))(uptr)p->callback;
+  void* param = p->param;
+  ThreadStartCommon(p);
+
+  int res = callback(param);
+  // Prevent the callback from being tail called,
+  // it mixes up stack traces.
+  volatile int foo = 42;
+  foo++;
+  return res;
+}
+
+TSAN_INTERCEPTOR(int, thrd_create, void* th, int (*callback)(void*),
+                 void* param) {
+  SCOPED_INTERCEPTOR_RAW(thrd_create, th, callback, param);
+  return ThreadCreateCommon(
+      thr, pc, th, /*detached=*/false, (void* (*)(void*))(uptr)callback, param,
+      [&](ThreadParam* p) {
+        return REAL(thrd_create)(th, __tsan_c11_thread_start_func, p);
+      });
+}
+
+TSAN_INTERCEPTOR(int, thrd_join, uptr th, int* res) {
+  SCOPED_INTERCEPTOR_RAW(thrd_join, th, res);
+  return ThreadJoinCommon(thr, pc, th,
+                          [&]() { return BLOCK_REAL(thrd_join)(th, res); });
+}
+
+TSAN_INTERCEPTOR(int, thrd_detach, uptr th) {
+  SCOPED_INTERCEPTOR_RAW(thrd_detach, th);
+  return ThreadDetachCommon(thr, pc, th,
+                            [&]() { return REAL(thrd_detach)(th); });
+}
+#endif  // SANITIZER_INTERCEPT_C11_THREADS
+
 // Problem:
 // NPTL implementation of pthread_cond has 2 versions (2.2.5 and 2.3.2).
 // pthread_cond_t has different size in the different versions.
@@ -3129,6 +3167,11 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(pthread_tryjoin_np);
   TSAN_INTERCEPT(pthread_timedjoin_np);
   #endif
+#if SANITIZER_INTERCEPT_C11_THREADS
+  TSAN_INTERCEPT(thrd_create);
+  TSAN_INTERCEPT(thrd_join);
+  TSAN_INTERCEPT(thrd_detach);
+#endif
 
   // In glibc versions older than 2.36, dlsym(RTLD_NEXT, "pthread_cond_init")
   // may return an outdated symbol (max(2.2,base_version)) if the port was
