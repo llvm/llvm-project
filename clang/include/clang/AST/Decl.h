@@ -2144,18 +2144,16 @@ public:
         : SpecialMember(llvm::to_underlying(CXXSpecialMemberKind::Invalid)),
           Comparison(llvm::to_underlying(DefaultedComparisonKind::None)),
           PostfixOperator(llvm::to_underlying(PostfixOperatorKind::None)) {}
-    DefaultedFunctionKind(CXXSpecialMemberKind CSM)
-        : SpecialMember(llvm::to_underlying(CSM)),
-          Comparison(llvm::to_underlying(DefaultedComparisonKind::None)),
-          PostfixOperator(llvm::to_underlying(PostfixOperatorKind::None)) {}
+    DefaultedFunctionKind(CXXSpecialMemberKind CSM) : DefaultedFunctionKind() {
+      SpecialMember = llvm::to_underlying(CSM);
+    }
     DefaultedFunctionKind(DefaultedComparisonKind Comp)
-        : SpecialMember(llvm::to_underlying(CXXSpecialMemberKind::Invalid)),
-          Comparison(llvm::to_underlying(Comp)),
-          PostfixOperator(llvm::to_underlying(PostfixOperatorKind::None)) {}
-    DefaultedFunctionKind(PostfixOperatorKind PO)
-        : SpecialMember(llvm::to_underlying(CXXSpecialMemberKind::Invalid)),
-          Comparison(llvm::to_underlying(DefaultedComparisonKind::None)),
-          PostfixOperator(llvm::to_underlying(PO)) {}
+        : DefaultedFunctionKind() {
+      Comparison = llvm::to_underlying(Comp);
+    }
+    DefaultedFunctionKind(PostfixOperatorKind PO) : DefaultedFunctionKind() {
+      PostfixOperator = llvm::to_underlying(PO);
+    }
 
     bool isSpecialMember() const {
       return static_cast<CXXSpecialMemberKind>(SpecialMember) !=
