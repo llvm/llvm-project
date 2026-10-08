@@ -6212,6 +6212,114 @@ def CIR_VecExtractOp : CIR_Op<"vec.extract", [
 }
 
 //===----------------------------------------------------------------------===//
+// Vector reduction operations
+//===----------------------------------------------------------------------===//
+
+class CIR_VecReduceOp<string mnemonic, Type inputType, string llvmOpName>
+    : CIR_Op<"vec.reduce." # mnemonic, [
+  Pure,
+  TypesMatchWith<"type of 'result' matches element type of 'input'",
+    "input", "result",
+    "mlir::cast<cir::VectorType>($_self).getElementType()">
+]> {
+  let summary = "Reduce a vector using " # mnemonic;
+  let description = [{
+    Reduces the elements of a vector to a scalar of the vector element type.
+  }];
+
+  let arguments = (ins inputType:$input);
+  let results = (outs CIR_VectorElementType:$result);
+
+  let assemblyFormat = [{
+    `(` $input `)` `:` functional-type(operands, results) attr-dict
+  }];
+
+  let llvmOp = llvmOpName;
+}
+
+def CIR_VecReduceAddOp
+    : CIR_VecReduceOp<"add", CIR_VectorOfIntOrBoolType,
+                      "vector_reduce_add">;
+def CIR_VecReduceAndOp
+    : CIR_VecReduceOp<"and", CIR_VectorOfIntOrBoolType,
+                      "vector_reduce_and">;
+def CIR_VecReduceMulOp
+    : CIR_VecReduceOp<"mul", CIR_VectorOfIntOrBoolType,
+                      "vector_reduce_mul">;
+def CIR_VecReduceOrOp
+    : CIR_VecReduceOp<"or", CIR_VectorOfIntOrBoolType,
+                      "vector_reduce_or">;
+def CIR_VecReduceSMaxOp
+    : CIR_VecReduceOp<"smax", CIR_VectorOfSIntType,
+                      "vector_reduce_smax">;
+def CIR_VecReduceSMinOp
+    : CIR_VecReduceOp<"smin", CIR_VectorOfSIntType,
+                      "vector_reduce_smin">;
+def CIR_VecReduceUMaxOp
+    : CIR_VecReduceOp<"umax",
+                      CIR_VectorTypeOf<[CIR_AnyUIntType, CIR_AnyBoolType]>,
+                      "vector_reduce_umax">;
+def CIR_VecReduceUMinOp
+    : CIR_VecReduceOp<"umin",
+                      CIR_VectorTypeOf<[CIR_AnyUIntType, CIR_AnyBoolType]>,
+                      "vector_reduce_umin">;
+def CIR_VecReduceXorOp
+    : CIR_VecReduceOp<"xor", CIR_VectorOfIntOrBoolType,
+                      "vector_reduce_xor">;
+
+// Floating-point reductions use custom lowering to translate CIR fast-math
+// flags to the corresponding LLVM dialect attribute.
+class CIR_VecReduceFPOp<string mnemonic>
+    : CIR_Op<"vec.reduce." # mnemonic, [
+  Pure,
+  TypesMatchWith<"type of 'result' matches element type of 'input'",
+    "input", "result",
+    "mlir::cast<cir::VectorType>($_self).getElementType()">
+]> {
+  let summary = "Reduce a floating-point vector using " # mnemonic;
+  let arguments = (ins
+    CIR_VectorOfFloatType:$input,
+    OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath_flags
+  );
+  let results = (outs CIR_AnyFloatType:$result);
+
+  let assemblyFormat = [{
+    `(` $input `)` `:` functional-type(operands, results)
+    prop-dict attr-dict
+  }];
+}
+
+def CIR_VecReduceFMaxOp : CIR_VecReduceFPOp<"fmax">;
+def CIR_VecReduceFMinOp : CIR_VecReduceFPOp<"fmin">;
+
+class CIR_VecReduceAccFPOp<string mnemonic>
+    : CIR_Op<"vec.reduce." # mnemonic, [
+  Pure,
+  TypesMatchWith<"type of 'accumulator' matches element type of 'input'",
+    "input", "accumulator",
+    "mlir::cast<cir::VectorType>($_self).getElementType()">,
+  TypesMatchWith<"type of 'result' matches element type of 'input'",
+    "input", "result",
+    "mlir::cast<cir::VectorType>($_self).getElementType()">
+]> {
+  let summary = "Reduce a floating-point vector using " # mnemonic;
+  let arguments = (ins
+    CIR_AnyFloatType:$accumulator,
+    CIR_VectorOfFloatType:$input,
+    OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath_flags
+  );
+  let results = (outs CIR_AnyFloatType:$result);
+
+  let assemblyFormat = [{
+    `(` $accumulator `,` $input `)` `:` functional-type(operands, results)
+    prop-dict attr-dict
+  }];
+}
+
+def CIR_VecReduceFAddOp : CIR_VecReduceAccFPOp<"fadd">;
+def CIR_VecReduceFMulOp : CIR_VecReduceAccFPOp<"fmul">;
+
+//===----------------------------------------------------------------------===//
 // VecCmpOp
 //===----------------------------------------------------------------------===//
 

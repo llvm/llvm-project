@@ -5108,6 +5108,54 @@ mlir::LogicalResult CIRToLLVMVecInsertOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+template <typename LLVMOp, typename CIROp>
+static mlir::LogicalResult
+lowerFPVectorReduction(CIROp op, typename CIROp::Adaptor adaptor,
+                       const mlir::TypeConverter &typeConverter,
+                       mlir::ConversionPatternRewriter &rewriter) {
+  mlir::Type resultTy = typeConverter.convertType(op.getType());
+  mlir::LLVM::FastmathFlags fastmathFlags{};
+  if (std::optional<cir::FastMathFlags> fastmath = op.getFastmathFlags())
+    fastmathFlags = convertFastMathFlags(*fastmath);
+
+  typename LLVMOp::Properties properties =
+      cir::getDefaultProperties<LLVMOp>(op.getContext());
+  properties.setFastmathFlags(
+      mlir::LLVM::FastmathFlagsAttr::get(op.getContext(), fastmathFlags));
+  rewriter.replaceOpWithNewOp<LLVMOp>(op, mlir::TypeRange{resultTy},
+                                      adaptor.getOperands(), properties);
+
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMVecReduceFAddOpLowering::matchAndRewrite(
+    cir::VecReduceFAddOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return lowerFPVectorReduction<mlir::LLVM::vector_reduce_fadd>(
+      op, adaptor, *getTypeConverter(), rewriter);
+}
+
+mlir::LogicalResult CIRToLLVMVecReduceFMulOpLowering::matchAndRewrite(
+    cir::VecReduceFMulOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return lowerFPVectorReduction<mlir::LLVM::vector_reduce_fmul>(
+      op, adaptor, *getTypeConverter(), rewriter);
+}
+
+mlir::LogicalResult CIRToLLVMVecReduceFMaxOpLowering::matchAndRewrite(
+    cir::VecReduceFMaxOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return lowerFPVectorReduction<mlir::LLVM::vector_reduce_fmax>(
+      op, adaptor, *getTypeConverter(), rewriter);
+}
+
+mlir::LogicalResult CIRToLLVMVecReduceFMinOpLowering::matchAndRewrite(
+    cir::VecReduceFMinOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return lowerFPVectorReduction<mlir::LLVM::vector_reduce_fmin>(
+      op, adaptor, *getTypeConverter(), rewriter);
+}
+
 mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
     cir::VecCmpOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
