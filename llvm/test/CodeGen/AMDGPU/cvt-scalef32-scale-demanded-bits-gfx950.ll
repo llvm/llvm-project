@@ -170,6 +170,8 @@ define <2 x i32> @exponent_mask_vector_multi_use(<2 x half> %a, <2 x half> %b, p
 ; GFX950-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX950-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-NEXT:    v_and_b32_e32 v5, 0x7f800000, v5
+; GFX950-NEXT:    v_and_b32_e32 v4, 0x7f800000, v4
 ; GFX950-NEXT:    v_cvt_scalef32_pk_fp4_f16 v3, v0, v4
 ; GFX950-NEXT:    v_cvt_scalef32_pk_fp4_f16 v2, v0, v5
 ; GFX950-NEXT:    v_cvt_scalef32_pk_fp4_f16 v3, v1, v4 op_sel:[0,0,1,0]
