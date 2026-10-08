@@ -13150,10 +13150,6 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     SDValue Rs1 = Op.getOperand(1);
     SDValue Rs2 = Op.getOperand(2);
     if (Subtarget.is64Bit()) {
-      if (VT == MVT::v2i32 && !Rs1.getValueType().isVector()) {
-        unsigned WOpc = IsSigned ? RISCVISD::PNCLIPP_W : RISCVISD::PNCLIPUP_W;
-        return DAG.getNode(WOpc, DL, VT, Rs1, Rs2);
-      }
       unsigned Opc = IsSigned ? RISCVISD::PNCLIPP : RISCVISD::PNCLIPUP;
       return DAG.getNode(Opc, DL, VT, Rs1, Rs2);
     }
