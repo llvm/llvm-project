@@ -715,6 +715,9 @@ public:
 
     WrapFlagsTy(bool HasNUW, bool HasNSW) : HasNUW(HasNUW), HasNSW(HasNSW) {}
     WrapFlagsTy() : HasNUW(false), HasNSW(false) {}
+    WrapFlagsTy withoutNoSignedWrap() {
+      return {static_cast<bool>(HasNUW), false};
+    }
   };
 
   struct TruncFlagsTy {
@@ -1317,6 +1320,15 @@ public:
     // WideActiveLaneMask is used for control flow and is unrolled by widening,
     // with one extract vector created per unroll part.
     WideActiveLaneMask,
+    // Signature: Vectors... -> WideVector
+    // Concatenates all vector operands to a single wide vector.
+    ConcatVectors,
+    // Signature: (Multiplier, Address, Align) -> Vector
+    // Loads a single wide vector of `Multiplier * VF` elements.
+    WideVectorLoad,
+    // Signature: (Multiplier, Address, Alignment, Vector)
+    // Stores a single wide vector of `Multiplier * VF` elements.
+    WideVectorStore,
     // Extracts each unrolled part of a (VF * UF) widened vector/mask.
     ExtractVectorForPart,
     ExplicitVectorLength,
@@ -1521,6 +1533,7 @@ public:
     case VPInstruction::BranchOnCond:
     case VPInstruction::BranchOnTwoConds:
     case VPInstruction::BranchOnCount:
+    case VPInstruction::WideVectorStore:
       return false;
     default:
       return true;
@@ -1554,9 +1567,7 @@ public:
 
   /// Returns the mask for the VPInstruction. Returns nullptr for unmasked
   /// VPInstructions.
-  VPValue *getMask() const {
-    return isMasked() ? getOperand(getNumOperands() - 1) : nullptr;
-  }
+  VPValue *getMask() const { return isMasked() ? getLastOperand() : nullptr; }
 
   /// Returns an iterator range over the operands excluding the mask operand
   /// if present.
@@ -2117,9 +2128,8 @@ public:
                             DL),
         VPIRMetadata(Metadata), Variant(Variant) {
     setUnderlyingValue(UV);
-    assert(
-        isa<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue()) &&
-        "last operand must be the called function");
+    assert(isa<Function>(getLastOperand()->getLiveInIRValue()) &&
+           "last operand must be the called function");
     assert(cast<Function>(CallArguments.back()->getLiveInIRValue())
                    ->getReturnType() == getScalarType() &&
            "Scalar type must match return type of called scalar function");
@@ -2145,7 +2155,7 @@ public:
   static InstructionCost computeCallCost(Function *Variant, VPCostContext &Ctx);
 
   Function *getCalledScalarFunction() const {
-    return cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
+    return cast<Function>(getLastOperand()->getLiveInIRValue());
   }
 
   operand_range args() { return drop_end(operands()); }
@@ -2686,7 +2696,7 @@ public:
   /// the last unrolled part, if it exists. Returns itself if unrolling did not
   /// take place.
   VPValue *getLastUnrolledPartOperand() {
-    return isUnrolled() ? getOperand(getNumOperands() - 1) : this;
+    return isUnrolled() ? getLastOperand() : this;
   }
 
 protected:
@@ -3112,7 +3122,7 @@ public:
   /// by a nullptr.
   VPValue *getMask() const {
     // Mask is optional and the last operand.
-    return HasMask ? getOperand(getNumOperands() - 1) : nullptr;
+    return HasMask ? getLastOperand() : nullptr;
   }
 
   /// Return true if the access needs a mask because of the gaps.
@@ -3342,7 +3352,7 @@ public:
   VPValue *getVecOp() const { return getOperand(1); }
   /// The VPValue of the condition for the block.
   VPValue *getCondOp() const {
-    return isConditional() ? getOperand(getNumOperands() - 1) : nullptr;
+    return isConditional() ? getLastOperand() : nullptr;
   }
   /// Get the factor that the VF of this recipe's output should be scaled by, or
   /// 1 if it isn't scaled.
@@ -3492,7 +3502,7 @@ public:
   /// Return the mask of a predicated VPReplicateRecipe.
   VPValue *getMask() {
     assert(isPredicated() && "Trying to get the mask of a unpredicated recipe");
-    return getOperand(getNumOperands() - 1);
+    return getLastOperand();
   }
 
   /// Return the recipe's operands, excluding the mask of a predicated recipe.
@@ -3811,7 +3821,7 @@ public:
   VPValue *getMask() const {
     // Mask is optional and therefore the last operand.
     const VPRecipeBase *R = getAsRecipe();
-    return isMasked() ? R->getOperand(R->getNumOperands() - 1) : nullptr;
+    return isMasked() ? R->getLastOperand() : nullptr;
   }
 
   /// Returns the alignment of the memory access.

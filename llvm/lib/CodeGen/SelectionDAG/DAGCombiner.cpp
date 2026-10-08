@@ -5078,7 +5078,7 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
   }
 
   // fold (mul (add x, c1), c2) -> (add (mul x, c2), c1*c2)
-  if (sd_match(N0, m_SpecificOpc(ISD::ADD)) && isConstantOrConstantVector(N1) &&
+  if (N0.getOpcode() == ISD::ADD && isConstantOrConstantVector(N1) &&
       isConstantOrConstantVector(N0.getOperand(1)) &&
       isMulAddWithConstProfitable(N, N0, N1))
     return DAG.getNode(
@@ -11942,7 +11942,7 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
           N0,
           m_OneUse(m_BitwiseLogic(
               m_Value(X),
-              m_OneUse(m_Shl(m_Value(ZExtY, m_SpecificOpc(ISD::ZERO_EXTEND)),
+              m_OneUse(m_Shl(m_Value(ZExtY, m_SpecificOpc<ISD::ZERO_EXTEND>()),
                              m_Specific(N1))))))) {
     unsigned NumLeadingZeros = ZExtY.getScalarValueSizeInBits() -
                                ZExtY.getOperand(0).getScalarValueSizeInBits();
@@ -12150,14 +12150,14 @@ SDValue DAGCombiner::visitFunnelShift(SDNode *N) {
     unsigned C1Expected = IsFSHL ? BitWidth - ShAmt : ShAmt;
 
     if ((sd_match(N0, m_Srl(m_Value(Val), m_SpecificInt(C0Expected))) ||
-         sd_match(N0, m_Node(ISD::FSHR, m_Value(), m_Value(Val),
-                             m_SpecificInt(C0Expected))) ||
-         sd_match(N0, m_Node(ISD::FSHL, m_Value(), m_Value(Val),
-                             m_SpecificInt(C1Expected)))) &&
+         sd_match(N0,
+                  m_FShR(m_Value(), m_Value(Val), m_SpecificInt(C0Expected))) ||
+         sd_match(
+             N0, m_FShL(m_Value(), m_Value(Val), m_SpecificInt(C1Expected)))) &&
         (sd_match(N1, m_Shl(m_Specific(Val), m_SpecificInt(C1Expected))) ||
-         sd_match(N1, m_Node(ISD::FSHL, m_Specific(Val), m_Value(),
+         sd_match(N1, m_FShL(m_Specific(Val), m_Value(),
                              m_SpecificInt(C1Expected))) ||
-         sd_match(N1, m_Node(ISD::FSHR, m_Specific(Val), m_Value(),
+         sd_match(N1, m_FShR(m_Specific(Val), m_Value(),
                              m_SpecificInt(C0Expected)))))
       return Val;
 
@@ -17972,7 +17972,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
 
   // fold (truncate (load x)) -> (smaller load x)
   // fold (truncate (srl (load x), c)) -> (smaller load (x+c/evtbits))
-  if (!LegalTypes || TLI.isTypeDesirableForOp(N0.getOpcode(), VT)) {
+  if (!LegalTypes || TLI.isTypeDesirableForOp(N0.getNode(), VT)) {
     if (SDValue Reduced = reduceLoadWidth(N))
       return Reduced;
 
@@ -18566,6 +18566,11 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
     if (SrcVT.isScalarInteger() && VT.bitsGT(SrcVT))
       return DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), VT, SrcScalar);
   }
+
+  // vt (bitcast (scalar_to_vector vt:x)) -> x
+  if (N0.getOpcode() == ISD::SCALAR_TO_VECTOR &&
+      N0.getOperand(0).getValueType() == VT)
+    return N0.getOperand(0);
 
   // Remove double bitcasts from shuffles - this is often a legacy of
   // XformToShuffleWithZero being used to combine bitmaskings (of
@@ -27609,8 +27614,7 @@ static SDValue combineConcatVectorOfShuffles(SDNode *N, SelectionDAG &DAG,
                                              bool LegalOperations) {
   SDValue A, B;
   ArrayRef<int> M0, M1;
-  if (!sd_match(N,
-                m_Node(ISD::CONCAT_VECTORS,
+  if (!sd_match(N, m_Node<ISD::CONCAT_VECTORS>(
                        m_OneUse(m_Shuffle(m_NUses<2>(m_Value(A)),
                                           m_NUses<2>(m_Value(B)), m_Mask(M0))),
                        m_OneUse(m_Shuffle(m_Deferred(A), m_Deferred(B),

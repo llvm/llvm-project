@@ -846,8 +846,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
     // We can preserve nuw when the step is non-negative.
     const APInt *Step;
     if (match(WideIV->getStepValue(), m_APInt(Step)) && Step->isNonNegative())
-      WrapFlags = {static_cast<bool>(WideIV->getNoWrapFlagsOrNone().HasNUW),
-                   false};
+      WrapFlags = WideIV->getNoWrapFlagsOrNone().withoutNoSignedWrap();
     VPScalarIVStepsRecipe *Steps = vputils::createScalarIVSteps(
         Plan, ID.getKind(), ID.getInductionOpcode(),
         dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()),
@@ -1210,6 +1209,12 @@ static VPValue *simplifyLogicalRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
   if (match(Def, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X))))
     return X;
 
+  // X != false -> X
+  if (match(Def, m_SpecificICmp(CmpInst::ICMP_NE, m_VPValue(X), m_False()))) {
+    assert(X->getScalarType()->isIntegerTy(1) && "must have boolean operands");
+    return X;
+  }
+
   return nullptr;
 }
 
@@ -1292,7 +1297,7 @@ static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
   if (match(Def, m_ExtractLastLane(m_VPValue(A)))) {
     if (match(A, m_BuildVector())) {
       auto *BuildVector = cast<VPInstruction>(A);
-      return BuildVector->getOperand(BuildVector->getNumOperands() - 1);
+      return BuildVector->getLastOperand();
     }
 
     if (match(A, m_Broadcast(m_VPValue(B))))
@@ -3233,7 +3238,7 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
 
     VPValue *Op1, *Op2;
     // Walk back through recipes until we find at least one load from memory.
-    if (match(V, m_ICmp(m_VPValue(Op1), m_VPValue(Op2)))) {
+    if (match(V, m_Cmp(m_VPValue(Op1), m_VPValue(Op2)))) {
       Worklist.push_back(Op1);
       Worklist.push_back(Op2);
       Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
@@ -4196,6 +4201,70 @@ void VPlanTransforms::sinkPredicatedStores(VPlan &Plan,
   }
 }
 
+void VPlanTransforms::widenMemoryAccessesByUF(VPlan &Plan, ElementCount VF,
+                                              unsigned UF,
+                                              const TargetTransformInfo &TTI) {
+  assert(UF > 1 && "Expected plan to have an UF > 1");
+
+  auto m_ContiguousVecPtr = m_VecPtr(m_VPValue(), m_One());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      VPValue *StoredValue = nullptr;
+      if (!match(&R, m_WidenLoad(m_ContiguousVecPtr)) &&
+          !match(&R, m_WidenStore(m_ContiguousVecPtr, m_VPValue(StoredValue))))
+        continue;
+
+      auto *MemOp = cast<VPWidenMemoryRecipe>(&R);
+      assert(MemOp->isConsecutive() && "Expected consecutive load/store");
+
+      // TODO: Support masked loads/stores. This requires widening the header
+      // mask to the same factor as the memory operation.
+      assert(!MemOp->isMasked() && "Masked accesses are not supported yet");
+
+      Type *AccessType = StoredValue ? StoredValue->getScalarType()
+                                     : R.getVPSingleValue()->getScalarType();
+      bool IsStore = isa<VPWidenStoreRecipe>(MemOp->getAsRecipe());
+      std::optional<Instruction::CastOps> CastHint;
+      VPUser *MaybeCast = IsStore ? StoredValue->getDefiningRecipe()
+                                  : R.getVPSingleValue()->getSingleUser();
+      if (auto *Cast = dyn_cast_if_present<VPWidenCastRecipe>(MaybeCast))
+        CastHint = Cast->getOpcode();
+
+      VectorType *VectorAccessType = VectorType::get(AccessType, VF);
+      if (!TTI.hasMultiVectorLoadStore(
+              /*NumVectors=*/UF, TargetTransformInfo::MaskSource::None,
+              VectorAccessType, IsStore, CastHint))
+        continue;
+
+      DebugLoc DL = R.getDebugLoc();
+      VPValue *Ptr = MemOp->getAddr();
+      VPValue *Align = Plan.getConstantInt(64, MemOp->getAlign().value());
+      VPValue *Multiplier = Plan.getConstantInt(64, 1);
+
+      VPBuilder Builder(VPBB, R.getIterator());
+      if (IsStore) {
+        VPValue *WideStoredValue = Builder.createNaryOp(
+            VPInstruction::ConcatVectors, {StoredValue}, DL);
+        Builder.createNaryOp(VPInstruction::WideVectorStore,
+                             {Multiplier, Ptr, Align, WideStoredValue}, nullptr,
+                             {}, *MemOp, R.getDebugLoc());
+      } else {
+        VPValue *OldLoad = R.getVPSingleValue();
+        VPValue *Load = Builder.createNaryOp(
+            VPInstruction::WideVectorLoad, {Multiplier, Ptr, Align}, nullptr,
+            {}, *MemOp, R.getDebugLoc(), "", OldLoad->getScalarType());
+        VPValue *Extract =
+            Builder.createNaryOp(VPInstruction::ExtractVectorForPart,
+                                 {Load, Plan.getConstantInt(64, 0)}, DL);
+        OldLoad->replaceAllUsesWith(Extract);
+      }
+
+      R.eraseFromParent();
+    }
+  }
+}
+
 /// Returns true if \p V is VPWidenLoadRecipe or VPInterleaveRecipe that can be
 /// converted to a narrower recipe. \p V is used by a wide recipe that feeds a
 /// store interleave group at index \p Idx, \p WideMember0 is the recipe feeding
@@ -5104,8 +5173,7 @@ createPartialReductionExpression(VPReductionRecipe *Red) {
   // -> VPExpressionRecipe(op, sub/neg, red)
   if (match(VecOp, m_AnyNeg(m_WidenAnyExtend(m_VPValue())))) {
     auto *Neg = cast<VPWidenRecipe>(VecOp);
-    auto *Ext =
-        cast<VPWidenCastRecipe>(Neg->getOperand(Neg->getNumOperands() - 1));
+    auto *Ext = cast<VPWidenCastRecipe>(Neg->getLastOperand());
     return new VPExpressionRecipe(Ext, Neg, Red);
   }
 
