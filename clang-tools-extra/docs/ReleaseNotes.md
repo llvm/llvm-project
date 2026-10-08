@@ -97,6 +97,11 @@ infrastructure are described first, followed by tool-specific sections.
   operator call such as `stream << 42;`), which it previously refused to
   extract.
 
+- The `Extract to function` tweak is now also available in C files, where
+  it previously always refused to apply. Captured variables are passed by
+  value when possible, and otherwise via a pointer parameter, since C has
+  no references.
+
 #### Signature help
 
 - Parameters declared with a `decltype` are now displayed as the type the
@@ -267,6 +272,11 @@ infrastructure are described first, followed by tool-specific sections.
 - Extend {doc}`modernize-use-nullptr
   <clang-tidy/checks/modernize/use-nullptr>` to turn `decltype(nullptr)` into
   `std::nullptr_t` from `<cstdef>`.
+
+- Improved {doc}`modernize-use-nullptr
+  <clang-tidy/checks/modernize/use-nullptr>` check to avoid replacing `0`
+  with `nullptr` in comparisons with ordering types such as
+  `std::strong_ordering`.
 
 - Improved {doc}`modernize-use-ranges
   <clang-tidy/checks/modernize/use-ranges>` check by preserving used output

@@ -2240,6 +2240,9 @@ declare void  @llvm.nvvm.prefetch.local.L2(ptr addrspace(5) %local_ptr)
 declare void  @llvm.nvvm.prefetch.L1(ptr %ptr)
 declare void  @llvm.nvvm.prefetch.L2(ptr %ptr)
 
+declare void  @llvm.nvvm.prefetch.L1.32B.valid_addr.p0(ptr %generic_ptr)
+declare void  @llvm.nvvm.prefetch.L1.32B.valid_addr.p1(ptr addrspace(1) %global_ptr)
+
 declare void  @llvm.nvvm.prefetch.tensormap.p0(ptr %ptr)
 declare void  @llvm.nvvm.prefetch.tensormap.p4(ptr addrspace(4) %const_ptr)
 declare void  @llvm.nvvm.prefetch.tensormap.p101(ptr addrspace(101) %param_ptr)
@@ -2255,10 +2258,15 @@ declare void  @llvm.nvvm.prefetchu.L1(ptr %ptr)
 The '`@llvm.nvvm.prefetch.*`' and '`@llvm.nvvm.prefetchu.*`' intrinsic
 correspond to the '`prefetch.*`;' and '`prefetchu.*`' family of PTX
 instructions. The '`prefetch.*`' instructions bring the cache line containing
-the specified address in global or local memory address space into the specified
-cache level (L1 or L2). If the '`.tensormap`' qualifier is specified then the
-prefetch instruction brings the cache line containing the specified address in
-the '`.const`' or '`.param memory`' state space for subsequent use by the
+the specified address in global or local memory address space into the
+specified cache level (L1 or L2). The `L1.32B.valid_addr` intrinsic variants
+request a prefetch of at least 32 bytes. This qualifier can be used with a
+`.global` specifier or with no specifier, indicating a generic address, which
+must fall within the `global` state space. At least 1B of the memory location
+specified by the argument must be valid, otherwise the behavior is undefined.
+If the '`.tensormap`' qualifier is specified then the prefetch instruction
+brings the cache line containing the specified address in the '`.const`' or
+'`.param memory`' state space for subsequent use by the
 '`cp.async.bulk.tensor`' instruction. The '`prefetchu.*`' instruction brings
 the cache line containing the specified generic address into the specified
 uniform cache level. If no address space is specified, it is assumed to be
