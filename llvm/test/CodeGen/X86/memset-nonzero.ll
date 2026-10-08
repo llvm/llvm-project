@@ -525,7 +525,6 @@ define void @memset_128_nonconst_bytes(ptr %x, i8 %c) {
 define void @memset_256_nonconst_bytes(ptr %x, i8 %c) {
 ; SSE-LABEL: memset_256_nonconst_bytes:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movsbl %sil, %esi
 ; SSE-NEXT:    movl $256, %edx # imm = 0x100
 ; SSE-NEXT:    jmp memset@PLT # TAILCALL
 ;

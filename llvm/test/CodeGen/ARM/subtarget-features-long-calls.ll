@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=thumb-- -mcpu=cortex-a8 -relocation-model=static %s -o - -mattr=+long-calls | FileCheck -check-prefix=LONGCALL %s
 ; RUN: llc -mtriple=thumb-- -mcpu=cortex-a8 -relocation-model=static %s -o - -mattr=-long-calls | FileCheck -check-prefix=NO-LONGCALL %s
 ; RUN: llc -mtriple=thumb-- -mcpu=cortex-a8 -relocation-model=static %s -o - -O0 | FileCheck -check-prefix=NO-OPTION %s
-; RUN: llc -mtriple=thumb-- -mcpu=cortex-a8 -relocation-model=static %s -o - -O0 -mattr=+long-calls | FileCheck -check-prefix=LONGCALL-O0 %s
+; RUN: llc -mtriple=thumb-- -mcpu=cortex-a8 -relocation-model=static %s -o - -O0 -mattr=+long-calls | FileCheck -check-prefix=LONGCALL %s
 ; RUN: llc -mtriple=thumb-- -mcpu=cortex-a8 -relocation-model=static %s -o - -O0 -mattr=-long-calls | FileCheck -check-prefix=NO-LONGCALL %s
 ; RUN: llc -mtriple=arm-linux-gnueabi -mcpu=cortex-a8 -relocation-model=static %s -o - -mattr=+long-calls,+execute-only | FileCheck -check-prefix=XO-LONGCALL %s
 ; RUN: llc -mtriple=arm-linux-gnueabi -mcpu=cortex-a8 -relocation-model=pic %s -o - -mattr=+long-calls | FileCheck -check-prefix=PIC-LONGCALL %s
@@ -39,18 +39,6 @@ define i32 @caller0() #0 {
 ; NO-LONGCALL-NEXT:    bl callee0
 ; NO-LONGCALL-NEXT:    movs r0, #0
 ; NO-LONGCALL-NEXT:    pop {r7, pc}
-;
-; LONGCALL-O0-LABEL: caller0:
-; LONGCALL-O0:       @ %bb.0: @ %entry
-; LONGCALL-O0-NEXT:    push {r7, lr}
-; LONGCALL-O0-NEXT:    ldr r0, .LCPI0_0
-; LONGCALL-O0-NEXT:    blx r0
-; LONGCALL-O0-NEXT:    movs r0, #0
-; LONGCALL-O0-NEXT:    pop {r7, pc}
-; LONGCALL-O0-NEXT:    .p2align 2
-; LONGCALL-O0-NEXT:  @ %bb.1:
-; LONGCALL-O0-NEXT:  .LCPI0_0:
-; LONGCALL-O0-NEXT:    .long callee0
 ;
 ; XO-LONGCALL-LABEL: caller0:
 ; XO-LONGCALL:       @ %bb.0: @ %entry
@@ -109,18 +97,6 @@ define i32 @caller1() {
 ; NO-LONGCALL-NEXT:    movs r0, #0
 ; NO-LONGCALL-NEXT:    pop {r7, pc}
 ;
-; LONGCALL-O0-LABEL: caller1:
-; LONGCALL-O0:       @ %bb.0: @ %entry
-; LONGCALL-O0-NEXT:    push {r7, lr}
-; LONGCALL-O0-NEXT:    ldr r0, .LCPI1_0
-; LONGCALL-O0-NEXT:    blx r0
-; LONGCALL-O0-NEXT:    movs r0, #0
-; LONGCALL-O0-NEXT:    pop {r7, pc}
-; LONGCALL-O0-NEXT:    .p2align 2
-; LONGCALL-O0-NEXT:  @ %bb.1:
-; LONGCALL-O0-NEXT:  .LCPI1_0:
-; LONGCALL-O0-NEXT:    .long callee0
-;
 ; XO-LONGCALL-LABEL: caller1:
 ; XO-LONGCALL:       @ %bb.0: @ %entry
 ; XO-LONGCALL-NEXT:    .save {r11, lr}
@@ -168,10 +144,6 @@ define dso_local void @global_func() {
 ; NO-LONGCALL:       @ %bb.0: @ %entry
 ; NO-LONGCALL-NEXT:    bx lr
 ;
-; LONGCALL-O0-LABEL: global_func:
-; LONGCALL-O0:       @ %bb.0: @ %entry
-; LONGCALL-O0-NEXT:    bx lr
-;
 ; XO-LONGCALL-LABEL: global_func:
 ; XO-LONGCALL:       @ %bb.0: @ %entry
 ; XO-LONGCALL-NEXT:    bx lr
@@ -202,17 +174,6 @@ define void @test_global() {
 ; NO-LONGCALL-NEXT:    push {r7, lr}
 ; NO-LONGCALL-NEXT:    bl global_func
 ; NO-LONGCALL-NEXT:    pop {r7, pc}
-;
-; LONGCALL-O0-LABEL: test_global:
-; LONGCALL-O0:       @ %bb.0: @ %entry
-; LONGCALL-O0-NEXT:    push {r7, lr}
-; LONGCALL-O0-NEXT:    ldr r0, .LCPI3_0
-; LONGCALL-O0-NEXT:    blx r0
-; LONGCALL-O0-NEXT:    pop {r7, pc}
-; LONGCALL-O0-NEXT:    .p2align 2
-; LONGCALL-O0-NEXT:  @ %bb.1:
-; LONGCALL-O0-NEXT:  .LCPI3_0:
-; LONGCALL-O0-NEXT:    .long global_func
 ;
 ; XO-LONGCALL-LABEL: test_global:
 ; XO-LONGCALL:       @ %bb.0: @ %entry
@@ -247,7 +208,6 @@ define void @test_memset(ptr %dst, i8 %val, i32 %len) {
 ; NO-OPTION-LABEL: test_memset:
 ; NO-OPTION:       @ %bb.0: @ %entry
 ; NO-OPTION-NEXT:    push {r7, lr}
-; NO-OPTION-NEXT:    sxtb r1, r1
 ; NO-OPTION-NEXT:    bl memset
 ; NO-OPTION-NEXT:    pop {r7, pc}
 ;
@@ -255,7 +215,6 @@ define void @test_memset(ptr %dst, i8 %val, i32 %len) {
 ; LONGCALL:       @ %bb.0: @ %entry
 ; LONGCALL-NEXT:    push {r7, lr}
 ; LONGCALL-NEXT:    ldr r3, .LCPI4_0
-; LONGCALL-NEXT:    sxtb r1, r1
 ; LONGCALL-NEXT:    blx r3
 ; LONGCALL-NEXT:    pop {r7, pc}
 ; LONGCALL-NEXT:    .p2align 2
@@ -266,28 +225,14 @@ define void @test_memset(ptr %dst, i8 %val, i32 %len) {
 ; NO-LONGCALL-LABEL: test_memset:
 ; NO-LONGCALL:       @ %bb.0: @ %entry
 ; NO-LONGCALL-NEXT:    push {r7, lr}
-; NO-LONGCALL-NEXT:    sxtb r1, r1
 ; NO-LONGCALL-NEXT:    bl memset
 ; NO-LONGCALL-NEXT:    pop {r7, pc}
-;
-; LONGCALL-O0-LABEL: test_memset:
-; LONGCALL-O0:       @ %bb.0: @ %entry
-; LONGCALL-O0-NEXT:    push {r7, lr}
-; LONGCALL-O0-NEXT:    sxtb r1, r1
-; LONGCALL-O0-NEXT:    ldr r3, .LCPI4_0
-; LONGCALL-O0-NEXT:    blx r3
-; LONGCALL-O0-NEXT:    pop {r7, pc}
-; LONGCALL-O0-NEXT:    .p2align 2
-; LONGCALL-O0-NEXT:  @ %bb.1:
-; LONGCALL-O0-NEXT:  .LCPI4_0:
-; LONGCALL-O0-NEXT:    .long memset
 ;
 ; XO-LONGCALL-LABEL: test_memset:
 ; XO-LONGCALL:       @ %bb.0: @ %entry
 ; XO-LONGCALL-NEXT:    .save {r11, lr}
 ; XO-LONGCALL-NEXT:    push {r11, lr}
 ; XO-LONGCALL-NEXT:    movw r3, :lower16:memset
-; XO-LONGCALL-NEXT:    sxtb r1, r1
 ; XO-LONGCALL-NEXT:    movt r3, :upper16:memset
 ; XO-LONGCALL-NEXT:    blx r3
 ; XO-LONGCALL-NEXT:    pop {r11, pc}
@@ -297,7 +242,6 @@ define void @test_memset(ptr %dst, i8 %val, i32 %len) {
 ; PIC-LONGCALL-NEXT:    .save {r11, lr}
 ; PIC-LONGCALL-NEXT:    push {r11, lr}
 ; PIC-LONGCALL-NEXT:    ldr r3, .LCPI4_0
-; PIC-LONGCALL-NEXT:    sxtb r1, r1
 ; PIC-LONGCALL-NEXT:  .LPC4_0:
 ; PIC-LONGCALL-NEXT:    ldr r3, [pc, r3]
 ; PIC-LONGCALL-NEXT:    blx r3

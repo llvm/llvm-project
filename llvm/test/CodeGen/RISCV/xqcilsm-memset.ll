@@ -37,7 +37,7 @@ entry:
 define void @test2(ptr nocapture %p) nounwind {
 ; RV32I-LABEL: test2:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    li a1, -91
+; RV32I-NEXT:    li a1, 165
 ; RV32I-NEXT:    li a2, 128
 ; RV32I-NEXT:    tail memset
 ;
@@ -56,7 +56,7 @@ entry:
 define void @test2a(ptr nocapture %p) nounwind {
 ; RV32I-LABEL: test2a:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    li a1, -91
+; RV32I-NEXT:    li a1, 165
 ; RV32I-NEXT:    li a2, 188
 ; RV32I-NEXT:    tail memset
 ;
@@ -76,13 +76,13 @@ entry:
 define void @test2b(ptr nocapture %p) nounwind {
 ; RV32I-LABEL: test2b:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    li a1, -91
+; RV32I-NEXT:    li a1, 165
 ; RV32I-NEXT:    li a2, 192
 ; RV32I-NEXT:    tail memset
 ;
 ; RV32IXQCILSM-LABEL: test2b:
 ; RV32IXQCILSM:       # %bb.0: # %entry
-; RV32IXQCILSM-NEXT:    li a1, -91
+; RV32IXQCILSM-NEXT:    li a1, 165
 ; RV32IXQCILSM-NEXT:    li a2, 192
 ; RV32IXQCILSM-NEXT:    tail memset
 entry:
@@ -93,7 +93,7 @@ entry:
 define void @test2c(ptr nocapture %p) nounwind {
 ; RV32I-LABEL: test2c:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    li a1, -91
+; RV32I-NEXT:    li a1, 165
 ; RV32I-NEXT:    li a2, 128
 ; RV32I-NEXT:    tail memset
 ;
@@ -196,7 +196,7 @@ entry:
 define void @test4a(ptr nocapture %s) nounwind {
 ; RV32I-LABEL: test4a:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    li a1, -90
+; RV32I-NEXT:    li a1, 166
 ; RV32I-NEXT:    li a2, 64
 ; RV32I-NEXT:    tail memset
 ;
@@ -551,7 +551,7 @@ define void @test7b() nounwind {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a0, %hi(arr1)
 ; RV32I-NEXT:    addi a0, a0, %lo(arr1)
-; RV32I-NEXT:    li a1, -1
+; RV32I-NEXT:    li a1, 255
 ; RV32I-NEXT:    li a2, 68
 ; RV32I-NEXT:    tail memset
 ;
@@ -573,7 +573,7 @@ define void @test7c() nounwind {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a0, %hi(arr1)
 ; RV32I-NEXT:    addi a0, a0, %lo(arr1)
-; RV32I-NEXT:    li a1, -128
+; RV32I-NEXT:    li a1, 128
 ; RV32I-NEXT:    li a2, 128
 ; RV32I-NEXT:    tail memset
 ;
@@ -620,7 +620,7 @@ define void @test7e() nounwind {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a0, %hi(arr1)
 ; RV32I-NEXT:    addi a0, a0, %lo(arr1)
-; RV32I-NEXT:    li a1, -17
+; RV32I-NEXT:    li a1, 239
 ; RV32I-NEXT:    li a2, 100
 ; RV32I-NEXT:    tail memset
 ;
@@ -818,7 +818,7 @@ define void @test15a() nounwind {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a0, %hi(arr1)
 ; RV32I-NEXT:    addi a0, a0, %lo(arr1)
-; RV32I-NEXT:    li a1, -91
+; RV32I-NEXT:    li a1, 165
 ; RV32I-NEXT:    li a2, 192
 ; RV32I-NEXT:    tail memset
 ;
@@ -826,7 +826,7 @@ define void @test15a() nounwind {
 ; RV32IXQCILSM:       # %bb.0: # %entry
 ; RV32IXQCILSM-NEXT:    lui a0, %hi(arr1)
 ; RV32IXQCILSM-NEXT:    addi a0, a0, %lo(arr1)
-; RV32IXQCILSM-NEXT:    li a1, -91
+; RV32IXQCILSM-NEXT:    li a1, 165
 ; RV32IXQCILSM-NEXT:    li a2, 192
 ; RV32IXQCILSM-NEXT:    tail memset
 entry:
