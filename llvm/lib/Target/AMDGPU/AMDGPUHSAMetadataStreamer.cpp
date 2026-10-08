@@ -283,7 +283,7 @@ void MetadataStreamerMsgPackV4::emitKernelAttrs(const AMDGPUTargetMachine &TM,
 void MetadataStreamerMsgPackV4::emitKernelArgs(const MachineFunction &MF,
                                                msgpack::MapDocNode Kern) {
   auto &Func = MF.getFunction();
-  unsigned Offset = 0;
+  uint64_t Offset = 0;
   auto Args = HSAMetadataDoc->getArrayNode();
   for (auto &Arg : Func.args()) {
     if (Arg.hasAttribute("amdgpu-hidden-argument"))
@@ -298,7 +298,7 @@ void MetadataStreamerMsgPackV4::emitKernelArgs(const MachineFunction &MF,
 }
 
 void MetadataStreamerMsgPackV4::emitKernelArg(const Argument &Arg,
-                                              unsigned &Offset,
+                                              uint64_t &Offset,
                                               msgpack::ArrayDocNode Args) {
   const auto *Func = Arg.getParent();
   auto ArgNo = Arg.getArgNo();
@@ -364,7 +364,7 @@ void MetadataStreamerMsgPackV4::emitKernelArg(const Argument &Arg,
 
 void MetadataStreamerMsgPackV4::emitKernelArg(
     const DataLayout &DL, Type *Ty, Align Alignment, StringRef ValueKind,
-    unsigned &Offset, msgpack::ArrayDocNode Args, MaybeAlign PointeeAlign,
+    uint64_t &Offset, msgpack::ArrayDocNode Args, MaybeAlign PointeeAlign,
     StringRef Name, StringRef TypeName, StringRef BaseTypeName,
     StringRef ActAccQual, StringRef AccQual, StringRef TypeQual) {
   auto Arg = Args.getDocument()->getMapNode();
@@ -375,9 +375,9 @@ void MetadataStreamerMsgPackV4::emitKernelArg(
     Arg[".type_name"] = Arg.getDocument()->getNode(TypeName, /*Copy=*/true);
   auto Size = DL.getTypeAllocSize(Ty);
   Arg[".size"] = Arg.getDocument()->getNode(Size);
-  Offset = static_cast<unsigned>(alignTo(Offset, Alignment));
+  Offset = alignTo(Offset, Alignment);
   Arg[".offset"] = Arg.getDocument()->getNode(Offset);
-  Offset += static_cast<unsigned>(Size);
+  Offset += Size;
   Arg[".value_kind"] = Arg.getDocument()->getNode(ValueKind, /*Copy=*/true);
   if (PointeeAlign)
     Arg[".pointee_align"] = Arg.getDocument()->getNode(PointeeAlign->value());
@@ -412,7 +412,7 @@ void MetadataStreamerMsgPackV4::emitKernelArg(
 }
 
 void MetadataStreamerMsgPackV4::emitHiddenKernelArgs(
-    const MachineFunction &MF, unsigned &Offset, msgpack::ArrayDocNode Args) {
+    const MachineFunction &MF, uint64_t &Offset, msgpack::ArrayDocNode Args) {
   auto &Func = MF.getFunction();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
@@ -424,8 +424,7 @@ void MetadataStreamerMsgPackV4::emitHiddenKernelArgs(
   auto &DL = M->getDataLayout();
   auto *Int64Ty = Type::getInt64Ty(Func.getContext());
 
-  Offset = static_cast<unsigned>(
-      alignTo(Offset, ST.getAlignmentForImplicitArgPtr()));
+  Offset = alignTo(Offset, ST.getAlignmentForImplicitArgPtr());
 
   if (HiddenArgNumBytes >= 8)
     emitKernelArg(DL, Int64Ty, Align(8), "hidden_global_offset_x", Offset,
@@ -618,7 +617,7 @@ void MetadataStreamerMsgPackV5::emitVersion() {
 }
 
 void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
-    const MachineFunction &MF, unsigned &Offset, msgpack::ArrayDocNode Args) {
+    const MachineFunction &MF, uint64_t &Offset, msgpack::ArrayDocNode Args) {
   auto &Func = MF.getFunction();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
@@ -634,8 +633,7 @@ void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
   auto *Int32Ty = Type::getInt32Ty(Func.getContext());
   auto *Int16Ty = Type::getInt16Ty(Func.getContext());
 
-  Offset = static_cast<unsigned>(
-      alignTo(Offset, ST.getAlignmentForImplicitArgPtr()));
+  Offset = alignTo(Offset, ST.getAlignmentForImplicitArgPtr());
   emitKernelArg(DL, Int32Ty, Align(4), "hidden_block_count_x", Offset, Args);
   emitKernelArg(DL, Int32Ty, Align(4), "hidden_block_count_y", Offset, Args);
   emitKernelArg(DL, Int32Ty, Align(4), "hidden_block_count_z", Offset, Args);
