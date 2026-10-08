@@ -106,10 +106,10 @@ static std::optional<uint32_t> getSSPAllocaMD(const AllocaInst &AI,
 ///
 /// cl.exe gives such an allocation a slot in the frame's temporary area, which
 /// the cookie does not cover, and leaves it out of the GS analysis: the only
-/// code that writes it from outside is a callee, and a callee writes exactly one
-/// object of the type it returns. As soon as the address reaches anywhere else,
-/// cl.exe relocates the object into the protected region instead, so look for
-/// that here rather than in the frontend, which cannot see the uses.
+/// code that writes it from outside is a callee, and a callee writes exactly
+/// one object of the type it returns. As soon as the address reaches anywhere
+/// else, cl.exe relocates the object into the protected region instead, so look
+/// for that here rather than in the frontend, which cannot see the uses.
 ///
 /// Only an object cl.exe is free to relocate can end up in that area, which is
 /// why the caller also requires the allocation to hold a trivial object.

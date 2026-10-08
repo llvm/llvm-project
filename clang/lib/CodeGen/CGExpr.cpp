@@ -202,8 +202,7 @@ RawAddress CodeGenFunction::CreateMemTemp(QualType Ty, const Twine &Name,
 }
 
 RawAddress CodeGenFunction::CreateMemTemp(QualType Ty, CharUnits Align,
-                                          const Twine &Name,
-                                          RawAddress *Alloca,
+                                          const Twine &Name, RawAddress *Alloca,
                                           GSObjectKind GSKind) {
   RawAddress Result =
       CreateTempAlloca(ConvertTypeForMem(Ty), Ty.getAddressSpace(), Align, Name,

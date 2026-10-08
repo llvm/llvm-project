@@ -1671,8 +1671,9 @@ static bool isGSBuffer(const ASTContext &Ctx, QualType Ty,
   if (const ConstantArrayType *CAT = Ctx.getAsConstantArrayType(Ty)) {
     QualType ElemTy = CAT->getElementType();
     if (Ctx.getTypeSizeInChars(Ty).getQuantity() > MinGSArraySize &&
-        (Position == GSTypePosition::TopLevel ? hasMoreThanTwoGSElements(Ctx, Ty)
-                                              : !isGSPointerType(ElemTy)))
+        (Position == GSTypePosition::TopLevel
+             ? hasMoreThanTwoGSElements(Ctx, Ty)
+             : !isGSPointerType(ElemTy)))
       return Found(Ty);
 
     // The array itself is not a GS buffer, but its elements may still be or
@@ -1726,9 +1727,9 @@ void CodeGenFunction::MarkGSBufferAlloca(llvm::AllocaInst *AI, bool IsLarge,
   if (AI->getMetadata("stack-protector"))
     return;
 
-  // 2 is a large buffer and 1 a small one. The second operand says the object is
-  // trivial, and is left out when it is not, which is the common case; see the
-  // "stack-protector" metadata in LLVM's LangRef.
+  // 2 is a large buffer and 1 a small one. The second operand says the object
+  // is trivial, and is left out when it is not, which is the common case; see
+  // the "stack-protector" metadata in LLVM's LangRef.
   llvm::LLVMContext &Ctx = Builder.getContext();
   SmallVector<llvm::Metadata *, 2> Ops = {
       llvm::ConstantAsMetadata::get(Builder.getInt32(IsLarge ? 2 : 1))};
@@ -1763,8 +1764,8 @@ void CodeGenFunction::EmitGSBufferStackProtectorMD(llvm::Value *AllocaPtr,
   // and the destructor runs on the original.
   if (Kind == GSObjectKind::ArgumentCopy) {
     const auto *RD = Ty->getAsCXXRecordDecl();
-    if (RD && !(RD->hasSimpleCopyConstructor() &&
-                RD->hasTrivialCopyConstructor()))
+    if (RD &&
+        !(RD->hasSimpleCopyConstructor() && RD->hasTrivialCopyConstructor()))
       return;
   }
 
