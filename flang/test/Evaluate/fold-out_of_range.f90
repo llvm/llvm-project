@@ -1,4 +1,5 @@
 ! RUN: %python %S/test_folding.py %s %flang_fc1 -pedantic -triple x86_64-unknown-linux-gnu
+! RUN: %python %S/test_folding.py %s %flang_fc1 -pedantic -triple x86_64-unknown-linux-gnu -fdefault-integer-8
 ! UNSUPPORTED: system-windows
 ! REQUIRES: target=x86_64{{.*}}
 ! REQUIRES: flang-supports-f128-math
@@ -352,6 +353,7 @@ module m
   logical, parameter :: test_r16i16ur = all(out_of_range(real(i16v, kind=16)+.5_16, 1_16, .true.)  .eqv. [.false., .true.])
   logical, parameter :: test_r16i16d  = all(out_of_range(real(i16v, kind=16)-.5_16, 1_16, .false.) .eqv. [.false., .true.])
   logical, parameter :: test_r16i16dr = all(out_of_range(real(i16v, kind=16)-.5_16, 1_16, .true.)  .eqv. [.false., .true.])
+  logical, parameter :: test_kind = kind(out_of_range([128.0_8], 1_1)) == kind(.true.)
 
  contains
   subroutine s(x, r)
