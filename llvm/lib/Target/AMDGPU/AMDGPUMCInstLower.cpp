@@ -90,8 +90,8 @@ bool AMDGPUMCInstLower::lowerOperand(const MachineOperand &MO,
     SmallString<128> SymbolName;
     AP.getNameWithPrefix(SymbolName, GV);
     MCSymbol *Sym = Ctx.getOrCreateSymbol(SymbolName);
-    const MCExpr *Expr = MCSymbolRefExpr::create(
-        Sym, static_cast<uint16_t>(getSpecifier(MO.getTargetFlags())), Ctx);
+    const MCExpr *Expr =
+        MCSymbolRefExpr::create(Sym, getSpecifier(MO.getTargetFlags()), Ctx);
     int64_t Offset = MO.getOffset();
     if (Offset != 0) {
       Expr = MCBinaryExpr::createAdd(Expr,
@@ -102,15 +102,15 @@ bool AMDGPUMCInstLower::lowerOperand(const MachineOperand &MO,
   }
   case MachineOperand::MO_ExternalSymbol: {
     MCSymbol *Sym = Ctx.getOrCreateSymbol(StringRef(MO.getSymbolName()));
-    const MCExpr *Expr = MCSymbolRefExpr::create(
-        Sym, static_cast<uint16_t>(getSpecifier(MO.getTargetFlags())), Ctx);
+    const MCExpr *Expr =
+        MCSymbolRefExpr::create(Sym, getSpecifier(MO.getTargetFlags()), Ctx);
     MCOp = MCOperand::createExpr(Expr);
     return true;
   }
   case MachineOperand::MO_BlockAddress: {
     MCSymbol *Sym = AP.GetBlockAddressSymbol(MO.getBlockAddress());
-    const MCSymbolRefExpr *Expr = MCSymbolRefExpr::create(
-        Sym, static_cast<uint16_t>(getSpecifier(MO.getTargetFlags())), Ctx);
+    const MCSymbolRefExpr *Expr =
+        MCSymbolRefExpr::create(Sym, getSpecifier(MO.getTargetFlags()), Ctx);
     assert(MO.getOffset() == 0);
     MCOp = MCOperand::createExpr(Expr);
     return true;
