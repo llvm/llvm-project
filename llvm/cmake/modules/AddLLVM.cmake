@@ -751,13 +751,11 @@ function(llvm_add_library name)
   ## This will also keep us below the 64k exported symbol limit
   ## https://blog.llvm.org/2018/11/30-faster-windows-builds-with-clang-cl_14.html
   if(LLVM_BUILD_LLVM_DYLIB AND NOT LLVM_DYLIB_EXPORT_INLINES AND MSVC)
-    set(_is_clang_c_or_cxx
-      "$<OR:$<COMPILE_LANG_AND_ID:C,Clang>,$<COMPILE_LANG_AND_ID:CXX,Clang>>")
     target_compile_options(${name} PUBLIC
-      "$<${_is_clang_c_or_cxx}:/Zc:dllexportInlines->")
+      "$<$<COMPILE_LANGUAGE:C,CXX>:$<$<CXX_COMPILER_ID:Clang>:/Zc:dllexportInlines->>")
     if(TARGET ${obj_name})
       target_compile_options(${obj_name} PUBLIC
-        "$<${_is_clang_c_or_cxx}:/Zc:dllexportInlines->")
+        "$<$<COMPILE_LANGUAGE:C,CXX>:$<$<CXX_COMPILER_ID:Clang>:/Zc:dllexportInlines->>")
     endif()
   endif()
 
@@ -1298,11 +1296,8 @@ macro(add_llvm_executable name)
 
   if(LLVM_BUILD_LLVM_DYLIB_VIS AND NOT LLVM_DYLIB_EXPORT_INLINES AND MSVC)
     # This has to match how the libraries the executable is linked to are built or there be linker errors.
-    set(_is_clang_c_or_cxx
-      "$<OR:$<COMPILE_LANG_AND_ID:C,Clang>,$<COMPILE_LANG_AND_ID:CXX,Clang>>")
     target_compile_options(${name} PRIVATE
-      "$<${_is_clang_c_or_cxx}:/Zc:dllexportInlines->")
-    unset(_is_clang_c_or_cxx)
+      "$<$<COMPILE_LANGUAGE:C,CXX>:$<$<CXX_COMPILER_ID:Clang>:/Zc:dllexportInlines->>")
   endif()
 endmacro(add_llvm_executable name)
 
