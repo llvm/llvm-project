@@ -8129,7 +8129,7 @@ bool SIInstrWorklist::isDeferred(MachineInstr *MI) {
 // Create VReg32 for MI dst. This is called when a SALU16 (dst32)
 // is moved to VALU16 (dst16) to preserved the register size of dst operand
 static Register createLo16ToVReg32(MachineInstr &MI, const SIInstrInfo *TII) {
-  MachineOperand DstOp = MI.getOperand(0);
+  MachineOperand &DstOp = MI.getOperand(0);
   assert(DstOp.isReg() && DstOp.isDef());
   Register DstReg = DstOp.getReg();
   MachineBasicBlock *MBB = MI.getParent();

@@ -23,6 +23,8 @@ define amdgpu_ps bfloat @strict_fsub_bf16_ss(bfloat inreg %a, bfloat inreg %b) #
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    s_pack_ll_b32_b16 s0, s0, s0
+; GFX1250-NEXT:    s_pack_ll_b32_b16 s1, s1, s0
 ; GFX1250-NEXT:    v_pk_add_bf16 v0, s0, s1 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s0

@@ -739,11 +739,10 @@ define amdgpu_ps <3 x half> @test_fminimum_v3f16_ss(<3 x half> inreg %a, <3 x ha
 ; GFX1170-GISEL-TRUE16-LABEL: test_fminimum_v3f16_ss:
 ; GFX1170-GISEL-TRUE16:       ; %bb.0:
 ; GFX1170-GISEL-TRUE16-NEXT:    v_minimum_f16 v0.l, s1, s3
-; GFX1170-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX1170-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.l
+; GFX1170-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX1170-GISEL-TRUE16-NEXT:    v_readfirstlane_b32 s1, v0
 ; GFX1170-GISEL-TRUE16-NEXT:    v_pk_minimum_f16 v0, s0, s2
-; GFX1170-GISEL-TRUE16-NEXT:    v_readfirstlane_b32 s0, v1
-; GFX1170-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-GISEL-TRUE16-NEXT:    s_pack_ll_b32_b16 s0, s1, s0
 ; GFX1170-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX1170-GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ;
@@ -762,14 +761,25 @@ define amdgpu_ps <3 x half> @test_fminimum_v3f16_ss(<3 x half> inreg %a, <3 x ha
 ; GFX12-SDAG-NEXT:    v_pk_minimum_f16 v1, s1, s3
 ; GFX12-SDAG-NEXT:    ; return to shader part epilog
 ;
-; GFX12-GISEL-LABEL: test_fminimum_v3f16_ss:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    v_pk_minimum_f16 v0, s0, s2
-; GFX12-GISEL-NEXT:    s_minimum_f16 s0, s1, s3
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, s0
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
+; GFX12-GISEL-TRUE16-LABEL: test_fminimum_v3f16_ss:
+; GFX12-GISEL-TRUE16:       ; %bb.0:
+; GFX12-GISEL-TRUE16-NEXT:    v_pk_minimum_f16 v0, s0, s2
+; GFX12-GISEL-TRUE16-NEXT:    s_minimum_f16 s0, s1, s3
+; GFX12-GISEL-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
+; GFX12-GISEL-TRUE16-NEXT:    s_pack_ll_b32_b16 s0, s0, s0
+; GFX12-GISEL-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v1, s0
+; GFX12-GISEL-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-FAKE16-LABEL: test_fminimum_v3f16_ss:
+; GFX12-GISEL-FAKE16:       ; %bb.0:
+; GFX12-GISEL-FAKE16-NEXT:    v_pk_minimum_f16 v0, s0, s2
+; GFX12-GISEL-FAKE16-NEXT:    s_minimum_f16 s0, s1, s3
+; GFX12-GISEL-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
+; GFX12-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v1, s0
+; GFX12-GISEL-FAKE16-NEXT:    ; return to shader part epilog
   %val = call <3 x half> @llvm.minimum.v3f16(<3 x half> %a, <3 x half> %b)
   ret <3 x half> %val
 }

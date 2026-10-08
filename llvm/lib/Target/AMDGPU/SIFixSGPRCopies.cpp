@@ -239,7 +239,8 @@ static bool isSGPRToVGPRCopy(const TargetRegisterClass *SrcRC,
 static bool tryChangeVGPRtoSGPRinCopy(MachineInstr &MI,
                                       const SIRegisterInfo *TRI,
                                       const SIInstrInfo *TII) {
-  MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  MachineFunction *MF = MI.getMF();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
   auto &Src = MI.getOperand(1);
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = Src.getReg();
@@ -247,7 +248,7 @@ static bool tryChangeVGPRtoSGPRinCopy(MachineInstr &MI,
   if (!SrcReg.isVirtual() || !DstReg.isVirtual())
     return false;
 
-  const GCNSubtarget &ST = MI.getMF()->getSubtarget<GCNSubtarget>();
+  const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
   SmallVector<MachineOperand *, 4> Lo16Users;
 
   for (auto &MO : MRI.reg_nodbg_operands(DstReg)) {

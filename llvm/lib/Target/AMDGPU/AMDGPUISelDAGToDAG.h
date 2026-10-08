@@ -316,6 +316,7 @@ private:
   bool Legalize16BitExtractSubReg(SDNode *N);
   bool Legalize16BitCrossBank(SDNode *N);
   bool Legalize16BitRegClass(SDNode *N);
+  bool Legalize16BitUndef(SDNode *N);
   const TargetRegisterClass *inferNodeRegClass(SDNode *N) const;
 
 protected:

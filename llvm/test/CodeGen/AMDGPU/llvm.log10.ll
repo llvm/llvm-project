@@ -9126,9 +9126,10 @@ define <3 x half> @v_log10_v3f16_fpmath(<3 x half> %x) {
 ; GFX1100-GISEL-TRUE16-NEXT:    v_log_f16_e32 v0.l, v0.l
 ; GFX1100-GISEL-TRUE16-NEXT:    v_log_f16_e32 v0.h, v0.h
 ; GFX1100-GISEL-TRUE16-NEXT:    v_log_f16_e32 v1.l, v1.l
+; GFX1100-GISEL-TRUE16-NEXT:    s_pack_ll_b32_b16 s0, 0x34d1, s0
 ; GFX1100-GISEL-TRUE16-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX1100-GISEL-TRUE16-NEXT:    v_pk_mul_f16 v0, 0x34d134d1, v0
-; GFX1100-GISEL-TRUE16-NEXT:    v_pk_mul_f16 v1, 0x34d1, v1
+; GFX1100-GISEL-TRUE16-NEXT:    v_pk_mul_f16 v1, v1, s0
 ; GFX1100-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1100-GISEL-FAKE16-LABEL: v_log10_v3f16_fpmath:
