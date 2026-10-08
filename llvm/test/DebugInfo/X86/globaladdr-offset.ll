@@ -6,7 +6,7 @@
 ;; both reach the same DWARF.
 
 ; RUN: llc -O2 -mtriple=x86_64-unknown-linux-gnu -dwarf-version=5 \
-; RUN:   -stop-after=livedebugvalues < %s | FileCheck %s --check-prefix=MIR
+; RUN:   -stop-after=live-debug-values < %s | FileCheck %s --check-prefix=MIR
 ; RUN: llc -O2 -mtriple=x86_64-unknown-linux-gnu -dwarf-version=5 \
 ; RUN:   -filetype=obj < %s | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF
 

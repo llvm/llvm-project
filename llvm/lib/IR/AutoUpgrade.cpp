@@ -2499,8 +2499,7 @@ GlobalVariable *llvm::UpgradeGlobalVariable(GlobalVariable *GV) {
   if (!STy || STy->getNumElements() != 2)
     return nullptr;
 
-  LLVMContext &C = GV->getContext();
-  IRBuilder<> IRB(C);
+  IRBuilder<> IRB(*GV->getParent());
   auto EltTy = StructType::get(STy->getElementType(0), STy->getElementType(1),
                                IRB.getPtrTy());
   Constant *Init = GV->getInitializer();
@@ -5766,7 +5765,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     return;
 
   LLVMContext &C = CI->getContext();
-  IRBuilder<> Builder(CI->getParent(), CI->getIterator());
+  IRBuilder<> Builder(CI->getIterator());
   if (isa<FPMathOperator>(CI))
     Builder.setFastMathFlags(CI->getFastMathFlags());
 
@@ -6974,7 +6973,7 @@ void llvm::UpgradeARCRuntime(Module &M) {
       if (!CI || CI->getCalledFunction() != Fn)
         continue;
 
-      IRBuilder<> Builder(CI->getParent(), CI->getIterator());
+      IRBuilder<> Builder(CI->getIterator());
       FunctionType *NewFuncTy = NewFn->getFunctionType();
       SmallVector<Value *, 2> Args;
 
@@ -7239,8 +7238,10 @@ bool llvm::UpgradeModuleFlags(Module &M) {
 
     // Upgrade branch protection and return address signing module flags. The
     // module flag behavior for these fields were Error and now they are Min.
+    // The one exception is "sign-return-address-harden".
     if (ID->getString() == "branch-target-enforcement" ||
-        ID->getString().starts_with("sign-return-address")) {
+        (ID->getString().starts_with("sign-return-address") &&
+         ID->getString() != "sign-return-address-harden")) {
       if (auto *Behavior =
               mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(0))) {
         if (Behavior->getLimitedValue() == Module::Error) {

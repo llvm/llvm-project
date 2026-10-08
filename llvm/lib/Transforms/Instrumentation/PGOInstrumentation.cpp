@@ -956,7 +956,7 @@ void FunctionInstrumenter::instrument() {
       Name, PointerType::get(M.getContext(), 0));
   if (PGOFunctionEntryCoverage) {
     auto &EntryBB = F.getEntryBlock();
-    IRBuilder<> Builder(&EntryBB, EntryBB.getFirstNonPHIOrDbgOrAlloca());
+    IRBuilder<> Builder(EntryBB.getFirstNonPHIOrDbgOrAlloca());
     // llvm.instrprof.cover(i8* <name>, i64 <hash>, i32 <num-counters>,
     //                      i32 <index>)
     Builder.CreateIntrinsic(
@@ -1014,7 +1014,7 @@ void FunctionInstrumenter::instrument() {
   if (PGOTemporalInstrumentation) {
     NumCounters += PGOBlockCoverage ? 8 : 1;
     auto &EntryBB = F.getEntryBlock();
-    IRBuilder<> Builder(&EntryBB, EntryBB.getFirstNonPHIOrDbgOrAlloca());
+    IRBuilder<> Builder(EntryBB.getFirstNonPHIOrDbgOrAlloca());
     // llvm.instrprof.timestamp(i8* <name>, i64 <hash>, i32 <num-counters>,
     //                          i32 <index>)
     Builder.CreateIntrinsic(Intrinsic::instrprof_timestamp,
@@ -1025,7 +1025,7 @@ void FunctionInstrumenter::instrument() {
   }
 
   for (auto *InstrBB : InstrumentBBs) {
-    IRBuilder<> Builder(InstrBB, InstrBB->getFirstNonPHIOrDbgOrAlloca());
+    IRBuilder<> Builder(InstrBB->getFirstNonPHIOrDbgOrAlloca());
     assert(Builder.GetInsertPoint() != InstrBB->end() &&
            "Cannot get the Instrumentation point");
     // llvm.instrprof.increment(i8* <name>, i64 <hash>, i32 <num-counters>,
