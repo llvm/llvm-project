@@ -3139,6 +3139,80 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
   return nullptr;
 }
 
+/// Return true for the narrow loop-carried PHI shape where converting the
+/// branch to a select would put the selected value directly on the next
+/// loop-header branch condition.
+static bool shouldVetoLoopCarriedSelect(BasicBlock *BB, BasicBlock *ThenBB,
+                                        BasicBlock *EndBB,
+                                        ArrayRef<WeakVH> LoopHeaders) {
+  auto *BI = dyn_cast<CondBrInst>(BB->getTerminator());
+  if (!BI || !isa<ICmpInst>(BI->getCondition()))
+    return false;
+  if (BB == EndBB)
+    return false;
+
+  // Only handle the empty-arm diamond that speculativelyExecuteBB would
+  // otherwise flatten.
+  if (ThenBB->getSinglePredecessor() != BB ||
+      ThenBB->getSingleSuccessor() != EndBB)
+    return false;
+  for (const Instruction &I : *ThenBB)
+    if (!I.isDebugOrPseudoInst() && !I.isTerminator())
+      return false;
+
+  // Usually the merge block feeds a separate loop header.  A previous CFG
+  // simplification can instead make the merge block itself the loop header;
+  // in that form its PHI is used directly by its own terminator.
+  BasicBlock *Header = nullptr;
+  auto IsLoopHeader = [&LoopHeaders](BasicBlock *Block) {
+    return is_contained(LoopHeaders, WeakVH(Block));
+  };
+  auto *EndBI = dyn_cast<CondBrInst>(EndBB->getTerminator());
+  bool UseEndBBCondition = IsLoopHeader(EndBB);
+  if (!UseEndBBCondition && EndBI)
+    UseEndBBCondition = any_of(EndBI->successors(), IsLoopHeader);
+  if (UseEndBBCondition) {
+    Header = EndBB;
+  } else {
+    Header = EndBB->getSingleSuccessor();
+    if (!Header || !IsLoopHeader(Header))
+      return false;
+  }
+
+  auto *HeaderBI = dyn_cast<CondBrInst>(Header->getTerminator());
+  if (!HeaderBI || !isa<ICmpInst>(HeaderBI->getCondition()))
+    return false;
+  auto *HeaderCond = cast<Instruction>(HeaderBI->getCondition());
+
+  // Look for a nontrivial merge PHI feeding a loop-header PHI whose value
+  // is directly used by the loop-header comparison.  Inspect the current
+  // merge block here instead of relying on a PHI list collected by
+  // validateAndCostRequiredSelects
+  for (PHINode &PN : EndBB->phis()) {
+    Value *BBValue = PN.getIncomingValueForBlock(BB);
+    Value *ThenValue = PN.getIncomingValueForBlock(ThenBB);
+    if (!BBValue || !ThenValue || BBValue == ThenValue)
+      continue;
+
+    if (UseEndBBCondition) {
+      if (any_of(HeaderCond->operands(),
+                 [&PN](Value *Op) { return Op == &PN; }))
+        return true;
+      continue;
+    }
+
+    for (PHINode &HeaderPN : Header->phis()) {
+      if (HeaderPN.getIncomingValueForBlock(EndBB) != &PN)
+        continue;
+
+      if (any_of(HeaderCond->operands(),
+                 [&HeaderPN](Value *Op) { return Op == &HeaderPN; }))
+        return true;
+    }
+  }
+
+  return false;
+}
 /// Estimate the cost of the insertion(s) and check that the PHI nodes can be
 /// converted to selects.
 static bool validateAndCostRequiredSelects(BasicBlock *BB, BasicBlock *ThenBB,
@@ -3261,6 +3335,13 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
 
   BasicBlock *BB = BI->getParent();
   BasicBlock *EndBB = ThenBB->getTerminator()->getSuccessor(0);
+
+  if (shouldVetoLoopCarriedSelect(BB, ThenBB, EndBB, LoopHeaders)) {
+    LLVM_DEBUG(dbgs() << "vetoing speculative execution of loop-carried "
+                      << "branch in " << BB->getName() << "\n");
+    return false;
+  }
+
   InstructionCost Budget =
       PHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic;
 
