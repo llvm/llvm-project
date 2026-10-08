@@ -22,6 +22,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/KnownBits.h"
@@ -103,7 +104,8 @@ static Value *EvaluateInDifferentTypeImpl(Value *V, Type *Ty, bool isSigned,
                                               IC, Processed);
     Value *False = EvaluateInDifferentTypeImpl(I->getOperand(2), Ty, isSigned,
                                                IC, Processed);
-    Res = SelectInst::Create(I->getOperand(0), True, False);
+    Res = SelectInst::Create(I->getOperand(0), True, False, "", nullptr,
+                             ProfcheckDisableMetadataFixes ? nullptr : I);
     break;
   }
   case Instruction::PHI: {
@@ -1943,6 +1945,44 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
     return CI;
   }
 
+  Value *X;
+  if (match(Src, m_Trunc(m_Value(X)))) {
+    // If the input has more sign bits than bits truncated, then convert
+    // directly to final type.
+    unsigned XBitSize = X->getType()->getScalarSizeInBits();
+    unsigned TruncatedBits = XBitSize - SrcBitSize;
+    bool HasNSW = cast<TruncInst>(Src)->hasNoSignedWrap();
+    if (HasNSW || (ComputeNumSignBits(X, &Sext) > TruncatedBits)) {
+      auto *Res = CastInst::CreateIntegerCast(X, DestTy, /* isSigned */ true);
+      if (auto *ResTrunc = dyn_cast<TruncInst>(Res); ResTrunc && HasNSW)
+        ResTrunc->setHasNoSignedWrap(true);
+      return Res;
+    }
+
+    // If we are replacing shifted-in high zero bits with sign bits, convert
+    // the logic shift to arithmetic shift and eliminate the cast to
+    // intermediate type:
+    // sext (trunc (lshr Y, C)) --> sext/trunc (ashr Y, C)
+    // where C <= truncatedbits && signbits(Y) + C > truncatedbits
+    Value *Y;
+    const APInt *C;
+    if (Src->hasOneUse() &&
+        match(X, m_LShr(m_Value(Y), m_APIntAllowPoison(C))) &&
+        C->ule(TruncatedBits) &&
+        (*C == TruncatedBits ||
+         ComputeNumSignBits(Y, &Sext) + C->getZExtValue() > TruncatedBits)) {
+      Value *Ashr = Builder.CreateAShr(Y, C->getZExtValue());
+      return CastInst::CreateIntegerCast(Ashr, DestTy, /* isSigned */ true);
+    }
+
+    // If input is a trunc from the destination type, then convert into shifts.
+    if (Src->hasOneUse() && X->getType() == DestTy) {
+      // sext (trunc X) --> ashr (shl X, C), C
+      Constant *ShAmt = ConstantInt::get(DestTy, DestBitSize - SrcBitSize);
+      return BinaryOperator::CreateAShr(Builder.CreateShl(X, ShAmt), ShAmt);
+    }
+  }
+
   // Try to extend the entire expression tree to the wide destination type.
   bool ShouldExtendExpression = true;
   Value *TruncSrc = nullptr;
@@ -1970,39 +2010,6 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
     Value *ShAmt = ConstantInt::get(DestTy, DestBitSize - SrcBitSize);
     return BinaryOperator::CreateAShr(Builder.CreateShl(Res, ShAmt, "sext"),
                                       ShAmt);
-  }
-
-  Value *X = TruncSrc;
-  if (X) {
-    // If the input has more sign bits than bits truncated, then convert
-    // directly to final type.
-    unsigned XBitSize = X->getType()->getScalarSizeInBits();
-    bool HasNSW = cast<TruncInst>(Src)->hasNoSignedWrap();
-    if (HasNSW || (ComputeNumSignBits(X, &Sext) > XBitSize - SrcBitSize)) {
-      auto *Res = CastInst::CreateIntegerCast(X, DestTy, /* isSigned */ true);
-      if (auto *ResTrunc = dyn_cast<TruncInst>(Res); ResTrunc && HasNSW)
-        ResTrunc->setHasNoSignedWrap(true);
-      return Res;
-    }
-
-    // If input is a trunc from the destination type, then convert into shifts.
-    if (Src->hasOneUse() && X->getType() == DestTy) {
-      // sext (trunc X) --> ashr (shl X, C), C
-      Constant *ShAmt = ConstantInt::get(DestTy, DestBitSize - SrcBitSize);
-      return BinaryOperator::CreateAShr(Builder.CreateShl(X, ShAmt), ShAmt);
-    }
-
-    // If we are replacing shifted-in high zero bits with sign bits, convert
-    // the logic shift to arithmetic shift and eliminate the cast to
-    // intermediate type:
-    // sext (trunc (lshr Y, C)) --> sext/trunc (ashr Y, C)
-    Value *Y;
-    if (Src->hasOneUse() &&
-        match(X, m_LShr(m_Value(Y),
-                        m_SpecificIntAllowPoison(XBitSize - SrcBitSize)))) {
-      Value *Ashr = Builder.CreateAShr(Y, XBitSize - SrcBitSize);
-      return CastInst::CreateIntegerCast(Ashr, DestTy, /* isSigned */ true);
-    }
   }
 
   if (auto *Cmp = dyn_cast<ICmpInst>(Src))

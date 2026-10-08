@@ -185,10 +185,10 @@ bool VectorizerParams::isInterleaveForced() {
   return ::VectorizationInterleave.getNumOccurrences() > 0;
 }
 
-const SCEV *
-llvm::replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
-                                const SymbolicStrideMap &PtrToStride,
-                                Value *Ptr) {
+const SCEV *llvm::replaceSymbolicStrideSCEV(
+    PredicatedScalarEvolution &PSE, const Loop *Lp,
+    const SymbolicStrideMap &PtrToStride, Value *Ptr,
+    SmallVectorImpl<const SCEVPredicate *> *Predicates) {
   const SCEV *OrigSCEV = PSE.getSCEV(Ptr);
 
   // If there is an entry in the map return the SCEV of the pointer with the
@@ -200,11 +200,18 @@ llvm::replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
 
   ScalarEvolution *SE = PSE.getSE();
   const SCEV *CT = SE->getOne(StrideSCEV->getType());
-  PSE.addPredicate(*SE->getEqualPredicate(StrideSCEV, CT));
-  const SCEV *Expr = PSE.getSCEV(Ptr);
-
-  LLVM_DEBUG(dbgs() << "LAA: Replacing SCEV: " << *OrigSCEV
-	     << " by: " << *Expr << "\n");
+  const SCEV *Expr;
+  const SCEVPredicate *EqPred = SE->getEqualPredicate(StrideSCEV, CT);
+  if (Predicates) {
+    Predicates->push_back(EqPred);
+    Expr = SE->rewriteUsingPredicate(OrigSCEV, Lp,
+                                     SCEVUnionPredicate(*Predicates, *SE));
+  } else {
+    PSE.addPredicate(*EqPred);
+    Expr = PSE.getSCEV(Ptr);
+  }
+  LLVM_DEBUG(dbgs() << "LAA: Replacing SCEV: " << *OrigSCEV << " by: " << *Expr
+                    << "\n");
   return Expr;
 }
 
@@ -780,9 +787,10 @@ void RuntimePointerChecking::groupChecks(
 
   unsigned TotalComparisons = 0;
 
-  DenseMap<Value *, SmallVector<unsigned>> PositionMap;
+  DenseMap<MemoryDepChecker::MemAccessInfo, SmallVector<unsigned>> PositionMap;
   for (unsigned Index = 0; Index < Pointers.size(); ++Index)
-    PositionMap[Pointers[Index].PointerValue].push_back(Index);
+    PositionMap[{Pointers[Index].PointerValue, Pointers[Index].IsWritePtr}]
+        .push_back(Index);
 
   // We need to keep track of what pointers we've already seen so we
   // don't process them twice.
@@ -815,15 +823,10 @@ void RuntimePointerChecking::groupChecks(
     // the order in which unions and insertions are performed on the
     // equivalence class, the iteration order is deterministic.
     for (auto M : DepCands.members(Access)) {
-      auto PointerI = PositionMap.find(M.getPointer());
-      // If we can't find the pointer in PositionMap that means we can't
-      // generate a memcheck for it.
-      if (PointerI == PositionMap.end())
-        continue;
-      for (unsigned Pointer : PointerI->second) {
-        bool Merged = false;
-        // Mark this pointer as seen.
+      for (unsigned Pointer : PositionMap.lookup(M)) {
+        assert(!Seen.contains(Pointer) && "pointer already processed");
         Seen.insert(Pointer);
+        bool Merged = false;
 
         // Go through all the existing sets and see if we can find one
         // which can include this pointer.
@@ -2172,7 +2175,8 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
                for (const auto &[Idx, Q] : enumerate(RTCheckPtrs)) dbgs()
                << "\t(" << Idx << ") " << *Q.getPointer() << "\n");
   } else {
-    RTCheckPtrs = {{replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr), false}};
+    RTCheckPtrs = {
+        {replaceSymbolicStrideSCEV(PSE, TheLoop, StridesMap, Ptr), false}};
   }
 
   /// Check whether all pointers can participate in a runtime bounds check. They
@@ -2204,7 +2208,7 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
       PSE.addPredicates(Predicates);
       Predicates.clear();
       if (auto *StrideAR = dyn_cast<SCEVAddRecExpr>(
-              replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr)))
+              replaceSymbolicStrideSCEV(PSE, TheLoop, StridesMap, Ptr)))
         AR = StrideAR;
       P.setPointer(AR);
     }
@@ -2557,7 +2561,8 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
                    const Loop *Lp, const DominatorTree &DT,
                    const SymbolicStrideMap &StridesMap, bool ShouldCheckWrap,
                    SmallVectorImpl<const SCEVPredicate *> *Predicates) {
-  const SCEV *PtrScev = replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr);
+  const SCEV *PtrScev =
+      replaceSymbolicStrideSCEV(PSE, Lp, StridesMap, Ptr, Predicates);
   if (PSE.getSE()->isLoopInvariant(PtrScev, Lp))
     return 0;
 
