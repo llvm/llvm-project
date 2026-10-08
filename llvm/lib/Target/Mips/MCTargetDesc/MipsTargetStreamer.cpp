@@ -905,11 +905,8 @@ MipsTargetELFStreamer::MipsTargetELFStreamer(MCStreamer &S,
   // fully, but any external user of the API that uses the MCTargetStreamer
   // would otherwise crash on assertion failure.
 
-  ABI = MipsABIInfo(
-      STI.getTargetTriple().getArch() == Triple::ArchType::mipsel ||
-              STI.getTargetTriple().getArch() == Triple::ArchType::mips
-          ? MipsABIInfo::O32()
-          : MipsABIInfo::N64());
+  ABI = MipsABIInfo(STI.getTargetTriple().isMIPS32() ? MipsABIInfo::O32()
+                                                     : MipsABIInfo::N64());
 
   // Architecture
   if (Features[Mips::FeatureMips64r6])

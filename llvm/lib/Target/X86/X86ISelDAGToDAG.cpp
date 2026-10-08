@@ -41,16 +41,6 @@ using namespace llvm;
 
 STATISTIC(NumLoadMoved, "Number of loads moved below TokenFactor");
 
-static cl::opt<bool> AndImmShrink("x86-and-imm-shrink", cl::init(true),
-    cl::desc("Enable setting constant bits to reduce size of mask immediates"),
-    cl::Hidden);
-
-static cl::opt<bool> EnablePromoteAnyextLoad(
-    "x86-promote-anyext-load", cl::init(true),
-    cl::desc("Enable promoting aligned anyext load to wider load"), cl::Hidden);
-
-extern cl::opt<bool> IndirectBranchTracking;
-
 //===----------------------------------------------------------------------===//
 //                      Pattern Matcher Implementation
 //===----------------------------------------------------------------------===//
@@ -1018,7 +1008,8 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
         Metadata *CFProtectionBranch =
             MF->getFunction().getParent()->getModuleFlag(
                 "cf-protection-branch");
-        if (CFProtectionBranch || IndirectBranchTracking) {
+        if (CFProtectionBranch ||
+            Subtarget->getCLOpts().indirect_branch_tracking) {
           SDLoc dl(N);
           uint64_t ComplementImm =
               (~Imm) & maskTrailingOnes<uint64_t>(VT.getSizeInBits());
@@ -5747,11 +5738,12 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       SDValue Target = Node->getOperand(1);
       assert(Target.getValueType() == MVT::i32 && "Unexpected VT!");
       SDValue ZextTarget = CurDAG->getZExtOrTrunc(Target, dl, MVT::i64);
-      SDValue Brind = CurDAG->getNode(Opcode, dl, MVT::Other,
-                                      Node->getOperand(0), ZextTarget);
-      ReplaceNode(Node, Brind.getNode());
-      SelectCode(ZextTarget.getNode());
-      SelectCode(Brind.getNode());
+      insertDAGNode(*CurDAG, SDValue(Node, 0), ZextTarget);
+
+      unsigned Opc = Opcode == X86ISD::NT_BRIND ? X86::JMP64r_NT : X86::JMP64r;
+      SDNode *Res = CurDAG->getMachineNode(Opc, dl, MVT::Other, ZextTarget,
+                                           Node->getOperand(0));
+      ReplaceNode(Node, Res);
       return;
     }
     break;
@@ -5813,7 +5805,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     }
     if (matchBitExtract(Node))
       return;
-    if (AndImmShrink && shrinkAndImmediate(Node))
+    if (Subtarget->getCLOpts().and_imm_shrink && shrinkAndImmediate(Node))
       return;
 
     [[fallthrough]];
