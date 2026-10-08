@@ -61,13 +61,13 @@ define void @alloca_address_stored(ptr noalias %dst, i64 %n) {
 ; VF1IC2:       [[VECTOR_BODY]]:
 ; VF1IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF1IC2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; VF1IC2-NEXT:    [[TMP2:%.*]] = trunc i64 [[INDEX]] to i32
-; VF1IC2-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], 1
 ; VF1IC2-NEXT:    [[TMP4:%.*]] = alloca [8 x i8], align 16
 ; VF1IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds ptr, ptr [[DST]], i64 [[INDEX]]
 ; VF1IC2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds ptr, ptr [[DST]], i64 [[TMP1]]
 ; VF1IC2-NEXT:    store ptr [[TMP4]], ptr [[TMP5]], align 8
 ; VF1IC2-NEXT:    store ptr [[TMP4]], ptr [[TMP6]], align 8
+; VF1IC2-NEXT:    [[TMP2:%.*]] = trunc i64 [[INDEX]] to i32
+; VF1IC2-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP1]] to i32
 ; VF1IC2-NEXT:    store i32 [[TMP2]], ptr [[TMP4]], align 4
 ; VF1IC2-NEXT:    store i32 [[TMP3]], ptr [[TMP4]], align 4
 ; VF1IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2

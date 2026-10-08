@@ -36,10 +36,10 @@ define void @example12() {
 ; IC2:       [[VECTOR_BODY]]:
 ; IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; IC2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
-; IC2-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDEX]] to i32
-; IC2-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 1
 ; IC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [2048 x i32], ptr @a, i64 0, i64 [[INDEX]]
 ; IC2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2048 x i32], ptr @a, i64 0, i64 [[TMP0]]
+; IC2-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDEX]] to i32
+; IC2-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP0]] to i32
 ; IC2-NEXT:    store i32 [[TMP1]], ptr [[TMP3]], align 4
 ; IC2-NEXT:    store i32 [[TMP2]], ptr [[TMP4]], align 4
 ; IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
@@ -194,8 +194,8 @@ define void @cast_variable_step(i64 %step) {
 ; IC2-NEXT:    [[TMP2:%.*]] = mul i64 [[INDEX]], [[STEP]]
 ; IC2-NEXT:    [[OFFSET_IDX:%.*]] = add i64 10, [[TMP2]]
 ; IC2-NEXT:    [[TMP3:%.*]] = trunc i64 [[OFFSET_IDX]] to i32
-; IC2-NEXT:    [[TMP4:%.*]] = mul i32 1, [[TMP0]]
-; IC2-NEXT:    [[TMP5:%.*]] = add i32 [[TMP3]], [[TMP4]]
+; IC2-NEXT:    [[TMP9:%.*]] = mul i32 1, [[TMP0]]
+; IC2-NEXT:    [[TMP5:%.*]] = add i32 [[TMP3]], [[TMP9]]
 ; IC2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2048 x i32], ptr @a, i64 0, i64 [[INDEX]]
 ; IC2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2048 x i32], ptr @a, i64 0, i64 [[TMP1]]
 ; IC2-NEXT:    store i32 [[TMP3]], ptr [[TMP6]], align 4
@@ -599,7 +599,7 @@ define void @cast_induction_through_identity_op(ptr %dst) {
 ; IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; IC2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
 ; IC2-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDEX]] to i32
-; IC2-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 1
+; IC2-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP0]] to i32
 ; IC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[INDEX]]
 ; IC2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[TMP0]]
 ; IC2-NEXT:    store i32 [[TMP1]], ptr [[TMP3]], align 4
