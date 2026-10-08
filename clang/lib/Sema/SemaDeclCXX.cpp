@@ -4703,6 +4703,10 @@ Sema::BuildMemberInitializer(ValueDecl *Member, Expr *Init,
     Args = MultiExprArg(ParenList->getExprs(), ParenList->getNumExprs());
   } else if (InitListExpr *InitList = dyn_cast<InitListExpr>(Init)) {
     Args = MultiExprArg(InitList->getInits(), InitList->getNumInits());
+  } else if (auto *ParenListInit = dyn_cast<CXXParenListInitExpr>(Init)) {
+    // Template instantiation reverts the elements to their syntactic form;
+    // redo the initialization from the written arguments.
+    Args = ParenListInit->getUserSpecifiedInitExprs();
   } else {
     // Template instantiation doesn't reconstruct ParenListExprs for us.
     Args = Init;
@@ -17528,6 +17532,30 @@ VarDecl *Sema::BuildExceptionDeclaration(Scope *S, TypeSourceInfo *TInfo,
     Invalid = true;
   }
 
+  // Reject catch types that need a cross-AS conversion.
+  // cause runtimes don't yet support cross-address-
+  // space conversions
+  if (Mode == 1) {
+    if (ExDeclType.getAddressSpace() != LangAS::Default ||
+        BaseType.getAddressSpace() != LangAS::Default) {
+      Diag(Loc, diag::err_throw_or_catch_address_space_qualified_ptr)
+          << /*IsCatch=*/1 << /*IsRef=*/0 << ExDeclType;
+      Invalid = true;
+    }
+  } else if (Mode == 2) {
+    if (const PointerType *PT = BaseType->getAs<PointerType>();
+        PT && (BaseType.getAddressSpace() != LangAS::Default ||
+               PT->getPointeeType().getAddressSpace() != LangAS::Default)) {
+      Diag(Loc, diag::err_throw_or_catch_address_space_qualified_ptr)
+          << /*IsCatch=*/1 << /*IsRef=*/0 << ExDeclType;
+      Invalid = true;
+    } else if (BaseType.getAddressSpace() != LangAS::Default) {
+      Diag(Loc, diag::err_throw_or_catch_address_space_qualified_ptr)
+          << /*IsCatch=*/1 << /*IsRef=*/1 << ExDeclType;
+      Invalid = true;
+    }
+  }
+
   if (!Invalid && Mode != 1 && BaseType->isSizelessType()) {
     Diag(Loc, diag::err_catch_sizeless) << (Mode == 2 ? 1 : 0) << BaseType;
     Invalid = true;
@@ -18816,8 +18844,7 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
     FriendDecl *Friend = FriendDecl::Create(
         Context, CurContext, D.getIdentifierLoc(), ND, DS.getFriendSpecLoc());
     Friend->setAccess(AS_public);
-    if (!isa<FunctionTemplateDecl>(ND))
-      Friend->setInvalidDecl();
+    Friend->setInvalidDecl();
     CurContext->addDecl(Friend);
     return ND;
   }

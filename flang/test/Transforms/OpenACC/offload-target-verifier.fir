@@ -141,7 +141,7 @@ func.func @test_fir_declare_cuda() {
   %c10 = arith.constant 10 : index
   %0 = fir.alloca !fir.array<10xf32>
   %1 = fir.shape %c10 : (index) -> !fir.shape<1>
-  %2 = fir.declare %0(%1) {data_attr = #cuf.cuda<device>, uniq_name = "cuda_array"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+  %2 = fir.declare %0(%1) uniq_name("cuda_array") data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
   // expected-remark @below {{passed validity check}}
   acc.serial {
     %3 = fir.load %2 : !fir.ref<!fir.array<10xf32>>
@@ -156,7 +156,7 @@ func.func @test_fir_declare_cuda() {
 func.func @test_hlfir_declare(%arg0: !fir.ref<f32> {fir.bindc_name = "var"}) {
   %0 = fir.dummy_scope : !fir.dscope
   // expected-note @below {{value}}
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QEvar"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QEvar") : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   // expected-warning @below {{1 illegal live-in value(s)}}
   acc.serial {
     %cst = arith.constant 1.000000e+00 : f32
@@ -234,7 +234,7 @@ func.func @test_cuf_kernel_cuda_device() {
   %c1 = arith.constant 1 : index
   %c1_i32 = arith.constant 1 : i32
   %alloca = fir.alloca f32
-  %decl = fir.declare %alloca {data_attr = #cuf.cuda<device>, uniq_name = "cuda_scalar"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %decl = fir.declare %alloca uniq_name("cuda_scalar") data_attr(#cuf.cuda<device>) : (!fir.ref<f32>) -> !fir.ref<f32>
   // expected-remark @below {{passed validity check}}
   cuf.kernel<<<%c1_i32, %c1_i32>>> (%arg0 : index) = (%c1 : index) to (%c1 : index) step (%c1 : index) {
     %load = fir.load %decl : !fir.ref<f32>
@@ -253,7 +253,7 @@ func.func @test_cuf_kernel_shape_illegal() {
   %alloca = fir.alloca !fir.array<10xf32>
   // expected-note @below {{value}}
   %shape = fir.shape %c10 : (index) -> !fir.shape<1>
-  %decl = fir.declare %alloca(%shape) {data_attr = #cuf.cuda<device>, uniq_name = "cuda_arr"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+  %decl = fir.declare %alloca(%shape) uniq_name("cuda_arr") data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
   // expected-warning @below {{1 illegal live-in value(s)}}
   cuf.kernel<<<%c1_i32, %c1_i32>>> (%arg0 : index) = (%c1 : index) to (%c10 : index) step (%c1 : index) {
     %coor = fir.array_coor %decl(%shape) %arg0 : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
@@ -269,7 +269,7 @@ func.func @test_cuf_kernel_shape_illegal() {
 func.func @test_cuf_kernel_cuf_alloc() {
   %c1 = arith.constant 1 : index
   %c1_i32 = arith.constant 1 : i32
-  %alloca = cuf.alloc f32 {data_attr = #cuf.cuda<device>} -> !fir.ref<f32>
+  %alloca = cuf.alloc f32 data_attr(device) -> !fir.ref<f32>
   // expected-remark @below {{passed validity check}}
   cuf.kernel<<<%c1_i32, %c1_i32>>> (%arg0 : index) = (%c1 : index) to (%c1 : index) step (%c1 : index) {
     %load = fir.load %alloca : !fir.ref<f32>
@@ -283,7 +283,7 @@ func.func @test_cuf_kernel_cuf_alloc() {
 // Test fir.rebox live-in - should fail (box without data clause)
 func.func @test_fir_rebox(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "arr"}) {
   %0 = fir.dummy_scope : !fir.dscope
-  %1 = fir.declare %arg0 dummy_scope %0 {uniq_name = "_QEarr"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
+  %1 = fir.declare %arg0 dummy_scope %0 uniq_name("_QEarr") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
   // expected-note @below {{value}}
   %2 = fir.rebox %1 : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
   // expected-warning @below {{1 illegal live-in value(s)}}
@@ -300,7 +300,7 @@ func.func @test_fir_rebox(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "
 // Test fir.rebox with CUDA device attribute - should pass
 func.func @test_fir_rebox_cuda(%arg0: !fir.box<!fir.array<?xf32>> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "arr"}) {
   %0 = fir.dummy_scope : !fir.dscope
-  %1 = fir.declare %arg0 dummy_scope %0 {data_attr = #cuf.cuda<device>, uniq_name = "_QEarr"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
+  %1 = fir.declare %arg0 dummy_scope %0 uniq_name("_QEarr") data_attr(#cuf.cuda<device>) : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
   %2 = fir.rebox %1 : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
   // expected-remark @below {{passed validity check}}
   acc.serial {
@@ -589,7 +589,7 @@ func.func @test_cuf_kernel_nested_nonscalar_record() {
 // CUF-originated compute regions use the same scalar live-in rules.
 func.func @test_cuf_compute_region_record_scalar() {
   %alloca = fir.alloca !fir.type<_QFTcompute_point{x:f32}>
-  %decl = fir.declare %alloca {uniq_name = "_QFEpoint"} : (!fir.ref<!fir.type<_QFTcompute_point{x:f32}>>) -> !fir.ref<!fir.type<_QFTcompute_point{x:f32}>>
+  %decl = fir.declare %alloca uniq_name("_QFEpoint") : (!fir.ref<!fir.type<_QFTcompute_point{x:f32}>>) -> !fir.ref<!fir.type<_QFTcompute_point{x:f32}>>
   %blocks = acc.par_width par_dim(#acc.par_dim<block_x>)
   %threads = acc.par_width par_dim(#acc.par_dim<thread_x>)
   // expected-remark @below {{passed validity check}}
