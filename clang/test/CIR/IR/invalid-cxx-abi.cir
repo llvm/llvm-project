@@ -1,4 +1,4 @@
-// RUN: cir-opt %s -verify-diagnostics -split-input-file
+// RUN: cir-opt %s -verify-diagnostics --cir-cxxabi-lowering -split-input-file
 
 // expected-error@+1 {{unknown C++ ABI 'bla'}}
 module attributes {cir.cxx_abi = "bla"} {
@@ -27,6 +27,6 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu", cir.cxx_abi = "micro
 
 // -----
 
-// expected-error@+1 {{C++ ABI 'fuchsia' is not yet supported by CIR}}
+// expected-error@+1 {{createItaniumCXXABI: C++ ABI kind NYI in CIR}}
 module attributes {cir.triple = "aarch64-unknown-fuchsia", cir.cxx_abi = "fuchsia"} {
 }

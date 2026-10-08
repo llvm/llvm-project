@@ -280,16 +280,6 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
                << "C++ ABI '" << abi.getValue()
                << "' is not supported on target '" << triple.getValue() << "'";
 
-    switch (kind) {
-    case clang::TargetCXXABI::GenericItanium:
-    case clang::TargetCXXABI::GenericAArch64:
-    case clang::TargetCXXABI::AppleARM64:
-    case clang::TargetCXXABI::Microsoft:
-      break;
-    default:
-      return op->emitOpError() << "C++ ABI '" << abi.getValue()
-                               << "' is not yet supported by CIR";
-    }
     return success();
   }
 

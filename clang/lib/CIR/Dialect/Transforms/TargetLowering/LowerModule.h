@@ -21,6 +21,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "llvm/ADT/StringRef.h"
 #include <memory>
 
 namespace cir {
@@ -51,6 +52,8 @@ public:
   CIRCXXABI &getCXXABI() const { return *abi; }
   const clang::TargetInfo &getTarget() const { return *target; }
   mlir::MLIRContext *getMLIRContext() { return module.getContext(); }
+
+  void emitError(llvm::StringRef error) const { module->emitError(error); }
 
   const TargetLoweringInfo &getTargetLoweringInfo();
 };
