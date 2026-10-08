@@ -390,6 +390,28 @@ unsigned GCNTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
   return 128;
 }
 
+bool GCNTTIImpl::consecutiveLoadsCoalesce(Type *ElemTy, unsigned NumElts,
+                                          Align Alignment,
+                                          unsigned AddrSpace) const {
+  unsigned MaxBits = getLoadStoreVecRegBitWidth(AddrSpace);
+  unsigned ElemBits = DL.getTypeSizeInBits(ElemTy);
+  if (MaxBits < 64 || ElemBits % 8 != 0)
+    return false;
+  unsigned Bits = std::min(ElemBits * NumElts, MaxBits);
+  if (!isLegalToVectorizeLoadChain(Bits / 8, Alignment, AddrSpace))
+    return false;
+  if (Alignment.value() % (Bits / 8) == 0)
+    return true;
+  LLVMContext &Ctx = ElemTy->getContext();
+  unsigned VecSpeed = 0, ElemSpeed = 0;
+  if (!allowsMisalignedMemoryAccesses(Ctx, Bits, AddrSpace, Alignment,
+                                      &VecSpeed))
+    return false;
+  allowsMisalignedMemoryAccesses(Ctx, ElemBits, AddrSpace, Alignment,
+                                 &ElemSpeed);
+  return VecSpeed >= ElemSpeed;
+}
+
 bool GCNTTIImpl::isLegalToVectorizeMemChain(unsigned ChainSizeInBytes,
                                             Align Alignment,
                                             unsigned AddrSpace) const {
@@ -2118,6 +2140,26 @@ InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   }
   return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind,
                                 OpInfo, I);
+}
+
+InstructionCost
+GCNTTIImpl::getLoadCoalescingSaving(Type *LoadTy, unsigned NumLoads,
+                                    Align Alignment, unsigned AddrSpace,
+                                    TTI::TargetCostKind CostKind) const {
+  if (!consecutiveLoadsCoalesce(LoadTy, NumLoads, Alignment, AddrSpace))
+    return 0;
+  unsigned NumElts = NumLoads;
+  if (auto *LoadVecTy = dyn_cast<FixedVectorType>(LoadTy))
+    NumElts *= LoadVecTy->getNumElements();
+  InstructionCost ScalarCost =
+      NumLoads * getMemoryOpCost(Instruction::Load, LoadTy, Alignment,
+                                 AddrSpace, CostKind);
+  InstructionCost VecCost = getMemoryOpCost(
+      Instruction::Load, FixedVectorType::get(LoadTy->getScalarType(), NumElts),
+      Alignment, AddrSpace, CostKind);
+  if (VecCost >= ScalarCost)
+    return 0;
+  return ScalarCost - VecCost;
 }
 
 unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) const {

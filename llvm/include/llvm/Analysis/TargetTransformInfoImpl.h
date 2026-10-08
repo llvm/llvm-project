@@ -927,6 +927,13 @@ public:
     return 1;
   }
 
+  virtual InstructionCost
+  getLoadCoalescingSaving(Type *LoadTy, unsigned NumLoads, Align Alignment,
+                          unsigned AddrSpace,
+                          TTI::TargetCostKind CostKind) const {
+    return 0;
+  }
+
   virtual InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,

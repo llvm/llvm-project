@@ -1327,6 +1327,15 @@ InstructionCost TargetTransformInfo::getMemoryOpCost(
   return Cost;
 }
 
+InstructionCost TargetTransformInfo::getLoadCoalescingSaving(
+    Type *LoadTy, unsigned NumLoads, Align Alignment, unsigned AddrSpace,
+    TargetCostKind CostKind) const {
+  InstructionCost Cost = TTIImpl->getLoadCoalescingSaving(
+      LoadTy, NumLoads, Alignment, AddrSpace, CostKind);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
 InstructionCost TargetTransformInfo::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,

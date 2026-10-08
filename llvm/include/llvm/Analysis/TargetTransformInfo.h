@@ -1784,6 +1784,14 @@ public:
                   OperandValueInfo OpdInfo = {OK_AnyValue, OP_None},
                   const Instruction *I = nullptr) const;
 
+  /// \return The cost the backend saves on \p NumLoads consecutive loads of
+  /// \p LoadTy from address space \p AddrSpace by coalescing them into one
+  /// wider access, \p Alignment being the best alignment known among them.
+  /// Zero when the loads stay separate.
+  LLVM_ABI InstructionCost
+  getLoadCoalescingSaving(Type *LoadTy, unsigned NumLoads, Align Alignment,
+                          unsigned AddrSpace, TargetCostKind CostKind) const;
+
   /// \return The cost of the interleaved memory operation.
   /// \p Opcode is the memory operation code
   /// \p VecTy is the vector type of the interleaved access.

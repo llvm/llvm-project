@@ -474,10 +474,13 @@ public:
   TargetTransformInfo::TargetCostKind getCostKind() const { return CostKind; }
 
   /// Calculates the cost of the subtrees, trims non-profitable ones and returns
-  /// final cost.
+  /// final cost. \p RdxKind and \p RdxFMF describe the reduction that consumes
+  /// the tree, if any.
   InstructionCost
   calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals = {},
-                                        Instruction *RdxRoot = nullptr);
+                                        Instruction *RdxRoot = nullptr,
+                                        RecurKind RdxKind = RecurKind::None,
+                                        FastMathFlags RdxFMF = FastMathFlags());
 
   /// Finds i1 and/or nodes whose operand nodes are booleanized wide leaves
   /// (one-use truncs of wide values or zero-tests of values from [0, 1]) and
@@ -2589,10 +2592,12 @@ private:
   /// Get the loop nest for the given loop \p L.
   ArrayRef<const Loop *> getLoopNest(const Loop *L);
 
-  /// \returns the cost of the vectorizable entry.
+  /// \returns the cost of the vectorizable entry. \p RdxKind and \p RdxFMF
+  /// describe the reduction that consumes the tree, if any.
   InstructionCost getEntryCost(const TreeEntry *E,
                                ArrayRef<Value *> VectorizedVals,
-                               SmallPtrSetImpl<Value *> &CheckedExtracts);
+                               SmallPtrSetImpl<Value *> &CheckedExtracts,
+                               RecurKind RdxKind, FastMathFlags RdxFMF);
 
   /// Estimates spill/reload cost from vector register pressure for \p E at the
   /// point of emitting its vector result type \p FinalVecTy. \p ScalarTy is the
@@ -13416,6 +13421,19 @@ InstructionCost BoUpSLP::getUnfusedFMulsPenalty(const TreeEntry &TE) const {
   return Penalty;
 }
 
+/// \returns true if a reduction over \p VL loses the fmas of its scalar fmuls
+/// once vectorized. A contract fadd reduction fuses each scalar fmul into the
+/// fadd that consumes it, a reassociable one fuses its vector fmuls into the
+/// reduction as well.
+static bool reductionLosesFMAs(RecurKind RdxKind, FastMathFlags RdxFMF,
+                               ArrayRef<Value *> VL) {
+  return RdxKind == RecurKind::FAdd && RdxFMF.allowContract() &&
+         !RdxFMF.allowReassoc() && any_of(VL, [](Value *V) {
+           return match(
+               V, m_OneUse(m_AllowContract(m_FMul(m_Value(), m_Value()))));
+         });
+}
+
 // A poor-throughput entry's real vector-vs-scalar savings (fdiv/frem/fsqrt)
 // are already folded into TreeCost like any other entry, including all
 // shuffle/insert/extract overhead elsewhere in the tree. So bypassing the
@@ -16547,9 +16565,10 @@ getVectorInstrContextHint(ArrayRef<Value *> VL, const APInt &DemandedElts) {
   return VIC;
 }
 
-InstructionCost
-BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
-                      SmallPtrSetImpl<Value *> &CheckedExtracts) {
+InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
+                                      ArrayRef<Value *> VectorizedVals,
+                                      SmallPtrSetImpl<Value *> &CheckedExtracts,
+                                      RecurKind RdxKind, FastMathFlags RdxFMF) {
   ArrayRef<Value *> VL = E->Scalars;
 
   Type *ScalarTy = getValueType(VL[0], SLPReVec);
@@ -17636,6 +17655,19 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
               Instruction::Load, VecTy, LI0->getAlign(),
               LI0->getPointerAddressSpace(), CostKind,
               TTI::getOperandInfo(LI0->getPointerOperand()));
+          // The vector load of a bundle saves nothing over scalar loads the
+          // target coalesces as well. A reduction that loses its fmas pays
+          // that saving back.
+          if (E->ReuseShuffleIndices.empty() && E->ReorderIndices.empty() &&
+              It == MinBWs.end() &&
+              reductionLosesFMAs(RdxKind, RdxFMF, VectorizedVals)) {
+            Align BestAlign = LI0->getAlign();
+            for (Value *V : VL)
+              BestAlign = std::max(BestAlign, cast<LoadInst>(V)->getAlign());
+            VecLdCost += TTI->getLoadCoalescingSaving(
+                LI0->getType(), VL.size(), BestAlign,
+                LI0->getPointerAddressSpace(), CostKind);
+          }
         }
         break;
       case TreeEntry::StridedVectorize: {
@@ -19330,9 +19362,9 @@ void BoUpSLP::detectBooleanizedNodes() {
   }
 }
 
-InstructionCost
-BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
-                                               Instruction *RdxRoot) {
+InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
+    ArrayRef<Value *> VectorizedVals, Instruction *RdxRoot, RecurKind RdxKind,
+    FastMathFlags RdxFMF) {
   // FIXME: support buildvector of the gather nodes with struct types.
   if (any_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
         return TE->isGather() &&
@@ -19455,7 +19487,8 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
     assert((!TE.isGather() || TE.Idx == 0 || TE.UserTreeIndex) &&
            "Expected gather nodes with users only.");
 
-    InstructionCost C = getEntryCost(&TE, VectorizedVals, CheckedExtracts);
+    InstructionCost C =
+        getEntryCost(&TE, VectorizedVals, CheckedExtracts, RdxKind, RdxFMF);
     uint64_t Scale = 0;
     bool CostIsFree = C == 0;
     // For gather/buildvector (and split-vectorize) entries, prefer the
@@ -19657,7 +19690,8 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
     return BVCost;
   };
   auto RecostEntry = [&](const TreeEntry *TE) {
-    InstructionCost C = getEntryCost(TE, VectorizedVals, CheckedExtracts);
+    InstructionCost C =
+        getEntryCost(TE, VectorizedVals, CheckedExtracts, RdxKind, RdxFMF);
     if (!C.isValid() || C == 0)
       return C;
     uint64_t Scale = EntryToScale.lookup(TE);
@@ -33046,7 +33080,8 @@ public:
         }
         V.transformNodes();
         V.computeMinimumValueSizes();
-        InstructionCost TreeCost = V.calculateTreeCostAndTrimNonProfitable(VL);
+        InstructionCost TreeCost = V.calculateTreeCostAndTrimNonProfitable(
+            VL, /*RdxRoot=*/nullptr, RdxKind, RdxFMF);
         // A negated slice is subtracted in the final combine, it cannot be
         // accumulated lane-wise.
         const bool LoopAccCandidate =
@@ -33699,8 +33734,8 @@ public:
 
       V.transformNodes();
       V.computeMinimumValueSizes();
-      InstructionCost TreeCost =
-          V.calculateTreeCostAndTrimNonProfitable(VL, RdxRootInst);
+      InstructionCost TreeCost = V.calculateTreeCostAndTrimNonProfitable(
+          VL, RdxRootInst, RdxKind, RdxFMF);
       V.buildExternalUses(LocalExternallyUsedValues);
 
       InstructionCost VectorCost, RdxOpCost;
