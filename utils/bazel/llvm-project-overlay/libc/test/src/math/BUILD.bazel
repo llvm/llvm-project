@@ -12,6 +12,8 @@ exports_files(["libc_math_test_rules.bzl"])
 
 licenses(["notice"])
 
+math_mpfr_test(name = "acos")
+
 math_mpfr_test(
     name = "acosbf16",
     deps = [
@@ -22,6 +24,8 @@ math_mpfr_test(
 math_mpfr_test(name = "acosf")
 
 math_mpfr_test(name = "acoshf")
+
+math_mpfr_test(name = "asin")
 
 math_mpfr_test(
     name = "asinbf16",
@@ -107,6 +111,11 @@ math_mpfr_test(
     deps = [
         "//libc:__support_fputil_float128",
     ],
+)
+
+math_mpfr_test(
+    name = "copysign",
+    hdrs = ["CopySignTest.h"],
 )
 
 math_mpfr_test(name = "cos")
@@ -259,6 +268,11 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "fdim",
+    hdrs = ["FDimTest.h"],
+)
+
+math_mpfr_test(
     name = "fdiv",
     hdrs = ["DivTest.h"],
 )
@@ -312,6 +326,21 @@ math_mpfr_test(
 )
 
 # TODO: Add fma, fmaf, fmal, fmul, fmull tests.  Missing stdlib/rand dependency.
+
+math_mpfr_test(
+    name = "fmax",
+    hdrs = ["FMaxTest.h"],
+)
+
+math_mpfr_test(
+    name = "fmin",
+    hdrs = ["FMinTest.h"],
+)
+
+math_mpfr_test(
+    name = "fmod",
+    hdrs = ["FModTest.h"],
+)
 
 math_mpfr_test(
     name = "f16mul",
@@ -470,6 +499,21 @@ math_mpfr_test(
     hdrs = [
         "HypotTest.h",
     ],
+)
+
+math_mpfr_test(
+    name = "ilogb",
+    hdrs = ["ILogbTest.h"],
+)
+
+math_mpfr_test(
+    name = "ldexp",
+    hdrs = ["LdExpTest.h"],
+)
+
+math_mpfr_test(
+    name = "logb",
+    hdrs = ["LogbTest.h"],
 )
 
 math_mpfr_test(
@@ -650,6 +694,16 @@ math_mpfr_test(
     ],
 )
 
+math_mpfr_test(
+    name = "modf",
+    hdrs = ["ModfTest.h"],
+)
+
+math_mpfr_test(
+    name = "nextafter",
+    hdrs = ["NextAfterTest.h"],
+)
+
 math_mpfr_test(name = "pow")
 
 math_mpfr_test(
@@ -770,6 +824,14 @@ math_mpfr_test(
     name = "roundf128",
     hdrs = ["RoundTest.h"],
     deps = ["//libc:__support_fputil_float128"],
+)
+
+math_mpfr_test(
+    name = "scalbn",
+    hdrs = [
+        "LdExpTest.h",
+        "ScalbnTest.h",
+    ],
 )
 
 math_mpfr_test(name = "sin")
@@ -946,6 +1008,8 @@ math_mpfr_test(name = "exp10m1f16")
 math_mpfr_test(name = "asinf16")
 
 math_mpfr_test(name = "asinhf16")
+
+math_mpfr_test(name = "asinpi")
 
 math_mpfr_test(name = "asinpif16")
 
