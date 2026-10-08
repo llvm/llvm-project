@@ -80,6 +80,9 @@ struct BlockData {
   // Keeps track of whether the block is already in the queue.
   bool InQueue = false;
 
+  // Collected during emission to avoid scanning blocks without a candidate.
+  bool MayHaveBoundedWideningAdd = false;
+
   BlockData() = default;
 };
 
@@ -94,6 +97,7 @@ class RISCVInsertVSETVLI : public MachineFunctionPass {
   MachineRegisterInfo *MRI;
   // Possibly null!
   LiveIntervals *LIS;
+  SlotIndexes *Indexes;
   RISCVVSETVLIInfoAnalysis VIA;
 
   std::vector<BlockData> BlockInfo;
@@ -141,6 +145,7 @@ private:
                             const DemandedFields &Used,
                             MachineInstr *&AVLDefToMove) const;
   void coalesceVSETVLIs(MachineBasicBlock &MBB) const;
+  void foldBoundedWideningAdd(MachineBasicBlock &MBB) const;
   bool canMutatePriorConfigWithTWiden(const MachineInstr &PrevMI,
                                       const MachineInstr &MI) const;
   void coalesceVSETVLIsForTWiden(MachineBasicBlock &MBB) const;
@@ -570,6 +575,17 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
 
     uint64_t TSFlags = MI.getDesc().TSFlags;
     if (RISCVII::hasSEWOp(TSFlags)) {
+      // Keep this filter conservative for shapes accepted by
+      // foldBoundedWideningAdd, and update it when that helper changes.
+      bool &MayHaveAdd = BlockInfo[MBB.getNumber()].MayHaveBoundedWideningAdd;
+      if (!MayHaveAdd &&
+          MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm() == 6 &&
+          !RISCVII::usesMaskPolicy(TSFlags) &&
+          RISCV::getRVVMCOpcode(MI.getOpcode()) == RISCV::VADD_VX) {
+        const MachineOperand &ScalarOp = MI.getOperand(3);
+        MayHaveAdd = ScalarOp.isReg() && ScalarOp.getReg().isVirtual() &&
+                     !ScalarOp.isUndef() && !ScalarOp.getSubReg();
+      }
       if (!PrevInfo.isCompatible(DemandedFields::all(), CurInfo, LIS)) {
         // If this is the first implicit state change, and the state change
         // requested can be proven to produce the same register contents, we
@@ -815,7 +831,191 @@ bool RISCVInsertVSETVLI::canMutatePriorConfig(
   return areCompatibleVTYPEs(PriorVType, VType, Used);
 }
 
+// Keep a preceding narrow configuration for a bounded, unmasked VX addition.
+// The normal anchor and every intervening X0X0 configuration must be supported
+// and preserve the anchor's actual VL. The next configuration restores the
+// original state, so no inter-block state or policy selection is needed.
+void RISCVInsertVSETVLI::foldBoundedWideningAdd(MachineBasicBlock &MBB) const {
+  if (!ST->is64Bit() || !ST->hasVInstructionsI64())
+    return;
+
+  const TargetRegisterInfo *TRI = ST->getRegisterInfo();
+  auto supportedType = [](unsigned Type) {
+    if ((Type & ~255U) || RISCVVType::getSEW(Type) > 64 ||
+        unsigned(RISCVVType::getVLMUL(Type)) == 4)
+      return false;
+    auto [LMUL, Fractional] =
+        RISCVVType::decodeVLMUL(RISCVVType::getVLMUL(Type));
+    // Fractional LMUL cannot require elements wider than ELEN * LMUL.
+    return !Fractional || RISCVVType::getSEW(Type) * LMUL <= 64;
+  };
+  auto ratio = [](unsigned Type) {
+    return RISCVVType::getSEWLMULRatio(RISCVVType::getSEW(Type),
+                                       RISCVVType::getVLMUL(Type));
+  };
+
+  MachineInstr *Prev = nullptr, *Q = nullptr, *Add = nullptr;
+  Register Scalar;
+  unsigned AnchorRatio = 0, NarrowType = 0, WideType = 0;
+  const MCInstrDesc *NewDesc = nullptr;
+  auto reset = [&]() {
+    Prev = Q = Add = nullptr;
+    Scalar = Register();
+    NewDesc = nullptr;
+  };
+
+  // Each instruction is inspected once. A proposal is immutable until its
+  // endpoint is proved, and at most one proposal is applied in this block.
+  for (MachineInstr &MI : MBB) {
+    if (RISCVInstrInfo::isVectorConfigInstr(MI)) {
+      bool Preserving = MI.getOpcode() == RISCV::PseudoVSETVLIX0X0;
+      bool Normal = MI.getOpcode() == RISCV::PseudoVSETVLI ||
+                    MI.getOpcode() == RISCV::PseudoVSETVLIX0 ||
+                    MI.getOpcode() == RISCV::PseudoVSETIVLI;
+      if (!Preserving && !Normal) {
+        reset();
+        continue;
+      }
+      unsigned Type = MI.getOperand(2).getImm();
+      if (!supportedType(Type)) {
+        reset();
+        continue;
+      }
+      if (Q && Add && Preserving && ratio(Type) == AnchorRatio) {
+        // The same-ratio R preserves the unchanged actual VL and establishes
+        // its own exact VTYPE, so its SEW and policies need not match P's.
+        // Original and replacement have the same wide vector EEW/EMUL and
+        // scalar value. Only the descriptor and explicit SEW change.
+        Add->setDesc(*NewDesc);
+        Add->getOperand(RISCVII::getSEWOpNum(*NewDesc)).setImm(5);
+        // Only uses between P and the restoring R can gain a reaching def
+        // from P. The unchanged R ends that extension of VL/VTYPE liveness.
+        for (auto I = Prev->getIterator(), E = std::next(MI.getIterator());
+             I != E; ++I)
+          for (MachineOperand &MO : I->operands())
+            if (MO.isReg() && MO.isUse() &&
+                (MO.getReg() == RISCV::VL || MO.getReg() == RISCV::VTYPE))
+              MO.setIsKill(false);
+        for (MachineOperand &MO : Prev->operands())
+          if (MO.isReg() && MO.isDef() &&
+              (MO.getReg() == RISCV::VL || MO.getReg() == RISCV::VTYPE))
+            MO.setIsDead(false);
+        if (LIS) {
+          LIS->removeAllRegUnitsForPhysReg(RISCV::VL);
+          LIS->removeAllRegUnitsForPhysReg(RISCV::VTYPE);
+          LIS->RemoveMachineInstrFromMaps(*Q);
+        }
+        if (!LIS && Indexes)
+          Indexes->removeMachineInstrFromMaps(*Q);
+        Q->eraseFromParent();
+        ++NumCoalescedVSETVL;
+        return;
+      }
+      // An abandoned Q is now the active configuration, so the old P must
+      // not be reused as though no configuration intervened.
+      if (Q)
+        reset();
+      Q = Add = nullptr;
+      NewDesc = nullptr;
+      if (Normal) {
+        Scalar = MI.getOperand(0).getReg();
+        AnchorRatio = ratio(Type);
+        // A VSET result is unsigned and at most VLMAX. Require a strict
+        // bound below 2^32, using maximum rather than minimum VLEN.
+        if (!Scalar.isVirtual() ||
+            uint64_t(ST->getRealMaxVLen()) / AnchorRatio >= (1ULL << 32))
+          reset();
+        else
+          Prev = &MI;
+        continue;
+      }
+      if (!Prev || !Scalar || ratio(Type) != AnchorRatio ||
+          !MI.getOperand(0).isDead()) {
+        reset();
+        continue;
+      }
+      NarrowType = Prev->getOperand(2).getImm();
+      // Limit this checkpoint to ordinary e64 addition with an e32 WX form.
+      if (RISCVVType::getSEW(NarrowType) == 32 &&
+          RISCVVType::getSEW(Type) == 64 &&
+          (NarrowType & 192) == (Type & 192)) {
+        Q = &MI;
+        WideType = Type;
+      } else
+        Prev = &MI;
+      continue;
+    }
+
+    if (!Prev)
+      continue;
+
+    // vstart and state-changing effects are not represented by demanded fields.
+    if (MI.isCall() || MI.isInlineAsm() || MI.hasUnmodeledSideEffects() ||
+        RISCVInstrInfo::isFaultOnlyFirstLoad(MI) ||
+        TII->getName(MI.getOpcode()).starts_with("CSR") ||
+        MI.modifiesRegister(RISCV::VL, TRI) ||
+        MI.modifiesRegister(RISCV::VTYPE, TRI) ||
+        (Scalar && MI.modifiesRegister(Scalar, TRI))) {
+      reset();
+      continue;
+    }
+    if (!Q)
+      continue;
+
+    const MCInstrDesc &OldDesc = MI.getDesc();
+    const auto *Old = RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
+    if (!Add && Old && Old->BaseInstr == RISCV::VADD_VX &&
+        !RISCVII::hasTWidenOp(OldDesc.TSFlags) &&
+        RISCVII::getAltFmtType(OldDesc.TSFlags) !=
+            RISCVII::AltFmtType::AltFmt &&
+        RISCVII::hasSEWOp(OldDesc.TSFlags) &&
+        MI.getOperand(RISCVII::getSEWOpNum(OldDesc)).getImm() == 6 &&
+        MI.getOperand(3).isReg() && MI.getOperand(3).getReg() == Scalar &&
+        !MI.getOperand(3).isUndef() && !MI.getOperand(3).getSubReg() &&
+        RISCVII::getLMul(OldDesc.TSFlags) == RISCVVType::getVLMUL(WideType)) {
+      const auto *Inverse = RISCVVInversePseudosTable::getBaseInfo(
+          RISCV::VWADDU_WX, RISCVVType::getVLMUL(NarrowType), 0);
+      if (!Inverse) {
+        reset();
+        continue;
+      }
+      const MCInstrDesc &Desc = TII->get(Inverse->Pseudo);
+      bool LayoutOK = OldDesc.getNumOperands() == Desc.getNumOperands() &&
+                      OldDesc.getNumDefs() == Desc.getNumDefs() &&
+                      OldDesc.implicit_uses() == Desc.implicit_uses() &&
+                      OldDesc.implicit_defs() == Desc.implicit_defs();
+      for (unsigned I = 0; LayoutOK && I < Desc.getNumOperands(); ++I) {
+        LayoutOK &=
+            OldDesc.operands()[I].RegClass == Desc.operands()[I].RegClass &&
+            OldDesc.getOperandConstraint(I, MCOI::TIED_TO) ==
+                Desc.getOperandConstraint(I, MCOI::TIED_TO) &&
+            OldDesc.getOperandConstraint(I, MCOI::EARLY_CLOBBER) ==
+                Desc.getOperandConstraint(I, MCOI::EARLY_CLOBBER);
+        if (I < 3) {
+          const MachineOperand &MO = MI.getOperand(I);
+          LayoutOK &= MO.isReg() && MO.getReg().isPhysical() &&
+                      !MO.getSubReg() &&
+                      TRI->getRegClass(Desc.operands()[I].RegClass)
+                          ->contains(MO.getReg());
+        }
+      }
+      if (!LayoutOK) {
+        reset();
+        continue;
+      }
+      Add = &MI;
+      NewDesc = &Desc;
+      continue;
+    }
+    if (!areCompatibleVTYPEs(WideType, NarrowType, getDemanded(MI, ST))) {
+      reset();
+    }
+  }
+}
+
 void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
+  if (BlockInfo[MBB.getNumber()].MayHaveBoundedWideningAdd)
+    foldBoundedWideningAdd(MBB);
   MachineInstr *NextMI = nullptr;
   // We can have arbitrary code in successors, so VL and VTYPE
   // must be considered demanded.
@@ -1144,6 +1344,8 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
   LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
+  auto *IndexesWrapper = getAnalysisIfAvailable<SlotIndexesWrapperPass>();
+  Indexes = IndexesWrapper ? &IndexesWrapper->getSI() : nullptr;
   VIA = RISCVVSETVLIInfoAnalysis(ST, LIS);
 
   assert(BlockInfo.empty() && "Expect empty block infos");

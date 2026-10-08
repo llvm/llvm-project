@@ -53,8 +53,7 @@ body: |
     ; NOLIS-NEXT: [[COPY:%[0-9]+]]:gprnox0 = COPY $x10
     ; NOLIS-NEXT: [[PseudoVSETVLIX0_:%[0-9]+]]:gprnox0 = PseudoVSETVLIX0 $x0, 209 /* e32, m2, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; NOLIS-NEXT: $v14m2 = PseudoVMADD_VV_M2 $v14m2, $v16m2, $v16m2, -1 /* vl=VLMAX */, 5 /* e32 */, 1 /* ta, mu */, implicit $vl, implicit $vtype
-    ; NOLIS-NEXT: dead $x0 = PseudoVSETVLIX0X0 killed $x0, 218 /* e64, m4, ta, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
-    ; NOLIS-NEXT: $v8m4 = PseudoVADD_VX_M4 undef $v8m4, $v8m4, [[PseudoVSETVLIX0_]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    ; NOLIS-NEXT: $v8m4 = PseudoVWADDU_WX_M2 undef $v8m4, $v8m4, [[PseudoVSETVLIX0_]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
     ; NOLIS-NEXT: dead $x0 = PseudoVSETVLIX0X0 killed $x0, 145 /* e32, m2, tu, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
     ; NOLIS-NEXT: $v12m2 = PseudoVADD_VV_M2 $v12m2, $v14m2, $v12m2, -1 /* vl=VLMAX */, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; NOLIS-NEXT: PseudoRET implicit $v8m4, implicit $v12m2
@@ -65,8 +64,7 @@ body: |
     ; CHECK-NEXT: dead [[COPY:%[0-9]+]]:gprnox0 = COPY $x10
     ; CHECK-NEXT: [[PseudoVSETVLIX0_:%[0-9]+]]:gprnox0 = PseudoVSETVLIX0 $x0, 209 /* e32, m2, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: $v14m2 = PseudoVMADD_VV_M2 $v14m2, $v16m2, $v16m2, -1 /* vl=VLMAX */, 5 /* e32 */, 1 /* ta, mu */, implicit $vl, implicit $vtype
-    ; CHECK-NEXT: dead $x0 = PseudoVSETVLIX0X0 killed $x0, 218 /* e64, m4, ta, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
-    ; CHECK-NEXT: $v8m4 = PseudoVADD_VX_M4 undef $v8m4, $v8m4, [[PseudoVSETVLIX0_]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: $v8m4 = PseudoVWADDU_WX_M2 undef $v8m4, $v8m4, [[PseudoVSETVLIX0_]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: dead $x0 = PseudoVSETVLIX0X0 killed $x0, 145 /* e32, m2, tu, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
     ; CHECK-NEXT: $v12m2 = PseudoVADD_VV_M2 $v12m2, $v14m2, $v12m2, -1 /* vl=VLMAX */, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: PseudoRET implicit $v8m4, implicit $v12m2
@@ -114,8 +112,7 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gprnox0 = COPY $x10
     ; CHECK-NEXT: [[PseudoVSETVLI:%[0-9]+]]:gprnox0 = PseudoVSETVLI [[COPY]], 209 /* e32, m2, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: $v14m2 = PseudoVMADD_VV_M2 $v14m2, $v16m2, $v16m2, $noreg /* vl */, 5 /* e32 */, 1 /* ta, mu */, implicit $vl, implicit $vtype
-    ; CHECK-NEXT: dead $x0 = PseudoVSETVLIX0X0 killed $x0, 218 /* e64, m4, ta, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
-    ; CHECK-NEXT: $v8m4 = PseudoVADD_VX_M4 undef $v8m4, $v8m4, [[PseudoVSETVLI]], $noreg /* vl */, 6 /* e64 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: $v8m4 = PseudoVWADDU_WX_M2 undef $v8m4, $v8m4, [[PseudoVSETVLI]], $noreg /* vl */, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: dead $x0 = PseudoVSETVLIX0X0 killed $x0, 145 /* e32, m2, tu, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
     ; CHECK-NEXT: $v12m2 = PseudoVADD_VV_M2 $v12m2, $v14m2, $v12m2, $noreg /* vl */, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: PseudoRET implicit $v8m4, implicit $v12m2
@@ -172,8 +169,7 @@ body: |
     ; CHECK-NEXT: early-clobber $v16m2 = PseudoVWSUBU_VV_M1 undef $v16m2, $v18, $v19, $noreg /* vl */, 4 /* e16 */, 1 /* ta, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: dead $x0 = PseudoVSETVLIX0X0 killed $x0, 209 /* e32, m2, ta, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
     ; CHECK-NEXT: $v14m2 = PseudoVMADD_VV_M2 $v14m2, $v16m2, $v16m2, $noreg /* vl */, 5 /* e32 */, 1 /* ta, mu */, implicit $vl, implicit $vtype
-    ; CHECK-NEXT: dead $x0 = PseudoVSETVLIX0X0 killed $x0, 218 /* e64, m4, ta, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
-    ; CHECK-NEXT: $v8m4 = PseudoVADD_VX_M4 undef $v8m4, $v8m4, [[PseudoVSETVLI]], $noreg /* vl */, 6 /* e64 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: $v8m4 = PseudoVWADDU_WX_M2 undef $v8m4, $v8m4, [[PseudoVSETVLI]], $noreg /* vl */, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: dead $x0 = PseudoVSETVLIX0X0 killed $x0, 145 /* e32, m2, tu, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
     ; CHECK-NEXT: $v12m2 = PseudoVADD_VV_M2 $v12m2, $v14m2, $v12m2, $noreg /* vl */, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: PseudoRET implicit $v8m4, implicit $v12m2
@@ -1710,16 +1706,36 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $v8m4, $v14m2, $v16m2, $v12
-    ; COMMON-LABEL: name: same_ratio_different_endpoint
-    ; COMMON: liveins: $v8m4, $v14m2, $v16m2, $v12
-    ; COMMON-NEXT: {{  $}}
-    ; COMMON-NEXT: [[PseudoVSETVLIX0_:%[0-9]+]]:gprnox0 = PseudoVSETVLIX0 $x0, 209 /* e32, m2, ta, ma */, implicit-def $vl, implicit-def $vtype
-    ; COMMON-NEXT: $v14m2 = PseudoVMADD_VV_M2 $v14m2, $v16m2, $v16m2, -1 /* vl=VLMAX */, 5 /* e32 */, 1 /* ta, mu */, implicit $vl, implicit $vtype
-    ; COMMON-NEXT: dead $x0 = PseudoVSETVLIX0X0 killed $x0, 218 /* e64, m4, ta, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
-    ; COMMON-NEXT: $v8m4 = PseudoVADD_VX_M4 undef $v8m4, $v8m4, [[PseudoVSETVLIX0_]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
-    ; COMMON-NEXT: dead $x0 = PseudoVSETVLIX0X0 killed $x0, 136 /* e16, m1, tu, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
-    ; COMMON-NEXT: $v12 = PseudoVADD_VV_M1 $v12, $v12, $v12, -1 /* vl=VLMAX */, 4 /* e16 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
-    ; COMMON-NEXT: PseudoRET implicit $v8m4, implicit $v12, implicit $vl, implicit $vtype
+    ; NOLIS-LABEL: name: same_ratio_different_endpoint
+    ; NOLIS: liveins: $v8m4, $v14m2, $v16m2, $v12
+    ; NOLIS-NEXT: {{  $}}
+    ; NOLIS-NEXT: [[PseudoVSETVLIX0_:%[0-9]+]]:gprnox0 = PseudoVSETVLIX0 $x0, 209 /* e32, m2, ta, ma */, implicit-def $vl, implicit-def $vtype
+    ; NOLIS-NEXT: $v14m2 = PseudoVMADD_VV_M2 $v14m2, $v16m2, $v16m2, -1 /* vl=VLMAX */, 5 /* e32 */, 1 /* ta, mu */, implicit $vl, implicit $vtype
+    ; NOLIS-NEXT: $v8m4 = PseudoVWADDU_WX_M2 undef $v8m4, $v8m4, [[PseudoVSETVLIX0_]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    ; NOLIS-NEXT: dead $x0 = PseudoVSETVLIX0X0 killed $x0, 136 /* e16, m1, tu, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
+    ; NOLIS-NEXT: $v12 = PseudoVADD_VV_M1 $v12, $v12, $v12, -1 /* vl=VLMAX */, 4 /* e16 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+    ; NOLIS-NEXT: PseudoRET implicit $v8m4, implicit $v12, implicit $vl, implicit $vtype
+    ;
+    ; CHECK-LABEL: name: same_ratio_different_endpoint
+    ; CHECK: liveins: $v8m4, $v14m2, $v16m2, $v12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[PseudoVSETVLIX0_:%[0-9]+]]:gprnox0 = PseudoVSETVLIX0 $x0, 209 /* e32, m2, ta, ma */, implicit-def $vl, implicit-def $vtype
+    ; CHECK-NEXT: $v14m2 = PseudoVMADD_VV_M2 $v14m2, $v16m2, $v16m2, -1 /* vl=VLMAX */, 5 /* e32 */, 1 /* ta, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: $v8m4 = PseudoVWADDU_WX_M2 undef $v8m4, $v8m4, [[PseudoVSETVLIX0_]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: dead $x0 = PseudoVSETVLIX0X0 killed $x0, 136 /* e16, m1, tu, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
+    ; CHECK-NEXT: $v12 = PseudoVADD_VV_M1 $v12, $v12, $v12, -1 /* vl=VLMAX */, 4 /* e16 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: PseudoRET implicit $v8m4, implicit $v12, implicit $vl, implicit $vtype
+    ;
+    ; RV32-LABEL: name: same_ratio_different_endpoint
+    ; RV32: liveins: $v8m4, $v14m2, $v16m2, $v12
+    ; RV32-NEXT: {{  $}}
+    ; RV32-NEXT: [[PseudoVSETVLIX0_:%[0-9]+]]:gprnox0 = PseudoVSETVLIX0 $x0, 209 /* e32, m2, ta, ma */, implicit-def $vl, implicit-def $vtype
+    ; RV32-NEXT: $v14m2 = PseudoVMADD_VV_M2 $v14m2, $v16m2, $v16m2, -1 /* vl=VLMAX */, 5 /* e32 */, 1 /* ta, mu */, implicit $vl, implicit $vtype
+    ; RV32-NEXT: dead $x0 = PseudoVSETVLIX0X0 killed $x0, 218 /* e64, m4, ta, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
+    ; RV32-NEXT: $v8m4 = PseudoVADD_VX_M4 undef $v8m4, $v8m4, [[PseudoVSETVLIX0_]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
+    ; RV32-NEXT: dead $x0 = PseudoVSETVLIX0X0 killed $x0, 136 /* e16, m1, tu, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
+    ; RV32-NEXT: $v12 = PseudoVADD_VV_M1 $v12, $v12, $v12, -1 /* vl=VLMAX */, 4 /* e16 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+    ; RV32-NEXT: PseudoRET implicit $v8m4, implicit $v12, implicit $vl, implicit $vtype
     %0:gprnox0 = PseudoVSETVLIX0 $x0, 209, implicit-def $vl, implicit-def $vtype
     $v14m2 = PseudoVMADD_VV_M2 $v14m2, $v16m2, $v16m2, -1, 5, 1
     $v8m4 = PseudoVADD_VX_M4 undef $v8m4, $v8m4, %0, -1, 6, 3
