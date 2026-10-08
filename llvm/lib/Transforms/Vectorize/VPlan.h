@@ -715,6 +715,9 @@ public:
 
     WrapFlagsTy(bool HasNUW, bool HasNSW) : HasNUW(HasNUW), HasNSW(HasNSW) {}
     WrapFlagsTy() : HasNUW(false), HasNSW(false) {}
+    WrapFlagsTy withoutNoSignedWrap() {
+      return {static_cast<bool>(HasNUW), false};
+    }
   };
 
   struct TruncFlagsTy {
