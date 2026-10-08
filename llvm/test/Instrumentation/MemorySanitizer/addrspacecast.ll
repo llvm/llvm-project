@@ -9,7 +9,7 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define ptr addrspace(1) @AddrSpaceCast(ptr %x) nounwind uwtable readnone sanitize_memory {
+define ptr addrspace(1) @AddrSpaceCast(ptr %x) sanitize_memory {
 ; CHECK-LABEL: define ptr addrspace(1) @AddrSpaceCast(
 ; CHECK-SAME: ptr [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -35,7 +35,7 @@ entry:
   ret ptr addrspace(1) %0
 }
 
-define <2 x ptr addrspace(1)> @AddrSpaceCast_Vector(<2 x ptr> %x) nounwind uwtable readnone sanitize_memory {
+define <2 x ptr addrspace(1)> @AddrSpaceCast_Vector(<2 x ptr> %x) sanitize_memory {
 ; CHECK-LABEL: define <2 x ptr addrspace(1)> @AddrSpaceCast_Vector(
 ; CHECK-SAME: <2 x ptr> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -59,4 +59,60 @@ define <2 x ptr addrspace(1)> @AddrSpaceCast_Vector(<2 x ptr> %x) nounwind uwtab
 entry:
   %0 = addrspacecast <2 x ptr> %x to <2 x ptr addrspace(1)>
   ret <2 x ptr addrspace(1)> %0
+}
+
+define ptr addrspace(270) @AddrSpaceCast_Trunc(ptr %x) sanitize_memory {
+; CHECK-LABEL: define ptr addrspace(270) @AddrSpaceCast_Trunc(
+; CHECK-SAME: ptr [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[_MSPROP_ADDRSPACECAST:%.*]] = trunc i64 [[TMP0]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[X]] to ptr addrspace(270)
+; CHECK-NEXT:    store i32 [[_MSPROP_ADDRSPACECAST]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    ret ptr addrspace(270) [[TMP1]]
+;
+; ORIGIN-LABEL: define ptr addrspace(270) @AddrSpaceCast_Trunc(
+; ORIGIN-SAME: ptr [[X:%.*]]) #[[ATTR0]] {
+; ORIGIN-NEXT:  [[ENTRY:.*:]]
+; ORIGIN-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8
+; ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
+; ORIGIN-NEXT:    call void @llvm.donothing()
+; ORIGIN-NEXT:    [[_MSPROP_ADDRSPACECAST:%.*]] = trunc i64 [[TMP0]] to i32
+; ORIGIN-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[X]] to ptr addrspace(270)
+; ORIGIN-NEXT:    store i32 [[_MSPROP_ADDRSPACECAST]], ptr @__msan_retval_tls, align 8
+; ORIGIN-NEXT:    store i32 [[TMP1]], ptr @__msan_retval_origin_tls, align 4
+; ORIGIN-NEXT:    ret ptr addrspace(270) [[TMP2]]
+;
+entry:
+  %0 = addrspacecast ptr %x to ptr addrspace(270)
+  ret ptr addrspace(270) %0
+}
+
+define ptr @AddrSpaceCast_ZExt(ptr addrspace(270) %x) sanitize_memory {
+; CHECK-LABEL: define ptr @AddrSpaceCast_ZExt(
+; CHECK-SAME: ptr addrspace(270) [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[_MSPROP_ADDRSPACECAST:%.*]] = zext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(270) [[X]] to ptr
+; CHECK-NEXT:    store i64 [[_MSPROP_ADDRSPACECAST]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    ret ptr [[TMP1]]
+;
+; ORIGIN-LABEL: define ptr @AddrSpaceCast_ZExt(
+; ORIGIN-SAME: ptr addrspace(270) [[X:%.*]]) #[[ATTR0]] {
+; ORIGIN-NEXT:  [[ENTRY:.*:]]
+; ORIGIN-NEXT:    [[TMP0:%.*]] = load i32, ptr @__msan_param_tls, align 8
+; ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
+; ORIGIN-NEXT:    call void @llvm.donothing()
+; ORIGIN-NEXT:    [[_MSPROP_ADDRSPACECAST:%.*]] = zext i32 [[TMP0]] to i64
+; ORIGIN-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(270) [[X]] to ptr
+; ORIGIN-NEXT:    store i64 [[_MSPROP_ADDRSPACECAST]], ptr @__msan_retval_tls, align 8
+; ORIGIN-NEXT:    store i32 [[TMP1]], ptr @__msan_retval_origin_tls, align 4
+; ORIGIN-NEXT:    ret ptr [[TMP2]]
+;
+entry:
+  %0 = addrspacecast ptr addrspace(270) %x to ptr
+  ret ptr %0
 }
