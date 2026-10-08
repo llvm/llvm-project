@@ -1346,43 +1346,55 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     SlotIndex PrevIndex = StartIndex.getPrevSlot();
     SlotIndex EndIndex = Indexes->getMBBEndIdx(NMBB);
 
-    // Find the registers used from NMBB in PHIs in Succ.
-    SmallSet<Register, 8> PHISrcRegs;
+    // Find the registers used from NMBB in PHIs in Succ, along with the lanes
+    // those PHIs actually read.
+    SmallDenseMap<Register, LaneBitmask, 8> PHISrcRegs;
+
     for (MachineBasicBlock::instr_iterator
          I = Succ->instr_begin(), E = Succ->instr_end();
          I != E && I->isPHI(); ++I) {
       for (unsigned ni = 1, ne = I->getNumOperands(); ni != ne; ni += 2) {
         if (I->getOperand(ni+1).getMBB() == NMBB) {
           MachineOperand &MO = I->getOperand(ni);
-          Register Reg = MO.getReg();
           if (MO.isUndef())
             continue;
-          PHISrcRegs.insert(Reg);
-
-          LiveInterval &LI = LIS->getInterval(Reg);
-          VNInfo *VNI = LI.getVNInfoAt(PrevIndex);
-          assert(VNI &&
-                 "PHI sources should be live out of their predecessors.");
-          LI.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
-          for (auto &SR : LI.subranges()) {
-            if (VNInfo *SRVNI = SR.getVNInfoAt(PrevIndex))
-              SR.addSegment(LiveInterval::Segment(StartIndex, EndIndex, SRVNI));
-          }
+          PHISrcRegs[MO.getReg()] |=
+              TRI->getSubRegIndexLaneMask(MO.getSubReg());
         }
+      }
+    }
+
+    SlotIndex SuccStartIndex = LIS->getMBBStartIdx(Succ);
+    for (auto [Reg, PHILanes] : PHISrcRegs) {
+      LiveInterval &LI = LIS->getInterval(Reg);
+      VNInfo *VNI = LI.getVNInfoAt(PrevIndex);
+      assert(VNI && "PHI sources should be live out of their predecessors.");
+      LI.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
+
+      for (auto &SR : LI.subranges()) {
+        VNInfo *SRVNI = SR.getVNInfoAt(PrevIndex);
+        if (!SRVNI)
+          continue;
+        // Only the lanes read by the PHI, plus any lanes that are live into
+        // the successor, remain live through the new block.
+        if ((SR.LaneMask & PHILanes).any() || SR.liveAt(SuccStartIndex))
+          SR.addSegment(LiveInterval::Segment(StartIndex, EndIndex, SRVNI));
+        else if (!isLastMBB)
+          SR.removeSegment(StartIndex, EndIndex);
       }
     }
 
     MachineRegisterInfo *MRI = &getParent()->getRegInfo();
     for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
       Register Reg = Register::index2VirtReg(i);
-      if (PHISrcRegs.count(Reg) || !LIS->hasInterval(Reg))
+      if (PHISrcRegs.contains(Reg) || !LIS->hasInterval(Reg))
         continue;
 
       LiveInterval &LI = LIS->getInterval(Reg);
       if (!LI.liveAt(PrevIndex))
         continue;
 
-      bool isLiveOut = LI.liveAt(LIS->getMBBStartIdx(Succ));
+      bool isLiveOut = LI.liveAt(SuccStartIndex);
       if (isLiveOut && isLastMBB) {
         VNInfo *VNI = LI.getVNInfoAt(PrevIndex);
         assert(VNI && "LiveInterval should have VNInfo where it is live.");
