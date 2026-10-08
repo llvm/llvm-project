@@ -3,7 +3,7 @@
 
 int main(int argc, char **argv) {
   // expected-warning@+1{{unsafe buffer access}}
-  char c = argv[1][0]; 
+  char c = argv[1][0];
 
   int *p = nullptr;
   // both-warning@+1{{unsafe buffer access}}

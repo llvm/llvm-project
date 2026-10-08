@@ -2422,10 +2422,18 @@ public:
 
 namespace {
 
-static bool isMainParam(const Decl *D) {
+bool isMainParam(const Decl *D) {
   if (const auto *PVD = dyn_cast_or_null<ParmVarDecl>(D))
     if (const auto *FD = dyn_cast<FunctionDecl>(PVD->getDeclContext()))
       return FD->isMain();
+  return false;
+}
+
+bool refersMainParam(const Expr *E) {
+  if (!E)
+    return false;
+  if (const auto *DRE = dyn_cast_or_null<DeclRefExpr>(E->IgnoreParenImpCasts()))
+    return isMainParam(DRE->getDecl());
   return false;
 }
 
@@ -2478,29 +2486,24 @@ public:
     SourceRange Range;
     unsigned MsgParam = 0;
     NamedDecl *D = nullptr;
+    const Expr *BufferOperand = nullptr;
     if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(Operation)) {
-      Loc = ASE->getBase()->getExprLoc();
-      Range = ASE->getBase()->getSourceRange();
+      BufferOperand = ASE->getBase();
+      Loc = BufferOperand->getExprLoc();
+      Range = BufferOperand->getSourceRange();
       MsgParam = 2;
-      if (const auto *DRE =
-              dyn_cast<DeclRefExpr>(ASE->getBase()->IgnoreParenImpCasts()))
-        D = const_cast<ValueDecl *>(DRE->getDecl());
     } else if (const auto *BO = dyn_cast<BinaryOperator>(Operation)) {
       BinaryOperator::Opcode Op = BO->getOpcode();
       if (Op == BO_Add || Op == BO_AddAssign || Op == BO_Sub ||
           Op == BO_SubAssign) {
         if (BO->getRHS()->getType()->isIntegerType()) {
-          Loc = BO->getLHS()->getExprLoc();
-          Range = BO->getLHS()->getSourceRange();
-          if (const auto *DRE =
-                  dyn_cast<DeclRefExpr>(BO->getLHS()->IgnoreParenImpCasts()))
-            D = const_cast<ValueDecl *>(DRE->getDecl());
+          BufferOperand = BO->getLHS();
+          Loc = BufferOperand->getExprLoc();
+          Range = BufferOperand->getSourceRange();
         } else {
-          Loc = BO->getRHS()->getExprLoc();
-          Range = BO->getRHS()->getSourceRange();
-          if (const auto *DRE =
-                  dyn_cast<DeclRefExpr>(BO->getRHS()->IgnoreParenImpCasts()))
-            D = const_cast<ValueDecl *>(DRE->getDecl());
+          BufferOperand = BO->getRHS();
+          Loc = BufferOperand->getExprLoc();
+          Range = BufferOperand->getSourceRange();
         }
         MsgParam = 1;
       }
@@ -2508,12 +2511,10 @@ public:
       UnaryOperator::Opcode Op = UO->getOpcode();
       if (Op == UO_PreInc || Op == UO_PreDec || Op == UO_PostInc ||
           Op == UO_PostDec) {
-        Loc = UO->getSubExpr()->getExprLoc();
-        Range = UO->getSubExpr()->getSourceRange();
+        BufferOperand = UO->getSubExpr();
+        Loc = BufferOperand->getExprLoc();
+        Range = BufferOperand->getSourceRange();
         MsgParam = 1;
-        if (const auto *DRE =
-                dyn_cast<DeclRefExpr>(UO->getSubExpr()->IgnoreParenImpCasts()))
-          D = const_cast<ValueDecl *>(DRE->getDecl());
       }
     } else {
       if (isa<CallExpr>(Operation) || isa<CXXConstructExpr>(Operation)) {
@@ -2570,8 +2571,8 @@ public:
              "Variables blamed for unsafe buffer usage without suggestions!");
       S.Diag(Loc, diag::note_unsafe_buffer_operation) << MsgParam << Range;
     } else {
-      unsigned DiagID = isMainParam(D)
-                            ? diag::warn_unsafe_buffer_usage_main_argv
+      unsigned DiagID = refersMainParam(BufferOperand)
+                            ? diag::warn_unsafe_buffer_operation_main_argv
                             : diag::warn_unsafe_buffer_operation;
 
       if (D)
