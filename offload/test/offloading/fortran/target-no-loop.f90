@@ -98,8 +98,11 @@ end program main
 
 ! DEFAULT:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD-No-Loop mode
 ! DEFAULT:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD mode
+! DEFAULT:  info: #Args: 3 Teams x Thrds:    3x{{ *[0-9]+}}
 ! DEFAULT:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD-No-Loop mode
+! DEFAULT:  info: #Args: 3 Teams x Thrds: {{ *[0-9]+}}x  64
 ! DEFAULT:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD mode
+! DEFAULT:  info: #Args: 3 Teams x Thrds:    1x{{ *[0-9]+}}
 ! DEFAULT:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} Generic mode
 ! DEFAULT:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD mode
 ! DEFAULT:  number of errors: 0
