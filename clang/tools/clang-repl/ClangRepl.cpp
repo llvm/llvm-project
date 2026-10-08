@@ -108,7 +108,10 @@ static llvm::Error sanitizeOopArguments(const char *ArgV0) {
       (OOPExecutor.getNumOccurrences() ||
        OOPExecutorConnect.getNumOccurrences()))
     return llvm::make_error<llvm::StringError>(
-        "Out-of-process execution is only supported on Unix platforms",
+        SystemTriple.isOSEmscripten()
+            ? "Out-of-process execution is not supported by the WebAssembly "
+              "executor"
+            : "Out-of-process execution is only supported on Unix platforms",
         llvm::inconvertibleErrorCode());
 
   // If -slab-allocate is passed, check that we're not trying to use it in
@@ -294,6 +297,15 @@ int main(int argc, const char **argv) {
   clang::IncrementalCompilerBuilder CB;
   CB.SetCompilerArgs(ClangArgv);
 
+  auto SizeOrErr = getSlabAllocSize(SlabAllocateSizeString);
+  if (!SizeOrErr) {
+    llvm::logAllUnhandledErrors(SizeOrErr.takeError(), llvm::errs(), "error: ");
+    return EXIT_FAILURE;
+  }
+
+#ifdef __EMSCRIPTEN__
+  auto IEB = clang::IncrementalExecutorBuilder::createDefault();
+#else
   auto IEB = std::make_unique<clang::OrcIncrementalExecutorBuilder>();
   IEB->IsOutOfProcess = !OOPExecutor.empty() || !OOPExecutorConnect.empty();
   IEB->OOPExecutor = OOPExecutor;
@@ -302,13 +314,9 @@ int main(int argc, const char **argv) {
   else
     CB.SetDriverCompilationCallback(IEB->UpdateOrcRuntimePathCB);
 
-  auto SizeOrErr = getSlabAllocSize(SlabAllocateSizeString);
-  if (!SizeOrErr) {
-    llvm::logAllUnhandledErrors(SizeOrErr.takeError(), llvm::errs(), "error: ");
-    return EXIT_FAILURE;
-  }
   IEB->SlabAllocateSize = *SizeOrErr;
   IEB->UseSharedMemory = UseSharedMemory;
+#endif
 
   std::unique_ptr<clang::CompilerInstance> DeviceCI;
   if (CudaEnabled) {
