@@ -223,41 +223,34 @@ public:
 private:
   struct CastState {
     SmallVector<CastInst *, 4> Casts;
-    bool SignExtended = false;
-    bool ZeroExtended = false;
 
     void pushCast(CastInst *Cast) {
       assert((isa<SExtInst, ZExtInst, TruncInst>(Cast)) && "Unexpected cast");
       Casts.push_back(Cast);
-      if (isa<SExtInst>(Cast)) {
-        SignExtended = true;
-      } else if (isa<ZExtInst>(Cast)) {
-        SignExtended = false;
-        ZeroExtended = true;
-      }
     }
 
     void popCast() {
       assert(!Casts.empty() && "No cast to pop");
       Casts.pop_back();
-
-      // The innermost extension determines whether signed overflow matters:
-      // sext(zext(a)) = zext(a).
-      SignExtended = [this] {
-        for (CastInst *Cast : reverse(Casts)) {
-          if (isa<SExtInst>(Cast))
-            return true;
-          if (isa<ZExtInst>(Cast))
-            return false;
-        }
-        return false;
-      }();
-      ZeroExtended = any_of(Casts, IsaPred<ZExtInst>);
     }
 
-    bool hasSignExtension() const { return SignExtended; }
-    bool hasZeroExtension() const { return ZeroExtended; }
-    bool hasExtensions() const { return SignExtended || ZeroExtended; }
+    bool hasSignExtension() const {
+      // The innermost extension determines whether signed overflow matters:
+      // sext(zext(a)) = zext(a).
+      for (CastInst *Cast : reverse(Casts)) {
+        if (isa<SExtInst>(Cast))
+          return true;
+        if (isa<ZExtInst>(Cast))
+          return false;
+      }
+      return false;
+    }
+
+    bool hasZeroExtension() const { return any_of(Casts, IsaPred<ZExtInst>); }
+
+    bool hasExtensions() const {
+      return any_of(Casts, IsaPred<SExtInst, ZExtInst>);
+    }
 
     APInt apply(APInt Offset) const {
       for (CastInst *Cast : llvm::reverse(Casts)) {
