@@ -650,29 +650,66 @@ static MachineInstr *foldPatchpoint(MachineFunction &MF, MachineInstr &MI,
   return NewMI;
 }
 
-static void foldInlineAsmMemOperand(MachineInstr *MI, unsigned OpNo, int FI,
-                                    const TargetInstrInfo &TII) {
-  // If the machine operand is tied, untie it first.
-  if (MI->getOperand(OpNo).isTied()) {
-    unsigned TiedTo = MI->findTiedOperandIdx(OpNo);
-    MI->untieRegOperand(OpNo);
-    // Intentional recursion!
-    foldInlineAsmMemOperand(MI, TiedTo, FI, TII);
+/// Rewrite the register operands \p Ops of the inline asm \p MI to refer to
+/// stack slot \p FI. The use tied to a folded def is folded along with it,
+/// since the two name a single location.
+static void foldInlineAsmMemOperands(MachineInstr &MI, ArrayRef<unsigned> Ops,
+                                     int FI, const TargetInstrInfo &TII) {
+  SmallVector<MachineOperand, 5> MemOps;
+  TII.getFrameIndexOperands(MemOps, FI);
+  assert(!MemOps.empty() && "getFrameIndexOperands didn't create any operands");
+  InlineAsm::Flag MemFlag(InlineAsm::Kind::Mem, MemOps.size());
+  MemFlag.setMemConstraint(InlineAsm::ConstraintCode::m);
+
+  // Find the uses to fold along with their defs, and the ties to keep. A
+  // folded operand becomes MemOps.size() operands, moving every later one, and
+  // MachineInstr can't move a tied operand. So untie everything (untying a use
+  // also unties its def), re-add the operands from the first folded one on,
+  // and re-tie the pairs that are still registers at their new positions.
+  SmallVector<unsigned, 4> FoldOps(Ops);
+  SmallVector<std::pair<unsigned, unsigned>, 4> Ties;
+  for (unsigned I = InlineAsm::MIOp_FirstOperand, E = MI.getNumOperands();
+       I != E; ++I) {
+    unsigned DefIdx;
+    if (!MI.isRegTiedToDefOperand(I, &DefIdx))
+      continue;
+
+    MI.untieRegOperand(I);
+    if (is_contained(Ops, DefIdx))
+      FoldOps.push_back(I);
+    else
+      Ties.emplace_back(DefIdx, I);
   }
 
-  SmallVector<MachineOperand, 5> NewOps;
-  TII.getFrameIndexOperands(NewOps, FI);
-  assert(!NewOps.empty() && "getFrameIndexOperands didn't create any operands");
-  MI->removeOperand(OpNo);
-  MI->insert(MI->operands_begin() + OpNo, NewOps);
+  unsigned First = *llvm::min_element(FoldOps);
+  SmallVector<MachineOperand, 16> Tail(MI.operands_begin() + First,
+                                       MI.operands_end());
+  while (MI.getNumOperands() > First)
+    MI.removeOperand(MI.getNumOperands() - 1);
 
-  // Change the previous operand to a MemKind InlineAsm::Flag. The second param
-  // is the per-target number of operands that represent the memory operand
-  // excluding this one (MD). This includes MO.
-  InlineAsm::Flag F(InlineAsm::Kind::Mem, NewOps.size());
-  F.setMemConstraint(InlineAsm::ConstraintCode::m);
-  MachineOperand &MD = MI->getOperand(OpNo - 1);
-  MD.setImm(F);
+  SmallVector<unsigned, 16> NewIdx;
+  for (auto [I, MO] : enumerate(Tail)) {
+    NewIdx.push_back(MI.getNumOperands());
+    if (!is_contained(FoldOps, First + I)) {
+      MI.addOperand(MO);
+      continue;
+    }
+
+    // Only the first register after a flag can be folded, so the operand just
+    // before this one is its flag. It now describes the memory operand.
+    MachineOperand &FlagMO = MI.getOperand(MI.getNumOperands() - 1);
+    assert(InlineAsm::Flag(FlagMO.getImm()).getNumOperandRegisters() == 1 &&
+           "cannot fold one register of a multi-register operand");
+    FlagMO.setImm(MemFlag);
+    for (const MachineOperand &MemOp : MemOps)
+      MI.addOperand(MemOp);
+  }
+
+  auto Remap = [&](unsigned Idx) {
+    return Idx < First ? Idx : NewIdx[Idx - First];
+  };
+  for (auto [DefIdx, UseIdx] : Ties)
+    MI.tieOperands(Remap(DefIdx), Remap(UseIdx));
 }
 
 // Returns nullptr if not possible to fold.
@@ -680,29 +717,45 @@ static MachineInstr *foldInlineAsmMemOperand(MachineInstr &MI,
                                              ArrayRef<unsigned> Ops, int FI,
                                              const TargetInstrInfo &TII) {
   assert(MI.isInlineAsm() && "wrong opcode");
-  if (Ops.size() > 1)
-    return nullptr;
-  unsigned Op = Ops[0];
-  assert(Op && "should never be first operand");
-  assert(MI.getOperand(Op).isReg() && "shouldn't be folding non-reg operands");
 
-  if (!MI.mayFoldInlineAsmRegOp(Op))
+  // Sanity check that there are operands to fold.
+  if (Ops.empty())
     return nullptr;
+
+  // Every operand in Ops holds the same register (e.g. one value passed to two
+  // "rm" operands), so they all fold to the same stack slot. The asm reads
+  // the slot through a use, and through a def tied to a use, which need not
+  // be the same virtual register when the allocator lowers ties itself.
+  bool Reads = false;
+  bool Writes = false;
+  for (unsigned Op : Ops) {
+    assert(Op && "should never be first operand");
+    const MachineOperand &MO = MI.getOperand(Op);
+    assert(MO.isReg() && "shouldn't be folding non-reg operands");
+
+    // A tied use is only ever folded along with its def.
+    if (MI.isRegTiedToDefOperand(Op) || !MI.mayFoldInlineAsmRegOp(Op))
+      return nullptr;
+
+    Reads |= MO.readsReg();
+    if (MO.isDef()) {
+      Writes = true;
+      Reads |=
+          MO.isTied() && MI.getOperand(MI.findTiedOperandIdx(Op)).readsReg();
+    }
+  }
 
   MachineInstr &NewMI = TII.duplicate(*MI.getParent(), MI.getIterator(), MI);
-
-  foldInlineAsmMemOperand(&NewMI, Op, FI, TII);
+  foldInlineAsmMemOperands(NewMI, Ops, FI, TII);
 
   // Update mayload/maystore metadata, and memoperands.
-  const VirtRegInfo &RI =
-      AnalyzeVirtRegInBundle(MI, MI.getOperand(Op).getReg());
   MachineOperand &ExtraMO = NewMI.getOperand(InlineAsm::MIOp_ExtraInfo);
   MachineMemOperand::Flags Flags = MachineMemOperand::MONone;
-  if (RI.Reads) {
+  if (Reads) {
     ExtraMO.setImm(ExtraMO.getImm() | InlineAsm::Extra_MayLoad);
     Flags |= MachineMemOperand::MOLoad;
   }
-  if (RI.Writes) {
+  if (Writes) {
     ExtraMO.setImm(ExtraMO.getImm() | InlineAsm::Extra_MayStore);
     Flags |= MachineMemOperand::MOStore;
   }
