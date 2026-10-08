@@ -49,10 +49,12 @@ define i32 @e8m0_byte1(<2 x half> %src, i32 %w) {
   ret i32 %r
 }
 
+; Negative test: the bitcast has more than one use.
 define i32 @exponent_mask_two_conversions(<2 x half> %a, <2 x half> %b, i32 %bits) {
 ; CHECK-LABEL: define i32 @exponent_mask_two_conversions(
 ; CHECK-SAME: <2 x half> [[A:%.*]], <2 x half> [[B:%.*]], i32 [[BITS:%.*]]) {
-; CHECK-NEXT:    [[SCALE:%.*]] = bitcast i32 [[BITS]] to float
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[BITS]], 2139095040
+; CHECK-NEXT:    [[SCALE:%.*]] = bitcast i32 [[AND]] to float
 ; CHECK-NEXT:    [[R0:%.*]] = call i32 @llvm.amdgcn.cvt.scalef32.pk.fp4.f16(i32 0, <2 x half> [[A]], float [[SCALE]], i32 0)
 ; CHECK-NEXT:    [[R1:%.*]] = call i32 @llvm.amdgcn.cvt.scalef32.pk.fp4.f16(i32 [[R0]], <2 x half> [[B]], float [[SCALE]], i32 1)
 ; CHECK-NEXT:    ret i32 [[R1]]
@@ -315,6 +317,21 @@ define i32 @exponent_mask_data_and_scale(float %x, i32 %bits) {
   %and = and i32 %bits, 2139095040
   %scale = bitcast i32 %and to float
   %r = call i32 @llvm.amdgcn.cvt.scalef32.pk.fp4.f32(i32 0, float %scale, float %x, float %scale, i32 0)
+  ret i32 %r
+}
+
+; Negative test: the bitcast source is not i32.
+define i32 @exponent_mask_v2i16(<2 x half> %src, <2 x i16> %bits) {
+; CHECK-LABEL: define i32 @exponent_mask_v2i16(
+; CHECK-SAME: <2 x half> [[SRC:%.*]], <2 x i16> [[BITS:%.*]]) {
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i16> [[BITS]], <i16 0, i16 32640>
+; CHECK-NEXT:    [[SCALE:%.*]] = bitcast <2 x i16> [[AND]] to float
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.amdgcn.cvt.scalef32.pk.fp4.f16(i32 0, <2 x half> [[SRC]], float [[SCALE]], i32 0)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %and = and <2 x i16> %bits, <i16 0, i16 32640>
+  %scale = bitcast <2 x i16> %and to float
+  %r = call i32 @llvm.amdgcn.cvt.scalef32.pk.fp4.f16(i32 0, <2 x half> %src, float %scale, i32 0)
   ret i32 %r
 }
 
