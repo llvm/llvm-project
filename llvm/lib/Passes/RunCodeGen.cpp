@@ -17,6 +17,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -75,14 +76,24 @@ static Error runCodeGenPipelineNewPM(TargetMachine &TM, Module &M,
   PipelineTuningOptions PTOptions;
   TargetMachine *TMPointer = &TM;
   PassBuilder PB(TMPointer, PTOptions, std::nullopt, &PIC, VFS);
+
+  StandardInstrumentations SI(M.getContext(), /*DebugLogging=*/false);
+  SI.registerCallbacks(PIC, &MAM);
+
+  TargetLibraryInfoImpl TLII(M.getTargetTriple());
+  FAM.registerPass([&] { return TargetLibraryAnalysis(TLII); });
+  MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
+  MAM.registerPass([&] {
+    const llvm::TargetOptions &Options = TM.Options;
+    return RuntimeLibraryAnalysis(Options.MCOptions.ABIName, Options.VecLib);
+  });
+
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
   PB.registerFunctionAnalyses(FAM);
   PB.registerLoopAnalyses(LAM);
   PB.registerMachineFunctionAnalyses(MFAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
-
-  MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
 
   Error BuildPipelineError =
       TM.buildCodeGenPipeline(MPM, MAM, OS, DwoOS ? &DwoOS->os() : nullptr,
