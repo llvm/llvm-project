@@ -122,6 +122,11 @@ serializeModule(spirv::ModuleOp moduleOp, raw_ostream &output,
 
 namespace mlir {
 void registerToSPIRVTranslation() {
+  static llvm::cl::opt<bool> emitDebugInfo(
+      "spirv-emit-debug-info",
+      llvm::cl::desc("Emit SPIR-V debug information during serialization"),
+      llvm::cl::init(false));
+
   static llvm::cl::opt<std::string> validationFilesPrefix(
       "spirv-save-validation-files-with-prefix",
       llvm::cl::desc(
@@ -137,7 +142,8 @@ void registerToSPIRVTranslation() {
       "serialize-spirv", "serialize SPIR-V dialect",
       [](spirv::ModuleOp moduleOp, raw_ostream &output) {
         return serializeModule(moduleOp, output,
-                               {true, false, !validationFilesPrefix.empty(),
+                               {true, emitDebugInfo,
+                                !validationFilesPrefix.empty(),
                                 validationFilesPrefix});
       },
       [](DialectRegistry &registry) {

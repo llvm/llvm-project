@@ -236,6 +236,12 @@ void SSAUpdater::RewriteUseAfterInsertions(Use &U) {
 
 namespace llvm {
 
+cl::opt<unsigned> SSAUpdaterPhiSearchLimit(
+    "ssaupdater-phi-search-limit",
+    cl::desc("Limit number of phi-nodes to be searched when "
+             "looking for an existing duplicate."),
+    cl::init(80), cl::Hidden);
+
 template<>
 class SSAUpdaterTraits<SSAUpdater> {
 public:
@@ -441,6 +447,9 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
         // use the stored value.
         if (StoredValue) {
           replaceLoadWithValue(L, StoredValue);
+          // Avoid assertions in unreachable code.
+          if (StoredValue == L)
+            StoredValue = PoisonValue::get(L->getType());
           L->replaceAllUsesWith(StoredValue);
           ReplacedLoads[L] = StoredValue;
         } else {

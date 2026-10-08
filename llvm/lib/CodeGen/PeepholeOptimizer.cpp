@@ -444,7 +444,8 @@ public:
   using RecurrenceCycle = SmallVector<RecurrenceInstr, 4>;
 
 private:
-  bool optimizeCmpInstr(MachineInstr &MI);
+  bool optimizeCmpInstr(MachineInstr &MI, MachineFunction &MF,
+                        SmallPtrSet<MachineInstr *, 16> &LocalMIs);
   bool optimizeExtInstr(MachineInstr &MI, MachineBasicBlock &MBB,
                         SmallPtrSetImpl<MachineInstr *> &LocalMIs);
   bool optimizeSelect(MachineInstr &MI,
@@ -573,10 +574,8 @@ public:
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
     AU.addRequired<MachineLoopInfoWrapperPass>();
-    AU.addPreserved<MachineLoopInfoWrapperPass>();
     if (Aggressive) {
       AU.addRequired<MachineDominatorTreeWrapperPass>();
-      AU.addPreserved<MachineDominatorTreeWrapperPass>();
     }
   }
 
@@ -745,8 +744,11 @@ public:
                const TargetInstrInfo *TII = nullptr)
       : DefSubReg(DefSubReg), Reg(Reg), MRI(MRI), TII(TII) {
     if (!Reg.isPhysical()) {
-      Def = MRI.getVRegDef(Reg);
-      DefIdx = MRI.def_begin(Reg).getOperandNo();
+      MachineRegisterInfo::def_iterator DI = MRI.def_begin(Reg);
+      if (DI != MRI.def_end()) {
+        Def = DI->getParent();
+        DefIdx = DI.getOperandNo();
+      }
     }
   }
 
@@ -920,17 +922,23 @@ bool PeepholeOptimizer::optimizeExtInstr(
       // %6:gprc_and_gprc_nor0 = COPY %1.sub_32:g8rc_and_g8rc_nox0
       // %3:gprc_and_gprc_nor0 = COPY %6:gprc_and_gprc_nor0
       //
-      if (UseSrcSubIdx)
-        RC = MRI->getRegClass(UseMI->getOperand(0).getReg());
+      if (UseSrcSubIdx) {
+        RC = MRI->getRegClass(UseMO->getReg());
+        if (UseMO->getSubReg())
+          RC = TRI->getSubRegisterClass(RC, UseMO->getSubReg());
+      }
 
       Register NewVR = MRI->createVirtualRegister(RC);
-      BuildMI(*UseMBB, UseMI, UseMI->getDebugLoc(),
-              TII->get(TargetOpcode::COPY), NewVR)
-          .addReg(DstReg, {}, SubIdx);
+      [[maybe_unused]] auto Copy = BuildMI(*UseMBB, UseMI, UseMI->getDebugLoc(),
+                                           TII->get(TargetOpcode::COPY), NewVR)
+                                       .addReg(DstReg, {}, SubIdx);
+      LLVM_DEBUG(dbgs() << "  Build new copy: " << *Copy
+                        << "  Changing: " << *UseMI);
       if (UseSrcSubIdx)
         UseMO->setSubReg(0);
 
       UseMO->setReg(NewVR);
+      LLVM_DEBUG(dbgs() << "        to: " << *UseMI);
       ++NumReuse;
       Changed = true;
     }
@@ -943,7 +951,9 @@ bool PeepholeOptimizer::optimizeExtInstr(
 /// against already sets (or could be modified to set) the same flag as the
 /// compare, then we can remove the comparison and use the flag from the
 /// previous instruction.
-bool PeepholeOptimizer::optimizeCmpInstr(MachineInstr &MI) {
+bool PeepholeOptimizer::optimizeCmpInstr(
+    MachineInstr &MI, MachineFunction &MF,
+    SmallPtrSet<MachineInstr *, 16> &LocalMIs) {
   // If this instruction is a comparison against zero and isn't comparing a
   // physical register, we can try to optimize it.
   Register SrcReg, SrcReg2;
@@ -954,13 +964,29 @@ bool PeepholeOptimizer::optimizeCmpInstr(MachineInstr &MI) {
 
   // Attempt to optimize the comparison instruction.
   LLVM_DEBUG(dbgs() << "Attempting to optimize compare: " << MI);
-  if (TII->optimizeCompareInstr(MI, SrcReg, SrcReg2, CmpMask, CmpValue, MRI)) {
-    LLVM_DEBUG(dbgs() << "  -> Successfully optimized compare!\n");
-    ++NumCmps;
-    return true;
+  if (!TII->optimizeCompareInstr(MI, SrcReg, SrcReg2, CmpMask, CmpValue, MRI))
+    return false;
+
+  LLVM_DEBUG(dbgs() << "  -> Successfully optimized compare!\n");
+  LocalMIs.erase(&MI);
+  ++NumCmps;
+
+  // The eliminated compare may have been the extra use preventing a
+  // load from being folded into the flag-setting instruction.
+  if (MachineInstr *FlagProducer =
+          SrcReg.isVirtual() ? MRI->getOneNonDBGUser(SrcReg) : nullptr) {
+    MachineInstr *LoadMI = MRI->getVRegDef(SrcReg);
+    // No store between LoadMI and FlagProducer that could change the value.
+    if (LocalMIs.count(FlagProducer) && LoadMI && LoadMI->canFoldAsLoad() &&
+        LoadMI->mayLoad() && LocalMIs.count(LoadMI) &&
+        llvm::none_of(
+            make_range(std::next(LoadMI->getIterator()),
+                       FlagProducer->getIterator()),
+            [](const MachineInstr &I) { return I.isLoadFoldBarrier(); }))
+      foldLoadInto(MF, *FlagProducer, SrcReg, LocalMIs);
   }
 
-  return false;
+  return true;
 }
 
 /// Optimize a select instruction.
@@ -1006,11 +1032,19 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
   SmallVector<RegSubRegPair, 4> SrcToLook = {CurSrcPair};
 
   unsigned PHICount = 0;
+
+  // Remember the last suitable source in case the search meets an invalid
+  // source.
+  bool FoundSuitable = false;
+  RegSubRegPair SuitablePair = RegSubReg;
+  bool Aborted = false;
   do {
     CurSrcPair = SrcToLook.pop_back_val();
     // As explained above, do not handle physical registers
-    if (CurSrcPair.Reg.isPhysical())
-      return false;
+    if (CurSrcPair.Reg.isPhysical()) {
+      Aborted = true;
+      break;
+    }
 
     ValueTracker ValTracker(CurSrcPair.Reg, CurSrcPair.SubReg, *MRI, TII);
 
@@ -1019,8 +1053,10 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
     while (true) {
       ValueTrackerResult Res = ValTracker.getNextSource();
       // Abort at the end of a chain (without finding a suitable source).
-      if (!Res.isValid())
-        return false;
+      if (!Res.isValid()) {
+        Aborted = true;
+        break;
+      }
 
       // Insert the Def -> Use entry for the recently found source.
       auto [InsertPt, WasInserted] = RewriteMap.try_emplace(CurSrcPair, Res);
@@ -1034,7 +1070,7 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
         if (CurSrcRes.getNumSources() > 1) {
           LLVM_DEBUG(dbgs()
                      << "findNextSource: found PHI cycle, aborting...\n");
-          return false;
+          Aborted = true;
         }
         break;
       }
@@ -1046,7 +1082,8 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
         PHICount++;
         if (PHICount >= RewritePHILimit) {
           LLVM_DEBUG(dbgs() << "findNextSource: PHI limit reached\n");
-          return false;
+          Aborted = true;
+          break;
         }
 
         for (unsigned i = 0; i < NumSrcs; ++i)
@@ -1059,8 +1096,10 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
       // constraints to the register allocator. Moreover, if we want to extend
       // the live-range of a physical register, unlike SSA virtual register,
       // we will have to check that they aren't redefine before the related use.
-      if (CurSrcPair.Reg.isPhysical())
-        return false;
+      if (CurSrcPair.Reg.isPhysical()) {
+        Aborted = true;
+        break;
+      }
 
       // Keep following the chain if the value isn't any better yet.
       const TargetRegisterClass *SrcRC = MRI->getRegClass(CurSrcPair.Reg);
@@ -1073,10 +1112,31 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
       if (PHICount > 0 && CurSrcPair.SubReg != 0)
         continue;
 
+      // Don't stop at the first suitable source if it is still a subregister;
+      // keep tracing to try to reach a deeper source. Remember it.
+      if (CurSrcPair.SubReg != 0) {
+        SuitablePair = CurSrcPair;
+        FoundSuitable = true;
+        continue;
+      }
+
       // We found a suitable source, and are done with this chain.
       break;
     }
+
+    // A dead-ended chain ends all exploration
+    if (Aborted)
+      break;
   } while (!SrcToLook.empty());
+
+  if (Aborted) {
+    // If aborted with an invalid source, restore the suitable so far, if any.
+    if (!FoundSuitable)
+      return false;
+
+    CurSrcPair = SuitablePair;
+    RewriteMap.erase(SuitablePair);
+  }
 
   // If we did not find a more suitable source, there is nothing to optimize.
   return CurSrcPair.Reg != Reg;
@@ -1704,8 +1764,6 @@ PeepholeOptimizerPass::run(MachineFunction &MF,
     return PreservedAnalyses::all();
 
   auto PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserve<MachineDominatorTreeAnalysis>();
-  PA.preserve<MachineLoopAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
@@ -1800,14 +1858,13 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
             }
           } else if (MO.isRegMask()) {
             const uint32_t *RegMask = MO.getRegMask();
-            for (auto &RegMI : NAPhysToVirtMIs) {
-              Register Def = RegMI.first;
-              if (MachineOperand::clobbersPhysReg(RegMask, Def)) {
-                LLVM_DEBUG(dbgs()
-                           << "NAPhysCopy: invalidating because of " << *MI);
-                NAPhysToVirtMIs.erase(Def);
-              }
-            }
+            NAPhysToVirtMIs.remove_if([&](const auto &RegMI) {
+              if (!MachineOperand::clobbersPhysReg(RegMask, RegMI.first))
+                return false;
+              LLVM_DEBUG(dbgs()
+                         << "NAPhysCopy: invalidating because of " << *MI);
+              return true;
+            });
           }
         }
       }
@@ -1825,9 +1882,13 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
         NAPhysToVirtMIs.clear();
       }
 
+      if (MI->isCompare() && optimizeCmpInstr(*MI, MF, LocalMIs)) {
+        Changed = true;
+        continue;
+      }
+
       if ((isUncoalescableCopy(*MI) &&
            optimizeUncoalescableCopy(*MI, LocalMIs)) ||
-          (MI->isCompare() && optimizeCmpInstr(*MI)) ||
           (MI->isSelect() && optimizeSelect(*MI, LocalMIs))) {
         // MI is deleted.
         LocalMIs.erase(MI);

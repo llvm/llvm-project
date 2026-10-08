@@ -16,7 +16,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR long lrintbf16(bfloat16 x) {
+LIBC_INLINE constexpr long lrintbf16(bfloat16 x) {
   return fputil::round_to_signed_integer_using_current_rounding_mode<bfloat16,
                                                                      long>(x);
 }

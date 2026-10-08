@@ -38,6 +38,8 @@ public:
                               const MCSubtargetInfo &STI, raw_ostream &O);
   void printFenceArg(const MCInst *MI, unsigned OpNo,
                      const MCSubtargetInfo &STI, raw_ostream &O);
+  void printSMTVType(const MCInst *MI, unsigned OpNo,
+                     const MCSubtargetInfo &STI, raw_ostream &O);
   void printFRMArg(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                    raw_ostream &O);
   void printFRMArgLegacy(const MCInst *MI, unsigned OpNo,
@@ -54,6 +56,8 @@ public:
                      const MCSubtargetInfo &STI, raw_ostream &O);
   void printVScaleReg(const MCInst *MI, unsigned OpNo,
                       const MCSubtargetInfo &STI, raw_ostream &O);
+  void printTileLambda(const MCInst *MI, unsigned OpNo,
+                       const MCSubtargetInfo &STI, raw_ostream &O);
   void printImm(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                 raw_ostream &O);
   void printRegList(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,

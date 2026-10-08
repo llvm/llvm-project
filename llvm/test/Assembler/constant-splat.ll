@@ -36,6 +36,9 @@
 ; CHECK: @constant.splat.ppc_fp128 = constant <1 x ppc_fp128> splat (ppc_fp128 -0.000000e+00)
 @constant.splat.ppc_fp128 = constant <1 x ppc_fp128> splat (ppc_fp128 0xM80000000000000000000000000000000)
 
+; CHECK: @constant.splat.ppc_fp128.zero.1 = constant <1 x ppc_fp128> splat (ppc_fp128 f0x00000000000000010000000000000000)
+@constant.splat.ppc_fp128.zero.1 = constant <1 x ppc_fp128> splat (ppc_fp128 f0x00000000000000010000000000000000)
+
 ; CHECK: @constant.splat.global.ptr = constant <4 x ptr> <ptr @my_global, ptr @my_global, ptr @my_global, ptr @my_global>
 @constant.splat.global.ptr = constant <4 x ptr> splat (ptr @my_global)
 

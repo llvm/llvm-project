@@ -187,84 +187,44 @@ define void @widen_fadd_v2f32_v16f32(ptr %a0, ptr %b0, ptr %c0) {
 ; AVX1OR2-NEXT:    vzeroupper
 ; AVX1OR2-NEXT:    retq
 ;
-; AVX512F-LABEL: widen_fadd_v2f32_v16f32:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX512F-NEXT:    vaddps %xmm4, %xmm0, %xmm0
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX512F-NEXT:    vaddps %xmm4, %xmm1, %xmm1
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX512F-NEXT:    vaddps %xmm4, %xmm2, %xmm2
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX512F-NEXT:    vaddps %xmm4, %xmm3, %xmm3
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm5 = mem[0],zero
-; AVX512F-NEXT:    vaddps %xmm5, %xmm4, %xmm4
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm5 = mem[0],zero
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm6 = mem[0],zero
-; AVX512F-NEXT:    vaddps %xmm6, %xmm5, %xmm5
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm6 = mem[0],zero
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm7 = mem[0],zero
-; AVX512F-NEXT:    vaddps %xmm7, %xmm6, %xmm6
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm7 = mem[0],zero
-; AVX512F-NEXT:    vmovsd {{.*#+}} xmm8 = mem[0],zero
-; AVX512F-NEXT:    vaddps %xmm7, %xmm8, %xmm7
-; AVX512F-NEXT:    vinsertf32x4 $1, %xmm7, %zmm6, %zmm6
-; AVX512F-NEXT:    vinsertf32x4 $1, %xmm5, %zmm4, %zmm4
-; AVX512F-NEXT:    vbroadcasti64x4 {{.*#+}} zmm5 = [0,2,8,10,0,2,8,10]
-; AVX512F-NEXT:    # zmm5 = mem[0,1,2,3,0,1,2,3]
-; AVX512F-NEXT:    vpermt2pd %zmm6, %zmm5, %zmm4
-; AVX512F-NEXT:    vinsertf32x4 $1, %xmm3, %zmm2, %zmm2
-; AVX512F-NEXT:    vinsertf32x4 $1, %xmm1, %zmm0, %zmm0
-; AVX512F-NEXT:    vpermt2pd %zmm2, %zmm5, %zmm0
-; AVX512F-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm4[4,5,6,7]
-; AVX512F-NEXT:    vmovupd %zmm0, (%rdx)
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: widen_fadd_v2f32_v16f32:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX512VL-NEXT:    vaddps %xmm4, %xmm0, %xmm0
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX512VL-NEXT:    vaddps %xmm4, %xmm1, %xmm1
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX512VL-NEXT:    vaddps %xmm4, %xmm2, %xmm2
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX512VL-NEXT:    vaddps %xmm4, %xmm3, %xmm3
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm5 = mem[0],zero
-; AVX512VL-NEXT:    vaddps %xmm5, %xmm4, %xmm4
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm5 = mem[0],zero
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm6 = mem[0],zero
-; AVX512VL-NEXT:    vaddps %xmm6, %xmm5, %xmm5
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm6 = mem[0],zero
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm7 = mem[0],zero
-; AVX512VL-NEXT:    vaddps %xmm7, %xmm6, %xmm6
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm7 = mem[0],zero
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm8 = mem[0],zero
-; AVX512VL-NEXT:    vaddps %xmm7, %xmm8, %xmm7
-; AVX512VL-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; AVX512VL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [0,2,4,6]
-; AVX512VL-NEXT:    vpermi2pd %ymm2, %ymm0, %ymm1
-; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm7, %zmm6, %zmm0
-; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm5, %zmm4, %zmm2
-; AVX512VL-NEXT:    vbroadcasti64x4 {{.*#+}} zmm3 = [0,2,8,10,0,2,8,10]
-; AVX512VL-NEXT:    # zmm3 = mem[0,1,2,3,0,1,2,3]
-; AVX512VL-NEXT:    vpermi2pd %zmm0, %zmm2, %zmm3
-; AVX512VL-NEXT:    vinsertf64x4 $0, %ymm1, %zmm3, %zmm0
-; AVX512VL-NEXT:    vmovupd %zmm0, (%rdx)
-; AVX512VL-NEXT:    vzeroupper
-; AVX512VL-NEXT:    retq
+; AVX512-LABEL: widen_fadd_v2f32_v16f32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
+; AVX512-NEXT:    vaddps %xmm4, %xmm0, %xmm0
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
+; AVX512-NEXT:    vaddps %xmm4, %xmm1, %xmm1
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
+; AVX512-NEXT:    vaddps %xmm4, %xmm2, %xmm2
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
+; AVX512-NEXT:    vaddps %xmm4, %xmm3, %xmm3
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm5 = mem[0],zero
+; AVX512-NEXT:    vaddps %xmm5, %xmm4, %xmm4
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm5 = mem[0],zero
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm6 = mem[0],zero
+; AVX512-NEXT:    vaddps %xmm6, %xmm5, %xmm5
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm6 = mem[0],zero
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm7 = mem[0],zero
+; AVX512-NEXT:    vaddps %xmm7, %xmm6, %xmm6
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm7 = mem[0],zero
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm8 = mem[0],zero
+; AVX512-NEXT:    vaddps %xmm7, %xmm8, %xmm7
+; AVX512-NEXT:    vinsertf32x4 $1, %xmm7, %zmm6, %zmm6
+; AVX512-NEXT:    vinsertf32x4 $1, %xmm5, %zmm4, %zmm4
+; AVX512-NEXT:    vbroadcasti64x4 {{.*#+}} zmm5 = [0,2,8,10,0,2,8,10]
+; AVX512-NEXT:    # zmm5 = mem[0,1,2,3,0,1,2,3]
+; AVX512-NEXT:    vpermi2pd %zmm6, %zmm4, %zmm5
+; AVX512-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
+; AVX512-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX512-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; AVX512-NEXT:    vinsertf64x4 $0, %ymm0, %zmm5, %zmm0
+; AVX512-NEXT:    vmovupd %zmm0, (%rdx)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %a2 = getelementptr inbounds i8, ptr %a0, i64 8
   %b2 = getelementptr inbounds i8, ptr %b0, i64 8
   %c2 = getelementptr inbounds i8, ptr %c0, i64 8

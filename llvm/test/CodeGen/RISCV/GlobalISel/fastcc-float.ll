@@ -57,8 +57,6 @@ define float @caller([32 x float] %A) nounwind {
 ; CHECK-NEXT:    sw s0, 28(sp)
 ; CHECK-NEXT:    sw s1, 32(sp)
 ; CHECK-NEXT:    sw s2, 36(sp)
-; CHECK-NEXT:    sw s3, 40(sp)
-; CHECK-NEXT:    sw s4, 44(sp)
 ; CHECK-NEXT:    fmv.w.x fa0, a0
 ; CHECK-NEXT:    fmv.w.x fa1, a1
 ; CHECK-NEXT:    fmv.w.x fa2, a2
@@ -67,6 +65,8 @@ define float @caller([32 x float] %A) nounwind {
 ; CHECK-NEXT:    fmv.w.x fa5, a5
 ; CHECK-NEXT:    fmv.w.x fa6, a6
 ; CHECK-NEXT:    fmv.w.x fa7, a7
+; CHECK-NEXT:    sw s3, 40(sp)
+; CHECK-NEXT:    sw s4, 44(sp)
 ; CHECK-NEXT:    call callee
 ; CHECK-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload

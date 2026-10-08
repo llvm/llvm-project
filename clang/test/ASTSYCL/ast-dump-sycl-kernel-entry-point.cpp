@@ -1,5 +1,5 @@
 // Tests without serialization:
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown -fsycl-is-device \
+// RUN: %clang_cc1 -std=c++17 -triple spirv64-unknown-unknown -fsycl-is-device \
 // RUN:   -ast-dump %s \
 // RUN:   | FileCheck --match-full-lines %s
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown -fsycl-is-host \
@@ -7,9 +7,9 @@
 // RUN:   | FileCheck --match-full-lines %s
 //
 // Tests with serialization:
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown -fsycl-is-device \
+// RUN: %clang_cc1 -std=c++17 -triple spirv64-unknown-unknown -fsycl-is-device \
 // RUN:   -emit-pch -o %t %s
-// RUN: %clang_cc1 -x c++ -std=c++17 -triple x86_64-unknown-unknown -fsycl-is-device \
+// RUN: %clang_cc1 -x c++ -std=c++17 -triple spirv64-unknown-unknown -fsycl-is-device \
 // RUN:   -include-pch %t -ast-dump-all /dev/null \
 // RUN:   | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
 // RUN:   | FileCheck --match-full-lines %s

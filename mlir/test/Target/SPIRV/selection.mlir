@@ -346,3 +346,32 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.5, [Shader], []> {
   spirv.EntryPoint "GLCompute" @main
   spirv.ExecutionMode @main "LocalSize", 1, 1, 1
 }
+
+// -----
+
+// Switch with only a default target (no case literals).
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
+// CHECK-LABEL: @switch_default_only
+  spirv.func @switch_default_only(%cond: i32) -> () "None" {
+// CHECK:        spirv.mlir.selection
+    spirv.mlir.selection {
+// CHECK-NEXT:     spirv.Switch %{{.*}} : i32, [
+// CHECK-NEXT:       default: ^[[DEFAULT:.+]]]
+      spirv.Switch %cond : i32, [
+        default: ^default
+      ]
+
+// CHECK-NEXT:   ^[[DEFAULT]]:
+    ^default:
+// CHECK-NEXT:     spirv.Branch ^[[MERGE:.+]]
+      spirv.Branch ^merge
+
+// CHECK-NEXT:   ^[[MERGE]]:
+    ^merge:
+// CHECK-NEXT:     spirv.mlir.merge
+      spirv.mlir.merge
+    }
+    spirv.Return
+  }
+}

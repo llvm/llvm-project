@@ -11,19 +11,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CIRTransformUtils.h"
 #include "PassDetail.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Rewrite/PatternApplicator.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
+#include "clang/CIR/Dialect/Transforms/CIRTransformUtils.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -263,28 +263,41 @@ public:
                                   mlir::Block *defaultDestination,
                                   const APInt &lowerBound,
                                   const APInt &upperBound) const {
-    assert(lowerBound.sle(upperBound) && "Invalid range");
+    auto condType = mlir::cast<cir::IntType>(op.getCondition().getType());
+    bool isSigned = condType.isSigned();
+    assert(
+        (isSigned ? lowerBound.sle(upperBound) : lowerBound.ule(upperBound)) &&
+        "Invalid range");
     mlir::Block *resBlock = rewriter.createBlock(defaultDestination);
-    cir::IntType sIntType = cir::IntType::get(op.getContext(), 32, true);
-    cir::IntType uIntType = cir::IntType::get(op.getContext(), 32, false);
 
-    cir::ConstantOp rangeLength = cir::ConstantOp::create(
-        rewriter, op.getLoc(),
-        cir::IntAttr::get(sIntType, upperBound - lowerBound));
+    // Build the range check at the switch operand's width.  The classic
+    // `sub x, lo; ule (x - lo), (hi - lo)` idiom is a cyclic-distance test that
+    // is correct for both signed and unsigned switches, so the comparison is
+    // always unsigned.
+    cir::IntType uIntType =
+        cir::IntType::get(op.getContext(), condType.getWidth(),
+                          /*isSigned=*/false);
 
     cir::ConstantOp lowerBoundValue = cir::ConstantOp::create(
-        rewriter, op.getLoc(), cir::IntAttr::get(sIntType, lowerBound));
+        rewriter, op.getLoc(), cir::IntAttr::get(condType, lowerBound));
     mlir::Value diffValue = cir::SubOp::create(
         rewriter, op.getLoc(), op.getCondition(), lowerBoundValue);
 
-    // Use unsigned comparison to check if the condition is in the range.
-    cir::CastOp uDiffValue = cir::CastOp::create(
-        rewriter, op.getLoc(), uIntType, CastKind::integral, diffValue);
-    cir::CastOp uRangeLength = cir::CastOp::create(
-        rewriter, op.getLoc(), uIntType, CastKind::integral, rangeLength);
+    // Use an unsigned comparison to check whether the condition is in range.
+    // cir.cmp takes its signedness from the operand type, so a signed
+    // difference needs a same-width integral cast to the unsigned type (a
+    // signedness reinterpretation) to make the `le` unsigned; an unsigned
+    // difference already has the right type.
+    if (isSigned)
+      diffValue = cir::CastOp::create(rewriter, op.getLoc(), uIntType,
+                                      CastKind::integral, diffValue);
+
+    cir::ConstantOp rangeLength = cir::ConstantOp::create(
+        rewriter, op.getLoc(),
+        cir::IntAttr::get(uIntType, upperBound - lowerBound));
 
     cir::CmpOp cmpResult = cir::CmpOp::create(
-        rewriter, op.getLoc(), cir::CmpOpKind::le, uDiffValue, uRangeLength);
+        rewriter, op.getLoc(), cir::CmpOpKind::le, diffValue, rangeLength);
     cir::BrCondOp::create(rewriter, op.getLoc(), cmpResult, rangeDestination,
                           defaultDestination);
     return resBlock;
@@ -301,14 +314,15 @@ public:
       if (hasNestedOpsToFlatten(region))
         return mlir::failure();
 
-    llvm::SmallVector<CaseOp> cases;
-    op.collectCases(cases);
-
     // Empty switch statement: just erase it.
-    if (cases.empty()) {
+    if (op.getBody().hasOneBlock() &&
+        op.getBody().front().without_terminator().empty()) {
       rewriter.eraseOp(op);
       return mlir::success();
     }
+
+    llvm::SmallVector<CaseOp> cases;
+    op.collectCases(cases);
 
     // Create exit block from the next node of cir.switch op.
     mlir::Block *exitBlock = rewriter.splitBlock(
@@ -321,6 +335,18 @@ public:
     //    case. b. Inline the case region after the case op.
     // 3. Replace the empty cir.switch.op with the new cir.switchflat op by the
     //    recorded block and conditions.
+
+    // First we have to handle the rewrite of all of the 'break' ops to make
+    // sure they now go to the right place, including the ones in the pre-case
+    // blcoks.
+    walkRegionSkipping<cir::LoopOpInterface, cir::SwitchOp>(
+        op.getBody(), [&](mlir::Operation *op) {
+          if (!isa<cir::BreakOp>(op))
+            return mlir::WalkResult::advance();
+
+          lowerTerminator(op, exitBlock, rewriter);
+          return mlir::WalkResult::skip();
+        });
 
     // inline everything from switch body between the switch op and the exit
     // block.
@@ -389,16 +415,6 @@ public:
         break;
       }
 
-      // Handle break statements.
-      walkRegionSkipping<cir::LoopOpInterface, cir::SwitchOp>(
-          region, [&](mlir::Operation *op) {
-            if (!isa<cir::BreakOp>(op))
-              return mlir::WalkResult::advance();
-
-            lowerTerminator(op, exitBlock, rewriter);
-            return mlir::WalkResult::skip();
-          });
-
       // Track fallthrough in cases.
       for (mlir::Block &blk : region.getBlocks()) {
         if (blk.getNumSuccessors())
@@ -440,22 +456,31 @@ public:
         rewriter.eraseOp(caseOp);
     }
 
+    bool isSigned =
+        mlir::cast<cir::IntType>(op.getCondition().getType()).isSigned();
     for (auto [rangeVal, operand, destination] :
          llvm::zip(rangeValues, rangeOperands, rangeDestinations)) {
       APInt lowerBound = rangeVal.first;
       APInt upperBound = rangeVal.second;
 
-      // The case range is unreachable, skip it.
-      if (lowerBound.sgt(upperBound))
+      // An empty range (lo > hi in the switch's signedness) is unreachable.
+      if (isSigned ? lowerBound.sgt(upperBound) : lowerBound.ugt(upperBound))
         continue;
 
       // If range is small, add multiple switch instruction cases.
       // This magical number is from the original CGStmt code.
-      constexpr int kSmallRangeThreshold = 64;
-      if ((upperBound - lowerBound)
-              .ult(llvm::APInt(32, kSmallRangeThreshold))) {
-        for (APInt iValue = lowerBound; iValue.sle(upperBound); ++iValue) {
-          caseValues.push_back(iValue);
+      constexpr uint64_t kSmallRangeThreshold = 64;
+      APInt rangeSize = upperBound - lowerBound;
+      if (rangeSize.ult(kSmallRangeThreshold)) {
+        // Expand into individual cases.  rangeSize < kSmallRangeThreshold, so
+        // the inclusive case count (rangeSize + 1) fits in a uint64_t.  Drive
+        // termination by the count rather than by comparing caseValue to
+        // upperBound: when upperBound is the type's maximum the final
+        // caseValue++ wraps past the top, which is harmless because the
+        // wrapped value is never used.
+        APInt caseValue = lowerBound;
+        for (uint64_t n = rangeSize.getZExtValue() + 1; n != 0; --n) {
+          caseValues.push_back(caseValue++);
           caseOperands.push_back(operand);
           caseDestinations.push_back(destination);
         }
@@ -493,6 +518,154 @@ public:
                                                exit);
   }
 
+  // Rewrite a loop that has a per-iteration cleanup region into a loop whose
+  // condition is always 'true' and whose body is a cir.cleanup.scope enclosing
+  // the original condition, body, and step regions.
+  //
+  // The condition test is sunk to the top of the scope body (a false
+  // result becomes a cir.break out of the loop) and, for a for loop, the step
+  // is appended to the end of the scope body. The loop's cleanup region becomes
+  // the cleanup region of a cir.cleanup.scope enclosing the new body.
+  //
+  // For example, a while loop:
+  //
+  //   cir.while { <cond>; cir.condition(%c) }
+  //          do { <body> }
+  //     cleanup all { <cleanup> }
+  //
+  // becomes:
+  //
+  //   cir.while { cir.condition(%true) } do {
+  //     cir.cleanup.scope {
+  //       <cond>
+  //       cir.brcond %c ^body, ^cond_false
+  //     ^cond_false:
+  //       cir.break
+  //     ^body:
+  //       <body>
+  //     } cleanup all { <cleanup> }
+  //     cir.yield
+  //   }
+  //
+  // A for loop is the same, except the step region is appended to the scope
+  // body (after the body) and both the body's normal end and any continue are
+  // redirected into the step so that the step runs before the cleanup. The init
+  // section of a for loop is already outside the loop op.
+  mlir::LogicalResult
+  rewriteLoopWithCleanup(cir::LoopOpInterface op,
+                         mlir::PatternRewriter &rewriter) const {
+    mlir::Location loc = op.getLoc();
+    mlir::Region *stepRegion = op.maybeGetStep();
+
+    cir::CleanupKindAttr cleanupKind = op.maybeGetCleanupKind();
+    assert(cleanupKind && "loop cleanup region without a cleanup kind");
+
+    mlir::Region &condRegion = op.getCond();
+    mlir::Region &bodyRegion = op.getBody();
+    mlir::Region &cleanupRegion = *op.maybeGetCleanup();
+
+    // The cir.condition is the terminator of the condition region's last block
+    // (there can be more than one block if a nested scope was already
+    // flattened within the condition).
+    auto conditionOp =
+        cast<cir::ConditionOp>(condRegion.back().getTerminator());
+    mlir::Value condVal = conditionOp.getCondition();
+
+    // Capture block references and exit terminators before moving blocks
+    // around. Block pointers stay valid across region inlining because blocks
+    // are reparented, not recreated.
+    mlir::Block *bodyFront = &bodyRegion.front();
+    mlir::Block *stepFront = stepRegion ? &stepRegion->front() : nullptr;
+
+    // For a for loop the body's normal end and any continue must run the step
+    // before the cleanup, so collect them to redirect into the step region. For
+    // a while loop they are genuine cleanup-scope exits and are left untouched.
+    llvm::SmallVector<cir::YieldOp> bodyYieldsToStep;
+    llvm::SmallVector<cir::ContinueOp> continuesToStep;
+    if (stepRegion) {
+      for (mlir::Block &blk : bodyRegion.getBlocks())
+        if (auto y = dyn_cast<cir::YieldOp>(blk.getTerminator()))
+          bodyYieldsToStep.push_back(y);
+      op.walkBodySkippingNestedLoops([&](mlir::Operation *o) {
+        if (auto c = dyn_cast<cir::ContinueOp>(o)) {
+          continuesToStep.push_back(c);
+          return mlir::WalkResult::skip();
+        }
+        return mlir::WalkResult::advance();
+      });
+    }
+
+    // Assemble the per-iteration blocks into the condition region, in
+    // execution order: [ cond blocks..., body blocks..., step blocks... ].
+    rewriter.inlineRegionBefore(bodyRegion, condRegion, condRegion.end());
+    if (stepRegion)
+      rewriter.inlineRegionBefore(*stepRegion, condRegion, condRegion.end());
+
+    // Replace cir.condition(%c) with a conditional branch into the body whose
+    // false edge breaks out of the loop.
+    mlir::Block *breakBlock =
+        rewriter.createBlock(&condRegion, condRegion.end());
+    rewriter.setInsertionPointToEnd(breakBlock);
+    cir::BreakOp::create(rewriter, conditionOp.getLoc());
+
+    rewriter.setInsertionPoint(conditionOp);
+    rewriter.replaceOpWithNewOp<cir::BrCondOp>(conditionOp, condVal, bodyFront,
+                                               breakBlock);
+
+    // For a for loop, redirect the body's normal end and any continue to the
+    // step. The step's own yield remains the normal end of the iteration.
+    for (cir::YieldOp y : bodyYieldsToStep)
+      lowerTerminator(y, stepFront, rewriter);
+    for (cir::ContinueOp c : continuesToStep)
+      lowerTerminator(c, stepFront, rewriter);
+
+    // Build the trivial loop body: a single cir.cleanup.scope followed by a
+    // yield, in a fresh block (the body region's blocks were moved out above).
+    mlir::Block *newBodyBlock = rewriter.createBlock(&bodyRegion);
+    rewriter.setInsertionPointToEnd(newBodyBlock);
+    auto emitYield = [](mlir::OpBuilder &b, mlir::Location l) {
+      cir::YieldOp::create(b, l);
+    };
+    auto scope = cir::CleanupScopeOp::create(
+        rewriter, loc, cleanupKind.getValue(), emitYield, emitYield);
+    cir::YieldOp::create(rewriter, loc);
+
+    // Move the assembled per-iteration blocks into the scope's body region and
+    // the loop's cleanup blocks into the scope's cleanup region, discarding the
+    // placeholder blocks the builder created.
+    mlir::Block *bodyPlaceholder = &scope.getBodyRegion().front();
+    rewriter.inlineRegionBefore(condRegion, bodyPlaceholder);
+    rewriter.eraseBlock(bodyPlaceholder);
+
+    mlir::Block *cleanupPlaceholder = &scope.getCleanupRegion().front();
+    rewriter.inlineRegionBefore(cleanupRegion, cleanupPlaceholder);
+    rewriter.eraseBlock(cleanupPlaceholder);
+
+    // Rebuild the loop condition region with an always-true condition.
+    mlir::Block *newCondBlock = rewriter.createBlock(&condRegion);
+    rewriter.setInsertionPointToEnd(newCondBlock);
+    mlir::Value trueVal = cir::ConstantOp::create(
+        rewriter, loc, cir::BoolAttr::get(rewriter.getContext(), true));
+    cir::ConditionOp::create(rewriter, loc, trueVal);
+
+    // For a for loop, rebuild the (now empty) step region with a trivial yield.
+    if (stepRegion) {
+      mlir::Block *newStepBlock = rewriter.createBlock(stepRegion);
+      rewriter.setInsertionPointToEnd(newStepBlock);
+      cir::YieldOp::create(rewriter, loc);
+    }
+
+    // Drop the cleanup-kind attribute now that the loop's cleanup region is
+    // empty, so the trivial loop verifies and takes the no-cleanup flattening
+    // path when the greedy driver revisits it.
+    if (auto whileOp = mlir::dyn_cast<cir::WhileOp>(op.getOperation()))
+      whileOp.removeCleanupKindAttr();
+    else if (auto forOp = mlir::dyn_cast<cir::ForOp>(op.getOperation()))
+      forOp.removeCleanupKindAttr();
+
+    return mlir::success();
+  }
+
   mlir::LogicalResult
   matchAndRewrite(cir::LoopOpInterface op,
                   mlir::PatternRewriter &rewriter) const final {
@@ -503,6 +676,17 @@ public:
     for (mlir::Region &region : op->getRegions())
       if (hasNestedOpsToFlatten(region))
         return mlir::failure();
+
+    // Loops with a per-iteration cleanup region need every iteration-exit edge
+    // routed through that cleanup, including the false-condition exit and any
+    // exceptions that might be thrown from the step region. Rather than trying
+    // to figure out all of the cleanup routing here, we sink the condition into
+    // the body region, hoist the step region (if any) and create a new
+    // cir.cleanup.scope enclosing the body region. A subsequent sweep of the
+    // pass will flatten the cir.cleanup.scope and the loop reusing the normal
+    // handlers.
+    if (op.maybeGetCleanup())
+      return rewriteLoopWithCleanup(op, rewriter);
 
     // Setup CFG blocks.
     mlir::Block *entry = rewriter.getInsertionBlock();
@@ -646,11 +830,12 @@ static cir::AllocaOp getOrCreateCleanupDestSlot(cir::FuncOp funcOp,
   rewriter.setInsertionPointToStart(&entryBlock);
   cir::IntType s32Type =
       cir::IntType::get(rewriter.getContext(), 32, /*isSigned=*/true);
-  cir::PointerType ptrToS32Type = cir::PointerType::get(s32Type);
   cir::CIRDataLayout dataLayout(funcOp->getParentOfType<mlir::ModuleOp>());
+  cir::PointerType ptrToS32Type = cir::PointerType::get(
+      s32Type, dataLayout.getAllocaAddrSpace(rewriter.getContext()));
   uint64_t alignment = dataLayout.getAlignment(s32Type, true).value();
   auto allocaOp = cir::AllocaOp::create(
-      rewriter, loc, ptrToS32Type, s32Type, "__cleanup_dest_slot",
+      rewriter, loc, ptrToS32Type, "__cleanup_dest_slot",
       /*alignment=*/rewriter.getI64IntegerAttr(alignment));
   allocaOp.setCleanupDestSlot(true);
   return allocaOp;
@@ -658,6 +843,51 @@ static cir::AllocaOp getOrCreateCleanupDestSlot(cir::FuncOp funcOp,
 
 /// Shared EH flattening utilities used by both CIRCleanupScopeOpFlattening
 /// and CIRTryOpFlattening.
+
+// Lifetime markers participate in existing EH paths, but do not require an
+// unwind edge on their own. Conservatively treat other cleanup code as real
+// cleanup, including regions with control flow.
+static bool isLifetimeMarkerOnly(mlir::Region &region) {
+  return llvm::hasSingleElement(region) &&
+         llvm::any_of(
+             region.front(),
+             [](mlir::Operation &op) { return isa<cir::LifetimeEndOp>(op); }) &&
+         llvm::all_of(region.front(), [](mlir::Operation &op) {
+           return isa<cir::LifetimeEndOp, cir::YieldOp>(op);
+         });
+}
+
+// Look for an enclosing handler or non-marker EH cleanup that protects this
+// operation. Follow regions, rather than just parent ops: a try does not catch
+// exceptions from its own handlers, and a cleanup does not protect itself.
+static bool hasEnclosingEHRequirement(mlir::Operation *op) {
+  for (mlir::Region *region = op->getParentRegion(); region;
+       region = region->getParentRegion()) {
+    mlir::Operation *parent = region->getParentOp();
+    if (!parent || isa<cir::FuncOp>(parent))
+      break;
+    if (auto tryOp = dyn_cast<cir::TryOp>(parent)) {
+      auto handlers = tryOp.getHandlerTypesAttr();
+      if (region == &tryOp.getTryRegion() && handlers &&
+          llvm::any_of(handlers, [](mlir::Attribute handler) {
+            return !isa<cir::UnwindAttr>(handler);
+          }))
+        return true;
+    } else if (auto cleanupOp = dyn_cast<cir::CleanupScopeOp>(parent)) {
+      if (region == &cleanupOp.getBodyRegion() &&
+          cleanupOp.getCleanupKindAttr().isEH() &&
+          !isLifetimeMarkerOnly(cleanupOp.getCleanupRegion()))
+        return true;
+    } else if (auto loopOp = dyn_cast<cir::LoopOpInterface>(parent)) {
+      // The enclosing loop may not yet have been rewritten to a cleanup scope.
+      mlir::Region *cleanup = loopOp.maybeGetCleanup();
+      if (cleanup && region != cleanup && loopOp.maybeGetCleanupKind().isEH() &&
+          !isLifetimeMarkerOnly(*cleanup))
+        return true;
+    }
+  }
+  return false;
+}
 
 // Collect all function calls in a region that may throw exceptions and need
 // to be replaced with try_call operations. Skips calls marked nothrow.
@@ -667,9 +897,24 @@ static void
 collectThrowingCalls(mlir::Region &region,
                      llvm::SmallVectorImpl<cir::CallOp> &callsToRewrite) {
   region.walk([&](cir::CallOp callOp) {
-    if (!callOp.getNothrow())
+    // A musttail call is never an invoke. LLVM has no musttail invoke, and
+    // the tail call replaces the frame the cleanup would have run in, so
+    // there is nothing left to unwind through.
+    if (!callOp.getNothrow() && !callOp.getMusttail())
       callsToRewrite.push_back(callOp);
   });
+}
+
+// Collect all cir.throw operations in a region that need to be replaced
+// with cir.try_throw operations so they can unwind through an enclosing
+// cleanup or catch handler. Nested cleanup scopes and try ops are always
+// flattened before their enclosing parents, so there are no nested
+// regions to skip here.
+static void
+collectThrows(mlir::Region &region,
+              llvm::SmallVectorImpl<cir::ThrowOp> &throwsToRewrite) {
+  region.walk(
+      [&](cir::ThrowOp throwOp) { throwsToRewrite.push_back(throwOp); });
 }
 
 // Collect all cir.resume operations in a region that come from
@@ -729,6 +974,25 @@ public:
     CleanupExit(mlir::Operation *op, int id) : exitOp(op), destinationId(id) {}
   };
 
+  // Determine whether a goto operation transfers control to a label that
+  // exists somewhere inside the given region (or any of its nested regions).
+  // Label names are unique within a function, so finding a matching cir.label
+  // inside the region implies that the goto definitely targets that label and
+  // therefore stays within the region. If no match is found, the goto either
+  // exits the region or its target is unknown; in either case the caller must
+  // treat it as exiting the region.
+  static bool gotoTargetsLabelInRegion(cir::GotoOp gotoOp,
+                                       mlir::Region &region) {
+    llvm::StringRef targetLabel = gotoOp.getLabel();
+    return region
+        .walk([&](cir::LabelOp labelOp) {
+          if (labelOp.getLabel() == targetLabel)
+            return mlir::WalkResult::interrupt();
+          return mlir::WalkResult::advance();
+        })
+        .wasInterrupted();
+  }
+
   // Collect all operations that exit a cleanup scope body. Return, goto, break,
   // and continue can all require branches through the cleanup region. When a
   // loop is encountered, only return and goto are collected because break and
@@ -739,9 +1003,16 @@ public:
   // any return, goto, break, or continue from the nested cleanup will also
   // branch through the outer cleanup.
   //
-  // Note that goto statements may not necessarily exit the cleanup scope, but
-  // for now we conservatively assume that they do. We'll need more nuanced
-  // handling of that when multi-exit flattening is implemented.
+  // A goto is only treated as an exit if its target label is not somewhere
+  // inside the cleanup body region. Gotos whose target label is within the
+  // cleanup body stay inside the cleanup scope and need no special handling
+  // during flattening; they are simply inlined along with the rest of the
+  // body region.
+  //
+  // A musttail return is likewise not an exit. It leaves the function
+  // directly without running any cleanup, which is what the tail call means:
+  // the frame those cleanups would run in no longer exists. CIRGen only emits
+  // one when every cleanup it skips is redundant before a return.
   //
   // This function assigns unique destination IDs to each exit, which are
   // used when multi-exit cleanup scopes are flattened.
@@ -757,14 +1028,39 @@ public:
         exits.emplace_back(terminator, nextId++);
     }
 
+    // Helper to decide whether an op is a goto that needs to be treated as an
+    // exit from the cleanup scope being flattened. If op is a goto and targets
+    // a label inside the cleanup body region, control stays within the cleanup
+    // and we leave the goto in place.
+    auto isGotoThatExitsCleanup = [&](mlir::Operation *op) {
+      auto gotoOp = dyn_cast<cir::GotoOp>(op);
+      return gotoOp && !gotoTargetsLabelInRegion(gotoOp, cleanupBodyRegion);
+    };
+
+    // Helper to decide whether a return branches through the cleanup. The
+    // return that completes a musttail call does not. LLVM requires the two
+    // to stay adjacent, so it cannot be rewritten into a store and a branch
+    // to the cleanup. CIRGen emits the pair adjacently in the same block, and
+    // the predecessor is only ever a cir.call, never a cir.try_call, since a
+    // try_call terminates its block and so cannot be followed by a return.
+    auto isReturnThatExitsCleanup = [](mlir::Operation *op) {
+      if (!isa<cir::ReturnOp>(op))
+        return false;
+      auto callOp = dyn_cast_if_present<cir::CallOp>(op->getPrevNode());
+      return !callOp || !callOp.getMusttail();
+    };
+
     // Lambda to walk a loop and collect only returns and gotos.
     // Break and continue inside loops are handled by the loop itself.
     // Loops don't require special handling for nested switch or cleanup scopes
     // because break and continue never branch out of the loop.
     auto collectExitsInLoop = [&](mlir::Operation *loopOp) {
       loopOp->walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *nestedOp) {
-        if (isa<cir::ReturnOp, cir::GotoOp>(nestedOp))
+        if (isReturnThatExitsCleanup(nestedOp)) {
           exits.emplace_back(nestedOp, nextId++);
+        } else if (isGotoThatExitsCleanup(nestedOp)) {
+          exits.emplace_back(nestedOp, nextId++);
+        }
         return mlir::WalkResult::advance();
       });
     };
@@ -787,7 +1083,10 @@ public:
         } else if (isa<cir::LoopOpInterface>(nestedOp)) {
           collectExitsInLoop(nestedOp);
           return mlir::WalkResult::skip();
-        } else if (isa<cir::ReturnOp, cir::GotoOp, cir::ContinueOp>(nestedOp)) {
+        } else if (isa<cir::ContinueOp>(nestedOp) ||
+                   isReturnThatExitsCleanup(nestedOp)) {
+          exits.emplace_back(nestedOp, nextId++);
+        } else if (isGotoThatExitsCleanup(nestedOp)) {
           exits.emplace_back(nestedOp, nextId++);
         }
         return mlir::WalkResult::advance();
@@ -807,7 +1106,9 @@ public:
         // the nested cleanup.
         if (!ignoreBreak && isa<cir::BreakOp>(op)) {
           exits.emplace_back(op, nextId++);
-        } else if (isa<cir::ContinueOp, cir::ReturnOp, cir::GotoOp>(op)) {
+        } else if (isa<cir::ContinueOp>(op) || isReturnThatExitsCleanup(op)) {
+          exits.emplace_back(op, nextId++);
+        } else if (isGotoThatExitsCleanup(op)) {
           exits.emplace_back(op, nextId++);
         } else if (isa<cir::CleanupScopeOp>(op)) {
           // Recurse into nested cleanup's body region.
@@ -908,9 +1209,9 @@ public:
           uint64_t alignment =
               dataLayout.getAlignment(operand.getType(), true).value();
           cir::PointerType ptrType = cir::PointerType::get(operand.getType());
-          alloca = cir::AllocaOp::create(rewriter, loc, ptrType,
-                                         operand.getType(), "__ret_operand_tmp",
-                                         rewriter.getI64IntegerAttr(alignment));
+          alloca =
+              cir::AllocaOp::create(rewriter, loc, ptrType, "__ret_operand_tmp",
+                                    rewriter.getI64IntegerAttr(alignment));
         }
 
         // Store the operand value at the original return location.
@@ -919,16 +1220,19 @@ public:
           rewriter.setInsertionPoint(exitOp);
           cir::StoreOp::create(rewriter, loc, operand, alloca,
                                /*isVolatile=*/false,
+                               /*isNontemporal=*/false,
                                /*alignment=*/mlir::IntegerAttr(),
                                cir::SyncScopeKindAttr(), cir::MemOrderAttr());
         }
 
         // Reload the value from the temporary alloca in the destination block.
         rewriter.setInsertionPointToEnd(destBlock);
-        auto loaded = cir::LoadOp::create(
-            rewriter, loc, alloca, /*isDeref=*/false,
-            /*isVolatile=*/false, /*alignment=*/mlir::IntegerAttr(),
-            cir::SyncScopeKindAttr(), cir::MemOrderAttr());
+        auto loaded =
+            cir::LoadOp::create(rewriter, loc, alloca, /*isDeref=*/false,
+                                /*isVolatile=*/false, /*isNontemporal=*/false,
+                                /*alignment=*/mlir::IntegerAttr(),
+                                cir::SyncScopeKindAttr(), cir::MemOrderAttr(),
+                                /*invariant=*/false);
         returnValues.push_back(loaded);
       }
     }
@@ -972,15 +1276,12 @@ public:
           return mlir::success();
         })
         .Case<cir::GotoOp>([&](auto gotoOp) {
-          // Correct goto handling requires determining whether the goto
-          // branches out of the cleanup scope or stays within it.
-          // Although the goto necessarily exits the cleanup scope in the
-          // case where it is the only exit from the scope, it is left
-          // as unimplemented for now so that it can be generalized when
-          // multi-exit flattening is implemented.
-          cir::UnreachableOp::create(rewriter, loc);
-          return gotoOp.emitError(
-              "goto in cleanup scope is not yet implemented");
+          // Gotos that target a label within the cleanup body region are
+          // filtered out by collectExits and never reach this code, so any
+          // goto that does reach here transfers control out of the cleanup
+          // scope. The goto is just moved to the exit block.
+          cir::GotoOp::create(rewriter, loc, gotoOp.getLabel());
+          return mlir::success();
         })
         .Default([&](mlir::Operation *op) {
           cir::UnreachableOp::create(rewriter, loc);
@@ -1144,6 +1445,7 @@ public:
   flattenCleanup(cir::CleanupScopeOp cleanupOp,
                  llvm::SmallVectorImpl<CleanupExit> &exits,
                  llvm::SmallVectorImpl<cir::CallOp> &callsToRewrite,
+                 llvm::SmallVectorImpl<cir::ThrowOp> &throwsToRewrite,
                  llvm::SmallVectorImpl<cir::ResumeOp> &resumeOpsToChain,
                  mlir::PatternRewriter &rewriter) const {
     mlir::Location loc = cleanupOp.getLoc();
@@ -1153,6 +1455,13 @@ public:
     bool hasEHCleanup = cleanupKind == cir::CleanupKind::EH ||
                         cleanupKind == cir::CleanupKind::All;
     bool isMultiExit = exits.size() > 1;
+
+    // If every exit from the body is a musttail return, nothing reaches the
+    // normal cleanup, so it is dropped rather than emitted as dead code. The
+    // EH path is still built. The only cleanup a musttail call may skip and
+    // still unwind through is a lifetime marker, which is pushed as an "all"
+    // cleanup, and the body can throw before reaching the tail call.
+    bool emitNormalCleanup = hasNormalCleanup && !exits.empty();
 
     // Get references to region blocks before inlining.
     mlir::Block *bodyEntry = &cleanupOp.getBodyRegion().front();
@@ -1172,7 +1481,7 @@ public:
     // function. This is only needed if the cleanup scope requires normal
     // cleanup.
     cir::AllocaOp destSlot;
-    if (isMultiExit && hasNormalCleanup) {
+    if (isMultiExit && emitNormalCleanup) {
       auto funcOp = cleanupOp->getParentOfType<cir::FuncOp>();
       if (!funcOp)
         return cleanupOp->emitError("cleanup scope not inside a function");
@@ -1188,20 +1497,20 @@ public:
     // the cleanup region since buildEHCleanupBlocks clones from it. The unwind
     // block is inserted before the EH cleanup entry so that the final layout
     // is: body -> normal cleanup -> exit -> unwind -> EH cleanup -> continue.
-    // EH cleanup blocks are needed when there are throwing calls that need to
-    // be rewritten to try_call, or when there are resume ops from
+    // EH cleanup blocks are needed when there are throwing calls or throws
+    // that need to be rewritten, or when there are resume ops from
     // already-flattened inner cleanup scopes that need to chain through this
     // cleanup's EH handler.
     mlir::Block *unwindBlock = nullptr;
     mlir::Block *ehCleanupEntry = nullptr;
-    if (hasEHCleanup &&
-        (!callsToRewrite.empty() || !resumeOpsToChain.empty())) {
+    if (hasEHCleanup && (!callsToRewrite.empty() || !throwsToRewrite.empty() ||
+                         !resumeOpsToChain.empty())) {
       ehCleanupEntry =
           buildEHCleanupBlocks(cleanupOp, loc, continueBlock, rewriter);
-      // The unwind block is only needed when there are throwing calls that
-      // need a shared unwind destination. Resume ops from inner cleanups
-      // branch directly to the EH cleanup entry.
-      if (!callsToRewrite.empty())
+      // The unwind block is only needed when there are throwing calls or
+      // throws that need a shared unwind destination. Resume ops from inner
+      // cleanups branch directly to the EH cleanup entry.
+      if (!callsToRewrite.empty() || !throwsToRewrite.empty())
         unwindBlock = buildUnwindBlock(ehCleanupEntry, /*isCleanupOnly=*/true,
                                        loc, ehCleanupEntry, rewriter);
     }
@@ -1218,7 +1527,7 @@ public:
     rewriter.inlineRegionBefore(cleanupOp.getBodyRegion(), normalInsertPt);
 
     // Inline the cleanup region for the normal cleanup path.
-    if (hasNormalCleanup)
+    if (emitNormalCleanup)
       rewriter.inlineRegionBefore(cleanupOp.getCleanupRegion(), normalInsertPt);
 
     // Branch from current block to body entry.
@@ -1227,7 +1536,7 @@ public:
 
     // Handle normal exits.
     mlir::LogicalResult result = mlir::success();
-    if (hasNormalCleanup) {
+    if (emitNormalCleanup) {
       // Create the exit/dispatch block (after cleanup, before continue).
       mlir::Block *exitBlock = rewriter.createBlock(normalInsertPt);
 
@@ -1240,10 +1549,12 @@ public:
         rewriter.setInsertionPointToEnd(exitBlock);
 
         // Load the destination slot value.
-        auto slotValue = cir::LoadOp::create(
-            rewriter, loc, destSlot, /*isDeref=*/false,
-            /*isVolatile=*/false, /*alignment=*/mlir::IntegerAttr(),
-            cir::SyncScopeKindAttr(), cir::MemOrderAttr());
+        auto slotValue =
+            cir::LoadOp::create(rewriter, loc, destSlot, /*isDeref=*/false,
+                                /*isVolatile=*/false, /*isNontemporal=*/false,
+                                /*alignment=*/mlir::IntegerAttr(),
+                                cir::SyncScopeKindAttr(), cir::MemOrderAttr(),
+                                /*invariant=*/false);
 
         // Create destination blocks for each exit and collect switch case info.
         llvm::SmallVector<mlir::APInt, 8> caseValues;
@@ -1272,6 +1583,7 @@ public:
               rewriter, loc, cir::IntAttr::get(s32Type, exit.destinationId));
           cir::StoreOp::create(rewriter, loc, destIdConst, destSlot,
                                /*isVolatile=*/false,
+                               /*isNontemporal=*/false,
                                /*alignment=*/mlir::IntegerAttr(),
                                cir::SyncScopeKindAttr(), cir::MemOrderAttr());
           rewriter.replaceOpWithNewOp<cir::BrOp>(exit.exitOp, cleanupEntry);
@@ -1308,7 +1620,7 @@ public:
         rewriter.replaceOpWithNewOp<cir::BrOp>(exitOp, cleanupEntry);
       }
     } else {
-      // EH-only cleanup: normal exits skip the cleanup entirely.
+      // No normal cleanup to run: normal exits skip the cleanup entirely.
       // Replace yield exits with branches to the continue block.
       for (CleanupExit &exit : exits) {
         if (isa<cir::YieldOp>(exit.exitOp)) {
@@ -1320,32 +1632,43 @@ public:
       }
     }
 
-    // Replace non-nothrow calls with try_call operations. All calls within
-    // this cleanup scope share the same unwind destination.
+    // Replace non-nothrow calls and throws with try_call/try_throw
+    // operations. All calls and throws within this cleanup scope share the
+    // same unwind destination.
     if (hasEHCleanup) {
       for (cir::CallOp callOp : callsToRewrite)
         replaceCallWithTryCall(callOp, unwindBlock, loc, rewriter);
+      for (cir::ThrowOp throwOp : throwsToRewrite)
+        replaceThrowWithTryThrow(throwOp, unwindBlock, loc, rewriter);
     }
 
-    // Handle throwing calls in EH cleanup blocks. When an exception is thrown
-    // during cleanup code that runs on the exception unwind path, the C++
-    // standard requires that std::terminate() be called. Replace such calls
-    // with try_call operations that unwind to a terminate block containing
+    // Handle throwing calls and throws in EH cleanup blocks. When an
+    // exception is thrown during cleanup code that runs on the exception
+    // unwind path, the C++ standard requires that std::terminate() be
+    // called. Replace such calls and throws with try_call/try_throw
+    // operations that unwind to a terminate block containing
     // cir.eh.initiate + cir.eh.terminate.
     if (ehCleanupEntry) {
       llvm::SmallVector<cir::CallOp> ehCleanupThrowingCalls;
+      llvm::SmallVector<cir::ThrowOp> ehCleanupThrows;
       for (mlir::Block *block = ehCleanupEntry; block != continueBlock;
            block = block->getNextNode()) {
-        block->walk([&](cir::CallOp callOp) {
-          if (!callOp.getNothrow())
-            ehCleanupThrowingCalls.push_back(callOp);
+        block->walk([&](mlir::Operation *op) {
+          if (auto callOp = mlir::dyn_cast<cir::CallOp>(op)) {
+            if (!callOp.getNothrow())
+              ehCleanupThrowingCalls.push_back(callOp);
+          } else if (auto throwOp = mlir::dyn_cast<cir::ThrowOp>(op)) {
+            ehCleanupThrows.push_back(throwOp);
+          }
         });
       }
-      if (!ehCleanupThrowingCalls.empty()) {
+      if (!ehCleanupThrowingCalls.empty() || !ehCleanupThrows.empty()) {
         mlir::Block *terminateBlock =
             buildTerminateUnwindBlock(loc, continueBlock, rewriter);
         for (cir::CallOp callOp : ehCleanupThrowingCalls)
           replaceCallWithTryCall(callOp, terminateBlock, loc, rewriter);
+        for (cir::ThrowOp throwOp : ehCleanupThrows)
+          replaceThrowWithTryThrow(throwOp, terminateBlock, loc, rewriter);
       }
     }
 
@@ -1368,10 +1691,7 @@ public:
 
     // Always return success because the IR has been modified (blocks split,
     // regions inlined, ops erased, etc.). The MLIR pattern rewriter contract
-    // requires that if a pattern modifies IR, it must return success(). Any
-    // errors from unsupported exit operations (e.g. goto) have already been
-    // reported via emitError and an unreachable terminator was placed as a
-    // placeholder.
+    // requires that if a pattern modifies IR, it must return success().
     return mlir::success();
   }
 
@@ -1403,30 +1723,43 @@ public:
     if (hasNestedOpsToFlatten(cleanupOp.getBodyRegion()))
       return mlir::failure();
 
-    cir::CleanupKind cleanupKind = cleanupOp.getCleanupKind();
+    bool hasEHCleanup = cleanupOp.getCleanupKindAttr().isEH();
 
     // Collect all exits from the body region.
     llvm::SmallVector<CleanupExit> exits;
     int nextId = 0;
     collectExits(cleanupOp.getBodyRegion(), exits, nextId);
 
-    assert(!exits.empty() && "cleanup scope body has no exit");
+#ifndef NDEBUG
+    // A body with no exits at all only happens when every path out of it is a
+    // musttail return, which leaves the function without running the cleanup.
+    bool hasMustTailCall = false;
+    cleanupOp.getBodyRegion().walk(
+        [&](cir::CallOp callOp) { hasMustTailCall |= callOp.getMusttail(); });
+    assert((!exits.empty() || hasMustTailCall) &&
+           "cleanup scope body has no exit");
+#endif
 
-    // Collect non-nothrow calls that need to be converted to try_call.
-    // This is only needed for EH and All cleanup kinds, but the vector
-    // will simply be empty for Normal cleanup.
+    // Collect non-nothrow calls and throws that need to be converted to
+    // try_call/try_throw. A marker-only cleanup must not introduce an unwind
+    // edge unless an enclosing handler or real EH cleanup requires one.
     llvm::SmallVector<cir::CallOp> callsToRewrite;
-    if (cleanupKind != cir::CleanupKind::Normal)
+    llvm::SmallVector<cir::ThrowOp> throwsToRewrite;
+    if (hasEHCleanup && (!isLifetimeMarkerOnly(cleanupOp.getCleanupRegion()) ||
+                         hasEnclosingEHRequirement(cleanupOp))) {
       collectThrowingCalls(cleanupOp.getBodyRegion(), callsToRewrite);
+      collectThrows(cleanupOp.getBodyRegion(), throwsToRewrite);
+    }
 
     // Collect resume ops from already-flattened inner cleanup scopes that
-    // need to chain through this cleanup's EH handler.
+    // need to chain through this cleanup's EH handler, including lifetime
+    // markers even when they did not introduce any unwind edges themselves.
     llvm::SmallVector<cir::ResumeOp> resumeOpsToChain;
-    if (cleanupKind != cir::CleanupKind::Normal)
+    if (hasEHCleanup)
       collectResumeOps(cleanupOp.getBodyRegion(), resumeOpsToChain);
 
-    return flattenCleanup(cleanupOp, exits, callsToRewrite, resumeOpsToChain,
-                          rewriter);
+    return flattenCleanup(cleanupOp, exits, callsToRewrite, throwsToRewrite,
+                          resumeOpsToChain, rewriter);
   }
 };
 
@@ -1475,21 +1808,53 @@ public:
     mlir::Block *defaultDest = nullptr;
     bool defaultIsCatchAll = false;
 
-    for (auto [typeAttr, handlerBlock] :
-         llvm::zip(handlerTypes, catchHandlerBlocks)) {
-      if (mlir::isa<cir::CatchAllAttr>(typeAttr)) {
-        assert(!defaultDest && "multiple catch_all or unwind handlers");
-        defaultDest = handlerBlock;
-        defaultIsCatchAll = true;
-      } else if (mlir::isa<cir::UnwindAttr>(typeAttr)) {
-        assert(!defaultDest && "multiple catch_all or unwind handlers");
-        defaultDest = handlerBlock;
-        defaultIsCatchAll = false;
-      } else {
-        // This is a typed catch handler (GlobalViewAttr with type info).
-        catchTypeAttrs.push_back(typeAttr);
-        catchDests.push_back(handlerBlock);
-      }
+    // A filter try operation has exactly two handlers. The unexpected region
+    // is the destination of the filter clause (taken when the exception is
+    // *not* permitted). The filter region is the unwind destination (taken
+    // when it is).
+    cir::EhFilterAttr filterAttr;
+    mlir::Block *filterUnwindDest = nullptr;
+    mlir::Block *filterClauseDest = nullptr;
+
+    for (auto zipped : llvm::zip(handlerTypes, catchHandlerBlocks)) {
+      mlir::Attribute typeAttr = std::get<0>(zipped);
+      mlir::Block *handlerBlock = std::get<1>(zipped);
+      llvm::TypeSwitch<mlir::Attribute>(typeAttr)
+          .Case<cir::CatchAllAttr>([&](auto) {
+            assert(!defaultDest && "multiple catch_all or unwind handlers");
+            defaultDest = handlerBlock;
+            defaultIsCatchAll = true;
+          })
+          .Case<cir::UnwindAttr>([&](auto) {
+            assert(!defaultDest && "multiple catch_all or unwind handlers");
+            defaultDest = handlerBlock;
+            defaultIsCatchAll = false;
+          })
+          .Case<cir::EhFilterAttr>([&](cir::EhFilterAttr ehFilter) {
+            assert(!filterAttr && "multiple filter handlers");
+            filterAttr = ehFilter;
+            filterUnwindDest = handlerBlock;
+          })
+          .Case<cir::EhUnexpectedAttr>([&](auto) {
+            assert(!filterClauseDest && "multiple unexpected handlers");
+            filterClauseDest = handlerBlock;
+          })
+          .Default([&](mlir::Attribute attr) {
+            // Typed catch handler (GlobalViewAttr with type info).
+            catchTypeAttrs.push_back(attr);
+            catchDests.push_back(handlerBlock);
+          });
+    }
+
+    if (filterAttr) {
+      assert(filterUnwindDest && filterClauseDest &&
+             "filter handler requires an unexpected handler");
+      assert(!defaultDest &&
+             "filter handler cannot share a dispatch with catch_all or unwind");
+      catchTypeAttrs.push_back(filterAttr);
+      catchDests.push_back(filterClauseDest);
+      defaultDest = filterUnwindDest;
+      defaultIsCatchAll = false;
     }
 
     assert(defaultDest && "dispatch must have a catch_all or unwind handler");
@@ -1575,12 +1940,12 @@ public:
     return handlerEntry;
   }
 
-  // Flatten an unwind handler region. The unwind region just contains a
-  // cir.resume that continues unwinding. We inline it and leave the resume
-  // in place. If this try op is nested inside an EH cleanup or another try op,
-  // the enclosing op will rewrite the resume as a branch to its cleanup or
-  // dispatch block when it is flattened. Otherwise, the resume will unwind to
-  // the caller.
+  // Flatten an unwind, filter, or unexpected handler region. These regions
+  // do not catch the exception. They resume, are unreachable, or call
+  // cir.eh.unexpected. We inline them and leave the terminator in place. If
+  // this try op is nested inside an EH cleanup or another try op, the
+  // enclosing op will rewrite a resume as a branch to its cleanup or dispatch
+  // block when it is flattened. Otherwise, a resume will unwind to the caller.
   mlir::Block *flattenUnwindHandler(mlir::Region &unwindRegion,
                                     mlir::Location loc,
                                     mlir::Block *insertBefore,
@@ -1610,9 +1975,11 @@ public:
     mlir::MutableArrayRef<mlir::Region> handlerRegions =
         tryOp.getHandlerRegions();
 
-    // Collect throwing calls in the try body.
+    // Collect throwing calls and throws in the try body.
     llvm::SmallVector<cir::CallOp> callsToRewrite;
     collectThrowingCalls(tryOp.getTryRegion(), callsToRewrite);
+    llvm::SmallVector<cir::ThrowOp> throwsToRewrite;
+    collectThrows(tryOp.getTryRegion(), throwsToRewrite);
 
     // Collect resume ops from already-flattened cleanup scopes in the try body.
     llvm::SmallVector<cir::ResumeOp> resumeOpsToChain;
@@ -1646,12 +2013,13 @@ public:
       return mlir::success();
     }
 
-    // If there are no throwing calls and no resume ops from inner cleanup
-    // scopes, exceptions cannot reach the catch handlers. Drop all uses
-    // from the (unreachable) handler regions before erasing the try op,
-    // since handler ops may reference values that were inlined from the
-    // try body into the parent block.
-    if (callsToRewrite.empty() && resumeOpsToChain.empty()) {
+    // If there are no throwing calls, no throws, and no resume ops from
+    // inner cleanup scopes, exceptions cannot reach the catch handlers.
+    // Drop all uses from the (unreachable) handler regions before erasing
+    // the try op, since handler ops may reference values that were inlined
+    // from the try body into the parent block.
+    if (callsToRewrite.empty() && throwsToRewrite.empty() &&
+        resumeOpsToChain.empty()) {
       for (mlir::Region &handlerRegion : handlerRegions)
         for (mlir::Block &block : handlerRegion)
           block.dropAllDefinedValueUses();
@@ -1667,7 +2035,8 @@ public:
     for (const auto &[idx, typeAttr] : llvm::enumerate(handlerTypes)) {
       mlir::Region &handlerRegion = handlerRegions[idx];
 
-      if (mlir::isa<cir::UnwindAttr>(typeAttr)) {
+      if (mlir::isa<cir::UnwindAttr, cir::EhFilterAttr, cir::EhUnexpectedAttr>(
+              typeAttr)) {
         mlir::Block *unwindEntry =
             flattenUnwindHandler(handlerRegion, loc, continueBlock, rewriter);
         catchHandlerBlocks.push_back(unwindEntry);
@@ -1696,20 +2065,22 @@ public:
           return mlir::isa<cir::CatchAllAttr>(attr);
         });
 
-    // Build a block to be the unwind desination for throwing calls and replace
-    // the calls with try_call ops. Note that the unwind block created here is
-    // something different than the unwind handler that we may have created
-    // above. The unwind handler continues unwinding after uncaught exceptions.
-    // This is the block that will eventually become the landing pad for invoke
-    // instructions.
+    // Build a block to be the unwind desination for throwing calls/throws
+    // and replace the calls/throws with try_call/try_throw ops. Note that
+    // the unwind block created here is something different than the unwind
+    // handler that we may have created above. The unwind handler continues
+    // unwinding after uncaught exceptions. This is the block that will
+    // eventually become the landing pad for invoke instructions.
     bool isCleanupOnly = tryOp.getCleanup() && !hasCatchAll;
-    if (!callsToRewrite.empty()) {
-      // Create a shared unwind block for all throwing calls.
+    if (!callsToRewrite.empty() || !throwsToRewrite.empty()) {
+      // Create a shared unwind block for all throwing calls/throws.
       mlir::Block *unwindBlock = buildUnwindBlock(dispatchBlock, isCleanupOnly,
                                                   loc, dispatchBlock, rewriter);
 
       for (cir::CallOp callOp : callsToRewrite)
         replaceCallWithTryCall(callOp, unwindBlock, loc, rewriter);
+      for (cir::ThrowOp throwOp : throwsToRewrite)
+        replaceThrowWithTryThrow(throwOp, unwindBlock, loc, rewriter);
     }
 
     // Chain resume ops from inner cleanup scopes.
@@ -1747,21 +2118,75 @@ void populateFlattenCFGPatterns(RewritePatternSet &patterns) {
           patterns.getContext());
 }
 
+namespace {
+// An implementation of RewriterBase::Listener that determines whether the IR
+// has been modified since the last time it was 'reset'. At the moment, this is
+// the only use for something like this, but we might wish to move this
+// somewhere if someone else needs similar functionality in the future.
+class MLIRChangedListener final : public mlir::RewriterBase::Listener {
+  bool hasChanged = false;
+
+public:
+  void reset() { hasChanged = false; }
+
+  bool changed() const { return hasChanged; }
+
+  void notifyBlockErased(Block *) override { hasChanged = true; }
+  void notifyOperationModified(Operation *) override { hasChanged = true; }
+  void notifyOperationReplaced(Operation *, Operation *) override {
+    hasChanged = true;
+  }
+  void notifyOperationReplaced(Operation *, ValueRange) override {
+    hasChanged = true;
+  }
+  void notifyOperationErased(Operation *) override { hasChanged = true; }
+
+  // notifyPatternBegin, notifyPatternEnd, notifyMatchFailure all skipped, since
+  // they don't modify.
+  void notifyOperationInserted(Operation *,
+                               mlir::IRRewriter::InsertPoint) override {
+    hasChanged = true;
+  }
+  void notifyBlockInserted(Block *, Region *, Region::iterator) override {
+    hasChanged = true;
+  }
+};
+} // namespace
+
 void CIRFlattenCFGPass::runOnOperation() {
-  RewritePatternSet patterns(&getContext());
-  populateFlattenCFGPatterns(patterns);
+  RewritePatternSet patternList(&getContext());
+  populateFlattenCFGPatterns(patternList);
+  FrozenRewritePatternSet patterns(std::move(patternList));
 
-  // Collect operations to apply patterns.
-  llvm::SmallVector<Operation *, 16> ops;
-  getOperation()->walk<mlir::WalkOrder::PostOrder>([&](Operation *op) {
-    if (isa<IfOp, ScopeOp, SwitchOp, LoopOpInterface, TernaryOp, CleanupScopeOp,
-            TryOp>(op))
-      ops.push_back(op);
-  });
+  PatternApplicator applicator(patterns);
+  // We need _A_ cost model, and everything here is the same cost-model, so this
+  // is effectively a no-op, but necessary to use the PatternApplicator.
+  applicator.applyDefaultCostModel();
 
-  // Apply patterns.
-  if (applyOpPatternsGreedily(ops, std::move(patterns)).failed())
-    signalPassFailure();
+  mlir::PatternRewriter rewriter(&getContext());
+  MLIRChangedListener changedListener;
+  rewriter.setListener(&changedListener);
+
+  do {
+    changedListener.reset();
+
+    // Collect flatten candidates post-order so an inner op is handled before
+    // its parent; op pointers stay valid across the block splits / region
+    // inlines the patterns perform (a pattern only erases the matched op and
+    // its descendants, which are visited first), so the list can be iterated
+    // directly.
+    llvm::SmallVector<Operation *, 16> ops;
+    getOperation()->walk<mlir::WalkOrder::PostOrder>([&](Operation *op) {
+      if (isa<IfOp, ScopeOp, SwitchOp, LoopOpInterface, TernaryOp,
+              CleanupScopeOp, TryOp>(op))
+        ops.push_back(op);
+    });
+
+    for (mlir::Operation *op : ops) {
+      rewriter.setInsertionPoint(op);
+      (void)applicator.matchAndRewrite(op, rewriter);
+    }
+  } while (changedListener.changed());
 }
 
 } // namespace

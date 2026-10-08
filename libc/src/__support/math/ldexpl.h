@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR long double ldexpl(long double x, int exp) {
+LIBC_INLINE constexpr long double ldexpl(long double x, int exp) {
   return fputil::ldexp(x, exp);
 }
 

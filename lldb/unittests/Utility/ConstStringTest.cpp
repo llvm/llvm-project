@@ -10,6 +10,12 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "gtest/gtest.h"
 
+#include <atomic>
+#include <random>
+#include <string>
+#include <thread>
+#include <vector>
+
 using namespace lldb_private;
 
 TEST(ConstStringTest, format_provider) {
@@ -151,4 +157,61 @@ TEST(ConstStringTest, StringConversions) {
   EXPECT_EQ(llvm::StringRef("foo"), llvm::StringRef(foo));
   EXPECT_EQ(std::string("foo"), std::string_view(foo));
   EXPECT_EQ(std::string("foo"), std::string(foo));
+}
+
+// Stress-tests the ConstString pool from many threads at once with a mix of
+// reads (lookups of already-interned strings) and writes (interning new
+// strings). Intended both as a thread-safety regression check and as a
+// hand-runnable benchmark for changes to the pool's locking strategy. Run
+// timing is left to an external tool (e.g. hyperfine).
+TEST(ConstStringTest, ConcurrentReadsAndWritesBenchmark) {
+  // Pre-intern a set of "hot" strings that read operations will look up.
+  // Sized to spread across the pool's 256 shards so contention is realistic.
+  constexpr size_t kHotStringCount = 4096;
+  std::vector<std::string> hot_strings;
+  hot_strings.reserve(kHotStringCount);
+  for (size_t i = 0; i < kHotStringCount; ++i) {
+    hot_strings.push_back("ConstStringBench_hot_" + std::to_string(i));
+    ConstString cs(hot_strings.back());
+    (void)cs;
+  }
+
+  const unsigned num_threads =
+      std::max(2u, std::thread::hardware_concurrency());
+  constexpr size_t kIterationsPerThread = 200000;
+  // 80% reads / 20% writes, which is probably generous as most lock contentions
+  // is expected for writes while parsing the symtab in parallel.
+  constexpr int kReadPercent = 80;
+
+  std::atomic<bool> start{false};
+  std::vector<std::thread> threads;
+  threads.reserve(num_threads);
+
+  for (unsigned t = 0; t < num_threads; ++t) {
+    threads.emplace_back([&, t] {
+      while (!start.load(std::memory_order_acquire))
+        std::this_thread::yield();
+
+      std::mt19937 rng(static_cast<uint32_t>(t) * 1337u + 17u);
+      std::uniform_int_distribution<int> ratio_dist(0, 99);
+      std::uniform_int_distribution<size_t> hot_dist(0, kHotStringCount - 1);
+      uint64_t write_counter = 0;
+
+      for (size_t i = 0; i < kIterationsPerThread; ++i) {
+        if (ratio_dist(rng) < kReadPercent) {
+          ConstString cs(hot_strings[hot_dist(rng)]);
+          (void)cs;
+        } else {
+          std::string s = "ConstStringBench_tw_" + std::to_string(t) + "_" +
+                          std::to_string(write_counter++);
+          ConstString cs(s);
+          (void)cs;
+        }
+      }
+    });
+  }
+
+  start.store(true, std::memory_order_release);
+  for (auto &th : threads)
+    th.join();
 }

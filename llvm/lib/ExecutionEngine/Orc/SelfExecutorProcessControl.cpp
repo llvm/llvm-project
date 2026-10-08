@@ -7,12 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/Shared/Mangler.h"
 
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/DylibManager.h"
 #include "llvm/ExecutionEngine/Orc/InProcessMemoryAccess.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/DefaultHostBootstrapValues.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/OrcRTBootstrap.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Process.h"
@@ -27,7 +30,7 @@ public:
   InProcessDylibManager(char GlobalManglingPrefix);
   Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override;
   void
-  lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
+  lookupSymbolsAsync(tpctypes::DylibHandle H, const SymbolLookupSet &Symbols,
                      DylibManager::SymbolLookupCompleteFn Complete) override;
 
 private:
@@ -41,10 +44,15 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
 
   this->TargetTriple = std::move(TargetTriple);
   this->PageSize = PageSize;
-  this->JDI = {ExecutorAddr::fromPtr(jitDispatchViaWrapperFunctionManager),
-               ExecutorAddr::fromPtr(this)};
 
   addDefaultBootstrapValuesForHostProcess(BootstrapMap, BootstrapSymbols);
+  rt_bootstrap::addRunAsFunctionWrappersTo(BootstrapSymbols);
+
+  Mangler Mangle(getTargetTriple());
+  BootstrapSymbols[Mangle.mangledCopy(rt::DispatchName)] =
+      ExecutorAddr::fromPtr(jitDispatchViaWrapperFunctionManager);
+  BootstrapSymbols[Mangle.mangledCopy(rt::DispatchCtxName)] =
+      ExecutorAddr::fromPtr(this);
 
 #ifdef __APPLE__
   // FIXME: Don't add an UnwindInfoManager by default -- it's redundant when
@@ -80,18 +88,6 @@ SelfExecutorProcessControl::runAsMain(ExecutorAddr MainFnAddr,
                                       ArrayRef<std::string> Args) {
   using MainTy = int (*)(int, char *[]);
   return orc::runAsMain(MainFnAddr.toPtr<MainTy>(), Args);
-}
-
-Expected<int32_t>
-SelfExecutorProcessControl::runAsVoidFunction(ExecutorAddr VoidFnAddr) {
-  using VoidTy = int (*)();
-  return orc::runAsVoidFunction(VoidFnAddr.toPtr<VoidTy>());
-}
-
-Expected<int32_t>
-SelfExecutorProcessControl::runAsIntFunction(ExecutorAddr IntFnAddr, int Arg) {
-  using IntTy = int (*)(int);
-  return orc::runAsIntFunction(IntFnAddr.toPtr<IntTy>(), Arg);
 }
 
 void SelfExecutorProcessControl::callWrapperAsync(ExecutorAddr WrapperFnAddr,
@@ -139,7 +135,7 @@ SelfExecutorProcessControl::jitDispatchViaWrapperFunctionManager(
   auto ResultF = ResultP.get_future();
   static_cast<SelfExecutorProcessControl *>(Ctx)
       ->getExecutionSession()
-      .runJITDispatchHandler(
+      .runCallControllerHandler(
           [ResultP = std::move(ResultP)](
               shared::WrapperFunctionBuffer Result) mutable {
             ResultP.set_value(std::move(Result));
@@ -165,25 +161,20 @@ SelfExecutorProcessControl::InProcessDylibManager::loadDylib(
 }
 
 void SelfExecutorProcessControl::InProcessDylibManager::lookupSymbolsAsync(
-    ArrayRef<LookupRequest> Request,
+    tpctypes::DylibHandle H, const SymbolLookupSet &Symbols,
     DylibManager::SymbolLookupCompleteFn Complete) {
-  std::vector<tpctypes::LookupResult> R;
+  tpctypes::LookupResult R;
 
-  for (auto &Elem : Request) {
-    sys::DynamicLibrary Dylib(Elem.Handle.toPtr<void *>());
-    R.push_back(tpctypes::LookupResult());
-    for (auto &KV : Elem.Symbols) {
-      auto &Sym = KV.first;
-      std::string Tmp((*Sym).data() + !!GlobalManglingPrefix,
-                      (*Sym).size() - !!GlobalManglingPrefix);
-      void *Addr = Dylib.getAddressOfSymbol(Tmp.c_str());
-      if (!Addr && KV.second == SymbolLookupFlags::RequiredSymbol)
-        R.back().emplace_back();
-      else
-        // FIXME: determine accurate JITSymbolFlags.
-        R.back().emplace_back(ExecutorSymbolDef(ExecutorAddr::fromPtr(Addr),
-                                                JITSymbolFlags::Exported));
-    }
+  sys::DynamicLibrary Dylib(H.toPtr<void *>());
+  for (auto &KV : Symbols) {
+    auto &Sym = KV.first;
+    std::string Tmp((*Sym).data() + !!GlobalManglingPrefix,
+                    (*Sym).size() - !!GlobalManglingPrefix);
+    void *Addr = Dylib.getAddressOfSymbol(Tmp.c_str());
+    if (!Addr && KV.second == SymbolLookupFlags::RequiredSymbol)
+      R.emplace_back();
+    else
+      R.emplace_back(ExecutorAddr::fromPtr(Addr));
   }
   Complete(std::move(R));
 }

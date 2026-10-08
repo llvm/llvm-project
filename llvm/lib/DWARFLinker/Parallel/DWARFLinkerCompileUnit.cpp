@@ -51,8 +51,7 @@ CompileUnit::CompileUnit(LinkingGlobalData &GlobalData, DWARFUnit &OrigUnit,
   if (!CUDie)
     return;
 
-  if (std::optional<DWARFFormValue> Val = CUDie.find(dwarf::DW_AT_language))
-    Language = dwarf::toUnsigned(Val, 0);
+  Language = CUDie.getLanguage();
 
   if (!GlobalData.getOptions().NoODR && Language.has_value() &&
       isODRLanguage(*Language))
@@ -257,6 +256,84 @@ void CompileUnit::cleanupDataAfterClonning() {
   getOrigUnit().clear();
 }
 
+bool CompileUnit::getModulePath(const DWARFDebugInfoEntry *DieEntry,
+                                SmallVectorImpl<char> &Path) {
+  assert(DieEntry->getTag() == dwarf::DW_TAG_module);
+
+  SmallVector<StringRef, 4> Names;
+  for (const DWARFDebugInfoEntry *CurEntry = DieEntry;
+       CurEntry && CurEntry->getTag() == dwarf::DW_TAG_module;
+       CurEntry = getParent(CurEntry).getDebugInfoEntry()) {
+    StringRef Name = dwarf::toStringRef(find(CurEntry, dwarf::DW_AT_name));
+    if (Name.empty())
+      return false;
+    Names.push_back(Name);
+  }
+
+  for (StringRef Name : reverse(Names)) {
+    Path.append(Name.begin(), Name.end());
+    Path.push_back('\0');
+  }
+
+  return true;
+}
+
+void CompileUnit::noteModuleAnchors() {
+  const DWARFDebugInfoEntry *UnitEntry = getUnitDIE().getDebugInfoEntry();
+  assert(UnitEntry && "unit reached cloning without loaded DIEs");
+
+  // Find the root, ignoring the skeletons for the imported module.
+  const DWARFDebugInfoEntry *Root = nullptr;
+  for (const DWARFDebugInfoEntry *CurChild = getFirstChildEntry(UnitEntry);
+       CurChild && CurChild->getAbbreviationDeclarationPtr();
+       CurChild = getSiblingEntry(CurChild)) {
+    if (CurChild->getTag() == dwarf::DW_TAG_module &&
+        dwarf::toStringRef(find(CurChild, dwarf::DW_AT_name)) ==
+            getClangModuleName()) {
+      Root = CurChild;
+      break;
+    }
+  }
+  if (!Root)
+    return;
+
+  SmallString<128> Path;
+
+  // Submodules nest inside the module which declares them, so following the
+  // DW_TAG_module chain down from the root visits every module this unit
+  // describes, without walking the types they contain.
+  SmallVector<const DWARFDebugInfoEntry *, 4> WorkList = {Root};
+  while (!WorkList.empty()) {
+    const DWARFDebugInfoEntry *DieEntry = WorkList.pop_back_val();
+
+    for (const DWARFDebugInfoEntry *CurChild = getFirstChildEntry(DieEntry);
+         CurChild && CurChild->getAbbreviationDeclarationPtr();
+         CurChild = getSiblingEntry(CurChild))
+      if (CurChild->getTag() == dwarf::DW_TAG_module)
+        WorkList.push_back(CurChild);
+
+    Path.clear();
+    if (!getModulePath(DieEntry, Path))
+      continue;
+
+    ModuleAnchor Anchor;
+    Anchor.Priority = getPriority();
+    if (getDIEInfo(DieEntry).needToPlaceInTypeTable())
+      Anchor.TypeName = getDieTypeEntry(DieEntry);
+    if (!Anchor.TypeName) {
+      // Don't create a dangling reference to a DIE without a type entry or
+      // output offset.
+      uint64_t OutOffset = getDieOutOffset(DieEntry);
+      if (!OutOffset)
+        continue;
+      Anchor.Section = &getSectionDescriptor(DebugSectionKind::DebugInfo);
+      Anchor.LocalOffset = OutOffset;
+    }
+
+    getGlobalData().getModulePool().set(Path, Anchor);
+  }
+}
+
 /// Collect references to parseable Swift interfaces in imported
 /// DW_TAG_module blocks.
 void CompileUnit::analyzeImportedModule(const DWARFDebugInfoEntry *DieEntry) {
@@ -365,6 +442,15 @@ void CompileUnit::updateDieRefPatchesWithClonedOffsets() {
     (*DebugInfoSection)
         ->ListDebugULEB128DieRefPatch.forEach(
             [&](DebugULEB128DieRefPatch &Patch) {
+              /// Replace stored DIE indexes with DIE output offsets.
+              Patch.RefDieIdxOrClonedOffset =
+                  Patch.RefCU.getPointer()->getDieOutOffset(
+                      Patch.RefDieIdxOrClonedOffset);
+            });
+
+    (*DebugInfoSection)
+        ->ListDebugDieModuleRefPatch.forEach(
+            [&](DebugDieModuleRefPatch &Patch) {
               /// Replace stored DIE indexes with DIE output offsets.
               Patch.RefDieIdxOrClonedOffset =
                   Patch.RefCU.getPointer()->getDieOutOffset(
@@ -518,8 +604,7 @@ void CompileUnit::emitLocations(DebugSectionKind LocationSectionKind) {
               CurExpression.Range->HighPC + Patch.AddrAdjustmentValue};
         }
 
-        DataExtractor Data(CurExpression.Expr, OrigUnit.isLittleEndian(),
-                           OrigUnit.getAddressByteSize());
+        DataExtractor Data(CurExpression.Expr, OrigUnit.isLittleEndian());
 
         DWARFExpression InputExpression(Data, OrigUnit.getAddressByteSize(),
                                         OrigUnit.getFormParams().Format);
@@ -931,7 +1016,7 @@ Error CompileUnit::cloneAndEmitDebugMacro() {
   if (std::optional<uint64_t> MacroAttr =
           dwarf::toSectionOffset(OrigUnitDie.find(dwarf::DW_AT_macros))) {
     if (const DWARFDebugMacro *Table =
-            getContaingFile().Dwarf->getDebugMacro()) {
+            getContainingFile().Dwarf->getDebugMacro()) {
       emitMacroTableImpl(Table, *MacroAttr, true);
     }
   }
@@ -940,7 +1025,7 @@ Error CompileUnit::cloneAndEmitDebugMacro() {
   if (std::optional<uint64_t> MacroAttr =
           dwarf::toSectionOffset(OrigUnitDie.find(dwarf::DW_AT_macro_info))) {
     if (const DWARFDebugMacro *Table =
-            getContaingFile().Dwarf->getDebugMacinfo()) {
+            getContainingFile().Dwarf->getDebugMacinfo()) {
       emitMacroTableImpl(Table, *MacroAttr, false);
     }
   }
@@ -1131,6 +1216,17 @@ void CompileUnit::cloneDieAttrExpression(
 
   uint64_t OpOffset = 0;
   for (auto &Op : InputExpression) {
+    if (Op.isError()) {
+      // The operation could not be decoded, so neither it nor anything after
+      // it can be located. Its end offset is the offset it started at, so the
+      // slice copied below would be empty and the rest of the expression
+      // would be silently dropped. Preserve the remaining bytes instead.
+      warn("cannot decode a DW_OP, copying the rest of the expression "
+           "unmodified.");
+      StringRef Bytes = InputExpression.getData().substr(OpOffset);
+      OutputExpression.append(Bytes.begin(), Bytes.end());
+      return;
+    }
     auto Desc = Op.getDescription();
     // DW_OP_const_type is variable-length and has 3
     // operands. Thus far we only support 2.
@@ -1200,7 +1296,11 @@ void CompileUnit::cloneDieAttrExpression(
         // Argument of DW_OP_addrx should be relocated here as it is not
         // processed by applyValidRelocs.
         OutputExpression.push_back(dwarf::DW_OP_addr);
-        uint64_t LinkedAddress = SA->Address + VarAddressAdjustment.value_or(0);
+        uint64_t LinkedAddress =
+            SA->Address +
+            getContainingFile()
+                .Addresses->getAddrIndexRelocAdjustment(OrigUnit, Op, false)
+                .value_or(VarAddressAdjustment.value_or(0));
         if (getEndianness() != llvm::endianness::native)
           sys::swapByteOrder(LinkedAddress);
         ArrayRef<uint8_t> AddressBytes(
@@ -1237,7 +1337,10 @@ void CompileUnit::cloneDieAttrExpression(
         if (OutOperandKind) {
           OutputExpression.push_back(*OutOperandKind);
           uint64_t LinkedAddress =
-              SA->Address + VarAddressAdjustment.value_or(0);
+              SA->Address +
+              getContainingFile()
+                  .Addresses->getAddrIndexRelocAdjustment(OrigUnit, Op, false)
+                  .value_or(VarAddressAdjustment.value_or(0));
           if (getEndianness() != llvm::endianness::native)
             sys::swapByteOrder(LinkedAddress);
           ArrayRef<uint8_t> AddressBytes(
@@ -1317,7 +1420,7 @@ std::pair<DIE *, TypeEntry *> CompileUnit::cloneDIE(
     const DWARFDebugInfoEntry *InputDieEntry, TypeEntry *ClonedParentTypeDIE,
     uint64_t OutOffset, std::optional<int64_t> FuncAddressAdjustment,
     std::optional<int64_t> VarAddressAdjustment, BumpPtrAllocator &Allocator,
-    TypeUnit *ArtificialTypeUnit) {
+    TypeUnit *ArtificialTypeUnit, uint32_t SiblingOrdinal) {
   uint32_t InputDieIdx = getDIEIndex(InputDieEntry);
   CompileUnit::DIEInfo &Info = getDIEInfo(InputDieIdx);
 
@@ -1344,7 +1447,7 @@ std::pair<DIE *, TypeEntry *> CompileUnit::cloneDIE(
 
     ClonedDIE.second = createTypeDIEandCloneAttributes(
         InputDieEntry, TypeDIEGenerator, ClonedParentTypeDIE,
-        ArtificialTypeUnit);
+        ArtificialTypeUnit, SiblingOrdinal);
   }
   TypeEntry *TypeParentForChild =
       ClonedDIE.second ? ClonedDIE.second : ClonedParentTypeDIE;
@@ -1359,13 +1462,14 @@ std::pair<DIE *, TypeEntry *> CompileUnit::cloneDIE(
 
   // Recursively clone children.
   if (HasPlainChildrenToClone || HasTypeChildrenToClone) {
+    uint32_t ChildOrdinal = 0;
     for (const DWARFDebugInfoEntry *CurChild =
              getFirstChildEntry(InputDieEntry);
          CurChild && CurChild->getAbbreviationDeclarationPtr();
-         CurChild = getSiblingEntry(CurChild)) {
+         CurChild = getSiblingEntry(CurChild), ++ChildOrdinal) {
       std::pair<DIE *, TypeEntry *> ClonedChild = cloneDIE(
           CurChild, TypeParentForChild, OutOffset, FuncAddressAdjustment,
-          VarAddressAdjustment, Allocator, ArtificialTypeUnit);
+          VarAddressAdjustment, Allocator, ArtificialTypeUnit, ChildOrdinal);
 
       if (ClonedChild.first) {
         OutOffset =
@@ -1399,7 +1503,7 @@ DIE *CompileUnit::createPlainDIEandCloneAttributes(
   if (InputDieEntry->getTag() == dwarf::DW_TAG_subprogram) {
     // Get relocation adjustment value for the current function.
     FuncAddressAdjustment =
-        getContaingFile().Addresses->getSubprogramRelocAdjustment(
+        getContainingFile().Addresses->getSubprogramRelocAdjustment(
             getDIE(InputDieEntry), false);
   } else if (InputDieEntry->getTag() == dwarf::DW_TAG_label) {
     // Get relocation adjustment value for the current label.
@@ -1413,7 +1517,7 @@ DIE *CompileUnit::createPlainDIEandCloneAttributes(
   } else if (InputDieEntry->getTag() == dwarf::DW_TAG_variable) {
     // Get relocation adjustment value for the current variable.
     std::pair<bool, std::optional<int64_t>> LocExprAddrAndRelocAdjustment =
-        getContaingFile().Addresses->getVariableRelocAdjustment(
+        getContainingFile().Addresses->getVariableRelocAdjustment(
             getDIE(InputDieEntry), false);
 
     HasLocationExpressionAddress = LocExprAddrAndRelocAdjustment.first;
@@ -1502,7 +1606,8 @@ DIE *CompileUnit::allocateTypeDie(TypeEntryBody *TypeDescriptor,
 
 TypeEntry *CompileUnit::createTypeDIEandCloneAttributes(
     const DWARFDebugInfoEntry *InputDieEntry, DIEGenerator &TypeDIEGenerator,
-    TypeEntry *ClonedParentTypeDIE, TypeUnit *ArtificialTypeUnit) {
+    TypeEntry *ClonedParentTypeDIE, TypeUnit *ArtificialTypeUnit,
+    uint32_t SiblingOrdinal) {
   assert(ArtificialTypeUnit != nullptr);
   uint32_t InputDieIdx = getDIEIndex(InputDieEntry);
 
@@ -1513,6 +1618,25 @@ TypeEntry *CompileUnit::createTypeDIEandCloneAttributes(
       ArtificialTypeUnit->getTypePool().getOrCreateTypeEntryBody(
           Entry, ClonedParentTypeDIE);
   assert(EntryBody);
+
+  // Min-merge this child's ordinal in its parent's child list so children of
+  // record-like types (class/struct/union/interface) sort in source order.
+  // Min across CUs because Clang appends template instantiations lazily, so
+  // positions vary between CUs.
+  if (std::optional<uint32_t> ParentIdx = InputDieEntry->getParentIdx()) {
+    dwarf::Tag ParentTag = getDebugInfoEntry(*ParentIdx)->getTag();
+    if (ParentTag == dwarf::DW_TAG_structure_type ||
+        ParentTag == dwarf::DW_TAG_class_type ||
+        ParentTag == dwarf::DW_TAG_union_type ||
+        ParentTag == dwarf::DW_TAG_interface_type) {
+      uint32_t Prev = EntryBody->SortKey.load(std::memory_order_relaxed);
+      while (SiblingOrdinal < Prev &&
+             !EntryBody->SortKey.compare_exchange_weak(
+                 Prev, SiblingOrdinal, std::memory_order_relaxed,
+                 std::memory_order_relaxed))
+        ;
+    }
+  }
 
   bool IsDeclaration =
       dwarf::toUnsigned(find(InputDieEntry, dwarf::DW_AT_declaration), 0);
@@ -1551,7 +1675,7 @@ TypeEntry *CompileUnit::createTypeDIEandCloneAttributes(
 
 Error CompileUnit::cloneAndEmitLineTable(const Triple &TargetTriple) {
   const DWARFDebugLine::LineTable *InputLineTable =
-      getContaingFile().Dwarf->getLineTableForUnit(&getOrigUnit());
+      getContainingFile().Dwarf->getLineTableForUnit(&getOrigUnit());
   if (InputLineTable == nullptr) {
     if (getOrigUnit().getUnitDIE().find(dwarf::DW_AT_stmt_list))
       warn("cann't load line table.");
@@ -1820,10 +1944,11 @@ CompileUnit::getDirAndFilenameFromLineTable(
 
 std::optional<std::pair<StringRef, StringRef>>
 CompileUnit::getDirAndFilenameFromLineTable(uint64_t FileIdx) {
+  std::lock_guard<std::mutex> Guard(FileNamesMutex);
   FileNamesCache::iterator FileData = FileNames.find(FileIdx);
   if (FileData != FileNames.end())
-    return std::make_pair(StringRef(FileData->second.first),
-                          StringRef(FileData->second.second));
+    return {{StringRef(FileData->second->first),
+             StringRef(FileData->second->second)}};
 
   if (const DWARFDebugLine::LineTable *LineTable =
           getOrigUnit().getContext().getLineTableForUnit(&getOrigUnit())) {
@@ -1842,12 +1967,12 @@ CompileUnit::getDirAndFilenameFromLineTable(uint64_t FileIdx) {
       if (isPathAbsoluteOnWindowsOrPosix(FileName)) {
         FileNamesCache::iterator FileData =
             FileNames
-                .insert(std::make_pair(
-                    FileIdx,
-                    std::make_pair(std::string(""), std::move(FileName))))
+                .insert({FileIdx,
+                         std::make_unique<std::pair<std::string, std::string>>(
+                             std::string(""), std::move(FileName))})
                 .first;
-        return std::make_pair(StringRef(FileData->second.first),
-                              StringRef(FileData->second.second));
+        return {{StringRef(FileData->second->first),
+                 StringRef(FileData->second->second)}};
       }
 
       SmallString<256> FilePath;
@@ -1893,12 +2018,12 @@ CompileUnit::getDirAndFilenameFromLineTable(uint64_t FileIdx) {
 
       FileNamesCache::iterator FileData =
           FileNames
-              .insert(
-                  std::make_pair(FileIdx, std::make_pair(std::string(FilePath),
-                                                         std::move(FileName))))
+              .insert({FileIdx,
+                       std::make_unique<std::pair<std::string, std::string>>(
+                           std::string(FilePath), std::move(FileName))})
               .first;
-      return std::make_pair(StringRef(FileData->second.first),
-                            StringRef(FileData->second.second));
+      return {{StringRef(FileData->second->first),
+               StringRef(FileData->second->second)}};
     }
   }
 
@@ -1986,7 +2111,8 @@ void CompileUnit::verifyDependencies() {
 ArrayRef<dwarf::Attribute> dwarf_linker::parallel::getODRAttributes() {
   static dwarf::Attribute ODRAttributes[] = {
       dwarf::DW_AT_type, dwarf::DW_AT_specification,
-      dwarf::DW_AT_abstract_origin, dwarf::DW_AT_import};
+      dwarf::DW_AT_abstract_origin, dwarf::DW_AT_import,
+      dwarf::DW_AT_LLVM_alloc_type};
 
   return ODRAttributes;
 }

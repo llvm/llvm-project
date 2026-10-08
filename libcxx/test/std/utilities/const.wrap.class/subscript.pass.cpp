@@ -172,12 +172,6 @@ constexpr bool test() {
   }
 
   {
-    // just use the index operator
-    assert(std::cw<"abcd">[2] == 'c');
-    assert(std::cw<"abcd">[std::cw<3>] == 'd');
-  }
-
-  {
     // integral_constant
     using T                                                      = std::constant_wrapper<arr>;
     std::same_as<std::constant_wrapper<2>> decltype(auto) result = T::operator[](std::integral_constant<int, 1>{});

@@ -404,29 +404,6 @@ void ScheduleDAGFast::InsertCopiesAndMoveSuccs(SUnit *SU, unsigned Reg,
   ++NumPRCopies;
 }
 
-/// getPhysicalRegisterVT - Returns the ValueType of the physical register
-/// definition of the specified node.
-/// FIXME: Move to SelectionDAG?
-static MVT getPhysicalRegisterVT(SDNode *N, unsigned Reg,
-                                 const TargetInstrInfo *TII) {
-  unsigned NumRes;
-  if (N->getOpcode() == ISD::CopyFromReg) {
-    // CopyFromReg has: "chain, Val, glue" so operand 1 gives the type.
-    NumRes = 1;
-  } else {
-    const MCInstrDesc &MCID = TII->get(N->getMachineOpcode());
-    assert(!MCID.implicit_defs().empty() &&
-           "Physical reg def must be in implicit def list!");
-    NumRes = MCID.getNumDefs();
-    for (MCPhysReg ImpDef : MCID.implicit_defs()) {
-      if (Reg == ImpDef)
-        break;
-      ++NumRes;
-    }
-  }
-  return N->getSimpleValueType(NumRes);
-}
-
 /// CheckForLiveRegDef - Return true and update live register vector if the
 /// specified register def of the specified SUnit clobbers any "live" registers.
 static bool CheckForLiveRegDef(SUnit *SU, MCRegister Reg,
@@ -572,9 +549,7 @@ void ScheduleDAGFast::ListScheduleBottomUp() {
         assert(LRegs.size() == 1 && "Can't handle this yet!");
         unsigned Reg = LRegs[0];
         SUnit *LRDef = LiveRegDefs[Reg];
-        MVT VT = getPhysicalRegisterVT(LRDef->getNode(), Reg, TII);
-        const TargetRegisterClass *RC =
-          TRI->getMinimalPhysRegClass(Reg, VT);
+        const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
         const TargetRegisterClass *DestRC = TRI->getCrossCopyRegClass(RC);
 
         // If cross copy register class is the same as RC, then it must be

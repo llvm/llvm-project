@@ -15,10 +15,19 @@
 #include "llvm/CodeGen/MachineStableHash.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
+
+static cl::opt<bool> EmitBBHash(
+    "emit-bb-hash",
+    cl::desc(
+        "Emit the hash of basic block in the SHT_LLVM_BB_ADDR_MAP section."),
+    cl::init(false));
+
+bool llvm::shouldEmitBBHash() { return EmitBBHash; }
 
 // Frozen mixer; the block hashes computed below are serialized into BB
 // section profile data, so this function's exact output is part of the
@@ -163,7 +172,7 @@ MachineBlockHashInfoPrinterPass::run(MachineFunction &MF,
   OS << "Machine Block Hash Info for function: " << MF.getName() << "\n";
   for (const auto &MBB : MF) {
     OS << "  BB#" << MBB.getNumber() << ": "
-       << format_hex(MBHI.getMBBHash(MBB), 16) << "\n";
+       << format_hex(MBHI.getMBBHash(MBB), 18) << "\n";
   }
   return PreservedAnalyses::all();
 }

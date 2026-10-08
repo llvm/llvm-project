@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-windows-gnu       -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-windows-msvc      -emit-llvm %s -o - | FileCheck --check-prefix=MSVC %s
+// RUN: %clang_cc1 -triple x86_64-windows-msvc -fclang-abi-compat=22 \
+// RUN:   -emit-llvm %s -o - | FileCheck %s
 // PR5599
 
 char arr[16];

@@ -4,5 +4,9 @@ from lldbsuite.test import decorators
 lldbinline.MakeInlineTest(
     __file__,
     globals(),
-    [decorators.expectedFailureAll(bugnumber="llvm.org/pr50814", compiler="gcc")],
+    [
+        decorators.requireExpressionEvaluation,
+        decorators.expectedFailureAll(bugnumber="llvm.org/pr50814", compiler="gcc"),
+    ],
+    test_with_pdb_debug_info=True,
 )

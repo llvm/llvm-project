@@ -1717,7 +1717,48 @@ bool operator==(const StatusOr<T> &lhs, const StatusOr<T> &rhs);
 template <typename T>
 bool operator!=(const StatusOr<T> &lhs, const StatusOr<T> &rhs);
 
+using StatusBuilder = Status;
+namespace status_macro_internal {
+class ReturnIfErrorAdaptor {
+ public:
+  explicit ReturnIfErrorAdaptor(
+      const absl::Status& status,
+      absl::SourceLocation loc = absl::SourceLocation::current());
+
+  explicit ReturnIfErrorAdaptor(
+      absl::Status&& status,
+      absl::SourceLocation loc = absl::SourceLocation::current());
+
+  ~ReturnIfErrorAdaptor();
+
+  explicit operator bool() const;
+  StatusBuilder Consume();
+};
+
+ReturnIfErrorAdaptor MacroAdaptor(const absl::Status& s,
+                                         absl::SourceLocation loc);
+ReturnIfErrorAdaptor MacroAdaptor(absl::Status&& s,
+                                         absl::SourceLocation loc);
+}
+
 } // namespace absl
+
+#define ABSL_INTERNAL_STATUS_MACROS_IMPL_ELSE_BLOCKER_ \
+  switch (0)                                           \
+  case 0:                                              \
+  default:  // NOLINT
+
+#define ABSL_INTERNAL_STATUS_MACROS_RETURN_IF_ERROR_IMPL_(return_keyword, \
+                                                          expr)           \
+  ABSL_INTERNAL_STATUS_MACROS_IMPL_ELSE_BLOCKER_                          \
+  if (auto status_macro_internal_adaptor =                                \
+          absl::status_macro_internal::MacroAdaptor(                      \
+              (expr), absl::SourceLocation::current())) {                 \
+  } else /* NOLINT */                                                     \
+    return_keyword status_macro_internal_adaptor.Consume()
+
+#define ABSL_RETURN_IF_ERROR(expr) \
+  ABSL_INTERNAL_STATUS_MACROS_RETURN_IF_ERROR_IMPL_(return, expr)
 
 #endif // STATUSOR_H_
 )cc";
@@ -2169,6 +2210,16 @@ GTEST_IMPL_CMP_HELPER_(GT)
 
 #undef GTEST_IMPL_CMP_HELPER_
 
+struct AssertionResultExpectation {
+  AssertionResult assertion_result;
+  bool expected_result;
+
+  explicit operator bool() const {
+    bool converted(assertion_result);
+    return converted == expected_result;
+  }
+};
+
 std::string GetBoolAssertionFailureMessage(
     const AssertionResult &assertion_result, const char *expression_text,
     const char *actual_predicate_value, const char *expected_predicate_value);
@@ -2293,17 +2344,17 @@ using testing::AssertionResult;
 
 #define GTEST_TEST_BOOLEAN_(expression, text, actual, expected, fail)          \
   GTEST_AMBIGUOUS_ELSE_BLOCKER_                                                \
-  if (const ::testing::AssertionResult gtest_ar_ =                             \
-          ::testing::AssertionResult(expression))                              \
+  if (const ::testing::internal::AssertionResultExpectation gtest_are_ = {     \
+          ::testing::AssertionResult(expression), expected})                   \
     ;                                                                          \
   else                                                                         \
     fail(::testing::internal::GetBoolAssertionFailureMessage(                  \
-             gtest_ar_, text, #actual, #expected)                              \
+             gtest_are_.assertion_result, text, #actual, #expected)            \
              .c_str())
 #define GTEST_ASSERT_TRUE(condition)                                           \
   GTEST_TEST_BOOLEAN_(condition, #condition, false, true, GTEST_FATAL_FAILURE_)
 #define GTEST_ASSERT_FALSE(condition)                                          \
-  GTEST_TEST_BOOLEAN_(!(condition), #condition, true, false,                   \
+  GTEST_TEST_BOOLEAN_(condition, #condition, true, false,                      \
                       GTEST_FATAL_FAILURE_)
 #define ASSERT_TRUE(condition) GTEST_ASSERT_TRUE(condition)
 #define ASSERT_FALSE(condition) GTEST_ASSERT_FALSE(condition)

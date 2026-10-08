@@ -12,8 +12,6 @@
 
 // iter_type put(iter_type s, ios_base& iob, char_type fill, unsigned long v) const;
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <locale>
 #include <ios>
 #include <cassert>

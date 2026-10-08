@@ -79,13 +79,6 @@ functions:
     return_type: int
     arguments:
       - type: mbstate_t *
-  - name: mblen
-    standards:
-      - stdc
-    return_type: int
-    arguments:
-      - type: const char *
-      - type: size_t
   - name: mbrlen
     standards:
       - stdc
@@ -124,6 +117,21 @@ functions:
     arguments:
       - type: const wchar_t *
       - type: const wchar_t *
+  - name: wcscasecmp
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: const wchar_t *
+      - type: const wchar_t *
+  - name: wcsncasecmp
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: const wchar_t *
+      - type: const wchar_t *
+      - type: size_t
   - name: wcscoll
     standards:
       - stdc
@@ -436,3 +444,12 @@ functions:
     arguments:
       - type: wint_t
       - type: FILE *
+  - name: swprintf
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wchar_t *__restrict
+      - type: size_t
+      - type: const wchar_t *__restrict
+      - type: '...'

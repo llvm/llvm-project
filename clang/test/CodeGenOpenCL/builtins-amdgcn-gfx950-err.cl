@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx906 -emit-llvm \
+// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgpu9.06-amd-amdhsa -emit-llvm \
 // RUN:   -verify -o - %s
-// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx90a -emit-llvm \
+// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgpu9.0a-amd-amdhsa -emit-llvm \
 // RUN:   -verify -o - %s
-// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx942 -emit-llvm \
+// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgpu9.42-amd-amdhsa -emit-llvm \
 // RUN:   -verify -o - %s
-// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx1200 -emit-llvm \
+// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgpu12.00-amd-amdhsa -emit-llvm \
 // RUN:   -verify -o - %s
 
 

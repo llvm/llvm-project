@@ -19,8 +19,9 @@ class Loop;
 class LoopVersioningLICMPass
     : public OptionalPassInfoMixin<LoopVersioningLICMPass> {
 public:
-  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
-                        LoopStandardAnalysisResults &LAR, LPMUpdater &U);
+  LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+                                 LoopStandardAnalysisResults &LAR,
+                                 LPMUpdater &U);
 };
 
 } // namespace llvm

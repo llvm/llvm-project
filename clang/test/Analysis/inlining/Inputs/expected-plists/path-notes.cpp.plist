@@ -2223,7 +2223,7 @@
          <array>
           <dict>
            <key>line</key><integer>105</integer>
-           <key>col</key><integer>63</integer>
+           <key>col</key><integer>57</integer>
            <key>file</key><integer>0</integer>
           </dict>
           <dict>
@@ -2240,7 +2240,7 @@
      <key>location</key>
      <dict>
       <key>line</key><integer>105</integer>
-      <key>col</key><integer>63</integer>
+      <key>col</key><integer>57</integer>
       <key>file</key><integer>0</integer>
      </dict>
      <key>ranges</key>
@@ -2248,7 +2248,7 @@
        <array>
         <dict>
          <key>line</key><integer>105</integer>
-         <key>col</key><integer>63</integer>
+         <key>col</key><integer>57</integer>
          <key>file</key><integer>0</integer>
         </dict>
         <dict>

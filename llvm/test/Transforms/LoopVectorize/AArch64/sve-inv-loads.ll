@@ -34,4 +34,4 @@ for.end:
 !1 = distinct !{!1, !2, !3, !4}
 !2 = !{!"llvm.loop.vectorize.width", i32 4}
 !3 = !{!"llvm.loop.interleave.count", i32 1}
-!4 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!4 = !{!"llvm.loop.vectorize.scalable.enable"}

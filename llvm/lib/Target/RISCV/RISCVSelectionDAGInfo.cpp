@@ -35,11 +35,27 @@ void RISCVSelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
     assert(N->getOperand(2).getOpcode() == ISD::TargetConstant &&
            "Expected index to be a target constant!");
     break;
+  case RISCVISD::TUPLE_CAST: {
+    EVT VT = N->getValueType(0);
+    EVT OpVT = N->getOperand(0).getValueType();
+    assert(VT.isRISCVVectorTuple() && OpVT.isRISCVVectorTuple() &&
+           "Expected input and output of TUPLE_CAST to be vector tuples");
+    unsigned NF = VT.getRISCVVectorTupleNumFields();
+    unsigned OpNF = OpVT.getRISCVVectorTupleNumFields();
+    unsigned LMUL = divideCeil(VT.getSizeInBits().getKnownMinValue(),
+                               NF * RISCV::RVVBitsPerBlock);
+    unsigned OpLMUL = divideCeil(OpVT.getSizeInBits().getKnownMinValue(),
+                                 OpNF * RISCV::RVVBitsPerBlock);
+    assert(NF == OpNF && LMUL == OpLMUL &&
+           "Expected input and output of TUPLE_CAST to have the same "
+           "factor and LMUL");
+    break;
+  }
   case RISCVISD::VDOT4A_VL:
   case RISCVISD::VDOT4AU_VL:
   case RISCVISD::VDOT4ASU_VL: {
     EVT VT = N->getValueType(0);
-    assert(VT.isScalableVector() && VT.getVectorElementType() == MVT::i32 &&
+    assert(VT.isScalableVectorOf(MVT::i32) &&
            "Expected result to be an i32 scalable vector");
     assert(N->getOperand(0).getValueType() == VT &&
            N->getOperand(1).getValueType() == VT &&

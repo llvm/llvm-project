@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/Support/Compiler.h"
 
@@ -30,7 +31,7 @@ namespace rootsig {
 class RootSignatureValidationError
     : public ErrorInfo<RootSignatureValidationError> {
 public:
-  static char ID;
+  LLVM_ABI static char ID;
   std::string Msg;
 
   RootSignatureValidationError(const Twine &Msg) : Msg(Msg.str()) {}
@@ -44,8 +45,8 @@ public:
 
 class MetadataBuilder {
 public:
-  MetadataBuilder(llvm::LLVMContext &Ctx, ArrayRef<RootElement> Elements)
-      : Ctx(Ctx), Elements(Elements) {}
+  MetadataBuilder(llvm::Module &M, ArrayRef<RootElement> Elements)
+      : M(M), Ctx(M.getContext()), Elements(Elements) {}
 
   /// Iterates through elements and dispatches onto the correct Build* method
   ///
@@ -62,6 +63,7 @@ private:
   MDNode *BuildDescriptorTableClause(const DescriptorTableClause &Clause);
   MDNode *BuildStaticSampler(const StaticSampler &Sampler);
 
+  llvm::Module &M;
   llvm::LLVMContext &Ctx;
   ArrayRef<RootElement> Elements;
   SmallVector<Metadata *> GeneratedMetadata;

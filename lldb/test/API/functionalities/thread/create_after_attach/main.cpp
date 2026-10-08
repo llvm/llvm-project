@@ -1,6 +1,5 @@
 #include "attach.h"
 #include <chrono>
-#include <cstdio>
 #include <thread>
 
 using std::chrono::microseconds;
@@ -57,6 +56,4 @@ int main(int argc, char const *argv[])
     // Wait for the threads to finish.
     thread_1.join();
     thread_2.join();
-
-    printf("Exiting now\n");
 }

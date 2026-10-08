@@ -17,6 +17,6 @@
 
 #include <sys/ipc.h>
 
-#endif // LLVM_LIBC_FULL_BUILD
+#endif // LIBC_FULL_BUILD
 
 #endif // LLVM_LIBC_HDR_TYPES_KEY_T_H

@@ -2,9 +2,6 @@
 ; RUN: opt -passes=nsan -nsan-shadow-type-mapping=dqq -nsan-truncate-fcmp-eq=false -S %s | FileCheck %s --check-prefixes=CHECK,DQQ
 ; RUN: opt -passes=nsan -nsan-shadow-type-mapping=dlq -nsan-truncate-fcmp-eq=false -S %s | FileCheck %s --check-prefixes=CHECK,DLQ
 
-; RUN: opt -passes=nsan -nsan-shadow-type-mapping=dqq -nsan-truncate-fcmp-eq=false -use-constant-fp-for-fixed-length-splat -S %s | FileCheck %s --check-prefixes=CHECK,DQQ
-; RUN: opt -passes=nsan -nsan-shadow-type-mapping=dlq -nsan-truncate-fcmp-eq=false -use-constant-fp-for-fixed-length-splat -S %s | FileCheck %s --check-prefixes=CHECK,DLQ
-
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
 declare float @declaration_only(float %a) sanitize_numerical_stability
@@ -484,8 +481,8 @@ define void @call_fn_taking_float() sanitize_numerical_stability {
 ; DQQ-NEXT:  entry:
 ; DQQ-NEXT:    store ptr @takes_floats, ptr @__nsan_shadow_args_tag, align 8
 ; DQQ-NEXT:    store double 1.000000e+00, ptr @__nsan_shadow_args_ptr, align 1
-; DQQ-NEXT:    store fp128 3.000000e+00, ptr getelementptr ([16384 x i8], ptr @__nsan_shadow_args_ptr, i64 0, i64 8), align 1
-; DQQ-NEXT:    store fp128 f0x3FC9CD2B297D889BC000000000000000, ptr getelementptr ([16384 x i8], ptr @__nsan_shadow_args_ptr, i64 0, i64 24), align 1
+; DQQ-NEXT:    store fp128 3.000000e+00, ptr getelementptr (i8, ptr @__nsan_shadow_args_ptr, i64 8), align 1
+; DQQ-NEXT:    store fp128 f0x3FC9CD2B297D889BC000000000000000, ptr getelementptr (i8, ptr @__nsan_shadow_args_ptr, i64 24), align 1
 ; DQQ-NEXT:    call void @takes_floats(float 1.000000e+00, i8 2, double 3.000000e+00, x86_fp80 f0x3FC9E69594BEC44DE000)
 ; DQQ-NEXT:    ret void
 ;
@@ -493,8 +490,8 @@ define void @call_fn_taking_float() sanitize_numerical_stability {
 ; DLQ-NEXT:  entry:
 ; DLQ-NEXT:    store ptr @takes_floats, ptr @__nsan_shadow_args_tag, align 8
 ; DLQ-NEXT:    store double 1.000000e+00, ptr @__nsan_shadow_args_ptr, align 1
-; DLQ-NEXT:    store x86_fp80 3.000000e+00, ptr getelementptr ([16384 x i8], ptr @__nsan_shadow_args_ptr, i64 0, i64 8), align 1
-; DLQ-NEXT:    store fp128 f0x3FC9CD2B297D889BC000000000000000, ptr getelementptr ([16384 x i8], ptr @__nsan_shadow_args_ptr, i64 0, i64 18), align 1
+; DLQ-NEXT:    store x86_fp80 3.000000e+00, ptr getelementptr (i8, ptr @__nsan_shadow_args_ptr, i64 8), align 1
+; DLQ-NEXT:    store fp128 f0x3FC9CD2B297D889BC000000000000000, ptr getelementptr (i8, ptr @__nsan_shadow_args_ptr, i64 18), align 1
 ; DLQ-NEXT:    call void @takes_floats(float 1.000000e+00, i8 2, double 3.000000e+00, x86_fp80 f0x3FC9E69594BEC44DE000)
 ; DLQ-NEXT:    ret void
 ;
@@ -676,7 +673,7 @@ define void @freeze_vector_insert(<2 x float> %vec, i32 %idx, float %scalar) san
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr @__nsan_shadow_args_ptr, align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = fpext <2 x float> [[VEC:%.*]] to <2 x double>
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP1]], <2 x double> [[TMP2]], <2 x double> [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load double, ptr getelementptr ([16384 x i8], ptr @__nsan_shadow_args_ptr, i64 0, i64 16), align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = load double, ptr getelementptr (i8, ptr @__nsan_shadow_args_ptr, i64 16), align 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = fpext float [[SCALAR:%.*]] to double
 ; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP1]], double [[TMP5]], double [[TMP6]]
 ; CHECK-NEXT:    store i64 0, ptr @__nsan_shadow_args_tag, align 8
@@ -765,7 +762,7 @@ define float @sub_fabs(float %a, float %b) sanitize_numerical_stability {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr @__nsan_shadow_args_ptr, align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = fpext float [[A:%.*]] to double
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP1]], double [[TMP2]], double [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load double, ptr getelementptr ([16384 x i8], ptr @__nsan_shadow_args_ptr, i64 0, i64 8), align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = load double, ptr getelementptr (i8, ptr @__nsan_shadow_args_ptr, i64 8), align 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = fpext float [[B:%.*]] to double
 ; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP1]], double [[TMP5]], double [[TMP6]]
 ; CHECK-NEXT:    store i64 0, ptr @__nsan_shadow_args_tag, align 8

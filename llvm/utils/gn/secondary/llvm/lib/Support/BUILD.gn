@@ -32,6 +32,7 @@ static_library("Support") {
     "Unix",
     "Windows",
     "//third-party/siphash/include",
+    "//libc",
   ]
   sources = [
     "AArch64AttributeParser.cpp",
@@ -57,6 +58,7 @@ static_library("Support") {
     "BlockFrequency.cpp",
     "BranchProbability.cpp",
     "BuryPointer.cpp",
+    "CHERICapabilityFormat.cpp",
     "COM.cpp",
     "CRC.cpp",
     "CSKYAttributeParser.cpp",
@@ -79,7 +81,9 @@ static_library("Support") {
     "DebugCounter.cpp",
     "DeltaAlgorithm.cpp",
     "DeltaTree.cpp",
+    "DenseMap.cpp",
     "DivisionByConstantInfo.cpp",
+    "Driver.cpp",
     "DynamicAPInt.cpp",
     "ELFAttrParserCompact.cpp",
     "ELFAttrParserExtended.cpp",
@@ -176,6 +180,7 @@ static_library("Support") {
     "VirtualOutputConfig.cpp",
     "VirtualOutputError.cpp",
     "VirtualOutputFile.cpp",
+    "Win64EH.cpp",
     "WithColor.cpp",
     "YAMLParser.cpp",
     "YAMLTraits.cpp",

@@ -117,7 +117,7 @@ const char *SBModuleSpec::GetTriple() {
   // Unique the string so we don't run into ownership issues since the const
   // strings put the string into the string pool once and the strings never
   // comes out
-  ConstString const_triple(triple.c_str());
+  ConstString const_triple(triple);
   return const_triple.GetCString();
 }
 
@@ -194,6 +194,11 @@ SBModuleSpecList::SBModuleSpecList() : m_opaque_up(new ModuleSpecList()) {
 SBModuleSpecList::SBModuleSpecList(const SBModuleSpecList &rhs)
     : m_opaque_up(new ModuleSpecList(*rhs.m_opaque_up)) {
   LLDB_INSTRUMENT_VA(this, rhs);
+}
+
+SBModuleSpecList::SBModuleSpecList(lldb_private::ModuleSpecList &&module_spec)
+    : m_opaque_up(new ModuleSpecList(std::move(module_spec))) {
+  LLDB_INSTRUMENT_VA(this);
 }
 
 SBModuleSpecList &SBModuleSpecList::operator=(const SBModuleSpecList &rhs) {

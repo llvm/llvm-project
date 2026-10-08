@@ -11,7 +11,7 @@
 
 #include "include/llvm-libc-types/float128.h"
 
-#ifdef LIBC_TYPES_HAS_FLOAT128
+#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #include "src/__support/FPUtil/DivisionAndRemainderOperations.h"
 #include "src/__support/macros/config.h"
@@ -19,14 +19,13 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR float128 remquof128(float128 x, float128 y,
-                                               int *exp) {
+LIBC_INLINE constexpr float128 remquof128(float128 x, float128 y, int *exp) {
   return fputil::remquo(x, y, *exp);
 }
 
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LIBC_TYPES_HAS_FLOAT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_REMQUOF128_H

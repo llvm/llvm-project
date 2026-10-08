@@ -67,7 +67,7 @@ bool checkDevice(int64_t &DeviceID, ident_t *Loc) {
     return true;
   }
 
-  if (DeviceID == omp_get_initial_device()) {
+  if (isInitialDevice(static_cast<int>(DeviceID))) {
     ODBG(ODT_Device) << "Device is host (" << DeviceID
                      << "), returning as if offload is disabled";
     return true;
@@ -308,12 +308,12 @@ static KernelArgsTy *upgradeKernelArgs(KernelArgsTy *KernelArgs,
     LocalKernelArgs.Tripcount = KernelArgs->Tripcount;
     LocalKernelArgs.Flags = KernelArgs->Flags;
     LocalKernelArgs.DynCGroupMem = 0;
-    LocalKernelArgs.NumTeams[0] = NumTeams;
-    LocalKernelArgs.NumTeams[1] = 1;
-    LocalKernelArgs.NumTeams[2] = 1;
-    LocalKernelArgs.ThreadLimit[0] = ThreadLimit;
-    LocalKernelArgs.ThreadLimit[1] = 1;
-    LocalKernelArgs.ThreadLimit[2] = 1;
+    LocalKernelArgs.UserNumBlocks[0] = NumTeams;
+    LocalKernelArgs.UserNumBlocks[1] = 1;
+    LocalKernelArgs.UserNumBlocks[2] = 1;
+    LocalKernelArgs.UserThreadLimit[0] = ThreadLimit;
+    LocalKernelArgs.UserThreadLimit[1] = 1;
+    LocalKernelArgs.UserThreadLimit[2] = 1;
     return &LocalKernelArgs;
   }
 
@@ -325,8 +325,8 @@ static KernelArgsTy *upgradeKernelArgs(KernelArgsTy *KernelArgs,
     if (Val[2] == 0)
       Val[2] = 1;
   };
-  CorrectMultiDim(KernelArgs->ThreadLimit);
-  CorrectMultiDim(KernelArgs->NumTeams);
+  CorrectMultiDim(KernelArgs->UserThreadLimit);
+  CorrectMultiDim(KernelArgs->UserNumBlocks);
 
   // Version 3 put the implicit argument at the front with no storage.
   if (KernelArgs->Version == OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR) {
@@ -384,7 +384,7 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
 
   bool IsTeams = NumTeams != -1;
   if (!IsTeams)
-    KernelArgs->NumTeams[0] = NumTeams = 1;
+    KernelArgs->UserNumBlocks[0] = NumTeams = 1;
 
   KernelArgsTy LocalKernelArgs;
   UpgradedArgBuffersTy UpgradedBufs;
@@ -592,12 +592,10 @@ EXTERN void __tgt_set_info_flag(uint32_t NewInfoLevel) {
 }
 
 EXTERN int __tgt_print_device_info(int64_t DeviceId) {
-  assert(PM && "Runtime not initialized");
-  auto DeviceOrErr = PM->getDevice(DeviceId);
-  if (!DeviceOrErr)
-    FATAL_MESSAGE(DeviceId, "%s", toString(DeviceOrErr.takeError()).c_str());
-
-  return DeviceOrErr->printDeviceInfo();
+  MESSAGE("The %s function is deprecated and no longer prints any "
+          "information. Use olGetDeviceInfo instead",
+          __PRETTY_FUNCTION__);
+  return false;
 }
 
 EXTERN void __tgt_target_nowait_query(void **AsyncHandle) {
@@ -646,7 +644,25 @@ EXTERN void __tgt_target_nowait_query(void **AsyncHandle) {
 
 EXTERN void __tgt_register_rpc_callback(unsigned (*Callback)(void *,
                                                              unsigned)) {
-  for (auto &Plugin : PM->plugins())
-    if (Plugin.is_initialized())
-      Plugin.getRPCServer().registerCallback(Callback);
+  if (!PM)
+    return;
+
+  olIteratePlatforms(
+      [](ol_platform_handle_t Platform, void *Data) {
+        bool Active = false;
+        if (olGetPlatformInfo(Platform, OL_PLATFORM_INFO_ACTIVE, sizeof(Active),
+                              &Active) == OL_SUCCESS &&
+            Active)
+          olPlatformRegisterRPCCallback(
+              Platform, reinterpret_cast<ol_platform_rpc_cb_t>(Data));
+        return true;
+      },
+      reinterpret_cast<void *>(Callback));
+}
+
+EXTERN void *__tgt_get_mapped_ptr(int64_t DeviceId, const void *HostPtr) {
+  void *TargetPtr = omp_get_mapped_ptr(HostPtr, DeviceId);
+  if (!TargetPtr)
+    return const_cast<void *>(HostPtr);
+  return TargetPtr;
 }

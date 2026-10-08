@@ -11,7 +11,7 @@
 
 #include "include/llvm-libc-types/float128.h"
 
-#ifdef LIBC_TYPES_HAS_FLOAT128
+#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
@@ -20,7 +20,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR float128 nanf128(const char *arg) {
+LIBC_INLINE constexpr float128 nanf128(const char *arg) {
   auto result = internal::strtonan<float128>(arg);
   if (result.has_error())
     libc_errno = result.error;
@@ -30,6 +30,6 @@ LIBC_INLINE LIBC_CONSTEXPR float128 nanf128(const char *arg) {
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LIBC_TYPES_HAS_FLOAT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_NANF128_H

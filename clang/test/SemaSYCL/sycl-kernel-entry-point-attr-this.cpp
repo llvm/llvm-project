@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -std=c++17 -fsycl-is-host -verify %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -std=c++17 -fsycl-is-device -verify %s
+// RUN: %clang_cc1 -triple spirv64-unknown-unknown -fsyntax-only -std=c++17 -fsycl-is-device -verify %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -std=c++20 -fsycl-is-host -verify %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -std=c++20 -fsycl-is-device -verify %s
+// RUN: %clang_cc1 -triple spirv64-unknown-unknown -fsyntax-only -std=c++20 -fsycl-is-device -verify %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -std=c++23 -fsycl-is-host -verify %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -std=c++23 -fsycl-is-device -verify %s
+// RUN: %clang_cc1 -triple spirv64-unknown-unknown -fsyntax-only -std=c++23 -fsycl-is-device -verify %s
 
 // These tests validate diagnostics for invalid use of 'this' in the body of
 // a function declared with the sycl_kernel_entry_point attribute.

@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_MUNMAP_H
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_MUNMAP_H
 
-#include "src/__support/OSUtil/linux/syscall.h" // syscall_impl
+#include "src/__support/OSUtil/linux/syscall.h" // For syscall_checked
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
@@ -19,10 +19,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> munmap(void *addr, size_t size) {
-  int ret = syscall_impl<int>(SYS_munmap, reinterpret_cast<long>(addr), size);
-  if (ret < 0)
-    return Error(-ret);
-  return ret;
+  return syscall_checked<int>(SYS_munmap, addr, size);
 }
 
 } // namespace linux_syscalls

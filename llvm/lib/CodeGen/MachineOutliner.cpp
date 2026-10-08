@@ -102,7 +102,7 @@ STATISTIC(NumIllegalInUnsignedVec,
           "Unoutlinable instructions mapped + number of sentinel values");
 STATISTIC(NumSentinels, "Sentinel values inserted during mapping");
 STATISTIC(NumInvisible,
-          "Invisible instructions skipped during mapping");
+          "Non-debug invisible instructions skipped during mapping");
 STATISTIC(UnsignedVecSize,
           "Total number of instructions mapped and saved to mapping vector");
 STATISTIC(StableHashAttempts,
@@ -244,11 +244,6 @@ struct InstructionMapper {
     if (LegalInstrNumber >= IllegalInstrNumber)
       report_fatal_error("Instruction mapping overflow!");
 
-    assert(LegalInstrNumber != DenseMapInfo<unsigned>::getEmptyKey() &&
-           "Tried to assign DenseMap tombstone or empty key to instruction.");
-    assert(LegalInstrNumber != DenseMapInfo<unsigned>::getTombstoneKey() &&
-           "Tried to assign DenseMap tombstone or empty key to instruction.");
-
     // Statistics.
     ++NumLegalInUnsignedVec;
     return MINumber;
@@ -283,12 +278,6 @@ struct InstructionMapper {
 
     assert(LegalInstrNumber < IllegalInstrNumber &&
            "Instruction mapping overflow!");
-
-    assert(IllegalInstrNumber != DenseMapInfo<unsigned>::getEmptyKey() &&
-           "IllegalInstrNumber cannot be DenseMap tombstone or empty key!");
-
-    assert(IllegalInstrNumber != DenseMapInfo<unsigned>::getTombstoneKey() &&
-           "IllegalInstrNumber cannot be DenseMap tombstone or empty key!");
 
     return MINumber;
   }
@@ -354,6 +343,8 @@ struct InstructionMapper {
       unsigned NumSkippedInRange = 0;
 #endif
       for (; It != OutlinableRangeBegin; ++It) {
+        if (It->isDebugInstr())
+          continue;
 #ifndef NDEBUG
         ++NumSkippedInRange;
 #endif
@@ -368,6 +359,8 @@ struct InstructionMapper {
       // `It` is now positioned at the beginning of a range of instructions
       // which may be outlinable. Check if each instruction is known to be safe.
       for (; It != OutlinableRangeEnd; ++It) {
+        if (It->isDebugInstr())
+          continue;
         // Keep track of where this instruction is in the module.
         switch (TII.getOutliningType(MMI, It, Flags)) {
         case InstrType::Illegal:
@@ -418,14 +411,7 @@ struct InstructionMapper {
     }
   }
 
-  InstructionMapper(const MachineModuleInfo &MMI_) : MMI(MMI_) {
-    // Make sure that the implementation of DenseMapInfo<unsigned> hasn't
-    // changed.
-    static_assert(DenseMapInfo<unsigned>::getEmptyKey() ==
-                  static_cast<unsigned>(-1));
-    static_assert(DenseMapInfo<unsigned>::getTombstoneKey() ==
-                  static_cast<unsigned>(-2));
-  }
+  InstructionMapper(const MachineModuleInfo &MMI_) : MMI(MMI_) {}
 };
 
 /// An interprocedural pass which finds repeated sequences of
@@ -972,11 +958,14 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
       MachineInstr &NewMI = TII.duplicate(MBB, MBB.end(), MI);
       NewMI.dropMemRefs(MF);
       NewMI.setDebugLoc(DL);
-      // Also clear debug locations on any bundled instructions.
+      NewMI.clearKillInfo();
+      // Also clear debug locations and kill info on any bundled instructions.
       if (NewMI.isBundledWithSucc()) {
         auto BundleEnd = getBundleEnd(NewMI.getIterator());
-        for (auto I = std::next(NewMI.getIterator()); I != BundleEnd; ++I)
+        for (auto I = std::next(NewMI.getIterator()); I != BundleEnd; ++I) {
           I->setDebugLoc(DL);
+          I->clearKillInfo();
+        }
       }
     }
   }
@@ -1123,9 +1112,47 @@ bool MachineOutliner::outline(
       MachineBasicBlock::iterator StartIt = C.begin();
       MachineBasicBlock::iterator EndIt = std::prev(C.end());
 
+      // Find the first non-debug instruction with a non-zero source line, and
+      // the location of the last call in the candidate, if it has one.
+      DebugLoc FirstLoc, LastCallLoc;
+      for (MachineInstr &MI : C) {
+        if (MI.isDebugInstr())
+          continue;
+        const DebugLoc &DL = MI.getDebugLoc();
+        bool HasLine = DL && DL.getLine();
+        if (!FirstLoc && HasLine)
+          FirstLoc = DL;
+        if (MI.isCall())
+          LastCallLoc = HasLine ? DL : DebugLoc();
+      }
+
+      // Remember the instruction the call sequence will be inserted after, so
+      // we can find every instruction the target inserts below.
+      MachineBasicBlock::iterator PrevIt =
+          StartIt == MBB.begin() ? MBB.end() : std::prev(StartIt);
+
       // Insert the call.
       auto CallInst = TII.insertOutlinedCall(M, MBB, StartIt, *MF, C);
-// Insert the call.
+
+      // Unwinding through a call in the candidate symbolizes the caller frame
+      // at the outlined call, so it should carry that call's location. Use the
+      // last call: a candidate ending in a call may be outlined as a thunk
+      // whose tail call returns directly past the outlined call. With multiple
+      // calls, only the last is attributed exactly. Nothing returns to a tail
+      // branch, so it keeps the first location.
+      DebugLoc CallLoc =
+          !CallInst->isTerminator() && LastCallLoc ? LastCallLoc : FirstLoc;
+
+      // insertOutlinedCall may emit link register save/restore instructions
+      // around the call, and leaves StartIt on the last instruction it
+      // inserted. Give the whole sequence the same location. Otherwise, a
+      // locationless save or restore can introduce a line 0 row, including at
+      // the return address immediately after the call.
+      MachineBasicBlock::iterator SeqBegin =
+          PrevIt == MBB.end() ? MBB.begin() : std::next(PrevIt);
+      for (MachineInstr &MI : make_range(SeqBegin, std::next(StartIt)))
+        MI.setDebugLoc(CallLoc);
+
 #ifndef NDEBUG
       auto MBBBeingOutlinedFromName =
           MBB.getName().empty() ? "<unknown>" : MBB.getName().str();
@@ -1308,11 +1335,17 @@ void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M) {
       LLVM_DEBUG(dbgs() << "  MAPPING MBB: '" << MBB.getName() << "'\n");
       // If there isn't anything in MBB, then there's no point in outlining from
       // it.
-      // If there are fewer than 2 instructions in the MBB, then it can't ever
-      // contain something worth outlining.
+      // If there are fewer than 2 non-debug instructions in the MBB, then it
+      // can't ever contain something worth outlining. Count raw instructions,
+      // including bundle interiors, to preserve MBB.size() behavior. Pseudo
+      // probes also retain their historical treatment as ordinary
+      // instructions.
       // FIXME: This should be based off of the maximum size in B of an outlined
       // call versus the size in B of the MBB.
-      if (MBB.size() < MinMBBSize) {
+      if (!hasNItemsOrMore(instructionsWithoutDebug(MBB.instr_begin(),
+                                                    MBB.instr_end(),
+                                                    /* SkipPseudoOp */ false),
+                           MinMBBSize)) {
         LLVM_DEBUG(dbgs() << "    SKIP: MBB size less than minimum size of "
                           << MinMBBSize << "\n");
         continue;

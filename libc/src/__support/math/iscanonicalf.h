@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR int iscanonicalf(float x) {
+LIBC_INLINE constexpr int iscanonicalf(float x) {
   float temp{};
   return fputil::canonicalize(temp, x) == 0;
 }

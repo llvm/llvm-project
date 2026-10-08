@@ -30187,6 +30187,10 @@
 {"_ZZNH3Foo3fooES_iENK4Foo24foo2Ev", "Foo::foo(this Foo, int)::Foo2::foo2() const" },
 {"_ZNH3FooclERKS_", "Foo::operator()(this Foo const&)"},
 
+// C++26 pack indexing
+{"_Z3fooILi0ETpTnDaJLi1ELi2EEEDTsyT0_T_Ev", "decltype((1, 2...)[0]) foo<0, 1, 2>()"},
+{"_Z1gILi0EJciEEDyT0_T_v", "(char, int)[0] g<0, char, int>()"},
+
 // fixed-point types as defined in the N1169 draft of ISO/IEC DTR 18037
 {"_Z1fDAs", "f(short _Accum)"},
 {"_Z1fDAt", "f(unsigned short _Accum)"},

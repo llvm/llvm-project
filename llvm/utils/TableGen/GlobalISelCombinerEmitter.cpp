@@ -33,8 +33,8 @@
 #include "Common/GlobalISel/CodeExpander.h"
 #include "Common/GlobalISel/CodeExpansions.h"
 #include "Common/GlobalISel/CombinerUtils.h"
-#include "Common/GlobalISel/GlobalISelMatchTable.h"
 #include "Common/GlobalISel/GlobalISelMatchTableExecutorEmitter.h"
+#include "Common/GlobalISel/MatchTable/Matchers.h"
 #include "Common/GlobalISel/PatternParser.h"
 #include "Common/GlobalISel/Patterns.h"
 #include "Common/SubtargetFeatureInfo.h"
@@ -1037,6 +1037,15 @@ bool CombineRuleBuilder::addApplyPattern(std::unique_ptr<Pattern> Pat) {
     return false;
   }
 
+  // GIHasOneUse is a match-only predicate and cannot appear in 'apply'.
+  if (const auto *BP = dyn_cast<BuiltinPattern>(Pat.get())) {
+    if (BP->getBuiltinKind() == BI_HasOneUse) {
+      PrintError("'" + BP->getInstName() +
+                 "' cannot be used in a 'apply' pattern");
+      return false;
+    }
+  }
+
   if (auto *CXXPat = dyn_cast<CXXPattern>(Pat.get()))
     CXXPat->setIsApply();
 
@@ -1051,11 +1060,13 @@ bool CombineRuleBuilder::addMatchPattern(std::unique_ptr<Pattern> Pat) {
     return false;
   }
 
-  // For now, none of the builtins can appear in 'match'.
+  // Most builtins cannot appear in 'match', except GIHasOneUse.
   if (const auto *BP = dyn_cast<BuiltinPattern>(Pat.get())) {
-    PrintError("'" + BP->getInstName() +
-               "' cannot be used in a 'match' pattern");
-    return false;
+    if (BP->getBuiltinKind() != BI_HasOneUse) {
+      PrintError("'" + BP->getInstName() +
+                 "' cannot be used in a 'match' pattern");
+      return false;
+    }
   }
 
   MatchPats[Name] = std::move(Pat);
@@ -1072,9 +1083,6 @@ void CombineRuleBuilder::addCXXPredicate(RuleMatcher &M,
                                          const CodeExpansions &CE,
                                          const CXXPattern &P,
                                          const PatternAlternatives &Alts) {
-  // FIXME: Hack so C++ code is executed last. May not work for more complex
-  // patterns.
-  auto &IM = *std::prev(M.insnmatchers().end());
   auto Loc = RuleDef.getLoc();
   const auto AddComment = [&](raw_ostream &OS) {
     OS << "// Pattern Alternatives: ";
@@ -1083,7 +1091,13 @@ void CombineRuleBuilder::addCXXPredicate(RuleMatcher &M,
   };
   const auto &ExpandedCode =
       DebugCXXPreds ? P.expandCode(CE, Loc, AddComment) : P.expandCode(CE, Loc);
-  IM->addPredicate<GenericInstructionPredicateMatcher>(
+  // FIXME?: This isn't too clean, the pred does not belong to that instruction.
+  // It works because GenericInstructionPredicateMatcher will never be hoisted.
+  // Ideally the RuleMatcher should have a separate container for this type of
+  // situation (perhaps we can reuse EpilogueMatcher), but it's not a big deal
+  // right now.
+  InstructionMatcher &IM = M.roots_front();
+  IM.addPredicate<GenericInstructionPredicateMatcher>(
       ExpandedCode.getEnumNameWithPrefix(CXXPredPrefix));
 }
 
@@ -1368,6 +1382,9 @@ bool CombineRuleBuilder::checkSemantics() {
       }
       break;
     }
+    case BI_HasOneUse:
+      // GIHasOneUse is a match-only predicate, not valid in apply patterns.
+      break;
     }
   }
 
@@ -1384,7 +1401,12 @@ bool CombineRuleBuilder::checkSemantics() {
 
 RuleMatcher &CombineRuleBuilder::addRuleMatcher(const PatternAlternatives &Alts,
                                                 Twine AdditionalComment) {
-  auto &RM = OutRMs.emplace_back(RuleDef.getLoc());
+  // C++ predicates in the combiner are much more flexible and do not depend on
+  // RecordNamedOperandMatcher. The drawback of this is that we need to assume
+  // any operand can be used by any C++ predicate, limiting optimizations in
+  // some cases.
+  auto &RM =
+      OutRMs.emplace_back(RuleDef.getLoc(), /*UsesRecordOperands=*/false);
   addFeaturePredicates(RM);
   RM.setPermanentGISelFlags(GISF_IgnoreCopies);
   RM.addRequiredSimplePredicate(getIsEnabledPredicateEnumName(RuleID));
@@ -1612,8 +1634,12 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
 
     if (!emitPatFragMatchPattern(CE, Alts, M, &IM, *PFP, SeenPats))
       return false;
-  } else if (isa<BuiltinPattern>(&IP)) {
-    llvm_unreachable("No match builtins known!");
+  } else if (const auto *BP = dyn_cast<BuiltinPattern>(&IP)) {
+    if (BP->getBuiltinKind() == BI_HasOneUse) {
+      IM.addPredicate<OneUsePredicateMatcher>();
+    } else {
+      llvm_unreachable("No match builtins known!");
+    }
   } else {
     llvm_unreachable("Unknown kind of InstructionPattern!");
   }
@@ -1635,9 +1661,23 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
         return false;
       continue;
     }
-    case Pattern::K_Builtin:
+    case Pattern::K_Builtin: {
+      const auto *BP = cast<BuiltinPattern>(Pat.get());
+      if (BP->getBuiltinKind() == BI_HasOneUse) {
+        assert(BP->getNumInstOperands() == 1 && "GIHasOneUse takes 1 operand");
+        StringRef OpName = BP->getOperand(0).getOperandName();
+        const auto *DefPat = MatchOpTable.getDef(OpName);
+        if (!DefPat) {
+          PrintError("GIHasOneUse: operand '" + OpName + "' not defined");
+          return false;
+        }
+        auto &InsnMatcher = M.getInstructionMatcher(DefPat->getName());
+        InsnMatcher.addPredicate<OneUsePredicateMatcher>();
+        continue;
+      }
       PrintError("No known match builtins");
       return false;
+    }
     case Pattern::K_CodeGenInstruction:
       cast<InstructionPattern>(Pat.get())->reportUnreachable(RuleDef.getLoc());
       return false;
@@ -1693,9 +1733,6 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
           return false;
         continue;
       }
-      case Pattern::K_Builtin:
-        PrintError("No known match builtins");
-        return false;
       case Pattern::K_CodeGenInstruction:
         cast<InstructionPattern>(Pat.get())->reportUnreachable(
             RuleDef.getLoc());
@@ -1901,8 +1938,9 @@ bool CombineRuleBuilder::emitApplyPatterns(CodeExpansions &CE, RuleMatcher &M) {
 
   // Erase the root.
   unsigned RootInsnID =
-      M.getInsnVarID(M.getInstructionMatcher(MatchRoot->getName()));
-  M.addAction<EraseInstAction>(RootInsnID);
+      M.getInstructionMatcher(MatchRoot->getName()).getInsnVarID();
+  if (M.tryEraseInsnID(RootInsnID))
+    M.addAction<EraseInstAction>(RootInsnID);
 
   return true;
 }
@@ -1985,7 +2023,7 @@ bool CombineRuleBuilder::emitInstructionApplyPattern(
 
   // Now render this inst.
   auto &DstMI =
-      M.addAction<BuildMIAction>(M.allocateOutputInsnID(), &CGIP.getInst());
+      M.addAction<BuildMIAction>(M.allocateOutputInsnID(), M, &CGIP.getInst());
 
   bool HasEmittedIntrinsicID = false;
   const auto EmitIntrinsicID = [&]() {
@@ -2028,7 +2066,7 @@ bool CombineRuleBuilder::emitInstructionApplyPattern(
         // the previous condition should have passed.
         assert(MatchOpTable.lookup(OpName).Found &&
                !ApplyOpTable.getDef(OpName) && "Temp reg not emitted yet!");
-        DstMI.addRenderer<CopyRenderer>(OpName);
+        DstMI.addRenderer<CopyRenderer>(M, OpName);
       }
       continue;
     }
@@ -2056,7 +2094,7 @@ bool CombineRuleBuilder::emitInstructionApplyPattern(
         return false;
       }
       // redef of a match
-      DstMI.addRenderer<CopyRenderer>(OpName);
+      DstMI.addRenderer<CopyRenderer>(M, OpName);
       continue;
     }
 
@@ -2121,16 +2159,26 @@ bool CombineRuleBuilder::emitCodeGenInstructionApplyImmOperand(
     RuleMatcher &M, BuildMIAction &DstMI, const CodeGenInstructionPattern &P,
     const InstructionOperand &O) {
   // If we have a type, we implicitly emit a G_CONSTANT, except for G_CONSTANT
-  // itself where we emit a CImm.
+  // itself (which needs a CImm) and G_FCONSTANT (which needs an FP immediate).
+  // The pattern grammar has no fp literals, so a G_FCONSTANT immediate is an
+  // IEEE bit pattern of the immediate's type (0 is +0.0 for every FP width).
   //
   // No type means we emit a simple imm.
-  // G_CONSTANT is a special case and needs a CImm though so this is likely a
-  // mistake.
+  // G_CONSTANT/G_FCONSTANT are special cases and need a typed immediate
+  // though so this is likely a mistake.
   const bool isGConstant = P.is("G_CONSTANT");
+  const bool isGFConstant = P.is("G_FCONSTANT");
   const auto Ty = O.getType();
   if (!Ty) {
     if (isGConstant) {
       PrintError("'G_CONSTANT' immediate must be typed!");
+      PrintNote("while emitting pattern '" + P.getName() + "' (" +
+                P.getInstName() + ")");
+      return false;
+    }
+
+    if (isGFConstant) {
+      PrintError("'G_FCONSTANT' immediate must be typed!");
       PrintNote("while emitting pattern '" + P.getName() + "' (" +
                 P.getInstName() + ")");
       return false;
@@ -2146,6 +2194,11 @@ bool CombineRuleBuilder::emitCodeGenInstructionApplyImmOperand(
 
   if (isGConstant) {
     DstMI.addRenderer<ImmRenderer>(O.getImmValue(), *ImmTy);
+    return true;
+  }
+
+  if (isGFConstant) {
+    DstMI.addRenderer<ImmRenderer>(O.getImmValue(), *ImmTy, /*IsFP=*/true);
     return true;
   }
 
@@ -2169,9 +2222,13 @@ bool CombineRuleBuilder::emitBuiltinApplyPattern(
   switch (P.getBuiltinKind()) {
   case BI_EraseRoot: {
     // Root is always inst 0.
-    M.addAction<EraseInstAction>(/*InsnID*/ 0);
+    if (M.tryEraseInsnID(0))
+      M.addAction<EraseInstAction>(/*InsnID*/ 0);
     return true;
   }
+  case BI_HasOneUse:
+    llvm_unreachable("GIHasOneUse cannot be used in apply patterns!");
+
   case BI_ReplaceReg: {
     StringRef Old = P.getOperand(0).getOperandName();
     StringRef New = P.getOperand(1).getOperandName();
@@ -2566,14 +2623,14 @@ void GICombinerEmitter::emitRuleConfigImpl(raw_ostream &OS) {
 void GICombinerEmitter::collectMatchOpcodes(ArrayRef<RuleMatcher> Rules) {
   for (const RuleMatcher &Rule : Rules) {
     for (const CodeGenInstruction *I :
-         Rule.insnmatchers_front().getOpcodeMatcher().getAlternativeOpcodes())
+         Rule.roots_front().getOpcodeMatcher().getAlternativeOpcodes())
       MatchOpcodes.insert(I);
   }
 }
 
 void GICombinerEmitter::emitCanMatchOpcodeFn(raw_ostream &OS,
                                              StringRef FnName) const {
-  OS << "static bool " << FnName << "(unsigned Opc) {\n";
+  OS << "bool " << FnName << "(unsigned Opc) const {\n";
   if (MatchOpcodes.empty()) {
     OS << "  (void)Opc;\n"
        << "  return false;\n"
@@ -2592,12 +2649,16 @@ void GICombinerEmitter::emitCanMatchOpcodeFn(raw_ostream &OS,
 }
 
 void GICombinerEmitter::emitAdditionalImpl(raw_ostream &OS) {
-  std::string CanMatchOpcodeFnName = (getClassName() + "_canMatchOpcode").str();
+  std::string CanMatchOpcodeFnName =
+      (getClassName() + "::canMatchOpcode").str();
   emitCanMatchOpcodeFn(OS, CanMatchOpcodeFnName);
+  // Combines may build new instructions that do not preserve the
+  // poison-generating flags from the original root instruction.
+  OS << "uint32_t " << getClassName() << "::getRootFlagsToDrop() const {\n"
+     << "  return MachineInstr::getPoisonGeneratingFlags();\n"
+     << "}\n\n";
   OS << "bool " << getClassName() << "::" << getCombineAllMethodName()
      << "(MachineInstr &I) const {\n"
-     << "  if (!" << CanMatchOpcodeFnName << "(I.getOpcode()))\n"
-     << "    return false;\n"
      << "  const PredicateBitset AvailableFeatures = "
         "getAvailableFeatures();\n"
      << "  State.MIs.clear();\n"
@@ -2712,43 +2773,10 @@ GICombinerEmitter::GICombinerEmitter(const RecordKeeper &RK,
 
 MatchTable
 GICombinerEmitter::buildMatchTable(MutableArrayRef<RuleMatcher> Rules) {
-  std::vector<Matcher *> InputRules;
-  for (Matcher &Rule : Rules)
-    InputRules.push_back(&Rule);
-
-  unsigned CurrentOrdering = 0;
-  StringMap<unsigned> OpcodeOrder;
-  for (RuleMatcher &Rule : Rules) {
-    const StringRef Opcode = Rule.getOpcode();
-    assert(!Opcode.empty() && "Didn't expect an undefined opcode");
-    if (OpcodeOrder.try_emplace(Opcode, CurrentOrdering).second)
-      ++CurrentOrdering;
-  }
-
-  llvm::stable_sort(InputRules, [&OpcodeOrder](const Matcher *A,
-                                               const Matcher *B) {
-    auto *L = static_cast<const RuleMatcher *>(A);
-    auto *R = static_cast<const RuleMatcher *>(B);
-    return std::tuple(OpcodeOrder[L->getOpcode()],
-                      L->insnmatchers_front().getNumOperandMatchers()) <
-           std::tuple(OpcodeOrder[R->getOpcode()],
-                      R->insnmatchers_front().getNumOperandMatchers());
-  });
-
-  for (Matcher *Rule : InputRules)
-    Rule->optimize();
-
   std::vector<std::unique_ptr<Matcher>> MatcherStorage;
-  std::vector<Matcher *> OptRules =
-      optimizeRules<GroupMatcher>(InputRules, MatcherStorage);
-
-  for (Matcher *Rule : OptRules)
-    Rule->optimize();
-
-  OptRules = optimizeRules<SwitchMatcher>(OptRules, MatcherStorage);
-
-  return MatchTable::buildTable(OptRules, /*WithCoverage*/ false,
-                                /*IsCombiner*/ true);
+  std::vector<Matcher *> OptRules = optimizeRuleset(Rules, MatcherStorage);
+  return ::buildMatchTable(OptRules, /*WithCoverage*/ false,
+                           /*IsCombiner*/ true);
 }
 
 /// Recurse into GICombineGroup's and flatten the ruleset into a simple list.
@@ -2847,6 +2875,11 @@ void GICombinerEmitter::run(raw_ostream &OS) {
   emitPredicateBitset(OS, "GET_GICOMBINER_TYPES");
 
   // GET_GICOMBINER_CLASS_MEMBERS, which need to be included inside the class.
+  {
+    IfDefGuardEmitter If(OS, "GET_GICOMBINER_CLASS_MEMBERS");
+    OS << "  bool canMatchOpcode(unsigned Opc) const override;\n"
+       << "  uint32_t getRootFlagsToDrop() const override;\n";
+  }
   emitPredicatesDecl(OS, "GET_GICOMBINER_CLASS_MEMBERS");
   emitTemporariesDecl(OS, "GET_GICOMBINER_CLASS_MEMBERS");
 

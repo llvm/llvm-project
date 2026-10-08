@@ -309,6 +309,12 @@
 #  define SANITIZER_LOONGARCH64 0
 #endif
 
+#if defined(__alpha__)
+#  define SANITIZER_ALPHA 1
+#else
+#  define SANITIZER_ALPHA 0
+#endif
+
 #if defined(__AMDGPU__)
 #  define SANITIZER_AMDGPU 1
 #else
@@ -325,6 +331,12 @@
 #  define SANITIZER_SPIRV 1
 #else
 #  define SANITIZER_SPIRV 0
+#endif
+
+#if SANITIZER_AMDGPU || SANITIZER_NVPTX || SANITIZER_SPIRV
+#  define SANITIZER_GPU 1
+#else
+#  define SANITIZER_GPU 0
 #endif
 
 // By default we allow to use SizeClassAllocator64 on 64-bit platform.

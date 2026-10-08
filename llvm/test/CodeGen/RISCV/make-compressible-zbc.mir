@@ -181,7 +181,7 @@
     %d = load volatile i16, ptr %2, align 2
     ret void
   }
-  attributes #0 = { minsize }
+  attributes #0 = { optsize }
 
 ...
 ---

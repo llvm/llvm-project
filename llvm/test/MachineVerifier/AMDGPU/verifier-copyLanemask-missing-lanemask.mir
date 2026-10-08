@@ -1,4 +1,4 @@
-# RUN: not --crash llc -o - -mtriple=amdgcn-amd-amdhsa -run-pass=none %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -o - -mtriple=amdgpu7.00-amd-amdhsa -run-pass=none %s 2>&1 | FileCheck %s
 
 # CHECK: *** Bad machine code: Too few operands ***
 # CHECK-NEXT: - function:    test_copy_lanemask_instruction_1

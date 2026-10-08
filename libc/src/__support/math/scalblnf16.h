@@ -24,7 +24,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR float16 scalblnf16(float16 x, long n) {
+LIBC_INLINE constexpr float16 scalblnf16(float16 x, long n) {
   return fputil::ldexp(x, n);
 }
 

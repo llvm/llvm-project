@@ -7,7 +7,7 @@ expr = re.compile(r"^(\\)?((\| )?)\W+b(\S+)\\b\W*$")
 wordifier = re.compile(r"(\W*)(\b[^\b]+\b)")
 
 
-class FindTool(object):
+class FindTool:
     def __init__(self, name):
         self.name = name
 
@@ -26,7 +26,7 @@ class FindTool(object):
         return command
 
 
-class ToolSubst(object):
+class ToolSubst:
     """String-like class used to build regex substitution patterns for llvm
     tools.
 

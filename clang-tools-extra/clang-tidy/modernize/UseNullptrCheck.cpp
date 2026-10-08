@@ -28,9 +28,19 @@ AST_MATCHER(Type, sugaredNullptrType) {
   return false;
 }
 
+AST_MATCHER(DecltypeType, decltypeTypeNullptrLiteral) {
+  if (const Expr *E = Node.getUnderlyingExpr())
+    return isa<CXXNullPtrLiteralExpr>(E->IgnoreParens());
+  return false;
+}
+
 } // namespace
 
 static constexpr char CastSequence[] = "sequence";
+
+static constexpr char DefaultIgnoredTypes[] = "std::_CmpUnspecifiedParam;"
+                                              "^std::__cmp_cat::__unspec;"
+                                              "^std::__cmp_cat::__literal_zero";
 
 /// Create a matcher that finds implicit casts as well as the head of a
 /// sequence of zero or more nested explicit casts that have an implicit cast
@@ -55,7 +65,7 @@ void UseNullptrCheck::registerMatchers(MatchFinder *Finder) {
       unless(hasImplicitDestinationType(
           qualType(matchers::matchesAnyListedTypeName(IgnoredTypes)))));
 
-  auto IsOrHasDescendant = [](const auto &InnerMatcher) {
+  const auto IsOrHasDescendant = [](const auto &InnerMatcher) {
     return anyOf(InnerMatcher, hasDescendant(InnerMatcher));
   };
 
@@ -81,6 +91,11 @@ void UseNullptrCheck::registerMatchers(MatchFinder *Finder) {
           // Skip defaulted comparison operators.
           unless(hasAncestor(functionDecl(isDefaulted())))),
       this);
+
+  if (UseNullptrT)
+    Finder->addMatcher(typeLoc(loc(decltypeType(decltypeTypeNullptrLiteral())))
+                           .bind("matchDecltypeNullptr"),
+                       this);
 }
 
 static bool isReplaceableRange(SourceLocation StartLoc, SourceLocation EndLoc,
@@ -91,7 +106,7 @@ static bool isReplaceableRange(SourceLocation StartLoc, SourceLocation EndLoc,
 /// Replaces the provided range with the text "nullptr", but only if
 /// the start and end location are both in main file.
 /// Returns true if and only if a replacement was made.
-static void replaceWithNullptr(ClangTidyCheck &Check, SourceManager &SM,
+static void replaceWithNullptr(ClangTidyCheck &Check, const SourceManager &SM,
                                SourceLocation StartLoc, SourceLocation EndLoc) {
   const CharSourceRange Range(SourceRange(StartLoc, EndLoc), true);
   // Add a space if nullptr follows an alphanumeric character. This happens
@@ -470,12 +485,11 @@ private:
 
       // TypeLoc and NestedNameSpecifierLoc are members of the parent map. Skip
       // them and keep going up.
-      if (Loc.isValid()) {
-        if (!expandsFrom(Loc, MacroLoc)) {
-          Result = Parent;
-          return true;
-        }
+      if (Loc.isValid() && !expandsFrom(Loc, MacroLoc)) {
+        Result = Parent;
+        return true;
       }
+
       Start = Parent;
     }
 
@@ -495,18 +509,41 @@ private:
 UseNullptrCheck::UseNullptrCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       NullMacrosStr(Options.get("NullMacros", "NULL")),
-      IgnoredTypes(utils::options::parseStringList(Options.get(
-          "IgnoredTypes", "_CmpUnspecifiedParam;^std::__cmp_cat::__unspec"))) {
+      IgnoredTypes(utils::options::parseStringList(
+          Options.get("IgnoredTypes", DefaultIgnoredTypes))),
+      UseNullptrT(Options.get("UseNullptrT", true)),
+      IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
+                                               utils::IncludeSorter::IS_LLVM),
+                      areDiagsSelfContained()) {
   NullMacrosStr.split(NullMacros, ",");
+}
+
+void UseNullptrCheck::registerPPCallbacks(const SourceManager &SM,
+                                          Preprocessor *PP,
+                                          Preprocessor *ModuleExpanderPP) {
+  IncludeInserter.registerPreprocessor(PP);
 }
 
 void UseNullptrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "NullMacros", NullMacrosStr);
   Options.store(Opts, "IgnoredTypes",
                 utils::options::serializeStringList(IgnoredTypes));
+  Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
+  Options.store(Opts, "UseNullptrT", UseNullptrT);
 }
 
 void UseNullptrCheck::check(const MatchFinder::MatchResult &Result) {
+  if (const auto *MatchedTypeLoc =
+          Result.Nodes.getNodeAs<TypeLoc>("matchDecltypeNullptr")) {
+    diag(MatchedTypeLoc->getBeginLoc(), "use std::nullptr_t instead")
+        << IncludeInserter.createIncludeInsertion(
+               Result.SourceManager->getFileID(MatchedTypeLoc->getBeginLoc()),
+               "<cstddef>")
+        << FixItHint::CreateReplacement(MatchedTypeLoc->getSourceRange(),
+                                        "std::nullptr_t");
+    return;
+  }
+
   const auto *NullCast = Result.Nodes.getNodeAs<CastExpr>(CastSequence);
   assert(NullCast && "Bad Callback. No node provided");
 

@@ -13,9 +13,7 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0DEFS_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0DEFS_H
 
-#include "PluginInterface.h"
-#include "Shared/Requirements.h"
-#include "omptarget.h"
+#include "OffloadError.h"
 
 enum class AllocOptionTy : int32_t {
   ALLOC_OPT_NONE = 0,
@@ -29,10 +27,6 @@ namespace llvm::omp::target::plugin {
 
 /// Default alignmnet for allocation.
 constexpr size_t L0DefaultAlignment = 0;
-/// Default staging buffer size for host to device copy (16KB).
-constexpr size_t L0StagingBufferSize = (1 << 14);
-/// Default staging buffer count.
-constexpr size_t L0StagingBufferCount = 64;
 /// USM allocation threshold where preallocation does not pay off (128MB).
 constexpr size_t L0UsmPreAllocThreshold = (128 << 20);
 /// Host USM allocation threshold where preallocation does not pay off (8MB).

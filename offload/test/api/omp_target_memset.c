@@ -4,9 +4,9 @@
 #include <omp.h>
 #include <stdlib.h>
 
-int main() {
+int run_test(int hostDev) {
   int d = omp_get_default_device();
-  int id = omp_get_initial_device();
+  int id = hostDev;
   int q[128], i;
   void *p;
   void *result;
@@ -42,4 +42,8 @@ int main() {
   omp_target_free(p, d);
 
   return 0;
+}
+
+int main() {
+  return run_test(omp_get_initial_device()) && run_test(omp_initial_device);
 }

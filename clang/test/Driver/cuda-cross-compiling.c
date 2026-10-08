@@ -113,6 +113,15 @@
 
 // PATH: clang-nvlink-wrapper{{.*}}"--cuda-path={{.*}}/Inputs/CUDA/usr/local/cuda"
 
+// RUN: %clang -target nvptx64-nvidia-cuda -march=sm_52 --ptxas-path=/some/path/to/ptxas \
+// RUN:   -nogpulib -nogpuinc -### %s 2>&1 | FileCheck -check-prefix=PTXAS-PATH %s
+
+// PTXAS-PATH: clang-nvlink-wrapper{{.*}}"--ptxas-path=/some/path/to/ptxas"
+
+// RUN: %clang -target nvptx64-nvidia-cuda -march=sm_52 -Xcuda-ptxas -maxrregcount=32 \
+// RUN:   -nogpulib -nogpuinc -### %s 2>&1 | FileCheck -check-prefix=PTXAS-ARGS %s
+// PTXAS-ARGS: clang-nvlink-wrapper{{.*}}"-Xptxas" "-maxrregcount=32"
+
 // RUN: %clang -### --target=nvptx64-nvidia-cuda -march=sm_89 -nogpulib \
 // RUN:   -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:   -fprofile-generate %s 2>&1 | FileCheck -check-prefixes=PROFILE %s

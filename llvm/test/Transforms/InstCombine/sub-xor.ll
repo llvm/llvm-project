@@ -145,15 +145,15 @@ define <2 x i8> @xor_add_splat(<2 x i8> %x) {
   ret <2 x i8> %add
 }
 
-define <2 x i8> @xor_add_splat_undef(<2 x i8> %x) {
-; CHECK-LABEL: @xor_add_splat_undef(
+define <2 x i8> @xor_add_splat_poison(<2 x i8> %x) {
+; CHECK-LABEL: @xor_add_splat_poison(
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 24)
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i8> [[AND]], <i8 63, i8 undef>
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[XOR]], splat (i8 42)
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i8> [[AND]], <i8 63, i8 poison>
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <2 x i8> [[XOR]], splat (i8 42)
 ; CHECK-NEXT:    ret <2 x i8> [[ADD]]
 ;
   %and = and <2 x i8> %x, <i8 24, i8 24>
-  %xor = xor <2 x i8> %and, <i8 63, i8 undef>
+  %xor = xor <2 x i8> %and, <i8 63, i8 poison>
   %add = add <2 x i8> %xor, <i8 42, i8 42>
   ret <2 x i8> %add
 }

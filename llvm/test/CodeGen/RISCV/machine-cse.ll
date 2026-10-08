@@ -42,17 +42,17 @@ falseblock:
 define void @commute_add_i64(i64 %x, i64 %y, ptr %p1, ptr %p2, i1 zeroext %cond) {
 ; RV32-LABEL: commute_add_i64:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    add a5, a0, a2
 ; RV32-NEXT:    add a1, a1, a3
-; RV32-NEXT:    add a3, a0, a2
-; RV32-NEXT:    sltu a0, a3, a0
+; RV32-NEXT:    sltu a0, a5, a0
 ; RV32-NEXT:    add a0, a1, a0
-; RV32-NEXT:    sw a3, 0(a4)
+; RV32-NEXT:    sw a5, 0(a4)
 ; RV32-NEXT:    sw a0, 4(a4)
 ; RV32-NEXT:    beqz a6, .LBB1_2
 ; RV32-NEXT:  # %bb.1: # %trueblock
-; RV32-NEXT:    sltu a0, a3, a2
+; RV32-NEXT:    sltu a0, a5, a2
 ; RV32-NEXT:    add a0, a1, a0
-; RV32-NEXT:    sw a3, 0(a4)
+; RV32-NEXT:    sw a5, 0(a4)
 ; RV32-NEXT:    sw a0, 4(a4)
 ; RV32-NEXT:  .LBB1_2: # %falseblock
 ; RV32-NEXT:    ret

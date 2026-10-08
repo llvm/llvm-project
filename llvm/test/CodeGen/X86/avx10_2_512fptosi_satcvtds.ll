@@ -217,3 +217,25 @@ define <8 x i64> @test_unsigned_v8i64_v8f32(<8 x float> %f) nounwind {
   %x = call  <8 x i64> @llvm.fptoui.sat.v8i64.v8f32(<8 x float> %f)
   ret <8 x i64> %x
 }
+
+; VCVTTBF162IUBS
+define <32 x i8> @test_unsigned_v32i8_v32bf16(<32 x bfloat> %f) nounwind {
+; CHECK-LABEL: test_unsigned_v32i8_v32bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcvttbf162iubs %zmm0, %zmm0
+; CHECK-NEXT:    vpmovwb %zmm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %x = call  <32 x i8> @llvm.fptoui.sat.v32i8.v32bf16(<32 x bfloat> %f)
+  ret <32 x i8> %x
+}
+
+; VCVTTBF162IBS
+define <32 x i8> @test_signed_v32i8_v32bf16(<32 x bfloat> %f) nounwind {
+; CHECK-LABEL: test_signed_v32i8_v32bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcvttbf162ibs %zmm0, %zmm0
+; CHECK-NEXT:    vpmovwb %zmm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %x = call  <32 x i8> @llvm.fptosi.sat.v32i8.v32bf16(<32 x bfloat> %f)
+  ret <32 x i8> %x
+}

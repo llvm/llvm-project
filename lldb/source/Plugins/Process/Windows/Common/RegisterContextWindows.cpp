@@ -30,7 +30,7 @@ RegisterContextWindows::RegisterContextWindows(Thread &thread,
     : RegisterContext(thread, concrete_frame_idx), m_context(),
       m_context_stale(true) {}
 
-RegisterContextWindows::~RegisterContextWindows() {}
+RegisterContextWindows::~RegisterContextWindows() = default;
 
 void RegisterContextWindows::InvalidateAllRegisters() {
   m_context_stale = true;
@@ -158,7 +158,7 @@ bool RegisterContextWindows::CacheAllRegisterValues() {
   m_context.ContextFlags = kWinContextFlags;
   if (::SuspendThread(
           wthread.GetHostThread().GetNativeThread().GetSystemHandle()) ==
-      (DWORD)-1) {
+      static_cast<DWORD>(-1)) {
     return false;
   }
   if (!::GetThreadContext(
@@ -172,7 +172,7 @@ bool RegisterContextWindows::CacheAllRegisterValues() {
   }
   if (::ResumeThread(
           wthread.GetHostThread().GetNativeThread().GetSystemHandle()) ==
-      (DWORD)-1) {
+      static_cast<DWORD>(-1)) {
     return false;
   }
   LLDB_LOG(log, "successfully updated the register values.");

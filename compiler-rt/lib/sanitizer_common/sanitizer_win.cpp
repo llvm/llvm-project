@@ -759,9 +759,11 @@ static int RunAtexit() {
   return ret;
 }
 
-#pragma section(".CRT$XID", long, read)
-__declspec(allocate(".CRT$XID")) int (*__run_atexit)() = RunAtexit;
-#endif
+#    if !defined(__GNUC__) || defined(__clang__)
+#      pragma section(".CRT$XID", long, read)
+#    endif
+IN_SECTION(".CRT$XID") int (*__run_atexit)() = RunAtexit;
+#  endif
 
 // ------------------ sanitizer_libc.h
 fd_t OpenFile(const char *filename, FileAccessMode mode, error_t *last_error) {
@@ -1223,7 +1225,7 @@ int WaitForProcess(pid_t pid) { return -1; }
 // FIXME implement on this platform.
 void GetMemoryProfile(fill_profile_f cb, uptr *stats) {}
 
-void CheckNoDeepBind(const char *filename, int flag) {
+void OnDlOpen(const char* filename, int flag) {
   // Do nothing.
 }
 

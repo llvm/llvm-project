@@ -7,6 +7,7 @@ Does some things, spits out a list of projects.
 """
 
 from collections.abc import Set
+import json
 import pathlib
 import platform
 import sys
@@ -26,6 +27,7 @@ PROJECT_DEPENDENCIES = {
     "cross-project-tests": {"clang", "lldb", "lld"},
     "libc": {"clang", "lld"},
     "openmp": {"clang", "lld"},
+    "orc-rt": {"llvm"},
     "flang": {"llvm", "clang"},
     "flang-rt": {"flang"},
     "lldb": {"llvm", "clang"},
@@ -33,6 +35,45 @@ PROJECT_DEPENDENCIES = {
     "lld": {"llvm"},
     "mlir": {"llvm"},
     "polly": {"llvm"},
+    "offload": {"clang", "lld", "flang"},
+}
+
+PROJECT_CHECK_TARGETS = {
+    "clang-tools-extra": "check-clang-tools",
+    "compiler-rt": "check-compiler-rt",
+    "cross-project-tests": "check-cross-project",
+    "libcxx": "check-cxx",
+    "libcxxabi": "check-cxxabi",
+    "libunwind": "check-unwind",
+    "lldb": "check-lldb",
+    "llvm": "check-llvm",
+    "clang": "check-clang check-clang-python",
+    "CIR": "check-clang-cir",
+    "bolt": "check-bolt",
+    "lld": "check-lld",
+    "flang": "check-flang",
+    "flang-rt": "check-flang-rt",
+    "libc": "check-libc",
+    "libclc": "check-libclc",
+    "mlir": "check-mlir",
+    "openmp": "openmp",  # Run only build in pre-merge
+    "orc-rt": "check-orc-rt",
+    "polly": "check-polly",
+    "lit": "check-lit",
+    "offload": "offload",  # Run only build in pre-merge
+}
+
+RUNTIMES = {
+    "libcxx",
+    "libcxxabi",
+    "libunwind",
+    "compiler-rt",
+    "libc",
+    "flang-rt",
+    "libclc",
+    "openmp",
+    "offload",
+    "orc-rt",
 }
 
 # This mapping describes the additional projects that should be tested when a
@@ -40,6 +81,7 @@ PROJECT_DEPENDENCIES = {
 # just invert the dependencies list to give more control over what exactly is
 # tested.
 DEPENDENTS_TO_TEST = {
+    "libc-shared": {"llvm", "clang"},
     "llvm": {
         "bolt",
         "clang",
@@ -56,17 +98,9 @@ DEPENDENTS_TO_TEST = {
     "mlir": {"flang"},
     # Test everything if ci scripts are changed.
     ".ci": {
-        "llvm",
-        "clang",
-        "CIR",
-        "lld",
-        "lldb",
-        "bolt",
-        "clang-tools-extra",
-        "mlir",
-        "polly",
-        "flang",
-        "openmp",
+        project_name
+        for project_name in PROJECT_CHECK_TARGETS
+        if project_name not in RUNTIMES
     },
 }
 
@@ -74,30 +108,38 @@ DEPENDENTS_TO_TEST = {
 # but not necessarily run for testing. The only case of this currently is lldb
 # which needs some runtimes enabled for tests.
 DEPENDENT_RUNTIMES_TO_BUILD = {
-    "lldb": {"libcxx", "libcxxabi", "libunwind", "compiler-rt"}
+    "flang": {"openmp"},
+    "lldb": {"libcxx", "libcxxabi", "libunwind", "compiler-rt"},
 }
 
 # This mapping describes runtimes that should be tested when the key project is
 # touched.
-DEPENDENT_RUNTIMES_TO_TEST = {
-    "clang": {"compiler-rt"},
-    "clang-tools-extra": {"libc"},
-    "libc": {"libc"},
-    "libclc": {"libclc"},
-    "compiler-rt": {"compiler-rt"},
-    "flang": {"flang-rt"},
-    "flang-rt": {"flang-rt"},
-    ".ci": {"compiler-rt", "libc", "flang-rt", "libclc"},
-}
 DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {
     "llvm": {"libcxx", "libcxxabi", "libunwind"},
     "clang": {"libcxx", "libcxxabi", "libunwind"},
     ".ci": {"libcxx", "libcxxabi", "libunwind"},
 }
-
-EXCLUDE_LINUX = {
-    "openmp",  # https://github.com/google/llvm-premerge-checks/issues/410
+DEPENDENT_RUNTIMES_TO_TEST = {
+    "clang": {"compiler-rt", "libc"},
+    "clang-tools-extra": {"libc"},
+    "libc": {"libc"},
+    "libc-shared": {"libcxx", "libcxxabi", "libunwind"},
+    "libclc": {"libclc"},
+    "compiler-rt": {"compiler-rt"},
+    "flang": {"flang-rt"},
+    "flang-rt": {"flang-rt"},
+    "openmp": {"openmp"},
+    "orc-rt": {"orc-rt"},
+    "offload": {"offload", "openmp"},
+    ".ci": {
+        runtime_name
+        for runtime_name in PROJECT_CHECK_TARGETS
+        if runtime_name in RUNTIMES
+        and runtime_name not in DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG[".ci"]
+    },
 }
+
+EXCLUDE_LINUX = {}
 
 # Runtimes configured for cross-compilation using LLVM_RUNTIME_TARGETS.
 # The same build may also use LLVM_ENABLE_RUNTIMES for other runtimes.
@@ -106,6 +148,7 @@ CROSS_COMPILATION_RUNTIMES = {
 }
 
 EXCLUDE_WINDOWS = {
+    "CIR",  # The Windows premerge build does not enable CLANG_ENABLE_CIR.
     "cross-project-tests",  # TODO(issues/132797): Tests are failing.
     "openmp",  # TODO(issues/132799): Does not detect perl installation.
     "libc",  # No Windows Support.
@@ -114,6 +157,7 @@ EXCLUDE_WINDOWS = {
     "libcxxabi",
     "libunwind",
     "flang-rt",
+    "offload",
 }
 
 # These are projects that we should test if the project itself is changed but
@@ -121,54 +165,30 @@ EXCLUDE_WINDOWS = {
 # enabled on changes to dependencies.
 EXCLUDE_DEPENDENTS_WINDOWS = {
     "flang",
+    # TODO: Re-enable once Windows CI timings allow it (daemonized testing).
+    "lldb",
 }
 
 EXCLUDE_MAC = {
     "bolt",
-    "compiler-rt",
+    "CIR",  # Depends on mlir, which is excluded below.
     "cross-project-tests",
     "flang",
+    "flang-rt",
     "libc",
-    "lldb",
+    "mlir",
     "openmp",
     "polly",
     "libcxx",
     "libcxxabi",
     "libunwind",
+    "offload",
 }
 
-PROJECT_CHECK_TARGETS = {
-    "clang-tools-extra": "check-clang-tools",
-    "compiler-rt": "check-compiler-rt",
-    "cross-project-tests": "check-cross-project",
-    "libcxx": "check-cxx",
-    "libcxxabi": "check-cxxabi",
-    "libunwind": "check-unwind",
-    "lldb": "check-lldb",
-    "llvm": "check-llvm",
-    "clang": "check-clang",
-    "CIR": "check-clang-cir",
-    "bolt": "check-bolt",
-    "lld": "check-lld",
-    "flang": "check-flang",
-    "flang-rt": "check-flang-rt",
-    "libc": "check-libc",
-    "libclc": "check-libclc",
-    "lld": "check-lld",
-    "lldb": "check-lldb",
-    "mlir": "check-mlir",
-    "openmp": "check-openmp",
-    "polly": "check-polly",
-    "lit": "check-lit",
-}
-
-RUNTIMES = {
-    "libcxx",
-    "libcxxabi",
-    "libunwind",
-    "compiler-rt",
-    "libc",
-    "flang-rt",
+# These projects are still built on the self-hosted macOS runners, but their
+# tests are temporarily skipped there.
+EXCLUDE_CHECK_TARGETS_MAC = {
+    "lldb",
     "libclc",
 }
 
@@ -185,27 +205,15 @@ META_PROJECTS = {
     (".github", "workflows", "premerge.yaml"): ".ci",
     ("third-party",): ".ci",
     ("llvm", "utils", "lit"): "lit",
+    ("libc", "shared"): "libc-shared",
+    ("libc", "src", "__support", "math"): "libc-shared",
 }
 
 # Projects that should run tests but cannot be explicitly built.
-SKIP_BUILD_PROJECTS = ["CIR", "lit"]
+SKIP_BUILD_PROJECTS = ["CIR", "lit", "libc-shared"]
 
 # Projects that should not run any tests. These need to be metaprojects.
 SKIP_PROJECTS = ["docs", "gn"]
-
-# Overrides for PROJECT_CHECK_TARGETS on a per-platform basis. If a platform
-# has an entry for a given project here, its value is used as the ninja
-# target(s) instead of the default check target. This is intended for cases
-# where a project can be built but its tests are not yet stable on that
-# platform, so we still want a compile-time signal.
-PROJECT_CHECK_TARGETS_OVERRIDE = {
-    "Windows": {
-        # TODO(issues/132800): LLDB tests need environment setup on Windows.
-        # In the meantime, at least compile lldb and lldb-dap to catch
-        # breakage.
-        "lldb": "lldb lldb-dap",
-    },
-}
 
 
 def _add_dependencies(projects: Set[str], runtimes: Set[str]) -> Set[str]:
@@ -265,11 +273,10 @@ def _compute_project_check_targets(
     projects_to_test: Set[str], platform: str
 ) -> Set[str]:
     check_targets = set()
-    platform_overrides = PROJECT_CHECK_TARGETS_OVERRIDE.get(platform, {})
     for project_to_test in projects_to_test:
-        if project_to_test in platform_overrides:
-            check_targets.add(platform_overrides[project_to_test])
-        elif project_to_test in PROJECT_CHECK_TARGETS:
+        if platform == "Darwin" and project_to_test in EXCLUDE_CHECK_TARGETS_MAC:
+            continue
+        if project_to_test in PROJECT_CHECK_TARGETS:
             check_targets.add(PROJECT_CHECK_TARGETS[project_to_test])
     return check_targets
 
@@ -387,5 +394,4 @@ if __name__ == "__main__":
         current_platform = sys.argv[1]
     changed_files = [line.strip() for line in sys.stdin.readlines()]
     env_variables = get_env_variables(changed_files, current_platform)
-    for env_variable in env_variables:
-        print(f"{env_variable}='{env_variables[env_variable]}'")
+    print(json.dumps(env_variables))

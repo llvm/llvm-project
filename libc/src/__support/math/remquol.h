@@ -15,8 +15,8 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR long double remquol(long double x, long double y,
-                                               int *exp) {
+LIBC_INLINE constexpr long double remquol(long double x, long double y,
+                                          int *exp) {
   return fputil::remquo(x, y, *exp);
 }
 

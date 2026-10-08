@@ -37,7 +37,7 @@ class LLVM_ABI InstSimplifyFolder final : public IRBuilderFolder {
   TargetFolder ConstFolder;
   SimplifyQuery SQ;
 
-  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION() override;
 
 public:
   explicit InstSimplifyFolder(const DataLayout &DL) : ConstFolder(DL), SQ(DL) {}
@@ -78,13 +78,14 @@ public:
     return simplifyCmpInst(P, LHS, RHS, SQ);
   }
 
-  Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                 GEPNoWrapFlags NW) const override {
+  Value *FoldGEP(const DataLayout &, Type *Ty, Value *Ptr,
+                 ArrayRef<Value *> IdxList, GEPNoWrapFlags NW) const override {
     return simplifyGEPInst(Ty, Ptr, IdxList, NW, SQ);
   }
 
-  Value *FoldSelect(Value *C, Value *True, Value *False) const override {
-    return simplifySelectInst(C, True, False, SQ);
+  Value *FoldSelect(Value *C, Value *True, Value *False,
+                    FastMathFlags FMF = FastMathFlags()) const override {
+    return simplifySelectInst(C, True, False, FMF, SQ);
   }
 
   Value *FoldExtractValue(Value *Agg,
@@ -114,17 +115,25 @@ public:
     return simplifyShuffleVectorInst(V1, V2, Mask, RetTy, SQ);
   }
 
+  Value *FoldBitInsert(Value *Base, Value *Val, Value *Offset) const override {
+    // TODO
+    return nullptr;
+  }
+
+  Value *FoldBitExtract(Type *Ty, Value *Src, Value *Offset) const override {
+    // TODO
+    return nullptr;
+  }
+
   Value *FoldCast(Instruction::CastOps Op, Value *V,
                   Type *DestTy) const override {
     return simplifyCastInst(Op, V, DestTy, SQ);
   }
 
-  Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
-                             Instruction *FMFSource = nullptr) const override {
-    FastMathFlags FMF;
-    if (auto *FPMO = dyn_cast_if_present<FPMathOperator>(FMFSource))
-      FMF = FPMO->getFastMathFlags();
-    return simplifyBinaryIntrinsic(ID, Ty, LHS, RHS, FMF, SQ);
+  Value *FoldIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Ops, Type *Ty,
+                       FastMathFlags FMF = {},
+                       Function *CtxF = nullptr) const override {
+    return simplifyIntrinsic(ID, Ty, Ops, FMF, SQ.getWithFunction(CtxF));
   }
 
   //===--------------------------------------------------------------------===//

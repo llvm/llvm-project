@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck --check-prefix=CHECK %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck  --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck  --check-prefix=CHECK %s
 
 ; CHECK-LABEL: {{^}}inline_asm:
 ; CHECK: s_endpgm

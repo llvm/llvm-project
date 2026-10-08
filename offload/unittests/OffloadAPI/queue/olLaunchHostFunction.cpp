@@ -11,10 +11,14 @@
 #include <gtest/gtest.h>
 #include <thread>
 
-struct olLaunchHostFunctionTest : OffloadQueueTest {};
+struct olLaunchHostFunctionTest : OffloadQueueTest {
+  void SetUp() override { RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp()); }
+};
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olLaunchHostFunctionTest);
 
-struct olLaunchHostFunctionKernelTest : OffloadKernelTest {};
+struct olLaunchHostFunctionKernelTest : OffloadKernelTest {
+  void SetUp() override { RETURN_ON_FATAL_FAILURE(OffloadKernelTest::SetUp()); }
+};
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olLaunchHostFunctionKernelTest);
 
 TEST_P(olLaunchHostFunctionTest, Success) {
@@ -42,6 +46,8 @@ TEST_P(olLaunchHostFunctionTest, SuccessSequence) {
 }
 
 TEST_P(olLaunchHostFunctionKernelTest, SuccessBlocking) {
+  SKIP_KNOWN_FAILURE(LevelZero{"driver issue"});
+
   // Verify that a host kernel can block execution - A host task is created that
   // only resolves when Block is set to false.
   ol_kernel_launch_size_args_t LaunchArgs;
@@ -51,10 +57,10 @@ TEST_P(olLaunchHostFunctionKernelTest, SuccessBlocking) {
   LaunchArgs.DynSharedMemory = 0;
 
   ol_queue_handle_t Queue;
-  ASSERT_SUCCESS(olCreateQueue(Device, &Queue));
+  ASSERT_SUCCESS(olCreateQueue(Context, Device, &Queue));
 
   void *Mem;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
+  ASSERT_SUCCESS(olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED,
                             LaunchArgs.GroupSize.x * sizeof(uint32_t), &Mem));
 
   uint32_t *Data = (uint32_t *)Mem;
@@ -74,11 +80,10 @@ TEST_P(olLaunchHostFunctionKernelTest, SuccessBlocking) {
       },
       const_cast<bool *>(&Block)));
 
-  struct {
-    void *Mem;
-  } Args{Mem};
-  ASSERT_SUCCESS(
-      olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args), &LaunchArgs));
+  void *ArgPtrs[] = {&Mem};
+  size_t ArgSizes[] = {sizeof(Mem)};
+  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &LaunchArgs, nullptr, 1,
+                                ArgPtrs, ArgSizes));
 
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
   for (uint32_t i = 0; i < 64; i++) {
@@ -93,7 +98,7 @@ TEST_P(olLaunchHostFunctionKernelTest, SuccessBlocking) {
   }
 
   ASSERT_SUCCESS(olDestroyQueue(Queue));
-  ASSERT_SUCCESS(olMemFree(Mem));
+  ASSERT_SUCCESS(olMemFree(Context, Mem));
 }
 
 TEST_P(olLaunchHostFunctionTest, InvalidNullCallback) {

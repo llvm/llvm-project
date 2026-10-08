@@ -448,6 +448,7 @@ static bool dieNeedsChildrenToBeMeaningful(uint32_t Tag) {
     return false;
   case dwarf::DW_TAG_class_type:
   case dwarf::DW_TAG_common_block:
+  case dwarf::DW_TAG_enumeration_type:
   case dwarf::DW_TAG_lexical_block:
   case dwarf::DW_TAG_structure_type:
   case dwarf::DW_TAG_subprogram:
@@ -523,8 +524,7 @@ DWARFLinker::getVariableRelocAdjustment(AddressesMap &RelocMgr,
     return std::make_pair(false, std::nullopt);
 
   // Parse 'exprloc' expression.
-  DataExtractor Data(toStringRef(*Expr), U->getContext().isLittleEndian(),
-                     U->getAddressByteSize());
+  DataExtractor Data(*Expr, U->getContext().isLittleEndian());
   DWARFExpression Expression(Data, U->getAddressByteSize(),
                              U->getFormParams().Format);
 
@@ -672,7 +672,7 @@ unsigned DWARFLinker::shouldKeepSubprogramDIE(
     // function ranges when available, falling back to labels otherwise.
     if (Unit.getLanguage() == dwarf::DW_LANG_Mips_Assembler ||
         Unit.getLanguage() == dwarf::DW_LANG_Assembly) {
-      if (auto Range = RelocMgr.getAssemblyRangeForAddress(*LowPc)) {
+      if (auto Range = RelocMgr.getSymbolRangeForAddress(*LowPc)) {
         Unit.addFunctionRange(Range->LowPC, Range->HighPC, MyInfo.AddrAdjust);
       } else {
         Unit.addLabelLowPc(*LowPc, MyInfo.AddrAdjust);
@@ -698,7 +698,10 @@ unsigned DWARFLinker::shouldKeepSubprogramDIE(
   }
 
   // Replace the debug map range with a more accurate one.
-  Unit.addFunctionRange(*LowPc, *HighPc, MyInfo.AddrAdjust);
+  Unit.addFunctionRange(
+      *LowPc,
+      RelocMgr.constrainCodeRangeHighPC(*LowPc, *HighPc, MyInfo.AddrAdjust),
+      MyInfo.AddrAdjust);
   return Flags;
 }
 
@@ -1099,8 +1102,8 @@ void DWARFLinker::assignAbbrev(DIEAbbrev &Abbrev) {
   // Check the set for priors.
   FoldingSetNodeID ID;
   Abbrev.Profile(ID);
-  void *InsertToken;
-  DIEAbbrev *InSet = AbbreviationsSet.FindNodeOrInsertPos(ID, InsertToken);
+  FoldingSetInsertToken Token;
+  DIEAbbrev *InSet = AbbreviationsSet.lookup(ID, Token);
 
   // If it's newly added.
   if (InSet) {
@@ -1112,7 +1115,7 @@ void DWARFLinker::assignAbbrev(DIEAbbrev &Abbrev) {
         std::make_unique<DIEAbbrev>(Abbrev.getTag(), Abbrev.hasChildren()));
     for (const auto &Attr : Abbrev.getData())
       Abbreviations.back()->AddAttribute(Attr);
-    AbbreviationsSet.InsertNode(Abbreviations.back().get(), InsertToken);
+    AbbreviationsSet.insert(Abbreviations.back().get(), Token);
     // Assign the unique abbreviation number.
     Abbrev.setNumber(Abbreviations.size());
     Abbreviations.back()->setNumber(Abbreviations.size());
@@ -1246,6 +1249,19 @@ void DWARFLinker::DIECloner::cloneExpression(
 
   uint64_t OpOffset = 0;
   for (auto &Op : Expression) {
+    if (Op.isError()) {
+      // The operation could not be decoded, so neither it nor anything after
+      // it can be located. Its end offset is the offset it started at, so the
+      // slice copied below would be empty and the rest of the expression
+      // would be silently dropped. Preserve the remaining bytes instead.
+      Linker.reportWarning(
+          "cannot decode a DW_OP, copying the rest of the expression "
+          "unmodified.",
+          File);
+      StringRef Bytes = Data.getData().substr(OpOffset);
+      OutputBuffer.append(Bytes.begin(), Bytes.end());
+      return;
+    }
     auto Desc = Op.getDescription();
     // DW_OP_const_type is variable-length and has 3
     // operands. Thus far we only support 2.
@@ -1305,7 +1321,12 @@ void DWARFLinker::DIECloner::cloneExpression(
         // Argument of DW_OP_addrx should be relocated here as it is not
         // processed by applyValidRelocs.
         OutputBuffer.push_back(dwarf::DW_OP_addr);
-        uint64_t LinkedAddress = SA->Address + AddrRelocAdjustment;
+        uint64_t LinkedAddress =
+            SA->Address +
+            File.Addresses
+                ->getAddrIndexRelocAdjustment(Unit.getOrigUnit(), Op,
+                                              Linker.Options.Verbose)
+                .value_or(AddrRelocAdjustment);
         if (IsLittleEndian != sys::IsLittleEndianHost)
           sys::swapByteOrder(LinkedAddress);
         ArrayRef<uint8_t> AddressBytes(
@@ -1339,7 +1360,12 @@ void DWARFLinker::DIECloner::cloneExpression(
 
         if (OutOperandKind) {
           OutputBuffer.push_back(*OutOperandKind);
-          uint64_t LinkedAddress = SA->Address + AddrRelocAdjustment;
+          uint64_t LinkedAddress =
+              SA->Address +
+              File.Addresses
+                  ->getAddrIndexRelocAdjustment(Unit.getOrigUnit(), Op,
+                                                Linker.Options.Verbose)
+                  .value_or(AddrRelocAdjustment);
           if (IsLittleEndian != sys::IsLittleEndianHost)
             sys::swapByteOrder(LinkedAddress);
           ArrayRef<uint8_t> AddressBytes(
@@ -1384,8 +1410,7 @@ unsigned DWARFLinker::DIECloner::cloneBlockAttribute(
   if (DWARFAttribute::mayHaveLocationExpr(AttrSpec.Attr) &&
       (Val.isFormClass(DWARFFormValue::FC_Block) ||
        Val.isFormClass(DWARFFormValue::FC_Exprloc))) {
-    DataExtractor Data(StringRef((const char *)Bytes.data(), Bytes.size()),
-                       IsLittleEndian, OrigUnit.getAddressByteSize());
+    DataExtractor Data(Bytes, IsLittleEndian);
     DWARFExpression Expr(Data, OrigUnit.getAddressByteSize(),
                          OrigUnit.getFormParams().Format);
     cloneExpression(Data, Expr, File, Unit, Buffer,
@@ -1422,6 +1447,25 @@ unsigned DWARFLinker::DIECloner::cloneBlockAttribute(
   }
 
   return Die.addValue(DIEAlloc, Value)->sizeOf(OrigUnit.getFormParams());
+}
+
+/// Returns \p InputDIE's DW_AT_high_pc value \p HighPC, constrained so the code
+/// range it ends stays clear of the symbol the linker places next. \p IsLength
+/// tells whether high_pc is encoded as a length rather than an address, and
+/// \p PCOffset is the amount the range shifts by in the output.
+///
+/// A scope nested in a function inherits the overrun of the function, so it is
+/// constrained as well.
+static uint64_t constrainHighPC(const DWARFDie &InputDIE, uint64_t HighPC,
+                                bool IsLength, int64_t PCOffset,
+                                AddressesMap &Addresses) {
+  std::optional<uint64_t> LowPC =
+      dwarf::toAddress(InputDIE.find(dwarf::DW_AT_low_pc));
+  if (!LowPC)
+    return HighPC;
+  uint64_t Constrained = Addresses.constrainCodeRangeHighPC(
+      *LowPC, IsLength ? *LowPC + HighPC : HighPC, PCOffset);
+  return IsLength ? Constrained - *LowPC : Constrained;
 }
 
 unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
@@ -1472,6 +1516,9 @@ unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
     else
       return 0;
   } else {
+    if (AttrSpec.Attr == dwarf::DW_AT_high_pc)
+      Addr = constrainHighPC(InputDIE, *Addr, /*IsLength=*/false, Info.PCOffset,
+                             *ObjFile.Addresses);
     *Addr += Info.PCOffset;
   }
 
@@ -1629,6 +1676,13 @@ unsigned DWARFLinker::DIECloner::cloneScalarAttribute(
         &InputDIE);
     return 0;
   }
+
+  // A compile unit's high_pc comes from the unit's own linked range and spans
+  // every symbol in it.
+  if (AttrSpec.Attr == dwarf::DW_AT_high_pc &&
+      Die.getTag() != dwarf::DW_TAG_compile_unit)
+    Value = constrainHighPC(InputDIE, Value, /*IsLength=*/true, Info.PCOffset,
+                            *File.Addresses);
 
   DIE::value_iterator Patch =
       Die.addValue(DIEAlloc, dwarf::Attribute(AttrSpec.Attr),
@@ -1846,8 +1900,12 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
 
   if (Abbrev->getTag() == dwarf::DW_TAG_subprogram) {
     Flags |= TF_InFunctionScope;
-    if (!Info.InDebugMap && LLVM_LIKELY(!Update))
-      Flags |= TF_SkipPC;
+    if (LLVM_LIKELY(!Update)) {
+      if (Info.InDebugMap)
+        Flags &= ~TF_SkipPC;
+      else
+        Flags |= TF_SkipPC;
+    }
   } else if (Abbrev->getTag() == dwarf::DW_TAG_variable) {
     // Function-local globals could be in the debug map even when the function
     // is not, e.g., inlined functions.
@@ -1910,6 +1968,8 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
   // accelerator tables too. For now stick with dsymutil's behavior.
   if ((Info.InDebugMap || AttrInfo.HasLowPc || AttrInfo.HasRanges) &&
       Tag != dwarf::DW_TAG_compile_unit &&
+      !(Tag == dwarf::DW_TAG_variable &&
+        hasImplicitAddressLocation(InputDIE)) &&
       getDIENames(InputDIE, AttrInfo, DebugStrPool, File, Unit,
                   Tag != dwarf::DW_TAG_inlined_subroutine)) {
     if (AttrInfo.MangledName && AttrInfo.MangledName != AttrInfo.Name)
@@ -2562,7 +2622,7 @@ void DWARFLinker::patchFrameInfoForObject(LinkContext &Context) {
       AllUnitsRanges.insert(CurRange.Range, CurRange.Value);
   }
 
-  DataExtractor Data(FrameData, OrigDwarf.isLittleEndian(), 0);
+  DataExtractor Data(FrameData, OrigDwarf.isLittleEndian());
   uint64_t InputOffset = 0;
 
   // Store the data of the CIEs defined in this object, keyed by their
@@ -2893,8 +2953,7 @@ Expected<uint64_t> DWARFLinker::DIECloner::cloneAllCompileUnits(
                              SmallVectorImpl<uint8_t> &OutBytes,
                              int64_t RelocAdjustment) {
         DWARFUnit &OrigUnit = CurrentUnit->getOrigUnit();
-        DataExtractor Data(SrcBytes, IsLittleEndian,
-                           OrigUnit.getAddressByteSize());
+        DataExtractor Data(SrcBytes, IsLittleEndian);
         cloneExpression(Data,
                         DWARFExpression(Data, OrigUnit.getAddressByteSize(),
                                         OrigUnit.getFormParams().Format),

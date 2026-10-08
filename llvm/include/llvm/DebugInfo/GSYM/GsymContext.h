@@ -26,7 +26,7 @@ class GsymReader;
 /// interface to different symbolication formats (e.g. GSYM, PDB and DWARF).
 /// More control and power over the debug information access can be had by using
 /// the GSYM interfaces directly.
-class GsymContext : public DIContext {
+class LLVM_ABI GsymContext : public DIContext {
 public:
   GsymContext(std::unique_ptr<GsymReader> Reader);
   ~GsymContext() override;

@@ -1,9 +1,14 @@
-//===--- Implementation of a platform independent file data structure -----===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Implementation of a platform independent file data structure.
+///
 //===----------------------------------------------------------------------===//
 
 #include "file.h"
@@ -16,6 +21,7 @@
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/alloc-checker.h"
+#include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/wchar/character_converter.h"
 #include "src/__support/wchar/wcrtomb.h"
@@ -458,6 +464,35 @@ int File::flush_unlocked() {
   return 0;
 }
 
+// Does the following:
+// 1. If in write mode, Write out any data present in the buffer.
+// 2. Call platform_close.
+// platform_close is expected to cleanup the complete file object.
+int File::close() {
+  {
+    FileLock lock(this);
+    if (prev_op == FileOp::WRITE && pos > 0) {
+      auto buf_result = platform_write(this, buf, pos);
+      if (buf_result.has_error() || buf_result.value < pos) {
+        err = true;
+        return buf_result.error;
+      }
+    }
+  }
+
+  // If we own the buffer, delete it before calling the platform close
+  // implementation. The platform close should not need to access the buffer
+  // and we need to clean it up before the entire structure is removed.
+  if (own_buf)
+    delete buf;
+
+  // Platform close is expected to cleanup the file data structure which
+  // includes the file mutex. Hence, we call platform_close after releasing
+  // the file lock. Another thread doing file operations while a thread is
+  // closing the file is undefined behavior as per POSIX.
+  return platform_close(this);
+}
+
 int File::set_buffer(void *buffer, size_t size, int buffer_mode) {
   // We do not need to lock the file as this method should be called before
   // other operations are performed on the file.
@@ -507,51 +542,6 @@ int File::set_buffer(void *buffer, size_t size, int buffer_mode) {
   bufmode = buffer_mode;
   adjust_buf();
   return 0;
-}
-
-File::ModeFlags File::mode_flags(const char *mode) {
-  // First character in |mode| should be 'a', 'r' or 'w'.
-  if (*mode != 'a' && *mode != 'r' && *mode != 'w')
-    return 0;
-
-  // There should be exaclty one main mode ('a', 'r' or 'w') character.
-  // If there are more than one main mode characters listed, then
-  // we will consider |mode| as incorrect and return 0;
-  int main_mode_count = 0;
-
-  ModeFlags flags = 0;
-  for (; *mode != '\0'; ++mode) {
-    switch (*mode) {
-    case 'r':
-      flags |= static_cast<ModeFlags>(OpenMode::READ);
-      ++main_mode_count;
-      break;
-    case 'w':
-      flags |= static_cast<ModeFlags>(OpenMode::WRITE);
-      ++main_mode_count;
-      break;
-    case '+':
-      flags |= static_cast<ModeFlags>(OpenMode::PLUS);
-      break;
-    case 'b':
-      flags |= static_cast<ModeFlags>(ContentType::BINARY);
-      break;
-    case 'a':
-      flags |= static_cast<ModeFlags>(OpenMode::APPEND);
-      ++main_mode_count;
-      break;
-    case 'x':
-      flags |= static_cast<ModeFlags>(CreateType::EXCLUSIVE);
-      break;
-    default:
-      return 0;
-    }
-  }
-
-  if (main_mode_count != 1)
-    return 0;
-
-  return flags;
 }
 
 FileIOResult File::write_unlocked(const wchar_t *ws, size_t len) {
@@ -642,7 +632,7 @@ FileIOResult File::read_unlocked(wchar_t *ws, size_t len) {
   return {read_count, 0};
 }
 
-wint_t File::ungetwc_unlocked(wint_t wc) {
+ErrorOr<wint_t> File::ungetwc_unlocked(wint_t wc) {
   // There is no meaning to unget if:
   // 1. You are trying to push back EOF.
   // 2. Read operations are not allowed on this file.
@@ -663,7 +653,7 @@ wint_t File::ungetwc_unlocked(wint_t wc) {
   char mb_buf[4];
   auto result = internal::wcrtomb(mb_buf, static_cast<wchar_t>(wc), &mbstate);
   if (!result.has_value())
-    return WEOF;
+    return Error(result.error());
 
   size_t n = result.value();
 

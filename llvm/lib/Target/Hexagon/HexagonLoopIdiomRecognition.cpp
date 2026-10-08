@@ -20,6 +20,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -111,8 +112,9 @@ class HexagonLoopIdiomRecognize {
 public:
   explicit HexagonLoopIdiomRecognize(AliasAnalysis *AA, DominatorTree *DT,
                                      LoopInfo *LF, const TargetLibraryInfo *TLI,
-                                     ScalarEvolution *SE)
-      : AA(AA), DT(DT), LF(LF), TLI(TLI), SE(SE) {}
+                                     ScalarEvolution *SE,
+                                     OptimizationRemarkEmitter &ORE)
+      : AA(AA), DT(DT), LF(LF), TLI(TLI), SE(SE), ORE(ORE) {}
 
   bool run(Loop *L);
 
@@ -133,6 +135,7 @@ private:
   LoopInfo *LF;
   const TargetLibraryInfo *TLI;
   ScalarEvolution *SE;
+  OptimizationRemarkEmitter &ORE;
   bool HasMemcpy, HasMemmove;
 };
 
@@ -154,6 +157,7 @@ public:
     AU.addRequired<ScalarEvolutionWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
+    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
     AU.addPreserved<TargetLibraryInfoWrapperPass>();
   }
 
@@ -162,7 +166,7 @@ public:
 
 struct Simplifier {
   struct Rule {
-    using FuncType = std::function<Value *(Instruction *, LLVMContext &)>;
+    using FuncType = std::function<Value *(Instruction *, Module &)>;
     Rule(StringRef N, FuncType F) : Name(N), Fn(F) {}
     StringRef Name; // For debugging.
     FuncType Fn;
@@ -207,12 +211,9 @@ public:
     Value *Root;
     ValueSetType Used;   // The set of all cloned values used by Root.
     ValueSetType Clones; // The set of all cloned values.
-    LLVMContext &Ctx;
+    Module &M;
 
-    Context(Instruction *Exp)
-        : Ctx(Exp->getParent()->getParent()->getContext()) {
-      initialize(Exp);
-    }
+    Context(Instruction *Exp) : M(*Exp->getModule()) { initialize(Exp); }
 
     ~Context() { cleanup(); }
 
@@ -266,6 +267,7 @@ INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
 INITIALIZE_PASS_END(HexagonLoopIdiomRecognizeLegacyPass, "hexagon-loop-idiom",
                     "Recognize Hexagon-specific loop idioms", false, false)
 
@@ -532,7 +534,7 @@ Value *Simplifier::simplify(Context &C) {
       continue;
     bool Changed = false;
     for (Rule &R : Rules) {
-      Value *W = R.Fn(U, C.Ctx);
+      Value *W = R.Fn(U, C.M);
       if (!W)
         continue;
       Changed = true;
@@ -1092,7 +1094,7 @@ bool PolynomialMultiplyRecognize::promoteTypes(BasicBlock *LoopB,
       assert(Ty0 == DestTy);
       // In order to create the trunc, P must have the promoted type.
       P->mutateType(Ty0);
-      Value *T = IRBuilder<>(ExitB, End).CreateTrunc(P, PTy);
+      Value *T = IRBuilder<>(End).CreateTrunc(P, PTy);
       // In order for the RAUW to work, the types of P and T must match.
       P->mutateType(PTy);
       P->replaceAllUsesWith(T);
@@ -1437,7 +1439,7 @@ bool PolynomialMultiplyRecognize::convertShiftsToLeft(BasicBlock *LoopB,
   // them right after the loop exit.
   // Take advantage of the loop-closed SSA form, which has all the post-
   // loop values in phi nodes.
-  IRB.SetInsertPoint(ExitB, ExitB->getFirstInsertionPt());
+  IRB.SetInsertPoint(ExitB->getFirstInsertionPt());
   for (auto P = ExitB->begin(), Q = ExitB->end(); P != Q; ++P) {
     if (!isa<PHINode>(P))
       break;
@@ -1575,154 +1577,160 @@ static bool hasZeroSignBit(const Value *V) {
 
 void PolynomialMultiplyRecognize::setupPreSimplifier(Simplifier &S) {
   S.addRule("sink-zext",
-    // Sink zext past bitwise operations.
-    [](Instruction *I, LLVMContext &Ctx) -> Value* {
-      if (I->getOpcode() != Instruction::ZExt)
-        return nullptr;
-      Instruction *T = dyn_cast<Instruction>(I->getOperand(0));
-      if (!T)
-        return nullptr;
-      switch (T->getOpcode()) {
-        case Instruction::And:
-        case Instruction::Or:
-        case Instruction::Xor:
-          break;
-        default:
-          return nullptr;
-      }
-      IRBuilder<> B(Ctx);
-      return B.CreateBinOp(cast<BinaryOperator>(T)->getOpcode(),
-                           B.CreateZExt(T->getOperand(0), I->getType()),
-                           B.CreateZExt(T->getOperand(1), I->getType()));
-    });
+            // Sink zext past bitwise operations.
+            [](Instruction *I, Module &M) -> Value * {
+              if (I->getOpcode() != Instruction::ZExt)
+                return nullptr;
+              Instruction *T = dyn_cast<Instruction>(I->getOperand(0));
+              if (!T)
+                return nullptr;
+              switch (T->getOpcode()) {
+              case Instruction::And:
+              case Instruction::Or:
+              case Instruction::Xor:
+                break;
+              default:
+                return nullptr;
+              }
+              IRBuilder<> B(M);
+              return B.CreateBinOp(
+                  cast<BinaryOperator>(T)->getOpcode(),
+                  B.CreateZExt(T->getOperand(0), I->getType()),
+                  B.CreateZExt(T->getOperand(1), I->getType()));
+            });
   S.addRule("xor/and -> and/xor",
-    // (xor (and x a) (and y a)) -> (and (xor x y) a)
-    [](Instruction *I, LLVMContext &Ctx) -> Value* {
-      if (I->getOpcode() != Instruction::Xor)
-        return nullptr;
-      Instruction *And0 = dyn_cast<Instruction>(I->getOperand(0));
-      Instruction *And1 = dyn_cast<Instruction>(I->getOperand(1));
-      if (!And0 || !And1)
-        return nullptr;
-      if (And0->getOpcode() != Instruction::And ||
-          And1->getOpcode() != Instruction::And)
-        return nullptr;
-      if (And0->getOperand(1) != And1->getOperand(1))
-        return nullptr;
-      IRBuilder<> B(Ctx);
-      return B.CreateAnd(B.CreateXor(And0->getOperand(0), And1->getOperand(0)),
-                         And0->getOperand(1));
-    });
-  S.addRule("sink binop into select",
-    // (Op (select c x y) z) -> (select c (Op x z) (Op y z))
-    // (Op x (select c y z)) -> (select c (Op x y) (Op x z))
-    [](Instruction *I, LLVMContext &Ctx) -> Value* {
-      BinaryOperator *BO = dyn_cast<BinaryOperator>(I);
-      if (!BO)
-        return nullptr;
-      Instruction::BinaryOps Op = BO->getOpcode();
-      if (SelectInst *Sel = dyn_cast<SelectInst>(BO->getOperand(0))) {
-        IRBuilder<> B(Ctx);
-        Value *X = Sel->getTrueValue(), *Y = Sel->getFalseValue();
-        Value *Z = BO->getOperand(1);
-        return B.CreateSelect(Sel->getCondition(),
-                              B.CreateBinOp(Op, X, Z),
-                              B.CreateBinOp(Op, Y, Z));
-      }
-      if (SelectInst *Sel = dyn_cast<SelectInst>(BO->getOperand(1))) {
-        IRBuilder<> B(Ctx);
-        Value *X = BO->getOperand(0);
-        Value *Y = Sel->getTrueValue(), *Z = Sel->getFalseValue();
-        return B.CreateSelect(Sel->getCondition(),
-                              B.CreateBinOp(Op, X, Y),
-                              B.CreateBinOp(Op, X, Z));
-      }
-      return nullptr;
-    });
-  S.addRule("fold select-select",
-    // (select c (select c x y) z) -> (select c x z)
-    // (select c x (select c y z)) -> (select c x z)
-    [](Instruction *I, LLVMContext &Ctx) -> Value* {
-      SelectInst *Sel = dyn_cast<SelectInst>(I);
-      if (!Sel)
-        return nullptr;
-      IRBuilder<> B(Ctx);
-      Value *C = Sel->getCondition();
-      if (SelectInst *Sel0 = dyn_cast<SelectInst>(Sel->getTrueValue())) {
-        if (Sel0->getCondition() == C)
-          return B.CreateSelect(C, Sel0->getTrueValue(), Sel->getFalseValue());
-      }
-      if (SelectInst *Sel1 = dyn_cast<SelectInst>(Sel->getFalseValue())) {
-        if (Sel1->getCondition() == C)
-          return B.CreateSelect(C, Sel->getTrueValue(), Sel1->getFalseValue());
-      }
-      return nullptr;
-    });
-  S.addRule("or-signbit -> xor-signbit",
-    // (or (lshr x 1) 0x800.0) -> (xor (lshr x 1) 0x800.0)
-    [](Instruction *I, LLVMContext &Ctx) -> Value* {
-      if (I->getOpcode() != Instruction::Or)
-        return nullptr;
-      ConstantInt *Msb = dyn_cast<ConstantInt>(I->getOperand(1));
-      if (!Msb || !Msb->getValue().isSignMask())
-        return nullptr;
-      if (!hasZeroSignBit(I->getOperand(0)))
-        return nullptr;
-      return IRBuilder<>(Ctx).CreateXor(I->getOperand(0), Msb);
-    });
-  S.addRule("sink lshr into binop",
-    // (lshr (BitOp x y) c) -> (BitOp (lshr x c) (lshr y c))
-    [](Instruction *I, LLVMContext &Ctx) -> Value* {
-      if (I->getOpcode() != Instruction::LShr)
-        return nullptr;
-      BinaryOperator *BitOp = dyn_cast<BinaryOperator>(I->getOperand(0));
-      if (!BitOp)
-        return nullptr;
-      switch (BitOp->getOpcode()) {
-        case Instruction::And:
-        case Instruction::Or:
-        case Instruction::Xor:
-          break;
-        default:
+            // (xor (and x a) (and y a)) -> (and (xor x y) a)
+            [](Instruction *I, Module &M) -> Value * {
+              if (I->getOpcode() != Instruction::Xor)
+                return nullptr;
+              Instruction *And0 = dyn_cast<Instruction>(I->getOperand(0));
+              Instruction *And1 = dyn_cast<Instruction>(I->getOperand(1));
+              if (!And0 || !And1)
+                return nullptr;
+              if (And0->getOpcode() != Instruction::And ||
+                  And1->getOpcode() != Instruction::And)
+                return nullptr;
+              if (And0->getOperand(1) != And1->getOperand(1))
+                return nullptr;
+              IRBuilder<> B(M);
+              return B.CreateAnd(
+                  B.CreateXor(And0->getOperand(0), And1->getOperand(0)),
+                  And0->getOperand(1));
+            });
+  S.addRule(
+      "sink binop into select",
+      // (Op (select c x y) z) -> (select c (Op x z) (Op y z))
+      // (Op x (select c y z)) -> (select c (Op x y) (Op x z))
+      [](Instruction *I, Module &M) -> Value * {
+        BinaryOperator *BO = dyn_cast<BinaryOperator>(I);
+        if (!BO)
           return nullptr;
-      }
-      IRBuilder<> B(Ctx);
-      Value *S = I->getOperand(1);
-      return B.CreateBinOp(BitOp->getOpcode(),
-                B.CreateLShr(BitOp->getOperand(0), S),
-                B.CreateLShr(BitOp->getOperand(1), S));
-    });
-  S.addRule("expose bitop-const",
-    // (BitOp1 (BitOp2 x a) b) -> (BitOp2 x (BitOp1 a b))
-    [](Instruction *I, LLVMContext &Ctx) -> Value* {
-      auto IsBitOp = [](unsigned Op) -> bool {
-        switch (Op) {
-          case Instruction::And:
-          case Instruction::Or:
-          case Instruction::Xor:
-            return true;
+        Instruction::BinaryOps Op = BO->getOpcode();
+        if (SelectInst *Sel = dyn_cast<SelectInst>(BO->getOperand(0))) {
+          IRBuilder<> B(M);
+          Value *X = Sel->getTrueValue(), *Y = Sel->getFalseValue();
+          Value *Z = BO->getOperand(1);
+          return B.CreateSelect(Sel->getCondition(), B.CreateBinOp(Op, X, Z),
+                                B.CreateBinOp(Op, Y, Z));
         }
-        return false;
-      };
-      BinaryOperator *BitOp1 = dyn_cast<BinaryOperator>(I);
-      if (!BitOp1 || !IsBitOp(BitOp1->getOpcode()))
+        if (SelectInst *Sel = dyn_cast<SelectInst>(BO->getOperand(1))) {
+          IRBuilder<> B(M);
+          Value *X = BO->getOperand(0);
+          Value *Y = Sel->getTrueValue(), *Z = Sel->getFalseValue();
+          return B.CreateSelect(Sel->getCondition(), B.CreateBinOp(Op, X, Y),
+                                B.CreateBinOp(Op, X, Z));
+        }
         return nullptr;
-      BinaryOperator *BitOp2 = dyn_cast<BinaryOperator>(BitOp1->getOperand(0));
-      if (!BitOp2 || !IsBitOp(BitOp2->getOpcode()))
+      });
+  S.addRule(
+      "fold select-select",
+      // (select c (select c x y) z) -> (select c x z)
+      // (select c x (select c y z)) -> (select c x z)
+      [](Instruction *I, Module &M) -> Value * {
+        SelectInst *Sel = dyn_cast<SelectInst>(I);
+        if (!Sel)
+          return nullptr;
+        IRBuilder<> B(M);
+        Value *C = Sel->getCondition();
+        if (SelectInst *Sel0 = dyn_cast<SelectInst>(Sel->getTrueValue())) {
+          if (Sel0->getCondition() == C)
+            return B.CreateSelect(C, Sel0->getTrueValue(),
+                                  Sel->getFalseValue());
+        }
+        if (SelectInst *Sel1 = dyn_cast<SelectInst>(Sel->getFalseValue())) {
+          if (Sel1->getCondition() == C)
+            return B.CreateSelect(C, Sel->getTrueValue(),
+                                  Sel1->getFalseValue());
+        }
         return nullptr;
-      ConstantInt *CA = dyn_cast<ConstantInt>(BitOp2->getOperand(1));
-      ConstantInt *CB = dyn_cast<ConstantInt>(BitOp1->getOperand(1));
-      if (!CA || !CB)
-        return nullptr;
-      IRBuilder<> B(Ctx);
-      Value *X = BitOp2->getOperand(0);
-      return B.CreateBinOp(BitOp2->getOpcode(), X,
-                B.CreateBinOp(BitOp1->getOpcode(), CA, CB));
-    });
+      });
+  S.addRule("or-signbit -> xor-signbit",
+            // (or (lshr x 1) 0x800.0) -> (xor (lshr x 1) 0x800.0)
+            [](Instruction *I, Module &M) -> Value * {
+              if (I->getOpcode() != Instruction::Or)
+                return nullptr;
+              ConstantInt *Msb = dyn_cast<ConstantInt>(I->getOperand(1));
+              if (!Msb || !Msb->getValue().isSignMask())
+                return nullptr;
+              if (!hasZeroSignBit(I->getOperand(0)))
+                return nullptr;
+              return IRBuilder<>(M).CreateXor(I->getOperand(0), Msb);
+            });
+  S.addRule("sink lshr into binop",
+            // (lshr (BitOp x y) c) -> (BitOp (lshr x c) (lshr y c))
+            [](Instruction *I, Module &M) -> Value * {
+              if (I->getOpcode() != Instruction::LShr)
+                return nullptr;
+              BinaryOperator *BitOp =
+                  dyn_cast<BinaryOperator>(I->getOperand(0));
+              if (!BitOp)
+                return nullptr;
+              switch (BitOp->getOpcode()) {
+              case Instruction::And:
+              case Instruction::Or:
+              case Instruction::Xor:
+                break;
+              default:
+                return nullptr;
+              }
+              IRBuilder<> B(M);
+              Value *S = I->getOperand(1);
+              return B.CreateBinOp(BitOp->getOpcode(),
+                                   B.CreateLShr(BitOp->getOperand(0), S),
+                                   B.CreateLShr(BitOp->getOperand(1), S));
+            });
+  S.addRule("expose bitop-const",
+            // (BitOp1 (BitOp2 x a) b) -> (BitOp2 x (BitOp1 a b))
+            [](Instruction *I, Module &M) -> Value * {
+              auto IsBitOp = [](unsigned Op) -> bool {
+                switch (Op) {
+                case Instruction::And:
+                case Instruction::Or:
+                case Instruction::Xor:
+                  return true;
+                }
+                return false;
+              };
+              BinaryOperator *BitOp1 = dyn_cast<BinaryOperator>(I);
+              if (!BitOp1 || !IsBitOp(BitOp1->getOpcode()))
+                return nullptr;
+              BinaryOperator *BitOp2 =
+                  dyn_cast<BinaryOperator>(BitOp1->getOperand(0));
+              if (!BitOp2 || !IsBitOp(BitOp2->getOpcode()))
+                return nullptr;
+              ConstantInt *CA = dyn_cast<ConstantInt>(BitOp2->getOperand(1));
+              ConstantInt *CB = dyn_cast<ConstantInt>(BitOp1->getOperand(1));
+              if (!CA || !CB)
+                return nullptr;
+              IRBuilder<> B(M);
+              Value *X = BitOp2->getOperand(0);
+              return B.CreateBinOp(BitOp2->getOpcode(), X,
+                                   B.CreateBinOp(BitOp1->getOpcode(), CA, CB));
+            });
   S.addRule("select with trunc cond to select with icmp cond",
             // select (trunc x to i1) -> select (icmp ne (and x, 1), 0)
             // select (xor (trunc x to i1) 1) -> select (icmp eq (and x, 1), 0)
-            [](Instruction *I, LLVMContext &Ctx) -> Value * {
+            [](Instruction *I, Module &M) -> Value * {
               SelectInst *Sel = dyn_cast<SelectInst>(I);
               if (!Sel)
                 return nullptr;
@@ -1733,7 +1741,7 @@ void PolynomialMultiplyRecognize::setupPreSimplifier(Simplifier &S) {
                     match(C, m_Not(m_Trunc(m_Value(X))))))
                 return nullptr;
 
-              IRBuilder<> B(Ctx);
+              IRBuilder<> B(M);
               Type *Ty = X->getType();
               Value *And = B.CreateAnd(X, ConstantInt::get(Ty, 1));
               Value *Icmp = B.CreateICmp(isa<TruncInst>(C) ? ICmpInst::ICMP_NE
@@ -1746,30 +1754,30 @@ void PolynomialMultiplyRecognize::setupPreSimplifier(Simplifier &S) {
 
 void PolynomialMultiplyRecognize::setupPostSimplifier(Simplifier &S) {
   S.addRule("(and (xor (and x a) y) b) -> (and (xor x y) b), if b == b&a",
-    [](Instruction *I, LLVMContext &Ctx) -> Value* {
-      if (I->getOpcode() != Instruction::And)
-        return nullptr;
-      Instruction *Xor = dyn_cast<Instruction>(I->getOperand(0));
-      ConstantInt *C0 = dyn_cast<ConstantInt>(I->getOperand(1));
-      if (!Xor || !C0)
-        return nullptr;
-      if (Xor->getOpcode() != Instruction::Xor)
-        return nullptr;
-      Instruction *And0 = dyn_cast<Instruction>(Xor->getOperand(0));
-      Instruction *And1 = dyn_cast<Instruction>(Xor->getOperand(1));
-      // Pick the first non-null and.
-      if (!And0 || And0->getOpcode() != Instruction::And)
-        std::swap(And0, And1);
-      ConstantInt *C1 = dyn_cast<ConstantInt>(And0->getOperand(1));
-      if (!C1)
-        return nullptr;
-      uint32_t V0 = C0->getZExtValue();
-      uint32_t V1 = C1->getZExtValue();
-      if (V0 != (V0 & V1))
-        return nullptr;
-      IRBuilder<> B(Ctx);
-      return B.CreateAnd(B.CreateXor(And0->getOperand(0), And1), C0);
-    });
+            [](Instruction *I, Module &M) -> Value * {
+              if (I->getOpcode() != Instruction::And)
+                return nullptr;
+              Instruction *Xor = dyn_cast<Instruction>(I->getOperand(0));
+              ConstantInt *C0 = dyn_cast<ConstantInt>(I->getOperand(1));
+              if (!Xor || !C0)
+                return nullptr;
+              if (Xor->getOpcode() != Instruction::Xor)
+                return nullptr;
+              Instruction *And0 = dyn_cast<Instruction>(Xor->getOperand(0));
+              Instruction *And1 = dyn_cast<Instruction>(Xor->getOperand(1));
+              // Pick the first non-null and.
+              if (!And0 || And0->getOpcode() != Instruction::And)
+                std::swap(And0, And1);
+              ConstantInt *C1 = dyn_cast<ConstantInt>(And0->getOperand(1));
+              if (!C1)
+                return nullptr;
+              uint32_t V0 = C0->getZExtValue();
+              uint32_t V1 = C1->getZExtValue();
+              if (V0 != (V0 & V1))
+                return nullptr;
+              IRBuilder<> B(M);
+              return B.CreateAnd(B.CreateXor(And0->getOperand(0), And1), C0);
+            });
 }
 
 bool PolynomialMultiplyRecognize::recognize() {
@@ -1943,8 +1951,14 @@ bool HexagonLoopIdiomRecognize::isLegalStore(Loop *CurLoop, StoreInst *SI) {
   // loop, which indicates a strided store.  If we have something else, it's a
   // random store we can't handle.
   auto *StoreEv = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(StorePtr));
-  if (!StoreEv || StoreEv->getLoop() != CurLoop || !StoreEv->isAffine())
+  if (!StoreEv || StoreEv->getLoop() != CurLoop || !StoreEv->isAffine()) {
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "NonAffineStorePtr",
+                                      SI->getDebugLoc(), SI->getParent())
+             << "store pointer is not an affine AddRec";
+    });
     return false;
+  }
 
   // Check to see if the stride matches the size of the store.  If so, then we
   // know that every byte is touched in the loop.
@@ -1952,21 +1966,39 @@ bool HexagonLoopIdiomRecognize::isLegalStore(Loop *CurLoop, StoreInst *SI) {
   if (Stride == 0)
     return false;
   unsigned StoreSize = DL->getTypeStoreSize(SI->getValueOperand()->getType());
-  if (StoreSize != unsigned(std::abs(Stride)))
+  if (StoreSize != unsigned(std::abs(Stride))) {
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "StrideSizeMismatch",
+                                      SI->getDebugLoc(), SI->getParent())
+             << "stride does not match store size";
+    });
     return false;
+  }
 
   // The store must be feeding a non-volatile load.
   LoadInst *LI = dyn_cast<LoadInst>(SI->getValueOperand());
-  if (!LI || !LI->isSimple())
+  if (!LI || !LI->isSimple()) {
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "StoreNotFeedingLoad",
+                                      SI->getDebugLoc(), SI->getParent())
+             << "store value is not a simple load";
+    });
     return false;
+  }
 
   // See if the pointer expression is an AddRec like {base,+,1} on the current
   // loop, which indicates a strided load.  If we have something else, it's a
   // random load we can't handle.
   Value *LoadPtr = LI->getPointerOperand();
   auto *LoadEv = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(LoadPtr));
-  if (!LoadEv || LoadEv->getLoop() != CurLoop || !LoadEv->isAffine())
+  if (!LoadEv || LoadEv->getLoop() != CurLoop || !LoadEv->isAffine()) {
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "NonAffineLoadPtr",
+                                      LI->getDebugLoc(), LI->getParent())
+             << "load pointer is not an affine AddRec";
+    });
     return false;
+  }
 
   // The store and load must share the same stride.
   if (StoreEv->getOperand(1) != LoadEv->getOperand(1))
@@ -2090,6 +2122,11 @@ CleanupAndExit:
     if (mayLoopAccessLocation(StoreBasePtr, ModRefInfo::ModRef, CurLoop,
                               BECount, StoreSize, *AA, Ignore1)) {
       // Still bad. Nothing we can do.
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "MemoryAlias",
+                                        SI->getDebugLoc(), SI->getParent())
+               << "memory aliasing prevents memcpy/memmove";
+      });
       goto CleanupAndExit;
     }
     // It worked with the load ignored.
@@ -2097,8 +2134,14 @@ CleanupAndExit:
   }
 
   if (!Overlap) {
-    if (DisableMemcpyIdiom || !HasMemcpy)
+    if (DisableMemcpyIdiom || !HasMemcpy) {
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "MemcpyDisabled",
+                                        SI->getDebugLoc(), SI->getParent())
+               << "memcpy idiom is disabled or unavailable";
+      });
       goto CleanupAndExit;
+    }
   } else {
     // Don't generate memmove if this function will be inlined. This is
     // because the caller will undergo this transformation after inlining.
@@ -2113,14 +2156,32 @@ CleanupAndExit:
     SmallVector<Instruction*,2> Insts;
     Insts.push_back(SI);
     Insts.push_back(LI);
-    if (!coverLoop(CurLoop, Insts))
+    if (!coverLoop(CurLoop, Insts)) {
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "ExtraLoopInstructions",
+                                        SI->getDebugLoc(), SI->getParent())
+               << "loop contains instructions beyond load/store pair";
+      });
       goto CleanupAndExit;
+    }
 
-    if (DisableMemmoveIdiom || !HasMemmove)
+    if (DisableMemmoveIdiom || !HasMemmove) {
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "MemmoveDisabled",
+                                        SI->getDebugLoc(), SI->getParent())
+               << "memmove idiom is disabled or unavailable";
+      });
       goto CleanupAndExit;
+    }
     bool IsNested = CurLoop->getParentLoop() != nullptr;
-    if (IsNested && OnlyNonNestedMemmove)
+    if (IsNested && OnlyNonNestedMemmove) {
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "NestedLoop",
+                                        SI->getDebugLoc(), SI->getParent())
+               << "memmove skipped for nested loop";
+      });
       goto CleanupAndExit;
+    }
   }
 
   // For a memcpy, we have to make sure that the input array is not being
@@ -2306,6 +2367,20 @@ CleanupAndExit:
                     << "    from store ptr=" << *StoreEv << " at: " << *SI
                     << "\n");
 
+  if (Overlap) {
+    ORE.emit([&]() {
+      return OptimizationRemark(DEBUG_TYPE, "LoopToMemmove", DLoc,
+                                CurLoop->getHeader())
+             << "converted loop to memmove";
+    });
+  } else {
+    ORE.emit([&]() {
+      return OptimizationRemark(DEBUG_TYPE, "LoopToMemcpy", DLoc,
+                                CurLoop->getHeader())
+             << "converted loop to memcpy";
+    });
+  }
+
   return true;
 }
 
@@ -2388,8 +2463,14 @@ bool HexagonLoopIdiomRecognize::runOnLoopBlock(Loop *CurLoop, BasicBlock *BB,
 
 bool HexagonLoopIdiomRecognize::runOnCountableLoop(Loop *L) {
   PolynomialMultiplyRecognize PMR(L, *DL, *DT, *TLI, *SE);
-  if (PMR.recognize())
+  if (PMR.recognize()) {
+    ORE.emit([&]() {
+      return OptimizationRemark(DEBUG_TYPE, "PolynomialMultiply",
+                                L->getStartLoc(), L->getHeader())
+             << "recognized polynomial multiply idiom";
+    });
     return true;
+  }
 
   if (!HasMemcpy && !HasMemmove)
     return false;
@@ -2422,8 +2503,14 @@ bool HexagonLoopIdiomRecognize::run(Loop *L) {
 
   // If the loop could not be converted to canonical form, it must have an
   // indirectbr in it, just give up.
-  if (!L->getLoopPreheader())
+  if (!L->getLoopPreheader()) {
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "NoPreheader",
+                                      L->getStartLoc(), L->getHeader())
+             << "loop not in canonical form (no preheader)";
+    });
     return false;
+  }
 
   // Disable loop idiom recognition if the function's name is a common idiom.
   StringRef Name = L->getHeader()->getParent()->getName();
@@ -2437,6 +2524,12 @@ bool HexagonLoopIdiomRecognize::run(Loop *L) {
 
   if (SE->hasLoopInvariantBackedgeTakenCount(L))
     return runOnCountableLoop(L);
+
+  ORE.emit([&]() {
+    return OptimizationRemarkMissed(DEBUG_TYPE, "NonCountableLoop",
+                                    L->getStartLoc(), L->getHeader())
+           << "backedge-taken count is not loop-invariant";
+  });
   return false;
 }
 
@@ -2451,7 +2544,8 @@ bool HexagonLoopIdiomRecognizeLegacyPass::runOnLoop(Loop *L,
   auto *TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(
       *L->getHeader()->getParent());
   auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  return HexagonLoopIdiomRecognize(AA, DT, LF, TLI, SE).run(L);
+  auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
+  return HexagonLoopIdiomRecognize(AA, DT, LF, TLI, SE, ORE).run(L);
 }
 
 Pass *llvm::createHexagonLoopIdiomPass() {
@@ -2462,7 +2556,8 @@ PreservedAnalyses
 HexagonLoopIdiomRecognitionPass::run(Loop &L, LoopAnalysisManager &AM,
                                      LoopStandardAnalysisResults &AR,
                                      LPMUpdater &U) {
-  return HexagonLoopIdiomRecognize(&AR.AA, &AR.DT, &AR.LI, &AR.TLI, &AR.SE)
+  OptimizationRemarkEmitter ORE(L.getHeader()->getParent());
+  return HexagonLoopIdiomRecognize(&AR.AA, &AR.DT, &AR.LI, &AR.TLI, &AR.SE, ORE)
                  .run(&L)
              ? getLoopPassPreservedAnalyses()
              : PreservedAnalyses::all();

@@ -44,7 +44,7 @@ namespace serialization {
 /// Version 4 of AST files also requires that the version control branch and
 /// revision match exactly, since there is no backward compatibility of
 /// AST files at this time.
-const unsigned VERSION_MAJOR = 38;
+const unsigned VERSION_MAJOR = 41;
 
 /// AST file minor version number supported by this version of
 /// Clang.
@@ -133,14 +133,6 @@ static_assert(alignof(TypeIdx) == 4);
 /// DenseMap.  This uses the standard pointer hash function.
 struct UnsafeQualTypeDenseMapInfo {
   static bool isEqual(QualType A, QualType B) { return A == B; }
-
-  static QualType getEmptyKey() {
-    return QualType::getFromOpaquePtr((void *)1);
-  }
-
-  static QualType getTombstoneKey() {
-    return QualType::getFromOpaquePtr((void *)2);
-  }
 
   static unsigned getHashValue(QualType T) {
     assert(!T.getLocalFastQualifiers() &&
@@ -375,6 +367,10 @@ enum ControlRecordTypes {
 
   /// Record code for the module build directory.
   MODULE_DIRECTORY,
+
+  /// Record code for the directories this AST file depends on the listing of.
+  /// Only emitted when non-empty.
+  MODULE_DIRECTORY_DEPENDENCIES,
 };
 
 /// Record types that occur within the options block inside
@@ -755,6 +751,9 @@ enum ASTRecordTypes {
   /// Record that encodes the number of submodules, their base ID in the AST
   /// file, and for each module the relative bit offset into the stream.
   SUBMODULE_METADATA = 80,
+
+  /// Record code for the OpenMP 'requires' directives seen in the TU.
+  OMP_REQUIRES_DECLS = 81,
 };
 
 /// Record types used within a source manager block.
@@ -1162,6 +1161,15 @@ enum PredefinedTypeIDs {
 // \brief HLSL intangible types with auto numeration
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
 #include "clang/Basic/HLSLIntangibleTypes.def"
+// \brief HLSL packed types with auto numeration
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
+#include "clang/Basic/HLSLPackedTypes.def"
+// \brief SPIR-V types with auto numeration
+#define SPIRV_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
+#include "clang/Basic/SPIRVTypes.def"
+
+  /// C++26 std::meta::info type.
+  PREDEF_TYPE_META_INFO_ID,
 
   /// The placeholder type for unresolved templates.
   PREDEF_TYPE_UNRESOLVED_TEMPLATE,
@@ -1174,7 +1182,7 @@ enum PredefinedTypeIDs {
 ///
 /// Type IDs for non-predefined types will start at
 /// NUM_PREDEF_TYPE_IDs.
-const unsigned NUM_PREDEF_TYPE_IDS = 529;
+const unsigned NUM_PREDEF_TYPE_IDS = 533;
 
 // Ensure we do not overrun the predefined types we reserved
 // in the enum PredefinedTypeIDs above.
@@ -1473,6 +1481,9 @@ enum DeclCode {
 
   /// \brief A StaticAssertDecl record.
   DECL_STATIC_ASSERT,
+
+  /// A C++ expansion statement.
+  DECL_EXPANSION_STMT,
 
   /// A record containing CXXBaseSpecifiers.
   DECL_CXX_BASE_SPECIFIERS,
@@ -1856,6 +1867,12 @@ enum StmtCode {
 
   STMT_CXX_FOR_RANGE,
 
+  /// A CXXExpansionPatternStmt.
+  STMT_CXX_EXPANSION_PATTERN,
+
+  /// A CXXExpansionInstantiationStmt.
+  STMT_CXX_EXPANSION_INSTANTIATION,
+
   /// A CXXOperatorCallExpr record.
   EXPR_CXX_OPERATOR_CALL,
 
@@ -1925,6 +1942,7 @@ enum StmtCode {
 
   EXPR_CXX_DEPENDENT_SCOPE_MEMBER,   // CXXDependentScopeMemberExpr
   EXPR_CXX_DEPENDENT_SCOPE_DECL_REF, // DependentScopeDeclRefExpr
+  EXPR_DEPENDENT_TEMPLATE_ID,        // DependentTemplateIdExpr
   EXPR_CXX_UNRESOLVED_CONSTRUCT,     // CXXUnresolvedConstructExpr
   EXPR_CXX_UNRESOLVED_MEMBER,        // UnresolvedMemberExpr
   EXPR_CXX_UNRESOLVED_LOOKUP,        // UnresolvedLookupExpr
@@ -1947,6 +1965,7 @@ enum StmtCode {
   EXPR_CXX_FOLD,                          // CXXFoldExpr
   EXPR_CONCEPT_SPECIALIZATION,            // ConceptSpecializationExpr
   EXPR_REQUIRES,                          // RequiresExpr
+  EXPR_CXX_EXPANSION_SELECT,              // CXXExpansionSelectExpr
 
   // Reflection
   EXPR_REFLECT,
@@ -1978,6 +1997,7 @@ enum StmtCode {
   STMT_OMP_REVERSE_DIRECTIVE,
   STMT_OMP_SPLIT_DIRECTIVE,
   STMT_OMP_INTERCHANGE_DIRECTIVE,
+  STMT_OMP_FLATTEN_DIRECTIVE,
   STMT_OMP_FUSE_DIRECTIVE,
   STMT_OMP_FOR_DIRECTIVE,
   STMT_OMP_FOR_SIMD_DIRECTIVE,
@@ -1999,7 +2019,8 @@ enum StmtCode {
   STMT_OMP_FLUSH_DIRECTIVE,
   STMT_OMP_DEPOBJ_DIRECTIVE,
   STMT_OMP_SCAN_DIRECTIVE,
-  STMT_OMP_ORDERED_DIRECTIVE,
+  STMT_OMP_ORDERED_STANDALONE_DIRECTIVE,
+  STMT_OMP_ORDERED_BLOCK_ASSOC_DIRECTIVE,
   STMT_OMP_ATOMIC_DIRECTIVE,
   STMT_OMP_TARGET_DIRECTIVE,
   STMT_OMP_TARGET_DATA_DIRECTIVE,
@@ -2117,6 +2138,14 @@ enum CtorInitializerType {
   CTOR_INITIALIZER_INDIRECT_MEMBER
 };
 
+/// Kinds of friend payloads owned by FriendTemplateDecl.
+enum FriendTemplateDeclKind {
+  FTDK_Type = 0,
+  FTDK_Decl = 1,
+  FTDK_Template = 2,
+  FTDK_Dependent = 3,
+};
+
 /// Kinds of cleanup objects owned by ExprWithCleanups.
 enum CleanupObjectKind { COK_Block, COK_CompoundLiteral };
 
@@ -2214,14 +2243,6 @@ public:
 namespace llvm {
 
 template <> struct DenseMapInfo<clang::serialization::DeclarationNameKey> {
-  static clang::serialization::DeclarationNameKey getEmptyKey() {
-    return clang::serialization::DeclarationNameKey(-1, 1);
-  }
-
-  static clang::serialization::DeclarationNameKey getTombstoneKey() {
-    return clang::serialization::DeclarationNameKey(-1, 2);
-  }
-
   static unsigned
   getHashValue(const clang::serialization::DeclarationNameKey &Key) {
     return Key.getHash();

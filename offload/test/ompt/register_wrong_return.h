@@ -12,6 +12,7 @@
 
 // OMPT entry point handles
 static ompt_set_callback_t ompt_set_callback = 0;
+ompt_get_unique_id_t ompt_get_unique_id = 0;
 
 // Init functions
 int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
@@ -19,6 +20,10 @@ int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
   ompt_set_callback = (ompt_set_callback_t)lookup("ompt_set_callback");
 
   if (!ompt_set_callback)
+    return 1; // failed but wrongly returning 1
+
+  ompt_get_unique_id = (ompt_get_unique_id_t)lookup("ompt_get_unique_id");
+  if (!ompt_get_unique_id)
     return 1; // failed but wrongly returning 1
 
   register_ompt_callback(ompt_callback_device_initialize);

@@ -22,10 +22,10 @@ define <2 x bfloat> @copysign_v2bf16(<2 x bfloat> %vm, <2 x bfloat> %vs) {
 ; ZVFBFMIN-LABEL: copysign_v2bf16:
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    lui a0, 8
+; ZVFBFMIN-NEXT:    addi a1, a0, -1
 ; ZVFBFMIN-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; ZVFBFMIN-NEXT:    vand.vx v9, v9, a0
-; ZVFBFMIN-NEXT:    addi a0, a0, -1
-; ZVFBFMIN-NEXT:    vand.vx v8, v8, a0
+; ZVFBFMIN-NEXT:    vand.vx v8, v8, a1
 ; ZVFBFMIN-NEXT:    vor.vv v8, v8, v9
 ; ZVFBFMIN-NEXT:    ret
   %r = call <2 x bfloat> @llvm.copysign.v2bf16(<2 x bfloat> %vm, <2 x bfloat> %vs)
@@ -42,10 +42,10 @@ define <4 x bfloat> @copysign_v4bf16(<4 x bfloat> %vm, <4 x bfloat> %vs) {
 ; ZVFBFMIN-LABEL: copysign_v4bf16:
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    lui a0, 8
+; ZVFBFMIN-NEXT:    addi a1, a0, -1
 ; ZVFBFMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; ZVFBFMIN-NEXT:    vand.vx v9, v9, a0
-; ZVFBFMIN-NEXT:    addi a0, a0, -1
-; ZVFBFMIN-NEXT:    vand.vx v8, v8, a0
+; ZVFBFMIN-NEXT:    vand.vx v8, v8, a1
 ; ZVFBFMIN-NEXT:    vor.vv v8, v8, v9
 ; ZVFBFMIN-NEXT:    ret
   %r = call <4 x bfloat> @llvm.copysign.v4bf16(<4 x bfloat> %vm, <4 x bfloat> %vs)
@@ -62,10 +62,10 @@ define <8 x bfloat> @copysign_v8bf16(<8 x bfloat> %vm, <8 x bfloat> %vs) {
 ; ZVFBFMIN-LABEL: copysign_v8bf16:
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    lui a0, 8
+; ZVFBFMIN-NEXT:    addi a1, a0, -1
 ; ZVFBFMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZVFBFMIN-NEXT:    vand.vx v9, v9, a0
-; ZVFBFMIN-NEXT:    addi a0, a0, -1
-; ZVFBFMIN-NEXT:    vand.vx v8, v8, a0
+; ZVFBFMIN-NEXT:    vand.vx v8, v8, a1
 ; ZVFBFMIN-NEXT:    vor.vv v8, v8, v9
 ; ZVFBFMIN-NEXT:    ret
   %r = call <8 x bfloat> @llvm.copysign.v8bf16(<8 x bfloat> %vm, <8 x bfloat> %vs)
@@ -82,10 +82,10 @@ define <16 x bfloat> @copysign_v16bf16(<16 x bfloat> %vm, <16 x bfloat> %vs) {
 ; ZVFBFMIN-LABEL: copysign_v16bf16:
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    lui a0, 8
+; ZVFBFMIN-NEXT:    addi a1, a0, -1
 ; ZVFBFMIN-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vand.vx v10, v10, a0
-; ZVFBFMIN-NEXT:    addi a0, a0, -1
-; ZVFBFMIN-NEXT:    vand.vx v8, v8, a0
+; ZVFBFMIN-NEXT:    vand.vx v8, v8, a1
 ; ZVFBFMIN-NEXT:    vor.vv v8, v8, v10
 ; ZVFBFMIN-NEXT:    ret
   %r = call <16 x bfloat> @llvm.copysign.v16bf16(<16 x bfloat> %vm, <16 x bfloat> %vs)
@@ -140,10 +140,10 @@ define <2 x half> @copysign_v2f16(<2 x half> %vm, <2 x half> %vs) {
 ; CHECK-LABEL: copysign_v2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, 8
+; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vand.vx v9, v9, a0
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vand.vx v8, v8, a0
+; CHECK-NEXT:    vand.vx v8, v8, a1
 ; CHECK-NEXT:    vor.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %r = call <2 x half> @llvm.copysign.v2f16(<2 x half> %vm, <2 x half> %vs)
@@ -154,10 +154,10 @@ define <8 x half> @copysign_v8f16(<8 x half> %vm, <8 x half> %vs) {
 ; CHECK-LABEL: copysign_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, 8
+; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vand.vx v9, v9, a0
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vand.vx v8, v8, a0
+; CHECK-NEXT:    vand.vx v8, v8, a1
 ; CHECK-NEXT:    vor.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %r = call <8 x half> @llvm.copysign.v8f16(<8 x half> %vm, <8 x half> %vs)

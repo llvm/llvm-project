@@ -1,3 +1,3 @@
-; RUN: not opt < %s -passes=instrumentor -instrumentor-read-config-file=%S/bad_rt_config.json 2>&1 | FileCheck %s --ignore-case
+; RUN: not opt < %s -passes=instrumentor -instrumentor-read-config-files=%S/bad_rt_config.json 2>&1 | FileCheck %s --ignore-case
 
 ; CHECK: error: failed to open instrumentor stub runtime file for writing: {{.*}}

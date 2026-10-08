@@ -302,11 +302,14 @@ def U3Imm  : ImmediateAsmOperand<"U3Imm">;
 def U4Imm  : ImmediateAsmOperand<"U4Imm">;
 def S8Imm  : ImmediateAsmOperand<"S8Imm">;
 def U8Imm  : ImmediateAsmOperand<"U8Imm">;
+def X8Imm  : ImmediateAsmOperand<"X8Imm">;
 def U12Imm : ImmediateAsmOperand<"U12Imm">;
 def S16Imm : ImmediateAsmOperand<"S16Imm">;
 def U16Imm : ImmediateAsmOperand<"U16Imm">;
+def X16Imm : ImmediateAsmOperand<"X16Imm">;
 def S32Imm : ImmediateAsmOperand<"S32Imm">;
 def U32Imm : ImmediateAsmOperand<"U32Imm">;
+def X32Imm : ImmediateAsmOperand<"X32Imm">;
 def U48Imm : ImmediateAsmOperand<"U48Imm">;
 
 //===----------------------------------------------------------------------===//
@@ -366,7 +369,25 @@ defm imm32zx8 : Immediate<i32, [{
   return Imm.isIntN(8);
 }], UIMM8, "U8Imm">;
 
+// Disable for codegen - only relevant for .insn directives.
+defm imm32xx8 : Immediate<i32, [{
+  return false;
+}], UIMM8, "X8Imm">;
+
 defm imm32zx8trunc : Immediate<i32, [{}], UIMM8, "U8Imm">;
+
+// Immediates for the 8-bit LSB chunk of an i32, with the other bits being one.
+defm imm32ll8c : Immediate<i32, [{
+  return Imm.isIntN(32) &&
+         (uint32_t(~Imm.getZExtValue()) & ~0xffULL) == 0;
+}], UIMM8, "U8Imm">;
+
+// Immediates for the 8-bit LSB chunk of an i16 (evaluated as i32),
+// with the other bits being one.
+defm imm16ll8c : Immediate<i32, [{
+  return Imm.isIntN(16) &&
+         (uint16_t(~Imm.getZExtValue()) & ~0xffULL) == 0;
+}], UIMM8, "U8Imm">;
 
 defm imm32zx12 : Immediate<i32, [{
   return Imm.isIntN(12);
@@ -383,6 +404,11 @@ defm imm32sx16n : Immediate<i32, [{
 defm imm32zx16 : Immediate<i32, [{
   return Imm.isIntN(16);
 }], UIMM16, "U16Imm">;
+
+// Disable for codegen - only relevant for .insn directives.
+defm imm32xx16 : Immediate<i32, [{
+  return false;
+}], UIMM16, "X16Imm">;
 
 defm imm32sx16trunc : Immediate<i32, [{}], SIMM16, "S16Imm">;
 defm imm32zx16trunc : Immediate<i32, [{}], UIMM16, "U16Imm">;
@@ -486,6 +512,26 @@ defm imm64zx8 : Immediate<i64, [{
   return Imm.isIntN(8);;
 }], UIMM8, "U8Imm">;
 
+// Immediates for the 8-bit LSB chunk of an i64, with the other bits being one.
+defm imm64ll8c : Immediate<i64, [{
+  return Imm.isIntN(64) &&
+         (uint64_t(~Imm.getZExtValue()) & ~0xffULL) == 0;
+}], UIMM8, "U8Imm">;
+
+// Immediates for the 8-bit LSB chunk of an i16, with the other i16 bits
+// being one.  The immediate is a 16-bit value held in an i64.
+defm imm16ll8c_i64 : Immediate<i64, [{
+  return Imm.isIntN(16) &&
+         (uint16_t(~Imm.getZExtValue()) & ~0xffULL) == 0;
+}], UIMM8, "U8Imm">;
+
+// Immediates for the 8-bit LSB chunk of an i32, with the other i32 bits
+// being one.  The immediate is a 32-bit value held in an i64.
+defm imm32ll8c_i64 : Immediate<i64, [{
+  return Imm.isIntN(32) &&
+         (uint32_t(~Imm.getZExtValue()) & ~0xffULL) == 0;
+}], UIMM8, "U8Imm">;
+
 defm imm64sx16 : Immediate<i64, [{
   return Imm.isSignedIntN(16);
 }], SIMM16, "S16Imm">;
@@ -509,6 +555,11 @@ defm imm64sx32n : Immediate<i64, [{
 defm imm64zx32 : Immediate<i64, [{
   return Imm.isIntN(32);
 }], UIMM32, "U32Imm">;
+
+// Disable for codegen - only relevant for .insn directives.
+defm imm64xx32 : Immediate<i64, [{
+  return false;
+}], UIMM32, "X32Imm">;
 
 defm imm64zx32n : Immediate<i64, [{
   return (-Imm).isIntN(32);
@@ -536,10 +587,10 @@ def len8imm64 : Imm64 {
 //===----------------------------------------------------------------------===//
 
 // Floating-point zero.
-def fpimm0 : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(+0.0); }]>;
+def fpimm0 : FPImmLeaf<fAny, [{ return Imm.isPosZero(); }]>;
 
 // Floating point negative zero.
-def fpimmneg0 : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(-0.0); }]>;
+def fpimmneg0 : FPImmLeaf<fAny, [{ return Imm.isNegZero(); }]>;
 
 //===----------------------------------------------------------------------===//
 // Symbolic address operands
@@ -680,6 +731,16 @@ def bdladdr12onlylen4 : BDLMode<"BDLAddr",  "64", "12", "Only", "4">;
 def bdladdr12onlylen8 : BDLMode<"BDLAddr",  "64", "12", "Only", "8">;
 def bdraddr12only     : BDRMode<"BDRAddr",  "64", "12", "Only">;
 def bdvaddr12only     : BDVMode<            "64", "12">;
+
+// 12-bit unsigned displacement variants (for NI, OI, XI)
+def bdaddr12off1 : ComplexPattern<i64, 2, "selectBDAddr12off1">;
+def bdaddr12off3 : ComplexPattern<i64, 2, "selectBDAddr12off3">;
+def bdaddr12off7 : ComplexPattern<i64, 2, "selectBDAddr12off7">;
+
+// 20-bit signed displacement variants (for NIY, OIY, XIY)
+def bdaddr20off1 : ComplexPattern<i64, 2, "selectBDAddr20off1">;
+def bdaddr20off3 : ComplexPattern<i64, 2, "selectBDAddr20off3">;
+def bdaddr20off7 : ComplexPattern<i64, 2, "selectBDAddr20off7">;
 
 //===----------------------------------------------------------------------===//
 // Miscellaneous

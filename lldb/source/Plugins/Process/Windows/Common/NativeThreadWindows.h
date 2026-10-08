@@ -23,7 +23,7 @@ class NativeThreadWindows : public NativeThreadProtocol {
 public:
   NativeThreadWindows(NativeProcessWindows &process, const HostThread &thread);
 
-  ~NativeThreadWindows() {}
+  ~NativeThreadWindows() override = default;
 
   Status DoStop();
   Status DoResume(lldb::StateType resume_state);
@@ -48,6 +48,8 @@ public:
 
   Status RemoveHardwareBreakpoint(lldb::addr_t addr) override;
 
+  StructuredData::ObjectSP GetExtendedInfo() const override;
+
   void SetStopReason(ThreadStopInfo stop_info, std::string description);
 
   const HostThread &GetHostThread() { return m_host_thread; }
@@ -55,8 +57,6 @@ public:
 protected:
   lldb::StateType m_state = lldb::StateType::eStateInvalid;
   std::string m_name;
-  ThreadStopInfo m_stop_info;
-  std::string m_stop_description;
   std::unique_ptr<NativeRegisterContextWindows> m_reg_context_up;
   // Cache address and index of the watchpoints and hardware breakpoints since
   // the register context does not.

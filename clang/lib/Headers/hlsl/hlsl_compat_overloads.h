@@ -28,6 +28,10 @@ namespace hlsl {
   [[deprecated("In 202x mismatched vector/scalar lowering for " #fn " is "     \
                "deprecated. Explicitly cast parameters.")]]
 
+#define _DXC_DEPRECATED_SCALAR_FN(ty1, ty2, fn)                                \
+  [[deprecated("In 202x mismatched " #ty1 "/" #ty2 " lowering for " #fn " is " \
+               "deprecated. Explicitly cast parameters.")]]
+
 #define _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(fn)                                 \
   _DXC_DEPRECATED_64BIT_FN(fn)                                                 \
   constexpr float fn(double V) { return fn((float)V); }                        \
@@ -230,6 +234,43 @@ namespace hlsl {
     return fn((float4)V1, (float4)V2, (float4)V3);                             \
   }
 
+#define _DXC_COMPAT_BINARY_DOUBLE_MATRIX_OVERLOADS(fn)                         \
+  template <uint R, uint C>                                                    \
+  _DXC_DEPRECATED_64BIT_FN(fn)                                                 \
+  constexpr matrix<float, R, C> fn(matrix<double, R, C> V1,                    \
+                                   matrix<double, R, C> V2) {                  \
+    return fn((matrix<float, R, C>)V1, (matrix<float, R, C>)V2);               \
+  }
+
+#define _DXC_COMPAT_BINARY_INTEGER_MATRIX_OVERLOADS(fn)                        \
+  template <uint R, uint C>                                                    \
+  _DXC_DEPRECATED_INT_FN(fn)                                                   \
+  constexpr matrix<float, R, C> fn(matrix<int, R, C> V1,                       \
+                                   matrix<int, R, C> V2) {                     \
+    return fn((matrix<float, R, C>)V1, (matrix<float, R, C>)V2);               \
+  }                                                                            \
+                                                                               \
+  template <uint R, uint C>                                                    \
+  _DXC_DEPRECATED_INT_FN(fn)                                                   \
+  constexpr matrix<float, R, C> fn(matrix<uint, R, C> V1,                      \
+                                   matrix<uint, R, C> V2) {                    \
+    return fn((matrix<float, R, C>)V1, (matrix<float, R, C>)V2);               \
+  }                                                                            \
+                                                                               \
+  template <uint R, uint C>                                                    \
+  _DXC_DEPRECATED_INT_FN(fn)                                                   \
+  constexpr matrix<float, R, C> fn(matrix<int64_t, R, C> V1,                   \
+                                   matrix<int64_t, R, C> V2) {                 \
+    return fn((matrix<float, R, C>)V1, (matrix<float, R, C>)V2);               \
+  }                                                                            \
+                                                                               \
+  template <uint R, uint C>                                                    \
+  _DXC_DEPRECATED_INT_FN(fn)                                                   \
+  constexpr matrix<float, R, C> fn(matrix<uint64_t, R, C> V1,                  \
+                                   matrix<uint64_t, R, C> V2) {                \
+    return fn((matrix<float, R, C>)V1, (matrix<float, R, C>)V2);               \
+  }
+
 //===----------------------------------------------------------------------===//
 // acos builtins overloads
 //===----------------------------------------------------------------------===//
@@ -257,6 +298,8 @@ _DXC_COMPAT_UNARY_INTEGER_OVERLOADS(atan)
 
 _DXC_COMPAT_BINARY_DOUBLE_OVERLOADS(atan2)
 _DXC_COMPAT_BINARY_INTEGER_OVERLOADS(atan2)
+_DXC_COMPAT_BINARY_DOUBLE_MATRIX_OVERLOADS(atan2)
+_DXC_COMPAT_BINARY_INTEGER_MATRIX_OVERLOADS(atan2)
 
 //===----------------------------------------------------------------------===//
 // ceil builtins overloads
@@ -343,23 +386,87 @@ _DXC_COMPAT_UNARY_INTEGER_OVERLOADS(frac)
 // isinf builtins overloads
 //===----------------------------------------------------------------------===//
 
-_DXC_DEPRECATED_64BIT_FN(fn)
+_DXC_DEPRECATED_64BIT_FN(isinf)
 constexpr bool isinf(double V) { return isinf((float)V); }
-_DXC_DEPRECATED_64BIT_FN(fn)
+_DXC_DEPRECATED_64BIT_FN(isinf)
 constexpr bool2 isinf(double2 V) { return isinf((float2)V); }
-_DXC_DEPRECATED_64BIT_FN(fn)
+_DXC_DEPRECATED_64BIT_FN(isinf)
 constexpr bool3 isinf(double3 V) { return isinf((float3)V); }
-_DXC_DEPRECATED_64BIT_FN(fn)
+_DXC_DEPRECATED_64BIT_FN(isinf)
 constexpr bool4 isinf(double4 V) { return isinf((float4)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool1x2 isinf(double1x2 V) { return isinf((float1x2)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool1x3 isinf(double1x3 V) { return isinf((float1x3)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool1x4 isinf(double1x4 V) { return isinf((float1x4)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool2x1 isinf(double2x1 V) { return isinf((float2x1)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool2x2 isinf(double2x2 V) { return isinf((float2x2)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool2x3 isinf(double2x3 V) { return isinf((float2x3)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool2x4 isinf(double2x4 V) { return isinf((float2x4)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool3x1 isinf(double3x1 V) { return isinf((float3x1)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool3x2 isinf(double3x2 V) { return isinf((float3x2)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool3x3 isinf(double3x3 V) { return isinf((float3x3)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool3x4 isinf(double3x4 V) { return isinf((float3x4)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool4x1 isinf(double4x1 V) { return isinf((float4x1)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool4x2 isinf(double4x2 V) { return isinf((float4x2)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool4x3 isinf(double4x3 V) { return isinf((float4x3)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool4x4 isinf(double4x4 V) { return isinf((float4x4)V); }
 
 //===----------------------------------------------------------------------===//
 // isnan builtins overloads
 //===----------------------------------------------------------------------===//
 
+_DXC_DEPRECATED_64BIT_FN(isnan)
 constexpr bool isnan(double V) { return isnan((float)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
 constexpr bool2 isnan(double2 V) { return isnan((float2)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
 constexpr bool3 isnan(double3 V) { return isnan((float3)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
 constexpr bool4 isnan(double4 V) { return isnan((float4)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool1x2 isnan(double1x2 V) { return isnan((float1x2)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool1x3 isnan(double1x3 V) { return isnan((float1x3)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool1x4 isnan(double1x4 V) { return isnan((float1x4)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool2x1 isnan(double2x1 V) { return isnan((float2x1)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool2x2 isnan(double2x2 V) { return isnan((float2x2)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool2x3 isnan(double2x3 V) { return isnan((float2x3)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool2x4 isnan(double2x4 V) { return isnan((float2x4)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool3x1 isnan(double3x1 V) { return isnan((float3x1)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool3x2 isnan(double3x2 V) { return isnan((float3x2)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool3x3 isnan(double3x3 V) { return isnan((float3x3)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool3x4 isnan(double3x4 V) { return isnan((float3x4)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool4x1 isnan(double4x1 V) { return isnan((float4x1)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool4x2 isnan(double4x2 V) { return isnan((float4x2)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool4x3 isnan(double4x3 V) { return isnan((float4x3)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool4x4 isnan(double4x4 V) { return isnan((float4x4)V); }
 
 //===----------------------------------------------------------------------===//
 // lerp builtins overloads
@@ -414,6 +521,12 @@ constexpr __detail::enable_if_t<(N > 1 && N <= 4), vector<T, N>> max(
   return max((vector<T, N>)p0, p1);
 }
 
+_DXC_DEPRECATED_SCALAR_FN(float, int, max)
+constexpr float max(float p0, int p1) { return max(p0, (float)p1); }
+
+_DXC_DEPRECATED_SCALAR_FN(int, float, max)
+constexpr float max(int p0, float p1) { return max((float)p0, p1); }
+
 //===----------------------------------------------------------------------===//
 // min builtins overloads
 //===----------------------------------------------------------------------===//
@@ -432,6 +545,12 @@ constexpr __detail::enable_if_t<(N > 1 && N <= 4), vector<T, N>> min(
   return min((vector<T, N>)p0, p1);
 }
 
+_DXC_DEPRECATED_SCALAR_FN(float, int, min)
+constexpr float min(float p0, int p1) { return min(p0, (float)p1); }
+
+_DXC_DEPRECATED_SCALAR_FN(int, float, min)
+constexpr float min(int p0, float p1) { return min((float)p0, p1); }
+
 //===----------------------------------------------------------------------===//
 // normalize builtins overloads
 //===----------------------------------------------------------------------===//
@@ -445,6 +564,8 @@ _DXC_COMPAT_UNARY_INTEGER_OVERLOADS(normalize)
 
 _DXC_COMPAT_BINARY_DOUBLE_OVERLOADS(pow)
 _DXC_COMPAT_BINARY_INTEGER_OVERLOADS(pow)
+_DXC_COMPAT_BINARY_DOUBLE_MATRIX_OVERLOADS(pow)
+_DXC_COMPAT_BINARY_INTEGER_MATRIX_OVERLOADS(pow)
 
 //===----------------------------------------------------------------------===//
 // rsqrt builtins overloads

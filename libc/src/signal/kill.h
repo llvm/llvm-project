@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC_SIGNAL_KILL_H
 #define LLVM_LIBC_SRC_SIGNAL_KILL_H
 
+#include "hdr/types/pid_t.h"
 #include "src/__support/macros/config.h"
-#include <signal.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

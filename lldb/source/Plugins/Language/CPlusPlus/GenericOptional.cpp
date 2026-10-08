@@ -10,7 +10,6 @@
 #include "LibCxx.h"
 #include "LibStdcpp.h"
 #include "MsvcStl.h"
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Target.h"
 #include "llvm/Support/ErrorExtras.h"
@@ -128,7 +127,7 @@ ValueObjectSP GenericOptionalFrontend::GetChildAtIndex(uint32_t _idx) {
   if (!holder_type)
     return ValueObjectSP();
 
-  return val_sp->Clone(ConstString("Value"));
+  return val_sp->Clone("Value");
 }
 
 SyntheticChildrenFrontEnd *

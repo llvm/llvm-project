@@ -53,6 +53,16 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
       libc.src.__support.freestore
       libc.src.__support.freetrie
   )
+
+  add_libc_test(
+    tlsf_table_test
+    SUITE
+      libc-support-tests
+    SRCS
+      tlsf_table_test.cpp
+    DEPENDS
+      libc.src.__support.tlsf_table
+  )
 endif()
 
 # TODO: FreeListHeap uses the _end symbol which conflicts with the _end symbol
@@ -69,6 +79,36 @@ if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
       libc.src.__support.freelist_heap
       libc.src.string.memcmp
       libc.src.string.memcpy
+      libc.src.string.memory_utils.inline_memset
+  )
+
+  # Same tests, but with the heap rotating between several free stores, so that
+  # both configurations get covered by a single build.
+  add_libc_test(
+    freelist_heap_rotation_test
+    SUITE
+      libc-support-tests
+    SRCS
+      freelist_heap_test.cpp
+    COMPILE_OPTIONS
+      -DLIBC_COPT_BAREMETAL_HEAP_ENABLE_FREESTORE_ROTATION
+    DEPENDS
+      libc.src.__support.CPP.span
+      libc.src.__support.freelist_heap
+      libc.src.string.memcmp
+      libc.src.string.memcpy
+      libc.src.string.memory_utils.inline_memset
+  )
+
+  add_libc_test(
+    freelist_heap_death_test
+    SUITE
+      libc-support-tests
+    SRCS
+      freelist_heap_death_test.cpp
+    DEPENDS
+      libc.src.__support.CPP.span
+      libc.src.__support.freelist_heap
   )
 endif()
 
@@ -109,7 +149,7 @@ add_libc_test(
   SUITE
     libc-support-tests
   SRCS
-  high_precision_decimal_test.cpp
+    high_precision_decimal_test.cpp
   DEPENDS
     libc.src.__support.high_precision_decimal
     libc.src.__support.uint128
@@ -126,6 +166,7 @@ add_libc_test(
   HDRS
     str_to_fp_test.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.integer_literals
     libc.src.__support.str_to_float
     libc.src.__support.uint128
@@ -166,6 +207,7 @@ add_libc_test(
     libc.src.__support.CPP.string_view
     libc.src.__support.integer_literals
     libc.src.__support.integer_to_string
+    libc.src.__support.macros.properties.types
     libc.src.__support.uint128
 )
 
@@ -239,14 +281,13 @@ add_libc_test(
     hash_test.cpp
   DEPENDS
     libc.src.__support.hash
+    libc.src.__support.CPP.bit
     libc.src.__support.CPP.new
     libc.src.stdlib.rand
     libc.src.stdlib.srand
     libc.src.string.memset
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
-  UNIT_TEST_ONLY
-    # Aligned Allocation is not supported in hermetic builds.
 )
 
 add_libc_test(
@@ -258,6 +299,26 @@ add_libc_test(
   DEPENDS
     libc.src.__support.memory_size
 )
+
+if(LIBC_TARGET_OS_IS_BAREMETAL AND
+   NOT LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP)
+  add_object_library(
+    minimal_external_crt1_for_test
+    SRCS
+      minimal_external_crt1_for_test.cpp
+  )
+
+  add_libc_hermetic(
+    external_startup_link_test
+    NO_RUN_POSTBUILD
+    STARTUP
+      .minimal_external_crt1_for_test
+    SUITE
+      libc-support-tests
+    SRCS
+      external_startup_link_test.cpp
+  )
+endif()
 
 add_libc_test(
   str_to_float_comparison_test
@@ -304,6 +365,8 @@ add_libc_test(
 
 add_subdirectory(CPP)
 add_subdirectory(File)
+add_subdirectory(pwd)
+add_subdirectory(printf_core)
 add_subdirectory(RPC)
 add_subdirectory(OSUtil)
 add_subdirectory(FPUtil)
@@ -313,3 +376,6 @@ add_subdirectory(time)
 add_subdirectory(threads)
 add_subdirectory(wchar)
 add_subdirectory(wctype)
+if(LLVM_LIBC_FULL_BUILD)
+  add_subdirectory(regex)
+endif()

@@ -16,7 +16,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR float nextdownf(float x) {
+LIBC_INLINE constexpr float nextdownf(float x) {
   return fputil::nextupdown</*IsDown=*/true>(x);
 }
 

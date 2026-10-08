@@ -274,6 +274,7 @@ FAST(google-runtime-operator, 1.0)
 FAST(google-upgrade-googletest-case, 1.0)
 FAST(linuxkernel-must-check-errs, 0.0)
 FAST(llvm-else-after-return, 2.0)
+FAST(llvm-formatv-string, 2.0)
 FAST(llvm-header-guard, 0.0)
 FAST(llvm-include-order, -1.0)
 FAST(llvm-namespace-comment, 1.0)
@@ -465,7 +466,5 @@ FAST(readability-uppercase-literal-suffix, 1.0)
 FAST(readability-use-anyofallof, 1.0)
 FAST(readability-use-concise-preprocessor-directives, 1.0)
 FAST(readability-use-std-min-max, 1.0)
-FAST(zircon-temporary-objects, 1.0)
-
 #undef FAST
 #undef SLOW

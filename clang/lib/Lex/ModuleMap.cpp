@@ -175,18 +175,25 @@ static void appendSubframeworkPaths(Module *Mod,
 OptionalFileEntryRef ModuleMap::findHeader(
     Module *M, const Module::UnresolvedHeaderDirective &Header,
     SmallVectorImpl<char> &RelativePathName, bool &NeedsFramework) {
-  // Search for the header file within the module's home directory.
-  auto Directory = M->Directory;
-  SmallString<128> FullPathName(Directory->getName());
-
   auto GetFile = [&](StringRef Filename) -> OptionalFileEntryRef {
-    auto File =
-        expectedToOptional(SourceMgr.getFileManager().getFileRef(Filename));
+    auto File = SourceMgr.getFileManager().getOptionalFileRef(Filename);
     if (!File || (Header.Size && File->getSize() != *Header.Size) ||
         (Header.ModTime && File->getModificationTime() != *Header.ModTime))
       return std::nullopt;
     return *File;
   };
+
+  if (llvm::sys::path::is_absolute(Header.FileName)) {
+    RelativePathName.clear();
+    RelativePathName.append(Header.FileName.begin(), Header.FileName.end());
+    return GetFile(Header.FileName);
+  }
+
+  // Search for the header file within the module's home directory.
+  auto Directory = M->Directory;
+  if (!Directory)
+    return std::nullopt;
+  SmallString<128> FullPathName(Directory->getName());
 
   auto GetFrameworkFile = [&]() -> OptionalFileEntryRef {
     unsigned FullPathLength = FullPathName.size();
@@ -215,12 +222,6 @@ OptionalFileEntryRef ModuleMap::findHeader(
     llvm::sys::path::append(FullPathName, RelativePathName);
     return GetFile(FullPathName);
   };
-
-  if (llvm::sys::path::is_absolute(Header.FileName)) {
-    RelativePathName.clear();
-    RelativePathName.append(Header.FileName.begin(), Header.FileName.end());
-    return GetFile(Header.FileName);
-  }
 
   if (M->isPartOfFramework())
     return GetFrameworkFile();
@@ -1265,6 +1266,8 @@ Module *ModuleMap::inferFrameworkModule(DirectoryEntryRef FrameworkDir,
   llvm::sys::path::append(SubframeworksDirName, "Frameworks");
   llvm::sys::path::native(SubframeworksDirName);
   llvm::vfs::FileSystem &FS = FileMgr.getVirtualFileSystem();
+  // Every entry here becomes a submodule of this framework.
+  recordDirectoryDependencies(Result, SubframeworksDirName);
   for (llvm::vfs::directory_iterator
            Dir = FS.dir_begin(SubframeworksDirName, EC),
            DirEnd;
@@ -1339,10 +1342,25 @@ void ModuleMap::setUmbrellaHeaderAsWritten(
   Mod->UmbrellaRelativeToRootModuleDirectory =
       PathRelativeToRootModuleDirectory.str();
   UmbrellaDirs[UmbrellaHeader.getDir()] = Mod;
+  // A header added next to the umbrella header doesn't change the module, but
+  // it should rebuild to warn that the umbrella header doesn't include it.
+  recordDirectoryDependencies(Mod, UmbrellaHeader.getDir().getName());
 
   // Notify callbacks that we just added a new header.
   for (const auto &Cb : Callbacks)
     Cb->moduleMapAddUmbrellaHeader(UmbrellaHeader);
+}
+
+void ModuleMap::recordDirectoryDependencies(Module *Mod, StringRef Dir) {
+  FileManager &FileMgr = SourceMgr.getFileManager();
+  SmallVector<std::string, 2> Sources;
+  FileMgr.getVirtualFileSystem().getDirectoryContentRealSources(Dir, Sources);
+  for (StringRef Source : Sources) {
+    SmallString<256> Canonical(Source);
+    FileMgr.makeAbsolutePath(Canonical);
+    llvm::sys::path::remove_dots(Canonical, /*remove_dot_dot=*/true);
+    Mod->addDirectoryDependency(Canonical);
+  }
 }
 
 void ModuleMap::setUmbrellaDirAsWritten(
@@ -1354,6 +1372,8 @@ void ModuleMap::setUmbrellaDirAsWritten(
   Mod->UmbrellaRelativeToRootModuleDirectory =
       PathRelativeToRootModuleDirectory.str();
   UmbrellaDirs[UmbrellaDir] = Mod;
+  // The umbrella directory tree is enumerated to collect the module's headers.
+  recordDirectoryDependencies(Mod, UmbrellaDir.getName());
 }
 
 void ModuleMap::addUnresolvedHeader(Module *Mod,
@@ -2216,6 +2236,7 @@ void ModuleMapLoader::handleUmbrellaDirDecl(
     SmallVector<Module::Header, 6> Headers;
     llvm::vfs::FileSystem &FS =
         SourceMgr.getFileManager().getVirtualFileSystem();
+    Map.recordDirectoryDependencies(ActiveModule, Dir->getName());
     for (llvm::vfs::recursive_directory_iterator I(FS, Dir->getName(), EC), E;
          I != E && !EC; I.increment(EC)) {
       if (auto FE = SourceMgr.getFileManager().getOptionalFileRef(I->path())) {

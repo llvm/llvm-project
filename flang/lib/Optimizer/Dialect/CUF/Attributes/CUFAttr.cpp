@@ -13,7 +13,6 @@
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/CUF/CUFDialect.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Operation.h"
@@ -27,7 +26,7 @@ namespace cuf {
 
 void CUFDialect::registerAttributes() {
   addAttributes<ClusterDimsAttr, DataAttributeAttr, DataTransferKindAttr,
-                LaunchBoundsAttr, ProcAttributeAttr>();
+                LaunchBoundsAttr, LaunchConfigAttr, ProcAttributeAttr>();
 }
 
 cuf::DataAttributeAttr getDataAttr(mlir::Operation *op) {
@@ -63,6 +62,17 @@ bool isDeviceDataAttribute(cuf::DataAttribute attr) {
 bool hasDeviceDataAttr(mlir::Operation *op) {
   if (auto dataAttr = getDataAttr(op))
     return isDeviceDataAttribute(dataAttr.getValue());
+  return false;
+}
+
+bool isManagedOrUnifiedDataAttribute(cuf::DataAttribute attr) {
+  return attr == cuf::DataAttribute::Managed ||
+         attr == cuf::DataAttribute::Unified;
+}
+
+bool hasManagedOrUnifiedDataAttr(mlir::Operation *op) {
+  if (auto dataAttr = getDataAttr(op))
+    return isManagedOrUnifiedDataAttribute(dataAttr.getValue());
   return false;
 }
 

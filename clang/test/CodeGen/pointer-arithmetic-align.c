@@ -10,10 +10,10 @@ struct a {
 };
 
 // CHECK-LABEL: define dso_local void @ptradd_0(
-// CHECK-SAME: ptr noundef writeonly captures(none) initializes((8, 9)) [[CTX:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr nofree noundef writeonly captures(none) initializes((8, 9)) [[CTX:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[BLOCK:%.*]] = getelementptr inbounds nuw i8, ptr [[CTX]], i64 8
-// CHECK-NEXT:    store i8 0, ptr [[BLOCK]], align 8, !tbaa [[TBAA6:![0-9]+]]
+// CHECK-NEXT:    store i8 0, ptr [[BLOCK]], align 8, !tbaa [[TBAA5:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 void ptradd_0(struct a *ctx) {
@@ -21,10 +21,10 @@ void ptradd_0(struct a *ctx) {
 }
 
 // CHECK-LABEL: define dso_local void @ptradd_4(
-// CHECK-SAME: ptr noundef writeonly captures(none) initializes((12, 13)) [[CTX:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef writeonly captures(none) initializes((12, 13)) [[CTX:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[CTX]], i64 12
-// CHECK-NEXT:    store i8 0, ptr [[ADD_PTR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store i8 0, ptr [[ADD_PTR]], align 4, !tbaa [[TBAA5]]
 // CHECK-NEXT:    ret void
 //
 void ptradd_4(struct a *ctx) {
@@ -32,10 +32,10 @@ void ptradd_4(struct a *ctx) {
 }
 
 // CHECK-LABEL: define dso_local void @ptradd_8(
-// CHECK-SAME: ptr noundef writeonly captures(none) initializes((16, 17)) [[CTX:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef writeonly captures(none) initializes((16, 17)) [[CTX:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[CTX]], i64 16
-// CHECK-NEXT:    store i8 0, ptr [[ADD_PTR]], align 8, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store i8 0, ptr [[ADD_PTR]], align 8, !tbaa [[TBAA5]]
 // CHECK-NEXT:    ret void
 //
 void ptradd_8(struct a *ctx) {
@@ -43,10 +43,10 @@ void ptradd_8(struct a *ctx) {
 }
 
 // CHECK-LABEL: define dso_local void @ptradd_8_commuted(
-// CHECK-SAME: ptr noundef writeonly captures(none) initializes((16, 17)) [[CTX:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef writeonly captures(none) initializes((16, 17)) [[CTX:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[CTX]], i64 16
-// CHECK-NEXT:    store i8 0, ptr [[ADD_PTR]], align 8, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store i8 0, ptr [[ADD_PTR]], align 8, !tbaa [[TBAA5]]
 // CHECK-NEXT:    ret void
 //
 void ptradd_8_commuted(struct a *ctx) {
@@ -54,10 +54,10 @@ void ptradd_8_commuted(struct a *ctx) {
 }
 
 // CHECK-LABEL: define dso_local void @ptrsub_4(
-// CHECK-SAME: ptr noundef writeonly captures(none) initializes((8, 9)) [[CTX:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef writeonly captures(none) initializes((8, 9)) [[CTX:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[CTX]], i64 8
-// CHECK-NEXT:    store i8 0, ptr [[ADD_PTR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store i8 0, ptr [[ADD_PTR]], align 4, !tbaa [[TBAA5]]
 // CHECK-NEXT:    ret void
 //
 void ptrsub_4(struct a *ctx) {
@@ -65,19 +65,19 @@ void ptrsub_4(struct a *ctx) {
 }
 
 // CHECK-LABEL: define dso_local void @neg_ptradd_var_index(
-// CHECK-SAME: ptr noundef writeonly captures(none) [[CTX:%.*]], i8 noundef zeroext [[IDX:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef writeonly captures(none) [[CTX:%.*]], i8 noundef zeroext [[IDX:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[BLOCK:%.*]] = getelementptr inbounds nuw i8, ptr [[CTX]], i64 8
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i8 [[IDX]] to i64
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[BLOCK]], i64 [[IDX_EXT]]
-// CHECK-NEXT:    store i8 0, ptr [[ADD_PTR]], align 1, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store i8 0, ptr [[ADD_PTR]], align 1, !tbaa [[TBAA5]]
 // CHECK-NEXT:    ret void
 //
 void neg_ptradd_var_index(struct a *ctx, uint8_t idx) {
   *(ctx->block + idx) = 0;
 }
 //.
-// CHECK: [[META4:![0-9]+]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
-// CHECK: [[META5]] = !{!"Simple C/C++ TBAA"}
-// CHECK: [[TBAA6]] = !{[[META4]], [[META4]], i64 0}
+// CHECK: [[META3:![0-9]+]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
+// CHECK: [[META4]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[TBAA5]] = !{[[META3]], [[META3]], i64 0}
 //.

@@ -20,6 +20,29 @@ static constexpr float16 neg_one =
         .get_val();
 
 TEST_F(LlvmLibcAtan2f16Test, SpecialNumbers) {
+  constexpr float16 PI = static_cast<float16>(0x1.92p+1);
+  constexpr float16 PI_OVER_2 = static_cast<float16>(0x1.92p+0);
+  constexpr float16 PI_OVER_4 = static_cast<float16>(0x1.92p-1);
+  constexpr float16 THREE_PI_OVER_4 = static_cast<float16>(0x1.2d8p+1);
+
+  EXPECT_FP_EQ(PI, LIBC_NAMESPACE::atan2f16(zero, neg_zero));
+  EXPECT_FP_EQ(-PI, LIBC_NAMESPACE::atan2f16(neg_zero, neg_zero));
+  EXPECT_FP_EQ(PI, LIBC_NAMESPACE::atan2f16(zero, neg_inf));
+  EXPECT_FP_EQ(-PI, LIBC_NAMESPACE::atan2f16(neg_zero, neg_inf));
+  EXPECT_FP_EQ(PI_OVER_2, LIBC_NAMESPACE::atan2f16(inf, zero));
+  EXPECT_FP_EQ(PI_OVER_2, LIBC_NAMESPACE::atan2f16(inf, neg_zero));
+  EXPECT_FP_EQ(-PI_OVER_2, LIBC_NAMESPACE::atan2f16(neg_inf, zero));
+  EXPECT_FP_EQ(-PI_OVER_2, LIBC_NAMESPACE::atan2f16(neg_inf, neg_zero));
+  EXPECT_FP_EQ(PI_OVER_4, LIBC_NAMESPACE::atan2f16(inf, inf));
+  EXPECT_FP_EQ(-PI_OVER_4, LIBC_NAMESPACE::atan2f16(neg_inf, inf));
+  EXPECT_FP_EQ(THREE_PI_OVER_4, LIBC_NAMESPACE::atan2f16(inf, neg_inf));
+  EXPECT_FP_EQ(-THREE_PI_OVER_4, LIBC_NAMESPACE::atan2f16(neg_inf, neg_inf));
+
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atan2f16(aNaN, zero));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atan2f16(1.0, aNaN));
+  EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::atan2f16(1.0, inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, LIBC_NAMESPACE::atan2f16(-1.0, inf));
+
   EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::atan2f16(sNaN, sNaN),
                               FE_INVALID);
   EXPECT_MATH_ERRNO(0);

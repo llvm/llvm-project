@@ -10,16 +10,18 @@
 #include "hdr/wchar_macros.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/File/file.h"
+#include "src/__support/File/file_mode.h"
 #include "src/__support/alloc-checker.h"
 #include "src/__support/error_or.h"
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/MemoryMatcher.h"
 #include "test/UnitTest/Test.h"
 
-using ModeFlags = LIBC_NAMESPACE::File::ModeFlags;
 using MemoryView = LIBC_NAMESPACE::testing::MemoryView;
 using LIBC_NAMESPACE::ErrorOr;
 using LIBC_NAMESPACE::File;
 using LIBC_NAMESPACE::FileIOResult;
+using LIBC_NAMESPACE::FileMode;
 
 class StringFile : public File {
   static constexpr size_t SIZE = 512;
@@ -40,13 +42,12 @@ class StringFile : public File {
 
 public:
   explicit StringFile(char *buffer, size_t buflen, int bufmode, bool owned,
-                      ModeFlags modeflags)
+                      FileMode mode)
       : LIBC_NAMESPACE::File(&str_write, &str_read, &str_seek, &str_close,
                              reinterpret_cast<uint8_t *>(buffer), buflen,
-                             bufmode, owned, modeflags),
+                             bufmode, owned, mode),
         pos(0), eof_marker(0), write_append(false) {
-    if (modeflags &
-        static_cast<ModeFlags>(LIBC_NAMESPACE::File::OpenMode::APPEND))
+    if (mode.is_append())
       write_append = true;
   }
 
@@ -108,10 +109,10 @@ ErrorOr<off_t> StringFile::str_seek(LIBC_NAMESPACE::File *f, off_t offset,
 StringFile *new_string_file(char *buffer, size_t buflen, int bufmode,
                             bool owned, const char *mode) {
   LIBC_NAMESPACE::AllocChecker ac;
+  const FileMode file_mode(mode);
   // We will just assume the allocation succeeds. We cannot test anything
   // otherwise.
-  return new (ac) StringFile(buffer, buflen, bufmode, owned,
-                             LIBC_NAMESPACE::File::mode_flags(mode));
+  return new (ac) StringFile(buffer, buflen, bufmode, owned, file_mode);
 }
 
 TEST(LlvmLibcFileTest, WriteOnly) {
@@ -560,7 +561,9 @@ TEST(LlvmLibcFileTest, Ungetwc) {
   EXPECT_EQ(static_cast<uint32_t>(ws_out[0]), static_cast<uint32_t>(L'A'));
 
   auto unget_res = f->ungetwc(L'B');
-  EXPECT_EQ(static_cast<uint32_t>(unget_res), static_cast<uint32_t>(L'B'));
+  ASSERT_TRUE(unget_res.has_value());
+  EXPECT_EQ(static_cast<uint32_t>(unget_res.value()),
+            static_cast<uint32_t>(L'B'));
   auto read_res2 = f->read(ws_out, 1);
 
   ASSERT_EQ(read_res2.value, size_t(1));
@@ -640,7 +643,9 @@ TEST(LlvmLibcFileTest, UngetwcMultiByte) {
   EXPECT_EQ(static_cast<uint32_t>(ws_out[0]), static_cast<uint32_t>(L'€'));
 
   auto unget_res = f->ungetwc(L'¢');
-  EXPECT_EQ(static_cast<uint32_t>(unget_res), static_cast<uint32_t>(L'¢'));
+  ASSERT_TRUE(unget_res.has_value());
+  EXPECT_EQ(static_cast<uint32_t>(unget_res.value()),
+            static_cast<uint32_t>(L'¢'));
 
   auto read_res2 = f->read(ws_out, 1);
   ASSERT_EQ(read_res2.value, size_t(1));
@@ -662,7 +667,9 @@ TEST(LlvmLibcFileTest, UngetwcUnbufferedMultiByte) {
   EXPECT_EQ(static_cast<uint32_t>(ws_out[0]), static_cast<uint32_t>(L'€'));
 
   auto unget_res = f->ungetwc(L'¢');
-  EXPECT_EQ(static_cast<uint32_t>(unget_res), static_cast<uint32_t>(L'¢'));
+  ASSERT_TRUE(unget_res.has_value());
+  EXPECT_EQ(static_cast<uint32_t>(unget_res.value()),
+            static_cast<uint32_t>(L'¢'));
 
   auto read_res2 = f->read(ws_out, 1);
   ASSERT_EQ(read_res2.value, size_t(1));
@@ -765,7 +772,9 @@ TEST(LlvmLibcFileTest, UngetwcWEOF) {
             static_cast<uint32_t>(File::Orientation::UNORIENTED));
 
   auto unget_res = f->ungetwc(WEOF);
-  EXPECT_EQ(static_cast<uint32_t>(unget_res), static_cast<uint32_t>(WEOF));
+  ASSERT_TRUE(unget_res.has_value());
+  EXPECT_EQ(static_cast<uint32_t>(unget_res.value()),
+            static_cast<uint32_t>(WEOF));
 
   EXPECT_EQ(static_cast<uint32_t>(f->get_orientation()),
             static_cast<uint32_t>(File::Orientation::UNORIENTED));
@@ -821,10 +830,10 @@ class ShortWriteFile : public File {
 
 public:
   explicit ShortWriteFile(char *buffer, size_t buflen, int bufmode, bool owned,
-                          ModeFlags modeflags, size_t max_write_bytes)
+                          FileMode mode, size_t max_write_bytes)
       : LIBC_NAMESPACE::File(&short_write, &short_read, &short_seek,
                              &short_close, reinterpret_cast<uint8_t *>(buffer),
-                             buflen, bufmode, owned, modeflags),
+                             buflen, bufmode, owned, mode),
         pos(0), max_write(max_write_bytes) {}
 
   void reset() { pos = 0; }
@@ -839,9 +848,9 @@ public:
 TEST(LlvmLibcFileTest, PartialWideCharWriteDetected) {
   LIBC_NAMESPACE::AllocChecker ac;
   // Unbuffered so writes go directly to platform_write, limited to 2 bytes.
-  ShortWriteFile *f = new (ac) ShortWriteFile(
-      nullptr, 0, _IONBF, true, LIBC_NAMESPACE::File::mode_flags("w"),
-      /*max_write_bytes=*/2);
+  ShortWriteFile *f =
+      new (ac) ShortWriteFile(nullptr, 0, _IONBF, true, FileMode("w"),
+                              /*max_write_bytes=*/2);
   ASSERT_FALSE(f == nullptr);
 
   // € (U+20AC) encodes to 3 UTF-8 bytes: 0xE2 0x82 0xAC.
@@ -856,5 +865,20 @@ TEST(LlvmLibcFileTest, PartialWideCharWriteDetected) {
   // The error indicator on the stream should be set.
   EXPECT_TRUE(f->error());
 
+  ASSERT_EQ(f->close(), 0);
+}
+
+TEST(LlvmLibcFileTest, FileLockRAII) {
+  StringFile *f = new_string_file(nullptr, 0, _IONBF, false, "w+");
+  ASSERT_FALSE(f == nullptr);
+
+  {
+    File::FileLock lock(f);
+    ASSERT_EQ(f->write_unlocked("abc", 3).value, size_t(3));
+  }
+
+  // After FileLock is destroyed, operations under lock still acquire and
+  // release cleanly.
+  ASSERT_EQ(f->write("def", 3).value, size_t(3));
   ASSERT_EQ(f->close(), 0);
 }

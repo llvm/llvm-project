@@ -230,6 +230,7 @@ MSP430TargetLowering::getRegForInlineAsmConstraint(
 //                      Calling Convention Implementation
 //===----------------------------------------------------------------------===//
 
+#define GET_CALLING_CONV_IMPL
 #include "MSP430GenCallingConv.inc"
 
 /// For each argument in a function store the number of pieces it is composed
@@ -685,8 +686,9 @@ SDValue MSP430TargetLowering::LowerCCCCallTo(
 
       if (Flags.isByVal()) {
         SDValue SizeNode = DAG.getConstant(Flags.getByValSize(), dl, MVT::i16);
-        MemOp = DAG.getMemcpy(Chain, dl, PtrOff, Arg, SizeNode,
-                              Flags.getNonZeroByValAlign(),
+        Align Alignment = Flags.getNonZeroByValAlign();
+        MemOp = DAG.getMemcpy(Chain, dl, PtrOff, Arg, SizeNode, Alignment,
+                              Alignment,
                               /*isVolatile*/ false,
                               /*AlwaysInline=*/true,
                               /*CI=*/nullptr, std::nullopt,

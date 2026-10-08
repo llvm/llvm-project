@@ -41,11 +41,16 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/ModuleMap.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Serialization/ObjectFilePCHContainerReader.h"
 
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"
@@ -64,7 +69,11 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Expression/Expression.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/StreamFile.h"
+#include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandObject.h"
+#include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -243,8 +252,13 @@ static lldb::addr_t GetVTableAddress(Process &process,
 
     vbtable_ptr_addr += vbtable_ptr_offset;
 
-    Status err;
-    return process.ReadPointerFromMemory(vbtable_ptr_addr, err);
+    llvm::Expected<lldb::addr_t> vbtable_ptr_addr_or_err =
+        process.ReadPointerFromMemory(vbtable_ptr_addr);
+    if (!vbtable_ptr_addr_or_err) {
+      llvm::consumeError(vbtable_ptr_addr_or_err.takeError());
+      return LLDB_INVALID_ADDRESS;
+    }
+    return *vbtable_ptr_addr_or_err;
   }
 
   // We have an object already read from process memory,
@@ -313,6 +327,8 @@ static bool GetVBaseBitOffset(VTableContextBase &vtable_ctx,
   if (base_offset == INT64_MAX)
     return false;
 
+  if (vtable_ctx.isMicrosoft())
+    base_offset += record_layout.getVBPtrOffset().getQuantity();
   bit_offset = base_offset * 8;
 
   return true;
@@ -577,14 +593,80 @@ LanguageSet TypeSystemClang::GetSupportedLanguagesForExpressions() {
   return languages;
 }
 
+namespace {
+class CommandObjectTargetModulesDumpClangPCMInfo : public CommandObjectParsed {
+public:
+  CommandObjectTargetModulesDumpClangPCMInfo(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target modules dump pcm-info",
+            "Dump information about the given clang module (pcm).") {
+    // Take a single file argument.
+    AddSimpleArgumentList(eArgTypeFilename);
+  }
+
+  ~CommandObjectTargetModulesDumpClangPCMInfo() override = default;
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    if (command.GetArgumentCount() != 1) {
+      result.AppendErrorWithFormat("'%s' takes exactly one pcm path argument",
+                                   m_cmd_name.c_str());
+      return;
+    }
+
+    const char *pcm_path = command.GetArgumentAtIndex(0);
+    const FileSpec pcm_file{pcm_path};
+
+    if (pcm_file.GetFileNameExtension() != ".pcm") {
+      result.AppendError("file must have a .pcm extension");
+      return;
+    }
+
+    if (!FileSystem::Instance().Exists(pcm_file)) {
+      result.AppendError("pcm file does not exist");
+      return;
+    }
+
+    const char *clang_args[] = {"clang", pcm_path};
+    clang::CompilerInstance compiler(clang::createInvocation(clang_args));
+    compiler.setVirtualFileSystem(
+        FileSystem::Instance().GetVirtualFileSystem());
+    compiler.createDiagnostics();
+
+    // Pass empty deleter to not attempt to free memory that was allocated
+    // outside of the current scope, possibly statically.
+    std::shared_ptr<llvm::raw_ostream> Out(
+        &result.GetOutputStream().AsRawOstream(), [](llvm::raw_ostream *) {});
+    clang::DumpModuleInfoAction dump_module_info(Out);
+    // DumpModuleInfoAction requires ObjectFilePCHContainerReader.
+    compiler.getPCHContainerOperations()->registerReader(
+        std::make_unique<clang::ObjectFilePCHContainerReader>());
+
+    if (compiler.ExecuteAction(dump_module_info))
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+  }
+};
+} // namespace
+
 void TypeSystemClang::Initialize() {
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(), "clang base AST context plug-in", CreateInstance,
-      GetSupportedLanguagesForTypes(), GetSupportedLanguagesForExpressions());
+      GetSupportedLanguagesForTypes(), GetSupportedLanguagesForExpressions(),
+      DebuggerInitialize);
 }
 
 void TypeSystemClang::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
+}
+
+void TypeSystemClang::DebuggerInitialize(Debugger &debugger) {
+  CommandInterpreter &interpreter = debugger.GetCommandInterpreter();
+  llvm::StringRef parent = "target modules dump";
+  if (CommandObject *dump = interpreter.GetCommandObjectForCommand(parent))
+    dump->LoadSubCommand(
+        "pcm-info",
+        std::make_shared<CommandObjectTargetModulesDumpClangPCMInfo>(
+            interpreter));
 }
 
 void TypeSystemClang::Finalize() {
@@ -695,7 +777,7 @@ void TypeSystemClang::CreateASTContext() {
             m_target_triple)
             .str();
 
-    LLDB_LOG(GetLog(LLDBLog::Expressions), err.c_str());
+    LLDB_LOG(GetLog(LLDBLog::Expressions), "{0}", err);
 
     static std::once_flag s_uninitialized_target_warning;
     Debugger::ReportWarning(std::move(err), /*debugger_id=*/std::nullopt,
@@ -1450,7 +1532,7 @@ void TypeSystemClang::CreateFunctionTemplateSpecializationInfo(
       func_decl->getASTContext(), infos.GetArgs());
 
   func_decl->setFunctionTemplateSpecialization(func_tmpl_decl,
-                                               template_args_ptr, nullptr);
+                                               template_args_ptr, {});
 }
 
 /// Returns true if the given template parameter can represent the given value.
@@ -1673,11 +1755,11 @@ TypeSystemClang::CreateClassTemplateSpecializationDecl(
   class_template_specialization_decl->setInstantiationOf(class_template_decl);
   class_template_specialization_decl->setTemplateArgs(
       TemplateArgumentList::CreateCopy(ast, args));
-  void *insert_pos = nullptr;
-  if (class_template_decl->findSpecialization(args, insert_pos))
+  llvm::FoldingSetInsertToken insert_token;
+  if (class_template_decl->findSpecialization(args, insert_token))
     return nullptr;
   class_template_decl->AddSpecialization(class_template_specialization_decl,
-                                         insert_pos);
+                                         insert_token);
   class_template_specialization_decl->setDeclName(
       class_template_decl->getDeclName());
 
@@ -2412,6 +2494,14 @@ CompilerType TypeSystemClang::GetPointerDiffType(bool is_signed) {
   if (is_signed)
     return GetType(getASTContext().getPointerDiffType());
   return GetType(getASTContext().getUnsignedPointerDiffType());
+}
+
+CompilerType TypeSystemClang::GetSizeType() {
+  // Check if builtin types are initialized.
+  if (!getASTContext().VoidPtrTy)
+    return {};
+
+  return GetType(getASTContext().getSizeType());
 }
 
 void TypeSystemClang::DumpDeclContextHiearchy(clang::DeclContext *decl_ctx) {
@@ -4099,6 +4189,9 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
   case clang::Type::Using:
   case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
+  case clang::Type::LateParsedAttr:
+    llvm_unreachable("LateParsedAttrType is a transient parsing placeholder "
+                     "that is resolved before the AST is finalized.");
   case clang::Type::UnaryTransform:
     break;
   case clang::Type::FunctionNoProto:
@@ -4803,6 +4896,9 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
   case clang::Type::Using:
   case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
+  case clang::Type::LateParsedAttr:
+    llvm_unreachable("LateParsedAttrType is a transient parsing placeholder "
+                     "that is resolved before the AST is finalized.");
 
   case clang::Type::UnaryTransform:
     break;
@@ -4902,6 +4998,12 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
       return lldb::eEncodingUint;
 
     case clang::BuiltinType::NullPtr:
+      return lldb::eEncodingUint;
+
+    case clang::BuiltinType::MetaInfo:
+      // HLSL -- Packed Types
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case clang::BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
       return lldb::eEncodingUint;
 
     case clang::BuiltinType::Kind::ARCUnbridgedCast:
@@ -5004,6 +5106,11 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
   case clang::BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
       break;
+
+      // SPIR-V builtin types.
+#define SPIRV_TYPE(Name, Id, SingletonId) case clang::BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
+      break;
     }
     break;
   // All pointer types are represented as unsigned integer encodings. We may
@@ -5105,6 +5212,9 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
   case clang::Type::Using:
   case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
+  case clang::Type::LateParsedAttr:
+    llvm_unreachable("LateParsedAttrType is a transient parsing placeholder "
+                     "that is resolved before the AST is finalized.");
   case clang::Type::UnaryTransform:
     break;
 
@@ -5529,7 +5639,7 @@ void TypeSystemClang::ForEachEnumerator(
       for (enum_pos = enum_decl->enumerator_begin(),
           enum_end_pos = enum_decl->enumerator_end();
            enum_pos != enum_end_pos; ++enum_pos) {
-        ConstString name(enum_pos->getNameAsString().c_str());
+        ConstString name(enum_pos->getNameAsString());
         if (!callback(integer_type, name, enum_pos->getInitVal()))
           break;
       }
@@ -8477,14 +8587,19 @@ TypeSystemClang::dump(lldb::opaque_compiler_type_t type) const {
 namespace {
 struct ScopedASTColor {
   ScopedASTColor(clang::ASTContext &ast, bool show_colors)
-      : ast(ast), old_show_colors(ast.getDiagnostics().getShowColors()) {
-    ast.getDiagnostics().setShowColors(show_colors);
+      : ast(ast),
+        old_show_colors(
+            ast.getDiagnostics().getDiagnosticOptions().getShowColors()) {
+    ast.getDiagnostics().getDiagnosticOptions().setShowColors(
+        show_colors ? clang::ShowColorsKind::On : clang::ShowColorsKind::Off);
   }
 
-  ~ScopedASTColor() { ast.getDiagnostics().setShowColors(old_show_colors); }
+  ~ScopedASTColor() {
+    ast.getDiagnostics().getDiagnosticOptions().setShowColors(old_show_colors);
+  }
 
   clang::ASTContext &ast;
-  const bool old_show_colors;
+  const clang::ShowColorsKind old_show_colors;
 };
 } // namespace
 
@@ -8494,6 +8609,7 @@ void TypeSystemClang::Dump(llvm::raw_ostream &output, llvm::StringRef filter,
 
   auto consumer =
       clang::CreateASTDumper(output, filter,
+                             /*FilterPath=*/"",
                              /*DumpDecls=*/true,
                              /*Deserialize=*/false,
                              /*DumpLookups=*/false,
@@ -8705,7 +8821,7 @@ bool TypeSystemClang::DumpTypeValue(
         case eFormatBoolean:
         case eFormatBinary:
         case eFormatComplex:
-        case eFormatCString: // NULL terminated C strings
+        case eFormatCString: // null-terminated C strings
         case eFormatDecimal:
         case eFormatEnum:
         case eFormatHex:

@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -76,6 +77,14 @@ class SCEVExpander : public SCEVUseVisitor<SCEVExpander, Value *> {
   // InsertedExpressions caches Values for reuse, so must track RAUW.
   DenseMap<std::pair<SCEVUse, Instruction *>, TrackingVH<Value>>
       InsertedExpressions;
+
+  // InsertedOverflowChecks caches Values for reuse, so must track RAUW.
+  // The key is a tuple containing the trip count for the loop, the absolute
+  // value of the recurrence step, and the insert point. The stored pair values
+  // are the multiply result and a boolean value indicating overflow.
+  DenseMap<std::tuple<Value *, Value *, Instruction *>,
+           std::pair<TrackingVH<Value>, TrackingVH<Value>>>
+      InsertedOverflowChecks;
 
   // InsertedValues only flags inserted instructions so needs no RAUW.
   DenseSet<AssertingVH<Value>> InsertedValues;
@@ -142,7 +151,6 @@ class SCEVExpander : public SCEVUseVisitor<SCEVExpander, Value *> {
   // expansion.
   class SCEVInsertPointGuard {
     IRBuilderBase &Builder;
-    AssertingVH<BasicBlock> Block;
     BasicBlock::iterator Point;
     DebugLoc DbgLoc;
     SCEVExpander *SE;
@@ -152,7 +160,7 @@ class SCEVExpander : public SCEVUseVisitor<SCEVExpander, Value *> {
 
   public:
     SCEVInsertPointGuard(IRBuilderBase &B, SCEVExpander *SE)
-        : Builder(B), Block(B.GetInsertBlock()), Point(B.GetInsertPoint()),
+        : Builder(B), Point(B.GetInsertPoint()),
           DbgLoc(B.getCurrentDebugLocation()), SE(SE) {
       SE->InsertPointGuards.push_back(this);
     }
@@ -163,7 +171,7 @@ class SCEVExpander : public SCEVUseVisitor<SCEVExpander, Value *> {
       // ScalarEvolutionExpander.
       assert(SE->InsertPointGuards.back() == this);
       SE->InsertPointGuards.pop_back();
-      Builder.restoreIP(IRBuilderBase::InsertPoint(Block, Point));
+      Builder.restoreIP(Point);
       Builder.SetCurrentDebugLocation(DbgLoc);
     }
 
@@ -188,7 +196,7 @@ public:
       : SE(SE), DL(SE.getDataLayout()), IVName(Name),
         PreserveLCSSA(PreserveLCSSA), IVIncInsertLoop(nullptr),
         IVIncInsertPos(nullptr), CanonicalMode(true), LSRMode(false),
-        Builder(SE.getContext(), InstSimplifyFolder(DL),
+        Builder(SE.getModule(), InstSimplifyFolder(DL),
                 IRBuilderCallbackInserter(
                     [this](Instruction *I) { rememberInstruction(I); })) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -210,6 +218,7 @@ public:
   /// places within the same BasicBlock can do so.
   void clear() {
     InsertedExpressions.clear();
+    InsertedOverflowChecks.clear();
     InsertedValues.clear();
     InsertedPostIncValues.clear();
     ReusedValues.clear();
@@ -311,6 +320,18 @@ public:
   LLVM_ABI bool isSafeToExpandAt(const SCEV *S,
                                  const Instruction *InsertionPoint) const;
 
+  /// Drop poison-generating flags from \p I, then try re-infer via SCEV.
+  LLVM_ABI static void
+  dropPoisonGeneratingAnnotationsAndReinfer(ScalarEvolution &SE,
+                                            Instruction *I);
+
+  /// Find an existing cast among \p PtrOp's users that computes the same value
+  /// as a `ptrtoaddr` of \p PtrOp to \p Ty and can be reused when expanding
+  /// ptrtoaddr.
+  LLVM_ABI static CastInst *
+  findReusableCastForPtrToAddr(Value *PtrOp, Type *Ty, const DataLayout &DL,
+                               function_ref<bool(const CastInst *)> Dominates);
+
   /// Insert code to directly compute the specified SCEV expression into the
   /// program.  The code is inserted into the specified block.
   LLVM_ABI Value *expandCodeFor(SCEVUse SH, Type *Ty, BasicBlock::iterator I);
@@ -390,9 +411,7 @@ public:
     Builder.SetInsertPoint(IP);
   }
 
-  void setInsertPoint(BasicBlock::iterator IP) {
-    Builder.SetInsertPoint(IP->getParent(), IP);
-  }
+  void setInsertPoint(BasicBlock::iterator IP) { Builder.SetInsertPoint(IP); }
 
   /// Clear the current insertion point. This is useful if the instruction
   /// that had been serving as the insertion point may have been deleted.
@@ -434,7 +453,7 @@ public:
 
   /// Remove inserted instructions that are dead, e.g. due to InstSimplifyFolder
   /// simplifications. \p Root is assumed to be used and won't be removed.
-  void eraseDeadInstructions(Value *Root);
+  LLVM_ABI void eraseDeadInstructions(Value *Root);
 
 private:
   LLVMContext &getContext() const { return SE.getContext(); }
@@ -451,7 +470,7 @@ private:
   /// avoid inserting an obviously redundant operation, and hoisting to an
   /// outer loop when the opportunity is there and it is safe.
   Value *InsertBinop(Instruction::BinaryOps Opcode, Value *LHS, Value *RHS,
-                     SCEV::NoWrapFlags Flags, bool IsSafeToHoist);
+                     SCEVFlags Flags, bool IsSafeToHoist);
 
   /// We want to cast \p V. What would be the best place for such a cast?
   BasicBlock::iterator GetOptimalInsertionPointForCastOf(Value *V) const;
@@ -468,7 +487,7 @@ private:
 
   /// Expand a SCEVAddExpr with a pointer type into a GEP instead of using
   /// ptrtoint+arithmetic+inttoptr.
-  Value *expandAddToGEP(const SCEV *Op, Value *V, SCEV::NoWrapFlags Flags);
+  Value *expandAddToGEP(SCEVUse Op, Value *V, SCEVFlags Flags);
 
   /// Find a previous Value in ExprValueMap for expand.
   /// DropPoisonGeneratingInsts is populated with instructions for which
@@ -476,6 +495,11 @@ private:
   Value *FindValueInExprValueMap(
       SCEVUse S, const Instruction *InsertPt,
       SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts);
+
+  /// Like FindValueInExprValueMap, but on a successful lookup also drops the
+  /// poison-generating flags that reusing the value requires.
+  Value *findExistingExpansionAndDropPoisonFlags(SCEVUse S,
+                                                 const Instruction *InsertPt);
 
   LLVM_ABI Value *expand(SCEVUse S);
   Value *expand(SCEVUse S, BasicBlock::iterator I) {
@@ -501,8 +525,6 @@ private:
   Value *visitVScale(SCEVUseT<const SCEVVScale *> S);
 
   Value *visitPtrToAddrExpr(SCEVUseT<const SCEVPtrToAddrExpr *> S);
-
-  Value *visitPtrToIntExpr(SCEVUseT<const SCEVPtrToIntExpr *> S);
 
   Value *visitTruncateExpr(SCEVUseT<const SCEVTruncateExpr *> S);
 

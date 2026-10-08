@@ -1,17 +1,17 @@
 ; RUN: llc -mtriple=powerpc64le-unknown-linux-gnu --verify-machineinstrs \
-; RUN: -stop-after=prologepilog < %s | FileCheck \
+; RUN: -stop-after=prolog-epilog < %s | FileCheck \
 ; RUN: --check-prefixes=CHECK,CHECK64,ELFV2 %s
 
 ; RUN: llc -mtriple=powerpc64-unknown-aix-xcoff -mcpu=pwr4 \
-; RUN: --verify-machineinstrs --mattr=-altivec -stop-after=prologepilog < %s | \
+; RUN: --verify-machineinstrs --mattr=-altivec -stop-after=prolog-epilog < %s | \
 ; RUN: FileCheck --check-prefixes=CHECK,CHECK64,V1ANDAIX  %s
 
 ; RUN: llc -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 --verify-machineinstrs \
-; RUN: -stop-after=prologepilog < %s | FileCheck \
+; RUN: -stop-after=prolog-epilog < %s | FileCheck \
 ; RUN: --check-prefixes=CHECK,CHECK64,V1ANDAIX %s
 
 ; RUN: llc -mtriple=powerpc-unknown-aix-xcoff -mcpu=pwr4 \
-; RUN: --verify-machineinstrs --mattr=-altivec -stop-after=prologepilog < %s | \
+; RUN: --verify-machineinstrs --mattr=-altivec -stop-after=prolog-epilog < %s | \
 ; RUN: FileCheck --check-prefixes=CHECK,CHECK32  %s
 
 define dso_local signext i32 @test(i32 signext %n) {

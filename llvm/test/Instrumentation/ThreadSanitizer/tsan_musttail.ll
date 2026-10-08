@@ -15,16 +15,3 @@ define i32 @call_preallocated_musttail(ptr preallocated(i32) %a) sanitize_thread
 ; CHECK:          call void @__tsan_func_exit()
 ; CHECK-NEXT:     %r = musttail call i32 @preallocated_musttail(ptr preallocated(i32) %a)
 ; CHECK-NEXT:     ret i32 %r
-
-
-define i32 @call_preallocated_musttail_cast(ptr preallocated(i32) %a) sanitize_thread {
-  %r = musttail call i32 @preallocated_musttail(ptr preallocated(i32) %a)
-  %t = bitcast i32 %r to i32
-  ret i32 %t
-}
-
-; CHECK-LABEL:  define i32 @call_preallocated_musttail_cast(ptr preallocated(i32) %a)
-; CHECK:          call void @__tsan_func_exit()
-; CHECK-NEXT:     %r = musttail call i32 @preallocated_musttail(ptr preallocated(i32) %a)
-; CHECK-NEXT:     %t = bitcast i32 %r to i32
-; CHECK-NEXT:     ret i32 %t

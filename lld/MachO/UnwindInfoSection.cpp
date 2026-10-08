@@ -213,6 +213,9 @@ void UnwindInfoSectionImpl::prepare() {
         // to avoid overflowing the 3-personality limit.
         FDE &fde = cast<ObjFile>(d->getFile())->fdes[d->unwindEntry()];
         fde.personality = canonicalizePersonality(fde.personality);
+        // If ICF folded the LSDA, point at the surviving copy.
+        if (fde.lsda)
+          fde.lsda = fde.lsda->canonical();
       }
     }
 }

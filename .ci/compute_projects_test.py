@@ -19,10 +19,11 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["project_check_targets"],
-            "check-bolt check-clang check-clang-tools check-cross-project check-flang check-lld check-lldb check-llvm check-mlir check-polly",
+            "check-bolt check-clang check-clang-python check-clang-tools check-cross-project check-flang check-lld check-lldb check-llvm check-mlir check-polly",
         )
         self.assertEqual(
-            env_variables["runtimes_to_build"], "libcxx;libcxxabi;libunwind"
+            env_variables["runtimes_to_build"],
+            "libcxx;libcxxabi;libunwind",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
@@ -39,11 +40,11 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["projects_to_build"],
-            "clang;clang-tools-extra;lld;lldb;llvm;mlir;polly",
+            "clang;clang-tools-extra;lld;llvm;mlir;polly",
         )
         self.assertEqual(
             env_variables["project_check_targets"],
-            "check-clang check-clang-tools check-lld check-llvm check-mlir check-polly lldb lldb-dap",
+            "check-clang check-clang-python check-clang-tools check-lld check-llvm check-mlir check-polly",
         )
         self.assertEqual(env_variables["runtimes_to_build"], "")
         self.assertEqual(
@@ -61,11 +62,11 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["projects_to_build"],
-            "clang;clang-tools-extra;lld;llvm;mlir",
+            "clang;clang-tools-extra;lld;lldb;llvm",
         )
         self.assertEqual(
             env_variables["project_check_targets"],
-            "check-clang check-clang-tools check-lld check-llvm check-mlir",
+            "check-clang check-clang-python check-clang-tools check-lld check-llvm",
         )
         self.assertEqual(env_variables["runtimes_to_build"], "")
         self.assertEqual(
@@ -77,6 +78,71 @@ class TestComputeProjects(unittest.TestCase):
             "",
         )
 
+    def test_mlir_mac(self):
+        env_variables = compute_projects.get_env_variables(
+            ["mlir/CMakeLists.txt"], "Darwin"
+        )
+        self.assertEqual(env_variables["projects_to_build"], "")
+        self.assertEqual(env_variables["project_check_targets"], "")
+        self.assertEqual(env_variables["runtimes_to_build"], "")
+        self.assertEqual(env_variables["runtimes_check_targets"], "")
+        self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
+        self.assertEqual(env_variables["enable_cir"], "OFF")
+
+    def test_cir_windows(self):
+        env_variables = compute_projects.get_env_variables(
+            ["clang/lib/CIR/CMakeLists.txt"], "Windows"
+        )
+        self.assertEqual(
+            env_variables["projects_to_build"],
+            "clang;clang-tools-extra;lld;llvm",
+        )
+        self.assertEqual(
+            env_variables["project_check_targets"],
+            "check-clang check-clang-python check-clang-tools",
+        )
+        self.assertEqual(env_variables["runtimes_to_build"], "compiler-rt")
+        self.assertEqual(env_variables["runtimes_check_targets"], "check-compiler-rt")
+        self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
+        self.assertEqual(env_variables["enable_cir"], "OFF")
+
+    def test_cir_mac(self):
+        env_variables = compute_projects.get_env_variables(
+            ["clang/lib/CIR/CMakeLists.txt"], "Darwin"
+        )
+        self.assertEqual(
+            env_variables["projects_to_build"],
+            "clang;clang-tools-extra;lld;lldb;llvm",
+        )
+        self.assertEqual(
+            env_variables["project_check_targets"],
+            "check-clang check-clang-python check-clang-tools",
+        )
+        self.assertEqual(env_variables["runtimes_to_build"], "compiler-rt")
+        self.assertEqual(env_variables["runtimes_check_targets"], "check-compiler-rt")
+        self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
+        self.assertEqual(env_variables["enable_cir"], "OFF")
+
+    def test_lldb_mac(self):
+        env_variables = compute_projects.get_env_variables(
+            ["lldb/CMakeLists.txt"], "Darwin"
+        )
+        self.assertEqual(env_variables["projects_to_build"], "clang;lld;lldb;llvm")
+        self.assertEqual(env_variables["project_check_targets"], "")
+        self.assertEqual(env_variables["runtimes_to_build"], "compiler-rt")
+        self.assertEqual(env_variables["runtimes_check_targets"], "")
+        self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
+
+    def test_libclc_mac(self):
+        env_variables = compute_projects.get_env_variables(
+            ["libclc/CMakeLists.txt"], "Darwin"
+        )
+        self.assertEqual(env_variables["projects_to_build"], "clang;llvm")
+        self.assertEqual(env_variables["project_check_targets"], "")
+        self.assertEqual(env_variables["runtimes_to_build"], "")
+        self.assertEqual(env_variables["runtimes_check_targets"], "")
+        self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
+
     def test_clang(self):
         env_variables = compute_projects.get_env_variables(
             ["clang/CMakeLists.txt"], "Linux"
@@ -87,14 +153,15 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["project_check_targets"],
-            "check-clang check-clang-tools check-cross-project check-lldb",
+            "check-clang check-clang-python check-clang-tools check-cross-project check-lldb",
         )
         self.assertEqual(
-            env_variables["runtimes_to_build"], "compiler-rt;libcxx;libcxxabi;libunwind"
+            env_variables["runtimes_to_build"],
+            "compiler-rt;libc;libcxx;libcxxabi;libunwind",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
-            "check-compiler-rt",
+            "check-compiler-rt check-libc",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets_needs_reconfig"],
@@ -111,11 +178,11 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["projects_to_build"],
-            "clang;clang-tools-extra;lld;lldb;llvm",
+            "clang;clang-tools-extra;lld;llvm",
         )
         self.assertEqual(
             env_variables["project_check_targets"],
-            "check-clang check-clang-tools lldb lldb-dap",
+            "check-clang check-clang-python check-clang-tools",
         )
         self.assertEqual(env_variables["runtimes_to_build"], "compiler-rt")
         self.assertEqual(
@@ -154,6 +221,16 @@ class TestComputeProjects(unittest.TestCase):
             "OFF",
         )
 
+    def test_orc_rt(self):
+        env_variables = compute_projects.get_env_variables(
+            ["orc-rt/CMakeLists.txt"], "Linux"
+        )
+        self.assertEqual(env_variables["projects_to_build"], "llvm")
+        self.assertEqual(env_variables["project_check_targets"], "")
+        self.assertEqual(env_variables["runtimes_to_build"], "orc-rt")
+        self.assertEqual(env_variables["runtimes_check_targets"], "check-orc-rt")
+        self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
+
     def test_cir(self):
         env_variables = compute_projects.get_env_variables(
             ["clang/lib/CIR/CMakeLists.txt"], "Linux"
@@ -164,14 +241,15 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["project_check_targets"],
-            "check-clang check-clang-cir check-clang-tools check-cross-project check-lldb",
+            "check-clang check-clang-python check-clang-cir check-clang-tools check-cross-project check-lldb",
         )
         self.assertEqual(
-            env_variables["runtimes_to_build"], "compiler-rt;libcxx;libcxxabi;libunwind"
+            env_variables["runtimes_to_build"],
+            "compiler-rt;libc;libcxx;libcxxabi;libunwind",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
-            "check-compiler-rt",
+            "check-compiler-rt check-libc",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets_needs_reconfig"],
@@ -216,9 +294,9 @@ class TestComputeProjects(unittest.TestCase):
         env_variables = compute_projects.get_env_variables(
             ["flang/CMakeLists.txt"], "Linux"
         )
-        self.assertEqual(env_variables["projects_to_build"], "clang;flang;llvm")
+        self.assertEqual(env_variables["projects_to_build"], "clang;flang;lld;llvm")
         self.assertEqual(env_variables["project_check_targets"], "check-flang")
-        self.assertEqual(env_variables["runtimes_to_build"], "flang-rt")
+        self.assertEqual(env_variables["runtimes_to_build"], "flang-rt;openmp")
         self.assertEqual(env_variables["runtimes_check_targets"], "check-flang-rt")
         self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
         self.assertEqual(env_variables["enable_cir"], "OFF")
@@ -300,19 +378,19 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["projects_to_build"],
-            "bolt;clang;clang-tools-extra;flang;lld;lldb;llvm;mlir;polly",
+            "bolt;clang;clang-tools-extra;cross-project-tests;flang;lld;lldb;llvm;mlir;polly",
         )
         self.assertEqual(
             env_variables["project_check_targets"],
-            "check-bolt check-clang check-clang-cir check-clang-tools check-flang check-lld check-lldb check-llvm check-mlir check-polly",
+            "check-bolt check-clang check-clang-python check-clang-cir check-clang-tools check-cross-project check-flang check-lit check-lld check-lldb check-llvm check-mlir check-polly",
         )
         self.assertEqual(
             env_variables["runtimes_to_build"],
-            "compiler-rt;flang-rt;libc;libcxx;libcxxabi;libunwind",
+            "compiler-rt;flang-rt;libc;libcxx;libcxxabi;libunwind;offload;openmp;orc-rt",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
-            "check-compiler-rt check-flang-rt check-libc check-libclc",
+            "check-compiler-rt check-flang-rt check-libc check-libclc check-orc-rt offload openmp",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets_needs_reconfig"],
@@ -325,19 +403,19 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["projects_to_build"],
-            "clang;clang-tools-extra;lld;lldb;llvm;mlir;polly",
+            "clang;clang-tools-extra;lld;llvm;mlir;polly",
         )
         self.assertEqual(
             env_variables["project_check_targets"],
-            "check-clang check-clang-cir check-clang-tools check-lld check-llvm check-mlir check-polly lldb lldb-dap",
+            "check-clang check-clang-python check-clang-tools check-lit check-lld check-llvm check-mlir check-polly",
         )
         self.assertEqual(
             env_variables["runtimes_to_build"],
-            "compiler-rt",
+            "compiler-rt;orc-rt",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
-            "check-compiler-rt check-libclc",
+            "check-compiler-rt check-libclc check-orc-rt",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets_needs_reconfig"],
@@ -374,19 +452,19 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["projects_to_build"],
-            "bolt;clang;clang-tools-extra;flang;lld;lldb;llvm;mlir;polly",
+            "bolt;clang;clang-tools-extra;cross-project-tests;flang;lld;lldb;llvm;mlir;polly",
         )
         self.assertEqual(
             env_variables["project_check_targets"],
-            "check-bolt check-clang check-clang-cir check-clang-tools check-flang check-lld check-lldb check-llvm check-mlir check-polly",
+            "check-bolt check-clang check-clang-python check-clang-cir check-clang-tools check-cross-project check-flang check-lit check-lld check-lldb check-llvm check-mlir check-polly",
         )
         self.assertEqual(
             env_variables["runtimes_to_build"],
-            "compiler-rt;flang-rt;libc;libcxx;libcxxabi;libunwind",
+            "compiler-rt;flang-rt;libc;libcxx;libcxxabi;libunwind;offload;openmp;orc-rt",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
-            "check-compiler-rt check-flang-rt check-libc check-libclc",
+            "check-compiler-rt check-flang-rt check-libc check-libclc check-orc-rt offload openmp",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets_needs_reconfig"],
@@ -409,19 +487,19 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["projects_to_build"],
-            "bolt;clang;clang-tools-extra;flang;lld;lldb;llvm;mlir;polly",
+            "bolt;clang;clang-tools-extra;cross-project-tests;flang;lld;lldb;llvm;mlir;polly",
         )
         self.assertEqual(
             env_variables["project_check_targets"],
-            "check-bolt check-clang check-clang-cir check-clang-tools check-flang check-lld check-lldb check-llvm check-mlir check-polly",
+            "check-bolt check-clang check-clang-python check-clang-cir check-clang-tools check-cross-project check-flang check-lit check-lld check-lldb check-llvm check-mlir check-polly",
         )
         self.assertEqual(
             env_variables["runtimes_to_build"],
-            "compiler-rt;flang-rt;libc;libcxx;libcxxabi;libunwind",
+            "compiler-rt;flang-rt;libc;libcxx;libcxxabi;libunwind;offload;openmp;orc-rt",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
-            "check-compiler-rt check-flang-rt check-libc check-libclc",
+            "check-compiler-rt check-flang-rt check-libc check-libclc check-orc-rt offload openmp",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets_needs_reconfig"],
@@ -438,10 +516,11 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["project_check_targets"],
-            "check-bolt check-clang check-clang-tools check-cross-project check-flang check-lit check-lld check-lldb check-llvm check-mlir check-polly",
+            "check-bolt check-clang check-clang-python check-clang-tools check-cross-project check-flang check-lit check-lld check-lldb check-llvm check-mlir check-polly",
         )
         self.assertEqual(
-            env_variables["runtimes_to_build"], "libcxx;libcxxabi;libunwind"
+            env_variables["runtimes_to_build"],
+            "libcxx;libcxxabi;libunwind",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
@@ -470,9 +549,27 @@ class TestComputeProjects(unittest.TestCase):
             ["lldb/CMakeLists.txt"], "Windows"
         )
         self.assertEqual(env_variables["projects_to_build"], "clang;lld;lldb;llvm")
-        self.assertEqual(env_variables["project_check_targets"], "lldb lldb-dap")
+        self.assertEqual(env_variables["project_check_targets"], "check-lldb")
         self.assertEqual(env_variables["runtimes_to_build"], "compiler-rt")
         self.assertEqual(env_variables["runtimes_check_targets"], "")
+        self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
+
+    def test_libc_shared(self):
+        env_variables = compute_projects.get_env_variables(
+            ["libc/shared/math/acos.h"], "Linux"
+        )
+        self.assertEqual(env_variables["projects_to_build"], "clang;lld;llvm")
+        self.assertEqual(
+            env_variables["project_check_targets"],
+            "check-clang check-clang-python check-llvm",
+        )
+        self.assertEqual(
+            env_variables["runtimes_to_build"], "libc;libcxx;libcxxabi;libunwind"
+        )
+        self.assertEqual(
+            env_variables["runtimes_check_targets"],
+            "check-cxx check-cxxabi check-libc check-unwind",
+        )
         self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
 
 

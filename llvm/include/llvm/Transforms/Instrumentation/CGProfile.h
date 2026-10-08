@@ -19,7 +19,7 @@ class Module;
 class CGProfilePass : public OptionalPassInfoMixin<CGProfilePass> {
 public:
   CGProfilePass(bool InLTO) : InLTO(InLTO) {}
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
 private:
   bool InLTO = false;

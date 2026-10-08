@@ -70,10 +70,10 @@ public:
 
   /// Calculate and insert necessary PHI nodes for SSA form.
   /// Must be called after registering all definitions and uses.
-  void calculate();
+  LLVM_ABI void calculate();
 
   /// See SSAUpdater::GetValueInMiddleOfBlock description.
-  Register getValueInMiddleOfBlock(MachineBasicBlock *BB);
+  LLVM_ABI Register getValueInMiddleOfBlock(MachineBasicBlock *BB);
 };
 
 } // end namespace llvm

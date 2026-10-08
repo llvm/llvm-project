@@ -390,6 +390,10 @@ ZOSArchiveMemberHeader::ZOSArchiveMemberHeader(const Archive *Parent,
                                                uint64_t Size, Error *Err)
     : ArchiveMemberHeader(Parent, RawHeaderPtr, Size, Err) {
   ErrorAsOutParameter ErrAsOutParam(Err);
+  // If the base class constructor already detected an error
+  // do not attempt to read header fields
+  if (Err && *Err)
+    return;
   setMemberHeaderStrings(Err, Size);
 }
 
@@ -1134,6 +1138,18 @@ bool Archive::Symbol::isECSymbol() const {
   uint32_t SymbolCount = Parent->getNumberOfSymbols();
   return SymbolCount <= SymbolIndex &&
          SymbolIndex < SymbolCount + Parent->getNumberOfECSymbols();
+}
+
+uint32_t Archive::Symbol::getZOSAttributes() const {
+  assert(Parent->kind() == K_ZOS && "Cannot get z/OS attributes for non-z/OS "
+                                    "archives");
+  if (SymbolIndex >= Parent->getNumberOfSymbols())
+    return 0;
+
+  // The z/OS symbol table layout is:
+  //   NumSyms * { uint32_t member_offset, uint32_t attrs }  (big-endian)
+  const char *Buf = Parent->getSymbolTable().begin();
+  return read32be(Buf + sizeof(uint32_t) + SymbolIndex * 8 + sizeof(uint32_t));
 }
 
 StringRef Archive::Symbol::getName() const {

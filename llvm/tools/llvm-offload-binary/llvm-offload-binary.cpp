@@ -20,6 +20,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -30,8 +31,6 @@
 
 using namespace llvm;
 using namespace llvm::object;
-
-static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
 
 static cl::OptionCategory OffloadBinaryCategory("llvm-offload-binary options");
 
@@ -55,6 +54,22 @@ static cl::opt<bool>
     CreateArchive("archive",
                   cl::desc("Write extracted files to a static archive"),
                   cl::cat(OffloadBinaryCategory));
+
+static cl::opt<bool> Compress("compress",
+                              cl::desc("Compress the packaged offload binary"),
+                              cl::cat(OffloadBinaryCategory));
+
+static cl::opt<compression::Format> CompressionFormat(
+    "compression-format", cl::desc("Format used with --compress"),
+    cl::values(
+        clEnumValN(compression::Format::Zstd, "zstd", "Zstandard compression"),
+        clEnumValN(compression::Format::Zlib, "zlib", "zlib compression")),
+    cl::init(compression::Format::Zstd), cl::cat(OffloadBinaryCategory));
+
+static cl::opt<int>
+    CompressionLevel("compression-level",
+                     cl::desc("Compression level used with --compress"),
+                     cl::init(-1), cl::cat(OffloadBinaryCategory));
 
 /// Path of the current binary.
 static const char *PackagerExecutable;
@@ -87,11 +102,10 @@ static Error writeFile(StringRef Filename, StringRef Data) {
 }
 
 static Error bundleImages() {
-  SmallVector<char, 1024> BinaryData;
-  raw_svector_ostream OS(BinaryData);
+  SmallVector<OffloadBinary::OffloadingImage> AllImages;
+  BumpPtrAllocator Alloc;
+  StringSaver Saver(Alloc);
   for (StringRef Image : DeviceImages) {
-    BumpPtrAllocator Alloc;
-    StringSaver Saver(Alloc);
     DenseMap<StringRef, StringRef> Args = getImageArguments(Image, Saver);
 
     if (!Args.count("file"))
@@ -123,16 +137,31 @@ static Error bundleImages() {
           ImageBinary.StringData[Key] = Value;
         }
       }
-      llvm::SmallString<0> Buffer = OffloadBinary::write(ImageBinary);
-      if (Buffer.size() % OffloadBinary::getAlignment() != 0)
-        return createStringError(inconvertibleErrorCode(),
-                                 "Offload binary has invalid size alignment");
-      OS << Buffer;
+      AllImages.emplace_back(std::move(ImageBinary));
     }
   }
 
-  if (Error E = writeFile(OutputFile,
-                          StringRef(BinaryData.begin(), BinaryData.size())))
+  SmallString<0> Buffer;
+  if (Compress) {
+    if (const char *Reason =
+            compression::getReasonIfUnsupported(CompressionFormat))
+      return createStringError(inconvertibleErrorCode(), Reason);
+    compression::Params Params(CompressionFormat);
+    if (CompressionLevel.getNumOccurrences())
+      Params.level = CompressionLevel;
+    Expected<SmallString<0>> CompressedOrErr =
+        OffloadBinary::write(AllImages, Params);
+    if (!CompressedOrErr)
+      return CompressedOrErr.takeError();
+    Buffer = std::move(*CompressedOrErr);
+  } else {
+    Buffer = OffloadBinary::write(AllImages);
+  }
+  if (Buffer.size() % OffloadBinary::getAlignment() != 0)
+    return createStringError(inconvertibleErrorCode(),
+                             "Offload binary has invalid size alignment");
+
+  if (Error E = writeFile(OutputFile, StringRef(Buffer.data(), Buffer.size())))
     return E;
   return Error::success();
 }
@@ -213,13 +242,17 @@ static Error unbundleImages() {
     SmallVector<const OffloadBinary *> Extracted;
     for (const OffloadFile &File : Binaries) {
       const auto *Binary = File.getBinary();
-      // We handle the 'file' and 'kind' identifiers differently.
+      // We handle the 'file', 'kind', and 'member' identifiers differently.
       bool Match = llvm::all_of(Args, [&](auto &Arg) {
         const auto [Key, Value] = Arg;
         if (Key == "file")
           return true;
         if (Key == "kind")
           return Binary->getOffloadKind() == getOffloadKind(Value);
+        if (Key == "member")
+          return sys::path::filename(
+                     Binary->getMemoryBufferRef().getBufferIdentifier()) ==
+                 Value;
         return Binary->getString(Key) == Value;
       });
       if (Match)
@@ -277,7 +310,7 @@ int main(int argc, const char **argv) {
         << "'clang-offload-packager' is deprecated. Use 'llvm-offload-binary' "
            "instead.\n";
 
-  if (Help || (OutputFile.empty() && InputFile.empty())) {
+  if (OutputFile.empty() && InputFile.empty()) {
     cl::PrintHelpMessage();
     return EXIT_SUCCESS;
   }

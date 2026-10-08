@@ -15,11 +15,13 @@
 #include "LoongArch.h"
 #include "LoongArchMachineFunctionInfo.h"
 #include "MCTargetDesc/LoongArchInstPrinter.h"
+#include "MCTargetDesc/LoongArchMCAsmInfo.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "TargetInfo/LoongArchTargetInfo.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -40,6 +42,20 @@ cl::opt<bool> LArchAnnotateTableJump(
 // Simple pseudo-instructions have their lowering (with expansion to real
 // instructions) auto-generated.
 #include "LoongArchGenMCPseudoLowering.inc"
+
+LoongArchTargetStreamer &LoongArchAsmPrinter::getTargetStreamer() const {
+  return static_cast<LoongArchTargetStreamer &>(
+      *OutStreamer->getTargetStreamer());
+}
+
+void LoongArchAsmPrinter::emitStartOfAsmFile(Module &M) {
+  StringRef ABIName = M.getTargetABIFromMD();
+  if (!ABIName.empty()) {
+    getTargetStreamer().setTargetABI(LoongArchABI::computeTargetABI(
+        M.getTargetTriple(), TM.getMCSubtargetInfo().getFeatureBits(),
+        ABIName));
+  }
+}
 
 void LoongArchAsmPrinter::emitInstruction(const MachineInstr *MI) {
   LoongArch_MC::verifyInstructionPredicates(
@@ -244,7 +260,7 @@ void LoongArchAsmPrinter::emitSled(const MachineInstr &MI, SledKind Kind) {
   // The count here should be adjusted accordingly if the implementation
   // changes.
   const int8_t NoopsInSledCount = 11;
-  OutStreamer->emitCodeAlignment(Align(4), &getSubtargetInfo());
+  OutStreamer->emitCodeAlignment(Align(4), getSubtargetInfo());
   MCSymbol *BeginOfSled = OutContext.createTempSymbol("xray_sled_begin");
   MCSymbol *EndOfSled = OutContext.createTempSymbol("xray_sled_end");
   OutStreamer->emitLabel(BeginOfSled);
@@ -291,6 +307,28 @@ void LoongArchAsmPrinter::emitJumpTableInfo() {
     OutStreamer->emitValue(
         MCSymbolRefExpr::create(GetJTISymbol(JTIIdx), OutContext), Size);
   }
+}
+
+// Emit .dtprelword or .dtpreldword directive
+// and value for debug thread local expression.
+void LoongArchAsmPrinter::emitDebugValue(const MCExpr *Value,
+                                         unsigned Size) const {
+  if (auto *Expr = dyn_cast<MCSpecifierExpr>(Value)) {
+    if (Expr->getSpecifier() == LoongArchMCExpr::VK_DTPREL) {
+      switch (Size) {
+      case 4:
+        getTargetStreamer().emitDTPRel32Value(Expr->getSubExpr());
+        break;
+      case 8:
+        getTargetStreamer().emitDTPRel64Value(Expr->getSubExpr());
+        break;
+      default:
+        llvm_unreachable("Unexpected size of expression value.");
+      }
+      return;
+    }
+  }
+  AsmPrinter::emitDebugValue(Value, Size);
 }
 
 bool LoongArchAsmPrinter::runOnMachineFunction(MachineFunction &MF) {

@@ -127,11 +127,7 @@ void SPIRVDialect::initialize() {
   registerAttributes();
   registerTypes();
 
-  // Add SPIR-V ops.
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/SPIRV/IR/SPIRVOps.cpp.inc"
-      >();
+  registerSPIRVDialectOperations(this);
 
   addInterfaces<SPIRVInlinerInterface>();
 
@@ -173,7 +169,12 @@ static Type parseAndVerifyType(SPIRVDialect const &dialect,
 
   // Check other allowed types.
   if (auto t = dyn_cast<FloatType>(type)) {
-    // TODO: All float types are allowed for now, but this should be fixed.
+    if (!ScalarType::isValid(t)) {
+      parser.emitError(typeLoc,
+                       "only 8/16/32/64-bit float type allowed but found ")
+          << type;
+      return Type();
+    }
   } else if (auto t = dyn_cast<IntegerType>(type)) {
     if (!ScalarType::isValid(t)) {
       parser.emitError(typeLoc,

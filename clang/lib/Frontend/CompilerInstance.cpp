@@ -10,6 +10,7 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/Basic/AtomicLineLogger.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
@@ -34,6 +35,7 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/Lex/TextEncoding.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
@@ -58,6 +60,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -119,6 +122,12 @@ bool CompilerInstance::createTarget() {
   if (!hasTarget())
     return false;
 
+  if (getLangOpts().SYCLIsDevice && !getTarget().getTriple().isGPU()) {
+    getDiagnostics().Report(diag::err_sycl_device_invalid_target)
+        << getTarget().getTriple().str();
+    return false;
+  }
+
   // Check whether AuxTarget exists, if not, then create TargetInfo for the
   // other side of CUDA/OpenMP/SYCL compilation.
   if (!getAuxTarget() &&
@@ -177,6 +186,11 @@ void CompilerInstance::setSourceManager(
 
 void CompilerInstance::setPreprocessor(std::shared_ptr<Preprocessor> Value) {
   PP = std::move(Value);
+}
+
+IntrusiveRefCntPtr<ASTContext> CompilerInstance::getASTContextPtr() const {
+  assert(Context && "Compiler instance has no AST context!");
+  return Context;
 }
 
 void CompilerInstance::setASTContext(
@@ -281,9 +295,15 @@ static void collectVFSEntries(CompilerInstance &CI,
 
 void CompilerInstance::createVirtualFileSystem(
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS, DiagnosticConsumer *DC) {
+  bool ShouldOwnClient = false;
+  if (!DC) {
+    DC = new DiagnosticConsumer;
+    ShouldOwnClient = true;
+  }
+
   DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts, DC,
-                          /*ShouldOwnClient=*/false);
+                          ShouldOwnClient);
 
   VFS = createVFSFromCompilerInvocation(getInvocation(), Diags,
                                         std::move(BaseFS));
@@ -547,6 +567,11 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
 
   if (GetDependencyDirectives)
     PP->setDependencyDirectivesGetter(*GetDependencyDirectives);
+
+  if (auto EC = TextEncoding::setConvertersFromOptions(PP->getTextEncoding(),
+                                                       getLangOpts()))
+    PP->getDiagnostics().Report(clang::diag::err_fe_text_encoding_config)
+        << PP->getTextEncoding().getLiteralEncoding();
 }
 
 // ASTContext
@@ -799,7 +824,8 @@ void CompilerInstance::clearOutputFiles(bool EraseFiles) {
 
 std::unique_ptr<raw_pwrite_stream> CompilerInstance::createDefaultOutputFile(
     bool Binary, StringRef InFile, StringRef Extension, bool RemoveFileOnSignal,
-    bool CreateMissingDirectories, bool ForceUseTemporary) {
+    bool CreateMissingDirectories, bool ForceUseTemporary,
+    bool SetOnlyIfDifferent) {
   StringRef OutputPath = getFrontendOpts().OutputFile;
   std::optional<SmallString<128>> PathStorage;
   if (OutputPath.empty()) {
@@ -814,7 +840,7 @@ std::unique_ptr<raw_pwrite_stream> CompilerInstance::createDefaultOutputFile(
 
   return createOutputFile(OutputPath, Binary, RemoveFileOnSignal,
                           getFrontendOpts().UseTemporary || ForceUseTemporary,
-                          CreateMissingDirectories);
+                          CreateMissingDirectories, SetOnlyIfDifferent);
 }
 
 std::unique_ptr<raw_pwrite_stream> CompilerInstance::createNullOutputFile() {
@@ -845,13 +871,12 @@ llvm::vfs::OutputBackend &CompilerInstance::getOrCreateOutputManager() {
   return getOutputManager();
 }
 
-std::unique_ptr<raw_pwrite_stream>
-CompilerInstance::createOutputFile(StringRef OutputPath, bool Binary,
-                                   bool RemoveFileOnSignal, bool UseTemporary,
-                                   bool CreateMissingDirectories) {
+std::unique_ptr<raw_pwrite_stream> CompilerInstance::createOutputFile(
+    StringRef OutputPath, bool Binary, bool RemoveFileOnSignal,
+    bool UseTemporary, bool CreateMissingDirectories, bool SetOnlyIfDifferent) {
   Expected<std::unique_ptr<raw_pwrite_stream>> OS =
       createOutputFileImpl(OutputPath, Binary, RemoveFileOnSignal, UseTemporary,
-                           CreateMissingDirectories);
+                           CreateMissingDirectories, SetOnlyIfDifferent);
   if (OS)
     return std::move(*OS);
   getDiagnostics().Report(diag::err_fe_unable_to_open_output)
@@ -863,7 +888,8 @@ Expected<std::unique_ptr<llvm::raw_pwrite_stream>>
 CompilerInstance::createOutputFileImpl(StringRef OutputPath, bool Binary,
                                        bool RemoveFileOnSignal,
                                        bool UseTemporary,
-                                       bool CreateMissingDirectories) {
+                                       bool CreateMissingDirectories,
+                                       bool SetOnlyIfDifferent) {
   assert((!CreateMissingDirectories || UseTemporary) &&
          "CreateMissingDirectories is only allowed when using temporary files");
 
@@ -886,7 +912,8 @@ CompilerInstance::createOutputFileImpl(StringRef OutputPath, bool Binary,
           .setTextWithCRLF(!Binary)
           .setDiscardOnSignal(RemoveFileOnSignal)
           .setAtomicWrite(UseTemporary)
-          .setImplyCreateDirectories(UseTemporary && CreateMissingDirectories));
+          .setImplyCreateDirectories(UseTemporary && CreateMissingDirectories)
+          .setOnlyIfDifferent(SetOnlyIfDifferent));
   if (!O)
     return O.takeError();
 
@@ -1088,7 +1115,7 @@ void CompilerInstance::LoadRequestedPlugins() {
 
   // Load and store pass plugins for the back-end.
   for (const std::string &Path : getCodeGenOpts().PassPlugins) {
-    if (auto PassPlugin = llvm::PassPlugin::Load(Path)) {
+    if (auto PassPlugin = llvm::PassPlugin::load(Path)) {
       PassPlugins.emplace_back(std::make_unique<llvm::PassPlugin>(*PassPlugin));
     } else {
       getDiagnostics().Report(diag::err_fe_unable_to_load_plugin)
@@ -1108,6 +1135,20 @@ void CompilerInstance::LoadRequestedPlugins() {
   }
 }
 
+void CompilerInstance::parseLLVMArgs() {
+  if (!getFrontendOpts().LLVMArgs.empty()) {
+    unsigned NumArgs = getFrontendOpts().LLVMArgs.size();
+    auto Args = std::make_unique<const char *[]>(NumArgs + 2);
+    Args[0] = "clang (LLVM option parsing)";
+    for (unsigned i = 0; i != NumArgs; ++i)
+      Args[i + 1] = getFrontendOpts().LLVMArgs[i].c_str();
+    Args[NumArgs + 1] = nullptr;
+    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get(), /*Overview=*/"",
+                                      /*Errs=*/nullptr,
+                                      /*VFS=*/&getVirtualFileSystem());
+  }
+}
+
 /// Determine the appropriate source input kind based on language
 /// options.
 static Language getLanguageFromOptions(const LangOptions &LangOpts) {
@@ -1123,6 +1164,7 @@ static Language getLanguageFromOptions(const LangOptions &LangOpts) {
 std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
     SourceLocation ImportLoc, StringRef ModuleName, FrontendInputFile Input,
     StringRef OriginalModuleMapFile, StringRef ModuleFileName,
+    ArrayRef<std::string> DirectoryDependencies,
     std::optional<ThreadSafeCloneConfig> ThreadSafeConfig) {
   // Construct a compiler invocation for creating this module.
   auto Invocation = std::make_shared<CompilerInvocation>(getInvocation());
@@ -1142,6 +1184,17 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
                    return HSOpts.ModulesIgnoreMacros.contains(
                        llvm::CachedHashString(MacroDef.split('=').first));
                  });
+  HSOpts.ModulesIgnoreMacros.clear();
+
+  // Remove any search paths that are explicitly ignored by the module.
+  // They aren't supposed to affect how the module is built anyway.
+  if (!HSOpts.ModulesIgnoreSearchPaths.empty())
+    llvm::erase_if(HSOpts.UserEntries,
+                   [&HSOpts](const HeaderSearchOptions::Entry &E) {
+                     return HSOpts.ModulesIgnoreSearchPaths.contains(
+                         llvm::CachedHashString(E.Path));
+                   });
+  HSOpts.ModulesIgnoreSearchPaths.clear();
 
   // If the original compiler invocation had -fmodule-name, pass it through.
   Invocation->getLangOpts().ModuleName =
@@ -1225,6 +1278,11 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   // Make a copy for the new instance.
   Instance.FailedModules = FailedModules;
 
+  // An inferred framework is built from module map text printed by this
+  // instance rather than by repeating the inference, so directories the
+  // inference enumerated (its Frameworks subdirectory) are only known here.
+  Instance.setInheritedDirectoryDependencies(DirectoryDependencies);
+
   // Pass along the GenModuleActionWrapper callback.
   Instance.setGenModuleActionWrapper(getGenModuleActionWrapper());
 
@@ -1282,8 +1340,13 @@ CompilerInstance::compileModule(SourceLocation ImportLoc, StringRef ModuleName,
 
   // Execute the action to actually build the module in-place. Use a separate
   // thread so that we get a stack large enough.
+  uint64_t ParentTID = llvm::get_threadid();
   bool Crashed = !llvm::CrashRecoveryContext().RunSafelyOnNewStack(
       [&]() {
+        getModuleCache().getLogger().log()
+            << "module_compile_thread: parent=" << ParentTID
+            << " pcm_compile: " << ModuleFileName;
+
         auto OS = std::make_unique<llvm::raw_svector_ostream>(Buffer);
 
         std::unique_ptr<FrontendAction> Action =
@@ -1397,7 +1460,7 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompile(
         ImportLoc, ModuleName,
         FrontendInputFile(ModuleMapFilePath, IK, IsSystem),
         ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName,
-        std::move(ThreadSafeConfig));
+        Module->getDirectoryDependencies(), std::move(ThreadSafeConfig));
   }
 
   // FIXME: We only need to fake up an input file here as a way of
@@ -1415,7 +1478,7 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompile(
       ImportLoc, ModuleName,
       FrontendInputFile(FakeModuleMapFile, IK, +Module->IsSystem),
       ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName,
-      std::move(ThreadSafeConfig));
+      Module->getDirectoryDependencies(), std::move(ThreadSafeConfig));
 
   std::unique_ptr<llvm::MemoryBuffer> ModuleMapBuffer =
       llvm::MemoryBuffer::getMemBufferCopy(InferredModuleMapContent);

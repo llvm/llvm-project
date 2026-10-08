@@ -25,7 +25,7 @@ struct PreISelIntrinsicLoweringPass
   const TargetMachine *TM;
 
   PreISelIntrinsicLoweringPass(const TargetMachine *TM) : TM(TM) {}
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // end namespace llvm

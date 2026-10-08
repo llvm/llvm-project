@@ -76,6 +76,8 @@ void MipsTargetStreamer::emitDirectiveSetVirt() {}
 void MipsTargetStreamer::emitDirectiveSetNoVirt() {}
 void MipsTargetStreamer::emitDirectiveSetGINV() {}
 void MipsTargetStreamer::emitDirectiveSetNoGINV() {}
+void MipsTargetStreamer::emitDirectiveSetEVA() {}
+void MipsTargetStreamer::emitDirectiveSetNoEVA() {}
 void MipsTargetStreamer::emitDirectiveSetAt() { forbidModuleDirective(); }
 void MipsTargetStreamer::emitDirectiveSetAtWithArg(unsigned RegNo) {
   forbidModuleDirective();
@@ -526,6 +528,16 @@ void MipsTargetAsmStreamer::emitDirectiveSetNoGINV() {
   MipsTargetStreamer::emitDirectiveSetNoGINV();
 }
 
+void MipsTargetAsmStreamer::emitDirectiveSetEVA() {
+  OS << "\t.set\teva\n";
+  MipsTargetStreamer::emitDirectiveSetEVA();
+}
+
+void MipsTargetAsmStreamer::emitDirectiveSetNoEVA() {
+  OS << "\t.set\tnoeva\n";
+  MipsTargetStreamer::emitDirectiveSetNoEVA();
+}
+
 void MipsTargetAsmStreamer::emitDirectiveSetAt() {
   OS << "\t.set\tat\n";
   MipsTargetStreamer::emitDirectiveSetAt();
@@ -849,9 +861,18 @@ void MipsTargetAsmStreamer::emitDirectiveModuleNoGINV() {
 }
 
 // This part is for ELF object output.
+MipsTargetELFStreamer::ISAMode
+MipsTargetELFStreamer::getISAMode(const MCSubtargetInfo &STI) {
+  if (STI.hasFeature(Mips::FeatureMips16))
+    return ISAMode::Mips16;
+  if (STI.hasFeature(Mips::FeatureMicroMips))
+    return ISAMode::MicroMips;
+  return ISAMode::Standard;
+}
+
 MipsTargetELFStreamer::MipsTargetELFStreamer(MCStreamer &S,
                                              const MCSubtargetInfo &STI)
-    : MipsTargetStreamer(S), MicroMipsEnabled(false), STI(STI) {
+    : MipsTargetStreamer(S), Mode(getISAMode(STI)), STI(STI) {
   MCAssembler &MCA = getStreamer().getAssembler();
   ELFObjectWriter &W = getStreamer().getWriter();
 
@@ -884,11 +905,8 @@ MipsTargetELFStreamer::MipsTargetELFStreamer(MCStreamer &S,
   // fully, but any external user of the API that uses the MCTargetStreamer
   // would otherwise crash on assertion failure.
 
-  ABI = MipsABIInfo(
-      STI.getTargetTriple().getArch() == Triple::ArchType::mipsel ||
-              STI.getTargetTriple().getArch() == Triple::ArchType::mips
-          ? MipsABIInfo::O32()
-          : MipsABIInfo::N64());
+  ABI = MipsABIInfo(STI.getTargetTriple().isMIPS32() ? MipsABIInfo::O32()
+                                                     : MipsABIInfo::N64());
 
   // Architecture
   if (Features[Mips::FeatureMips64r6])
@@ -925,6 +943,8 @@ MipsTargetELFStreamer::MipsTargetELFStreamer(MCStreamer &S,
     EFlags |= ELF::EF_MIPS_MACH_5900;
 
   // Other options.
+  if (isMips16Enabled())
+    EFlags |= ELF::EF_MIPS_ARCH_ASE_M16;
   if (Features[Mips::FeatureNaN2008])
     EFlags |= ELF::EF_MIPS_NAN2008;
 
@@ -940,6 +960,8 @@ void MipsTargetELFStreamer::emitLabel(MCSymbol *S) {
 
   if (isMicroMipsEnabled())
     Symbol->setOther(ELF::STO_MIPS_MICROMIPS);
+  else if (isMips16Enabled())
+    Symbol->setOther(ELF::STO_MIPS_MIPS16);
 }
 
 void MipsTargetELFStreamer::finish() {
@@ -971,7 +993,7 @@ void MipsTargetELFStreamer::finish() {
       Align Alignment = Section.getAlign();
       S.switchSection(&Section);
       if (getContext().getAsmInfo().useCodeAlign(Section))
-        S.emitCodeAlignment(Alignment, &STI, Alignment.value());
+        S.emitCodeAlignment(Alignment, STI, Alignment.value());
       else
         S.emitValueToAlignment(Alignment, 0, 1, Alignment.value());
     }
@@ -1017,16 +1039,14 @@ void MipsTargetELFStreamer::finish() {
 
 void MipsTargetELFStreamer::emitAssignment(MCSymbol *S, const MCExpr *Value) {
   auto *Symbol = static_cast<MCSymbolELF *>(S);
-  // If on rhs is micromips symbol then mark Symbol as microMips.
+  // Propagate the ISA mode of a symbol to its alias.
   if (Value->getKind() != MCExpr::SymbolRef)
     return;
   auto &RhsSym = static_cast<const MCSymbolELF &>(
       static_cast<const MCSymbolRefExpr *>(Value)->getSymbol());
 
-  if (!(RhsSym.getOther() & ELF::STO_MIPS_MICROMIPS))
-    return;
-
-  Symbol->setOther(ELF::STO_MIPS_MICROMIPS);
+  // Copy the target-specific flags directly; visibility is stored separately.
+  Symbol->setOther(RhsSym.getOther());
 }
 
 MCELFStreamer &MipsTargetELFStreamer::getStreamer() {
@@ -1077,13 +1097,30 @@ void MipsTargetELFStreamer::emitTPRel64Value(const MCExpr *Value) {
 }
 
 void MipsTargetELFStreamer::emitDirectiveSetMicroMips() {
-  MicroMipsEnabled = true;
+  Mode = ISAMode::MicroMips;
   forbidModuleDirective();
 }
 
 void MipsTargetELFStreamer::emitDirectiveSetNoMicroMips() {
-  MicroMipsEnabled = false;
+  if (isMicroMipsEnabled())
+    Mode = ISAMode::Standard;
   forbidModuleDirective();
+}
+
+void MipsTargetELFStreamer::emitDirectiveSetPush() {
+  ModeStack.push_back(Mode);
+  MipsTargetStreamer::emitDirectiveSetPush();
+}
+
+void MipsTargetELFStreamer::emitDirectiveSetPop() {
+  assert(!ModeStack.empty() && "unmatched .set pop");
+  Mode = ModeStack.pop_back_val();
+  MipsTargetStreamer::emitDirectiveSetPop();
+}
+
+void MipsTargetELFStreamer::emitDirectiveSetMips0() {
+  Mode = getISAMode(STI);
+  MipsTargetStreamer::emitDirectiveSetMips0();
 }
 
 void MipsTargetELFStreamer::setUsesMicroMips() {
@@ -1094,11 +1131,18 @@ void MipsTargetELFStreamer::setUsesMicroMips() {
 }
 
 void MipsTargetELFStreamer::emitDirectiveSetMips16() {
+  Mode = ISAMode::Mips16;
   ELFObjectWriter &W = getStreamer().getWriter();
   unsigned Flags = W.getELFHeaderEFlags();
   Flags |= ELF::EF_MIPS_ARCH_ASE_M16;
   W.setELFHeaderEFlags(Flags);
   forbidModuleDirective();
+}
+
+void MipsTargetELFStreamer::emitDirectiveSetNoMips16() {
+  if (isMips16Enabled())
+    Mode = ISAMode::Standard;
+  MipsTargetStreamer::emitDirectiveSetNoMips16();
 }
 
 void MipsTargetELFStreamer::emitDirectiveSetNoReorder() {

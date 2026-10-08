@@ -1,7 +1,7 @@
 add_mlir_dialect_library(MLIRAMDGPUTransforms
   EmulateAtomics.cpp
-  FoldMemRefsOps.cpp
   MaskedloadToLoad.cpp
+  MemoryAccessOpInterfacesImpl.cpp
   ResolveStridedMetadata.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -16,6 +16,7 @@ add_mlir_dialect_library(MLIRAMDGPUTransforms
   MLIRAffineUtils
   MLIRArithDialect
   MLIRMemRefDialect
+  MLIRROCDLDialect
   MLIRSCFDialect
   MLIRVectorDialect
   MLIRControlFlowDialect

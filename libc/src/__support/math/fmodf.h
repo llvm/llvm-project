@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR float fmodf(float x, float y) {
+LIBC_INLINE constexpr float fmodf(float x, float y) {
   return fputil::generic::FMod<float, uint64_t>::eval(x, y);
 }
 

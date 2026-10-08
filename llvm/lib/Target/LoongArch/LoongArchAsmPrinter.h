@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_LOONGARCH_LOONGARCHASMPRINTER_H
 
 #include "LoongArchSubtarget.h"
+#include "MCTargetDesc/LoongArchTargetStreamer.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/MC/MCStreamer.h"
@@ -28,6 +29,8 @@ public:
 private:
   const MCSubtargetInfo *STI;
 
+  LoongArchTargetStreamer &getTargetStreamer() const;
+
 public:
   explicit LoongArchAsmPrinter(TargetMachine &TM,
                                std::unique_ptr<MCStreamer> Streamer)
@@ -39,6 +42,8 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
+
+  void emitStartOfAsmFile(Module &M) override;
 
   void emitInstruction(const MachineInstr *MI) override;
 
@@ -61,6 +66,7 @@ public:
     return lowerLoongArchMachineOperandToMCOperand(MO, MCOp, *this);
   }
   void emitJumpTableInfo() override;
+  void emitDebugValue(const MCExpr *Value, unsigned Size) const override;
 };
 
 } // end namespace llvm

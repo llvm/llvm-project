@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -mcpu=ppc -stop-after=machine-cp -verify-machineinstrs < %s | \
 ; RUN: FileCheck --check-prefix=32BIT %s
 
-; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -mcpu=ppc -stop-after=machine-cp -verify-machineinstrs < %s | \
+; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -mcpu=ppc --code-model=small -stop-after=machine-cp -verify-machineinstrs < %s | \
 ; RUN: FileCheck --check-prefix=64BIT %s
 
 define void @call_test_chars() {

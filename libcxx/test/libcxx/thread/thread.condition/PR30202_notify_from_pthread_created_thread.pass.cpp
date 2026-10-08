@@ -20,7 +20,6 @@
 // Test that this function works with threads that were not created by
 // std::thread. See https://llvm.org/PR30202
 
-
 #include <condition_variable>
 #include <mutex>
 #include <thread>
