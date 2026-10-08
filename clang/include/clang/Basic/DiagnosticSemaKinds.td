@@ -88,8 +88,6 @@ defm equals_this_lambda_capture : CXX20Compat<
   "explicit capture of 'this' with a capture default of '=' is">;
 defm capture_binding : CXX20Compat<"captured structured bindings are">;
 defm defaulted_comparison : CXX20Compat<"defaulted comparison operators are">;
-defm defaulted_postfix_operator : CXX29Compat<
-  "defaulted postfix increment and decrement operators are">;
 
 // C++23 compatibility with C++20 and earlier.
 defm constexpr_static_var : CXX23Compat<
@@ -108,6 +106,8 @@ defm placeholder_var_definition : CXX26Compat<"placeholder variables are">;
 
 // C++29 compatibility with C++26 and earlier.
 defm pack_indexing_template : CXX29Compat<"pack indexing for template names is">;
+defm defaulted_postfix_operator : CXX29Compat<
+  "defaulted postfix increment and decrement operators are">;
 
 // Compatibility warnings duplicated across multiple language versions.
 foreach std = [14, 20, 23] in {
