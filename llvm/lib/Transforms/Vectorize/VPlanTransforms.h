@@ -172,7 +172,7 @@ struct VPlanTransforms {
   /// recurrence cannot be handled.
   LLVM_ABI_FOR_TEST static bool createHeaderPhiRecipes(
       VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &OrigLoop,
-      const VPDominatorTree &VPDT,
+      OptimizationRemarkEmitter *ORE, const VPDominatorTree &VPDT,
       const MapVector<PHINode *, InductionDescriptor> &Inductions,
       const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
       const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
@@ -216,7 +216,7 @@ struct VPlanTransforms {
   /// Add a check to \p Plan to see if the epilogue vector loop should be
   /// executed.
   static void addMinimumVectorEpilogueIterationCheck(
-      VPlan &Plan, Value *VectorTripCount, bool RequiresScalarEpilogue,
+      VPlan &Plan, VPValue *MainVectorTripCount, bool RequiresScalarEpilogue,
       ElementCount EpilogueVF, unsigned MainLoopStep, unsigned EpilogueLoopStep,
       ScalarEvolution &SE);
 
@@ -226,14 +226,18 @@ struct VPlanTransforms {
   /// BranchOnCond with BranchOnCount, using \p DL for the canonical IV.
   LLVM_ABI_FOR_TEST static void createLoopRegions(VPlan &Plan, DebugLoc DL);
 
-  /// Wrap runtime check block \p CheckBlock in a VPIRBB and \p Cond in a
-  /// VPValue and connect the block to \p Plan, using the VPValue as branch
-  /// condition.
+  /// Connect \p CheckBlock to \p Plan, branching on \p Cond.
   static void attachVPCheckBlock(VPlan &Plan, VPValue *Cond,
                                  VPBasicBlock *CheckBlock,
                                  bool AddBranchWeights);
   static void attachCheckBlock(VPlan &Plan, Value *Cond, BasicBlock *CheckBlock,
                                bool AddBranchWeights);
+
+  /// Generate \p Checks as recipes and attach the check block to \p Plan.
+  static void attachMemoryChecks(VPlan &Plan,
+                                 ArrayRef<RuntimePointerCheck> Checks,
+                                 ScalarEvolution &SE, DebugLoc DL,
+                                 bool AddBranchWeights);
 
   /// Model the blocks the executed \p MainPlan generated for the main vector
   /// loop in \p EpiPlan during epilogue vectorization, wrapping each in a
@@ -389,6 +393,12 @@ struct VPlanTransforms {
                                          DominatorTree &DT,
                                          AssumptionCache *AC);
 
+  /// If a single exit has multiple conditions combined together, split them
+  /// and create new exiting blocks. Currently limited to a single exit in the
+  /// latch block.
+  static bool splitCombinedExits(VPlan &Plan, PredicatedScalarEvolution &PSE,
+                                 Loop *TheLoop);
+
   /// Update \p Plan to account for uncountable early exits by introducing
   /// appropriate branching logic in the latch that handles early exits and the
   /// latch exit condition. Multiple exits are handled with a dispatch block
@@ -471,6 +481,11 @@ struct VPlanTransforms {
   /// unconditionally store to the same location.
   static void sinkPredicatedStores(VPlan &Plan, PredicatedScalarEvolution &PSE,
                                    const Loop *L);
+
+  /// Widens memory operations by a factor of UF based on a target hook.
+  /// This allows targets to use wider memory operations when profitable.
+  static void widenMemoryAccessesByUF(VPlan &Plan, ElementCount VF, unsigned UF,
+                                      const TargetTransformInfo &TTI);
 
   // Materialize vector trip counts for constants early if it can simply be
   // computed as (Original TC / VF * UF) * VF * UF.

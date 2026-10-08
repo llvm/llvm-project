@@ -30,11 +30,6 @@ using namespace PatternMatch;
 STATISTIC(NumDeadStore, "Number of dead stores eliminated");
 STATISTIC(NumGlobalCopies, "Number of allocas copied from constant global");
 
-static cl::opt<unsigned> MaxCopiedFromConstantUsers(
-    "instcombine-max-copied-from-constant-users", cl::init(300),
-    cl::desc("Maximum users to visit in copy from constant transform"),
-    cl::Hidden);
-
 /// isOnlyCopiedFromConstantMemory - Recursively walk the uses of a (derived)
 /// pointer to an alloca.  Ignore any reads of the pointer, return false if we
 /// see any stores or other unknown uses.  If we see pointer arithmetic, keep
@@ -42,10 +37,9 @@ static cl::opt<unsigned> MaxCopiedFromConstantUsers(
 /// the uses.  If we see a memcpy/memmove that targets an unoffseted pointer to
 /// the alloca, and if the source pointer is a pointer to a constant memory
 /// location, we can optimize this.
-static bool
-isOnlyCopiedFromConstantMemory(AAResults *AA, AllocaInst *V,
-                               MemTransferInst *&TheCopy,
-                               SmallVectorImpl<Instruction *> &ToDelete) {
+static bool isOnlyCopiedFromConstantMemory(
+    AAResults *AA, AllocaInst *V, MemTransferInst *&TheCopy,
+    SmallVectorImpl<Instruction *> &ToDelete, unsigned MaxUsers) {
   // We track lifetime intrinsics as we encounter them.  If we decide to go
   // ahead and replace the value with the memory location, this lets the caller
   // quickly eliminate the markers.
@@ -58,7 +52,7 @@ isOnlyCopiedFromConstantMemory(AAResults *AA, AllocaInst *V,
     ValueAndIsOffset Elem = Worklist.pop_back_val();
     if (!Visited.insert(Elem).second)
       continue;
-    if (Visited.size() > MaxCopiedFromConstantUsers)
+    if (Visited.size() > MaxUsers)
       return false;
 
     const auto [Value, IsOffset] = Elem;
@@ -160,11 +154,11 @@ isOnlyCopiedFromConstantMemory(AAResults *AA, AllocaInst *V,
 /// can replace any uses of the alloca with uses of the memory location
 /// directly.
 static MemTransferInst *
-isOnlyCopiedFromConstantMemory(AAResults *AA,
-                               AllocaInst *AI,
-                               SmallVectorImpl<Instruction *> &ToDelete) {
+isOnlyCopiedFromConstantMemory(AAResults *AA, AllocaInst *AI,
+                               SmallVectorImpl<Instruction *> &ToDelete,
+                               unsigned MaxUsers) {
   MemTransferInst *TheCopy = nullptr;
-  if (isOnlyCopiedFromConstantMemory(AA, AI, TheCopy, ToDelete))
+  if (isOnlyCopiedFromConstantMemory(AA, AI, TheCopy, ToDelete, MaxUsers))
     return TheCopy;
   return nullptr;
 }
@@ -553,7 +547,8 @@ Instruction *InstCombinerImpl::visitAllocaInst(AllocaInst &AI) {
   // constructs like "void foo() { int A[] = {1,2,3,4,5,6,7,8,9...}; }" if 'A'
   // is only subsequently read.
   SmallVector<Instruction *, 4> ToDelete;
-  if (MemTransferInst *Copy = isOnlyCopiedFromConstantMemory(AA, &AI, ToDelete)) {
+  if (MemTransferInst *Copy = isOnlyCopiedFromConstantMemory(
+          AA, &AI, ToDelete, CLOpts.max_copied_from_constant_users)) {
     Value *TheSrc = Copy->getSource();
     Align AllocaAlign = AI.getAlign();
     Align SourceAlign = getOrEnforceKnownAlignment(
@@ -807,7 +802,7 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
     // arrays of arbitrary size but this has a terrible impact on compile time.
     // The threshold here is chosen arbitrarily, maybe needs a little bit of
     // tuning.
-    if (NumElements > IC.MaxArraySizeForCombine)
+    if (NumElements > IC.CLOpts.maxarray_size)
       return nullptr;
 
     const DataLayout &DL = IC.getDataLayout();
@@ -1044,8 +1039,7 @@ static bool canSimplifyNullLoadOrGEP(LoadInst &LI, Value *Op) {
   return false;
 }
 
-Value *InstCombinerImpl::simplifyNonNullOperand(Value *V,
-                                                bool HasDereferenceable,
+Value *InstCombinerImpl::simplifyNonNullOperand(Value *V, bool UseProvenance,
                                                 unsigned Depth) {
   if (auto *Sel = dyn_cast<SelectInst>(V)) {
     if (isa<ConstantPointerNull>(Sel->getOperand(1)))
@@ -1063,9 +1057,20 @@ Value *InstCombinerImpl::simplifyNonNullOperand(Value *V,
     return nullptr;
 
   if (auto *GEP = dyn_cast<GetElementPtrInst>(V)) {
-    if (HasDereferenceable || GEP->isInBounds()) {
+    // If UseProvenance is true, we know by precondition that null pointers are
+    // not defined in this address-space. And we know that the GEP has
+    // provenance for a valid object. Therefore, the operand must also have
+    // valid provenance. We assume ConstantPointerNull does not have provenance.
+    // (The address could be equal to zero, but that doesn't matter.)
+    //
+    // If UseProvenance is false, we know that the address is some non-zero
+    // value. If the GEP is inbounds, and null pointers can't point to valid
+    // objects, the operand must also have a non-zero value.
+    if (UseProvenance ||
+        (GEP->isInBounds() &&
+         !NullPointerIsDefined(GEP->getFunction(), GEP->getAddressSpace()))) {
       if (auto *Res = simplifyNonNullOperand(GEP->getPointerOperand(),
-                                             HasDereferenceable, Depth + 1)) {
+                                             UseProvenance, Depth + 1)) {
         replaceOperand(*GEP, 0, Res);
         addToWorklist(GEP);
         return nullptr;
@@ -1077,8 +1082,8 @@ Value *InstCombinerImpl::simplifyNonNullOperand(Value *V,
     bool Changed = false;
     for (Use &U : PHI->incoming_values()) {
       // We set Depth to RecursionLimit to avoid expensive recursion.
-      if (auto *Res = simplifyNonNullOperand(U.get(), HasDereferenceable,
-                                             RecursionLimit)) {
+      if (auto *Res =
+              simplifyNonNullOperand(U.get(), UseProvenance, RecursionLimit)) {
         replaceUse(U, Res);
         Changed = true;
       }
@@ -1186,7 +1191,7 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
   }
 
   if (!NullPointerIsDefined(LI.getFunction(), LI.getPointerAddressSpace()))
-    if (Value *V = simplifyNonNullOperand(Op, /*HasDereferenceable=*/true))
+    if (Value *V = simplifyNonNullOperand(Op, /*UseProvenance=*/true))
       return replaceOperand(LI, 0, V);
 
   // load(llvm.protected.field.ptr(ptr)) -> llvm.ptrauth.auth(load(ptr))
@@ -1404,7 +1409,7 @@ static bool unpackStoreToAggregate(InstCombinerImpl &IC, StoreInst &SI) {
     // arrays of arbitrary size but this has a terrible impact on compile time.
     // The threshold here is chosen arbitrarily, maybe needs a little bit of
     // tuning.
-    if (NumElements > IC.MaxArraySizeForCombine)
+    if (NumElements > IC.CLOpts.maxarray_size)
       return false;
 
     const DataLayout &DL = IC.getDataLayout();
@@ -1594,7 +1599,7 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
         ConstantExpr::getBitCast(C, Type::getIntFromByteType(C->getType())));
 
   if (!NullPointerIsDefined(SI.getFunction(), SI.getPointerAddressSpace()))
-    if (Value *V = simplifyNonNullOperand(Ptr, /*HasDereferenceable=*/true))
+    if (Value *V = simplifyNonNullOperand(Ptr, /*UseProvenance=*/true))
       return replaceOperand(SI, 1, V);
 
   // store(ptr1, llvm.protected.field.ptr(ptr2)) ->
