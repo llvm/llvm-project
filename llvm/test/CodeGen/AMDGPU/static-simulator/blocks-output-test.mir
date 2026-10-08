@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgpu12.50 -amdgpu-enable-static-simulator -run-pass=amdgpu-static-simulator -filetype=null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu12.50 -run-pass=amdgpu-static-simulator -filetype=null %s 2>&1 | FileCheck %s
 
 ---
 name: blocks_output
