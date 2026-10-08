@@ -9904,8 +9904,14 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
 
       // If the user explicitly requested it via `--offload-arch` we should
       // extract it from any static libraries if present.
-      for (StringRef Arg : ToolChainArgs.getAllArgValues(OPT_offload_arch_EQ))
+      // A SYCL Intel GPU is requested by its canonical name, the one its device
+      // images are labeled with, whichever spelling the user wrote.
+      for (StringRef Arg : ToolChainArgs.getAllArgValues(OPT_offload_arch_EQ)) {
+        OffloadArch ID = StringToOffloadArch(Arg);
+        if (Kind == Action::OFK_SYCL && ID.isIntelGPU())
+          Arg = OffloadArchToString(ID);
         CmdArgs.emplace_back(Args.MakeArgString("--should-extract=" + Arg));
+      }
 
       // If this is OpenMP the device linker will need `-lompdevice`.
       if (Kind == Action::OFK_OpenMP && !Args.hasArg(OPT_no_offloadlib) &&

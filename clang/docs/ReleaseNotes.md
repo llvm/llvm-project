@@ -1207,7 +1207,17 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 
 ### SYCL Support
 
+- On a `spirv32-unknown-unknown` or `spirv64-unknown-unknown` offload target,
+  `--offload-arch` and `--no-offload-arch` must now name an Intel GPU or CPU,
+  `generic`, or the numeric name of an Intel GPU such as `xe_40.11.0`. Any other
+  value, e.g. a misspelled `xe-pcv`, is an error rather than a device job for a
+  device that does not exist.
+
 #### Improvements
+
+- `-fsycl --offload-arch=<Intel GPU>`, e.g. `xe-pvc`, now selects the SPIR-V
+  target without `--offload-targets`. `--offload-arch=native` skips NVIDIA GPUs,
+  which SYCL cannot target.
 
 ## Additional Information
 
