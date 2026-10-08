@@ -14,11 +14,11 @@ struct S { S(); ~S(); int x; };
 S g;
 const S &r = S();
 
-// CIR-BEFORE-LPP: cir.global external @g = ctor : !rec_S {
+// CIR-BEFORE-LPP: cir.global external {{.*}}@g = {{.*}} : !rec_S ctor {
 // CIR-BEFORE-LPP:   cir.call @_ZN1SC1Ev(%{{.*}}) cc(spir_function)
 // CIR-BEFORE-LPP: } dtor {
 // CIR-BEFORE-LPP:   cir.call @_ZN1SD1Ev(%{{.*}}) cc(spir_function)
-// CIR-BEFORE-LPP: cir.global external @r = ctor : !cir.ptr<!rec_S> {
+// CIR-BEFORE-LPP: cir.global external {{.*}}@r = {{.*}} : !cir.ptr<!rec_S> ctor {
 // CIR-BEFORE-LPP:   cir.call @_ZN1SC1Ev(%{{.*}}) cc(spir_function)
 // CIR-BEFORE-LPP: } dtor {
 // CIR-BEFORE-LPP:   cir.call @_ZN1SD1Ev(%{{.*}}) cc(spir_function)
