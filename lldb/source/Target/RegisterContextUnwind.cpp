@@ -75,6 +75,20 @@ static bool IsClangOutlinedFunction(const SymbolContext &sym_ctx) {
   return false;
 }
 
+/// Return the start of the function containing \p pc according to the object
+/// file's own unwind info (the .pdata RUNTIME_FUNCTION on PE/COFF x64), or an
+/// invalid address if there is none.
+static Address GetFunctionStartFromObjectFileUnwindInfo(const Address &pc) {
+  ModuleSP module_sp = pc.GetModule();
+  if (!module_sp)
+    return Address();
+  CallFrameInfo *cfi = module_sp->GetUnwindTable().GetObjectFileUnwindInfo();
+  AddressRange range;
+  if (!cfi || !cfi->GetAddressRange(pc, range))
+    return Address();
+  return range.GetBaseAddress();
+}
+
 #define UNWIND_LOG_IMPL(LOG_FN, log, ...)                                      \
   LOG_FN(log, "{0}th{1}/fr{2} {3}",                                            \
          llvm::indent(std::min(m_frame_number, 100U)), m_thread.GetIndexID(),  \
@@ -222,6 +236,13 @@ void RegisterContextUnwind::InitializeZerothFrame() {
       m_current_offset =
           m_current_pc.GetFileAddress() - m_start_pc.GetFileAddress();
     }
+    m_current_offset_backed_up_one = m_current_offset;
+  } else if (Address start =
+                 GetFunctionStartFromObjectFileUnwindInfo(m_current_pc);
+             start.IsValid()) {
+    m_start_pc = start;
+    m_current_offset =
+        m_current_pc.GetFileAddress() - m_start_pc.GetFileAddress();
     m_current_offset_backed_up_one = m_current_offset;
   } else {
     m_start_pc = m_current_pc;
@@ -928,8 +949,8 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
     // track.
     if (DWARFCallFrameInfo *eh_frame =
             pc_module_sp->GetUnwindTable().GetEHFrameInfo()) {
-      if (std::unique_ptr<UnwindPlan> plan_up =
-              eh_frame->GetUnwindPlan(m_current_pc))
+      if (std::unique_ptr<UnwindPlan> plan_up = eh_frame->GetUnwindPlan(
+              {AddressRange(m_current_pc, 1)}, m_start_pc))
         return plan_up;
     }
 
