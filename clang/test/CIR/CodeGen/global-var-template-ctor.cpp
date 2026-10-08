@@ -38,7 +38,7 @@ int test_multi_use() {
 // LLVM-DAG: @_ZL3fixILi2EE = internal global %{{.*}}FixedInt{{.*}} zeroinitializer
 // LLVM-DAG: @_ZGV3dynILi1EE = linkonce_odr global i64 0, comdat($_Z3dynILi1EE)
 
-// Classic orderes this first for some reason, so we have to have a separate
+// Classic orders this first for some reason, so we have to have a separate
 // check line.
 // OGCG-DAG: define {{.*}} @_Z4testv
 

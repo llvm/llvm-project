@@ -677,8 +677,7 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
     if (auto existing = dyn_cast_if_present<cir::CIRGlobalValueInterface>(
             getGlobalValue(getMangledName(gd)));
         existing && !existing.isDeclaration())
-      if (!existing.isDeclaration())
-        return;
+      return;
 
     // Emit the definition if it can't be deferred.
     emitGlobalDefinition(gd);
