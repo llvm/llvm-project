@@ -10,7 +10,6 @@
 #include "DirectX.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
