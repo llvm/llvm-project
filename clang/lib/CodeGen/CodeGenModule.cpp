@@ -6619,8 +6619,11 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
     Init = EmitNullConstant(D->getType());
   } else {
     initializedGlobalDecl = GlobalDecl(D);
-    emitter.emplace(*this);
-    llvm::Constant *Initializer = emitter->tryEmitForInitializer(*InitDecl);
+    llvm::Constant *Initializer = nullptr;
+    if (!mustDynamicallyInitialize(*D)) {
+      emitter.emplace(*this);
+      Initializer = emitter->tryEmitForInitializer(*InitDecl);
+    }
     if (!Initializer) {
       QualType T = InitExpr->getType();
       if (D->getType()->isReferenceType())
@@ -6906,6 +6909,28 @@ llvm::GlobalValue::LinkageTypes
 CodeGenModule::getLLVMLinkageVarDefinition(const VarDecl *VD) {
   GVALinkage Linkage = getContext().GetGVALinkageForVariable(VD);
   return getLLVMLinkageForDeclarator(VD, Linkage);
+}
+
+bool CodeGenModule::mustDynamicallyInitialize(const VarDecl &D) {
+  // A variable with vague linkage (an inline variable, a static data member of
+  // a class template, a static local of an inline function, ...) is shared by
+  // every translation unit that emits it, but only a constant initializer is
+  // guaranteed to be constant-folded in all of them. If we were to fold an
+  // initializer that another translation unit can't fold (say, because it
+  // reads a variable whose initializer is only visible here), that translation
+  // unit would initialize the variable dynamically, and could store to our
+  // copy of it (possibly placed in read-only memory) or race with our
+  // unguarded reads of it. Initialize it dynamically here as well, so that
+  // every translation unit agrees on how the variable is initialized.
+  if (!getLangOpts().CPlusPlus || getLangOpts().CUDAIsDevice)
+    return false;
+
+  const VarDecl *InitDecl;
+  if (!D.getAnyInitializer(InitDecl) || InitDecl->hasConstantInitialization() ||
+      InitDecl->hasFlexibleArrayInit(getContext()))
+    return false;
+
+  return llvm::GlobalValue::isWeakForLinker(getLLVMLinkageVarDefinition(&D));
 }
 
 /// Replace the uses of a function that was declared with a non-proto type.
