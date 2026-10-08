@@ -4,25 +4,25 @@
 // Immediate out of lower bound [-8, 7].
 
 st1w z19.s, p2, [x18, #-9, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-8, 7].
 // CHECK-NEXT: st1w z19.s, p2, [x18, #-9, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // Immediate out of upper bound [-8, 7].
 st1w z1.s, p5, [x23, #8, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-8, 7].
 // CHECK-NEXT: st1w z1.s, p5, [x23, #8, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // Immediate out of lower bound [-8, 7].
 st1w z21.d, p2, [x29, #-9, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-8, 7].
 // CHECK-NEXT: st1w z21.d, p2, [x29, #-9, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // Immediate out of upper bound [-8, 7].
 st1w z10.d, p5, [x26, #8, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-8, 7].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-8, 7].
 // CHECK-NEXT: st1w z10.d, p5, [x26, #8, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
@@ -140,52 +140,52 @@ st1w z0.d, p0, [x0, z0.d, sxtw #3]
 // Invalid vector + immediate addressing modes
 
 st1w z0.s, p0, [z0.s, #-1]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [0, 124].
 // CHECK-NEXT: st1w z0.s, p0, [z0.s, #-1]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st1w z0.s, p0, [z0.s, #-4]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [0, 124].
 // CHECK-NEXT: st1w z0.s, p0, [z0.s, #-4]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st1w z0.s, p0, [z0.s, #125]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [0, 124].
 // CHECK-NEXT: st1w z0.s, p0, [z0.s, #125]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st1w z0.s, p0, [z0.s, #128]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [0, 124].
 // CHECK-NEXT: st1w z0.s, p0, [z0.s, #128]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st1w z0.s, p0, [z0.s, #3]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [0, 124].
 // CHECK-NEXT: st1w z0.s, p0, [z0.s, #3]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st1w z0.d, p0, [z0.d, #-1]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [0, 124].
 // CHECK-NEXT: st1w z0.d, p0, [z0.d, #-1]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st1w z0.d, p0, [z0.d, #-4]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [0, 124].
 // CHECK-NEXT: st1w z0.d, p0, [z0.d, #-4]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st1w z0.d, p0, [z0.d, #125]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [0, 124].
 // CHECK-NEXT: st1w z0.d, p0, [z0.d, #125]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st1w z0.d, p0, [z0.d, #128]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [0, 124].
 // CHECK-NEXT: st1w z0.d, p0, [z0.d, #128]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st1w z0.d, p0, [z0.d, #3]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [0, 124].
 // CHECK-NEXT: st1w z0.d, p0, [z0.d, #3]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
