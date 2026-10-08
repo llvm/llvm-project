@@ -175,6 +175,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_NT>::enumeration(
   ECase(NT_OPENBSD_FPREGS);
   ECase(NT_OPENBSD_XFPREGS);
   ECase(NT_OPENBSD_WCOOKIE);
+  ECase(NT_OPENBSD_PACMASK);
   // AMD specific notes. (Code Object V2)
   ECase(NT_AMD_HSA_CODE_OBJECT_VERSION);
   ECase(NT_AMD_HSA_HSAIL);
@@ -680,6 +681,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHT>::enumeration(
   ECase(SHT_LLVM_OFFLOADING);
   ECase(SHT_LLVM_LTO);
   ECase(SHT_LLVM_CALL_GRAPH);
+  ECase(SHT_LLVM_DYNDBG_ELF);
   ECase(SHT_GNU_SFRAME);
   ECase(SHT_GNU_ATTRIBUTES);
   ECase(SHT_GNU_HASH);

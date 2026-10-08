@@ -30,6 +30,7 @@ add_mlir_dialect_library(MLIRGPUPipelines
   MLIRSCFToControlFlow
   MLIRVectorToLLVMPass
   MLIRVectorToSCF
+  MLIRVectorToXeGPU
   MLIRXeGPUTransforms
   MLIRXeGPUToXeVM
   MLIRXeVMToLLVM

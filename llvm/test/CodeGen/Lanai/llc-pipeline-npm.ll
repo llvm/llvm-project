@@ -49,7 +49,7 @@
 ; CHECK:     dead-mi-elimination
 ; CHECK:     detect-dead-lanes
 ; CHECK:     init-undef
-; CHECK:     process-imp-defs
+; CHECK:     process-implicit-defs
 ; CHECK:     unreachable-mbb-elimination
 ; CHECK:     require<live-vars>
 ; CHECK:     require<machine-loops>
@@ -60,7 +60,6 @@
 ; CHECK:     machine-scheduler
 ; CHECK:     greedy<all>
 ; CHECK:     virt-reg-rewriter
-; CHECK:     stack-slot-coloring
 ; CHECK:     stack-slot-coloring
 ; CHECK:     machine-cp
 ; CHECK:     machinelicm
@@ -81,13 +80,13 @@
 ; CHECK:     xray-instrumentation
 ; CHECK:     patchable-function
 ; CHECK:     lanai-delay-slot-fillter
-; CHECK:     FuncletLayoutPass
+; CHECK:     funclet-layout
 ; CHECK:     remove-loads-into-fake-uses
 ; CHECK:     StackMapLivenessPass
 ; CHECK:     live-debug-values
 ; CHECK:     machine-sanmd
 ; CHECK:     stack-frame-layout
 ; CHECK:     verify
-; CHECK:     lanai-asmprinter
+; CHECK:     lanai-asm-printer
 ; CHECK:   free-machine-function
 ; CHECK: lanai-asm-printer-end

@@ -56,11 +56,19 @@ if config.enable_profcheck:
     config.excludes.extend(["UpdateTestChecks", "Bitcode"])
     # TODO(#166655): Reenable Instrumentation tests
     config.excludes.append("Instrumentation")
-    # profiling doesn't work quite well on GPU, excluding
-    config.excludes.append("AMDGPU")
-    # TODO targets where profiling may make sense but will be addressed later
+    # TODO targets that will be addressed later
     config.excludes.extend(
-        ["Hexagon", "NVPTX", "PowerPC", "RISCV", "SPARC", "SPIRV", "WebAssembly"]
+        [
+            "Hexagon",
+            "NVPTX",
+            "PowerPC",
+            "RISCV",
+            "SPARC",
+            "SPIRV",
+            "WebAssembly",
+            "AMDGPU",
+            "DirectX",
+        ]
     )
     # these passes aren't hooked up to the pass pipeline:
     config.excludes.extend(["IRCE", "LoopBoundSplit", "LoopInterchange", "Scalarizer"])
@@ -68,7 +76,6 @@ if config.enable_profcheck:
     config.excludes.extend(
         [
             "Attributor",
-            "IROutliner",
             "BlockExtractor",
             "CodeExtractor",
             "HotColdSplit",
@@ -80,7 +87,7 @@ if config.enable_profcheck:
     )
     # Not aimed at being used for peak-optimized binaries. These will be
     # addressed later. PhaseOrdering has a couple of merge function tests.
-    config.excludes.extend(["GCOVProfiling", "MergeFunc", "PhaseOrdering"])
+    config.excludes.extend(["GCOVProfiling", "PhaseOrdering"])
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
@@ -114,11 +121,7 @@ llvm_config.with_environment("OCAMLRUNPARAM", "b")
 
 
 def get_asan_rtlib():
-    if (
-        not "Address" in config.llvm_use_sanitizer
-        or not "Darwin" in config.target_os
-        or not "x86" in config.host_triple
-    ):
+    if not "Address" in config.llvm_use_sanitizer or not "Darwin" in config.target_os:
         return ""
     try:
         import glob
@@ -183,6 +186,11 @@ if asan_rtlib:
     ld64_cmd = "env DYLD_INSERT_LIBRARIES={} {}".format(asan_rtlib, ld64_cmd)
 if config.osx_sysroot:
     ld64_cmd = "{} -syslibroot {}".format(ld64_cmd, config.osx_sysroot)
+elif config.osx_xcrun:
+    osx_sysroot = subprocess.check_output(
+        [config.osx_xcrun, "--show-sdk-path"], text=True
+    )
+    ld64_cmd = "{} -syslibroot {}".format(ld64_cmd, osx_sysroot)
 
 ocamlc_command = "%s ocamlc -cclib -L%s %s" % (
     config.ocamlfind_executable,
@@ -224,6 +232,7 @@ tools = [
     ToolSubst("%lli", FindTool("lli"), post=".", extra_args=lli_args),
     ToolSubst("%llc_dwarf", FindTool("llc"), extra_args=llc_args),
     ToolSubst("%gold", config.gold_executable, unresolved="ignore"),
+    ToolSubst("%ld_bfd", config.ld_bfd_executable, unresolved="ignore"),
     ToolSubst("%ld64", ld64_cmd, unresolved="ignore"),
     ToolSubst("%ocamlc", ocamlc_command, unresolved="ignore"),
     ToolSubst("%ocamlopt", ocamlopt_command, unresolved="ignore"),
@@ -291,7 +300,6 @@ tools.extend(
         "llvm-readelf",
         "llvm-readobj",
         "llvm-rtdyld",
-        "llvm-sim",
         "llvm-size",
         "llvm-split",
         "llvm-stress",
@@ -336,6 +344,7 @@ tools.extend(
         ToolSubst("OrcV2CBindingsLazy", unresolved="ignore"),
         ToolSubst("OrcV2CBindingsVeryLazy", unresolved="ignore"),
         ToolSubst("dxil-dis", unresolved="ignore"),
+        ToolSubst("llvm-calc-occupancy", unresolved="ignore"),
     ]
 )
 
@@ -529,9 +538,9 @@ if config.include_examples:
     config.available_features.add("examples")
 
 if config.linked_bye_extension:
+    config.available_features.add("linked-bye")
     config.substitutions.append(("%llvmcheckext", "CHECK-EXT"))
     config.substitutions.append(("%loadbye", ""))
-    config.substitutions.append(("%loadnewpmbye", ""))
 else:
     config.substitutions.append(("%llvmcheckext", "CHECK-NOEXT"))
     config.substitutions.append(
@@ -540,26 +549,22 @@ else:
             "-load={}/Bye{}".format(config.llvm_shlib_dir, config.llvm_shlib_ext),
         )
     )
-    config.substitutions.append(
-        (
-            "%loadnewpmbye",
-            "-load-pass-plugin={}/Bye{}".format(
-                config.llvm_shlib_dir, config.llvm_shlib_ext
-            ),
-        )
-    )
 
-if config.linked_exampleirtransforms_extension:
-    config.substitutions.append(("%loadexampleirtransforms", ""))
-else:
-    config.substitutions.append(
-        (
-            "%loadexampleirtransforms",
-            "-load-pass-plugin={}/ExampleIRTransforms{}".format(
-                config.llvm_shlib_dir, config.llvm_shlib_ext
-            ),
+# %loadX loads the extension as a pass plugin unless it is linked into tools.
+for name, lib, linked in [
+    ("%loadnewpmbye", "Bye", config.linked_bye_extension),
+    (
+        "%loadexampleirtransforms",
+        "ExampleIRTransforms",
+        config.linked_exampleirtransforms_extension,
+    ),
+]:
+    load = ""
+    if not linked:
+        load = "-load-pass-plugin={}/{}{}".format(
+            config.llvm_shlib_dir, lib, config.llvm_shlib_ext
         )
-    )
+    config.substitutions.append((name, load))
 
 # Static libraries are not built if BUILD_SHARED_LIBS is ON.
 if not config.build_shared_libs and not config.link_llvm_dylib:
@@ -579,6 +584,15 @@ if config.link_llvm_dylib:
 
 if config.have_tf_aot:
     config.available_features.add("have_tf_aot")
+
+if getattr(config, "have_mlir_lowering", False):
+    config.available_features.add("have_mlir_lowering")
+
+if getattr(config, "have_mlir_lowering_inliner", False):
+    config.available_features.add("have_mlir_lowering_inliner")
+
+if getattr(config, "have_mlir_lowering_regalloc", False):
+    config.available_features.add("have_mlir_lowering_regalloc")
 
 if getattr(config, "have_opencsd", False):
     config.available_features.add("opencsd")
@@ -642,14 +656,18 @@ if config.have_llvm_driver:
 import subprocess
 
 
-def have_ld_plugin_support():
+def have_ld_plugin_support(ld_executable, name):
     if not os.path.exists(
         os.path.join(config.llvm_shlib_dir, "LLVMgold" + config.llvm_shlib_ext)
     ):
         return False
 
+    # CMake was not able to find the linker executable.
+    if ld_executable.endswith("NOTFOUND"):
+        return False
+
     ld_cmd = subprocess.Popen(
-        [config.gold_executable, "--help"], stdout=subprocess.PIPE, env={"LANG": "C"}
+        [ld_executable, "--help"], stdout=subprocess.PIPE, env={"LANG": "C"}
     )
     ld_out = ld_cmd.stdout.read().decode()
     ld_cmd.wait()
@@ -672,18 +690,20 @@ def have_ld_plugin_support():
         config.available_features.add("ld_emu_elf32ppc")
 
     ld_version = subprocess.Popen(
-        [config.gold_executable, "--version"], stdout=subprocess.PIPE, env={"LANG": "C"}
+        [ld_executable, "--version"], stdout=subprocess.PIPE, env={"LANG": "C"}
     )
-    if not "GNU gold" in ld_version.stdout.read().decode():
+    if not name in ld_version.stdout.read().decode():
         return False
     ld_version.wait()
 
     return True
 
 
-if have_ld_plugin_support():
+if have_ld_plugin_support(config.ld_bfd_executable, "GNU ld"):
     config.available_features.add("ld_plugin")
 
+if have_ld_plugin_support(config.gold_executable, "GNU gold"):
+    config.available_features.add("gold_linker")
 
 def have_ld64_plugin_support():
     if not os.path.exists(
@@ -692,13 +712,6 @@ def have_ld64_plugin_support():
         return False
 
     if config.ld64_executable == "":
-        return False
-
-    ld_cmd = subprocess.Popen([config.ld64_executable, "-v"], stderr=subprocess.PIPE)
-    ld_out = ld_cmd.stderr.read().decode()
-    ld_cmd.wait()
-
-    if "ld64" not in ld_out or "LTO" not in ld_out:
         return False
 
     return True
@@ -752,6 +765,25 @@ def host_unwind_supports_jit():
 
 if host_unwind_supports_jit():
     config.available_features.add("host-unwind-supports-jit")
+
+
+# The triple that lli's JIT will target. This can be more specific than either
+# the host or the default target triple: e.g. an arm64e build of lli reports
+# arm64e-apple-darwin, while both CMake triples describe the machine as arm64.
+def host_jit_triple():
+    lli = lit.util.which("lli", config.llvm_tools_dir)
+    if not lli:
+        return None
+    try:
+        return subprocess.check_output([lli, "-host-jit-triple"], text=True).strip()
+    except (OSError, subprocess.CalledProcessError):
+        lit_config.warning("could not determine host JIT triple from lli")
+        return None
+
+
+config.host_jit_triple = host_jit_triple()
+if config.host_jit_triple:
+    config.available_features.add("host-jit-triple=" + config.host_jit_triple)
 
 # Ask llvm-config about asserts
 llvm_config.feature_config(

@@ -39,6 +39,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include "llvm/Transforms/Utils/SanitizerStats.h"
 #include <optional>
 
@@ -52,10 +53,6 @@ class DataLayout;
 class FunctionType;
 class LLVMContext;
 class IndexedInstrProfReader;
-
-namespace vfs {
-class FileSystem;
-}
 
 namespace abi {
 class ArgInfo;
@@ -509,7 +506,10 @@ private:
 
   // Store deferred function annotations so they can be emitted at the end with
   // most up to date ValueDecl that will have all the inherited annotations.
-  llvm::MapVector<StringRef, const ValueDecl *> DeferredAnnotations;
+  // The key owns its storage: not every mangled name handed to
+  // GetOrCreateLLVMFunction outlives the call.
+  llvm::MapVector<std::string, const ValueDecl *, llvm::StringMap<unsigned>>
+      DeferredAnnotations;
 
   /// Map used to get unique annotation strings.
   llvm::StringMap<llvm::Constant*> AnnotationStrings;
@@ -708,6 +708,7 @@ private:
   MetadataTypeMap MetadataIdMap;
   MetadataTypeMap VirtualMetadataIdMap;
   MetadataTypeMap GeneralizedMetadataIdMap;
+  MetadataTypeMap CallGraphMetadataIdMap;
 
   // Helps squashing blocks of TopLevelStmtDecl into a single llvm::Function
   // when used with -fincremental-extensions.
@@ -719,7 +720,8 @@ private:
   llvm::DenseMap<const CXXRecordDecl *, std::optional<PointerAuthQualifier>>
       VTablePtrAuthInfos;
   std::optional<PointerAuthQualifier>
-  computeVTPointerAuthentication(const CXXRecordDecl *ThisClass);
+  computeVTPointerAuthentication(const CXXRecordDecl *ThisClass,
+                                 bool IsVTTEntry);
 
   AtomicOptions AtomicOpts;
 
@@ -1160,13 +1162,14 @@ public:
                                    GlobalDecl SchemaDecl, QualType SchemaType);
 
   uint16_t getPointerAuthDeclDiscriminator(GlobalDecl GD);
-  std::optional<CGPointerAuthInfo>
-  getVTablePointerAuthInfo(CodeGenFunction *Context,
-                           const CXXRecordDecl *Record,
-                           llvm::Value *StorageAddress);
+
+  std::optional<CGPointerAuthInfo> getVTablePointerAuthInfo(
+      CodeGenFunction *Context, const CXXRecordDecl *Record,
+      llvm::Value *StorageAddress, bool IsVTTEntry = false);
 
   std::optional<PointerAuthQualifier>
-  getVTablePointerAuthentication(const CXXRecordDecl *thisClass);
+  getVTablePointerAuthentication(const CXXRecordDecl *thisClass,
+                                 bool IsVTTEntry = false);
 
   CGPointerAuthInfo EmitPointerAuthInfo(const RecordDecl *RD);
 
@@ -1521,6 +1524,7 @@ public:
   /// contribute to the function attributes and calling convention.
   /// \param Attrs [out] - On return, the attribute list to use.
   /// \param CallingConv [out] - On return, the LLVM calling convention to use.
+  /// \param AttrOnCallSite - Whether or not the attributes are on a call site
   void ConstructAttributeList(StringRef Name, const CGFunctionInfo &Info,
                               CGCalleeInfo CalleeInfo,
                               llvm::AttributeList &Attrs, unsigned &CallingConv,
@@ -1759,6 +1763,22 @@ public:
   /// MDString (for external identifiers) or a distinct unnamed MDNode (for
   /// internal identifiers).
   llvm::Metadata *CreateMetadataIdentifierForType(QualType T);
+
+  /// Create a metadata identifier for the Call Graph Section.
+  /// This is a generalized type identifier that is guaranteed to be an
+  /// MDString.
+  llvm::Metadata *CreateMetadataIdentifierForCallGraphType(QualType T);
+
+  /// Applies C default argument promotions to a parameter type for Call Graph
+  /// Section type reconstruction.
+  QualType GetCallGraphPromotedType(QualType Ty) const;
+
+  /// Reconstructs a FunctionProtoType for an unprototyped function type
+  /// (FunctionNoProtoType) using the given parameter/argument types, applying
+  /// default argument promotions to ensure call-site and definition-site type
+  /// signatures match.
+  QualType ReconstructCallGraphPrototype(const FunctionNoProtoType *FNPT,
+                                         ArrayRef<QualType> ParamTypes) const;
 
   /// Create a metadata identifier that is intended to be used to check virtual
   /// calls via a member function pointer.
@@ -2171,6 +2191,12 @@ private:
   /// by clang-sycl-linker during device-code splitting.
   void addSYCLModuleIdAttr(llvm::Function *Fn);
 
+  /// Embed the finalized SYCL device binary named by -foffload-include-binary
+  /// into the host module.
+  /// \return the function that registers the binary with the runtime, or null
+  /// if the binary could not be read.
+  llvm::Function *embedSYCLDeviceBinary();
+
   /// Determine whether the definition must be emitted; if this returns \c
   /// false, the definition can be emitted lazily if it's used.
   bool MustBeEmitted(const ValueDecl *D);
@@ -2199,7 +2225,8 @@ private:
                                     llvm::AttrBuilder &FuncAttrs);
 
   llvm::Metadata *CreateMetadataIdentifierImpl(QualType T, MetadataTypeMap &Map,
-                                               StringRef Suffix);
+                                               StringRef Suffix,
+                                               bool ForceString = false);
 
   /// Emit deactivation symbols for any PFP fields whose offset is taken with
   /// offsetof.

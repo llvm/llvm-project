@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SemaAPINotesInternal.h"
 #include "UsedDeclVisitor.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
@@ -69,7 +70,6 @@
 #include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/SemaX86.h"
 #include "clang/Sema/TemplateDeduction.h"
-#include "clang/Sema/TemplateInstCallback.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -227,6 +227,11 @@ public:
   }
   void PragmaDiagnostic(SourceLocation Loc, StringRef Namespace,
                         diag::Severity Mapping, StringRef Str) override {
+    // The pragma changed diagnostic severities; drop any cached state
+    // derived from the previous one.
+    S->AnalysisWarnings.clearPolicyCache();
+    S->clearDocumentationDiagsCache();
+
     // If one of the analysis-based diagnostics was enabled while processing
     // a function, we want to note it in the analysis-based warnings so they
     // can be run at the end of the function body even if the analysis warnings
@@ -569,17 +574,20 @@ void Sema::Initialize() {
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
   }
 
-  if (Context.getTargetInfo().getTriple().isAMDGPU() ||
-      (Context.getTargetInfo().getTriple().isSPIRV() &&
-       Context.getTargetInfo().getTriple().getVendor() == llvm::Triple::AMD) ||
+  if (Context.getTargetInfo().hasAMDGPUTypes() ||
       (Context.getAuxTargetInfo() &&
-       (Context.getAuxTargetInfo()->getTriple().isAMDGPU() ||
-        (Context.getAuxTargetInfo()->getTriple().isSPIRV() &&
-         Context.getAuxTargetInfo()->getTriple().getVendor() ==
-             llvm::Triple::AMD)))) {
+       (Context.getAuxTargetInfo()->hasAMDGPUTypes()))) {
 #define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
   addImplicitTypedef(Name, Context.SingletonId);
 #include "clang/Basic/AMDGPUTypes.def"
+  }
+
+  if (Context.getTargetInfo().getTriple().isSPIRV() ||
+      (Context.getAuxTargetInfo() &&
+       Context.getAuxTargetInfo()->getTriple().isSPIRV())) {
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  addImplicitTypedef(Name, Context.SingletonId);
+#include "clang/Basic/SPIRVTypes.def"
   }
 
   if (Context.getTargetInfo().hasBuiltinMSVaList()) {
@@ -1171,8 +1179,9 @@ static bool IsRecordFullyDefined(const CXXRecordDecl *RD,
   for (CXXRecordDecl::friend_iterator I = RD->friend_begin(),
                                       E = RD->friend_end();
        I != E && Complete; ++I) {
+    FriendDecl *Friend = *I;
     // Check if friend classes and methods are complete.
-    if (TypeSourceInfo *TSI = (*I)->getFriendType()) {
+    if (TypeSourceInfo *TSI = Friend->getFriendType()) {
       // Friend classes are available as the TypeSourceInfo of the FriendDecl.
       if (CXXRecordDecl *FriendD = TSI->getType()->getAsCXXRecordDecl())
         Complete = MethodsAndNestedClassesComplete(FriendD, MNCComplete);
@@ -1181,7 +1190,7 @@ static bool IsRecordFullyDefined(const CXXRecordDecl *RD,
     } else {
       // Friend functions are available through the NamedDecl of FriendDecl.
       if (const FunctionDecl *FD =
-          dyn_cast<FunctionDecl>((*I)->getFriendDecl()))
+              dyn_cast<FunctionDecl>(Friend->getFriendDecl()))
         Complete = FD->isDefined();
       else
         // This is a template friend, give up.
@@ -1328,6 +1337,7 @@ void Sema::ActOnEndOfTranslationUnit() {
   DiagnoseUnterminatedPragmaAttribute();
   OpenMP().DiagnoseUnterminatedOpenMPDeclareTarget();
   DiagnosePrecisionLossInComplexDivision();
+  DiagnoseUnusedAPINotesSelectors();
 
   // All delayed member exception specs should be checked or we end up accepting
   // incompatible declarations.
@@ -1406,8 +1416,18 @@ void Sema::ActOnEndOfTranslationUnit() {
   if (Module *CurrentModule = getCurrentModule();
       CurrentModule && CurrentModule->isInterfaceOrPartition()) {
     auto DoesModNeedInit = [this](Module *M) {
-      if (!getASTContext().getModuleInitializers(M).empty())
-        return true;
+      for (Decl *D : getASTContext().getModuleInitializers(M)) {
+        auto *VD = dyn_cast<VarDecl>(D);
+        // TLS initialization is not handled by the TU's global initializer.
+        if (!VD || VD->getTLSKind() != VarDecl::TLS_None)
+          continue;
+
+        if (const VarDecl *InitDecl = VD->getInitializingDeclaration();
+            (InitDecl && !InitDecl->hasConstantInitialization()) ||
+            VD->needsDestruction(getASTContext()) ==
+                QualType::DK_cxx_destructor)
+          return true;
+      }
       for (auto [Exported, _] : M->Exports)
         if (Exported->isNamedModuleInterfaceHasInit())
           return true;
@@ -2402,6 +2422,9 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
       ARM().checkSVETypeSupport(Ty, Loc, FD, CallerFeatureMap);
     }
 
+    if (TI.hasAMDGPUTypes())
+      AMDGPU().checkAMDGPUTypeSupport(Ty, Loc);
+
     if (auto *VT = Ty->getAs<VectorType>();
         VT && FD &&
         (VT->getVectorKind() == VectorKind::SveFixedLengthData ||
@@ -2727,10 +2750,79 @@ LambdaScopeInfo *Sema::getCurGenericLambda() {
   return nullptr;
 }
 
+bool Sema::shouldRetainCommentsInAST(SourceLocation Loc) {
+  if (!LangOpts.CommentOpts.RetainCommentsFromSystemHeaders &&
+      SourceMgr.isInSystemHeader(Loc))
+    return false;
+
+  if (LangOpts.CommentOpts.ParseAllComments)
+    return true;
+
+  if (LangOpts.CommentOpts.RetainComments)
+    return true;
+
+  // When building a PCH the comments are serialized into the AST file
+  // so downstream consumers like clangd) can retrieve documentation, and the
+  // incremental/REPL front end may query them interactively.
+  if (TUKind != TU_Complete)
+    return true;
+
+  if (PP.isCodeCompletionEnabled())
+    return true;
+
+  // Keep the comment if a documentation warning is enabled at its location.
+  // Checking the location, rather than globally, is what makes a warning
+  // turned on by a `#pragma clang diagnostic` take effect.
+  return areDocumentationDiagsEnabled(Loc);
+}
+
+bool Sema::computeDocumentationDiagsAt(SourceLocation Loc) const {
+  return !Diags.areAllIgnored("documentation", Loc) ||
+         !Diags.areAllIgnored("documentation-pedantic", Loc);
+}
+
+void Sema::clearDocumentationDiagsCache() {
+  DocDiagsStateKey = nullptr;
+  DocDiagsExactComputed = 0;
+}
+
+bool Sema::areDocumentationDiagsEnabled(SourceLocation Loc) {
+  // Under a suppression mapping the severity depends on the file path rather
+  // than the diagnostic state, so there is nothing stable to key a cache on.
+  if (Loc.isInvalid() || Diags.hasDiagSuppressionMapping())
+    return computeDocumentationDiagsAt(Loc);
+
+  const void *StateKey = Diags.getDiagStateKeyForLoc(Loc);
+  if (StateKey != DocDiagsStateKey) {
+    DocDiagsStateKey = StateKey;
+    {
+      // Answer as if Loc were not in a system header.
+      ForceSystemWarningsRAII ShowSystemWarnings(Diags);
+      DocDiagsEnabledIgnoringSystem = computeDocumentationDiagsAt(Loc);
+    }
+    DocDiagsExactComputed = 0;
+  }
+
+  if (!DocDiagsEnabledIgnoringSystem)
+    return false;
+
+  DiagStateSystemClass SysClass = Diags.getDiagStateSystemClassForLoc(Loc);
+  if (SysClass == DiagStateSystemClass::UserCode)
+    return true;
+
+  const unsigned Bit = 1u << static_cast<unsigned>(SysClass);
+  if (!(DocDiagsExactComputed & Bit)) {
+    DocDiagsExactComputed |= Bit;
+    if (computeDocumentationDiagsAt(Loc))
+      DocDiagsExactEnabled |= Bit;
+    else
+      DocDiagsExactEnabled &= ~Bit;
+  }
+  return (DocDiagsExactEnabled & Bit) != 0;
+}
 
 void Sema::ActOnComment(SourceRange Comment) {
-  if (!LangOpts.RetainCommentsFromSystemHeaders &&
-      SourceMgr.isInSystemHeader(Comment.getBegin()))
+  if (!shouldRetainCommentsInAST(Comment.getBegin()))
     return;
   RawComment RC(SourceMgr, Comment, LangOpts.CommentOpts, false);
   if (RC.isAlmostTrailingComment() || RC.hasUnsupportedSplice(SourceMgr)) {

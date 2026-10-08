@@ -51,6 +51,56 @@ exit:                                              ; preds = %loop
   ret i16 %crc.next
 }
 
+; A direct trunc to i1 tests whether bit zero is set.
+define i16 @crc16.le.tc8.trunc.i1(i8 %msg, i16 %checksum) {
+; CHECK-LABEL: 'crc16.le.tc8.trunc.i1'
+; CHECK-NEXT:  Found little-endian CRC-16 loop with trip count 8
+; CHECK-NEXT:    Initial CRC: i16 %checksum
+; CHECK-NEXT:    Generating polynomial: 40961
+; CHECK-NEXT:    Computed CRC: %crc.next = select i1 %check.sb, i16 %xor, i16 %crc.lshr
+; CHECK-NEXT:    Auxiliary data: i8 %msg
+; CHECK-NEXT:    Computed CRC lookup table:
+; CHECK-NEXT:  0 49345 49537 320 49921 960 640 49729 50689 1728 1920 51009 1280 50625 50305 1088
+; CHECK-NEXT:  52225 3264 3456 52545 3840 53185 52865 3648 2560 51905 52097 2880 51457 2496 2176 51265
+; CHECK-NEXT:  55297 6336 6528 55617 6912 56257 55937 6720 7680 57025 57217 8000 56577 7616 7296 56385
+; CHECK-NEXT:  5120 54465 54657 5440 55041 6080 5760 54849 53761 4800 4992 54081 4352 53697 53377 4160
+; CHECK-NEXT:  61441 12480 12672 61761 13056 62401 62081 12864 13824 63169 63361 14144 62721 13760 13440 62529
+; CHECK-NEXT:  15360 64705 64897 15680 65281 16320 16000 65089 64001 15040 15232 64321 14592 63937 63617 14400
+; CHECK-NEXT:  10240 59585 59777 10560 60161 11200 10880 59969 60929 11968 12160 61249 11520 60865 60545 11328
+; CHECK-NEXT:  58369 9408 9600 58689 9984 59329 59009 9792 8704 58049 58241 9024 57601 8640 8320 57409
+; CHECK-NEXT:  40961 24768 24960 41281 25344 41921 41601 25152 26112 42689 42881 26432 42241 26048 25728 42049
+; CHECK-NEXT:  27648 44225 44417 27968 44801 28608 28288 44609 43521 27328 27520 43841 26880 43457 43137 26688
+; CHECK-NEXT:  30720 47297 47489 31040 47873 31680 31360 47681 48641 32448 32640 48961 32000 48577 48257 31808
+; CHECK-NEXT:  46081 29888 30080 46401 30464 47041 46721 30272 29184 45761 45953 29504 45313 29120 28800 45121
+; CHECK-NEXT:  20480 37057 37249 20800 37633 21440 21120 37441 38401 22208 22400 38721 21760 38337 38017 21568
+; CHECK-NEXT:  39937 23744 23936 40257 24320 40897 40577 24128 23040 39617 39809 23360 39169 22976 22656 38977
+; CHECK-NEXT:  34817 18624 18816 35137 19200 35777 35457 19008 19968 36545 36737 20288 36097 19904 19584 35905
+; CHECK-NEXT:  17408 33985 34177 17728 34561 18368 18048 34369 33281 17088 17280 33601 16640 33217 32897 16448
+; CHECK-NEXT:    Computed CRC Barrett constants:
+; CHECK-NEXT:  Mu = 511, FullGenPoly = 81923
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data = phi i8 [ %msg, %entry ], [ %data.next, %loop ]
+  %crc.trunc = trunc i16 %crc to i8
+  %xor.data.crc = xor i8 %data, %crc.trunc
+  %data.next = lshr i8 %data, 1
+  %check.sb = trunc i8 %xor.data.crc to i1
+  %crc.lshr = lshr i16 %crc, 1
+  %xor = xor i16 %crc.lshr, -24575
+  %crc.next = select i1 %check.sb, i16 %xor, i16 %crc.lshr
+  %iv.next = add nuw nsw i8 %iv, 1
+  %exit.cond = icmp samesign ult i8 %iv, 7
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
 define i16 @crc16.le.tc8.udiv(i8 %msg, i16 %checksum) {
 ; CHECK-LABEL: 'crc16.le.tc8.udiv'
 ; CHECK-NEXT:  Found little-endian CRC-16 loop with trip count 8
@@ -327,6 +377,54 @@ loop:                                              ; preds = %loop, %entry
   %crc.xor = xor i16 %crc.shl, 4129
   %check.sb = icmp sge i16 %crc, 0
   %crc.next = select i1 %check.sb, i16 %crc.shl, i16 %crc.xor
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exit.cond = icmp samesign ult i32 %iv, 7
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
+define i16 @crc16.be.tc8.crc.init.select(i16 %a, i16 %b) {
+; CHECK-LABEL: 'crc16.be.tc8.crc.init.select'
+; CHECK-NEXT:  Found big-endian CRC-16 loop with trip count 8
+; CHECK-NEXT:    Initial CRC: %crc.init = select i1 %init.cond, i16 %a.inc, i16 %b.inc
+; CHECK-NEXT:    Generating polynomial: 4129
+; CHECK-NEXT:    Computed CRC: %crc.next = select i1 %check.sb, i16 %crc.xor, i16 %crc.shl
+; CHECK-NEXT:    Computed CRC lookup table:
+; CHECK-NEXT:  0 4129 8258 12387 16516 20645 24774 28903 33032 37161 41290 45419 49548 53677 57806 61935
+; CHECK-NEXT:  4657 528 12915 8786 21173 17044 29431 25302 37689 33560 45947 41818 54205 50076 62463 58334
+; CHECK-NEXT:  9314 13379 1056 5121 25830 29895 17572 21637 42346 46411 34088 38153 58862 62927 50604 54669
+; CHECK-NEXT:  13907 9842 5649 1584 30423 26358 22165 18100 46939 42874 38681 34616 63455 59390 55197 51132
+; CHECK-NEXT:  18628 22757 26758 30887 2112 6241 10242 14371 51660 55789 59790 63919 35144 39273 43274 47403
+; CHECK-NEXT:  23285 19156 31415 27286 6769 2640 14899 10770 56317 52188 64447 60318 39801 35672 47931 43802
+; CHECK-NEXT:  27814 31879 19684 23749 11298 15363 3168 7233 60846 64911 52716 56781 44330 48395 36200 40265
+; CHECK-NEXT:  32407 28342 24277 20212 15891 11826 7761 3696 65439 61374 57309 53244 48923 44858 40793 36728
+; CHECK-NEXT:  37256 33193 45514 41451 53516 49453 61774 57711 4224 161 12482 8419 20484 16421 28742 24679
+; CHECK-NEXT:  33721 37784 41979 46042 49981 54044 58239 62302 689 4752 8947 13010 16949 21012 25207 29270
+; CHECK-NEXT:  46570 42443 38312 34185 62830 58703 54572 50445 13538 9411 5280 1153 29798 25671 21540 17413
+; CHECK-NEXT:  42971 47098 34713 38840 59231 63358 50973 55100 9939 14066 1681 5808 26199 30326 17941 22068
+; CHECK-NEXT:  55628 51565 63758 59695 39368 35305 47498 43435 22596 18533 30726 26663 6336 2273 14466 10403
+; CHECK-NEXT:  52093 56156 60223 64286 35833 39896 43963 48026 19061 23124 27191 31254 2801 6864 10931 14994
+; CHECK-NEXT:  64814 60687 56684 52557 48554 44427 40424 36297 31782 27655 23652 19525 15522 11395 7392 3265
+; CHECK-NEXT:  61215 65342 53085 57212 44955 49082 36825 40952 28183 32310 20053 24180 11923 16050 3793 7920
+; CHECK-NEXT:    Computed CRC Barrett constants:
+; CHECK-NEXT:  Mu = 273, FullGenPoly = 69665
+;
+entry:
+  %a.inc = add i16 %a, 1
+  %b.inc = add i16 %b, 2
+  %init.cond = icmp ult i16 %a, %b
+  %crc.init = select i1 %init.cond, i16 %a.inc, i16 %b.inc
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %crc.init, %entry ], [ %crc.next, %loop ]
+  %crc.shl = shl i16 %crc, 1
+  %crc.xor = xor i16 %crc.shl, 4129
+  %check.sb = icmp slt i16 %crc, 0
+  %crc.next = select i1 %check.sb, i16 %crc.xor, i16 %crc.shl
   %iv.next = add nuw nsw i32 %iv, 1
   %exit.cond = icmp samesign ult i32 %iv, 7
   br i1 %exit.cond, label %loop, label %exit
@@ -858,6 +956,31 @@ exit:                                              ; preds = %loop
   ret i16 %crc.next
 }
 
+define i16 @not.crc.latch.cond.not.icmp(i16 %crc.init) {
+; CHECK-LABEL: 'not.crc.latch.cond.not.icmp'
+; CHECK-NEXT:  Did not find a hash algorithm
+; CHECK-NEXT:  Reason: Loop not in canonical form
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %crc.init, %entry ], [ %crc.next, %loop ]
+  %crc.shl = shl i16 %crc, 1
+  %crc.xor = xor i16 %crc.shl, 4129
+  %check.sb = icmp slt i16 %crc, 0
+  %crc.next = select i1 %check.sb, i16 %crc.xor, i16 %crc.shl
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exit.cond.lo = icmp samesign ult i32 %iv, 7
+  %exit.cond.hi = icmp samesign ult i32 %iv, 100
+  %exit.cond = and i1 %exit.cond.lo, %exit.cond.hi
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
 define i16 @not.crc.tc.exceeds.data.bw(i16 %crc.init) {
 ; CHECK-LABEL: 'not.crc.tc.exceeds.data.bw'
 ; CHECK-NEXT:  Did not find a hash algorithm
@@ -957,7 +1080,7 @@ exit:                                              ; preds = %loop
 define i16 @not.crc.result.unused(i16 %crc.init) {
 ; CHECK-LABEL: 'not.crc.result.unused'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Unable to find use of computed value in loop exit block
+; CHECK-NEXT:  Reason: Found stray incoming values in loop exit block
 ;
 entry:
   br label %loop
@@ -1234,6 +1357,52 @@ loop:                                              ; preds = %loop, %entry
   %crc.next = select i1 %check.sb, i16 %crc.xor, i16 %crc.lshr
   %iv.next = add nuw nsw i8 %iv, 1
   %exit.cond = icmp samesign ult i8 %iv, 7
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
+define i16 @not.crc.init.arg.trunc.i1.inverted.select(i16 %crc.init) {
+; CHECK-LABEL: 'not.crc.init.arg.trunc.i1.inverted.select'
+; CHECK-NEXT:  Did not find a hash algorithm
+; CHECK-NEXT:  Reason: Malformed significant-bit check
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %crc.init, %entry ], [ %crc.next, %loop ]
+  %check.sb = trunc i16 %crc to i1
+  %crc.lshr = lshr i16 %crc, 1
+  %crc.xor = xor i16 %crc.lshr, -24575
+  %crc.next = select i1 %check.sb, i16 %crc.lshr, i16 %crc.xor
+  %iv.next = add nuw nsw i8 %iv, 1
+  %exit.cond = icmp samesign ult i8 %iv, 7
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
+define i16 @not.crc.trunc.i1.sb.check.be(i16 %crc.init) {
+; CHECK-LABEL: 'not.crc.trunc.i1.sb.check.be'
+; CHECK-NEXT:  Did not find a hash algorithm
+; CHECK-NEXT:  Reason: Malformed significant-bit check
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %crc.init, %entry ], [ %crc.next, %loop ]
+  %crc.shl = shl i16 %crc, 1
+  %crc.xor = xor i16 %crc.shl, 4129
+  %check.sb = trunc i16 %crc to i1
+  %crc.next = select i1 %check.sb, i16 %crc.xor, i16 %crc.shl
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exit.cond = icmp samesign ult i32 %iv, 7
   br i1 %exit.cond, label %loop, label %exit
 
 exit:                                              ; preds = %loop
@@ -1810,6 +1979,57 @@ loop:
 
 exit:
   %ret = xor i16 %crc, %crc.next
+  ret i16 %ret
+}
+
+define i16 @not.crc.crc.phi.outside.user.nodata(i16 %crc.init) {
+; CHECK-LABEL: 'not.crc.crc.phi.outside.user.nodata'
+; CHECK-NEXT:  Did not find a hash algorithm
+; CHECK-NEXT:  Reason: Found stray incoming values in loop exit block
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %crc.init, %entry ], [ %crc.next, %loop ]
+  %crc.shl = shl i16 %crc, 1
+  %crc.xor = xor i16 %crc.shl, 3
+  %check.sb = icmp slt i16 %crc, 0
+  %crc.next = select i1 %check.sb, i16 %crc.xor, i16 %crc.shl
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exit.cond = icmp samesign ult i32 %iv, 7
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:
+  %ret = xor i16 %crc, %crc.next
+  ret i16 %ret
+}
+
+define i16 @not.crc.iv.phi.outside.user(i16 %crc.init, i16 %data.init) {
+; CHECK-LABEL: 'not.crc.iv.phi.outside.user'
+; CHECK-NEXT:  Did not find a hash algorithm
+; CHECK-NEXT:  Reason: Found stray incoming values in loop exit block
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i16 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %crc.init, %entry ], [ %crc.next, %loop ]
+  %data = phi i16 [ %data.init, %entry ], [ %data.next, %loop ]
+  %xor.crc.data = xor i16 %data, %crc
+  %crc.shl = shl i16 %crc, 1
+  %crc.xor = xor i16 %crc.shl, 3
+  %check.sb = icmp slt i16 %xor.crc.data, 0
+  %crc.next = select i1 %check.sb, i16 %crc.xor, i16 %crc.shl
+  %data.next = shl i16 %data, 1
+  %iv.next = add nuw nsw i16 %iv, 1
+  %exit.cond = icmp samesign ult i16 %iv, 7
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:
+  %ret = xor i16 %iv, %crc.next
   ret i16 %ret
 }
 

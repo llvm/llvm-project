@@ -1332,19 +1332,21 @@ KnownBits KnownBits::remGetLowBits(const KnownBits &LHS, const KnownBits &RHS) {
 }
 
 KnownBits KnownBits::urem(const KnownBits &LHS, const KnownBits &RHS) {
-  KnownBits Known = remGetLowBits(LHS, RHS);
-  if (RHS.isConstant() && RHS.getConstant().isPowerOf2()) {
-    // NB: Low bits set in `remGetLowBits`.
-    APInt HighBits = ~(RHS.getConstant() - 1);
-    Known.Zero |= std::move(HighBits);
-    return Known;
-  }
+  // L % R for L < R is L. (A zero divisor is UB, and if MinR is zero this
+  // condition cannot hold anyway.)
+  if (LHS.getMaxValue().ult(RHS.getMinValue()))
+    return LHS;
 
-  // Since the result is less than or equal to either operand, any leading
-  // zero bits in either operand must also exist in the result.
-  uint32_t Leaders =
-      std::max(LHS.countMinLeadingZeros(), RHS.countMinLeadingZeros());
-  Known.Zero.setHighBits(Leaders);
+  KnownBits Known = remGetLowBits(LHS, RHS);
+
+  // L % R is at most L and, since a zero divisor is UB, strictly less than
+  // R, so the result has at least as many leading zeros as
+  // umin(MaxL, MaxR - 1), as in ConstantRange::urem. For a power-of-two
+  // constant R this computes the exact L & (R - 1): remGetLowBits preserved
+  // the low bits and this clears the bits from log2(R) up. If R is known to
+  // be zero, MaxR - 1 wraps around, which is harmless: every input is UB.
+  APInt MaxRes = APIntOps::umin(LHS.getMaxValue(), RHS.getMaxValue() - 1);
+  Known.Zero.setHighBits(MaxRes.countLeadingZeros());
   return Known;
 }
 
@@ -1444,3 +1446,26 @@ LLVM_DUMP_METHOD void KnownBits::dump() const {
   dbgs() << "\n";
 }
 #endif
+
+unsigned llvm::SignBitsOps::rot(unsigned SrcSignBits, unsigned BitWidth,
+                                std::optional<APInt> RotAmt,
+                                bool IsRotateRight) {
+  // If we're rotating an 0/-1 value, then it stays an 0/-1 value.
+  if (SrcSignBits == BitWidth)
+    return BitWidth;
+
+  if (!RotAmt)
+    return 1;
+
+  unsigned Amt = RotAmt->urem(BitWidth);
+
+  // Handle rotate right by N like a rotate left by BitWidth-N.
+  if (IsRotateRight)
+    Amt = (BitWidth - Amt) % BitWidth;
+
+  // If we aren't rotating out all of the known-in sign bits, return the
+  // number that are left. This handles rotl(sext(x), 1) for example.
+  if (SrcSignBits > Amt + 1)
+    return SrcSignBits - Amt;
+  return 1;
+}

@@ -340,14 +340,12 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
           break_addr.Slide(prologue_byte_size);
       }
     } else if (sc.symbol) {
-      if (sc.symbol->GetType() == eSymbolTypeReExported) {
-        const Symbol *actual_symbol =
-            sc.symbol->ResolveReExportedSymbol(breakpoint.GetTarget());
-        if (actual_symbol) {
-          is_reexported = true;
-          break_addr = actual_symbol->GetAddress();
-        }
-      } else {
+      const Symbol *actual_symbol = sc.symbol->ResolveReExportedSymbol(
+          breakpoint.GetTarget(), sc.module_sp);
+      if (actual_symbol) {
+        is_reexported = true;
+        break_addr = actual_symbol->GetAddress();
+      } else if (sc.symbol->GetType() != eSymbolTypeReExported) {
         break_addr = sc.symbol->GetAddress();
       }
 
@@ -405,12 +403,12 @@ void BreakpointResolverName::GetDescription(Stream *s) {
       s->Printf("name = '%s'", unique_lookups[0].GetCString());
     else {
       size_t num_names = unique_lookups.size();
-      s->Printf("names = {");
+      s->PutCString("names = {");
       for (size_t i = 0; i < num_names; i++) {
         s->Printf("%s'%s'", (i == 0 ? "" : ", "),
                   unique_lookups[i].GetCString());
       }
-      s->Printf("}");
+      s->PutCString("}");
     }
   }
   if (m_language != eLanguageTypeUnknown) {

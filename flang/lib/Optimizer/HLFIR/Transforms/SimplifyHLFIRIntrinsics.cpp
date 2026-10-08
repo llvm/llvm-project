@@ -15,6 +15,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
@@ -311,7 +312,10 @@ protected:
       auto constDim = fir::getIntIfConstant(getDim());
       if (!constDim)
         return rewriter.notifyMatchFailure(op, "Nonconstant DIM");
-      dimVal = *constDim;
+      std::optional<std::int64_t> constDim64 = constDim->trySExtValue();
+      if (!constDim64)
+        return rewriter.notifyMatchFailure(op, "DIM does not fit in int64_t");
+      dimVal = *constDim64;
 
       if ((dimVal <= 0 || dimVal > getSourceRank()))
         return rewriter.notifyMatchFailure(op,
@@ -368,10 +372,9 @@ static mlir::Value genMinMaxInitValue(mlir::Location loc,
     return builder.createRealConstant(loc, type, limit);
   }
   unsigned bits = type.getIntOrFloatBitWidth();
-  int64_t limitInt = IS_MAX
-                         ? llvm::APInt::getSignedMinValue(bits).getSExtValue()
-                         : llvm::APInt::getSignedMaxValue(bits).getSExtValue();
-  return builder.createIntegerConstant(loc, type, limitInt);
+  llvm::APInt limit = IS_MAX ? llvm::APInt::getSignedMinValue(bits)
+                             : llvm::APInt::getSignedMaxValue(bits);
+  return builder.createIntegerConstant(loc, type, limit);
 }
 
 /// Generate a comparison of an array element value \p elem
@@ -500,6 +503,12 @@ private:
       return rewriter.notifyMatchFailure(
           getOp(),
           "CHARACTER type is not supported for MINLOC/MAXLOC inlining");
+    if (auto intType =
+            mlir::dyn_cast<mlir::IntegerType>(getSourceElementType()))
+      if (intType.isUnsigned())
+        return rewriter.notifyMatchFailure(
+            getOp(),
+            "UNSIGNED type is not supported for MINLOC/MAXLOC inlining");
     return mlir::success();
   }
 
@@ -1435,7 +1444,11 @@ public:
         if (!constDim)
           return rewriter.notifyMatchFailure(
               op, "Nonconstant DIM for CSHIFT/EOSHIFT");
-        dimVal = *constDim;
+        std::optional<std::int64_t> constDim64 = constDim->trySExtValue();
+        if (!constDim64)
+          return rewriter.notifyMatchFailure(
+              op, "DIM does not fit in int64_t for CSHIFT/EOSHIFT");
+        dimVal = *constDim64;
       }
 
     if (dimVal <= 0 || dimVal > arrayRank)
@@ -1454,10 +1467,11 @@ public:
           return rewriter.notifyMatchFailure(
               op, "EOSHIFT with BOUNDARY being CHARACTER expression");
       }
-      // TODO: selecting between ARRAY and BOUNDARY values with derived types
-      // need more work.
-      if (fir::isa_derived(expr.getEleTy()))
-        return rewriter.notifyMatchFailure(op, "EOSHIFT of derived type");
+      // TODO: selecting between ARRAY and BOUNDARY values with derived or
+      // polymorphic types need more work.
+      if (fir::isa_derived(expr.getEleTy()) || expr.isPolymorphic())
+        return rewriter.notifyMatchFailure(
+            op, "EOSHIFT of derived or polymorphic type");
     }
 
     // When DIM==1 and the contiguity of the input array is not statically
@@ -2505,7 +2519,7 @@ public:
     std::optional<bool> isBack;
     if (back) {
       if (auto backCst = fir::getIntIfConstant(back))
-        isBack = *backCst != 0;
+        isBack = !backCst->isZero();
     } else {
       isBack = false;
     }
@@ -3061,6 +3075,75 @@ private:
   }
 };
 
+static std::optional<bool> getLogicalConstant(mlir::Value value) {
+  if (auto convertOp = value.getDefiningOp<fir::ConvertOp>())
+    value = convertOp.getValue();
+  if (auto cst = fir::getIntIfConstant(value))
+    return *cst != 0;
+  return std::nullopt;
+}
+
+class PackAsReshapeConversion : public mlir::OpRewritePattern<hlfir::PackOp> {
+public:
+  using mlir::OpRewritePattern<hlfir::PackOp>::OpRewritePattern;
+
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::PackOp pack,
+                  mlir::PatternRewriter &rewriter) const override {
+    if (pack.getVector())
+      return rewriter.notifyMatchFailure(pack, "PACK with VECTOR");
+    hlfir::Entity mask{pack.getMask()};
+    if (mask.getRank() != 0)
+      return rewriter.notifyMatchFailure(pack, "non-scalar mask");
+    if (!getLogicalConstant(pack.getMask()).value_or(false))
+      return rewriter.notifyMatchFailure(pack, "mask is not .TRUE.");
+    hlfir::Entity array{pack.getArray()};
+    if (!fir::isa_trivial(array.getFortranElementType()) ||
+        array.isPolymorphic())
+      return rewriter.notifyMatchFailure(pack, "unsupported array type");
+
+    mlir::Location loc = pack.getLoc();
+    fir::FirOpBuilder builder{rewriter, pack.getOperation()};
+    builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nuw);
+
+    llvm::SmallVector<mlir::Value, Fortran::common::maxRank> arrayExtents =
+        hlfir::genExtentsVector(loc, builder, array);
+    mlir::Type indexType = builder.getIndexType();
+    mlir::Value totalSize = builder.createIntegerConstant(loc, indexType, 1);
+    for (mlir::Value extent : arrayExtents)
+      totalSize = mlir::arith::MulIOp::create(
+          builder, loc, totalSize,
+          builder.createConvert(loc, indexType, extent));
+
+    mlir::Type shapeElementType = builder.getIntPtrType();
+    mlir::Value totalSizeAsShapeElement =
+        builder.createConvert(loc, shapeElementType, totalSize);
+
+    mlir::Value one = builder.createIntegerConstant(loc, indexType, 1);
+    mlir::Value unitShape = fir::ShapeOp::create(builder, loc, one);
+    mlir::Type shapeExprType =
+        hlfir::ExprType::get(builder.getContext(), {1}, shapeElementType,
+                             /*polymorphic=*/false);
+
+    auto genShapeKernel = [&](mlir::Location loc, fir::FirOpBuilder &builder,
+                              mlir::ValueRange) -> hlfir::Entity {
+      return hlfir::Entity{totalSizeAsShapeElement};
+    };
+    mlir::Value shapeExpr = hlfir::genElementalOp(
+        loc, builder, shapeElementType, unitShape, /*typeParams=*/{},
+        genShapeKernel, /*isUnordered=*/true,
+        /*polymorphicMold=*/mlir::Value{}, shapeExprType);
+
+    auto reshape = hlfir::ReshapeOp::create(
+        builder, loc, pack.getType(), pack.getArray(), shapeExpr,
+        /*pad=*/mlir::Value{}, /*order=*/mlir::Value{});
+    rewriter.replaceOp(pack, reshape);
+    rewriter.setInsertionPointAfter(reshape);
+    hlfir::DestroyOp::create(rewriter, loc, shapeExpr);
+    return mlir::success();
+  }
+};
+
 class ReshapeAsElementalConversion
     : public mlir::OpRewritePattern<hlfir::ReshapeOp> {
 public:
@@ -3105,8 +3188,12 @@ public:
     mlir::Location loc = reshape.getLoc();
     fir::FirOpBuilder builder{rewriter, reshape.getOperation()};
     // Assume that all the indices arithmetic does not overflow
-    // the IndexType.
-    builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nuw);
+    // the signed IndexType. No-unsigned-wrap is only valid for the
+    // zero-based linear index computations (see LinearIndexArithScope),
+    // it must not be set on the computations involving the lower bounds
+    // of ARRAY, SHAPE or PAD (e.g., in hlfir::getElementAt), since they
+    // may be zero or negative.
+    builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nsw);
 
     llvm::SmallVector<mlir::Value, 1> typeParams;
     hlfir::genLengthParameters(loc, builder, array, typeParams);
@@ -3150,8 +3237,11 @@ public:
             hlfir::genExtentsVector(loc, builder, hlfir::Entity{pad});
         // Subtract the ARRAY size from the zero-based linear index
         // to get the zero-based linear index into PAD.
-        mlir::Value padLinearIndex =
-            mlir::arith::SubIOp::create(builder, loc, linearIndex, arraySize);
+        mlir::Value padLinearIndex = [&]() {
+          LinearIndexArithScope scope{builder};
+          return mlir::arith::SubIOp::create(builder, loc, linearIndex,
+                                             arraySize);
+        }();
         llvm::SmallVector<mlir::Value, Fortran::common::maxRank> padIndices =
             delinearizeIndex(loc, builder, padExtents, padLinearIndex,
                              /*wrapAround=*/true);
@@ -3188,6 +3278,24 @@ public:
   }
 
 private:
+  /// Sets nsw and nuw on the arithmetic operations created while
+  /// it is alive. Only valid for the computations of the array sizes,
+  /// and the zero-based linear indices and their one-based counterparts,
+  /// which are all non-negative.
+  class LinearIndexArithScope {
+  public:
+    LinearIndexArithScope(fir::FirOpBuilder &builder)
+        : builder{builder}, savedFlags{builder.getIntegerOverflowFlags()} {
+      builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nsw |
+                                      mlir::arith::IntegerOverflowFlags::nuw);
+    }
+    ~LinearIndexArithScope() { builder.setIntegerOverflowFlags(savedFlags); }
+
+  private:
+    fir::FirOpBuilder &builder;
+    mlir::arith::IntegerOverflowFlags savedFlags;
+  };
+
   /// Compute zero-based linear index given an array extents
   /// and one-based indices:
   ///   \p extents: [e0, e1, ..., en]
@@ -3201,6 +3309,7 @@ private:
                                         mlir::ValueRange indices) {
     std::size_t rank = extents.size();
     assert(rank == indices.size());
+    LinearIndexArithScope scope{builder};
     mlir::Type indexType = builder.getIndexType();
     mlir::Value zero = builder.createIntegerConstant(loc, indexType, 0);
     mlir::Value one = builder.createIntegerConstant(loc, indexType, 1);
@@ -3241,6 +3350,7 @@ private:
   delinearizeIndex(mlir::Location loc, fir::FirOpBuilder &builder,
                    mlir::ValueRange extents, mlir::Value linearIndex,
                    bool wrapAround) {
+    LinearIndexArithScope scope{builder};
     llvm::SmallVector<mlir::Value, Fortran::common::maxRank> indices;
     mlir::Type indexType = builder.getIndexType();
     mlir::Value one = builder.createIntegerConstant(loc, indexType, 1);
@@ -3266,6 +3376,7 @@ private:
   static mlir::Value computeArraySize(mlir::Location loc,
                                       fir::FirOpBuilder &builder,
                                       mlir::ValueRange extents) {
+    LinearIndexArithScope scope{builder};
     mlir::Type indexType = builder.getIndexType();
     mlir::Value size = builder.createIntegerConstant(loc, indexType, 1);
     for (auto extent : extents)
@@ -3326,6 +3437,7 @@ public:
       patterns.insert<MatmulConversion<hlfir::MatmulOp>>(context);
 
     patterns.insert<DotProductConversion>(context);
+    patterns.insert<PackAsReshapeConversion>(context);
     patterns.insert<ReshapeAsElementalConversion>(context);
 
     if (mlir::failed(mlir::applyPatternsGreedily(

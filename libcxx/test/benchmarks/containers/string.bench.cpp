@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstring>
 #include <functional>
 #include <string>
 #include <vector>
@@ -32,16 +33,12 @@ std::string rename(std::string str, std::string_view replacement) {
 
 template <class Func, class Mod = decltype([](auto) {})>
 void bench(std::string name, Func func, Mod modifier = {}) {
-  benchmark::RegisterBenchmark(rename(name, "string"), [=](benchmark::State& state) {
+  benchmark::RegisterBenchmark(rename(name, "string"), [=](benchmark::State& state) TEST_ALIGN_BENCHMARK {
     func(std::type_identity<char>(), state);
   })->Apply(modifier);
 
-  benchmark::RegisterBenchmark(rename(name, "u8string"), [=](benchmark::State& state) {
-    func(std::type_identity<char8_t>(), state);
-  })->Apply(modifier);
-
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  benchmark::RegisterBenchmark(rename(name, "wstring"), [=](benchmark::State& state) {
+  benchmark::RegisterBenchmark(rename(name, "wstring"), [=](benchmark::State& state) TEST_ALIGN_BENCHMARK {
     func(std::type_identity<wchar_t>(), state);
   })->Apply(modifier);
 #endif
@@ -184,16 +181,20 @@ int main(int argc, char** argv) {
         };
 
     bench("std::basic_string::operator=(const value_type*) (opaque)",
-          std::bind_front(bench_impl, std::integral_constant<size_t, small_size>{}, std::true_type{}));
+          std::bind_front(bench_impl, std::integral_constant<size_t, small_size>{}, std::true_type{}),
+          [](auto bm) { bm->Arg(small_size); }); // for naming
 
     bench("std::basic_string::operator=(const value_type*) (opaque)",
-          std::bind_front(bench_impl, std::integral_constant<size_t, large_size>{}, std::true_type{}));
+          std::bind_front(bench_impl, std::integral_constant<size_t, large_size>{}, std::true_type{}),
+          [](auto bm) { bm->Arg(large_size); }); // for naming
 
     bench("std::basic_string::operator=(const value_type*) (transparent)",
-          std::bind_front(bench_impl, std::integral_constant<size_t, small_size>{}, std::false_type{}));
+          std::bind_front(bench_impl, std::integral_constant<size_t, small_size>{}, std::false_type{}),
+          [](auto bm) { bm->Arg(small_size); }); // for naming
 
     bench("std::basic_string::operator=(const value_type*) (transparent)",
-          std::bind_front(bench_impl, std::integral_constant<size_t, large_size>{}, std::false_type{}));
+          std::bind_front(bench_impl, std::integral_constant<size_t, large_size>{}, std::false_type{}),
+          [](auto bm) { bm->Arg(large_size); }); // for naming
   }
 
   // [string.capacity]
@@ -205,7 +206,7 @@ int main(int argc, char** argv) {
     }
   });
 
-#if TEST_STD_VER >= 23
+#if defined(__cpp_lib_string_resize_and_overwrite) && __cpp_lib_string_resize_and_overwrite >= 202110L
   bench("std::basic_string::resize_and_overwrite()",
         []<class CharT>(std::type_identity<CharT>, benchmark::State& state) {
           std::basic_string<CharT> str;
@@ -260,6 +261,94 @@ int main(int argc, char** argv) {
           [](auto bm) { bm->Arg(small_size)->Arg(large_size); });
     bench("std::basic_string::erase() (in the middle, transparent)",
           std::bind_front(bench_impl, std::integral_constant<size_t, 2>{}, std::false_type{}),
+          [](auto bm) { bm->Arg(small_size)->Arg(large_size); });
+  }
+
+  {
+    static auto bench_impl =
+        []<bool opaque, class CharT>(std::bool_constant<opaque>, std::type_identity<CharT>, benchmark::State& state) {
+          std::basic_string<CharT> strings[4096];
+
+          size_t size = state.range();
+          size_t pos  = size / 2;
+          while (state.KeepRunningBatch(std::size(strings))) {
+            state.PauseTiming();
+            for (auto& string : strings)
+              string.resize(size, 'a');
+            state.ResumeTiming();
+            for (auto& string : strings) {
+              if constexpr (opaque)
+                benchmark::DoNotOptimize(pos);
+              string.pop_back();
+            }
+          }
+        };
+    bench("std::basic_string::pop_back() (opaque)", std::bind_front(bench_impl, std::true_type{}), [](auto bm) {
+      bm->Arg(small_size)->Arg(large_size);
+    });
+    bench("std::basic_string::pop_back() (transparent)", std::bind_front(bench_impl, std::false_type{}), [](auto bm) {
+      bm->Arg(small_size)->Arg(large_size);
+    });
+  }
+
+  {
+    static auto bench_impl =
+        []<bool opaque, class CharT>(std::bool_constant<opaque>, std::type_identity<CharT>, benchmark::State& state) {
+          using str = std::basic_string<CharT>;
+          str src(state.range(), 'a');
+
+          str strings[4096];
+          while (state.KeepRunningBatch(std::size(strings))) {
+            state.PauseTiming();
+            for (auto& string : strings)
+              str().swap(string); // Make sure the strings are in the default constructed state
+            state.ResumeTiming();
+            benchmark::DoNotOptimize(strings);
+
+            for (auto& string : strings) {
+              if constexpr (opaque)
+                benchmark::DoNotOptimize(src);
+              string.append(src);
+            }
+          }
+        };
+
+    bench("std::basic_string::append(const std::basic_string&) (opaque)",
+          std::bind_front(bench_impl, std::true_type{}),
+          [](auto bm) { bm->Arg(small_size)->Arg(large_size); });
+    bench("std::basic_string::append(const std::basic_string&) (transparent)",
+          std::bind_front(bench_impl, std::false_type{}),
+          [](auto bm) { bm->Arg(small_size)->Arg(large_size); });
+  }
+
+  {
+    static auto bench_impl =
+        []<bool opaque, class CharT>(std::bool_constant<opaque>, std::type_identity<CharT>, benchmark::State& state) {
+          using str = std::basic_string<CharT>;
+          str src_str(state.range(), 'a');
+          const CharT* src = src_str.data();
+
+          str strings[4096];
+          while (state.KeepRunningBatch(std::size(strings))) {
+            state.PauseTiming();
+            for (auto& string : strings)
+              str().swap(string); // Make sure the strings are in the default constructed state
+            state.ResumeTiming();
+            benchmark::DoNotOptimize(strings);
+
+            for (auto& string : strings) {
+              if constexpr (opaque)
+                benchmark::DoNotOptimize(src);
+              string.append(src);
+            }
+          }
+        };
+
+    bench("std::basic_string::append(const value_type*) (opaque)",
+          std::bind_front(bench_impl, std::true_type{}),
+          [](auto bm) { bm->Arg(small_size)->Arg(large_size); });
+    bench("std::basic_string::append(const value_type*) (transparent)",
+          std::bind_front(bench_impl, std::false_type{}),
           [](auto bm) { bm->Arg(small_size)->Arg(large_size); });
   }
 
@@ -352,16 +441,20 @@ int main(int argc, char** argv) {
         };
 
     bench("std::basic_string == const CharT* (opaque)",
-          std::bind_front(bench_impl, std::integral_constant<size_t, small_size>{}, std::true_type{}));
+          std::bind_front(bench_impl, std::integral_constant<size_t, small_size>{}, std::true_type{}),
+          [](auto bm) { bm->Arg(small_size); }); // for naming
 
     bench("std::basic_string == const CharT* (opaque)",
-          std::bind_front(bench_impl, std::integral_constant<size_t, large_size>{}, std::true_type{}));
+          std::bind_front(bench_impl, std::integral_constant<size_t, large_size>{}, std::true_type{}),
+          [](auto bm) { bm->Arg(large_size); }); // for naming
 
     bench("std::basic_string == const CharT* (transparent)",
-          std::bind_front(bench_impl, std::integral_constant<size_t, small_size>{}, std::false_type{}));
+          std::bind_front(bench_impl, std::integral_constant<size_t, small_size>{}, std::false_type{}),
+          [](auto bm) { bm->Arg(small_size); }); // for naming
 
     bench("std::basic_string == const CharT* (transparent)",
-          std::bind_front(bench_impl, std::integral_constant<size_t, large_size>{}, std::false_type{}));
+          std::bind_front(bench_impl, std::integral_constant<size_t, large_size>{}, std::false_type{}),
+          [](auto bm) { bm->Arg(large_size); }); // for naming
   }
 
   {
@@ -395,16 +488,20 @@ int main(int argc, char** argv) {
         };
 
     bench("std::basic_string::compare(const CharT*) (opaque)",
-          std::bind_front(bench_impl, std::integral_constant<size_t, small_size>{}, std::true_type{}));
+          std::bind_front(bench_impl, std::integral_constant<size_t, small_size>{}, std::true_type{}),
+          [](auto bm) { bm->Arg(small_size); }); // for naming
 
     bench("std::basic_string::compare(const CharT*) (opaque)",
-          std::bind_front(bench_impl, std::integral_constant<size_t, large_size>{}, std::true_type{}));
+          std::bind_front(bench_impl, std::integral_constant<size_t, large_size>{}, std::true_type{}),
+          [](auto bm) { bm->Arg(large_size); }); // for naming
 
     bench("std::basic_string::compare(const CharT*) (transparent)",
-          std::bind_front(bench_impl, std::integral_constant<size_t, small_size>{}, std::false_type{}));
+          std::bind_front(bench_impl, std::integral_constant<size_t, small_size>{}, std::false_type{}),
+          [](auto bm) { bm->Arg(small_size); }); // for naming
 
     bench("std::basic_string::compare(const CharT*) (transparent)",
-          std::bind_front(bench_impl, std::integral_constant<size_t, large_size>{}, std::false_type{}));
+          std::bind_front(bench_impl, std::integral_constant<size_t, large_size>{}, std::false_type{}),
+          [](auto bm) { bm->Arg(large_size); }); // for naming
   }
 
   // [string.compare]
@@ -433,16 +530,20 @@ int main(int argc, char** argv) {
         };
 
     bench("std::basic_string == std::basic_string (opaque)",
-          std::bind_front(bench_impl, std::integral_constant<size_t, small_size>{}, std::true_type{}));
+          std::bind_front(bench_impl, std::integral_constant<size_t, small_size>{}, std::true_type{}),
+          [](auto bm) { bm->Arg(small_size); }); // for naming
 
     bench("std::basic_string == std::basic_string (opaque)",
-          std::bind_front(bench_impl, std::integral_constant<size_t, large_size>{}, std::true_type{}));
+          std::bind_front(bench_impl, std::integral_constant<size_t, large_size>{}, std::true_type{}),
+          [](auto bm) { bm->Arg(large_size); }); // for naming
 
     bench("std::basic_string == std::basic_string (transparent)",
-          std::bind_front(bench_impl, std::integral_constant<size_t, small_size>{}, std::false_type{}));
+          std::bind_front(bench_impl, std::integral_constant<size_t, small_size>{}, std::false_type{}),
+          [](auto bm) { bm->Arg(small_size); }); // for naming
 
     bench("std::basic_string == std::basic_string (transparent)",
-          std::bind_front(bench_impl, std::integral_constant<size_t, large_size>{}, std::false_type{}));
+          std::bind_front(bench_impl, std::integral_constant<size_t, large_size>{}, std::false_type{}),
+          [](auto bm) { bm->Arg(large_size); }); // for naming
   }
 
   {
@@ -470,16 +571,20 @@ int main(int argc, char** argv) {
     // These also effectively cover operator<, since operator< is just forwarding to compare.
 
     bench("std::basic_string::compare(const std::basic_string&) (opaque)",
-          std::bind_front(bench_impl, std::integral_constant<size_t, small_size>{}, std::true_type{}));
+          std::bind_front(bench_impl, std::integral_constant<size_t, small_size>{}, std::true_type{}),
+          [](auto bm) { bm->Arg(small_size); }); // for naming
 
     bench("std::basic_string::compare(const std::basic_string&) (opaque)",
-          std::bind_front(bench_impl, std::integral_constant<size_t, large_size>{}, std::true_type{}));
+          std::bind_front(bench_impl, std::integral_constant<size_t, large_size>{}, std::true_type{}),
+          [](auto bm) { bm->Arg(large_size); }); // for naming
 
     bench("std::basic_string::compare(const std::basic_string&) (transparent)",
-          std::bind_front(bench_impl, std::integral_constant<size_t, small_size>{}, std::false_type{}));
+          std::bind_front(bench_impl, std::integral_constant<size_t, small_size>{}, std::false_type{}),
+          [](auto bm) { bm->Arg(small_size); }); // for naming
 
     bench("std::basic_string::compare(const std::basic_string&) (transparent)",
-          std::bind_front(bench_impl, std::integral_constant<size_t, large_size>{}, std::false_type{}));
+          std::bind_front(bench_impl, std::integral_constant<size_t, large_size>{}, std::false_type{}),
+          [](auto bm) { bm->Arg(large_size); }); // for naming
   }
 
   benchmark::Initialize(&argc, argv);

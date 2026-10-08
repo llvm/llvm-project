@@ -24,10 +24,12 @@ void test() {
     std::multimap<int, operator_hijacker> mo;
     std::multimap<int, operator_hijacker> m;
     m = mo;
+    (void)m;
   }
   {
     std::multimap<operator_hijacker, int> mo;
     std::multimap<operator_hijacker, int> m;
     m = mo;
+    (void)m;
   }
 }

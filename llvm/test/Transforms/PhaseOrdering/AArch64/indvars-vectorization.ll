@@ -66,7 +66,7 @@ define void @s172(i32 noundef %xa, i32 noundef %xb, ptr noundef %a, ptr noundef 
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP8]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END]], label [[FOR_BODY_PREHEADER13]]
-; CHECK:       for.body.preheader13:
+; CHECK:       for.body.preheader10:
 ; CHECK-NEXT:    [[INDVARS_IV_PH:%.*]] = phi i64 [ [[TMP0]], [[VECTOR_MEMCHECK]] ], [ [[TMP0]], [[FOR_BODY_PREHEADER]] ], [ [[IND_END]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
@@ -119,7 +119,7 @@ for.end:
 ;.
 ; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
 ; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}
-; CHECK: [[META2]] = distinct !{[[META2]], !"LVerDomain"}
+; CHECK: [[META2]] = distinct !{[[META2]], i1 false, !"LVerDomain"}
 ; CHECK: [[META3]] = !{[[META4:![0-9]+]]}
 ; CHECK: [[META4]] = distinct !{[[META4]], [[META2]]}
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]], [[META7:![0-9]+]], [[META8:![0-9]+]]}

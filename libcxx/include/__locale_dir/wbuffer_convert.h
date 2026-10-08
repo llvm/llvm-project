@@ -11,6 +11,7 @@
 
 #include <__algorithm/reverse.h>
 #include <__config>
+#include <__locale_dir/codecvt.h>
 #include <__string/char_traits.h>
 #include <ios>
 #include <streambuf>
@@ -62,7 +63,7 @@ public:
   explicit _LIBCPP_HIDE_FROM_ABI
   wbuffer_convert(streambuf* __bytebuf, _Codecvt* __pcvt = new _Codecvt, state_type __state = state_type());
 #    else
-  _LIBCPP_EXPLICIT_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_HIDE_FROM_ABI
   wbuffer_convert(streambuf* __bytebuf = nullptr, _Codecvt* __pcvt = new _Codecvt, state_type __state = state_type());
 #    endif
 

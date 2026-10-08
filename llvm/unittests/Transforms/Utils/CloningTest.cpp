@@ -476,7 +476,7 @@ protected:
 
   void CreateOldFunctionBodyAndDI() {
     DIBuilder DBuilder(*M);
-    IRBuilder<> IBuilder(C);
+    IRBuilder<> IBuilder(*M);
 
     // Function DI
     auto *File = DBuilder.createFile("filename.c", "/file/dir/");
@@ -513,7 +513,7 @@ protected:
         DBuilder.createAutoVariable(Subprogram, "x", File, 5, IntType, true);
     auto *DL = DILocation::get(Subprogram->getContext(), 5, 0, Subprogram);
     DBuilder.insertDeclare(Alloca, Variable, E, DL, Store->getIterator());
-    DBuilder.insertDbgValueIntrinsic(AllocaContent, Variable, E, DL, Entry);
+    DBuilder.insertDbgValue(AllocaContent, Variable, E, DL, Entry);
     // Also create an inlined variable.
     // Create a distinct struct type that we should not duplicate during
     // cloning).
@@ -1115,7 +1115,7 @@ protected:
     }
 
     DIBuilder DBuilder(*OldM);
-    IRBuilder<> IBuilder(C);
+    IRBuilder<> IBuilder(*OldM);
 
     auto *FuncType = FunctionType::get(Type::getVoidTy(C), false);
     auto *PersFn = Function::Create(FuncType, GlobalValue::ExternalLinkage,

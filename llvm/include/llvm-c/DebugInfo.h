@@ -140,6 +140,18 @@ typedef enum {
   LLVMDWARFSourceLanguageMove,
   LLVMDWARFSourceLanguageHylo,
   LLVMDWARFSourceLanguageMetal,
+  LLVMDWARFSourceLanguageC_plus_plus_23,
+  LLVMDWARFSourceLanguageOdin,
+  LLVMDWARFSourceLanguageP4,
+  LLVMDWARFSourceLanguageC23,
+  LLVMDWARFSourceLanguageFortran23,
+  LLVMDWARFSourceLanguageV,
+  LLVMDWARFSourceLanguageAlgol68,
+  LLVMDWARFSourceLanguageNim,
+  LLVMDWARFSourceLanguageErlang,
+  LLVMDWARFSourceLanguageElixir,
+  LLVMDWARFSourceLanguageGleam,
+  LLVMDWARFSourceLanguageRoc,
 
   // Vendor extensions:
   LLVMDWARFSourceLanguageMips_Assembler,
@@ -200,6 +212,9 @@ enum {
   LLVMDIAssignIDMetadataKind,
   LLVMDISubrangeTypeMetadataKind,
   LLVMDIFixedPointTypeMetadataKind,
+  LLVMDIPropertyMetadataKind,
+  LLVMDILayerLocMetadataKind,
+  LLVMDILayerLocListMetadataKind,
 };
 typedef unsigned LLVMMetadataKind;
 

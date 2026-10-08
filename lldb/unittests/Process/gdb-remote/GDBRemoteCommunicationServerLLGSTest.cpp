@@ -12,6 +12,18 @@
 
 using namespace lldb_private::process_gdb_remote;
 
+class TestGDBRemoteCommunicationServerLLGS
+    : public GDBRemoteCommunicationServerLLGS {
+public:
+  using GDBRemoteCommunicationServerLLGS::XMLEncodeAttributeValue;
+};
+
+TEST(GDBRemoteCommunicationServerLLGSTest, XMLEncodeAttributeValue) {
+  EXPECT_EQ(TestGDBRemoteCommunicationServerLLGS::XMLEncodeAttributeValue(
+                "type<>&\"'"),
+            "type&lt;&gt;&amp;&quot;&apos;");
+}
+
 TEST(GDBRemoteCommunicationServerLLGSTest, LLGSArgToURL) {
   // LLGS new-style URLs should be passed through (indepenently of
   // --reverse-connect)
@@ -30,6 +42,15 @@ TEST(GDBRemoteCommunicationServerLLGSTest, LLGSArgToURL) {
   EXPECT_EQ(LLGSArgToURL("unix:///tmp/foo", false), "unix-accept:///tmp/foo");
   EXPECT_EQ(LLGSArgToURL("unix-abstract://foo", false),
             "unix-abstract-accept://foo");
+
+  // LLGS legacy listen URLs carrying a Windows drive-letter path (in RFC 8089
+  // "/C:/..." form) should be converted, keeping the path intact.
+  EXPECT_EQ(LLGSArgToURL("unix:///C:/Users/a/foo", false),
+            "unix-accept:///C:/Users/a/foo");
+
+  // Same for a Windows UNC path (in "//server/share/..." form).
+  EXPECT_EQ(LLGSArgToURL("unix:////server/share/foo", false),
+            "unix-accept:////server/share/foo");
 
   // LLGS listen host:port pairs should be converted to listen://
   EXPECT_EQ(LLGSArgToURL("127.0.0.1:1234", false), "listen://127.0.0.1:1234");

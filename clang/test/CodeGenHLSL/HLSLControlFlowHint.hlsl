@@ -44,5 +44,27 @@ export int test_no_attr(int X){
     return resp;
 }
 
+// CHECK-LABEL: test_nested_branch_preserved
+// CHECK: br i1 %{{.*}}, label %if.then, label %if.end{{.*}}, !hlsl.controlflow.hint [[HINT_BRANCH]]
+// CHECK: br i1 %{{.*}}, label %if.then{{.*}}, label %if.end{{.*}}, !hlsl.controlflow.hint [[HINT_BRANCH]]
+void foo(int);
+export void test_nested_branch_preserved(int X, int Y) {
+    [branch] if (X) {
+        [[clang::noinline]] // unrelated to branch
+        if (Y) foo(Y);
+    }
+}
+
+// CHECK-LABEL: test_nested_flatten_preserved
+// CHECK: br i1 %{{.*}}, label %if.then, label %if.end{{.*}}, !hlsl.controlflow.hint [[HINT_FLATTEN]]
+// CHECK: br i1 %{{.*}}, label %if.then{{.*}}, label %if.end{{.*}}, !hlsl.controlflow.hint [[HINT_FLATTEN]]
+void bar(int);
+export void test_nested_flatten_preserved(int X, int Y) {
+    [flatten] if (X) {
+        [[clang::noinline]] // unrelated to flatten
+        if (Y) bar(Y);
+    }
+}
+
 //CHECK: [[HINT_BRANCH]] = !{!"hlsl.controlflow.hint", i32 1}
 //CHECK: [[HINT_FLATTEN]] = !{!"hlsl.controlflow.hint", i32 2}

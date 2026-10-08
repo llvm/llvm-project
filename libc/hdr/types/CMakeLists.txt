@@ -50,6 +50,30 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_link_map
+  HDRS
+    struct_link_map.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_link_map
+)
+
+add_proxy_header_library(
+  struct___pthread_cleanup_frame
+  HDRS
+    struct___pthread_cleanup_frame.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct___pthread_cleanup_frame
+)
+
+add_proxy_header_library(
+  struct_r_debug
+  HDRS
+    struct_r_debug.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_r_debug
+)
+
+add_proxy_header_library(
   ldiv_t
   HDRS
     ldiv_t.h
@@ -146,11 +170,35 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_itimerspec
+  HDRS
+    struct_itimerspec.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_itimerspec
+)
+
+add_proxy_header_library(
   struct_tm
   HDRS
     struct_tm.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_tm
+)
+
+add_proxy_header_library(
+  struct_passwd
+  HDRS
+    struct_passwd.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_passwd
+)
+
+add_proxy_header_library(
+  struct_group
+  HDRS
+    struct_group.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_group
 )
 
 add_proxy_header_library(
@@ -178,6 +226,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_statfs
+  HDRS
+    struct_statfs.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_statfs
+)
+
+add_proxy_header_library(
   struct_winsize
   HDRS
     struct_winsize.h
@@ -191,6 +247,14 @@ add_proxy_header_library(
     ssize_t.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.ssize_t
+)
+
+add_proxy_header_library(
+  dev_t
+  HDRS
+    dev_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.dev_t
 )
 
 add_proxy_header_library(
@@ -257,6 +321,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  timer_t
+  HDRS
+    timer_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.timer_t
+    libc.include.time
+)
+
+add_proxy_header_library(
   clockid_t
   HDRS
     clockid_t.h
@@ -280,6 +353,14 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.suseconds_t
     libc.include.sys_time
+)
+
+add_proxy_header_library(
+  useconds_t
+  HDRS
+    useconds_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.useconds_t
 )
 
 add_proxy_header_library(
@@ -326,11 +407,36 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  sem_t
+  HDRS
+    sem_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.sem_t
+)
+
+add_proxy_header_library(
   pthread_barrierattr_t
   HDRS
     pthread_barrierattr_t.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.pthread_barrierattr_t
+)
+
+add_proxy_header_library(
+  pthread_attr_t
+  HDRS
+    pthread_attr_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.pthread_attr_t
+)
+
+add_proxy_header_library(
+  pthread_t
+  HDRS
+    pthread_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.pthread_t
+    libc.include.pthread
 )
 
 add_proxy_header_library(
@@ -349,6 +455,14 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_sigaction
     libc.include.signal
+)
+
+add_proxy_header_library(
+  struct_sigevent
+  HDRS
+    struct_sigevent.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_sigevent
 )
 
 add_proxy_header_library(
@@ -381,6 +495,16 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.off_t
     libc.include.stdio
+)
+
+add_proxy_header_library(
+  off64_t
+  HDRS
+    off64_t.h
+  DEPENDS
+    libc.hdr.fcntl_overlay
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.off64_t
 )
 
 add_proxy_header_library(
@@ -434,6 +558,8 @@ add_proxy_header_library(
   struct_linger
   HDRS
     struct_linger.h
+  DEPENDS
+    libc.hdr.sys_socket_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_linger
     libc.include.sys_socket
@@ -443,6 +569,8 @@ add_proxy_header_library(
   struct_cmsghdr
   HDRS
     struct_cmsghdr.h
+  DEPENDS
+    libc.hdr.sys_socket_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_cmsghdr
     libc.include.sys_socket
@@ -452,6 +580,8 @@ add_proxy_header_library(
   struct_mmsghdr
   HDRS
     struct_mmsghdr.h
+  DEPENDS
+    libc.hdr.sys_socket_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_mmsghdr
     libc.include.sys_socket
@@ -461,6 +591,8 @@ add_proxy_header_library(
   struct_msghdr
   HDRS
     struct_msghdr.h
+  DEPENDS
+    libc.hdr.sys_socket_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_msghdr
     libc.include.sys_socket
@@ -521,6 +653,24 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_group_req
+  HDRS
+    struct_group_req.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_group_req
+    libc.include.netinet_in
+)
+
+add_proxy_header_library(
+  struct_group_source_req
+  HDRS
+    struct_group_source_req.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_group_source_req
+    libc.include.netinet_in
+)
+
+add_proxy_header_library(
   struct_ip_opts
   HDRS
     struct_ip_opts.h
@@ -557,18 +707,39 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_if_nameindex
+  HDRS
+    struct_if_nameindex.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_if_nameindex
+    libc.include.net_if
+)
+
+add_proxy_header_library(
   struct_sockaddr
   HDRS
     struct_sockaddr.h
+  DEPENDS
+    libc.hdr.sys_socket_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_sockaddr
     libc.include.sys_socket
 )
 
 add_proxy_header_library(
+  struct_addrinfo
+  HDRS
+    struct_addrinfo.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_addrinfo
+)
+
+add_proxy_header_library(
   struct_sockaddr_storage
   HDRS
     struct_sockaddr_storage.h
+  DEPENDS
+    libc.hdr.sys_socket_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_sockaddr_storage
     libc.include.sys_socket
@@ -611,6 +782,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_sysinfo
+  HDRS
+    struct_sysinfo.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_sysinfo
+    libc.include.sys_sysinfo
+)
+
+add_proxy_header_library(
   struct_utsname
   HDRS
     struct_utsname.h
@@ -623,6 +803,8 @@ add_proxy_header_library(
   sa_family_t
   HDRS
     sa_family_t.h
+  DEPENDS
+    libc.hdr.sys_socket_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.sa_family_t
     libc.include.sys_socket
@@ -632,6 +814,8 @@ add_proxy_header_library(
   socklen_t
   HDRS
     socklen_t.h
+  DEPENDS
+    libc.hdr.sys_socket_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.socklen_t
     libc.include.sys_socket
@@ -658,7 +842,6 @@ add_proxy_header_library(
     libc.include.llvm-libc-types.wint_t
     libc.include.wchar
 )
-
 
 add_proxy_header_library(
   wctype_t
@@ -689,6 +872,8 @@ add_proxy_header_library(
   nfds_t
   HDRS
     nfds_t.h
+  DEPENDS
+    libc.hdr.poll_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.nfds_t
 )
@@ -697,6 +882,8 @@ add_proxy_header_library(
   struct_pollfd
   HDRS
     struct_pollfd.h
+  DEPENDS
+    libc.hdr.poll_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_pollfd
 )
@@ -962,7 +1149,7 @@ add_proxy_header_library(
 add_proxy_header_library(
   Elf32_Xword
   HDRS
-  Elf32_Xword.h
+    Elf32_Xword.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.Elf32_Xword
 )
@@ -970,7 +1157,7 @@ add_proxy_header_library(
 add_proxy_header_library(
   Elf32_auxv_t
   HDRS
-  Elf32_auxv_t.h
+    Elf32_auxv_t.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.Elf32_auxv_t
 )
@@ -1114,7 +1301,7 @@ add_proxy_header_library(
 add_proxy_header_library(
   Elf64_auxv_t
   HDRS
-  Elf64_auxv_t.h
+    Elf64_auxv_t.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.Elf64_auxv_t
 )
@@ -1178,6 +1365,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  glob_t
+  HDRS
+    glob_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.glob_t
+)
+
+add_proxy_header_library(
   regex_t
   HDRS
     regex_t.h
@@ -1199,4 +1394,44 @@ add_proxy_header_library(
     regmatch_t.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.regmatch_t
+)
+
+add_proxy_header_library(
+  speed_t
+  HDRS
+    speed_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.speed_t
+)
+
+add_proxy_header_library(
+  struct_termios
+  HDRS
+    struct_termios.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_termios
+)
+
+add_proxy_header_library(
+  cc_t
+  HDRS
+    cc_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.cc_t
+)
+
+add_proxy_header_library(
+  tcflag_t
+  HDRS
+    tcflag_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.tcflag_t
+)
+
+add_proxy_header_library(
+  id_t
+  HDRS
+    id_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.id_t
 )

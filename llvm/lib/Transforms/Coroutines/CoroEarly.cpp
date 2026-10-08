@@ -12,7 +12,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Transforms/Coroutines/CoroShape.h"
 
 using namespace llvm;
 
@@ -30,7 +29,7 @@ class Lowerer : public coro::LowererBase {
 
 public:
   Lowerer(Module &M)
-      : LowererBase(M), Builder(Context),
+      : LowererBase(M), Builder(M),
         AnyResumeFnPtrTy(PointerType::getUnqual(Context)) {}
   void lowerEarlyIntrinsics(Function &F);
 };

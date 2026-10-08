@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-apple-macosx10.9.0 %s -stop-after=livedebugvars \
+; RUN: llc -mtriple=x86_64-apple-macosx10.9.0 %s -stop-before=x86-asm-printer \
 ; RUN:   -o - | FileCheck %s
 ; Generated from:
 ; void g(int *);

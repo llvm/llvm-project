@@ -11,6 +11,7 @@ add_public_tablegen_target(PluginErrcodes)
 # don't want to export `PluginInterface` while `add_llvm_library` requires that.
 add_library(PluginCommon OBJECT
   src/PluginInterface.cpp
+  src/GenericProfiler.cpp
   src/GlobalHandler.cpp
   src/JIT.cpp
   src/RecordReplay.cpp
@@ -21,7 +22,7 @@ add_library(PluginCommon OBJECT
 add_dependencies(PluginCommon intrinsics_gen PluginErrcodes OffloadAPI)
 
 # Only enable JIT for those targets that LLVM can support.
-set(supported_jit_targets AMDGPU NVPTX)
+set(supported_jit_targets AMDGPU NVPTX SPIRV)
 if (NOT LLVM_LINK_LLVM_DYLIB)
   foreach(target IN LISTS supported_jit_targets)
     if("${target}" IN_LIST LLVM_TARGETS_TO_BUILD)

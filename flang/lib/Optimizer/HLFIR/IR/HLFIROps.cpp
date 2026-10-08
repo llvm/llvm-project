@@ -1197,7 +1197,8 @@ void hlfir::SetLengthOp::build(mlir::OpBuilder &builder,
                                mlir::Value len) {
   fir::CharacterType::LenType resultTypeLen = fir::CharacterType::unknownLen();
   if (auto cstLen = fir::getIntIfConstant(len))
-    resultTypeLen = *cstLen;
+    if (std::optional<std::int64_t> cstLen64 = cstLen->trySExtValue())
+      resultTypeLen = *cstLen64;
   unsigned kind = getCharacterKind(string.getType());
   auto resultType = hlfir::ExprType::get(
       builder.getContext(), hlfir::ExprType::Shape{},
@@ -1568,8 +1569,15 @@ static llvm::LogicalResult verifyArrayShift(Op op) {
   int64_t dimVal = -1;
   if (!op.getDim())
     dimVal = 1;
-  else if (auto dim = fir::getIntIfConstant(op.getDim()))
-    dimVal = *dim;
+  else if (std::optional<llvm::APInt> dim =
+               fir::getIntIfConstant(op.getDim())) {
+    if (std::optional<std::int64_t> dim64 = dim->trySExtValue())
+      dimVal = *dim64;
+    else if (useStrictIntrinsicVerifier)
+      return op.emitOpError(dim->isNegative()
+                                ? "DIM must be >= 1"
+                                : "DIM must be <= input array's rank");
+  }
 
   // The DIM argument may be statically invalid (e.g. exceed the
   // input array rank) in dead code after constant propagation,
@@ -1668,6 +1676,66 @@ llvm::LogicalResult hlfir::EOShiftOp::verify() {
 }
 
 void hlfir::EOShiftOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
+}
+
+//===----------------------------------------------------------------------===//
+// PackOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult hlfir::PackOp::verify() {
+  hlfir::ExprType resultType = mlir::cast<hlfir::ExprType>(getType());
+  mlir::Value array = getArray();
+  auto arrayType = mlir::cast<fir::SequenceType>(
+      hlfir::getFortranElementOrSequenceType(array.getType()));
+  if (auto match = areMatchingTypes(
+          *this, hlfir::getFortranElementType(resultType),
+          arrayType.getElementType(),
+          /*allowCharacterLenMismatch=*/!useStrictIntrinsicVerifier);
+      match.failed())
+    return emitOpError("ARRAY and the result must have the same element type");
+  if (hlfir::isPolymorphicType(resultType) !=
+      hlfir::isPolymorphicType(array.getType()))
+    return emitOpError("ARRAY must be polymorphic iff result is polymorphic");
+  if (resultType.getRank() != 1)
+    return emitOpError("result must be of rank 1");
+  if (!hlfir::isMaskArgument(getMask().getType()))
+    return emitOpError("MASK must be of logical type");
+
+  mlir::Type maskSeqTy =
+      hlfir::getFortranElementOrSequenceType(getMask().getType());
+  if (auto maskArrayType = mlir::dyn_cast<fir::SequenceType>(maskSeqTy)) {
+    llvm::ArrayRef<int64_t> arrayShape = arrayType.getShape();
+    llvm::ArrayRef<int64_t> maskShape = maskArrayType.getShape();
+    if (maskShape.size() != arrayShape.size())
+      return emitOpError("MASK must be conformable to ARRAY");
+    if (useStrictIntrinsicVerifier) {
+      constexpr int64_t unknownExtent = fir::SequenceType::getUnknownExtent();
+      for (std::size_t i = 0; i < arrayShape.size(); ++i) {
+        if (arrayShape[i] != maskShape[i] && arrayShape[i] != unknownExtent &&
+            maskShape[i] != unknownExtent)
+          return emitOpError("MASK must be conformable to ARRAY");
+      }
+    }
+  }
+  if (mlir::Value vector = getVector()) {
+    auto vectorType = mlir::cast<fir::SequenceType>(
+        hlfir::getFortranElementOrSequenceType(vector.getType()));
+    if (vectorType.getDimension() != 1)
+      return emitOpError("VECTOR must be an array of rank 1");
+    if (auto match = areMatchingTypes(
+            *this, vectorType.getElementType(), arrayType.getElementType(),
+            /*allowCharacterLenMismatch=*/!useStrictIntrinsicVerifier);
+        match.failed())
+      return emitOpError("ARRAY and VECTOR must have the same element type");
+  }
+  return mlir::success();
+}
+
+void hlfir::PackOp::getEffects(
     llvm::SmallVectorImpl<
         mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
         &effects) {
@@ -1941,9 +2009,10 @@ llvm::LogicalResult hlfir::DestroyOp::verify() {
 
 void hlfir::CopyInOp::build(mlir::OpBuilder &builder,
                             mlir::OperationState &odsState, mlir::Value var,
-                            mlir::Value tempBox, mlir::Value var_is_present) {
-  return build(builder, odsState, {var.getType(), builder.getI1Type()}, var,
-               tempBox, var_is_present);
+                            mlir::Value temp_box, mlir::Value var_is_present) {
+  return build(builder, odsState,
+               {var.getType(), builder.getI1Type(), builder.getI1Type()}, var,
+               temp_box, var_is_present);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2456,6 +2525,37 @@ llvm::LogicalResult hlfir::EvaluateInMemoryOp::verify() {
   mlir::Type elementType = exprType.getElementType();
   if (auto res = verifyTypeparams(*this, elementType, getTypeparams().size());
       failed(res))
+    return res;
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// ConditionalOp
+//===----------------------------------------------------------------------===//
+
+void hlfir::ConditionalOp::build(mlir::OpBuilder &builder,
+                                 mlir::OperationState &odsState,
+                                 mlir::Type resultType, mlir::Value condition) {
+  odsState.addTypes(resultType);
+  odsState.addOperands(condition);
+  // Create the then and else regions, each with one empty block.
+  odsState.addRegion()->emplaceBlock();
+  odsState.addRegion()->emplaceBlock();
+}
+
+llvm::LogicalResult hlfir::ConditionalOp::verify() {
+  if (!mlir::isa<hlfir::ExprType>(getResult().getType()))
+    return emitOpError("result must be an hlfir.expr type");
+  const auto checkRegion = [&](mlir::Region &region,
+                               llvm::StringRef name) -> llvm::LogicalResult {
+    if (!mlir::isa_and_nonnull<hlfir::YieldOp>(getTerminator(region)))
+      return emitOpError(name)
+             << " region must be terminated by an hlfir.yield";
+    return mlir::success();
+  };
+  if (const auto res = checkRegion(getThenRegion(), "then"); failed(res))
+    return res;
+  if (const auto res = checkRegion(getElseRegion(), "else"); failed(res))
     return res;
   return mlir::success();
 }

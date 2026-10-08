@@ -22,6 +22,7 @@
 #include <gtest/gtest.h>
 
 #include <memory>
+#include <string>
 #include <vector>
 
 using namespace sycl;
@@ -41,7 +42,7 @@ createEventImplWithHandle(detail::PlatformImpl &PlatformImpl,
 class sycl::detail::MockQueue : public sycl::queue {
 public:
   using sycl::queue::getLastEvent;
-  using sycl::queue::setKernelParameters;
+  using sycl::queue::setKernelLaunchParams;
   using sycl::queue::sycl_kernel_launch;
 };
 
@@ -120,7 +121,7 @@ TEST(Event, GetWaitListWithSetKernelParametersAndLaunch) {
 
   std::vector<event> DepEvents = {Dep1, Dep2};
 
-  Q.setKernelParameters(DepEvents);
+  Q.setKernelLaunchParams(DepEvents, {});
   Q.sycl_kernel_launch<class TestKernelWithDeps>(TestKernelWithDeps, Data);
   event KernelEvent = Q.getLastEvent();
 
@@ -136,4 +137,25 @@ TEST(Event, GetWaitListWithSetKernelParametersAndLaunch) {
   EXPECT_CALL(Mock.get(), olSyncEvent(Dep1Impl->getHandle())).Times(1);
   EXPECT_CALL(Mock.get(), olSyncEvent(Dep2Impl->getHandle())).Times(1);
   event::wait(WaitList);
+}
+
+template <typename Param>
+void expectGetProfilingInfoThrows(const event &Event) {
+  try {
+    (void)Event.template get_profiling_info<Param>();
+    FAIL() << "Expected sycl::exception";
+  } catch (const exception &Ex) {
+    EXPECT_EQ(Ex.code(), make_error_code(errc::feature_not_supported));
+    EXPECT_THAT(std::string(Ex.what()),
+                HasSubstr("Profiling features are not supported."));
+  }
+}
+
+TEST(Event, GetProfilingInfoThrows) {
+  mock::MockWrapper Mock;
+  event Event;
+
+  expectGetProfilingInfoThrows<info::event_profiling::command_submit>(Event);
+  expectGetProfilingInfoThrows<info::event_profiling::command_start>(Event);
+  expectGetProfilingInfoThrows<info::event_profiling::command_end>(Event);
 }

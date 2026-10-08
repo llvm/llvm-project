@@ -19,11 +19,11 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Driver.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/JSON.h"
-#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
@@ -54,24 +54,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "Opts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Opts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-const llvm::opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "Opts.inc"
-#undef OPTION
-};
-
-class ScanDepsOptTable : public llvm::opt::GenericOptTable {
+class ScanDepsOptTable : public llvm::opt::OptTable {
 public:
-  ScanDepsOptTable()
-      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {
+  ScanDepsOptTable() : OptTable(optionTables()) {
     setGroupedShortOptions(true);
   }
 };
@@ -644,35 +632,6 @@ private:
   std::vector<InputDeps> Inputs;
 };
 
-static bool handleModuleResult(StringRef ModuleName,
-                               llvm::Expected<TranslationUnitDeps> &MaybeTUDeps,
-                               FullDeps &FD, size_t InputIndex,
-                               SharedStream &OS, SharedStream &Errs) {
-  if (!MaybeTUDeps) {
-    llvm::handleAllErrors(MaybeTUDeps.takeError(),
-                          [&ModuleName, &Errs](llvm::StringError &Err) {
-                            Errs.applyLocked([&](raw_ostream &OS) {
-                              OS << "Error while scanning dependencies for "
-                                 << ModuleName << ":\n";
-                              OS << Err.getMessage();
-                            });
-                          });
-    return true;
-  }
-  FD.mergeDeps(std::move(MaybeTUDeps->ModuleGraph), InputIndex);
-  return false;
-}
-
-static void handleErrorWithInfoString(StringRef Info, llvm::Error E,
-                                      SharedStream &OS, SharedStream &Errs) {
-  llvm::handleAllErrors(std::move(E), [&Info, &Errs](llvm::StringError &Err) {
-    Errs.applyLocked([&](raw_ostream &OS) {
-      OS << "Error: " << Info << ":\n";
-      OS << Err.getMessage();
-    });
-  });
-}
-
 class P1689Deps {
 public:
   void printDependencies(raw_ostream &OS) {
@@ -864,6 +823,32 @@ getCompilationDatabase(int argc, char **argv, std::string &ErrorMessage) {
   return std::make_unique<InplaceCompilationDatabase>(
       FEOpts.Inputs[0].getFile(), OutputFile, CommandLine);
 }
+
+namespace {
+struct ByNameConsumer : DependencyConsumer {
+  FullDeps &FD;
+  size_t InputIndex;
+  ModuleDepsGraph ModuleGraph;
+
+  ByNameConsumer(FullDeps &FD, size_t InputIndex)
+      : FD(FD), InputIndex(InputIndex) {}
+
+  void handleDependencyOutputOpts(const DependencyOutputOptions &) override {}
+  void handleFileDependency(StringRef) override {}
+  void handlePrebuiltModuleDependency(PrebuiltModuleDep) override {}
+  void handleDirectModuleDependency(ModuleID) override {}
+  void handleVisibleModule(std::string) override {}
+  void handleContextHash(std::string) override {}
+  void handleModuleDependency(ModuleDeps MD) override {
+    ModuleGraph.push_back(std::move(MD));
+  }
+  void finishQuery(StringRef, bool Success) override {
+    if (Success)
+      FD.mergeDeps(std::move(ModuleGraph), InputIndex);
+    ModuleGraph.clear();
+  }
+};
+} // namespace
 
 int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   llvm::InitializeAllTargetInfos();
@@ -1110,35 +1095,21 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
         ModuleNameRef.split(Names, ',');
 
         CallbackActionController Controller(LookupOutput);
+        ByNameConsumer DepConsumer(*FD, LocalIndex);
 
-        if (Names.size() == 1) {
-          auto MaybeModuleDepsGraph = WorkerTool.getModuleDependencies(
-              Names[0], Input->CommandLine, CWD, AlreadySeenModules,
-              Controller);
-          if (handleModuleResult(Names[0], MaybeModuleDepsGraph, *FD,
-                                 LocalIndex, DependencyOS, Errs))
-            HadErrors = true;
-        } else {
-          auto CIWithCtx = CompilerInstanceWithContext::initializeOrError(
-              WorkerTool, CWD, Input->CommandLine, Controller);
-          if (llvm::Error Err = CIWithCtx.takeError()) {
-            handleErrorWithInfoString(
-                "Compiler instance with context setup error", std::move(Err),
-                DependencyOS, Errs);
-            HadErrors = true;
-            continue;
-          }
+        unsigned NameIdx = 0;
+        auto GetNextName = [&]() -> std::optional<std::string> {
+          if (NameIdx >= Names.size())
+            return std::nullopt;
+          return Names[NameIdx++].str();
+        };
 
-          for (auto N : Names) {
-            auto MaybeModuleDepsGraph =
-                CIWithCtx->computeDependenciesByNameOrError(
-                    N, AlreadySeenModules, Controller);
-            if (handleModuleResult(N, MaybeModuleDepsGraph, *FD, LocalIndex,
-                                   DependencyOS, Errs)) {
-              HadErrors = true;
-            }
-          }
-        }
+        bool Success = WorkerTool.getByNameDependencies(
+            CWD, Input->CommandLine, DiagConsumer, Controller, GetNextName,
+            DepConsumer);
+        handleDiagnostics(ModuleNameRef, S, Errs);
+        if (!Success)
+          HadErrors = true;
       } else {
         std::unique_ptr<llvm::MemoryBuffer> TU;
         std::optional<llvm::MemoryBufferRef> TUBuffer;

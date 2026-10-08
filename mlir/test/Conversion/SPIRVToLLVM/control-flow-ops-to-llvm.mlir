@@ -214,6 +214,65 @@ spirv.module Logical GLSL450 {
     %one = spirv.Constant 1 : i32
     spirv.ReturnValue %one : i32
   }
+
+  spirv.func @selection_with_yielding_value(%cond: i1) -> i32 "None" {
+    // CHECK: llvm.cond_br %{{.*}}, ^bb1, ^bb2
+    %0 = spirv.mlir.selection -> i32 {
+      spirv.BranchConditional %cond, ^true, ^false
+    // CHECK: ^bb1:
+    ^true:
+      // CHECK: %[[C1:.*]] = llvm.mlir.constant(1 : i32) : i32
+      %cst1 = spirv.Constant 1 : i32
+      // CHECK: llvm.br ^bb3(%[[C1]] : i32)
+      spirv.Branch ^merge(%cst1 : i32)
+    // CHECK: ^bb2:
+    ^false:
+      // CHECK: %[[C2:.*]] = llvm.mlir.constant(2 : i32) : i32
+      %cst2 = spirv.Constant 2 : i32
+      // CHECK: llvm.br ^bb3(%[[C2]] : i32)
+      spirv.Branch ^merge(%cst2 : i32)
+    // CHECK: ^bb3(%[[ARG:.*]]: i32):
+    ^merge(%1: i32):
+      // CHECK: llvm.br ^bb4(%[[ARG]] : i32)
+      spirv.mlir.merge %1 : i32
+    }
+    // CHECK: ^bb4(%[[RES:.*]]: i32):
+    // CHECK: llvm.return %[[RES]] : i32
+    spirv.ReturnValue %0 : i32
+  }
+
+  spirv.func @selection_with_multiple_yielding_values(%cond: i1) -> i32 "None" {
+    // CHECK: llvm.cond_br %{{.*}}, ^bb1, ^bb2
+    %0:2 = spirv.mlir.selection -> i32, i32 {
+      spirv.BranchConditional %cond, ^true, ^false
+    // CHECK: ^bb1:
+    ^true:
+      // CHECK: %[[C1:.*]] = llvm.mlir.constant(1 : i32) : i32
+      %cst1 = spirv.Constant 1 : i32
+      // CHECK: %[[C3:.*]] = llvm.mlir.constant(3 : i32) : i32
+      %cst3 = spirv.Constant 3 : i32
+      // CHECK: llvm.br ^bb3(%[[C1]], %[[C3]] : i32, i32)
+      spirv.Branch ^merge(%cst1, %cst3 : i32, i32)
+    // CHECK: ^bb2:
+    ^false:
+      // CHECK: %[[C2:.*]] = llvm.mlir.constant(2 : i32) : i32
+      %cst2 = spirv.Constant 2 : i32
+      // CHECK: %[[C4:.*]] = llvm.mlir.constant(4 : i32) : i32
+      %cst4 = spirv.Constant 4 : i32
+      // CHECK: llvm.br ^bb3(%[[C2]], %[[C4]] : i32, i32)
+      spirv.Branch ^merge(%cst2, %cst4 : i32, i32)
+    // CHECK: ^bb3(%[[ARG:.*]]: i32, %[[ARG1:.*]]: i32):
+    ^merge(%1: i32, %2: i32):
+      // CHECK: llvm.br ^bb4(%[[ARG]], %[[ARG1]] : i32, i32)
+      spirv.mlir.merge %1, %2 : i32, i32
+    }
+    // CHECK: ^bb4(%[[ARG2:.*]]: i32, %[[ARG3:.*]]: i32):
+    // Makes sure both values are used.
+    // CHECK: %[[RES:.*]] = llvm.add %[[ARG2]], %[[ARG3]] : i32
+    %sum = spirv.IAdd %0#0, %0#1 : i32
+    // CHECK: llvm.return %[[RES]] : i32
+    spirv.ReturnValue %sum : i32
+  }
 }
 
 // -----
