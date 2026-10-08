@@ -22634,6 +22634,8 @@ static bool doEvaluateDestruction(const VarDecl *VD, SemaProxy *SProxy,
 
 bool VarDecl::evaluateDestruction(
     SmallVectorImpl<PartialDiagnosticAt> &Notes) const {
+  // Only treat the destruction as constant destruction if we formally have
+  // constant initialization (or are usable in a constant expression).
   bool IsConstantDestruction = hasConstantInitialization();
 
   return ::doEvaluateDestruction(this, /*SProxy=*/nullptr,
@@ -22642,6 +22644,8 @@ bool VarDecl::evaluateDestruction(
 
 bool VarDecl::evaluateConstantDestruction(
     SmallVectorImpl<PartialDiagnosticAt> &Notes, SemaProxy &SProxy) const {
+  // Only treat the destruction as constant destruction if we formally have
+  // constant initialization (or are usable in a constant expression).
   bool IsConstantDestruction = hasConstantInitialization();
 
   return ::doEvaluateDestruction(this, &SProxy, IsConstantDestruction, Notes);

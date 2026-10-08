@@ -35,6 +35,6 @@ public:
                                 FunctionDecl *Function) = 0;
 };
 
-} // end namespace clang
+} // namespace clang
 
 #endif // LLVM_CLANG_AST_SEMA_PROXY_H

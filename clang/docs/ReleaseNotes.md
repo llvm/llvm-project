@@ -72,7 +72,7 @@ in a future version of Clang.
   template <auto = g()>     consteval int h()      { return 1; }
   template <typename... Ts> consteval int h(Ts...) { return 2; }
 
-  int main() { return h(); }  // Previously returned 1; now returns 2.
+  int main() { return h(); }  // Previously returned 2; now returns 1.
   ```
 
 ### Objective-C Specific Potentially Breaking Changes

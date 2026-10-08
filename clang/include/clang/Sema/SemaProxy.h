@@ -35,7 +35,7 @@ private:
   Sema &SemaRef;
 };
 
-} // end namespace sema
-} // end namespace clang
+} // namespace sema
+} // namespace clang
 
 #endif

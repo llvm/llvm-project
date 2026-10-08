@@ -32,5 +32,5 @@ void EvalProxy::instantiateFunctionDefinition(
       /*DefinitionRequired=*/true, /*AtEndOfTU=*/false);
 }
 
-} // end namespace sema
-} // end namespace clang
+} // namespace sema
+} // namespace clang
