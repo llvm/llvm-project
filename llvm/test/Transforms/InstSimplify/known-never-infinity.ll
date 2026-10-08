@@ -446,7 +446,7 @@ define i1 @isKnownNeverPosInfinity_floor_ppcf128(ppc_fp128 %x) {
 ;
   %a = fadd ninf ppc_fp128 %x, %x
   %e = call ppc_fp128 @llvm.floor.ppcf128(ppc_fp128 %a)
-  %r = fcmp une ppc_fp128 %e, 0xM7FF00000000000000000000000000000
+  %r = fcmp une ppc_fp128 %e, +inf
   ret i1 %r
 }
 
@@ -460,7 +460,7 @@ define i1 @isKnownNeverNegInfinity_floor_ppcf128(ppc_fp128 %x) {
 ;
   %a = fadd ninf ppc_fp128 %x, %x
   %e = call ppc_fp128 @llvm.floor.ppcf128(ppc_fp128 %a)
-  %r = fcmp une ppc_fp128 %e, 0xMFFF00000000000000000000000000000
+  %r = fcmp une ppc_fp128 %e, -inf
   ret i1 %r
 }
 
@@ -474,7 +474,7 @@ define i1 @isKnownNeverPosInfinity_ceil_ppcf128(ppc_fp128 %x) {
 ;
   %a = fadd ninf ppc_fp128 %x, %x
   %e = call ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 %a)
-  %r = fcmp une ppc_fp128 %e, 0xM7FF00000000000000000000000000000
+  %r = fcmp une ppc_fp128 %e, +inf
   ret i1 %r
 }
 
@@ -485,7 +485,7 @@ define i1 @isKnownNeverNegInfinity_ceil_ppcf128(ppc_fp128 %x) {
 ;
   %a = fadd ninf ppc_fp128 %x, %x
   %e = call ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 %a)
-  %r = fcmp une ppc_fp128 %e, 0xMFFF00000000000000000000000000000
+  %r = fcmp une ppc_fp128 %e, -inf
   ret i1 %r
 }
 
@@ -499,7 +499,7 @@ define i1 @isKnownNeverPosInfinity_rint_ppcf128(ppc_fp128 %x) {
 ;
   %a = fadd ninf ppc_fp128 %x, %x
   %e = call ppc_fp128 @llvm.rint.ppcf128(ppc_fp128 %a)
-  %r = fcmp une ppc_fp128 %e, 0xM7FF00000000000000000000000000000
+  %r = fcmp une ppc_fp128 %e, +inf
   ret i1 %r
 }
 
@@ -513,7 +513,7 @@ define i1 @isKnownNeverNegInfinity_rint_ppcf128(ppc_fp128 %x) {
 ;
   %a = fadd ninf ppc_fp128 %x, %x
   %e = call ppc_fp128 @llvm.rint.ppcf128(ppc_fp128 %a)
-  %r = fcmp une ppc_fp128 %e, 0xMFFF00000000000000000000000000000
+  %r = fcmp une ppc_fp128 %e, -inf
   ret i1 %r
 }
 
@@ -527,7 +527,7 @@ define i1 @isKnownNeverPosInfinity_nearbyint_ppcf128(ppc_fp128 %x) {
 ;
   %a = fadd ninf ppc_fp128 %x, %x
   %e = call ppc_fp128 @llvm.nearbyint.ppcf128(ppc_fp128 %a)
-  %r = fcmp une ppc_fp128 %e, 0xM7FF00000000000000000000000000000
+  %r = fcmp une ppc_fp128 %e, +inf
   ret i1 %r
 }
 
@@ -541,7 +541,7 @@ define i1 @isKnownNeverNegInfinity_nearbyint_ppcf128(ppc_fp128 %x) {
 ;
   %a = fadd ninf ppc_fp128 %x, %x
   %e = call ppc_fp128 @llvm.nearbyint.ppcf128(ppc_fp128 %a)
-  %r = fcmp une ppc_fp128 %e, 0xMFFF00000000000000000000000000000
+  %r = fcmp une ppc_fp128 %e, -inf
   ret i1 %r
 }
 
@@ -555,7 +555,7 @@ define i1 @isKnownNeverPosInfinity_round_ppcf128(ppc_fp128 %x) {
 ;
   %a = fadd ninf ppc_fp128 %x, %x
   %e = call ppc_fp128 @llvm.round.ppcf128(ppc_fp128 %a)
-  %r = fcmp une ppc_fp128 %e, 0xM7FF00000000000000000000000000000
+  %r = fcmp une ppc_fp128 %e, +inf
   ret i1 %r
 }
 
@@ -569,7 +569,7 @@ define i1 @isKnownNeverNegInfinity_round_ppcf128(ppc_fp128 %x) {
 ;
   %a = fadd ninf ppc_fp128 %x, %x
   %e = call ppc_fp128 @llvm.round.ppcf128(ppc_fp128 %a)
-  %r = fcmp une ppc_fp128 %e, 0xMFFF00000000000000000000000000000
+  %r = fcmp une ppc_fp128 %e, -inf
   ret i1 %r
 }
 
@@ -583,7 +583,7 @@ define i1 @isKnownNeverPosInfinity_roundeven_ppcf128(ppc_fp128 %x) {
 ;
   %a = fadd ninf ppc_fp128 %x, %x
   %e = call ppc_fp128 @llvm.roundeven.ppcf128(ppc_fp128 %a)
-  %r = fcmp une ppc_fp128 %e, 0xM7FF00000000000000000000000000000
+  %r = fcmp une ppc_fp128 %e, +inf
   ret i1 %r
 }
 
@@ -597,7 +597,7 @@ define i1 @isKnownNeverNegInfinity_roundeven_ppcf128(ppc_fp128 %x) {
 ;
   %a = fadd ninf ppc_fp128 %x, %x
   %e = call ppc_fp128 @llvm.roundeven.ppcf128(ppc_fp128 %a)
-  %r = fcmp une ppc_fp128 %e, 0xMFFF00000000000000000000000000000
+  %r = fcmp une ppc_fp128 %e, -inf
   ret i1 %r
 }
 
@@ -608,7 +608,7 @@ define i1 @isKnownNeverPosInfinity_trunc_ppcf128(ppc_fp128 %x) {
 ;
   %a = fadd ninf ppc_fp128 %x, %x
   %e = call ppc_fp128 @llvm.trunc.ppcf128(ppc_fp128 %a)
-  %r = fcmp une ppc_fp128 %e, 0xM7FF00000000000000000000000000000
+  %r = fcmp une ppc_fp128 %e, +inf
   ret i1 %r
 }
 
@@ -619,7 +619,7 @@ define i1 @isKnownNeverNegInfinity_trunc_ppcf128(ppc_fp128 %x) {
 ;
   %a = fadd ninf ppc_fp128 %x, %x
   %e = call ppc_fp128 @llvm.trunc.ppcf128(ppc_fp128 %a)
-  %r = fcmp une ppc_fp128 %e, 0xMFFF00000000000000000000000000000
+  %r = fcmp une ppc_fp128 %e, -inf
   ret i1 %r
 }
 
