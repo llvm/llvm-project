@@ -578,17 +578,17 @@ const MFMA_F8F6F4_Info *getMFMA_F8F6F4_WithFormatArgs(unsigned CBSZ,
                                                       unsigned F8F8Opcode);
 
 LLVM_READNONE
-uint8_t wmmaScaleF8F6F4FormatToNumRegs(unsigned Fmt);
+uint8_t wmmaScaleF8F6F4FormatToNumRegs(uint64_t Fmt);
 
 LLVM_READONLY
-const MFMA_F8F6F4_Info *getWMMA_F8F6F4_WithFormatArgs(unsigned FmtA,
-                                                      unsigned FmtB,
+const MFMA_F8F6F4_Info *getWMMA_F8F6F4_WithFormatArgs(uint64_t FmtA,
+                                                      uint64_t FmtB,
                                                       unsigned F8F8Opcode);
 
 /// \return true if this combination is listed as valid.
 LLVM_READONLY
-bool isValidWMMAScaleFmtCombination(unsigned AFmt, unsigned AScale,
-                                    unsigned BFmt, unsigned BScale);
+bool isValidWMMAScaleFmtCombination(uint64_t AFmt, uint64_t AScale,
+                                    uint64_t BFmt, uint64_t BScale);
 
 /// \returns the matrix_a_fmt and matrix_b_fmt operands of an f8f6f4 WMMA.
 /// Works on both MCInst and MachineInstr.
