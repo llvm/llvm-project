@@ -21,7 +21,7 @@ typedef int   __attribute__((coop_mat(memory_scope_sub_group,
                                       CLK_COOPERATIVE_MATRIX_A)))           MatA_int_t;
 
 // ---------------------------------------------------------------------------
-// 1. coop_mat_init — float scalar.
+// coop_mat_init — float scalar.
 //    Expected IR: call __spirv_CompositeConstruct with the scalar value,
 //    returning a spirv.CooperativeMatrixKHR TargetExtType.
 // ---------------------------------------------------------------------------
@@ -37,7 +37,7 @@ kernel void test_init_float(global float *out) {
 }
 
 // ---------------------------------------------------------------------------
-// 2. coop_mat_init — integer scalar.
+// coop_mat_init — integer scalar.
 //    Expected IR: call __spirv_CompositeConstruct with an i32 value.
 // ---------------------------------------------------------------------------
 
@@ -52,7 +52,7 @@ kernel void test_init_int(void) {
 }
 
 // ---------------------------------------------------------------------------
-// 3. coop_mat_init — zero initialisation.
+// coop_mat_init — zero initialisation.
 //    Expected IR: call __spirv_CompositeConstruct with 0.0.
 // ---------------------------------------------------------------------------
 
@@ -67,7 +67,7 @@ kernel void test_init_zero(void) {
 }
 
 // ---------------------------------------------------------------------------
-// 4. coop_mat_length — returns unsigned int.
+// coop_mat_length — returns unsigned int.
 //    Expected IR: call __spirv_CooperativeMatrixLengthKHR, result stored into
 //    an i32 alloca.
 // ---------------------------------------------------------------------------
@@ -84,7 +84,7 @@ kernel void test_length(global unsigned int *out) {
 }
 
 // ---------------------------------------------------------------------------
-// 5. coop_mat_init then coop_mat_length — combined flow.
+// coop_mat_init then coop_mat_length — combined flow.
 //    Verifies the TargetExtType produced by init flows into length unchanged.
 // ---------------------------------------------------------------------------
 
@@ -100,7 +100,7 @@ kernel void test_init_then_length(global unsigned int *out) {
 }
 
 // ---------------------------------------------------------------------------
-// 6. coop_mat_length — calling convention is SPIR_FUNC.
+// coop_mat_length — calling convention is SPIR_FUNC.
 //    The call must NOT be a plain 'call' — it must be 'call spir_func'.
 // ---------------------------------------------------------------------------
 
