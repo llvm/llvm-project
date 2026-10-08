@@ -1032,9 +1032,9 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction({ISD::LROUND, ISD::LLROUND}, {MVT::f32, MVT::f64}, Expand);
 
   setOperationAction(ISD::FCOPYSIGN, MVT::f16, Custom);
-  setOperationAction(ISD::FCOPYSIGN, MVT::v2f16, Expand);
+  setOperationAction(ISD::FCOPYSIGN, MVT::v2f16, Custom);
   setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Custom);
-  setOperationAction(ISD::FCOPYSIGN, MVT::v2bf16, Expand);
+  setOperationAction(ISD::FCOPYSIGN, MVT::v2bf16, Custom);
   setOperationAction(ISD::FCOPYSIGN, MVT::f32, Custom);
   setOperationAction(ISD::FCOPYSIGN, MVT::f64, Custom);
 
@@ -2258,30 +2258,35 @@ SDValue NVPTXTargetLowering::LowerFCOPYSIGN(SDValue Op,
   SDValue In2 = Op.getOperand(1);
   EVT SrcVT = In2.getValueType();
 
-  if (VT == MVT::f16 || VT == MVT::bf16) {
-    // Use bitwise operations instead of expanding to fabs/fneg/select.
-    SDValue Mag = DAG.getBitcast(MVT::i16, In1);
-    EVT IntVT = SrcVT.changeTypeToInteger();
-    SDValue Sign = DAG.getBitcast(IntVT, In2);
+  if (VT == MVT::f16 || VT == MVT::bf16 || VT == MVT::v2f16 ||
+      VT == MVT::v2bf16) {
+    // There is no native copysign, so expand to bitwise operations.
+    MVT IntVT = MVT::getIntegerVT(VT.getSizeInBits());
+    MVT SrcIntVT = MVT::getIntegerVT(SrcVT.getSizeInBits());
+    SDValue Mag = DAG.getBitcast(IntVT, In1);
+    SDValue Sign = DAG.getBitcast(SrcIntVT, In2);
 
-    // DAG combining can remove an FP_ROUND from the sign operand.
+    // DAG combining can remove an FP_ROUND from a scalar sign operand.
+    assert((!VT.isVector() || SrcVT == VT) &&
+           "Unexpected mismatched vector copysign operands");
     if (SrcVT.bitsGT(VT)) {
       Sign = DAG.getNode(
-          ISD::SRL, DL, IntVT, Sign,
-          DAG.getShiftAmountConstant(SrcVT.getSizeInBits() - 16, IntVT, DL));
-      Sign = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Sign);
+          ISD::SRL, DL, SrcIntVT, Sign,
+          DAG.getShiftAmountConstant(SrcVT.getSizeInBits() - 16, SrcIntVT, DL));
+      Sign = DAG.getNode(ISD::TRUNCATE, DL, IntVT, Sign);
     }
+    uint32_t SignMask = VT.isVector() ? 0x80008000 : 0x8000;
     // This is equivalent to:
-    //    (Mag & 0x7fff) | (Sign & 0x8000)
+    //    (Mag & ~SignMask) | (Sign & SignMask)
     // which uses 4 input values (including the 2 constants). We can instead
     // write it as:
-    //    Mag ^ ((Mag ^ Sign) & 0x8000)
+    //    Mag ^ ((Mag ^ Sign) & SignMask)
     // which only uses 3 inputs, so ptxas can fuse it into a single lop3
     // instruction.
-    SDValue Diff = DAG.getNode(ISD::XOR, DL, MVT::i16, Mag, Sign);
-    Diff = DAG.getNode(ISD::AND, DL, MVT::i16, Diff,
-                       DAG.getConstant(0x8000, DL, MVT::i16));
-    return DAG.getBitcast(VT, DAG.getNode(ISD::XOR, DL, MVT::i16, Mag, Diff));
+    SDValue Diff = DAG.getNode(ISD::XOR, DL, IntVT, Mag, Sign);
+    Diff = DAG.getNode(ISD::AND, DL, IntVT, Diff,
+                       DAG.getConstant(SignMask, DL, IntVT));
+    return DAG.getBitcast(VT, DAG.getNode(ISD::XOR, DL, IntVT, Mag, Diff));
   }
 
   // Native copysign instructions require matching operand types.

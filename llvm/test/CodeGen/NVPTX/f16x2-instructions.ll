@@ -1896,9 +1896,9 @@ define <2 x half> @test_copysign(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r2, [test_copysign_param_1];
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_copysign_param_0];
-; CHECK-NEXT:    and.b32 %r3, %r2, -2147450880;
-; CHECK-NEXT:    and.b32 %r4, %r1, 2147450879;
-; CHECK-NEXT:    or.b32 %r5, %r4, %r3;
+; CHECK-NEXT:    xor.b32 %r3, %r1, %r2;
+; CHECK-NEXT:    and.b32 %r4, %r3, -2147450880;
+; CHECK-NEXT:    xor.b32 %r5, %r1, %r4;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
 ; CHECK-NEXT:    ret;
   %r = call <2 x half> @llvm.copysign.f16(<2 x half> %a, <2 x half> %b)
@@ -1917,9 +1917,9 @@ define <2 x half> @test_copysign_f32(<2 x half> %a, <2 x float> %b) #0 {
 ; CHECK-NEXT:    cvt.rn.f16.f32 %rs1, %r3;
 ; CHECK-NEXT:    cvt.rn.f16.f32 %rs2, %r2;
 ; CHECK-NEXT:    mov.b32 %r4, {%rs2, %rs1};
-; CHECK-NEXT:    and.b32 %r5, %r4, -2147450880;
-; CHECK-NEXT:    and.b32 %r6, %r1, 2147450879;
-; CHECK-NEXT:    or.b32 %r7, %r6, %r5;
+; CHECK-NEXT:    xor.b32 %r5, %r1, %r4;
+; CHECK-NEXT:    and.b32 %r6, %r5, -2147450880;
+; CHECK-NEXT:    xor.b32 %r7, %r1, %r6;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r7;
 ; CHECK-NEXT:    ret;
   %tb = fptrunc <2 x float> %b to <2 x half>
@@ -1940,9 +1940,9 @@ define <2 x half> @test_copysign_f64(<2 x half> %a, <2 x double> %b) #0 {
 ; CHECK-NEXT:    cvt.rn.f16.f64 %rs1, %rd2;
 ; CHECK-NEXT:    cvt.rn.f16.f64 %rs2, %rd1;
 ; CHECK-NEXT:    mov.b32 %r2, {%rs2, %rs1};
-; CHECK-NEXT:    and.b32 %r3, %r2, -2147450880;
-; CHECK-NEXT:    and.b32 %r4, %r1, 2147450879;
-; CHECK-NEXT:    or.b32 %r5, %r4, %r3;
+; CHECK-NEXT:    xor.b32 %r3, %r1, %r2;
+; CHECK-NEXT:    and.b32 %r4, %r3, -2147450880;
+; CHECK-NEXT:    xor.b32 %r5, %r1, %r4;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
 ; CHECK-NEXT:    ret;
   %tb = fptrunc <2 x double> %b to <2 x half>
@@ -1959,9 +1959,9 @@ define <2 x float> @test_copysign_extended(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r2, [test_copysign_extended_param_1];
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_copysign_extended_param_0];
-; CHECK-NEXT:    and.b32 %r3, %r2, -2147450880;
-; CHECK-NEXT:    and.b32 %r4, %r1, 2147450879;
-; CHECK-NEXT:    or.b32 %r5, %r4, %r3;
+; CHECK-NEXT:    xor.b32 %r3, %r1, %r2;
+; CHECK-NEXT:    and.b32 %r4, %r3, -2147450880;
+; CHECK-NEXT:    xor.b32 %r5, %r1, %r4;
 ; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r5;
 ; CHECK-NEXT:    cvt.f32.f16 %r6, %rs2;
 ; CHECK-NEXT:    cvt.f32.f16 %r7, %rs1;
