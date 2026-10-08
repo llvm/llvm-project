@@ -3664,6 +3664,8 @@ SCEVUse ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS,
   return {getOrCreateUDivExpr(LHS, RHS, ExprFlags), UseFlags};
 }
 
+/// Get a canonical unsigned division expression with the exact flag, as is
+/// familiar from IR.
 const SCEV *ScalarEvolution::getUDivExactExpr(SCEVUse LHS, SCEVUse RHS) {
   return getUDivExpr(LHS, RHS, SCEV::FlagExact);
 }
