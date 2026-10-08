@@ -4284,22 +4284,10 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
   return true;
 }
 
-// Advance in the iterator's direction past meta instructions (debug values,
-// labels, CFI, KILL, etc.) to the next instruction that actually issues. The
-// iterator determines both direction and whether iteration is raw or
-// bundle-aware. Unlike getFirstNonDebugInstr, skipDebugInstructionsForward,
-// and next_nodbg, this skips the full isMetaInstruction() set.
-template <typename Iterator>
-static Iterator skipMetaInstructions(Iterator I, Iterator End) {
-  while (I != End && I->isMetaInstruction())
-    ++I;
-  return I;
-}
-
 static bool ensureEntrySetPrio(MachineFunction *MF, int Priority,
                                const SIInstrInfo &TII) {
   MachineBasicBlock &EntryMBB = MF->front();
-  auto EntryI = skipMetaInstructions(EntryMBB.begin(), EntryMBB.end());
+  auto EntryI = skipMetaInstructionsForward(EntryMBB.begin(), EntryMBB.end());
   if (EntryI != EntryMBB.end() && EntryI->getOpcode() == AMDGPU::S_SETPRIO &&
       EntryI->getOperand(0).getImm() >= Priority)
     return false;
@@ -4347,10 +4335,13 @@ bool GCNHazardRecognizer::fixRequiredExportPriority(MachineInstr *MI) {
     // Raise minimum priority unless in workaround.
     auto &PrioOp = MI->getOperand(0);
     int Prio = PrioOp.getImm();
-    auto PrevI = skipMetaInstructions(std::next(MI->getReverseIterator()),
-                                      MBB->instr_rend());
-    bool InWA = (Prio == PostExportPriority) &&
-                (PrevI != MBB->instr_rend() && TII.isEXP(*PrevI));
+    bool InWA = false;
+    auto It = MI->getIterator();
+    if (Prio == PostExportPriority && It != MBB->instr_begin()) {
+      auto PrevI =
+          skipMetaInstructionsBackward(std::prev(It), MBB->instr_begin());
+      InWA = !PrevI->isMetaInstruction() && TII.isEXP(*PrevI);
+    }
     if (InWA || Prio >= NormalPriority)
       return false;
     PrioOp.setImm(std::min(Prio + NormalPriority, MaxPriority));
@@ -4371,7 +4362,7 @@ bool GCNHazardRecognizer::fixRequiredExportPriority(MachineInstr *MI) {
     Changed = ensureEntrySetPrio(MF, NormalPriority, TII);
 
   auto InsertPt = std::next(It);
-  auto NextMI = skipMetaInstructions(InsertPt, MBB->instr_end());
+  auto NextMI = skipMetaInstructionsForward(InsertPt, MBB->instr_end());
   bool EndOfShader = false;
   if (NextMI != MBB->instr_end()) {
     // Only need WA at end of sequence of exports.
@@ -4425,7 +4416,7 @@ bool GCNHazardRecognizer::fixVPermPk16Hazard(MachineInstr *MI) {
   // Requirement #2 of 2:
   // V_PERM_PK16 must be immediately followed by a safe instruction.
   MachineBasicBlock::iterator NextI = std::next(MI->getIterator());
-  NextI = skipMetaInstructions(NextI, MBB->end());
+  NextI = skipMetaInstructionsForward(NextI, MBB->end());
   if (NextI != MBB->end() && TII.isVPermPk16SafeInstr(*NextI))
     return false;
 
