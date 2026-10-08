@@ -124,7 +124,7 @@ public:
   /// \param numBytes is the number of bytes to copy.
   void memcpy(void *dest, const void *src, std::size_t numBytes);
 
-  /// Defines a memory copy operation for this command group.
+  /// Defines a memory set operation for this command group.
   ///
   /// \param ptr is the pointer to the memory to be set.
   /// \param value is the value the memory should be filled with,
@@ -146,7 +146,7 @@ public:
 
   /// Defines a prefetch operation for this command group.
   ///
-  /// \param dest is the pointer to the memory to be prefetched to the device.
+  /// \param ptr is the pointer to the memory to be prefetched to the device.
   /// \param numBytes is the number of bytes to be prefetched.
   void prefetch(const void *ptr, std::size_t numBytes);
 

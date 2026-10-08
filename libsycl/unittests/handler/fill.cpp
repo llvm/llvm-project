@@ -26,8 +26,7 @@ TEST(Handler, FIll) {
 
   EXPECT_CALL(Mock.get(), olMemFill(_, Ptr, sizeof(int), _, FillBytes))
       .Times(1);
-  auto E =
-      Q.submit([&](sycl::handler &CGH) { CGH.fill(Ptr, Pattern, FillCount); });
+  Q.submit([&](sycl::handler &CGH) { CGH.fill(Ptr, Pattern, FillCount); });
 }
 
 TEST(Handler, DependsOnWithFill) {

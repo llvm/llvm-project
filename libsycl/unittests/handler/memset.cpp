@@ -25,8 +25,7 @@ TEST(Handler, Memset) {
 
   EXPECT_CALL(Mock.get(), olMemFill(_, Ptr, sizeof(unsigned char), _, NumBytes))
       .Times(1);
-  auto E =
-      Q.submit([&](sycl::handler &CGH) { CGH.memset(Ptr, Pattern, NumBytes); });
+  Q.submit([&](sycl::handler &CGH) { CGH.memset(Ptr, Pattern, NumBytes); });
 }
 
 TEST(Handler, DependsOnWithMemset) {

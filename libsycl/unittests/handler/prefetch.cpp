@@ -34,7 +34,7 @@ TEST(Handler, Prefetch) {
         EXPECT_EQ(Sizes[0], NumBytes);
         return OL_SUCCESS;
       });
-  auto E = Q.submit([&](sycl::handler &CGH) { CGH.prefetch(Ptr, NumBytes); });
+  Q.submit([&](sycl::handler &CGH) { CGH.prefetch(Ptr, NumBytes); });
 }
 
 TEST(Handler, DependsOnWithPrefetch) {
