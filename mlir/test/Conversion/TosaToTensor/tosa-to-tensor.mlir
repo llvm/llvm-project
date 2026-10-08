@@ -468,6 +468,19 @@ func.func @test_reshape_samerank_unsigned(%arg0: tensor<3x2xui8>) -> tensor<2x3x
 
 // -----
 
+// CHECK-LABEL: @test_reshape_quantized_const
+func.func @test_reshape_quantized_const() -> tensor<1x3x!quant.uniform<i8:f32, 1.000000e+00>> {
+  // CHECK: %[[CONST:.*]] = "tosa.const"() <{values = dense<[1, 2, 3]> : tensor<3xi8>}> : () -> tensor<3x!quant.uniform<i8:f32, 1.000000e+00>>
+  // CHECK: %[[RESHAPE:.*]] = tensor.expand_shape %[[CONST]] {{\[}}[0, 1]] output_shape {{\[}}1, 3] : tensor<3x!quant.uniform<i8:f32, 1.000000e+00>> into tensor<1x3x!quant.uniform<i8:f32, 1.000000e+00>>
+  // CHECK: return %[[RESHAPE]]
+  %0 = "tosa.const"() <{values = dense<[1, 2, 3]> : tensor<3xi8>}> : () -> tensor<3x!quant.uniform<i8:f32, 1.000000e+00>>
+  %s = tosa.const_shape { values = dense<[1, 3]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %1 = tosa.reshape %0, %s : (tensor<3x!quant.uniform<i8:f32, 1.000000e+00>>, !tosa.shape<2>) -> tensor<1x3x!quant.uniform<i8:f32, 1.000000e+00>>
+  return %1 : tensor<1x3x!quant.uniform<i8:f32, 1.000000e+00>>
+}
+
+// -----
+
 // CHECK-LABEL: func @slice
 func.func @slice(%arg0: tensor<6xf32>) ->() {
   // CHECK: [[SLICE:%.+]] = tensor.extract_slice %arg0[2] [1] [1]

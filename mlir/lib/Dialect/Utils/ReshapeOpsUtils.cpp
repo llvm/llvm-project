@@ -750,7 +750,10 @@ PackingMetadata mlir::computePackingMetadata(int64_t packedRank,
 OpFoldResult mlir::reshapeConstantSource(DenseElementsAttr source,
                                          TensorType result,
                                          std::optional<Attribute> cst) {
+  // The splat can only be resized when the element types match; a constant
+  // may hold its values in the storage type of a quantized result type.
   if (source && source.isSplat() && result.hasStaticShape() &&
+      source.getType().getElementType() == result.getElementType() &&
       (!cst.has_value() || source.getSplatValue<Attribute>() == cst.value()))
     return source.resizeSplat(result);
 
