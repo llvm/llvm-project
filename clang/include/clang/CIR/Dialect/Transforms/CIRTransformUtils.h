@@ -16,6 +16,16 @@
 #include "llvm/ADT/SmallVector.h"
 
 namespace cir {
+/// Helper type for lowering global ctor/dtors, that contain all the values
+/// needed for transforming the values between IRs.
+struct GlobalCtorDtorEntry {
+  GlobalCtorDtorEntry(llvm::StringRef name, uint32_t priority,
+                      llvm::StringRef associated = "")
+      : name(name), priority(priority), associated(associated) {}
+  std::string name;
+  uint32_t priority;
+  std::string associated;
+};
 
 /// Replace a `cir::CallOp` with a `cir::TryCallOp` whose unwind destination
 /// is \p unwindDest. The call's parent block is split immediately after the
