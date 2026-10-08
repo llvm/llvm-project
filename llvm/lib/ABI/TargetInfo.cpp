@@ -127,9 +127,8 @@ const Type *TargetInfo::isSingleElementStruct(const Type *Ty) const {
     return nullptr;
 
   // We don't consider a struct a single-element struct if it has padding
-  // beyond the element type. Compare at in-memory size so that an element
-  // narrower than its storage, such as bool, still unwraps.
-  if (Found->getTypeAllocSizeInBits() != Ty->getSizeInBits())
+  // beyond the element type.
+  if (Found->getABISizeInBits() != Ty->getABISizeInBits())
     return nullptr;
 
   return Found;

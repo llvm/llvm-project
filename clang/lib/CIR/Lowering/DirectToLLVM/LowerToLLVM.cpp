@@ -4158,11 +4158,10 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
     return mlir::LLVM::LLVMVoidType::get(type.getContext());
   });
 }
-
 static void buildCtorDtorList(
     mlir::ModuleOp module, StringRef globalXtorName, StringRef llvmXtorName,
-    llvm::function_ref<std::pair<StringRef, int>(mlir::Attribute)> createXtor) {
-  llvm::SmallVector<std::pair<StringRef, int>> globalXtors;
+    llvm::function_ref<cir::GlobalCtorDtorEntry(mlir::Attribute)> createXtor) {
+  llvm::SmallVector<cir::GlobalCtorDtorEntry> globalXtors;
   if (auto attr =
           module->getDiscardableAttrOfType<mlir::ArrayAttr>(globalXtorName))
     for (mlir::Attribute element : attr)
@@ -4198,22 +4197,26 @@ static void buildCtorDtorList(
   mlir::Value result =
       mlir::LLVM::UndefOp::create(builder, loc, ctorStructArrayTy);
 
-  for (auto [index, fn] : llvm::enumerate(globalXtors)) {
+  for (auto [index, xtorInfo] : llvm::enumerate(globalXtors)) {
     mlir::Value structInit =
         mlir::LLVM::UndefOp::create(builder, loc, ctorStructTy);
     mlir::Value initPriority = mlir::LLVM::ConstantOp::create(
-        builder, loc, ctorStructFields[0], fn.second);
+        builder, loc, ctorStructFields[0], xtorInfo.priority);
     mlir::Value initFuncAddr = mlir::LLVM::AddressOfOp::create(
-        builder, loc, ctorStructFields[1], fn.first);
+        builder, loc, ctorStructFields[1], xtorInfo.name);
     mlir::Value initAssociate =
-        mlir::LLVM::ZeroOp::create(builder, loc, ctorStructFields[2]);
+        xtorInfo.associated.empty()
+            ? mlir::LLVM::ZeroOp::create(builder, loc, ctorStructFields[2])
+                  .getResult()
+            : mlir::LLVM::AddressOfOp::create(builder, loc, ctorStructFields[2],
+                                              xtorInfo.associated)
+                  .getResult();
     // Literal zero makes the InsertValueOp::create ambiguous.
     llvm::SmallVector<int64_t> zero{0};
     structInit = mlir::LLVM::InsertValueOp::create(builder, loc, structInit,
                                                    initPriority, zero);
     structInit = mlir::LLVM::InsertValueOp::create(builder, loc, structInit,
                                                    initFuncAddr, 1);
-    // TODO: handle associated data for initializers.
     structInit = mlir::LLVM::InsertValueOp::create(builder, loc, structInit,
                                                    initAssociate, 2);
     result = mlir::LLVM::InsertValueOp::create(builder, loc, result, structInit,
@@ -4582,19 +4585,27 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   }
 
   // Emit the llvm.global_ctors array.
-  buildCtorDtorList(module, cir::CIRDialect::getGlobalCtorsAttrName(),
-                    "llvm.global_ctors", [](mlir::Attribute attr) {
-                      auto ctorAttr = mlir::cast<cir::GlobalCtorAttr>(attr);
-                      return std::make_pair(ctorAttr.getName(),
-                                            ctorAttr.getPriority());
-                    });
+  buildCtorDtorList(
+      module, cir::CIRDialect::getGlobalCtorsAttrName(), "llvm.global_ctors",
+      [](mlir::Attribute attr) {
+        auto ctorAttr = mlir::cast<cir::GlobalCtorAttr>(attr);
+        StringRef associated;
+        if (mlir::FlatSymbolRefAttr assoc = ctorAttr.getAssociated())
+          associated = assoc.getValue();
+        return cir::GlobalCtorDtorEntry(ctorAttr.getName(),
+                                        ctorAttr.getPriority(), associated);
+      });
   // Emit the llvm.global_dtors array.
-  buildCtorDtorList(module, cir::CIRDialect::getGlobalDtorsAttrName(),
-                    "llvm.global_dtors", [](mlir::Attribute attr) {
-                      auto dtorAttr = mlir::cast<cir::GlobalDtorAttr>(attr);
-                      return std::make_pair(dtorAttr.getName(),
-                                            dtorAttr.getPriority());
-                    });
+  buildCtorDtorList(
+      module, cir::CIRDialect::getGlobalDtorsAttrName(), "llvm.global_dtors",
+      [](mlir::Attribute attr) {
+        auto dtorAttr = mlir::cast<cir::GlobalDtorAttr>(attr);
+        StringRef associated;
+        if (mlir::FlatSymbolRefAttr assoc = dtorAttr.getAssociated())
+          associated = assoc.getValue();
+        return cir::GlobalCtorDtorEntry(dtorAttr.getName(),
+                                        dtorAttr.getPriority(), associated);
+      });
   // Emit @llvm.global.annotations from the previously-collected entries.
   buildGlobalAnnotationsVar(module);
 
@@ -5270,6 +5281,18 @@ mlir::LogicalResult CIRToLLVMMatrixColumnMajorLoadOpLowering::matchAndRewrite(
       rewriter.getBoolAttr(op.getIsVolatile()),
       rewriter.getI32IntegerAttr(resultMatrixTy.getRowNum()),
       rewriter.getI32IntegerAttr(resultMatrixTy.getColumnNum()));
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMMatrixColumnMajorStoreOpLowering::matchAndRewrite(
+    cir::MatrixColumnMajorStoreOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  cir::MatrixType matrixTy = op.getMatrix().getType();
+  rewriter.replaceOpWithNewOp<mlir::LLVM::MatrixColumnMajorStoreOp>(
+      op, adaptor.getMatrix(), adaptor.getValue(), adaptor.getStride(),
+      rewriter.getBoolAttr(op.getIsVolatile()),
+      rewriter.getI32IntegerAttr(matrixTy.getRowNum()),
+      rewriter.getI32IntegerAttr(matrixTy.getColumnNum()));
   return mlir::success();
 }
 
