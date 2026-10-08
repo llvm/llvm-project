@@ -51,12 +51,12 @@ STATISTIC(NumTransformedToWInstrs,
 STATISTIC(NumTransformedToNonWInstrs,
           "Number of instructions transformed to non-W-ops");
 
-static cl::opt<bool> DisableSExtWRemoval("riscv-disable-sextw-removal",
-                                         cl::desc("Disable removal of sext.w"),
-                                         cl::init(false), cl::Hidden);
-static cl::opt<bool> DisableStripWSuffix("riscv-disable-strip-w-suffix",
-                                         cl::desc("Disable strip W suffix"),
-                                         cl::init(false), cl::Hidden);
+static cl::opt<bool> EnableSExtWRemoval("riscv-sextw-removal",
+                                        cl::desc("Enable removal of sext.w"),
+                                        cl::init(true), cl::Hidden);
+static cl::opt<bool> EnableStripWSuffix("riscv-strip-w-suffix",
+                                        cl::desc("Enable strip W suffix"),
+                                        cl::init(true), cl::Hidden);
 
 namespace {
 
@@ -746,7 +746,7 @@ bool RISCVOptWInstrsImpl::removeSExtWInstrs(MachineFunction &MF,
                                             const RISCVInstrInfo &TII,
                                             const RISCVSubtarget &ST,
                                             MachineRegisterInfo &MRI) {
-  if (DisableSExtWRemoval)
+  if (!EnableSExtWRemoval)
     return false;
 
   bool MadeChange = false;
@@ -809,7 +809,7 @@ bool RISCVOptWInstrsImpl::canonicalizeWSuffixes(MachineFunction &MF,
                                                 const RISCVInstrInfo &TII,
                                                 const RISCVSubtarget &ST,
                                                 MachineRegisterInfo &MRI) {
-  bool ShouldStripW = !(DisableStripWSuffix || ST.preferWInst());
+  bool ShouldStripW = EnableStripWSuffix && !ST.preferWInst();
   bool ShouldPreferW = ST.preferWInst();
   bool MadeChange = false;
 
