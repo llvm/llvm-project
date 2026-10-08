@@ -34,6 +34,7 @@ using namespace llvm;
 using namespace llvm::sys;
 using namespace llvm::omp::target::error;
 using namespace llvm::omp::target::debug;
+using namespace llvm::omp::target::helpers;
 
 PluginManager *PM = nullptr;
 

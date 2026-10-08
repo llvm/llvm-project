@@ -37,6 +37,7 @@
 using namespace llvm::omp::target::ompt;
 #endif
 using namespace llvm::omp::target::debug;
+using namespace llvm::omp::target::helpers;
 
 // If offload is enabled, ensure that device DeviceID has been initialized.
 //

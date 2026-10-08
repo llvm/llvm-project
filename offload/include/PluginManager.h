@@ -200,44 +200,66 @@ extern PluginManager *PM;
 extern std::atomic<bool> RTLAlive; // Indicates if the RTL has been initialized
 extern std::atomic<int> RTLOngoingSyncs; // Counts ongoing external syncs
 
-// Helper functions to iterate over all platforms and invoke the provided
-// callback.
-template <typename CallbackTy>
-llvm::Error iteratePlatforms(CallbackTy Callback, void *UserData) {
+namespace llvm::omp::target::helpers {
+// Helper functions to iterate over different elements provided by liboffload.
+template <typename ElemTy, typename IterateFn, typename CallbackTy>
+ol_result_t iterate(IterateFn Func, CallbackTy Callback, void *UserData) {
   struct {
     CallbackTy *Callback;
     void *UserData;
   } WrapperData;
-  ol_platform_iterate_cb_t Wrapper = [](ol_platform_handle_t Platform,
-                                        void *UserData) -> bool {
+  auto Wrapper = [](ElemTy Elem, void *UserData) -> bool {
     auto *Unwrapped = static_cast<decltype(WrapperData) *>(UserData);
-    (*Unwrapped->Callback)(Platform, Unwrapped->UserData);
+    (*Unwrapped->Callback)(Elem, Unwrapped->UserData);
     return true;
   };
-  if (auto Res = olIteratePlatforms(Wrapper, &WrapperData))
+  return Func(Wrapper, &WrapperData);
+}
+
+template <typename ElemTy, typename IterateFn, typename CallbackTy>
+ol_result_t iterate(IterateFn Func, CallbackTy Callback) {
+  auto Wrapper = [](ElemTy Elem, void *UserData) -> bool {
+    auto *Unwrapped = static_cast<CallbackTy *>(UserData);
+    (*Unwrapped)(Elem);
+    return true;
+  };
+  return Func(Wrapper, reinterpret_cast<void *>(&Callback));
+}
+
+inline llvm::Error iterateCheck(ol_result_t Result, llvm::StringRef Message) {
+  if (Result)
     return llvm::omp::target::error::createError(
-        llvm::omp::target::error::ErrorCode::BackendFailure,
-        "Failed to iterate platforms: %s", Res->Details);
+        llvm::omp::target::error::ErrorCode::BackendFailure, "%s : %s",
+        Message.str().c_str(), Result->Details);
   return llvm::Error::success();
 }
 
+// Iterate platforms
+template <typename CallbackTy>
+llvm::Error iteratePlatforms(CallbackTy Callback, void *UserData) {
+  return iterateCheck(
+      iterate<ol_platform_handle_t>(olIteratePlatforms, Callback, UserData),
+      "Failed to iterate platforms");
+}
 template <typename CallbackTy>
 llvm::Error iteratePlatforms(CallbackTy Callback) {
-  return iteratePlatforms(Callback, nullptr);
+  return iterateCheck(
+      iterate<ol_platform_handle_t>(olIteratePlatforms, Callback),
+      "Failed to iterate platforms");
 }
 
-// Helper function to iterate over all devices and invoke the provided callback.
-template <typename CallbackTy> llvm::Error iterateDevices(CallbackTy Callback) {
-  ol_device_iterate_cb_t Wrapper = [](ol_device_handle_t Device,
-                                      void *UserData) -> bool {
-    CallbackTy *Unwrapped = static_cast<CallbackTy *>(UserData);
-    (*Unwrapped)(Device);
-    return true;
-  };
-  if (auto Res = olIterateDevices(Wrapper, &Callback))
-    return llvm::omp::target::error::createError(
-        llvm::omp::target::error::ErrorCode::BackendFailure,
-        "Failed to iterate devices: %s", Res->Details);
-  return llvm::Error::success();
+// Iterate devices
+template <typename CallbackTy>
+llvm::Error iterateDevices(CallbackTy Callback, void *UserData) {
+  return iterateCheck(
+      iterate<ol_device_handle_t>(olIterateDevices, Callback, UserData),
+      "Failed to iterate devices");
 }
+template <typename CallbackTy> llvm::Error iterateDevices(CallbackTy Callback) {
+  return iterateCheck(iterate<ol_device_handle_t>(olIterateDevices, Callback),
+                      "Failed to iterate devices");
+}
+
+} // namespace llvm::omp::target::helpers
+
 #endif // OMPTARGET_PLUGIN_MANAGER_H
