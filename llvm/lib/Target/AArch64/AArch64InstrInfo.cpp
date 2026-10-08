@@ -51,7 +51,6 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
@@ -77,35 +76,6 @@ STATISTIC(NumZCRegMoveInstrsFPR, "Number of zero-cycle FPR register move "
 STATISTIC(NumZCZeroingInstrsGPR, "Number of zero-cycle GPR zeroing "
                                  "instructions expanded from canonical COPY");
 // NumZCZeroingInstrsFPR is counted at AArch64AsmPrinter
-
-static cl::opt<unsigned>
-    CBDisplacementBits("aarch64-cb-offset-bits", cl::Hidden, cl::init(9),
-                       cl::desc("Restrict range of CB instructions (DEBUG)"));
-
-static cl::opt<unsigned> TBZDisplacementBits(
-    "aarch64-tbz-offset-bits", cl::Hidden, cl::init(14),
-    cl::desc("Restrict range of TB[N]Z instructions (DEBUG)"));
-
-static cl::opt<unsigned> CBZDisplacementBits(
-    "aarch64-cbz-offset-bits", cl::Hidden, cl::init(19),
-    cl::desc("Restrict range of CB[N]Z instructions (DEBUG)"));
-
-static cl::opt<unsigned>
-    BCCDisplacementBits("aarch64-bcc-offset-bits", cl::Hidden, cl::init(19),
-                        cl::desc("Restrict range of Bcc instructions (DEBUG)"));
-
-static cl::opt<unsigned>
-    BDisplacementBits("aarch64-b-offset-bits", cl::Hidden, cl::init(26),
-                      cl::desc("Restrict range of B instructions (DEBUG)"));
-
-static cl::opt<unsigned> GatherOptSearchLimit(
-    "aarch64-search-limit", cl::Hidden, cl::init(2048),
-    cl::desc("Restrict range of instructions to search for the "
-             "machine-combiner gather pattern optimization"));
-
-static cl::opt<bool> UseCompactUnwindFrameRecordForOutlinedFunctions(
-    "aarch64-outliner-compact-unwind-frame", cl::Hidden, cl::init(true),
-    cl::desc("Use a frame record for Mach-O non-leaf outlined functions"));
 
 AArch64InstrInfo::AArch64InstrInfo(const AArch64Subtarget &STI)
     : AArch64GenInstrInfo(STI, RI, AArch64::ADJCALLSTACKDOWN,
@@ -384,37 +354,38 @@ static void parseCondBranch(MachineInstr *LastInst, MachineBasicBlock *&Target,
   }
 }
 
-static unsigned getBranchDisplacementBits(unsigned Opc) {
+static unsigned getBranchDisplacementBits(const AArch64Options &CLOpts,
+                                          unsigned Opc) {
   switch (Opc) {
   default:
     llvm_unreachable("unexpected opcode!");
   case AArch64::B:
-    return BDisplacementBits;
+    return CLOpts.b_offset_bits;
   case AArch64::TBNZW:
   case AArch64::TBZW:
   case AArch64::TBNZX:
   case AArch64::TBZX:
-    return TBZDisplacementBits;
+    return CLOpts.tbz_offset_bits;
   case AArch64::CBNZW:
   case AArch64::CBZW:
   case AArch64::CBNZX:
   case AArch64::CBZX:
-    return CBZDisplacementBits;
+    return CLOpts.cbz_offset_bits;
   case AArch64::Bcc:
-    return BCCDisplacementBits;
+    return CLOpts.bcc_offset_bits;
   case AArch64::CBWPri:
   case AArch64::CBXPri:
   case AArch64::CBBAssertExt:
   case AArch64::CBHAssertExt:
   case AArch64::CBWPrr:
   case AArch64::CBXPrr:
-    return CBDisplacementBits;
+    return CLOpts.cb_offset_bits;
   }
 }
 
 bool AArch64InstrInfo::isBranchOffsetInRange(unsigned BranchOp,
                                              int64_t BrOffset) const {
-  unsigned Bits = getBranchDisplacementBits(BranchOp);
+  unsigned Bits = getBranchDisplacementBits(Subtarget.getCLOpts(), BranchOp);
   assert(Bits >= 3 && "max branch displacement must be enough to jump"
                       "over conditional branch expansion");
   return isIntN(Bits, BrOffset / 4);
@@ -8520,7 +8491,8 @@ static bool getGatherLanePattern(MachineInstr &Root,
   // Exit early if we've encountered all load instructions or hit the search
   // limit.
   auto MBBItr = Root.getIterator();
-  unsigned RemainingSteps = GatherOptSearchLimit;
+  unsigned RemainingSteps =
+      MF->getSubtarget<AArch64Subtarget>().getCLOpts().search_limit;
   SmallPtrSet<const MachineInstr *, 16> RemainingLoadInstrs;
   RemainingLoadInstrs.insert(LoadInstrs.begin(), LoadInstrs.end());
   const MachineBasicBlock *MBB = Root.getParent();
@@ -10407,7 +10379,9 @@ enum MachineOutlinerMBBFlags {
 /// instead. Saving FP and LR as a frame record (stp x29, x30 ; mov x29, sp)
 /// gets the small FRAME encoding, and costs one extra instruction.
 static bool isCompactUnwindFrameRecordEnabled(const MachineFunction &MF) {
-  return UseCompactUnwindFrameRecordForOutlinedFunctions &&
+  return MF.getSubtarget<AArch64Subtarget>()
+             .getCLOpts()
+             .outliner_compact_unwind_frame &&
          MF.getFunction().getParent()->getTargetTriple().isOSBinFormatMachO();
 }
 
@@ -10575,6 +10549,23 @@ AArch64InstrInfo::getOutliningCandidateInfo(
                                    ->getInfo<AArch64FunctionInfo>()
                                    ->getSignReturnAddressCondition();
   if (RASignCondition != SignReturnAddress::None) {
+    // Candidates that have Return Address Authentication Hardening enabled are
+    // discarded.
+    //
+    // In its current form, the machine outliner does not preserve X16/X17
+    // across outlined function calls, even though it should as they are
+    // caller-saved registers. And since the hardening based on load from the
+    // return address may clobber one of these registers, if they are alive
+    // across a call their value would be lost due to the hardening mechanism.
+    llvm::erase_if(RepeatedSequenceLocs, [](outliner::Candidate &C) {
+      return C.getMF()
+          ->getInfo<AArch64FunctionInfo>()
+          ->shouldHardenSignReturnAddress();
+    });
+    // If the sequence doesn't have enough candidates left, then we're done.
+    if (RepeatedSequenceLocs.size() < MinRepeats)
+      return std::nullopt;
+
     // One PAC and one AUT instructions
     NumBytesToCreateFrame += 8;
 
@@ -10952,6 +10943,13 @@ void AArch64InstrInfo::mergeOutliningCandidateAttributes(
     F.addFnAttr(CFn.getFnAttribute("sign-return-address"));
   if (CFn.hasFnAttribute("sign-return-address-key"))
     F.addFnAttr(CFn.getFnAttribute("sign-return-address-key"));
+  // The "sign-return-address-harden" attribute is not included because no
+  // candidate is supposed to have hardening enabled.
+  assert(llvm::none_of(Candidates, [](const outliner::Candidate &C) {
+    return C.getMF()
+        ->getInfo<AArch64FunctionInfo>()
+        ->shouldHardenSignReturnAddress();
+  }));
 
   AArch64GenInstrInfo::mergeOutliningCandidateAttributes(F, Candidates);
 }

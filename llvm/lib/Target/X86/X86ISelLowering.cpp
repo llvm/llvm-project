@@ -31577,7 +31577,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     }
     APInt APIntShiftAmt;
     bool IsConstantSplat = X86::isConstantSplat(Amt, APIntShiftAmt);
-    bool Profitable = Subtarget.getCLOpts().widen_shift;
+    bool Profitable = true;
     // AVX512BW brings support for vpsllvw.
     if (WideEltSizeInBits * AmtWideElts.size() >= 512 &&
         WideEltSizeInBits < 32 && !Subtarget.hasBWI()) {
@@ -37664,7 +37664,8 @@ X86TargetLowering::EmitLoweredSelect(MachineInstr &MI,
       NextMIIt->getOpcode() == MI.getOpcode() &&
       NextMIIt->getOperand(2).getReg() == MI.getOperand(2).getReg() &&
       NextMIIt->getOperand(1).getReg() == MI.getOperand(0).getReg() &&
-      NextMIIt->getOperand(1).isKill()) {
+      ThisMBB->getParent()->getRegInfo().hasOneNonDBGUse(
+          MI.getOperand(0).getReg())) {
     return EmitLoweredCascadedSelect(MI, *NextMIIt, ThisMBB);
   }
 
@@ -39053,7 +39054,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     // precision.
     Register NewCW = MF->getRegInfo().createVirtualRegister(&X86::GR32RegClass);
     BuildMI(*BB, MI, MIMD, TII->get(X86::OR32ri), NewCW)
-        .addReg(OldCW, RegState::Kill)
+        .addReg(OldCW)
         .addImm(0x300)
         .setOperandDead(3);
 
@@ -39061,14 +39062,14 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     Register NewCW16 =
         MF->getRegInfo().createVirtualRegister(&X86::GR16RegClass);
     BuildMI(*BB, MI, MIMD, TII->get(TargetOpcode::COPY), NewCW16)
-        .addReg(NewCW, RegState::Kill, X86::sub_16bit);
+        .addReg(NewCW, {}, X86::sub_16bit);
 
     // Prepare memory for FLDCW.
     int NewCWFrameIdx =
         MF->getFrameInfo().CreateStackObject(2, Align(2), false);
     addFrameReference(BuildMI(*BB, MI, MIMD, TII->get(X86::MOV16mr)),
                       NewCWFrameIdx)
-        .addReg(NewCW16, RegState::Kill);
+        .addReg(NewCW16);
 
     // Reload the modified control word now...
     addFrameReference(BuildMI(*BB, MI, MIMD, TII->get(X86::FLDCW16m)),
@@ -39123,7 +39124,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     // OR 0b11 into bit 10 and 11. 0b11 is the encoding for round toward zero.
     Register NewCW = MF->getRegInfo().createVirtualRegister(&X86::GR32RegClass);
     BuildMI(*BB, MI, MIMD, TII->get(X86::OR32ri), NewCW)
-        .addReg(OldCW, RegState::Kill)
+        .addReg(OldCW)
         .addImm(0xC00)
         .setOperandDead(3);
 
@@ -39131,14 +39132,14 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     Register NewCW16 =
         MF->getRegInfo().createVirtualRegister(&X86::GR16RegClass);
     BuildMI(*BB, MI, MIMD, TII->get(TargetOpcode::COPY), NewCW16)
-      .addReg(NewCW, RegState::Kill, X86::sub_16bit);
+        .addReg(NewCW, {}, X86::sub_16bit);
 
     // Prepare memory for FLDCW.
     int NewCWFrameIdx =
         MF->getFrameInfo().CreateStackObject(2, Align(2), false);
     addFrameReference(BuildMI(*BB, MI, MIMD, TII->get(X86::MOV16mr)),
                       NewCWFrameIdx)
-      .addReg(NewCW16, RegState::Kill);
+        .addReg(NewCW16);
 
     // Reload the modified control word now...
     addFrameReference(BuildMI(*BB, MI, MIMD,
