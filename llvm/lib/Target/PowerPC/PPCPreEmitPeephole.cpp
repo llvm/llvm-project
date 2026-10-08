@@ -92,6 +92,49 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
   }
 }
 
+/// Preserve debug uses between a CRSET/CRUNSET and its branch before the
+/// definition is erased.
+static void
+salvageCRBitDebugUses(MachineInstr &CRSetMI, MachineInstr &Br, Register CRBit,
+                      const TargetRegisterInfo *TRI,
+                      SmallVectorImpl<MachineInstr *> &InstrsToErase) {
+  MachineBasicBlock::iterator DebugIt = CRSetMI;
+  MachineBasicBlock::iterator DebugEnd = Br;
+  int64_t KnownValue = CRSetMI.getOpcode() == PPC::CRSET ? 1 : 0;
+  for (++DebugIt; DebugIt != DebugEnd; ++DebugIt) {
+    MachineInstr &DebugUse = *DebugIt;
+    if (!DebugUse.isDebugInstr() || !DebugUse.readsRegister(CRBit, TRI))
+      continue;
+    if (DebugUse.isDebugPHI()) {
+      // Erasing a DBG_PHI makes its references undef.
+      InstrsToErase.push_back(&DebugUse);
+      continue;
+    }
+    if (!DebugUse.isDebugValue())
+      continue;
+    if (DebugUse.isDebugEntryValue())
+      continue;
+
+    bool CanUseImmediate = !DebugUse.isIndirectDebugValue();
+    for (MachineOperand &Op : DebugUse.debug_operands()) {
+      if (!Op.isReg())
+        continue;
+      Register DebugReg = Op.getReg();
+      if (!DebugReg || !TRI->regsOverlap(DebugReg, CRBit))
+        continue;
+      if (DebugReg == CRBit && !Op.getSubReg() && CanUseImmediate) {
+        Op.ChangeToImmediate(KnownValue);
+        continue;
+      }
+      // A wider or indirect location cannot be represented by the known
+      // CR-bit value. A single unavailable operand makes the whole value
+      // unavailable, so use the standard helper for lists as well.
+      DebugUse.setDebugValueUndef();
+      break;
+    }
+  }
+}
+
   class PPCPreEmitPeephole : public MachineFunctionPass {
   public:
     static char ID;
@@ -530,15 +573,18 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
         unsigned CRReg = getCRFromCRBit(CRBit);
         bool SeenUse = false;
         MachineBasicBlock::reverse_iterator It = Br, Er = MBB.rend();
-        for (It++; It != Er; It++) {
-          if (It->modifiesRegister(CRBit, TRI)) {
-            if ((It->getOpcode() == PPC::CRUNSET ||
-                 It->getOpcode() == PPC::CRSET) &&
-                It->getOperand(0).getReg() == CRBit)
-              CRSetMI = &*It;
+        ++It;
+        // Ignore debug instructions without changing pseudo-probe visibility.
+        for (MachineInstr &ScanMI :
+             instructionsWithoutDebug(It, Er, /*SkipPseudoOp=*/false)) {
+          if (ScanMI.modifiesRegister(CRBit, TRI)) {
+            if ((ScanMI.getOpcode() == PPC::CRUNSET ||
+                 ScanMI.getOpcode() == PPC::CRSET) &&
+                ScanMI.getOperand(0).getReg() == CRBit)
+              CRSetMI = &ScanMI;
             break;
           }
-          if (It->readsRegister(CRBit, TRI))
+          if (ScanMI.readsRegister(CRBit, TRI))
             SeenUse = true;
         }
         if (!CRSetMI) continue;
@@ -580,8 +626,11 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
               SeenUse = true;
               break;
             }
-          if (!SeenUse)
+          if (!SeenUse) {
+            // Branch erasure is deferred until after this block scan.
+            salvageCRBitDebugUses(*CRSetMI, *Br, CRBit, TRI, InstrsToErase);
             InstrsToErase.push_back(CRSetMI);
+          }
         }
       }
       for (MachineInstr *MI : InstrsToErase) {
