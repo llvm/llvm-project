@@ -91,9 +91,9 @@ static cl::opt<bool>
                            cl::desc("Enable the loop data prefetch pass"),
                            cl::init(true));
 
-static cl::opt<bool> DisableVectorMaskMutation(
-    "riscv-disable-vector-mask-mutation",
-    cl::desc("Disable the vector mask scheduling mutation"), cl::init(false),
+static cl::opt<bool> EnableVectorMaskMutation(
+    "riscv-vector-mask-mutation",
+    cl::desc("Enable the vector mask scheduling mutation"), cl::init(true),
     cl::Hidden);
 
 static cl::opt<bool>
@@ -272,7 +272,8 @@ RISCVTargetMachine::getTargetTransformInfo(const Function &F) const {
 // for all memory accesses, so it is reasonable to assume that an
 // implementation has no-op address space casts. If an implementation makes a
 // change to this, they can override it here.
-bool RISCVTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
+bool RISCVTargetMachine::isNoopAddrSpaceCast(const DataLayout &DL,
+                                             unsigned SrcAS,
                                              unsigned DstAS) const {
   return true;
 }
@@ -289,13 +290,13 @@ RISCVTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
 
   if (ST.enableMISchedLoadClustering())
     DAG->addMutation(createLoadClusterDAGMutation(
-        DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
+        DAG->TII, /*ReorderWhileClustering=*/true));
 
   if (ST.enableMISchedStoreClustering())
     DAG->addMutation(createStoreClusterDAGMutation(
-        DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
+        DAG->TII, /*ReorderWhileClustering=*/true));
 
-  if (!DisableVectorMaskMutation && ST.hasVInstructions())
+  if (EnableVectorMaskMutation && ST.hasVInstructions())
     DAG->addMutation(createRISCVVectorMaskDAGMutation(DAG->TRI));
 
   return DAG;
@@ -313,11 +314,11 @@ RISCVTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
 
   if (ST.enablePostMISchedLoadClustering())
     DAG->addMutation(createLoadClusterDAGMutation(
-        DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
+        DAG->TII, /*ReorderWhileClustering=*/true));
 
   if (ST.enablePostMISchedStoreClustering())
     DAG->addMutation(createStoreClusterDAGMutation(
-        DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
+        DAG->TII, /*ReorderWhileClustering=*/true));
 
   return DAG;
 }

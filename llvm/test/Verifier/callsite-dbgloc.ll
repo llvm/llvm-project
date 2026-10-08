@@ -33,6 +33,13 @@ entry:
   ret void, !dbg !22
 }
 
+; Function Attrs: nounwind ssp uwtable
+define void @l() #2 !dbg !26 {
+entry:
+  call void (...) @i(), !dbg !27
+  ret void, !dbg !28
+}
+
 declare !dbg !23 void @i(...) #1
 
 ; Function Attrs: nounwind ssp uwtable
@@ -48,6 +55,10 @@ entry:
 ; CHECK: inlinable function call in a function with debug info must have a !dbg location
 ; CHECK: @k()
   call void @k()
+; noipa does not prevent inlining, so this call still needs a !dbg location.
+; CHECK: inlinable function call in a function with debug info must have a !dbg location
+; CHECK: @l()
+  call void @l()
 ; CHECK-NOT: inlinable function call in a function with debug info must have a !dbg location
 ; CHECK-NOT: @i()
   call void (...) @i()
@@ -62,6 +73,7 @@ entry:
 }
 
 attributes #0 = { nounwind ssp uwtable }
+attributes #2 = { noipa nounwind ssp uwtable }
 
 ; CHECK: warning: ignoring invalid debug info
 
@@ -95,3 +107,6 @@ attributes #0 = { nounwind ssp uwtable }
 !23 = !DISubprogram(name: "i", scope: !1, file: !1, line: 1, type: !24, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
 !24 = !DISubroutineType(types: !25)
 !25 = !{null}
+!26 = distinct !DISubprogram(name: "l", scope: !1, file: !1, line: 7, type: !8, isLocal: false, isDefinition: true, scopeLine: 7, isOptimized: false, unit: !0, retainedNodes: !2)
+!27 = !DILocation(line: 7, column: 12, scope: !26)
+!28 = !DILocation(line: 7, column: 17, scope: !26)

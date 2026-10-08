@@ -1076,7 +1076,6 @@ defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE", i32, extloadi8_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE", i32, zextloadi8_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_SBYTE", i32, sextloadi8_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_SBYTE", i32, atomic_load_sext_8_global>;
-defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_SBYTE", i32, atomic_load_sext_16_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_USHORT", i32, extloadi16_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_USHORT", i32, zextloadi16_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_SSHORT", i32, sextloadi16_global>;
@@ -1429,7 +1428,7 @@ let SubtargetPredicate = HasAtomicFMinFMaxF64GlobalInsts in {
 }
 
 def BUFFER_INV : MUBUF_Invalidate<"buffer_inv"> {
-  let SubtargetPredicate = isGFX940Plus;
+  let SubtargetPredicate = HasBufferInvInst;
   let has_glc = 1;
   let has_sccb = 1;
   let InOperandList = (ins CPol_0:$cpol);
@@ -3660,10 +3659,8 @@ let AsmString = BUFFER_WBL2.Mnemonic, // drop flags
 defm BUFFER_WBL2  : MUBUF_Real_gfx90a<0x28>;
 defm BUFFER_INVL2 : MUBUF_Real_gfx90a<0x29>;
 
-let SubtargetPredicate = isGFX940Plus in {
 def BUFFER_WBL2_gfx940  : MUBUF_Real_gfx940<0x28, BUFFER_WBL2>;
 def BUFFER_INV_gfx940   : MUBUF_Real_gfx940<0x29, BUFFER_INV>;
-}
 
 class MTBUF_Real_Base_vi <bits<4> op, MTBUF_Pseudo ps, int Enc> :
   MTBUF_Real<ps>,

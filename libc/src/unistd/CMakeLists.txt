@@ -120,6 +120,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fchownat
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.fchownat
+)
+
+add_entrypoint_object(
+  fdatasync
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.fdatasync
+)
+
+add_entrypoint_object(
   fork
   ALIAS
   DEPENDS
