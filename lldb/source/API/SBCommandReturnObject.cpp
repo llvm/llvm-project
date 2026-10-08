@@ -22,24 +22,26 @@
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-forward.h"
+#include <utility>
 
 using namespace lldb;
 using namespace lldb_private;
 
 SBCommandReturnObjectImpl::SBCommandReturnObjectImpl()
-    : m_ptr(new CommandReturnObject(false)) {}
+    : m_ptr(new CommandReturnObject(false)), m_owned(true) {}
 
 SBCommandReturnObjectImpl::SBCommandReturnObjectImpl(CommandReturnObject &ref)
     : m_ptr(&ref), m_owned(false) {}
 
 SBCommandReturnObjectImpl::SBCommandReturnObjectImpl(
     const SBCommandReturnObjectImpl &rhs)
-    : m_ptr(new CommandReturnObject(*rhs.m_ptr)), m_owned(rhs.m_owned) {}
+    : m_ptr(new CommandReturnObject(*rhs.m_ptr)), m_owned(true) {}
 
 SBCommandReturnObjectImpl &
 SBCommandReturnObjectImpl::operator=(const SBCommandReturnObjectImpl &rhs) {
   SBCommandReturnObjectImpl copy(rhs);
-  std::swap(*this, copy);
+  std::swap(m_ptr, copy.m_ptr);
+  std::swap(m_owned, copy.m_owned);
   return *this;
 }
 
