@@ -7913,7 +7913,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
           "the cost-model indicates that vectorization is not beneficial"};
     } else {
       LLVM_DEBUG(dbgs() << "LV: Vectorization is not possible. Failed to "
-                           "create any vector vplans.\n");
+                           "create any vector VPlans.\n");
       VecDiagMsg = {"VectorizationNotPossible",
                     "vectorization is not possible"};
     }

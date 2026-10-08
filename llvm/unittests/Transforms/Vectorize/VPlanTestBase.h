@@ -106,10 +106,10 @@ protected:
           /*AllowReordering=*/false);
     }
 
-    if (Style)
+    if (Style) {
       VPlanTransforms::handleUncountableEarlyExits(*Plan, &ORE, L, PSE, *DT,
                                                    AC.get(), *Style);
-    else
+    } else
       VPlanTransforms::handleCountableEarlyExits(*Plan);
     VPlanTransforms::addMiddleCheck(*Plan);
 
