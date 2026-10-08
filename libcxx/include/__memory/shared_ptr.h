@@ -1180,9 +1180,12 @@ public:
   }
 
   template <class _Yp, __enable_if_t<__compatible_with_v<_Yp, _Tp>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI weak_ptr(weak_ptr<_Yp> const& __r) _NOEXCEPT : __ptr_(nullptr), __cntrl_(nullptr) {
+  _LIBCPP_HIDE_FROM_ABI weak_ptr(weak_ptr<_Yp> const& __r) _NOEXCEPT : __ptr_(nullptr), __cntrl_(__r.__cntrl_) {
     shared_ptr<_Yp> __s = __r.lock();
-    *this               = weak_ptr<_Tp>(__s);
+    if (__s)
+      __ptr_ = __s.get();
+    if (__cntrl_)
+      __cntrl_->__add_weak();
   }
 
   _LIBCPP_HIDE_FROM_ABI weak_ptr(weak_ptr&& __r) _NOEXCEPT : __ptr_(__r.__ptr_), __cntrl_(__r.__cntrl_) {
@@ -1191,10 +1194,12 @@ public:
   }
 
   template <class _Yp, __enable_if_t<__compatible_with_v<_Yp, _Tp>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI weak_ptr(weak_ptr<_Yp>&& __r) _NOEXCEPT : __ptr_(nullptr), __cntrl_(nullptr) {
+  _LIBCPP_HIDE_FROM_ABI weak_ptr(weak_ptr<_Yp>&& __r) _NOEXCEPT : __ptr_(nullptr), __cntrl_(__r.__cntrl_) {
     shared_ptr<_Yp> __s = __r.lock();
-    *this               = weak_ptr<_Tp>(__s);
-    __r.reset();
+    if (__s)
+      __ptr_ = __s.get();
+    __r.__ptr_   = nullptr;
+    __r.__cntrl_ = nullptr;
   }
 
   _LIBCPP_HIDE_FROM_ABI ~weak_ptr() {
