@@ -22,7 +22,6 @@ Transforms/InstCombine/memrchr-3.ll
 Transforms/InstCombine/memrchr-4.ll
 Transforms/InstCombine/minmax-fold.ll
 Transforms/InstCombine/minmax-intrinsics.ll
-Transforms/InstCombine/mul.ll
 Transforms/InstCombine/select-factorize.ll
 Transforms/InstCombine/select-min-max.ll
 Transforms/InstCombine/select-of-symmetric-selects.ll
