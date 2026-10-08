@@ -418,6 +418,8 @@ createScanCompilerInvocation(const CompilerInvocation &Invocation,
   ScanInvocation->getHeaderSearchOpts().ModuleFormat = "raw";
   ScanInvocation->getHeaderSearchOpts().ModulesIncludeVFSUsage =
       any(Service.getOpts().OptimizeArgs & ScanningOptimizations::VFS);
+  ScanInvocation->getHeaderSearchOpts().ModulesValidateSearchDirectories =
+      Service.getOpts().TrackSearchDirectories;
 
   // Consider different header search and diagnostic options to create
   // different modules. This avoids the unsound aliasing of module PCMs.

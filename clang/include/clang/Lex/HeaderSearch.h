@@ -1057,6 +1057,11 @@ private:
                                      bool IsFramework);
 };
 
+/// The non-system directories \p HSOpts searches. Header maps are skipped.
+std::vector<std::string>
+getNonSystemSearchDirs(const HeaderSearchOptions &HSOpts,
+                       const FileManager &FileMgr);
+
 /// Apply the header search options to get given HeaderSearch object.
 void ApplyHeaderSearchOptions(HeaderSearch &HS,
                               const HeaderSearchOptions &HSOpts,

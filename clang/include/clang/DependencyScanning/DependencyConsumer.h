@@ -32,6 +32,8 @@ public:
 
   virtual void handleFileDependency(StringRef Filename) = 0;
 
+  virtual void handleDirectoryDependency(StringRef Dirname) {}
+
   virtual void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) = 0;
 
   virtual void handleModuleDependency(ModuleDeps MD) = 0;

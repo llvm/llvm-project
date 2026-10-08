@@ -273,6 +273,11 @@ features cannot lower the translation-unit ABI level;
   be detected by watching the directories or by comparing their modification
   times.
 
+- Added `clang-scan-deps -track-search-directories`, which extends
+  `directory-deps` to the non-system directories searched for headers. Adding a
+  header there can shadow one found in a later directory, which changes the
+  build without changing any file it previously depended on.
+
 ### New Compiler Flags
 
 - New option `-fmodules-validate-directory-dependencies` makes an implicitly
