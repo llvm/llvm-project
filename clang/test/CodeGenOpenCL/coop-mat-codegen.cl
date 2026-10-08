@@ -23,12 +23,12 @@ typedef float __attribute__((coop_mat(SCOPE, 16, 16, USE_C))) MatC_t;
 //     Also verifies CooperativeMatrixType lowers to spirv.CooperativeMatrixKHR
 //     TargetExtType (visible in the call signature).
 // ---------------------------------------------------------------------------
-kernel void test_load(__global float *ptr) {
+kernel void test_load_1(__global float *ptr) {
     MatA_t a;
     a = coop_mat_load(ptr, ROW_MAJOR, 16);
     (void)a;
 }
-// CHECK-LABEL: @__clang_ocl_kern_imp_test_load
+// CHECK-LABEL: @__clang_ocl_kern_imp_test_load_1
 // CHECK: call
 // CHECK-SAME: target("spirv.CooperativeMatrixKHR"
 // CHECK-SAME: @__spirv_CooperativeMatrixLoadKHR
@@ -36,11 +36,11 @@ kernel void test_load(__global float *ptr) {
 // ---------------------------------------------------------------------------
 // Same test as above. But 'a' is initialized directly using the 'load'.
 // ---------------------------------------------------------------------------
-kernel void test_load(__global float *ptr) {
+kernel void test_load_2(__global float *ptr) {
     MatA_t a = coop_mat_load(ptr, ROW_MAJOR, 16);
     (void)a;
 }
-// CHECK-LABEL: @__clang_ocl_kern_imp_test_load
+// CHECK-LABEL: @__clang_ocl_kern_imp_test_load_2
 // CHECK: call
 // CHECK-SAME: target("spirv.CooperativeMatrixKHR"
 // CHECK-SAME: @__spirv_CooperativeMatrixLoadKHR
