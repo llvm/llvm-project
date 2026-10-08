@@ -63,8 +63,11 @@ ValueWithRealFlags<value::Real<W, P>> IntPower(const value::Real<W, P> &base,
   REAL one{REAL::FromInteger(INT{1}).value};
   if (power.IsNegative() && !base.IsZero() &&
       base.ABS().Compare(one) == Relation::Greater) {
-    REAL recip{one.Divide(base, rounding).value};
-    return TimesIntPowerOf(one, recip, power.ABS().value, rounding);
+    ValueWithRealFlags<REAL> result;
+    REAL recip{one.Divide(base, rounding).AccumulateFlags(result.flags)};
+    result.value = TimesIntPowerOf(one, recip, power.ABS().value, rounding)
+                       .AccumulateFlags(result.flags);
+    return result;
   }
   return TimesIntPowerOf(one, base, power, rounding);
 }
