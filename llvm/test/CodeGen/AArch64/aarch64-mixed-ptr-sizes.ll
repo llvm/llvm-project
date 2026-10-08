@@ -3,6 +3,7 @@
 ; RUN: llc --fast-isel < %s | FileCheck %s --check-prefixes=CHECK,NARROW
 ; RUN: llc --global-isel --global-isel-abort=2 < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI,NARROW
 ; RUN: llc -O0 < %s | FileCheck %s --check-prefix=NARROW
+; RUN: llc --global-isel --global-isel-abort=2 -stop-after=aarch64-prelegalizer-combiner < %s | FileCheck %s --check-prefix=GI-MEMCPY
 
 ; CHECK-GI:       warning: Instruction selection used fallback path for test_sign_ext
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_sign_ext_store_load
@@ -256,6 +257,11 @@ define void @test_copy6_uptr(ptr addrspace(271) %dst, ptr %src) {
 ; CHECK:       str w{{[0-9]+}}, [x{{[0-9]+}}]
 ; CHECK-NEXT:  strh w{{[0-9]+}}, [x{{[0-9]+}}]
 ; CHECK-NEXT:  ret
+; GI-MEMCPY-LABEL: name: test_copy6_uptr
+; GI-MEMCPY:       %[[SRC_OFFSET:[0-9]+]]:_(i64) = G_CONSTANT i64 4
+; GI-MEMCPY:       G_PTR_ADD %{{[0-9]+}}, %[[SRC_OFFSET]](i64)
+; GI-MEMCPY:       %[[DST_OFFSET:[0-9]+]]:_(i32) = G_CONSTANT i32 4
+; GI-MEMCPY:       G_PTR_ADD %{{[0-9]+}}, %[[DST_OFFSET]](i32)
   call void @llvm.memcpy.p271.p0.i64(ptr addrspace(271) align 2 %dst,
                                      ptr align 2 %src, i64 6, i1 false)
   ret void
