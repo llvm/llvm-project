@@ -244,7 +244,6 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   Info.IsMustTailCall = CB.isMustTailCall();
   Info.IsTailCall = CanBeTailCalled;
   Info.IsVarArg = IsVarArg;
-  Info.NoMerge = CB.cannotMerge();
 
   if (!lowerCall(MIRBuilder, Info))
     return false;
