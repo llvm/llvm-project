@@ -3413,6 +3413,7 @@ cc_library(
         "//llvm:IPO",
         "//llvm:Linker",
         "//llvm:Support",
+        "//mlir:BytecodeWriter",
         "//mlir:IR",
         "//mlir:Parser",
         "//mlir:Pass",
