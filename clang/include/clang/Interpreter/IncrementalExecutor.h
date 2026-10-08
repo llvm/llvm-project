@@ -41,6 +41,7 @@ public:
   virtual ~IncrementalExecutorBuilder();
 
   /// Create the default builder for the platform clangInterpreter is built for.
+  /// The selected backend provides this definition.
   static std::unique_ptr<IncrementalExecutorBuilder> createDefault();
 
   /// Return the supplied executor, or create one using the selected backend.
