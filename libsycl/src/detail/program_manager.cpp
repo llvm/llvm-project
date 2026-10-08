@@ -157,7 +157,7 @@ void ProgramAndKernelManager::unregisterFatBin(const void *BinaryStart,
     llvm::offloading::sycl::forEachSymbol(Symbols, [&](llvm::StringRef Name) {
       if (auto KernelIt = MDeviceKernelInfoMap.find(std::string_view(Name));
           KernelIt != MDeviceKernelInfoMap.end()) {
-        // Remove this DeviceKernel info from every live context tracking it
+        // Remove this DeviceKernelInfo from every live context tracking it
         DeviceKernelInfo *Info = &KernelIt->second;
         for (const std::weak_ptr<ContextImpl> &WeakContext :
              MContextsWithPrograms) {

@@ -92,6 +92,7 @@ TEST_F(ProgramCacheTest, RepeatedKernelLookupSkipsCompatibilityCheck) {
 
   EXPECT_CALL(Mock.get(), olIsValidBinary(_, _, _, _)).Times(1);
   EXPECT_CALL(Mock.get(), olCreateProgram(_, _, _, _, _)).Times(1);
+  EXPECT_CALL(Mock.get(), olGetSymbol(_, _, _, _)).Times(1);
 
   ol_symbol_handle_t FirstKernel = getKernel(Context, Device, KernelName);
   ol_symbol_handle_t SecondKernel = getKernel(Context, Device, KernelName);
@@ -110,6 +111,7 @@ TEST_F(ProgramCacheTest, KernelCacheIsScopedPerContext) {
 
   EXPECT_CALL(Mock.get(), olIsValidBinary(_, _, _, _)).Times(2);
   EXPECT_CALL(Mock.get(), olCreateProgram(_, _, _, _, _)).Times(2);
+  EXPECT_CALL(Mock.get(), olGetSymbol(_, _, _, _)).Times(2);
 
   ol_symbol_handle_t FirstKernel = getKernel(FirstContext, Device, KernelName);
   ol_symbol_handle_t SecondKernel =
@@ -153,6 +155,7 @@ TEST_F(ProgramCacheTest, ProgramIsCreatedPerContext) {
   std::shared_ptr<detail::ContextImpl> SecondContext = createContext(Device);
 
   EXPECT_CALL(Mock.get(), olCreateProgram(_, _, _, _, _)).Times(2);
+  EXPECT_CALL(Mock.get(), olGetSymbol(_, _, _, _)).Times(2);
 
   ol_symbol_handle_t FirstKernel = getKernel(FirstContext, Device, KernelName);
   ol_symbol_handle_t SecondKernel =
@@ -203,6 +206,7 @@ TEST_F(ProgramCacheTest, ProgramIsCreatedPerDeviceImage) {
   std::shared_ptr<detail::ContextImpl> Context = createContext(Device);
 
   EXPECT_CALL(Mock.get(), olCreateProgram(_, _, _, _, _)).Times(2);
+  EXPECT_CALL(Mock.get(), olGetSymbol(_, _, _, _)).Times(2);
 
   ol_symbol_handle_t FirstKernel = getKernel(Context, Device, KernelNames[0]);
   ol_symbol_handle_t SecondKernel = getKernel(Context, Device, KernelNames[1]);
