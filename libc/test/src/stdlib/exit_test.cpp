@@ -19,6 +19,7 @@
 #include "hdr/types/FILE.h"
 #include "hdr/types/size_t.h"
 #include "src/__support/CPP/scope.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/stdio/fclose.h"
 #include "src/stdio/fopen.h"
 #include "src/stdio/fputs.h"
@@ -43,20 +44,19 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 struct LlvmLibcExitTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
   static constexpr size_t VERIFY_BUFFER_SIZE = 128;
 
-  void verify_file_content(const char *filepath, const char *expected) {
-    size_t len = 0;
-    while (expected[len] != '\0')
-      ++len;
-    ASSERT_LT(len, VERIFY_BUFFER_SIZE);
+  void verify_file_content(const char *filepath,
+                           LIBC_NAMESPACE::cpp::string_view expected) {
+    ASSERT_LT(expected.size(), VERIFY_BUFFER_SIZE);
 
     ::FILE *file = LIBC_NAMESPACE::fopen(filepath, "r");
-    ASSERT_FALSE(file == nullptr);
-    char read_buf[VERIFY_BUFFER_SIZE] = {0};
+    ASSERT_NE(file, nullptr);
+    LIBC_NAMESPACE::cpp::scope_exit close_file(
+        [&] { EXPECT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0)); });
+    char read_buf[VERIFY_BUFFER_SIZE] = {};
     ASSERT_THAT(
         LIBC_NAMESPACE::fread(read_buf, 1, VERIFY_BUFFER_SIZE - 1, file),
-        Succeeds(len));
-    ASSERT_STREQ(read_buf, expected);
-    ASSERT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0));
+        Succeeds(expected.size()));
+    ASSERT_EQ(LIBC_NAMESPACE::cpp::string_view(read_buf), expected);
   }
 };
 

@@ -36,9 +36,18 @@ static int flush_on_host(::FILE *stream) {
   return ret;
 }
 
-ErrorOr<int> flush_stream(::FILE *stream) { return flush_on_host(stream); }
+ErrorOr<int> flush_stream(::FILE *stream) {
+  int ret = flush_on_host(stream);
+  if (ret != 0)
+    return Error(ret);
+  return 0;
+}
 
-ErrorOr<int> flush_all_streams() { return flush_on_host(nullptr); }
-
+ErrorOr<int> flush_all_streams() {
+  int ret = flush_on_host(nullptr);
+  if (ret != 0)
+    return Error(ret);
+  return 0;
+}
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL
