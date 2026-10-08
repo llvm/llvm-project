@@ -1,5 +1,4 @@
-; Check that the "exception-model" flag is respected. The pass should only run
-; when the module selects the Wasm model, and is a no-op for any other model.
+; The pass should only run when the module selects the Wasm model.
 
 ; RUN: split-file %s %t
 ; RUN: opt -passes=wasm-eh-prepare -S %t/wasm.ll   | FileCheck %s --check-prefix=WASM

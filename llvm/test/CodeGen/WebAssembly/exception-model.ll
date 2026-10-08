@@ -1,6 +1,5 @@
-; The "exception-model" module flag selects the EH model with no
-; -exception-model on the command line. Wasm triples default to no exception
-; handling, so a module without the flag keeps neither lowering.
+; The "exception-model" module flag selects the EH model. Wasm triples default
+; to no exception handling, so a module without the flag gets neither.
 
 ; RUN: split-file %s %t
 
