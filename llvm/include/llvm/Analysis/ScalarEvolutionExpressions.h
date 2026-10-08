@@ -318,6 +318,7 @@ public:
     assert(!(Flags & ~SCEV::FlagExact) && "Unexpected flags set");
     SubclassData |= static_cast<unsigned short>(Flags & SCEV::FlagExact);
   }
+
   SCEVFlags getExactFlag() const {
     return static_cast<SCEVFlags>(SubclassData) & SCEV::FlagExact;
   }
