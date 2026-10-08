@@ -26,3 +26,154 @@ define i32 @computeNumSignBits_look_through_extractelt(<2 x i1> %vecin) {
   %ashr = ashr i32 %elt0, 5
   ret i32 %ashr
 }
+
+define <2 x i32> @add_demanded(<2 x i1> %x, <2 x i32> %wide) {
+; CHECK-LABEL: @add_demanded(
+; CHECK-NEXT:    [[EXT:%.*]] = sext <2 x i1> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[SRC:%.*]] = shufflevector <2 x i32> [[EXT]], <2 x i32> [[WIDE:%.*]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[SRC]], splat (i32 -1)
+; CHECK-NEXT:    [[SHIFT:%.*]] = ashr <2 x i32> [[ADD]], splat (i32 1)
+; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <2 x i32> [[SHIFT]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x i32> [[SPLAT]]
+;
+  %ext = sext <2 x i1> %x to <2 x i32>
+  %src = shufflevector <2 x i32> %ext, <2 x i32> %wide, <2 x i32> <i32 0, i32 2>
+  %add = add <2 x i32> %src, <i32 -1, i32 -1>
+  %shift = ashr <2 x i32> %add, <i32 1, i32 1>
+  %splat = shufflevector <2 x i32> %shift, <2 x i32> poison, <2 x i32> zeroinitializer
+  %result = ashr <2 x i32> %splat, <i32 5, i32 5>
+  ret <2 x i32> %result
+}
+
+define <2 x i32> @trunc_demanded(<2 x i1> %x, <2 x i64> %wide) {
+; CHECK-LABEL: @trunc_demanded(
+; CHECK-NEXT:    [[EXT:%.*]] = sext <2 x i1> [[X:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[SRC:%.*]] = shufflevector <2 x i64> [[EXT]], <2 x i64> [[WIDE:%.*]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <2 x i64> [[SRC]] to <2 x i32>
+; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <2 x i32> [[TRUNC]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x i32> [[SPLAT]]
+;
+  %ext = sext <2 x i1> %x to <2 x i64>
+  %src = shufflevector <2 x i64> %ext, <2 x i64> %wide, <2 x i32> <i32 0, i32 2>
+  %trunc = trunc <2 x i64> %src to <2 x i32>
+  %splat = shufflevector <2 x i32> %trunc, <2 x i32> poison, <2 x i32> zeroinitializer
+  %result = ashr <2 x i32> %splat, <i32 5, i32 5>
+  ret <2 x i32> %result
+}
+
+define i32 @extract_demanded(<2 x i1> %x, <2 x i32> %wide) {
+; CHECK-LABEL: @extract_demanded(
+; CHECK-NEXT:    [[EXT:%.*]] = sext <2 x i1> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[SRC:%.*]] = shufflevector <2 x i32> [[EXT]], <2 x i32> [[WIDE:%.*]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[ELT:%.*]] = extractelement <2 x i32> [[SRC]], i32 0
+; CHECK-NEXT:    ret i32 [[ELT]]
+;
+  %ext = sext <2 x i1> %x to <2 x i32>
+  %src = shufflevector <2 x i32> %ext, <2 x i32> %wide, <2 x i32> <i32 0, i32 2>
+  %elt = extractelement <2 x i32> %src, i32 0
+  %result = ashr i32 %elt, 5
+  ret i32 %result
+}
+
+define i32 @extract_other(<2 x i1> %x, <2 x i32> %wide) {
+; CHECK-LABEL: @extract_other(
+; CHECK-NEXT:    [[EXT:%.*]] = sext <2 x i1> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[SRC:%.*]] = shufflevector <2 x i32> [[EXT]], <2 x i32> [[WIDE:%.*]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[ELT:%.*]] = extractelement <2 x i32> [[SRC]], i32 1
+; CHECK-NEXT:    [[RESULT:%.*]] = ashr i32 [[ELT]], 5
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %ext = sext <2 x i1> %x to <2 x i32>
+  %src = shufflevector <2 x i32> %ext, <2 x i32> %wide, <2 x i32> <i32 0, i32 2>
+  %elt = extractelement <2 x i32> %src, i32 1
+  %result = ashr i32 %elt, 5
+  ret i32 %result
+}
+
+define i32 @extract_variable(<2 x i1> %x, <2 x i32> %wide, i32 %idx) {
+; CHECK-LABEL: @extract_variable(
+; CHECK-NEXT:    [[EXT:%.*]] = sext <2 x i1> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[SRC:%.*]] = shufflevector <2 x i32> [[EXT]], <2 x i32> [[WIDE:%.*]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[ELT:%.*]] = extractelement <2 x i32> [[SRC]], i32 [[IDX:%.*]]
+; CHECK-NEXT:    [[RESULT:%.*]] = ashr i32 [[ELT]], 5
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %ext = sext <2 x i1> %x to <2 x i32>
+  %src = shufflevector <2 x i32> %ext, <2 x i32> %wide, <2 x i32> <i32 0, i32 2>
+  %elt = extractelement <2 x i32> %src, i32 %idx
+  %result = ashr i32 %elt, 5
+  ret i32 %result
+}
+
+define i32 @extract_scalable(<vscale x 2 x i1> %x) {
+; CHECK-LABEL: @extract_scalable(
+; CHECK-NEXT:    [[SRC:%.*]] = sext <vscale x 2 x i1> [[X:%.*]] to <vscale x 2 x i32>
+; CHECK-NEXT:    [[ELT:%.*]] = extractelement <vscale x 2 x i32> [[SRC]], i32 0
+; CHECK-NEXT:    ret i32 [[ELT]]
+;
+  %src = sext <vscale x 2 x i1> %x to <vscale x 2 x i32>
+  %elt = extractelement <vscale x 2 x i32> %src, i32 0
+  %result = ashr i32 %elt, 5
+  ret i32 %result
+}
+
+define <2 x i32> @bitcast_demanded_low(<2 x i1> %x, <2 x i64> %wide) {
+; CHECK-LABEL: @bitcast_demanded_low(
+; CHECK-NEXT:    [[EXT:%.*]] = sext <2 x i1> [[X:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[SRC:%.*]] = shufflevector <2 x i64> [[EXT]], <2 x i64> [[WIDE:%.*]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast <2 x i64> [[SRC]] to <4 x i32>
+; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <4 x i32> [[CAST]], <4 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x i32> [[SPLAT]]
+;
+  %ext = sext <2 x i1> %x to <2 x i64>
+  %src = shufflevector <2 x i64> %ext, <2 x i64> %wide, <2 x i32> <i32 0, i32 2>
+  %cast = bitcast <2 x i64> %src to <4 x i32>
+  %splat = shufflevector <4 x i32> %cast, <4 x i32> poison, <2 x i32> <i32 0, i32 0>
+  %result = ashr <2 x i32> %splat, splat (i32 5)
+  ret <2 x i32> %result
+}
+
+define <2 x i32> @bitcast_demanded_high(<2 x i1> %x, <2 x i64> %wide) {
+; CHECK-LABEL: @bitcast_demanded_high(
+; CHECK-NEXT:    [[EXT:%.*]] = sext <2 x i1> [[X:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[SRC:%.*]] = shufflevector <2 x i64> [[EXT]], <2 x i64> [[WIDE:%.*]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast <2 x i64> [[SRC]] to <4 x i32>
+; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <4 x i32> [[CAST]], <4 x i32> poison, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    ret <2 x i32> [[SPLAT]]
+;
+  %ext = sext <2 x i1> %x to <2 x i64>
+  %src = shufflevector <2 x i64> %ext, <2 x i64> %wide, <2 x i32> <i32 0, i32 2>
+  %cast = bitcast <2 x i64> %src to <4 x i32>
+  %splat = shufflevector <4 x i32> %cast, <4 x i32> poison, <2 x i32> <i32 1, i32 1>
+  %result = ashr <2 x i32> %splat, splat (i32 5)
+  ret <2 x i32> %result
+}
+
+define <2 x i32> @bitcast_wide_lane(<2 x i1> %x, <2 x i64> %wide) {
+; CHECK-LABEL: @bitcast_wide_lane(
+; CHECK-NEXT:    [[EXT:%.*]] = sext <2 x i1> [[X:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[SRC:%.*]] = shufflevector <2 x i64> [[EXT]], <2 x i64> [[WIDE:%.*]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast <2 x i64> [[SRC]] to <4 x i32>
+; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <4 x i32> [[CAST]], <4 x i32> poison, <2 x i32> <i32 2, i32 2>
+; CHECK-NEXT:    [[RESULT:%.*]] = ashr <2 x i32> [[SPLAT]], splat (i32 5)
+; CHECK-NEXT:    ret <2 x i32> [[RESULT]]
+;
+  %ext = sext <2 x i1> %x to <2 x i64>
+  %src = shufflevector <2 x i64> %ext, <2 x i64> %wide, <2 x i32> <i32 0, i32 2>
+  %cast = bitcast <2 x i64> %src to <4 x i32>
+  %splat = shufflevector <4 x i32> %cast, <4 x i32> poison, <2 x i32> <i32 2, i32 2>
+  %result = ashr <2 x i32> %splat, splat (i32 5)
+  ret <2 x i32> %result
+}
+
+define <2 x i32> @bitcast_scalar_sign_splat(i1 %x) {
+; CHECK-LABEL: @bitcast_scalar_sign_splat(
+; CHECK-NEXT:    [[EXT:%.*]] = sext i1 [[X:%.*]] to i64
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast i64 [[EXT]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[CAST]]
+;
+  %ext = sext i1 %x to i64
+  %cast = bitcast i64 %ext to <2 x i32>
+  %result = ashr <2 x i32> %cast, splat (i32 5)
+  ret <2 x i32> %result
+}
