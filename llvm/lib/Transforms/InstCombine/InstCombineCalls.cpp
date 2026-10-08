@@ -3504,19 +3504,22 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     // ldexp(x, zext(i1 y)) -> fmul x, (select y, 2.0, 1.0)
     // ldexp(x, sext(i1 y)) -> fmul x, (select y, 0.5, 1.0)
+    // For both of the cases below, we have no information on the distribution
+    // of x in the general case, so we mark the created selects as having
+    // unknown branch weights.
     Value *ExtSrc;
     if (match(Exp, m_ZExt(m_Value(ExtSrc))) &&
         ExtSrc->getType()->getScalarSizeInBits() == 1) {
-      Value *Select =
-          Builder.CreateSelect(ExtSrc, ConstantFP::get(II->getType(), 2.0),
-                               ConstantFP::get(II->getType(), 1.0));
+      Value *Select = Builder.CreateSelectWithUnknownProfile(
+          ExtSrc, ConstantFP::get(II->getType(), 2.0),
+          ConstantFP::get(II->getType(), 1.0), DEBUG_TYPE);
       return BinaryOperator::CreateFMulFMF(Src, Select, II);
     }
     if (match(Exp, m_SExt(m_Value(ExtSrc))) &&
         ExtSrc->getType()->getScalarSizeInBits() == 1) {
-      Value *Select =
-          Builder.CreateSelect(ExtSrc, ConstantFP::get(II->getType(), 0.5),
-                               ConstantFP::get(II->getType(), 1.0));
+      Value *Select = Builder.CreateSelectWithUnknownProfile(
+          ExtSrc, ConstantFP::get(II->getType(), 0.5),
+          ConstantFP::get(II->getType(), 1.0), DEBUG_TYPE);
       return BinaryOperator::CreateFMulFMF(Src, Select, II);
     }
 

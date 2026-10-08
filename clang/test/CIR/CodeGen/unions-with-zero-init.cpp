@@ -66,7 +66,7 @@ auto use() {
 }
 
 union outer_aggregate{int S::*m; int i; } outer_a1 = { p };
-// CIR-BEFORE-LABEL:   cir.global external @outer_a1 = ctor : !rec_outer_aggregate {
+// CIR-BEFORE-LABEL:   cir.global external @outer_a1 = #cir.const_record<{#cir.data_member<null> : !cir.data_member<!s32i in !rec_S>}> : !rec_outer_aggregate ctor {
 // CIR-BEFORE:     %[[GET_GLOB:.*]] = cir.get_global @outer_a1 : !cir.ptr<!rec_outer_aggregate>
 // CIR-BEFORE:     %[[GET_MEM:.*]] = cir.get_member %[[GET_GLOB]][0] {name = "m"} : !cir.ptr<!rec_outer_aggregate> -> !cir.ptr<!cir.data_member<!s32i in !rec_S>>
 // CIR-BEFORE:     %[[GET_P:.*]] = cir.get_global @p : !cir.ptr<!cir.data_member<!s32i in !rec_S>>
