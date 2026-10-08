@@ -1547,15 +1547,12 @@ AMDGPUPassConfig::AMDGPUPassConfig(TargetMachine &TM, PassManagerBase &PM)
   // Garbage collection is not supported.
   disablePass(&GCLoweringID);
   disablePass(&ShadowStackGCLoweringID);
-<<<<<<< HEAD
 
   if (UseSSAMachineScheduler) {
     // Use SSA Machine Scheduler instead of regular Machine Scheduler.
     disablePass(&MachineSchedulerID);
     setEnableSSAMachineScheduler(true);
   }
-=======
->>>>>>> 33e4d425a56e (Use analysis results of Live Vars; also add tests.)
 }
 
 void AMDGPUPassConfig::addEarlyCSEOrGVNPass() {

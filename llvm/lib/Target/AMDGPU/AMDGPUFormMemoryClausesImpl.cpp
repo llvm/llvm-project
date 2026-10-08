@@ -5,14 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-/// \file This pass is a clone of SIFormMemoryClauses intended to run in SSA
-/// form, before PHI elimination. It extends the live ranges of registers used
-/// as pointers in sequences of adjacent SMEM and VMEM instructions when XNACK
-/// is enabled, preventing a load from overwriting a pointer and requiring a
-/// soft clause break.
-///
-//===----------------------------------------------------------------------===//
 
 #include "AMDGPUFormMemoryClausesImpl.h"
 #include "AMDGPU.h"
