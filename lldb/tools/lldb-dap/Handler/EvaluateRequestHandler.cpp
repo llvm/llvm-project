@@ -56,8 +56,8 @@ static bool IsValidAddress(lldb::SBValue &value, lldb::addr_t addr) {
   lldb::SBMemoryRegionInfo region;
   lldb::SBError err = value.GetProcess().GetMemoryRegionInfo(addr, region);
   if (err.Success())
-    return region.IsMapped() &&
-        (region.IsReadable() || region.IsWritable() || region.IsExecutable());
+    return region.IsMapped() && (region.IsReadable() || region.IsWritable() ||
+                                 region.IsExecutable());
 
   return false;
 }
