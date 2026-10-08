@@ -1,0 +1,264 @@
+## Test --stubs-file, which names mach-o symbol stubs from a second file
+## without replacing the symbol table of the converted file.
+##
+## dsymutil copies LC_SYMTAB into a dSYM but not LC_DYSYMTAB, so a dSYM has the
+## richer symbol table yet cannot name its own __stubs. --symtab-file cannot
+## express that split, because it replaces the symbol table source.
+##
+## stubs.yaml is a complete image: __text with _main, a 12 byte __stubs entry
+## at 0x100000410, and an indirect symbol table pointing it at the undefined
+## _puts. dsym.yaml is the same image without LC_DYSYMTAB and with an extra
+## defined symbol _helper, standing in for a dSYM whose symbol table is the
+## richer of the two.
+
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/stubs.yaml -o %t/stubs.o
+# RUN: yaml2obj %t/dsym.yaml -o %t/dsym.o
+
+## Converting the dSYM alone keeps both its symbols but cannot name the stub.
+# RUN: llvm-gsymutil --convert %t/dsym.o -o %t/plain.gsym 2>&1 | FileCheck %s --check-prefix=PLAIN
+# RUN: llvm-gsymutil --address=0x100000410 %t/plain.gsym 2>&1 | FileCheck %s --check-prefix=PLAIN-ADDR
+
+## --stubs-file adds the stub and leaves the symbol table alone.
+# RUN: llvm-gsymutil --convert %t/dsym.o --stubs-file=%t/stubs.o -o %t/stubs.gsym 2>&1 | FileCheck %s --check-prefix=STUBS
+# RUN: llvm-gsymutil --address=0x100000400 --address=0x100000410 %t/stubs.gsym 2>&1 | FileCheck %s --check-prefix=STUBS-ADDR
+
+## --symtab-file replaces it, which here loses _helper. Contrast with STUBS.
+# RUN: llvm-gsymutil --convert %t/dsym.o --symtab-file=%t/stubs.o -o %t/symtab.gsym 2>&1 | FileCheck %s --check-prefix=SYMTAB
+
+## Given both, the symbol table comes from --symtab-file and the stubs from
+## --stubs-file; neither flag overrides the other.
+# RUN: llvm-gsymutil --convert %t/dsym.o --symtab-file=%t/stubs.o --stubs-file=%t/stubs.o -o %t/both.gsym 2>&1 | FileCheck %s --check-prefix=BOTH
+# RUN: llvm-gsymutil --address=0x100000410 %t/both.gsym 2>&1 | FileCheck %s --check-prefix=BOTH-ADDR
+
+## A --stubs-file that is not an object file at all is an error.
+# RUN: not llvm-gsymutil --convert %t/dsym.o --stubs-file=%t/dsym.yaml -o %t/bad.gsym 2>&1 | FileCheck %s --check-prefix=BADSTUBS
+
+# PLAIN: Loaded 2 functions from symbol table.
+# PLAIN: Loaded 0 functions from symbol stubs.
+# PLAIN-ADDR: error: address 0x100000410 is not in GSYM
+
+# STUBS: Using symbol stubs file: {{.*}}stubs.o
+# STUBS: Loaded 2 functions from symbol table.
+# STUBS: Loaded 1 functions from symbol stubs.
+# STUBS-ADDR:      0x0000000100000400: main
+# STUBS-ADDR-NEXT: 0x0000000100000410: symbol stub for: puts
+
+# SYMTAB: Using symbol table file: {{.*}}stubs.o
+# SYMTAB: Loaded 1 functions from symbol table.
+
+# BOTH: Using symbol stubs file: {{.*}}stubs.o
+# BOTH: Using symbol table file: {{.*}}stubs.o
+# BOTH: Loaded 1 functions from symbol table.
+# BOTH: Loaded 1 functions from symbol stubs.
+# BOTH-ADDR: 0x0000000100000410: symbol stub for: puts
+
+# BADSTUBS: The file was not recognized as a valid object file
+
+## A --stubs-file that is a valid object but not mach-o is diagnosed, the stub
+## pass is skipped, and the conversion still succeeds.
+# RUN: yaml2obj %t/notmacho.yaml -o %t/notmacho.o
+# RUN: llvm-gsymutil --convert %t/dsym.o --stubs-file=%t/notmacho.o -o %t/notmacho.gsym 2>&1 | FileCheck %s --check-prefix=NOTMACHO
+
+# NOTMACHO: Loaded 2 functions from symbol table.
+# NOTMACHO: warning: the symbol stubs file is not a mach-o file
+# NOTMACHO-NOT: functions from symbol stubs
+
+#--- stubs.yaml
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x1000007
+  cpusubtype:      0x3
+  filetype:        0x2
+  ncmds:           4
+  sizeofcmds:      360
+  flags:           0x200085
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         __TEXT
+    vmaddr:          4294967296
+    vmsize:          16384
+    fileoff:         0
+    filesize:        16384
+    maxprot:         5
+    initprot:        5
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x100000400
+        size:            16
+        offset:          0x400
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         FF8300D1FD7B01A9FD430091C0035FD6
+      - sectname:        __stubs
+        segname:         __TEXT
+        addr:            0x100000410
+        size:            12
+        offset:          0x410
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000408
+        reserved1:       0x0
+        reserved2:       0xC
+        reserved3:       0x0
+        content:         50000090100240F900021FD6
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            4C4C440A-5555-3144-A169-3C971C8F7EF2
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          16384
+    nsyms:           2
+    stroff:          16416
+    strsize:         16
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       0
+    iextdefsym:      0
+    nextdefsym:      1
+    iundefsym:       1
+    nundefsym:       1
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  16432
+    nindirectsyms:   1
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+LinkEditData:
+  NameList:
+    - n_strx:          1
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968320
+    - n_strx:          7
+      n_type:          0x01
+      n_sect:          0
+      n_desc:          256
+      n_value:         0
+  StringTable:
+    - ''
+    - _main
+    - _puts
+    - ''
+  IndirectSymbols: [ 0x1 ]
+...
+
+#--- dsym.yaml
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x1000007
+  cpusubtype:      0x3
+  filetype:        0x2
+  ncmds:           3
+  sizeofcmds:      280
+  flags:           0x200085
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         __TEXT
+    vmaddr:          4294967296
+    vmsize:          16384
+    fileoff:         0
+    filesize:        16384
+    maxprot:         5
+    initprot:        5
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x100000400
+        size:            16
+        offset:          0x400
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         FF8300D1FD7B01A9FD430091C0035FD6
+      - sectname:        __stubs
+        segname:         __TEXT
+        addr:            0x100000410
+        size:            12
+        offset:          0x410
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000408
+        reserved1:       0x0
+        reserved2:       0xC
+        reserved3:       0x0
+        content:         50000090100240F900021FD6
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            4C4C440A-5555-3144-A169-3C971C8F7EF2
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          16384
+    nsyms:           3
+    stroff:          16432
+    strsize:         22
+LinkEditData:
+  NameList:
+    - n_strx:          1
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968320
+    - n_strx:          7
+      n_type:          0x01
+      n_sect:          0
+      n_desc:          256
+      n_value:         0
+    - n_strx:          13
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968328
+  StringTable:
+    - ''
+    - _main
+    - _puts
+    - _helper
+    - ''
+...
+
+#--- notmacho.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x0000000000401000
+    AddressAlign: 0x10
+    Content: C3
+...

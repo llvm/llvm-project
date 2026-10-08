@@ -16,10 +16,21 @@ def verbose : FF<"verbose", "Enable verbose logging and encoding details">;
 defm convert :
   Eq<"convert",
      "Convert the specified file to the GSYM format.\nSupported files include ELF and mach-o files that will have their debug info (DWARF) and symbol table converted">;
+defm stubs_file :
+  Eq<"stubs-file",
+     "Specify a separate file to read mach-o symbol stubs from during GSYM conversion.\n"
+     "Stubs are named from the indirect symbol table in LC_DYSYMTAB, which a dSYM does not\n"
+     "carry, so point this at the linked binary when converting a dSYM. Unlike --symtab-file\n"
+     "this does not replace the symbol table, it only adds the stubs. The two options\n"
+     "are independent: given both, the symbol table comes from --symtab-file and the\n"
+     "stubs from --stubs-file.\n"
+     "Matching architectures are selected automatically for universal binaries">;
 defm symtab_file :
   Eq<"symtab-file",
      "Specify a separate file to read the symbol table from during GSYM conversion.\n"
-     "Use when the symbol table and debug info are in separate files.\n"
+     "Use when the symbol table and debug info are in separate files. This replaces the\n"
+     "symbol table of the converted file; see --stubs-file to add mach-o stubs without\n"
+     "replacing it.\n"
      "Matching architectures are selected automatically for universal binaries">;
 def merged_functions :
   FF<"merged-functions", "When used with --convert, encodes merged function information for functions in debug info that have matching address ranges.\n"
