@@ -163,12 +163,18 @@ define half @fptrunc_contract(double %d) #0 {
 }
 
 define half @fptrunc_contract_twostep(double %d) #0 {
-; ALL-LABEL: fptrunc_contract_twostep:
-; ALL:       # %bb.0:
-; ALL-NEXT:    pushq %rax
-; ALL-NEXT:    callq __truncdfhf2@PLT
-; ALL-NEXT:    popq %rax
-; ALL-NEXT:    retq
+; F16C-LABEL: fptrunc_contract_twostep:
+; F16C:       # %bb.0:
+; F16C-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
+; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; F16C-NEXT:    retq
+;
+; AVX-LABEL: fptrunc_contract_twostep:
+; AVX:       # %bb.0:
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    callq __truncdfhf2@PLT
+; AVX-NEXT:    popq %rax
+; AVX-NEXT:    retq
   %f = fptrunc contract double %d to float
   %r = fptrunc contract float %f to half
   ret half %r

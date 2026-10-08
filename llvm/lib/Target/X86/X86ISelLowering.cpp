@@ -36771,6 +36771,14 @@ bool X86TargetLowering::isTruncateFree(EVT VT1, EVT VT2) const {
   return NumBits1 > NumBits2;
 }
 
+bool X86TargetLowering::shouldFoldFPRoundPair(EVT DestVT, EVT SrcVT) const {
+  // Without FP16, f64->f16 is a libcall, but F16C rounds f64->f32->f16 in two
+  // instructions.
+  return DestVT.getScalarType() != MVT::f16 ||
+         SrcVT.getScalarType() != MVT::f64 || !Subtarget.hasF16C() ||
+         Subtarget.hasFP16();
+}
+
 bool X86TargetLowering::isZExtFree(Type *Ty1, Type *Ty2) const {
   // x86-64 implicitly zero-extends 32-bit results in 64-bit registers.
   return Ty1->isIntegerTy(32) && Ty2->isIntegerTy(64) && Subtarget.is64Bit();
