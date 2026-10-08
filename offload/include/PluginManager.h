@@ -200,6 +200,32 @@ extern PluginManager *PM;
 extern std::atomic<bool> RTLAlive; // Indicates if the RTL has been initialized
 extern std::atomic<int> RTLOngoingSyncs; // Counts ongoing external syncs
 
+// Helper functions to iterate over all platforms and invoke the provided
+// callback.
+template <typename CallbackTy>
+llvm::Error iteratePlatforms(CallbackTy Callback, void *UserData) {
+  struct {
+    CallbackTy *Callback;
+    void *UserData;
+  } WrapperData;
+  ol_platform_iterate_cb_t Wrapper = [](ol_platform_handle_t Platform,
+                                        void *UserData) -> bool {
+    auto *Unwrapped = static_cast<decltype(WrapperData) *>(UserData);
+    (*Unwrapped->Callback)(Platform, Unwrapped->UserData);
+    return true;
+  };
+  if (auto Res = olIteratePlatforms(Wrapper, &WrapperData))
+    return llvm::omp::target::error::createError(
+        llvm::omp::target::error::ErrorCode::BackendFailure,
+        "Failed to iterate platforms: %s", Res->Details);
+  return llvm::Error::success();
+}
+
+template <typename CallbackTy>
+llvm::Error iteratePlatforms(CallbackTy Callback) {
+  return iteratePlatforms(Callback, nullptr);
+}
+
 // Helper function to iterate over all devices and invoke the provided callback.
 template <typename CallbackTy> llvm::Error iterateDevices(CallbackTy Callback) {
   ol_device_iterate_cb_t Wrapper = [](ol_device_handle_t Device,
