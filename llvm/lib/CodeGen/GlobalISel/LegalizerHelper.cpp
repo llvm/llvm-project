@@ -4376,15 +4376,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
   LLT PtrTy = MRI.getType(PtrReg);
   unsigned AnyExtSize = PowerOf2Ceil(DstTy.getSizeInBits());
 
-  LLT AnyExtTy;
-  LLT OffsetCstRes;
-  if (EltTy.isPointer()) {
-    AnyExtTy = LLT::scalar(AnyExtSize);
-    OffsetCstRes = LLT::scalar(PtrTy.getSizeInBits());
-  } else {
-    AnyExtTy = DstTy.changeElementSize(AnyExtSize);
-    OffsetCstRes = DstTy.changeElementSize(PtrTy.getSizeInBits());
-  }
+  LLT AnyExtTy = LLT::integer(AnyExtSize);
+  LLT OffsetCstRes = LLT::integer(PtrTy.getSizeInBits());
 
   auto LargeLoad = MIRBuilder.buildLoadInstr(TargetOpcode::G_ZEXTLOAD, AnyExtTy,
                                              PtrReg, *LargeMMO);
@@ -4402,14 +4395,22 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
     MIRBuilder.buildOr(DstReg, Shift, LargeLoad);
   else if (AnyExtTy.getSizeInBits() != DstTy.getSizeInBits()) {
     auto Or = MIRBuilder.buildOr(AnyExtTy, Shift, LargeLoad);
-    MIRBuilder.buildTrunc(DstReg, {Or});
-  } else {
-    assert(DstTy.isPointer() && "expected pointer");
+    LLT IntDstTy = DstTy.changeToInteger();
+    if (IntDstTy == DstTy) {
+      MIRBuilder.buildTrunc(DstReg, {Or});
+    } else {
+      auto Trunc = MIRBuilder.buildTrunc(IntDstTy, Or);
+      MIRBuilder.buildBitcast(DstReg, Trunc);
+    }
+  } else if (DstTy.isPointer()) {
     auto Or = MIRBuilder.buildOr(AnyExtTy, Shift, LargeLoad);
 
     // FIXME: We currently consider this to be illegal for non-integral address
     // spaces, but we need still need a way to reinterpret the bits.
     MIRBuilder.buildIntToPtr(DstReg, Or);
+  } else {
+    auto Or = MIRBuilder.buildOr(AnyExtTy, Shift, LargeLoad);
+    MIRBuilder.buildBitcast(DstReg, Or);
   }
 
   LoadMI.eraseFromParent();

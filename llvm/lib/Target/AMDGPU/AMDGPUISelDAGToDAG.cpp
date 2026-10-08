@@ -341,10 +341,35 @@ bool AMDGPUDAGToDAGISel::matchLoadD16FromBuildVector(SDNode *N) const {
   return false;
 }
 
-void AMDGPUDAGToDAGISel::PreprocessISelDAG() {
-  if (!Subtarget->d16PreservesUnusedBits())
-    return;
+bool AMDGPUDAGToDAGISel::widenRegionLoad16(SDNode *N) const {
+  auto *Mem = cast<MemSDNode>(N);
+  EVT VT = N->getValueType(0);
+  if (Mem->getAddressSpace() != AMDGPUAS::REGION_ADDRESS || VT.isVector() ||
+      VT.getSizeInBits() != 16)
+    return false;
 
+  SDLoc SL(N);
+  auto *Ld = dyn_cast<LoadSDNode>(N);
+  ISD::LoadExtType ExtType =
+      Ld ? Ld->getExtensionType() : cast<AtomicSDNode>(N)->getExtensionType();
+  if (ExtType == ISD::NON_EXTLOAD)
+    ExtType = ISD::EXTLOAD;
+
+  SDValue NewLoad =
+      Ld ? CurDAG->getExtLoad(ExtType, SL, MVT::i32, Mem->getChain(),
+                              Mem->getBasePtr(), Mem->getMemoryVT(),
+                              Mem->getMemOperand())
+         : CurDAG->getAtomicLoad(ExtType, SL, Mem->getMemoryVT(), MVT::i32,
+                                 Mem->getChain(), Mem->getBasePtr(),
+                                 Mem->getMemOperand());
+
+  SDValue Trunc = CurDAG->getNode(ISD::TRUNCATE, SL, MVT::i16, NewLoad);
+  SDValue Ops[] = {CurDAG->getBitcast(VT, Trunc), NewLoad.getValue(1)};
+  CurDAG->ReplaceAllUsesWith(N, Ops);
+  return true;
+}
+
+void AMDGPUDAGToDAGISel::PreprocessISelDAG() {
   SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
 
   bool MadeChange = false;
@@ -356,7 +381,13 @@ void AMDGPUDAGToDAGISel::PreprocessISelDAG() {
     switch (N->getOpcode()) {
     case ISD::BUILD_VECTOR:
       // TODO: Match load d16 from shl (extload:i16), 16
-      MadeChange |= matchLoadD16FromBuildVector(N);
+      if (Subtarget->d16PreservesUnusedBits())
+        MadeChange |= matchLoadD16FromBuildVector(N);
+      break;
+    case ISD::LOAD:
+    case ISD::ATOMIC_LOAD:
+      if (Subtarget->useRealTrue16Insts())
+        MadeChange |= widenRegionLoad16(N);
       break;
     default:
       break;
@@ -4221,16 +4252,28 @@ bool AMDGPUDAGToDAGISel::SelectSWMMACIndex32(SDValue In, SDValue &Src,
 
 bool AMDGPUDAGToDAGISel::SelectVOP3OpSel(SDValue In, SDValue &Src,
                                          SDValue &SrcMods) const {
+  unsigned Mods = SISrcMods::NONE;
   Src = In;
-  // FIXME: Handle op_sel
-  SrcMods = CurDAG->getTargetConstant(0, SDLoc(In), MVT::i32);
+  if (!Subtarget->useRealTrue16Insts() && In.getValueSizeInBits() == 16 &&
+      isExtractHiElt(Src, Src))
+    Mods |= SISrcMods::OP_SEL_0;
+  SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
   return true;
 }
 
 bool AMDGPUDAGToDAGISel::SelectVOP3OpSelMods(SDValue In, SDValue &Src,
                                              SDValue &SrcMods) const {
-  // FIXME: Handle op_sel
-  return SelectVOP3Mods(In, Src, SrcMods);
+  unsigned Mods;
+  if (!SelectVOP3ModsImpl(In, Src, Mods, /*IsCanonicalizing=*/true,
+                          /*AllowAbs=*/true))
+    return false;
+
+  if (!Subtarget->useRealTrue16Insts() && In.getValueSizeInBits() == 16 &&
+      isExtractHiElt(Src, Src))
+    Mods |= SISrcMods::OP_SEL_0;
+
+  SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
+  return true;
 }
 
 // Match lowered fpext from bf16 to f32. This is a bit operation extending
