@@ -111,8 +111,7 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
                   match_fn(m_Add(m_Specific(CanIV),
                                  m_Specific(&VPBB->getPlan()->getVFxUF()))))) {
             errs() << "There should be no users of the canonical IV other than "
-                      "the "
-                      "increment after a VPCurrentIterationPHI is added\n";
+                      "the increment after a VPCurrentIterationPHI is added\n";
             return false;
           }
         }
