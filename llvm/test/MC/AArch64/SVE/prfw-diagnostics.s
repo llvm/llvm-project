@@ -29,12 +29,12 @@ prfw #pldl1keep, p0, [x0]
 // invalid scalar + scalar addressing modes
 
 prfw #0, p0, [x0, #-33, mul vl]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-32, 31].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-32, 31].
 // CHECK-NEXT: prfw #0, p0, [x0, #-33, mul vl]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 prfw #0, p0, [x0, #32, mul vl]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-32, 31].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-32, 31].
 // CHECK-NEXT: prfw #0, p0, [x0, #32, mul vl]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
@@ -97,52 +97,52 @@ prfw #0, p0, [x0, z0.d, sxtw #3]
 // Invalid vector + immediate addressing modes
 
 prfw #0, p0, [z0.s, #-4]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [0, 124].
 // CHECK-NEXT: prfw #0, p0, [z0.s, #-4]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 prfw #0, p0, [z0.s, #-1]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [0, 124].
 // CHECK-NEXT: prfw #0, p0, [z0.s, #-1]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 prfw #0, p0, [z0.s, #125]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [0, 124].
 // CHECK-NEXT: prfw #0, p0, [z0.s, #125]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 prfw #0, p0, [z0.s, #128]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [0, 124].
 // CHECK-NEXT: prfw #0, p0, [z0.s, #128]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 prfw #0, p0, [z0.s, #3]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [0, 124].
 // CHECK-NEXT: prfw #0, p0, [z0.s, #3]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 prfw #0, p0, [z0.d, #-4]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [0, 124].
 // CHECK-NEXT: prfw #0, p0, [z0.d, #-4]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 prfw #0, p0, [z0.d, #-1]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [0, 124].
 // CHECK-NEXT: prfw #0, p0, [z0.d, #-1]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 prfw #0, p0, [z0.d, #125]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [0, 124].
 // CHECK-NEXT: prfw #0, p0, [z0.d, #125]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 prfw #0, p0, [z0.d, #128]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [0, 124].
 // CHECK-NEXT: prfw #0, p0, [z0.d, #128]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 prfw #0, p0, [z0.d, #3]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [0, 124].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [0, 124].
 // CHECK-NEXT: prfw #0, p0, [z0.d, #3]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
