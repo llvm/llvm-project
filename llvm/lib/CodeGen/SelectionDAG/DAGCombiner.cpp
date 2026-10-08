@@ -14316,8 +14316,10 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
     // If we're not extending the inputs, just combine them normally. This
     // already happens for integer ops, but fp requires separate handling.
     if (N->getOpcode() == ISD::PARTIAL_REDUCE_FMLA &&
+        N->getFlags().hasAllowContract() &&
         Op1->getFlags().hasAllowContract() &&
-        TLI.isOperationLegalOrCustom(ISD::FMA, AccTy))
+        TLI.isOperationLegalOrCustom(ISD::FMA, AccTy) &&
+        TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), AccTy))
       return DAG.getNode(ISD::FMA, DL, AccTy, LHS, RHS, Acc);
 
     return SDValue();
