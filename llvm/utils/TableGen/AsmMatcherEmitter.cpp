@@ -133,6 +133,12 @@ static cl::opt<std::string>
                 cl::desc("Only match instructions with the given prefix"),
                 cl::cat(AsmMatcherEmitterCat));
 
+static cl::opt<bool> ReportUnprovenExclusions(
+    "report-unproven-exclusions", cl::init(false), cl::Hidden,
+    cl::desc("Report pairs declared with MutuallyExclusiveAssemblerPredicates "
+             "that do not follow from the subtarget features"),
+    cl::cat(AsmMatcherEmitterCat));
+
 namespace {
 class AsmMatcherInfo;
 
@@ -425,11 +431,9 @@ class ExclusivePredicates {
   /// Constraints.
   DenseMap<std::pair<unsigned, unsigned>, bool> Conflicts;
 
-  unsigned getConstraintsIdx(ArrayRef<const SubtargetFeatureInfo *> Features) {
-    std::vector<const Record *> Preds;
-    Preds.reserve(Features.size());
-    for (const SubtargetFeatureInfo *F : Features)
-      Preds.push_back(F->TheDef);
+  /// Returns the index into Constraints of the requirements of \p Preds,
+  /// computing them the first time that list of predicates is seen.
+  unsigned getConstraintsIdx(std::vector<const Record *> Preds) {
     sort(Preds);
     Preds.erase(unique(Preds), Preds.end());
 
@@ -438,6 +442,28 @@ class ExclusivePredicates {
       SubtargetFeatureConstraints C;
       getRequiredFeatures(C.FeaturesSet, C.AnyOfFeatureSets, Preds);
       Constraints.push_back(std::move(C));
+    }
+    return It->second;
+  }
+
+  unsigned getConstraintsIdx(ArrayRef<const SubtargetFeatureInfo *> Features) {
+    std::vector<const Record *> Preds;
+    Preds.reserve(Features.size());
+    for (const SubtargetFeatureInfo *F : Features)
+      Preds.push_back(F->TheDef);
+    return getConstraintsIdx(std::move(Preds));
+  }
+
+  /// Returns true if the requirements held at \p IdxA and \p IdxB are provably
+  /// unsatisfiable together.
+  bool isProvenExclusive(unsigned IdxA, unsigned IdxB) {
+    auto Key = std::minmax(IdxA, IdxB);
+    auto [It, Inserted] = Conflicts.try_emplace(Key, false);
+    if (Inserted) {
+      SubtargetFeatureConstraints Combined = Constraints[Key.first];
+      Combined.add(Constraints[Key.second]);
+      Combined.add(Implications);
+      It->second = Combined.isSelfContradictory();
     }
     return It->second;
   }
@@ -475,15 +501,25 @@ public:
     if (A.empty() || B.empty())
       return false;
 
-    auto Key = std::minmax(getConstraintsIdx(A), getConstraintsIdx(B));
-    auto [It, Inserted] = Conflicts.try_emplace(Key, false);
-    if (Inserted) {
-      SubtargetFeatureConstraints Combined = Constraints[Key.first];
-      Combined.add(Constraints[Key.second]);
-      Combined.add(Implications);
-      It->second = Combined.isSelfContradictory();
-    }
-    return It->second;
+    return isProvenExclusive(getConstraintsIdx(A), getConstraintsIdx(B));
+  }
+
+  /// Prints the declared pairs that inference cannot prove. Each one is a
+  /// place where the features do not say what the declaration asserts, so
+  /// either a feature implication or a predicate term is missing, or the
+  /// declaration does not actually hold.
+  void reportUnprovenDeclarations() {
+    std::vector<std::pair<StringRef, StringRef>> Unproven;
+    for (auto [PA, PB] : Declared)
+      if (!isProvenExclusive(getConstraintsIdx({PA}), getConstraintsIdx({PB})))
+        Unproven.emplace_back(PA->getName(), PB->getName());
+
+    // Declared is keyed on pointers, so sort to keep the output stable.
+    sort(Unproven);
+    for (auto [A, B] : Unproven)
+      errs() << "unproven exclusion: " << A << " and " << B << '\n';
+    errs() << Unproven.size() << " of " << Declared.size()
+           << " declared exclusions unproven\n";
   }
 };
 
@@ -3713,6 +3749,9 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
 
   if (CheckAmbiguousMatchables) {
     ExclusivePredicates ExclusivePreds(Records);
+    if (ReportUnprovenExclusions)
+      ExclusivePreds.reportUnprovenDeclarations();
+
     unsigned NumAmbiguous = 0;
     for (auto I = Info.Matchables.begin(), E = Info.Matchables.end(); I != E;
          ++I) {
