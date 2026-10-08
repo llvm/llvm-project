@@ -18,6 +18,7 @@
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBCommandReturnObject.h"
 #include "lldb/API/SBExecutionContext.h"
+#include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -48,6 +49,19 @@ static bool RunExpressionAsLLDBCommand(DAP &dap, lldb::SBFrame &frame,
   return repl_mode == ReplMode::Command;
 }
 
+static bool IsValidAddress(lldb::SBValue &value, lldb::addr_t addr) {
+  if (addr == LLDB_INVALID_ADDRESS)
+    return false;
+
+  lldb::SBMemoryRegionInfo region;
+  lldb::SBError err = value.GetProcess().GetMemoryRegionInfo(addr, region);
+  if (err.Success())
+    return region.IsMapped() &&
+        (region.IsReadable() || region.IsWritable() || region.IsExecutable());
+
+  return false;
+}
+
 static lldb::SBValue EvaluateVariableExpression(lldb::SBTarget &target,
                                                 lldb::SBFrame &frame,
                                                 const std::string &expression,
@@ -59,8 +73,11 @@ static lldb::SBValue EvaluateVariableExpression(lldb::SBTarget &target,
     // Check if it is a variable or an expression path for a variable. i.e.
     // 'foo->bar' finds the 'bar' variable. It is more reliable than the
     // expression parser in many cases and it is faster.
+    lldb::DILMode mode = run_as_expression
+                         ? lldb::eDILModeFull
+                         : lldb::eDILModeLegacy;
     value = frame.GetValueForVariablePathWithMode(
-        expression_cstr, lldb::eDILModeFull, lldb::eDynamicDontRunTarget);
+        expression_cstr, mode, lldb::eDynamicDontRunTarget);
     if (value || !run_as_expression)
       return value;
 
@@ -150,8 +167,9 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
     body.variablesReference = dap.reference_storage.Insert(
         value, /*is_permanent=*/is_repl_context, /*is_internal=*/false);
 
-  if (lldb::addr_t addr = value.GetLoadAddress(); addr != LLDB_INVALID_ADDRESS)
-    body.memoryReference = EncodeMemoryReference(addr);
+  if (lldb::addr_t addr = value.GetLoadAddress())
+    if (IsValidAddress(value, addr))
+      body.memoryReference = EncodeMemoryReference(addr);
 
   if (ValuePointsToCode(value) &&
       body.variablesReference.Kind() != eReferenceKindInvalid)
