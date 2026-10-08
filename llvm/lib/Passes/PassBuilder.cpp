@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Passes/PassBuilder.h"
+#include "PassesOptions.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/Analysis/AliasAnalysisEvaluator.h"
@@ -593,7 +594,8 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
                          std::optional<PGOOptions> PGOOpt,
                          PassInstrumentationCallbacks *PIC,
                          IntrusiveRefCntPtr<vfs::FileSystem> FS)
-    : TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC), FS(std::move(FS)) {
+    : Opts(PassesOptions::Global), TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC),
+      FS(std::move(FS)) {
   if (TM)
     TM->registerPassBuilderCallbacks(*this);
   if (PIC) {

@@ -65,6 +65,7 @@ public:
   }
 };
 
+#ifndef __EMSCRIPTEN__
 class CustomJBInterpreter : public Interpreter {
   using CustomJITBuilderCreatorFunction =
       std::function<llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>()>;
@@ -137,6 +138,8 @@ TEST_F(InterpreterExtensionsTest, CustomCrossJIT) {
   EXPECT_NE(0U, Addr.getValue());
   EXPECT_EQ(1U, Objs.size());
 }
+
+#endif // __EMSCRIPTEN__
 
 TEST_F(InterpreterExtensionsTest, CustomIncrementalExecutor) {
   struct RecordingIncrementalExecutor : public clang::IncrementalExecutor {
