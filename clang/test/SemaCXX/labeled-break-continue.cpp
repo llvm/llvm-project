@@ -46,7 +46,7 @@ void f3() {
   a: while (true) {
     (void) []{
       break a; // expected-error {{'break' label does not name an enclosing loop or 'switch'}}
-      continue a; // expected-error {{'continue' label does not name an enclosing loop}}
+      continue a; // expected-error 0-1 {{'continue' label does not name an enclosing loop}}
     };
   }
 }
@@ -54,7 +54,7 @@ void f3() {
 void f4() {
   l1: for (;;) {
     constexpr int x = ({ // expected-error {{constexpr variable 'x' must be initialized by a constant expression}}
-      break l1; // expected-note {{not supported in a constant expression}}
+      break l1; // expected-note 0-1 {{not supported in a constant expression}}
       1;
     });
   }
@@ -63,7 +63,7 @@ void f4() {
 void f5() {
   l1: for (;;) {
     constexpr int x = ({ // expected-error {{constexpr variable 'x' must be initialized by a constant expression}}
-      continue l1; // expected-note {{not supported in a constant expression}}
+      continue l1; // expected-note 0-1 {{not supported in a constant expression}}
       1;
     });
   }
