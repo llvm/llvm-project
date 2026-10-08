@@ -178,7 +178,7 @@ createSPIRVInstructionSelector(const SPIRVTargetMachine &TM,
                                const SPIRVSubtarget &Subtarget,
                                const RegisterBankInfo &RBI);
 
-void initializeSPIRVModuleAnalysisPass(PassRegistry &);
+void initializeSPIRVModuleAnalysisWrapperPassPass(PassRegistry &);
 void initializeSPIRVAsmPrinterPass(PassRegistry &);
 void initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PassRegistry &);
 void initializeSPIRVPreLegalizerLegacyPass(PassRegistry &);

@@ -4158,11 +4158,10 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
     return mlir::LLVM::LLVMVoidType::get(type.getContext());
   });
 }
-
 static void buildCtorDtorList(
     mlir::ModuleOp module, StringRef globalXtorName, StringRef llvmXtorName,
-    llvm::function_ref<std::pair<StringRef, int>(mlir::Attribute)> createXtor) {
-  llvm::SmallVector<std::pair<StringRef, int>> globalXtors;
+    llvm::function_ref<cir::GlobalCtorDtorEntry(mlir::Attribute)> createXtor) {
+  llvm::SmallVector<cir::GlobalCtorDtorEntry> globalXtors;
   if (auto attr =
           module->getDiscardableAttrOfType<mlir::ArrayAttr>(globalXtorName))
     for (mlir::Attribute element : attr)
@@ -4198,22 +4197,26 @@ static void buildCtorDtorList(
   mlir::Value result =
       mlir::LLVM::UndefOp::create(builder, loc, ctorStructArrayTy);
 
-  for (auto [index, fn] : llvm::enumerate(globalXtors)) {
+  for (auto [index, xtorInfo] : llvm::enumerate(globalXtors)) {
     mlir::Value structInit =
         mlir::LLVM::UndefOp::create(builder, loc, ctorStructTy);
     mlir::Value initPriority = mlir::LLVM::ConstantOp::create(
-        builder, loc, ctorStructFields[0], fn.second);
+        builder, loc, ctorStructFields[0], xtorInfo.priority);
     mlir::Value initFuncAddr = mlir::LLVM::AddressOfOp::create(
-        builder, loc, ctorStructFields[1], fn.first);
+        builder, loc, ctorStructFields[1], xtorInfo.name);
     mlir::Value initAssociate =
-        mlir::LLVM::ZeroOp::create(builder, loc, ctorStructFields[2]);
+        xtorInfo.associated.empty()
+            ? mlir::LLVM::ZeroOp::create(builder, loc, ctorStructFields[2])
+                  .getResult()
+            : mlir::LLVM::AddressOfOp::create(builder, loc, ctorStructFields[2],
+                                              xtorInfo.associated)
+                  .getResult();
     // Literal zero makes the InsertValueOp::create ambiguous.
     llvm::SmallVector<int64_t> zero{0};
     structInit = mlir::LLVM::InsertValueOp::create(builder, loc, structInit,
                                                    initPriority, zero);
     structInit = mlir::LLVM::InsertValueOp::create(builder, loc, structInit,
                                                    initFuncAddr, 1);
-    // TODO: handle associated data for initializers.
     structInit = mlir::LLVM::InsertValueOp::create(builder, loc, structInit,
                                                    initAssociate, 2);
     result = mlir::LLVM::InsertValueOp::create(builder, loc, result, structInit,
@@ -4582,19 +4585,27 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   }
 
   // Emit the llvm.global_ctors array.
-  buildCtorDtorList(module, cir::CIRDialect::getGlobalCtorsAttrName(),
-                    "llvm.global_ctors", [](mlir::Attribute attr) {
-                      auto ctorAttr = mlir::cast<cir::GlobalCtorAttr>(attr);
-                      return std::make_pair(ctorAttr.getName(),
-                                            ctorAttr.getPriority());
-                    });
+  buildCtorDtorList(
+      module, cir::CIRDialect::getGlobalCtorsAttrName(), "llvm.global_ctors",
+      [](mlir::Attribute attr) {
+        auto ctorAttr = mlir::cast<cir::GlobalCtorAttr>(attr);
+        StringRef associated;
+        if (mlir::FlatSymbolRefAttr assoc = ctorAttr.getAssociated())
+          associated = assoc.getValue();
+        return cir::GlobalCtorDtorEntry(ctorAttr.getName(),
+                                        ctorAttr.getPriority(), associated);
+      });
   // Emit the llvm.global_dtors array.
-  buildCtorDtorList(module, cir::CIRDialect::getGlobalDtorsAttrName(),
-                    "llvm.global_dtors", [](mlir::Attribute attr) {
-                      auto dtorAttr = mlir::cast<cir::GlobalDtorAttr>(attr);
-                      return std::make_pair(dtorAttr.getName(),
-                                            dtorAttr.getPriority());
-                    });
+  buildCtorDtorList(
+      module, cir::CIRDialect::getGlobalDtorsAttrName(), "llvm.global_dtors",
+      [](mlir::Attribute attr) {
+        auto dtorAttr = mlir::cast<cir::GlobalDtorAttr>(attr);
+        StringRef associated;
+        if (mlir::FlatSymbolRefAttr assoc = dtorAttr.getAssociated())
+          associated = assoc.getValue();
+        return cir::GlobalCtorDtorEntry(dtorAttr.getName(),
+                                        dtorAttr.getPriority(), associated);
+      });
   // Emit @llvm.global.annotations from the previously-collected entries.
   buildGlobalAnnotationsVar(module);
 
@@ -5296,6 +5307,60 @@ mlir::LogicalResult CIRToLLVMMatrixTransposeOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMComplexCreateOpLowering::matchAndRewrite(
+    cir::ComplexCreateOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type complexLLVMTy =
+      getTypeConverter()->convertType(op.getResult().getType());
+  auto initialComplex =
+      mlir::LLVM::UndefOp::create(rewriter, op->getLoc(), complexLLVMTy);
+
+  auto realComplex = mlir::LLVM::InsertValueOp::create(
+      rewriter, op->getLoc(), initialComplex, adaptor.getReal(),
+      ArrayRef(int64_t{0}));
+
+  auto complex = mlir::LLVM::InsertValueOp::create(
+      rewriter, op->getLoc(), realComplex, adaptor.getImag(),
+      ArrayRef(int64_t{1}));
+
+  rewriter.replaceOp(op, complex);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMComplexRealOpLowering::matchAndRewrite(
+    cir::ComplexRealOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resultLLVMTy = getTypeConverter()->convertType(op.getType());
+  mlir::Value operand = adaptor.getOperand();
+  if (mlir::isa<cir::ComplexType>(op.getOperand().getType())) {
+    operand = mlir::LLVM::ExtractValueOp::create(
+        rewriter, op.getLoc(), resultLLVMTy, operand,
+        llvm::ArrayRef<std::int64_t>{0});
+  }
+  rewriter.replaceOp(op, operand);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMComplexImagOpLowering::matchAndRewrite(
+    cir::ComplexImagOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resultLLVMTy = getTypeConverter()->convertType(op.getType());
+  mlir::Value operand = adaptor.getOperand();
+  mlir::Location loc = op.getLoc();
+
+  if (mlir::isa<cir::ComplexType>(op.getOperand().getType())) {
+    operand = mlir::LLVM::ExtractValueOp::create(
+        rewriter, loc, resultLLVMTy, operand, llvm::ArrayRef<std::int64_t>{1});
+  } else {
+    mlir::TypedAttr zeroAttr = rewriter.getZeroAttr(resultLLVMTy);
+    operand =
+        mlir::LLVM::ConstantOp::create(rewriter, loc, resultLLVMTy, zeroAttr);
+  }
+
+  rewriter.replaceOp(op, operand);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMComplexAddOpLowering::matchAndRewrite(
     cir::ComplexAddOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -5342,40 +5407,6 @@ mlir::LogicalResult CIRToLLVMComplexAddOpLowering::matchAndRewrite(
   rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(
       op, realComplex, newImag, ArrayRef(int64_t{1}));
 
-  return mlir::success();
-}
-
-mlir::LogicalResult CIRToLLVMComplexCreateOpLowering::matchAndRewrite(
-    cir::ComplexCreateOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Type complexLLVMTy =
-      getTypeConverter()->convertType(op.getResult().getType());
-  auto initialComplex =
-      mlir::LLVM::UndefOp::create(rewriter, op->getLoc(), complexLLVMTy);
-
-  auto realComplex = mlir::LLVM::InsertValueOp::create(
-      rewriter, op->getLoc(), initialComplex, adaptor.getReal(),
-      ArrayRef(int64_t{0}));
-
-  auto complex = mlir::LLVM::InsertValueOp::create(
-      rewriter, op->getLoc(), realComplex, adaptor.getImag(),
-      ArrayRef(int64_t{1}));
-
-  rewriter.replaceOp(op, complex);
-  return mlir::success();
-}
-
-mlir::LogicalResult CIRToLLVMComplexRealOpLowering::matchAndRewrite(
-    cir::ComplexRealOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Type resultLLVMTy = getTypeConverter()->convertType(op.getType());
-  mlir::Value operand = adaptor.getOperand();
-  if (mlir::isa<cir::ComplexType>(op.getOperand().getType())) {
-    operand = mlir::LLVM::ExtractValueOp::create(
-        rewriter, op.getLoc(), resultLLVMTy, operand,
-        llvm::ArrayRef<std::int64_t>{0});
-  }
-  rewriter.replaceOp(op, operand);
   return mlir::success();
 }
 
@@ -5428,23 +5459,83 @@ mlir::LogicalResult CIRToLLVMComplexSubOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-mlir::LogicalResult CIRToLLVMComplexImagOpLowering::matchAndRewrite(
-    cir::ComplexImagOp op, OpAdaptor adaptor,
+mlir::LogicalResult CIRToLLVMComplexFAddOpLowering::matchAndRewrite(
+    cir::ComplexFAddOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Type resultLLVMTy = getTypeConverter()->convertType(op.getType());
-  mlir::Value operand = adaptor.getOperand();
+  mlir::Value lhs = adaptor.getLhs();
+  mlir::Value rhs = adaptor.getRhs();
   mlir::Location loc = op.getLoc();
 
-  if (mlir::isa<cir::ComplexType>(op.getOperand().getType())) {
-    operand = mlir::LLVM::ExtractValueOp::create(
-        rewriter, loc, resultLLVMTy, operand, llvm::ArrayRef<std::int64_t>{1});
-  } else {
-    mlir::TypedAttr zeroAttr = rewriter.getZeroAttr(resultLLVMTy);
-    operand =
-        mlir::LLVM::ConstantOp::create(rewriter, loc, resultLLVMTy, zeroAttr);
-  }
+  auto complexType = mlir::cast<cir::ComplexType>(op.getLhs().getType());
+  mlir::Type complexElemTy =
+      getTypeConverter()->convertType(complexType.getElementType());
+  auto lhsReal = mlir::LLVM::ExtractValueOp::create(
+      rewriter, loc, complexElemTy, lhs, ArrayRef(int64_t{0}));
+  auto lhsImag = mlir::LLVM::ExtractValueOp::create(
+      rewriter, loc, complexElemTy, lhs, ArrayRef(int64_t{1}));
+  auto rhsReal = mlir::LLVM::ExtractValueOp::create(
+      rewriter, loc, complexElemTy, rhs, ArrayRef(int64_t{0}));
+  auto rhsImag = mlir::LLVM::ExtractValueOp::create(
+      rewriter, loc, complexElemTy, rhs, ArrayRef(int64_t{1}));
 
-  rewriter.replaceOp(op, operand);
+  assert(!cir::MissingFeatures::fastMathFlags());
+  assert(!cir::MissingFeatures::fpConstraints());
+  mlir::Value newReal = mlir::LLVM::FAddOp::create(rewriter, loc, complexElemTy,
+                                                   lhsReal, rhsReal);
+  mlir::Value newImag = mlir::LLVM::FAddOp::create(rewriter, loc, complexElemTy,
+                                                   lhsImag, rhsImag);
+
+  mlir::Type complexLLVMTy =
+      getTypeConverter()->convertType(op.getResult().getType());
+  auto initialComplex =
+      mlir::LLVM::PoisonOp::create(rewriter, op->getLoc(), complexLLVMTy);
+
+  auto realComplex = mlir::LLVM::InsertValueOp::create(
+      rewriter, op->getLoc(), initialComplex, newReal, ArrayRef(int64_t{0}));
+
+  rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(
+      op, realComplex, newImag, ArrayRef(int64_t{1}));
+
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMComplexFSubOpLowering::matchAndRewrite(
+    cir::ComplexFSubOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Value lhs = adaptor.getLhs();
+  mlir::Value rhs = adaptor.getRhs();
+  mlir::Location loc = op.getLoc();
+
+  auto complexType = mlir::cast<cir::ComplexType>(op.getLhs().getType());
+  mlir::Type complexElemTy =
+      getTypeConverter()->convertType(complexType.getElementType());
+  auto lhsReal = mlir::LLVM::ExtractValueOp::create(
+      rewriter, loc, complexElemTy, lhs, ArrayRef(int64_t{0}));
+  auto lhsImag = mlir::LLVM::ExtractValueOp::create(
+      rewriter, loc, complexElemTy, lhs, ArrayRef(int64_t{1}));
+  auto rhsReal = mlir::LLVM::ExtractValueOp::create(
+      rewriter, loc, complexElemTy, rhs, ArrayRef(int64_t{0}));
+  auto rhsImag = mlir::LLVM::ExtractValueOp::create(
+      rewriter, loc, complexElemTy, rhs, ArrayRef(int64_t{1}));
+
+  assert(!cir::MissingFeatures::fastMathFlags());
+  assert(!cir::MissingFeatures::fpConstraints());
+  mlir::Value newReal = mlir::LLVM::FSubOp::create(rewriter, loc, complexElemTy,
+                                                   lhsReal, rhsReal);
+  mlir::Value newImag = mlir::LLVM::FSubOp::create(rewriter, loc, complexElemTy,
+                                                   lhsImag, rhsImag);
+
+  mlir::Type complexLLVMTy =
+      getTypeConverter()->convertType(op.getResult().getType());
+  auto initialComplex =
+      mlir::LLVM::PoisonOp::create(rewriter, op->getLoc(), complexLLVMTy);
+
+  auto realComplex = mlir::LLVM::InsertValueOp::create(
+      rewriter, op->getLoc(), initialComplex, newReal, ArrayRef(int64_t{0}));
+
+  rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(
+      op, realComplex, newImag, ArrayRef(int64_t{1}));
+
   return mlir::success();
 }
 

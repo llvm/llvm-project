@@ -49,6 +49,7 @@
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Support/NVVMAttributes.h"
@@ -60,6 +61,8 @@
 #include <numeric>
 
 using namespace llvm;
+
+#define DEBUG_TYPE "auto-upgrade"
 
 static cl::opt<bool>
     DisableAutoUpgradeDebugInfo("disable-auto-upgrade-debug-info",
@@ -2499,8 +2502,7 @@ GlobalVariable *llvm::UpgradeGlobalVariable(GlobalVariable *GV) {
   if (!STy || STy->getNumElements() != 2)
     return nullptr;
 
-  LLVMContext &C = GV->getContext();
-  IRBuilder<> IRB(C);
+  IRBuilder<> IRB(*GV->getParent());
   auto EltTy = StructType::get(STy->getElementType(0), STy->getElementType(1),
                                IRB.getPtrTy());
   Constant *Init = GV->getInitializer();
@@ -7239,8 +7241,10 @@ bool llvm::UpgradeModuleFlags(Module &M) {
 
     // Upgrade branch protection and return address signing module flags. The
     // module flag behavior for these fields were Error and now they are Min.
+    // The one exception is "sign-return-address-harden".
     if (ID->getString() == "branch-target-enforcement" ||
-        ID->getString().starts_with("sign-return-address")) {
+        (ID->getString().starts_with("sign-return-address") &&
+         ID->getString() != "sign-return-address-harden")) {
       if (auto *Behavior =
               mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(0))) {
         if (Behavior->getLimitedValue() == Module::Error) {
@@ -7579,8 +7583,11 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
 // Check if the function attribute is not present and set it.
 static void setFunctionAttrIfNotSet(Function &F, StringRef FnAttrName,
                                     StringRef Value) {
-  if (!F.hasFnAttribute(FnAttrName))
+  if (!F.hasFnAttribute(FnAttrName)) {
     F.addFnAttr(FnAttrName, Value);
+    LLVM_DEBUG(dbgs() << "Set attribute: " << FnAttrName << "=\"" << Value
+                      << "\", function: " << F.getName() << "\n");
+  }
 }
 
 // Check if the function attribute is not present and set it if needed.
@@ -7588,17 +7595,31 @@ static void setFunctionAttrIfNotSet(Function &F, StringRef FnAttrName,
 // If the attribute is "true" resets it to a valueless attribute.
 static void ConvertFunctionAttr(Function &F, bool Set, StringRef FnAttrName) {
   if (!F.hasFnAttribute(FnAttrName)) {
-    if (Set)
+    if (Set) {
       F.addFnAttr(FnAttrName);
+      LLVM_DEBUG(dbgs() << "Added attribute: " << FnAttrName
+                        << ", function: " << F.getName() << "\n");
+    }
   } else {
     auto A = F.getFnAttribute(FnAttrName);
-    if ("false" == A.getValueAsString())
+    if ("false" == A.getValueAsString()) {
       F.removeFnAttr(FnAttrName);
-    else if ("true" == A.getValueAsString()) {
+      LLVM_DEBUG(dbgs() << "Removed attribute: " << FnAttrName
+                        << "=\"false\", function: " << F.getName() << "\n");
+    } else if ("true" == A.getValueAsString()) {
       F.removeFnAttr(FnAttrName);
       F.addFnAttr(FnAttrName);
+      LLVM_DEBUG(dbgs() << "Converted attribute: " << FnAttrName
+                        << "=\"true\", function: " << F.getName() << "\n");
     }
   }
+}
+
+static void ConvertModuleFlag(Module &M, Module::ModFlagBehavior Behavior,
+                              StringRef Key, uint32_t Val) {
+  M.setModuleFlag(Behavior, Key, Val);
+  LLVM_DEBUG(dbgs() << "Converted module flag: " << "{" << Behavior << ", "
+                    << Key << ", " << Val << "}\n");
 }
 
 void llvm::copyModuleAttrToFunctions(Module &M) {
@@ -7640,6 +7661,9 @@ void llvm::copyModuleAttrToFunctions(Module &M) {
       *ValPtr = CI->getZExtValue();
       if (*ValPtr == 2)
         return;
+
+      LLVM_DEBUG(dbgs() << "Found module flag: " << IDStr << "(" << *ValPtr
+                        << ")\n");
     }
   }
 
@@ -7676,17 +7700,19 @@ void llvm::copyModuleAttrToFunctions(Module &M) {
   }
 
   if (BTE)
-    M.setModuleFlag(llvm::Module::Min, "branch-target-enforcement", 2);
+    ConvertModuleFlag(M, llvm::Module::Min, "branch-target-enforcement", 2);
   if (BPPLR)
-    M.setModuleFlag(llvm::Module::Min, "branch-protection-pauth-lr", 2);
+    ConvertModuleFlag(M, llvm::Module::Min, "branch-protection-pauth-lr", 2);
   if (GCS)
-    M.setModuleFlag(llvm::Module::Min, "guarded-control-stack", 2);
+    ConvertModuleFlag(M, llvm::Module::Min, "guarded-control-stack", 2);
   if (SRA) {
-    M.setModuleFlag(llvm::Module::Min, "sign-return-address", 2);
+    ConvertModuleFlag(M, llvm::Module::Min, "sign-return-address", 2);
     if (SRAALLValue == 1)
-      M.setModuleFlag(llvm::Module::Min, "sign-return-address-all", 2);
-    if (SRABKeyValue == 1)
-      M.setModuleFlag(llvm::Module::Min, "sign-return-address-with-bkey", 2);
+      ConvertModuleFlag(M, llvm::Module::Min, "sign-return-address-all", 2);
+    if (SRABKeyValue == 1) {
+      ConvertModuleFlag(M, llvm::Module::Min, "sign-return-address-with-bkey",
+                        2);
+    }
   }
 }
 
