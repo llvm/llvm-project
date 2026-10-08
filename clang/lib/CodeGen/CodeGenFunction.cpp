@@ -37,8 +37,10 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGenUtils/CodeGenUtils.h"
+#include "clang/CodeGenUtils/FunctionUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
@@ -59,32 +61,14 @@
 using namespace clang;
 using namespace CodeGen;
 
-/// shouldEmitLifetimeMarkers - Decide whether we need emit the life-time
-/// markers.
-static bool shouldEmitLifetimeMarkers(const CodeGenOptions &CGOpts,
-                                      const LangOptions &LangOpts) {
-  if (CGOpts.DisableLifetimeMarkers)
-    return false;
-
-  // Sanitizers may use markers.
-  if (CGOpts.SanitizeAddressUseAfterScope ||
-      LangOpts.Sanitize.has(SanitizerKind::HWAddress) ||
-      LangOpts.Sanitize.has(SanitizerKind::Memory) ||
-      LangOpts.Sanitize.has(SanitizerKind::MemtagStack))
-    return true;
-
-  // For now, only in optimized builds.
-  return CGOpts.OptimizationLevel != 0;
-}
-
 CodeGenFunction::CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext)
     : CodeGenTypeCache(cgm), CGM(cgm), Target(cgm.getTarget()),
       Builder(cgm, cgm.getModule().getContext(), CGBuilderInserterTy(this)),
       SanOpts(CGM.getLangOpts().Sanitize), CurFPFeatures(CGM.getLangOpts()),
       DebugInfo(CGM.getModuleDebugInfo()),
       PGO(std::make_unique<CodeGenPGO>(cgm)),
-      ShouldEmitLifetimeMarkers(
-          shouldEmitLifetimeMarkers(CGM.getCodeGenOpts(), CGM.getLangOpts())) {
+      ShouldEmitLifetimeMarkers(CodeGenUtils::shouldEmitLifetimeMarkers(
+          CGM.getCodeGenOpts(), CGM.getLangOpts())) {
   if (!suppressNewContext)
     CGM.getCXXABI().getMangleContext().startNewFunction();
   EHStack.setCGF(this);
@@ -1070,6 +1054,33 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     }
   }
 
+  // Annotate C++ special member functions so that CopyProfPass can instrument
+  // them, provided the object is at least as large as the size threshold.
+  if (CGM.getCodeGenOpts().CopyProf) {
+    if (const auto *MD = dyn_cast_or_null<CXXMethodDecl>(D)) {
+      StringRef Attr;
+      if (const auto *CD = dyn_cast<CXXConstructorDecl>(MD)) {
+        if (!CD->isMoveConstructor())
+          Attr =
+              CD->isCopyConstructor() ? "copyprof-copy-ctor" : "copyprof-ctor";
+      } else if (isa<CXXDestructorDecl>(MD)) {
+        Attr = "copyprof-dtor";
+      } else if (MD->isCopyAssignmentOperator()) {
+        Attr = "copyprof-copy-assign-op";
+      }
+      if (!Attr.empty()) {
+        // Finally, add the object size in bytes to the annotation.
+        // A special member function always has an implicit object parameter, so
+        // its type is guaranteed to be complete here.
+        CharUnits ObjSize = getContext().getTypeSizeInChars(
+            MD->getFunctionObjectParameterType());
+        if (ObjSize.getQuantity() >=
+            CGM.getCodeGenOpts().CopyProfStaticSizeThreshold)
+          Fn->addFnAttr(Attr, llvm::utostr(ObjSize.getQuantity()));
+      }
+    }
+  }
+
   // If we're in C++ mode and the function name is "main", it is guaranteed
   // to be norecurse by the standard (3.6.1.3 "The function main shall not be
   // used within a program").
@@ -1557,9 +1568,12 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     if (isa<CoroutineBodyStmt>(Body))
       ShouldEmitLifetimeMarkers = true;
 
-    // Initialize helper which will detect jumps which can cause invalid
-    // lifetime markers.
-    if (ShouldEmitLifetimeMarkers)
+    // Detect jumps that invalidate lifetime markers or bypass auto-var-init.
+    bool NeedsBypassDetection =
+        ShouldEmitLifetimeMarkers ||
+        (CGM.getLangOpts().getTrivialAutoVarInit() !=
+         LangOptions::TrivialAutoVarInitKind::Uninitialized);
+    if (NeedsBypassDetection)
       Bypasses.Init(CGM, Body);
   }
 
@@ -2903,7 +2917,7 @@ void CodeGenFunction::EmitSanitizerStatReport(llvm::SanitizerStatKind SSK) {
   if (!CGM.getCodeGenOpts().SanitizeStats)
     return;
 
-  llvm::IRBuilder<> IRB(Builder.GetInsertBlock(), Builder.GetInsertPoint());
+  llvm::IRBuilder<> IRB(Builder.GetInsertPoint());
   IRB.SetCurrentDebugLocation(Builder.getCurrentDebugLocation());
   CGM.getSanStats().create(IRB, SSK);
 }
@@ -3047,18 +3061,54 @@ void CodeGenFunction::EmitPPCAIXMultiVersionResolver(
     assert(RO.Features.size() == 1 &&
            "for now one feature requirement per version");
 
-    assert(RO.Features[0].starts_with("cpu="));
-    StringRef CPU = RO.Features[0].split("=").second.trim();
-    StringRef Feature = llvm::StringSwitch<StringRef>(CPU)
-                            .Case("pwr7", "arch_2_06")
-                            .Case("pwr8", "arch_2_07")
-                            .Case("pwr9", "arch_3_00")
-                            .Case("pwr10", "arch_3_1")
-                            .Case("pwr11", "arch_3_1")
-                            .Default("error");
+    StringRef FeatureStr = RO.Features[0];
+    StringRef BuiltinCpuSupportsArg;
+    bool IsNegated = false;
 
-    llvm::Value *Condition = EmitPPCBuiltinCpu(
-        Builtin::BI__builtin_cpu_supports, Builder.getInt1Ty(), Feature);
+    if (FeatureStr.starts_with("cpu=")) {
+      // CPU specification - map to ISA level
+      StringRef CPU = FeatureStr.split("=").second.trim();
+      BuiltinCpuSupportsArg = llvm::StringSwitch<StringRef>(CPU)
+#define PPC_AIX_CLONES_CPU(CPU_NAME, AIX_BUILTIN_CPU_SUPPORTS_NAME, _)         \
+  .Case(CPU_NAME, AIX_BUILTIN_CPU_SUPPORTS_NAME)
+#include "llvm/TargetParser/PPCTargetParser.def"
+                                  .Default("error");
+    } else {
+      // Feature strings arrive here already normalized:
+      // - Positive features: just the name (e.g., "altivec")
+      // - Negated features: "no-" prefix (e.g., "no-altivec")
+      if (FeatureStr.starts_with("no-")) {
+        IsNegated = true;
+        FeatureStr = FeatureStr.drop_front(3);
+      }
+
+      // Map feature names to __builtin_cpu_supports() strings
+      BuiltinCpuSupportsArg =
+          llvm::StringSwitch<StringRef>(FeatureStr)
+#define PPC_AIX_CLONES_FEATURE(FEATURE_NAME, AIX_BUILTIN_CPU_SUPPORTS_NAME, _, \
+                               __)                                             \
+  .Case(FEATURE_NAME, AIX_BUILTIN_CPU_SUPPORTS_NAME)
+#include "llvm/TargetParser/PPCTargetParser.def"
+              // Features without runtime checks return empty string
+              .Default("");
+
+      // All features in target_clones must have runtime detection
+      assert(!BuiltinCpuSupportsArg.empty() &&
+             "Feature without runtime detection should have been rejected in "
+             "Sema");
+    }
+
+    assert(getContext().getTargetInfo().validateCpuSupports(
+        BuiltinCpuSupportsArg));
+
+    llvm::Value *Condition =
+        EmitPPCBuiltinCpu(Builtin::BI__builtin_cpu_supports,
+                          Builder.getInt1Ty(), BuiltinCpuSupportsArg);
+
+    // Negate the condition if this is a negated feature
+    if (IsNegated) {
+      Condition = Builder.CreateNot(Condition, "neg");
+    }
 
     llvm::BasicBlock *ThenBlock = createBasicBlock("if.version", Resolver);
     CurBlock = createBasicBlock("if.else", Resolver);
@@ -3179,6 +3229,10 @@ void CodeGenFunction::EmitAArch64MultiVersionResolver(
   llvm::BasicBlock *CurBlock = createBasicBlock("resolver_entry", Resolver);
 
   for (const FMVResolverOption &RO : Options) {
+    // Skip unreachable versions.
+    if (RO.Function == nullptr)
+      continue;
+
     Builder.SetInsertPoint(CurBlock);
     llvm::Value *Condition = FormAArch64ResolverCondition(RO);
 
@@ -3190,15 +3244,11 @@ void CodeGenFunction::EmitAArch64MultiVersionResolver(
     }
 
     if (!AArch64CpuInitialized) {
-      Builder.SetInsertPoint(CurBlock, CurBlock->begin());
+      Builder.SetInsertPoint(CurBlock->begin());
       EmitAArch64CpuInit();
       AArch64CpuInitialized = true;
       Builder.SetInsertPoint(CurBlock);
     }
-
-    // Skip unreachable versions.
-    if (RO.Function == nullptr)
-      continue;
 
     llvm::BasicBlock *RetBlock = createBasicBlock("resolver_return", Resolver);
     CGBuilderTy RetBuilder(CGM, RetBlock);
@@ -3262,9 +3312,8 @@ void CodeGenFunction::emitAlignmentAssumptionCheck(
     llvm::Instruction *Assumption) {
   assert(isa_and_nonnull<llvm::CallInst>(Assumption) &&
          cast<llvm::CallInst>(Assumption)->getCalledOperand() ==
-             llvm::Intrinsic::getOrInsertDeclaration(
-                 Builder.GetInsertBlock()->getParent()->getParent(),
-                 llvm::Intrinsic::assume) &&
+             llvm::Intrinsic::getOrInsertDeclaration(Builder.getModule(),
+                                                     llvm::Intrinsic::assume) &&
          "Assumption should be a call to llvm.assume().");
   assert(&(Builder.GetInsertBlock()->back()) == Assumption &&
          "Assumption should be the last instruction of the basic block, "

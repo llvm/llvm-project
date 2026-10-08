@@ -1858,6 +1858,15 @@ class AsmParser {
   // messages.
   bit ReportMultipleNearMisses = false;
 
+  // PrioritizeFeatureInMultiMismatchFallback -
+  // When 0, retain the first operand near-miss as the fallback diagnostic when an
+  // instruction has multiple invalid operands.
+  // When 1, prioritize a feature near-miss over the first operand near-miss when
+  // recording a MultiMismatchFallback entry, so that diagnostics point to the
+  // missing extension rather than an operand mismatch.
+  // Only effective when ReportMultipleNearMisses is also 1.
+  bit PrioritizeFeatureInMultiMismatchFallback = false;
+
   // OperandParserMethod - If non-empty, this is the name of a custom
   // member function of the AsmParser class to call for every custom instruction
   // operand to be parsed. If unset, this defaults to calling the generated
@@ -2051,6 +2060,11 @@ class AsmWriter {
   // will specify which alternative to use. For example "{x|y|z}" with Variant
   // == 1, will expand to "y".
   int Variant = 0;
+
+  // If set, emit a bytecode table and interpreter loop instead of a large
+  // switch statement for remaining operands that do not fit in the 64-bit
+  // table-driven printer.
+  bit UseBytecode = 0;
 }
 def DefaultAsmWriter : AsmWriter;
 

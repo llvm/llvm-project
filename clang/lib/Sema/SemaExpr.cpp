@@ -722,6 +722,10 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
   if (T.hasQualifiers())
     T = T.getUnqualifiedType();
 
+  if (getLangOpts().HLSL)
+    if (const auto *MT = T->getAs<ConstantMatrixType>(); MT && MT->getLayout())
+      T = Context.getCanonicalType(T);
+
   // Under the MS ABI, lock down the inheritance model now.
   if (T->isMemberPointerType() &&
       Context.getTargetInfo().getCXXABI().isMicrosoft())
@@ -6580,6 +6584,8 @@ static bool isPlaceholderToRemoveAsArg(QualType type) {
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/SPIRVTypes.def"
 #define PLACEHOLDER_TYPE(ID, SINGLETON_ID)
@@ -8965,8 +8971,7 @@ OpenCLCheckVectorConditional(Sema &S, ExprResult &Cond,
                               /*isCompAssign*/ false,
                               /*AllowBothBool*/ true,
                               /*AllowBoolConversions*/ false,
-                              /*AllowBooleanOperation*/ IsBoolVecLang,
-                              /*ReportInvalid*/ true);
+                              /*AllowBooleanOperation*/ IsBoolVecLang);
     if (VecResTy.isNull())
       return QualType();
     // The result type must match the condition type as specified in
@@ -9049,8 +9054,7 @@ QualType Sema::CheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
     return CheckVectorOperands(LHS, RHS, QuestionLoc, /*isCompAssign*/ false,
                                /*AllowBothBool*/ true,
                                /*AllowBoolConversions*/ false,
-                               /*AllowBooleanOperation*/ false,
-                               /*ReportInvalid*/ true);
+                               /*AllowBooleanOperation*/ false);
 
   QualType ResTy = UsualArithmeticConversions(LHS, RHS, QuestionLoc,
                                               ArithConvKind::Conditional);
@@ -10423,9 +10427,10 @@ AssignConvertType Sema::CheckSingleAssignmentConstraints(QualType LHSType,
       // a macro expansion because the use of a macro may indicate different
       // code between C and C++. Consider: char *s = NULL; where NULL is
       // defined as (void *)0 in C (which would be invalid in C++), but 0 in
-      // C++, which is valid in C++.
+      // C++, which is valid in C++. Ignore parentheses around the macro when
+      // checking where the expression originates.
       if (Kind != CK_NoOp && !getLangOpts().CPlusPlus &&
-          !RHS.get()->getBeginLoc().isMacroID()) {
+          !RHS.get()->IgnoreParens()->getBeginLoc().isMacroID()) {
         QualType CanRHS =
             RHS.get()->getType().getCanonicalType().getUnqualifiedType();
         QualType CanLHS = LHSType.getCanonicalType().getUnqualifiedType();
@@ -10860,8 +10865,7 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
                                    SourceLocation Loc, bool IsCompAssign,
                                    bool AllowBothBool,
                                    bool AllowBoolConversions,
-                                   bool AllowBoolOperation,
-                                   bool ReportInvalid) {
+                                   bool AllowBoolOperation) {
   if (!IsCompAssign) {
     LHS = DefaultFunctionArrayLvalueConversion(LHS.get());
     if (LHS.isInvalid())
@@ -10894,12 +10898,12 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
   if (!AllowBothBool && LHSVecType &&
       LHSVecType->getVectorKind() == VectorKind::AltiVecBool && RHSVecType &&
       RHSVecType->getVectorKind() == VectorKind::AltiVecBool)
-    return ReportInvalid ? InvalidOperands(Loc, LHS, RHS) : QualType();
+    return InvalidOperands(Loc, LHS, RHS);
 
   // This operation may not be performed on boolean vectors.
   if (!AllowBoolOperation &&
       (LHSType->isExtVectorBoolType() || RHSType->isExtVectorBoolType()))
-    return ReportInvalid ? InvalidOperands(Loc, LHS, RHS) : QualType();
+    return InvalidOperands(Loc, LHS, RHS);
 
   // If the vector types are identical, return.
   if (Context.hasSameType(LHSType, RHSType))
@@ -11390,8 +11394,7 @@ QualType Sema::CheckMultiplyDivideOperands(ExprResult &LHS, ExprResult &RHS,
     return CheckVectorOperands(LHS, RHS, Loc, IsCompAssign,
                                /*AllowBothBool*/ getLangOpts().AltiVec,
                                /*AllowBoolConversions*/ false,
-                               /*AllowBooleanOperation*/ false,
-                               /*ReportInvalid*/ true);
+                               /*AllowBooleanOperation*/ false);
   if (LHSTy->isSveVLSBuiltinType() || RHSTy->isSveVLSBuiltinType())
     return CheckSizelessVectorOperands(LHS, RHS, Loc, IsCompAssign,
                                        ArithConvKind::Arithmetic);
@@ -11453,8 +11456,7 @@ QualType Sema::CheckRemainderOperands(
       return CheckVectorOperands(LHS, RHS, Loc, IsCompAssign,
                                  /*AllowBothBool*/ getLangOpts().AltiVec,
                                  /*AllowBoolConversions*/ false,
-                                 /*AllowBooleanOperation*/ false,
-                                 /*ReportInvalid*/ true);
+                                 /*AllowBooleanOperation*/ false);
     return InvalidOperands(Loc, LHS, RHS);
   }
 
@@ -11779,8 +11781,7 @@ QualType Sema::CheckAdditionOperands(ExprResult &LHS, ExprResult &RHS,
         CheckVectorOperands(LHS, RHS, Loc, CompLHSTy,
                             /*AllowBothBool*/ getLangOpts().AltiVec,
                             /*AllowBoolConversions*/ getLangOpts().ZVector,
-                            /*AllowBooleanOperation*/ false,
-                            /*ReportInvalid*/ true);
+                            /*AllowBooleanOperation*/ false);
     if (CompLHSTy) *CompLHSTy = compType;
     return compType;
   }
@@ -11926,8 +11927,7 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
         CheckVectorOperands(LHS, RHS, Loc, CompLHSTy,
                             /*AllowBothBool*/ getLangOpts().AltiVec,
                             /*AllowBoolConversions*/ getLangOpts().ZVector,
-                            /*AllowBooleanOperation*/ false,
-                            /*ReportInvalid*/ true);
+                            /*AllowBooleanOperation*/ false);
     if (CompLHSTy) *CompLHSTy = compType;
     return compType;
   }
@@ -13184,6 +13184,13 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
         *CCT, Loc, ComparisonCategoryUsage::OperatorInExpression);
   };
 
+  if (LHSType->isMetaInfoType() && RHSType->isMetaInfoType()) {
+    if (!BinaryOperator::isEqualityOp(Opc)) {
+      return InvalidOperands(Loc, LHS, RHS);
+    }
+    return computeResultTy();
+  }
+
   if (!IsOrdered && LHSIsNull != RHSIsNull) {
     bool IsEquality = Opc == BO_EQ;
     if (RHSIsNull)
@@ -13653,8 +13660,7 @@ QualType Sema::CheckVectorCompareOperands(ExprResult &LHS, ExprResult &RHS,
       CheckVectorOperands(LHS, RHS, Loc, /*isCompAssign*/ false,
                           /*AllowBothBool*/ true,
                           /*AllowBoolConversions*/ getLangOpts().ZVector,
-                          /*AllowBooleanOperation*/ true,
-                          /*ReportInvalid*/ true);
+                          /*AllowBooleanOperation*/ true);
   if (vType.isNull())
     return vType;
 
@@ -13900,10 +13906,9 @@ QualType Sema::CheckVectorLogicalOperands(ExprResult &LHS, ExprResult &RHS,
   QualType vType = CheckVectorOperands(LHS, RHS, Loc, false,
                                        /*AllowBothBool*/ true,
                                        /*AllowBoolConversions*/ false,
-                                       /*AllowBooleanOperation*/ false,
-                                       /*ReportInvalid*/ false);
+                                       /*AllowBooleanOperation*/ false);
   if (vType.isNull())
-    return InvalidOperands(Loc, LHS, RHS);
+    return QualType();
   if (getLangOpts().OpenCL &&
       getLangOpts().getOpenCLCompatibleVersion() < 120 &&
       vType->hasFloatingRepresentation())
@@ -14057,11 +14062,11 @@ inline QualType Sema::CheckBitwiseOperands(ExprResult &LHS, ExprResult &RHS,
       RHS.get()->getType()->isVectorType()) {
     if (LHS.get()->getType()->hasIntegerRepresentation() &&
         RHS.get()->getType()->hasIntegerRepresentation())
-      return CheckVectorOperands(LHS, RHS, Loc, IsCompAssign,
-                                 /*AllowBothBool*/ true,
-                                 /*AllowBoolConversions*/ getLangOpts().ZVector,
-                                 /*AllowBooleanOperation*/ LegalBoolVecOperator,
-                                 /*ReportInvalid*/ true);
+      return CheckVectorOperands(
+          LHS, RHS, Loc, IsCompAssign,
+          /*AllowBothBool*/ true,
+          /*AllowBoolConversions*/ getLangOpts().ZVector,
+          /*AllowBooleanOperation*/ LegalBoolVecOperator);
     return InvalidOperands(Loc, LHS, RHS);
   }
 
@@ -16584,7 +16589,11 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
                          << resultType << Input.get()->getSourceRange());
       }
 
-      if (resultType->isScalarType() && !isScopedEnumerationType(resultType)) {
+      if (resultType->isScalarType() && !isScopedEnumerationType(resultType) &&
+          !resultType->isMetaInfoType()) {
+        // Before C++26, scalar types are contextually converted to bool,
+        // std::meta::info is a scalar type but not an arithmetic type.
+
         // C99 6.5.3.3p1: ok, fallthrough;
         if (Context.getLangOpts().CPlusPlus) {
           // C++03 [expr.unary.op]p8, C++0x [expr.unary.op]p9:
@@ -19656,6 +19665,15 @@ static bool isVariableCapturable(CapturingScopeInfo *CSI, ValueDecl *Var,
   bool IsBlock = isa<BlockScopeInfo>(CSI);
   bool IsLambda = isa<LambdaScopeInfo>(CSI);
 
+  // Reject bindings referenced from a lambda or block that wraps an OpenMP
+  // region.
+  if ((IsLambda || IsBlock) && S.getLangOpts().OpenMP &&
+      isa<DecompositionDecl>(Var)) {
+    if (Diagnose)
+      S.Diag(Loc, diag::err_omp_unsupported_on_binding) << 3;
+    return false;
+  }
+
   // Lambdas are not allowed to capture unnamed variables
   // (e.g. anonymous unions).
   // FIXME: The C++11 rule don't actually state this explicitly, but I'm
@@ -19707,7 +19725,23 @@ static bool isVariableCapturable(CapturingScopeInfo *CSI, ValueDecl *Var,
     return false;
   }
 
-  if (isa<BindingDecl>(Var)) {
+  if (auto *BD = dyn_cast<BindingDecl>(Var)) {
+    if (auto *RSI = dyn_cast<CapturedRegionScopeInfo>(CSI)) {
+      if (RSI->CapRegionKind == CR_OpenMP) {
+        if (BD->getHoldingVar()) {
+          if (Diagnose) {
+            S.Diag(Loc, diag::err_capture_tuple_binding_openmp) << Var;
+            S.Diag(Var->getLocation(), diag::note_entity_declared_at) << Var;
+          }
+          return false;
+        }
+        if (Diagnose && S.getLangOpts().CPlusPlus) {
+          S.DiagCompat(Loc, diag_compat::capture_binding) << Var;
+          S.Diag(Var->getLocation(), diag::note_entity_declared_at) << Var;
+        }
+        return true;
+      }
+    }
     if (!IsLambda || !S.getLangOpts().CPlusPlus) {
       if (Diagnose)
         diagnoseUncapturableValueReferenceOrBinding(S, Loc, Var);
@@ -19797,23 +19831,46 @@ static bool captureInCapturedRegion(
     Sema &S, bool Invalid) {
   // By default, capture variables by reference.
   bool ByRef = true;
+  bool IsBindingDecl = isa<BindingDecl>(Var);
+  ValueDecl *DSAVar = Var;
   if (IsTopScope && Kind != TryCaptureKind::Implicit) {
     ByRef = (Kind == TryCaptureKind::ExplicitByRef);
   } else if (S.getLangOpts().OpenMP && RSI->CapRegionKind == CR_OpenMP) {
     // Using an LValue reference type is consistent with Lambdas (see below).
-    if (S.OpenMP().isOpenMPCapturedDecl(Var)) {
+    if (VarDecl *VD = S.OpenMP().isOpenMPCapturedDecl(Var)) {
+      Var = VD; // Capture the DecompositionDecl.
       bool HasConst = DeclRefType.isConstQualified();
+      // Note: DeclRefType should remain the BindingDecl's type (e.g., int),
+      // not the DecompositionDecl's type (e.g., Point). The variable being
+      // captured is the DecompositionDecl, but expressions still reference
+      // the individual binding's type.
       DeclRefType = DeclRefType.getUnqualifiedType();
       // Don't lose diagnostics about assignments to const.
       if (HasConst)
         DeclRefType.addConst();
     }
-    // Do not capture firstprivates in tasks.
-    if (S.OpenMP().isOpenMPPrivateDecl(Var, RSI->OpenMPLevel,
-                                       RSI->OpenMPCaptureLevel) != OMPC_unknown)
+    // Do not capture firstprivates in tasks. For bindings the DSA is on the
+    // binding, not on the DecompositionDecl; the task firstprivate path still
+    // needs the DecompositionDecl capture, so skip only private.
+    OpenMPClauseKind PrivateKind = S.OpenMP().isOpenMPPrivateDecl(
+        IsBindingDecl ? DSAVar : Var, RSI->OpenMPLevel,
+        RSI->OpenMPCaptureLevel);
+    if (IsBindingDecl ? PrivateKind == OMPC_private
+                      : PrivateKind != OMPC_unknown)
       return true;
-    ByRef = S.OpenMP().isOpenMPCapturedByRef(Var, RSI->OpenMPLevel,
+    ByRef = S.OpenMP().isOpenMPCapturedByRef(DSAVar, RSI->OpenMPLevel,
                                              RSI->OpenMPCaptureLevel);
+    // Bindings share the DecompositionDecl storage; a second capture with
+    // a different capture kind is not representable.
+    if (BuildAndDiagnose && IsBindingDecl) {
+      unsigned Idx = RSI->CaptureMap.lookup(Var);
+      if (Idx != 0 && RSI->Captures[Idx - 1].isReferenceCapture() != ByRef) {
+        S.Diag(Loc,
+               diag::err_omp_decomposition_bindings_different_capture_kinds)
+            << DSAVar;
+        return false;
+      }
+    }
   }
 
   if (ByRef)
@@ -19825,6 +19882,11 @@ static bool captureInCapturedRegion(
   if (BuildAndDiagnose)
     RSI->addCapture(Var, /*isBlock*/ false, ByRef, RefersToCapturedVariable,
                     Loc, SourceLocation(), CaptureType, Invalid);
+
+  if (BuildAndDiagnose && IsBindingDecl)
+    // Key the binding to its own capture entry so repeated uses hit the
+    // already-captured path.
+    RSI->CaptureMap[DSAVar] = RSI->Captures.size();
 
   return !Invalid;
 }
@@ -20212,14 +20274,6 @@ bool Sema::tryCaptureVariable(
         // just break here. Similarly, global variables that are captured in a
         // target region should not be captured outside the scope of the region.
         if (RSI->CapRegionKind == CR_OpenMP) {
-          // FIXME: We should support capturing structured bindings in OpenMP.
-          if (isa<BindingDecl>(Var)) {
-            if (BuildAndDiagnose) {
-              Diag(ExprLoc, diag::err_capture_binding_openmp) << Var;
-              Diag(Var->getLocation(), diag::note_entity_declared_at) << Var;
-            }
-            return true;
-          }
           OpenMPClauseKind IsOpenMPPrivateDecl = OpenMP().isOpenMPPrivateDecl(
               Var, RSI->OpenMPLevel, RSI->OpenMPCaptureLevel);
           // If the variable is private (i.e. not captured) and has variably
@@ -22333,6 +22387,8 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/SPIRVTypes.def"
 #define BUILTIN_TYPE(Id, SingletonId) case BuiltinType::Id:

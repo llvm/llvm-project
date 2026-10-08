@@ -146,6 +146,10 @@ public:
 
   virtual unsigned getFlatAddressSpace() const { return -1; }
 
+  virtual unsigned getAddressSpaceJoin(unsigned AS1, unsigned AS2) const {
+    return getFlatAddressSpace();
+  }
+
   virtual bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                           Intrinsic::ID IID) const {
     return false;
@@ -364,6 +368,11 @@ public:
     return false;
   }
 
+  virtual bool isLegalSpeculativeLoad(Type *DataType,
+                                      unsigned AddressSpace) const {
+    return false;
+  }
+
   virtual bool isLegalNTStore(Type *DataType, Align Alignment) const {
     // By default, assume nontemporal memory stores are available for stores
     // that are aligned and have a size that is a power of 2.
@@ -408,7 +417,8 @@ public:
 
   virtual bool isLegalAltInstr(VectorType *VecTy, unsigned Opcode0,
                                unsigned Opcode1,
-                               const SmallBitVector &OpcodeMask) const {
+                               const SmallBitVector &OpcodeMask,
+                               ArrayRef<const Value *> Scalars) const {
     return false;
   }
 
@@ -417,6 +427,13 @@ public:
   }
 
   virtual bool isLegalStridedLoadStore(Type *DataType, Align Alignment) const {
+    return false;
+  }
+
+  virtual bool
+  hasMultiVectorLoadStore(unsigned NumVectors, TTI::MaskSource Mask,
+                          VectorType *VectorTy, bool IsStore,
+                          std::optional<Instruction::CastOps> CastHint) const {
     return false;
   }
 
@@ -729,7 +746,7 @@ public:
   virtual InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Opd1Info, TTI::OperandValueInfo Opd2Info,
-      ArrayRef<const Value *> Args, const Instruction *CxtI = nullptr) const {
+      ArrayRef<const Value *> Args, const Instruction *CtxI = nullptr) const {
     // Widenable conditions will eventually lower into constants, so some
     // operations with them will be trivially optimized away.
     auto IsWidenableCondition = [](const Value *V) {
@@ -766,10 +783,11 @@ public:
     return 1;
   }
 
-  virtual InstructionCost getAltInstrCost(VectorType *VecTy, unsigned Opcode0,
-                                          unsigned Opcode1,
-                                          const SmallBitVector &OpcodeMask,
-                                          TTI::TargetCostKind CostKind) const {
+  virtual InstructionCost
+  getAltInstrCost(VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
+                  const SmallBitVector &OpcodeMask,
+                  TTI::TargetCostKind CostKind,
+                  ArrayRef<const Value *> Scalars) const {
     return InstructionCost::getInvalid();
   }
 
@@ -777,7 +795,7 @@ public:
       TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
       TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
       VectorType *SubTp, ArrayRef<const Value *> Args = {},
-      const Instruction *CxtI = nullptr,
+      const Instruction *CtxI = nullptr,
       TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const {
     return 1;
   }
@@ -936,7 +954,6 @@ public:
     case Intrinsic::invariant_start:
     case Intrinsic::invariant_end:
     case Intrinsic::launder_invariant_group:
-    case Intrinsic::strip_invariant_group:
     case Intrinsic::is_constant:
     case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end:
@@ -987,6 +1004,7 @@ public:
     case Intrinsic::vp_gather:
     case Intrinsic::masked_compressstore:
     case Intrinsic::masked_expandload:
+    case Intrinsic::speculative_load:
       return 1;
     }
     return InstructionCost::getInvalid();

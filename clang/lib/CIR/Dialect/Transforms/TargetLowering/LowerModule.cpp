@@ -69,7 +69,8 @@ LowerModule::LowerModule(clang::LangOptions langOpts,
                          clang::CodeGenOptions codeGenOpts,
                          mlir::ModuleOp &module,
                          std::unique_ptr<clang::TargetInfo> target)
-    : module(module), target(std::move(target)), abi(createCXXABI(*this)) {}
+    : module(module), langOpts(std::move(langOpts)), target(std::move(target)),
+      abi(createCXXABI(*this)) {}
 
 const TargetLoweringInfo &LowerModule::getTargetLoweringInfo() {
   if (!targetLoweringInfo)
@@ -93,11 +94,26 @@ std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
   targetOptions.Triple = triple.str();
   auto targetInfo = clang::targets::AllocateTarget(triple, targetOptions);
 
-  // FIXME(cir): This just uses the default language options. We need to account
-  // for custom options.
-  // Create context.
-  assert(!cir::MissingFeatures::lowerModuleLangOpts());
+  // Populate the lowering-relevant LangOptions from the module's
+  // #cir.lowering_lang_options attribute so a reloaded .cir lowers the same
+  // way it was compiled, without a live clang::LangOptions. When the attribute
+  // is absent (e.g. hand-written CIR) the defaults are kept;
   clang::LangOptions langOpts;
+  if (auto loweringLangOpts =
+          mlir::dyn_cast_if_present<cir::LoweringLangOptionsAttr>(
+              module->getAttr(
+                  cir::CIRDialect::getLoweringLangOptionsAttrName()))) {
+    langOpts.Exceptions = loweringLangOpts.getExceptions();
+    langOpts.ThreadsafeStatics = loweringLangOpts.getThreadsafeStatics();
+    langOpts.CUDA = loweringLangOpts.getCuda();
+    langOpts.CUDAIsDevice = loweringLangOpts.getCudaIsDevice();
+    langOpts.HIP = loweringLangOpts.getHip();
+    langOpts.GPURelocatableDeviceCode = loweringLangOpts.getGpuRdc();
+    langOpts.OpenMP = loweringLangOpts.getOpenmp();
+    langOpts.OpenMPIsTargetDevice = loweringLangOpts.getOpenmpIsTargetDevice();
+    langOpts.setClangABICompat(static_cast<clang::LangOptions::ClangABI>(
+        loweringLangOpts.getClangAbiCompat()));
+  }
 
   // FIXME(cir): This just uses the default code generation options. We need to
   // account for custom options.
