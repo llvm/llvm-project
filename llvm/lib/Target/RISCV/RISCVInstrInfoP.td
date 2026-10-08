@@ -2089,7 +2089,9 @@ def riscv_psshlr : RVSDNode<"PSSHLR", SDT_RISCVPackedShift>;
 def SDT_RISCVPackedNarrowingShift
     : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
                            SDTCisVT<2, XLenVT>]>;
-def riscv_pnsrl : RVSDNode<"PNSRL", SDT_RISCVPackedNarrowingShift>;
+def riscv_pnsrl  : RVSDNode<"PNSRL", SDT_RISCVPackedNarrowingShift>;
+def riscv_pnsra  : RVSDNode<"PNSRA", SDT_RISCVPackedNarrowingShift>;
+def riscv_pnsrar : RVSDNode<"PNSRAR", SDT_RISCVPackedNarrowingShift>;
 def riscv_pnclip  : RVSDNode<"PNCLIP", SDT_RISCVPackedNarrowingShift>;
 def riscv_pnclipu : RVSDNode<"PNCLIPU", SDT_RISCVPackedNarrowingShift>;
 
@@ -2821,6 +2823,31 @@ let append Predicates = [IsRV32] in {
             (PNSRLI_B GPRPair:$rs1, uimm4:$imm)>;
   def : Pat<(v2i16 (riscv_pnsrl (v4i16 GPRPair:$rs1), uimm5:$imm)),
             (PNSRLI_H GPRPair:$rs1, uimm5:$imm)>;
+  def : Pat<(v4i8 (riscv_pnsrl (v4i16 GPRPair:$rs1), uimm4:$imm)),
+            (PNSRLI_B GPRPair:$rs1, uimm4:$imm)>;
+  def : Pat<(v2i16 (riscv_pnsrl (v2i32 GPRPair:$rs1), uimm5:$imm)),
+            (PNSRLI_H GPRPair:$rs1, uimm5:$imm)>;
+  def : Pat<(v4i8 (riscv_pnsra (v4i16 GPRPair:$rs1), uimm4:$imm)),
+            (PNSRAI_B GPRPair:$rs1, uimm4:$imm)>;
+  def : Pat<(v2i16 (riscv_pnsra (v2i32 GPRPair:$rs1), uimm5:$imm)),
+            (PNSRAI_H GPRPair:$rs1, uimm5:$imm)>;
+  def : Pat<(v4i8 (riscv_pnsrar (v4i16 GPRPair:$rs1), uimm4:$imm)),
+            (PNSRARI_B GPRPair:$rs1, uimm4:$imm)>;
+  def : Pat<(v2i16 (riscv_pnsrar (v2i32 GPRPair:$rs1), uimm5:$imm)),
+            (PNSRARI_H GPRPair:$rs1, uimm5:$imm)>;
+
+  def : Pat<(v4i8 (riscv_pnsrl (v4i16 GPRPair:$rs1), shiftMask32:$rs2)),
+            (PNSRL_BS GPRPair:$rs1, shiftMask32:$rs2)>;
+  def : Pat<(v2i16 (riscv_pnsrl (v2i32 GPRPair:$rs1), shiftMask32:$rs2)),
+            (PNSRL_HS GPRPair:$rs1, shiftMask32:$rs2)>;
+  def : Pat<(v4i8 (riscv_pnsra (v4i16 GPRPair:$rs1), shiftMask32:$rs2)),
+            (PNSRA_BS GPRPair:$rs1, shiftMask32:$rs2)>;
+  def : Pat<(v2i16 (riscv_pnsra (v2i32 GPRPair:$rs1), shiftMask32:$rs2)),
+            (PNSRA_HS GPRPair:$rs1, shiftMask32:$rs2)>;
+  def : Pat<(v4i8 (riscv_pnsrar (v4i16 GPRPair:$rs1), shiftMask32:$rs2)),
+            (PNSRAR_BS GPRPair:$rs1, shiftMask32:$rs2)>;
+  def : Pat<(v2i16 (riscv_pnsrar (v2i32 GPRPair:$rs1), shiftMask32:$rs2)),
+            (PNSRAR_HS GPRPair:$rs1, shiftMask32:$rs2)>;
 
   def : Pat<(v4i8 (trunc (v4i16 (riscv_psrl GPRPair:$rs1, uimm4:$imm)))),
             (PNSRLI_B GPRPair:$rs1, uimm4:$imm)>;

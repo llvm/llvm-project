@@ -16,7 +16,7 @@ subroutine sub2(a,b,c)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QMm1Psub2(
-! CHECK-SAME: %[[ARG0:.*]]: !fir.boxchar<1> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.boxchar<1> {fir.bindc_name = "b"}, %[[ARG2:.*]]: !fir.boxchar<1> {fir.bindc_name = "c"}) {
+! CHECK-SAME: %[[ARG0:.*]]: !fir.boxchar<1> {fir.bindc_name = "a", fir.fortran_attrs = #fir.var_attrs<intent_in>}, %[[ARG1:.*]]: !fir.boxchar<1> {fir.bindc_name = "b", fir.fortran_attrs = #fir.var_attrs<intent_in>}, %[[ARG2:.*]]: !fir.boxchar<1> {fir.bindc_name = "c", fir.fortran_attrs = #fir.var_attrs<intent_inout>}) {
 ! CHECK: %[[UNBOX_ARG0:.*]]:2 = fir.unboxchar %[[ARG0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %[[UNBOX_ARG0]]#0 typeparams %[[UNBOX_ARG0]]#1 dummy_scope %0 {{.*}} uniq_name("_QMm1Fsub2Ea") fortran_attrs<intent_in> : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 ! CHECK: %[[UNBOX_ARG1:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
@@ -43,7 +43,7 @@ subroutine sub4(a,b,c)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QMm1Psub4(
-! CHECK-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?x!fir.char<1,?>>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.box<!fir.array<?x!fir.char<1,?>>> {fir.bindc_name = "b"}, %[[ARG2:.*]]: !fir.box<!fir.array<?x!fir.char<1,?>>> {fir.bindc_name = "c"}) {
+! CHECK-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?x!fir.char<1,?>>> {fir.bindc_name = "a", fir.fortran_attrs = #fir.var_attrs<intent_in>}, %[[ARG1:.*]]: !fir.box<!fir.array<?x!fir.char<1,?>>> {fir.bindc_name = "b", fir.fortran_attrs = #fir.var_attrs<intent_in>}, %[[ARG2:.*]]: !fir.box<!fir.array<?x!fir.char<1,?>>> {fir.bindc_name = "c", fir.fortran_attrs = #fir.var_attrs<intent_inout>}) {
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{.*}} {{.*}} uniq_name("_QMm1Fsub4Ea") fortran_attrs<intent_in> : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.box<!fir.array<?x!fir.char<1,?>>>)
 ! CHECK: %[[B:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{.*}} {{.*}} uniq_name("_QMm1Fsub4Eb") fortran_attrs<intent_in> : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.box<!fir.array<?x!fir.char<1,?>>>)
 ! CHECK: %[[C:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %{{.*}} {{.*}} uniq_name("_QMm1Fsub4Ec") fortran_attrs<intent_inout> : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.box<!fir.array<?x!fir.char<1,?>>>)

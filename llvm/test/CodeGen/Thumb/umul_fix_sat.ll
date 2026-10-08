@@ -196,22 +196,25 @@ define i64 @func5(i64 %x, i64 %y) {
 ; ARM-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
 ; ARM-NEXT:    mov r3, r5
 ; ARM-NEXT:    bl __aeabi_lmul
-; ARM-NEXT:    adds r3, r1, r6
-; ARM-NEXT:    mov r2, r5
-; ARM-NEXT:    adcs r2, r5
-; ARM-NEXT:    orrs r2, r4
-; ARM-NEXT:    mvns r1, r5
-; ARM-NEXT:    cmp r2, #0
-; ARM-NEXT:    mov r2, r1
-; ARM-NEXT:    bne .LBB4_2
-; ARM-NEXT:  @ %bb.1:
 ; ARM-NEXT:    mov r2, r0
+; ARM-NEXT:    adds r3, r1, r6
+; ARM-NEXT:    mov r0, r5
+; ARM-NEXT:    adcs r0, r5
+; ARM-NEXT:    orrs r0, r4
+; ARM-NEXT:    mvns r1, r5
+; ARM-NEXT:    cmp r0, #0
+; ARM-NEXT:    mov r0, r1
+; ARM-NEXT:    beq .LBB4_3
+; ARM-NEXT:  @ %bb.1:
+; ARM-NEXT:    beq .LBB4_4
 ; ARM-NEXT:  .LBB4_2:
-; ARM-NEXT:    bne .LBB4_4
-; ARM-NEXT:  @ %bb.3:
-; ARM-NEXT:    mov r1, r3
-; ARM-NEXT:  .LBB4_4:
+; ARM-NEXT:    add sp, #12
+; ARM-NEXT:    pop {r4, r5, r6, r7, pc}
+; ARM-NEXT:  .LBB4_3:
 ; ARM-NEXT:    mov r0, r2
+; ARM-NEXT:    bne .LBB4_2
+; ARM-NEXT:  .LBB4_4:
+; ARM-NEXT:    mov r1, r3
 ; ARM-NEXT:    add sp, #12
 ; ARM-NEXT:    pop {r4, r5, r6, r7, pc}
   %tmp = call i64 @llvm.umul.fix.sat.i64(i64 %x, i64 %y, i32 0)
@@ -249,14 +252,14 @@ define <4 x i32> @vec2(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; ARM-NEXT:    .pad #12
 ; ARM-NEXT:    sub sp, #12
 ; ARM-NEXT:    str r3, [sp, #8] @ 4-byte Spill
-; ARM-NEXT:    mov r7, r2
+; ARM-NEXT:    mov r6, r2
 ; ARM-NEXT:    mov r5, r1
 ; ARM-NEXT:    ldr r2, [sp, #32]
-; ARM-NEXT:    movs r6, #0
-; ARM-NEXT:    mov r1, r6
-; ARM-NEXT:    mov r3, r6
+; ARM-NEXT:    movs r7, #0
+; ARM-NEXT:    mov r1, r7
+; ARM-NEXT:    mov r3, r7
 ; ARM-NEXT:    bl __aeabi_lmul
-; ARM-NEXT:    mvns r4, r6
+; ARM-NEXT:    mvns r4, r7
 ; ARM-NEXT:    cmp r1, #0
 ; ARM-NEXT:    mov r1, r4
 ; ARM-NEXT:    bhi .LBB6_2
@@ -266,8 +269,8 @@ define <4 x i32> @vec2(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; ARM-NEXT:    str r1, [sp, #4] @ 4-byte Spill
 ; ARM-NEXT:    ldr r2, [sp, #36]
 ; ARM-NEXT:    mov r0, r5
-; ARM-NEXT:    mov r1, r6
-; ARM-NEXT:    mov r3, r6
+; ARM-NEXT:    mov r1, r7
+; ARM-NEXT:    mov r3, r7
 ; ARM-NEXT:    bl __aeabi_lmul
 ; ARM-NEXT:    cmp r1, #0
 ; ARM-NEXT:    mov r5, r4
@@ -276,20 +279,20 @@ define <4 x i32> @vec2(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; ARM-NEXT:    mov r5, r0
 ; ARM-NEXT:  .LBB6_4:
 ; ARM-NEXT:    ldr r2, [sp, #40]
-; ARM-NEXT:    mov r0, r7
-; ARM-NEXT:    mov r1, r6
-; ARM-NEXT:    mov r3, r6
+; ARM-NEXT:    mov r0, r6
+; ARM-NEXT:    mov r1, r7
+; ARM-NEXT:    mov r3, r7
 ; ARM-NEXT:    bl __aeabi_lmul
 ; ARM-NEXT:    cmp r1, #0
-; ARM-NEXT:    mov r7, r4
+; ARM-NEXT:    mov r6, r4
 ; ARM-NEXT:    bhi .LBB6_6
 ; ARM-NEXT:  @ %bb.5:
-; ARM-NEXT:    mov r7, r0
+; ARM-NEXT:    mov r6, r0
 ; ARM-NEXT:  .LBB6_6:
 ; ARM-NEXT:    ldr r2, [sp, #44]
 ; ARM-NEXT:    ldr r0, [sp, #8] @ 4-byte Reload
-; ARM-NEXT:    mov r1, r6
-; ARM-NEXT:    mov r3, r6
+; ARM-NEXT:    mov r1, r7
+; ARM-NEXT:    mov r3, r7
 ; ARM-NEXT:    bl __aeabi_lmul
 ; ARM-NEXT:    cmp r1, #0
 ; ARM-NEXT:    bhi .LBB6_8
@@ -298,7 +301,7 @@ define <4 x i32> @vec2(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; ARM-NEXT:  .LBB6_8:
 ; ARM-NEXT:    ldr r0, [sp, #4] @ 4-byte Reload
 ; ARM-NEXT:    mov r1, r5
-; ARM-NEXT:    mov r2, r7
+; ARM-NEXT:    mov r2, r6
 ; ARM-NEXT:    mov r3, r4
 ; ARM-NEXT:    add sp, #12
 ; ARM-NEXT:    pop {r4, r5, r6, r7, pc}
