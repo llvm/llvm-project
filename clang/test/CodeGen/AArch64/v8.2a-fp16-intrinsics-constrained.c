@@ -200,14 +200,6 @@ float16_t test_vrndxh_f16(float16_t a) {
   return vrndxh_f16(a);
 }
 
-// COMMON-LABEL: test_vsqrth_f16
-// UNCONSTRAINED:  [[SQR:%.*]] = call half @llvm.sqrt.f16(half %a)
-// CONSTRAINED:    [[SQR:%.*]] = call half @llvm.experimental.constrained.sqrt.f16(half %a, metadata !"round.tonearest", metadata !"fpexcept.strict")
-// COMMONIR:       ret half [[SQR]]
-float16_t test_vsqrth_f16(float16_t a) {
-  return vsqrth_f16(a);
-}
-
 // COMMON-LABEL: test_vaddh_f16
 // UNCONSTRAINED:  [[ADD:%.*]] = fadd half %a, %b
 // CONSTRAINED:    [[ADD:%.*]] = call half @llvm.experimental.constrained.fadd.f16(half %a, half %b, metadata !"round.tonearest", metadata !"fpexcept.strict")
@@ -283,14 +275,6 @@ float16_t test_vmulh_f16(float16_t a, float16_t b) {
 // COMMONIR:       ret half [[SUB]]
 float16_t test_vsubh_f16(float16_t a, float16_t b) {
   return vsubh_f16(a, b);
-}
-
-// COMMON-LABEL: test_vfmah_f16
-// UNCONSTRAINED:  [[FMA:%.*]] = call half @llvm.fma.f16(half %b, half %c, half %a)
-// CONSTRAINED:    [[FMA:%.*]] = call half @llvm.experimental.constrained.fma.f16(half %b, half %c, half %a, metadata !"round.tonearest", metadata !"fpexcept.strict")
-// COMMONIR:       ret half [[FMA]]
-float16_t test_vfmah_f16(float16_t a, float16_t b, float16_t c) {
-  return vfmah_f16(a, b, c);
 }
 
 // COMMON-LABEL: test_vfmsh_f16

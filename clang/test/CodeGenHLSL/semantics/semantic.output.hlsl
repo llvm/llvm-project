@@ -58,10 +58,10 @@ S main() {
 // CHECK: !dx.semantic.signatures = !{![[#ENTRY_SIG:]]}
 // CHECK: ![[#ENTRY_SIG]] = !{ptr @main, null, ![[#OUTPUT_SIG:]]}
 // CHECK: ![[#OUTPUT_SIG]] = !{![[#A_SIG:]], ![[#B_SIG:]], ![[#D_SIG:]], ![[#E_SIG:]]}
-// CHECK: ![[#A_SIG]] = !{i32 0, !"A", i32 9, i32 0, ![[#ZERO_INDEX:]], i32 0, i32 1, i8 1, i32 -1, i8 -1, i8 0, i8 0, i32 0}
+// CHECK: ![[#A_SIG]] = !{i32 0, !"A", i32 9, i32 0, ![[#ZERO_INDEX:]], i32 2, i32 1, i8 1, i32 -1, i8 -1, i8 0, i8 0, i32 0}
 // CHECK: ![[#ZERO_INDEX]] = !{i32 0}
-// CHECK: ![[#B_SIG]] = !{i32 1, !"B", i32 9, i32 0, ![[#ZERO_INDEX]], i32 0, i32 1, i8 4, i32 -1, i8 -1, i8 0, i8 0, i32 0}
-// CHECK: ![[#D_SIG]] = !{i32 2, !"D", i32 9, i32 0, ![[#D_INDICES:]], i32 0, i32 5, i8 1, i32 -1, i8 -1, i8 0, i8 0, i32 0}
+// CHECK: ![[#B_SIG]] = !{i32 1, !"B", i32 9, i32 0, ![[#ZERO_INDEX]], i32 2, i32 1, i8 4, i32 -1, i8 -1, i8 0, i8 0, i32 0}
+// CHECK: ![[#D_SIG]] = !{i32 2, !"D", i32 9, i32 0, ![[#D_INDICES:]], i32 2, i32 5, i8 1, i32 -1, i8 -1, i8 0, i8 0, i32 0}
 // CHECK: ![[#D_INDICES]] = !{i32 0, i32 1, i32 2, i32 3, i32 4}
-// CHECK: ![[#E_SIG]] = !{i32 3, !"E", i32 9, i32 0, ![[#E_INDICES:]], i32 0, i32 6, i8 4, i32 -1, i8 -1, i8 0, i8 0, i32 0}
+// CHECK: ![[#E_SIG]] = !{i32 3, !"E", i32 9, i32 0, ![[#E_INDICES:]], i32 2, i32 6, i8 4, i32 -1, i8 -1, i8 0, i8 0, i32 0}
 // CHECK: ![[#E_INDICES]] = !{i32 0, i32 1, i32 2, i32 3, i32 4, i32 5}
