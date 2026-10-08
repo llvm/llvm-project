@@ -244,6 +244,8 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the AArch64 Backend
 
+* Added support for C2-Pro and C2-Ultra CPUs.
+
 ### Changes to the AMDGPU Backend
 
 * Replaced `xnack` and `sramecc` target features with `amdgpu.xnack`
