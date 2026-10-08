@@ -126,9 +126,9 @@ struct FlattenInfo {
                                    // tripcount. Also used to recognise a
                                    // linear expression that will be replaced.
 
-  SmallPtrSet<Value *, 4> LinearIVUses; // Contains the linear expressions
-                                        // of the form i*M+j that will be
-                                        // replaced.
+  SmallPtrSet<Value *, 4> LinearIVUses;  // Contains the linear expressions
+                                         // of the form i*M+j that will be
+                                         // replaced.
 
   BinaryOperator *InnerIncrement = nullptr;  // Uses of induction variables in
   BinaryOperator *OuterIncrement = nullptr;  // loop control statements that
