@@ -698,7 +698,7 @@ def SPIRV_CLFloorOp : SPIRV_CLUnaryArithmeticOp<"floor", 25, SPIRV_Float> {
 
 // -----
 
-def SPIRV_CLFmaOp : SPIRV_CLTernaryArithmeticOp<"fma", 26, SPIRV_Float> {
+def SPIRV_CLFmaOp : SPIRV_CLTernaryArithmeticOp<"fma", 26, SPIRV_Float, [AlwaysSpeculatable]> {
   let summary = [{
     Compute the correctly rounded floating-point representation of the sum
     of c with the infinitely precise product of a and b. Rounding of
@@ -850,7 +850,7 @@ def SPIRV_CLLog1pOp : SPIRV_CLUnaryArithmeticOp<"log1p", 40, SPIRV_Float> {
 
 // -----
 
-def SPIRV_CLMixOp : SPIRV_CLTernaryArithmeticOp<"mix", 99, SPIRV_Float> {
+def SPIRV_CLMixOp : SPIRV_CLTernaryArithmeticOp<"mix", 99, SPIRV_Float, [AlwaysSpeculatable]> {
   let summary = "Returns the linear blend of x & y implemented as: x + (y - x) * a";
 
   let description = [{
