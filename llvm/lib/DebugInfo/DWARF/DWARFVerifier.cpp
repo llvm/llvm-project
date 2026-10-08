@@ -1967,14 +1967,17 @@ void DWARFVerifier::verifyNameIndexCompleteness(
   if (EntryNames.empty())
     return;
 
+  // Unit roots, whatever their tag, have names but shouldn't be indexed.
+  if (!Die.getParent())
+    return;
+
   // We deviate from the specification here, which says:
   // "The name index must contain an entry for each debugging information entry
   // that defines a named subprogram, label, variable, type, or namespace,
   // subject to ..."
   // Explicitly exclude all TAGs that we know shouldn't be indexed.
   switch (Die.getTag()) {
-  // Compile units and modules have names but shouldn't be indexed.
-  case DW_TAG_compile_unit:
+  // Modules have names but shouldn't be indexed.
   case DW_TAG_module:
     return;
 
