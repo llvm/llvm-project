@@ -123,6 +123,30 @@ struct SubtargetFeatureLiteral {
   }
 };
 
+/// A requirement on the subtarget features in conjunctive normal form: every
+/// literal in \p FeaturesSet must hold, and every clause in
+/// \p AnyOfFeatureSets must have at least one literal that holds.
+struct SubtargetFeatureConstraints {
+  std::set<SubtargetFeatureLiteral> FeaturesSet;
+  std::set<std::set<SubtargetFeatureLiteral>> AnyOfFeatureSets;
+
+  /// Conjoins \p Other with these constraints.
+  void add(const SubtargetFeatureConstraints &Other);
+
+  /// Returns true if no assignment of the features can satisfy these
+  /// constraints.
+  ///
+  /// Only unit propagation is performed, so this proves contradiction but
+  /// never satisfiability: a false result means no contradiction was found,
+  /// not that one does not exist. Callers must be able to tolerate that.
+  bool isSelfContradictory();
+
+  /// Returns true if no assignment of the features can satisfy both these
+  /// constraints and \p Other. Incomplete in the same way as
+  /// isSelfContradictory().
+  bool conflictsWith(const SubtargetFeatureConstraints &Other) const;
+};
+
 /// Populates \p FeaturesSet and \p AnyOfFeatureSets from \p ReqPredicates.
 /// Returns true if all predicates were assembler predicates with a valid
 /// AssemblerCondDag, or false if any non-assembler predicates were skipped.

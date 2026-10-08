@@ -287,6 +287,71 @@ static CNFFormula convertToCNF(const Record *R, const Init &Val, bool Negate) {
   return Result;
 }
 
+void SubtargetFeatureConstraints::add(
+    const SubtargetFeatureConstraints &Other) {
+  FeaturesSet.insert(Other.FeaturesSet.begin(), Other.FeaturesSet.end());
+  AnyOfFeatureSets.insert(Other.AnyOfFeatureSets.begin(),
+                          Other.AnyOfFeatureSets.end());
+}
+
+// Simplifies \p OrSet against the literals known to hold. Returns true if the
+// set is already satisfied by one of them, and otherwise fills
+// \p SimplifiedSet with the literals that are still undecided.
+static bool simplifyOrSet(const std::set<SubtargetFeatureLiteral> &OrSet,
+                          const std::set<SubtargetFeatureLiteral> &FeaturesSet,
+                          std::set<SubtargetFeatureLiteral> &SimplifiedSet) {
+  for (const auto &Lit : OrSet) {
+    if (FeaturesSet.count(Lit))
+      return true; // Satisfied
+    if (!FeaturesSet.count({Lit.Feature, !Lit.IsNot}))
+      SimplifiedSet.insert(Lit);
+  }
+  return false;
+}
+
+bool SubtargetFeatureConstraints::isSelfContradictory() {
+  // Check for immediate contradictions (e.g. requiring both F and !F).
+  for (const auto &Lit : FeaturesSet) {
+    if (FeaturesSet.count({Lit.Feature, !Lit.IsNot}))
+      return true;
+  }
+
+  std::set<std::set<SubtargetFeatureLiteral>> NewAnyOfs;
+  bool FeaturesChanged = false;
+
+  for (const auto &OrSet : AnyOfFeatureSets) {
+    std::set<SubtargetFeatureLiteral> SimplifiedSet;
+    if (simplifyOrSet(OrSet, FeaturesSet, SimplifiedSet))
+      continue; // Discard satisfied set
+
+    // All literals in this OR-set are false, causing a contradiction.
+    if (SimplifiedSet.empty())
+      return true;
+
+    if (SimplifiedSet.size() == 1) {
+      // Unit clause: only one choice remains, so it must be true.
+      FeaturesSet.insert(*SimplifiedSet.begin());
+      FeaturesChanged = true;
+    } else {
+      NewAnyOfs.insert(std::move(SimplifiedSet));
+    }
+  }
+
+  if (FeaturesChanged) {
+    AnyOfFeatureSets = std::move(NewAnyOfs);
+    return isSelfContradictory();
+  }
+
+  return false;
+}
+
+bool SubtargetFeatureConstraints::conflictsWith(
+    const SubtargetFeatureConstraints &Other) const {
+  SubtargetFeatureConstraints Combined(*this);
+  Combined.add(Other);
+  return Combined.isSelfContradictory();
+}
+
 bool llvm::getRequiredFeatures(
     std::set<SubtargetFeatureLiteral> &FeaturesSet,
     std::set<std::set<SubtargetFeatureLiteral>> &AnyOfFeatureSets,

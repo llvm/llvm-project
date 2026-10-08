@@ -29,18 +29,13 @@ class RecordKeeper;
 
 struct CodeGenHwModes;
 
-struct HwModePredicates {
-  std::set<SubtargetFeatureLiteral> FeaturesSet;
-  std::set<std::set<SubtargetFeatureLiteral>> AnyOfFeatureSets;
+struct HwModePredicates : SubtargetFeatureConstraints {
   bool HasNonAsmPredicates = false;
 
   HwModePredicates() = default;
   HwModePredicates(ArrayRef<const Record *> Preds);
 
   static HwModePredicates createForDefaultMode(const CodeGenHwModes &CGH);
-  void add(const HwModePredicates &Other);
-  bool isSelfContradictory();
-  bool conflictsWith(const HwModePredicates &Other) const;
 };
 
 struct HwMode {
