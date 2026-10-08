@@ -52,6 +52,7 @@ class UdtRecordCompleter : public llvm::codeview::TypeVisitorCallbacks {
   llvm::DenseMap<clang::Decl *, DeclStatus> &m_decl_to_status;
   /// Index of the current member.
   uint32_t m_member_index = 0;
+  bool m_any_virtual_base = false;
 
 public:
   UdtRecordCompleter(PdbTypeSymId id, CompilerType &derived_ct,

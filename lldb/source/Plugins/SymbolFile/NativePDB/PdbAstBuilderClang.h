@@ -51,6 +51,8 @@ struct DeclStatus {
   bool resolved = false;
 };
 
+struct CVTagRecord;
+
 class PdbAstBuilderClang : public PdbAstBuilder {
 public:
   PdbAstBuilderClang(TypeSystemClang &clang);
@@ -124,8 +126,7 @@ private:
   clang::QualType
   CreateModifierType(const llvm::codeview::ModifierRecord &modifier);
   clang::QualType CreateArrayType(const llvm::codeview::ArrayRecord &array);
-  clang::QualType CreateRecordType(PdbTypeSymId id,
-                                   const llvm::codeview::TagRecord &record);
+  clang::QualType CreateRecordType(PdbTypeSymId id, const CVTagRecord &record);
   clang::QualType CreateEnumType(PdbTypeSymId id,
                                  const llvm::codeview::EnumRecord &record);
   clang::QualType
