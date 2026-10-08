@@ -10700,6 +10700,9 @@ def err_defaulted_postfix_operator_param_unknown : Error<
 def err_defaulted_postfix_operator_return_type : Error<
   "return type for defaulted %sub{select_defaulted_postfix_operator_kind}0 "
   "must be %1, not %2">;
+def err_defaulted_postfix_operator_deduced_return_type : Error<
+  "defaulted %sub{select_defaulted_postfix_operator_kind}0 cannot have a "
+  "deduced return type">;
 def err_defaulted_postfix_operator_incomplete : Error<
   "cannot default %sub{select_defaulted_postfix_operator_kind}0 for "
   "incomplete type %1">;

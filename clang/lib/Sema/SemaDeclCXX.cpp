@@ -9857,54 +9857,73 @@ bool Sema::CheckExplicitlyDefaultedPostfixOperator(Scope *S, FunctionDecl *FD,
   QualType FirstParamType = getPostfixOperatorFirstParamType(FD);
   QualType ReturnType = FD->getDeclaredReturnType();
 
-  // Determine the type C. For a member function, this is the enclosing class.
-  // For a non-member function, infer it from the first parameter, falling back
-  // to the return type if the first parameter is not a reference.
+  // Diagnose an invalid first parameter. ExpectedC is the type that the
+  // parameter should be a reference to, if that type is known.
+  auto DiagnoseFirstParam = [&](QualType ExpectedC) {
+    if (MD && MD->isImplicitObjectMemberFunction()) {
+      // The implicit object parameter is always a reference to the enclosing
+      // class, so the only possible problem is a const qualifier.
+      Diag(MD->getLocation(), diag::err_defaulted_postfix_operator_const)
+          << (int)Kind;
+    } else if (ExpectedC.isNull()) {
+      Diag(FirstParam->getBeginLoc(),
+           diag::err_defaulted_postfix_operator_param_unknown)
+          << (int)Kind << FirstParamType << FirstParam->getSourceRange();
+    } else {
+      Diag(FirstParam->getBeginLoc(),
+           diag::err_defaulted_postfix_operator_param)
+          << (int)Kind << !MD << FirstParamType
+          << Context.getLValueReferenceType(ExpectedC)
+          << Context.getLValueReferenceType(ExpectedC.withVolatile())
+          << FirstParam->getSourceRange();
+    }
+    return true;
+  };
+
+  // Check the type of the first parameter and determine the type C from it.
+  // If the parameter type is dependent, C is not known until instantiation.
   QualType C;
-  if (MD)
-    C = Context.getCanonicalTagType(MD->getParent());
-  else if (FirstParamType->isReferenceType())
-    C = FirstParamType.getNonReferenceType().getUnqualifiedType();
-  else if (!ReturnType->isReferenceType())
-    C = ReturnType.getUnqualifiedType();
-  if (C.isNull() || (!MD && !C->isDependentType() && !C->isRecordType() &&
-                     !C->isEnumeralType())) {
-    Diag(FirstParam->getBeginLoc(),
-         diag::err_defaulted_postfix_operator_param_unknown)
-        << (int)Kind << FirstParamType << FirstParam->getSourceRange();
+  if (!FirstParamType->isDependentType()) {
+    QualType EnclosingClass =
+        MD ? Context.getCanonicalTagType(MD->getParent()) : QualType();
+
+    // The first parameter must be a reference to C.
+    if (!FirstParamType->isReferenceType())
+      return DiagnoseFirstParam(EnclosingClass);
+    QualType Referent = FirstParamType.getNonReferenceType();
+    C = Referent.getUnqualifiedType();
+
+    // For a member function, C is the enclosing class. For a non-member
+    // function, C must be a class or enumeration type.
+    if (MD) {
+      if (!Context.hasSameType(C, EnclosingClass))
+        return DiagnoseFirstParam(EnclosingClass);
+    } else if (!C->isRecordType() && !C->isEnumeralType()) {
+      return DiagnoseFirstParam(QualType());
+    }
+
+    // The referent may be volatile-qualified, but not const-qualified.
+    if (Referent.isConstQualified())
+      return DiagnoseFirstParam(C);
+  }
+
+  // A deduced return type is never permitted, so diagnose it even if C is not
+  // known yet. Allowing it would need P2952R2 (auto& operator=(X&&) = default),
+  // which is not part of the standard.
+  if (ReturnType->getContainedDeducedType()) {
+    Diag(FD->getLocation(),
+         diag::err_defaulted_postfix_operator_deduced_return_type)
+        << (int)Kind << FD->getReturnTypeSourceRange();
     return true;
   }
 
-  // Check the type of the first parameter.
-  if (!FirstParamType->isDependentType() && !C->isDependentType()) {
-    QualType Referent = FirstParamType->isReferenceType()
-                            ? FirstParamType.getNonReferenceType()
-                            : QualType();
-    if (Referent.isNull() || Referent.isConstQualified() ||
-        !Context.hasSameType(Referent.getUnqualifiedType(), C)) {
-      if (MD && MD->isImplicitObjectMemberFunction()) {
-        // The implicit object parameter is always a reference to the class,
-        // so the only possible problem is a const qualifier.
-        Diag(MD->getLocation(), diag::err_defaulted_postfix_operator_const)
-            << (int)Kind;
-      } else {
-        Diag(FirstParam->getBeginLoc(),
-             diag::err_defaulted_postfix_operator_param)
-            << (int)Kind << !MD << FirstParamType
-            << Context.getLValueReferenceType(C)
-            << Context.getLValueReferenceType(C.withVolatile())
-            << FirstParam->getSourceRange();
-      }
-      return true;
-    }
-  }
+  // If C is not known or the return type is dependent, defer the remaining
+  // checks until instantiation.
+  if (C.isNull() || ReturnType->isDependentType())
+    return false;
 
-  // Check the declared return type. A placeholder type is not permitted; this
-  // would need P2952R2 (auto& operator=(X&&) = default), which is not yet
-  // part of the standard.
-  if (ReturnType->getContainedDeducedType() ||
-      (!ReturnType->isDependentType() && !C->isDependentType() &&
-       !Context.hasSameType(ReturnType, C))) {
+  //    -- has a declared return type of C.
+  if (!Context.hasSameType(ReturnType, C)) {
     Diag(FD->getLocation(), diag::err_defaulted_postfix_operator_return_type)
         << (int)Kind << C << ReturnType << FD->getReturnTypeSourceRange();
     return true;
@@ -9912,7 +9931,7 @@ bool Sema::CheckExplicitlyDefaultedPostfixOperator(Scope *S, FunctionDecl *FD,
 
   // For a defaulted function in a dependent context, defer all remaining
   // checks until instantiation.
-  if (C->isDependentType() || FD->isDependentContext())
+  if (FD->isDependentContext())
     return false;
 
   //    -- is defined as defaulted in C or in a context where C is complete

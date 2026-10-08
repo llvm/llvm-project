@@ -76,11 +76,11 @@ struct ReturnsConst {
 };
 struct ReturnsAuto {
   ReturnsAuto &operator++();
-  auto operator++(int) = default; // expected-error {{return type for defaulted postfix increment operator must be 'ReturnsAuto', not 'auto'}}
+  auto operator++(int) = default; // expected-error {{defaulted postfix increment operator cannot have a deduced return type}}
 };
 struct ReturnsDecltypeAuto {
   ReturnsDecltypeAuto &operator--();
-  decltype(auto) operator--(int) = default; // expected-error {{return type for defaulted postfix decrement operator must be 'ReturnsDecltypeAuto', not 'decltype(auto)'}}
+  decltype(auto) operator--(int) = default; // expected-error {{defaulted postfix decrement operator cannot have a deduced return type}}
 };
 struct ReturnsInt {
   ReturnsInt &operator++();
@@ -110,7 +110,7 @@ NV operator++(volatile NV &, int) = default; // OK
 struct NConst { NConst &operator++(); };
 NConst operator++(const NConst &, int) = default; // expected-error {{invalid first parameter type for defaulted postfix increment operator; found 'const NConst &', expected 'NConst &' or 'volatile NConst &'}}
 struct NValue { NValue &operator++(); };
-NValue operator++(NValue, int) = default; // expected-error {{invalid first parameter type for defaulted postfix increment operator; found 'NValue', expected 'NValue &' or 'volatile NValue &'}}
+NValue operator++(NValue, int) = default; // expected-error {{invalid first parameter type for defaulted non-member postfix increment operator; found 'NValue', expected reference to a non-const class or enumeration type}}
 struct NRet { NRet &operator--(); };
 int operator--(NRet &, int) = default; // expected-error {{return type for defaulted postfix decrement operator must be 'NRet', not 'int'}}
 struct NMismatch { NMismatch &operator++(); };
@@ -203,3 +203,10 @@ template <typename T> struct DependentFriend {
   friend int operator--(T &, int) = default;                           // expected-error {{return type for defaulted postfix decrement operator must be 'S', not 'int'}}
 };
 DependentFriend<S> df1; // expected-note {{in instantiation of template class 'DependentFriend<S>' requested here}}
+
+// A deduced return type is never valid, so it is diagnosed even if C is not
+// known yet.
+template <typename T> struct DependentAuto {
+  friend auto operator++(T &, int) = default; // expected-error {{defaulted postfix increment operator cannot have a deduced return type}}
+  auto operator--(this T &, int) = default;   // expected-error {{defaulted postfix decrement operator cannot have a deduced return type}}
+};
