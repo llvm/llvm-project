@@ -551,22 +551,15 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   gv.setAlignment(getASTContext().getDeclAlign(&d).getAsAlign().value());
 
   if (supportsCOMDAT() && gv.isWeakForLinker())
-    gv.setComdat(true);
+    gv.setSelfComdat();
 
   if (d.getTLSKind())
     setTLSMode(gv, d);
 
   setGVProperties(gv, &d);
 
-  // OG checks if the expected address space, denoted by the type, is the
-  // same as the actual address space indicated by attributes. If they aren't
-  // the same, an addrspacecast is emitted when this variable is accessed.
-  // In CIR however, cir.get_global already carries that information in
-  // !cir.ptr type - if this global is in OpenCL local address space, then its
-  // type would be !cir.ptr<..., addrspace(offload_local)>. Therefore we don't
-  // need an explicit address space cast in CIR: they will get emitted when
-  // lowering to LLVM IR.
-
+  // The global may live in a different address space than the declared type.
+  // Users of the address cast it through castGlobalToDeclAddrSpace.
   setStaticLocalDeclAddress(&d, gv);
 
   // Ensure that the static local gets initialized by making sure the parent
@@ -807,6 +800,7 @@ void CIRGenFunction::emitStaticVarDecl(const VarDecl &d,
   // RAUW's the GV uses of this constant will be invalid.
   mlir::Value castedAddr =
       builder.createBitcast(getAddrOp.getAddr(), expectedType);
+  castedAddr = cgm.castGlobalToDeclAddrSpace(castedAddr, d);
   localDeclMap.find(&d)->second = Address(castedAddr, elemTy, alignment);
   cgm.setStaticLocalDeclAddress(&d, var);
 
@@ -1170,8 +1164,8 @@ struct IrregularPartialArrayDestroy final : EHScopeStack::Cleanup {
 } // namespace
 
 /// Push an EH cleanup to destroy already-constructed elements of the given
-/// array.  The cleanup may be popped with deactivateCleanupBlock or
-/// popCleanupBlock.
+/// array. The cleanup is deactivated when the enclosing
+/// CleanupDeactivationScope exits.
 ///
 /// \param elementType - the immediate element type of the array;
 ///   possibly still an array type
@@ -1180,7 +1174,7 @@ void CIRGenFunction::pushIrregularPartialArrayCleanup(mlir::Value arrayBegin,
                                                       QualType elementType,
                                                       CharUnits elementAlign,
                                                       Destroyer *destroyer) {
-  ehStack.pushCleanup<IrregularPartialArrayDestroy>(
+  pushCleanupAndDeferDeactivation<IrregularPartialArrayDestroy>(
       EHCleanup, arrayBegin, arrayEndPointer, elementType, elementAlign,
       destroyer);
 }

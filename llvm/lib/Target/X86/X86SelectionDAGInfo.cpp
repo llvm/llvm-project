@@ -72,14 +72,8 @@ void X86SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
     break;
   case X86ISD::VP2INTERSECT:
     // invalid number of results; expected 1, got 2
-  case X86ISD::FSETCCM_SAE:
-    // invalid number of operands; expected 3, got 4
-  case X86ISD::CVTTP2SI_SAE:
-  case X86ISD::CVTTP2UI_SAE:
   case X86ISD::CVTTP2IBS_SAE:
     // invalid number of operands; expected 1, got 2
-  case X86ISD::CMPMM_SAE:
-    // invalid number of operands; expected 4, got 5
   case X86ISD::CALL:
   case X86ISD::NT_BRIND:
     // operand #1 must have type i32 (iPTR), but has type i64
@@ -90,6 +84,38 @@ void X86SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
   }
 
   SelectionDAGGenTargetInfo::verifyTargetNode(DAG, N);
+
+  switch (N->getOpcode()) {
+  default:
+    break;
+  case X86ISD::TC_RETURN:
+  case X86ISD::TC_RETURN_GLOBALADDR: {
+    // The tail-call target is an integer whose width depends on both the
+    // subtarget and on how the callee is addressed:
+    //  * A direct call to a GlobalAddress/ExternalSymbol is i32 on the
+    //    x32 ABI (as well as plain 32-bit mode) and i64 under LP64, since
+    //    TCRETURNdi/TCRETURNdi64 are selected based on IsLP64/NotLP64.
+    //  * Anything else (register, folded load, or TC_RETURN_GLOBALADDR's
+    //    RIP-relative CFGuard call) uses the register width the subtarget
+    //    executes in, i.e. i64 whenever the subtarget runs in 64-bit mode
+    //    (including x32) and i32 otherwise.
+    const X86Subtarget &Subtarget =
+        DAG.getMachineFunction().getSubtarget<X86Subtarget>();
+    SDValue Target = N->getOperand(1);
+    bool IsDirect =
+        isa<GlobalAddressSDNode>(Target) || isa<ExternalSymbolSDNode>(Target);
+    bool WantI64 =
+        IsDirect ? Subtarget.isTarget64BitLP64() : Subtarget.is64Bit();
+    EVT ExpectedVT = WantI64 ? MVT::i64 : MVT::i32;
+    EVT VT = Target.getValueType();
+    if (VT != ExpectedVT)
+      report_fatal_error("invalid node: " + Twine(N->getOperationName(&DAG)) +
+                         " operand #1 must have type " +
+                         ExpectedVT.getEVTString() + ", but has type " +
+                         VT.getEVTString());
+    break;
+  }
+  }
 }
 
 /// Returns the best type to use with repmovs/repstos depending on alignment.

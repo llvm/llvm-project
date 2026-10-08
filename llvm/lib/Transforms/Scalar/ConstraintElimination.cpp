@@ -217,11 +217,12 @@ struct MonotonicInfo {
 struct State {
   DominatorTree &DT;
   LoopInfo &LI;
-  ScalarEvolution &SE;
+  /// Only available for functions with loops.
+  ScalarEvolution *SE;
   TargetLibraryInfo &TLI;
   SmallVector<FactOrCheck, 64> WorkList;
 
-  State(DominatorTree &DT, LoopInfo &LI, ScalarEvolution &SE,
+  State(DominatorTree &DT, LoopInfo &LI, ScalarEvolution *SE,
         TargetLibraryInfo &TLI)
       : DT(DT), LI(LI), SE(SE), TLI(TLI) {}
 
@@ -1150,14 +1151,14 @@ MonotonicInfo State::getMonotonicityInfo(PHINode &PN, Value *Step) {
   if (Info.Unsigned || Info.Signed || !StepOffset)
     return Info;
 
-  const auto *AR = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(&PN));
+  const auto *AR = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(&PN));
   if (!AR)
     return Info;
   ScalarEvolution::MonotonicPredicateType Expected =
       Info.Decreasing ? ScalarEvolution::MonotonicallyDecreasing
                       : ScalarEvolution::MonotonicallyIncreasing;
   auto IsMonotonic = [&](CmpInst::Predicate Pred) {
-    return SE.getMonotonicPredicateType(AR, Pred) == Expected;
+    return SE->getMonotonicPredicateType(AR, Pred) == Expected;
   };
   Info.Signed = IsMonotonic(CmpInst::ICMP_SGT);
   Info.Unsigned = !Info.Decreasing && IsMonotonic(CmpInst::ICMP_UGT);
@@ -1238,7 +1239,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
   }
 
   if (PN->getParent() != Header || PN->getNumIncomingValues() != 2 ||
-      !SE.isSCEVable(PN->getType()))
+      !SE->isSCEVable(PN->getType()))
     return;
 
   // For latch conditions, we need to inject the condition that holds for the
@@ -1307,7 +1308,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
     if (StepOffset->isZero())
       return;
   } else {
-    const SCEV *Expr = SE.getSCEV(PN);
+    const SCEV *Expr = SE->getSCEV(PN);
     if (!match(Expr,
                m_scev_AffineAddRec(m_SCEV(StartSCEV), m_scev_APInt(StepOffset),
                                    m_SpecificLoop(L))))
@@ -1362,10 +1363,10 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (!StepOffset->isOne()) {
     // Check whether B-Start is known to be a multiple of StepOffset.
     if (!StartSCEV)
-      StartSCEV = SE.getSCEV(StartValue);
-    const SCEV *BMinusStart = SE.getMinusSCEV(SE.getSCEV(B), StartSCEV);
+      StartSCEV = SE->getSCEV(StartValue);
+    const SCEV *BMinusStart = SE->getMinusSCEV(SE->getSCEV(B), StartSCEV);
     if (isa<SCEVCouldNotCompute>(BMinusStart) ||
-        !SE.getConstantMultiple(BMinusStart).urem(*StepOffset).isZero())
+        !SE->getConstantMultiple(BMinusStart).urem(*StepOffset).isZero())
       return;
   }
 
@@ -1414,8 +1415,25 @@ static bool getConstraintFromMemoryAccess(GetElementPtrInst &GEP,
                                           CmpPredicate &Pred, Value *&A,
                                           Value *&B, const DataLayout &DL,
                                           const TargetLibraryInfo &TLI) {
+  if (!GEP.hasNoUnsignedWrap())
+    return false;
+
+  Value *Base = GEP.getPointerOperand();
+  if (auto *InnerGEP = dyn_cast<GetElementPtrInst>(Base))
+    Base = InnerGEP->getPointerOperand();
+
+  ObjectSizeOpts Opts;
+  // Workaround for gep inbounds, ptr null, idx.
+  Opts.NullIsUnknownSize = true;
+  // Be conservative since we are not clear on whether an out of bounds access
+  // to the padding is UB or not.
+  Opts.RoundToAlign = true;
+  std::optional<TypeSize> Size = getBaseObjectSize(Base, DL, &TLI, Opts);
+  if (!Size || Size->isScalable())
+    return false;
+
   auto Offset = collectOffsets(cast<GEPOperator>(GEP), DL);
-  if (!Offset.NW.hasNoUnsignedWrap())
+  if (Offset.BasePtr != Base || !Offset.NW.hasNoUnsignedWrap())
     return false;
 
   if (Offset.VariableOffsets.size() != 1)
@@ -1425,17 +1443,6 @@ static bool getConstraintFromMemoryAccess(GetElementPtrInst &GEP,
   auto &[Index, Scale] = Offset.VariableOffsets.front();
   // Bail out on non-canonical GEPs.
   if (Index->getType()->getScalarSizeInBits() != BitWidth)
-    return false;
-
-  ObjectSizeOpts Opts;
-  // Workaround for gep inbounds, ptr null, idx.
-  Opts.NullIsUnknownSize = true;
-  // Be conservative since we are not clear on whether an out of bounds access
-  // to the padding is UB or not.
-  Opts.RoundToAlign = true;
-  std::optional<TypeSize> Size =
-      getBaseObjectSize(Offset.BasePtr, DL, &TLI, Opts);
-  if (!Size || Size->isScalable())
     return false;
 
   // Index * Scale + ConstOffset + AccessSize <= AllocSize
@@ -2261,9 +2268,14 @@ void ConstraintInfo::addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B,
   if (R.empty() || R.isNe())
     return;
 
+  auto &CSToUse = getCS(R.IsSigned);
+  // A row implied by a single existing row adds no information. Rows in the
+  // system are removed in reverse order, so the existing row outlives R.
+  if (!R.isEq() && NewVariables.empty() &&
+      CSToUse.isImpliedBySingleRow(R.Coefficients))
+    return;
   LLVM_DEBUG(dbgs() << "Adding '"; dumpUnpackedICmp(dbgs(), Pred, A, B);
              dbgs() << "'\n");
-  auto &CSToUse = getCS(R.IsSigned);
   bool Added = CSToUse.addRow(R.Coefficients, R.NumVars);
   if (!Added)
     return;
@@ -2359,7 +2371,7 @@ tryToSimplifyOverflowMath(WithOverflowInst *II, ConstraintInfo &Info,
 }
 
 static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
-                                 ScalarEvolution &SE,
+                                 ScalarEvolution *SE,
                                  OptimizationRemarkEmitter &ORE,
                                  TargetLibraryInfo &TLI) {
   bool Changed = false;
@@ -2698,7 +2710,8 @@ PreservedAnalyses ConstraintEliminationPass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &LI = AM.getResult<LoopAnalysis>(F);
-  auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
+  // SCEV is only used for loops, only construct it if there are some.
+  auto *SE = LI.empty() ? nullptr : &AM.getResult<ScalarEvolutionAnalysis>(F);
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   if (!eliminateConstraints(F, DT, LI, SE, ORE, TLI))

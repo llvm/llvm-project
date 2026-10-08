@@ -204,6 +204,16 @@ class TestComputeProjects(unittest.TestCase):
             "OFF",
         )
 
+    def test_orc_rt(self):
+        env_variables = compute_projects.get_env_variables(
+            ["orc-rt/CMakeLists.txt"], "Linux"
+        )
+        self.assertEqual(env_variables["projects_to_build"], "llvm")
+        self.assertEqual(env_variables["project_check_targets"], "")
+        self.assertEqual(env_variables["runtimes_to_build"], "orc-rt")
+        self.assertEqual(env_variables["runtimes_check_targets"], "check-orc-rt")
+        self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
+
     def test_cir(self):
         env_variables = compute_projects.get_env_variables(
             ["clang/lib/CIR/CMakeLists.txt"], "Linux"
@@ -359,11 +369,11 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["runtimes_to_build"],
-            "compiler-rt;flang-rt;libc;libcxx;libcxxabi;libunwind;offload;openmp",
+            "compiler-rt;flang-rt;libc;libcxx;libcxxabi;libunwind;offload;openmp;orc-rt",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
-            "check-compiler-rt check-flang-rt check-libc check-libclc offload openmp",
+            "check-compiler-rt check-flang-rt check-libc check-libclc check-orc-rt offload openmp",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets_needs_reconfig"],
@@ -384,11 +394,11 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["runtimes_to_build"],
-            "compiler-rt",
+            "compiler-rt;orc-rt",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
-            "check-compiler-rt check-libclc",
+            "check-compiler-rt check-libclc check-orc-rt",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets_needs_reconfig"],
@@ -433,11 +443,11 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["runtimes_to_build"],
-            "compiler-rt;flang-rt;libc;libcxx;libcxxabi;libunwind;offload;openmp",
+            "compiler-rt;flang-rt;libc;libcxx;libcxxabi;libunwind;offload;openmp;orc-rt",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
-            "check-compiler-rt check-flang-rt check-libc check-libclc offload openmp",
+            "check-compiler-rt check-flang-rt check-libc check-libclc check-orc-rt offload openmp",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets_needs_reconfig"],
@@ -468,11 +478,11 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["runtimes_to_build"],
-            "compiler-rt;flang-rt;libc;libcxx;libcxxabi;libunwind;offload;openmp",
+            "compiler-rt;flang-rt;libc;libcxx;libcxxabi;libunwind;offload;openmp;orc-rt",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
-            "check-compiler-rt check-flang-rt check-libc check-libclc offload openmp",
+            "check-compiler-rt check-flang-rt check-libc check-libclc check-orc-rt offload openmp",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets_needs_reconfig"],
