@@ -515,6 +515,31 @@ define void @uitofp_2i64_2f32() #0 {
   ret void
 }
 
+define [2 x float] @uitofp_2i64_2f32_fdiv(ptr %p, float %y) #0 {
+; CHECK-LABEL: @uitofp_2i64_2f32_fdiv(
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = uitofp <2 x i64> [[TMP1]] to <2 x float>
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[Y:%.*]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = fdiv <2 x float> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[TMP5]], i64 0
+; CHECK-NEXT:    [[R0:%.*]] = insertvalue [2 x float] poison, float [[TMP6]], 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x float> [[TMP5]], i64 1
+; CHECK-NEXT:    [[R1:%.*]] = insertvalue [2 x float] [[R0]], float [[TMP7]], 1
+; CHECK-NEXT:    ret [2 x float] [[R1]]
+;
+  %ld0 = load i64, ptr %p, align 8
+  %p1 = getelementptr inbounds i8, ptr %p, i64 8
+  %ld1 = load i64, ptr %p1, align 8
+  %cvt0 = uitofp i64 %ld0 to float
+  %cvt1 = uitofp i64 %ld1 to float
+  %div0 = fdiv float %cvt0, %y
+  %div1 = fdiv float %cvt1, %y
+  %r0 = insertvalue [2 x float] poison, float %div0, 0
+  %r1 = insertvalue [2 x float] %r0, float %div1, 1
+  ret [2 x float] %r1
+}
+
 define void @uitofp_4i64_4f32() #0 {
 ; CHECK-LABEL: @uitofp_4i64_4f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @src64, align 64
