@@ -705,10 +705,10 @@ arrangeFreeFunctionLikeCall(CodeGenTypes &CGT, CodeGenModule &CGM,
       addExtParameterInfosForCall(paramInfos, proto, numExtraRequiredArgs,
                                   args.size());
 
-    // If we don't have a prototype at all, but we're supposed to
-    // explicitly use the variadic convention for unprototyped calls,
-    // treat all of the arguments as required but preserve the nominal
-    // possibility of variadics.
+  // If we don't have a prototype at all, but we're supposed to
+  // explicitly use the variadic convention for unprototyped calls,
+  // treat all of the arguments as required but preserve the nominal
+  // possibility of variadics.
   } else if (CGM.getTargetCodeGenInfo().isNoProtoCallVariadic(
                  args, cast<FunctionNoProtoType>(fnType))) {
     required = RequiredArgs(args.size());
@@ -3985,8 +3985,7 @@ static llvm::Value *tryEmitFusedAutoreleaseOfResult(CodeGenFunction &CGF,
   // Look for:
   //   %generator = call i8* @objc_retain(i8* %originalResult)
   // or
-  //   %generator = call i8* @objc_retainAutoreleasedReturnValue(i8*
-  //   %originalResult)
+  //   %generator = call i8* @objc_retainAutoreleasedReturnValue(i8* %originalResult)
   llvm::CallInst *call = dyn_cast<llvm::CallInst>(generator);
   if (!call)
     return nullptr;
@@ -4466,7 +4465,7 @@ void CodeGenFunction::EmitFunctionEpilog(
         RV = SI->getValueOperand();
         SI->eraseFromParent();
 
-        // Otherwise, we have to do a simple load.
+      // Otherwise, we have to do a simple load.
       } else {
         RV = Builder.CreateLoad(ReturnValue);
       }
@@ -4534,7 +4533,7 @@ void CodeGenFunction::EmitFunctionEpilog(
     if (results.size() == 1) {
       RV = results[0];
 
-      // Otherwise, we need to make a first-class aggregate.
+    // Otherwise, we need to make a first-class aggregate.
     } else {
       // Construct a return type that lacks padding elements.
       llvm::Type *returnType = RetAI.getUnpaddedCoerceAndExpandType();
@@ -4684,11 +4683,11 @@ void CodeGenFunction::EmitDelegateCallArg(CallArgList &args,
   if (type->isReferenceType()) {
     args.add(RValue::get(Builder.CreateLoad(local)), type);
 
-    // In ARC, move out of consumed arguments so that the release cleanup
-    // entered by StartFunction doesn't cause an over-release.  This isn't
-    // optimal -O0 code generation, but it should get cleaned up when
-    // optimization is enabled.  This also assumes that delegate calls are
-    // performed exactly once for a set of arguments, but that should be safe.
+  // In ARC, move out of consumed arguments so that the release cleanup
+  // entered by StartFunction doesn't cause an over-release.  This isn't
+  // optimal -O0 code generation, but it should get cleaned up when
+  // optimization is enabled.  This also assumes that delegate calls are
+  // performed exactly once for a set of arguments, but that should be safe.
   } else if (getLangOpts().ObjCAutoRefCount &&
              param->hasAttr<NSConsumedAttr>() && type->isObjCRetainableType()) {
     llvm::Value *ptr = Builder.CreateLoad(local);
@@ -4697,8 +4696,8 @@ void CodeGenFunction::EmitDelegateCallArg(CallArgList &args,
     Builder.CreateStore(null, local);
     args.add(RValue::get(ptr), type);
 
-    // For the most part, we just need to load the alloca, except that
-    // aggregate r-values are actually pointers to temporaries.
+  // For the most part, we just need to load the alloca, except that
+  // aggregate r-values are actually pointers to temporaries.
   } else {
     args.add(convertTempToRValue(local, type, loc), type);
   }
@@ -4787,7 +4786,7 @@ static void emitWriteback(CodeGenFunction &CGF,
     // Release the old value.
     CGF.EmitARCRelease(oldValue, srcLV.isARCPreciseLifetime());
 
-    // Otherwise, we can just do a normal lvalue store.
+  // Otherwise, we can just do a normal lvalue store.
   } else {
     CGF.EmitStoreThroughLValue(RValue::get(value), srcLV);
   }
@@ -4828,7 +4827,7 @@ static void emitWritebackArg(CodeGenFunction &CGF, CallArgList &args,
   if (const Expr *lvExpr = maybeGetUnaryAddrOfOperand(CRE->getSubExpr())) {
     srcLV = CGF.EmitLValue(lvExpr);
 
-    // Otherwise, just emit it as a scalar.
+  // Otherwise, just emit it as a scalar.
   } else {
     Address srcAddr = CGF.EmitPointerWithAlignment(CRE->getSubExpr());
 
@@ -5294,10 +5293,11 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
       type->castAsRecordDecl()->isParamDestroyedInCallee()) {
     // If we're using inalloca, use the argument memory.  Otherwise, use a
     // temporary.
-    AggValueSlot Slot = args.isUsingInAlloca()
-                            ? createPlaceholderSlot(*this, type)
-                            : CreateAggTemp(type, "agg.tmp", /*Alloca=*/nullptr,
-                                            GSObjectKind::ArgumentCopy);
+    AggValueSlot Slot =
+        args.isUsingInAlloca()
+            ? createPlaceholderSlot(*this, type)
+            : CreateAggTemp(type, "agg.tmp", /*Alloca=*/nullptr,
+                            GSObjectKind::ArgumentCopy);
 
     bool DestroyedInCallee = true, NeedsCleanup = true;
     if (const auto *RD = type->getAsCXXRecordDecl())
