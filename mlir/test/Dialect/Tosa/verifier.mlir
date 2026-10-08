@@ -347,6 +347,26 @@ func.func @test_depthwise_conv2d_invalid_bias_size(%arg0: tensor<1x4x4x4xf32>, %
 
 // -----
 
+func.func @test_conv3d_mxfp_input_zp_type(%input: tensor<1x4x4x4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %weight: tensor<8x1x1x1x32xf32>, %bias: tensor<8xf32>) -> tensor<1x4x4x4x8xf32> {
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf16>}> : () -> tensor<1xf16>
+  %weight_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.conv3d' op expect block scaled input to have fp32 zero point}}
+  %0 = tosa.conv3d %input, %weight, %bias, %input_zp, %weight_zp pad([0, 0, 0, 0, 0, 0]) stride([1, 1, 1]) dilation([1, 1, 1]) acc_type(f32) : (tensor<1x4x4x4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<8x1x1x1x32xf32>, tensor<8xf32>, tensor<1xf16>, tensor<1xf32>) -> tensor<1x4x4x4x8xf32>
+  return %0 : tensor<1x4x4x4x8xf32>
+}
+
+// -----
+
+func.func @test_conv3d_mxfp_weight_zp_type(%input: tensor<1x4x4x4x32xf32>, %weight: tensor<8x1x1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %bias: tensor<8xf32>) -> tensor<1x4x4x4x8xf32> {
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %weight_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf16>}> : () -> tensor<1xf16>
+  // expected-error@+1 {{'tosa.conv3d' op expect block scaled weight to have fp32 zero point}}
+  %0 = tosa.conv3d %input, %weight, %bias, %input_zp, %weight_zp pad([0, 0, 0, 0, 0, 0]) stride([1, 1, 1]) dilation([1, 1, 1]) acc_type(f32) : (tensor<1x4x4x4x32xf32>, tensor<8x1x1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<8xf32>, tensor<1xf32>, tensor<1xf16>) -> tensor<1x4x4x4x8xf32>
+  return %0 : tensor<1x4x4x4x8xf32>
+}
+
+// -----
+
 func.func @test_conv3d_invalid_padding(%arg0: tensor<1x4x8x21x17xf32>, %arg1: tensor<34x1x1x1x17xf32>, %arg2: tensor<21xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x4x8x21x34xf32> {
   // expected-error@+1 {{'tosa.conv3d' op expect all padding values to be >= 0, got 0, -1, 0, -1, 0, 0}}
   %0 = tosa.conv3d %arg0, %arg1, %arg2, %arg3, %arg4 pad([0, -1, 0, -1, 0, 0]) stride([1, 1, 1]) dilation([1, 2, 1]) acc_type(f32)
