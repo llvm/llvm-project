@@ -243,3 +243,20 @@ define void @offset_diff_overflow(ptr addrspace(2) %b) {
   store i32 2, ptr addrspace(2) %k, align 1
   ret void
 }
+
+; Same as @offset_diff_overflow, but the killing offset is the larger one.
+define void @offset_diff_overflow_killing_after(ptr addrspace(2) %b) {
+; CHECK-LABEL: define void @offset_diff_overflow_killing_after(
+; CHECK-SAME: ptr addrspace(2) [[B:%.*]]) {
+; CHECK-NEXT:    [[D:%.*]] = getelementptr i8, ptr addrspace(2) [[B]], i64 -4611686018427387912
+; CHECK-NEXT:    [[K:%.*]] = getelementptr i8, ptr addrspace(2) [[B]], i64 4611686018427387904
+; CHECK-NEXT:    store i32 1, ptr addrspace(2) [[D]], align 1
+; CHECK-NEXT:    store i32 2, ptr addrspace(2) [[K]], align 1
+; CHECK-NEXT:    ret void
+;
+  %d = getelementptr i8, ptr addrspace(2) %b, i64 -4611686018427387912
+  %k = getelementptr i8, ptr addrspace(2) %b, i64 4611686018427387904
+  store i32 1, ptr addrspace(2) %d, align 1
+  store i32 2, ptr addrspace(2) %k, align 1
+  ret void
+}
