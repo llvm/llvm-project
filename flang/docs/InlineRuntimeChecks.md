@@ -27,6 +27,16 @@ Abbreviations used in the tables:
 | `X2H` | `flang/lib/Lower/ConvertExprToHLFIR.cpp` |
 | `RT/` | `flang-rt/lib/runtime/` |
 
+Terminology:
+
+- **Lowering** is the translation of the Fortran parse tree to HLFIR, in
+  `flang/lib/Lower`.
+- **Emitting** an assert means creating a `fir.assert` operation, either in
+  lowering or in an HLFIR or FIR pass.
+- **Code generation** is the conversion of FIR to the LLVM dialect
+  (`FIRToLLVMLowering` in `flang/lib/Optimizer/CodeGen/CodeGen.cpp`), where
+  `fir.assert` becomes a branch and a runtime call.
+
 ## 1. Problem
 
 Flang relies on the Fortran runtime for almost all dynamic checks: shape
@@ -62,8 +72,12 @@ STORAGE_SIZE, the realloc-with-scalar-RHS case) use `fir.if` plus
 Goals:
 
 - Keep every user-facing check the runtime performs when the call is inlined,
-  and report it with the runtime's message format:
-  `fatal Fortran runtime error(<file>:<line>): <message>`.
+  and report it with the runtime's message format,
+  `fatal Fortran runtime error(<file>:<line>): <message>`, and with message
+  text as close as possible to the runtime's.
+- Make non-conforming programs behave the same at `-O0` and `-O2`, so that
+  tests disabled because of that difference (for example in the
+  llvm-test-suite gfortran tests) can be re-enabled.
 - Keep the checks cheap and transparent to optimization. They must not block
   store-to-load forwarding, CSE of loads, LICM of loads, or alias analysis.
 - Let checks be hoisted, merged, folded, and dropped under an option.
@@ -105,11 +119,25 @@ Non-goals:
   pass having to know about `fir.assert`. Asserts without a guard only order
   themselves with respect to I/O and calls (section 3.2).
 
-What to guard: the value from which the dangerous access is derived. For
-inlined loops this is the **extent used as the loop bound** (or the
-`fir.shape` operands): every access in the loop depends on the induction
-variable, which depends on the guarded extent. Guarding extents rather than
-array entities avoids threading `!hlfir.expr` values through the assert.
+What to guard: the operand of the protected operation, such as a divisor,
+a DO step, a subscript, or a box that is dereferenced. For conformance
+checks, it is the **array being accessed** (a variable, or an
+`!hlfir.expr`), at the point where it is combined with another array:
+
+- In an elemental operation or an elemental procedure reference, guard the
+  array operands that do not provide the iteration space.
+- In an array assignment, guard both sides. The pass that expands the
+  assignment may iterate over either one.
+
+Conformance checks do not guard shapes or extents. HLFIR can re-derive them
+without going
+through a guarded value: from static types (`hlfir.shape_of` folds to a
+constant shape), from the preference for constant extents
+(`fir::factory::deduceOptimalExtents`), or from the other side of an
+assignment. Leaving them unguarded also keeps constant loop bounds visible
+to MLIR loop optimizations. Array bases are never compile-time constants, so
+guarding them loses nothing. Section 7 explains how the guards follow an
+expression when it is inlined.
 
 ### 3.2 Traits
 
@@ -142,7 +170,9 @@ array entities avoids threading `!hlfir.expr` values through the assert.
     unknown.
 
   Alias analysis may look through the assert, since it only answers
-  aliasing queries and does not rewrite uses.
+  aliasing queries and does not rewrite uses. So may the analyses that read
+  Fortran attributes or contiguity from a guarded variable's
+  `hlfir.declare`.
 
 ### 3.3 TableGen sketch
 
@@ -178,27 +208,36 @@ def fir_AssertOp : fir_Op<"assert", [AttrSizedOperandSegments,
   disabled). There, the assert would disappear together with the pruned
   code, and a program that should have stopped would silently produce
   wrong results.
-- **Dominating assert with the same condition:** remove the later one, mapping
-  its results to the earlier one's results. This is valid regardless of what
-  lies between them and regardless of the message, because the earlier check
-  fails first. Only remove it when the earlier assert guards everything the
-  later one guards; otherwise the consumers would lose their dependence.
+- **Dominating assert with the same condition and kind:** remove the later
+  one, mapping its results to the earlier one's results. This is valid
+  regardless of what lies between them and regardless of the message, because
+  the earlier check fails first. Two restrictions:
+  - The kinds must be the same. Some pipelines drop asserts by kind after
+    this point (section 4), and removing a check because of an earlier one
+    that is dropped later would lose it.
+  - The earlier assert must guard everything the later one guards; otherwise
+    the consumers would lose their dependence.
+
   Upstream CSE cannot do this: it skips ops with write effects
   (`mlir/lib/Transforms/Utils/CSE.cpp`, `simplifyOperation`). So this needs a
-  small dominance-based pass (section 6).
+  small dominance-based pass (section 6). It is not required to start with:
+  once the runtime call is declared `noreturn`, LLVM already removes many
+  redundant checks (GVN, jump threading). The MLIR pass is for cleaning up
+  checks early, before the MLIR loop analyses and transformations that would
+  otherwise have to step around them.
 
-### 3.5 Lowering
+### 3.5 Code generation
 
-Lowering is done in `FIRToLLVMLowering`, where the IR is already a control-flow
-graph:
+`fir.assert` is converted in `FIRToLLVMLowering`, where the IR is already a
+control-flow graph:
 
 ```
-// fir.assert %ok, conformance, "..." values(%a, %b : index, index) guard(%n : index)
+// fir.assert %ok, conformance, "..." values(%na, %nb : index, index) guard(%b : !fir.box<...>)
 llvm.cond_br %ok weights([2000, 1]), ^cont, ^fail
 ^fail:
-  llvm.call @_FortranAReportFatalUserErrorValues(%msg, %file, %line, %a64, %b64, ...)
+  llvm.call @_FortranAReportFatalUserErrorValues(%msg, %file, %line, %na64, %nb64, ...)
   llvm.unreachable
-^cont:   // uses of the result are replaced with %n
+^cont:   // uses of the result are replaced with %b
 ```
 
 - **Runtime entry.** `_FortranAReportFatalUserError(msg, source, line)`
@@ -215,14 +254,14 @@ llvm.cond_br %ok weights([2000, 1]), ^cont, ^fail
   `fir::factory::locationToFilename` returns null for them, so inlined checks
   lose file and line.
 - **Device code.** String globals must be created in the nearest symbol table
-  (a `gpu.module` for device code), and the lowering must also exist in any
-  device code generation pipeline. If a device runtime lacks the entry point,
+  (a `gpu.module` for device code), and the conversion must also exist in
+  any device code generation pipeline. If a device runtime lacks the entry point,
   fall back to `printf` plus `llvm.trap`. The function is not in the OpenMP
   offload API group today, unlike `Abort`.
 
-Lowering before `CFGConversion` (to `fir.if` plus call) is also possible, but
-`fir.if` regions cannot end with `fir.unreachable`, and asserts would stop
-being visible to the passes after that point.
+Converting asserts earlier, before `CFGConversion` (to `fir.if` plus call), is
+also possible, but `fir.if` regions cannot end with `fir.unreachable`, and
+asserts would stop being visible to the passes after that point.
 
 ### 3.6 Alternatives considered
 
@@ -234,14 +273,14 @@ is not told that the call never returns.
 **`cf.assert`.** Not retained. It writes the default resource, which is how
 it models program termination, so it blocks store-to-load forwarding and
 load CSE across it. It still does not order non-speculatable operations
-without memory effects, such as `arith.remsi`, after it. Its LLVM lowering
-prints with `puts` and calls `abort`, rather than reporting through the
+without memory effects, such as `arith.remsi`, after it. Its conversion to
+LLVM prints with `puts` and calls `abort`, rather than reporting through the
 Fortran runtime. It also has no guarded results.
 
 **A result-less `fir.assert` (the current revision of
 [#223287](https://github.com/llvm/llvm-project/pull/223287)).** The PR
 defines `fir.assert` as a non-speculatable op with a
-`MemWrite<FortranRuntimeResource>` effect, lowers it through `cf.assert`, and
+`MemWrite<FortranRuntimeResource>` effect, converts it to `cf.assert`, and
 teaches Flang LICM not to hoist non-speculatable operations across a
 preceding assert in the same block. This design keeps that effect model
 (section 3.2), which gives the right DCE, alias-analysis, and forwarding
@@ -258,12 +297,12 @@ operations is not expressed in the IR:
 - Once a protected load or remainder is above the check, LLVM may infer from
   its undefined behavior that the check cannot fail, and delete it.
 - The guarded results make the ordering a matter of SSA dominance, so no pass
-  has to know about `fir.assert`. The lowering then goes directly to the
-  Fortran runtime entry, so messages match the runtime's format (section
+  has to know about `fir.assert`. Code generation then calls the Fortran
+  runtime entry directly, so messages match the runtime's format (section
   3.5).
 
 The design in this document is therefore the PR's op, with guarded results
-and a direct lowering added.
+added and code generation calling the runtime directly.
 
 **A region-based assert, like `shape.assuming`.** The protected operations go
 inside a region attached to the assert, and the values used afterwards are
@@ -292,15 +331,15 @@ checks must not block:
 - Several checks on the same statement nest regions inside each other.
 
 The guarded-result form gives the same guarantee at the granularity of a
-value: guarding a loop's extent protects every access in the loop, without
-moving the loop into a region.
+value: guarding the arrays a loop accesses protects every access in the
+loop, without moving the loop into a region.
 
 ## 4. Check categories and default policy
 
 | Kind | Meaning | Default | Option |
 |---|---|---|---|
-| `status` | Allocation status required by the standard (ALLOCATE/DEALLOCATE, assignment to an unallocated or disassociated left-hand side) and allocation failure | Always on, all optimization levels | Engineering option to drop, for staging |
-| `conformance` | Shape or size agreement that the runtime checks when not inlined | On (same behavior as `-O0`) | `-fno-check=conformance` (name to be decided) |
+| `status` | Allocation status required by the standard (ALLOCATE/DEALLOCATE, assignment to an unallocated or disassociated left-hand side) and allocation failure | On, all optimization levels | Option to disable, for diagnosing regressions |
+| `conformance` | Shape or size agreement that the runtime checks when not inlined | On, all optimization levels (same behavior as `-O0`) | `-fno-check=conformance` (name to be decided) |
 | `argument` | Intrinsic argument values the runtime checks (DIM range, RESHAPE SHAPE values) | On | same mechanism |
 | `bounds` | Subscript, section, substring, and character-dummy-length checks | Off | `-fcheck=bounds` |
 | `pointer` | Dereference of a disassociated POINTER, an unallocated ALLOCATABLE, or an absent OPTIONAL | Off | `-fcheck=pointer` |
@@ -310,14 +349,22 @@ moving the loop into a region.
 
 Gating:
 
-- Default-on checks are always emitted. The assert lowering (or an earlier
-  cleanup pass) drops them by category. Dropping replaces the results with the
-  guarded operands.
-- Opt-in checks are only emitted when enabled, so they cost nothing otherwise.
-  The flags reach lowering and the passes through a module attribute, as
-  `-fcheck-integer-mod-zero-divisor` does today (`fir.check_integer_mod_zero_divisor`).
-  A single `fir.runtime_checks` attribute listing the enabled kinds would
-  scale better.
+- Asserts are gated where they are emitted. Lowering and the passes that
+  emit asserts do not emit the ones whose kind is disabled, whether it is a
+  default-on kind disabled by an option or an opt-in kind that is not
+  enabled. Disabled checks therefore never affect the MLIR passes, and cost
+  nothing.
+- The enabled kinds reach lowering and the passes through a module
+  attribute, as `-fcheck-integer-mod-zero-divisor` does today
+  (`fir.check_integer_mod_zero_divisor`). A single `fir.runtime_checks`
+  attribute listing the enabled kinds would scale better.
+- Dropping asserts after they are emitted is only needed when one function
+  is compiled for several targets with different policies. For example, for
+  an OpenACC `acc routine`, lowering emits a single `func.func` that later
+  becomes a host and a device variant, and some asserts may have to be
+  dropped or simplified in the device variant. A small pass drops asserts by
+  kind, replacing their results with the guarded operands. It runs only in
+  such pipelines, after the variants are split, not in the normal pipeline.
 - `-fcheck=` currently exists only as a gfortran pass-through in
   `clang/include/clang/Options/FlangOptions.td`. It would become a Flang
   option with gfortran-compatible sub-options.
@@ -337,31 +384,40 @@ These checks exist in the runtime today and disappear at `-O1` and above.
 
 | ID | Operation | Condition (`%ok`) | Runtime message | Inserted in | Guard |
 |---|---|---|---|---|---|
-| A1 | Array assignment, no realloc | for each `d`: `ext(lhs,d) == ext(rhs,d)`. Skip for `temporary_lhs` and for assigns produced by `SeparateAllocatableAssign` (conform by construction; mark them with an attribute). | `Assign: mismatching element counts in array assignment (to %jd, from %jd)` (`RT/assign.cpp:453-461`; `AssignSimple` at `:921-928`) | `IHA` `InlineHLFIRAssignConversion`, before `hlfir::genNoAliasArrayAssignment` | Loop extents from `deduceOptimalExtents` |
+| A1 | Array assignment, no realloc, whatever the right-hand side (variable, `hlfir.elemental`, or `hlfir.eval_in_mem` such as an inlined MATMUL) | for each `d`: `ext(lhs,d) == ext(rhs,d)` | `Assign: mismatching element counts in array assignment (to %jd, from %jd)` (`RT/assign.cpp:453-461`; `AssignSimple` at `:921-928`) | Lowering, before `hlfir.assign` (`flang/lib/Lower/Bridge.cpp`, `genDataAssignment`, `:5884`) | Both sides |
 | A2 | Assignment to a POINTER or non-realloc ALLOCATABLE left-hand side | `!null(lhs) \|\| size(lhs) == 0` | `Assign: left-hand side variable is neither allocated nor allocatable` (`RT/assign.cpp:371-374`) | `IHA` `InlineHLFIRAssignConversion`; `OB` `ElementalAssignBufferization`, `EvaluateIntoMemoryAssignBufferization` | Left-hand-side box |
-| A3 | Elemental expression assigned in place | for each `d`: `ext(elemental,d) == ext(lhs,d)` | as A1 | `OB` `ElementalAssignBufferization` rewrite, where `rhsExtents` and `lhsExtents` are computed (`:463-473`); it currently assumes conformance (`:273-279`) | Loop extents |
-| A4 | `hlfir.eval_in_mem` (inlined MATMUL and others) written directly into the left-hand side | `size(lhs) == product(ext(shape))`; per dimension for strict conformance | as A1 | `OB` `tryUsingAssignLhsDirectly` (`:632-713`) | Left-hand-side address passed to the region |
 | A5 | Scalar broadcast to an unallocated allocatable (realloc) or disassociated pointer | `!null(lhs)` | `Assign: mismatched ranks (%jd != %jd) in assignment to unallocated allocatable` (`RT/assign.cpp:361-370`), or the existing inline text `array left hand side must be allocated when the right hand side is a scalar` (`MutableBox.cpp:947-954`) | `OB` `BroadcastAssignBufferization` (`:514-612`); it fires even with `realloc` | Left-hand-side box |
 | A6 | Inline (re)allocation for assignment | `!null(newStorage)` after `fir.allocmem` | `Memory allocation failed` / `AssignSimple: allocation failed (stat=%jd)` (`RT/assign.cpp:130`, `:1050`) | `SAA` (runs at every optimization level), `IHA` `InlineAllocatableExprAssignConversion`, `C2F` scalar allocatable path (`:123-150`), all through `fir::factory::genReallocIfNeeded` / `allocateAndInitNewStorage` | New storage address |
 
 Not lost: `InlineCopyInConversion` replaces `ShallowCopyDirect`, whose checks
 are internal, because the temporary is built from the variable's own shape.
 
-Note on A1: the runtime only compares **element counts**. A `2x3 = 3x2`
-assignment passes the runtime and gives a wrong result in element order. The
-inline loop nest would access out of bounds, so the assert must compare
-**per-dimension** extents. That is stricter than the runtime, and it is
-exactly F2018 10.2.1.2 conformance. The message then also names the
-dimension (see the A3 example in section 5.4).
+Notes on A1:
+
+- It is emitted once, in lowering, rather than in each pass that expands
+  `hlfir.assign` (`InlineHLFIRAssign`, the `OptimizedBufferization` patterns,
+  `BufferizeHLFIR`, the runtime-call path). Those passes only see the guarded
+  sides. `OptimizedBufferization` inlines the right-hand side's elemental
+  body through the guard (section 7), and `tryUsingAssignLhsDirectly` writes
+  through the guarded left-hand side.
+- At `-O0`, the runtime then checks the assignment again, which is harmless.
+- Assignments created by passes (`temporary_lhs`, the ones produced by
+  `SeparateAllocatableAssign`) conform by construction and are not checked.
+- The runtime only compares **element counts**. A `2x3 = 3x2` assignment
+  passes the runtime and gives a wrong result in element order. The inline
+  loop nest would access out of bounds, so the assert must compare
+  **per-dimension** extents. That is stricter than the runtime, and it is
+  exactly F2018 10.2.1.2 conformance. The message then also names the
+  dimension (see the A1 example in section 5.4).
 
 #### Reductions, MATMUL, DOT_PRODUCT
 
 | ID | Operation | Condition | Runtime message | Inserted in | Guard |
 |---|---|---|---|---|---|
-| A7 | DOT_PRODUCT | `ext(a,0) == ext(b,0)` | `DOT_PRODUCT: SIZE(VECTOR_A) is %jd but SIZE(VECTOR_B) is %jd` (`RT/dot-product.h:63-67`) | `SHI` `DotProductConversion::genProductExtent`, before `deduceOptimalExtents`; `SI` DOT_PRODUCT at the call site (the generated body always loops over the first vector) | Loop extent |
-| A8 | MATMUL | `ext(a, rank(a)-1) == ext(b,0)` | `MATMUL: unacceptable operand shapes (%jdx%jd, %jdx%jd)` and the vector forms (`RT/matmul.h:272-293`) | `SHI` `MatmulConversion::genResultShape`, before `deduceOptimalExtents` | Inner extent |
-| A9 | MATMUL_TRANSPOSE | `ext(a,0) == ext(b,0)` | `MATMUL-TRANSPOSE: unacceptable operand shapes (%jdx%jd, %jdx%jd)` (`RT/matmul-transpose.h:201-209`) | same | Inner extent |
-| A10 | MASK of SUM, PRODUCT, MAXVAL, MINVAL, MAXLOC, MINLOC | `!present(mask) \|\|` for each `d`: `ext(mask,d) == ext(array,d)`, with the extents read inside `fir.if present` | `Incompatible array arguments to %s: dimension %jd of ARRAY has extent %jd but MASK has extent %jd` (`RT/tools.cpp:97-104`) | `SHI` `ReductionAsElementalConverter::convert` (`:1142-1266`); `SI` `simplifyMinMaxlocReduction` | ARRAY extents (loop bounds) |
+| A7 | DOT_PRODUCT | `ext(a,0) == ext(b,0)` | `DOT_PRODUCT: SIZE(VECTOR_A) is %jd but SIZE(VECTOR_B) is %jd` (`RT/dot-product.h:63-67`) | `SHI` `DotProductConversion::genProductExtent`, before `deduceOptimalExtents`; `SI` DOT_PRODUCT at the call site (the generated body always loops over the first vector) | Both vectors (VECTOR_B is enough for `SI`) |
+| A8 | MATMUL | `ext(a, rank(a)-1) == ext(b,0)` | `MATMUL: unacceptable operand shapes (%jdx%jd, %jdx%jd)` and the vector forms (`RT/matmul.h:272-293`) | `SHI` `MatmulConversion::genResultShape`, before `deduceOptimalExtents` | Both matrices |
+| A9 | MATMUL_TRANSPOSE | `ext(a,0) == ext(b,0)` | `MATMUL-TRANSPOSE: unacceptable operand shapes (%jdx%jd, %jdx%jd)` (`RT/matmul-transpose.h:201-209`) | same | Both matrices |
+| A10 | MASK of SUM, PRODUCT, MAXVAL, MINVAL, MAXLOC, MINLOC | `!present(mask) \|\|` for each `d`: `ext(mask,d) == ext(array,d)`, with the extents read inside `fir.if present` | `Incompatible array arguments to %s: dimension %jd of ARRAY has extent %jd but MASK has extent %jd` (`RT/tools.cpp:97-104`) | `SHI` `ReductionAsElementalConverter::convert` (`:1142-1266`); `SI` `simplifyMinMaxlocReduction` | MASK |
 | A11 | Non-constant DIM on a rank-1 argument of ALL, ANY, COUNT, MAXLOC, MINLOC | `dim == 1` | `%s: bad DIM=%jd for ARRAY with rank 1` (`RT/reduction.cpp:256`, `RT/tools.cpp:345`) | `SHI` `AllAnyAsElementalConverter`, `CountAsElementalConverter`, `MinMaxlocAsElementalConverter`; `SI` `simplifyLogicalDim1Reduction`, `simplifyMinMaxlocReduction` | None (DIM is not used for addressing) |
 
 Not lost:
@@ -378,14 +434,17 @@ Not lost:
 
 | ID | Operation | Condition | Runtime message | Inserted in | Guard |
 |---|---|---|---|---|---|
-| A12 | CSHIFT and EOSHIFT with an array SHIFT | for each `k`, with `j` the matching ARRAY dimension (skipping DIM): `ext(shift,k) == ext(array,j)` | `%s: on dimension %jd, SHIFT= has extent %jd but ARRAY= has extent %jd` (`RT/transformational.cpp:48-53`) | `SHI` `ArrayShiftConversion`, after the ARRAY extents are computed, before `hlfir.elemental` or `hlfir.eval_in_mem` | Result shape extents |
-| A13 | EOSHIFT with an array BOUNDARY | `!present(boundary) \|\|` same per-dimension test | `EOSHIFT: BOUNDARY= has extent %jd on dimension %jd but must conform with extent %jd of ARRAY=` (`RT/transformational.cpp:630-643`) | same | Result shape extents |
+| A12 | CSHIFT and EOSHIFT with an array SHIFT | for each `k`, with `j` the matching ARRAY dimension (skipping DIM): `ext(shift,k) == ext(array,j)` | `%s: on dimension %jd, SHIFT= has extent %jd but ARRAY= has extent %jd` (`RT/transformational.cpp:48-53`) | `SHI` `ArrayShiftConversion`, after the ARRAY extents are computed, before `hlfir.elemental` or `hlfir.eval_in_mem` | SHIFT |
+| A13 | EOSHIFT with an array BOUNDARY | `!present(boundary) \|\|` same per-dimension test | `EOSHIFT: BOUNDARY= has extent %jd on dimension %jd but must conform with extent %jd of ARRAY=` (`RT/transformational.cpp:630-643`) | same | BOUNDARY |
 | A14 | EOSHIFT on CHARACTER with BOUNDARY | `len(boundary) == len(array)` | `EOSHIFT: BOUNDARY= has element byte length %jd, but ARRAY= has length %jd` (`RT/transformational.cpp:625-629`, `:700-704`) | same; the inline path pads or truncates instead of failing | None |
 | A15 | RESHAPE: SHAPE values | for each `i`: `shape(i) >= 0` | `RESHAPE: bad value for SHAPE(%jd)=%jd` (`RT/transformational.cpp:818-821`) | `SHI` `ReshapeAsElementalConversion`, after the SHAPE loads, before `fir.shape` (`:3130-3137`) | SHAPE extents fed to `fir.shape` |
-| A16 | RESHAPE: enough elements | `product(shape) <= size(array) \|\| (present(pad) && size(pad) > 0)` | `RESHAPE: not enough elements, need %jd but only have %jd` (`RT/transformational.cpp:831-836`) | same | same |
+| A16 | RESHAPE: enough elements | `product(shape) <= size(array) \|\| (present(pad) && size(pad) > 0)` | `RESHAPE: not enough elements, need %jd but only have %jd` (`RT/transformational.cpp:831-836`) | SOURCE and PAD, and the dynamic extents used as divisors |
 
 A16 also prevents an unsigned division by zero in the inline index
-computation when ARRAY or PAD is empty (`SHI:3262-3266`).
+computation when ARRAY or PAD is empty (`SHI:3262-3266`). The divisions do
+not access memory, so guarding SOURCE does not order them: the extents they
+divide by are guarded too. Constant extents need no guard, because MLIR
+already treats a division by a non-zero constant as speculatable.
 
 Not lost: TRANSPOSE (rank only, static), character comparison
 (`hlfir.cmpchar`), and INDEX. Their runtime entry points have no user-facing
@@ -400,10 +459,20 @@ checks.
 | B3 | `divide` | Integer MOD/MODULO, `P==0` | `p != 0` | `MOD with P==0` / `MODULO with P==0` | `IC` `genIntegerZeroDivisorCheck`: replace `fir.if`; also add it to the UNSIGNED path (`genMod`, `genModulo`), which has none | `p` (the `arith.remsi` operand) |
 | B4 | migrate | NEAREST `S==0`, IEEE `RADIX/=2`, STORAGE_SIZE of an unallocated polymorphic, realloc with scalar RHS | existing conditions | existing messages | `IC` `genNearest`, `checkRadix`, `genStorageSize`; `MutableBox.cpp` `genReallocIfNeeded` | Operand of the protected op |
 | B5 | `bits` | BTEST, IBCLR/IBSET, IBITS, ISHFTC, MASKL/MASKR, MVBITS (out of range gives poison); ISHFT and SHIFTL/SHIFTR/SHIFTA/DSHIFTL/DSHIFTR (clamped, so silently accepted) | `0 <= pos < bit_size`, `pos + len <= bit_size`, and similar | gfortran `-fcheck=bits` style | `IC` per intrinsic | Shift or position operand |
+| B6 | `conformance` | Elemental operations and elemental procedure references on arrays | for each `d`: `ext(x,d) == ext(s,d)` for every array operand `x`, where `s` is the operand providing the iteration space | New, no runtime equivalent | `X2H` binary and unary elemental operations (`:1838-1886`), elemental calls in `flang/lib/Lower/ConvertCall.cpp` (`:2440-2472`); both carry a `TODO: merge shape` | Operands other than `s` |
 
 B1 and B2 are required by the standard and should be unconditional. The
 runtime path already checks them (`RT/allocatable.cpp:142-143`, `:198-199`);
 `-use-alloc-runtime` works around the problem today.
+
+B6 is new behavior at every optimization level: the runtime is never
+involved, and Flang checks no elemental expression today. gfortran only
+checks it under `-fcheck=bounds`, and ifx under `-check shape`. Whether it
+belongs to `conformance` or to a separate opt-in kind is open (section 9).
+The choice does not affect the other checks, which protect their own
+accesses. An elemental-call argument with dynamic OPTIONAL handling
+(`ConvertCall.cpp:2452-2471`) may be absent, so its condition must include
+presence.
 
 Also note: the CSHIFT shift normalization calls `genModulo` with the extent
 hidden behind a `select`, so with `-fcheck-integer-mod-zero-divisor` every
@@ -439,28 +508,45 @@ only has an address), and checks of undefined POINTER status.
 %da:3 = fir.box_dims %a, %c0 : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 %db:3 = fir.box_dims %b, %c0 : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 %eq   = arith.cmpi eq, %da#1, %db#1 : index
-%n    = fir.assert %eq, conformance,
+%a_ok, %b_ok = fir.assert %eq, conformance,
           "DOT_PRODUCT: SIZE(VECTOR_A) is %jd but SIZE(VECTOR_B) is %jd"
-          values(%da#1, %db#1 : index, index) guard(%da#1 : index)
-%r = fir.do_loop %i = %c1 to %n step %c1 iter_args(%acc = %zero) -> (f32) {
-  %ea = hlfir.designate %a (%i) : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
-  %eb = hlfir.designate %b (%i) : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+          values(%da#1, %db#1 : index, index)
+          guard(%a, %b : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+// The loop bound is not guarded, and stays a constant when an extent is one.
+%r = fir.do_loop %i = %c1 to %da#1 step %c1 iter_args(%acc = %zero) -> (f32) {
+  %ea = hlfir.designate %a_ok (%i) : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+  %eb = hlfir.designate %b_ok (%i) : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
   ...
 }
 ```
 
-**A3, elemental assignment** (`OB` `ElementalAssignBufferization`):
+**A1, assignment of an elemental expression** (`x = y + 1.0`, lowering, then
+`OB` `ElementalAssignBufferization`):
 
 ```
-%e = hlfir.elemental %shr unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> { ... }
-hlfir.assign %e to %x#0 : !hlfir.expr<?xf32>, !fir.box<!fir.array<?xf32>>
-// becomes
+%e = hlfir.elemental %shy unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
+^bb0(%i: index):
+  %yi = hlfir.designate %y#0 (%i) : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+  ...
+}
 %dx:3 = fir.box_dims %x#0, %c0 : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
-%eq   = arith.cmpi eq, %n, %dx#1 : index
-%n_ok = fir.assert %eq, conformance,
+%eq   = arith.cmpi eq, %dx#1, %ny : index
+%x_ok, %e_ok = fir.assert %eq, conformance,
           "Assign: mismatching extents on dimension %jd in array assignment (to %jd, from %jd)"
-          values(%c1, %dx#1, %n : index, index, index) guard(%n : index)
-fir.do_loop %i = %c1 to %n_ok step %c1 unordered { ...inlined elemental body; store into x(i)... }
+          values(%c1, %dx#1, %ny : index, index, index)
+          guard(%x#0, %e : !fir.box<!fir.array<?xf32>>, !hlfir.expr<?xf32>)
+hlfir.assign %e_ok to %x_ok : !hlfir.expr<?xf32>, !fir.box<!fir.array<?xf32>>
+
+// After OptimizedBufferization, the guard on %e has moved to the array that
+// its body accesses (section 7), and the loop is free of asserts.
+%x_ok, %y_ok = fir.assert %eq, conformance, "..." values(...)
+          guard(%x#0, %y#0 : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+fir.do_loop %i = %c1 to %ny step %c1 unordered {
+  %yi = hlfir.designate %y_ok (%i) : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+  ...
+  %xi = hlfir.designate %x_ok (%i) : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+  hlfir.assign %v to %xi : f32, !fir.ref<f32>
+}
 ```
 
 When the elemental shape comes from `x` itself (`x = x + 1.0`), the two
@@ -477,10 +563,11 @@ extents are the same SSA value and the assert folds away.
 } else {
   fir.result %true, %na : i1, index
 }
-%na_ok = fir.assert %m#0, conformance,
+%mask_ok = fir.assert %m#0, conformance,
            "Incompatible array arguments to SUM: dimension %jd of ARRAY has extent %jd but MASK has extent %jd"
-           values(%c1, %na, %m#1 : index, index, index) guard(%na : index)
-// reduction loop over 1..%na_ok, MASK read at the same index
+           values(%c1, %na, %m#1 : index, index, index)
+           guard(%mask : !fir.box<!fir.array<?x!fir.logical<4>>>)
+// reduction loop over 1..%na, MASK read through %mask_ok at the same index
 ```
 
 **A15/A16, RESHAPE without PAD** (`SHI` `ReshapeAsElementalConversion`):
@@ -492,11 +579,16 @@ extents are the same SSA value and the assert folds away.
 %da:3 = fir.box_dims %a, %c0 : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 %enough = arith.cmpi ule, %s1i, %da#1 : index
 %ok  = arith.andi %nn, %enough : i1
-%ext = fir.assert %ok, argument, "RESHAPE: bad SHAPE= or not enough elements in SOURCE="
-         guard(%s1i : index)
+%ext, %a_ok = fir.assert %ok, argument, "RESHAPE: bad SHAPE= or not enough elements in SOURCE="
+         guard(%s1i, %a : index, !fir.box<!fir.array<?xf32>>)
 %shape = fir.shape %ext : (index) -> !fir.shape<1>
-%r = hlfir.elemental %shape unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> { ... }
+%r = hlfir.elemental %shape unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> { ... reads %a_ok ... }
 ```
+
+The SHAPE values are guarded because they size the result, which may be
+allocated as a temporary. This is not an iteration-space guard: SOURCE is
+guarded separately, so its accesses stay protected wherever the elemental
+is inlined.
 
 Two separate asserts give the two exact runtime messages. One combined assert
 gives a smaller IR.
@@ -533,40 +625,84 @@ fir.assert %free, status, "the object 'array' is already allocated"
 %e = hlfir.designate %bx_ok (%i) : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> !fir.ref<f32>
 ```
 
-## 6. Where asserts are created, optimized and lowered
+## 6. Where asserts are emitted, optimized, and converted
 
 Pipeline (`flang/lib/Optimizer/Passes/Pipelines.cpp`), with the `fir.assert`
 steps added:
 
 | Stage | Pass (existing, unless marked new) | Optimization level | `fir.assert` role |
 |---|---|---|---|
-| Lowering | `flang/lib/Lower` (designators, ALLOCATE, DEALLOCATE, DO, intrinsics in `IC`) | all | Create B1-B5 and C1-C9 |
-| HLFIR | `SimplifyHLFIRIntrinsics` (twice) | O1+ | Create A7-A16 |
-| HLFIR | `InlineElementals`, `SeparateAllocatableAssign` | all | Create A6 (`SeparateAllocatableAssign`) |
+| Lowering | `flang/lib/Lower` (assignments, elemental expressions, designators, ALLOCATE, DEALLOCATE, DO, intrinsics in `IC`) | all | Emit A1, B1-B6, and C1-C9 |
+| HLFIR | `SimplifyHLFIRIntrinsics` (twice) | O1+ | Emit A7-A16 |
+| HLFIR | `InlineElementals`, `SeparateAllocatableAssign` | all | Emit A6 (`SeparateAllocatableAssign`); move guards from inlined expressions to the arrays they access (section 7) |
 | HLFIR | CSE, canonicalize | O1+ | Fold constant asserts; merges the conditions |
-| HLFIR | `OptimizedBufferization`, `InlineHLFIRAssign` (twice), `InlineHLFIRCopy` (O3) | O1+ (O0 variants for device) | Create A1-A6 |
-| HLFIR | `BufferizeHLFIR`, `ConvertHLFIRtoFIR` | all | Nothing (the op is FIR) |
-| FIR | CSE, canonicalize, then **new: redundant-assert elimination** | O1+ | Dominance-based merging (section 3.4) |
-| FIR | `SimplifyIntrinsics` | O1+ | Create A7, A10, A11 at the call site |
+| HLFIR | `OptimizedBufferization`, `InlineHLFIRAssign` (twice), `InlineHLFIRCopy` (O3) | O1+ (O0 variants for device) | Emit A2, A5, A6; move guards as `InlineElementals` does |
+| HLFIR | `BufferizeHLFIR` | all | Move guards from expressions to their buffers |
+| HLFIR | `ConvertHLFIRtoFIR` | all | Nothing (the op is FIR) |
+| FIR | CSE, canonicalize, then **new, optional: redundant-assert elimination** | O1+ | Dominance-based merging (section 3.4) |
+| FIR | `SimplifyIntrinsics` | O1+ | Emit A7, A10, A11 at the call site |
 | FIR | flang LICM, extended | O1+ | Hoist invariant asserts (section 7) |
-| FIR | **new: redundant-assert elimination** (second run) | O1+ | Merge asserts that hoisting made comparable |
+| FIR | **new, optional: redundant-assert elimination** (second run) | O1+ | Merge asserts that hoisting made comparable |
 | FIR | `SimplifyFIROperations`, `CFGConversion` | all | Nothing |
-| Codegen | `FIRToLLVMLowering` | all | Drop disabled kinds; lower the rest to a branch plus noreturn call (section 3.5) |
+| Device | **new: drop asserts by kind**, only in pipelines that split one function into host and device variants (for example OpenACC `acc routine`) | all | Drop the kinds disabled for the device variant (section 4) |
+| Code generation | `FIRToLLVMLowering` | all | Convert to a branch plus a noreturn call (section 3.5) |
 
-At `-O0`, only lowering, `InlineElementals`, `SeparateAllocatableAssign`, and
-the device variants of `InlineHLFIRAssign` create asserts, and none of the
-optimizing steps run. The lowering pattern must work on unoptimized IR.
+At `-O0`, only lowering, `SeparateAllocatableAssign`, and the device variants
+of `InlineHLFIRAssign` emit asserts, and none of the optimizing steps run.
+`InlineElementals` and `BufferizeHLFIR` still move guards. The code
+generation pattern must work
+on unoptimized IR.
 
 ## 7. Optimization interactions
 
 - **No interference with memory optimizations.** The assert writes only the
-  non-addressable runtime resource (section 3.2).
-- **Hoisting.** FIR LICM hoists only pure ops and loads, so asserts stay in
-  the loop, and so do the operations depending on their guarded results. A
-  dedicated rule is needed: move a loop-invariant assert to before the loop
-  when the loop runs at least once (LICM already proves this for loads) and
-  the assert is executed on every iteration. Its users can then be hoisted
-  too. For a possibly-zero trip count, hoist `cond || tripCount == 0`.
+  non-addressable runtime resource (section 3.2). Passes that inspect memory
+  effects themselves, instead of asking alias analysis, must also skip
+  effects on non-addressable resources (`Resource::isAddressable`), as FIR
+  alias analysis does. For example, `InlineElementals` (`isConflictingWrite`)
+  currently treats any write without a value as a conflict, so an assert
+  between an `hlfir.elemental` and its `hlfir.apply` would block inlining.
+- **Inlining a guarded expression.** `InlineElementals`,
+  `OptimizedBufferization`, `BufferizeHLFIR`, and
+  `LowerHLFIROrderedAssignments` replace `hlfir.apply %e, %j`, or an
+  `hlfir.assign` of `%e`, with the body of the elemental `%e` evaluated at
+  the consumer's index. When `%e` is guarded by an assert, the guard must
+  survive. The body's accesses run at a foreign index, so they are exactly
+  what the assert protects. All these passes go through
+  `hlfir::inlineElementalOp`, which applies one rule:
+  - Rewrite the assert in place so that it guards the arrays that the body
+    accesses at an index derived from its index argument: variables, and
+    expressions read through nested `hlfir.apply`. Then map them to the
+    guarded results when cloning the body. The arrays are defined before
+    the elemental, so they dominate the assert and nothing has to move.
+  - All accesses must be covered, not just one. Index arithmetic (lower
+    bounds, CSHIFT, RESHAPE, vector subscripts) does not change that,
+    because the accessed arrays are still defined outside the body.
+  - Operations that are not speculatable and do not access memory, such as
+    divisions by extents, are protected by guarding their divisor too. Their
+    rare forms with only constant operands outside the body fall back to
+    guarding the index, inside the loop.
+  - Operations with unknown effects, such as calls, are already ordered with
+    the assert by its effect.
+
+  A guard on a nested expression is handled by the same rule when that
+  expression is inlined, or is moved to its buffer by `BufferizeHLFIR`. A
+  pass that does not apply the rule must not inline through the assert.
+  That loses an optimization but does not produce wrong code. The asserts
+  stay before the loops, and the loop bounds remain the unguarded extents.
+  `InlineElementals` must also find the elemental through the assert
+  (`getTwoUses` already looks through `hlfir.declare` and `fir.convert`).
+- **Hoisting.** Conformance asserts are already outside the loops. Asserts
+  inside loops come from per-element checks (section 5.3) and from the
+  fallback above. FIR LICM hoists only pure ops and loads, so asserts stay
+  in the loop, and so do the operations depending on their guarded results.
+  A dedicated rule is needed: move a loop-invariant assert to before the
+  loop when the loop runs at least once (LICM already proves this for loads)
+  and the assert is executed on every iteration. Its users can then be
+  hoisted too. For a possibly-zero trip count, hoist
+  `cond || tripCount == 0`. LLVM could also do this after code generation,
+  but doing it in Flang leaves simpler loops for the MLIR loop
+  optimizations.
 - **Range checks for subscripts (C1).** For an affine subscript
   `s*i + c` in `fir.do_loop %i = lo to hi step st`, replace the per-iteration
   check with checks on the first and last executed values. Two variants:
@@ -576,7 +712,7 @@ optimizing steps run. The lowering pattern must work on unoptimized IR.
     checked loop, reusing the cloning infrastructure of `fir::LoopVersioning`.
     Exact messages, and the fast path vectorizes. Recommended for
     `-O2 -fcheck=bounds`.
-- **Vectorization.** After lowering, an assert inside a loop is an early exit
+- **Vectorization.** After code generation, an assert inside a loop is an early exit
   to a noreturn call, which the LLVM loop vectorizer does not handle. The
   checks in sections 5.1 and 5.2 (A and B) are loop-invariant and placed
   before the loop nests, so they cost nothing per element. Only the checks in
@@ -585,7 +721,7 @@ optimizing steps run. The lowering pattern must work on unoptimized IR.
   created by `BufferizeHLFIR` and the inlining passes are in bounds by
   construction once the A checks hold. That is why bounds checks belong in
   `HlfirDesignatorBuilder` and not in a pass over all `hlfir.designate`, or in
-  `fir.array_coor` codegen.
+  the code generation of `fir.array_coor`.
 - **Device code.** Per-element checks in kernels cost registers and block
   unrolling and vectorized loads. For `-fcheck=bounds` in offloaded loops,
   prefer range checks before the kernel launch, and keep in-kernel checks for
@@ -594,31 +730,45 @@ optimizing steps run. The lowering pattern must work on unoptimized IR.
 ## 8. Suggested implementation order
 
 1. `fir.assert` with `FortranRuntimeResource`, verifier, canonicalization,
-   lowering, the runtime entry with values, and a `noreturn` declaration.
+   code generation, the runtime entry with values, and a `noreturn`
+   declaration. Make `InlineElementals` skip non-addressable effects, and
+   implement the rule for inlining guarded expressions in
+   `hlfir::inlineElementalOp`, with the `BufferizeHLFIR` pattern for asserts
+   on expressions (section 7).
 2. B1 and B2 (standard-required, one compare per statement). This supersedes
    the current version of
    [#223287](https://github.com/llvm/llvm-project/pull/223287).
-3. A7-A9 and A1-A5 (out-of-bounds risks in the most common inlined code).
-4. A10-A16 and A6.
+3. A1, A2, A5, and A7-A9 (out-of-bounds risks in the most common inlined
+   code).
+4. A10-A16, A6, and B6.
 5. Migrate the existing checks (B3, B4) and add the UNSIGNED MOD check.
-6. Redundant-assert elimination and LICM support.
+6. LICM support, then redundant-assert elimination if MLIR loop
+   optimizations need it (LLVM already removes many redundant checks).
 7. `-fcheck=` plumbing, then C9, C1, C2, C4, C5, then C6-C8, then C3 and B5.
 8. Range checks and versioning for C1.
 
 ## 9. Open questions
 
-1. Message formatting: a fixed number of `int64` values, or a variadic runtime
-   entry? Do we keep the runtime's exact messages, or switch to one message
-   style for inline checks?
-2. Should disabled default-on checks become `llvm.intr.assume` (more
-   optimization, but a false condition is then undefined behavior) or be
-   dropped?
-3. Option names and defaults for `conformance` and `argument`. Turning them
-   on by default matches the runtime, but changes `-O2` behavior on
-   non-conforming programs (they now stop instead of producing wrong results
-   or crashing).
+1. Message formatting: a fixed number of `int64` values, or a variadic
+   runtime entry? Inline messages keep the runtime's text as closely as
+   possible, and only differ where the inline check is stricter (per-dimension
+   conformance, section 5.1).
+2. When a default-on kind (`conformance`, `argument`) is disabled by an
+   option, should its checks be emitted as assumptions (`llvm.intr.assume` at
+   code generation) instead of not at all? An assumption gives more
+   optimization, but a false condition becomes undefined behavior. This seems
+   acceptable when the standard only makes the program non-conforming, which
+   is the case for these kinds. It does not apply to `status`: there the
+   standard requires error termination, and disabling the kind is only meant
+   for diagnosing regressions, so its checks are simply not emitted. Input
+   from users on the expected behavior would help. Opt-in kinds that are not
+   enabled are never emitted, as assertions or as assumptions.
+3. Option names for disabling `status`, `conformance`, and `argument`.
+   Should the elemental expression check (B6), which is new at every
+   optimization level, be in `conformance` (on by default) or in a separate
+   opt-in kind?
 4. Allocation failure (A6): check after each `fir.allocmem`, or give
-   `fir.allocmem` a "fail on null" attribute handled in codegen?
+   `fir.allocmem` a "fail on null" attribute handled in code generation?
 5. Device runtime availability of the error entry point in each offload
    configuration (CUDA, OpenACC, OpenMP offload).
 
