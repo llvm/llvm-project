@@ -474,4 +474,19 @@ def cuf_StreamCastOp : cuf_Op<"stream_cast", [NoMemoryEffect]> {
   let hasVerifier = 1;
 }
 
+def cuf_DeviceSynchronizeOp : cuf_Op<"device_synchronize", []> {
+  let summary = "Synchronize the device";
+
+  let description = [{
+    Returns true if the CUDA device's primary context is alive. Used to
+    guard host-side scope-exit deallocation against a user cudaDeviceReset().
+
+    Converted to a `_FortranACUFDeviceIsActive` runtime call on the host and
+    to `false` in device code, so host-only cleanup is DCE'd from GPU
+    functions.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 #endif // FORTRAN_DIALECT_CUF_CUF_OPS

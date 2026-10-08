@@ -418,8 +418,7 @@ unsigned MipsFastISel::materializeGV(const GlobalValue *GV, MVT VT) {
   emitInst(Mips::LW, DestReg)
       .addReg(MFI->getGlobalBaseReg(*MF))
       .addGlobalAddress(GV, 0, MipsII::MO_GOT);
-  if ((GV->hasInternalLinkage() ||
-       (GV->hasLocalLinkage() && !isa<Function>(GV)))) {
+  if (GV->hasLocalLinkage()) {
     Register TempReg = createResultReg(RC);
     emitInst(Mips::ADDiu, TempReg)
         .addReg(DestReg)

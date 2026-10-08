@@ -28,8 +28,8 @@ using ::testing::Ne;
 
 namespace {
 // Local aliases for brevity in test bodies.
-constexpr auto Req = NativeDylibManager::RequiredSymbol;
-constexpr auto Weak = NativeDylibManager::WeaklyReferencedSymbol;
+constexpr auto Req = SymbolLookupFlags::RequiredSymbol;
+constexpr auto Weak = SymbolLookupFlags::WeaklyReferencedSymbol;
 } // namespace
 
 // Wrap a symbol-name string literal in the platform's linker-mangling.
@@ -54,15 +54,11 @@ static Expected<void *> syncLoad(NativeDylibManager &NDM, std::string Path) {
 }
 
 // Helper: synchronously run lookup and return results.
-static Expected<std::vector<std::optional<void *>>>
-syncLookup(NativeDylibManager &NDM, void *Handle,
-           NativeDylibManager::SymbolLookupSet Symbols) {
-  std::optional<Expected<std::vector<std::optional<void *>>>> Result;
-  NDM.lookup(
-      [&](Expected<std::vector<std::optional<void *>>> R) {
-        Result = std::move(R);
-      },
-      Handle, std::move(Symbols));
+static Expected<SymbolLookupResult>
+syncLookup(NativeDylibManager &NDM, void *Handle, SymbolLookupSet Symbols) {
+  std::optional<Expected<SymbolLookupResult>> Result;
+  NDM.lookup([&](Expected<SymbolLookupResult> R) { Result = std::move(R); },
+             Handle, std::move(Symbols));
   return std::move(*Result);
 }
 

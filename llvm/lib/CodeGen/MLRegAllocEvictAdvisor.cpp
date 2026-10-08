@@ -39,6 +39,7 @@
 #include "llvm/Support/ErrorHandling.h"
 
 #include <bitset>
+#include <cmath>
 #include <memory>
 
 using namespace llvm;
@@ -817,7 +818,8 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
     if (DoNotNormalize.test(FeatureIndex))
       continue;
     for (size_t Pos = 0; Pos < NumColumns; ++Pos) {
-      Runner->getTensor<float>(FeatureIndex)[Pos] /= Largest[FeatureIndex];
+      float &V = Runner->getTensor<float>(FeatureIndex)[Pos];
+      V = std::isinf(V) ? 1.0f : V / Largest[FeatureIndex];
     }
   }
   *Runner->getTensor<float>(FeatureIDs::progress) =
@@ -969,9 +971,9 @@ void MLEvictAdvisor::extractFeatures(
 #define SET(ID, TYPE, VAL)                                                     \
   do {                                                                         \
     Runner->getTensor<TYPE>(FeatureIDs::ID)[Pos] = static_cast<TYPE>(VAL);     \
-    if (!DoNotNormalize.test(FeatureIDs::ID))                                  \
-      Largest[FeatureIDs::ID] =                                                \
-          std::max(Largest[FeatureIDs::ID], static_cast<float>(VAL));          \
+    float F = static_cast<float>(VAL);                                         \
+    if (!DoNotNormalize.test(FeatureIDs::ID) && !std::isinf(F))                \
+      Largest[FeatureIDs::ID] = std::max(Largest[FeatureIDs::ID], F);          \
   } while (false)
   SET(mask, int64_t, 1);
   SET(is_free, int64_t, Intervals.empty());

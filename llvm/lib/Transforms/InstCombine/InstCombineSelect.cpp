@@ -404,8 +404,12 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
           FMF &= cast<FPMathOperator>(FII)->getFastMathFlags();
           FMF |= SelectFPOp->getFastMathFlags();
 
-          Value *SelectVal = Builder.CreateSelect(Cond, LdexpVal0, LdexpVal1);
-          Value *SelectExp = Builder.CreateSelect(Cond, LdexpExp0, LdexpExp1);
+          Value *SelectVal = Builder.CreateSelect(
+              Cond, LdexpVal0, LdexpVal1, "",
+              ProfcheckDisableMetadataFixes ? nullptr : &SI);
+          Value *SelectExp = Builder.CreateSelect(
+              Cond, LdexpExp0, LdexpExp1, "",
+              ProfcheckDisableMetadataFixes ? nullptr : &SI);
 
           Value *NewLdexp = Builder.CreateIntrinsic(
               TII->getType(), Intrinsic::ldexp, {SelectVal, SelectExp}, FMF);
@@ -3525,7 +3529,35 @@ foldSelectOfOrderedFAbsCmpOfNaNScrubbedValue(SelectInst &SI,
   Value *NewCmp =
       IC.Builder.CreateFCmpFMF(Pred, NewAbs, Cmp1, FMFSource(NewCmpFMF));
   Value *NewSel = IC.Builder.CreateSelectFMF(NewCmp, X, Y, &SI);
-  return IC.replaceInstUsesWith(SI, NewSel);
+
+  Instruction *NewSelUsesReplaced = IC.replaceInstUsesWith(SI, NewSel);
+
+  uint64_t WeightNotNaN, WeightNaN, WeightComparisonTrue,
+      WeightComparisonFalse = 0;
+  bool HasProfile = extractBranchWeights(*cast<SelectInst>(InnerSel),
+                                         WeightNotNaN, WeightNaN);
+  HasProfile &=
+      extractBranchWeights(SI, WeightComparisonTrue, WeightComparisonFalse);
+  if (!HasProfile || !isa<SelectInst>(NewSel))
+    return NewSelUsesReplaced;
+  // The branch weights for the new select will be the same as before, except
+  // they will additionally account for the probability of NaN values which was
+  // previously handled with the inner select. For the true arm the new
+  // probability is P(not Nan) * P(fcmp true). For the false arm, the new
+  // probability is P(NaN) + (P(not NaN) * P(fcmp false)). We can assume the
+  // probabilities are independent given the first select only checks for NaNs
+  // and the second select's condition will never see NaNs because of the first
+  // select. The code below uses some algebraic simplifications on top of those
+  // formulas.
+  uint64_t WeightNewSelTrue = WeightNotNaN * WeightComparisonTrue;
+  uint64_t WeightNewSelFalse =
+      WeightNaN * (WeightComparisonTrue + WeightComparisonFalse) +
+      WeightNotNaN * WeightComparisonFalse;
+  if (!ProfcheckDisableMetadataFixes)
+    setFittedBranchWeights(*cast<SelectInst>(NewSel),
+                           {WeightNewSelTrue, WeightNewSelFalse},
+                           /*IsExpected*/ false);
+  return NewSelUsesReplaced;
 }
 
 // Match the following IR pattern:

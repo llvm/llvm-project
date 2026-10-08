@@ -1962,11 +1962,9 @@ bool NVPTXDAGToDAGISel::tryBFE(SDNode *N) {
   if (Val.getValueType() != MVT::i32)
     return false;
 
-  unsigned Opc = IsSigned ? NVPTX::BFE_S32rii : NVPTX::BFE_U32rii;
+  unsigned Opc = IsSigned ? NVPTX::BFE_S32 : NVPTX::BFE_U32;
 
-  SDValue Ops[] = {
-    Val, Start, Len
-  };
+  SDValue Ops[] = {selectPossiblyImm(Val), Start, Len};
 
   ReplaceNode(N, CurDAG->getMachineNode(Opc, DL, N->getVTList(), Ops));
   return true;

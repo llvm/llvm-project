@@ -452,6 +452,9 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     }
   }
 
+  if (MDNode *FuncMD = F.getMetadata("spirv.Decorations"))
+    buildOpSpirvDecorations(FuncVReg, MIRBuilder, FuncMD, *ST);
+
   return true;
 }
 

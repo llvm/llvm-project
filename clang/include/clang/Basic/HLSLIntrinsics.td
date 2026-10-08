@@ -1085,6 +1085,19 @@ call.
   let IsConvergent = 1;
 }
 
+// Inserts a memory barrier with the specified memory and semantic flags.
+def hlsl_barrier : HLSLBuiltin<"Barrier", "__builtin_hlsl_barrier"> {
+  let Doc = [{
+\fn void Barrier(uint MemoryTypeFlags, uint SemanticFlags)
+\brief Inserts a memory barrier.
+\param MemoryTypeFlags The memory types affected by the barrier.
+\param SemanticFlags The synchronization and scope behavior.
+}];
+  let Args = [UIntTy, UIntTy];
+  let IsConvergent = 1;
+  let Availability = SM6_8;
+}
+
 // Determines if the specified value x is infinite.
 def hlsl_isinf : HLSLOneArgBuiltin<"isinf", "__builtin_hlsl_elementwise_isinf"> {
   let Doc = [{

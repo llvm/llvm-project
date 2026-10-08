@@ -24,9 +24,8 @@ using namespace llvm;
 #define RISCV_INSERT_READ_WRITE_CSR_NAME "RISC-V Insert Read/Write CSR Pass"
 
 static cl::opt<bool>
-    DisableFRMInsertOpt("riscv-disable-frm-insert-opt", cl::init(false),
-                        cl::Hidden,
-                        cl::desc("Disable optimized frm insertion."));
+    EnableFRMInsertOpt("riscv-frm-insert-opt", cl::init(true), cl::Hidden,
+                       cl::desc("Enable optimized frm insertion."));
 
 namespace {
 
@@ -183,7 +182,7 @@ bool RISCVInsertReadWriteCSR::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {
-    if (DisableFRMInsertOpt)
+    if (!EnableFRMInsertOpt)
       Changed |= emitWriteRoundingMode(MBB);
     else
       Changed |= emitWriteRoundingModeOpt(MBB);

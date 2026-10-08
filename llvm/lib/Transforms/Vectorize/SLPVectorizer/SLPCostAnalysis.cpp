@@ -123,8 +123,20 @@ getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
             ? TTI::PointersChainInfo::getUnknownStride()
             : TTI::PointersChainInfo::getKnownStride();
 
+    // The GEPs of the masked gather loads are accessed with the loaded type
+    // and form a chain only if the lanes share the base.
+    Type *AccessTy = ScalarTy;
+    if (all_of(Ptrs, [](const Value *V) {
+          auto *Ptr = dyn_cast<GetElementPtrInst>(V);
+          return Ptr && Ptr->hasOneUse() && isa<LoadInst>(Ptr->user_back());
+        })) {
+      PtrsInfo.IsSameBaseAddress = all_equal(map_range(Ptrs, [](Value *V) {
+        return cast<GetElementPtrInst>(V)->getPointerOperand();
+      }));
+      AccessTy = Ptrs.front()->user_back()->getType();
+    }
     ScalarCost =
-        TTI.getPointersChainCost(Ptrs, BasePtr, PtrsInfo, ScalarTy, CostKind);
+        TTI.getPointersChainCost(Ptrs, BasePtr, PtrsInfo, AccessTy, CostKind);
     auto *BaseGEP = dyn_cast<GEPOperator>(BasePtr);
     if (!BaseGEP) {
       auto *It = find_if(Ptrs, IsaPred<GEPOperator>);

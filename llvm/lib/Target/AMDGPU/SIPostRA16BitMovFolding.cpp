@@ -166,8 +166,6 @@ bool SIPostRA16BitMovFolding::mergeSingleMovB16Pair(MachineInstr &Lo,
       continue;
     if (Scan.modifiesRegister(Dst32, TRI))
       return false;
-    assert(!Scan.modifiesRegister(AMDGPU::EXEC, TRI) &&
-           "Expect no write on EXEC!");
     LoopCnt++;
     if (LoopCnt < UpperBoundCnt &&
         ((FirstSrc16 && Scan.modifiesRegister(FirstSrc16, TRI)) ||

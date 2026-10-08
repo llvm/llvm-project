@@ -61,8 +61,6 @@ defm : ValueField<"x86-experimental-pref-innermost-loop-alignment", "std::option
   "If specified, this option overrides alignment set by x86-experimental-pref-loop-alignment">;
 defm : BoolField<"mul-constant-optimization", "true",
   "Replace 'mul x, Const' with more effective instructions like SHIFT, LEA, etc">;
-defm : BoolField<"x86-widen-shift", "true",
-  "Replace narrow shifts with wider shifts">;
 
 // X86IndirectBranchTracking.cpp
 defm : BoolField<"x86-indirect-branch-tracking", "false",

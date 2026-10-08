@@ -1,4 +1,4 @@
-# RUN: llc -mtriple mips64-linux -emit-call-site-info -start-after=livedebugvalues -filetype=obj %s -o -| llvm-dwarfdump -| FileCheck %s
+# RUN: llc -mtriple mips64-linux -emit-call-site-info -start-after=live-debug-values -filetype=obj %s -o -| llvm-dwarfdump -| FileCheck %s
 
 ## Test case where a parameter value could be described as a sub-register.
 ## Built from source:

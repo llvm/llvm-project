@@ -846,9 +846,8 @@ Value *HWAddressSanitizer::getShadowNonTls(IRBuilder<> &IRB) {
   if (Mapping.isInIfunc())
     return getDynamicShadowIfunc(IRB);
 
-  Value *GlobalDynamicAddress =
-      IRB.GetInsertBlock()->getParent()->getParent()->getOrInsertGlobal(
-          kHwasanShadowMemoryDynamicAddress, PtrTy);
+  Value *GlobalDynamicAddress = IRB.getModule()->getOrInsertGlobal(
+      kHwasanShadowMemoryDynamicAddress, PtrTy);
   return IRB.CreateLoad(PtrTy, GlobalDynamicAddress);
 }
 

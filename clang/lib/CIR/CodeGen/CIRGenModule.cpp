@@ -1133,7 +1133,8 @@ static mlir::Attribute createNewGlobalView(CIRGenModule &cgm,
     newPtrTy = cast<cir::PointerType>(attr.getType());
 
   if (newPtrTy)
-    return bld.getGlobalViewAttr(newPtrTy, newGlob, newInds);
+    return bld.getGlobalViewAttr(newPtrTy, newGlob, newInds,
+                                 attr.getAddressPoint());
 
   // This may be unreachable in practice, but keep it as errorNYI while CIR
   // is still under development.
@@ -1448,7 +1449,8 @@ mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty,
   mlir::Value addr = cir::GetGlobalOp::create(
       builder, getLoc(d->getSourceRange()), ptrTy, g.getSymNameAttr(),
       tlsAccess,
-      /*static_local=*/g.getStaticLocalGuard().has_value());
+      /*static_local=*/g.getDynamicInitGuard().has_value() &&
+          d->isLocalVarDecl());
   return castGlobalToDeclAddrSpace(addr, *d);
 }
 

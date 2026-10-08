@@ -543,7 +543,7 @@ TEST_F(CIRControlFlowTest, CleanupScopeOp) {
 TEST_F(CIRControlFlowTest, GlobalOpWithCtorAndDtor) {
   OwningOpRef<ModuleOp> module = parse(R"CIR(
     !s32i = !cir.int<s, 32>
-    cir.global external @g = ctor : !s32i {
+    cir.global external @g = #cir.int<0> : !s32i ctor {
       cir.yield
     } dtor {
       cir.yield

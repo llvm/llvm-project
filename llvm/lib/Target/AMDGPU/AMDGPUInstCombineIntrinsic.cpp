@@ -2505,7 +2505,7 @@ Value *GCNTTIImpl::simplifyAMDGCNLaneIntrinsicDemanded(
   SmallVector<OperandBundleDef, 2> OpBundles;
   II.getOperandBundlesAsDefs(OpBundles);
 
-  Module *M = IC.Builder.GetInsertBlock()->getModule();
+  Module *M = IC.Builder.getModule();
   Function *Remangled =
       Intrinsic::getOrInsertDeclaration(M, II.getIntrinsicID(), {NewVT});
 

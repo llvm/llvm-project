@@ -12,6 +12,7 @@
 
 #include "PluginManager.h"
 #include "OffloadPolicy.h"
+#include "OmpAccError.h"
 #include "OpenMP/OMPT/Interface.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
@@ -31,6 +32,7 @@ using namespace llvm::omp::target::ompt;
 
 using namespace llvm;
 using namespace llvm::sys;
+using namespace llvm::omp::target::error;
 using namespace llvm::omp::target::debug;
 
 PluginManager *PM = nullptr;
@@ -238,7 +240,11 @@ bool PluginManager::registerImageOnDevice(
   ODBG(ODT_Init) << "Image " << Img->ImageStart << " with RTL " << PlatformName
                  << " on device " << DeviceHandle;
 
-  initializeDevice(DeviceHandle);
+  if (!initializeDevice(DeviceHandle)) {
+    ODBG(ODT_Init) << "Skipping image " << Img->ImageStart << " on device "
+                   << DeviceHandle << ": device failed to initialize";
+    return false;
+  }
 
   // Initialize (if necessary) translation table for this library.
   std::lock_guard<std::mutex> LG(TrlTblMtx);
@@ -255,7 +261,7 @@ bool PluginManager::registerImageOnDevice(
   ODBG(ODT_Init) << "Registering image " << Img->ImageStart << " with RTL "
                  << PlatformName;
 
-  auto UserId = DeviceIds[DeviceHandle];
+  auto UserId = DeviceIds.at(DeviceHandle);
   if (TT.TargetsTable.size() < static_cast<size_t>(UserId + 1)) {
     TT.DeviceTables.resize(UserId + 1, {});
     TT.TargetsImages.resize(UserId + 1, nullptr);
@@ -631,8 +637,8 @@ Expected<DeviceTy &> PluginManager::getDevice(uint32_t DeviceNo) {
   {
     auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
     if (DeviceNo >= ExclusiveDevicesAccessor->size())
-      return error::createOffloadError(
-          error::ErrorCode::INVALID_VALUE,
+      return createError(
+          ErrorCode::InvalidValue,
           "device number '%i' out of range, only %i devices available",
           DeviceNo, ExclusiveDevicesAccessor->size());
 
@@ -642,8 +648,7 @@ Expected<DeviceTy &> PluginManager::getDevice(uint32_t DeviceNo) {
   // Check whether global data has been mapped for this device
   if (DevicePtr->hasPendingImages())
     if (loadImagesOntoDevice(*DevicePtr) != OFFLOAD_SUCCESS)
-      return error::createOffloadError(error::ErrorCode::BACKEND_FAILURE,
-                                       "failed to load images on device '%i'",
-                                       DeviceNo);
+      return createError(ErrorCode::BackendFailure,
+                         "failed to load images on device '%i'", DeviceNo);
   return *DevicePtr;
 }

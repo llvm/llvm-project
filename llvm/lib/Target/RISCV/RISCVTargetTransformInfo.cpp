@@ -47,7 +47,7 @@ static cl::opt<unsigned>
                              "vectorization while tail-folding."),
                     cl::init(5), cl::Hidden);
 
-static cl::opt<bool> EnableOrLikeSelectOpt("enable-riscv-or-like-select",
+static cl::opt<bool> EnableOrLikeSelectOpt("riscv-or-like-select",
                                            cl::init(true), cl::Hidden);
 
 InstructionCost

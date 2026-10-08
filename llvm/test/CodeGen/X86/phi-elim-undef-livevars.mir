@@ -33,7 +33,7 @@ body: |
   ; CHECK-NEXT:   JMP_1 %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vr128 = COPY killed [[DEF]]
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vr128 = COPY [[DEF]]
   ; CHECK-NEXT:   $xmm0 = COPY killed [[COPY]]
   ; CHECK-NEXT:   RET 0, implicit killed $xmm0
   ; CHECK-NEXT: {{  $}}
@@ -41,7 +41,7 @@ body: |
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[V_SET0_:%[0-9]+]]:vr128 = V_SET0
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vr128 = COPY killed [[V_SET0_]]
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vr128 = COPY [[V_SET0_]]
   ; CHECK-NEXT:   JMP_1 %bb.3
   bb.0:
     successors: %bb.1, %bb.4

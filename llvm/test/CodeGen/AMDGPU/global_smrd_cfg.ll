@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgpu8.03--amdhsa -amdgpu-scalarize-global-loads=true < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu8.03--amdhsa < %s | FileCheck %s
 
 ; CHECK-LABEL: %bb22
 

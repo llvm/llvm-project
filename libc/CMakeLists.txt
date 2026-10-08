@@ -262,11 +262,20 @@ if(LIBC_ENABLE_COVERAGE)
         CACHE INTERNAL "Clang profile runtime")
   endif()
 endif()
+option(LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP
+       "Link hermetic tests against LLVM libc's own startup object"
+       ON)
 option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
 option(LLVM_LIBC_ALL_HEADERS "Outputs all functions in header files, regardless of whether they are enabled on this target" OFF)
 option(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS
   "Enable entrypoints with known-incomplete implementations (off by default)" OFF)
+option(LLVM_LIBC_ENABLE_MINOR_VARIANT
+  "Build LLVM libc minor variant archive" OFF)
+set(LLVM_LIBC_SUBARCHIVE_NAME "" CACHE STRING
+  "Target and archive name for the LLVM libc minor variant")
+set(LLVM_LIBC_SUBARCHIVE_ENTRYPOINTS "" CACHE STRING
+  "Semicolon-separated entrypoint targets for the LLVM libc minor variant")
 
 option(LIBC_CONFIG_PATH "The path to user provided folder that configures the build for the target system." OFF)
 

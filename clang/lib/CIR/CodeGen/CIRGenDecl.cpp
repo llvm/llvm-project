@@ -387,8 +387,8 @@ void CIRGenFunction::emitAutoVarDecl(const VarDecl &d) {
   emitAutoVarCleanups(emission);
 }
 
-void CIRGenFunction::emitLoopConditionVariable(
-    const VarDecl &d, DeferredLoopConditionCleanup &condCleanup) {
+void CIRGenFunction::emitLoopConditionVariable(const VarDecl &d,
+                                               CapturedCleanups &condCleanup) {
   // A condition variable always has automatic storage duration, so this
   // mirrors the auto-var path of emitVarDecl/emitAutoVarDecl. Capture the
   // lifetime-end cleanup pushed while emitting the alloca, but emit the
@@ -406,7 +406,7 @@ void CIRGenFunction::emitLoopConditionVariable(
 
   CIRGenFunction::VarDeclContext varDeclCtx{*this, &d};
   CIRGenFunction::AutoVarEmission emission = [&] {
-    DeferredLoopConditionCleanup::CaptureScope capture(condCleanup);
+    CapturedCleanups::CaptureScope capture(condCleanup);
     return emitAutoVarAlloca(d);
   }();
 
@@ -439,7 +439,7 @@ void CIRGenFunction::emitLoopConditionVariable(
   }
 
   {
-    DeferredLoopConditionCleanup::CaptureScope capture(condCleanup);
+    CapturedCleanups::CaptureScope capture(condCleanup);
     emitAutoVarCleanups(emission);
   }
 

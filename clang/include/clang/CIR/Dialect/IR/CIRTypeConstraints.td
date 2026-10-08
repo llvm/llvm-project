@@ -202,6 +202,19 @@ def CIR_AnyIntOrBoolOrFloatType
 
 def CIR_AnyComplexType : CIR_TypeBase<"::cir::ComplexType", "complex type">;
 
+class CIR_ComplexElementTypePred<Pred pred> : SubstLeaves<"$_self",
+    "::mlir::cast<::cir::ComplexType>($_self).getElementType()", pred>;
+
+class CIR_ComplexTypeOf<list<Type> types, string summary = "">
+    : CIR_ConfinedType<CIR_AnyComplexType,
+        [Or<!foreach(type, types, CIR_ComplexElementTypePred<type.predicate>)>],
+        !if(!empty(summary),
+            "complex of " # CIR_TypeSummaries<types>.value,
+            summary)>;
+
+def CIR_ComplexOfIntType : CIR_ComplexTypeOf<[CIR_AnyIntType]>;
+def CIR_ComplexOfFloatType : CIR_ComplexTypeOf<[CIR_AnyFloatType]>;
+
 def CIR_AnyComplexOrIntOrBoolOrFloatType
     : AnyTypeOf<[CIR_AnyComplexType, CIR_AnyIntOrBoolOrFloatType],
                 "complex, integer, boolean or floating point type"> {
