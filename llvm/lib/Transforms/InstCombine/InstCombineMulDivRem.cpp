@@ -27,6 +27,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -104,39 +105,48 @@ static Value *simplifyValueKnownNonZero(Value *V, InstCombinerImpl &IC,
 static Value *foldMulSelectToNegate(BinaryOperator &I,
                                     InstCombiner::BuilderTy &Builder) {
   Value *Cond, *OtherOp;
+  Instruction *SI = nullptr;
 
   // mul (select Cond, 1, -1), OtherOp --> select Cond, OtherOp, -OtherOp
   // mul OtherOp, (select Cond, 1, -1) --> select Cond, OtherOp, -OtherOp
-  if (match(&I, m_c_Mul(m_OneUse(m_Select(m_Value(Cond), m_One(), m_AllOnes())),
+  if (match(&I, m_c_Mul(m_OneUse(m_Instruction(
+                            SI, m_Select(m_Value(Cond), m_One(), m_AllOnes()))),
                         m_Value(OtherOp)))) {
     bool HasAnyNoWrap = I.hasNoSignedWrap() || I.hasNoUnsignedWrap();
     Value *Neg = Builder.CreateNeg(OtherOp, "", HasAnyNoWrap);
-    return Builder.CreateSelect(Cond, OtherOp, Neg);
+    return Builder.CreateSelect(Cond, OtherOp, Neg, "",
+                                ProfcheckDisableMetadataFixes ? nullptr : SI);
   }
   // mul (select Cond, -1, 1), OtherOp --> select Cond, -OtherOp, OtherOp
   // mul OtherOp, (select Cond, -1, 1) --> select Cond, -OtherOp, OtherOp
-  if (match(&I, m_c_Mul(m_OneUse(m_Select(m_Value(Cond), m_AllOnes(), m_One())),
+  if (match(&I, m_c_Mul(m_OneUse(m_Instruction(
+                            SI, m_Select(m_Value(Cond), m_AllOnes(), m_One()))),
                         m_Value(OtherOp)))) {
     bool HasAnyNoWrap = I.hasNoSignedWrap() || I.hasNoUnsignedWrap();
     Value *Neg = Builder.CreateNeg(OtherOp, "", HasAnyNoWrap);
-    return Builder.CreateSelect(Cond, Neg, OtherOp);
+    return Builder.CreateSelect(Cond, Neg, OtherOp, "",
+                                ProfcheckDisableMetadataFixes ? nullptr : SI);
   }
 
   // fmul (select Cond, 1.0, -1.0), OtherOp --> select Cond, OtherOp, -OtherOp
   // fmul OtherOp, (select Cond, 1.0, -1.0) --> select Cond, OtherOp, -OtherOp
-  if (match(&I, m_c_FMul(m_OneUse(m_Select(m_Value(Cond), m_SpecificFP(1.0),
-                                           m_SpecificFP(-1.0))),
+  if (match(&I, m_c_FMul(m_OneUse(m_Instruction(
+                             SI, m_Select(m_Value(Cond), m_SpecificFP(1.0),
+                                          m_SpecificFP(-1.0)))),
                          m_Value(OtherOp))))
-    return Builder.CreateSelectFMF(Cond, OtherOp,
-                                   Builder.CreateFNegFMF(OtherOp, &I), &I);
+    return Builder.CreateSelectFMF(
+        Cond, OtherOp, Builder.CreateFNegFMF(OtherOp, &I), &I, "",
+        ProfcheckDisableMetadataFixes ? nullptr : SI);
 
   // fmul (select Cond, -1.0, 1.0), OtherOp --> select Cond, -OtherOp, OtherOp
   // fmul OtherOp, (select Cond, -1.0, 1.0) --> select Cond, -OtherOp, OtherOp
-  if (match(&I, m_c_FMul(m_OneUse(m_Select(m_Value(Cond), m_SpecificFP(-1.0),
-                                           m_SpecificFP(1.0))),
+  if (match(&I, m_c_FMul(m_OneUse(m_Instruction(
+                             SI, m_Select(m_Value(Cond), m_SpecificFP(-1.0),
+                                          m_SpecificFP(1.0)))),
                          m_Value(OtherOp))))
-    return Builder.CreateSelectFMF(Cond, Builder.CreateFNegFMF(OtherOp, &I),
-                                   OtherOp, &I);
+    return Builder.CreateSelectFMF(
+        Cond, Builder.CreateFNegFMF(OtherOp, &I), OtherOp, &I, "",
+        ProfcheckDisableMetadataFixes ? nullptr : SI);
 
   return nullptr;
 }

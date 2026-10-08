@@ -133,9 +133,9 @@ public:
         EmitAddrsig(false), BBAddrMap(false), EmitCallGraphSection(false),
         EmitCallSiteInfo(false), EnableDebugEntryValues(false),
         ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
-        XRayFunctionIndex(true), DebugStrictDwarf(false), Hotpatch(false),
-        JMCInstrument(false), EnableCFIFixup(false), MisExpect(false),
-        XCOFFReadOnlyPointers(false), VerifyArgABICompliance(true) {}
+        XRayFunctionIndex(true), DebugStrictDwarf(false), JMCInstrument(false),
+        EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
+        VerifyArgABICompliance(true) {}
 
   /// NoZerosInBSS - By default some codegens place zero-initialized data to
   /// .bss section. This flag disables such behaviour (necessary, e.g. for
@@ -276,9 +276,6 @@ public:
   /// When set to true, don't use DWARF extensions in later DWARF versions.
   /// By default, it is set to false.
   unsigned DebugStrictDwarf : 1;
-
-  /// Emit the hotpatch flag in CodeView debug.
-  unsigned Hotpatch : 1;
 
   /// Enable JustMyCode instrumentation.
   unsigned JMCInstrument : 1;

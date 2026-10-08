@@ -1016,6 +1016,9 @@ features cannot lower the translation-unit ABI level;
   subsequent base; Clang now does the same.
   ([#210174](https://github.com/llvm/llvm-project/issues/210174))
 
+- Fixed ``/hotpatch`` with LTO, where objects were not marked as hotpatchable,
+  so ``/FUNCTIONPADMIN`` didn't pad their functions.
+
 #### LoongArch Support
 
 - `loongarch32-*-none-elf` and `loongarch64-*-none-elf` targets now use the

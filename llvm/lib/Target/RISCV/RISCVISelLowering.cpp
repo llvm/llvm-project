@@ -2049,6 +2049,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasStdExtZbkb())
     setTargetDAGCombine(ISD::BITREVERSE);
 
+  if (Subtarget.hasStdExtZbc() && Subtarget.is64Bit())
+    setTargetDAGCombine(ISD::SRL);
+
   if (Subtarget.hasStdExtFOrZfinx())
     setTargetDAGCombine({ISD::ZERO_EXTEND, ISD::FP_TO_SINT, ISD::FP_TO_UINT,
                          ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT});
@@ -23031,6 +23034,36 @@ static SDValue performVEXT_VLCombine(SDNode *N,
   return DCI.DAG.getNode(Opcode, SDLoc(N), DstVT, Src, Mask, VL);
 }
 
+// Combine (srl (clmul (and X, 0xffffffff), (and Y, 0xffffffff)), 31) ->
+// (srl (clmulr (shl X, 32), (shl Y, 32)), 32). This avoids needing two
+// shifts to zero extend each input.
+static SDValue performSRLCombine(SDNode *N,
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const RISCVSubtarget &Subtarget) {
+  assert(N->getOpcode() == ISD::SRL && "Unexpected opcode");
+
+  if (!DCI.isAfterLegalizeDAG() || N->getValueType(0) != MVT::i64 ||
+      !Subtarget.is64Bit() || !Subtarget.hasStdExtZbc())
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+
+  using namespace SDPatternMatch;
+  SDValue X, Y;
+  if (!sd_match(N, m_Srl(m_OneUse(m_Clmul(
+                             m_And(m_Value(X), m_SpecificInt(0xffffffff)),
+                             m_And(m_Value(Y), m_SpecificInt(0xffffffff)))),
+                         m_SpecificInt(31))))
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue ShAmt = DAG.getConstant(32, DL, MVT::i64);
+  X = DAG.getNode(ISD::SHL, DL, MVT::i64, X, ShAmt);
+  Y = DAG.getNode(ISD::SHL, DL, MVT::i64, Y, ShAmt);
+  SDValue Res = DAG.getNode(ISD::CLMULR, DL, MVT::i64, X, Y);
+  return DAG.getNode(ISD::SRL, DL, MVT::i64, Res, ShAmt);
+}
+
 static SDValue performSRACombine(SDNode *N, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
   assert(N->getOpcode() == ISD::SRA && "Unexpected opcode");
@@ -25632,10 +25665,12 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     [[fallthrough]];
   case ISD::SRL:
   case ISD::SHL: {
-    if (N->getOpcode() == ISD::SHL) {
+    if (N->getOpcode() == ISD::SRL)
+      if (SDValue V = performSRLCombine(N, DCI, Subtarget))
+        return V;
+    if (N->getOpcode() == ISD::SHL)
       if (SDValue V = performSHLCombine(N, DCI, Subtarget))
         return V;
-    }
     SDValue ShAmt = N->getOperand(1);
     if (ShAmt.getOpcode() == RISCVISD::SPLAT_VECTOR_SPLIT_I64_VL) {
       // We don't need the upper 32 bits of a 64-bit element for a shift amount.

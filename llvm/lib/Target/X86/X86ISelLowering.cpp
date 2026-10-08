@@ -20607,14 +20607,12 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
     if (SrcVT == MVT::v2i32 && VT == MVT::v2f64) {
       // Note: Since v2f64 is a legal type. We don't need to zero extend the
       // source for strict FP.
+      Src = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i32, Src,
+                        DAG.getUNDEF(SrcVT));
       if (IsStrict)
-        return DAG.getNode(
-            X86ISD::STRICT_CVTSI2P, dl, {VT, MVT::Other},
-            {Chain, DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i32, Src,
-                                DAG.getUNDEF(SrcVT))});
-      return DAG.getNode(X86ISD::CVTSI2P, dl, VT,
-                         DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i32, Src,
-                                     DAG.getUNDEF(SrcVT)));
+        return DAG.getNode(X86ISD::STRICT_CVTSI2P, dl, {VT, MVT::Other},
+                           {Chain, Src});
+      return DAG.getNode(X86ISD::CVTSI2P, dl, VT, Src);
     }
     if (SrcVT == MVT::v2i64 || SrcVT == MVT::v4i64)
       return lowerINT_TO_FP_vXi64(Op, dl, DAG, Subtarget);
