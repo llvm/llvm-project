@@ -142,7 +142,7 @@ define dso_local i32 @e() #0 {
 ; CHECK-NEXT:    .pad #392
 ; CHECK-NEXT:    sub sp, #392
 ; CHECK-NEXT:    movw r7, :lower16:.L_MergedGlobals
-; CHECK-NEXT:    vldr s15, .LCPI1_1
+; CHECK-NEXT:    vldr s19, .LCPI1_1
 ; CHECK-NEXT:    movt r7, :upper16:.L_MergedGlobals
 ; CHECK-NEXT:    movw r2, :lower16:e
 ; CHECK-NEXT:    mov r4, r7
@@ -150,26 +150,26 @@ define dso_local i32 @e() #0 {
 ; CHECK-NEXT:    ldr r6, [r4, #8]!
 ; CHECK-NEXT:    movt r2, :upper16:e
 ; CHECK-NEXT:    ldr r0, [r3, #4]!
-; CHECK-NEXT:    vmov r5, s15
+; CHECK-NEXT:    vmov r5, s19
 ; CHECK-NEXT:    vmov q0[2], q0[0], r4, r4
-; CHECK-NEXT:    vldr s12, .LCPI1_0
-; CHECK-NEXT:    vmov s13, r3
+; CHECK-NEXT:    vldr s16, .LCPI1_0
+; CHECK-NEXT:    vmov s17, r3
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r2
 ; CHECK-NEXT:    vdup.32 q7, r3
 ; CHECK-NEXT:    vmov q6[2], q6[0], r3, r5
 ; CHECK-NEXT:    vstrw.32 q0, [sp, #76]
 ; CHECK-NEXT:    vmov q0, q7
 ; CHECK-NEXT:    vmov q6[3], q6[1], r3, r2
-; CHECK-NEXT:    vmov q4, q7
+; CHECK-NEXT:    vmov q3, q7
 ; CHECK-NEXT:    vmov.32 q0[0], r2
 ; CHECK-NEXT:    vmov.32 q7[1], r2
 ; CHECK-NEXT:    vmov s21, r2
 ; CHECK-NEXT:    movs r1, #64
-; CHECK-NEXT:    vmov.f32 s20, s12
+; CHECK-NEXT:    vmov.f32 s20, s16
 ; CHECK-NEXT:    str r0, [sp, #24]
-; CHECK-NEXT:    vmov.f32 s22, s13
+; CHECK-NEXT:    vmov.f32 s22, s17
 ; CHECK-NEXT:    str r6, [r0]
-; CHECK-NEXT:    vmov.f32 s23, s15
+; CHECK-NEXT:    vmov.f32 s23, s19
 ; CHECK-NEXT:    str r0, [r0]
 ; CHECK-NEXT:    vstrw.32 q5, [r0]
 ; CHECK-NEXT:    vstrw.32 q7, [r0]
@@ -180,12 +180,12 @@ define dso_local i32 @e() #0 {
 ; CHECK-NEXT:    vmov q2[2], q2[0], r3, r3
 ; CHECK-NEXT:    mov.w r12, #4
 ; CHECK-NEXT:    vmov q1[3], q1[1], r2, r4
-; CHECK-NEXT:    vmov.f32 s14, s13
+; CHECK-NEXT:    vmov.f32 s18, s17
 ; CHECK-NEXT:    vmov q2[3], q2[1], r4, r5
-; CHECK-NEXT:    vmov.32 q4[0], r8
+; CHECK-NEXT:    vmov.32 q3[0], r8
 ; CHECK-NEXT:    @ implicit-def: $r2
 ; CHECK-NEXT:    str.w r8, [sp, #28]
-; CHECK-NEXT:    vstrw.32 q3, [sp, #44]
+; CHECK-NEXT:    vstrw.32 q4, [sp, #44]
 ; CHECK-NEXT:    strh.w r12, [sp, #390]
 ; CHECK-NEXT:    wlstp.8 lr, r1, .LBB1_2
 ; CHECK-NEXT:  .LBB1_1: @ =>This Inner Loop Header: Depth=1
@@ -195,7 +195,7 @@ define dso_local i32 @e() #0 {
 ; CHECK-NEXT:  .LBB1_2: @ %entry
 ; CHECK-NEXT:    vstrw.32 q1, [r0]
 ; CHECK-NEXT:    str.w r8, [r7]
-; CHECK-NEXT:    vstrw.32 q4, [r0]
+; CHECK-NEXT:    vstrw.32 q3, [r0]
 ; CHECK-NEXT:    vstrw.32 q2, [r0]
 ; CHECK-NEXT:    str.w r12, [sp, #308]
 ; CHECK-NEXT:  .LBB1_3: @ %for.cond
