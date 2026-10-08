@@ -204,7 +204,7 @@ integer function test_external_nocontext(cond, value) result(res)
     integer function external_base_func(value) result(output)
       import :: external_dispatch_func, external_host_func
       integer, value :: value
-      !$omp declare variant(external_base_func:external_dispatch_func) match(construct={dispatch})
+      !$omp declare variant(external_base_func:external_dispatch_func) match(construct={dispatch}, user={condition(score(2): .true.)})
       !$omp declare variant(external_base_func:external_host_func) match(device={kind(host)})
     end function
   end interface
@@ -247,7 +247,7 @@ subroutine test_dispatch_argument(c1, c2)
     integer function argument_base(value) result(output)
       import :: argument_dispatch, argument_host
       integer, value :: value
-      !$omp declare variant(argument_base:argument_dispatch) match(construct={dispatch})
+      !$omp declare variant(argument_base:argument_dispatch) match(construct={dispatch}, user={condition(score(2): .true.)})
       !$omp declare variant(argument_base:argument_host) match(device={kind(host)})
     end function
     subroutine target_dispatch(value)
@@ -259,7 +259,7 @@ subroutine test_dispatch_argument(c1, c2)
     subroutine target_base(value)
       import :: target_dispatch, target_host
       integer, value :: value
-      !$omp declare variant(target_base:target_dispatch) match(construct={dispatch})
+      !$omp declare variant(target_base:target_dispatch) match(construct={dispatch}, user={condition(score(2): .true.)})
       !$omp declare variant(target_base:target_host) match(device={kind(host)})
     end subroutine
   end interface
@@ -337,7 +337,7 @@ subroutine test_dispatch_ignore_tkr(c1, c2, values)
       import :: cast_dispatch, cast_host
       real, intent(in) :: values(:)
       !dir$ ignore_tkr(c) values
-      !$omp declare variant(cast_base:cast_dispatch) match(construct={dispatch})
+      !$omp declare variant(cast_base:cast_dispatch) match(construct={dispatch}, user={condition(score(2): .true.)})
       !$omp declare variant(cast_base:cast_host) match(device={kind(host)})
     end subroutine
   end interface
@@ -515,6 +515,46 @@ subroutine test_dispatch_array_result(nv, nc, values)
   !HLFIR-NEXT: omp.terminator
   !$omp dispatch novariants(nv) nocontext(nc)
   values = array_base(array_argument())
+end subroutine
+
+module dispatch_result
+  implicit none
+  type :: pair
+    integer :: v(2)
+  end type
+contains
+  function pair_variant() result(r)
+    type(pair) :: r
+    r%v = 2
+  end function
+  function pair_base() result(r)
+    !$omp declare variant(pair_base:pair_variant) match(construct={dispatch})
+    type(pair) :: r
+    r%v = 1
+  end function
+end module
+
+! A result returned in memory is saved in each branch, through the declare
+! of the result temporary.
+!HLFIR-LABEL: func @_QPtest_result_in_memory(
+subroutine test_result_in_memory(cond, x)
+  use dispatch_result
+  implicit none
+  logical :: cond
+  type(pair) :: x
+
+  !HLFIR: %[[RES:.*]] = fir.alloca !fir.type<_QMdispatch_resultTpair{{.*}}> <{bindc_name = ".result"}>
+  !HLFIR: omp.dispatch novariants(%[[COND:.*]]) {
+  !HLFIR: %[[DECL:.*]]:2 = hlfir.declare %[[RES]] uniq_name(".tmp.func_result")
+  !HLFIR-NEXT: fir.if %[[COND]] {
+  !HLFIR-NEXT: %[[BASE:.*]] = fir.call @_QMdispatch_resultPpair_base() {{.*}}
+  !HLFIR-NEXT: fir.save_result %[[BASE]] to %[[DECL]]#0
+  !HLFIR-NEXT: } else {
+  !HLFIR-NEXT: %[[VARIANT:.*]] = fir.call @_QMdispatch_resultPpair_variant() {{.*}}
+  !HLFIR-NEXT: fir.save_result %[[VARIANT]] to %[[DECL]]#0
+  !HLFIR-NEXT: {{^ *[}]$}}
+  !$omp dispatch novariants(cond)
+  x = pair_base()
 end subroutine
 
 !HLFIR-DAG: func.func private @_QPexternal_variant()

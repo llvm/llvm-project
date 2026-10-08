@@ -132,7 +132,7 @@ contains
   end subroutine
 
   subroutine base_routine()
-    !$omp declare variant(base_routine:dispatch_variant) match(construct={dispatch})
+    !$omp declare variant(base_routine:dispatch_variant) match(construct={dispatch}, user={condition(score(2): .true.)})
     !$omp declare variant(base_routine:host_variant) match(device={kind(host)})
     print *, "in base_routine"
   end subroutine
