@@ -17,7 +17,7 @@ void use_member(S s) { s++; }
 // CHECK-NEXT:   ParmVarDecl {{.*}} 'int'
 // CHECK-NEXT:   CompoundStmt
 // CHECK-NEXT:     DeclStmt
-// CHECK-NEXT:       VarDecl {{.*}} used tmp 'S' nrvo callinit
+// CHECK-NEXT:       VarDecl {{.*}} used __tmp 'S' nrvo callinit
 // CHECK-NEXT:         CXXConstructExpr {{.*}} 'S' 'void (const S &) noexcept'
 // CHECK-NEXT:           ImplicitCastExpr {{.*}} 'const S' lvalue <NoOp>
 // CHECK-NEXT:             UnaryOperator {{.*}} 'S' lvalue prefix '*' cannot overflow
@@ -27,10 +27,10 @@ void use_member(S s) { s++; }
 // CHECK-NEXT:         DeclRefExpr {{.*}} 'S &()' lvalue CXXMethod {{.*}} 'operator++' 'S &()'
 // CHECK-NEXT:       UnaryOperator {{.*}} 'S' lvalue prefix '*' cannot overflow
 // CHECK-NEXT:         CXXThisExpr {{.*}} 'S *' this
-// CHECK-NEXT:     ReturnStmt {{.*}} nrvo_candidate(Var {{.*}} 'tmp' 'S')
+// CHECK-NEXT:     ReturnStmt {{.*}} nrvo_candidate(Var {{.*}} '__tmp' 'S')
 // CHECK-NEXT:       CXXConstructExpr {{.*}} 'S' 'void (S &&) noexcept'
 // CHECK-NEXT:         ImplicitCastExpr {{.*}} 'S' xvalue <NoOp>
-// CHECK-NEXT:           DeclRefExpr {{.*}} 'S' lvalue Var {{.*}} 'tmp' 'S'
+// CHECK-NEXT:           DeclRefExpr {{.*}} 'S' lvalue Var {{.*}} '__tmp' 'S'
 
 struct T {
   int v;
@@ -44,7 +44,7 @@ void use_non_member(T t) { t--; }
 // CHECK-NEXT:   ParmVarDecl {{.*}} 'int'
 // CHECK-NEXT:   CompoundStmt
 // CHECK-NEXT:     DeclStmt
-// CHECK-NEXT:       VarDecl {{.*}} used tmp 'T' nrvo callinit
+// CHECK-NEXT:       VarDecl {{.*}} used __tmp 'T' nrvo callinit
 // CHECK-NEXT:         CXXConstructExpr {{.*}} 'T' 'void (const T &) noexcept'
 // CHECK-NEXT:           ImplicitCastExpr {{.*}} 'const T' lvalue <NoOp>
 // CHECK-NEXT:             DeclRefExpr {{.*}} 'T' lvalue ParmVar {{.*}} 'self' 'T &'
@@ -52,10 +52,10 @@ void use_non_member(T t) { t--; }
 // CHECK-NEXT:       ImplicitCastExpr {{.*}} 'T &(*)()' <FunctionToPointerDecay>
 // CHECK-NEXT:         DeclRefExpr {{.*}} 'T &()' lvalue CXXMethod {{.*}} 'operator--' 'T &()'
 // CHECK-NEXT:       DeclRefExpr {{.*}} 'T' lvalue ParmVar {{.*}} 'self' 'T &'
-// CHECK-NEXT:     ReturnStmt {{.*}} nrvo_candidate(Var {{.*}} 'tmp' 'T')
+// CHECK-NEXT:     ReturnStmt {{.*}} nrvo_candidate(Var {{.*}} '__tmp' 'T')
 // CHECK-NEXT:       CXXConstructExpr {{.*}} 'T' 'void (T &&) noexcept'
 // CHECK-NEXT:         ImplicitCastExpr {{.*}} 'T' xvalue <NoOp>
-// CHECK-NEXT:           DeclRefExpr {{.*}} 'T' lvalue Var {{.*}} 'tmp' 'T'
+// CHECK-NEXT:           DeclRefExpr {{.*}} 'T' lvalue Var {{.*}} '__tmp' 'T'
 
 struct U {
   int v;
@@ -69,7 +69,7 @@ void use_explicit_object(U u) { u++; }
 // CHECK-NEXT:   ParmVarDecl {{.*}} 'int'
 // CHECK-NEXT:   CompoundStmt
 // CHECK-NEXT:     DeclStmt
-// CHECK-NEXT:       VarDecl {{.*}} used tmp 'U' nrvo callinit
+// CHECK-NEXT:       VarDecl {{.*}} used __tmp 'U' nrvo callinit
 // CHECK-NEXT:         CXXConstructExpr {{.*}} 'U' 'void (const U &) noexcept'
 // CHECK-NEXT:           ImplicitCastExpr {{.*}} 'const U' lvalue <NoOp>
 // CHECK-NEXT:             DeclRefExpr {{.*}} 'U' lvalue ParmVar {{.*}} 'self' 'U &'
@@ -77,10 +77,10 @@ void use_explicit_object(U u) { u++; }
 // CHECK-NEXT:       ImplicitCastExpr {{.*}} 'U &(*)()' <FunctionToPointerDecay>
 // CHECK-NEXT:         DeclRefExpr {{.*}} 'U &()' lvalue CXXMethod {{.*}} 'operator++' 'U &()'
 // CHECK-NEXT:       DeclRefExpr {{.*}} 'U' lvalue ParmVar {{.*}} 'self' 'U &'
-// CHECK-NEXT:     ReturnStmt {{.*}} nrvo_candidate(Var {{.*}} 'tmp' 'U')
+// CHECK-NEXT:     ReturnStmt {{.*}} nrvo_candidate(Var {{.*}} '__tmp' 'U')
 // CHECK-NEXT:       CXXConstructExpr {{.*}} 'U' 'void (U &&) noexcept'
 // CHECK-NEXT:         ImplicitCastExpr {{.*}} 'U' xvalue <NoOp>
-// CHECK-NEXT:           DeclRefExpr {{.*}} 'U' lvalue Var {{.*}} 'tmp' 'U'
+// CHECK-NEXT:           DeclRefExpr {{.*}} 'U' lvalue Var {{.*}} '__tmp' 'U'
 
 // A deleted defaulted postfix operator has no body.
 struct Deleted {

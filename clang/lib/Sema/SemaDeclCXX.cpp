@@ -9770,7 +9770,7 @@ static StmtResult buildDefaultedPostfixOperatorBody(Sema &S, FunctionDecl *FD,
   if (Init.isInvalid())
     return StmtError();
   QualType C = FD->getReturnType();
-  IdentifierInfo *TmpName = &S.Context.Idents.get("tmp");
+  IdentifierInfo *TmpName = &S.Context.Idents.get("__tmp");
   VarDecl *Tmp =
       VarDecl::Create(S.Context, S.CurContext, Loc, Loc, TmpName, C,
                       S.Context.getTrivialTypeSourceInfo(C, Loc), SC_None);
