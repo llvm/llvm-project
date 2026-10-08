@@ -76,26 +76,6 @@ static auto InitListContainsPack(const InitListExpr *ILE) {
                       [](const Expr *E) { return isa<PackExpansionExpr>(E); });
 }
 
-static Token CreateValueDeclAnnotToken(ValueDecl *D, SourceLocation Loc) {
-  Token Tok;
-  Tok.startToken();
-  Tok.setKind(tok::annot_value_decl);
-  Tok.setAnnotationValue(D);
-  Tok.setAnnotationEndLoc(Loc);
-  Tok.setLocation(Loc);
-  return Tok;
-}
-
-static Token CreateExprAnnotToken(Expr *E, SourceLocation Loc) {
-  Token Tok;
-  Tok.startToken();
-  Tok.setKind(tok::annot_expr);
-  Tok.setAnnotationValue(ExprResult(E).getAsOpaquePointer());
-  Tok.setAnnotationEndLoc(Loc);
-  Tok.setLocation(Loc);
-  return Tok;
-}
-
 static bool HasDependentSize(const DeclContext *CurContext,
                              const CXXExpansionStmtPattern *Pattern) {
   switch (Pattern->getKind()) {
@@ -224,11 +204,15 @@ static IterableExpansionStmtData TryBuildIterableExpansionStmtInitializer(
     return Data;
 
   // Build 'begin + decltype(begin - begin){i}'.
+  auto TokBegin =
+      Token::createAnnotation(tok::annot_value_decl, ColonLoc, Info.BeginVar);
+  auto TokI = Token::createAnnotation(tok::annot_expr, ColonLoc,
+                                      ExprResult(Index).getAsOpaquePointer());
   ExprResult BeginPlusI = S.TokenInjectionHandler->ParseAsExpression(
       "__begin + decltype(__begin - __begin){__i}",
       {
-          {"__begin", CreateValueDeclAnnotToken(Info.BeginVar, ColonLoc)},
-          {"__i", CreateExprAnnotToken(Index, ColonLoc)},
+          {"__begin", TokBegin},
+          {"__i", TokI},
       },
       ColonLoc);
   if (BeginPlusI.isInvalid())
@@ -652,12 +636,9 @@ Sema::ComputeExpansionSize(CXXExpansionStmtPattern *Expansion) {
     //   auto __begin = begin-expr;
     //   auto __end = end-expr;
     //
-    Token DeclareBeginEnd;
-    DeclareBeginEnd.startToken();
-    DeclareBeginEnd.setKind(tok::annot_expansion_stmt_declare_begin_end);
-    DeclareBeginEnd.setAnnotationValue(Expansion->getRangeVar());
-    DeclareBeginEnd.setLocation(Loc);
-    DeclareBeginEnd.setAnnotationEndLoc(Loc);
+    auto DeclareBeginEnd =
+        Token::createAnnotation(tok::annot_expansion_stmt_declare_begin_end,
+                                Loc, Expansion->getRangeVar());
 
     // Build the lambda.
     ExprResult Call = TokenInjectionHandler->ParseAsExpression(
