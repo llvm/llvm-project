@@ -103,7 +103,7 @@ RecordLayoutAttr tryGetRecordLayout(mlir::ModuleOp mod, mlir::StringAttr name);
 /// Attempts to construct an llvm::Triple from a module's cir.triple attribute.
 /// If emitDiag is not null, additional diagnostics information is passed into
 /// emitDiag upon failure.
-mlir::FailureOr<llvm::Triple>
+std::optional<llvm::Triple>
 getTripleFromModule(mlir::ModuleOp mod, llvm::function_ref<mlir::InFlightDiagnostic()> emitDiag = nullptr);
 } // namespace cir
 

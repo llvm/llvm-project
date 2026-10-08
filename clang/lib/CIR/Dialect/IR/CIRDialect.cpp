@@ -402,14 +402,14 @@ static LogicalResult verifyProducedBy(Operation *op, Value operand,
   return success();
 }
 
-mlir::FailureOr<llvm::Triple> cir::getTripleFromModule(
+std::optional<llvm::Triple> cir::getTripleFromModule(
   mlir::ModuleOp mod,
   llvm::function_ref<mlir::InFlightDiagnostic()> emitDiag) {
   if (!mod->hasAttr(cir::CIRDialect::getTripleAttrName())) {
     if (emitDiag)
       emitDiag() << "module is missing " << cir::CIRDialect::getTripleAttrName()
                  << " attribute";
-    return mlir::failure();
+    return std::nullopt;
   }
 
   auto tripleAttr = mod->getAttrOfType<mlir::StringAttr>(
@@ -418,7 +418,7 @@ mlir::FailureOr<llvm::Triple> cir::getTripleFromModule(
     if (emitDiag)
       emitDiag() << "expected a string from module attribute "
                  << cir::CIRDialect::getTripleAttrName();
-    return mlir::failure();
+    return std::nullopt;
   }
 
   return llvm::Triple{tripleAttr.getValue()};

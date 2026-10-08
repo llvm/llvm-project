@@ -5819,9 +5819,9 @@ mlir::LogicalResult CIRToLLVMCpuIdOpLowering::matchAndRewrite(
 
   StringRef asmString, constraints;
   mlir::ModuleOp moduleOp = op->getParentOfType<mlir::ModuleOp>();
-  auto triple = cir::getTripleFromModule(moduleOp,
+  std::optional<llvm::Triple> triple = cir::getTripleFromModule(moduleOp,
       [&] { return moduleOp.emitError(); }); 
-  if (mlir::failed(triple))
+  if (!triple)
     return mlir::failure();
   if (triple->getArch() == llvm::Triple::x86) {
     asmString = "cpuid";

@@ -87,8 +87,8 @@ createLowerModule(mlir::ModuleOp module,
   assert(!cir::MissingFeatures::makeTripleAlwaysPresent());
 
   // Fetch target information.
-  auto triple = cir::getTripleFromModule(module, emitDiag);
-  if (mlir::failed(triple))
+  std::optional<llvm::Triple> triple = cir::getTripleFromModule(module, emitDiag);
+  if (!triple)
     return nullptr;
   clang::TargetOptions targetOptions;
   targetOptions.Triple = triple->str();
