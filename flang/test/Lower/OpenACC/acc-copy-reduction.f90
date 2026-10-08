@@ -12,9 +12,12 @@ end subroutine
 ! CHECK: %[[REDUCTION1:.*]] = acc.reduction varPtr({{.*}}) recipe({{.*}}) name("x") -> !fir.ref<i32>
 ! CHECK: acc.parallel dataOperands(%[[COPY1]] : !fir.ref<i32>) reduction(%[[REDUCTION1]] : !fir.ref<i32>) {
 ! TODO: The region body binds x to the first mapping, so lowering depends on
-! clause order. The reduction mapping should take priority in both cases; check
-! the binding here once that is the case. Only the operands, which do not
-! depend on that choice, are checked for now.
+! clause order. The reduction mapping should take priority in both cases. The
+! two checks below record the current, wrong behavior. When it is fixed they
+! will fail: change them to expect %[[REDUCTION1]], as in reduction_then_copy
+! below, rather than deleting them.
+! CHECK: hlfir.declare %[[COPY1]]
+! CHECK: acc.copyout accPtr(%[[COPY1]] : !fir.ref<i32>)
 
 subroutine reduction_then_copy()
   integer :: x
