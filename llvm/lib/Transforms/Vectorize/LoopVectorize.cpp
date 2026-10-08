@@ -546,7 +546,7 @@ public:
                       ElementCount VecWidth, unsigned UnrollFactor,
                       GeneratedRTChecks &RTChecks, VPlan &Plan)
       : OrigLoop(OrigLoop), PSE(PSE), LI(LI), DT(DT), TTI(TTI), AC(AC),
-        VF(VecWidth), UF(UnrollFactor), Builder(PSE.getSE()->getContext()),
+        VF(VecWidth), UF(UnrollFactor), Builder(PSE.getSE()->getModule()),
         RTChecks(RTChecks), Plan(Plan),
         VectorPHVPBB(cast<VPBasicBlock>(
             Plan.getVectorLoopRegion()->getSinglePredecessor())) {}
@@ -1176,7 +1176,8 @@ public:
 
   /// Returns true if the predicated reduction select should be used to set the
   /// incoming value for the reduction phi.
-  bool usePredicatedReductionSelect(RecurKind RecurrenceKind) const {
+  bool usePredicatedReductionSelect(RecurKind RecurrenceKind,
+                                    bool HasUsesOutsideReductionChain) const {
     // Force to use predicated reduction select since the EVL of the
     // second-to-last iteration might not be VF*UF.
     if (foldTailWithEVL())
@@ -1187,10 +1188,12 @@ public:
     if (maskPartialAliasing())
       return true;
 
-    // Note: For FindLast recurrences we prefer a predicated select to simplify
-    // matching in handleFindLastReductions(), rather than handle multiple
+    // Note: For FindLast recurrences and multi-use reductions we prefer a
+    // predicated select to simplify matching in handleFindLastReductions() and
+    // handleMultiUseReductions() respectively, rather than handle multiple
     // cases.
-    if (RecurrenceDescriptor::isFindLastRecurrenceKind(RecurrenceKind))
+    if (RecurrenceDescriptor::isFindLastRecurrenceKind(RecurrenceKind) ||
+        HasUsesOutsideReductionChain)
       return true;
 
     return PreferPredicatedReductionSelect ||
@@ -3216,9 +3219,9 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
         } else {
           auto *WidenCall = dyn_cast<VPWidenCallRecipe>(R);
           Function *CalledFn =
-              WidenCall ? WidenCall->getCalledScalarFunction()
-                        : cast<Function>(R->getOperand(R->getNumOperands() - 1)
-                                             ->getLiveInIRValue());
+              WidenCall
+                  ? WidenCall->getCalledScalarFunction()
+                  : cast<Function>(R->getLastOperand()->getLiveInIRValue());
           Name = CalledFn->getName();
         }
         OS << " call to " << Name;
@@ -3445,6 +3448,20 @@ static EpilogueLowering getEpilogueTailLowering(
     reportVectorizationInfo(
         "Epilogue tail-folding is not supported with fixed-order recurrence",
         "InvalidTailFoldedEpilogue", ORE, L);
+    return CM_EpilogueAllowed;
+  }
+
+  // TODO: This is conservative: it rejects any target that prefers EVL, even
+  // for fixed-width epilogue VFs where EVL won't be chosen. Move this check to
+  // where the epilogue's TF style is known once epilogue TF is supported.
+  TailFoldingStyle TFStyle = TTI->getPreferredTailFoldingStyle();
+  if (ForceTailFoldingStyle.getNumOccurrences())
+    TFStyle = ForceTailFoldingStyle.getValue();
+  // TODO: Remove once EVL recipes support cloning.
+  if (TFStyle == TailFoldingStyle::DataWithEVL) {
+    reportVectorizationInfo("Epilogue tail-folding is not supported yet with "
+                            "EVL-based tail-folding",
+                            "UnsupportedEpilogueTailFoldingPolicy", ORE, L);
     return CM_EpilogueAllowed;
   }
 
@@ -6417,7 +6434,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
   // Create recipes for header phis. For outer loops, reductions, recurrences
   // and in-loop reductions are empty since legality doesn't detect them.
   if (!RUN_VPLAN_PASS(
-          VPlanTransforms::createHeaderPhiRecipes, *VPlan0, PSE, *OrigLoop,
+          VPlanTransforms::createHeaderPhiRecipes, *VPlan0, PSE, *OrigLoop, ORE,
           VPDT, Legal->getInductionVars(), Legal->getReductionVars(),
           Legal->getFixedOrderRecurrences(), Config.getInLoopReductions(),
           Config.getHints().allowReordering())) {
@@ -6627,8 +6644,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
 
   RUN_VPLAN_PASS(VPlanTransforms::makeScalarizationDecisions, *Plan, Range);
 
-  RUN_VPLAN_PASS(VPlanTransforms::makeCallWideningDecisions, *Plan, Range,
-                 RecipeBuilder, CostCtx);
+  // Widened calls may only use the first lane of some operands.
+  if (RUN_VPLAN_PASS(VPlanTransforms::makeCallWideningDecisions, *Plan, Range,
+                     RecipeBuilder, CostCtx))
+    RUN_VPLAN_PASS(VPlanTransforms::makeScalarizationDecisions, *Plan, Range);
 
   RUN_VPLAN_PASS(VPlanTransforms::narrowInductionTruncates, *Plan, Range, TTI,
                  PSE);
@@ -6795,7 +6814,8 @@ void LoopVectorizationPlanner::addReductionResultComputation(
 
     // Remove the predicated select if the target doesn't want it.
     VPValue *V;
-    if (!CM->usePredicatedReductionSelect(RecurrenceKind) &&
+    if (!CM->usePredicatedReductionSelect(
+            RecurrenceKind, PhiR->hasUsesOutsideReductionChain()) &&
         match(PhiR->getBackedgeValue(),
               m_Select(m_Specific(HeaderMask), m_VPValue(V), m_Specific(PhiR))))
       PhiR->setBackedgeValue(V);
@@ -7283,33 +7303,27 @@ struct MainPlanResumeMarkers {
 
 /// Prepare \p MainPlan for vectorizing the main vector loop during epilogue
 /// vectorization.
-static MainPlanResumeMarkers preparePlanForMainVectorLoop(VPlan &MainPlan,
-                                                          VPlan &EpiPlan) {
+static MainPlanResumeMarkers preparePlanForMainVectorLoop(VPlan &MainPlan) {
   using namespace VPlanPatternMatch;
   // When vectorizing the epilogue, FindFirstIV & FindLastIV reductions can
   // introduce multiple uses of undef/poison. If the reduction start value may
   // be undef or poison it needs to be frozen and the frozen start has to be
   // used when computing the reduction result. We also need to use the frozen
   // value in the resume phi generated by the main vector loop, as this is also
-  // used to compute the reduction result after the epilogue vector loop.
-  auto AddFreezeForFindLastIVReductions = [](VPlan &Plan,
-                                             bool UpdateResumePhis) {
-    VPBuilder Builder(Plan.getEntry());
-    for (VPInstruction &VPI :
-         make_isa_range<VPInstruction>(*Plan.getMiddleBlock())) {
-      VPValue *OrigStart;
-      if (!matchFindIVResult(&VPI, m_VPValue(), m_VPValue(OrigStart)))
-        continue;
-      if (isGuaranteedNotToBeUndefOrPoison(OrigStart->getLiveInIRValue()))
-        continue;
-      VPInstruction *Freeze = Builder.createFreeze(OrigStart, {}, "fr");
-      VPI.setOperand(2, Freeze);
-      if (UpdateResumePhis)
-        OrigStart->replaceUsesWithIf(Freeze, IsaPred<VPPhi>);
-    }
-  };
-  AddFreezeForFindLastIVReductions(MainPlan, true);
-  AddFreezeForFindLastIVReductions(EpiPlan, false);
+  // used to compute the reduction result after the epilogue vector loop. The
+  // epilogue plan re-uses the frozen values.
+  VPBuilder Builder(MainPlan.getEntry());
+  for (VPInstruction &VPI :
+       make_isa_range<VPInstruction>(*MainPlan.getMiddleBlock())) {
+    VPValue *OrigStart;
+    if (!matchFindIVResult(&VPI, m_VPValue(), m_VPValue(OrigStart)))
+      continue;
+    if (isGuaranteedNotToBeUndefOrPoison(OrigStart->getLiveInIRValue()))
+      continue;
+    VPInstruction *Freeze = Builder.createFreeze(OrigStart, {}, "fr");
+    VPI.setOperand(2, Freeze);
+    OrigStart->replaceUsesWithIf(Freeze, IsaPred<VPPhi>);
+  }
 
   VPValue *VectorTC = nullptr;
   auto *Term =
@@ -7417,8 +7431,6 @@ static void preparePlanForEpilogueVectorLoop(
   Increment->replaceAllUsesWith(OffsetIVInc);
   OffsetIVInc->setOperand(0, Increment);
 
-  SmallDenseMap<VPValue *, VPValue *, 8> ToFrozen;
-
   // Resume values must be created in the vector preheader.
   VPBasicBlock *VectorPH = Plan.getVectorPreheader();
   VPBuilder PHBuilder(VectorPH, VectorPH->getFirstNonPhi());
@@ -7470,10 +7482,14 @@ static void preparePlanForEpilogueVectorLoop(
         } else {
           assert(isa<VPIRValue>(SentinelVPV) &&
                  "sentinel must be a live-in to be used in the preheader");
-          VPValue *OrigStart;
-          if (VPlanPatternMatch::match(
-                  BypassOp, VPlanPatternMatch::m_Freeze(m_VPValue(OrigStart))))
-            ToFrozen[Plan.getOrAddLiveIn(cast<VPIRValue>(OrigStart))] = StartV;
+          // Use the start value frozen for the main plan, if any, when
+          // computing the reduction result.
+          if (match(BypassOp, m_Freeze(m_VPValue())))
+            for (VPUser *U : RdxResult->users()) {
+              auto *VPI = dyn_cast<VPInstruction>(U);
+              if (VPI && matchFindIVResult(VPI, m_VPValue(), m_VPValue()))
+                VPI->setOperand(2, StartV);
+            }
 
           // Adjust resume: select(icmp eq ResumeVPV, StartV), Sentinel,
           // ResumeVPV
@@ -7530,34 +7546,22 @@ static void preparePlanForEpilogueVectorLoop(
     cast<VPHeaderPHIRecipe>(&R)->setStartValue(ResumeVPV);
   }
 
-  // For some VPValues in the epilogue plan we must re-use the generated IR
-  // values from the main plan. Replace them with live-in VPValues.
+  // Re-use the trip count and steps expanded for the main loop, as skeleton
+  // creation needs it as a value that dominates both the scalar and vector
+  // epilogue loops.
   // TODO: This is a workaround needed for epilogue vectorization and it
   // should be removed once induction resume value creation is done
   // directly in VPlan.
-  for (auto &R : make_early_inc_range(*Plan.getEntry())) {
-    // Re-use frozen values from the main plan for Freeze VPInstructions in the
-    // epilogue plan. This ensures all users use the same frozen value.
-    auto *VPI = dyn_cast<VPInstruction>(&R);
-    if (VPI && VPI->getOpcode() == Instruction::Freeze) {
-      VPI->replaceAllUsesWith(ToFrozen.lookup(VPI->getOperand(0)));
-      continue;
-    }
-
-    // Re-use the trip count and steps expanded for the main loop, as
-    // skeleton creation needs it as a value that dominates both the scalar
-    // and vector epilogue loops
-    auto *ExpandR = dyn_cast<VPExpandSCEVRecipe>(&R);
-    if (!ExpandR)
-      continue;
-    assert(ExpandedSCEVs.contains(ExpandR->getSCEV()) &&
+  for (VPExpandSCEVRecipe &ExpandR : make_early_inc_range(
+           make_isa_range<VPExpandSCEVRecipe>(*Plan.getEntry()))) {
+    assert(ExpandedSCEVs.contains(ExpandR.getSCEV()) &&
            "Epilogue plan needs a SCEV not expanded for the main loop");
     VPValue *ExpandedVal =
-        Plan.getOrAddLiveIn(ExpandedSCEVs.lookup(ExpandR->getSCEV()));
-    ExpandR->replaceAllUsesWith(ExpandedVal);
-    if (Plan.getTripCount() == ExpandR)
+        Plan.getOrAddLiveIn(ExpandedSCEVs.lookup(ExpandR.getSCEV()));
+    ExpandR.replaceAllUsesWith(ExpandedVal);
+    if (Plan.getTripCount() == &ExpandR)
       Plan.resetTripCount(ExpandedVal);
-    ExpandR->eraseFromParent();
+    ExpandR.eraseFromParent();
   }
 
   auto VScale = Config.getVScaleForTuning();
@@ -7921,10 +7925,18 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   std::pair<StringRef, std::string> VecDiagMsg, IntDiagMsg;
   bool VectorizeLoop = true, InterleaveLoop = true;
   if (VF.Width.isScalar()) {
-    LLVM_DEBUG(dbgs() << "LV: Vectorization is possible but not beneficial.\n");
-    VecDiagMsg = {
-        "VectorizationNotBeneficial",
-        "the cost-model indicates that vectorization is not beneficial"};
+    if (LVP.hasVectorPlan()) {
+      LLVM_DEBUG(
+          dbgs() << "LV: Vectorization is possible but not beneficial.\n");
+      VecDiagMsg = {
+          "VectorizationNotBeneficial",
+          "the cost-model indicates that vectorization is not beneficial"};
+    } else {
+      LLVM_DEBUG(dbgs() << "LV: Vectorization is not possible. Failed to "
+                           "create any vector VPlans.\n");
+      VecDiagMsg = {"VectorizationNotPossible",
+                    "vectorization is not possible"};
+    }
     VectorizeLoop = false;
   }
 
@@ -7946,16 +7958,22 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     InterleaveLoop = false;
   } else if (IC == 1 && UserIC <= 1) {
     // Tell the user interleaving is not beneficial.
-    LLVM_DEBUG(dbgs() << "LV: Interleaving is not beneficial.\n");
-    IntDiagMsg = {
-        "InterleavingNotBeneficial",
-        "the cost-model indicates that interleaving is not beneficial"};
-    InterleaveLoop = false;
-    if (UserIC == 1) {
-      IntDiagMsg.first = "InterleavingNotBeneficialAndDisabled";
-      IntDiagMsg.second +=
-          " and is explicitly disabled or interleave count is set to 1";
+    if (LVP.hasAPlan()) {
+      LLVM_DEBUG(dbgs() << "LV: Interleaving is not beneficial.\n");
+      IntDiagMsg = {
+          "InterleavingNotBeneficial",
+          "the cost-model indicates that interleaving is not beneficial"};
+      if (UserIC == 1) {
+        IntDiagMsg.first = "InterleavingNotBeneficialAndDisabled";
+        IntDiagMsg.second +=
+            " and is explicitly disabled or interleave count is set to 1";
+      }
+    } else {
+      LLVM_DEBUG(dbgs() << "LV: Interleaving is not possible. Failed to create"
+                        << " any vplans\n");
+      IntDiagMsg = {"InterleavingNotPossible", "interleaving is not possible"};
     }
+    InterleaveLoop = false;
   } else if (IC > 1 && UserIC == 1) {
     // Tell the user interleaving is beneficial, but it explicitly disabled.
     LLVM_DEBUG(dbgs() << "LV: Interleaving is beneficial but is explicitly "
@@ -8084,8 +8102,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // factor) again shortly afterwards.
     BestEpiPlan.getMiddleBlock()->setName("vec.epilog.middle.block");
     BestEpiPlan.getVectorPreheader()->setName("vec.epilog.ph");
-    MainPlanResumeMarkers Markers =
-        preparePlanForMainVectorLoop(BestMainPlan, BestEpiPlan);
+    MainPlanResumeMarkers Markers = preparePlanForMainVectorLoop(BestMainPlan);
 
     // Add minimum iteration check for the epilogue plan, followed by runtime
     // checks for the main plan.

@@ -148,6 +148,11 @@ features cannot lower the translation-unit ABI level;
   As a result, the `__str__` representation of its return values changed.
   Like other libclang enums, it now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`.
 
+- Change the behavior of the deprecated `CodeCompletionResults.results` property.
+  It is used as an implementation detail now and should not be accessed directly.
+  Existing uses of it should be changed to use `CodeCompletionResults` directly:
+  it nows supports `__len__` and `__getitem__`, so it can be used the same as `CodeCompletionResults.results` previously.
+
 - `Cursor` instance's `enum_value` method now returns 1 instead of -1 for `true` bool enumeration values
 
 ### OpenCL Potentially Breaking Changes
@@ -257,6 +262,8 @@ features cannot lower the translation-unit ABI level;
 - Added `__builtin_sort_pack` to sort a pack of types using the same
   order as `__builtin_type_order`.
 
+- Updates Unicode Names data to Unicode 18.0 (from Unicode 18.0 Beta).
+
 ### New Compiler Flags
 
 - New option `-fmodules-validate-directory-dependencies` makes an implicitly
@@ -305,6 +312,11 @@ features cannot lower the translation-unit ABI level;
   `-ftrivial-auto-var-init=` entry in the User's Manual for the details,
   including where C deliberately departs from C 6.2.4p6.
 
+- `--config` files now support trailing `#` comments after an option, in
+  addition to whole-line comments. Mid-line comment-denoting `#`s must be
+  separated from surrounding arguments by whitespace. Quoted arguments can no
+  longer be split across multiple lines using a backslash.
+
 ### Removed Compiler Flags
 
 ### Attribute Changes in Clang
@@ -319,7 +331,15 @@ features cannot lower the translation-unit ABI level;
   index such that it would inadvertently apply the attribute with no arguments,
   causing all function parameters of pointer type to be considered nonnull. (#GH228670)
 
+- Added `[[clang::unsafe_buffer_usage_in_container]]` (and equivalent spelling
+  `[[clang::unsafe_buffer_usage("container")]]`) to allow two-parameter container
+  and view constructors and factory functions to opt in to
+  `-Wunsafe-buffer-usage-in-container` diagnostics.
+
 ### Improvements to Clang's diagnostics
+
+- Fixed spurious `-Wimplicit-void-ptr-cast` warnings in C for parenthesized
+  null pointer macros such as `(NULL)`. (#GH171874)
 
 - `-Wfortify-source` now diagnoses when `strlcat`, `__builtin_strlcat`, `strlcpy`, or
   `__builtin_strlcpy` is called with a size argument larger than the destination buffer.
@@ -534,6 +554,14 @@ features cannot lower the translation-unit ABI level;
   for pointer arithmetic on statically-sized arrays when the offset is a
   non-negative constant within the array bounds.
 
+- `-Wunsafe-buffer-usage-in-container` now warns on unsafe calls to
+  two-parameter constructors and factory functions annotated with
+  `[[clang::unsafe_buffer_usage_in_container]]` or
+  `[[clang::unsafe_buffer_usage("container")]]`. For these annotated functions,
+  the safe `(.data(), .size())` and `(.begin(), .end())` argument checks use
+  duck typing rather than a hardcoded type list, suppressing false positives
+  when both methods are called on the same user-defined container object.
+
 - `-Wc++98-compat` now diagnoses explicit conversion functions in C++20 and
   later, matching the behavior in C++11 through C++17. (#GH161689)
 
@@ -573,6 +601,13 @@ features cannot lower the translation-unit ABI level;
 
 - Improve Clang diagnoses when unary `__imag` operator with non-complex type operand is used as lvalue. (#GH222383)
 
+- Added `-Wredundant-defer` to diagnose redundant uses of the `_Defer`
+  keyword, such as when deferring the last statement of a block; when
+  used as the body of a conditional; or when it immediately precedes
+  a `break`/`continue` statement or a `return` with no argument.
+ 
+- Clang now diagnoses arrays whose size is deduced from an initializer list when they exceed the maximum object size
+
 - Added `-Wunsafe-buffer-usage-main-argv` as a diagnostic group under
   `-Wunsafe-buffer-usage` to control warnings on `main`'s `argv` parameter,
   allowing users to suppress them with `-Wno-unsafe-buffer-usage-main-argv`.
@@ -586,6 +621,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed incorrect handling of C++ import preprocessing token when a digraph character after import. (#GH190693)
 - Fixed a crash when emitting RTTI for a `dllexport` class, or the fundamental type descriptors for `__cxxabiv1::__fundamental_type_info`, under `-fvisibility=hidden`. (#GH207963)
 - Fixed an assertion failure when passing a wide string literal to `__builtin_nan`. (#GH212108)
+- Fixed an assertion failure when converting between an x87 `long double` vector and another vector type of the same size. (#GH173254), (#GH63548)
 - Fixed a constraint comparison bug in partial ordering. (#GH182671)
 - Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
 - Fixed an assertion on omp taskloop transparent (#GH197162)
@@ -641,12 +677,20 @@ features cannot lower the translation-unit ABI level;
   reference to a vector type; `vec_step` (in C++ for OpenCL) and
   `__builtin_ptrauth_type_discriminator` similarly no longer accept reference
   types that their evaluation silently mishandled. (#GH216997)
+- Fix a crash when using `__builtin_assume_aligned` with dynamic allocations
+  during constant evaluation. (#GH173767)
 - Fixed a crash when constant-evaluating `__builtin_align_up`, `__builtin_align_down`,
-  or `__builtin_is_aligned` with pointers without an underlying object. Null pointers 
+  or `__builtin_is_aligned` with pointers without an underlying object. Null pointers
   are handled as aligned values, while other base-less pointers are rejected during constant
   evaluation.
 
 #### Bug Fixes to Attribute Support
+
+- Fixed an assertion failure when parsing malformed GNU `__attribute__`
+  syntax followed by a parenthesized expression list in C code. (#GH225045)
+
+- Clang now diagnoses incompatible `weak` and `ifunc` attributes, including
+  weak linkage introduced through redeclarations or `#pragma weak`. (#GH220923)
 
 - Fixed crash (assertion) when the `alloc_align` attribute was applied to a declaration whose type has a `FunctionProtoType` but which is not itself a `FunctionDecl`, such as a function-pointer variable. (#GH122058)
 
@@ -843,9 +887,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed ambiguous overload where two non-static member functions with
   different signatures could be incorrectly considered equivalent. (#GH224499)
 
-- Fixed an assertion failure when explicitly instantiating a nested member with 
-  an ill-formed template argument. Clang now checks for a failed declaration 
-  lookup before asserting that the name is not dependent, avoiding an assertion 
+- Fixed an assertion failure when explicitly instantiating a nested member with
+  an ill-formed template argument. Clang now checks for a failed declaration
+  lookup before asserting that the name is not dependent, avoiding an assertion
   after an earlier diagnostic has caused the declaration to be unavailable. (#GH220525)
 
 - Fixed a crash in constant evaluation when a new-expression selects a
@@ -945,6 +989,12 @@ features cannot lower the translation-unit ABI level;
 
 #### Arm and AArch64 Support
 
+- Added support for the following Arm processors (command-line identifiers in
+  parentheses):
+
+  - C2-Pro (`c2-pro`).
+  - C2-Ultra (`c2-ultra`).
+
 - Added support for pointer authentication discrimination of C++ virtual table
   pointers stored in VTTs via the `-fptrauth-vtt-vtable-pointer-discrimination`
   option.
@@ -970,6 +1020,9 @@ features cannot lower the translation-unit ABI level;
   not Arm64EC or x64) reuses the tail padding of the over-aligned base for the
   subsequent base; Clang now does the same.
   ([#210174](https://github.com/llvm/llvm-project/issues/210174))
+
+- Fixed ``/hotpatch`` with LTO, where objects were not marked as hotpatchable,
+  so ``/FUNCTIONPADMIN`` didn't pad their functions.
 
 #### LoongArch Support
 

@@ -1109,8 +1109,9 @@ MCSection *TargetLoweringObjectFileELF::getSectionForConstantImpl(
     return Context.getELFSection(CstPrefix + ".cst32" + SectionSuffixStr,
                                  ELF::SHT_PROGBITS, MergeableCstFlags, 32);
   if (Kind.isReadOnly())
-    return Context.getELFSection(CstPrefix + SectionSuffixStr,
-                                 ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
+    return Context.getELFSection(
+        CstPrefix + SectionSuffixStr, ELF::SHT_PROGBITS,
+        ELF::SHF_ALLOC | (IsLarge ? ELF::SHF_X86_64_LARGE : 0));
 
   assert(Kind.isReadOnlyWithRel() && "Unknown section kind");
   return Context.getELFSection(".data.rel.ro" + SectionSuffixStr,
