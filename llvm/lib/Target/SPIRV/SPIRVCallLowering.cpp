@@ -670,6 +670,8 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                  .addDef(ResVReg)
                  .addUse(GR->getSPIRVTypeID(RetType))
                  .add(Info.Callee);
+  if (Info.NoMerge)
+    MIB.setMIFlag(MachineInstr::MIFlag::NoMerge);
 
   for (const auto &Arg : Info.OrigArgs) {
     // Currently call args should have single vregs.
