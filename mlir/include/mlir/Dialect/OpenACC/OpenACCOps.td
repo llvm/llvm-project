@@ -3822,15 +3822,22 @@ def OpenACC_WaitOp : OpenACC_Op<"wait", [AttrSizedOperandSegments]> {
 }
 
 //===----------------------------------------------------------------------===//
-// acc_on_device runtime call
+// 3.2.15 acc_on_device
 //===----------------------------------------------------------------------===//
 
 def OpenACC_OnDeviceOp : OpenACC_Op<"on_device"> {
-  let summary = "acc_on_device intrinsic operation";
+  let summary = "call to the acc_on_device runtime function";
 
   let description = [{
-    Represents a call to the OpenACC `acc_on_device` runtime function.
-    Returns whether the current thread is executing on the given device type.
+    Represents a call to the OpenACC `acc_on_device` runtime function
+    (OpenACC 3.4, section 3.2.15). The result indicates whether execution is
+    on the given device type.
+
+    The call is evaluated at compile time only when device specialization
+    runs and the call is inside the code being specialized. On that path, a
+    compile-time constant device type folds to a constant result. Otherwise
+    the call remains a runtime call. The device type must be one of the
+    defined accelerator types.
 
     Example:
 
