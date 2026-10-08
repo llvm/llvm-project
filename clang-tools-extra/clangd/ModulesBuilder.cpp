@@ -42,20 +42,20 @@ llvm::cl::opt<bool> DebugModulesBuilder(
 
 // Disable reusing prebuilt module files on windows by default.
 // As clangd may lock these module files on windows to prevent
-// these module files to be updated by buiild system on windows.
+// these module files to be updated by build system on windows.
 //
 // See https://github.com/clangd/clangd/issues/2497 for details.
 #ifdef _WIN32
-constexpr bool DisablePrebuiltModuleFileReuseDefault = true;
+constexpr bool ReusePrebuiltModuleFileDefault = false;
 #else
-constexpr bool DisablePrebuiltModuleFileReuseDefault = false;
+constexpr bool ReusePrebuiltModuleFileDefault = true;
 #endif
 
-llvm::cl::opt<bool> DisablePrebuiltModuleFileReuse(
-    "disable-prebuilt-module-file-reuse",
-    llvm::cl::desc("Do not reuse prebuilt module files from existing build "
+llvm::cl::opt<bool> ReusePrebuiltModuleFile(
+    "reuse-prebuilt-module-file",
+    llvm::cl::desc("Whether or not to reuse prebuilt module files from existing build "
                    "artifacts."),
-    llvm::cl::init(DisablePrebuiltModuleFileReuseDefault));
+    llvm::cl::init(ReusePrebuiltModuleFileDefault));
 
 llvm::cl::opt<unsigned> VersionedModuleFileGCThresholdSeconds(
     "modules-builder-versioned-gc-threshold-seconds",
@@ -1191,7 +1191,7 @@ void ModulesBuilder::ModulesBuilderImpl::
 void ModulesBuilder::ModulesBuilderImpl::getPrebuiltModuleFile(
     StringRef ModuleName, PathRef ModuleUnitFileName, const ThreadsafeFS &TFS,
     ReusablePrerequisiteModules &BuiltModuleFiles) {
-  if (DisablePrebuiltModuleFileReuse)
+  if (!ReusePrebuiltModuleFile)
     return;
 
   auto Cmd = getCDB().getCompileCommand(ModuleUnitFileName);
