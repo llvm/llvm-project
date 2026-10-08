@@ -543,9 +543,8 @@ define void @memset_p0_sz1055_align_4_varsetval(ptr addrspace(0) align 4 %dst, i
 ; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[38:39], v[0:1], 0, s[0:1]
 ; GFX942-SDAG-NEXT:    s_add_u32 s0, s0, 0x100
 ; GFX942-SDAG-NEXT:    s_addc_u32 s1, s1, 0
-; GFX942-SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[0:1], v[36:37]
 ; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[48:49], v[38:39], 0, s[2:3]
-; GFX942-SDAG-NEXT:    s_and_b64 vcc, exec, vcc
+; GFX942-SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[0:1], v[36:37]
 ; GFX942-SDAG-NEXT:    flat_store_dwordx4 v[38:39], v[20:23] offset:64
 ; GFX942-SDAG-NEXT:    flat_store_dwordx4 v[38:39], v[12:15] offset:32
 ; GFX942-SDAG-NEXT:    flat_store_dwordx4 v[38:39], v[8:11] offset:16
@@ -730,9 +729,8 @@ define void @memset_p0_sz2048_align_4_varsetval(ptr addrspace(0) align 4 %dst, i
 ; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[36:37], v[0:1], 0, s[0:1]
 ; GFX942-SDAG-NEXT:    s_add_u32 s0, s0, 0x100
 ; GFX942-SDAG-NEXT:    s_addc_u32 s1, s1, 0
-; GFX942-SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[0:1], v[34:35]
 ; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[38:39], v[36:37], 0, s[2:3]
-; GFX942-SDAG-NEXT:    s_and_b64 vcc, exec, vcc
+; GFX942-SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[0:1], v[34:35]
 ; GFX942-SDAG-NEXT:    flat_store_dwordx4 v[36:37], v[18:21] offset:64
 ; GFX942-SDAG-NEXT:    flat_store_dwordx4 v[36:37], v[10:13] offset:32
 ; GFX942-SDAG-NEXT:    flat_store_dwordx4 v[36:37], v[6:9] offset:16
@@ -867,7 +865,6 @@ define void @memset_p1_sz1055_align_4_varsetval(ptr addrspace(1) align 4 %dst, i
 ; GFX942-SDAG-NEXT:    s_add_u32 s0, s0, 0x100
 ; GFX942-SDAG-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX942-SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[0:1], v[36:37]
-; GFX942-SDAG-NEXT:    s_and_b64 vcc, exec, vcc
 ; GFX942-SDAG-NEXT:    global_store_dwordx4 v[38:39], v[32:35], off offset:112
 ; GFX942-SDAG-NEXT:    global_store_dwordx4 v[38:39], v[28:31], off offset:96
 ; GFX942-SDAG-NEXT:    global_store_dwordx4 v[38:39], v[24:27], off offset:80
@@ -1011,7 +1008,6 @@ define void @memset_p1_sz2048_align_4_varsetval(ptr addrspace(1) align 4 %dst, i
 ; GFX942-SDAG-NEXT:    s_add_u32 s0, s0, 0x100
 ; GFX942-SDAG-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX942-SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[0:1], v[34:35]
-; GFX942-SDAG-NEXT:    s_and_b64 vcc, exec, vcc
 ; GFX942-SDAG-NEXT:    global_store_dwordx4 v[36:37], v[30:33], off offset:112
 ; GFX942-SDAG-NEXT:    global_store_dwordx4 v[36:37], v[26:29], off offset:96
 ; GFX942-SDAG-NEXT:    global_store_dwordx4 v[36:37], v[22:25], off offset:80
@@ -1351,7 +1347,6 @@ define void @memset_p5_sz1055_align_4_varsetval(ptr addrspace(5) align 4 %dst, i
 ; GFX942-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX942-SDAG-NEXT:    s_add_u32 s0, s0, 0x100
 ; GFX942-SDAG-NEXT:    s_addc_u32 s1, s1, 0
-; GFX942-SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[0:1], v[34:35]
 ; GFX942-SDAG-NEXT:    scratch_store_dwordx4 v36, v[30:33], off offset:112
 ; GFX942-SDAG-NEXT:    scratch_store_dwordx4 v36, v[26:29], off offset:96
 ; GFX942-SDAG-NEXT:    scratch_store_dwordx4 v36, v[22:25], off offset:80
@@ -1369,6 +1364,7 @@ define void @memset_p5_sz1055_align_4_varsetval(ptr addrspace(5) align 4 %dst, i
 ; GFX942-SDAG-NEXT:    scratch_store_dwordx4 v36, v[6:9], off offset:144
 ; GFX942-SDAG-NEXT:    scratch_store_dwordx4 v36, v[2:5], off offset:128
 ; GFX942-SDAG-NEXT:    v_add_u32_e32 v36, 0x100, v36
+; GFX942-SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[0:1], v[34:35]
 ; GFX942-SDAG-NEXT:    s_cbranch_vccnz .LBB10_1
 ; GFX942-SDAG-NEXT:  ; %bb.2: ; %static-memset-post-expansion
 ; GFX942-SDAG-NEXT:    s_mov_b32 s0, 0x4040404
@@ -1495,7 +1491,6 @@ define void @memset_p5_sz2048_align_4_varsetval(ptr addrspace(5) align 4 %dst, i
 ; GFX942-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX942-SDAG-NEXT:    s_add_u32 s0, s0, 0x100
 ; GFX942-SDAG-NEXT:    s_addc_u32 s1, s1, 0
-; GFX942-SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[0:1], v[34:35]
 ; GFX942-SDAG-NEXT:    scratch_store_dwordx4 v0, v[30:33], off offset:112
 ; GFX942-SDAG-NEXT:    scratch_store_dwordx4 v0, v[26:29], off offset:96
 ; GFX942-SDAG-NEXT:    scratch_store_dwordx4 v0, v[22:25], off offset:80
@@ -1513,7 +1508,7 @@ define void @memset_p5_sz2048_align_4_varsetval(ptr addrspace(5) align 4 %dst, i
 ; GFX942-SDAG-NEXT:    scratch_store_dwordx4 v0, v[6:9], off offset:144
 ; GFX942-SDAG-NEXT:    scratch_store_dwordx4 v0, v[2:5], off offset:128
 ; GFX942-SDAG-NEXT:    v_add_u32_e32 v0, 0x100, v0
-; GFX942-SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[0:1], v[6:7]
+; GFX942-SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[0:1], v[34:35]
 ; GFX942-SDAG-NEXT:    s_cbranch_vccnz .LBB11_1
 ; GFX942-SDAG-NEXT:  ; %bb.2: ; %static-memset-post-expansion
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0)

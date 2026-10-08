@@ -90,10 +90,10 @@ define <4 x i16> @vec_8xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1)
 ; GFX9-NEXT:  .LBB0_2: ; %T
 ; GFX9-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:  .LBB0_5: ; %exit
-; GFX9-NEXT:    v_pk_ashrrev_i16 v0, 15, v2 op_sel_hi:[0,1]
+; GFX9-NEXT:  .LBB0_3: ; %exit
+; GFX9-NEXT:    v_pk_ashrrev_i16 v0, 15, v0 op_sel_hi:[0,1]
 ; GFX9-NEXT:    s_movk_i32 s4, 0x8000
-; GFX9-NEXT:    v_pk_ashrrev_i16 v1, 15, v3 op_sel_hi:[0,0]
+; GFX9-NEXT:    v_pk_ashrrev_i16 v1, 15, v1 op_sel_hi:[0,0]
 ; GFX9-NEXT:    v_or_b32_e32 v2, 0xffff8000, v0
 ; GFX9-NEXT:    v_or_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX9-NEXT:    v_or_b32_e32 v3, 0xffff8000, v1
@@ -639,7 +639,7 @@ define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX9-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
-; GFX9-NEXT:  .LBB3_5: ; %exit
+; GFX9-NEXT:  .LBB3_3: ; %exit
 ; GFX9-NEXT:    v_pk_ashrrev_i16 v0, 15, v4 op_sel_hi:[0,1]
 ; GFX9-NEXT:    s_movk_i32 s4, 0x8000
 ; GFX9-NEXT:    v_pk_ashrrev_i16 v1, 15, v5 op_sel_hi:[0,0]
