@@ -1833,6 +1833,10 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   // WebAssembly float semantics are always known
   case Intrinsic::wasm_trunc_signed:
   case Intrinsic::wasm_trunc_unsigned:
+  case Intrinsic::x86_sse42_crc32_32_8:
+  case Intrinsic::x86_sse42_crc32_32_16:
+  case Intrinsic::x86_sse42_crc32_32_32:
+  case Intrinsic::x86_sse42_crc32_64_64:
     return true;
 
   // Floating point operations cannot be folded in strictfp functions in
@@ -3998,12 +4002,16 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
     case Intrinsic::aarch64_crc32x:
       return ConstantFoldCRC32(Ty, C0, C1, 8, 0xEDB88320);
     case Intrinsic::aarch64_crc32cb:
+    case Intrinsic::x86_sse42_crc32_32_8:
       return ConstantFoldCRC32(Ty, C0, C1, 1, 0x82F63B78);
     case Intrinsic::aarch64_crc32ch:
+    case Intrinsic::x86_sse42_crc32_32_16:
       return ConstantFoldCRC32(Ty, C0, C1, 2, 0x82F63B78);
     case Intrinsic::aarch64_crc32cw:
+    case Intrinsic::x86_sse42_crc32_32_32:
       return ConstantFoldCRC32(Ty, C0, C1, 4, 0x82F63B78);
     case Intrinsic::aarch64_crc32cx:
+    case Intrinsic::x86_sse42_crc32_64_64:
       return ConstantFoldCRC32(Ty, C0, C1, 8, 0x82F63B78);
     }
 

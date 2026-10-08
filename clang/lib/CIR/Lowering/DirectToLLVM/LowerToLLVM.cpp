@@ -1035,9 +1035,30 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::GlobalViewAttr globalAttr) {
     }
     mlir::Type resTy = addrOp.getType();
     mlir::Type eltTy = converter->convertType(sourceType);
-    addrOp = mlir::LLVM::GEPOp::create(rewriter, parentOp->getLoc(), resTy,
-                                       eltTy, addrOp, indices,
-                                       mlir::LLVM::GEPNoWrapFlags::none);
+    auto gep = mlir::LLVM::GEPOp::create(rewriter, parentOp->getLoc(), resTy,
+                                         eltTy, addrOp, indices,
+                                         mlir::LLVM::GEPNoWrapFlags::none);
+    if (globalAttr.getAddressPoint()) {
+      // Like classic codegen, a vtable address point is inbounds, and only the
+      // one vtable of the group it points into can be accessed through it.
+      auto indices =
+          globalAttr.getIndices().getAsValueRange<mlir::IntegerAttr>();
+      assert(llvm::range_size(indices) == 2 &&
+             "address point takes a vtable index and a slot index");
+      auto vtableTy = mlir::cast<mlir::LLVM::LLVMArrayType>(
+          mlir::cast<mlir::LLVM::LLVMStructType>(eltTy)
+              .getBody()[(*indices.begin()).getZExtValue()]);
+      mlir::DataLayout layout(parentOp->getParentOfType<mlir::ModuleOp>());
+      int64_t slotSize = layout.getTypeSize(vtableTy.getElementType());
+      int64_t offset = (*std::next(indices.begin())).getSExtValue() * slotSize;
+      int64_t size = vtableTy.getNumElements() * slotSize;
+      unsigned indexBits = *layout.getTypeIndexBitwidth(
+          mlir::cast<mlir::LLVM::LLVMPointerType>(addrOp.getType()));
+      gep.setNoWrapFlags(mlir::LLVM::GEPNoWrapFlags::inbounds);
+      gep.setInrangeAttr(mlir::LLVM::ConstantRangeAttr::get(
+          rewriter.getContext(), indexBits, -offset, size - offset));
+    }
+    addrOp = gep;
   }
 
   return castGlobalAddrToType(addrOp, globalAttr.getType(), sourceType,
