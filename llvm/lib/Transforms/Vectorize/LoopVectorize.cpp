@@ -6644,8 +6644,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
 
   RUN_VPLAN_PASS(VPlanTransforms::makeScalarizationDecisions, *Plan, Range);
 
-  RUN_VPLAN_PASS(VPlanTransforms::makeCallWideningDecisions, *Plan, Range,
-                 RecipeBuilder, CostCtx);
+  // Widened calls may only use the first lane of some operands.
+  if (RUN_VPLAN_PASS(VPlanTransforms::makeCallWideningDecisions, *Plan, Range,
+                     RecipeBuilder, CostCtx))
+    RUN_VPLAN_PASS(VPlanTransforms::makeScalarizationDecisions, *Plan, Range);
 
   RUN_VPLAN_PASS(VPlanTransforms::narrowInductionTruncates, *Plan, Range, TTI,
                  PSE);
