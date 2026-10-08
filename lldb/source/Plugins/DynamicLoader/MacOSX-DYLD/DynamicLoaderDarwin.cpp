@@ -774,7 +774,7 @@ bool DynamicLoaderDarwin::AddModulesUsingPreloadedModules(
           if (commpage_section) {
             ModuleSpec module_spec(objfile->GetFileSpec(),
                                    image_info.GetArchitecture());
-            module_spec.GetObjectName() = ConstString(commpage_sect_name);
+            module_spec.GetObjectName() = commpage_sect_name.str();
             ModuleSP commpage_image_module_sp(
                 target_images.FindFirstModule(module_spec));
             if (!commpage_image_module_sp) {

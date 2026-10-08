@@ -475,7 +475,7 @@ ModuleSpecList ObjectContainerBSDArchive::GetModuleSpecifications(
                 object_specs.GetSize() - 1);
             llvm::sys::TimePoint<> object_mod_time(
                 std::chrono::seconds(object->modification_time));
-            spec.GetObjectName() = ConstString(object->ar_name);
+            spec.GetObjectName() = object->ar_name;
             spec.SetObjectOffset(0);
             spec.SetObjectSize(object->file_size);
             spec.GetObjectModificationTime() = object_mod_time;
@@ -494,7 +494,7 @@ ModuleSpecList ObjectContainerBSDArchive::GetModuleSpecifications(
                 object_specs.GetSize() - 1);
             llvm::sys::TimePoint<> object_mod_time(
                 std::chrono::seconds(object->modification_time));
-            spec.GetObjectName() = ConstString(object->ar_name);
+            spec.GetObjectName() = object->ar_name;
             spec.SetObjectOffset(object_file_offset);
             spec.SetObjectSize(object->file_size);
             spec.GetObjectModificationTime() = object_mod_time;
