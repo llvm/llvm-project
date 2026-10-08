@@ -498,7 +498,9 @@ def FeatureRequiresAlignedVGPRs : SubtargetFeature<"vgpr-align2",
 
 defm GFX90AInsts : AMDGPUSubtargetFeature<"gfx90a-insts",
   "Additional instructions for GFX90A+",
-  /*GenPredicate=*/0
+  /*GenPredicate=*/0,
+  /*GenAssemblerPredicate=*/1,
+  [FeatureGCN3Encoding]
 >;
 
 defm TgSplitSupport : AMDGPUSubtargetFeature<"tgsplit-support",
@@ -507,7 +509,9 @@ defm TgSplitSupport : AMDGPUSubtargetFeature<"tgsplit-support",
 
 defm GFX940Insts : AMDGPUSubtargetFeature<"gfx940-insts",
   "Additional instructions for GFX940+",
-  /*GenPredicate=*/0
+  /*GenPredicate=*/0,
+  /*GenAssemblerPredicate=*/1,
+  [FeatureGFX90AInsts]
 >;
 
 defm BufferInvInst : AMDGPUSubtargetFeature<"buffer-inv-inst",
@@ -640,24 +644,31 @@ defm GFX10Insts : AMDGPUSubtargetFeature<"gfx10-insts",
 
 defm GFX11Insts : AMDGPUSubtargetFeature<"gfx11-insts",
   "Additional instructions for GFX11+",
-  /*GenPredicate=*/0
+  /*GenPredicate=*/0,
+  /*GenAssemblerPredicate=*/1,
+  [FeatureGFX10Insts]
 >;
 
 defm GFX12Insts : AMDGPUSubtargetFeature<"gfx12-insts",
   "Additional instructions for GFX12+",
-  /*GenPredicate=*/0
+  /*GenPredicate=*/0,
+  /*GenAssemblerPredicate=*/1,
+  [FeatureGFX11Insts]
 >;
 
 defm GFX1250Insts : AMDGPUSubtargetFeature<"gfx1250-insts",
   "Additional instructions for GFX1250+",
-  /*GenPredicate=*/0
+  /*GenPredicate=*/0,
+  /*GenAssemblerPredicate=*/1,
+  [FeatureGFX12Insts]
 >;
 
 defm GFX13Insts : AMDGPUSubtargetFeature<"gfx13-insts",
   "Additional instructions for GFX13+",
   /*GenPredicate=*/0,
   /*GenAssemblerPredicate=*/0,
-  [FeatureSWakeupImm,
+  [FeatureGFX1250Insts,
+   FeatureSWakeupImm,
    FeatureSBarrierLeaveImm,
   ]
 >;
@@ -671,7 +682,9 @@ defm GFX10_3Insts : AMDGPUSubtargetFeature<"gfx10-3-insts",
 
 defm GFX11_7Insts : AMDGPUSubtargetFeature<"gfx11-7-insts",
   "Additional instructions for GFX11.7",
-  /*GenPredicate=*/0
+  /*GenPredicate=*/0,
+  /*GenAssemblerPredicate=*/1,
+  [FeatureGFX11Insts]
 >;
 
 defm GFX7GFX8GFX9Insts : AMDGPUSubtargetFeature<"gfx7-gfx8-gfx9-insts",
