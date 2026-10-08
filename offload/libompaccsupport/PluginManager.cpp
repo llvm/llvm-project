@@ -240,7 +240,11 @@ bool PluginManager::registerImageOnDevice(
   ODBG(ODT_Init) << "Image " << Img->ImageStart << " with RTL " << PlatformName
                  << " on device " << DeviceHandle;
 
-  initializeDevice(DeviceHandle);
+  if (!initializeDevice(DeviceHandle)) {
+    ODBG(ODT_Init) << "Skipping image " << Img->ImageStart << " on device "
+                   << DeviceHandle << ": device failed to initialize";
+    return false;
+  }
 
   // Initialize (if necessary) translation table for this library.
   std::lock_guard<std::mutex> LG(TrlTblMtx);
@@ -257,7 +261,7 @@ bool PluginManager::registerImageOnDevice(
   ODBG(ODT_Init) << "Registering image " << Img->ImageStart << " with RTL "
                  << PlatformName;
 
-  auto UserId = DeviceIds[DeviceHandle];
+  auto UserId = DeviceIds.at(DeviceHandle);
   if (TT.TargetsTable.size() < static_cast<size_t>(UserId + 1)) {
     TT.DeviceTables.resize(UserId + 1, {});
     TT.TargetsImages.resize(UserId + 1, nullptr);

@@ -858,12 +858,6 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
   return RTL->launch_kernel(RTLDeviceID, TgtEntryPtr, LaunchArgs, AsyncInfo);
 }
 
-// Run region on device
-bool DeviceTy::printDeviceInfo() {
-  RTL->print_device_info(RTLDeviceID);
-  return true;
-}
-
 // Whether data can be copied to DstDevice directly
 bool DeviceTy::isDataExchangable(const DeviceTy &DstDevice) {
   if (RTL != DstDevice.RTL)
