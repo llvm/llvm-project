@@ -744,7 +744,7 @@ define void @f12() #0 {
 ; RV64I-NEXT:    .cfi_offset ra, -8
 ; RV64I-NEXT:    lui a0, 9
 ; RV64I-NEXT:    sub t1, sp, a0
-; RV64I-NEXT:    .cfi_def_cfa t1, 36864
+; RV64I-NEXT:    .cfi_def_cfa t1, 38896
 ; RV64I-NEXT:    lui t2, 1
 ; RV64I-NEXT:  .LBB12_1: # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    sub sp, sp, t2
@@ -753,7 +753,7 @@ define void @f12() #0 {
 ; RV64I-NEXT:  # %bb.2:
 ; RV64I-NEXT:    .cfi_def_cfa_register sp
 ; RV64I-NEXT:    addi sp, sp, -1120
-; RV64I-NEXT:    .cfi_def_cfa_offset 37984
+; RV64I-NEXT:    .cfi_def_cfa_offset 40016
 ; RV64I-NEXT:    addi a0, sp, 8
 ; RV64I-NEXT:    call g
 ; RV64I-NEXT:    lui a0, 9
@@ -774,7 +774,7 @@ define void @f12() #0 {
 ; RV32I-NEXT:    .cfi_offset ra, -4
 ; RV32I-NEXT:    lui a0, 9
 ; RV32I-NEXT:    sub t1, sp, a0
-; RV32I-NEXT:    .cfi_def_cfa t1, 36864
+; RV32I-NEXT:    .cfi_def_cfa t1, 38896
 ; RV32I-NEXT:    lui t2, 1
 ; RV32I-NEXT:  .LBB12_1: # =>This Inner Loop Header: Depth=1
 ; RV32I-NEXT:    sub sp, sp, t2
@@ -783,7 +783,7 @@ define void @f12() #0 {
 ; RV32I-NEXT:  # %bb.2:
 ; RV32I-NEXT:    .cfi_def_cfa_register sp
 ; RV32I-NEXT:    addi sp, sp, -1120
-; RV32I-NEXT:    .cfi_def_cfa_offset 37984
+; RV32I-NEXT:    .cfi_def_cfa_offset 40016
 ; RV32I-NEXT:    addi a0, sp, 12
 ; RV32I-NEXT:    call g
 ; RV32I-NEXT:    lui a0, 9
