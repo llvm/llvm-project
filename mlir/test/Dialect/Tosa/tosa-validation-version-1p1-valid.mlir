@@ -428,6 +428,14 @@ func.func @test_gather_mxfp_i32_indices(%arg0: tensor<13x21x32x!tosa.block_scale
 
 // -----
 
+// CHECK-LABEL: gather_mxfp_f8e4m3
+func.func @gather_mxfp_f8e4m3(%arg0: tensor<1x35x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>, %arg1: tensor<1x126xi64>) -> tensor<1x126x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>> {
+  %0 = tosa.gather %arg0, %arg1 : (tensor<1x35x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>, tensor<1x126xi64>) -> tensor<1x126x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+  return %0 : tensor<1x126x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+}
+
+// -----
+
 // CHECK-LABEL: test_gather_mxfp_i64_indices
 func.func @test_gather_mxfp_i64_indices(%arg0: tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>, %arg1: tensor<13x26xi64>) -> tensor<13x26x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>> {
   %0 = tosa.gather %arg0, %arg1 : (tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>, tensor<13x26xi64>) -> tensor<13x26x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>

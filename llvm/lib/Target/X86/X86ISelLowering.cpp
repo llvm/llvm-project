@@ -1965,11 +1965,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::MUL, MVT::v32i16, HasBWI ? Legal : Custom);
     setOperationAction(ISD::MUL, MVT::v64i8,  Custom);
 
-    setOperationAction(ISD::MULHU, MVT::v8i64, Custom);
     if (Subtarget.is64Bit()) {
       setOperationAction(ISD::UMUL_LOHI, MVT::v8i64, Custom);
       setOperationAction(ISD::SMUL_LOHI, MVT::v8i64, Custom);
     }
+
+    setOperationAction(ISD::MULHU, MVT::v8i64, Custom);
+    setOperationAction(ISD::MULHS, MVT::v8i64, Custom);
     setOperationAction(ISD::MULHU, MVT::v16i32, Custom);
     setOperationAction(ISD::MULHS, MVT::v16i32, Custom);
     setOperationAction(ISD::MULHS, MVT::v32i16, HasBWI ? Legal : Custom);
@@ -2054,9 +2056,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     if (Subtarget.hasDQI()) {
       setOperationAction(ISD::MUL,        MVT::v8i64, Legal);
-
-      // MULHS needs vpmullq (AVX512DQ) for its low multiply to be a win.
-      setOperationAction(ISD::MULHS, MVT::v8i64, Custom);
     }
 
     if (Subtarget.hasCDI()) {
@@ -49010,9 +49009,9 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       }
     } else if (VT == MVT::i16 && LHS.getOpcode() == ISD::BITCAST &&
                RHS.getOpcode() == ISD::BITCAST) {
-      MVT SVT = LHS.getOperand(0).getSimpleValueType();
+      EVT SVT = LHS.getOperand(0).getValueType();
       if ((SVT == MVT::f16 || SVT == MVT::bf16) &&
-          SVT == RHS.getOperand(0).getSimpleValueType()) {
+          SVT == RHS.getOperand(0).getValueType()) {
         F16LHS = DAG.getBitcast(MVT::f16, LHS.getOperand(0));
         F16RHS = DAG.getBitcast(MVT::f16, RHS.getOperand(0));
       }
