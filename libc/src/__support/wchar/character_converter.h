@@ -120,6 +120,21 @@ public:
 #endif // LIBC_TYPES_WCHAR_T_IS_UTF32 || LIBC_TYPES_WCHAR_T_IS_UTF16
 
   template <typename CharType> ErrorOr<CharType> pop();
+
+  // mbrtowc, mbrtoc16, mbrtoc32
+  // mbrtoc16 may return a surrogate pair in 2 consecutive calls, and specify -3
+  // as a return value (for the second call). mbrtowc doesn't specify -3 as a
+  // return value. Set allowPartialPop to true for mbrtoc16.
+  template <typename T, bool allowPartialPop>
+  ErrorOr<size_t> mbrto_generic(T *__restrict dest_ptr,
+                                const char *__restrict src_ptr,
+                                size_t max_src_bytes);
+  // wcrtomb, c16rtomb, c32rtomb
+  // c16rtomb may consume a surrogate pair in 2 consecutive calls, and return 0
+  // on the first call. wcrtomb doesn't use that behavior. Set allowPartialPush
+  // to true for c16rtomb.
+  template <typename T, bool allowPartialPush>
+  ErrorOr<size_t> rtomb_generic(char *__restrict dest_ptr, T src);
 };
 
 LIBC_INLINE bool CharacterConverter::isValidState() {
@@ -405,6 +420,104 @@ template <> LIBC_INLINE size_t CharacterConverter::sizeAs<wchar_t>() {
 }
 
 #endif // LIBC_TYPES_WCHAR_T_IS_UTF32 || LIBC_TYPES_WCHAR_T_IS_UTF16
+
+template <typename T, bool allowPartialPop>
+LIBC_INLINE ErrorOr<size_t>
+CharacterConverter::mbrto_generic(T *__restrict dest_ptr,
+                                  const char *__restrict src_ptr,
+                                  size_t max_src_bytes) {
+  if (!isValidState())
+    return Error(EINVAL);
+  if (!allowPartialPop && isPartiallyPopping()) {
+    // don't allow a complete char32 spanning over 2 consecutive calls of char16
+    clear();
+    return Error(EILSEQ);
+  }
+
+  char empty_src = '\0';
+  if (src_ptr == nullptr) {
+    dest_ptr = nullptr;
+    src_ptr = &empty_src;
+    max_src_bytes = 1;
+  }
+
+  size_t i = 0;
+  // If we still have the lower part to write, don't read yet (UTF-16)
+  if (!isPartiallyPopping()) {
+    // Reading in bytes until we have a complete char32 or error
+    for (; i < max_src_bytes && !isFull(); ++i) {
+      int err = push(static_cast<char8_t>(src_ptr[i]));
+      // Encoding error
+      if (err != 0)
+        return Error(err);
+    }
+  }
+  if (!isFull() && !isPartiallyPopping()) {
+    // We haven't read in a full char32 yet.
+    // Incomplete but potentially valid
+    return (size_t)-2;
+  }
+  auto result = pop<T>();
+  if (!result.has_value()) {
+    return Error(result.error());
+  }
+  if (!allowPartialPop && !isEmpty()) {
+    // don't allow a complete char32 spanning over 2 consecutive calls of char16
+    clear();
+    return Error(EILSEQ);
+  }
+  if (dest_ptr != nullptr)
+    *dest_ptr = result.value();
+  if (i == 0) {
+    // lower part written, no input processed
+    return (size_t)-3;
+  }
+  // null terminator -> return 0
+  if (result.value() == T{})
+    return 0;
+  return i;
+}
+
+template <typename T, bool allowPartialPush>
+LIBC_INLINE ErrorOr<size_t>
+CharacterConverter::rtomb_generic(char *__restrict dest_ptr, T src) {
+  if (dest_ptr == nullptr)
+    src = {};
+
+  if (!isValidState())
+    return Error(EINVAL);
+  if (!allowPartialPush && !isEmpty()) {
+    // don't allow a complete char32 spanning over 2 consecutive calls of char16
+    clear();
+    return Error(EILSEQ);
+  }
+
+  int status = push(static_cast<T>(src));
+  if (status != 0)
+    return Error(status);
+
+  if (!isFull()) {
+    if (!allowPartialPush) {
+      // don't allow a complete char32 spanning over 2 consecutive calls of
+      // char16
+      clear();
+      return Error(EILSEQ);
+    }
+    return 0;
+  }
+
+  size_t count = 0;
+  for (; !isEmpty(); ++count) {
+    auto utf8 = pop_utf8(); // can never fail as long as the push succeeded
+    LIBC_ASSERT(utf8.has_value());
+
+    if (dest_ptr != nullptr) {
+      *dest_ptr = static_cast<char>(utf8.value());
+      dest_ptr++;
+    }
+  }
+  return count;
+}
 
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL

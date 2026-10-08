@@ -1,11 +1,11 @@
 add_custom_target(libc-support-wchar-tests)
 
 add_libc_test(
-  string_converter_test
+  string_converter_test_utf32
   SUITE
     libc-support-tests
   SRCS
-    string_converter_test.cpp
+    string_converter_test_utf32.cpp
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.wchar.string_converter
@@ -13,6 +13,21 @@ add_libc_test(
     libc.src.__support.error_or
     libc.hdr.errno_macros
     libc.hdr.types.char32_t
+)
+
+add_libc_test(
+  string_converter_test_utf16
+  SUITE
+    libc-support-tests
+  SRCS
+    string_converter_test_utf16.cpp
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.wchar.string_converter
+    libc.src.__support.wchar.mbstate
+    libc.src.__support.error_or
+    libc.hdr.errno_macros
+    libc.hdr.types.char16_t
 )
 
 add_libc_test(
