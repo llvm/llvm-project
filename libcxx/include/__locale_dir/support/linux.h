@@ -22,7 +22,6 @@
 #include <stdarg.h>
 #include <string.h>
 #include <time.h>
-#include <wchar.h>
 #if _LIBCPP_HAS_WIDE_CHARACTERS
 #  include <cwchar>
 #  include <wctype.h>
