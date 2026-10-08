@@ -358,16 +358,16 @@ static LogicalResult matchShapesAndTypes(MLUCandidate &candidate,
       regTileN = origN % (2 * nativeN) == 0 ? 2 * nativeN : nativeN;
       regTileK = nativeK;
     } else {
-      // Online packing requires a 2x2 tile register layout.
+      // Online packing requires a contract pair in the N-dimension.
       nativeK = 16 * vnni;
-      regTileM = 2 * nativeM;
-      regTileN = 2 * nativeN;
-      regTileK = nativeK;
-      if (origM % regTileM != 0 || origN % regTileN != 0)
+      if (origM % nativeM != 0 || origN % (2 * nativeN) != 0)
         return rewriter.notifyMatchFailure(
             contract, "vector shape cannot be cleanly unrolled");
       if (origK != nativeK)
         return rewriter.notifyMatchFailure(contract, "K dimension mismatch");
+      regTileM = origM % (2 * nativeM) == 0 ? 2 * nativeM : nativeM;
+      regTileN = 2 * nativeN;
+      regTileK = nativeK;
     }
   } else {
     return rewriter.notifyMatchFailure(contract, "unsupported target");

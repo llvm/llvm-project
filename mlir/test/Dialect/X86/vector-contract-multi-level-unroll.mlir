@@ -551,6 +551,93 @@ module attributes {transform.with_named_sequence} {
 #map1 = affine_map<(d0, d1, d2) -> (d2, d1)>
 #map2 = affine_map<(d0, d1, d2) -> (d0, d1)>
 
+// M = 48 is an odd multiple of 16, so a 1x2 tile register layout is used.
+// Online packing of the flat RHS needs the pair of contracts along N, which
+// this layout still provides.
+func.func @amx_bf16_flat_1x2_tile(%A: memref<?x?xbf16>, %B: memref<?x?xbf16>, %C: memref<?x?xf32>,
+                                  %m: index, %n: index, %k_start: index, %k_end: index) {
+  %c32 = arith.constant 32 : index
+  %c0_0 = arith.constant 0.0 : bf16
+  %c0_0_f32 = arith.constant 0.0 : f32
+  %c = vector.transfer_read %C[%m, %n], %c0_0_f32 {in_bounds = [true, true]} : memref<?x?xf32>, vector<48x64xf32>
+  %res = scf.for %k = %k_start to %k_end step %c32 iter_args(%acc = %c) -> (vector<48x64xf32>) {
+    %a = vector.transfer_read %A[%m, %k], %c0_0 {in_bounds = [true, true]} : memref<?x?xbf16>, vector<48x32xbf16>
+    %b = vector.transfer_read %B[%k, %n], %c0_0 {in_bounds = [true, true]} : memref<?x?xbf16>, vector<32x64xbf16>
+    %d = vector.contract {
+      indexing_maps = [#map, #map1, #map2],
+      iterator_types = ["parallel", "parallel", "reduction"],
+      kind = #vector.kind<add>}
+      %a, %b, %acc : vector<48x32xbf16>, vector<32x64xbf16> into vector<48x64xf32>
+    scf.yield %d : vector<48x64xf32>
+  }
+  vector.transfer_write %res, %C[%m, %n] {in_bounds = [true, true]} : vector<48x64xf32>, memref<?x?xf32>
+  func.return
+}
+
+// CHECK-LABEL: func.func @amx_bf16_flat_1x2_tile(
+// CHECK-SAME:    %[[A:.+]]: memref<?x?xbf16>, %[[B:.+]]: memref<?x?xbf16>, %[[C:.+]]: memref<?x?xf32>,
+// CHECK-SAME:    %[[M:.+]]: index, %[[N:.+]]: index, %[[K_START:.+]]: index, %[[K_END:.+]]: index)
+// CHECK-DAG:     %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG:     %[[C16:.+]] = arith.constant 16 : index
+// CHECK-DAG:     %[[C32:.+]] = arith.constant 32 : index
+// CHECK-DAG:     %[[C48:.+]] = arith.constant 48 : index
+// CHECK-DAG:     %[[C64:.+]] = arith.constant 64 : index
+// CHECK-NOT:     memref.alloca
+// CHECK:         %[[ACC_BUF:.+]] = memref.subview %[[C]][%[[M]], %[[N]]] [48, 64] [1, 1]
+// CHECK:         scf.for %[[IV_M:.+]] = %[[C0]] to %[[C48]] step %[[C16]] {
+// CHECK:           scf.for %[[IV_N:.+]] = %[[C0]] to %[[C64]] step %[[C32]] {
+// CHECK:             %[[ACC_VIEW:.+]] = memref.subview %[[ACC_BUF]][%[[IV_M]], %[[IV_N]]] [16, 32] [1, 1]
+// CHECK:             %[[ACC0:.+]] = vector.transfer_read %[[ACC_VIEW]][%[[C0]], %[[C0]]], {{.*}} vector<16x16xf32>
+// CHECK:             %[[ACC1:.+]] = vector.transfer_read %[[ACC_VIEW]][%[[C0]], %[[C16]]], {{.*}} vector<16x16xf32>
+// CHECK:             %[[OFF_M:.+]] = arith.addi %[[M]], %[[IV_M]]
+// CHECK:             %[[OFF_N:.+]] = arith.addi %[[N]], %[[IV_N]]
+// CHECK:             %[[RES:.+]]:2 = scf.for %[[IV_K:.+]] = %[[K_START]] to %[[K_END]] step %[[C32]]
+// CHECK-SAME:          iter_args(%[[ARG0:.+]] = %[[ACC0]], %[[ARG1:.+]] = %[[ACC1]])
+// CHECK-NOT:           arith.addi
+// CHECK:               %[[A_VIEW:.+]] = memref.subview %[[A]][%[[OFF_M]], %[[IV_K]]] [16, 32] [1, 1]
+// CHECK:               %[[B_VIEW:.+]] = memref.subview %[[B]][%[[IV_K]], %[[OFF_N]]] [32, 32] [1, 1]
+// CHECK:               %[[A0:.+]] = vector.transfer_read %[[A_VIEW]][%[[C0]], %[[C0]]], {{.*}} vector<16x32xbf16>
+// CHECK:               %[[B0:.+]] = vector.transfer_read %[[B_VIEW]][%[[C0]], %[[C0]]], {{.*}} vector<32x16xbf16>
+// CHECK:               %[[B1:.+]] = vector.transfer_read %[[B_VIEW]][%[[C0]], %[[C16]]], {{.*}} vector<32x16xbf16>
+// CHECK:               %[[D0:.+]] = vector.contract {{.*}} %[[A0]], %[[B0]], %[[ARG0]] {x86_vcmlu_native_shape = array<i64: 16, 16, 32>} : vector<16x32xbf16>, vector<32x16xbf16> into vector<16x16xf32>
+// CHECK:               %[[D1:.+]] = vector.contract {{.*}} %[[A0]], %[[B1]], %[[ARG1]] {x86_vcmlu_native_shape = array<i64: 16, 16, 32>}
+// CHECK:               scf.yield %[[D0]], %[[D1]]
+// CHECK:             }
+// CHECK:             vector.transfer_write %[[RES]]#0, %[[ACC_VIEW]][%[[C0]], %[[C0]]]
+// CHECK:             vector.transfer_write %[[RES]]#1, %[[ACC_VIEW]][%[[C0]], %[[C16]]]
+// CHECK:           }
+// CHECK:         }
+// CHECK-NOT:     vector.transfer_read
+// CHECK-NOT:     vector.transfer_write
+// CHECK:         return
+
+// NANO-LABEL: func.func @amx_bf16_flat_1x2_tile(
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
+    } : !transform.any_op
+    transform.yield
+  }
+
+  transform.named_sequence @__transform_nano(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
+      transform.apply_patterns.x86.vector_contract_to_amx_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+#map = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map1 = affine_map<(d0, d1, d2) -> (d2, d1)>
+#map2 = affine_map<(d0, d1, d2) -> (d0, d1)>
+
 // The accumulation loop sits inside an existing batch-M-N loop nest.
 func.func @amx_int8_flat_batched_loop_nest(%A: memref<?x?x?xi8>, %B: memref<?x?x?xi8>, %C: memref<?x?x?xi32>) {
   %c0 = arith.constant 0 : index
@@ -1589,8 +1676,8 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// Flat layout requires a 2x2 tile register layout, i.e. M and N must be
-// multiples of 32.
+// N = 48 would require a 2x1 tile register layout, but online packing of the
+// flat RHS needs a pair of contracts along N, i.e. N must be a multiple of 32.
 #map = affine_map<(d0, d1, d2) -> (d0, d2)>
 #map1 = affine_map<(d0, d1, d2) -> (d2, d1)>
 #map2 = affine_map<(d0, d1, d2) -> (d0, d1)>
@@ -1600,23 +1687,23 @@ func.func @negative_shape_not_unrollable(%A: memref<?x?xbf16>, %B: memref<?x?xbf
   %c32 = arith.constant 32 : index
   %c0_0 = arith.constant 0.0 : bf16
   %c0_0_f32 = arith.constant 0.0 : f32
-  %c = vector.transfer_read %C[%m, %n], %c0_0_f32 {in_bounds = [true, true]} : memref<?x?xf32>, vector<48x96xf32>
-  %res = scf.for %k = %k_start to %k_end step %c32 iter_args(%acc = %c) -> (vector<48x96xf32>) {
-    %a = vector.transfer_read %A[%m, %k], %c0_0 {in_bounds = [true, true]} : memref<?x?xbf16>, vector<48x32xbf16>
-    %b = vector.transfer_read %B[%k, %n], %c0_0 {in_bounds = [true, true]} : memref<?x?xbf16>, vector<32x96xbf16>
+  %c = vector.transfer_read %C[%m, %n], %c0_0_f32 {in_bounds = [true, true]} : memref<?x?xf32>, vector<64x48xf32>
+  %res = scf.for %k = %k_start to %k_end step %c32 iter_args(%acc = %c) -> (vector<64x48xf32>) {
+    %a = vector.transfer_read %A[%m, %k], %c0_0 {in_bounds = [true, true]} : memref<?x?xbf16>, vector<64x32xbf16>
+    %b = vector.transfer_read %B[%k, %n], %c0_0 {in_bounds = [true, true]} : memref<?x?xbf16>, vector<32x48xbf16>
     %d = vector.contract {
       indexing_maps = [#map, #map1, #map2],
       iterator_types = ["parallel", "parallel", "reduction"],
       kind = #vector.kind<add>}
-      %a, %b, %acc : vector<48x32xbf16>, vector<32x96xbf16> into vector<48x96xf32>
-    scf.yield %d : vector<48x96xf32>
+      %a, %b, %acc : vector<64x32xbf16>, vector<32x48xbf16> into vector<64x48xf32>
+    scf.yield %d : vector<64x48xf32>
   }
-  vector.transfer_write %res, %C[%m, %n] {in_bounds = [true, true]} : vector<48x96xf32>, memref<?x?xf32>
+  vector.transfer_write %res, %C[%m, %n] {in_bounds = [true, true]} : vector<64x48xf32>, memref<?x?xf32>
   func.return
 }
 
 // CHECK-LABEL: func.func @negative_shape_not_unrollable(
-// CHECK:         vector.contract {{.*}} : vector<48x32xbf16>, vector<32x96xbf16> into vector<48x96xf32>
+// CHECK:         vector.contract {{.*}} : vector<64x32xbf16>, vector<32x48xbf16> into vector<64x48xf32>
 
 // NANO-LABEL:  func.func @negative_shape_not_unrollable(
 // NANO:          vector.contract
