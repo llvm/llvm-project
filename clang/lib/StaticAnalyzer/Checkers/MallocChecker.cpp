@@ -4249,6 +4249,25 @@ markReleased(ProgramStateRef State, SymbolRef Sym, const Expr *Origin) {
   return State->set<RegionState>(Sym, RefState::getReleased(Family, Origin));
 }
 
+bool isReleasedByNew(ProgramStateRef State, SymbolRef Sym) {
+  // We consider the symbol "released-by-new" if MallocChecker originally
+  // registered it as a AF_CXXNew allocation and it subsequently escaped into
+  // an opaque owner (e.g., the body of a unique_ptr constructor). The Escaped
+  // state is assigned by EscapeTrackedCallback when the pointer passes through
+  // an opaque call. This is the exact precondition that justifies reclaiming
+  // ownership: we have definitive provenance from operator new.
+  const RefState *RS = State->get<RegionState>(Sym);
+  return RS && RS->isEscaped() && RS->getAllocationFamily().Kind == AF_CXXNew;
+}
+
+ProgramStateRef transferToCallerNew(ProgramStateRef State, SymbolRef Sym,
+                                    const Expr *Origin) {
+  // Reclaim the symbol: transition Escaped -> Allocated so that
+  // checkDeadSymbols will report a leak if the caller never frees it.
+  AllocationFamily Family(AF_CXXNew);
+  return State->set<RegionState>(Sym, RefState::getAllocated(Family, Origin));
+}
+
 } // end namespace allocation_state
 } // end namespace ento
 } // end namespace clang
