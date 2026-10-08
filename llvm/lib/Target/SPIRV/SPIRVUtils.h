@@ -141,12 +141,6 @@ struct FPFastMathDefaultInfo {
   FPFastMathDefaultInfo() = default;
   FPFastMathDefaultInfo(const Type *Ty, unsigned FastMathFlags)
       : Ty(Ty), FastMathFlags(FastMathFlags) {}
-  bool operator==(const FPFastMathDefaultInfo &Other) const {
-    return Ty == Other.Ty && FastMathFlags == Other.FastMathFlags &&
-           ContractionOff == Other.ContractionOff &&
-           SignedZeroInfNanPreserve == Other.SignedZeroInfNanPreserve &&
-           FPFastMathDefault == Other.FPFastMathDefault;
-  }
 };
 
 struct FPFastMathDefaultInfoVector
