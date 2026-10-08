@@ -108,7 +108,6 @@ void fillValidOffloadArchList(llvm::SmallVectorImpl<llvm::StringRef> &Values) {
   Values.push_back(NAME);
 #include "llvm/TargetParser/NVPTXTargetParser.def"
   llvm::AMDGPU::fillValidArchListAMDGCN(Values, llvm::Triple::NoSubArch);
-  llvm::IntelGPU::fillValidIGCATargetList(Values);
 }
 
 // TODO: Confirm IntelIGCA needs no subarch mapping; these only cover AMDGPU.
