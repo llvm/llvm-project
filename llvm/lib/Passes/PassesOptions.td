@@ -146,3 +146,5 @@ defm : ValueField<"print-on-crash-path", "StringRef", "",
   "Print the last form of the IR before crash to a file">;
 defm : BoolField<"print-pass-numbers", "false",
   "Print pass names and their ordinals">;
+defm : OptionalBoolField<"verify-analysis-invalidation",
+  "Verify that analyses a pass reports as preserved are unchanged (default: on with EXPENSIVE_CHECKS)">;

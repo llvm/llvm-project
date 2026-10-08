@@ -50,15 +50,6 @@
 
 using namespace llvm;
 
-static cl::opt<bool> VerifyAnalysisInvalidation("verify-analysis-invalidation",
-                                                cl::Hidden,
-#ifdef EXPENSIVE_CHECKS
-                                                cl::init(true)
-#else
-                                                cl::init(false)
-#endif
-);
-
 static cl::list<unsigned> PrintBeforePassNumber(
     "print-before-pass-number", cl::CommaSeparated, cl::Hidden,
     cl::desc("Print IR before the passes with specified numbers as "
@@ -1323,7 +1314,13 @@ static SmallVector<Function *, 1> GetFunctions(IRUnitRef IR) {
 
 void PreservedCFGCheckerInstrumentation::registerCallbacks(
     PassInstrumentationCallbacks &PIC, ModuleAnalysisManager &MAM) {
-  if (!VerifyAnalysisInvalidation)
+#ifdef EXPENSIVE_CHECKS
+  constexpr bool VerifyByDefault = true;
+#else
+  constexpr bool VerifyByDefault = false;
+#endif
+  if (!valueOr(PassesOptions::Global.verify_analysis_invalidation,
+               VerifyByDefault))
     return;
 
   bool Registered = false;
