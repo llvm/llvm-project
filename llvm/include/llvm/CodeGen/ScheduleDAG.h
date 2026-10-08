@@ -22,6 +22,7 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/Config/abi-breaking.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
@@ -634,7 +635,7 @@ class TargetRegisterInfo;
     virtual void dump() const = 0;
     void dumpNodeName(const SUnit &SU) const;
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
     /// Returns a label for an SUnit node in a visualization of the ScheduleDAG.
     virtual std::string getGraphNodeLabel(const SUnit *SU) const = 0;
 #endif

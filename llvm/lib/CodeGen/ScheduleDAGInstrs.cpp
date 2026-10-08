@@ -1164,7 +1164,7 @@ void ScheduleDAGInstrs::dump() const {
 #endif
 }
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
 std::string ScheduleDAGInstrs::getGraphNodeLabel(const SUnit *SU) const {
   std::string s;
   raw_string_ostream oss(s);
