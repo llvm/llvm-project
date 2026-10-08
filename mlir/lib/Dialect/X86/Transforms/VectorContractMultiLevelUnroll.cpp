@@ -559,6 +559,22 @@ static void makeAccResultBackedByMemory(MLUCandidate &candidate,
   Block *accLoopBlock = candidate.accLoop->getBlock();
   if (accWrite && isSimpleTransferOp(accWrite) &&
       accWrite->getBlock() == accLoopBlock) {
+
+    Value accWriteBase = accWrite.getBase();
+    ValueRange accWriteIndices = accWrite.getIndices();
+
+    auto isSafeToUseView = [&]() {
+      if (candidate.accIsZeroInit)
+        return true;
+      auto accMemInView = candidate.accMemIn.getDefiningOp<memref::SubViewOp>();
+      if (!accMemInView)
+        return true;
+
+      return accMemInView.getSource() == accWriteBase &&
+             isEqualConstantIntOrValueArray(accMemInView.getMixedOffsets(),
+                                            getAsOpFoldResult(accWriteIndices));
+    };
+
     auto isDefinedBeforeAccLoop = [&](Value v) {
       Operation *defOp = v.getDefiningOp();
       // No need for full dominance check, as we already know that accLoop and
@@ -566,11 +582,12 @@ static void makeAccResultBackedByMemory(MLUCandidate &candidate,
       return !defOp || defOp->getBlock() != accLoopBlock ||
              defOp->isBeforeInBlock(candidate.accLoop);
     };
-    if (isDefinedBeforeAccLoop(accWrite.getBase()) &&
-        all_of(accWrite.getIndices(), isDefinedBeforeAccLoop)) {
-      candidate.accMemOut = makeRankReducingSubview(
-          rewriter, loc, accWrite.getBase(), accWrite.getIndices(),
-          accWrite.getVectorType());
+
+    if (isSafeToUseView() && isDefinedBeforeAccLoop(accWriteBase) &&
+        all_of(accWriteIndices, isDefinedBeforeAccLoop)) {
+      candidate.accMemOut =
+          makeRankReducingSubview(rewriter, loc, accWriteBase, accWriteIndices,
+                                  accWrite.getVectorType());
       candidate.opsToDelete.push_back(accWrite);
       candidate.opsToDelete.push_back(candidate.accLoop);
       return;
