@@ -212,7 +212,7 @@ void SBLaunchInfo::Clear() {
 const char *SBLaunchInfo::GetWorkingDirectory() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return StringPool::GetSystemPool().Intern(
+  return StringPool::GetSystemPool().InternNonEmpty(
       m_opaque_sp->GetWorkingDirectory().GetPath());
 }
 
