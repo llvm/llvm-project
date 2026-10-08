@@ -1262,7 +1262,7 @@ bool Instruction::maySynchronize() const {
   case Instruction::AtomicCmpXchg: {
     auto *ACXI = cast<AtomicCmpXchgInst>(this);
     return isStrongerThanMonotonic(ACXI->getSuccessOrdering()) ||
-        isStrongerThanMonotonic(ACXI->getFailureOrdering());
+           isStrongerThanMonotonic(ACXI->getFailureOrdering());
   }
   case Instruction::Store:
     return isStrongerThanMonotonic(cast<StoreInst>(this)->getOrdering());
