@@ -18,8 +18,6 @@ Transforms/FixIrreducible/switch.ll
 Transforms/IndVarSimplify/debugloc-rem-subst.ll
 Transforms/IndVarSimplify/eliminate-rem.ll
 Transforms/IndVarSimplify/preserving-debugloc-rem-div.ll
-Transforms/InstCombine/memrchr-3.ll
-Transforms/InstCombine/memrchr-4.ll
 Transforms/InstCombine/minmax-fold.ll
 Transforms/InstCombine/minmax-intrinsics.ll
 Transforms/InstCombine/select-factorize.ll
