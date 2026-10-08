@@ -20,6 +20,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "SIModeRegisterDefaults.h"
+#include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
@@ -547,6 +548,10 @@ private:
   // MachineRegisterInfo callback functions to notify events.
   void MRI_NoteNewVirtualRegister(Register Reg) override;
   void MRI_NoteCloneVirtualRegister(Register NewReg, Register SrcReg) override;
+
+  // Sets of Dst and Src2 Registers in one MFMA instruction or chains of MFMA
+  // instructions.
+  EquivalenceClasses<Register> MFMAChainHints;
 
 public:
   static bool MFMAVGPRForm;
@@ -1248,6 +1253,13 @@ public:
   unsigned getMaxNumWorkGroupsZ() const { return MaxNumWorkGroups[2]; }
 
   AMDGPU::ClusterDimsAttr getClusterDims() const { return ClusterDims; }
+
+  void setMFMAChainHints(const EquivalenceClasses<Register> &MFMAHints) {
+    MFMAChainHints = MFMAHints;
+  }
+  const EquivalenceClasses<Register> &getMFMAChainHints() const {
+    return MFMAChainHints;
+  }
 };
 
 } // end namespace llvm

@@ -4330,8 +4330,53 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
     return false;
   }
   default:
-    return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
-                                                     VRM);
+    bool BaseImplRetVal = TargetRegisterInfo::getRegAllocationHints(
+        VirtReg, Order, Hints, MF, VRM);
+    const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+    const EquivalenceClasses<Register> &MFMAChainHints =
+        MFI->getMFMAChainHints();
+
+    Register OriginalVirtReg = VRM ? VRM->getOriginal(VirtReg) : VirtReg;
+    if (!MFMAChainHints.contains(OriginalVirtReg))
+      return BaseImplRetVal;
+
+    auto AddHintIfValid = [&](Register Reg) {
+      Register Phys = Reg;
+      if (VRM && Phys.isVirtual())
+        Phys = VRM->getPhys(Phys);
+      if (!Phys.isPhysical() || MRI.isReserved(Phys))
+        return;
+      if (!is_contained(Order, Phys))
+        return;
+      Hints.insert(Phys);
+    };
+
+    const SIInstrInfo *TII = ST.getInstrInfo();
+    auto AddMFMADstSrc2PartnerHints = [&](Register Reg) {
+      for (const MachineInstr &MI : MRI.reg_nodbg_instructions(Reg)) {
+        if (!SIInstrInfo::isMFMA(MI))
+          continue;
+        const MachineOperand *DstMO =
+            TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
+        const MachineOperand *Src2MO =
+            TII->getNamedOperand(MI, AMDGPU::OpName::src2);
+        if (!Src2MO->isReg())
+          continue;
+        Register DstReg = DstMO->getReg();
+        Register Src2Reg = Src2MO->getReg();
+        if (DstReg == Reg)
+          AddHintIfValid(Src2Reg);
+        else if (Src2Reg == Reg)
+          AddHintIfValid(DstReg);
+      }
+    };
+
+    AddMFMADstSrc2PartnerHints(VirtReg);
+    for (Register Member : MFMAChainHints.members(OriginalVirtReg))
+      if (Member != VirtReg)
+        AddHintIfValid(Member);
+
+    return BaseImplRetVal;
   }
 }
 

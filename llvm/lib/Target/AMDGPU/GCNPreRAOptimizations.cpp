@@ -33,7 +33,9 @@
 #include "GCNPreRAOptimizations.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
+#include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
+#include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/InitializePasses.h"
@@ -300,8 +302,35 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   TRI = ST.getRegisterInfo();
 
-  bool Changed = false;
+  if (ST.hasMAIInsts()) {
+    EquivalenceClasses<Register> MFMAHints;
+    for (const MachineBasicBlock &MBB : MF) {
+      for (const MachineInstr &MI : MBB) {
+        if (!SIInstrInfo::isMFMA(MI))
+          continue;
+        const MachineOperand *DstMO =
+            TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
+        const MachineOperand *Src2MO =
+            TII->getNamedOperand(MI, AMDGPU::OpName::src2);
+        if (!Src2MO->isReg())
+          continue;
+        Register Dst = DstMO->getReg();
+        Register Src2 = Src2MO->getReg();
+        if (!Dst.isVirtual() || !Src2.isVirtual())
+          continue;
+        if (DstMO->getSubReg() != Src2MO->getSubReg())
+          continue;
+        LLVM_DEBUG(dbgs() << "Adding MFMA chain hint for " << MI << " Dst: "
+                          << *DstMO << " Src2: " << *Src2MO << "\n");
+        MFMAHints.unionSets(Dst, Src2);
+      }
+    }
 
+    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+    MFI->setMFMAChainHints(MFMAHints);
+  }
+
+  bool Changed = false;
   for (unsigned I = 0, E = MRI->getNumVirtRegs(); I != E; ++I) {
     Register Reg = Register::index2VirtReg(I);
     if (!LIS->hasInterval(Reg))
