@@ -23,8 +23,8 @@ func.func @pack_scalar_true_mask(%arg0: !fir.box<!fir.array<?xi32>>) -> !hlfir.e
 // CHECK:           %[[ELEMENTAL:.*]] = hlfir.elemental %[[RESULT_SHAPE]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
 // CHECK:           ^bb0(%[[IDX:.*]]: index):
 // CHECK:             %[[ARRAY_DIM0:.*]]:3 = fir.box_dims %[[ARRAY]], %[[C0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
-// CHECK:             %[[LB_ADJ:.*]] = arith.subi %[[ARRAY_DIM0]]#0, %[[C1]] overflow<nuw> : index
-// CHECK:             %[[ARRAY_IDX:.*]] = arith.addi %[[IDX]], %[[LB_ADJ]] overflow<nuw> : index
+// CHECK:             %[[LB_ADJ:.*]] = arith.subi %[[ARRAY_DIM0]]#0, %[[C1]] overflow<nsw> : index
+// CHECK:             %[[ARRAY_IDX:.*]] = arith.addi %[[IDX]], %[[LB_ADJ]] overflow<nsw> : index
 // CHECK:             %[[ELEM_ADDR:.*]] = hlfir.designate %[[ARRAY]] (%[[ARRAY_IDX]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:             %[[ELEM:.*]] = fir.load %[[ELEM_ADDR]] : !fir.ref<i32>
 // CHECK:             hlfir.yield_element %[[ELEM]] : i32
@@ -60,17 +60,17 @@ func.func @pack_scalar_true_mask_2d(%arg0: !fir.box<!fir.array<?x?xi32>>) -> !hl
 // CHECK:           %[[RESULT_SHAPE:.*]] = fir.shape %[[SHAPE_VAL]] : (i64) -> !fir.shape<1>
 // CHECK:           %[[ELEMENTAL:.*]] = hlfir.elemental %[[RESULT_SHAPE]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
 // CHECK:           ^bb0(%[[IDX:.*]]: index):
-// CHECK:             %[[ZERO_IDX:.*]] = arith.subi %[[IDX]], %[[C1]] overflow<nuw> : index
+// CHECK:             %[[ZERO_IDX:.*]] = arith.subi %[[IDX]], %[[C1]] overflow<nsw, nuw> : index
 // CHECK:             %[[IDX0:.*]] = arith.remui %[[ZERO_IDX]], %[[HOISTED_DIM0]]#1 : index
 // CHECK:             %[[IDX1:.*]] = arith.divui %[[ZERO_IDX]], %[[HOISTED_DIM0]]#1 : index
-// CHECK:             %[[ONE_IDX0:.*]] = arith.addi %[[IDX0]], %[[C1]] overflow<nuw> : index
-// CHECK:             %[[ONE_IDX1:.*]] = arith.addi %[[IDX1]], %[[C1]] overflow<nuw> : index
+// CHECK:             %[[ONE_IDX0:.*]] = arith.addi %[[IDX0]], %[[C1]] overflow<nsw, nuw> : index
+// CHECK:             %[[ONE_IDX1:.*]] = arith.addi %[[IDX1]], %[[C1]] overflow<nsw, nuw> : index
 // CHECK:             %[[ARRAY_DIM0:.*]]:3 = fir.box_dims %[[ARRAY]], %[[C0]] : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
 // CHECK:             %[[ARRAY_DIM1:.*]]:3 = fir.box_dims %[[ARRAY]], %[[C1]] : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
-// CHECK:             %[[LB0:.*]] = arith.subi %[[ARRAY_DIM0]]#0, %[[C1]] overflow<nuw> : index
-// CHECK:             %[[ARRAY_IDX0:.*]] = arith.addi %[[ONE_IDX0]], %[[LB0]] overflow<nuw> : index
-// CHECK:             %[[LB1:.*]] = arith.subi %[[ARRAY_DIM1]]#0, %[[C1]] overflow<nuw> : index
-// CHECK:             %[[ARRAY_IDX1:.*]] = arith.addi %[[ONE_IDX1]], %[[LB1]] overflow<nuw> : index
+// CHECK:             %[[LB0:.*]] = arith.subi %[[ARRAY_DIM0]]#0, %[[C1]] overflow<nsw> : index
+// CHECK:             %[[ARRAY_IDX0:.*]] = arith.addi %[[ONE_IDX0]], %[[LB0]] overflow<nsw> : index
+// CHECK:             %[[LB1:.*]] = arith.subi %[[ARRAY_DIM1]]#0, %[[C1]] overflow<nsw> : index
+// CHECK:             %[[ARRAY_IDX1:.*]] = arith.addi %[[ONE_IDX1]], %[[LB1]] overflow<nsw> : index
 // CHECK:             %[[ELEM_ADDR:.*]] = hlfir.designate %[[ARRAY]] (%[[ARRAY_IDX0]], %[[ARRAY_IDX1]])  : (!fir.box<!fir.array<?x?xi32>>, index, index) -> !fir.ref<i32>
 // CHECK:             %[[ELEM:.*]] = fir.load %[[ELEM_ADDR]] : !fir.ref<i32>
 // CHECK:             hlfir.yield_element %[[ELEM]] : i32

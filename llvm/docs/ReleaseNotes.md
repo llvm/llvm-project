@@ -249,6 +249,8 @@ Makes programs 10x faster by doing Special New Thing.
   attribute perform a load from the return address before returning, reducing the
   cache side channel used to guess pointer authentication codes.
 
+* Added support for C2-Pro and C2-Ultra CPUs.
+
 ### Changes to the AMDGPU Backend
 
 * Replaced `xnack` and `sramecc` target features with `amdgpu.xnack`

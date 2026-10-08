@@ -1648,14 +1648,11 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
     assert(DstReg.isPhysical() &&
            "Only expect virtual or physical registers in remat");
 
-    // CopyDstReg is added as an implicit-def below. The remat may also define
-    // units CopyDstReg does not cover; nothing uses those, so the def is dead.
-    // If CopyDstReg covers every defined unit, the def is part of that live
-    // value and must stay live.
-    Register DefReg = NewMI.getOperand(0).getReg();
-    if (any_of(TRI->regunits(DefReg.asMCReg()), [&](MCRegUnit Unit) {
-          return !TRI->hasRegUnit(CopyDstReg, Unit);
-        }))
+    // CopyDstReg is added as an implicit-def below. If the remat defines a
+    // sub-register of CopyDstReg, the def is part of that live value and must
+    // stay live. Otherwise only the part covered by CopyDstReg is used, so the
+    // def is dead.
+    if (!TRI->isSuperRegister(NewMI.getOperand(0).getReg(), CopyDstReg))
       NewMI.getOperand(0).setIsDead(true);
 
     bool HasDefMatchingCopy = false;

@@ -9,6 +9,7 @@
 #include "clang/CodeGenUtils/TargetUtils.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
+#include "clang/Basic/TargetBuiltins.h"
 
 namespace clang::CodeGenUtils {
 
@@ -49,6 +50,30 @@ ArmSMEInlinability getArmSMEInlinability(const FunctionDecl *Caller,
   }
 
   return Inlinability;
+}
+
+bool hasExtraNeonArgument(unsigned BuiltinID) {
+  // Required by the headers included below, but not in this particular
+  // function.
+  [[maybe_unused]] int PtrArgNum = -1;
+  [[maybe_unused]] bool HasConstPtr = false;
+
+  // The mask encodes the type. We don't care about the actual value. Instead,
+  // we just check whether its been set.
+  uint64_t mask = 0;
+  switch (BuiltinID) {
+#define GET_NEON_OVERLOAD_CHECK
+#include "clang/Basic/arm_fp16.inc"
+#include "clang/Basic/arm_neon.inc"
+#undef GET_NEON_OVERLOAD_CHECK
+  // Non-neon builtins for controling VFP that take extra argument for
+  // discriminating the type.
+  case ARM::BI__builtin_arm_vcvtr_f:
+  case ARM::BI__builtin_arm_vcvtr_d:
+    mask = 1;
+  }
+
+  return mask != 0;
 }
 
 } // namespace clang::CodeGenUtils

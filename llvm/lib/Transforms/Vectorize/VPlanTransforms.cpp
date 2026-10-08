@@ -846,8 +846,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
     // We can preserve nuw when the step is non-negative.
     const APInt *Step;
     if (match(WideIV->getStepValue(), m_APInt(Step)) && Step->isNonNegative())
-      WrapFlags = {static_cast<bool>(WideIV->getNoWrapFlagsOrNone().HasNUW),
-                   false};
+      WrapFlags = WideIV->getNoWrapFlagsOrNone().withoutNoSignedWrap();
     VPScalarIVStepsRecipe *Steps = vputils::createScalarIVSteps(
         Plan, ID.getKind(), ID.getInductionOpcode(),
         dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()),

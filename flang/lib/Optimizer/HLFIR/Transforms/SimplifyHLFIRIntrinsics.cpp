@@ -3188,8 +3188,12 @@ public:
     mlir::Location loc = reshape.getLoc();
     fir::FirOpBuilder builder{rewriter, reshape.getOperation()};
     // Assume that all the indices arithmetic does not overflow
-    // the IndexType.
-    builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nuw);
+    // the signed IndexType. No-unsigned-wrap is only valid for the
+    // zero-based linear index computations (see LinearIndexArithScope),
+    // it must not be set on the computations involving the lower bounds
+    // of ARRAY, SHAPE or PAD (e.g., in hlfir::getElementAt), since they
+    // may be zero or negative.
+    builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nsw);
 
     llvm::SmallVector<mlir::Value, 1> typeParams;
     hlfir::genLengthParameters(loc, builder, array, typeParams);
@@ -3233,8 +3237,11 @@ public:
             hlfir::genExtentsVector(loc, builder, hlfir::Entity{pad});
         // Subtract the ARRAY size from the zero-based linear index
         // to get the zero-based linear index into PAD.
-        mlir::Value padLinearIndex =
-            mlir::arith::SubIOp::create(builder, loc, linearIndex, arraySize);
+        mlir::Value padLinearIndex = [&]() {
+          LinearIndexArithScope scope{builder};
+          return mlir::arith::SubIOp::create(builder, loc, linearIndex,
+                                             arraySize);
+        }();
         llvm::SmallVector<mlir::Value, Fortran::common::maxRank> padIndices =
             delinearizeIndex(loc, builder, padExtents, padLinearIndex,
                              /*wrapAround=*/true);
@@ -3271,6 +3278,24 @@ public:
   }
 
 private:
+  /// Sets nsw and nuw on the arithmetic operations created while
+  /// it is alive. Only valid for the computations of the array sizes,
+  /// and the zero-based linear indices and their one-based counterparts,
+  /// which are all non-negative.
+  class LinearIndexArithScope {
+  public:
+    LinearIndexArithScope(fir::FirOpBuilder &builder)
+        : builder{builder}, savedFlags{builder.getIntegerOverflowFlags()} {
+      builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nsw |
+                                      mlir::arith::IntegerOverflowFlags::nuw);
+    }
+    ~LinearIndexArithScope() { builder.setIntegerOverflowFlags(savedFlags); }
+
+  private:
+    fir::FirOpBuilder &builder;
+    mlir::arith::IntegerOverflowFlags savedFlags;
+  };
+
   /// Compute zero-based linear index given an array extents
   /// and one-based indices:
   ///   \p extents: [e0, e1, ..., en]
@@ -3284,6 +3309,7 @@ private:
                                         mlir::ValueRange indices) {
     std::size_t rank = extents.size();
     assert(rank == indices.size());
+    LinearIndexArithScope scope{builder};
     mlir::Type indexType = builder.getIndexType();
     mlir::Value zero = builder.createIntegerConstant(loc, indexType, 0);
     mlir::Value one = builder.createIntegerConstant(loc, indexType, 1);
@@ -3324,6 +3350,7 @@ private:
   delinearizeIndex(mlir::Location loc, fir::FirOpBuilder &builder,
                    mlir::ValueRange extents, mlir::Value linearIndex,
                    bool wrapAround) {
+    LinearIndexArithScope scope{builder};
     llvm::SmallVector<mlir::Value, Fortran::common::maxRank> indices;
     mlir::Type indexType = builder.getIndexType();
     mlir::Value one = builder.createIntegerConstant(loc, indexType, 1);
@@ -3349,6 +3376,7 @@ private:
   static mlir::Value computeArraySize(mlir::Location loc,
                                       fir::FirOpBuilder &builder,
                                       mlir::ValueRange extents) {
+    LinearIndexArithScope scope{builder};
     mlir::Type indexType = builder.getIndexType();
     mlir::Value size = builder.createIntegerConstant(loc, indexType, 1);
     for (auto extent : extents)

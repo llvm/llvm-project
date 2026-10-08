@@ -53,6 +53,7 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/CRC.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -1817,6 +1818,14 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::arm_mve_vctp16:
   case Intrinsic::arm_mve_vctp32:
   case Intrinsic::arm_mve_vctp64:
+  case Intrinsic::aarch64_crc32b:
+  case Intrinsic::aarch64_crc32h:
+  case Intrinsic::aarch64_crc32w:
+  case Intrinsic::aarch64_crc32x:
+  case Intrinsic::aarch64_crc32cb:
+  case Intrinsic::aarch64_crc32ch:
+  case Intrinsic::aarch64_crc32cw:
+  case Intrinsic::aarch64_crc32cx:
   case Intrinsic::aarch64_sve_convert_from_svbool:
   case Intrinsic::wasm_alltrue:
   case Intrinsic::wasm_anytrue:
@@ -3488,6 +3497,17 @@ static Constant *ConstantFoldLibCall2(StringRef Name, Type *Ty,
   return nullptr;
 }
 
+static Constant *ConstantFoldCRC32(Type *Ty, const APInt *CrcArg,
+                                   const APInt *DataArg, unsigned DataBytes,
+                                   uint32_t Poly) {
+  if (!CrcArg || !DataArg)
+    return nullptr;
+  uint32_t Crc = CrcArg->getZExtValue();
+  uint64_t Data = DataArg->getZExtValue();
+  uint32_t Result = calculateReflectedCRC32(Crc, Data, DataBytes, Poly);
+  return ConstantInt::get(Ty, Result);
+}
+
 static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
                                             ArrayRef<Constant *> Operands,
                                             const CallBase *Call = nullptr) {
@@ -3969,6 +3989,22 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
     case Intrinsic::amdgcn_wave_reduce_and:
     case Intrinsic::amdgcn_wave_reduce_or:
       return Operands[0];
+    case Intrinsic::aarch64_crc32b:
+      return ConstantFoldCRC32(Ty, C0, C1, 1, 0xEDB88320);
+    case Intrinsic::aarch64_crc32h:
+      return ConstantFoldCRC32(Ty, C0, C1, 2, 0xEDB88320);
+    case Intrinsic::aarch64_crc32w:
+      return ConstantFoldCRC32(Ty, C0, C1, 4, 0xEDB88320);
+    case Intrinsic::aarch64_crc32x:
+      return ConstantFoldCRC32(Ty, C0, C1, 8, 0xEDB88320);
+    case Intrinsic::aarch64_crc32cb:
+      return ConstantFoldCRC32(Ty, C0, C1, 1, 0x82F63B78);
+    case Intrinsic::aarch64_crc32ch:
+      return ConstantFoldCRC32(Ty, C0, C1, 2, 0x82F63B78);
+    case Intrinsic::aarch64_crc32cw:
+      return ConstantFoldCRC32(Ty, C0, C1, 4, 0x82F63B78);
+    case Intrinsic::aarch64_crc32cx:
+      return ConstantFoldCRC32(Ty, C0, C1, 8, 0x82F63B78);
     }
 
     return nullptr;

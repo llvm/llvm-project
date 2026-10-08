@@ -60,7 +60,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
         Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
         nullptr, Plan.getZero(CanIVTy), Plan.getConstantInt(CanIVTy, 1),
         WideCanIV->getDebugLoc(), Builder,
-        {static_cast<bool>(WideCanIV->getNoWrapFlags().HasNUW), false}));
+        WideCanIV->getNoWrapFlags().withoutNoSignedWrap()));
     WideCanIV->eraseFromParent();
     return;
   }

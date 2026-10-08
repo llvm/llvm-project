@@ -1064,6 +1064,19 @@ InstructionCost GCNTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
              getFullRateInstrCost();
   }
 
+  // Each f32 lane is rounded and the halves are packed in pairs. A packed
+  // conversion rounds a pair at once and true16 writes either half.
+  if (auto *SrcVTy = dyn_cast<FixedVectorType>(Src);
+      SrcVTy && Opcode == Instruction::FPTrunc && ST->has16BitInsts() &&
+      SrcVTy->getElementType()->isFloatTy() &&
+      Dst->getScalarType()->isHalfTy()) {
+    const unsigned NElts = SrcVTy->getNumElements();
+    const unsigned Ops = ST->hasCvtPkF16F32Inst()   ? divideCeil(NElts, 2)
+                         : ST->useRealTrue16Insts() ? NElts
+                                                    : NElts + NElts / 2;
+    return InstructionCost(Ops) * getFullRateInstrCost();
+  }
+
   const int ISD = TLI->InstructionOpcodeToISD(Opcode);
   switch (ISD) {
   case ISD::SINT_TO_FP:
