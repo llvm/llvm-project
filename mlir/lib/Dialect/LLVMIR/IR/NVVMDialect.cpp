@@ -576,13 +576,10 @@ LogicalResult ConvertF32x2ToF8x2Op::verify() {
                              "conversions from f32x2 to ")
                  << mlir::Float8E8M0FNUType::get(ctx) << " type";
         }
-        if (hasRelu) {
-          return emitOpError("relu not supported for conversions to ")
-                 << mlir::Float8E8M0FNUType::get(ctx) << " type";
-        }
-        if (hasPzo) {
-          return emitOpError("pzo not supported for conversions to ")
-                 << mlir::Float8E8M0FNUType::get(ctx) << " type";
+        if (hasRelu || hasPzo) {
+          return emitOpError() << (hasRelu ? "relu" : "pzo")
+                               << " not supported for conversions to "
+                               << mlir::Float8E8M0FNUType::get(ctx) << " type";
         }
         return success();
       })
@@ -641,12 +638,10 @@ LogicalResult ConvertBF16x2ToF8x2Op::verify() {
           return emitOpError("Only RZ and RP rounding modes are supported for "
                              "conversions from bf16x2 to ")
                  << mlir::Float8E8M0FNUType::get(ctx) << " type";
-        if (hasRelu)
-          return emitOpError("relu not supported for conversions to ")
-                 << mlir::Float8E8M0FNUType::get(ctx) << " type";
-        if (hasPzo)
-          return emitOpError("pzo not supported for conversions to ")
-                 << mlir::Float8E8M0FNUType::get(ctx) << " type";
+        if (hasRelu || hasPzo)
+          return emitOpError() << (hasRelu ? "relu" : "pzo")
+                               << " not supported for conversions to "
+                               << mlir::Float8E8M0FNUType::get(ctx) << " type";
         return success();
       })
       .Default([&](mlir::Type) -> LogicalResult {
