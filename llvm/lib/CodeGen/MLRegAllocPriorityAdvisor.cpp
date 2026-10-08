@@ -250,13 +250,16 @@ public:
 
   void logRewardIfNeeded(const MachineFunction &MF,
                          llvm::function_ref<float()> GetReward) override {
-    if (!Log || !Log->hasAnyObservationForContext(MF.getName()))
+    if (!Log)
+      return;
+    std::string Ctx = getContextName(MF);
+    if (!Log->hasAnyObservationForContext(Ctx))
       return;
     // The function pass manager would run all the function passes for a
     // function, so we assume the last context belongs to this function. If
     // this invariant ever changes, we can implement at that time switching
     // contexts. At this point, it'd be an error
-    if (Log->currentContext() != MF.getName()) {
+    if (Log->currentContext() != Ctx) {
       MF.getFunction().getContext().emitError(
           "The training log context shouldn't have had changed.");
     }
@@ -271,7 +274,7 @@ public:
       return nullptr;
     if (Log && LastFunctionNumber != MF.getFunctionNumber()) {
       LastFunctionNumber = MF.getFunctionNumber();
-      Log->switchContext(MF.getName());
+      Log->switchContext(getContextName(MF));
     }
     return std::make_unique<DevelopmentModePriorityAdvisor>(
         MF, RA, &SI, Runner.get(), Log.get());
@@ -280,6 +283,12 @@ public:
   std::unique_ptr<MLModelRunner> Runner;
   std::unique_ptr<Logger> Log;
   std::optional<unsigned> LastFunctionNumber;
+
+  static std::string getContextName(const MachineFunction &MF) {
+    if (!MF.getName().empty())
+      return MF.getName().str();
+    return ("__unnamed_" + Twine(MF.getFunctionNumber())).str();
+  }
 };
 
 class DevelopmentModePriorityAdvisorAnalysisLegacy final
