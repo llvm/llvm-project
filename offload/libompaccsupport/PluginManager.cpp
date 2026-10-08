@@ -34,7 +34,6 @@ using namespace llvm;
 using namespace llvm::sys;
 using namespace llvm::omp::target::error;
 using namespace llvm::omp::target::debug;
-using namespace llvm::omp::target::helpers;
 
 PluginManager *PM = nullptr;
 
@@ -54,7 +53,7 @@ void PluginManager::init() {
   if (ol_result_t Res = olInit(nullptr))
     REPORT() << "Failed to initialize liboffload: " << Res->Details;
 
-  if (auto Err = iteratePlatforms(
+  if (ol_result_t Res = olIteratePlatforms(
           [](ol_platform_handle_t Platform, void *Data) {
             auto *PM = static_cast<PluginManager *>(Data);
             auto *Plugin =
@@ -62,9 +61,10 @@ void PluginManager::init() {
             ODBG(ODT_Init) << "Adding plugin " << Plugin->getName()
                            << " from liboffload";
             PM->Plugins.push_back(Plugin);
+            return true;
           },
           this))
-    REPORT() << "Failed to iterate platforms: " << toString(std::move(Err));
+    REPORT() << "Failed to iterate platforms: " << Res->Details;
 
   ODBG(ODT_Init) << "RTLs loaded!";
 }
