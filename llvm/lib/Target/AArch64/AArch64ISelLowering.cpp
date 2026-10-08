@@ -1560,6 +1560,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                          Custom);
       setOperationAction(ISD::VECTOR_FIND_LAST_ACTIVE, VT, Legal);
       setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Legal);
+      setOperationAction(ISD::MASK_BEFOREFIRST, VT, Legal);
     }
 
     if (Subtarget->hasSVE2() && Subtarget->isSVEAvailable()) {
@@ -30327,6 +30328,16 @@ static SDValue performDUPCombine(SDNode *N,
     }
 
     return performPostLD1Combine(N, DCI, false);
+  } else { // AArch64ISD::DUPLANE8/16/32/64
+    SDValue SrcOp = N->getOperand(0);
+    APInt InDemandedElts =
+        APInt::getOneBitSet(SrcOp.getValueType().getVectorNumElements(),
+                            N->getConstantOperandVal(1));
+    KnownBits Known = DCI.DAG.computeKnownBits(SrcOp, InDemandedElts);
+    if (Known.isZero())
+      return DCI.DAG.getBitcast(
+          VT, DCI.DAG.getConstant(Known.getConstant(), DL,
+                                  VT.changeVectorElementTypeToInteger()));
   }
 
   return SDValue();
