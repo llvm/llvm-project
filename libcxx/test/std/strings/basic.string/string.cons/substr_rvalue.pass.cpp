@@ -33,12 +33,14 @@ constexpr struct should_throw_exception_t {
 
 template <class S>
 constexpr void test_string_pos(S orig, typename S::size_type pos, S expected) {
+  const bool expect_no_allocation = orig.get_allocator() == typename S::allocator_type();
 #ifdef _LIBCPP_VERSION
-  ConstexprDisableAllocationGuard g;
+  ConstexprDisableAllocationGuard g(expect_no_allocation);
 #endif
   S substr(std::move(orig), pos);
   LIBCPP_ASSERT(orig.__invariants());
-  LIBCPP_ASSERT(orig.empty());
+  if (expect_no_allocation)
+    LIBCPP_ASSERT(orig.empty());
   LIBCPP_ASSERT(substr.__invariants());
   assert(substr == expected);
   LIBCPP_ASSERT(is_string_asan_correct(orig));
@@ -93,12 +95,14 @@ constexpr void test_string_pos_alloc(
 
 template <class S>
 constexpr void test_string_pos_n(S orig, typename S::size_type pos, typename S::size_type n, S expected) {
+  const bool expect_no_allocation = orig.get_allocator() == typename S::allocator_type();
 #ifdef _LIBCPP_VERSION
-  ConstexprDisableAllocationGuard g;
+  ConstexprDisableAllocationGuard g(expect_no_allocation);
 #endif
   S substr(std::move(orig), pos, n);
   LIBCPP_ASSERT(orig.__invariants());
-  LIBCPP_ASSERT(orig.empty());
+  if (expect_no_allocation)
+    LIBCPP_ASSERT(orig.empty());
   LIBCPP_ASSERT(substr.__invariants());
   assert(substr == expected);
   LIBCPP_ASSERT(is_string_asan_correct(orig));
