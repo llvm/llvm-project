@@ -115,6 +115,21 @@ SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
 __sanitizer_cov_trace_const_cmp8();
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
 __sanitizer_cov_trace_switch();
+// Argument and return value tracing: observe a function's parameters on entry
+// and its return values.
+//   __sanitizer_cov_trace_args(u64 pc, u32 arg_idx, u32 size, u64 val,
+//                              u64 *offsets, u32 num_fields)
+//   __sanitizer_cov_trace_ret (u64 pc, u32 size, u64 val,
+//                              u64 *offsets, u32 num_fields)
+// `val` is the reported value itself, or, when num_fields is non-zero, the
+// address of an object whose fields the num_fields {byte offset, byte size}
+// pairs in `offsets` describe. A size of zero means nothing was reported: a
+// parameter the optimizer removed, a void return, a value the instrumentation
+// could not report.
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
+__sanitizer_cov_trace_args();
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
+__sanitizer_cov_trace_ret();
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
 __sanitizer_cov_trace_div4();
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
