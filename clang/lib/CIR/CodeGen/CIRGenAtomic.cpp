@@ -1184,7 +1184,7 @@ static RValue emitLibCallForAtomicExpr(CIRGenFunction &cgf, AtomicExpr *e,
                                        Address atomicPtr, Address dest,
                                        Address val1, Address val2,
                                        uint64_t atomicTySize,
-                                       QualType resultTy) {
+                                       QualType resultTy, mlir::Value scope) {
   mlir::Location loc = cgf.getLoc(e->getSourceRange());
 
   CallArgList args;
@@ -1197,12 +1197,20 @@ static RValue emitLibCallForAtomicExpr(CIRGenFunction &cgf, AtomicExpr *e,
   // The OpenCL atomic library functions only accept pointer arguments to
   // generic address space.
   auto castToGenericAddrSpace = [&](mlir::Value v, QualType pt) {
-    if (!e->isOpenCL())
-      return cgf.getBuilder().createPtrBitcast(v, cgf.voidTy);
+    v = cgf.getBuilder().createPtrBitcast(v, cgf.voidTy);
+    if (!e->isOpenCL() || !pt->isPointerType())
+      return v;
 
-    assert(!cir::MissingFeatures::openCL());
-    cgf.cgm.errorNYI(loc, "emitLibCallForAtomicExpr: openCL");
-    return cgf.getBuilder().createPtrBitcast(v, cgf.voidTy);
+    LangAS addrSpace =
+        pt->castAs<clang::PointerType>()->getPointeeType().getAddressSpace();
+    if (addrSpace == LangAS::opencl_generic)
+      return v;
+
+    auto destAddrSpace = cir::TargetAddressSpaceAttr::get(
+        &cgf.getMLIRContext(),
+        cgf.getContext().getTargetAddressSpace(LangAS::opencl_generic));
+    mlir::Type destType = cir::PointerType::get(cgf.voidTy, destAddrSpace);
+    return cgf.performAddrSpaceCast(v, destType);
   };
   args.add(RValue::get(castToGenericAddrSpace(atomicPtr.emitRawPointer(),
                                               e->getPtr()->getType())),
@@ -1211,7 +1219,7 @@ static RValue emitLibCallForAtomicExpr(CIRGenFunction &cgf, AtomicExpr *e,
   mlir::Value order = cgf.emitScalarExpr(e->getOrder());
 
   // The next 1-3 parameters are op-dependent.
-  llvm::StringRef calleeName;
+  std::string calleeName;
   QualType retTy;
   bool hasRetTy = false;
   switch (e->getOp()) {
@@ -1362,27 +1370,23 @@ static RValue emitLibCallForAtomicExpr(CIRGenFunction &cgf, AtomicExpr *e,
     llvm_unreachable("Integral atomic operations always become atomicrmw!");
   }
 
-  if (e->isOpenCL()) {
-    assert(!cir::MissingFeatures::openCL());
-    cgf.cgm.errorNYI(loc, "emitLibCallForAtomicExpr: openCL");
-    return RValue::get(nullptr);
-  }
+  if (e->isOpenCL())
+    calleeName =
+        std::string("__opencl") + StringRef(calleeName).drop_front(1).str();
 
   // By default, assume we return a value of the atomic type.
   if (!hasRetTy) {
     // Value is returned through parameter before the order.
     retTy = cgf.getContext().VoidTy;
-    args.add(RValue::get(castToGenericAddrSpace(dest.emitRawPointer(), retTy)),
+    args.add(RValue::get(castToGenericAddrSpace(dest.emitRawPointer(),
+                                                cgf.getContext().VoidPtrTy)),
              cgf.getContext().VoidPtrTy);
   }
 
   // Order is always the last parameter.
   args.add(RValue::get(order), cgf.getContext().IntTy);
-  if (e->isOpenCL()) {
-    assert(!cir::MissingFeatures::openCL());
-    cgf.cgm.errorNYI(loc, "emitLibCallForAtomicExpr: openCL");
-    return RValue::get(nullptr);
-  }
+  if (e->isOpenCL())
+    args.add(RValue::get(scope), cgf.getContext().IntTy);
 
   RValue res = emitAtomicLibCall(cgf, calleeName, retTy, args);
 
@@ -1646,7 +1650,7 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
   // See: https://llvm.org/docs/Atomics.html#libcalls-atomic
   if (useLibCall)
     return emitLibCallForAtomicExpr(*this, e, ptr, dest, val1, val2, size,
-                                    resultTy);
+                                    resultTy, scope);
 
   bool isStore = e->getOp() == AtomicExpr::AO__c11_atomic_store ||
                  e->getOp() == AtomicExpr::AO__opencl_atomic_store ||
