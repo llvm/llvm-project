@@ -2362,6 +2362,20 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     }
   }
 
+  case X86::BI__builtin_ia32_pmulhw128:
+  case X86::BI__builtin_ia32_pmulhw256:
+  case X86::BI__builtin_ia32_pmulhw512: {
+    Function *F = CGM.getIntrinsic(Intrinsic::smulh, Ops[0]->getType());
+    return Builder.CreateCall(F, {Ops[0], Ops[1]});
+  }
+
+  case X86::BI__builtin_ia32_pmulhuw128:
+  case X86::BI__builtin_ia32_pmulhuw256:
+  case X86::BI__builtin_ia32_pmulhuw512: {
+    Function *F = CGM.getIntrinsic(Intrinsic::umulh, Ops[0]->getType());
+    return Builder.CreateCall(F, {Ops[0], Ops[1]});
+  }
+
   case X86::BI__builtin_ia32_pmuludq128:
   case X86::BI__builtin_ia32_pmuludq256:
   case X86::BI__builtin_ia32_pmuludq512:

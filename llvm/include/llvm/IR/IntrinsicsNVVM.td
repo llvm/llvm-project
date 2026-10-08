@@ -97,6 +97,12 @@
 //   * llvm.nvvm.clz.ll              --> trunc i64 llvm.ctlz.i64(x) to i32
 //   * llvm.nvvm.popc.i              --> llvm.ctpop.i32
 //   * llvm.nvvm.popc.ll             --> trunc i64 llvm.ctpop.i64 to i32
+//   * llvm.nvvm.mulhi.s             --> llvm.smulh.i16
+//   * llvm.nvvm.mulhi.i             --> llvm.smulh.i32
+//   * llvm.nvvm.mulhi.ll            --> llvm.smulh.i64
+//   * llvm.nvvm.mulhi.us            --> llvm.umulh.i16
+//   * llvm.nvvm.mulhi.ui            --> llvm.umulh.i32
+//   * llvm.nvvm.mulhi.ull           --> llvm.umulh.i64
 //   * llvm.nvvm.abs.i               --> llvm.abs.i32(x, true)
 //   * llvm.nvvm.abs.ll              --> llvm.abs.i64(x, true)
 //   * llvm.nvvm.max.i               --> select(x sge y, x, y)
@@ -157,6 +163,10 @@ defvar WARP_SIZE = 32;
 defvar MAX_GRID_SIZE_X = 0x7fffffff;
 defvar MAX_GRID_SIZE_Y = 0xffff;
 defvar MAX_GRID_SIZE_Z = 0xffff;
+
+// The CTA rank is encoded in a single byte within a shared pointer, so the max
+// value is 255.
+defvar MAX_CLUSTER_RANK = 0xff;
 
 defvar MAX_BLOCK_SIZE_X = 1024;
 defvar MAX_BLOCK_SIZE_Y = 1024;
@@ -1667,15 +1677,6 @@ let TargetPrefix = "nvvm" in {
   let IntrProperties = [IntrNoMem, IntrSpeculatable, Commutative, 
                         IntrNoCreateUndefOrPoison] in {
     foreach sign = ["", "u"] in {
-      def int_nvvm_mulhi_ # sign # s : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i16_ty]>;
-
-      def int_nvvm_mulhi_ # sign # i : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty]>;
-
-      def int_nvvm_mulhi_ # sign # ll : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty]>;
-
       def int_nvvm_mul24_ # sign # i : NVVMBuiltin,
         DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty]>;
     }
@@ -2104,15 +2105,28 @@ let TargetPrefix = "nvvm" in {
             PureIntrinsic<[llvm_i16_ty],
                           [llvm_float_ty, llvm_float_ty, llvm_i1_ty],
                           [ImmArg<ArgIndex<2>, DefaultValue<0>>]>;
+        def int_nvvm_ff_to_ # type # _ # rnd # relu # _scale_n1_ue8m0 : NVVMBuiltin,
+            PureIntrinsic<[llvm_i16_ty],
+                          [llvm_float_ty, llvm_float_ty, llvm_i16_ty, llvm_i1_ty],
+                          [ImmArg<ArgIndex<3>, DefaultValue<0>>]>;
 
         def int_nvvm_f16x2_to_ # type # _ # rnd # relu : NVVMBuiltin,
             PureIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty, llvm_i1_ty],
                           [ImmArg<ArgIndex<1>, DefaultValue<0>>]>;
+        def int_nvvm_f16x2_to_ # type # _ # rnd # relu # _scale_n1_ue8m0 : NVVMBuiltin,
+            PureIntrinsic<[llvm_i16_ty],
+                          [llvm_v2f16_ty, llvm_i16_ty, llvm_i1_ty],
+                          [ImmArg<ArgIndex<2>, DefaultValue<0>>]>;
 
         def int_nvvm_bf16x2_to_ # type # _ # rnd # relu # _satfinite :
             NVVMBuiltin,
             PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty, llvm_i1_ty],
                           [ImmArg<ArgIndex<1>, DefaultValue<0>>]>;
+        def int_nvvm_bf16x2_to_ # type # _ # rnd # relu # _satfinite_scale_n1_ue8m0
+            : NVVMBuiltin,
+              PureIntrinsic<[llvm_i16_ty],
+                            [llvm_v2bf16_ty, llvm_i16_ty, llvm_i1_ty],
+                            [ImmArg<ArgIndex<2>, DefaultValue<0>>]>;
       }
 
       def int_nvvm_ # type # _to_f16x2_rn # relu : NVVMBuiltin,
@@ -2136,18 +2150,39 @@ let TargetPrefix = "nvvm" in {
 
   // FP4 conversions.
   foreach relu = ["", "_relu"] in {
-    def int_nvvm_ff_to_e2m1x2_rn # relu # _satfinite : NVVMBuiltin,
-        PureIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty]>;
+    foreach rnd = ["rn", "rz"] in {
+      def int_nvvm_ff_to_e2m1x2_ # rnd # relu # _satfinite : NVVMBuiltin,
+          PureIntrinsic<[llvm_i16_ty],
+                        [llvm_float_ty, llvm_float_ty, llvm_i1_ty],
+                        [ImmArg<ArgIndex<2>, DefaultValue<0>>]>;
+      def int_nvvm_ff_to_e2m1x2_ # rnd # relu # _satfinite_scale_n1_ue8m0
+          : NVVMBuiltin,
+            PureIntrinsic<[llvm_i16_ty],
+                          [llvm_float_ty, llvm_float_ty, llvm_i16_ty, llvm_i1_ty],
+                          [ImmArg<ArgIndex<3>, DefaultValue<0>>]>;
+
+      def int_nvvm_f16x2_to_e2m1x2_ # rnd # relu # _satfinite : NVVMBuiltin,
+          PureIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty, llvm_i1_ty],
+                        [ImmArg<ArgIndex<1>, DefaultValue<0>>]>;
+      def int_nvvm_f16x2_to_e2m1x2_ # rnd # relu # _satfinite_scale_n1_ue8m0
+          : NVVMBuiltin,
+            PureIntrinsic<[llvm_i16_ty],
+                          [llvm_v2f16_ty, llvm_i16_ty, llvm_i1_ty],
+                          [ImmArg<ArgIndex<2>, DefaultValue<0>>]>;
+
+      def int_nvvm_bf16x2_to_e2m1x2_ # rnd # relu # _satfinite : NVVMBuiltin,
+          PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty, llvm_i1_ty],
+                        [ImmArg<ArgIndex<1>, DefaultValue<0>>]>;
+      def int_nvvm_bf16x2_to_e2m1x2_ # rnd # relu # _satfinite_scale_n1_ue8m0
+          : NVVMBuiltin,
+            PureIntrinsic<[llvm_i16_ty],
+                          [llvm_v2bf16_ty, llvm_i16_ty, llvm_i1_ty],
+                          [ImmArg<ArgIndex<2>, DefaultValue<0>>]>;
+    }
 
     def int_nvvm_e2m1x2_to_f16x2_rn # relu : NVVMBuiltin,
         PureIntrinsic<[llvm_v2f16_ty], [llvm_i16_ty]>;
-        
-    def int_nvvm_f16x2_to_e2m1x2_rn # relu # _satfinite
-      : PureIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty]>;
 
-    def int_nvvm_bf16x2_to_e2m1x2_rn # relu # _satfinite
-      : PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty]>;
-    
     foreach satfinite = ["", "_satfinite"] in {
       def int_nvvm_e2m1x2_to_bf16x2_rn # relu # satfinite # _scale_n2_ue8m0
         : PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty, llvm_i16_ty]>;
@@ -2170,16 +2205,31 @@ let TargetPrefix = "nvvm" in {
             PureIntrinsic<[llvm_i16_ty],
                           [llvm_float_ty, llvm_float_ty, llvm_i1_ty],
                           [ImmArg<ArgIndex<2>, DefaultValue<0>>]>;
+        def int_nvvm_ff_to_ # type # _ # rnd # relu # _satfinite_scale_n1_ue8m0
+            : NVVMBuiltin,
+              PureIntrinsic<[llvm_i16_ty],
+                            [llvm_float_ty, llvm_float_ty, llvm_i16_ty, llvm_i1_ty],
+                            [ImmArg<ArgIndex<3>, DefaultValue<0>>]>;
 
         def int_nvvm_f16x2_to_ # type # _ # rnd # relu # _satfinite :
             NVVMBuiltin,
             PureIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty, llvm_i1_ty],
                           [ImmArg<ArgIndex<1>, DefaultValue<0>>]>;
+        def int_nvvm_f16x2_to_ # type # _ # rnd # relu # _satfinite_scale_n1_ue8m0
+            : NVVMBuiltin,
+              PureIntrinsic<[llvm_i16_ty],
+                            [llvm_v2f16_ty, llvm_i16_ty, llvm_i1_ty],
+                            [ImmArg<ArgIndex<2>, DefaultValue<0>>]>;
 
         def int_nvvm_bf16x2_to_ # type # _ # rnd # relu # _satfinite :
             NVVMBuiltin,
             PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty, llvm_i1_ty],
                           [ImmArg<ArgIndex<1>, DefaultValue<0>>]>;
+        def int_nvvm_bf16x2_to_ # type # _ # rnd # relu # _satfinite_scale_n1_ue8m0
+            : NVVMBuiltin,
+              PureIntrinsic<[llvm_i16_ty],
+                            [llvm_v2bf16_ty, llvm_i16_ty, llvm_i1_ty],
+                            [ImmArg<ArgIndex<2>, DefaultValue<0>>]>;
       }
 
       def int_nvvm_ # type # _to_f16x2_rn # relu : NVVMBuiltin,
@@ -2803,8 +2853,14 @@ defm int_nvvm_read_ptx_sreg_nclusterid : PTXReadSRegIntrinsicNB_v4i32<MAX_GRID_N
 defm int_nvvm_read_ptx_sreg_cluster_ctaid : PTXReadSRegIntrinsicNB_v4i32<MAX_GRID_ID_RANGE>;
 defm int_nvvm_read_ptx_sreg_cluster_nctaid : PTXReadSRegIntrinsicNB_v4i32<MAX_GRID_NID_RANGE>;
 
-def int_nvvm_read_ptx_sreg_cluster_ctarank : PTXReadSRegIntrinsicNB_r32;
-def int_nvvm_read_ptx_sreg_cluster_nctarank : PTXReadSRegIntrinsicNB_r32;
+// ctarank is an index within cluster CTA ranks (non-negative).
+// nctarank is the number of CTA ranks in cluster (positive).
+def int_nvvm_read_ptx_sreg_cluster_ctarank
+  : PTXReadSRegIntrinsicNB_r32<
+      [Range<RetIndex, 0, !add(MAX_CLUSTER_RANK, 1)>]>;
+def int_nvvm_read_ptx_sreg_cluster_nctarank
+  : PTXReadSRegIntrinsicNB_r32<
+      [Range<RetIndex, 1, !add(MAX_CLUSTER_RANK, 2)>]>;
 
 //
 // Reserved Shared Memory Intrinsics
@@ -3509,6 +3565,9 @@ let IntrProperties = [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<
 
   foreach eviction_priority = ["evict_normal", "evict_last"] in
     def int_nvvm_prefetch_global_L2_ # eviction_priority : DefaultAttrsIntrinsic<[], [llvm_global_ptr_ty]>;
+
+  def int_nvvm_prefetch_L1_32B_valid_addr
+    : DefaultAttrsIntrinsic<[], [llvm_anyptr_ty], [], "llvm.nvvm.prefetch.L1.32B.valid_addr">;
 
   def int_nvvm_prefetchu_L1 : DefaultAttrsIntrinsic<[], [llvm_ptr_ty]>;
 }

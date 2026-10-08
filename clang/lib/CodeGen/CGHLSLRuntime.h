@@ -33,21 +33,24 @@
 #include <optional>
 #include <vector>
 
-// A function generator macro for picking the right intrinsic
-// for the target backend
-#define GENERATE_HLSL_INTRINSIC_FUNCTION(FunctionName, IntrinsicPostfix)       \
+// Function generator macros for picking the right intrinsic for the target.
+#define GENERATE_HLSL_INTRINSIC_FUNCTION_BASE(FunctionName, DxilPostfix,       \
+                                              SpirvPostfix)                    \
   llvm::Intrinsic::ID get##FunctionName##Intrinsic() {                         \
     llvm::Triple::ArchType Arch = getArch();                                   \
     switch (Arch) {                                                            \
     case llvm::Triple::dxil:                                                   \
-      return llvm::Intrinsic::dx_##IntrinsicPostfix;                           \
+      return llvm::Intrinsic::dx_##DxilPostfix;                                \
     case llvm::Triple::spirv:                                                  \
-      return llvm::Intrinsic::spv_##IntrinsicPostfix;                          \
+      return llvm::Intrinsic::spv_##SpirvPostfix;                              \
     default:                                                                   \
-      llvm_unreachable("Intrinsic " #IntrinsicPostfix                          \
-                       " not supported by target architecture");               \
+      llvm_unreachable(#FunctionName " not supported by target architecture"); \
     }                                                                          \
   }
+
+#define GENERATE_HLSL_INTRINSIC_FUNCTION(FunctionName, IntrinsicPostfix)       \
+  GENERATE_HLSL_INTRINSIC_FUNCTION_BASE(FunctionName, IntrinsicPostfix,        \
+                                        IntrinsicPostfix)
 
 using ResourceClass = llvm::dxil::ResourceClass;
 
@@ -152,8 +155,10 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveUMin, wave_reduce_umin)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveCountBits, wave_active_countbits)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveIsFirstLane, wave_is_first_lane)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(WaveGetLaneCount, wave_get_lane_count)
+  GENERATE_HLSL_INTRINSIC_FUNCTION_BASE(WaveGetLaneCount, wave_get_lane_count,
+                                        subgroup_size)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveReadLaneAt, wave_readlane)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(WaveReadLaneFirst, wave_readlane_first)
   GENERATE_HLSL_INTRINSIC_FUNCTION(QuadReadAcrossX, quad_read_across_x)
   GENERATE_HLSL_INTRINSIC_FUNCTION(QuadReadAcrossY, quad_read_across_y)
   GENERATE_HLSL_INTRINSIC_FUNCTION(QuadReadAcrossDiagonal,
@@ -200,6 +205,16 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(GroupMemoryBarrier, group_memory_barrier)
   GENERATE_HLSL_INTRINSIC_FUNCTION(GroupMemoryBarrierWithGroupSync,
                                    group_memory_barrier_with_group_sync)
+  llvm::Intrinsic::ID getBarrierByMemoryTypeIntrinsic() {
+    assert(getArch() == llvm::Triple::dxil &&
+           "Barrier by memory type is only supported for DXIL");
+    return llvm::Intrinsic::dx_barrier_by_memory_type;
+  }
+  llvm::Intrinsic::ID getBarrierByMemoryHandleIntrinsic() {
+    assert(getArch() == llvm::Triple::dxil &&
+           "Barrier by memory handle is only supported for DXIL");
+    return llvm::Intrinsic::dx_barrier_by_memory_handle;
+  }
   GENERATE_HLSL_INTRINSIC_FUNCTION(GetDimensionsX, resource_getdimensions_x)
   GENERATE_HLSL_INTRINSIC_FUNCTION(GetDimensionsXY, resource_getdimensions_xy)
   GENERATE_HLSL_INTRINSIC_FUNCTION(GetDimensionsLevelsXY,
@@ -258,28 +273,34 @@ protected:
       const clang::DeclaratorDecl *Decl,
       specific_attr_iterator<HLSLAppliedSemanticAttr> begin,
       specific_attr_iterator<HLSLAppliedSemanticAttr> end,
-      SemanticSignatures &Signature);
+      SemanticSignatures &Signature,
+      llvm::hlsl::InterpolationModifier Modifiers);
 
   specific_attr_iterator<HLSLAppliedSemanticAttr> handleStructSemanticStore(
       llvm::IRBuilder<> &B, const FunctionDecl *FD, llvm::Value *Source,
       const clang::DeclaratorDecl *Decl,
       specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
       specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd,
-      SemanticSignatures &Signature);
+      SemanticSignatures &Signature,
+      llvm::hlsl::InterpolationModifier Modifiers);
 
   std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
   handleSemanticLoad(llvm::IRBuilder<> &B, const FunctionDecl *FD,
                      llvm::Type *Type, const clang::DeclaratorDecl *Decl,
                      specific_attr_iterator<HLSLAppliedSemanticAttr> begin,
                      specific_attr_iterator<HLSLAppliedSemanticAttr> end,
-                     SemanticSignatures &Signature);
+                     SemanticSignatures &Signature,
+                     llvm::hlsl::InterpolationModifier Modifiers =
+                         llvm::hlsl::InterpolationModifier::None);
 
   specific_attr_iterator<HLSLAppliedSemanticAttr>
   handleSemanticStore(llvm::IRBuilder<> &B, const FunctionDecl *FD,
                       llvm::Value *Source, const clang::DeclaratorDecl *Decl,
                       specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
                       specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd,
-                      SemanticSignatures &Signature);
+                      SemanticSignatures &Signature,
+                      llvm::hlsl::InterpolationModifier Modifiers =
+                          llvm::hlsl::InterpolationModifier::None);
 
 public:
   CGHLSLRuntime(CodeGenModule &CGM) : CGM(CGM) {}

@@ -1283,6 +1283,16 @@ def WaveReadLaneAt : DXILOp<117, waveReadLaneAt> {
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
+def WaveReadLaneFirst : DXILOp<118, waveReadLaneFirst> {
+  let Doc = "returns the value from the first active lane";
+  let intrinsics = [IntrinSelect<int_dx_wave_readlane_first>];
+  let arguments = [OverloadTy];
+  let result = OverloadTy;
+  let overloads = [Overloads<
+      DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int1Ty, Int16Ty, Int32Ty, Int64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def WaveActiveOp : DXILOp<119, waveActiveOp> {
   let Doc = "returns the result of the operation across waves";
   let intrinsics = [
@@ -1549,4 +1559,19 @@ def CreateHandleFromHeap : DXILOp<218, createHandleFromHeap> {
   let result = HandleTy;
   let stages = [Stages<DXIL1_6, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def BarrierByMemoryType : DXILOp<244, barrierByMemoryType> {
+  let Doc = "inserts a memory barrier for the specified memory types";
+  let intrinsics = [IntrinSelect<int_dx_barrier_by_memory_type>];
+  let arguments = [Int32Ty, Int32Ty];
+  let result = VoidTy;
+  let stages = [Stages<DXIL1_8, [all_stages]>];
+}
+
+def BarrierByMemoryHandle : DXILOp<245, barrierByMemoryHandle> {
+  let Doc = "inserts a memory barrier for the resource identified by a handle";
+  let arguments = [HandleTy, Int32Ty];
+  let result = VoidTy;
+  let stages = [Stages<DXIL1_8, [all_stages]>];
 }

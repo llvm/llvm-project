@@ -346,9 +346,9 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
     Base = VD;
   else if (const auto *E = Desc->asExpr()) {
     if (block()->isDynamic()) {
-      QualType AllocatedType = getDeclPtr().getFieldDesc()->getDataType(ASTCtx);
-      DynamicAllocLValue DA(*block()->DynAllocId);
-      Base = APValue::LValueBase::getDynamicAlloc(DA, AllocatedType);
+      DynamicAllocLValue DA(*block()->DynAllocId, Desc->getDynAllocKind());
+      Base =
+          APValue::LValueBase::getDynamicAlloc(DA, Desc->getDataType(ASTCtx));
     } else {
       Base = E;
     }
@@ -727,28 +727,6 @@ std::string Pointer::toDiagnosticString(const ASTContext &Ctx) const {
   return toAPValue(Ctx).getAsString(Ctx, Ty);
 }
 
-bool Pointer::isInitialized() const {
-  if (!isBlockPointer())
-    return true;
-
-  if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
-      Offset == BS.Base) {
-    const auto &GD = block()->getBlockDesc<GlobalInlineDescriptor>();
-    return GD.InitState == GlobalInitState::Initialized;
-  }
-
-  assert(BS.Pointee && "Cannot check if null pointer was initialized");
-  const Descriptor *Desc = getFieldDesc();
-  assert(Desc);
-  if (Desc->isPrimitiveArray())
-    return isElementInitialized(getIndex());
-
-  if (asBlockPointer().Base == 0)
-    return true;
-  // Field has its bit in an inline descriptor.
-  return getInlineDesc()->IsInitialized;
-}
-
 bool PtrView::isElementInitialized(unsigned Index) const {
   const Descriptor *Desc = getFieldDesc();
   assert(Desc);
@@ -829,6 +807,12 @@ void PtrView::setLifeState(Lifetime L) const {
 }
 
 void PtrView::initialize() const {
+  // FIXME: This happens when the control flow jumps right into a scope, e.g. in
+  // switch_into_init_stmt in constant-expression-cxx2a.cpp. I.e. we have never
+  // initialized the scope via an InitScope op.
+  if (LLVM_UNLIKELY(!Pointee->isInitialized()))
+    Pointee->invokeCtor();
+
   if (isRoot() && Base == sizeof(GlobalInlineDescriptor) && Offset == Base) {
     auto &GD = Pointee->getBlockDesc<GlobalInlineDescriptor>();
     GD.InitState = GlobalInitState::Initialized;
@@ -855,6 +839,12 @@ void PtrView::initializeElement(unsigned Index) const {
     return;
 
   assert(Index < getFieldDesc()->getNumElems());
+
+  // FIXME: This happens when the control flow jumps right into a scope, e.g. in
+  // switch_into_init_stmt in constant-expression-cxx2a.cpp. I.e. we have never
+  // initialized the scope via an InitScope op.
+  if (LLVM_UNLIKELY(!Pointee->isInitialized()))
+    Pointee->invokeCtor();
 
   InitMapPtr &IM = getInitMap();
   if (IM.allInitialized())

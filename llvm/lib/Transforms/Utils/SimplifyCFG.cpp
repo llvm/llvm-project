@@ -1181,13 +1181,14 @@ static void cloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
       continue;
 
     Instruction *NewBonusInst = BonusInst.clone();
+    NewBonusInst->insertInto(PredBlock, PTI->getIterator());
 
     if (!NewBonusInst->getDebugLoc().isSameSourceLocation(PTI->getDebugLoc())) {
       // Unless the instruction has the same !dbg location as the original
       // branch, drop it. When we fold the bonus instructions we want to make
       // sure we reset their debug locations in order to avoid stepping on
       // dead code caused by folding dead branches.
-      NewBonusInst->setDebugLoc(DebugLoc::getDropped());
+      NewBonusInst->dropLocation();
     } else if (const DebugLoc &DL = NewBonusInst->getDebugLoc()) {
       mapAtomInstance(DL, VMap);
     }
@@ -1202,7 +1203,6 @@ static void cloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
     // location the call is moved to.
     NewBonusInst->dropUBImplyingAttrsAndMetadata();
 
-    NewBonusInst->insertInto(PredBlock, PTI->getIterator());
     auto Range = NewBonusInst->cloneDebugInfoFrom(&BonusInst);
     RemapDbgRecordRange(NewBonusInst->getModule(), Range, VMap,
                         RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
@@ -2052,6 +2052,14 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
         // location is the merged locations of the original instructions.
         I1->applyMergedLocation(I1->getDebugLoc(), I2->getDebugLoc());
         I2->eraseFromParent();
+      }
+      // I1 now executes before the instructions we skipped.
+      unsigned SkippedFlags = 0;
+      for (const SuccIterPair &P : SuccIterPairs)
+        SkippedFlags |= P.second;
+      if (SkippedFlags & SkipImplicitControlFlow) {
+        // One of them may throw or not return, so I1 is speculated.
+        I1->dropUBImplyingAttrsAndMetadata();
       }
       if (!Changed)
         NumHoistCommonCode += SuccIterPairs.size();
@@ -3057,10 +3065,12 @@ public:
 ///     store i32 %add.add5, i32* %arrayidx2
 ///     ...
 ///
-/// \return The pointer to the value of the previous store if the store can be
-///         hoisted into the predecessor block. 0 otherwise.
+/// \return The value from the previous access if the store can be hoisted into
+///         the predecessor block. PreviousAccess is set to that access. Return
+///         null otherwise.
 static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
-                                     BasicBlock *StoreBB, BasicBlock *EndBB) {
+                                     BasicBlock *StoreBB, BasicBlock *EndBB,
+                                     Instruction *&PreviousAccess) {
   StoreInst *StoreToHoist = dyn_cast<StoreInst>(I);
   if (!StoreToHoist)
     return nullptr;
@@ -3094,9 +3104,11 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
       // atomic write.
       if (SI->getPointerOperand() == StorePtr &&
           SI->getValueOperand()->getType() == StoreTy && SI->isSimple() &&
-          SI->getAlign() >= StoreToHoist->getAlign())
+          SI->getAlign() >= StoreToHoist->getAlign()) {
         // Found the previous store, return its value operand.
+        PreviousAccess = SI;
         return SI->getValueOperand();
+      }
       return nullptr; // Unknown store.
     }
 
@@ -3116,6 +3128,7 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
              isDereferenceablePointer(StorePtr, StoreTy, LI->getDataLayout(),
                                       /*IgnoreFree=*/true))) {
           // Found a previous load, return it.
+          PreviousAccess = LI;
           return LI;
         }
       }
@@ -3149,7 +3162,7 @@ static bool validateAndCostRequiredSelects(BasicBlock *BB, BasicBlock *ThenBB,
       continue;
 
     Cost += TTI.getCmpSelInstrCost(Instruction::Select, PN.getType(),
-                                   CmpInst::makeCmpResultType(PN.getType()),
+                                   Type::getInt1Ty(PN.getContext()),
                                    CmpInst::BAD_ICMP_PREDICATE, CostKind);
 
     // Don't convert to selects if we could remove undefined behavior instead.
@@ -3277,6 +3290,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
   SmallVector<Instruction *, 2> SpeculatedConditionalLoadsStores;
   Value *SpeculatedStoreValue = nullptr;
   StoreInst *SpeculatedStore = nullptr;
+  Instruction *PreviousStoreAccess = nullptr;
   EphemeralValueTracker EphTracker;
   for (Instruction &I : reverse(drop_end(*ThenBB))) {
     // Skip pseudo probes. The consequence is we lose track of the branch
@@ -3315,8 +3329,8 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
     if (!IsSafeCheapLoadStore &&
         !isSafeToSpeculativelyExecute(&I, BI, Options.AC) &&
         !(HoistCondStores && !SpeculatedStoreValue &&
-          (SpeculatedStoreValue =
-               isSafeToSpeculateStore(&I, BB, ThenBB, EndBB))))
+          (SpeculatedStoreValue = isSafeToSpeculateStore(&I, BB, ThenBB, EndBB,
+                                                         PreviousStoreAccess))))
       return false;
     if (!IsSafeCheapLoadStore && !SpeculatedStoreValue &&
         computeSpeculationCost(&I, TTI) >
@@ -3418,8 +3432,14 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
   for (auto &I : make_early_inc_range(*ThenBB)) {
     if (!SpeculatedStoreValue || &I != SpeculatedStore) {
       I.dropLocation();
+      I.dropUBImplyingAttrsAndMetadata();
+    } else {
+      assert(PreviousStoreAccess && "Missing previous store access");
+      AAMDNodes MergedAA = SpeculatedStore->getAAMetadata().merge(
+          PreviousStoreAccess->getAAMetadata());
+      I.dropUBImplyingAttrsAndMetadata();
+      I.setAAMetadata(MergedAA);
     }
-    I.dropUBImplyingAttrsAndMetadata();
 
     // Drop ephemeral values.
     if (EphTracker.contains(&I)) {
@@ -4119,7 +4139,7 @@ static bool performBranchToCommonDestFolding(CondBrInst *BI, CondBrInst *PBI,
   LLVM_DEBUG(dbgs() << "FOLDING BRANCH TO COMMON DEST:\n" << *PBI << *BB);
 
   IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
-      BB->getContext(), ConstantFolder{},
+      *BB->getModule(), ConstantFolder{},
       IRBuilderCallbackInserter([&BB](Instruction *I) {
         // The builder is used to create instructions to eliminate the branch in
         // BB. If BB's terminator has !annotation metadata, add it to the new
@@ -4542,9 +4562,7 @@ static bool mergeConditionalStoreToAddress(
   Value *QPHI = ensureValueAvailableInSuccessor(QStore->getValueOperand(),
                                                 QStore->getParent(), PPHI);
 
-  BasicBlock::iterator PostBBFirst = PostBB->getFirstInsertionPt();
-  IRBuilder<> QB(PostBB, PostBBFirst);
-  QB.SetCurrentDebugLocation(PostBBFirst->getStableDebugLoc());
+  IRBuilder<> QB(PostBB->getFirstInsertionPt());
 
   InvertPCond ^= (PStore->getParent() != PTB);
   InvertQCond ^= (QStore->getParent() != QTB);

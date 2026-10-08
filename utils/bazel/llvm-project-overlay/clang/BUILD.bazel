@@ -2,6 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
 load("@bazel_skylib//rules:run_binary.bzl", "run_binary")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
@@ -1132,6 +1133,7 @@ cc_library(
         # least bad approach. Using `includes` is *specifically* problematic for
         # this library because it contains files that collide easily with system
         # headers such as `CXXABI.h`.
+        "-I$(WORKSPACE_ROOT)/clang/lib/AST",
         "-I$(GENDIR)/$(WORKSPACE_ROOT)/clang/lib/AST",
         "-I$(GENDIR)/$(WORKSPACE_ROOT)/clang/lib/AST/ByteCode",
     ],
@@ -1246,6 +1248,7 @@ cc_library(
     name = "analysis",
     srcs = glob([
         "lib/Analysis/FlowSensitive/Models/*.cpp",
+        "lib/Analysis/FlowSensitive/Models/*.h",
         "lib/Analysis/FlowSensitive/*.cpp",
         "lib/Analysis/LifetimeSafety/*.cpp",
         "lib/Analysis/LifetimeSafety/*.h",
@@ -1259,6 +1262,7 @@ cc_library(
     includes = [
         "include",
         "lib/Analysis/FlowSensitive",
+        "lib/Analysis/FlowSensitive/Models",
     ],
     textual_hdrs = glob([
         "include/clang/Analysis/**/*.def",
@@ -1985,19 +1989,18 @@ filegroup(
     srcs = builtin_headers,
 )
 
-genrule(
+[
+    copy_file(
+        name = "copy_" + hdr.replace("lib/Headers/", "staging/include/"),
+        src = hdr,
+        out = hdr.replace("lib/Headers/", "staging/include/"),
+    )
+    for hdr in builtin_headers
+]
+
+filegroup(
     name = "builtin_headers_gen",
-    srcs = builtin_headers,
-    outs = [hdr.replace("lib/Headers/", "staging/include/") for hdr in builtin_headers],
-    cmd = """
-       for src in $(SRCS); do
-         relsrc=$${src#*"$(WORKSPACE_ROOT)"/clang/lib/Headers}
-         target=$(@D)/staging/include/$$relsrc
-         mkdir -p $$(dirname $$target)
-         cp $$src $$target
-       done""",
-    output_to_bindir = 1,
-    toolchains = [":workspace_root"],
+    srcs = [hdr.replace("lib/Headers/", "staging/include/") for hdr in builtin_headers],
 )
 
 cc_library(
@@ -2126,6 +2129,9 @@ cc_library(
     deps = [
         ":ast",
         ":basic",
+        "//llvm:CodeGen",
+        "//llvm:Core",
+        "//llvm:Demangle",
         "//llvm:Support",
     ],
 )
@@ -2754,7 +2760,6 @@ cc_binary(
         "//llvm:Object",
         "//llvm:Option",
         "//llvm:Passes",
-        "//llvm:Plugins",
         "//llvm:Remarks",
         "//llvm:Support",
         "//llvm:Target",
@@ -3068,7 +3073,10 @@ cc_library(
 
 cc_library(
     name = "cir_dialect",
-    srcs = glob(["lib/CIR/Dialect/IR/*.cpp"]),
+    srcs = glob(
+        ["lib/CIR/Dialect/IR/*.cpp"],
+        exclude = ["lib/CIR/Dialect/IR/CIRMemorySlot.cpp"],
+    ),
     hdrs = glob([
         "include/clang/CIR/Dialect/IR/*.h",
         "include/clang/CIR/Dialect/Builder/*.h",
@@ -3142,6 +3150,7 @@ cc_library(
         ":cir_openmp_support",
         "//mlir:DLTIDialect",
         "//mlir:IR",
+        "//mlir:LLVMDialect",
         "//mlir:OpenACCDialect",
         "//mlir:OpenMPDialect",
     ],
@@ -3389,12 +3398,14 @@ cc_library(
         ":MLIRCIROpsIncGen",
         ":ast",
         ":basic",
+        ":cir_all_dialects",
         ":cir_codegen",
         ":cir_dialect",
         ":cir_headers",
         ":cir_lowering_common",
         ":cir_lowering_direct_to_llvm",
         ":codegen",
+        ":codegen_utils",
         ":frontend",
         "//llvm:Core",
         "//llvm:FrontendOffloading",
@@ -3402,6 +3413,7 @@ cc_library(
         "//llvm:Linker",
         "//llvm:Support",
         "//mlir:IR",
+        "//mlir:Parser",
         "//mlir:Pass",
     ],
 )

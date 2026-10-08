@@ -168,7 +168,6 @@ private:
   bool selectMemOperation(Register ResVReg, MachineInstr &I) const;
   Register getOrCreateMemSetGlobal(MachineInstr &I) const;
   bool selectCopyMemory(MachineInstr &I, Register SrcReg) const;
-  bool selectCopyMemorySized(MachineInstr &I, Register SrcReg) const;
 
   bool selectAtomicRMW(Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
                        unsigned NewOpcode, unsigned NegateOpcode = 0) const;
@@ -497,6 +496,8 @@ private:
   Register buildOnesVal(bool AllOnes, SPIRVTypeInst ResType,
                         MachineInstr &I) const;
   Register buildOnesValF(SPIRVTypeInst ResType, MachineInstr &I) const;
+  Register buildVectorSplat(Register ScalarReg, unsigned NumElts,
+                            MachineInstr &I) const;
 
   bool wrapIntoSpecConstantOp(MachineInstr &I,
                               SmallVector<Register> &CompositeArgs) const;
@@ -1683,18 +1684,7 @@ bool SPIRVInstructionSelector::selectLdexp(Register ResVReg,
   if (ResType->getOpcode() == SPIRV::OpTypeVector &&
       ExpType->getOpcode() != SPIRV::OpTypeVector) {
     unsigned NumElts = ResType->getOperand(2).getImm();
-    SPIRVTypeInst ExpVecType =
-        GR.getOrCreateSPIRVVectorType(ExpType, NumElts, I, TII);
-    Register SplatReg =
-        createVirtualRegister(ExpVecType, &GR, MRI, MRI->getMF());
-    auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                       TII.get(SPIRV::OpCompositeConstruct))
-                   .addDef(SplatReg)
-                   .addUse(GR.getSPIRVTypeID(ExpVecType));
-    for (unsigned J = 0; J < NumElts; ++J)
-      MIB.addUse(ExpReg);
-    MIB.constrainAllUses(TII, TRI, RBI);
-    ExpReg = SplatReg;
+    ExpReg = buildVectorSplat(ExpReg, NumElts, I);
   }
 
   return selectExtInst(ResVReg, ResType, I, CL::ldexp, GL::Ldexp,
@@ -1969,10 +1959,10 @@ bool SPIRVInstructionSelector::selectBitcast(Register ResVReg,
   return selectUnOp(ResVReg, ResType, I, SPIRV::OpBitcast);
 }
 
-static void addMemoryOperands(MachineMemOperand *MemOp,
-                              MachineInstrBuilder &MIB,
-                              MachineIRBuilder &MIRBuilder,
-                              SPIRVGlobalRegistry &GR) {
+static void
+addMemoryOperands(const MachineMemOperand *MemOp, MachineInstrBuilder &MIB,
+                  MachineIRBuilder &MIRBuilder, SPIRVGlobalRegistry &GR,
+                  std::optional<Align> AlignOverride = std::nullopt) {
   const SPIRVSubtarget *ST =
       static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
   uint32_t SpvMemOp = static_cast<uint32_t>(SPIRV::MemoryOperand::None);
@@ -2004,7 +1994,7 @@ static void addMemoryOperands(MachineMemOperand *MemOp,
   if (SpvMemOp != static_cast<uint32_t>(SPIRV::MemoryOperand::None)) {
     MIB.addImm(SpvMemOp);
     if (SpvMemOp & static_cast<uint32_t>(SPIRV::MemoryOperand::Aligned))
-      MIB.addImm(MemOp->getAlign().value());
+      MIB.addImm(AlignOverride.value_or(MemOp->getAlign()).value());
     if (AliasList)
       MIB.addUse(AliasList->getOperand(0).getReg());
     if (NoAliasList)
@@ -2535,42 +2525,53 @@ bool SPIRVInstructionSelector::selectCopyMemory(MachineInstr &I,
                                                 Register SrcReg) const {
   MachineBasicBlock &BB = *I.getParent();
   Register DstReg = I.getOperand(0).getReg();
-  SPIRVTypeInst DstTy = GR.getSPIRVTypeForVReg(DstReg);
-  SPIRVTypeInst SrcTy = GR.getSPIRVTypeForVReg(SrcReg);
-  if (GR.getPointeeType(DstTy) != GR.getPointeeType(SrcTy))
-    return diagnoseUnsupported(
-        I, "OpCopyMemory requires operands to have the same type");
-  uint64_t CopySize = getIConstVal(I.getOperand(2).getReg(), MRI);
-  SPIRVTypeInst PointeeTy = GR.getPointeeType(DstTy);
-  const Type *LLVMPointeeTy = GR.getTypeForSPIRVType(PointeeTy);
-  if (!LLVMPointeeTy)
-    return diagnoseUnsupported(
-        I, "Unable to determine pointee type size for OpCopyMemory");
-  const DataLayout &DL = I.getMF()->getFunction().getDataLayout();
-  if (CopySize != DL.getTypeStoreSize(const_cast<Type *>(LLVMPointeeTy)))
-    return diagnoseUnsupported(
-        I, "OpCopyMemory requires the size to match the pointee type size");
-  auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCopyMemory))
+  const bool IsLogical = STI.isLogicalSPIRV();
+  if (IsLogical) {
+    SPIRVTypeInst DstTy = GR.getSPIRVTypeForVReg(DstReg);
+    SPIRVTypeInst SrcTy = GR.getSPIRVTypeForVReg(SrcReg);
+    if (GR.getPointeeType(DstTy) != GR.getPointeeType(SrcTy))
+      return diagnoseUnsupported(
+          I, "OpCopyMemory requires operands to have the same type");
+    uint64_t CopySize = getIConstVal(I.getOperand(2).getReg(), MRI);
+    SPIRVTypeInst PointeeTy = GR.getPointeeType(DstTy);
+    const Type *LLVMPointeeTy = GR.getTypeForSPIRVType(PointeeTy);
+    if (!LLVMPointeeTy)
+      return diagnoseUnsupported(
+          I, "Unable to determine pointee type size for OpCopyMemory");
+    const DataLayout &DL = I.getMF()->getFunction().getDataLayout();
+    if (CopySize != DL.getTypeStoreSize(const_cast<Type *>(LLVMPointeeTy)))
+      return diagnoseUnsupported(
+          I, "OpCopyMemory requires the size to match the pointee type size");
+  }
+
+  const unsigned Opcode =
+      IsLogical ? SPIRV::OpCopyMemory : SPIRV::OpCopyMemorySized;
+  auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
                  .addUse(DstReg)
                  .addUse(SrcReg);
-  if (I.getNumMemOperands()) {
-    MachineIRBuilder MIRBuilder(I);
-    addMemoryOperands(*I.memoperands_begin(), MIB, MIRBuilder, GR);
-  }
-  MIB.constrainAllUses(TII, TRI, RBI);
-  return true;
-}
+  if (!IsLogical)
+    MIB.addUse(I.getOperand(2).getReg());
 
-bool SPIRVInstructionSelector::selectCopyMemorySized(MachineInstr &I,
-                                                     Register SrcReg) const {
-  MachineBasicBlock &BB = *I.getParent();
-  auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCopyMemorySized))
-                 .addUse(I.getOperand(0).getReg())
-                 .addUse(SrcReg)
-                 .addUse(I.getOperand(2).getReg());
   if (I.getNumMemOperands()) {
     MachineIRBuilder MIRBuilder(I);
-    addMemoryOperands(*I.memoperands_begin(), MIB, MIRBuilder, GR);
+    const MachineMemOperand *DstMemOp = *I.memoperands_begin();
+    const Align DstAlign = DstMemOp->getAlign();
+    Align SrcAlign = DstAlign;
+    // Copies carry destination and source MMOs; memset carries only the
+    // destination. Shader memory operands do not include alignment.
+    if (I.getNumMemOperands() > 1 && !STI.isShader())
+      SrcAlign = (*std::next(I.memoperands_begin()))->getAlign();
+
+    // A single mask applies to both pointers. SPIR-V 1.4 allows separate
+    // destination and source masks, preserving their individual alignments.
+    if (DstAlign != SrcAlign && STI.isAtLeastSPIRVVer(VersionTuple(1, 4))) {
+      // Preserve the existing flags and metadata on both accesses.
+      addMemoryOperands(DstMemOp, MIB, MIRBuilder, GR);
+      addMemoryOperands(DstMemOp, MIB, MIRBuilder, GR, SrcAlign);
+    } else {
+      addMemoryOperands(DstMemOp, MIB, MIRBuilder, GR,
+                        std::min(DstAlign, SrcAlign));
+    }
   }
   MIB.constrainAllUses(TII, TRI, RBI);
   return true;
@@ -2598,13 +2599,8 @@ bool SPIRVInstructionSelector::selectMemOperation(Register ResVReg,
     if (!selectOpWithSrcs(SrcReg, SourceTy, I, {VarReg}, SPIRV::OpBitcast))
       return false;
   }
-  if (STI.isLogicalSPIRV()) {
-    if (!selectCopyMemory(I, SrcReg))
-      return false;
-  } else {
-    if (!selectCopyMemorySized(I, SrcReg))
-      return false;
-  }
+  if (!selectCopyMemory(I, SrcReg))
+    return false;
   if (ResVReg.isValid() && ResVReg != I.getOperand(0).getReg())
     if (!BuildCOPY(ResVReg, I.getOperand(0).getReg(), I))
       return false;
@@ -4719,6 +4715,23 @@ Register SPIRVInstructionSelector::buildOnesVal(bool AllOnes,
   return GR.getOrCreateConstInt(One, I, ResType, TII);
 }
 
+Register SPIRVInstructionSelector::buildVectorSplat(Register ScalarReg,
+                                                    unsigned NumElts,
+                                                    MachineInstr &I) const {
+  SPIRVTypeInst VecType = GR.getOrCreateSPIRVVectorType(
+      GR.getSPIRVTypeForVReg(ScalarReg), NumElts, I, TII);
+  Register SplatReg = MRI->createVirtualRegister(GR.getRegClass(VecType));
+  GR.assignSPIRVTypeToVReg(VecType, SplatReg, MRI->getMF());
+  auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                     TII.get(SPIRV::OpCompositeConstruct))
+                 .addDef(SplatReg)
+                 .addUse(GR.getSPIRVTypeID(VecType));
+  for (unsigned J = 0; J < NumElts; ++J)
+    MIB.addUse(ScalarReg);
+  MIB.constrainAllUses(TII, TRI, RBI);
+  return SplatReg;
+}
+
 bool SPIRVInstructionSelector::selectSelect(Register ResVReg,
                                             SPIRVTypeInst ResType,
                                             MachineInstr &I) const {
@@ -4732,10 +4745,18 @@ bool SPIRVInstructionSelector::selectSelect(Register ResVReg,
   bool IsPtrTy =
       GR.isScalarOrVectorOfType(SelectFirstArg, SPIRV::OpTypePointer);
 
-  bool IsScalarBool =
-      GR.isScalarOfType(I.getOperand(1).getReg(), SPIRV::OpTypeBool);
+  Register CondReg = I.getOperand(1).getReg();
+  bool IsScalarBool = GR.isScalarOfType(CondReg, SPIRV::OpTypeBool);
   unsigned Opcode;
   if (isVectorType(GR.getSPIRVTypeForVReg(SelectFirstArg))) {
+    // Before SPIR-V 1.4, the condition of an OpSelect with a vector result
+    // must be a vector of Booleans with the same number of components, while
+    // LLVM IR also allows a scalar i1 condition. Splat it in that case.
+    if (IsScalarBool && !STI.isAtLeastSPIRVVer(VersionTuple(1, 4))) {
+      unsigned NumElts = GR.getScalarOrVectorComponentCount(ResType);
+      CondReg = buildVectorSplat(CondReg, NumElts, I);
+      IsScalarBool = false;
+    }
     if (IsFloatTy) {
       Opcode = IsScalarBool ? SPIRV::OpSelectVFSCond : SPIRV::OpSelectVFVCond;
     } else if (IsPtrTy) {
@@ -4757,7 +4778,7 @@ bool SPIRVInstructionSelector::selectSelect(Register ResVReg,
   BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
-      .addUse(I.getOperand(1).getReg())
+      .addUse(CondReg)
       .addUse(SelectFirstArg)
       .addUse(SelectSecondArg)
       .constrainAllUses(TII, TRI, RBI);
@@ -5721,6 +5742,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_wave_readlane:
     return selectWaveOpInst(ResVReg, ResType, I,
                             SPIRV::OpGroupNonUniformShuffle);
+  case Intrinsic::spv_wave_readlane_first:
+    return selectWaveOpInst(ResVReg, ResType, I,
+                            SPIRV::OpGroupNonUniformBroadcastFirst);
   case Intrinsic::spv_wave_prefix_sum:
     return selectWaveExclusiveScanSum(ResVReg, ResType, I);
   case Intrinsic::spv_wave_prefix_product:
@@ -7051,11 +7075,30 @@ bool SPIRVInstructionSelector::selectAllocaArray(Register ResVReg,
   // there was an allocation size parameter to the allocation instruction
   // that is not 1
   MachineBasicBlock &BB = *I.getParent();
-  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpVariableLengthArrayINTEL))
-      .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
-      .addUse(I.getOperand(2).getReg())
-      .constrainAllUses(TII, TRI, RBI);
+
+  bool UseUntypedPointers =
+      ResType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR;
+  unsigned Opcode = UseUntypedPointers
+                        ? SPIRV::OpUntypedVariableLengthArrayINTEL
+                        : SPIRV::OpVariableLengthArrayINTEL;
+
+  auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
+                 .addDef(ResVReg)
+                 .addUse(GR.getSPIRVTypeID(ResType));
+
+  // OpUntypedVariableLengthArrayINTEL takes an explicit Element Type <id>
+  // right after the result type
+  if (UseUntypedPointers) {
+    SPIRVTypeInst ElementType = GR.getUntypedPtrElementType(ResVReg);
+    assert(ElementType &&
+           "untyped variable length array result must have a recorded element "
+           "type");
+    MIB.addUse(GR.getSPIRVTypeID(ElementType));
+  }
+
+  MIB.addUse(I.getOperand(2).getReg());
+  MIB.constrainAllUses(TII, TRI, RBI);
+
   if (!STI.isShader()) {
     unsigned Alignment = I.getOperand(3).getImm();
     buildOpDecorate(ResVReg, I, TII, SPIRV::Decoration::Alignment, {Alignment});

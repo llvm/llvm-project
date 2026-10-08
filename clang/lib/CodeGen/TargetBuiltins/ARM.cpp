@@ -2112,7 +2112,7 @@ static Value *EmitAtomicStoreWithHintBuiltin(CodeGenFunction &CGF,
   unsigned HintArg = Result.Val.getInt().getExtValue();
 
   // Attach the hint if valid
-  if (toAArch64MemoryHint(HintArg) != AArch64MemoryHint::HINT_NONE) {
+  if (toAArch64MemoryHint(HintArg) != AArch64MemoryHint::NONE) {
     LLVMContext &Ctx = CGM.getLLVMContext();
     MDNode *MemHint = MDNode::get(
         Ctx, {MDString::get(Ctx, "aarch64.mem_hint"),
@@ -4920,6 +4920,37 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     MTEIntrinsicID = Intrinsic::aarch64_stg; break;
   case clang::AArch64::BI__builtin_arm_subp:
     MTEIntrinsicID = Intrinsic::aarch64_subp; break;
+  }
+
+  if (BuiltinID == clang::AArch64::BI__arm_set_fpm_lscale) {
+    Value *FPM = EmitScalarExpr(E->getArg(0));
+    Value *Scale = EmitScalarExpr(E->getArg(1));
+    Scale = Builder.CreateAnd(Scale, Builder.getInt64(0x7f));
+
+    Value *MaskedFPM = Builder.CreateAnd(FPM, Builder.getInt64(~0x7f0000ULL));
+    Value *ShiftedScale = Builder.CreateShl(Scale, Builder.getInt64(16));
+
+    return Builder.CreateOr(MaskedFPM, ShiftedScale);
+  }
+  if (BuiltinID == clang::AArch64::BI__arm_set_fpm_nscale) {
+    Value *FPM = EmitScalarExpr(E->getArg(0));
+    Value *Scale = EmitScalarExpr(E->getArg(1));
+    Scale = Builder.CreateAnd(Scale, Builder.getInt64(0xff));
+
+    Value *MaskedFPM = Builder.CreateAnd(FPM, Builder.getInt64(~0xff000000ULL));
+    Value *ShiftedScale = Builder.CreateShl(Scale, Builder.getInt64(24));
+
+    return Builder.CreateOr(MaskedFPM, ShiftedScale);
+  }
+  if (BuiltinID == clang::AArch64::BI__arm_set_fpm_lscale2) {
+    Value *FPM = EmitScalarExpr(E->getArg(0));
+    Value *Scale = EmitScalarExpr(E->getArg(1));
+    Scale = Builder.CreateAnd(Scale, Builder.getInt64(0x3f));
+
+    Value *LowFPM = Builder.CreateAnd(FPM, Builder.getInt64(~0x3f00000000ULL));
+    Value *ShiftedScale = Builder.CreateShl(Scale, Builder.getInt64(32));
+
+    return Builder.CreateOr(LowFPM, ShiftedScale);
   }
 
   if (MTEIntrinsicID != Intrinsic::not_intrinsic) {

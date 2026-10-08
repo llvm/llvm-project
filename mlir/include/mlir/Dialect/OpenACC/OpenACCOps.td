@@ -3042,10 +3042,20 @@ def AtomicReadOp : OpenACC_Op<"atomic.read", [AtomicReadOpInterface]> {
 
     The operand `x` is the address from where the value is atomically read.
     The operand `v` is the address where the value is stored after reading.
+
+    The operation declares its memory effects per operand: it reads the
+    location designated by `x` and writes the location designated by `v`. It
+    declares no other effect, which models relaxed ordering: the access to the
+    location is atomic, but the operation creates no ordering relationship with
+    accesses to any other location, so those may be moved across it. OpenACC
+    leaves the ordering of the `atomic` construct unspecified - unlike OpenMP
+    it has no memory-ordering clause - so relaxed is the weakest reading
+    consistent with the specification and the one that permits the most
+    optimization.
   }];
 
-  let arguments = (ins OpenACC_PointerLikeType:$x,
-                       OpenACC_PointerLikeType:$v,
+  let arguments = (ins Arg<OpenACC_PointerLikeType, "address atomically read from", [MemRead]>:$x,
+                       Arg<OpenACC_PointerLikeType, "address storing read value", [MemWrite]>:$v,
                        TypeAttr:$element_type, Optional<I1>:$ifCond);
   let assemblyFormat = [{
     oilist(
