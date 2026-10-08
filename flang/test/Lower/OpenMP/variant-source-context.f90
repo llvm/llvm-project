@@ -213,57 +213,57 @@ end subroutine
 ! A standalone replacement owns the following BLOCK and its nested context.
 ! CHECK-LABEL: func.func @_QPstandalone_block()
 ! CHECK: fir.call @_QPbefore_block
-! CHECK: omp.parallel
+! CHECK: omp.target
 ! CHECK: omp.barrier
 ! CHECK: omp.single
 ! CHECK: omp.taskyield
 ! CHECK: omp.terminator
 ! CHECK: omp.terminator
-! CHECK-NOT: omp.parallel
+! CHECK-NOT: omp.target
 ! CHECK-NOT: omp.barrier
 ! CHECK-NOT: omp.taskyield
 ! CHECK: return
 subroutine standalone_block()
   call before_block()
-  !$omp metadirective when(implementation={vendor(llvm)}: parallel)
+  !$omp metadirective when(implementation={vendor(llvm)}: target)
   block
-    !$omp metadirective when(construct={parallel}: barrier)
+    !$omp metadirective when(construct={target}: barrier)
     !$omp single
       !$omp metadirective &
-      !$omp& when(construct={parallel, single}: taskyield)
+      !$omp& when(construct={target, single}: taskyield)
     !$omp end single
   end block
-  !$omp metadirective when(construct={parallel}: taskyield)
+  !$omp metadirective when(construct={target}: taskyield)
 end subroutine
 
 ! Each runtime alternative lowers the BLOCK once, with its own context.
 ! CHECK-LABEL: func.func @_QPruntime_block(
 ! CHECK: fir.if
-! CHECK: omp.parallel
+! CHECK: omp.target
 ! CHECK: fir.call @_QPuse_block_local
 ! CHECK-NOT: fir.call @_QPuse_block_local
 ! CHECK: omp.taskyield
 ! CHECK: omp.terminator
 ! CHECK-NOT: fir.call @_QPuse_block_local
 ! CHECK: } else {
-! CHECK-NOT: omp.parallel
+! CHECK-NOT: omp.target
 ! CHECK-NOT: omp.taskyield
 ! CHECK: fir.call @_QPuse_block_local
 ! CHECK-NOT: fir.call @_QPuse_block_local
-! CHECK-NOT: omp.parallel
+! CHECK-NOT: omp.target
 ! CHECK-NOT: omp.taskyield
 ! CHECK: return
 subroutine runtime_block(flag)
   logical :: flag
-  !$omp metadirective when(user={condition(flag)}: parallel) &
+  !$omp metadirective when(user={condition(flag)}: target) &
   !$omp& otherwise(nothing)
   block
     integer :: local
     local = 1
     call use_block_local(local)
-    !$omp metadirective when(construct={parallel}: taskyield)
+    !$omp metadirective when(construct={target}: taskyield)
   end block
-  !$omp metadirective when(construct={parallel}: taskyield)
+  !$omp metadirective when(construct={target}: taskyield)
 end subroutine
 
 ! An empty delimited replacement must not capture the following BLOCK.
@@ -283,9 +283,9 @@ subroutine empty_delimited_block()
   end block
 end subroutine
 
-! The selected PARALLEL makes the inner SIMD variant lose to NOTHING.
+! The selected TARGET makes the inner SIMD variant lose to NOTHING.
 ! CHECK-LABEL: func.func @_QPstandalone_block_loop(
-! CHECK: omp.parallel
+! CHECK: omp.target
 ! CHECK-NOT: omp.simd
 ! CHECK: fir.do_loop
 ! CHECK: omp.terminator
@@ -294,11 +294,11 @@ end subroutine
 ! CHECK: return
 subroutine standalone_block_loop(n)
   integer :: n, i
-  !$omp metadirective when(implementation={vendor(llvm)}: parallel) &
+  !$omp metadirective when(implementation={vendor(llvm)}: target) &
   !$omp& otherwise(nothing)
   block
     !$omp metadirective &
-    !$omp& when(construct={parallel}: nothing) &
+    !$omp& when(construct={target}: nothing) &
     !$omp& when(implementation={vendor(score(0): llvm)}: simd collapse(1)) &
     !$omp& otherwise(nothing)
     do i = 1, n

@@ -7758,6 +7758,10 @@ static void genMetadirective(lower::AbstractConverter &converter,
       if (associatedBlockEval && associatedBlockEval->lowerAsUnstructured())
         TODO(variantLoc,
              "unstructured associated BLOCK in METADIRECTIVE variant");
+      // Semantics computed no variant-specific data-sharing for the BLOCK.
+      if (associatedBlockEval && hasUnsupportedDataEnvironmentDirective(queue))
+        TODO(variantLoc, "data-environment construct with associated BLOCK in "
+                         "METADIRECTIVE variant");
       mlir::SaveStateStack<OpenMPContextFrame> context{
           converter.getStateStack(), eval, spec->DirId(),
           /*isReplacement=*/true};

@@ -75,23 +75,20 @@ subroutine target_inner_parallel()
   !$omp end parallel
 end subroutine
 
-! A selected PARALLEL from a metadirective that precedes every executable
-! statement is still hidden by an inner TARGET.
-! CHECK-LABEL: func.func @_QPdeclarative_parallel_target()
-! CHECK: omp.parallel
-! CHECK: omp.barrier
+! A selected TARGET from a metadirective that precedes every executable
+! statement keeps its source position before an inner TEAMS.
+! CHECK-LABEL: func.func @_QPdeclarative_target_teams()
 ! CHECK: omp.target
-! CHECK-NOT: omp.barrier
+! CHECK: omp.teams
 ! CHECK: omp.taskyield
 ! CHECK: return
-subroutine declarative_parallel_target()
-  !$omp metadirective when(implementation={vendor(llvm)}: parallel)
+subroutine declarative_target_teams()
+  !$omp metadirective when(implementation={vendor(llvm)}: target)
   block
-    !$omp metadirective when(construct={parallel}: barrier) default(taskyield)
-    !$omp target
-      !$omp metadirective when(construct={parallel}: barrier) &
-      !$omp& default(taskyield)
-    !$omp end target
+    !$omp teams
+      !$omp metadirective when(construct={target, teams}: taskyield) &
+      !$omp& default(nothing)
+    !$omp end teams
   end block
 end subroutine
 
