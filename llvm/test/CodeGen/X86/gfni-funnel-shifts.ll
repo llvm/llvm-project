@@ -245,6 +245,8 @@ define <16 x i8> @var_fshr_v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %amt) nou
 define <16 x i8> @splatvar_fshl_v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %amt) nounwind {
 ; GFNISSE-LABEL: splatvar_fshl_v16i8:
 ; GFNISSE:       # %bb.0:
+; GFNISSE-NEXT:    pxor %xmm3, %xmm3
+; GFNISSE-NEXT:    pshufb %xmm3, %xmm2
 ; GFNISSE-NEXT:    movdqa %xmm1, %xmm3
 ; GFNISSE-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8],xmm0[8],xmm3[9],xmm0[9],xmm3[10],xmm0[10],xmm3[11],xmm0[11],xmm3[12],xmm0[12],xmm3[13],xmm0[13],xmm3[14],xmm0[14],xmm3[15],xmm0[15]
 ; GFNISSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
@@ -257,17 +259,45 @@ define <16 x i8> @splatvar_fshl_v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %amt
 ; GFNISSE-NEXT:    movdqa %xmm1, %xmm0
 ; GFNISSE-NEXT:    retq
 ;
-; GFNIAVX-LABEL: splatvar_fshl_v16i8:
-; GFNIAVX:       # %bb.0:
-; GFNIAVX-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm1[8],xmm0[8],xmm1[9],xmm0[9],xmm1[10],xmm0[10],xmm1[11],xmm0[11],xmm1[12],xmm0[12],xmm1[13],xmm0[13],xmm1[14],xmm0[14],xmm1[15],xmm0[15]
-; GFNIAVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
-; GFNIAVX-NEXT:    vpsllw %xmm2, %xmm3, %xmm3
-; GFNIAVX-NEXT:    vpsrlw $8, %xmm3, %xmm3
-; GFNIAVX-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
-; GFNIAVX-NEXT:    vpsllw %xmm2, %xmm0, %xmm0
-; GFNIAVX-NEXT:    vpsrlw $8, %xmm0, %xmm0
-; GFNIAVX-NEXT:    vpackuswb %xmm3, %xmm0, %xmm0
-; GFNIAVX-NEXT:    retq
+; GFNIAVX1-LABEL: splatvar_fshl_v16i8:
+; GFNIAVX1:       # %bb.0:
+; GFNIAVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; GFNIAVX1-NEXT:    vpshufb %xmm3, %xmm2, %xmm2
+; GFNIAVX1-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm1[8],xmm0[8],xmm1[9],xmm0[9],xmm1[10],xmm0[10],xmm1[11],xmm0[11],xmm1[12],xmm0[12],xmm1[13],xmm0[13],xmm1[14],xmm0[14],xmm1[15],xmm0[15]
+; GFNIAVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; GFNIAVX1-NEXT:    vpsllw %xmm2, %xmm3, %xmm3
+; GFNIAVX1-NEXT:    vpsrlw $8, %xmm3, %xmm3
+; GFNIAVX1-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; GFNIAVX1-NEXT:    vpsllw %xmm2, %xmm0, %xmm0
+; GFNIAVX1-NEXT:    vpsrlw $8, %xmm0, %xmm0
+; GFNIAVX1-NEXT:    vpackuswb %xmm3, %xmm0, %xmm0
+; GFNIAVX1-NEXT:    retq
+;
+; GFNIAVX2-LABEL: splatvar_fshl_v16i8:
+; GFNIAVX2:       # %bb.0:
+; GFNIAVX2-NEXT:    vpbroadcastb %xmm2, %xmm2
+; GFNIAVX2-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm1[8],xmm0[8],xmm1[9],xmm0[9],xmm1[10],xmm0[10],xmm1[11],xmm0[11],xmm1[12],xmm0[12],xmm1[13],xmm0[13],xmm1[14],xmm0[14],xmm1[15],xmm0[15]
+; GFNIAVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; GFNIAVX2-NEXT:    vpsllw %xmm2, %xmm3, %xmm3
+; GFNIAVX2-NEXT:    vpsrlw $8, %xmm3, %xmm3
+; GFNIAVX2-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; GFNIAVX2-NEXT:    vpsllw %xmm2, %xmm0, %xmm0
+; GFNIAVX2-NEXT:    vpsrlw $8, %xmm0, %xmm0
+; GFNIAVX2-NEXT:    vpackuswb %xmm3, %xmm0, %xmm0
+; GFNIAVX2-NEXT:    retq
+;
+; GFNIAVX512-LABEL: splatvar_fshl_v16i8:
+; GFNIAVX512:       # %bb.0:
+; GFNIAVX512-NEXT:    vpbroadcastb %xmm2, %xmm2
+; GFNIAVX512-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm1[8],xmm0[8],xmm1[9],xmm0[9],xmm1[10],xmm0[10],xmm1[11],xmm0[11],xmm1[12],xmm0[12],xmm1[13],xmm0[13],xmm1[14],xmm0[14],xmm1[15],xmm0[15]
+; GFNIAVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; GFNIAVX512-NEXT:    vpsllw %xmm2, %xmm3, %xmm3
+; GFNIAVX512-NEXT:    vpsrlw $8, %xmm3, %xmm3
+; GFNIAVX512-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; GFNIAVX512-NEXT:    vpsllw %xmm2, %xmm0, %xmm0
+; GFNIAVX512-NEXT:    vpsrlw $8, %xmm0, %xmm0
+; GFNIAVX512-NEXT:    vpackuswb %xmm3, %xmm0, %xmm0
+; GFNIAVX512-NEXT:    retq
   %splat = shufflevector <16 x i8> %amt, <16 x i8> undef, <16 x i32> zeroinitializer
   %res = call <16 x i8> @llvm.fshl.v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %splat)
   ret <16 x i8> %res
@@ -276,6 +306,8 @@ define <16 x i8> @splatvar_fshl_v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %amt
 define <16 x i8> @splatvar_fshr_v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %amt) nounwind {
 ; GFNISSE-LABEL: splatvar_fshr_v16i8:
 ; GFNISSE:       # %bb.0:
+; GFNISSE-NEXT:    pxor %xmm3, %xmm3
+; GFNISSE-NEXT:    pshufb %xmm3, %xmm2
 ; GFNISSE-NEXT:    movdqa %xmm1, %xmm4
 ; GFNISSE-NEXT:    punpckhbw {{.*#+}} xmm4 = xmm4[8],xmm0[8],xmm4[9],xmm0[9],xmm4[10],xmm0[10],xmm4[11],xmm0[11],xmm4[12],xmm0[12],xmm4[13],xmm0[13],xmm4[14],xmm0[14],xmm4[15],xmm0[15]
 ; GFNISSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
@@ -291,6 +323,8 @@ define <16 x i8> @splatvar_fshr_v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %amt
 ;
 ; GFNIAVX1-LABEL: splatvar_fshr_v16i8:
 ; GFNIAVX1:       # %bb.0:
+; GFNIAVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; GFNIAVX1-NEXT:    vpshufb %xmm3, %xmm2, %xmm2
 ; GFNIAVX1-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm1[8],xmm0[8],xmm1[9],xmm0[9],xmm1[10],xmm0[10],xmm1[11],xmm0[11],xmm1[12],xmm0[12],xmm1[13],xmm0[13],xmm1[14],xmm0[14],xmm1[15],xmm0[15]
 ; GFNIAVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; GFNIAVX1-NEXT:    vpsrlw %xmm2, %xmm3, %xmm3
@@ -304,6 +338,7 @@ define <16 x i8> @splatvar_fshr_v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %amt
 ;
 ; GFNIAVX2-LABEL: splatvar_fshr_v16i8:
 ; GFNIAVX2:       # %bb.0:
+; GFNIAVX2-NEXT:    vpbroadcastb %xmm2, %xmm2
 ; GFNIAVX2-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm1[8],xmm0[8],xmm1[9],xmm0[9],xmm1[10],xmm0[10],xmm1[11],xmm0[11],xmm1[12],xmm0[12],xmm1[13],xmm0[13],xmm1[14],xmm0[14],xmm1[15],xmm0[15]
 ; GFNIAVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; GFNIAVX2-NEXT:    vpsrlw %xmm2, %xmm3, %xmm3
@@ -317,6 +352,7 @@ define <16 x i8> @splatvar_fshr_v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %amt
 ;
 ; GFNIAVX512VL-LABEL: splatvar_fshr_v16i8:
 ; GFNIAVX512VL:       # %bb.0:
+; GFNIAVX512VL-NEXT:    vpbroadcastb %xmm2, %xmm2
 ; GFNIAVX512VL-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm1[8],xmm0[8],xmm1[9],xmm0[9],xmm1[10],xmm0[10],xmm1[11],xmm0[11],xmm1[12],xmm0[12],xmm1[13],xmm0[13],xmm1[14],xmm0[14],xmm1[15],xmm0[15]
 ; GFNIAVX512VL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; GFNIAVX512VL-NEXT:    vpsrlw %xmm2, %xmm3, %xmm3
@@ -330,6 +366,7 @@ define <16 x i8> @splatvar_fshr_v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %amt
 ;
 ; GFNIAVX512BW-LABEL: splatvar_fshr_v16i8:
 ; GFNIAVX512BW:       # %bb.0:
+; GFNIAVX512BW-NEXT:    vpbroadcastb %xmm2, %xmm2
 ; GFNIAVX512BW-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm1[8],xmm0[8],xmm1[9],xmm0[9],xmm1[10],xmm0[10],xmm1[11],xmm0[11],xmm1[12],xmm0[12],xmm1[13],xmm0[13],xmm1[14],xmm0[14],xmm1[15],xmm0[15]
 ; GFNIAVX512BW-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
 ; GFNIAVX512BW-NEXT:    vinserti128 $1, %xmm3, %ymm0, %ymm0
@@ -850,6 +887,8 @@ define <32 x i8> @var_fshr_v32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8> %amt) nou
 define <32 x i8> @splatvar_fshl_v32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8> %amt) nounwind {
 ; GFNISSE-LABEL: splatvar_fshl_v32i8:
 ; GFNISSE:       # %bb.0:
+; GFNISSE-NEXT:    pxor %xmm5, %xmm5
+; GFNISSE-NEXT:    pshufb %xmm5, %xmm4
 ; GFNISSE-NEXT:    movdqa %xmm2, %xmm5
 ; GFNISSE-NEXT:    punpckhbw {{.*#+}} xmm5 = xmm5[8],xmm0[8],xmm5[9],xmm0[9],xmm5[10],xmm0[10],xmm5[11],xmm0[11],xmm5[12],xmm0[12],xmm5[13],xmm0[13],xmm5[14],xmm0[14],xmm5[15],xmm0[15]
 ; GFNISSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4
@@ -876,6 +915,9 @@ define <32 x i8> @splatvar_fshl_v32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8> %amt
 ; GFNIAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; GFNIAVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
 ; GFNIAVX1-NEXT:    vpunpckhbw {{.*#+}} xmm5 = xmm4[8],xmm3[8],xmm4[9],xmm3[9],xmm4[10],xmm3[10],xmm4[11],xmm3[11],xmm4[12],xmm3[12],xmm4[13],xmm3[13],xmm4[14],xmm3[14],xmm4[15],xmm3[15]
+; GFNIAVX1-NEXT:    vpxor %xmm6, %xmm6, %xmm6
+; GFNIAVX1-NEXT:    vpshufb %xmm6, %xmm2, %xmm2
+; GFNIAVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; GFNIAVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; GFNIAVX1-NEXT:    vpsllw %xmm2, %xmm5, %xmm5
 ; GFNIAVX1-NEXT:    vpsrlw $8, %xmm5, %xmm5
@@ -896,6 +938,7 @@ define <32 x i8> @splatvar_fshl_v32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8> %amt
 ; GFNIAVX2-LABEL: splatvar_fshl_v32i8:
 ; GFNIAVX2:       # %bb.0:
 ; GFNIAVX2-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm1[8],ymm0[8],ymm1[9],ymm0[9],ymm1[10],ymm0[10],ymm1[11],ymm0[11],ymm1[12],ymm0[12],ymm1[13],ymm0[13],ymm1[14],ymm0[14],ymm1[15],ymm0[15],ymm1[24],ymm0[24],ymm1[25],ymm0[25],ymm1[26],ymm0[26],ymm1[27],ymm0[27],ymm1[28],ymm0[28],ymm1[29],ymm0[29],ymm1[30],ymm0[30],ymm1[31],ymm0[31]
+; GFNIAVX2-NEXT:    vpbroadcastb %xmm2, %xmm2
 ; GFNIAVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; GFNIAVX2-NEXT:    vpsllw %xmm2, %ymm3, %ymm3
 ; GFNIAVX2-NEXT:    vpsrlw $8, %ymm3, %ymm3
@@ -908,6 +951,7 @@ define <32 x i8> @splatvar_fshl_v32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8> %amt
 ; GFNIAVX512-LABEL: splatvar_fshl_v32i8:
 ; GFNIAVX512:       # %bb.0:
 ; GFNIAVX512-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm1[8],ymm0[8],ymm1[9],ymm0[9],ymm1[10],ymm0[10],ymm1[11],ymm0[11],ymm1[12],ymm0[12],ymm1[13],ymm0[13],ymm1[14],ymm0[14],ymm1[15],ymm0[15],ymm1[24],ymm0[24],ymm1[25],ymm0[25],ymm1[26],ymm0[26],ymm1[27],ymm0[27],ymm1[28],ymm0[28],ymm1[29],ymm0[29],ymm1[30],ymm0[30],ymm1[31],ymm0[31]
+; GFNIAVX512-NEXT:    vpbroadcastb %xmm2, %xmm2
 ; GFNIAVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; GFNIAVX512-NEXT:    vpsllw %xmm2, %ymm3, %ymm3
 ; GFNIAVX512-NEXT:    vpsrlw $8, %ymm3, %ymm3
@@ -924,6 +968,8 @@ define <32 x i8> @splatvar_fshl_v32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8> %amt
 define <32 x i8> @splatvar_fshr_v32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8> %amt) nounwind {
 ; GFNISSE-LABEL: splatvar_fshr_v32i8:
 ; GFNISSE:       # %bb.0:
+; GFNISSE-NEXT:    pxor %xmm5, %xmm5
+; GFNISSE-NEXT:    pshufb %xmm5, %xmm4
 ; GFNISSE-NEXT:    movdqa %xmm2, %xmm6
 ; GFNISSE-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8],xmm0[8],xmm6[9],xmm0[9],xmm6[10],xmm0[10],xmm6[11],xmm0[11],xmm6[12],xmm0[12],xmm6[13],xmm0[13],xmm6[14],xmm0[14],xmm6[15],xmm0[15]
 ; GFNISSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4
@@ -951,6 +997,9 @@ define <32 x i8> @splatvar_fshr_v32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8> %amt
 ; GFNIAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; GFNIAVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
 ; GFNIAVX1-NEXT:    vpunpckhbw {{.*#+}} xmm5 = xmm4[8],xmm3[8],xmm4[9],xmm3[9],xmm4[10],xmm3[10],xmm4[11],xmm3[11],xmm4[12],xmm3[12],xmm4[13],xmm3[13],xmm4[14],xmm3[14],xmm4[15],xmm3[15]
+; GFNIAVX1-NEXT:    vpxor %xmm6, %xmm6, %xmm6
+; GFNIAVX1-NEXT:    vpshufb %xmm6, %xmm2, %xmm2
+; GFNIAVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; GFNIAVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; GFNIAVX1-NEXT:    vpsrlw %xmm2, %xmm5, %xmm5
 ; GFNIAVX1-NEXT:    vbroadcastss {{.*#+}} xmm6 = [255,255,255,255,255,255,255,255]
@@ -972,6 +1021,7 @@ define <32 x i8> @splatvar_fshr_v32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8> %amt
 ; GFNIAVX2-LABEL: splatvar_fshr_v32i8:
 ; GFNIAVX2:       # %bb.0:
 ; GFNIAVX2-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm1[8],ymm0[8],ymm1[9],ymm0[9],ymm1[10],ymm0[10],ymm1[11],ymm0[11],ymm1[12],ymm0[12],ymm1[13],ymm0[13],ymm1[14],ymm0[14],ymm1[15],ymm0[15],ymm1[24],ymm0[24],ymm1[25],ymm0[25],ymm1[26],ymm0[26],ymm1[27],ymm0[27],ymm1[28],ymm0[28],ymm1[29],ymm0[29],ymm1[30],ymm0[30],ymm1[31],ymm0[31]
+; GFNIAVX2-NEXT:    vpbroadcastb %xmm2, %xmm2
 ; GFNIAVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; GFNIAVX2-NEXT:    vpsrlw %xmm2, %ymm3, %ymm3
 ; GFNIAVX2-NEXT:    vpbroadcastw {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
@@ -985,6 +1035,7 @@ define <32 x i8> @splatvar_fshr_v32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8> %amt
 ; GFNIAVX512VL-LABEL: splatvar_fshr_v32i8:
 ; GFNIAVX512VL:       # %bb.0:
 ; GFNIAVX512VL-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm1[8],ymm0[8],ymm1[9],ymm0[9],ymm1[10],ymm0[10],ymm1[11],ymm0[11],ymm1[12],ymm0[12],ymm1[13],ymm0[13],ymm1[14],ymm0[14],ymm1[15],ymm0[15],ymm1[24],ymm0[24],ymm1[25],ymm0[25],ymm1[26],ymm0[26],ymm1[27],ymm0[27],ymm1[28],ymm0[28],ymm1[29],ymm0[29],ymm1[30],ymm0[30],ymm1[31],ymm0[31]
+; GFNIAVX512VL-NEXT:    vpbroadcastb %xmm2, %xmm2
 ; GFNIAVX512VL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; GFNIAVX512VL-NEXT:    vpsrlw %xmm2, %ymm3, %ymm3
 ; GFNIAVX512VL-NEXT:    vpbroadcastd {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
@@ -998,6 +1049,7 @@ define <32 x i8> @splatvar_fshr_v32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8> %amt
 ; GFNIAVX512BW-LABEL: splatvar_fshr_v32i8:
 ; GFNIAVX512BW:       # %bb.0:
 ; GFNIAVX512BW-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm1[8],ymm0[8],ymm1[9],ymm0[9],ymm1[10],ymm0[10],ymm1[11],ymm0[11],ymm1[12],ymm0[12],ymm1[13],ymm0[13],ymm1[14],ymm0[14],ymm1[15],ymm0[15],ymm1[24],ymm0[24],ymm1[25],ymm0[25],ymm1[26],ymm0[26],ymm1[27],ymm0[27],ymm1[28],ymm0[28],ymm1[29],ymm0[29],ymm1[30],ymm0[30],ymm1[31],ymm0[31]
+; GFNIAVX512BW-NEXT:    vpbroadcastb %xmm2, %xmm2
 ; GFNIAVX512BW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; GFNIAVX512BW-NEXT:    vpsrlw %xmm2, %ymm3, %ymm3
 ; GFNIAVX512BW-NEXT:    vpbroadcastw {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
@@ -1878,6 +1930,8 @@ define <64 x i8> @splatvar_fshl_v64i8(<64 x i8> %a, <64 x i8> %b, <64 x i8> %amt
 ; GFNISSE-LABEL: splatvar_fshl_v64i8:
 ; GFNISSE:       # %bb.0:
 ; GFNISSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm8
+; GFNISSE-NEXT:    pxor %xmm9, %xmm9
+; GFNISSE-NEXT:    pshufb %xmm9, %xmm8
 ; GFNISSE-NEXT:    movdqa %xmm4, %xmm9
 ; GFNISSE-NEXT:    punpckhbw {{.*#+}} xmm9 = xmm9[8],xmm0[8],xmm9[9],xmm0[9],xmm9[10],xmm0[10],xmm9[11],xmm0[11],xmm9[12],xmm0[12],xmm9[13],xmm0[13],xmm9[14],xmm0[14],xmm9[15],xmm0[15]
 ; GFNISSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm8
@@ -1922,6 +1976,9 @@ define <64 x i8> @splatvar_fshl_v64i8(<64 x i8> %a, <64 x i8> %b, <64 x i8> %amt
 ; GFNIAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm5
 ; GFNIAVX1-NEXT:    vextractf128 $1, %ymm2, %xmm6
 ; GFNIAVX1-NEXT:    vpunpckhbw {{.*#+}} xmm7 = xmm6[8],xmm5[8],xmm6[9],xmm5[9],xmm6[10],xmm5[10],xmm6[11],xmm5[11],xmm6[12],xmm5[12],xmm6[13],xmm5[13],xmm6[14],xmm5[14],xmm6[15],xmm5[15]
+; GFNIAVX1-NEXT:    vpxor %xmm8, %xmm8, %xmm8
+; GFNIAVX1-NEXT:    vpshufb %xmm8, %xmm4, %xmm4
+; GFNIAVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm4
 ; GFNIAVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm4
 ; GFNIAVX1-NEXT:    vpsllw %xmm4, %xmm7, %xmm7
 ; GFNIAVX1-NEXT:    vpsrlw $8, %xmm7, %xmm7
@@ -1959,6 +2016,7 @@ define <64 x i8> @splatvar_fshl_v64i8(<64 x i8> %a, <64 x i8> %b, <64 x i8> %amt
 ; GFNIAVX2-LABEL: splatvar_fshl_v64i8:
 ; GFNIAVX2:       # %bb.0:
 ; GFNIAVX2-NEXT:    vpunpckhbw {{.*#+}} ymm5 = ymm2[8],ymm0[8],ymm2[9],ymm0[9],ymm2[10],ymm0[10],ymm2[11],ymm0[11],ymm2[12],ymm0[12],ymm2[13],ymm0[13],ymm2[14],ymm0[14],ymm2[15],ymm0[15],ymm2[24],ymm0[24],ymm2[25],ymm0[25],ymm2[26],ymm0[26],ymm2[27],ymm0[27],ymm2[28],ymm0[28],ymm2[29],ymm0[29],ymm2[30],ymm0[30],ymm2[31],ymm0[31]
+; GFNIAVX2-NEXT:    vpbroadcastb %xmm4, %xmm4
 ; GFNIAVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm4
 ; GFNIAVX2-NEXT:    vpsllw %xmm4, %ymm5, %ymm5
 ; GFNIAVX2-NEXT:    vpsrlw $8, %ymm5, %ymm5
@@ -1980,26 +2038,29 @@ define <64 x i8> @splatvar_fshl_v64i8(<64 x i8> %a, <64 x i8> %b, <64 x i8> %amt
 ; GFNIAVX512VL-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
 ; GFNIAVX512VL-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
 ; GFNIAVX512VL-NEXT:    vpunpckhbw {{.*#+}} ymm5 = ymm4[8],ymm3[8],ymm4[9],ymm3[9],ymm4[10],ymm3[10],ymm4[11],ymm3[11],ymm4[12],ymm3[12],ymm4[13],ymm3[13],ymm4[14],ymm3[14],ymm4[15],ymm3[15],ymm4[24],ymm3[24],ymm4[25],ymm3[25],ymm4[26],ymm3[26],ymm4[27],ymm3[27],ymm4[28],ymm3[28],ymm4[29],ymm3[29],ymm4[30],ymm3[30],ymm4[31],ymm3[31]
-; GFNIAVX512VL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
-; GFNIAVX512VL-NEXT:    vpsllw %xmm2, %ymm5, %ymm5
-; GFNIAVX512VL-NEXT:    vpsrlw $8, %ymm5, %ymm5
+; GFNIAVX512VL-NEXT:    vpbroadcastb %xmm2, %xmm2
+; GFNIAVX512VL-NEXT:    vpmovsxbq {{.*#+}} xmm6 = [7,0]
+; GFNIAVX512VL-NEXT:    vpternlogd {{.*#+}} xmm6 = xmm6 & xmm2 & m32bcst
+; GFNIAVX512VL-NEXT:    vpsllw %xmm6, %ymm5, %ymm2
+; GFNIAVX512VL-NEXT:    vpsrlw $8, %ymm2, %ymm2
 ; GFNIAVX512VL-NEXT:    vpunpcklbw {{.*#+}} ymm3 = ymm4[0],ymm3[0],ymm4[1],ymm3[1],ymm4[2],ymm3[2],ymm4[3],ymm3[3],ymm4[4],ymm3[4],ymm4[5],ymm3[5],ymm4[6],ymm3[6],ymm4[7],ymm3[7],ymm4[16],ymm3[16],ymm4[17],ymm3[17],ymm4[18],ymm3[18],ymm4[19],ymm3[19],ymm4[20],ymm3[20],ymm4[21],ymm3[21],ymm4[22],ymm3[22],ymm4[23],ymm3[23]
-; GFNIAVX512VL-NEXT:    vpsllw %xmm2, %ymm3, %ymm3
+; GFNIAVX512VL-NEXT:    vpsllw %xmm6, %ymm3, %ymm3
 ; GFNIAVX512VL-NEXT:    vpsrlw $8, %ymm3, %ymm3
-; GFNIAVX512VL-NEXT:    vpackuswb %ymm5, %ymm3, %ymm3
-; GFNIAVX512VL-NEXT:    vpunpckhbw {{.*#+}} ymm4 = ymm1[8],ymm0[8],ymm1[9],ymm0[9],ymm1[10],ymm0[10],ymm1[11],ymm0[11],ymm1[12],ymm0[12],ymm1[13],ymm0[13],ymm1[14],ymm0[14],ymm1[15],ymm0[15],ymm1[24],ymm0[24],ymm1[25],ymm0[25],ymm1[26],ymm0[26],ymm1[27],ymm0[27],ymm1[28],ymm0[28],ymm1[29],ymm0[29],ymm1[30],ymm0[30],ymm1[31],ymm0[31]
-; GFNIAVX512VL-NEXT:    vpsllw %xmm2, %ymm4, %ymm4
-; GFNIAVX512VL-NEXT:    vpsrlw $8, %ymm4, %ymm4
+; GFNIAVX512VL-NEXT:    vpackuswb %ymm2, %ymm3, %ymm2
+; GFNIAVX512VL-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm1[8],ymm0[8],ymm1[9],ymm0[9],ymm1[10],ymm0[10],ymm1[11],ymm0[11],ymm1[12],ymm0[12],ymm1[13],ymm0[13],ymm1[14],ymm0[14],ymm1[15],ymm0[15],ymm1[24],ymm0[24],ymm1[25],ymm0[25],ymm1[26],ymm0[26],ymm1[27],ymm0[27],ymm1[28],ymm0[28],ymm1[29],ymm0[29],ymm1[30],ymm0[30],ymm1[31],ymm0[31]
+; GFNIAVX512VL-NEXT:    vpsllw %xmm6, %ymm3, %ymm3
+; GFNIAVX512VL-NEXT:    vpsrlw $8, %ymm3, %ymm3
 ; GFNIAVX512VL-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm1[0],ymm0[0],ymm1[1],ymm0[1],ymm1[2],ymm0[2],ymm1[3],ymm0[3],ymm1[4],ymm0[4],ymm1[5],ymm0[5],ymm1[6],ymm0[6],ymm1[7],ymm0[7],ymm1[16],ymm0[16],ymm1[17],ymm0[17],ymm1[18],ymm0[18],ymm1[19],ymm0[19],ymm1[20],ymm0[20],ymm1[21],ymm0[21],ymm1[22],ymm0[22],ymm1[23],ymm0[23]
-; GFNIAVX512VL-NEXT:    vpsllw %xmm2, %ymm0, %ymm0
+; GFNIAVX512VL-NEXT:    vpsllw %xmm6, %ymm0, %ymm0
 ; GFNIAVX512VL-NEXT:    vpsrlw $8, %ymm0, %ymm0
-; GFNIAVX512VL-NEXT:    vpackuswb %ymm4, %ymm0, %ymm0
-; GFNIAVX512VL-NEXT:    vinserti64x4 $1, %ymm3, %zmm0, %zmm0
+; GFNIAVX512VL-NEXT:    vpackuswb %ymm3, %ymm0, %ymm0
+; GFNIAVX512VL-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
 ; GFNIAVX512VL-NEXT:    retq
 ;
 ; GFNIAVX512BW-LABEL: splatvar_fshl_v64i8:
 ; GFNIAVX512BW:       # %bb.0:
 ; GFNIAVX512BW-NEXT:    vpunpckhbw {{.*#+}} zmm3 = zmm1[8],zmm0[8],zmm1[9],zmm0[9],zmm1[10],zmm0[10],zmm1[11],zmm0[11],zmm1[12],zmm0[12],zmm1[13],zmm0[13],zmm1[14],zmm0[14],zmm1[15],zmm0[15],zmm1[24],zmm0[24],zmm1[25],zmm0[25],zmm1[26],zmm0[26],zmm1[27],zmm0[27],zmm1[28],zmm0[28],zmm1[29],zmm0[29],zmm1[30],zmm0[30],zmm1[31],zmm0[31],zmm1[40],zmm0[40],zmm1[41],zmm0[41],zmm1[42],zmm0[42],zmm1[43],zmm0[43],zmm1[44],zmm0[44],zmm1[45],zmm0[45],zmm1[46],zmm0[46],zmm1[47],zmm0[47],zmm1[56],zmm0[56],zmm1[57],zmm0[57],zmm1[58],zmm0[58],zmm1[59],zmm0[59],zmm1[60],zmm0[60],zmm1[61],zmm0[61],zmm1[62],zmm0[62],zmm1[63],zmm0[63]
+; GFNIAVX512BW-NEXT:    vpbroadcastb %xmm2, %xmm2
 ; GFNIAVX512BW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; GFNIAVX512BW-NEXT:    vpsllw %xmm2, %zmm3, %zmm3
 ; GFNIAVX512BW-NEXT:    vpsrlw $8, %zmm3, %zmm3
@@ -2017,6 +2078,8 @@ define <64 x i8> @splatvar_fshr_v64i8(<64 x i8> %a, <64 x i8> %b, <64 x i8> %amt
 ; GFNISSE-LABEL: splatvar_fshr_v64i8:
 ; GFNISSE:       # %bb.0:
 ; GFNISSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm9
+; GFNISSE-NEXT:    pxor %xmm8, %xmm8
+; GFNISSE-NEXT:    pshufb %xmm8, %xmm9
 ; GFNISSE-NEXT:    movdqa %xmm4, %xmm10
 ; GFNISSE-NEXT:    punpckhbw {{.*#+}} xmm10 = xmm10[8],xmm0[8],xmm10[9],xmm0[9],xmm10[10],xmm0[10],xmm10[11],xmm0[11],xmm10[12],xmm0[12],xmm10[13],xmm0[13],xmm10[14],xmm0[14],xmm10[15],xmm0[15]
 ; GFNISSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm9
@@ -2062,6 +2125,9 @@ define <64 x i8> @splatvar_fshr_v64i8(<64 x i8> %a, <64 x i8> %b, <64 x i8> %amt
 ; GFNIAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm6
 ; GFNIAVX1-NEXT:    vextractf128 $1, %ymm2, %xmm7
 ; GFNIAVX1-NEXT:    vpunpckhbw {{.*#+}} xmm5 = xmm7[8],xmm6[8],xmm7[9],xmm6[9],xmm7[10],xmm6[10],xmm7[11],xmm6[11],xmm7[12],xmm6[12],xmm7[13],xmm6[13],xmm7[14],xmm6[14],xmm7[15],xmm6[15]
+; GFNIAVX1-NEXT:    vpxor %xmm8, %xmm8, %xmm8
+; GFNIAVX1-NEXT:    vpshufb %xmm8, %xmm4, %xmm4
+; GFNIAVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm4
 ; GFNIAVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm4
 ; GFNIAVX1-NEXT:    vpsrlw %xmm4, %xmm5, %xmm8
 ; GFNIAVX1-NEXT:    vbroadcastss {{.*#+}} xmm5 = [255,255,255,255,255,255,255,255]
@@ -2100,6 +2166,7 @@ define <64 x i8> @splatvar_fshr_v64i8(<64 x i8> %a, <64 x i8> %b, <64 x i8> %amt
 ; GFNIAVX2-LABEL: splatvar_fshr_v64i8:
 ; GFNIAVX2:       # %bb.0:
 ; GFNIAVX2-NEXT:    vpunpckhbw {{.*#+}} ymm5 = ymm2[8],ymm0[8],ymm2[9],ymm0[9],ymm2[10],ymm0[10],ymm2[11],ymm0[11],ymm2[12],ymm0[12],ymm2[13],ymm0[13],ymm2[14],ymm0[14],ymm2[15],ymm0[15],ymm2[24],ymm0[24],ymm2[25],ymm0[25],ymm2[26],ymm0[26],ymm2[27],ymm0[27],ymm2[28],ymm0[28],ymm2[29],ymm0[29],ymm2[30],ymm0[30],ymm2[31],ymm0[31]
+; GFNIAVX2-NEXT:    vpbroadcastb %xmm4, %xmm4
 ; GFNIAVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm4
 ; GFNIAVX2-NEXT:    vpsrlw %xmm4, %ymm5, %ymm5
 ; GFNIAVX2-NEXT:    vpbroadcastw {{.*#+}} ymm6 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
@@ -2122,27 +2189,30 @@ define <64 x i8> @splatvar_fshr_v64i8(<64 x i8> %a, <64 x i8> %b, <64 x i8> %amt
 ; GFNIAVX512VL-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
 ; GFNIAVX512VL-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
 ; GFNIAVX512VL-NEXT:    vpunpckhbw {{.*#+}} ymm5 = ymm4[8],ymm3[8],ymm4[9],ymm3[9],ymm4[10],ymm3[10],ymm4[11],ymm3[11],ymm4[12],ymm3[12],ymm4[13],ymm3[13],ymm4[14],ymm3[14],ymm4[15],ymm3[15],ymm4[24],ymm3[24],ymm4[25],ymm3[25],ymm4[26],ymm3[26],ymm4[27],ymm3[27],ymm4[28],ymm3[28],ymm4[29],ymm3[29],ymm4[30],ymm3[30],ymm4[31],ymm3[31]
-; GFNIAVX512VL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
-; GFNIAVX512VL-NEXT:    vpsrlw %xmm2, %ymm5, %ymm5
-; GFNIAVX512VL-NEXT:    vpbroadcastd {{.*#+}} ymm6 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; GFNIAVX512VL-NEXT:    vpand %ymm6, %ymm5, %ymm5
+; GFNIAVX512VL-NEXT:    vpbroadcastb %xmm2, %xmm2
+; GFNIAVX512VL-NEXT:    vpmovsxbq {{.*#+}} xmm6 = [7,0]
+; GFNIAVX512VL-NEXT:    vpternlogd {{.*#+}} xmm6 = xmm6 & xmm2 & m32bcst
+; GFNIAVX512VL-NEXT:    vpsrlw %xmm6, %ymm5, %ymm2
+; GFNIAVX512VL-NEXT:    vpbroadcastd {{.*#+}} ymm5 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; GFNIAVX512VL-NEXT:    vpand %ymm5, %ymm2, %ymm2
 ; GFNIAVX512VL-NEXT:    vpunpcklbw {{.*#+}} ymm3 = ymm4[0],ymm3[0],ymm4[1],ymm3[1],ymm4[2],ymm3[2],ymm4[3],ymm3[3],ymm4[4],ymm3[4],ymm4[5],ymm3[5],ymm4[6],ymm3[6],ymm4[7],ymm3[7],ymm4[16],ymm3[16],ymm4[17],ymm3[17],ymm4[18],ymm3[18],ymm4[19],ymm3[19],ymm4[20],ymm3[20],ymm4[21],ymm3[21],ymm4[22],ymm3[22],ymm4[23],ymm3[23]
-; GFNIAVX512VL-NEXT:    vpsrlw %xmm2, %ymm3, %ymm3
-; GFNIAVX512VL-NEXT:    vpand %ymm6, %ymm3, %ymm3
-; GFNIAVX512VL-NEXT:    vpackuswb %ymm5, %ymm3, %ymm3
-; GFNIAVX512VL-NEXT:    vpunpckhbw {{.*#+}} ymm4 = ymm1[8],ymm0[8],ymm1[9],ymm0[9],ymm1[10],ymm0[10],ymm1[11],ymm0[11],ymm1[12],ymm0[12],ymm1[13],ymm0[13],ymm1[14],ymm0[14],ymm1[15],ymm0[15],ymm1[24],ymm0[24],ymm1[25],ymm0[25],ymm1[26],ymm0[26],ymm1[27],ymm0[27],ymm1[28],ymm0[28],ymm1[29],ymm0[29],ymm1[30],ymm0[30],ymm1[31],ymm0[31]
-; GFNIAVX512VL-NEXT:    vpsrlw %xmm2, %ymm4, %ymm4
-; GFNIAVX512VL-NEXT:    vpand %ymm6, %ymm4, %ymm4
+; GFNIAVX512VL-NEXT:    vpsrlw %xmm6, %ymm3, %ymm3
+; GFNIAVX512VL-NEXT:    vpand %ymm5, %ymm3, %ymm3
+; GFNIAVX512VL-NEXT:    vpackuswb %ymm2, %ymm3, %ymm2
+; GFNIAVX512VL-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm1[8],ymm0[8],ymm1[9],ymm0[9],ymm1[10],ymm0[10],ymm1[11],ymm0[11],ymm1[12],ymm0[12],ymm1[13],ymm0[13],ymm1[14],ymm0[14],ymm1[15],ymm0[15],ymm1[24],ymm0[24],ymm1[25],ymm0[25],ymm1[26],ymm0[26],ymm1[27],ymm0[27],ymm1[28],ymm0[28],ymm1[29],ymm0[29],ymm1[30],ymm0[30],ymm1[31],ymm0[31]
+; GFNIAVX512VL-NEXT:    vpsrlw %xmm6, %ymm3, %ymm3
+; GFNIAVX512VL-NEXT:    vpand %ymm5, %ymm3, %ymm3
 ; GFNIAVX512VL-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm1[0],ymm0[0],ymm1[1],ymm0[1],ymm1[2],ymm0[2],ymm1[3],ymm0[3],ymm1[4],ymm0[4],ymm1[5],ymm0[5],ymm1[6],ymm0[6],ymm1[7],ymm0[7],ymm1[16],ymm0[16],ymm1[17],ymm0[17],ymm1[18],ymm0[18],ymm1[19],ymm0[19],ymm1[20],ymm0[20],ymm1[21],ymm0[21],ymm1[22],ymm0[22],ymm1[23],ymm0[23]
-; GFNIAVX512VL-NEXT:    vpsrlw %xmm2, %ymm0, %ymm0
-; GFNIAVX512VL-NEXT:    vpand %ymm6, %ymm0, %ymm0
-; GFNIAVX512VL-NEXT:    vpackuswb %ymm4, %ymm0, %ymm0
-; GFNIAVX512VL-NEXT:    vinserti64x4 $1, %ymm3, %zmm0, %zmm0
+; GFNIAVX512VL-NEXT:    vpsrlw %xmm6, %ymm0, %ymm0
+; GFNIAVX512VL-NEXT:    vpand %ymm5, %ymm0, %ymm0
+; GFNIAVX512VL-NEXT:    vpackuswb %ymm3, %ymm0, %ymm0
+; GFNIAVX512VL-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
 ; GFNIAVX512VL-NEXT:    retq
 ;
 ; GFNIAVX512BW-LABEL: splatvar_fshr_v64i8:
 ; GFNIAVX512BW:       # %bb.0:
 ; GFNIAVX512BW-NEXT:    vpunpckhbw {{.*#+}} zmm3 = zmm1[8],zmm0[8],zmm1[9],zmm0[9],zmm1[10],zmm0[10],zmm1[11],zmm0[11],zmm1[12],zmm0[12],zmm1[13],zmm0[13],zmm1[14],zmm0[14],zmm1[15],zmm0[15],zmm1[24],zmm0[24],zmm1[25],zmm0[25],zmm1[26],zmm0[26],zmm1[27],zmm0[27],zmm1[28],zmm0[28],zmm1[29],zmm0[29],zmm1[30],zmm0[30],zmm1[31],zmm0[31],zmm1[40],zmm0[40],zmm1[41],zmm0[41],zmm1[42],zmm0[42],zmm1[43],zmm0[43],zmm1[44],zmm0[44],zmm1[45],zmm0[45],zmm1[46],zmm0[46],zmm1[47],zmm0[47],zmm1[56],zmm0[56],zmm1[57],zmm0[57],zmm1[58],zmm0[58],zmm1[59],zmm0[59],zmm1[60],zmm0[60],zmm1[61],zmm0[61],zmm1[62],zmm0[62],zmm1[63],zmm0[63]
+; GFNIAVX512BW-NEXT:    vpbroadcastb %xmm2, %xmm2
 ; GFNIAVX512BW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; GFNIAVX512BW-NEXT:    vpsrlw %xmm2, %zmm3, %zmm3
 ; GFNIAVX512BW-NEXT:    vpbroadcastw {{.*#+}} zmm4 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
@@ -2572,3 +2642,5 @@ define <64 x i8> @splatconstant_fshr_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind 
   ret <64 x i8> %res
 }
 declare <64 x i8> @llvm.fshr.v64i8(<64 x i8>, <64 x i8>, <64 x i8>)
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GFNIAVX: {{.*}}

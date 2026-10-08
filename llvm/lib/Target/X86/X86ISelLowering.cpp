@@ -45026,53 +45026,20 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     SDValue LHS = Op.getOperand(0);
     SDValue RHS = Op.getOperand(1);
 
-    auto GetDemandedMasks = [&](SDValue Op, bool Invert = false) {
-      APInt UndefElts;
-      SmallVector<APInt> EltBits;
-      int NumElts = VT.getVectorNumElements();
-      int EltSizeInBits = VT.getScalarSizeInBits();
-      APInt OpBits = APInt::getAllOnes(EltSizeInBits);
-      APInt OpElts = DemandedElts;
-      if (getTargetConstantBitsFromNode(Op, EltSizeInBits, UndefElts,
-                                        EltBits)) {
-        OpBits.clearAllBits();
-        OpElts.clearAllBits();
-        for (int I = 0; I != NumElts; ++I) {
-          if (!DemandedElts[I])
-            continue;
-          if (UndefElts[I]) {
-            // We can't assume an undef src element gives an undef dst - the
-            // other src might be zero.
-            OpBits.setAllBits();
-            OpElts.setBit(I);
-          } else if ((Invert && !EltBits[I].isAllOnes()) ||
-                     (!Invert && !EltBits[I].isZero())) {
-            OpBits |= Invert ? ~EltBits[I] : EltBits[I];
-            OpElts.setBit(I);
-          }
-        }
-      }
-      return std::make_pair(OpBits, OpElts);
-    };
-    APInt BitsLHS, EltsLHS;
-    APInt BitsRHS, EltsRHS;
-    std::tie(BitsLHS, EltsLHS) = GetDemandedMasks(RHS);
-    std::tie(BitsRHS, EltsRHS) = GetDemandedMasks(LHS, true);
-
     APInt LHSUndef, LHSZero;
     APInt RHSUndef, RHSZero;
-    if (SimplifyDemandedVectorElts(LHS, EltsLHS, LHSUndef, LHSZero, TLO,
+    if (SimplifyDemandedVectorElts(LHS, DemandedElts, LHSUndef, LHSZero, TLO,
                                    Depth + 1))
       return true;
-    if (SimplifyDemandedVectorElts(RHS, EltsRHS, RHSUndef, RHSZero, TLO,
+    if (SimplifyDemandedVectorElts(RHS, DemandedElts, RHSUndef, RHSZero, TLO,
                                    Depth + 1))
       return true;
 
     if (!DemandedElts.isAllOnes()) {
-      SDValue NewLHS = SimplifyMultipleUseDemandedBits(LHS, BitsLHS, EltsLHS,
-                                                       TLO.DAG, Depth + 1);
-      SDValue NewRHS = SimplifyMultipleUseDemandedBits(RHS, BitsRHS, EltsRHS,
-                                                       TLO.DAG, Depth + 1);
+      SDValue NewLHS = SimplifyMultipleUseDemandedVectorElts(
+          LHS, DemandedElts, TLO.DAG, Depth + 1);
+      SDValue NewRHS = SimplifyMultipleUseDemandedVectorElts(
+          RHS, DemandedElts, TLO.DAG, Depth + 1);
       if (NewLHS || NewRHS) {
         NewLHS = NewLHS ? NewLHS : LHS;
         NewRHS = NewRHS ? NewRHS : RHS;
@@ -53548,53 +53515,6 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
     SDValue Op(N, 0);
     if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
       return Res;
-
-    // If either operand is a constant mask, then only the elements that aren't
-    // zero are actually demanded by the other operand.
-    auto GetDemandedMasks = [&](SDValue Op) {
-      APInt UndefElts;
-      SmallVector<APInt> EltBits;
-      int NumElts = VT.getVectorNumElements();
-      int EltSizeInBits = VT.getScalarSizeInBits();
-      APInt DemandedBits = APInt::getAllOnes(EltSizeInBits);
-      APInt DemandedElts = APInt::getAllOnes(NumElts);
-      if (getTargetConstantBitsFromNode(Op, EltSizeInBits, UndefElts,
-                                        EltBits)) {
-        DemandedBits.clearAllBits();
-        DemandedElts.clearAllBits();
-        for (int I = 0; I != NumElts; ++I) {
-          if (UndefElts[I]) {
-            // We can't assume an undef src element gives an undef dst - the
-            // other src might be zero.
-            DemandedBits.setAllBits();
-            DemandedElts.setBit(I);
-          } else if (!EltBits[I].isZero()) {
-            DemandedBits |= EltBits[I];
-            DemandedElts.setBit(I);
-          }
-        }
-      }
-      return std::make_pair(DemandedBits, DemandedElts);
-    };
-    APInt Bits0, Elts0;
-    APInt Bits1, Elts1;
-    std::tie(Bits0, Elts0) = GetDemandedMasks(N1);
-    std::tie(Bits1, Elts1) = GetDemandedMasks(N0);
-
-    if (TLI.SimplifyDemandedVectorElts(N0, Elts0, DCI) ||
-        TLI.SimplifyDemandedVectorElts(N1, Elts1, DCI) ||
-        TLI.SimplifyDemandedBits(N0, Bits0, Elts0, DCI) ||
-        TLI.SimplifyDemandedBits(N1, Bits1, Elts1, DCI)) {
-      if (N->getOpcode() != ISD::DELETED_NODE)
-        DCI.AddToWorklist(N);
-      return SDValue(N, 0);
-    }
-
-    SDValue NewN0 = TLI.SimplifyMultipleUseDemandedBits(N0, Bits0, Elts0, DAG);
-    SDValue NewN1 = TLI.SimplifyMultipleUseDemandedBits(N1, Bits1, Elts1, DAG);
-    if (NewN0 || NewN1)
-      return DAG.getNode(ISD::AND, dl, VT, NewN0 ? NewN0 : N0,
-                         NewN1 ? NewN1 : N1);
   }
 
   // Attempt to combine a scalar bitmask AND with an extracted shuffle.
@@ -54367,30 +54287,6 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
     SDValue Op(N, 0);
     if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
       return Res;
-
-    // If second operand is a constant mask, then only the elements that aren't
-    // allones are actually demanded by the first operand.
-    APInt UndefElts;
-    SmallVector<APInt> EltBits;
-    int NumElts = VT.getVectorNumElements();
-    int EltSizeInBits = VT.getScalarSizeInBits();
-    if (getTargetConstantBitsFromNode(N1, EltSizeInBits, UndefElts, EltBits)) {
-      APInt DemandedElts = APInt::getZero(NumElts);
-      for (int I = 0; I != NumElts; ++I)
-        if (!EltBits[I].isAllOnes())
-          DemandedElts.setBit(I);
-
-      // We must freeze the result to prevent OR(poison,-1) -> poison.
-      // Restrict the fold to prevent infinite loops due to
-      // SimplifyDemandedVectorElts removing the freeze.
-      if (!DemandedElts.isAllOnes() &&
-          !DAG.isGuaranteedNotToBeUndefOrPoison(N0, DemandedElts) &&
-          TLI.SimplifyDemandedVectorElts(N0, DemandedElts, DCI)) {
-        SDValue F0 = DAG.getFreeze(N->getOperand(0), ~DemandedElts);
-        DAG.UpdateNodeOperands(N, F0, N->getOperand(1));
-        return SDValue(N, 0);
-      }
-    }
   }
 
   if (SDValue R = combineOrXorWithSETCC(N->getOpcode(), dl, VT, N0, N1, DAG))
@@ -57838,46 +57734,6 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
     SDValue Op(N, 0);
     if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
       return Res;
-
-    // If either operand is a constant mask, then only the elements that aren't
-    // zero are actually demanded by the other operand.
-    auto GetDemandedMasks = [&](SDValue Op, bool Invert = false) {
-      APInt UndefElts;
-      SmallVector<APInt> EltBits;
-      APInt DemandedBits = APInt::getAllOnes(EltSizeInBits);
-      APInt DemandedElts = APInt::getAllOnes(NumElts);
-      if (getTargetConstantBitsFromNode(Op, EltSizeInBits, UndefElts,
-                                        EltBits)) {
-        DemandedBits.clearAllBits();
-        DemandedElts.clearAllBits();
-        for (int I = 0; I != NumElts; ++I) {
-          if (UndefElts[I]) {
-            // We can't assume an undef src element gives an undef dst - the
-            // other src might be zero.
-            DemandedBits.setAllBits();
-            DemandedElts.setBit(I);
-          } else if ((Invert && !EltBits[I].isAllOnes()) ||
-                     (!Invert && !EltBits[I].isZero())) {
-            DemandedBits |= Invert ? ~EltBits[I] : EltBits[I];
-            DemandedElts.setBit(I);
-          }
-        }
-      }
-      return std::make_pair(DemandedBits, DemandedElts);
-    };
-    APInt Bits0, Elts0;
-    APInt Bits1, Elts1;
-    std::tie(Bits0, Elts0) = GetDemandedMasks(N1);
-    std::tie(Bits1, Elts1) = GetDemandedMasks(N0, true);
-
-    if (TLI.SimplifyDemandedVectorElts(N0, Elts0, DCI) ||
-        TLI.SimplifyDemandedVectorElts(N1, Elts1, DCI) ||
-        TLI.SimplifyDemandedBits(N0, Bits0, Elts0, DCI) ||
-        TLI.SimplifyDemandedBits(N1, Bits1, Elts1, DCI)) {
-      if (N->getOpcode() != ISD::DELETED_NODE)
-        DCI.AddToWorklist(N);
-      return SDValue(N, 0);
-    }
   }
 
   // Folds for better commutativity:
