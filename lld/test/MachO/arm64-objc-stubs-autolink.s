@@ -6,7 +6,7 @@
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/dep.s \
 # RUN:   -o %t/dep.o
 # RUN: llvm-ar rcs %t/libdep.a %t/dep.o
-# RUN: %lld -arch arm64 -lSystem -o %t/out %t/main.o -L%t \
+# RUN: %lld -arch arm64 -o %t/out %t/main.o -L%t \
 # RUN:   -objc_stubs_fast -U _objc_msgSend
 # RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_stubs \
 # RUN:   --macho %t/out | FileCheck %s
