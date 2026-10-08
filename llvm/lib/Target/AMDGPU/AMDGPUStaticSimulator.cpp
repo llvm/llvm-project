@@ -29,7 +29,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
-#include <cstdlib>
 #include <iterator>
 #include <memory>
 
@@ -39,22 +38,10 @@ using namespace llvm::AMDGPUSim;
 
 #define DEBUG_TYPE "amdgpu-static-simulator"
 
-static cl::opt<bool> EnableStaticSimulator(
-    "amdgpu-enable-static-simulator",
-    cl::desc("Enable static performance simulator for AMDGPU kernels"),
-    cl::init(false), cl::Hidden);
-
 static cl::opt<bool> VerboseSimulation(
     "amdgpu-static-sim-verbose",
     cl::desc("Enable verbose per-instruction logging in static simulator"),
     cl::init(false), cl::Hidden);
-
-// An explicitly set environment variable overrides the command line option.
-static bool isStaticSimulatorEnabled() {
-  if (const char *EnvVal = std::getenv("AMDGPU_ENABLE_STATIC_SIM"))
-    return StringRef(EnvVal) == "1";
-  return EnableStaticSimulator;
-}
 
 namespace {
 
@@ -462,9 +449,6 @@ analyzeFunction(MachineFunction &MF, const SIInstrInfo &TII, bool Verbose) {
 }
 
 static void runStaticSimulator(MachineFunction &MF) {
-  if (!isStaticSimulatorEnabled())
-    return;
-
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   if (!ST.hasGFX1250Insts())
     return;

@@ -554,6 +554,11 @@ static cl::opt<bool> EnableSetWavePriority("amdgpu-set-wave-priority",
                                            cl::desc("Adjust wave priority"),
                                            cl::init(false), cl::Hidden);
 
+static cl::opt<bool> EnableStaticSimulator(
+    "amdgpu-enable-static-simulator",
+    cl::desc("Enable static performance simulator for AMDGPU kernels"),
+    cl::init(false), cl::Hidden);
+
 static cl::opt<bool> EnableScalarIRPasses(
   "amdgpu-scalar-ir-passes",
   cl::desc("Enable scalar IR passes"),
@@ -2068,7 +2073,9 @@ void GCNPassConfig::addPreEmitPass() {
     addPass(&AMDGPUInsertDelayAluID);
 
   addPass(&BranchRelaxationPassID);
-  addPass(createAMDGPUStaticSimulatorPass());
+
+  if (isPassEnabled(EnableStaticSimulator, CodeGenOptLevel::Less))
+    addPass(createAMDGPUStaticSimulatorPass());
 }
 
 void GCNPassConfig::addPostBBSections() {
