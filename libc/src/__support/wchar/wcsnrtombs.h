@@ -18,7 +18,6 @@
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/null_check.h"
-#include "src/__support/macros/properties/types.h"
 #include "src/__support/wchar/character_converter.h"
 #include "src/__support/wchar/mbstate.h"
 #include "src/__support/wchar/string_converter.h"
@@ -26,8 +25,6 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-// TODO: Support UTF-16 wchar_t once CharacterConverter supports it.
-#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
 LIBC_INLINE ErrorOr<size_t> wcsnrtombs(char *__restrict dest,
                                        const wchar_t **__restrict ptr_to_src,
                                        size_t num_src_widechars,
@@ -44,6 +41,7 @@ LIBC_INLINE ErrorOr<size_t> wcsnrtombs(char *__restrict dest,
 
   StringConverter<wchar_t> str_conv(*ptr_to_src, ps, dest_len,
                                     num_src_widechars);
+  size_t src_idx = 0;
   size_t dst_idx = 0;
   ErrorOr<char8_t> converted = str_conv.pop<char8_t>();
   while (converted.has_value()) {
@@ -56,19 +54,30 @@ LIBC_INLINE ErrorOr<size_t> wcsnrtombs(char *__restrict dest,
       return dst_idx;
     }
 
+    src_idx = str_conv.getSourceIndex();
     dst_idx++;
     converted = str_conv.pop<char8_t>();
   }
 
+  // On error, we leave *ptr_to_src at just past the last successfully converted
+  // code point. See also:
+  // https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=209907
   if (dest != nullptr)
-    *ptr_to_src += str_conv.getSourceIndex();
-
-  if (converted.error() == -1) // if we hit conversion limit
+    *ptr_to_src += src_idx;
+  if (converted.error() == -1) {
+    if (!cr.isEmpty()) {
+      // (UTF-16) We disallow an unpaired high surrogate right at the end of the
+      // source string. We have no return value to indicate that situation, so
+      // we consider it an error in the source string.
+      cr.clear();
+      return Error(EILSEQ);
+    }
+    // if we hit conversion limit
     return dst_idx;
+  }
 
   return Error(converted.error());
 }
-#endif // LIBC_TYPES_WCHAR_T_IS_UTF32
 
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL
