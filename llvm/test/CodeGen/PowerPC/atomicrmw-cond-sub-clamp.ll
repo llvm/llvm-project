@@ -217,17 +217,17 @@ define i8 @atomicrmw_usub_sat_i8(ptr %ptr, i8 %val) {
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB4_4 Depth 2
 ; CHECK-NEXT:    srw 8, 7, 3
-; CHECK-NEXT:    clrlwi 9, 8, 24
-; CHECK-NEXT:    sub 8, 9, 4
-; CHECK-NEXT:    cmplw 8, 9
-; CHECK-NEXT:    li 9, 0
+; CHECK-NEXT:    clrlwi 8, 8, 24
+; CHECK-NEXT:    sub 9, 8, 4
+; CHECK-NEXT:    cmplw 9, 8
+; CHECK-NEXT:    li 8, 0
 ; CHECK-NEXT:    bgt 0, .LBB4_3
 ; CHECK-NEXT:  # %bb.2: # %atomicrmw.start
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    mr 9, 8
+; CHECK-NEXT:    mr 8, 9
 ; CHECK-NEXT:  .LBB4_3: # %atomicrmw.start
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    slw 8, 9, 3
+; CHECK-NEXT:    slw 8, 8, 3
 ; CHECK-NEXT:    and 9, 7, 6
 ; CHECK-NEXT:    or 9, 9, 8
 ; CHECK-NEXT:  .LBB4_4: # %cmpxchg.start
@@ -276,17 +276,17 @@ define i16 @atomicrmw_usub_sat_i16(ptr %ptr, i16 %val) {
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB5_4 Depth 2
 ; CHECK-NEXT:    srw 8, 7, 3
-; CHECK-NEXT:    clrlwi 9, 8, 16
-; CHECK-NEXT:    sub 8, 9, 4
-; CHECK-NEXT:    cmplw 8, 9
-; CHECK-NEXT:    li 9, 0
+; CHECK-NEXT:    clrlwi 8, 8, 16
+; CHECK-NEXT:    sub 9, 8, 4
+; CHECK-NEXT:    cmplw 9, 8
+; CHECK-NEXT:    li 8, 0
 ; CHECK-NEXT:    bgt 0, .LBB5_3
 ; CHECK-NEXT:  # %bb.2: # %atomicrmw.start
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    mr 9, 8
+; CHECK-NEXT:    mr 8, 9
 ; CHECK-NEXT:  .LBB5_3: # %atomicrmw.start
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    slw 8, 9, 3
+; CHECK-NEXT:    slw 8, 8, 3
 ; CHECK-NEXT:    and 9, 7, 6
 ; CHECK-NEXT:    or 9, 9, 8
 ; CHECK-NEXT:  .LBB5_4: # %cmpxchg.start
