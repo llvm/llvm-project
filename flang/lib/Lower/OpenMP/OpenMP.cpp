@@ -3030,6 +3030,9 @@ static void genCanonicalLoopNest(
   // Computing the trip count must happen before entering the outermost loop
   lower::pft::Evaluation *innermostEval = nestedEval;
   for (std::size_t i = 0; i < ivs.size(); ++i) {
+    // Otherwise a later loop's bounds would see the previous loop's body.
+    mlir::SaveStateStack<LoopControlContext> loopControlContext{
+        converter.getStateStack(), eval};
     if (innermostEval->getIf<parser::DoConstruct>()->IsDoConcurrent()) {
       // OpenMP specifies DO CONCURRENT only with the `!omp loop` construct.
       // Will need to add special cases for this combination.
@@ -3975,13 +3978,36 @@ struct DynamicSubstringVisitor {
   }
 };
 
+static bool isBodylessMetadirective(const lower::pft::Evaluation &eval) {
+  if (const auto *decl = eval.getIf<parser::OpenMPDeclarativeConstruct>())
+    return std::holds_alternative<parser::OmpMetadirectiveDirective>(decl->u);
+  const auto *omp = eval.getIf<parser::OpenMPConstruct>();
+  const auto *standalone =
+      omp ? std::get_if<parser::OpenMPStandaloneConstruct>(&omp->u) : nullptr;
+  return standalone &&
+         std::holds_alternative<parser::OmpMetadirectiveDirective>(
+             standalone->u);
+}
+
+/// Also visit evaluations spliced into a body-less METADIRECTIVE's PFT node.
+static void
+forEachParseTreeEval(lower::pft::Evaluation &eval,
+                     llvm::function_ref<void(lower::pft::Evaluation &)> fn) {
+  fn(eval);
+  if (isBodylessMetadirective(eval) && eval.hasNestedEvaluations())
+    for (lower::pft::Evaluation &nested : eval.getNestedEvaluations())
+      fn(nested);
+}
+
 // Collect symbols that have dynamic substring accesses in the target region
 static void collectSymbolsWithDynamicSubstring(
     semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
     llvm::SmallPtrSet<const semantics::Symbol *, 8>
         &symbolsWithDynamicSubstring) {
   DynamicSubstringVisitor visitor(semaCtx);
-  eval.visit([&](const auto &node) { parser::Walk(node, visitor); });
+  forEachParseTreeEval(eval, [&](lower::pft::Evaluation &e) {
+    e.visit([&](const auto &node) { parser::Walk(node, visitor); });
+  });
   symbolsWithDynamicSubstring = visitor.symbolsWithDynamicSubstring;
 }
 
@@ -4273,7 +4299,9 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     if (const semantics::Symbol *sym = object.sym())
       captureImplicitMap(*sym, /*forceAddressPreserving=*/true);
 
-  lower::pft::visitAllSymbols(eval, captureImplicitMap);
+  forEachParseTreeEval(eval, [&](lower::pft::Evaluation &e) {
+    lower::pft::visitAllSymbols(e, captureImplicitMap);
+  });
 
   auto targetOp = mlir::omp::TargetOp::create(firOpBuilder, loc, clauseOps);
 

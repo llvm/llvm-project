@@ -791,21 +791,6 @@ void collectTileSizesFromOpenMPConstruct(
       });
 }
 
-namespace {
-// Original loop control belongs outside the outermost loop-associated
-// constituent, including for composites that emit inner regions first.
-class LoopControlContext
-    : public mlir::StateStackFrameBase<LoopControlContext> {
-public:
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(LoopControlContext)
-
-  explicit LoopControlContext(const pft::Evaluation &evaluation)
-      : evaluation(evaluation) {}
-
-  const pft::Evaluation &evaluation;
-};
-} // namespace
-
 int64_t collectLoopRelatedInfo(
     lower::AbstractConverter &converter, mlir::Location currentLocation,
     lower::pft::Evaluation &eval, lower::pft::Evaluation *nestedEval,
@@ -1517,9 +1502,17 @@ void collectEnclosingConstructTraits(
   auto append = [&](llvm::omp::Directive directive) {
     semantics::omp::AppendDirectiveContextTraits(directive, constructTraits);
   };
-  auto getDirective = [&](const pft::Evaluation &eval,
-                          const parser::OpenMPConstruct &omp) {
-    llvm::omp::Directive directive = parser::omp::GetOmpDirectiveName(omp).v;
+  auto getDirective =
+      [&](const pft::Evaluation &eval) -> std::optional<llvm::omp::Directive> {
+    std::optional<llvm::omp::Directive> directive;
+    if (const auto *omp = eval.getIf<parser::OpenMPConstruct>()) {
+      directive = parser::omp::GetOmpDirectiveName(*omp).v;
+    } else if (const auto *decl =
+                   eval.getIf<parser::OpenMPDeclarativeConstruct>()) {
+      // A metadirective before the first executable statement is declarative.
+      if (std::holds_alternative<parser::OmpMetadirectiveDirective>(decl->u))
+        directive = llvm::omp::Directive::OMPD_metadirective;
+    }
     if (directive == llvm::omp::Directive::OMPD_metadirective)
       for (const OpenMPContextFrame *frame : frames)
         if (&frame->evaluation == &eval && frame->isReplacement)
@@ -1527,15 +1520,15 @@ void collectEnclosingConstructTraits(
     return directive;
   };
   for (const pft::Evaluation *ancestor : ancestors) {
-    const auto *omp = ancestor->getIf<parser::OpenMPConstruct>();
-    if (!omp)
+    std::optional<llvm::omp::Directive> directive = getDirective(*ancestor);
+    if (!directive)
       continue;
     // An ancestor supplies the full source context, including constituents
     // whose bodies also have active frames. Count each construct only once.
     for (auto [index, frame] : llvm::enumerate(frames))
       if (&frame->evaluation == ancestor)
         usedFrames[index] = true;
-    append(getDirective(*ancestor, *omp));
+    append(*directive);
   }
 
   // Use entered frames for clauses. Loop bounds use the source prefix below,
@@ -1550,13 +1543,13 @@ void collectEnclosingConstructTraits(
 
   if (!loopControl)
     return;
-  const auto *omp = evaluation->getIf<parser::OpenMPConstruct>();
-  if (!omp)
+  std::optional<llvm::omp::Directive> directive = getDirective(*evaluation);
+  if (!directive)
     return;
   // Bounds precede the first loop-associated constituent in source order.
   // TARGET TEAMS DISTRIBUTE PARALLEL DO therefore retains TARGET and TEAMS.
   for (llvm::omp::Directive leaf :
-       llvm::omp::getLeafConstructsOrSelf(getDirective(*evaluation, *omp))) {
+       llvm::omp::getLeafConstructsOrSelf(*directive)) {
     llvm::omp::Association association =
         llvm::omp::getDirectiveAssociation(leaf);
     if (association == llvm::omp::Association::LoopNest ||

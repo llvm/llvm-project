@@ -69,6 +69,19 @@ public:
   bool isReplacement;
 };
 
+// Original loop control belongs outside the outermost loop-associated
+// constituent, including for composites that emit inner regions first.
+class LoopControlContext
+    : public mlir::StateStackFrameBase<LoopControlContext> {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(LoopControlContext)
+
+  explicit LoopControlContext(const pft::Evaluation &evaluation)
+      : evaluation(evaluation) {}
+
+  const pft::Evaluation &evaluation;
+};
+
 struct DeclareTargetCaptureInfo {
   mlir::omp::DeclareTargetCaptureClause clause;
   bool automap = false;

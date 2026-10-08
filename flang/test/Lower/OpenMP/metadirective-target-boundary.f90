@@ -74,3 +74,53 @@ subroutine target_inner_parallel()
     !$omp end target
   !$omp end parallel
 end subroutine
+
+! A selected PARALLEL from a metadirective that precedes every executable
+! statement is still hidden by an inner TARGET.
+! CHECK-LABEL: func.func @_QPdeclarative_parallel_target()
+! CHECK: omp.parallel
+! CHECK: omp.barrier
+! CHECK: omp.target
+! CHECK-NOT: omp.barrier
+! CHECK: omp.taskyield
+! CHECK: return
+subroutine declarative_parallel_target()
+  !$omp metadirective when(implementation={vendor(llvm)}: parallel)
+  block
+    !$omp metadirective when(construct={parallel}: barrier) default(taskyield)
+    !$omp target
+      !$omp metadirective when(construct={parallel}: barrier) &
+      !$omp& default(taskyield)
+    !$omp end target
+  end block
+end subroutine
+
+! A BLOCK associated with a selected TARGET is mapped like a direct TARGET body.
+! CHECK-LABEL: func.func @_QPselected_target_block(
+! CHECK: %[[MAP:.*]] = omp.map.info {{.*}}name("x")
+! CHECK: omp.target {{.*}}map_entries(%[[MAP]] -> %[[ARG:.*]] : !fir.ref<i32>) {
+! CHECK: {{(hlfir|fir)}}.declare %[[ARG]] uniq_name("_QFselected_target_blockEx")
+! CHECK: omp.terminator
+subroutine selected_target_block(x)
+  integer :: x
+  !$omp metadirective when(implementation={vendor(llvm)}: target)
+  block
+    x = x + 1
+  end block
+end subroutine
+
+! A named constant with a dynamic substring in the BLOCK is mapped.
+! CHECK-LABEL: func.func @_QPselected_target_block_substring(
+! CHECK: %[[P:.*]] = omp.map.info {{.*}}name("p")
+! CHECK: omp.target {{.*}}map_entries({{.*}}%[[P]] -> %[[ARG:[^ ,]*]]
+! CHECK: {{(hlfir|fir)}}.declare %[[ARG]] {{.*}}uniq_name("_QFselected_target_block_substringECp")
+! CHECK: omp.terminator
+subroutine selected_target_block_substring(n, c)
+  integer :: n
+  character(1) :: c
+  character(4), parameter :: p = "abcd"
+  !$omp metadirective when(implementation={vendor(llvm)}: target)
+  block
+    c = p(n:n)
+  end block
+end subroutine
