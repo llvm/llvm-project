@@ -1,17 +1,15 @@
-; Test that AMDGPU atomic metadata is preserved as NonSemantic.AuxData
-; InstructionMetadata (opcode 5).
+; AMDGPU atomic metadata is preserved as AuxData InstructionMetadata records.
 
-; Positive: with -spirv-preserve-auxdata, metadata emitted as AuxData.
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa \
 ; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction \
 ; RUN:   -spirv-preserve-auxdata \
 ; RUN:   %s -o - | FileCheck %s
 
-; AMD triple enables AuxData without -spirv-preserve-auxdata.
+; AMD triples preserve it without -spirv-preserve-auxdata.
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa \
 ; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s
 
-; No UserSemantic decorations (old encoding).
+; The old UserSemantic decoration encoding is no longer emitted.
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa %s -o - \
 ; RUN:   | FileCheck %s --check-prefix=NOUS
 ; NOUS-NOT: UserSemantic
@@ -25,7 +23,8 @@
 ; RUN:   -spirv-preserve-auxdata \
 ; RUN:   %s -o - -filetype=obj | spirv-val %}
 
-; Without SPV_KHR_relaxed_extended_instruction, instruction metadata is dropped.
+; Records forward-reference their target, which requires
+; SPV_KHR_relaxed_extended_instruction; without it they are dropped.
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa \
 ; RUN:   --spirv-ext=-SPV_KHR_relaxed_extended_instruction \
 ; RUN:   -spirv-preserve-auxdata %s -o - | FileCheck %s --check-prefix=NORELAXED
@@ -46,23 +45,18 @@
 ; CHECK-DAG: %[[#md_idn:]] = OpString "atomic.ignore.denormal.mode"
 ; CHECK-DAG: %[[#void:]] = OpTypeVoid
 
-; Integer atomic (add) with two metadata kinds.
 ; CHECK-DAG: %[[#]] = OpExtInstWithForwardRefsKHR %[[#void]] %[[#auxset]] {{.+}} %[[#add_res:]] %[[#md_nfg]]
 ; CHECK-DAG: %[[#]] = OpExtInstWithForwardRefsKHR %[[#void]] %[[#auxset]] {{.+}} %[[#add_res]] %[[#md_nrm]]
 
-; Float atomic (fadd) with all three metadata kinds.
 ; CHECK-DAG: %[[#]] = OpExtInstWithForwardRefsKHR %[[#void]] %[[#auxset]] {{.+}} %[[#fadd_res:]] %[[#md_nfg]]
 ; CHECK-DAG: %[[#]] = OpExtInstWithForwardRefsKHR %[[#void]] %[[#auxset]] {{.+}} %[[#fadd_res]] %[[#md_nrm]]
 ; CHECK-DAG: %[[#]] = OpExtInstWithForwardRefsKHR %[[#void]] %[[#auxset]] {{.+}} %[[#fadd_res]] %[[#md_idn]]
 
-; Atomic (xchg) with only one metadata kind.
 ; CHECK-DAG: %[[#]] = OpExtInstWithForwardRefsKHR %[[#void]] %[[#auxset]] {{.+}} %[[#xchg_res:]] %[[#md_nfg]]
 
-; The atomic instructions themselves (forward-referenced by AuxData above).
 ; CHECK-DAG: %[[#add_res]] = OpAtomicIAdd
 ; CHECK-DAG: %[[#fadd_res]] = OpAtomicFAddEXT
 ; CHECK-DAG: %[[#xchg_res]] = OpAtomicExchange
-
 
 define amdgpu_kernel void @test_iadd(ptr addrspace(1) %ptr) {
   %val = atomicrmw add ptr addrspace(1) %ptr, i32 1 syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0

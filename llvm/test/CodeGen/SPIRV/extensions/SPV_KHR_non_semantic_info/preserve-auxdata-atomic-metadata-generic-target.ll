@@ -1,26 +1,19 @@
-; NonSemantic.AuxData is non-semantic by construction: a consumer that does not
-; understand the extended instruction set ignores it. Preserving instruction
-; metadata is therefore not restricted to AMD targets, even though the metadata
-; names that currently benefit are amdgpu.*. Verify that -spirv-preserve-auxdata
-; emits it on a generic target too.
-;
-; The AMD-target behaviour and the full set of metadata kinds are covered by
-; preserve-auxdata-amdgpu-atomic-metadata.ll.
+; Instruction metadata AuxData also works on non-AMD triples.
+; Full coverage is in preserve-auxdata-amdgpu-atomic-metadata.ll.
 
-; The forward-referencing metadata needs SPV_KHR_relaxed_extended_instruction,
-; which a generic triple (unlike AMD) does not auto-enable, so request it.
+; Non-AMD triple: the flag and extensions must be passed explicitly.
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown \
 ; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction \
 ; RUN:   -spirv-preserve-auxdata %s -o - | FileCheck %s
 
-; Without the option nothing is emitted, on any target.
+; Without -spirv-preserve-auxdata, nothing is emitted.
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown \
 ; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info %s -o - \
 ; RUN:   | FileCheck %s --check-prefix=OFF
 
 ; OFF-NOT: amdgpu.no.fine.grained.memory
 
-; Without SPV_KHR_relaxed_extended_instruction, instruction metadata is dropped.
+; Without SPV_KHR_relaxed_extended_instruction, records are dropped.
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown \
 ; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info -spirv-preserve-auxdata %s -o - \
 ; RUN:   | FileCheck %s --check-prefix=NORELAXED

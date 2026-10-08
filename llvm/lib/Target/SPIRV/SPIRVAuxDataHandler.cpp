@@ -81,8 +81,8 @@ void SPIRVAuxDataHandler::prepareModuleOutput(const SPIRVSubtarget &ST,
   if (!MAI.ExtInstSetMap.contains(NonSemanticAuxDataSet))
     MAI.ExtInstSetMap[NonSemanticAuxDataSet] = MAI.getNextIDRegister();
 
-  // Instruction metadata forward-references its target, so it needs
-  // OpExtInstWithForwardRefsKHR; drop it if that extension is not allowed.
+  // Instruction metadata forward-references its target, which requires
+  // SPV_KHR_relaxed_extended_instruction; drop it if unavailable.
   if (MAI.InstrAuxDataRecords.empty())
     return;
   if (ST.canUseExtension(
@@ -184,10 +184,7 @@ void SPIRVAuxDataHandler::collectMetadataFor(const GlobalObject *GO,
 void SPIRVAuxDataHandler::emitAuxDataStrings(SPIRV::ModuleAnalysisInfo &MAI) {
   if (!MAI.getExtInstSetReg(NonSemanticAuxDataSet).isValid())
     return;
-  // Only a handful of distinct metadata names exist, one per AMDGPUAtomicMDKind
-  // enumerator. Track which we've seen so we can stop once every name has been
-  // emitted, instead of scanning potentially thousands of records with
-  // redundant hash lookups.
+  // One OpString per metadata kind; stop scanning once every kind is seen.
   constexpr unsigned AllMDKindsSeen =
       (1u << (static_cast<unsigned>(
                   SPIRV::ModuleAnalysisInfo::AMDGPUAtomicMDKind::Last) +
@@ -203,7 +200,8 @@ void SPIRVAuxDataHandler::emitAuxDataStrings(SPIRV::ModuleAnalysisInfo &MAI) {
     if (SeenMask == AllMDKindsSeen)
       break;
   }
-  // Global object attributes and metadata stay behind the flag.
+  // Global object attributes/metadata need -spirv-preserve-auxdata; the AMD
+  // triple alone doesn't enable them.
   if (!SPVPreserveAuxData)
     return;
   SmallVector<StringRef> MDNames;
@@ -240,8 +238,8 @@ void SPIRVAuxDataHandler::emitAuxData(SPIRV::ModuleAnalysisInfo &MAI) {
       continue;
     MCRegister MDNameReg =
         getOrEmitString(MAI.getAMDGPUAtomicMDName(Rec.Kind), MAI);
-    // TargetReg is a function-body result emitted after this section, so it is
-    // always a forward reference.
+    // TargetReg is defined in a function body, emitted after this section, so
+    // it is always a forward reference.
     emitAuxDataExtInst(InstructionMetadataOpcode, VoidTypeReg, ExtSetReg,
                        {TargetReg, MDNameReg}, MAI, /*UseForwardRefs=*/true);
   }

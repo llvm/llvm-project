@@ -1,15 +1,15 @@
-; Test that atomicrmw uinc_wrap/udec_wrap with AMDGPU metadata emit both
-; OpFunctionCall (for the atomic) and AuxData InstructionMetadata (for the
-; metadata). AMD triple enables AuxData without -spirv-preserve-auxdata.
+; uinc_wrap/udec_wrap lower to helper OpFunctionCalls; their AMDGPU metadata
+; is preserved as AuxData InstructionMetadata on the call result.
 
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa \
 ; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction \
 ; RUN:   -spirv-preserve-auxdata %s -o - | FileCheck %s
 
+; AMD triples preserve it without -spirv-preserve-auxdata.
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa \
 ; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s
 
-; No UserSemantic decorations (old encoding).
+; The old UserSemantic decoration encoding is no longer emitted.
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa %s -o - \
 ; RUN:   | FileCheck %s --check-prefix=NOUS
 ; NOUS-NOT: UserSemantic
@@ -32,14 +32,11 @@
 ; CHECK-DAG: OpDecorate %[[#UIncFn:]] LinkageAttributes "__translate_spirv_atomic_uinc_wrap_p1_i32" Import
 ; CHECK-DAG: OpDecorate %[[#UDecFn:]] LinkageAttributes "__translate_spirv_atomic_udec_wrap_p1_i32" Import
 
-; AuxData for the uinc_wrap result.
 ; CHECK-DAG: %[[#]] = OpExtInstWithForwardRefsKHR %[[#void]] %[[#auxset]] {{.+}} %[[#uinc_res:]] %[[#md_nfg]]
 ; CHECK-DAG: %[[#]] = OpExtInstWithForwardRefsKHR %[[#void]] %[[#auxset]] {{.+}} %[[#uinc_res]] %[[#md_nrm]]
 
-; AuxData for the udec_wrap result.
 ; CHECK-DAG: %[[#]] = OpExtInstWithForwardRefsKHR %[[#void]] %[[#auxset]] {{.+}} %[[#udec_res:]] %[[#md_nfg]]
 
-; The function calls themselves (forward-referenced by the AuxData above).
 ; CHECK-DAG: %[[#uinc_res]] = OpFunctionCall %[[#]] %[[#UIncFn]]
 ; CHECK-DAG: %[[#udec_res]] = OpFunctionCall %[[#]] %[[#UDecFn]]
 
