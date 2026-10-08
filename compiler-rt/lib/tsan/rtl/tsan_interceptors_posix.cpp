@@ -1882,6 +1882,17 @@ TSAN_INTERCEPTOR(int, pthread_once, void *o, void (*f)()) {
   return 0;
 }
 
+#if SANITIZER_INTERCEPT_C11_THREADS
+TSAN_INTERCEPTOR(void, call_once, void* flag, void (*f)()) {
+  SCOPED_INTERCEPTOR_RAW(call_once, flag, f);
+  atomic_uint32_t* a = static_cast<atomic_uint32_t*>(flag);
+  if (guard_acquire(thr, pc, a)) {
+    (*f)();
+    guard_release(thr, pc, a, kGuardDone);
+  }
+}
+#endif
+
 #if SANITIZER_GLIBC
 TSAN_INTERCEPTOR(int, __fxstat, int version, int fd, void *buf) {
   SCOPED_TSAN_INTERCEPTOR(__fxstat, version, fd, buf);
@@ -3340,6 +3351,9 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(pthread_barrier_wait);
 
   TSAN_INTERCEPT(pthread_once);
+#if SANITIZER_INTERCEPT_C11_THREADS
+  TSAN_INTERCEPT(call_once);
+#endif
 
   TSAN_MAYBE_INTERCEPT___FXSTAT;
   TSAN_MAYBE_INTERCEPT_FSTAT;
