@@ -9396,15 +9396,10 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_CountedBy:
     case ParsedAttr::AT_CountedByOrNull:
     case ParsedAttr::AT_SizedBy:
-    case ParsedAttr::AT_SizedByOrNull: {
-      // XXX: The late-parsing path hasn't been switched to the new mechanism to
-      // properly support type-position attributes yet.
-      if (!state.getSema().getLangOpts().ExperimentalLateParseAttributes) {
-        HandleCountedByAttrOnType(state, type, attr);
-        attr.setUsedAsTypeAttr();
-      }
+    case ParsedAttr::AT_SizedByOrNull:
+      HandleCountedByAttrOnType(state, type, attr);
+      attr.setUsedAsTypeAttr();
       break;
-    }
 
     MS_TYPE_ATTRS_CASELIST:
       if (!handleMSPointerTypeQualifierAttr(state, attr, type))
