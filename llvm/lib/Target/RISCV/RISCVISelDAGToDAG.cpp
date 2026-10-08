@@ -3224,6 +3224,21 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     ReplaceNode(Node, Insert.getNode());
     return;
   }
+  case RISCVISD::TUPLE_CAST: {
+    // TUPLE_CAST reinterprets a vector tuple as a different tuple type with
+    // the same register class (same NF and LMUL), just a different minimum
+    // number of elements per field. The two types occupy identical
+    // registers, so just forward the operand like we do for same-register-
+    // class ISD::BITCAST, without emitting a copy.
+    assert(RISCVTargetLowering::getRegClassIDForVecVT(VT) ==
+               RISCVTargetLowering::getRegClassIDForVecVT(
+                   Node->getOperand(0).getSimpleValueType()) &&
+           "Expected input and output of TUPLE_CAST to use the same "
+           "register class");
+    ReplaceUses(SDValue(Node, 0), Node->getOperand(0));
+    CurDAG->RemoveDeadNode(Node);
+    return;
+  }
   case ISD::EXTRACT_SUBVECTOR:
   case RISCVISD::TUPLE_EXTRACT: {
     if (Subtarget->hasStdExtP())
@@ -4649,7 +4664,8 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
     case RISCV::BSET:
     case RISCV::BCLR:
     case RISCV::BINV:
-      // Shift amount operands only use log2(Xlen) bits.
+    case RISCV::BEXT:
+      // Shift amount and bit index operands only use log2(Xlen) bits.
       if (Use.getOperandNo() == 1 && Bits >= Log2_32(Subtarget->getXLen()))
         break;
       return false;

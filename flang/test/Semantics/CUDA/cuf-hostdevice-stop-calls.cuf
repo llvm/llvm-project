@@ -1,0 +1,57 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+! Check calls in STOP and ERROR STOP codes and QUIET expressions.
+module stop_call_test
+  use cudadevice, only: on_device
+contains
+  attributes(device) integer function d()
+    d = 1
+  end function
+  integer function h()
+    h = 1
+  end function
+  attributes(host,device) integer function both()
+    both = 1
+  end function
+  attributes(device) logical function device_quiet()
+    device_quiet = .true.
+  end function
+  logical function host_quiet()
+    host_quiet = .true.
+  end function
+
+  attributes(host,device) subroutine caller()
+    ! Review example: the STOP code expression runs on both targets.
+    !ERROR: 'd' may not be called in host code
+    stop d()
+  end subroutine
+  attributes(host,device) subroutine host_code()
+    !ERROR: 'h' may not be called in device code
+    stop h()
+  end subroutine
+  attributes(host,device) subroutine error_code()
+    !ERROR: 'd' may not be called in host code
+    error stop d()
+  end subroutine
+  attributes(host,device) subroutine quiet_device()
+    !ERROR: 'device_quiet' may not be called in host code
+    stop 1, quiet=device_quiet()
+  end subroutine
+  attributes(host,device) subroutine quiet_host()
+    !ERROR: 'host_quiet' may not be called in device code
+    error stop 'failed', quiet=host_quiet()
+  end subroutine
+  attributes(host,device) subroutine both_code()
+    stop both()
+  end subroutine
+  attributes(host,device) subroutine guarded()
+    if (on_device()) then
+      stop d(), quiet=device_quiet()
+    else
+      error stop h(), quiet=host_quiet()
+    end if
+  end subroutine
+  attributes(device) subroutine device_caller()
+    !ERROR: 'h' may not be called in device code
+    stop h()
+  end subroutine
+end module

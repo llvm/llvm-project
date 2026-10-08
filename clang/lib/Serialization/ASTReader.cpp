@@ -26,6 +26,7 @@
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
@@ -81,6 +82,7 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/Weak.h"
 #include "clang/Serialization/ASTBitCodes.h"
@@ -111,6 +113,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Bitstream/BitstreamReader.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/DJB.h"
@@ -1895,6 +1898,23 @@ int ASTReader::getSLocEntryID(SourceLocation::UIntTy SLocOffset) {
   return F->SLocEntryBaseID + *std::prev(It);
 }
 
+std::pair<SourceLocation::UIntTy, SourceLocationEncoding::Chain>
+ASTReader::ReadSourceLocationOffset(const RecordDataImpl &Record, unsigned Idx,
+                                    SourceLocation::UIntTy InitialDelta) {
+  SourceLocation::UIntTy Offset = Record[Idx];
+  return {Offset, SourceLocationEncoding::Chain(Offset + InitialDelta)};
+}
+
+std::pair<SourceLocation::UIntTy, SourceLocationEncoding::Chain>
+ASTReader::ReadEntryOffset(const RecordDataImpl &Record) {
+  // Anchor the chain at the entry's own local offset, deriving it exactly as
+  // the writer does -- see ASTWriter::EmitEntryOffset. The field has the dummy
+  // entry subtracted out, so add it back. The anchor stays in the writing
+  // module's local space, which is the space the deltas are differences in;
+  // deltaDecode therefore runs before the locations are translated into ours.
+  return ReadSourceLocationOffset(Record, 0, 2);
+}
+
 bool ASTReader::ReadSLocEntry(int ID) {
   if (ID == 0)
     return false;
@@ -2054,12 +2074,15 @@ bool ASTReader::ReadSLocEntry(int ID) {
   }
 
   case SM_SLOC_EXPANSION_ENTRY: {
-    SourceLocation SpellingLoc = ReadSourceLocation(*F, Record[1]);
-    SourceLocation ExpansionBegin = ReadSourceLocation(*F, Record[2]);
-    SourceLocation ExpansionEnd = ReadSourceLocation(*F, Record[3]);
+    auto [EntryOffset, Chain] = ReadEntryOffset(Record);
+    // The chain is stateful: decode in the same order the writer emitted, each
+    // in its own statement. See CreateSLocExpansionAbbrev for the field order.
+    SourceLocation ExpansionEnd = ReadSourceLocation(*F, Record[1], Chain);
+    SourceLocation ExpansionBegin = ReadSourceLocation(*F, Record[2], Chain);
+    SourceLocation SpellingLoc = ReadSourceLocation(*F, Record[3], Chain);
     SourceMgr.createExpansionLoc(SpellingLoc, ExpansionBegin, ExpansionEnd,
                                  Record[5], Record[4], ID,
-                                 BaseOffset + Record[0]);
+                                 BaseOffset + EntryOffset);
     break;
   }
   }
@@ -3055,6 +3078,10 @@ ASTReader::ResolveImportedPath(SmallString<0> &Buf, StringRef Path,
       Path == "<built-in>" || Path == "<command line>")
     return {Path, Buf};
 
+  // The writer makes the base directory itself relative as ".".
+  if (Path == ".")
+    return {Prefix, Buf};
+
   Buf.clear();
   llvm::sys::path::append(Buf, Prefix, Path);
   StringRef ResolvedPath{Buf.data(), Buf.size()};
@@ -3334,6 +3361,13 @@ ASTReader::ReadControlBlock(ModuleFile &F,
           if (!IF.getFile() || IF.isOutOfDate())
             return OutOfDate;
         }
+
+        // A header added to a directory the module enumerated was never
+        // recorded as an input file, so the check above misses it.
+        if (!WasValidated && F.Kind == MK_ImplicitModule &&
+            HSOpts.ModulesValidateDirectoryDependencies &&
+            isDirectoryDependencyOutOfDate(F, Complain))
+          return OutOfDate;
       } else {
         F.InputFilesValidationStatus = InputFilesValidation::Disabled;
       }
@@ -3677,6 +3711,10 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       if (ASTReadResult Result =
               ReadModuleMapFileBlock(Record, F, ImportedBy, ClientLoadCapabilities))
         return Result;
+      break;
+
+    case MODULE_DIRECTORY_DEPENDENCIES:
+      ReadDirectoryDependencies(Record, F);
       break;
 
     case INPUT_FILE_OFFSETS:
@@ -4470,6 +4508,11 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
         DeclsWithEffectsToVerify.push_back(ReadDeclID(F, Record, I));
       break;
 
+    case OMP_REQUIRES_DECLS:
+      for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
+        OpenMPRequiresDecls.push_back(ReadDeclID(F, Record, I));
+      break;
+
     case OPENCL_EXTENSIONS:
       for (unsigned I = 0, E = Record.size(); I != E; ) {
         auto Name = ReadString(Record, I);
@@ -4831,6 +4874,52 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
   if (Listener)
     Listener->ReadModuleMapFile(F.ModuleMapPath);
   return Success;
+}
+
+void ASTReader::ReadDirectoryDependencies(const RecordData &Record,
+                                          ModuleFile &F) {
+  unsigned Idx = 0;
+  unsigned N = Record[Idx++];
+  F.DirectoryDependencies.reserve(N);
+  for (unsigned I = 0; I != N; ++I)
+    F.DirectoryDependencies.push_back(ReadPath(F, Record, Idx));
+}
+
+bool ASTReader::isDirectoryDependencyOutOfDate(ModuleFile &F, bool Complain) {
+  llvm::vfs::FileSystem &FS = PP.getFileManager().getVirtualFileSystem();
+  // Adding or removing an entry updates the modification time of the directory
+  // holding it, so comparing every directory in the tree against the module
+  // file catches a header that was added, even one whose own modification time
+  // is older. A directory that doesn't exist has no listing to depend on.
+  auto IsNewer = [&](StringRef Dir) {
+    llvm::ErrorOr<llvm::vfs::Status> Status = FS.status(Dir);
+    return Status && Status->isDirectory() &&
+           llvm::sys::toTimeT(Status->getLastModificationTime()) > F.ModTime;
+  };
+
+  for (StringRef Dir : F.DirectoryDependencies) {
+    std::optional<std::string> Changed;
+    if (IsNewer(Dir)) {
+      Changed = Dir.str();
+    } else {
+      std::error_code EC;
+      for (llvm::vfs::recursive_directory_iterator I(FS, Dir, EC), E;
+           I != E && !EC; I.increment(EC)) {
+        if (I->type() == llvm::sys::fs::file_type::directory_file &&
+            IsNewer(I->path())) {
+          Changed = I->path().str();
+          break;
+        }
+      }
+    }
+    if (!Changed)
+      continue;
+    Diag(diag::remark_module_directory_dep_changed) << F.ModuleName << *Changed;
+    if (Complain)
+      Diag(diag::err_module_directory_dep_changed) << F.ModuleName << *Changed;
+    return true;
+  }
+  return false;
 }
 
 /// Move the given method to the back of the global list of methods.
@@ -8064,6 +8153,9 @@ QualType ASTReader::GetType(TypeID ID) {
     case PREDEF_TYPE_NULLPTR_ID:
       T = Context.NullPtrTy;
       break;
+    case PREDEF_TYPE_META_INFO_ID:
+      T = Context.MetaInfoTy;
+      break;
     case PREDEF_TYPE_CHAR8_ID:
       T = Context.Char8Ty;
       break;
@@ -9287,6 +9379,12 @@ void ASTReader::InitializeSema(Sema &S) {
 
 void ASTReader::UpdateSema() {
   assert(SemaObj && "no Sema to update");
+
+  // UpdateSema() runs after each AST file is loaded, not only the first, so a
+  // 'requires' directive from a module is registered too.
+  for (GlobalDeclID ID : OpenMPRequiresDecls)
+    SemaObj->OpenMP().addRequiresDecl(cast<OMPRequiresDecl>(GetDecl(ID)));
+  OpenMPRequiresDecls.clear();
 
   // Load the offsets of the declarations that Sema references.
   // They will be lazily deserialized when needed.

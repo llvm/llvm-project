@@ -536,6 +536,57 @@ bool LoopVectorizationLegality::isUniformMemOp(
   return isUniform(Ptr, VF) && !blockNeedsPredication(I.getParent());
 }
 
+/// Returns true if the type produced by \p I can be widened. Casts from vector
+/// types and extractelement instructions cannot be widened. Struct results are
+/// only supported if \p AllowStructCalls is set, for calls whose users are all
+/// extractvalue instructions and whose struct element types can be widened.
+static bool canWidenResultType(const Instruction &I, bool AllowStructCalls) {
+  if (isa<ExtractElementInst>(I) ||
+      (isa<CastInst>(I) &&
+       !VectorType::isValidElementType(I.getOperand(0)->getType())))
+    return false;
+  Type *Ty = I.getType();
+  if (!isa<StructType>(Ty))
+    return canVectorizeTy(Ty);
+  return AllowStructCalls && isa<CallInst>(I) && canVectorizeTy(Ty) &&
+         all_of(I.users(), IsaPred<ExtractValueInst>);
+}
+
+/// Returns true if the types produced and stored by \p I can be widened,
+/// otherwise reports a vectorization failure for \p TheLoop and returns false.
+static bool canWidenTypes(Instruction &I, bool AllowStructCalls,
+                          OptimizationRemarkEmitter *ORE, Loop *TheLoop) {
+  if (!canWidenResultType(I, AllowStructCalls)) {
+    reportVectorizationFailure("Found unvectorizable type",
+                               "instruction return type cannot be vectorized",
+                               "CantVectorizeInstructionReturnType", ORE,
+                               TheLoop, &I);
+    return false;
+  }
+  auto *SI = dyn_cast<StoreInst>(&I);
+  if (SI && !VectorType::isValidElementType(SI->getValueOperand()->getType())) {
+    reportVectorizationFailure("Store instruction cannot be vectorized",
+                               "CantVectorizeStore", ORE, TheLoop, SI);
+    return false;
+  }
+  return true;
+}
+
+/// Returns true if \p I does not use a swifterror value, otherwise reports a
+/// vectorization failure for \p TheLoop and returns false.
+/// TODO: Allow unmasked uniform accesses through loop-invariant swifterror
+/// pointers once memory operations on them are guaranteed to stay scalar.
+static bool canVectorizeSwiftErrorUses(Instruction &I,
+                                       OptimizationRemarkEmitter *ORE,
+                                       Loop *TheLoop) {
+  if (none_of(I.operands(), [](Value *Op) { return Op->isSwiftError(); }))
+    return true;
+  reportVectorizationFailure("Found a use of a swifterror value",
+                             "swifterror value cannot be vectorized",
+                             "CantVectorizeSwiftError", ORE, TheLoop, &I);
+  return false;
+}
+
 bool LoopVectorizationLegality::canVectorizeOuterLoop() {
   assert(!TheLoop->isInnermost() && "We are not vectorizing an outer loop.");
   // Store the result and return it at the end instead of exiting early, in case
@@ -544,6 +595,18 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
   bool DoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);
 
   for (BasicBlock *BB : TheLoop->blocks()) {
+    // Instructions in the loop nest are widened, so the types they produce and
+    // store must be widenable. Struct-returning calls are not supported yet.
+    // Uses of swifterror values must remain scalar.
+    for (Instruction &I : *BB) {
+      if (canWidenTypes(I, /*AllowStructCalls=*/false, ORE, TheLoop) &&
+          canVectorizeSwiftErrorUses(I, ORE, TheLoop))
+        continue;
+      if (!DoExtraAnalysis)
+        return false;
+      Result = false;
+    }
+
     // Don't try to vectorize outer loops with atomic or volatile accesses.
     for (Instruction &I : *BB) {
       if (!I.isAtomic() && !I.isVolatile())
@@ -635,6 +698,16 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
       Result = false;
     else
       return false;
+  }
+
+  // Like for inner loops, the widest integer induction type is used for the
+  // canonical IV and trip count, so at least one integer induction is required.
+  if (!WidestIndTy) {
+    reportVectorizationFailure(
+        "Did not find one integer induction var",
+        "loop induction variable could not be identified",
+        "NoInductionVariable", ORE, TheLoop);
+    return false;
   }
 
   return Result;
@@ -855,6 +928,9 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
     return false;
   } // end of PHI handling
 
+  if (!canVectorizeSwiftErrorUses(I, ORE, TheLoop))
+    return false;
+
   // We handle calls that:
   //   * Have a mapping to an IR intrinsic.
   //   * Have a vector version available.
@@ -911,46 +987,17 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
   if (CI && !VFDatabase::getMappings(*CI).empty())
     VecCallVariantsFound = true;
 
-  auto CanWidenInstructionTy = [](Instruction const &Inst) {
-    Type *InstTy = Inst.getType();
-    if (!isa<StructType>(InstTy))
-      return canVectorizeTy(InstTy);
-
-    // For now, we only recognize struct values returned from calls where
-    // all users are extractvalue as vectorizable. All element types of the
-    // struct must be types that can be widened.
-    return isa<CallInst>(Inst) && canVectorizeTy(InstTy) &&
-           all_of(Inst.users(), IsaPred<ExtractValueInst>);
-  };
-
-  // Check that the instruction return type is vectorizable.
-  // We can't vectorize casts from vector type to scalar type.
-  // Also, we can't vectorize extractelement instructions.
-  if (!CanWidenInstructionTy(I) ||
-      (isa<CastInst>(I) &&
-       !VectorType::isValidElementType(I.getOperand(0)->getType())) ||
-      isa<ExtractElementInst>(I)) {
-    reportVectorizationFailure("Found unvectorizable type",
-                               "instruction return type cannot be vectorized",
-                               "CantVectorizeInstructionReturnType", ORE,
-                               TheLoop, &I);
+  // Check that the instruction return and stored types are vectorizable.
+  if (!canWidenTypes(I, /*AllowStructCalls=*/true, ORE, TheLoop))
     return false;
-  }
 
-  // Check that the stored type is vectorizable.
   if (auto *ST = dyn_cast<StoreInst>(&I)) {
-    Type *T = ST->getValueOperand()->getType();
-    if (!VectorType::isValidElementType(T)) {
-      reportVectorizationFailure("Store instruction cannot be vectorized",
-                                 "CantVectorizeStore", ORE, TheLoop, ST);
-      return false;
-    }
-
     // For nontemporal stores, check that a nontemporal vector version is
     // supported on the target.
     if (ST->getMetadata(LLVMContext::MD_nontemporal)) {
       // Arbitrarily try a vector of 2 elements.
-      auto *VecTy = FixedVectorType::get(T, /*NumElts=*/2);
+      auto *VecTy =
+          FixedVectorType::get(ST->getValueOperand()->getType(), /*NumElts=*/2);
       assert(VecTy && "did not find vectorized version of stored type");
       if (!TTI->isLegalNTStore(VecTy, ST->getAlign())) {
         reportVectorizationFailure(
