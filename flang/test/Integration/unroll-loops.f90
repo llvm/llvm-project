@@ -27,7 +27,7 @@ subroutine unroll(a)
     ! NO-UNROLL-NEXT: %[[NIV:.*]] = add nuw i64 %{{.*}}, 2
     ! NO-UNROLL-NEXT: %[[NVIND]] = add nuw nsw <2 x i64> %[[VIND]], splat (i64 2)
     !
-    ! UNROLL-NEXT: %[[VIND1:.*]] = add nuw nsw <2 x i64> %[[VIND]], splat (i64 2)
+    ! UNROLL-NEXT: %[[VIND1:.*]] = add nuw <2 x i64> %[[VIND]], splat (i64 2)
     ! UNROLL-NEXT: %[[GEP0:.*]] = getelementptr [8 x i8], ptr %[[ARG0]], i64 %[[IND]]
     ! UNROLL-NEXT: %[[GEP1:.*]] = getelementptr i8, ptr %[[GEP0]], i64 16
     ! UNROLL-NEXT: store <2 x i64> %[[VIND]], ptr %[[GEP0]]

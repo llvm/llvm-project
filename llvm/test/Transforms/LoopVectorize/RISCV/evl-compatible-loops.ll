@@ -4,7 +4,7 @@
 ; RUN: -mtriple=riscv64 -mattr=+v -S < %s | FileCheck %s
 
 ; Make sure we do not vectorize a loop with a widened int induction.
-define void @test_wide_integer_induction(ptr noalias %a, i64 %N) {
+define void @test_wide_integer_induction(ptr noalias %a, i64 %N) vscale_range(2, 1024) {
 ; CHECK-LABEL: define void @test_wide_integer_induction(
 ; CHECK-SAME: ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -50,7 +50,7 @@ for.cond.cleanup:
 ; Make sure we do not vectorize a loop with a widened ptr induction.
 define void @test_wide_ptr_induction(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; CHECK-LABEL: define void @test_wide_ptr_induction(
-; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i64 [[N:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
