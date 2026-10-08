@@ -11434,14 +11434,76 @@ bool ScalarEvolution::isKnownViaInduction(CmpPredicate Pred, SCEVUse LHS,
          isLoopEntryGuardedByCond(MDL, Pred, SplitLHS.first, SplitRHS.first);
 }
 
+/// Try to prove "LHS Pred RHS" by decomposing a min/max on either side into its
+/// operands, proving the per-operand comparisons with \p Prove. A min/max
+/// equals one of its operands, so proving the comparison for all of them
+/// proves it:
+///
+///   minmax(X0, ..., Xn) Pred RHS  if  Xi Pred RHS for all i, and
+///   LHS Pred minmax(Y0, ..., Yn)  if  LHS Pred Yi for all i.
+///
+/// For LT/LE predicates with matching signedness, one operand is sufficient:
+///
+///   min(X0, ..., Xn) Pred RHS  if  Xi Pred RHS for any i, and
+///   LHS Pred max(Y0, ..., Yn)  if  LHS Pred Yi for any i.
+///
+static bool isKnownViaMinMaxDecomposition(
+    CmpPredicate Pred, SCEVUse LHS, SCEVUse RHS,
+    function_ref<bool(CmpPredicate, SCEVUse, SCEVUse)> Prove) {
+  // Samesign holds for the original operand pair only, not for the per-operand
+  // sub-queries below.
+  CmpInst::Predicate P = Pred.dropSameSign();
+  if (ICmpInst::isEquality(P))
+    return false;
+
+  // Normalize to less-than(-or-equal), so we only need to check for LHS == min
+  // or RHS == max to use to any-of rule. the RHS can use the any-of rule.
+  if (ICmpInst::isGT(P) || ICmpInst::isGE(P)) {
+    std::swap(LHS, RHS);
+    P = ICmpInst::getSwappedPredicate(P);
+  }
+
+  // A min/max of kind AnyOfKind needs one operand to hold, others all of them.
+  auto ViaOperands = [](SCEVUse S, SCEVTypes AnyOfKind, auto Holds) {
+    const auto *MinMax = dyn_cast<SCEVMinMaxExpr>(S);
+    if (!MinMax)
+      return false;
+    return MinMax->getSCEVType() == AnyOfKind
+               ? any_of(MinMax->operands(), Holds)
+               : all_of(MinMax->operands(), Holds);
+  };
+  auto HoldsForLHSOp = [&](SCEVUse Op) { return Prove(P, Op, RHS); };
+  auto HoldsForRHSOp = [&](SCEVUse Op) { return Prove(P, LHS, Op); };
+  SCEVTypes MinKind = ICmpInst::isSigned(P) ? scSMinExpr : scUMinExpr;
+  return ViaOperands(LHS, MinKind, HoldsForLHSOp) ||
+         ViaOperands(RHS, SCEVMinMaxExpr::negate(MinKind), HoldsForRHSOp);
+}
+
 bool ScalarEvolution::isKnownPredicate(CmpPredicate Pred, SCEVUse LHS,
                                        SCEVUse RHS) {
+  return isKnownPredicateImpl(Pred, LHS, RHS, 0);
+}
+
+bool ScalarEvolution::isKnownPredicateImpl(CmpPredicate Pred, SCEVUse LHS,
+                                           SCEVUse RHS, unsigned Depth) {
+  CmpPredicate OrigPred = Pred;
+  SCEVUse OrigLHS = LHS, OrigRHS = RHS;
+
   // Canonicalize the inputs first.
   (void)SimplifyICmpOperands(Pred, LHS, RHS);
 
-  return isKnownViaInduction(Pred, LHS, RHS) ||
-         isKnownPredicateViaSplitting(Pred, LHS, RHS) ||
-         isKnownViaNonRecursiveReasoning(Pred, LHS, RHS);
+  if (isKnownViaInduction(Pred, LHS, RHS) ||
+      isKnownPredicateViaSplitting(Pred, LHS, RHS) ||
+      isKnownViaNonRecursiveReasoning(Pred, LHS, RHS))
+    return true;
+
+  // Limit the nesting of min/max decompositions.
+  if (Depth == 4)
+    return false;
+  return isKnownViaMinMaxDecomposition(
+      OrigPred, OrigLHS, OrigRHS, [&](CmpPredicate P, SCEVUse A, SCEVUse B) {
+        return isKnownPredicateImpl(P, A, B, Depth + 1);
+      });
 }
 
 std::optional<bool> ScalarEvolution::evaluatePredicate(CmpPredicate Pred,
@@ -12958,28 +13020,14 @@ static bool IsKnownPredicateViaMinOrMax(ScalarEvolution &SE, CmpPredicate Pred,
         // A <= max(A, ...)
         IsMinMaxConsistingOf<SCEVUMaxExpr>(RHS, LHS);
 
-  case ICmpInst::ICMP_UGT:
-    std::swap(LHS, RHS);
-    [[fallthrough]];
   case ICmpInst::ICMP_ULT:
-    // umin(Ops) u<= each Op, so proving Op u< RHS for any Op proves
-    // umin(Ops) u< RHS.
-    //
-    // Use computeConstantDifference instead of the more powerful
-    // isKnownPredicate to keep this check cheap: isKnownPredicateViaMinOrMax
-    // is called from isKnownViaNonRecursiveReasoning, so recursing into
-    // the full predicate prover would be expensive.
-    if (const auto *Min = dyn_cast<SCEVUMinExpr>(LHS)) {
-      for (SCEVUse Op : Min->operands()) {
-        std::optional<APInt> Diff = SE.computeConstantDifference(RHS, Op);
-        // When Op and RHS share a common base differing by a
-        // constant offset D (RHS - Op = D), Op u< RHS holds iff D != 0 and
-        // RHS >= D (unsigned), i.e. the subtraction doesn't underflow.
-        if (Diff && !Diff->isZero() && SE.getUnsignedRangeMin(RHS).uge(*Diff))
-          return true;
-      }
-    }
-    return false;
+  case ICmpInst::ICMP_UGT:
+    return isKnownViaMinMaxDecomposition(
+        Pred, LHS, RHS, [&SE](CmpPredicate, SCEVUse A, SCEVUse B) {
+          std::optional<APInt> Diff = SE.computeConstantDifference(B, A);
+          return Diff && !Diff->isZero() &&
+                 SE.getUnsignedRangeMin(B).uge(*Diff);
+        });
   }
 
   llvm_unreachable("covered switch fell through?!");
