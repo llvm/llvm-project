@@ -20,6 +20,7 @@
 #include <vector>
 
 namespace llvm {
+class Triple;
 namespace orc {
 class ExecutorAddr;
 class ThreadSafeContext;
@@ -28,11 +29,21 @@ class ThreadSafeContext;
 
 namespace clang {
 class IncrementalExecutor;
+class IncrementalCompilerBuilder;
 class TargetInfo;
 
 /// Common configuration and interface for incremental executor builders.
 class IncrementalExecutorBuilder {
 public:
+  /// Options passed to the backend when configuring execution.
+  struct Options {
+    bool IsOutOfProcess = false;
+    std::string ExecutorPath;
+    std::string RuntimePath;
+    unsigned SlabAllocateSize = 0;
+    bool UseSharedMemory = false;
+  };
+
   /// An optional external IncrementalExecutor.
   std::unique_ptr<IncrementalExecutor> IE;
   /// Frontend -mllvm arguments for backends that need to restore LLVM options.
@@ -43,6 +54,16 @@ public:
   /// Create the default builder for the platform clangInterpreter is built for.
   /// The selected backend provides this definition.
   static std::unique_ptr<IncrementalExecutorBuilder> createDefault();
+
+  /// Apply execution options and configure the compiler for this backend.
+  virtual llvm::Error configure(IncrementalCompilerBuilder &CB,
+                                const Options &Opts) = 0;
+
+  /// Probe whether this backend can JIT code for the host.
+  virtual bool supportsJIT() const = 0;
+
+  /// Return the host triple used by this backend.
+  virtual llvm::Expected<llvm::Triple> getHostJITTriple() const = 0;
 
   /// Return the supplied executor, or create one using the selected backend.
   llvm::Expected<std::unique_ptr<IncrementalExecutor>>

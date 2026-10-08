@@ -25,6 +25,12 @@
 namespace clang {
 
 class WasmIncrementalExecutorBuilder : public IncrementalExecutorBuilder {
+public:
+  llvm::Error configure(IncrementalCompilerBuilder &CB,
+                        const Options &Opts) override;
+  bool supportsJIT() const override { return false; }
+  llvm::Expected<llvm::Triple> getHostJITTriple() const override;
+
 private:
   llvm::Expected<std::unique_ptr<IncrementalExecutor>>
   createExecutor(llvm::orc::ThreadSafeContext &TSC,

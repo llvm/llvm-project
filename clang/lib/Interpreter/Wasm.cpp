@@ -15,6 +15,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/TargetParser/Host.h"
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Module.h>
 #include <llvm/MC/TargetRegistry.h>
@@ -65,6 +66,20 @@ namespace clang {
 std::unique_ptr<IncrementalExecutorBuilder>
 IncrementalExecutorBuilder::createDefault() {
   return std::make_unique<WasmIncrementalExecutorBuilder>();
+}
+
+llvm::Error
+WasmIncrementalExecutorBuilder::configure(IncrementalCompilerBuilder &CB,
+                                          const Options &Opts) {
+  if (Opts.IsOutOfProcess)
+    return llvm::createStringError("Out-of-process execution is not supported "
+                                   "by the WebAssembly executor");
+  return llvm::Error::success();
+}
+
+llvm::Expected<llvm::Triple>
+WasmIncrementalExecutorBuilder::getHostJITTriple() const {
+  return llvm::Triple(llvm::sys::getProcessTriple());
 }
 
 llvm::Expected<std::unique_ptr<IncrementalExecutor>>
