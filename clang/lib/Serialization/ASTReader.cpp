@@ -1887,30 +1887,25 @@ InputFileLoc ASTReader::getLoadedFileLoc(StringRef Path, off_t Size) {
   if (Known == LoadedInputFiles->end())
     return InputFileLoc();
 
-  StringRef WantedName = llvm::sys::path::filename(Path);
-  SmallString<128> Wanted;
+  OptionalFileEntryRef Wanted;
+  bool TriedWanted = false;
 
   for (const LoadedInputModuleFile &In : Known->second) {
     InputFileInfo FI = getInputFileInfo(*In.F, In.InputID);
 
     StringRef Unresolved = FI.UnresolvedImportedFilename;
-    if (llvm::sys::path::filename(Unresolved) != WantedName)
-      continue;
-
-    // Two directories can hold files that agree on name and on size, so the
-    // whole path decides.
-    if (Wanted.empty()) {
-      Wanted = Path;
-      FileMgr.makeAbsolutePath(Wanted, /*Canonicalize=*/true);
-    }
-    SmallString<128> Candidate;
-    {
+    if (!llvm::sys::path::is_absolute(Unresolved) || Unresolved != Path) {
+      // Determine whether the actual files are equivalent.
+      if (!TriedWanted) {
+        Wanted = FileMgr.getOptionalFileRef(Path);
+        TriedWanted = true;
+      }
+      if (!Wanted)
+        continue;
       auto Filename = ResolveImportedPath(PathBuf, Unresolved, *In.F);
-      Candidate = *Filename;
+      if (FileMgr.getOptionalFileRef(*Filename) != Wanted)
+        continue;
     }
-    FileMgr.makeAbsolutePath(Candidate, /*Canonicalize=*/true);
-    if (StringRef(Candidate) != StringRef(Wanted))
-      continue;
 
     // A module file records no entry index for an input file it redirected
     // elsewhere, so it has no copy to offer and the search goes on.
