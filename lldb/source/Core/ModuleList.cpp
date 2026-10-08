@@ -155,6 +155,18 @@ bool ModuleListProperties::SetEnableLLDBIndexCache(bool new_value) {
   return SetPropertyAtIndex(ePropertyEnableLLDBIndexCache, new_value);
 }
 
+bool ModuleListProperties::GetEnableLLDBIndexCacheMemoryModules() const {
+  const uint32_t idx = ePropertyEnableLLDBIndexCacheMemoryModules;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_modulelist_properties[idx].default_uint_value != 0);
+}
+
+bool ModuleListProperties::SetEnableLLDBIndexCacheMemoryModules(
+    bool new_value) {
+  return SetPropertyAtIndex(ePropertyEnableLLDBIndexCacheMemoryModules,
+                            new_value);
+}
+
 uint64_t ModuleListProperties::GetLLDBIndexCacheMaxByteSize() {
   const uint32_t idx = ePropertyLLDBIndexCacheMaxByteSize;
   return GetPropertyAtIndexAs<uint64_t>(
@@ -196,6 +208,12 @@ bool ModuleListProperties::GetLoadSymbolOnDemand() const {
   const uint32_t idx = ePropertyLoadSymbolOnDemand;
   return GetPropertyAtIndexAs<bool>(
       idx, g_modulelist_properties[idx].default_uint_value != 0);
+}
+
+uint64_t ModuleListProperties::GetDemangledNameInfoCacheSize() const {
+  const uint32_t idx = ePropertyDemangledNameInfoCacheSize;
+  return GetPropertyAtIndexAs<uint64_t>(
+      idx, g_modulelist_properties[idx].default_uint_value);
 }
 
 ModuleList::ModuleList() : m_modules(), m_modules_mutex() {}

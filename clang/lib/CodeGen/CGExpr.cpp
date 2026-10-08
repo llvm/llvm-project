@@ -41,6 +41,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "clang/CodeGenUtils/ExprUtils.h"
+#include "clang/CodeGenUtils/RecordLayoutUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
@@ -644,8 +645,7 @@ EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
 
         OldIP = Builder.saveIP();
         llvm::BasicBlock *Block = OldConditional->getStartingBlock();
-        Builder.restoreIP(CGBuilderTy::InsertPoint(
-            Block, llvm::BasicBlock::iterator(Block->back())));
+        Builder.restoreIP(Block->back().getIterator());
       }
 
       if (EmitLifetimeStart(Alloca.getPointer())) {
@@ -5910,7 +5910,7 @@ static Address emitAddrOfZeroSizeField(CodeGenFunction &CGF, Address Base,
 static Address emitRawAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
                                          const FieldDecl *field,
                                          bool IsInBounds) {
-  if (isEmptyFieldForLayout(CGF.getContext(), field))
+  if (CodeGenUtils::isEmptyFieldForLayout(CGF.getContext(), field))
     return emitAddrOfZeroSizeField(CGF, base, field, IsInBounds);
 
   const RecordDecl *rec = field->getParent();

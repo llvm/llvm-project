@@ -1092,11 +1092,6 @@ void Parser::ParseOpenCLQualifiers(ParsedAttributes &Attrs) {
                Tok.getKind());
 }
 
-bool Parser::isHLSLQualifier(const Token &Tok) const {
-  return Tok.is(tok::kw_groupshared) || Tok.is(tok::kw_row_major) ||
-         Tok.is(tok::kw_column_major);
-}
-
 void Parser::ParseHLSLQualifiers(ParsedAttributes &Attrs) {
   IdentifierInfo *AttrName = Tok.getIdentifierInfo();
   auto Kind = Tok.getKind();
@@ -2536,7 +2531,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
   // If a '==' or '+=' is found, suggest a fixit to '='.
   if (isTokenEqualOrEqualTypo())
     TheInitKind = InitKind::Equal;
-  else if (Tok.is(tok::l_paren))
+  else if (getLangOpts().CPlusPlus && Tok.is(tok::l_paren))
     TheInitKind = InitKind::CXXDirect;
   else if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace) &&
            (!CurParsedObjCImpl || !D.isFunctionDeclarator()))
@@ -4119,6 +4114,20 @@ void Parser::ParseDeclarationSpecifiers(
       break;
     case tok::kw_auto:
       if (getLangOpts().CPlusPlus11 || getLangOpts().C23) {
+        auto IsTypedefName = [&](const Token &T) {
+          if (!T.is(tok::identifier))
+            return false;
+          IdentifierInfo *II = T.getIdentifierInfo();
+          if (!II)
+            return false;
+          // Suppress diagnostics; the real parse will emit them later.
+          LookupResult R(Actions, II, T.getLocation(),
+                         Sema::LookupOrdinaryName);
+          Actions.LookupName(R, getCurScope(),
+                             /*AllowBuiltinCreation=*/false);
+          R.suppressDiagnostics();
+          return R.isSingleResult() && isa<TypeDecl>(R.getFoundDecl());
+        };
         auto MayBeTypeSpecifier = [&]() {
           // In pre-C23 C, auto can be used as a storage-class specifier.
           // C23 removes auto from the storage-class specifiers and repurposes
@@ -4131,6 +4140,15 @@ void Parser::ParseDeclarationSpecifiers(
           while (true) {
             const Token &T = GetLookAheadToken(I);
             if (isKnownToBeTypeSpecifier(T))
+              return true;
+
+            // C23: a bare identifier that names a typedef is a type
+            // specifier here, so `auto typedefName varName;` should be
+            // parsed with `auto` as the storage-class specifier — not as
+            // type inference. Without this check the parser would consume
+            // `auto` as type-inference and then error on the missing
+            // initializer for what it thinks is `typedefName`.
+            if (getLangOpts().C23 && IsTypedefName(T))
               return true;
 
             if (getLangOpts().C23 && isTypeSpecifierQualifier(T))
@@ -4657,6 +4675,12 @@ void Parser::ParseDeclarationSpecifiers(
       break;
     case tok::kw_row_major:
     case tok::kw_column_major:
+    case tok::kw_nointerpolation:
+    case tok::kw_linear:
+    case tok::kw_centroid:
+    case tok::kw_noperspective:
+    case tok::kw_sample:
+    case tok::kw_center:
     case tok::kw_groupshared:
     case tok::kw_in:
     case tok::kw_inout:
@@ -4858,11 +4882,7 @@ void Parser::ParseStructDeclaration(
 ParsedAttributes Parser::ParseLexedAttributeTokens(LateParsedAttribute &LPA) {
   // Create a fake EOF so that attribute parsing won't go off the end of the
   // attribute.
-  Token AttrEnd;
-  AttrEnd.startToken();
-  AttrEnd.setKind(tok::eof);
-  AttrEnd.setLocation(Tok.getLocation());
-  AttrEnd.setEofData(LPA.Toks.data());
+  Token AttrEnd = Token::createEof(Tok.getLocation(), LPA.Toks.data());
   LPA.Toks.push_back(AttrEnd);
 
   // Append the current token at the end of the new token stream so that it
@@ -5216,8 +5236,15 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   bool CanBeBitfield =
       getCurScope()->isClassScope() && ScopedEnumKWLoc.isInvalid() && Name;
 
+  auto IsCXXTypeAhead = [this]() {
+    RevertingTentativeParsingAction PA(*this);
+    ConsumeToken();
+    return Parser::isCXXTypeId(TentativeCXXTypeIdContext::Unambiguous);
+  };
+
   // Parse the fixed underlying type.
-  if (Tok.is(tok::colon)) {
+  if (Tok.is(tok::colon) &&
+      (!ParsingGenericAssociationType || IsCXXTypeAhead())) {
     // This might be an enum-base or part of some unrelated enclosing context.
     //
     // 'enum E : base' is permitted in two circumstances:
@@ -5819,6 +5846,12 @@ bool Parser::isTypeSpecifierQualifier(const Token &Tok) {
     return true;
 
   // HLSL type qualifiers
+  case tok::kw_nointerpolation:
+  case tok::kw_linear:
+  case tok::kw_centroid:
+  case tok::kw_noperspective:
+  case tok::kw_sample:
+  case tok::kw_center:
   case tok::kw_groupshared:
   case tok::kw_in:
   case tok::kw_inout:
@@ -6105,6 +6138,12 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw_groupshared:
     return true;
 
+  case tok::kw_nointerpolation:
+  case tok::kw_linear:
+  case tok::kw_centroid:
+  case tok::kw_noperspective:
+  case tok::kw_sample:
+  case tok::kw_center:
   case tok::kw_row_major:
   case tok::kw_column_major:
     return getLangOpts().HLSL;
@@ -6351,6 +6390,12 @@ void Parser::ParseTypeQualifierListOpt(
     case tok::kw_in:
     case tok::kw_inout:
     case tok::kw_out:
+    case tok::kw_nointerpolation:
+    case tok::kw_linear:
+    case tok::kw_centroid:
+    case tok::kw_noperspective:
+    case tok::kw_sample:
+    case tok::kw_center:
       // NOTE: ParseHLSLQualifiers will consume the qualifier token.
       ParseHLSLQualifiers(DS.getAttributes());
       continue;
@@ -8304,10 +8349,7 @@ TypeResult Parser::ParseTypeFromString(StringRef TypeStr, StringRef Context,
   // Replace the "eod" token with an "eof" token identifying the end of
   // the provided string.
   Token &EndToken = Tokens.back();
-  EndToken.startToken();
-  EndToken.setKind(tok::eof);
-  EndToken.setLocation(Tok.getLocation());
-  EndToken.setEofData(TypeStr.data());
+  EndToken = Token::createEof(Tok.getLocation(), TypeStr.data());
 
   // Add the current token back.
   Tokens.push_back(Tok);

@@ -1426,29 +1426,54 @@ def CIR_VisibilityKind : CIR_I32Enum<"VisibilityKind", "C/C++ visibility", [
 ]>;
 
 //===----------------------------------------------------------------------===//
+// UnwindTableKind
+//===----------------------------------------------------------------------===//
+def CIR_UnwindTableKind : CIR_I32Enum<"UnwindTableKind", "Unwind Table Kind", [
+  I32EnumCase<"None", 0, "none">,
+  I32EnumCase<"Sync", 1, "sync">,
+  I32EnumCase<"Async", 2, "async">
+]>;
+
+def CIR_UnwindTableKindAttr : CIR_EnumAttr<CIR_UnwindTableKind, "uwtable"> {
+  let summary = "Encodes the unwind table kind for a function.";
+
+  let description = [{
+    This mirrors the UWTableKindEnum in The LLVM dialect,
+    and is passed through to the llvm dialect. According to the LLVM
+    documentation:
+        The ‘uwtable’ attribute is about the ABI or the user mandating an /
+            entry in the unwind table.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // GloblCtorAttr
 //===----------------------------------------------------------------------===//
 
 class CIR_GlobalCtorDtor<string name, string attrMnemonic>
-    : CIR_Attr<"Global" # name, "global_" # attrMnemonic> {
-  let parameters = (ins "mlir::StringAttr":$name, "int":$priority);
+    : CIR_Attr<"Global" #name, "global_" #attrMnemonic> {
+  let parameters = (ins "mlir::StringAttr":$name, "int":$priority,
+                        OptionalParameter<"mlir::FlatSymbolRefAttr">:$associated);
 
   let skipDefaultBuilders = 1;
   let builders = [
     AttrBuilder<(ins
         "llvm::StringRef":$name,
-        CArg<"int", "65535">:$priority), [{
-      return $_get($_ctxt, mlir::StringAttr::get($_ctxt, name), priority);
+        CArg<"int", "65535">:$priority,
+        CArg<"mlir::FlatSymbolRefAttr", "{}">:$associated), [{
+      return $_get($_ctxt, mlir::StringAttr::get($_ctxt, name), priority,
+                   associated);
     }]>,
     AttrBuilderWithInferredContext<(ins
         "mlir::StringAttr":$name,
-        CArg<"int", "65535">:$priority), [{
-      return $_get(name.getContext(), name, priority);
+        CArg<"int", "65535">:$priority,
+        CArg<"mlir::FlatSymbolRefAttr", "{}">:$associated), [{
+      return $_get(name.getContext(), name, priority, associated);
     }]>
   ];
 
   let assemblyFormat = [{
-    `<` $name `,` $priority `>`
+    `<` $name `,` $priority (`,` $associated^)? `>`
   }];
 
   let extraClassDeclaration = [{
@@ -1456,9 +1481,7 @@ class CIR_GlobalCtorDtor<string name, string attrMnemonic>
       return getPriority() == getDefaultPriority();
     };
 
-    static int getDefaultPriority() {
-      return 65535;
-    }
+    static int getDefaultPriority() { return 65535; }
   }];
   let canHaveIllegalCXXABIType = 0;
 }
@@ -2153,19 +2176,22 @@ def CIR_MemoryEffectsAttr : CIR_Attr<"MemoryEffects", "memory_effects"> {
 }
 
 //===----------------------------------------------------------------------===//
-// StaticLocalGuardAttr
+// DynamicInitGuardAttr
 //===----------------------------------------------------------------------===//
 
-def CIR_StaticLocalGuardAttr : CIR_Attr<"StaticLocalGuard",
-                                         "static_local_guard"> {
-  let summary = "Guard variable name for static local variables";
+def CIR_DynamicInitGuardAttr : CIR_Attr<"DynamicInitGuard",
+                                         "dynamic_init_guard"> {
+  let summary = "Guard variable name for guarded dynamic initialization";
   let description = [{
-    Contains the mangled guard variable name for static local variable
-    initialization.
+    Contains the mangled guard variable name for guarded dynamic
+    initialization. This covers both function-local static variables and
+    namespace-scope variables with vague linkage (e.g. weak/linkonce_odr
+    inline variables), which both use the Itanium `__cxa_guard_*` protocol.
+    See `DynamicInitInfoAttr` for the facts that distinguish the two.
 
     Example:
     ```
-    cir.global internal static_local_guard<"_ZGVZ3foovE1x"> @_ZZ3foovE1x = ...
+    cir.global internal dynamic_init_guard<"_ZGVZ3foovE1x"> @_ZZ3foovE1x = ...
     ```
   }];
   let parameters = (ins "mlir::StringAttr":$name);
@@ -2299,7 +2325,7 @@ def CIR_ASTVarDeclAttr : CIR_AST<"VarDecl", "var.decl", [
 ]>;
 
 //===----------------------------------------------------------------------===//
-// StaticLocalInfoAttr
+// DynamicInitInfoAttr
 //===----------------------------------------------------------------------===//
 
 // CIR-native thread-local storage kind. Cases mirror clang::VarDecl::TLSKind
@@ -2330,12 +2356,15 @@ def CIR_TemplateSpecializationKind
                   "explicit_instantiation_definition">
 ]>;
 
-def CIR_StaticLocalInfoAttr
-    : CIR_Attr<"StaticLocalInfo", "static_local_info"> {
-  let summary = "Static-local variable facts needed by later lowering";
+def CIR_DynamicInitInfoAttr
+    : CIR_Attr<"DynamicInitInfo", "dynamic_init_info"> {
+  let summary = "Variable facts needed by guarded dynamic initialization lowering";
   let description = [{
-    Holds the subset of a static-local variable's declaration facts that
-    post-CIRGen lowering needs, as plain data (no `clang::VarDecl` pointer).
+    Holds the subset of a guarded-dynamic-initialization variable's
+    declaration facts that post-CIRGen lowering needs, as plain data (no
+    `clang::VarDecl` pointer). Always accompanies a `DynamicInitGuardAttr`,
+    and applies equally to function-local statics and to namespace-scope
+    variables with vague linkage (e.g. weak/linkonce_odr inline variables).
 
     - `local`: whether the variable is a block-scope (local) declaration.
       Mirrors `clang::VarDecl::isLocalVarDecl()`. The namespace-scope inline
@@ -2354,7 +2383,7 @@ def CIR_StaticLocalInfoAttr
     Example:
     ```
     cir.global ... @x = ...
-      static_local_info<local = true, tls = none, is_inline = false,
+      dynamic_init_info<local = true, tls = none, is_inline = false,
                         tsk = undeclared>
     ```
 
@@ -2374,6 +2403,19 @@ def CIR_StaticLocalInfoAttr
 
   let assemblyFormat = [{
     `<` struct($local, $tls, $is_inline, $tsk) `>`
+  }];
+
+  let extraClassDeclaration = [{
+    /// Whether the variable is an instantiation of a template. Matches clang's
+    /// isTemplateInstantiation(TemplateSpecializationKind).
+    bool isTemplateInstantiation() const {
+      cir::TemplateSpecializationKind kind = getTsk();
+      return kind == cir::TemplateSpecializationKind::ImplicitInstantiation ||
+             kind == cir::TemplateSpecializationKind::
+                         ExplicitInstantiationDeclaration ||
+             kind ==
+                 cir::TemplateSpecializationKind::ExplicitInstantiationDefinition;
+    }
   }];
 
   let canHaveIllegalCXXABIType = 0;

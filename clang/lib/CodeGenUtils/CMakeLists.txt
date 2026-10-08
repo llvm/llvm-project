@@ -15,6 +15,9 @@ add_clang_library(clangCodeGenUtils
   FunctionUtils.cpp
   ItaniumCXXABIUtils.cpp
   ModuleUtils.cpp
+  RecordLayoutUtils.cpp
+  StmtUtils.cpp
+  TargetUtils.cpp
 
   LINK_LIBS
   clangAST

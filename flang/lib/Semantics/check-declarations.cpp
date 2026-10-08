@@ -1179,14 +1179,17 @@ void CheckHelper::CheckObjectEntity(
         messages_.Say(
             "Object '%s' with ATTRIBUTES(CONSTANT) may not be declared in a host subprogram"_err_en_US,
             symbol.name());
+      } else if (!isComponent && progUnit.kind() == Scope::Kind::MainProgram) {
+        messages_.Say(
+            "Object '%s' with ATTRIBUTES(CONSTANT) may not be declared in a main program"_err_en_US,
+            symbol.name());
       } else if (IsAllocatableOrPointer(symbol) ||
           symbol.attrs().test(Attr::TARGET)) {
         messages_.Say(
             "Object '%s' with ATTRIBUTES(CONSTANT) may not be allocatable, pointer, or target"_err_en_US,
             symbol.name());
       } else if (auto shape{evaluate::GetShape(foldingContext_, symbol)};
-                 !shape ||
-                 !evaluate::AsConstantExtents(foldingContext_, *shape)) {
+          !shape || !evaluate::AsConstantExtents(foldingContext_, *shape)) {
         messages_.Say(
             "Object '%s' with ATTRIBUTES(CONSTANT) must have constant array bounds"_err_en_US,
             symbol.name());
