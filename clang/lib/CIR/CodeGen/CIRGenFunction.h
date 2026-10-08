@@ -2061,6 +2061,7 @@ public:
   cir::CoroSuspendOp emitCoroSuspendBuiltinCall(const CallExpr *e);
 
   cir::CoroSizeOp emitCoroSizeBuiltinCall(const CallExpr *e);
+  cir::CoroAlignOp emitCoroAlignBuiltinCall(const CallExpr *e);
   cir::CoroFreeOp emitCoroFreeBuiltin(const CallExpr *e);
   RValue emitCoroutineFrame();
 

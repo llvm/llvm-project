@@ -2371,6 +2371,12 @@ mlir::LogicalResult cir::GlobalOp::verify() {
       return failure();
   }
 
+  // The initial value can't be recomputed from the type once the ctor is
+  // lowered (e.g. a null member pointer becomes -1 after CXXABILowering).
+  if (!getCtorRegion().empty() && !getInitialValue().has_value())
+    return emitOpError(
+        "cannot have a constructor region without an initial value");
+
   std::optional<DynamicInitInfoAttr> info = getDynamicInitInfo();
 
   if ((getDynamicInitGuard().has_value()) && (!info || info->getLocal()) &&
@@ -2519,17 +2525,14 @@ static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, cir::GlobalOp op,
   }
 
   p << "= ";
+  if (initAttr)
+    printConstant(p, initAttr);
+
   if (!ctorRegion.empty()) {
-    p << "ctor ";
-    printType();
-    p << " ";
+    p << " ctor ";
     p.printRegion(ctorRegion,
                   /*printEntryBlockArgs=*/false,
                   /*printBlockTerminators=*/false);
-  } else {
-    // This also prints the type...
-    if (initAttr)
-      printConstant(p, initAttr);
   }
 
   if (!dtorRegion.empty()) {
@@ -2552,26 +2555,24 @@ static ParseResult parseGlobalOpTypeAndInitialValue(OpAsmParser &parser,
     if (parser.parseColonType(opTy))
       return failure();
   } else {
-    // Parse contructor, example:
-    //  cir.global @rgb = ctor : type { ... }
+    // Parse constant with initializer, examples:
+    //  cir.global @y = 3.400000e+00 : f32
+    //  cir.global @rgb = #cir.const_array<[...] : !cir.array<i8 x 3>>
+    if (parseConstantValue(parser, initialValueAttr).failed())
+      return failure();
+
+    assert(mlir::isa<mlir::TypedAttr>(initialValueAttr) &&
+           "Non-typed attrs shouldn't appear here.");
+    opTy = mlir::cast<mlir::TypedAttr>(initialValueAttr).getType();
+
+    // Parse constructor, example:
+    //  cir.global @rgb = #cir.zero : type ctor { ... }
     if (!parser.parseOptionalKeyword("ctor")) {
-      if (parser.parseColonType(opTy))
-        return failure();
       auto parseLoc = parser.getCurrentLocation();
       if (parser.parseRegion(ctorRegion, /*arguments=*/{}, /*argTypes=*/{}))
         return failure();
       if (ensureRegionTerm(parser, ctorRegion, parseLoc).failed())
         return failure();
-    } else {
-      // Parse constant with initializer, examples:
-      //  cir.global @y = 3.400000e+00 : f32
-      //  cir.global @rgb = #cir.const_array<[...] : !cir.array<i8 x 3>>
-      if (parseConstantValue(parser, initialValueAttr).failed())
-        return failure();
-
-      assert(mlir::isa<mlir::TypedAttr>(initialValueAttr) &&
-             "Non-typed attrs shouldn't appear here.");
-      opTy = mlir::cast<mlir::TypedAttr>(initialValueAttr).getType();
     }
 
     // Parse destructor, example:

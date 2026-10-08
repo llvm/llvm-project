@@ -24,7 +24,7 @@ typedef NonTrivial NonTrivialArr[2];
 const NonTrivialArr &static_arr_ref = NonTrivialArr{};
 thread_local const NonTrivialArr &thread_arr_ref = NonTrivialArr{};
 
-// CIR-BEFORE: cir.global external @static_ref = ctor : !cir.ptr<!rec_NonTrivial> {
+// CIR-BEFORE: cir.global external @static_ref = #cir.ptr<null> : !cir.ptr<!rec_NonTrivial> ctor {
 // CIR-BEFORE:   %[[STATIC_REF:.*]] = cir.get_global @static_ref
 // CIR-BEFORE:   %[[REF_TEMP:.*]] = cir.get_global @_ZGR10static_ref_
 // CIR-BEFORE:   cir.call @_ZN10NonTrivialC1Ev(%[[REF_TEMP]])
@@ -47,7 +47,7 @@ thread_local const NonTrivialArr &thread_arr_ref = NonTrivialArr{};
 // CIR:   cir.call @__cxa_atexit
 // CIR: cir.global "private" internal @_ZGR10static_ref_ = #cir.zero : !rec_NonTrivial
 
-// CIR-BEFORE: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW10thread_ref", "_ZTH10thread_ref"> @thread_ref = ctor : !cir.ptr<!rec_NonTrivial> {
+// CIR-BEFORE: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW10thread_ref", "_ZTH10thread_ref"> @thread_ref = #cir.ptr<null> : !cir.ptr<!rec_NonTrivial> ctor {
 // CIR-BEFORE:   %[[THREAD_REF:.*]] = cir.get_global thread_local @thread_ref
 // CIR-BEFORE:   %[[REF_TEMP:.*]] = cir.get_global @_ZGR10thread_ref_
 // CIR-BEFORE:   cir.call @_ZN10NonTrivialC1Ev(%[[REF_TEMP]])
@@ -70,7 +70,7 @@ thread_local const NonTrivialArr &thread_arr_ref = NonTrivialArr{};
 // CIR:   cir.call @__cxa_thread_atexit
 // CIR: cir.global "private" internal tls_model = tls_dyn @_ZGR10thread_ref_ = #cir.zero : !rec_NonTrivial
 
-// CIR-BEFORE: cir.global external @static_arr_ref = ctor : !cir.ptr<!cir.array<!rec_NonTrivial x 2>> {
+// CIR-BEFORE: cir.global external @static_arr_ref = #cir.ptr<null> : !cir.ptr<!cir.array<!rec_NonTrivial x 2>> ctor {
 // CIR-BEFORE:   %[[ARRAY_INIT_TEMP:.*]] = cir.alloca {{.*}}"arrayinit.temp"
 // CIR-BEFORE:   %[[STATIC_ARR_REF:.*]] = cir.get_global @static_arr_ref
 // CIR-BEFORE:   %[[STATIC_ARR_REF_TEMP:.*]] = cir.get_global @_ZGR14static_arr_ref_
@@ -108,7 +108,7 @@ thread_local const NonTrivialArr &thread_arr_ref = NonTrivialArr{};
 // CIR:   cir.call @__cxa_atexit
 // CIR: cir.global "private" internal @_ZGR14static_arr_ref_ = #cir.zero : !cir.array<!rec_NonTrivial x 2>
 
-// CIR-BEFORE: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW14thread_arr_ref", "_ZTH14thread_arr_ref"> @thread_arr_ref = ctor : !cir.ptr<!cir.array<!rec_NonTrivial x 2>> {
+// CIR-BEFORE: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW14thread_arr_ref", "_ZTH14thread_arr_ref"> @thread_arr_ref = #cir.ptr<null> : !cir.ptr<!cir.array<!rec_NonTrivial x 2>> ctor {
 // CIR-BEFORE:   %[[ARRAY_INIT_TEMP:.*]] = cir.alloca {{.*}}"arrayinit.temp"
 // CIR-BEFORE:   %[[THREAD_ARR_REF:.*]] = cir.get_global thread_local @thread_arr_ref
 // CIR-BEFORE:   %[[THREAD_ARR_REF_TEMP:.*]] = cir.get_global @_ZGR14thread_arr_ref_
@@ -273,7 +273,7 @@ struct OwnsTemp {
 };
 OwnsTemp owns_temp{ExtendedTemp()};
 
-// CIR-BEFORE: cir.global external @owns_temp = ctor : !rec_OwnsTemp {
+// CIR-BEFORE: cir.global external @owns_temp = #cir.zero : !rec_OwnsTemp ctor {
 // CIR-BEFORE: } dtor {
 // CIR-BEFORE-NEXT: %[[OWNER:.*]] = cir.get_global @owns_temp
 // CIR-BEFORE-NEXT: cir.call @_ZN8OwnsTempD1Ev(%[[OWNER]])
