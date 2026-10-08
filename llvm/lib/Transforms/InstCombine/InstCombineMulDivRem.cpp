@@ -105,7 +105,7 @@ static Value *simplifyValueKnownNonZero(Value *V, InstCombinerImpl &IC,
 static Value *foldMulSelectToNegate(BinaryOperator &I,
                                     InstCombiner::BuilderTy &Builder) {
   Value *Cond, *OtherOp;
-  Instruction *SI;
+  Instruction *SI = nullptr;
 
   // mul (select Cond, 1, -1), OtherOp --> select Cond, OtherOp, -OtherOp
   // mul OtherOp, (select Cond, 1, -1) --> select Cond, OtherOp, -OtherOp
