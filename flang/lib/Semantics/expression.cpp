@@ -2784,6 +2784,13 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
             *sym);
         return std::nullopt;
       }
+      const bool isGeneric{sym->has<semantics::GenericDetails>()};
+      auto withGenericName{[&](ProcedureDesignator proc) {
+        if (isGeneric) {
+          proc.set_genericName(sc.Component().source);
+        }
+        return proc;
+      }};
       if (auto *dtExpr{UnwrapExpr<Expr<SomeDerived>>(*base)}) {
         if (sym->has<semantics::GenericDetails>()) {
           const Symbol &generic{*sym};
@@ -2795,12 +2802,14 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
                 }
                 return true;
               }};
-          auto result{ResolveGeneric(
+          auto result{CheckAndResolveGenericReference(
               generic, arguments, adjustment, isSubroutine, SymbolVector{})};
           sym = result.specific;
           if (!sym) {
-            EmitGenericResolutionError(generic, result.failedDueToAmbiguity,
-                isSubroutine, arguments, result.tried, adjustment);
+            if (!result.errorReported) {
+              EmitGenericResolutionError(generic, result.failedDueToAmbiguity,
+                  isSubroutine, arguments, result.tried, adjustment);
+            }
             return std::nullopt;
           }
           // re-resolve the name to the specific binding
@@ -2867,7 +2876,8 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
                 GetBindingResolution(dtExpr->GetType(), *sym)}) {
           AddPassArg(arguments, std::move(*dtExpr), *sym, false);
           return CalleeAndArguments{
-              ProcedureDesignator{*resolution}, std::move(arguments)};
+              withGenericName(ProcedureDesignator{*resolution}),
+              std::move(arguments)};
         } else if (dataRef.has_value()) {
           if (ExtractCoarrayRef(*dataRef)) {
             if (IsProcedurePointer(*sym)) {
@@ -2884,7 +2894,7 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
               if (auto component{CreateComponent(std::move(*dataRef), *sym,
                       *dtSpec->scope(), /*C919bAlreadyEnforced=*/true)}) {
                 return CalleeAndArguments{
-                    ProcedureDesignator{std::move(*component)},
+                    withGenericName(ProcedureDesignator{std::move(*component)}),
                     std::move(arguments)};
               }
             }
@@ -2896,7 +2906,8 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
                 Expr<SomeDerived>{Designator<SomeDerived>{std::move(*dataRef)}},
                 *sym);
             return CalleeAndArguments{
-                ProcedureDesignator{*sym}, std::move(arguments)};
+                withGenericName(ProcedureDesignator{*sym}),
+                std::move(arguments)};
           }
         }
       }
@@ -3440,6 +3451,29 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
   return {nullptr, false, std::move(tried)};
 }
 
+auto ExpressionAnalyzer::CheckAndResolveGenericReference(const Symbol &symbol,
+    const ActualArguments &actuals, const AdjustActuals &adjustActuals,
+    bool isSubroutine, SymbolVector &&tried, bool mightBeStructureConstructor)
+    -> GenericResolution {
+  const Symbol &ultimate{symbol.GetUltimate()};
+  // Attr::INTRINSIC is set for specific intrinsic names such as DSIN as well,
+  // and a reference to one of those is not a reference to a generic procedure.
+  if ((ultimate.has<semantics::GenericDetails>() ||
+          (ultimate.attrs().test(semantics::Attr::INTRINSIC) &&
+              context_.intrinsics().IsGenericIntrinsic(
+                  ultimate.name().ToString()))) &&
+      semantics::CheckConditionalArgsInGenericReference(
+          actuals, GetContextualMessages())) {
+    // Not resolving also leaves the parse tree symbol generic, so a second
+    // analysis of the expression reports the violation again.
+    GenericResolution result;
+    result.errorReported = true;
+    return result;
+  }
+  return ResolveGeneric(symbol, actuals, adjustActuals, isSubroutine,
+      std::move(tried), mightBeStructureConstructor);
+}
+
 const Symbol &ExpressionAnalyzer::AccessSpecific(
     const Symbol &originalGeneric, const Symbol &specific) {
   if (const auto *hosted{
@@ -3557,8 +3591,12 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
   SymbolVector tried;
   if (isGenericInterface || isExplicitIntrinsic) {
     ExpressionAnalyzer::AdjustActuals noAdjustment;
-    auto result{ResolveGeneric(*symbol, arguments, noAdjustment, isSubroutine,
-        SymbolVector{}, mightBeStructureConstructor)};
+    auto result{
+        CheckAndResolveGenericReference(*symbol, arguments, noAdjustment,
+            isSubroutine, SymbolVector{}, mightBeStructureConstructor)};
+    if (result.errorReported) {
+      return std::nullopt;
+    }
     resolution = result.specific;
     dueToAmbiguity = result.failedDueToAmbiguity;
     tried = std::move(result.tried);
@@ -3577,6 +3615,12 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
     if (resolution) {
       if (context_.GetPPCBuiltinsScope() &&
           resolution->name().ToString().rfind("__ppc_", 0) == 0) {
+        // The PowerPC intrinsic checks and PowerPC lowering require constant
+        // values for some arguments; now that the call is committed to this
+        // resolution, fold any named-constant designators that were retained
+        // for storage association.
+        evaluate::FoldNamedConstantActualArguments(
+            GetFoldingContext(), arguments);
         semantics::CheckPPCIntrinsic(
             *symbol, *resolution, arguments, GetFoldingContext());
       }
@@ -3617,8 +3661,11 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
           semantics::SymbolRef{*resolution}, std::move(arguments)};
     }
   } else if (IsProcedure(*resolution)) {
-    return CalleeAndArguments{
-        ProcedureDesignator{*resolution}, std::move(arguments)};
+    ProcedureDesignator proc{*resolution};
+    if (isGenericInterface) {
+      proc.set_genericName(name.source);
+    }
+    return CalleeAndArguments{std::move(proc), std::move(arguments)};
   }
   if (!context_.HasError(*resolution)) {
     AttachDeclaration(
@@ -5949,7 +5996,49 @@ MaybeExpr ArgumentAnalyzer::AnalyzeExprOrWholeAssumedSizeArray(
     }
   }
   auto restorer{context_.AllowNullPointer()};
-  return context_.Analyze(expr);
+  MaybeExpr result{context_.Analyze(expr)};
+  // For actual arguments of procedure references, retain a designator whose
+  // base is a named constant in designator form instead of replacing it by
+  // its folded Constant value, so that lowering associates the dummy argument
+  // with the named constant's storage.  This matters for sequence association
+  // of an array element actual argument (F'2023 15.5.2.12) and whenever the
+  // dummy's address is meaningful (e.g. OpenACC/OpenMP present checks).
+  // The inner Analyze calls below do not apply the outer folding performed
+  // by Analyze(parser::Expr), and folding still sees through the retained
+  // designator wherever a constant value is needed later.
+  if (isProcedureCall_ && result) {
+    // Look only at an expression that is itself a designator: a
+    // parenthesized designator is a primary, i.e. an expression
+    // (F'2023 R1001), and must keep its folded value.  Substring actual
+    // arguments (the F'2023 15.5.2.12 p4 form of character sequence
+    // association) are not retained here and keep their folded values.
+    if (const auto *designator{
+            std::get_if<common::Indirection<parser::Designator>>(&expr.u)}) {
+      if (const auto *name{parser::Unwrap<parser::Name>(designator->value())}) {
+        // Whole named-constant array.
+        if (name->symbol &&
+            semantics::IsNamedConstant(name->symbol->GetUltimate()) &&
+            name->symbol->Rank() > 0) {
+          return context_.Analyze(*name);
+        }
+      } else {
+        // Named-constant array element or section (or array component of a
+        // scalar named constant of derived type), e.g. a(1), a(1:3), a(2:*),
+        // pt%arr(1).  A section with a vector subscript or a component of a
+        // section is retained too; those are not contiguous, and lowering
+        // copies them like any other actual argument that needs a copy.
+        if (const auto *ae{
+                parser::Unwrap<parser::ArrayElement>(designator->value())}) {
+          const auto &baseName{parser::GetFirstName(ae->Base())};
+          if (baseName.symbol &&
+              semantics::IsNamedConstant(baseName.symbol->GetUltimate())) {
+            return context_.Analyze(*ae);
+          }
+        }
+      }
+    }
+  }
+  return result;
 }
 
 bool ArgumentAnalyzer::AreConformable() const {

@@ -137,7 +137,7 @@ public:
     InFPBits x_bits = InFPBits::one();
     x_bits.set_mantissa(InFPBits::SIG_MASK);
     InType x = x_bits.get_val();
-    func(x, x);
+    [[maybe_unused]] volatile OutType res = func(x, x);
     EXPECT_FP_EXCEPTION(FE_INEXACT);
   }
 };

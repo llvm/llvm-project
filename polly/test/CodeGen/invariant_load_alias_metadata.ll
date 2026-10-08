@@ -7,7 +7,7 @@
 ;
 ; CHECK: !0 = !{!1}
 ; CHECK-NEXT: !1 = distinct !{!1, !2, !"polly.alias.scope.MemRef_A"}
-; CHECK-NEXT: !2 = distinct !{!2, !"polly.alias.scope.domain"}
+; CHECK-NEXT: !2 = distinct !{!2, i1 false, !"polly.alias.scope.domain"}
 ; CHECK-NEXT: !3 = !{!4}
 ; CHECK-NEXT: !4 = distinct !{!4, !2, !"polly.alias.scope.MemRef_ptrA"}
 ;

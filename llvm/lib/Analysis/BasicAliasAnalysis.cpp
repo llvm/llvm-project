@@ -254,6 +254,10 @@ CaptureComponents EarliestEscapeAnalysis::getCapturesBefore(
     if (!I)
       return false;
 
+    // Handle longjmp during re-entry.
+    if (callsReturnsTwiceFn())
+      return false;
+
     if (I == CaptureInst) {
       if (OrAt)
         return false;
@@ -265,6 +269,13 @@ CaptureComponents EarliestEscapeAnalysis::getCapturesBefore(
   if (IsNotCapturedBefore())
     return CaptureComponents::None;
   return Iter.first->second.second.WithoutRet;
+}
+
+bool EarliestEscapeAnalysis::callsReturnsTwiceFn() {
+  if (!CallsReturnsTwiceFn)
+    CallsReturnsTwiceFn =
+        DT.getRoot()->getParent()->callsFunctionThatReturnsTwice();
+  return *CallsReturnsTwiceFn;
 }
 
 void EarliestEscapeAnalysis::removeInstruction(Instruction *I) {

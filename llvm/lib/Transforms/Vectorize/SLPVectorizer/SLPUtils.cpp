@@ -11,11 +11,13 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -857,6 +859,95 @@ bool isSelectedBaseLoad(Type *ScalarTy, ArrayRef<Value *> PointerOps,
   return TrueBase != nullptr;
 }
 
+Type *getCommonGEPIndexType(ArrayRef<Value *> VL, Instruction *VL0,
+                            function_ref<bool(Value *)> IsGEPLane,
+                            const DataLayout &DL) {
+  constexpr unsigned IndexIdx = 1;
+  Type *VL0Ty = VL0->getOperand(IndexIdx)->getType();
+  Type *PtrIdxTy =
+      DL.getIndexType(VL0->getOperand(0)->getType()->getScalarType());
+  bool AllSameTy = true;
+  bool HasNonConstIdx = false;
+  bool ConstsFitVL0Ty = true;
+  for (Value *V : make_filter_range(VL, IsGEPLane)) {
+    Value *Op = cast<GetElementPtrInst>(V)->getOperand(IndexIdx);
+    if (Op->getType() != VL0Ty)
+      AllSameTy = false;
+    auto *CI = dyn_cast<ConstantInt>(Op);
+    if (!CI) {
+      // Non-constant indices are not cast, they must have the main op type.
+      if (Op->getType() != VL0Ty)
+        return nullptr;
+      HasNonConstIdx = true;
+      continue;
+    }
+    if (!CI->getValue().isSignedIntN(VL0Ty->getIntegerBitWidth()))
+      ConstsFitVL0Ty = false;
+  }
+  if (AllSameTy)
+    return VL0Ty;
+  if (!HasNonConstIdx || VL0Ty == PtrIdxTy)
+    return PtrIdxTy;
+  return ConstsFitVL0Ty ? VL0Ty : nullptr;
+}
+
+bool isCopyableGEPAddressVector(ArrayRef<Value *> PointerOps) {
+  SmallPtrSet<Value *, 16> UniquePtrs(llvm::from_range, PointerOps);
+  if (UniquePtrs.size() != PointerOps.size())
+    return false;
+  auto IsConstantOffsetPtr = [](Value *P) {
+    auto *GEP = dyn_cast<GetElementPtrInst>(P);
+    return !GEP ||
+           (GEP->getNumOperands() == 2 && isConstant(GEP->getOperand(1)));
+  };
+  auto *RefIt = find_if_not(PointerOps, IsConstantOffsetPtr);
+  if (RefIt == PointerOps.end())
+    return false;
+  auto *RefGEP = dyn_cast<GetElementPtrInst>(*RefIt);
+  if (!RefGEP || RefGEP->getNumOperands() != 2)
+    return false;
+  Value *Base = RefGEP->getPointerOperand();
+  Type *PtrTy = RefGEP->getType();
+  Type *SrcElemTy = RefGEP->getSourceElementType();
+  // The stride and the (optional) cast opcode of the runtime indices.
+  Value *Stride = nullptr;
+  unsigned CastOpcode = 0;
+  for (Value *P : PointerOps) {
+    if (P->getType() != PtrTy)
+      return false;
+    if (P == Base)
+      continue;
+    auto *GEP = dyn_cast<GetElementPtrInst>(P);
+    if (!GEP || GEP->getNumOperands() != 2 ||
+        GEP->getPointerOperand() != Base ||
+        GEP->getSourceElementType() != SrcElemTy)
+      return false;
+    Value *Idx = GEP->getOperand(1);
+    if (isConstant(Idx))
+      continue;
+    unsigned LaneCastOpcode = 0;
+    if (auto *Cast = dyn_cast<CastInst>(Idx)) {
+      LaneCastOpcode = Cast->getOpcode();
+      Idx = Cast->getOperand(0);
+    }
+    Value *LaneStride = Idx;
+    if (auto *BO = dyn_cast<BinaryOperator>(Idx)) {
+      if (isa<Constant>(BO->getOperand(1)))
+        LaneStride = BO->getOperand(0);
+      else if (isa<Constant>(BO->getOperand(0)))
+        LaneStride = BO->getOperand(1);
+    }
+    if (!Stride) {
+      Stride = LaneStride;
+      CastOpcode = LaneCastOpcode;
+      continue;
+    }
+    if (LaneStride != Stride || LaneCastOpcode != CastOpcode)
+      return false;
+  }
+  return Stride != nullptr;
+}
+
 void addMask(SmallVectorImpl<int> &Mask, ArrayRef<int> SubMask,
              bool ExtendingManyInputs) {
   if (SubMask.empty())
@@ -945,25 +1036,14 @@ Intrinsic::ID getMaskedDivRemIntrinsic(unsigned Opcode) {
 }
 
 /// Returns true if \p I is a part of a single-use chain, computing an address,
-/// which does not pay off the vectorization: a constant table is accessed by a
-/// gather, while the indices, unrelated between the lanes, require a full
-/// buildvector, unlike the ones, shifted by a constant from a common base.
+/// which does not pay off the vectorization: all the lanes are extracted for
+/// the scalar addresses, the extracts delay the memory accesses.
 static bool isNonProfitableIndex(const Instruction *I) {
   constexpr unsigned MaxIndexChainLength = 3;
-  // A constant shift of a common base is a cheap buildvector, while the loads
-  // are vectorized together with the indices, computed from them.
-  auto IsProfitableOperand = [](const Value *V) {
-    if (isa<Constant>(V))
-      return true;
-    if (const auto *Cast = dyn_cast<CastInst>(V); Cast && Cast->hasOneUse())
-      V = Cast->getOperand(0);
-    return isa<LoadInst>(V);
-  };
   const User *U = I->user_back();
   for ([[maybe_unused]] unsigned _ : seq<unsigned>(MaxIndexChainLength)) {
-    if (const auto *GEP = dyn_cast<GetElementPtrInst>(U))
-      return isa<Constant>(GEP->getPointerOperand()) ||
-             none_of(I->operand_values(), IsProfitableOperand);
+    if (isa<GetElementPtrInst>(U))
+      return true;
     if (!isa<Instruction>(U) || !U->hasOneUse())
       return false;
     U = U->user_back();
@@ -1414,6 +1494,41 @@ Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
       Mask);
   NumInsts += 3;
   return Builder.CreateBitCast(Packed, IntTy);
+}
+
+void redirectDbgValues(Instruction &From, Value &To) {
+  SmallVector<DbgVariableRecord *, 2> DVRs;
+  findDbgValues(&From, DVRs);
+  auto *ExI = dyn_cast<Instruction>(&To);
+  for (DbgVariableRecord *DVR : DVRs) {
+    if (!DVR->isDbgValue())
+      continue;
+    Instruction *MarkedI = DVR->getInstruction();
+    if (ExI && MarkedI->getParent() != ExI->getParent())
+      continue;
+    if (!ExI || ExI->comesBefore(MarkedI)) {
+      DVR->replaceVariableLocationOp(&From, &To);
+      continue;
+    }
+    DebugVariableAggregate Var(DVR);
+    auto HasSameVar = [&](auto Records) {
+      return any_of(filterDbgVars(Records),
+                    [&](const DbgVariableRecord &Other) {
+                      return DebugVariableAggregate(&Other) == Var;
+                    });
+    };
+    if (HasSameVar(make_range(std::next(DVR->getIterator()),
+                              MarkedI->getDbgRecordRange().end())) ||
+        any_of(make_range(std::next(MarkedI->getIterator()),
+                          std::next(ExI->getIterator())),
+               [&](const Instruction &I) {
+                 return HasSameVar(I.getDbgRecordRange());
+               }))
+      continue;
+    DbgVariableRecord *NewDVR = DVR->clone();
+    NewDVR->replaceVariableLocationOp(&From, &To);
+    ExI->getParent()->insertDbgRecordAfter(NewDVR, ExI);
+  }
 }
 
 } // namespace llvm::slpvectorizer
