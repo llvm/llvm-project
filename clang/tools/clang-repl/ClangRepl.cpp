@@ -276,6 +276,16 @@ int main(int argc, const char **argv) {
   llvm::InitializeAllAsmPrinters();
   llvm::InitializeAllAsmParsers();
 
+#ifdef __EMSCRIPTEN__
+  if (OptHostSupportsJit) {
+    llvm::outs() << "false\n";
+    return 0;
+  } else if (OptHostJitTriple) {
+    llvm::outs() << llvm::Triple::normalize(llvm::sys::getProcessTriple())
+                 << '\n';
+    return 0;
+  }
+#else
   if (OptHostSupportsJit) {
     auto J = llvm::orc::LLJITBuilder().create();
     if (J)
@@ -291,6 +301,7 @@ int main(int argc, const char **argv) {
     llvm::outs() << T.normalize() << '\n';
     return 0;
   }
+#endif
 
   ExitOnErr(sanitizeOopArguments(argv[0]));
 
