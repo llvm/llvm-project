@@ -1861,8 +1861,6 @@ def : Pat<(i16 (sra (i16 (trunc i32:$s)), (i32 8))),
 // Comparison instructions (setp, set)
 //-----------------------------------
 
-// FIXME: This doesn't cover versions of set and setp that combine with a
-// boolean predicate, e.g. setp.eq.and.b16.
 def cond2cc : SDNodeXForm<cond, [{
   return getPTXCmpMode(*N);
 }]>;
@@ -1938,6 +1936,89 @@ def SETP_bf16x2rr :
                 (ins B32:$a, B32:$b), (ins CmpMode:$cmp),
                 "setp.${cmp:FCmp}.bf16x2">,
                 Requires<[hasBF16Math, SM90]>;
+
+// Predicate-fused comparisons.
+//
+// Match the fused form of the compare instruction:
+//
+//   setp.CmpOp.BoolOp.type p, a, b, c;
+//
+// which computes p = (a CmpOp b) BoolOp c, where c is a source predicate and
+// BoolOp is AND, OR, or XOR.
+//
+multiclass ISETP_BOOL<RegTyInfo t, string BoolOpStr, SDPatternOperator BoolOp> {
+  defvar op_str = "setp.${cmp:ICmp}." # BoolOpStr # ".${cmp:IType}" # t.Size;
+  let hasSideEffects = false, isCompare = 1 in {
+    def rr :
+      BasicFlagsNVPTXInst<(outs B1:$dst), (ins t.RC:$a, t.RC:$b, B1:$c),
+                          (ins CmpMode:$cmp), op_str>;
+    def ri :
+      BasicFlagsNVPTXInst<(outs B1:$dst), (ins t.RC:$a, t.Imm:$b, B1:$c),
+                          (ins CmpMode:$cmp), op_str>;
+    def ir :
+      BasicFlagsNVPTXInst<(outs B1:$dst), (ins t.Imm:$a, t.RC:$b, B1:$c),
+                          (ins CmpMode:$cmp), op_str>;
+  }
+  def : Pat<(i1 (BoolOp (i1 (setcc t.Ty:$a, t.Ty:$b, cond:$cc)), B1:$c)),
+            (!cast<NVPTXInst>(NAME # "rr") $a, $b, $c, (cond2cc $cc))>;
+  def : Pat<(i1 (BoolOp (i1 (setcc t.Ty:$a, imm:$b, cond:$cc)), B1:$c)),
+            (!cast<NVPTXInst>(NAME # "ri") $a, imm:$b, $c, (cond2cc $cc))>;
+  def : Pat<(i1 (BoolOp (i1 (setcc imm:$a, t.Ty:$b, cond:$cc)), B1:$c)),
+            (!cast<NVPTXInst>(NAME # "ir") imm:$a, $b, $c, (cond2cc $cc))>;
+}
+
+multiclass ISETP_BOOL_ALL<RegTyInfo t> {
+  defm _AND : ISETP_BOOL<t, "and", and>;
+  defm _OR  : ISETP_BOOL<t, "or", or>;
+  defm _XOR : ISETP_BOOL<t, "xor", xor>;
+}
+
+defm SETP_BOOL_i16 : ISETP_BOOL_ALL<I16RT>;
+defm SETP_BOOL_i32 : ISETP_BOOL_ALL<I32RT>;
+defm SETP_BOOL_i64 : ISETP_BOOL_ALL<I64RT>;
+
+// Float: setp.CmpOp.BoolOp{.ftz}.type p, a, b, c.
+multiclass FSETP_BOOL<RegTyInfo t, string BoolOpStr, SDPatternOperator BoolOp,
+                      bit allow_ftz = true> {
+  defvar ftz_str = !if(allow_ftz, "$ftz", "");
+  defvar op_str = "setp.${cmp:FCmp}." # BoolOpStr # ftz_str # "." # t.PtxType;
+  defvar flags = !con((ins CmpMode:$cmp),
+                      !if(allow_ftz, (ins FTZFlag:$ftz), (ins)));
+  let hasSideEffects = false, isCompare = 1 in {
+    def rr :
+      BasicFlagsNVPTXInst<(outs B1:$dst), (ins t.RC:$a, t.RC:$b, B1:$c),
+                          flags, op_str>;
+    if t.SupportsImm then {
+      def ri :
+        BasicFlagsNVPTXInst<(outs B1:$dst), (ins t.RC:$a, t.Imm:$b, B1:$c),
+                            flags, op_str>;
+      def ir :
+        BasicFlagsNVPTXInst<(outs B1:$dst), (ins t.Imm:$a, t.RC:$b, B1:$c),
+                            flags, op_str>;
+    }
+  }
+  def : Pat<(i1 (BoolOp (i1 (setcc t.Ty:$a, t.Ty:$b, cond:$cc)), B1:$c)),
+            (!cast<NVPTXInst>(NAME # "rr") $a, $b, $c, (cond2cc $cc))>;
+  if t.SupportsImm then {
+    def : Pat<(i1 (BoolOp (i1 (setcc t.Ty:$a, fpimm:$b, cond:$cc)), B1:$c)),
+              (!cast<NVPTXInst>(NAME # "ri") $a, fpimm:$b, $c, (cond2cc $cc))>;
+    def : Pat<(i1 (BoolOp (i1 (setcc fpimm:$a, t.Ty:$b, cond:$cc)), B1:$c)),
+              (!cast<NVPTXInst>(NAME # "ir") fpimm:$a, $b, $c, (cond2cc $cc))>;
+  }
+}
+
+multiclass FSETP_BOOL_ALL<RegTyInfo t, bit allow_ftz = true> {
+  defm _AND : FSETP_BOOL<t, "and", and, allow_ftz>;
+  defm _OR  : FSETP_BOOL<t, "or", or, allow_ftz>;
+  defm _XOR : FSETP_BOOL<t, "xor", xor, allow_ftz>;
+}
+
+defm SETP_BOOL_f32 : FSETP_BOOL_ALL<F32RT>;
+defm SETP_BOOL_f64 : FSETP_BOOL_ALL<F64RT, allow_ftz = false>;
+let Predicates = [allowFP16Math] in
+  defm SETP_BOOL_f16 : FSETP_BOOL_ALL<F16RT>;
+let Predicates = [hasBF16Math, PTX78, SM90] in
+  defm SETP_BOOL_bf16 : FSETP_BOOL_ALL<BF16RT>;
 
 //-----------------------------------
 // Data Movement (Load / Store, Move)
