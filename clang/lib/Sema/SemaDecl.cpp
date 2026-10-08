@@ -17630,18 +17630,20 @@ void Sema::AddKnownFunctionAttributes(FunctionDecl *FD) {
   if (FD->isInvalidDecl())
     return;
 
+  // Both format and format_arg attributes require a function prototype.
+  const bool HasPrototype = FD->getType()->isFunctionProtoType();
+
   // If this is a built-in function, map its builtin attributes to
   // actual attributes.
   if (unsigned BuiltinID = FD->getBuiltinID()) {
     // Handle printf-formatting attributes.
     unsigned FormatIdx;
     bool HasVAListArg;
-    if (Context.BuiltinInfo.isPrintfLike(BuiltinID, FormatIdx, HasVAListArg)) {
-      if (!FD->hasAttr<FormatAttr>()) {
+    if (HasPrototype &&
+        Context.BuiltinInfo.isPrintfLike(BuiltinID, FormatIdx, HasVAListArg)) {
+      if (!FD->hasAttr<FormatAttr>() && FormatIdx < FD->getNumParams()) {
         const char *fmt = "printf";
-        unsigned int NumParams = FD->getNumParams();
-        if (FormatIdx < NumParams && // NumParams may be 0 (e.g. vfprintf)
-            FD->getParamDecl(FormatIdx)->getType()->isObjCObjectPointerType())
+        if (FD->getParamDecl(FormatIdx)->getType()->isObjCObjectPointerType())
           fmt = "NSString";
         FD->addAttr(FormatAttr::CreateImplicit(Context,
                                                &Context.Idents.get(fmt),
@@ -17650,14 +17652,12 @@ void Sema::AddKnownFunctionAttributes(FunctionDecl *FD) {
                                                FD->getLocation()));
       }
     }
-    if (Context.BuiltinInfo.isScanfLike(BuiltinID, FormatIdx,
-                                             HasVAListArg)) {
-     if (!FD->hasAttr<FormatAttr>())
-       FD->addAttr(FormatAttr::CreateImplicit(Context,
-                                              &Context.Idents.get("scanf"),
-                                              FormatIdx+1,
-                                              HasVAListArg ? 0 : FormatIdx+2,
-                                              FD->getLocation()));
+    if (HasPrototype &&
+        Context.BuiltinInfo.isScanfLike(BuiltinID, FormatIdx, HasVAListArg)) {
+      if (!FD->hasAttr<FormatAttr>() && FormatIdx < FD->getNumParams())
+        FD->addAttr(FormatAttr::CreateImplicit(
+            Context, &Context.Idents.get("scanf"), FormatIdx + 1,
+            HasVAListArg ? 0 : FormatIdx + 2, FD->getLocation()));
     }
 
     // Handle automatically recognized callbacks.
@@ -17807,7 +17807,7 @@ void Sema::AddKnownFunctionAttributes(FunctionDecl *FD) {
   if (Name->isStr("asprintf") || Name->isStr("vasprintf")) {
     // FIXME: asprintf and vasprintf aren't C99 functions. Should they be
     // target-specific builtins, perhaps?
-    if (!FD->hasAttr<FormatAttr>())
+    if (HasPrototype && FD->getNumParams() >= 2 && !FD->hasAttr<FormatAttr>())
       FD->addAttr(FormatAttr::CreateImplicit(Context,
                                              &Context.Idents.get("printf"), 2,
                                              Name->isStr("vasprintf") ? 0 : 3,
@@ -17817,7 +17817,8 @@ void Sema::AddKnownFunctionAttributes(FunctionDecl *FD) {
   if (Name->isStr("__CFStringMakeConstantString")) {
     // We already have a __builtin___CFStringMakeConstantString,
     // but builds that use -fno-constant-cfstrings don't go through that.
-    if (!FD->hasAttr<FormatArgAttr>())
+    if (HasPrototype && FD->getNumParams() >= 1 &&
+        !FD->hasAttr<FormatArgAttr>())
       FD->addAttr(FormatArgAttr::CreateImplicit(Context, ParamIdx(1, FD),
                                                 FD->getLocation()));
   }
