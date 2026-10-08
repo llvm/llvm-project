@@ -148,9 +148,11 @@ define i64 @partition_loop(ptr noalias %v, ptr noalias %data, ptr noalias %t, i6
 ; HSW-NEXT:    # =>This Inner Loop Header: Depth=1
 ; HSW-NEXT:    movq (%rdi,%r8,8), %r10
 ; HSW-NEXT:    movq -8(%rsi,%r10,8), %r11
+; HSW-NEXT:    xorl %ebx, %ebx
 ; HSW-NEXT:    cmpq -8(%rsi,%rcx,8), %r11
 ; HSW-NEXT:    setge %r11b
 ; HSW-NEXT:    setg %bl
+; HSW-NEXT:    xorl %ebp, %ebp
 ; HSW-NEXT:    cmpq %rcx, %r10
 ; HSW-NEXT:    setge %bpl
 ; HSW-NEXT:    orb %bl, %bpl
@@ -188,9 +190,11 @@ define i64 @partition_loop(ptr noalias %v, ptr noalias %data, ptr noalias %t, i6
 ; SKL-NEXT:    movq %rax, %r10
 ; SKL-NEXT:    movq (%rdi,%r8,8), %r11
 ; SKL-NEXT:    movq -8(%rsi,%r11,8), %rax
+; SKL-NEXT:    xorl %ebx, %ebx
 ; SKL-NEXT:    cmpq -8(%rsi,%rcx,8), %rax
 ; SKL-NEXT:    setge %al
 ; SKL-NEXT:    setg %bl
+; SKL-NEXT:    xorl %ebp, %ebp
 ; SKL-NEXT:    cmpq %rcx, %r11
 ; SKL-NEXT:    setge %bpl
 ; SKL-NEXT:    orb %bl, %bpl
@@ -227,9 +231,11 @@ define i64 @partition_loop(ptr noalias %v, ptr noalias %data, ptr noalias %t, i6
 ; TGL-NEXT:    movq %rax, %r10
 ; TGL-NEXT:    movq (%rdi,%r8,8), %r11
 ; TGL-NEXT:    movq -8(%rsi,%r11,8), %rax
+; TGL-NEXT:    xorl %ebx, %ebx
 ; TGL-NEXT:    cmpq -8(%rsi,%rcx,8), %rax
 ; TGL-NEXT:    setge %al
 ; TGL-NEXT:    setg %bl
+; TGL-NEXT:    xorl %ebp, %ebp
 ; TGL-NEXT:    cmpq %rcx, %r11
 ; TGL-NEXT:    setge %bpl
 ; TGL-NEXT:    orb %bl, %bpl
@@ -265,10 +271,13 @@ define i64 @partition_loop(ptr noalias %v, ptr noalias %data, ptr noalias %t, i6
 ; SPR-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SPR-NEXT:    movq (%rdi,%r8,8), %r10
 ; SPR-NEXT:    movq -8(%rsi,%r10,8), %r11
+; SPR-NEXT:    xorl %ebx, %ebx
 ; SPR-NEXT:    cmpq -8(%rsi,%rcx,8), %r11
 ; SPR-NEXT:    movq %rax, %r11
+; SPR-NEXT:    movl $0, %eax
 ; SPR-NEXT:    setge %al
 ; SPR-NEXT:    setg %bl
+; SPR-NEXT:    xorl %ebp, %ebp
 ; SPR-NEXT:    cmpq %rcx, %r10
 ; SPR-NEXT:    setge %bpl
 ; SPR-NEXT:    orb %bl, %bpl
@@ -305,9 +314,11 @@ define i64 @partition_loop(ptr noalias %v, ptr noalias %data, ptr noalias %t, i6
 ; ZNVER5-NEXT:    movq (%rdi,%r8,8), %r11
 ; ZNVER5-NEXT:    movq %rax, %r10
 ; ZNVER5-NEXT:    movq -8(%rsi,%r11,8), %rax
+; ZNVER5-NEXT:    xorl %ebx, %ebx
 ; ZNVER5-NEXT:    cmpq -8(%rsi,%rcx,8), %rax
 ; ZNVER5-NEXT:    setge %al
 ; ZNVER5-NEXT:    setg %bl
+; ZNVER5-NEXT:    xorl %ebp, %ebp
 ; ZNVER5-NEXT:    cmpq %rcx, %r11
 ; ZNVER5-NEXT:    setge %bpl
 ; ZNVER5-NEXT:    orb %bl, %bpl

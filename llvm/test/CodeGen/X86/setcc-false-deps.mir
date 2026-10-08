@@ -28,29 +28,54 @@
 name:            xor_before_cmp
 tracksRegLiveness: true
 body:             |
-  ; CHECK-LABEL: name: xor_before_cmp
-  ; CHECK: bb.0:
-  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $rdi, $rsi
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $rax, $rdi, $rsi
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $rcx = MOV64rr $rax
-  ; CHECK-NEXT:   CMP64rr $rdi, $rsi, implicit-def $eflags
-  ; CHECK-NEXT:   $al = SETCCr 12, implicit $eflags
-  ; CHECK-NEXT:   $eax = MOVZX32rr8 killed $al
-  ; CHECK-NEXT:   $rax = ADD64rr killed $rax, killed $rcx, implicit-def dead $eflags
-  ; CHECK-NEXT:   $rdi = ADD64ri32 killed $rdi, 1, implicit-def $eflags
-  ; CHECK-NEXT:   JCC_1 %bb.1, 5, implicit $eflags
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $rax
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   RET64 $rax
+  ; BREAK-LABEL: name: xor_before_cmp
+  ; BREAK: bb.0:
+  ; BREAK-NEXT:   successors: %bb.1(0x80000000)
+  ; BREAK-NEXT:   liveins: $rdi, $rsi
+  ; BREAK-NEXT: {{  $}}
+  ; BREAK-NEXT:   $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
+  ; BREAK-NEXT: {{  $}}
+  ; BREAK-NEXT: bb.1:
+  ; BREAK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; BREAK-NEXT:   liveins: $rax, $rdi, $rsi
+  ; BREAK-NEXT: {{  $}}
+  ; BREAK-NEXT:   $rcx = MOV64rr $rax
+  ; BREAK-NEXT:   $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
+  ; BREAK-NEXT:   CMP64rr $rdi, $rsi, implicit-def $eflags
+  ; BREAK-NEXT:   $al = SETCCr 12, implicit $eflags
+  ; BREAK-NEXT:   $eax = MOVZX32rr8 killed $al
+  ; BREAK-NEXT:   $rax = ADD64rr killed $rax, killed $rcx, implicit-def dead $eflags
+  ; BREAK-NEXT:   $rdi = ADD64ri32 killed $rdi, 1, implicit-def $eflags
+  ; BREAK-NEXT:   JCC_1 %bb.1, 5, implicit $eflags
+  ; BREAK-NEXT: {{  $}}
+  ; BREAK-NEXT: bb.2:
+  ; BREAK-NEXT:   liveins: $rax
+  ; BREAK-NEXT: {{  $}}
+  ; BREAK-NEXT:   RET64 $rax
+  ;
+  ; NOBREAK-LABEL: name: xor_before_cmp
+  ; NOBREAK: bb.0:
+  ; NOBREAK-NEXT:   successors: %bb.1(0x80000000)
+  ; NOBREAK-NEXT:   liveins: $rdi, $rsi
+  ; NOBREAK-NEXT: {{  $}}
+  ; NOBREAK-NEXT:   $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
+  ; NOBREAK-NEXT: {{  $}}
+  ; NOBREAK-NEXT: bb.1:
+  ; NOBREAK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; NOBREAK-NEXT:   liveins: $rax, $rdi, $rsi
+  ; NOBREAK-NEXT: {{  $}}
+  ; NOBREAK-NEXT:   $rcx = MOV64rr $rax
+  ; NOBREAK-NEXT:   CMP64rr $rdi, $rsi, implicit-def $eflags
+  ; NOBREAK-NEXT:   $al = SETCCr 12, implicit $eflags
+  ; NOBREAK-NEXT:   $eax = MOVZX32rr8 killed $al
+  ; NOBREAK-NEXT:   $rax = ADD64rr killed $rax, killed $rcx, implicit-def dead $eflags
+  ; NOBREAK-NEXT:   $rdi = ADD64ri32 killed $rdi, 1, implicit-def $eflags
+  ; NOBREAK-NEXT:   JCC_1 %bb.1, 5, implicit $eflags
+  ; NOBREAK-NEXT: {{  $}}
+  ; NOBREAK-NEXT: bb.2:
+  ; NOBREAK-NEXT:   liveins: $rax
+  ; NOBREAK-NEXT: {{  $}}
+  ; NOBREAK-NEXT:   RET64 $rax
   bb.0:
     liveins: $rdi, $rsi
     $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
@@ -76,29 +101,54 @@ body:             |
 name:            mov_before_setcc
 tracksRegLiveness: true
 body:             |
-  ; CHECK-LABEL: name: mov_before_setcc
-  ; CHECK: bb.0:
-  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $rdi, $rsi
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $rax, $rdi, $rsi
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   CMP64rr $rdi, $rsi, implicit-def $eflags
-  ; CHECK-NEXT:   $rcx = MOV64rr $rax
-  ; CHECK-NEXT:   $al = SETCCr 12, implicit $eflags
-  ; CHECK-NEXT:   $eax = MOVZX32rr8 killed $al
-  ; CHECK-NEXT:   $rax = ADD64rr killed $rax, killed $rcx, implicit-def dead $eflags
-  ; CHECK-NEXT:   $rdi = ADD64ri32 killed $rdi, 1, implicit-def $eflags
-  ; CHECK-NEXT:   JCC_1 %bb.1, 5, implicit $eflags
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $rax
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   RET64 $rax
+  ; BREAK-LABEL: name: mov_before_setcc
+  ; BREAK: bb.0:
+  ; BREAK-NEXT:   successors: %bb.1(0x80000000)
+  ; BREAK-NEXT:   liveins: $rdi, $rsi
+  ; BREAK-NEXT: {{  $}}
+  ; BREAK-NEXT:   $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
+  ; BREAK-NEXT: {{  $}}
+  ; BREAK-NEXT: bb.1:
+  ; BREAK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; BREAK-NEXT:   liveins: $rax, $rdi, $rsi
+  ; BREAK-NEXT: {{  $}}
+  ; BREAK-NEXT:   CMP64rr $rdi, $rsi, implicit-def $eflags
+  ; BREAK-NEXT:   $rcx = MOV64rr $rax
+  ; BREAK-NEXT:   $eax = MOV32ri 0
+  ; BREAK-NEXT:   $al = SETCCr 12, implicit $eflags
+  ; BREAK-NEXT:   $eax = MOVZX32rr8 killed $al
+  ; BREAK-NEXT:   $rax = ADD64rr killed $rax, killed $rcx, implicit-def dead $eflags
+  ; BREAK-NEXT:   $rdi = ADD64ri32 killed $rdi, 1, implicit-def $eflags
+  ; BREAK-NEXT:   JCC_1 %bb.1, 5, implicit $eflags
+  ; BREAK-NEXT: {{  $}}
+  ; BREAK-NEXT: bb.2:
+  ; BREAK-NEXT:   liveins: $rax
+  ; BREAK-NEXT: {{  $}}
+  ; BREAK-NEXT:   RET64 $rax
+  ;
+  ; NOBREAK-LABEL: name: mov_before_setcc
+  ; NOBREAK: bb.0:
+  ; NOBREAK-NEXT:   successors: %bb.1(0x80000000)
+  ; NOBREAK-NEXT:   liveins: $rdi, $rsi
+  ; NOBREAK-NEXT: {{  $}}
+  ; NOBREAK-NEXT:   $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
+  ; NOBREAK-NEXT: {{  $}}
+  ; NOBREAK-NEXT: bb.1:
+  ; NOBREAK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; NOBREAK-NEXT:   liveins: $rax, $rdi, $rsi
+  ; NOBREAK-NEXT: {{  $}}
+  ; NOBREAK-NEXT:   CMP64rr $rdi, $rsi, implicit-def $eflags
+  ; NOBREAK-NEXT:   $rcx = MOV64rr $rax
+  ; NOBREAK-NEXT:   $al = SETCCr 12, implicit $eflags
+  ; NOBREAK-NEXT:   $eax = MOVZX32rr8 killed $al
+  ; NOBREAK-NEXT:   $rax = ADD64rr killed $rax, killed $rcx, implicit-def dead $eflags
+  ; NOBREAK-NEXT:   $rdi = ADD64ri32 killed $rdi, 1, implicit-def $eflags
+  ; NOBREAK-NEXT:   JCC_1 %bb.1, 5, implicit $eflags
+  ; NOBREAK-NEXT: {{  $}}
+  ; NOBREAK-NEXT: bb.2:
+  ; NOBREAK-NEXT:   liveins: $rax
+  ; NOBREAK-NEXT: {{  $}}
+  ; NOBREAK-NEXT:   RET64 $rax
   bb.0:
     liveins: $rdi, $rsi
     $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
@@ -124,35 +174,67 @@ body:             |
 name:            shared_flags_def
 tracksRegLiveness: true
 body:             |
-  ; CHECK-LABEL: name: shared_flags_def
-  ; CHECK: bb.0:
-  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $rdi, $rsi
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
-  ; CHECK-NEXT:   $ebx = XOR32rr undef $ebx, undef $ebx, implicit-def dead $eflags
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $rax, $rbx, $rdi, $rsi
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $rcx = MOV64rr $rax
-  ; CHECK-NEXT:   $rdx = MOV64rr $rbx
-  ; CHECK-NEXT:   CMP64rr $rdi, $rsi, implicit-def $eflags
-  ; CHECK-NEXT:   $al = SETCCr 12, implicit $eflags
-  ; CHECK-NEXT:   $bl = SETCCr 15, implicit $eflags
-  ; CHECK-NEXT:   $eax = MOVZX32rr8 killed $al
-  ; CHECK-NEXT:   $ebx = MOVZX32rr8 killed $bl
-  ; CHECK-NEXT:   $rax = ADD64rr killed $rax, killed $rcx, implicit-def dead $eflags
-  ; CHECK-NEXT:   $rbx = ADD64rr killed $rbx, killed $rdx, implicit-def dead $eflags
-  ; CHECK-NEXT:   $rdi = ADD64ri32 killed $rdi, 1, implicit-def $eflags
-  ; CHECK-NEXT:   JCC_1 %bb.1, 5, implicit $eflags
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $rax, $rbx
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $rax = ADD64rr killed $rax, killed $rbx, implicit-def dead $eflags
-  ; CHECK-NEXT:   RET64 $rax
+  ; BREAK-LABEL: name: shared_flags_def
+  ; BREAK: bb.0:
+  ; BREAK-NEXT:   successors: %bb.1(0x80000000)
+  ; BREAK-NEXT:   liveins: $rdi, $rsi
+  ; BREAK-NEXT: {{  $}}
+  ; BREAK-NEXT:   $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
+  ; BREAK-NEXT:   $ebx = XOR32rr undef $ebx, undef $ebx, implicit-def dead $eflags
+  ; BREAK-NEXT: {{  $}}
+  ; BREAK-NEXT: bb.1:
+  ; BREAK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; BREAK-NEXT:   liveins: $rax, $rbx, $rdi, $rsi
+  ; BREAK-NEXT: {{  $}}
+  ; BREAK-NEXT:   $rcx = MOV64rr $rax
+  ; BREAK-NEXT:   $rdx = MOV64rr $rbx
+  ; BREAK-NEXT:   $ebx = XOR32rr undef $ebx, undef $ebx, implicit-def dead $eflags
+  ; BREAK-NEXT:   $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
+  ; BREAK-NEXT:   CMP64rr $rdi, $rsi, implicit-def $eflags
+  ; BREAK-NEXT:   $al = SETCCr 12, implicit $eflags
+  ; BREAK-NEXT:   $bl = SETCCr 15, implicit $eflags
+  ; BREAK-NEXT:   $eax = MOVZX32rr8 killed $al
+  ; BREAK-NEXT:   $ebx = MOVZX32rr8 killed $bl
+  ; BREAK-NEXT:   $rax = ADD64rr killed $rax, killed $rcx, implicit-def dead $eflags
+  ; BREAK-NEXT:   $rbx = ADD64rr killed $rbx, killed $rdx, implicit-def dead $eflags
+  ; BREAK-NEXT:   $rdi = ADD64ri32 killed $rdi, 1, implicit-def $eflags
+  ; BREAK-NEXT:   JCC_1 %bb.1, 5, implicit $eflags
+  ; BREAK-NEXT: {{  $}}
+  ; BREAK-NEXT: bb.2:
+  ; BREAK-NEXT:   liveins: $rax, $rbx
+  ; BREAK-NEXT: {{  $}}
+  ; BREAK-NEXT:   $rax = ADD64rr killed $rax, killed $rbx, implicit-def dead $eflags
+  ; BREAK-NEXT:   RET64 $rax
+  ;
+  ; NOBREAK-LABEL: name: shared_flags_def
+  ; NOBREAK: bb.0:
+  ; NOBREAK-NEXT:   successors: %bb.1(0x80000000)
+  ; NOBREAK-NEXT:   liveins: $rdi, $rsi
+  ; NOBREAK-NEXT: {{  $}}
+  ; NOBREAK-NEXT:   $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
+  ; NOBREAK-NEXT:   $ebx = XOR32rr undef $ebx, undef $ebx, implicit-def dead $eflags
+  ; NOBREAK-NEXT: {{  $}}
+  ; NOBREAK-NEXT: bb.1:
+  ; NOBREAK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; NOBREAK-NEXT:   liveins: $rax, $rbx, $rdi, $rsi
+  ; NOBREAK-NEXT: {{  $}}
+  ; NOBREAK-NEXT:   $rcx = MOV64rr $rax
+  ; NOBREAK-NEXT:   $rdx = MOV64rr $rbx
+  ; NOBREAK-NEXT:   CMP64rr $rdi, $rsi, implicit-def $eflags
+  ; NOBREAK-NEXT:   $al = SETCCr 12, implicit $eflags
+  ; NOBREAK-NEXT:   $bl = SETCCr 15, implicit $eflags
+  ; NOBREAK-NEXT:   $eax = MOVZX32rr8 killed $al
+  ; NOBREAK-NEXT:   $ebx = MOVZX32rr8 killed $bl
+  ; NOBREAK-NEXT:   $rax = ADD64rr killed $rax, killed $rcx, implicit-def dead $eflags
+  ; NOBREAK-NEXT:   $rbx = ADD64rr killed $rbx, killed $rdx, implicit-def dead $eflags
+  ; NOBREAK-NEXT:   $rdi = ADD64ri32 killed $rdi, 1, implicit-def $eflags
+  ; NOBREAK-NEXT:   JCC_1 %bb.1, 5, implicit $eflags
+  ; NOBREAK-NEXT: {{  $}}
+  ; NOBREAK-NEXT: bb.2:
+  ; NOBREAK-NEXT:   liveins: $rax, $rbx
+  ; NOBREAK-NEXT: {{  $}}
+  ; NOBREAK-NEXT:   $rax = ADD64rr killed $rax, killed $rbx, implicit-def dead $eflags
+  ; NOBREAK-NEXT:   RET64 $rax
   bb.0:
     liveins: $rdi, $rsi
     $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
@@ -184,30 +266,56 @@ body:             |
 name:            flags_from_other_block
 tracksRegLiveness: true
 body:             |
-  ; CHECK-LABEL: name: flags_from_other_block
-  ; CHECK: bb.0:
-  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $rdi, $rsi
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
-  ; CHECK-NEXT:   CMP64rr $rdi, $rsi, implicit-def $eflags
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $eflags, $rax, $rdi, $rsi
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $rcx = MOV64rr $rax
-  ; CHECK-NEXT:   $al = SETCCr 12, implicit $eflags
-  ; CHECK-NEXT:   $eax = MOVZX32rr8 killed $al
-  ; CHECK-NEXT:   $rax = ADD64rr killed $rax, killed $rcx, implicit-def dead $eflags
-  ; CHECK-NEXT:   $rdi = ADD64ri32 killed $rdi, 1, implicit-def dead $eflags
-  ; CHECK-NEXT:   CMP64rr $rdi, $rsi, implicit-def $eflags
-  ; CHECK-NEXT:   JCC_1 %bb.1, 5, implicit $eflags
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $rax
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   RET64 $rax
+  ; BREAK-LABEL: name: flags_from_other_block
+  ; BREAK: bb.0:
+  ; BREAK-NEXT:   successors: %bb.1(0x80000000)
+  ; BREAK-NEXT:   liveins: $rdi, $rsi
+  ; BREAK-NEXT: {{  $}}
+  ; BREAK-NEXT:   $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
+  ; BREAK-NEXT:   CMP64rr $rdi, $rsi, implicit-def $eflags
+  ; BREAK-NEXT: {{  $}}
+  ; BREAK-NEXT: bb.1:
+  ; BREAK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; BREAK-NEXT:   liveins: $eflags, $rax, $rdi, $rsi
+  ; BREAK-NEXT: {{  $}}
+  ; BREAK-NEXT:   $rcx = MOV64rr $rax
+  ; BREAK-NEXT:   $eax = MOV32ri 0
+  ; BREAK-NEXT:   $al = SETCCr 12, implicit $eflags
+  ; BREAK-NEXT:   $eax = MOVZX32rr8 killed $al
+  ; BREAK-NEXT:   $rax = ADD64rr killed $rax, killed $rcx, implicit-def dead $eflags
+  ; BREAK-NEXT:   $rdi = ADD64ri32 killed $rdi, 1, implicit-def dead $eflags
+  ; BREAK-NEXT:   CMP64rr $rdi, $rsi, implicit-def $eflags
+  ; BREAK-NEXT:   JCC_1 %bb.1, 5, implicit $eflags
+  ; BREAK-NEXT: {{  $}}
+  ; BREAK-NEXT: bb.2:
+  ; BREAK-NEXT:   liveins: $rax
+  ; BREAK-NEXT: {{  $}}
+  ; BREAK-NEXT:   RET64 $rax
+  ;
+  ; NOBREAK-LABEL: name: flags_from_other_block
+  ; NOBREAK: bb.0:
+  ; NOBREAK-NEXT:   successors: %bb.1(0x80000000)
+  ; NOBREAK-NEXT:   liveins: $rdi, $rsi
+  ; NOBREAK-NEXT: {{  $}}
+  ; NOBREAK-NEXT:   $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
+  ; NOBREAK-NEXT:   CMP64rr $rdi, $rsi, implicit-def $eflags
+  ; NOBREAK-NEXT: {{  $}}
+  ; NOBREAK-NEXT: bb.1:
+  ; NOBREAK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; NOBREAK-NEXT:   liveins: $eflags, $rax, $rdi, $rsi
+  ; NOBREAK-NEXT: {{  $}}
+  ; NOBREAK-NEXT:   $rcx = MOV64rr $rax
+  ; NOBREAK-NEXT:   $al = SETCCr 12, implicit $eflags
+  ; NOBREAK-NEXT:   $eax = MOVZX32rr8 killed $al
+  ; NOBREAK-NEXT:   $rax = ADD64rr killed $rax, killed $rcx, implicit-def dead $eflags
+  ; NOBREAK-NEXT:   $rdi = ADD64ri32 killed $rdi, 1, implicit-def dead $eflags
+  ; NOBREAK-NEXT:   CMP64rr $rdi, $rsi, implicit-def $eflags
+  ; NOBREAK-NEXT:   JCC_1 %bb.1, 5, implicit $eflags
+  ; NOBREAK-NEXT: {{  $}}
+  ; NOBREAK-NEXT: bb.2:
+  ; NOBREAK-NEXT:   liveins: $rax
+  ; NOBREAK-NEXT: {{  $}}
+  ; NOBREAK-NEXT:   RET64 $rax
   bb.0:
     liveins: $rdi, $rsi
     $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
@@ -283,29 +391,54 @@ body:             |
 name:            flags_def_reads_flags
 tracksRegLiveness: true
 body:             |
-  ; CHECK-LABEL: name: flags_def_reads_flags
-  ; CHECK: bb.0:
-  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $rdi, $rsi
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
-  ; CHECK-NEXT:   CMP64rr $rdi, $rsi, implicit-def $eflags
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $eflags, $rax, $rdi, $rsi
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $rcx = MOV64rr $rax
-  ; CHECK-NEXT:   $rdi = ADC64rr killed $rdi, $rsi, implicit-def $eflags, implicit $eflags
-  ; CHECK-NEXT:   $al = SETCCr 12, implicit $eflags
-  ; CHECK-NEXT:   $eax = MOVZX32rr8 killed $al
-  ; CHECK-NEXT:   $rax = ADD64rr killed $rax, killed $rcx, implicit-def $eflags
-  ; CHECK-NEXT:   JCC_1 %bb.1, 5, implicit $eflags
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $rax
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   RET64 $rax
+  ; BREAK-LABEL: name: flags_def_reads_flags
+  ; BREAK: bb.0:
+  ; BREAK-NEXT:   successors: %bb.1(0x80000000)
+  ; BREAK-NEXT:   liveins: $rdi, $rsi
+  ; BREAK-NEXT: {{  $}}
+  ; BREAK-NEXT:   $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
+  ; BREAK-NEXT:   CMP64rr $rdi, $rsi, implicit-def $eflags
+  ; BREAK-NEXT: {{  $}}
+  ; BREAK-NEXT: bb.1:
+  ; BREAK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; BREAK-NEXT:   liveins: $eflags, $rax, $rdi, $rsi
+  ; BREAK-NEXT: {{  $}}
+  ; BREAK-NEXT:   $rcx = MOV64rr $rax
+  ; BREAK-NEXT:   $rdi = ADC64rr killed $rdi, $rsi, implicit-def $eflags, implicit $eflags
+  ; BREAK-NEXT:   $eax = MOV32ri 0
+  ; BREAK-NEXT:   $al = SETCCr 12, implicit $eflags
+  ; BREAK-NEXT:   $eax = MOVZX32rr8 killed $al
+  ; BREAK-NEXT:   $rax = ADD64rr killed $rax, killed $rcx, implicit-def $eflags
+  ; BREAK-NEXT:   JCC_1 %bb.1, 5, implicit $eflags
+  ; BREAK-NEXT: {{  $}}
+  ; BREAK-NEXT: bb.2:
+  ; BREAK-NEXT:   liveins: $rax
+  ; BREAK-NEXT: {{  $}}
+  ; BREAK-NEXT:   RET64 $rax
+  ;
+  ; NOBREAK-LABEL: name: flags_def_reads_flags
+  ; NOBREAK: bb.0:
+  ; NOBREAK-NEXT:   successors: %bb.1(0x80000000)
+  ; NOBREAK-NEXT:   liveins: $rdi, $rsi
+  ; NOBREAK-NEXT: {{  $}}
+  ; NOBREAK-NEXT:   $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
+  ; NOBREAK-NEXT:   CMP64rr $rdi, $rsi, implicit-def $eflags
+  ; NOBREAK-NEXT: {{  $}}
+  ; NOBREAK-NEXT: bb.1:
+  ; NOBREAK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; NOBREAK-NEXT:   liveins: $eflags, $rax, $rdi, $rsi
+  ; NOBREAK-NEXT: {{  $}}
+  ; NOBREAK-NEXT:   $rcx = MOV64rr $rax
+  ; NOBREAK-NEXT:   $rdi = ADC64rr killed $rdi, $rsi, implicit-def $eflags, implicit $eflags
+  ; NOBREAK-NEXT:   $al = SETCCr 12, implicit $eflags
+  ; NOBREAK-NEXT:   $eax = MOVZX32rr8 killed $al
+  ; NOBREAK-NEXT:   $rax = ADD64rr killed $rax, killed $rcx, implicit-def $eflags
+  ; NOBREAK-NEXT:   JCC_1 %bb.1, 5, implicit $eflags
+  ; NOBREAK-NEXT: {{  $}}
+  ; NOBREAK-NEXT: bb.2:
+  ; NOBREAK-NEXT:   liveins: $rax
+  ; NOBREAK-NEXT: {{  $}}
+  ; NOBREAK-NEXT:   RET64 $rax
   bb.0:
     liveins: $rdi, $rsi
     $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
@@ -622,6 +755,3 @@ body:             |
     liveins: $rax
     RET64 $rax
 ...
-## NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-# BREAK: {{.*}}
-# NOBREAK: {{.*}}
