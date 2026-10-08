@@ -15,6 +15,10 @@
     ret void
   }
 
+  define void @cascade_load_to_cond_br_scan_budget() {
+    ret void
+  }
+
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!2}
 
