@@ -11,25 +11,6 @@
 
 #include <linux/wait.h>
 
-// <linux/wait.h> defines P_ALL, P_PID, P_PGID, P_PIDFD as numeric macros.
-// Undefine them so they do not collide with the idtype_t enum specified by
-// POSIX.
-#ifdef P_ALL
-#undef P_ALL
-#endif
-
-#ifdef P_PID
-#undef P_PID
-#endif
-
-#ifdef P_PGID
-#undef P_PGID
-#endif
-
-#ifdef P_PIDFD
-#undef P_PIDFD
-#endif
-
 #define WCOREDUMP(status) ((status) & WCOREFLAG)
 #define WEXITSTATUS(status) (((status) & 0xff00) >> 8)
 #define WIFCONTINUED(status) ((status) == 0xffff)
