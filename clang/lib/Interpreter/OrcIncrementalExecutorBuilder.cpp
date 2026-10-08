@@ -1,4 +1,4 @@
-//===--- IncrementalExecutor.cpp - Incremental Execution --------*- C++ -*-===//
+//===-- OrcIncrementalExecutorBuilder.cpp - ORC Builder --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This has the implementation of the base facilities for incremental execution.
+// This implements the builder for ORC incremental execution.
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Interpreter/IncrementalExecutor.h"
+#include "clang/Interpreter/OrcIncrementalExecutorBuilder.h"
 #include "OrcIncrementalExecutor.h"
 
 #include "clang/Basic/TargetInfo.h"
@@ -18,6 +18,7 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/ToolChain.h"
+#include "clang/Interpreter/Interpreter.h"
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -81,7 +82,43 @@ static void *getEmuTLSGetAddressPtr() { return nullptr; }
 #endif
 
 namespace clang {
-IncrementalExecutorBuilder::~IncrementalExecutorBuilder() = default;
+OrcIncrementalExecutorBuilder::OrcIncrementalExecutorBuilder() = default;
+OrcIncrementalExecutorBuilder::~OrcIncrementalExecutorBuilder() = default;
+
+std::unique_ptr<IncrementalExecutorBuilder>
+IncrementalExecutorBuilder::createDefault() {
+  return std::make_unique<OrcIncrementalExecutorBuilder>();
+}
+
+llvm::Error
+OrcIncrementalExecutorBuilder::configure(IncrementalCompilerBuilder &CB,
+                                         const Options &Opts) {
+  IsOutOfProcess = Opts.IsOutOfProcess;
+  OOPExecutor = Opts.ExecutorPath;
+  OrcRuntimePath = Opts.RuntimePath;
+  if (OrcRuntimePath.empty())
+    CB.SetDriverCompilationCallback(UpdateOrcRuntimePathCB);
+  SlabAllocateSize = Opts.SlabAllocateSize;
+  UseSharedMemory = Opts.UseSharedMemory;
+  return llvm::Error::success();
+}
+
+bool OrcIncrementalExecutorBuilder::supportsJIT() const {
+  auto Triple = getHostJITTriple();
+  if (!Triple) {
+    llvm::consumeError(Triple.takeError());
+    return false;
+  }
+  return true;
+}
+
+llvm::Expected<llvm::Triple>
+OrcIncrementalExecutorBuilder::getHostJITTriple() const {
+  auto J = llvm::orc::LLJITBuilder().create();
+  if (!J)
+    return J.takeError();
+  return (*J)->getTargetTriple();
+}
 
 static llvm::Expected<llvm::orc::JITTargetMachineBuilder>
 createJITTargetMachineBuilder(const llvm::Triple &TT) {
@@ -321,7 +358,8 @@ createLLJITBuilder(std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC,
 
 static llvm::Expected<
     std::pair<std::unique_ptr<llvm::orc::LLJITBuilder>, uint32_t>>
-outOfProcessJITBuilder(const IncrementalExecutorBuilder &IncrExecutorBuilder) {
+outOfProcessJITBuilder(
+    const OrcIncrementalExecutorBuilder &IncrExecutorBuilder) {
   std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC;
   uint32_t childPid = -1;
   if (!IncrExecutorBuilder.OOPExecutor.empty()) {
@@ -367,10 +405,8 @@ outOfProcessJITBuilder(const IncrementalExecutorBuilder &IncrExecutorBuilder) {
 }
 
 llvm::Expected<std::unique_ptr<IncrementalExecutor>>
-IncrementalExecutorBuilder::create(llvm::orc::ThreadSafeContext &TSC,
-                                   const clang::TargetInfo &TI) {
-  if (IE)
-    return std::move(IE);
+OrcIncrementalExecutorBuilder::createExecutor(llvm::orc::ThreadSafeContext &TSC,
+                                              const clang::TargetInfo &TI) {
   llvm::Triple TT = TI.getTriple();
   if (!TT.isOSWindows() && IsOutOfProcess) {
     if (!JITBuilder) {
@@ -433,7 +469,7 @@ IncrementalExecutorBuilder::create(llvm::orc::ThreadSafeContext &TSC,
   return std::move(Executor);
 }
 
-llvm::Error IncrementalExecutorBuilder::UpdateOrcRuntimePath(
+llvm::Error OrcIncrementalExecutorBuilder::UpdateOrcRuntimePath(
     const clang::driver::Compilation &C) {
   if (!IsOutOfProcess)
     return llvm::Error::success();

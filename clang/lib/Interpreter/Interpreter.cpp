@@ -609,7 +609,7 @@ llvm::Error Interpreter::CreateExecutor() {
                                                std::error_code());
 
   if (!IncrExecutorBuilder)
-    IncrExecutorBuilder = std::make_unique<IncrementalExecutorBuilder>();
+    IncrExecutorBuilder = IncrementalExecutorBuilder::createDefault();
 
   // Propagate mllvm args so the wasm executor can restore them after each
   // lldMain invocation (which resets all cl options for test isolation).

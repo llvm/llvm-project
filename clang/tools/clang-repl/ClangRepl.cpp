@@ -16,14 +16,12 @@
 #include "clang/Config/config.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/CodeCompletion.h"
-#include "clang/Interpreter/IncrementalExecutor.h"
 #include "clang/Interpreter/Interpreter.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Sema.h"
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/LineEditor/LineEditor.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -39,8 +37,6 @@
 
 #include <string>
 #include <vector>
-
-#include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupport.h"
 
 // Disable LSan for this test.
 // FIXME: Re-enable once we can assume GCC 13.2 or higher.
@@ -108,7 +104,10 @@ static llvm::Error sanitizeOopArguments(const char *ArgV0) {
       (OOPExecutor.getNumOccurrences() ||
        OOPExecutorConnect.getNumOccurrences()))
     return llvm::make_error<llvm::StringError>(
-        "Out-of-process execution is only supported on Unix platforms",
+        SystemTriple.isOSEmscripten()
+            ? "Out-of-process execution is not supported by the WebAssembly "
+              "executor"
+            : "Out-of-process execution is only supported on Unix platforms",
         llvm::inconvertibleErrorCode());
 
   // If -slab-allocate is passed, check that we're not trying to use it in
@@ -273,18 +272,12 @@ int main(int argc, const char **argv) {
   llvm::InitializeAllAsmPrinters();
   llvm::InitializeAllAsmParsers();
 
+  auto IEB = clang::IncrementalExecutorBuilder::createDefault();
   if (OptHostSupportsJit) {
-    auto J = llvm::orc::LLJITBuilder().create();
-    if (J)
-      llvm::outs() << "true\n";
-    else {
-      llvm::consumeError(J.takeError());
-      llvm::outs() << "false\n";
-    }
+    llvm::outs() << (IEB->supportsJIT() ? "true\n" : "false\n");
     return 0;
   } else if (OptHostJitTriple) {
-    auto J = ExitOnErr(llvm::orc::LLJITBuilder().create());
-    auto T = J->getTargetTriple();
+    auto T = ExitOnErr(IEB->getHostJITTriple());
     llvm::outs() << T.normalize() << '\n';
     return 0;
   }
@@ -294,21 +287,20 @@ int main(int argc, const char **argv) {
   clang::IncrementalCompilerBuilder CB;
   CB.SetCompilerArgs(ClangArgv);
 
-  auto IEB = std::make_unique<clang::IncrementalExecutorBuilder>();
-  IEB->IsOutOfProcess = !OOPExecutor.empty() || !OOPExecutorConnect.empty();
-  IEB->OOPExecutor = OOPExecutor;
-  if (!OrcRuntimePath.empty())
-    IEB->OrcRuntimePath = OrcRuntimePath;
-  else
-    CB.SetDriverCompilationCallback(IEB->UpdateOrcRuntimePathCB);
-
   auto SizeOrErr = getSlabAllocSize(SlabAllocateSizeString);
   if (!SizeOrErr) {
     llvm::logAllUnhandledErrors(SizeOrErr.takeError(), llvm::errs(), "error: ");
     return EXIT_FAILURE;
   }
-  IEB->SlabAllocateSize = *SizeOrErr;
-  IEB->UseSharedMemory = UseSharedMemory;
+
+  clang::IncrementalExecutorBuilder::Options ExecutorOpts;
+  ExecutorOpts.IsOutOfProcess =
+      !OOPExecutor.empty() || !OOPExecutorConnect.empty();
+  ExecutorOpts.ExecutorPath = OOPExecutor;
+  ExecutorOpts.RuntimePath = OrcRuntimePath;
+  ExecutorOpts.SlabAllocateSize = *SizeOrErr;
+  ExecutorOpts.UseSharedMemory = UseSharedMemory;
+  ExitOnErr(IEB->configure(CB, ExecutorOpts));
 
   std::unique_ptr<clang::CompilerInstance> DeviceCI;
   if (CudaEnabled) {

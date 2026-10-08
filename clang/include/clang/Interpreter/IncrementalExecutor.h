@@ -13,67 +13,66 @@
 #ifndef LLVM_CLANG_LIB_INTERPRETER_INCREMENTALEXECUTOR_H
 #define LLVM_CLANG_LIB_INTERPRETER_INCREMENTALEXECUTOR_H
 
-#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Error.h"
 
+#include <memory>
+#include <string>
+#include <vector>
+
 namespace llvm {
+class Triple;
 namespace orc {
 class ExecutorAddr;
-class LLJITBuilder;
 class ThreadSafeContext;
 } // namespace orc
 } // namespace llvm
 
 namespace clang {
 class IncrementalExecutor;
+class IncrementalCompilerBuilder;
 class TargetInfo;
-namespace driver {
-class Compilation;
-} // namespace driver
 
+/// Common configuration and interface for incremental executor builders.
 class IncrementalExecutorBuilder {
 public:
-  /// Indicates whether out-of-process JIT execution is enabled.
-  bool IsOutOfProcess = false;
-  /// Path to the out-of-process JIT executor.
-  std::string OOPExecutor = "";
-  std::string OOPExecutorConnect = "";
-  /// Indicates whether to use shared memory for communication.
-  bool UseSharedMemory = false;
-  /// Representing the slab allocation size for memory management in kb.
-  unsigned SlabAllocateSize = 0;
-  /// Path to the ORC runtime library.
-  std::string OrcRuntimePath = "";
-  /// PID of the out-of-process JIT executor.
-  uint32_t ExecutorPID = 0;
-  /// Custom lambda to be executed inside child process/executor
-  std::function<void()> CustomizeFork = nullptr;
-  /// An optional code model to provide to the JITTargetMachineBuilder
-  std::optional<llvm::CodeModel::Model> CM = std::nullopt;
-  /// An optional external IncrementalExecutor
+  /// Options passed to the backend when configuring execution.
+  struct Options {
+    bool IsOutOfProcess = false;
+    std::string ExecutorPath;
+    std::string RuntimePath;
+    unsigned SlabAllocateSize = 0;
+    bool UseSharedMemory = false;
+  };
+
+  /// An optional external IncrementalExecutor.
   std::unique_ptr<IncrementalExecutor> IE;
-  /// mllvm args from the frontend; on wasm these are re-applied after each
-  /// lldMain call because lld resets all cl options for test-isolation
-  /// purposes.
+  /// Frontend -mllvm arguments for backends that need to restore LLVM options.
   std::vector<std::string> LLVMArgs;
-#ifndef __EMSCRIPTEN__
-  /// An optional external orc jit builder
-  std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder;
-#endif
-  /// A default callback that can be used in the IncrementalCompilerBuilder to
-  /// retrieve the path to the orc runtime.
-  std::function<llvm::Error(const driver::Compilation &)>
-      UpdateOrcRuntimePathCB = [this](const driver::Compilation &C) {
-        return UpdateOrcRuntimePath(C);
-      };
 
-  ~IncrementalExecutorBuilder();
+  virtual ~IncrementalExecutorBuilder();
 
+  /// Create the default builder for the platform clangInterpreter is built for.
+  /// The selected backend provides this definition.
+  static std::unique_ptr<IncrementalExecutorBuilder> createDefault();
+
+  /// Apply execution options and configure the compiler for this backend.
+  virtual llvm::Error configure(IncrementalCompilerBuilder &CB,
+                                const Options &Opts) = 0;
+
+  /// Probe whether this backend can JIT code for the host.
+  virtual bool supportsJIT() const = 0;
+
+  /// Return the host triple used by this backend.
+  virtual llvm::Expected<llvm::Triple> getHostJITTriple() const = 0;
+
+  /// Return the supplied executor, or create one using the selected backend.
   llvm::Expected<std::unique_ptr<IncrementalExecutor>>
   create(llvm::orc::ThreadSafeContext &TSC, const clang::TargetInfo &TI);
 
 private:
-  llvm::Error UpdateOrcRuntimePath(const driver::Compilation &C);
+  virtual llvm::Expected<std::unique_ptr<IncrementalExecutor>>
+  createExecutor(llvm::orc::ThreadSafeContext &TSC,
+                 const clang::TargetInfo &TI) = 0;
 };
 
 struct PartialTranslationUnit;
