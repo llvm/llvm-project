@@ -237,12 +237,9 @@ private:
     bool hasSignExtension() const {
       // The innermost extension determines whether signed overflow matters:
       // sext(zext(a)) = zext(a).
-      for (CastInst *Cast : reverse(Casts)) {
-        if (isa<SExtInst>(Cast))
-          return true;
-        if (isa<ZExtInst>(Cast))
-          return false;
-      }
+      for (CastInst *C : reverse(Casts))
+        if (isa<SExtInst, ZExtInst>(C))
+          return isa<SExtInst>(C);
       return false;
     }
 
