@@ -341,9 +341,9 @@ mlir::Value Fortran::lower::genInitialDataTarget(
                               /*slice=*/mlir::Value{});
 }
 
-static mlir::Value
-genCoarrayDefaultInitializerValue(Fortran::lower::AbstractConverter &converter,
-                                  mlir::Location loc, mlir::Type boxType) {
+static mlir::Value genCoarrayDefaultInitializerValue(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const Fortran::semantics::Symbol &sym, mlir::Type boxType) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   auto baseBoxType = mlir::cast<fir::BaseBoxType>(boxType);
   auto baseAddrType = baseBoxType.getBaseAddressType();
@@ -351,12 +351,30 @@ genCoarrayDefaultInitializerValue(Fortran::lower::AbstractConverter &converter,
   auto nullAddr = builder.createNullConstant(loc, baseAddrType);
   mlir::Value shape, slice;
   if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(type)) {
-    llvm::SmallVector<mlir::Value> extents;
+    llvm::SmallVector<mlir::Value> lbounds, extents;
+    if (const auto *details =
+            sym.GetUltimate()
+                .detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
+      for (const Fortran::semantics::ShapeSpec &spec : details->shape()) {
+        if (spec.lbound().GetExplicit())
+          if (auto lb =
+                  Fortran::evaluate::ToInt64(*spec.lbound().GetExplicit()))
+            lbounds.push_back(builder.createIntegerConstant(
+                loc, builder.getIndexType(), *lb));
+          else
+            lbounds.push_back(
+                builder.createIntegerConstant(loc, builder.getIndexType(), 1));
+        else
+          lbounds.push_back(
+              builder.createIntegerConstant(loc, builder.getIndexType(), 1));
+      }
+    }
     for (int64_t extent : seqTy.getShape())
       extents.push_back(
           builder.createIntegerConstant(loc, builder.getIndexType(), extent));
-    shape = builder.createShape(
-        loc, fir::ArrayBoxValue{nullAddr, extents, /*lbounds=*/{}});
+
+    shape = builder.createShape(loc,
+                                fir::ArrayBoxValue{nullAddr, extents, lbounds});
   }
   auto embox =
       fir::EmboxOp::create(builder, loc, baseBoxType, nullAddr, shape, slice,
@@ -605,7 +623,7 @@ fir::GlobalOp Fortran::lower::defineGlobal(
     } else {
       createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
         mlir::Value box =
-            genCoarrayDefaultInitializerValue(converter, loc, symTy);
+            genCoarrayDefaultInitializerValue(converter, loc, sym, symTy);
         fir::HasValueOp::create(b, loc, box);
       });
     }

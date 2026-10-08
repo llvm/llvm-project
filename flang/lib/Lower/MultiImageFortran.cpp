@@ -553,6 +553,13 @@ void Fortran::lower::genEventPostStatement(
   if (auto coref{evaluate::ExtractCoarrayRef(eventExpr)}) {
     cosubscripts =
         Fortran::lower::getCosubscripts(converter, loc, coref.value());
+    if (coref->stat().has_value())
+      TODO(loc, "event post: event variable with STAT= specifier.");
+    if (coref->team().has_value())
+      TODO(loc,
+           "event post: event variable with TEAM= and TEAM_NUMBER= specifier.");
+    if (coref->notify().has_value())
+      TODO(loc, "event post: event variable with NOTIFY= specifier.");
   }
 
   mif::EventPostOp::create(builder, loc, event, cosubscripts, statAddr,
@@ -568,7 +575,7 @@ void Fortran::lower::genEventWaitStatement(
   Fortran::lower::StatementContext stmtCtx;
 
   // Handle STAT ,ERRMSG and UNTIL_COUNT
-  mlir::Value statAddr, errMsgAddr, untilCount;
+  mlir::Value statAddr, errMsg, untilCount;
   const auto &eventSpecList =
       std::get<std::list<Fortran::parser::EventWaitSpec>>(stmt.t);
   for (const Fortran::parser::EventWaitSpec &eventSpec : eventSpecList) {
@@ -583,9 +590,10 @@ void Fortran::lower::genEventWaitStatement(
                             stmtCtx));
                       },
                       [&](const Fortran::parser::MsgVariable &errMsgVar) {
-                        errMsgAddr = fir::getBase(converter.genExprAddr(
-                            loc, Fortran::semantics::GetExpr(errMsgVar),
-                            stmtCtx));
+                        const Fortran::semantics::SomeExpr *expr =
+                            Fortran::semantics::GetExpr(errMsgVar);
+                        errMsg = fir::getBase(
+                            converter.genExprBox(loc, *expr, stmtCtx));
                       },
                   },
                   statOrErr.u);
@@ -605,5 +613,5 @@ void Fortran::lower::genEventWaitStatement(
       converter.genExprAddr(loc, *eventExpr, stmtCtx, /*allowCoarray=*/true));
 
   mif::EventWaitOp::create(builder, loc, eventVar, untilCount, statAddr,
-                           errMsgAddr);
+                           errMsg);
 }

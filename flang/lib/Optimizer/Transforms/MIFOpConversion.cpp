@@ -546,6 +546,24 @@ getInitialTeamIndex(fir::FirOpBuilder &builder, mlir::Location loc,
   return index;
 }
 
+static fir::CallOp genPrifSyncCall(fir::FirOpBuilder &builder,
+                                   mlir::Location loc, mlir::Value stat,
+                                   mlir::Value errmsg) {
+  mlir::Type errmsgTy = getPRIFErrmsgType(builder);
+  mlir::FunctionType ftype = mlir::FunctionType::get(
+      builder.getContext(),
+      /*inputs*/ {getPRIFStatType(builder), errmsgTy, errmsgTy},
+      /*results*/ {});
+  mlir::func::FuncOp funcOp =
+      builder.createFunction(loc, getPRIFProcName("sync_all"), ftype);
+
+  auto [errmsgArg, errmsgAllocArg] = genErrmsgPRIF(builder, loc, errmsg);
+  mlir::Value statArg = genStatPRIF(builder, loc, stat);
+  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+      builder, loc, ftype, statArg, errmsgArg, errmsgAllocArg);
+  return fir::CallOp::create(builder, loc, funcOp, args);
+}
+
 /// Convert mif.init operation to runtime call of 'prif_init'
 struct MIFInitOpConversion : public mlir::OpRewritePattern<mif::InitOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -795,21 +813,9 @@ struct MIFSyncAllOpConversion : public mlir::OpRewritePattern<mif::SyncAllOp> {
     auto mod = op->template getParentOfType<mlir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
-
-    mlir::Type errmsgTy = getPRIFErrmsgType(builder);
-    mlir::FunctionType ftype = mlir::FunctionType::get(
-        builder.getContext(),
-        /*inputs*/ {getPRIFStatType(builder), errmsgTy, errmsgTy},
-        /*results*/ {});
-    mlir::func::FuncOp funcOp =
-        builder.createFunction(loc, getPRIFProcName("sync_all"), ftype);
-
-    auto [errmsgArg, errmsgAllocArg] =
-        genErrmsgPRIF(builder, loc, op.getErrmsg());
-    mlir::Value stat = genStatPRIF(builder, loc, op.getStat());
-    llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
-        builder, loc, ftype, stat, errmsgArg, errmsgAllocArg);
-    rewriter.replaceOpWithNewOp<fir::CallOp>(op, funcOp, args);
+    fir::CallOp callOp =
+        genPrifSyncCall(builder, loc, op.getStat(), op.getErrmsg());
+    rewriter.replaceOp(op, callOp);
     return mlir::success();
   }
 };
@@ -1317,9 +1323,11 @@ struct MIFAllocCoarrayOpConversion
     llvm::SmallVector<mlir::Value> args2{fir::runtime::createArguments(
         builder, loc, sbaFunc.getFunctionType(), op.getBox(), allocMem)};
     fir::CallOp::create(builder, loc, sbaFunc, args2);
-    if (fir::isa_builtin_event_type(
-            fir::getFortranElementType(op.getBox().getType())))
+    if (mlir::isa<fir::RecordType>(
+            fir::getFortranElementType(op.getBox().getType()))) {
       fir::runtime::genDerivedTypeInitialize(builder, loc, op.getBox());
+      genPrifSyncCall(builder, loc, op.getStat(), op.getErrmsg());
+    }
     rewriter.replaceOp(op, callOp);
     return mlir::success();
   }
