@@ -216,7 +216,7 @@ inline match_bind<VPInstruction> m_VPInstruction(VPInstruction *&V) {
 }
 
 template <typename T>
-using has_getOpcode_t = decltype(std::declval<T &>().getOpcode());
+using hasOpcode_t = decltype(std::declval<T &>().getOpcode()); // NOLINT
 
 template <typename Ops_t, unsigned Opcode, bool Commutative,
           typename... RecipeTys>
@@ -293,10 +293,9 @@ private:
   template <typename RecipeTy>
   static bool matchRecipeAndOpcode(const VPRecipeBase *R) {
     auto *DefR = dyn_cast<RecipeTy>(R);
-    if constexpr (Opcode && is_detected<has_getOpcode_t, RecipeTy>::value)
+    if constexpr (Opcode && is_detected<hasOpcode_t, RecipeTy>::value)
       return DefR && DefR->getOpcode() == Opcode;
-    else
-      return DefR;
+    return DefR;
   }
 
   /// Helper to check if predicate \p P holds on all tuple elements in Ops using
