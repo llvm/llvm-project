@@ -5338,48 +5338,14 @@ bool CombinerHelper::matchMulOBy0(MachineInstr &MI,
   return true;
 }
 
-bool CombinerHelper::matchSubAddSameReg(MachineInstr &MI,
-                                        BuildFnTy &MatchInfo) const {
-  assert(MI.getOpcode() == TargetOpcode::G_SUB);
-  Register Dst = MI.getOperand(0).getReg();
-  // (x + y) - z -> x (if y == z)
-  // (x + y) - z -> y (if x == z)
-  Register X, Y, Z;
-  if (mi_match(Dst, MRI, m_GSub(m_GAdd(m_Reg(X), m_Reg(Y)), m_Reg(Z)))) {
-    Register ReplaceReg;
-    int64_t CstX, CstY;
-    if (Y == Z || (mi_match(Y, MRI, m_ICstOrSplat(CstY)) &&
-                   mi_match(Z, MRI, m_SpecificICstOrSplat(CstY))))
-      ReplaceReg = X;
-    else if (X == Z || (mi_match(X, MRI, m_ICstOrSplat(CstX)) &&
-                        mi_match(Z, MRI, m_SpecificICstOrSplat(CstX))))
-      ReplaceReg = Y;
-    if (ReplaceReg) {
-      MatchInfo = [=](MachineIRBuilder &B) { B.buildCopy(Dst, ReplaceReg); };
-      return true;
-    }
-  }
-
-  // x - (y + z) -> 0 - y (if x == z)
-  // x - (y + z) -> 0 - z (if x == y)
-  if (mi_match(Dst, MRI, m_GSub(m_Reg(X), m_GAdd(m_Reg(Y), m_Reg(Z))))) {
-    Register ReplaceReg;
-    int64_t CstX;
-    if (X == Z || (mi_match(X, MRI, m_ICstOrSplat(CstX)) &&
-                   mi_match(Z, MRI, m_SpecificICstOrSplat(CstX))))
-      ReplaceReg = Y;
-    else if (X == Y || (mi_match(X, MRI, m_ICstOrSplat(CstX)) &&
-                        mi_match(Y, MRI, m_SpecificICstOrSplat(CstX))))
-      ReplaceReg = Z;
-    if (ReplaceReg) {
-      MatchInfo = [=](MachineIRBuilder &B) {
-        auto Zero = B.buildConstant(MRI.getType(Dst), 0);
-        B.buildSub(Dst, Zero, ReplaceReg);
-      };
-      return true;
-    }
-  }
-  return false;
+bool CombinerHelper::matchSameRegOrICstOrSplat(Register A, Register B) const {
+  Register SrcA = getSrcRegIgnoringCopies(A, MRI);
+  Register SrcB = getSrcRegIgnoringCopies(B, MRI);
+  if (SrcA.isValid() && SrcA == SrcB)
+    return true;
+  int64_t Cst;
+  return mi_match(A, MRI, m_ICstOrSplat(Cst)) &&
+         mi_match(B, MRI, m_SpecificICstOrSplat(Cst));
 }
 
 MachineInstr *CombinerHelper::buildUDivOrURemUsingMul(MachineInstr &MI) const {
@@ -8472,30 +8438,27 @@ bool CombinerHelper::matchCtls(MachineInstr &CtlzMI,
   return true;
 }
 
-static unsigned getCountZeroPoisonOpcode(const MachineInstr &MI) {
-  assert((MI.getOpcode() == TargetOpcode::G_CTLZ ||
-          MI.getOpcode() == TargetOpcode::G_CTTZ) &&
-         "Expected count-zero opcode");
-  switch (MI.getOpcode()) {
-  case TargetOpcode::G_CTLZ:
-    return TargetOpcode::G_CTLZ_ZERO_POISON;
-  case TargetOpcode::G_CTTZ:
-    return TargetOpcode::G_CTTZ_ZERO_POISON;
-  default:
-    llvm_unreachable("Unexpected count-zero opcode");
-  }
+bool CombinerHelper::isConstantNaN(Register Reg) const {
+  const ConstantFP *C = getConstantFPVRegVal(Reg, MRI);
+  return C && C->getValueAPF().isNaN();
 }
 
-bool CombinerHelper::matchCountZeroToZeroPoison(MachineInstr &MI) const {
+bool CombinerHelper::matchCountZeroToZeroPoison(MachineInstr &MI, unsigned Opc,
+                                                unsigned ZeroPoisonOpc) const {
+  const bool IsCtlzPair = Opc == TargetOpcode::G_CTLZ &&
+                          ZeroPoisonOpc == TargetOpcode::G_CTLZ_ZERO_POISON;
+  const bool IsCttzPair = Opc == TargetOpcode::G_CTTZ &&
+                          ZeroPoisonOpc == TargetOpcode::G_CTTZ_ZERO_POISON;
+  if (MI.getOpcode() != Opc || (!IsCtlzPair && !IsCttzPair))
+    return false;
   if (!VT)
     return false;
 
-  unsigned ZPOpc = getCountZeroPoisonOpcode(MI);
   Register Src = MI.getOperand(1).getReg();
   if (!VT->isKnownNeverZero(Src))
     return false;
 
   LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
   LLT SrcTy = MRI.getType(Src);
-  return isLegalOrBeforeLegalizer({ZPOpc, {DstTy, SrcTy}});
+  return isLegalOrBeforeLegalizer({ZeroPoisonOpc, {DstTy, SrcTy}});
 }

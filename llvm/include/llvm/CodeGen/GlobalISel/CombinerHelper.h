@@ -869,13 +869,11 @@ public:
   LLVM_ABI bool matchTruncLshrBuildVectorFold(MachineInstr &MI,
                                               Register &MatchInfo) const;
 
-  /// Transform:
-  ///   (x + y) - y -> x
-  ///   (x + y) - x -> y
-  ///   x - (y + x) -> 0 - y
-  ///   x - (x + z) -> 0 - z
-  LLVM_ABI bool matchSubAddSameReg(MachineInstr &MI,
-                                   BuildFnTy &MatchInfo) const;
+  /// True when \p A and \p B are the same register, including through copies,
+  /// or different registers holding the same scalar or splat integer constant.
+  LLVM_ABI bool matchSameRegOrICstOrSplat(Register A, Register B) const;
+
+  LLVM_ABI bool isConstantNaN(Register Reg) const;
 
   /// \returns true if it is possible to simplify a select instruction \p MI
   /// to a min/max instruction of some sort.
@@ -1064,7 +1062,8 @@ public:
   // (ctlz (or (shl (xor x, (sra x, bitwidth-1)), 1), 1) -> (ctls x)
   LLVM_ABI bool matchCtls(MachineInstr &CtlzMI, BuildFnTy &MatchInfo) const;
 
-  LLVM_ABI bool matchCountZeroToZeroPoison(MachineInstr &MI) const;
+  LLVM_ABI bool matchCountZeroToZeroPoison(MachineInstr &MI, unsigned Opc,
+                                           unsigned ZeroPoisonOpc) const;
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
