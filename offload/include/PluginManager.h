@@ -143,10 +143,16 @@ struct PluginManager {
   /// Returns the number of plugins that are active.
   int getNumActivePlugins() const {
     int count = 0;
-    for (auto &R : plugins())
-      if (R.is_initialized())
-        ++count;
-
+    olIteratePlatforms(
+        [](ol_platform_handle_t Platform, void *Data) {
+          bool Active = false;
+          if (olGetPlatformInfo(Platform, OL_PLATFORM_INFO_ACTIVE,
+                                sizeof(Active), &Active) == OL_SUCCESS &&
+              Active)
+            ++(*reinterpret_cast<int *>(Data));
+          return true;
+        },
+        reinterpret_cast<void *>(&count));
     return count;
   }
 

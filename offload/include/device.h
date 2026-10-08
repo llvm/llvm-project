@@ -31,6 +31,7 @@
 #include "OpenMP/Mapping.h"
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 
 #include "GlobalHandler.h"
@@ -211,6 +212,9 @@ struct DeviceTy {
   /// Indicate that there are pending images for this device or not.
   void setHasPendingImages(bool V) { HasPendingImages = V; }
 
+  /// Return the unique identifier of the device.
+  llvm::StringRef getUid() const { return Uid; }
+
   /// Get information from the device.
   template <typename T> T getInfo(DeviceInfo Info) const {
     T Value{};
@@ -235,6 +239,9 @@ struct DeviceTy {
   }
 
 private:
+  /// Unique identifier of the device.
+  llvm::SmallString<32> Uid;
+
   /// All offload entries available on this device.
   using DeviceOffloadEntriesMapTy =
       llvm::DenseMap<llvm::StringRef, OffloadEntryTy>;
