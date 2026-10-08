@@ -8161,6 +8161,82 @@ TEST_F(OpenMPIRBuilderTest, CreateIteratorLoopBodyEscapes) {
             "iterator bodygen must not branch out of the loop body");
 }
 
+TEST_F(OpenMPIRBuilderTest, CreateIteratorLoopNewBlockEscapes) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  // A block created by the callback must not branch to the loop exit.
+  auto EscapeCB = [&](InsertPointTy BodyIP, Value *LinearIV) -> Error {
+    BasicBlock *Exit = nullptr;
+    for (BasicBlock &Block : *F)
+      if (Block.getName() == "omp_iterator.exit")
+        Exit = &Block;
+    if (!Exit)
+      return make_error<StringError>("loop exit not found",
+                                     inconvertibleErrorCode());
+    Builder.restoreIP(BodyIP);
+    BasicBlock *Inner = BasicBlock::Create(Ctx, "iterator.inner", F);
+    Builder.CreateBr(Inner);
+    Builder.SetInsertPoint(Inner);
+    Builder.CreateBr(Exit);
+    return Error::success();
+  };
+  OpenMPIRBuilder::LocationDescription Loc(Builder.saveIP(), DL);
+  OpenMPIRBuilder::InsertPointOrErrorTy AfterIP = OMPBuilder.createIteratorLoop(
+      Loc, Builder.getInt64(4), EscapeCB, "iterator");
+  EXPECT_EQ(toString(AfterIP.takeError()),
+            "iterator bodygen must not branch out of the loop body");
+}
+
+TEST_F(OpenMPIRBuilderTest, CreateIteratorLoopReinsertedBlockEscapes) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  // Moving a pre-existing block does not make it part of the loop body.
+  BasicBlock *Outside = BasicBlock::Create(Ctx, "outside", F);
+  auto EscapeCB = [&](InsertPointTy BodyIP, Value *LinearIV) -> Error {
+    Outside->removeFromParent();
+    Outside->insertInto(F);
+    Builder.restoreIP(BodyIP);
+    Builder.CreateBr(Outside);
+    return Error::success();
+  };
+  OpenMPIRBuilder::LocationDescription Loc(Builder.saveIP(), DL);
+  OpenMPIRBuilder::InsertPointOrErrorTy AfterIP = OMPBuilder.createIteratorLoop(
+      Loc, Builder.getInt64(4), EscapeCB, "iterator");
+  EXPECT_EQ(toString(AfterIP.takeError()),
+            "iterator bodygen must not branch out of the loop body");
+}
+
+TEST_F(OpenMPIRBuilderTest, CreateIteratorLoopRenumberedBody) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  // Renumbering blocks does not change which blocks belong to the loop.
+  auto BodyGenCB = [&](InsertPointTy BodyIP, Value *LinearIV) -> Error {
+    F->renumberBlocks();
+    Builder.restoreIP(BodyIP);
+    Builder.CreateAdd(LinearIV, Builder.getInt64(1));
+    return Error::success();
+  };
+  OpenMPIRBuilder::LocationDescription Loc(Builder.saveIP(), DL);
+  ASSERT_EXPECTED_INIT(InsertPointTy, AfterIP,
+                       OMPBuilder.createIteratorLoop(Loc, Builder.getInt64(4),
+                                                     BodyGenCB, "iterator"));
+  Builder.restoreIP(AfterIP);
+  Builder.CreateRetVoid();
+  EXPECT_FALSE(verifyFunction(*F, &errs()));
+}
+
 TEST_F(OpenMPIRBuilderTest, CreateTaskgroup) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);

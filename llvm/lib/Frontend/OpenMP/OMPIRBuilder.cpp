@@ -12910,14 +12910,13 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createIteratorLoop(
     T->eraseFromParent();
 
   InsertPointTy BodyIP = CLI->getBodyIP();
-  // Blocks numbered before BodyGen, other than the body and latch, are outside
-  // the loop body.
-  unsigned FirstBodyGenBlock = F->getMaxBlockNumber();
-  [[maybe_unused]] unsigned BlockNumberEpoch = F->getBlockNumberEpoch();
+  // Blocks that exist before BodyGen, other than the body and latch, are
+  // outside the loop body.
+  SmallPtrSet<BasicBlock *, 32> ExistingBlocks;
+  for (BasicBlock &Block : *F)
+    ExistingBlocks.insert(&Block);
   if (llvm::Error Err = BodyGen(BodyIP, CLI->getIndVar()))
     return Err;
-  assert(F->getBlockNumberEpoch() == BlockNumberEpoch &&
-         "iterator bodygen must not renumber blocks");
 
   // The body may span several blocks. Branch its single unterminated block to
   // the latch; otherwise some block must already branch there.
@@ -12941,7 +12940,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createIteratorLoop(
         ReachesLatch = true;
         continue;
       }
-      if (Succ->getNumber() < FirstBodyGenBlock && Succ != CLI->getBody())
+      if (Succ != CLI->getBody() && ExistingBlocks.contains(Succ))
         return make_error<StringError>(
             "iterator bodygen must not branch out of the loop body",
             inconvertibleErrorCode());
