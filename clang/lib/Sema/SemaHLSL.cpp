@@ -5117,6 +5117,58 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
                                getASTContext().UnsignedIntTy);
     break;
   }
+  case Builtin::BI__builtin_hlsl_pack_u8: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+    const auto *VecTy = TheCall->getArg(0)->getType()->getAs<VectorType>();
+    if (!VecTy || !VecTy->getElementType()->isUnsignedIntegerType() ||
+        (SemaRef.Context.getTypeSize(VecTy->getElementType()) != 16 &&
+         SemaRef.Context.getTypeSize(VecTy->getElementType()) != 32) ||
+        VecTy->getNumElements() != 4) {
+      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+                   diag::err_builtin_invalid_arg_type)
+          << 1 << /* vector of */ 4 << /* unsigned integer */ 3 << /* no fp */ 0
+          << TheCall->getArg(0)->getType();
+      return true;
+    }
+    TheCall->setType(getASTContext().UInt8_4PackedTy);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_pack_clamp_u8: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+    const auto *VecTy = TheCall->getArg(0)->getType()->getAs<VectorType>();
+    if (!VecTy || !VecTy->getElementType()->isSignedIntegerType() ||
+        (SemaRef.Context.getTypeSize(VecTy->getElementType()) != 16 &&
+         SemaRef.Context.getTypeSize(VecTy->getElementType()) != 32) ||
+        VecTy->getNumElements() != 4) {
+      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+                   diag::err_builtin_invalid_arg_type)
+          << 1 << /* vector of */ 4 << /* signed integer */ 2 << /* no fp */ 0
+          << TheCall->getArg(0)->getType();
+      return true;
+    }
+    TheCall->setType(getASTContext().UInt8_4PackedTy);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_pack_s8:
+  case Builtin::BI__builtin_hlsl_pack_clamp_s8: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+    const auto *VecTy = TheCall->getArg(0)->getType()->getAs<VectorType>();
+    if (!VecTy || !VecTy->getElementType()->isSignedIntegerType() ||
+        (SemaRef.Context.getTypeSize(VecTy->getElementType()) != 16 &&
+         SemaRef.Context.getTypeSize(VecTy->getElementType()) != 32) ||
+        VecTy->getNumElements() != 4) {
+      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+                   diag::err_builtin_invalid_arg_type)
+          << 1 << /* vector of */ 4 << /* signed integer */ 2 << /* no fp */ 0
+          << TheCall->getArg(0)->getType();
+      return true;
+    }
+    TheCall->setType(getASTContext().Int8_4PackedTy);
+    break;
+  }
   }
   return false;
 }
