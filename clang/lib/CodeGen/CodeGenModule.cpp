@@ -3533,7 +3533,7 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
       AddedAttr = true;
     }
   }
-  // Add metadata for AArch64 Function Multi Versioning.
+  // Add metadata for Function Multi Versioning.
   if (getTarget().getTriple().isAArch64()) {
     llvm::SmallVector<StringRef, 8> Feats;
     bool IsDefault = false;
@@ -3554,6 +3554,18 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
       for (StringRef F : OrderedFeats)
         FMVFeatures.append("," + F.str());
       Attrs.addAttribute("fmv-features", FMVFeatures.substr(1));
+      AddedAttr = true;
+    }
+  } else if (getTarget().getTriple().isX86() && getTarget().supportsIFunc() &&
+             TC) {
+    auto Arch = TC->getX86Architecture(GD.getMultiVersionIndex());
+    // CPU-model checks cannot be represented by feature masks.
+    if (!Arch || Arch->starts_with("x86-64")) {
+      llvm::SmallVector<StringRef, 8> Feats;
+      TC->getX86Feature(Feats, GD.getMultiVersionIndex());
+      if (Arch)
+        Feats.push_back(*Arch);
+      Attrs.addAttribute("fmv-features", llvm::join(Feats, ","));
       AddedAttr = true;
     }
   }
