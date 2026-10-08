@@ -93,3 +93,38 @@ func.func @cse_keeps_both_atomic_reads(%x: !fir.ref<i32>, %v: !fir.ref<i32>) {
   acc.atomic.read %v = %x : !fir.ref<i32>, !fir.ref<i32>, i32
   return
 }
+
+// The same contract for acc.atomic.write: it names only `x`, so an unrelated
+// load is free to leave the loop, and a load of `x` is not.
+
+// CHECK-LABEL: func.func @write_hoist_unrelated_load
+// CHECK:         fir.load
+// CHECK:         scf.for
+// CHECK-NOT:       fir.load
+// CHECK:           acc.atomic.write
+func.func @write_hoist_unrelated_load(
+    %x: !fir.ref<i32>, %y: !fir.ref<i32>, %val: i32, %n: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  scf.for %i = %c0 to %n step %c1 {
+    %0 = fir.load %y : !fir.ref<i32>
+    acc.atomic.write %x = %val : !fir.ref<i32>, i32
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @write_no_hoist_load_of_x
+// CHECK:         scf.for
+// CHECK:           fir.load
+// CHECK:           acc.atomic.write
+func.func @write_no_hoist_load_of_x(
+    %x: !fir.ref<i32>, %val: i32, %n: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  scf.for %i = %c0 to %n step %c1 {
+    %0 = fir.load %x : !fir.ref<i32>
+    acc.atomic.write %x = %val : !fir.ref<i32>, i32
+  }
+  return
+}
+
