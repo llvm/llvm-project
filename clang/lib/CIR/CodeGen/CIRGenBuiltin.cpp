@@ -494,6 +494,8 @@ static RValue emitAtomicIsLockFree(CIRGenFunction &cgf, const CallExpr *e,
   cir::FuncOp func = cgf.cgm.createRuntimeFunction(
       cir::FuncType::get({sizeTy, builder.getVoidPtrTy()}, builder.getBoolTy()),
       "__atomic_is_lock_free");
+  // TODO(cir): set the runtime calling convention to this call.
+  assert(!cir::MissingFeatures::opFuncCallingConv());
   return RValue::get(
       builder.createCallOp(loc, func, mlir::ValueRange{size, ptr}).getResult());
 }
