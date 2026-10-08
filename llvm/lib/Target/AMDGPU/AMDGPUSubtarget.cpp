@@ -244,16 +244,16 @@ bool AMDGPUSubtarget::hasWavefrontsEvenlySplittingXDim(
   auto *Node = F.getMetadata("reqd_work_group_size");
   if (!Node || Node->getNumOperands() != 3)
     return false;
-  unsigned XLen = static_cast<unsigned>(
-      mdconst::extract<ConstantInt>(Node->getOperand(0))->getZExtValue());
-  unsigned YLen = static_cast<unsigned>(
-      mdconst::extract<ConstantInt>(Node->getOperand(1))->getZExtValue());
-  unsigned ZLen = static_cast<unsigned>(
-      mdconst::extract<ConstantInt>(Node->getOperand(2))->getZExtValue());
+  uint64_t XLen =
+      mdconst::extract<ConstantInt>(Node->getOperand(0))->getZExtValue();
+  uint64_t YLen =
+      mdconst::extract<ConstantInt>(Node->getOperand(1))->getZExtValue();
+  uint64_t ZLen =
+      mdconst::extract<ConstantInt>(Node->getOperand(2))->getZExtValue();
 
   bool Is1D = YLen <= 1 && ZLen <= 1;
   bool IsXLargeEnough =
-      isPowerOf2_32(XLen) && (!RequiresUniformYZ || XLen >= getWavefrontSize());
+      isPowerOf2_64(XLen) && (!RequiresUniformYZ || XLen >= getWavefrontSize());
   return Is1D || IsXLargeEnough;
 }
 
