@@ -9523,10 +9523,8 @@ ComputeDefaultedComparisonExceptionSpec(Sema &S, SourceLocation Loc,
       });
 }
 
-//===----------------------------------------------------------------------===//
 // C++2d [over.inc.default]: defaulted postfix increment and decrement operator
 // functions (P3668R4).
-//===----------------------------------------------------------------------===//
 
 namespace {
 /// Which diagnostics to produce while analyzing a defaulted postfix increment
