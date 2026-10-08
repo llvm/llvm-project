@@ -73,28 +73,22 @@ define amdgpu_kernel void @memory_phi_no_clobber(ptr addrspace(1) %arg, i1 %cond
 ; GCN-LABEL: memory_phi_no_clobber:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GCN-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GCN-NEXT:    s_load_dword s3, s[4:5], 0x2c
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_bitcmp0_b32 s2, 0
-; GCN-NEXT:    s_load_dword s4, s[0:1], 0x0
-; GCN-NEXT:    s_mov_b64 s[2:3], -1
-; GCN-NEXT:    s_cbranch_scc0 .LBB1_2
-; GCN-NEXT:  ; %bb.1: ; %if.else
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_mov_b64 s[2:3], 0
-; GCN-NEXT:  .LBB1_2: ; %Flow
-; GCN-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GCN-NEXT:    s_cselect_b32 s2, 1, 0
-; GCN-NEXT:    s_cmp_lg_u32 s2, 1
-; GCN-NEXT:    s_cbranch_scc1 .LBB1_4
-; GCN-NEXT:  ; %bb.3: ; %if.then
+; GCN-NEXT:    s_bitcmp0_b32 s3, 0
+; GCN-NEXT:    s_load_dword s2, s[0:1], 0x0
+; GCN-NEXT:    s_cbranch_scc1 .LBB1_2
+; GCN-NEXT:  ; %bb.1: ; %if.then
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_barrier
-; GCN-NEXT:  .LBB1_4: ; %if.end
-; GCN-NEXT:    s_load_dword s2, s[0:1], 0x4
+; GCN-NEXT:    s_branch .LBB1_3
+; GCN-NEXT:  .LBB1_2: ; %if.else
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:  .LBB1_3: ; %if.end
+; GCN-NEXT:    s_load_dword s3, s[0:1], 0x4
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_add_i32 s2, s2, s4
+; GCN-NEXT:    s_add_i32 s2, s3, s2
 ; GCN-NEXT:    v_mov_b32_e32 v1, s2
 ; GCN-NEXT:    global_store_dword v0, v1, s[0:1] offset:8
 ; GCN-NEXT:    s_endpgm
@@ -142,30 +136,24 @@ define amdgpu_kernel void @memory_phi_clobber1(ptr addrspace(1) %arg, i1 %cond) 
 ; GCN-LABEL: memory_phi_clobber1:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GCN-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GCN-NEXT:    s_load_dword s3, s[4:5], 0x2c
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_bitcmp0_b32 s2, 0
-; GCN-NEXT:    s_load_dword s4, s[0:1], 0x0
-; GCN-NEXT:    s_mov_b64 s[2:3], -1
-; GCN-NEXT:    s_cbranch_scc0 .LBB2_2
-; GCN-NEXT:  ; %bb.1: ; %if.else
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_barrier
-; GCN-NEXT:    s_mov_b64 s[2:3], 0
-; GCN-NEXT:  .LBB2_2: ; %Flow
-; GCN-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GCN-NEXT:    s_cselect_b32 s2, 1, 0
-; GCN-NEXT:    s_cmp_lg_u32 s2, 1
-; GCN-NEXT:    s_cbranch_scc1 .LBB2_4
-; GCN-NEXT:  ; %bb.3: ; %if.then
+; GCN-NEXT:    s_bitcmp0_b32 s3, 0
+; GCN-NEXT:    s_load_dword s2, s[0:1], 0x0
+; GCN-NEXT:    s_cbranch_scc1 .LBB2_2
+; GCN-NEXT:  ; %bb.1: ; %if.then
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 1
 ; GCN-NEXT:    global_store_dword v0, v1, s[0:1] offset:12
-; GCN-NEXT:  .LBB2_4: ; %if.end
-; GCN-NEXT:    s_load_dword s2, s[0:1], 0x4
+; GCN-NEXT:    s_branch .LBB2_3
+; GCN-NEXT:  .LBB2_2: ; %if.else
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_barrier
+; GCN-NEXT:  .LBB2_3: ; %if.end
+; GCN-NEXT:    s_load_dword s3, s[0:1], 0x4
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_add_i32 s2, s2, s4
+; GCN-NEXT:    s_add_i32 s2, s3, s2
 ; GCN-NEXT:    v_mov_b32_e32 v1, s2
 ; GCN-NEXT:    global_store_dword v0, v1, s[0:1] offset:8
 ; GCN-NEXT:    s_endpgm
@@ -213,31 +201,25 @@ define amdgpu_kernel void @memory_phi_clobber2(ptr addrspace(1) %arg, i1 %cond) 
 ;
 ; GCN-LABEL: memory_phi_clobber2:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dword s2, s[4:5], 0x2c
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GCN-NEXT:    s_load_dword s3, s[4:5], 0x2c
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_bitcmp0_b32 s2, 0
-; GCN-NEXT:    s_mov_b64 s[2:3], -1
-; GCN-NEXT:    s_cbranch_scc0 .LBB3_2
-; GCN-NEXT:  ; %bb.1: ; %if.else
+; GCN-NEXT:    s_bitcmp0_b32 s3, 0
+; GCN-NEXT:    s_load_dword s2, s[0:1], 0x0
+; GCN-NEXT:    s_cbranch_scc1 .LBB3_2
+; GCN-NEXT:  ; %bb.1: ; %if.then
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_barrier
+; GCN-NEXT:    s_branch .LBB3_3
+; GCN-NEXT:  .LBB3_2: ; %if.else
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 1
 ; GCN-NEXT:    global_store_dword v0, v1, s[0:1] offset:12
-; GCN-NEXT:    s_mov_b64 s[2:3], 0
-; GCN-NEXT:  .LBB3_2: ; %Flow
-; GCN-NEXT:    s_load_dword s4, s[0:1], 0x0
-; GCN-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GCN-NEXT:    s_cselect_b32 s2, 1, 0
-; GCN-NEXT:    s_cmp_lg_u32 s2, 1
-; GCN-NEXT:    s_cbranch_scc1 .LBB3_4
-; GCN-NEXT:  ; %bb.3: ; %if.then
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_barrier
-; GCN-NEXT:  .LBB3_4: ; %if.end
-; GCN-NEXT:    s_load_dword s2, s[0:1], 0x4
+; GCN-NEXT:  .LBB3_3: ; %if.end
+; GCN-NEXT:    s_load_dword s3, s[0:1], 0x4
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_add_i32 s2, s2, s4
+; GCN-NEXT:    s_add_i32 s2, s3, s2
 ; GCN-NEXT:    v_mov_b32_e32 v1, s2
 ; GCN-NEXT:    global_store_dword v0, v1, s[0:1] offset:8
 ; GCN-NEXT:    s_endpgm
@@ -282,25 +264,23 @@ define amdgpu_kernel void @no_clobbering_loop1(ptr addrspace(1) %arg, i1 %cc) {
 ; GCN-LABEL: no_clobbering_loop1:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GCN-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GCN-NEXT:    s_load_dword s3, s[4:5], 0x2c
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_load_dword s4, s[0:1], 0x0
-; GCN-NEXT:    s_bitcmp1_b32 s2, 0
-; GCN-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GCN-NEXT:    s_xor_b64 s[2:3], s[2:3], -1
+; GCN-NEXT:    s_load_dword s2, s[0:1], 0x0
+; GCN-NEXT:    s_bitcmp1_b32 s3, 0
+; GCN-NEXT:    s_cselect_b64 s[4:5], -1, 0
+; GCN-NEXT:    s_and_b64 vcc, exec, s[4:5]
 ; GCN-NEXT:  .LBB4_1: ; %while.cond
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN-NEXT:    s_load_dword s5, s[0:1], 0x4
+; GCN-NEXT:    s_load_dword s3, s[0:1], 0x4
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_add_i32 s5, s5, s4
-; GCN-NEXT:    s_and_b64 s[6:7], s[2:3], exec
-; GCN-NEXT:    v_mov_b32_e32 v1, s5
-; GCN-NEXT:    s_cselect_b32 s5, 1, 0
-; GCN-NEXT:    s_cmp_lg_u32 s5, 1
+; GCN-NEXT:    s_add_i32 s3, s3, s2
+; GCN-NEXT:    v_mov_b32_e32 v1, s3
 ; GCN-NEXT:    global_store_dword v0, v1, s[0:1] offset:8
 ; GCN-NEXT:    ; wave barrier
-; GCN-NEXT:    s_cbranch_scc1 .LBB4_1
+; GCN-NEXT:    s_mov_b64 vcc, vcc
+; GCN-NEXT:    s_cbranch_vccnz .LBB4_1
 ; GCN-NEXT:  ; %bb.2: ; %end
 ; GCN-NEXT:    s_endpgm
 bb:
@@ -400,24 +380,22 @@ define amdgpu_kernel void @clobbering_loop(ptr addrspace(1) %arg, ptr addrspace(
 ; GCN-LABEL: clobbering_loop:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GCN-NEXT:    s_load_dword s7, s[4:5], 0x34
+; GCN-NEXT:    s_load_dword s6, s[4:5], 0x34
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_load_dword s6, s[0:1], 0x0
-; GCN-NEXT:    s_bitcmp1_b32 s7, 0
-; GCN-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GCN-NEXT:    s_xor_b64 s[4:5], s[4:5], -1
+; GCN-NEXT:    s_load_dword s4, s[0:1], 0x0
+; GCN-NEXT:    s_bitcmp1_b32 s6, 0
+; GCN-NEXT:    s_cselect_b64 s[6:7], -1, 0
+; GCN-NEXT:    s_and_b64 vcc, exec, s[6:7]
 ; GCN-NEXT:  .LBB6_1: ; %while.cond
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    global_load_dword v1, v0, s[0:1] offset:4
-; GCN-NEXT:    s_and_b64 s[8:9], s[4:5], exec
-; GCN-NEXT:    s_cselect_b32 s7, 1, 0
-; GCN-NEXT:    s_cmp_lg_u32 s7, 1
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_add_u32_e32 v1, s6, v1
+; GCN-NEXT:    v_add_u32_e32 v1, s4, v1
 ; GCN-NEXT:    global_store_dword v0, v1, s[2:3] offset:4
 ; GCN-NEXT:    ; wave barrier
-; GCN-NEXT:    s_cbranch_scc1 .LBB6_1
+; GCN-NEXT:    s_mov_b64 vcc, vcc
+; GCN-NEXT:    s_cbranch_vccnz .LBB6_1
 ; GCN-NEXT:  ; %bb.2: ; %end
 ; GCN-NEXT:    s_endpgm
 bb:

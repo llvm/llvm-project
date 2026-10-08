@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/IR/Module.h"
 
 using namespace llvm;
 using namespace llvm::AArch64PAuth;
@@ -25,40 +26,6 @@ using namespace llvm::AArch64PAuth;
 #define AARCH64_POINTER_AUTH_NAME "AArch64 Pointer Authentication"
 
 namespace {
-
-/// Control the emission of .cfi_set_ra_state, which replaces the
-/// deprecated .cfi_negate_ra_state_with_pc [1].
-///
-/// The latter is fundamentally unable to express some program orders [2], as
-/// the dwarf 'program' reads functions in a linear scan of their addresses to
-/// reconstruct the state of the frame, whereas control flow may enter and exit
-/// such regions arbitrarily (such as in hot-cold-split, and shrinkwrapped
-/// fucntions), and thus the negate-based cfi is unable to encode the address of
-/// the signing instruciton in all program orders.
-///
-/// Since .cfi_negate_ra_state is still sufficient for describing
-/// ptrauth-returns=pauth, we default to using the new CFI only for PAuth_LR, as
-/// DW_CFA_AARCH64_negate_ra_state has a smaller encoding than
-/// DW_CFA_AARCH64_set_ra_state.
-///
-/// 1: https://github.com/ARM-software/abi-aa/pull/346
-/// 2: https://github.com/ARM-software/abi-aa/issues/327
-enum class SetRAStateMode {
-  Never,   // Always use .cfi_negate_ra_state(_with_pc)
-  PAuthLR, // Use .cfi_set_ra_state only for PAuth_LR
-  Always,  // Use .cfi_set_ra_state for both PAuth and PAuth_LR
-};
-cl::opt<SetRAStateMode> CFILLVMSetRASignStateMode(
-    "aarch64-cfi-llvm-set-ra-sign-state", cl::init(SetRAStateMode::PAuthLR),
-    cl::desc("Control emission of .cfi_set_ra_state for PAC return address "
-             "signing CFI"),
-    cl::values(clEnumValN(SetRAStateMode::Never, "never",
-                          "Always use legacy .cfi_negate_ra_state[_with_pc]"),
-               clEnumValN(SetRAStateMode::PAuthLR, "pauth-lr",
-                          "Use new CFI only for PAuth_LR (default)"),
-               clEnumValN(SetRAStateMode::Always, "always",
-                          "Use new CFI for both PAuth and PAuth_LR")),
-    cl::Hidden);
 
 class AArch64PointerAuthImpl {
 public:
@@ -135,10 +102,13 @@ static void decoratePACWithCFI(MachineBasicBlock &MBB,
   auto &MF = *MBB.getParent();
   auto &MFnI = *MF.getInfo<AArch64FunctionInfo>();
   CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameSetup);
-  const Triple &TT = MF.getTarget().getTargetTriple();
+  const Triple &TT = MF.getFunction().getParent()->getTargetTriple();
+  SetRAStateMode Mode = MF.getSubtarget<AArch64Subtarget>()
+                            .getCLOpts()
+                            .cfi_llvm_set_ra_sign_state;
 
   if (MFnI.branchProtectionPAuthLR()) {
-    switch (CFILLVMSetRASignStateMode) {
+    switch (Mode) {
     case SetRAStateMode::Never:
       CFIBuilder.buildNegateRAStateWithPC();
       BuildPACMI();
@@ -153,7 +123,7 @@ static void decoratePACWithCFI(MachineBasicBlock &MBB,
     }
     }
   } else {
-    switch (CFILLVMSetRASignStateMode) {
+    switch (Mode) {
     case SetRAStateMode::Never:
     case SetRAStateMode::PAuthLR:
       BuildPACMI();
@@ -177,10 +147,13 @@ static void emitAUTCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
   auto &MF = *MBB.getParent();
   auto &MFnI = *MF.getInfo<AArch64FunctionInfo>();
   CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameDestroy);
-  const Triple &TT = MF.getTarget().getTargetTriple();
+  const Triple &TT = MF.getFunction().getParent()->getTargetTriple();
+  SetRAStateMode Mode = MF.getSubtarget<AArch64Subtarget>()
+                            .getCLOpts()
+                            .cfi_llvm_set_ra_sign_state;
 
   if (MFnI.branchProtectionPAuthLR()) {
-    switch (CFILLVMSetRASignStateMode) {
+    switch (Mode) {
     case SetRAStateMode::Never:
       // DW_CFA_AARCH64_negate_ra_state_with_pc is semantically broken for
       // functions where shrinkwrapping places signing/authenticating pairs on
@@ -222,7 +195,7 @@ static void emitAUTCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
       break;
     }
   } else if (!TT.isOSBinFormatMachO()) {
-    switch (CFILLVMSetRASignStateMode) {
+    switch (Mode) {
     case SetRAStateMode::Never:
     case SetRAStateMode::PAuthLR:
       CFIBuilder.buildNegateRAState();
