@@ -76,6 +76,10 @@ protected:
   /// its own reference, keeping the file locked and blocking recompilation
   /// during an active debug session.
   llvm::DenseMap<lldb::addr_t, lldb::ModuleWP> m_loaded_modules;
+
+private:
+  bool GetTlsIndexAddressForModule(const lldb::ModuleSP &module,
+                                   Address &addr) const;
 };
 
 } // namespace lldb_private

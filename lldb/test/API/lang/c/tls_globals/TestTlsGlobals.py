@@ -75,9 +75,9 @@ class TlsGlobalTestCase(TestBase):
             thread.GetFrameAtIndex(0).GetFunctionName() or ""
         )
         if not is_second_thread(self.thread()):
-            for thread in self.process():
-                if is_second_thread(thread):
-                    self.runCmd(f"thread select {thread.GetIndexID()}", "Change thread")
+            thread = next((t for t in self.process() if is_second_thread(t)), None)
+            self.assertIsNotNone(thread, "could not find the fn_static thread")
+            self.runCmd(f"thread select {thread.GetIndexID()}", "Change thread")
 
         # Check that TLS evaluates correctly within the thread.
         self.expect(
