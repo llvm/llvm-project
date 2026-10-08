@@ -1235,8 +1235,6 @@ int32_t GenericPluginTy::isDeviceCompatible(int32_t DeviceId, StringRef Image) {
   }
 }
 
-int32_t GenericPluginTy::number_of_devices() { return getNumDevices(); }
-
 int32_t GenericPluginTy::is_data_exchangable(int32_t SrcDeviceId,
                                              int32_t DstDeviceId) {
   return isDataExchangable(SrcDeviceId, DstDeviceId);
@@ -1388,12 +1386,6 @@ int32_t GenericPluginTy::data_submit_async(int32_t DeviceId, void *TgtPtr,
   return OFFLOAD_SUCCESS;
 }
 
-int32_t GenericPluginTy::data_retrieve(int32_t DeviceId, void *HstPtr,
-                                       void *TgtPtr, int64_t Size) {
-  return data_retrieve_async(DeviceId, HstPtr, TgtPtr, Size,
-                             /*AsyncInfoPtr=*/nullptr);
-}
-
 int32_t GenericPluginTy::data_retrieve_async(int32_t DeviceId, void *HstPtr,
                                              void *TgtPtr, int64_t Size,
                                              __tgt_async_info *AsyncInfoPtr) {
@@ -1518,23 +1510,6 @@ int32_t GenericPluginTy::sync_event(int32_t DeviceId, void *EventPtr) {
   return OFFLOAD_SUCCESS;
 }
 
-int32_t GenericPluginTy::get_event_elapsed_time(int32_t DeviceId,
-                                                void *StartEventPtr,
-                                                void *EndEventPtr,
-                                                float *ElapsedTime) {
-  auto ElapsedTimeOrErr =
-      getDevice(DeviceId).getEventElapsedTime(StartEventPtr, EndEventPtr);
-  if (!ElapsedTimeOrErr) {
-    REPORT() << "Failure to get elapsed time between events " << StartEventPtr
-             << " and " << EndEventPtr << ": "
-             << toString(ElapsedTimeOrErr.takeError());
-    return OFFLOAD_FAIL;
-  }
-
-  *ElapsedTime = *ElapsedTimeOrErr;
-  return OFFLOAD_SUCCESS;
-}
-
 int32_t GenericPluginTy::destroy_event(int32_t DeviceId, void *EventPtr) {
   auto Err = getDevice(DeviceId).destroyEvent(EventPtr);
   if (Err) {
@@ -1544,11 +1519,6 @@ int32_t GenericPluginTy::destroy_event(int32_t DeviceId, void *EventPtr) {
   }
 
   return OFFLOAD_SUCCESS;
-}
-
-void GenericPluginTy::set_info_flag(uint32_t NewInfoLevel) {
-  std::atomic<uint32_t> &InfoLevel = getInfoLevelInternal();
-  InfoLevel.store(NewInfoLevel);
 }
 
 int32_t GenericPluginTy::use_auto_zero_copy(int32_t DeviceId) {

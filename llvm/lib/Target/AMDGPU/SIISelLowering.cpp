@@ -4718,11 +4718,14 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     if (Info->isWholeWaveFunction())
       OPC = AMDGPUISD::TC_RETURN_GFX_WholeWave;
 
-    return DAG.getNode(OPC, DL, MVT::Other, Ops);
+    SDValue Ret = DAG.getNode(OPC, DL, MVT::Other, Ops);
+    DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
+    return Ret;
   }
 
   // Returns a chain and a flag for retval copy to use.
   SDValue Call = DAG.getNode(AMDGPUISD::CALL, DL, {MVT::Other, MVT::Glue}, Ops);
+  DAG.addNoMergeSiteInfo(Call.getNode(), CLI.NoMerge);
   Chain = Call.getValue(0);
   InGlue = Call.getValue(1);
 
@@ -7310,6 +7313,7 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       MIB.add(MO);
 
     MIB.cloneMemRefs(MI);
+    MIB.setMIFlags(MI.getFlags());
     MI.eraseFromParent();
     return BB;
   }
