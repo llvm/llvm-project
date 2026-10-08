@@ -78,13 +78,11 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
 
   llvm::TimeTraceScope scope("CIR To CIR Passes");
 
-  auto tripleAttr = theModule->getAttrOfType<mlir::StringAttr>(
-      cir::CIRDialect::getTripleAttrName());
-  if (!tripleAttr)
-    return theModule.emitError()
-           << "missing '" << cir::CIRDialect::getTripleAttrName()
-           << "' attribute";
-  llvm::Triple triple(tripleAttr.getValue());
+  auto maybeTriple = cir::getTripleFromModule(theModule,
+      [&]{ return theModule.emitError(); });
+  if (mlir::failed(maybeTriple))
+    return mlir::LogicalResult::failure();
+  llvm::Triple &triple = *maybeTriple;
 
   auto abiAttr = theModule->getAttrOfType<mlir::StringAttr>(
       cir::CIRDialect::getTargetABIAttrName());

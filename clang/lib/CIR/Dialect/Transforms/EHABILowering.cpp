@@ -1088,19 +1088,15 @@ void CIREHABILoweringPass::runOnOperation() {
   // The target triple is attached to the module as the "cir.triple"
   // attribute. If it is absent (e.g. a CIR module parsed from text without a
   // triple) we cannot determine the ABI and must skip the pass.
-  auto tripleAttr = mlir::dyn_cast_if_present<mlir::StringAttr>(
-      mod->getAttr(cir::CIRDialect::getTripleAttrName()));
-  if (!tripleAttr) {
-    mod.emitError("Module has no target triple");
+  auto triple = cir::getTripleFromModule(mod, [&] { return mod.emitWarning(); });
+  if (mlir::failed(triple))
     return;
-  }
 
   // Select the ABI-specific lowering handler from the triple. The Microsoft
   // C++ ABI targets a Windows MSVC environment; everything else uses Itanium.
   // Extend this when Microsoft ABI lowering is added.
-  llvm::Triple triple(tripleAttr.getValue());
   std::unique_ptr<EHABILowering> lowering;
-  if (triple.isWindowsMSVCEnvironment()) {
+  if (triple->isWindowsMSVCEnvironment()) {
     mod.emitError(
         "EH ABI lowering is not yet implemented for the Microsoft ABI");
     return signalPassFailure();

@@ -4508,7 +4508,6 @@ void ConvertCIRToLLVMPass::processCIRAttrs(mlir::ModuleOp module) {
           module->getAttr(cir::CIRDialect::getTripleAttrName()))
     module->setAttr(mlir::LLVM::LLVMDialect::getTargetTripleAttrName(),
                     tripleAttr);
-  // TODO(triple) handle triple exception here?
 
   if (mlir::Attribute asmAttr =
           module->getAttr(cir::CIRDialect::getModuleLevelAsmAttrName()))
@@ -5820,20 +5819,11 @@ mlir::LogicalResult CIRToLLVMCpuIdOpLowering::matchAndRewrite(
 
   StringRef asmString, constraints;
   mlir::ModuleOp moduleOp = op->getParentOfType<mlir::ModuleOp>();
-  auto tripleAttr = moduleOp->getAttr(cir::CIRDialect::getTripleAttrName());
-  if (!tripleAttr) {
-    moduleOp->emitError("module is missing a ")
-       << cir::CIRDialect::getTripleAttrName() << " attribute";
+  auto triple = cir::getTripleFromModule(moduleOp,
+      [&] { return moduleOp.emitError(); }); 
+  if (mlir::failed(triple))
     return mlir::failure();
-  }
-  mlir::StringAttr tripleStr = mlir::dyn_cast<mlir::StringAttr>(tripleAttr);
-  if (!tripleStr) {
-    moduleOp->emitError("expected string from module ")
-                << cir::CIRDialect::getTripleAttrName() << " attribute";
-    return mlir::failure();
-  }
-  llvm::Triple triple(tripleStr.getValue());
-  if (triple.getArch() == llvm::Triple::x86) {
+  if (triple->getArch() == llvm::Triple::x86) {
     asmString = "cpuid";
     constraints = "={ax},={bx},={cx},={dx},{ax},{cx}";
   } else {
