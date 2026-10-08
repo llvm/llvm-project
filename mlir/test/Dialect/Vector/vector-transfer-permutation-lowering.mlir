@@ -188,6 +188,31 @@ func.func @xfer_write_non_minor_identity_with_mask_missing_inner_dim(
   return
 }
 
+// Two missing dims (d1 and d3) that are not next to each other.
+
+// CHECK-LABEL:   func.func @xfer_write_non_minor_identity_with_mask_two_missing_inner_dims(
+// CHECK-SAME:      %[[MEM:.*]]: memref<?x?x?x?x?xf32>,
+// CHECK-SAME:      %[[VEC:.*]]: vector<6x7x8xf32>,
+// CHECK-SAME:      %[[MASK:.*]]: vector<6x7x8xi1>,
+// CHECK-SAME:      %[[IDX:.*]]: index) {
+// CHECK:           %[[BC_VEC:.*]] = vector.broadcast %[[VEC]] : vector<6x7x8xf32> to vector<1x1x6x7x8xf32>
+// CHECK:           %[[BC_MASK:.*]] = vector.broadcast %[[MASK]] : vector<6x7x8xi1> to vector<1x1x6x7x8xi1>
+// CHECK:           %[[TR_MASK:.*]] = vector.transpose %[[BC_MASK]], [2, 0, 3, 1, 4] : vector<1x1x6x7x8xi1> to vector<6x1x7x1x8xi1>
+// CHECK:           %[[TR_VEC:.*]] = vector.transpose %[[BC_VEC]], [2, 0, 3, 1, 4] : vector<1x1x6x7x8xf32> to vector<6x1x7x1x8xf32>
+// CHECK:           vector.transfer_write %[[TR_VEC]], %[[MEM]]{{\[}}%[[IDX]], %[[IDX]], %[[IDX]], %[[IDX]], %[[IDX]]], %[[TR_MASK]] {in_bounds = [false, true, false, true, false]} : vector<6x1x7x1x8xf32>, memref<?x?x?x?x?xf32>
+func.func @xfer_write_non_minor_identity_with_mask_two_missing_inner_dims(
+    %mem : memref<?x?x?x?x?xf32>,
+    %vec : vector<6x7x8xf32>,
+    %mask : vector<6x7x8xi1>,
+    %idx : index) {
+
+  vector.transfer_write %vec, %mem[%idx, %idx, %idx, %idx, %idx], %mask {
+    permutation_map = affine_map<(d0, d1, d2, d3, d4) -> (d0, d2, d4)>
+  } : vector<6x7x8xf32>, memref<?x?x?x?x?xf32>
+
+  return
+}
+
 // CHECK-LABEL:     func.func @xfer_write_non_minor_identity_with_mask_scalable(
 // CHECK-SAME:        %[[VEC:.*]]: vector<4x[8]xi16>,
 // CHECK-SAME:        %[[MEM:.*]]: memref<1x4x?x1xi16>,

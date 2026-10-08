@@ -48,7 +48,8 @@ static TypedValue<VectorType> extendVectorRank(OpBuilder &builder, Location loc,
 }
 
 /// Extend the rank of a mask Value by adding unit dimensions at the positions
-/// `missingInnerDims` of the result.
+/// `missingInnerDims` of the result. The positions are relative to the first
+/// dim that the transfer accesses, which is dim 0 of the mask.
 static Value extendMaskRank(OpBuilder &builder, Location loc, Value vec,
                             ArrayRef<int64_t> missingInnerDims) {
   TypedValue<VectorType> broadcasted =
