@@ -667,10 +667,6 @@ public:
     const SIRegisterInfo &TRI,
     SIMachineFunctionInfo &Info) const;
 
-  void allocateSpecialInputVGPRs(CCState &CCInfo,
-                                 MachineFunction &MF,
-                                 const SIRegisterInfo &TRI,
-                                 SIMachineFunctionInfo &Info) const;
   void allocateSpecialInputVGPRsFixed(CCState &CCInfo,
                                       MachineFunction &MF,
                                       const SIRegisterInfo &TRI,

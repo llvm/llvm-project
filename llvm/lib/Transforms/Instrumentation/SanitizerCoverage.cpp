@@ -443,7 +443,7 @@ bool ModuleSanitizerCoverage::instrumentModule() {
   IntptrTy = Type::getIntNTy(*C, DL->getPointerSizeInBits());
   PtrTy = PointerType::getUnqual(*C);
   Type *VoidTy = Type::getVoidTy(*C);
-  IRBuilder<> IRB(*C);
+  IRBuilder<> IRB(M);
   Int64Ty = IRB.getInt64Ty();
   Int32Ty = IRB.getInt32Ty();
   Int16Ty = IRB.getInt16Ty();

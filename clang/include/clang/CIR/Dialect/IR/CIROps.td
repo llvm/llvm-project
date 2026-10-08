@@ -3410,10 +3410,11 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
     Symbol visibility in `sym_visibility` is defined in terms of MLIR's visibility
     and verified to be in accordance to `linkage`.
 
-    The `static_local_guard` attribute indicates that this global represents a
-    function-local static variable that requires guarded initialization
-    (e.g., C++ static local variables with non-constant initializers).
-    It contains the mangled name of the guard variable.
+    The `dynamic_init_guard` attribute indicates that this global requires
+    guarded dynamic initialization via the Itanium `__cxa_guard_*` protocol
+    (e.g., C++ static local variables with non-constant initializers, or
+    namespace-scope variables with vague linkage such as weak/linkonce_odr
+    inline variables). It contains the mangled name of the guard variable.
 
     The `strictfp` attribute indicates that the dynamic initialization emitted
     into the `ctorRegion`/`dtorRegion` runs under a constrained floating-point
@@ -3445,10 +3446,10 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
                        OptionalAttr<StrAttr>:$comdat,
                        UnitProp:$constant,
                        UnitProp:$dso_local,
-                       OptionalAttr<CIR_StaticLocalGuardAttr>:$static_local_guard,
+                       OptionalAttr<CIR_DynamicInitGuardAttr>:$dynamic_init_guard,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<ASTVarDeclInterface>:$ast,
-                       OptionalAttr<CIR_StaticLocalInfoAttr>:$static_local_info,
+                       OptionalAttr<CIR_DynamicInitInfoAttr>:$dynamic_init_info,
                        OptionalAttr<StrAttr>:$section,
                        OptionalAttr<CIR_AnnotationArrayAttr>:$annotations,
                        OptionalAttr<FlatSymbolRefAttr>:$aliasee,
@@ -3456,8 +3457,8 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
                        OptionalAttr<I32Attr>:$init_priority
                        );
 
-  let regions = (region AnyRegion:$ctorRegion,
-                        AnyRegion:$dtorRegion);
+  let regions = (region MaxSizedRegion<1>:$ctorRegion,
+                        MaxSizedRegion<1>:$dtorRegion);
 
   let assemblyFormat = [{
     ($sym_visibility^)?
@@ -3468,7 +3469,7 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
     (`tls_model` `=` enum($tls_model)^)?
     (`tls_refs` `=` $tls_refs^)?
     (`dso_local` $dso_local^)?
-    (`static_local_guard` `` $static_local_guard^)?
+    (`dynamic_init_guard` `` $dynamic_init_guard^)?
     (` ` custom<GlobalMemorySpace>($addr_space)^ )?
     $sym_name
     (`alias` `(` $aliasee^ `)`)?
@@ -3477,7 +3478,7 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
     ($annotations^)?
     (`align` `(` $alignment^ `)`)?
     (`ast` `(` $ast^ `)`)?
-    (`static_local_info` `` $static_local_info^)?
+    (`dynamic_init_info` `` $dynamic_init_info^)?
     (`section` `(` $section^ `)`)?
     (`strictfp` $strictfp^)?
     (`init_priority` `(` $init_priority^ `)`)?
@@ -8699,7 +8700,7 @@ def CIR_TryOp : CIR_RegionBranchOpBase<"try", [
     }]>
   ];
 
-  let hasVerifier = 1;
+  let hasRegionVerifier = 1;
   let hasLLVMLowering = false;
 }
 
@@ -9286,6 +9287,8 @@ def CIR_InitCatchKind : CIR_I32Enum<
     I32EnumCase<"Objc", 3, "objc">,
     I32EnumCase<"TrivialCopy", 4, "trivial_copy">,
     I32EnumCase<"NonTrivialCopy", 5, "non_trivial_copy">,
+    I32EnumCase<"ReferenceToPointer", 6, "reference_to_pointer">,
+    I32EnumCase<"ReferenceToRecordPointer", 7, "reference_to_record_pointer">,
 ]>;
 
 def CIR_InitCatchKindAttr : CIR_EnumAttr<CIR_InitCatchKind, "init_catch">;
@@ -9303,6 +9306,16 @@ def CIR_InitCatchParamOp : CIR_Op<"init_catch_param"> {
     the Itanium C++ ABI may emit a load and store for scalar/pointer catch
     types, an aggregate copy for record types, or a call to a copy
     constructor when one is required).
+
+    A catch parameter that is a reference to a pointer uses the
+    `reference_to_record_pointer` kind when the pointer's source-level pointee
+    type is a record (class, struct, or union), and `reference_to_pointer`
+    otherwise. A reference to any other type uses `reference`.
+
+    A `reference_to_pointer` or `non_trivial_copy` operation requires its catch
+    handler to start with a `cir.construct_catch_param` of the same kind on the
+    same parameter. When the handler starts with a `cir.construct_catch_param`
+    on the parameter of the operation, the two must have the same kind.
 
     Example:
 
@@ -9326,6 +9339,7 @@ def CIR_InitCatchParamOp : CIR_Op<"init_catch_param"> {
       qualified(type($exn_ptr)) `,` qualified(type($param_addr)) attr-dict
   }];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
@@ -9349,9 +9363,11 @@ def CIR_ConstructCatchParamOp : CIR_Op<"construct_catch_param", [
     copy of the object before `__cxa_begin_catch` is invoked.
 
     This operation takes a `!cir.eh_token` that represents the in-flight
-    exception and the alloca value that is used for the local copy of the
-    exception object. The `copy_fn` attribute is a flat symbol reference to a
-    `cir.func` thunk that copies the exception object to a local alloca value.
+    exception and the alloca value for the catch parameter. The optional
+    `copy_fn` attribute, present for `non_trivial_copy`, is a flat symbol
+    reference to a `cir.func` thunk that copies the exception object to a
+    local alloca value. For `reference_to_pointer`, the operation binds the
+    reference to the exception object itself.
 
     This operation is replaced with a target-specific representation during
     the EHABI lowering pass. For some targets, such as the Microsoft ABI,
@@ -9377,6 +9393,7 @@ def CIR_ConstructCatchParamOp : CIR_Op<"construct_catch_param", [
       qualified(type($param_addr)) attr-dict
   }];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
