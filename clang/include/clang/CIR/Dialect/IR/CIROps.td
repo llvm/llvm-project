@@ -6451,7 +6451,7 @@ def CIR_MatrixExtractOp : CIR_Op<"matrix.extract", [
 
   let assemblyFormat = [{
     $matrix
-    `[` $rowIdx `:` type($rowIdx) `,` $columnIdx `:` type($columnIdx) `]`
+    `[` $rowIdx `:` type($rowIdx) `]` `[` $columnIdx `:` type($columnIdx) `]`
     attr-dict `:` qualified(type($matrix))
   }];
 }

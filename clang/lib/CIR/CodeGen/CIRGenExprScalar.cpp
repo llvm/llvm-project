@@ -320,10 +320,13 @@ public:
   }
 
   mlir::Value VisitMatrixSubscriptExpr(MatrixSubscriptExpr *e) {
+    mlir::Value rowIdx = cgf.emitScalarExpr(e->getRowIdx());
+    mlir::Value columnIdx = cgf.emitScalarExpr(e->getColumnIdx());
     mlir::Value matrix = Visit(e->getBase());
-    mlir::Value rowIdx = cgf.emitMatrixIndexExpr(e->getRowIdx());
-    mlir::Value columnIdx = cgf.emitMatrixIndexExpr(e->getColumnIdx());
     mlir::Location loc = cgf.getLoc(e->getSourceRange());
+    if (cgf.cgm.getCodeGenOpts().OptimizationLevel > 0)
+      cgf.cgm.errorNYI(e->getSourceRange(),
+                       "VisitMatrixSubscriptExpr: emit index assumption");
     return builder.createMatrixExtract(loc, matrix, rowIdx, columnIdx);
   }
 
