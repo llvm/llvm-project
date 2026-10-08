@@ -208,7 +208,7 @@ RT_API_ATTRS BTy FPowI(BTy base, ETy exp) {
   } else if (isNegativePower) {
     exp = -exp;
   }
-  if (isNegativePower && base != BTy{0} && std::abs(base) > BTy{1}) {
+  if (isNegativePower && base != BTy{0} && ABSTy<BTy>::compute(base) > BTy{1}) {
     base = BTy{1} / base;
     isNegativePower = false;
   }
