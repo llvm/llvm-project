@@ -2133,8 +2133,9 @@ public:
   /// For a defaulted function, the kind of defaulted function that it is.
   class DefaultedFunctionKind {
     LLVM_PREFERRED_TYPE(CXXSpecialMemberKind)
-    unsigned SpecialMember : 8;
-    unsigned Comparison : 8;
+    unsigned SpecialMember : 3;
+    LLVM_PREFERRED_TYPE(DefaultedComparisonKind)
+    unsigned Comparison : 3;
     LLVM_PREFERRED_TYPE(PostfixOperatorKind)
     unsigned PostfixOperator : 2;
 
