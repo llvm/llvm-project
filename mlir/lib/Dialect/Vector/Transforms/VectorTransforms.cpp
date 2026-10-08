@@ -382,10 +382,9 @@ FailureOr<Value> combineContractAndBroadcast(vector::ContractionOp contractOp,
   for (unsigned i = 0; i < iterators.size(); ++i) {
     if (!isReductionIterator(iterators[i]))
       continue;
-    if (getResultIndex(maps[0], i) && getResultIndex(maps[1], i)) {
-      hasReductionIteratorApplyingOnBothSides = true;
-      break;
-    }
+    if (!getResultIndex(maps[0], i) || !getResultIndex(maps[1], i))
+      return failure();
+    hasReductionIteratorApplyingOnBothSides = true;
   }
   if (!hasReductionIteratorApplyingOnBothSides)
     return failure();
