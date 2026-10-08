@@ -854,7 +854,7 @@ def ObjC : Flag<["-"], "ObjC">, Flags<[NoXarchOption]>,
   HelpText<"Treat source input files as Objective-C inputs">;
 def O : Joined<["-"], "O">, Group<O_Group>,
   Visibility<[ClangOption, CC1Option, FC1Option, FlangOption]>;
-def O_flag : Flag<["-"], "O">, Visibility<[ClangOption, CC1Option, FC1Option]>,
+def O_flag : Flag<["-"], "O">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   Alias<O>, AliasArgs<["1"]>;
 def Ofast : Joined<["-"], "Ofast">, Group<O_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
@@ -6015,6 +6015,15 @@ def msign_return_address_EQ : Joined<["-"], "msign-return-address=">,
   Visibility<[ClangOption, CC1Option]>,
   Group<m_Group>, Values<"none,all,non-leaf">,
   HelpText<"Select return address signing scope">;
+
+def mharden_pac_ret_EQ : Joined<["-"], "mharden-pac-ret=">,
+  Visibility<[ClangOption, CC1Option]>,
+  Flags<[TargetSpecific]>, Group<m_Group>,
+  HelpText<"Select the return address authentication hardening scheme">,
+  Values<"none,load-return-address">, NormalizedValues<["None", "LoadReturnAddress"]>,
+  NormalizedValuesScope<"LangOptions::SignReturnAddressHardeningKind">,
+  MarshallingInfoEnum<LangOpts<"SignReturnAddressHardening">, "None">;
+
 let Flags = [TargetSpecific] in {
 def mbranch_protection_EQ : Joined<["-"], "mbranch-protection=">,
   Group<m_Group>,
