@@ -1391,16 +1391,16 @@ OverwriteResult DSEState::isOverwrite(const Instruction *KillingI,
   if (DeadOff >= KillingOff) {
     // If the dead access ends "not after" the killing access then the
     // dead one is completely overwritten by the killing one.
-    if (uint64_t(DeadOff - KillingOff) + DeadSize <= KillingSize)
+    if (uint64_t(DeadOff) - uint64_t(KillingOff) + DeadSize <= KillingSize)
       return OW_Complete;
     // If start of the dead access is "before" end of the killing access
     // then accesses overlap.
-    else if ((uint64_t)(DeadOff - KillingOff) < KillingSize)
+    else if (uint64_t(DeadOff) - uint64_t(KillingOff) < KillingSize)
       return OW_MaybePartial;
   }
   // If start of the killing access is "before" end of the dead access then
   // accesses overlap.
-  else if ((uint64_t)(KillingOff - DeadOff) < DeadSize) {
+  else if (uint64_t(KillingOff) - uint64_t(DeadOff) < DeadSize) {
     return OW_MaybePartial;
   }
 
