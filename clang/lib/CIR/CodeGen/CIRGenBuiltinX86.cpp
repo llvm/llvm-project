@@ -2426,8 +2426,9 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_reduce_fadd_ph256:
   case X86::BI__builtin_ia32_reduce_fadd_ph128: {
     CIRGenFPOptionsRAII FPOptsRAII(*this, expr);
-    cir::FastMathFlagsAttr fastMath =
-        getFastMathFlagsAttr(cir::FastMathFlags::reassoc);
+    cir::FastMathFlags fastMathFlags = getCurrentFastMathFlags();
+    fastMathFlags |= cir::FastMathFlags::reassoc;
+    cir::FastMathFlagsAttr fastMath = getFastMathFlagsAttr(fastMathFlags);
     return cir::VecReduceFAddOp::create(builder, getLoc(expr->getExprLoc()),
                                         ops[0], ops[1], fastMath)
         .getResult();
@@ -2438,8 +2439,9 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_reduce_fmul_ph256:
   case X86::BI__builtin_ia32_reduce_fmul_ph128: {
     CIRGenFPOptionsRAII FPOptsRAII(*this, expr);
-    cir::FastMathFlagsAttr fastMath =
-        getFastMathFlagsAttr(cir::FastMathFlags::reassoc);
+    cir::FastMathFlags fastMathFlags = getCurrentFastMathFlags();
+    fastMathFlags |= cir::FastMathFlags::reassoc;
+    cir::FastMathFlagsAttr fastMath = getFastMathFlagsAttr(fastMathFlags);
     return cir::VecReduceFMulOp::create(builder, getLoc(expr->getExprLoc()),
                                         ops[0], ops[1], fastMath)
         .getResult();
@@ -2450,8 +2452,9 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_reduce_fmax_ph256:
   case X86::BI__builtin_ia32_reduce_fmax_ph128: {
     CIRGenFPOptionsRAII FPOptsRAII(*this, expr);
-    cir::FastMathFlagsAttr fastMath =
-        getFastMathFlagsAttr(cir::FastMathFlags::nnan);
+    cir::FastMathFlags fastMathFlags = getCurrentFastMathFlags();
+    fastMathFlags |= cir::FastMathFlags::nnan;
+    cir::FastMathFlagsAttr fastMath = getFastMathFlagsAttr(fastMathFlags);
     return cir::VecReduceFMaxOp::create(builder, getLoc(expr->getExprLoc()),
                                         ops[0], fastMath)
         .getResult();
@@ -2462,8 +2465,9 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_reduce_fmin_ph256:
   case X86::BI__builtin_ia32_reduce_fmin_ph128: {
     CIRGenFPOptionsRAII FPOptsRAII(*this, expr);
-    cir::FastMathFlagsAttr fastMath =
-        getFastMathFlagsAttr(cir::FastMathFlags::nnan);
+    cir::FastMathFlags fastMathFlags = getCurrentFastMathFlags();
+    fastMathFlags |= cir::FastMathFlags::nnan;
+    cir::FastMathFlagsAttr fastMath = getFastMathFlagsAttr(fastMathFlags);
     return cir::VecReduceFMinOp::create(builder, getLoc(expr->getExprLoc()),
                                         ops[0], fastMath)
         .getResult();

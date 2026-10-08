@@ -2230,7 +2230,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     }
 
     assert(type->isFloatingType() && "must have a float here");
-    cir::FastMathFlagsAttr fastMath = getFastMathFlagsAttr();
+    cir::FastMathFlagsAttr fastMath =
+        getFastMathFlagsAttr(getCurrentFastMathFlags());
     if (isMax)
       return RValue::get(
           cir::VecReduceFMaxOp::create(builder, loc, input, fastMath)
@@ -2278,8 +2279,10 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                                                   /*Negative=*/true)));
     }
 
-    cir::FastMathFlagsAttr fastMath = getFastMathFlagsAttr(
-        isAssociative ? cir::FastMathFlags::reassoc : cir::FastMathFlags::none);
+    cir::FastMathFlags fastMathFlags = getCurrentFastMathFlags();
+    if (isAssociative)
+      fastMathFlags |= cir::FastMathFlags::reassoc;
+    cir::FastMathFlagsAttr fastMath = getFastMathFlagsAttr(fastMathFlags);
 
     auto reduction = cir::VecReduceFAddOp::create(builder, loc, startValue,
                                                   vector, fastMath);

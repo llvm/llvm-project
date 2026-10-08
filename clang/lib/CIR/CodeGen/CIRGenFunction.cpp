@@ -1471,9 +1471,8 @@ CIRGenFunction::CIRGenFPOptionsRAII::~CIRGenFPOptionsRAII() {
   cgf.builder.setDefaultConstrainedRounding(oldRounding);
 }
 
-cir::FastMathFlagsAttr
-CIRGenFunction::getFastMathFlagsAttr(cir::FastMathFlags additionalFlags) {
-  cir::FastMathFlags flags = additionalFlags;
+cir::FastMathFlags CIRGenFunction::getCurrentFastMathFlags() const {
+  cir::FastMathFlags flags = cir::FastMathFlags::none;
   if (curFPFeatures.getAllowFPReassociate())
     flags |= cir::FastMathFlags::reassoc;
   if (curFPFeatures.getNoHonorNaNs())
@@ -1489,9 +1488,14 @@ CIRGenFunction::getFastMathFlagsAttr(cir::FastMathFlags additionalFlags) {
   if (curFPFeatures.allowFPContractAcrossStatement())
     flags |= cir::FastMathFlags::contract;
 
-  if (flags == cir::FastMathFlags::none)
+  return flags;
+}
+
+cir::FastMathFlagsAttr
+CIRGenFunction::getFastMathFlagsAttr(cir::FastMathFlags fastMathFlags) {
+  if (fastMathFlags == cir::FastMathFlags::none)
     return {};
-  return cir::FastMathFlagsAttr::get(&getMLIRContext(), flags);
+  return cir::FastMathFlagsAttr::get(&getMLIRContext(), fastMathFlags);
 }
 
 // TODO(cir): should be shared with LLVM codegen.

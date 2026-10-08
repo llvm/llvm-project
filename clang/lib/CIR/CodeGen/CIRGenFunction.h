@@ -342,10 +342,11 @@ public:
   };
   clang::FPOptions curFPFeatures;
 
-  /// Convert the active Clang floating-point options to CIR fast-math flags,
-  /// including any flags required by the operation itself.
-  cir::FastMathFlagsAttr getFastMathFlagsAttr(
-      cir::FastMathFlags additionalFlags = cir::FastMathFlags::none);
+  /// Convert the active Clang floating-point options to CIR fast-math flags.
+  cir::FastMathFlags getCurrentFastMathFlags() const;
+
+  /// Create a CIR fast-math attribute from the specified flags.
+  cir::FastMathFlagsAttr getFastMathFlagsAttr(cir::FastMathFlags fastMathFlags);
 
   /// The symbol table maps a variable name to a value in the current scope.
   /// Entering a function creates a new scope, and the function arguments are
