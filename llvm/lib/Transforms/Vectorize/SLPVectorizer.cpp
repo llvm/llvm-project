@@ -352,7 +352,7 @@ static cl::opt<unsigned> SLPVecLoopRTChecksCostPercent(
 /// once per loop entry. The skip only applies in front of a loop marked as
 /// vectorized. 0 disables the skip.
 static cl::opt<unsigned> SLPMaxRuntimeCheckReductionLeaves(
-    "slp-max-runtime-check-reduction-leaves", cl::init(32), cl::Hidden,
+    "slp-max-runtime-check-reduction-leaves", cl::init(64), cl::Hidden,
     cl::desc("Skip `or i1` reductions in a loop guard block with more than "
              "this number of pointer range check leaves (0 = never skip)."));
 
