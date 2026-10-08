@@ -12,6 +12,7 @@
 #include "ProfiledBinary.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
@@ -245,6 +246,8 @@ struct UnwindState {
       return It->second.get();
     }
     void recordRangeCount(uint64_t Start, uint64_t End, uint64_t Count) {
+      if (Start > End)
+        return;
       RangeSamples.emplace_back(std::make_tuple(Start, End, Count));
     }
     void recordBranchCount(uint64_t Source, uint64_t Target, uint64_t Count) {
@@ -387,7 +390,8 @@ struct SampleCounter {
   DataAccessSample DataAccessCounter;
 
   void recordRangeCount(uint64_t Start, uint64_t End, uint64_t Repeat) {
-    assert(Start <= End && "Invalid instruction range");
+    if (Start > End)
+      return;
     RangeCounter[{Start, End}] += Repeat;
   }
   void recordBranchCount(uint64_t Source, uint64_t Target, uint64_t Repeat) {
@@ -735,17 +739,23 @@ private:
 
 class ETMReader {
 public:
-  ETMReader(ProfiledBinary *Binary, StringRef TraceFile, uint8_t TraceID)
-      : Binary(Binary), TraceFile(TraceFile), TraceID(TraceID) {}
+  ETMReader(ProfiledBinary *Binary, StringRef TraceFile, uint8_t ETMTraceID,
+            uint8_t ITMTraceID)
+      : Binary(Binary), TraceFile(TraceFile), ETMTraceID(ETMTraceID),
+        ITMTraceID(ITMTraceID) {}
   void parseETMTraces();
-  void recordProcessedRange(uint64_t Start, uint64_t End, uint64_t Count);
+  void recordInstructionRange(uint64_t Start, uint64_t End, uint64_t Count);
+  void recordDataAddress(uint64_t Address, uint64_t Count);
   const ContextSampleCounterMap &getSampleCounters() const { return Counters; }
+  std::unique_ptr<memprof::DataAccessProfData> takeDataAccessProfData();
 
 private:
   ProfiledBinary *Binary = nullptr;
   StringRef TraceFile;
-  uint8_t TraceID;
+  uint8_t ETMTraceID;
+  uint8_t ITMTraceID;
   ContextSampleCounterMap Counters;
+  MapVector<uint64_t, uint64_t> DataAddressCounts;
 };
 
 } // end namespace sampleprof
