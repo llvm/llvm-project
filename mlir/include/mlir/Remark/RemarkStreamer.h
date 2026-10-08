@@ -22,8 +22,12 @@ namespace mlir::remark::detail {
 /// (YAML or Bitstream). Lives outside core.
 class LLVMRemarkStreamer final : public MLIRRemarkStreamerBase {
 public:
+  /// Open \p path and create the serializer for \p fmt. Write the error
+  /// message to \p errorMessage if errors occur and \p errorMessage is not
+  /// nullptr.
   static FailureOr<std::unique_ptr<MLIRRemarkStreamerBase>>
-  createToFile(llvm::StringRef path, llvm::remarks::Format fmt);
+  createToFile(llvm::StringRef path, llvm::remarks::Format fmt,
+               std::string *errorMessage = nullptr);
 
   void streamOptimizationRemark(const Remark &remark) override;
   void finalize() override;
@@ -42,7 +46,8 @@ namespace mlir::remark {
 /// Enable optimization remarks to a file with the given path and format.
 /// The remark categories are used to filter the remarks that are emitted.
 /// If the printAsEmitRemarks flag is set, remarks will also be printed using
-/// mlir::emitRemarks.
+/// mlir::emitRemarks. If the file cannot be opened or the serializer cannot be
+/// created, an error is emitted on the context.
 LogicalResult enableOptimizationRemarksWithLLVMStreamer(
     MLIRContext &ctx, StringRef filePath, llvm::remarks::Format fmt,
     std::unique_ptr<detail::RemarkEmittingPolicyBase> remarkEmittingPolicy,
