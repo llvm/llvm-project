@@ -181,9 +181,9 @@ SmallVector<Value *> BinOpSameOpcodeHelper::InterchangeableInfo::getOperand(
       break;
     case Instruction::LShr:
       if (ToOpcode == Instruction::UDiv) {
-        RHS = ConstantInt::get(
-                               RHSType, APInt::getOneBitSet(FromCIValueBitWidth,
-                                                            FromCIValue.getZExtValue()));
+        RHS = ConstantInt::get(RHSType,
+                               APInt::getOneBitSet(FromCIValueBitWidth,
+                                                   FromCIValue.getZExtValue()));
       } else {
         assert(FromCIValue.isZero() && "Cannot convert the instruction.");
         RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
@@ -205,7 +205,7 @@ SmallVector<Value *> BinOpSameOpcodeHelper::InterchangeableInfo::getOperand(
       assert(FromCIValue.isPowerOf2() && "Cannot convert the instruction.");
       if (ToOpcode == Instruction::LShr) {
         RHS = ConstantInt::get(
-                               RHSType, APInt(FromCIValueBitWidth, FromCIValue.logBase2()));
+            RHSType, APInt(FromCIValueBitWidth, FromCIValue.logBase2()));
       } else {
         assert(FromCIValue.isOne() && "Cannot convert the instruction.");
         RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
@@ -265,8 +265,8 @@ bool BinOpSameOpcodeHelper::add(const Instruction *I) {
          "BinOpSameOpcodeHelper only accepts BinaryOperator.");
   unsigned Opcode = I->getOpcode();
   MaskType OpcodeInMaskForm;
-  // Prefer Shl, AShr, Mul, Add, Sub, And, Or, Xor, FAdd, FSub, LShr, and UDiv over
-  // MainOp.
+  // Prefer Shl, AShr, Mul, Add, Sub, And, Or, Xor, FAdd, FSub, LShr, and UDiv
+  // over MainOp.
   switch (Opcode) {
   case Instruction::Shl:
     OpcodeInMaskForm = ShlBIT;

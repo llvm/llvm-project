@@ -54,10 +54,9 @@ class BinOpSameOpcodeHelper {
   using MaskType = std::uint_fast32_t;
   /// Sort SupportedOp because it is used by binary_search.
   constexpr static unsigned SupportedOp[] = {
-      Instruction::Add, Instruction::FAdd, Instruction::Sub, Instruction::FSub,
-      Instruction::Mul, Instruction::UDiv,
-      Instruction::Shl, Instruction::LShr, Instruction::AShr, Instruction::And,
-      Instruction::Or, Instruction::Xor};
+      Instruction::Add,  Instruction::FAdd, Instruction::Sub, Instruction::FSub,
+      Instruction::Mul,  Instruction::UDiv, Instruction::Shl, Instruction::LShr,
+      Instruction::AShr, Instruction::And,  Instruction::Or,  Instruction::Xor};
   static_assert(llvm::is_sorted_constexpr(SupportedOp) &&
                 "SupportedOp is not sorted.");
   enum : MaskType {
@@ -88,7 +87,8 @@ class BinOpSameOpcodeHelper {
     const Instruction *I = nullptr;
     /// The bit it sets represents whether MainOp can be converted to.
     MaskType Mask = MainOpBIT | XorBIT | OrBIT | AndBIT | SubBIT | AddBIT |
-                    MulBIT | AShrBIT | ShlBIT | FSubBIT | FAddBIT | LShrBIT | UDivBIT;
+                    MulBIT | AShrBIT | ShlBIT | FSubBIT | FAddBIT | LShrBIT |
+                    UDivBIT;
     /// We cannot create an interchangeable instruction that does not exist in
     /// VL. For example, VL [x + 0, y * 1] can be converted to [x << 0, y << 0],
     /// but << does not exist in VL. In the end, we convert VL to [x * 1, y *
