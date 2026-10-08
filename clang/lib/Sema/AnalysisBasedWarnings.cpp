@@ -2590,18 +2590,26 @@ public:
     SourceLocation Loc;
     SourceRange Range;
     unsigned MsgParam = 0;
+    std::string ContainerName = "container";
 
-    const auto *CtorExpr = cast<CXXConstructExpr>(Operation);
-    Loc = CtorExpr->getLocation();
-    Range = CtorExpr->getSourceRange();
-
-    std::string ContainerName = "std::span";
-    if (auto *TD = CtorExpr->getConstructor()->getParent()) {
-      // This will provide "std::span" if it's in the std namespace
-      ContainerName = TD->getQualifiedNameAsString();
+    if (const auto *CtorExpr = dyn_cast<CXXConstructExpr>(Operation)) {
+      Loc = CtorExpr->getLocation();
+      Range = CtorExpr->getSourceRange();
+      if (auto *TD = CtorExpr->getConstructor()->getParent()) {
+        ContainerName = TD->getQualifiedNameAsString();
+      }
+    } else if (const auto *Call = dyn_cast<CallExpr>(Operation)) {
+      Loc = Call->getExprLoc();
+      Range = Call->getSourceRange();
+      if (const auto *FD = Call->getDirectCallee()) {
+        ContainerName = FD->getQualifiedNameAsString();
+      }
+    } else {
+      Loc = Operation->getBeginLoc();
+      Range = Operation->getSourceRange();
     }
 
-    // FIX: Pass the container name to fill the %0 parameter
+    // Pass the container name to fill the %0 parameter
     S.Diag(Loc, diag::warn_unsafe_buffer_usage_in_container) << ContainerName;
 
     if (IsRelatedToDecl) {
@@ -2802,9 +2810,7 @@ sema::AnalysisBasedWarnings::getPolicyInEffectAt(SourceLocation Loc) {
   unsigned SysIdx = 0;
   if (Cacheable) {
     StateKey = D.getDiagStateKeyForLoc(Loc);
-    const SourceManager &SM = D.getSourceManager();
-    SysIdx = (SM.isInSystemHeader(SM.getExpansionLoc(Loc)) ? 2u : 0u) |
-             (SM.isInSystemMacro(Loc) ? 1u : 0u);
+    SysIdx = static_cast<unsigned>(D.getDiagStateSystemClassForLoc(Loc));
     auto It = PolicyCache[SysIdx].find(StateKey);
     if (It != PolicyCache[SysIdx].end()) {
       Policy P = It->second;

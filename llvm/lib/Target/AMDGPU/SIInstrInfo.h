@@ -30,7 +30,6 @@ namespace llvm {
 
 class APInt;
 class GCNSubtarget;
-class LiveVariables;
 class MachineDominatorTree;
 class MachineRegisterInfo;
 class RegScavenger;
@@ -299,8 +298,7 @@ public:
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &LdSt,
       SmallVectorImpl<const MachineOperand *> &BaseOps, int64_t &Offset,
-      bool &OffsetIsScalable, LocationSize &Width,
-      const TargetRegisterInfo *TRI) const final;
+      bool &OffsetIsScalable, LocationSize &Width) const final;
 
   bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
                            int64_t Offset1, bool OffsetIsScalable1,
@@ -486,7 +484,7 @@ public:
 
   unsigned getMachineCSELookAheadLimit() const override { return 500; }
 
-  MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
+  MachineInstr *convertToThreeAddress(MachineInstr &MI,
                                       LiveIntervals *LIS) const override;
 
   bool isSchedulingBoundary(const MachineInstr &MI,
@@ -1061,10 +1059,6 @@ public:
     return SIInstrFlags::isVINTERP(get(Opcode));
   }
 
-  static bool isScalarUnit(const MachineInstr &MI) {
-    return SIInstrFlags::isSALU(MI) || SIInstrFlags::isSMRD(MI);
-  }
-
   static bool usesVM_CNT(const MachineInstr &MI) {
     return SIInstrFlags::usesVM_CNT(MI);
   }
@@ -1541,13 +1535,6 @@ public:
   bool isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
                       const MachineOperand *MO = nullptr) const;
 
-  /// Check if \p MO would be a valid operand for the given operand
-  /// definition \p OpInfo. Note this does not attempt to validate constant bus
-  /// restrictions (e.g. literal constant usage).
-  bool isLegalVSrcOperand(const MachineRegisterInfo &MRI,
-                          const MCOperandInfo &OpInfo,
-                          const MachineOperand &MO) const;
-
   /// Check if \p MO (a register operand) is a legal register for the
   /// given operand description or operand index.
   /// The operand index version provide more legality checks
@@ -1707,8 +1694,6 @@ public:
 
   InstSizeVerifyMode
   getInstSizeVerifyMode(const MachineInstr &MI) const override;
-
-  bool mayAccessFlatAddressSpace(const MachineInstr &MI) const;
 
   std::pair<unsigned, unsigned>
   decomposeMachineOperandsTargetFlags(unsigned TF) const override;

@@ -41,9 +41,10 @@ using namespace clang::interp;
 // On MSVC, musttail does not guarantee tail calls in debug mode.
 // We disable it on MSVC generally since it doesn't seem to be able
 // to handle the way we use tailcalls.
-// PPC can't tail-call external calls, which is a problem for InterpNext.
+// MIPS and PPC can't tail-call external calls, which is a problem for
+// InterpNext.
 #if defined(_MSC_VER) || defined(__powerpc__) || !defined(MUSTTAIL) ||         \
-    defined(__i386__) || defined(__sparc__)
+    defined(__i386__) || defined(__sparc__) || defined(__mips__)
 #undef MUSTTAIL
 #define MUSTTAIL
 #define USE_TAILCALLS 0
@@ -1385,20 +1386,8 @@ bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC,
   return false;
 }
 
-bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Expr *Source,
-                       const Pointer &Ptr) {
-  if (!Ptr.isBlockPointer() && !Ptr.isOpaquePointer())
-    return false;
-  // Regular new type(...) call.
-  if (isa_and_nonnull<CXXNewExpr>(Source))
-    return true;
-  // operator new.
-  if (const auto *CE = dyn_cast_if_present<CallExpr>(Source);
-      CE && CE->getBuiltinCallee() == Builtin::BI__builtin_operator_new)
-    return true;
-  // std::allocator.allocate() call
-  if (const auto *MCE = dyn_cast_if_present<CXXMemberCallExpr>(Source);
-      MCE && MCE->getMethodDecl()->getIdentifier()->isStr("allocate"))
+bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (Ptr.isBlockPointer() && Ptr.block()->isDynamic())
     return true;
 
   // Whatever this is, we didn't heap allocate it.
@@ -1564,7 +1553,7 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
       return true;
 
     if (!Ptr.isBlockPointer())
-      return CheckDeleteSource(S, OpPC, nullptr, Ptr);
+      return CheckDeleteSource(S, OpPC, Ptr);
 
     // Remove base casts.
     QualType InitialType = Ptr.getType();
@@ -1603,7 +1592,7 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
       return false;
     }
 
-    if (!CheckDeleteSource(S, OpPC, Source, Ptr))
+    if (!CheckDeleteSource(S, OpPC, Ptr))
       return false;
 
     // For a class type with a virtual destructor, the selected operator delete
@@ -3820,7 +3809,7 @@ bool TrivialCopy(InterpState &S, CodePtr OpPC, bool Activate,
          Op == OP_RetSint64 || Op == OP_RetUint64 || Op == OP_RetIntAP ||
          Op == OP_RetIntAPS || Op == OP_RetBool || Op == OP_RetFixedPoint ||
          Op == OP_RetPtr || Op == OP_RetMemberPtr || Op == OP_RetFloat ||
-         Op == OP_EndSpeculation;
+         Op == OP_RetReflect || Op == OP_EndSpeculation;
 }
 
 #if USE_TAILCALLS

@@ -22,7 +22,6 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/LiveIntervals.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -1908,11 +1907,21 @@ int RISCVInstrInfo::getJumpTableIndex(const MachineInstr &MI) const {
   case RISCV::LW:
   case RISCV::LWU:
   case RISCV::LD:
-    // TODO: Zilx
     if (!isJumpTableLoad(*Def))
       return -1;
 
     JTI = getJumpTableIndexFromLoadAddr(MRI, Def->getOperand(1).getReg());
+    if (JTI >= 0)
+      return JTI;
+    break;
+  case RISCV::LXSW:
+  case RISCV::LXWU:
+  case RISCV::LXSD:
+  case RISCV::QC_LRW:
+    if (!isJumpTableLoad(*Def))
+      return -1;
+
+    JTI = getJumpTableIndexFromBase(MRI, Def->getOperand(1).getReg());
     if (JTI >= 0)
       return JTI;
     break;
@@ -3552,8 +3561,7 @@ bool RISCVInstrInfo::isLdStSafeToPair(const MachineInstr &LdSt,
 
 bool RISCVInstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
-    const TargetRegisterInfo *TRI) const {
+    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width) const {
   if (!LdSt.mayLoadOrStore())
     return false;
 
@@ -3588,7 +3596,7 @@ bool RISCVInstrInfo::getMemOperandsWithOffsetWidth(
   }
   const MachineOperand *BaseOp;
   OffsetIsScalable = false;
-  if (!getMemOperandWithOffsetWidth(LdSt, BaseOp, Offset, Width, TRI))
+  if (!getMemOperandWithOffsetWidth(LdSt, BaseOp, Offset, Width))
     return false;
   BaseOps.push_back(BaseOp);
   return true;
@@ -3663,7 +3671,7 @@ bool RISCVInstrInfo::shouldClusterMemOps(
 // function) and set it as appropriate.
 bool RISCVInstrInfo::getMemOperandWithOffsetWidth(
     const MachineInstr &LdSt, const MachineOperand *&BaseReg, int64_t &Offset,
-    LocationSize &Width, const TargetRegisterInfo *TRI) const {
+    LocationSize &Width) const {
   if (!LdSt.mayLoadOrStore())
     return false;
 
@@ -3699,13 +3707,12 @@ bool RISCVInstrInfo::areMemAccessesTriviallyDisjoint(
   // base registers are identical, and the offset of a lower memory access +
   // the width doesn't overlap the offset of a higher memory access,
   // then the memory accesses are different.
-  const TargetRegisterInfo *TRI = STI.getRegisterInfo();
   const MachineOperand *BaseOpA = nullptr, *BaseOpB = nullptr;
   int64_t OffsetA = 0, OffsetB = 0;
   LocationSize WidthA = LocationSize::precise(0),
                WidthB = LocationSize::precise(0);
-  if (getMemOperandWithOffsetWidth(MIa, BaseOpA, OffsetA, WidthA, TRI) &&
-      getMemOperandWithOffsetWidth(MIb, BaseOpB, OffsetB, WidthB, TRI)) {
+  if (getMemOperandWithOffsetWidth(MIa, BaseOpA, OffsetA, WidthA) &&
+      getMemOperandWithOffsetWidth(MIb, BaseOpB, OffsetB, WidthB)) {
     if (BaseOpA->isIdenticalTo(*BaseOpB)) {
       int LowOffset = std::min(OffsetA, OffsetB);
       int HighOffset = std::max(OffsetA, OffsetB);
@@ -4135,12 +4142,12 @@ std::optional<RegImmPair> RISCVInstrInfo::isAddImmediate(const MachineInstr &MI,
 }
 
 // MIR printer helper function to annotate Operands with a comment.
-std::string RISCVInstrInfo::createMIROperandComment(
-    const MachineInstr &MI, const MachineOperand &Op, unsigned OpIdx,
-    const TargetRegisterInfo *TRI) const {
+std::string RISCVInstrInfo::createMIROperandComment(const MachineInstr &MI,
+                                                    const MachineOperand &Op,
+                                                    unsigned OpIdx) const {
   // Print a generic comment for this operand if there is one.
   std::string GenericComment =
-      TargetInstrInfo::createMIROperandComment(MI, Op, OpIdx, TRI);
+      TargetInstrInfo::createMIROperandComment(MI, Op, OpIdx);
   if (!GenericComment.empty())
     return GenericComment;
 
@@ -5016,7 +5023,6 @@ bool RISCVInstrInfo::simplifyInstruction(MachineInstr &MI) const {
 // clang-format on
 
 MachineInstr *RISCVInstrInfo::convertToThreeAddress(MachineInstr &MI,
-                                                    LiveVariables *LV,
                                                     LiveIntervals *LIS) const {
   MachineInstrBuilder MIB;
   switch (MI.getOpcode()) {
@@ -5093,15 +5099,6 @@ MachineInstr *RISCVInstrInfo::convertToThreeAddress(MachineInstr &MI,
   }
   }
   MIB.copyImplicitOps(MI);
-
-  if (LV) {
-    unsigned NumOps = MI.getNumOperands();
-    for (unsigned I = 1; I < NumOps; ++I) {
-      MachineOperand &Op = MI.getOperand(I);
-      if (Op.isReg() && Op.isKill())
-        LV->replaceKillInstruction(Op.getReg(), MI, *MIB);
-    }
-  }
 
   if (LIS) {
     SlotIndex Idx = LIS->ReplaceMachineInstrInMaps(MI, *MIB);

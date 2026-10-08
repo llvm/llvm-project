@@ -33,6 +33,9 @@ class Expr;
 class CallExpr;
 class CXXRecordDecl;
 class FunctionDecl;
+
+CharUnits GetAlignOfDynamicAlloc(const ASTContext &Ctx, QualType AllocType,
+                                 DynAllocKind AllocKind);
 } // namespace clang
 using namespace clang;
 /// Values returned by __builtin_classify_type, chosen to match the values

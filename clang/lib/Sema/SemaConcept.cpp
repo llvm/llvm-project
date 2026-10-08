@@ -405,6 +405,15 @@ public:
     return inherited::TraverseType(TT->desugar());
   }
 
+  bool TraversePackIndexingType(PackIndexingType *T, bool TraverseQualifier) {
+    {
+      Sema::ArgPackSubstIndexRAII _(SemaRef, std::nullopt);
+      if (!TraverseType(T->getPattern()))
+        return false;
+    }
+    return TraverseStmt(T->getIndexExpr());
+  }
+
   bool TraverseDecl(Decl *D) {
     if (auto *VD = dyn_cast<ValueDecl>(D)) {
       if (auto *Var = dyn_cast<VarDecl>(VD))

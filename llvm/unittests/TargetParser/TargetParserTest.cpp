@@ -1160,6 +1160,8 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("c1-premium", "armv9.3-a"),
                       AArch64CPUTestParams("c1-pro", "armv9.3-a"),
                       AArch64CPUTestParams("c1-ultra", "armv9.3-a"),
+                      AArch64CPUTestParams("c2-pro", "armv9.3-a"),
+                      AArch64CPUTestParams("c2-ultra", "armv9.3-a"),
                       AArch64CPUTestParams("cyclone", "armv8-a"),
                       AArch64CPUTestParams("apple-a7", "armv8-a"),
                       AArch64CPUTestParams("apple-a8", "armv8-a"),
@@ -1294,6 +1296,7 @@ TEST_P(AArch64CPUAliasTestFixture, testCPUAlias) {
 INSTANTIATE_TEST_SUITE_P(
     AArch64CPUAliasTests, AArch64CPUAliasTestFixture,
     ::testing::Values(AArch64CPUAliasTestParams({"neoverse-n2", "cobalt-100"}),
+                      AArch64CPUAliasTestParams({"c1-pro", "c2-pro"}),
                       AArch64CPUAliasTestParams({"apple-a7", "cyclone",
                                                  "apple-a8", "apple-a9"}),
                       AArch64CPUAliasTestParams({"apple-a12", "apple-s4",
@@ -1309,7 +1312,7 @@ INSTANTIATE_TEST_SUITE_P(
     AArch64CPUAliasTestParams::PrintToStringParamName);
 
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 101;
+static constexpr unsigned NumAArch64CPUArchs = 103;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
@@ -2826,6 +2829,8 @@ TEST(TargetParserTest, testAMDGPUfillAMDGPUFeatureMap) {
 
   // A capability feature is queried through the bitset only.
   EXPECT_FALSE(HasFeature("gfx1030", "half-addressable-physical-local-memory"));
+  EXPECT_FALSE(HasFeature("gfx906", "sramecc-on-off-modes"));
+  EXPECT_FALSE(HasFeature("gfx1250", "sramecc-on-off-modes"));
 
   // LDS allocation granularity is queried through the bitset only.
   EXPECT_FALSE(HasFeature("gfx600", "lds-alloc-granularity-256"));
@@ -3634,6 +3639,62 @@ TEST(TargetParserTest, testAMDGPUParseTargetIDString) {
   // A non-AMDGCN triple has no target-id features.
   EXPECT_FALSE(
       TargetID::parse(Triple("r600-unknown-unknown"), "cypress").has_value());
+}
+
+TEST(TargetParserTest, testAMDGPUSramEccOnOffModes) {
+  using namespace AMDGPU;
+
+  // Existing SRAMECC targets retain their selectable modes, including generic
+  // targets and gfx12.5, where XNACK is hardwired on.
+  for (StringRef GPU :
+       {"gfx906", "gfx908", "gfx90a", "gfx942", "gfx950", "gfx9-4-generic",
+        "gfx1250-strict", "gfx1250", "gfx1251", "gfx12-5-generic"}) {
+    SCOPED_TRACE(GPU);
+    GPUKind Kind = parseArchAMDGCN(GPU);
+    const AMDGPUFeatureBitset &Features = getFeatureBitset(Kind);
+    EXPECT_TRUE(Features.test(FEAT_SRAMECC_SUPPORT));
+    EXPECT_TRUE(Features.test(FEAT_SRAMECC_ON_OFF_MODES));
+
+    // The processor is resolved from the triple subarch.
+    StringRef SubArch = getSubArchName(getSubArch(Kind));
+    Triple TT(SubArch, "amd", "amdhsa");
+    auto Default = TargetID::parse(TT, "");
+    ASSERT_TRUE(Default);
+    EXPECT_EQ(Default->getGPUKind(), Kind);
+    EXPECT_EQ(Default->getSramEccSetting(), TargetIDSetting::Any);
+    EXPECT_EQ(Default->getCanonicalFeatureString(), GPU);
+
+    for (bool Enabled : {false, true}) {
+      StringRef Mode = Enabled ? ":sramecc+" : ":sramecc-";
+      std::string ID = (GPU + Mode).str();
+      TargetIDSetting Setting =
+          Enabled ? TargetIDSetting::On : TargetIDSetting::Off;
+      auto Explicit = TargetID::parse(TT, Mode);
+      ASSERT_TRUE(Explicit);
+      EXPECT_EQ(Explicit->getSramEccSetting(), Setting);
+      EXPECT_EQ(Explicit->getCanonicalFeatureString(), ID);
+      EXPECT_EQ(Explicit->toString(),
+                (SubArch + "-amd-amdhsa-unknown-" + ID).str());
+      EXPECT_EQ(TargetID::createFromSubtargetFeatures(
+                    TT, GPU, Enabled ? "+sramecc" : "-sramecc"),
+                *Explicit);
+    }
+  }
+
+  for (StringRef GPU : {"gfx600", "gfx900", "gfx1100", "gfx1200"}) {
+    SCOPED_TRACE(GPU);
+    GPUKind Kind = parseArchAMDGCN(GPU);
+    EXPECT_FALSE(getFeatureBitset(Kind).test(FEAT_SRAMECC_ON_OFF_MODES));
+
+    Triple TT(getSubArchName(getSubArch(Kind)), "amd", "amdhsa");
+    EXPECT_EQ(TargetID(TT, "").getSramEccSetting(),
+              TargetIDSetting::Unsupported);
+    EXPECT_FALSE(TargetID::parse(TT, ":sramecc+"));
+    EXPECT_FALSE(TargetID::parse(TT, ":sramecc-"));
+    EXPECT_EQ(TargetID::createFromSubtargetFeatures(TT, GPU, "+sramecc")
+                  .getSramEccSetting(),
+              TargetIDSetting::Unsupported);
+  }
 }
 
 TEST(TargetParserTest, testAMDGPUTargetIDProvidesFor) {
