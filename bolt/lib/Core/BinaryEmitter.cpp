@@ -1092,9 +1092,22 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
     switch (TTypeEncoding & 0x70) {
     default:
       llvm_unreachable("unsupported TTypeEncoding");
-    case dwarf::DW_EH_PE_absptr:
+    case dwarf::DW_EH_PE_absptr: {
+      // Label entries backed by a dynamic relocation so it can be re-created
+      // once the output address is known. Temporary labels are not retained by
+      // the linker, so the symbol has to be named.
+      auto &DynRelocs = BF.getLSDATypeTableDynRelocs();
+      auto DynRelocIt = DynRelocs.find(Index);
+      if (DynRelocIt != DynRelocs.end()) {
+        MCSymbol *SlotLabel = BC.Ctx->getOrCreateSymbol(
+            "__bolt_lsda_tt_entry@" + BF.getOneName() + "/" +
+            Twine(FF.getFragmentNum().get()) + "/" + Twine(Index));
+        Streamer.emitLabel(SlotLabel);
+        DynRelocIt->second.OutputLabels.push_back(SlotLabel);
+      }
       Streamer.emitIntValue(TypeAddress, TTypeEncodingSize);
       break;
+    }
     case dwarf::DW_EH_PE_pcrel: {
       if (TypeAddress) {
         const MCSymbol *TypeSymbol =
