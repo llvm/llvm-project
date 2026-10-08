@@ -1,0 +1,49 @@
+// RUN: cir-opt %s -cir-to-llvm -verify-diagnostics -split-input-file
+// RUN: not cir-opt %s -cir-to-llvm -split-input-file 2>/dev/null \
+// RUN:   | FileCheck %s --implicit-check-not=llvm.func
+
+// -cir-to-llvm relies on cir.triple module attributes: Check that missing or
+// malformed cir.triple attributes read by -cir-to-llvm do not cause asserts or
+// compiler crashes, and are diagnosed properly.
+
+
+// Missing cir.triple.
+
+!s32i = !cir.int<s, 32>
+// expected-warning @below {{module is missing cir.triple attribute}}
+// expected-error @below {{module is missing cir.triple attribute}}
+module {
+  cir.func @missing_triple(%p: !cir.ptr<!s32i>, %a: !s32i, %b: !s32i) {
+    // expected-error @below {{failed to legalize operation 'cir.cpuid'}}
+    cir.cpuid %p, %a, %b : !cir.ptr<!s32i>, !s32i, !s32i
+    cir.return
+  }
+}
+
+// -----
+
+// Non-string cir.triple.
+
+!s32i = !cir.int<s, 32>
+// expected-warning @below {{expected a string from module attribute cir.triple}}
+// expected-error @below {{expected a string from module attribute cir.triple}}
+module attributes {cir.triple = 42 : i32} {
+  cir.func @non_string_triple(%p: !cir.ptr<!s32i>, %a: !s32i, %b: !s32i) {
+    // expected-error @below {{failed to legalize operation 'cir.cpuid'}}
+    cir.cpuid %p, %a, %b : !cir.ptr<!s32i>, !s32i, !s32i
+    cir.return
+  }
+}
+
+// -----
+
+// Valid cir.triple.
+
+!s32i = !cir.int<s, 32>
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // CHECK-LABEL: llvm.func @valid_triple(
+  cir.func @valid_triple(%p: !cir.ptr<!s32i>, %a: !s32i, %b: !s32i) {
+    cir.cpuid %p, %a, %b : !cir.ptr<!s32i>, !s32i, !s32i
+    cir.return
+  }
+}

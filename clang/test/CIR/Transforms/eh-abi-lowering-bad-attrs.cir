@@ -1,0 +1,41 @@
+// RUN: cir-opt %s -cir-eh-abi-lowering -verify-diagnostics -split-input-file
+// RUN: cir-opt %s -cir-eh-abi-lowering -split-input-file 2>/dev/null | FileCheck %s
+
+// Check that missing or malformed cir.triple attributes required by
+// -cir-eh-abi-lowering do not cause asserts or compiler crashes, and are
+// diagnosed properly. The pass should warn and skip instead of failing, so
+// every module is still printed.
+
+
+// Missing cir.triple.
+
+// expected-warning @below {{module is missing cir.triple attribute}}
+module {
+  // CHECK-LABEL: cir.func @missing_triple(
+  cir.func @missing_triple() {
+    cir.return
+  }
+}
+
+// -----
+
+// Non-string cir.triple.
+
+// expected-warning @below {{expected a string from module attribute cir.triple}}
+module attributes {cir.triple = 42 : i32} {
+  // CHECK-LABEL: cir.func @non_string_triple(
+  cir.func @non_string_triple() {
+    cir.return
+  }
+}
+
+// -----
+
+// Valid cir.triple.
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // CHECK-LABEL: cir.func @valid_triple(
+  cir.func @valid_triple() {
+    cir.return
+  }
+}
