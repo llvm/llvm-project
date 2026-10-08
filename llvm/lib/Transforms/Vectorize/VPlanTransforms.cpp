@@ -5986,6 +5986,13 @@ void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {
       if (!vputils::onlyFirstLaneUsed(&VPI))
         continue;
 
+      // A single-scalar extractvalue cannot extract a lane from a struct of
+      // vectors produced by a widened call.
+      if (VPI.getOpcode() == Instruction::ExtractValue &&
+          isa_and_nonnull<VPWidenCallRecipe, VPWidenIntrinsicRecipe>(
+              VPI.getOperand(0)->getDefiningRecipe()))
+        continue;
+
       auto *Recipe = VPBuilder::createSingleScalarOp(
           VPI.getOpcode(), VPI.operandsWithoutMask(), /*Mask=*/nullptr, VPI,
           VPI, VPI.getDebugLoc(), VPI.getScalarType(), I);
@@ -6106,9 +6113,10 @@ static CallWideningDecision decideCallWidening(VPInstruction &VPI,
   return CallWideningDecision::KindTy::Scalarize;
 }
 
-void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
+bool VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
                                                 VPRecipeBuilder &RecipeBuilder,
                                                 VPCostContext &CostCtx) {
+  bool MayEnableScalarization = false;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksAs<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPInstruction &VPI :
@@ -6138,6 +6146,7 @@ void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
         break;
       }
       case CallWideningDecision::KindTy::VectorVariant: {
+        MayEnableScalarization = true;
         // Masked variants take the mask as a trailing parameter, so they have
         // one more parameter than the original call's arguments.
         if (Decision.Variant->arg_size() > Ops.size()) {
@@ -6159,6 +6168,7 @@ void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
       VPI.eraseFromParent();
     }
   }
+  return MayEnableScalarization;
 }
 
 void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,

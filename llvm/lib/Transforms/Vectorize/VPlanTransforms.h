@@ -648,7 +648,10 @@ struct VPlanTransforms {
 
   /// Convert call VPInstructions in \p Plan into widened call, vector
   /// intrinsic or replicate recipes based on a cost comparison via \p CostCtx.
-  static void makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
+  /// Returns true if a vector library variant was chosen, in which case the
+  /// call's operands may only use their first lane (uniform or linear
+  /// parameters) and makeScalarizationDecisions can be re-run.
+  static bool makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
                                         VPRecipeBuilder &RecipeBuilder,
                                         VPCostContext &CostCtx);
 

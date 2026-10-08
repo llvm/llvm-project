@@ -1048,7 +1048,7 @@ define void @byte_dependent_byte_geps(ptr noalias %p.out, ptr %p0, ptr %p1, i64 
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld0> = load ir<%gep.ld0>
 ; CHECK-NEXT:      EMIT ir<%gep.ld1> = getelementptr ir<%p1>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld1> = load ir<%gep.ld1>
-; CHECK-NEXT:      EMIT-SCALAR ir<%ld1.ext> = sext ir<%ld1> to i64
+; CHECK-NEXT:      EMIT ir<%ld1.ext> = sext ir<%ld1> to i64
 ; CHECK-NEXT:      EMIT ir<%val> = add ir<%ld0>, ir<%ld1.ext>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%val>, ir<%gep.st>
@@ -1124,7 +1124,7 @@ define void @byte_dependent_byte_geps_reverse_order(ptr noalias %p.out, ptr %p0,
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
 ; CHECK-NEXT:      EMIT ir<%gep.ld1> = getelementptr ir<%p1>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld1> = load ir<%gep.ld1>
-; CHECK-NEXT:      EMIT-SCALAR ir<%ld1.ext> = sext ir<%ld1> to i64
+; CHECK-NEXT:      EMIT ir<%ld1.ext> = sext ir<%ld1> to i64
 ; CHECK-NEXT:      EMIT ir<%gep.ld0> = getelementptr ir<%p0>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld0> = load ir<%gep.ld0>
 ; CHECK-NEXT:      EMIT ir<%val> = add ir<%ld0>, ir<%ld1.ext>
@@ -2316,7 +2316,7 @@ define void @sext_stride(ptr noalias %p.out, ptr %p, i32 %stride.i32) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT-SCALAR ir<%stride> = sext ir<%stride.i32> to i64
+; CHECK-NEXT:      EMIT ir<%stride> = sext ir<%stride.i32> to i64
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
@@ -2537,7 +2537,7 @@ define void @trunc_stride(ptr noalias %p.out, ptr %p, i64 %stride.i64) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT-SCALAR ir<%stride> = trunc ir<%stride.i64> to i32
+; CHECK-NEXT:      EMIT ir<%stride> = trunc ir<%stride.i64> to i32
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
@@ -2607,7 +2607,7 @@ define void @trunc_stride_extra_narrow_use(ptr noalias %p.out, ptr %p, i64 %stri
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT-SCALAR ir<%stride> = trunc ir<%stride.i64> to i32
+; CHECK-NEXT:      EMIT ir<%stride> = trunc ir<%stride.i64> to i32
 ; CHECK-NEXT:      EMIT ir<%stride.byte> = mul ir<%stride>, ir<4>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride.byte>
@@ -2688,8 +2688,8 @@ define void @trunc_ext_stride(ptr noalias %p.out, ptr %p0, ptr %p1, i32 %stride)
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
-; CHECK-NEXT:      EMIT-SCALAR ir<%iv.trunc> = trunc ir<%iv> to i16
-; CHECK-NEXT:      EMIT-SCALAR ir<%iv.ext> = sext ir<%iv> to i64
+; CHECK-NEXT:      EMIT ir<%iv.trunc> = trunc ir<%iv> to i16
+; CHECK-NEXT:      EMIT ir<%iv.ext> = sext ir<%iv> to i64
 ; CHECK-NEXT:      EMIT ir<%idx.trunc> = mul ir<%iv.trunc>, ir<%stride.trunc>
 ; CHECK-NEXT:      EMIT ir<%idx.ext> = mul ir<%iv.ext>, ir<%stride.ext>
 ; CHECK-NEXT:      EMIT ir<%gep.trunc> = getelementptr ir<%p0>, ir<%idx.trunc>
@@ -3386,14 +3386,14 @@ define void @stride_mv_predicated_btc(ptr noalias %p.out, ptr %p, i32 %M, i64 %s
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT-SCALAR ir<%iv.ext> = sext ir<%iv> to i64
+; CHECK-NEXT:      EMIT ir<%iv.ext> = sext ir<%iv> to i64
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv.ext>, ir<%stride>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv.ext>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
-; CHECK-NEXT:      EMIT-SCALAR ir<%iv.next.ext> = sext ir<%iv.next> to i32
+; CHECK-NEXT:      EMIT ir<%iv.next.ext> = sext ir<%iv.next> to i32
 ; CHECK-NEXT:      EMIT ir<%ec> = icmp sgt ir<%iv.next.ext>, ir<%M>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
