@@ -3451,6 +3451,20 @@ static EpilogueLowering getEpilogueTailLowering(
     return CM_EpilogueAllowed;
   }
 
+  // TODO: This is conservative: it rejects any target that prefers EVL, even
+  // for fixed-width epilogue VFs where EVL won't be chosen. Move this check to
+  // where the epilogue's TF style is known once epilogue TF is supported.
+  TailFoldingStyle TFStyle = TTI->getPreferredTailFoldingStyle();
+  if (ForceTailFoldingStyle.getNumOccurrences())
+    TFStyle = ForceTailFoldingStyle.getValue();
+  // TODO: Remove once EVL recipes support cloning.
+  if (TFStyle == TailFoldingStyle::DataWithEVL) {
+    reportVectorizationInfo("Epilogue tail-folding is not supported yet with "
+                            "EVL-based tail-folding",
+                            "UnsupportedEpilogueTailFoldingPolicy", ORE, L);
+    return CM_EpilogueAllowed;
+  }
+
   // We can apply tail-folding on the vectorized epilogue loop.
   return CM_EpilogueNotNeededFoldTail;
 }
