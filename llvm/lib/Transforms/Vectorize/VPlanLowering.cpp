@@ -272,14 +272,13 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR) {
   if (ID.getKind() == InductionDescriptor::IK_IntInduction) {
     AddOp = Instruction::Add;
     MulOp = Instruction::Mul;
-    // Reconstructed initial addition can preserve NUW from the scalar
-    // recurrence since unsigned addition is monotonic, but cannot preserve
-    // NSW as intermediate vector lane offsets (e.g., lane * step) may wrap
-    // signed bounds even if scalar additions do not. Reconstructed
-    // multiplications cannot preserve NSW or NUW from scalar additions.
+    // Reconstructed initial addition and multiplications can preserve NUW
+    // from the scalar recurrence since unsigned addition is monotonic, but
+    // cannot preserve NSW as intermediate vector lane offsets (e.g., lane *
+    // step) may wrap signed bounds even if scalar additions do not.
     AddFlags = VPIRFlags::WrapFlagsTy(Flags.getNoWrapFlagsOrNone().HasNUW,
                                       /*HasNSW=*/false);
-    MulFlags = {};
+    MulFlags = AddFlags;
   } else {
     AddOp = ID.getInductionOpcode();
     MulOp = Instruction::FMul;
