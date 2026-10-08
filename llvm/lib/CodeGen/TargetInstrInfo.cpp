@@ -2222,7 +2222,7 @@ bool TargetInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
     return false;
 
   if (Last != First && Last->isReturn()) {
-    --Last;
+    Last = prev_nodbg(Last, First, /*SkipPseudoOp=*/false);
     if (Last->getOpcode() == TargetOpcode::PATCHABLE_FUNCTION_EXIT ||
         Last->getOpcode() == TargetOpcode::PATCHABLE_TAIL_CALL)
       return false;
