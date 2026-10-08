@@ -1,6 +1,7 @@
 ; RUN: opt -S -passes=no-op-module -instnamer-after-each-pass %s | FileCheck %s
 
-; Name unnamed values in both functions. Local names may repeat between them.
+; A module pass callback must name values in every function, including the
+; second one. Local names may repeat between functions.
 define i32 @first(i32) {
 entry:
   %1 = add i32 %0, 1

@@ -24,5 +24,6 @@ entry:
 ; DIFF: *** IR Dump At Start ***
 ; DIFF: %i.0 = atomicrmw max ptr %ptr, i32 %value seq_cst
 ; DIFF: *** IR Dump After LowerAtomicPass on f ***
-; DIFF: %i.1 = load i32, ptr %ptr
-; DIFF: %i.2 = icmp sgt i32 %i.1, %value
+; DIFF: -  %i.0 = atomicrmw max ptr %ptr, i32 %value seq_cst
+; DIFF: +  %i.1 = load i32, ptr %ptr
+; DIFF: +  %i.2 = icmp sgt i32 %i.1, %value
