@@ -267,8 +267,7 @@ define amdgpu_cs void @atomic_load_i16x2_monotonic_agent(ptr addrspace(3) %p, pt
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    ds_read_b32 v0, v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX10-NEXT:    v_add_nc_u16 v0, v0, v2
+; GFX10-NEXT:    v_add_nc_u16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX10-NEXT:    ds_write_b16 v1, v0
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -309,8 +308,7 @@ define amdgpu_cs void @atomic_load_i16x2_seq_cst_agent(ptr addrspace(3) %p, ptr 
 ; GFX10-NEXT:    ds_read_b32 v0, v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    buffer_gl0_inv
-; GFX10-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX10-NEXT:    v_add_nc_u16 v0, v0, v2
+; GFX10-NEXT:    v_add_nc_u16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX10-NEXT:    ds_write_b16 v1, v0
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -352,8 +350,7 @@ define amdgpu_cs void @atomic_load_i16x2_monotonic_wavefront(ptr addrspace(3) %p
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    ds_read_b32 v0, v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX10-NEXT:    v_add_nc_u16 v0, v0, v2
+; GFX10-NEXT:    v_add_nc_u16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX10-NEXT:    ds_write_b16 v1, v0
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -560,10 +557,9 @@ define amdgpu_cs void @atomic_load_i16x4_monotonic_agent(ptr addrspace(3) %p, pt
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    ds_read_b64 v[2:3], v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 16, v2
-; GFX10-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
-; GFX10-NEXT:    v_add_nc_u16 v0, v2, v0
-; GFX10-NEXT:    v_mad_u16 v0, v3, v4, v0
+; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 16, v3
+; GFX10-NEXT:    v_add_nc_u16 v2, v2, v2 op_sel:[0,1,0]
+; GFX10-NEXT:    v_mad_u16 v0, v3, v0, v2
 ; GFX10-NEXT:    ds_write_b16 v1, v0
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -614,10 +610,9 @@ define amdgpu_cs void @atomic_load_i16x4_seq_cst_agent(ptr addrspace(3) %p, ptr 
 ; GFX10-NEXT:    ds_read_b64 v[2:3], v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    buffer_gl0_inv
-; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 16, v2
-; GFX10-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
-; GFX10-NEXT:    v_add_nc_u16 v0, v2, v0
-; GFX10-NEXT:    v_mad_u16 v0, v3, v4, v0
+; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 16, v3
+; GFX10-NEXT:    v_add_nc_u16 v2, v2, v2 op_sel:[0,1,0]
+; GFX10-NEXT:    v_mad_u16 v0, v3, v0, v2
 ; GFX10-NEXT:    ds_write_b16 v1, v0
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -669,10 +664,9 @@ define amdgpu_cs void @atomic_load_i16x4_monotonic_wavefront(ptr addrspace(3) %p
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    ds_read_b64 v[2:3], v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 16, v2
-; GFX10-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
-; GFX10-NEXT:    v_add_nc_u16 v0, v2, v0
-; GFX10-NEXT:    v_mad_u16 v0, v3, v4, v0
+; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 16, v3
+; GFX10-NEXT:    v_add_nc_u16 v2, v2, v2 op_sel:[0,1,0]
+; GFX10-NEXT:    v_mad_u16 v0, v3, v0, v2
 ; GFX10-NEXT:    ds_write_b16 v1, v0
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -802,8 +796,7 @@ define amdgpu_cs void @atomic_load_i16x2_monotonic_agent_offset_1(ptr addrspace(
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    ds_read_b32 v0, v0 offset:1
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX10-NEXT:    v_add_nc_u16 v0, v0, v2
+; GFX10-NEXT:    v_add_nc_u16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX10-NEXT:    ds_write_b16 v1, v0
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -844,8 +837,7 @@ define amdgpu_cs void @atomic_load_i16x2_monotonic_agent_offset_max(ptr addrspac
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    ds_read_b32 v0, v0 offset:4095
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX10-NEXT:    v_add_nc_u16 v0, v0, v2
+; GFX10-NEXT:    v_add_nc_u16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX10-NEXT:    ds_write_b16 v1, v0
 ; GFX10-NEXT:    s_endpgm
 ;

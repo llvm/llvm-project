@@ -101,6 +101,9 @@ void AMDGPUDisassembler::emitTargetIDIfSupported(raw_ostream &OS,
 
   // Add xnack and sramecc from ELF flags (v4 format)
   if (CodeObjectVersion >= AMDGPU::AMDHSA_COV4) {
+    // Hardwired-on features are not selectable target-ID modifiers.
+    bool SramEccHardwiredOn = TargetID.isSramEccSupported() &&
+                              !STI.hasFeature(AMDGPU::FeatureSRAMECCOnOffModes);
     unsigned SrameccSetting = EFlags & ELF::EF_AMDGPU_FEATURE_SRAMECC_V4;
     switch (SrameccSetting) {
     case ELF::EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4:
@@ -110,11 +113,13 @@ void AMDGPUDisassembler::emitTargetIDIfSupported(raw_ostream &OS,
       break;
     case ELF::EF_AMDGPU_FEATURE_SRAMECC_OFF_V4:
       TargetID.setSramEccSetting(AMDGPU::TargetIDSetting::Off);
-      OS << ":sramecc-";
+      if (!SramEccHardwiredOn)
+        OS << ":sramecc-";
       break;
     case ELF::EF_AMDGPU_FEATURE_SRAMECC_ON_V4:
       TargetID.setSramEccSetting(AMDGPU::TargetIDSetting::On);
-      OS << ":sramecc+";
+      if (!SramEccHardwiredOn)
+        OS << ":sramecc+";
       break;
     }
 
@@ -2987,16 +2992,15 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptorDirective(
       return createReservedKDBitsError(KERNEL_CODE_PROPERTY_RESERVED0,
                                        amdhsa::KERNEL_CODE_PROPERTIES_OFFSET);
 
-    // Reserved for GFX9
-    if (isGFX9() &&
-        (TwoByteBuffer & KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32)) {
-      return createReservedKDBitsError(
-          KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32,
-          amdhsa::KERNEL_CODE_PROPERTIES_OFFSET, "must be zero on gfx9");
-    }
-    if (isGFX10Plus()) {
+    // Reserved unless both wave sizes are supported.
+    if (STI.getFeatureBits().test(AMDGPU::FeatureSupportsWave32) &&
+        STI.getFeatureBits().test(AMDGPU::FeatureSupportsWave64)) {
       PRINT_DIRECTIVE(".amdhsa_wavefront_size32",
                       KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32);
+    } else if (TwoByteBuffer & KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32) {
+      return createReservedKDBitsError(
+          KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32,
+          amdhsa::KERNEL_CODE_PROPERTIES_OFFSET);
     }
 
     if (CodeObjectVersion >= AMDGPU::AMDHSA_COV5)
@@ -3053,7 +3057,8 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptor(
   // accurately produce .amdhsa_next_free_vgpr, and they appear in the wrong
   // order. Workaround this by first looking up .amdhsa_wavefront_size32 here
   // when required.
-  if (isGFX10Plus()) {
+  if (STI.getFeatureBits().test(AMDGPU::FeatureSupportsWave32) &&
+      STI.getFeatureBits().test(AMDGPU::FeatureSupportsWave64)) {
     uint16_t KernelCodeProperties =
         support::endian::read16(&Bytes[amdhsa::KERNEL_CODE_PROPERTIES_OFFSET],
                                 llvm::endianness::little);
