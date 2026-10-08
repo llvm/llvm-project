@@ -7,10 +7,57 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/BTF/BTFBuilder.h"
+#include "BTFTypeUtils.h"
 #include "llvm/DebugInfo/BTF/BTFParser.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/SwapByteOrder.h"
 
 using namespace llvm;
+
+Error BTF::validateTypeRefs(const CommonType &Type, uint32_t MaxId) {
+  auto CheckId = [=](uint32_t Id) -> Error {
+    if (Id > MaxId)
+      return createStringError(errc::invalid_argument,
+                               "invalid .BTF type reference: %u", Id);
+    return Error::success();
+  };
+  if (BTFBuilder::hasTypeRef(Type.getKind()))
+    if (Error E = CheckId(Type.Type))
+      return E;
+
+  const auto *Tail = reinterpret_cast<const uint8_t *>(&Type) + sizeof(Type);
+  switch (Type.getKind()) {
+  case BTF_KIND_ARRAY: {
+    const auto *Array = reinterpret_cast<const BTFArray *>(Tail);
+    if (Error E = CheckId(Array->ElemType))
+      return E;
+    return CheckId(Array->IndexType);
+  }
+  case BTF_KIND_STRUCT:
+  case BTF_KIND_UNION: {
+    const auto *Members = reinterpret_cast<const BTFMember *>(Tail);
+    for (unsigned I = 0, N = Type.getVlen(); I < N; ++I)
+      if (Error E = CheckId(Members[I].Type))
+        return E;
+    break;
+  }
+  case BTF_KIND_FUNC_PROTO: {
+    const auto *Params = reinterpret_cast<const BTFParam *>(Tail);
+    for (unsigned I = 0, N = Type.getVlen(); I < N; ++I)
+      if (Error E = CheckId(Params[I].Type))
+        return E;
+    break;
+  }
+  case BTF_KIND_DATASEC: {
+    const auto *Vars = reinterpret_cast<const BTFDataSec *>(Tail);
+    for (unsigned I = 0, N = Type.getVlen(); I < N; ++I)
+      if (Error E = CheckId(Vars[I].Type))
+        return E;
+    break;
+  }
+  }
+  return Error::success();
+}
 
 BTFBuilder::BTFBuilder() {
   // String table starts with the empty string at offset 0.
@@ -179,6 +226,12 @@ Expected<uint32_t> BTFBuilder::merge(StringRef RawBTFSection,
   BTFParser Parser;
   if (Error E = Parser.parse(RawBTFSection, IsLittleEndian))
     return std::move(E);
+
+  // Validate against the input table before remapping. Otherwise an invalid ID
+  // can wrap around or capture a type from an earlier input.
+  for (uint32_t Id = 1, N = Parser.typesCount(); Id < N; ++Id)
+    if (Error E = BTF::validateTypeRefs(*Parser.findType(Id), N - 1))
+      return std::move(E);
 
   uint32_t StrDelta = Strings.size();
   uint32_t IdDelta = TypeOffsets.size();

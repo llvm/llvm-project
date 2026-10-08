@@ -22,6 +22,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/BTF/BTFDedup.h"
+#include "BTFTypeUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Hashing.h"
@@ -768,6 +769,12 @@ Error BTFDedupState::run() {
   uint32_t N = Builder.typesCount();
   if (N == 0)
     return Error::success();
+
+  // Reject invalid references before equivalence checking indexes HypotMap,
+  // and before any pass mutates the builder.
+  for (uint32_t Id = 1; Id <= N; ++Id)
+    if (Error E = BTF::validateTypeRefs(*Builder.findType(Id), N))
+      return E;
 
   Map.resize(N + 1);
   for (uint32_t I = 0; I <= N; ++I)

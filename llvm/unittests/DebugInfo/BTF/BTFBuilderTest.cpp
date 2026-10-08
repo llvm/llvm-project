@@ -480,6 +480,30 @@ TEST(BTFBuilderTest, mergeUnknownTypeKind) {
   EXPECT_EQ(B.typesCount(), 0u);
 }
 
+TEST(BTFBuilderTest, mergeInvalidTypeReference) {
+  for (bool LittleEndian : {false, true}) {
+    for (uint32_t InvalidId : {2u, UINT32_MAX}) {
+      SCOPED_TRACE(LittleEndian);
+      SCOPED_TRACE(InvalidId);
+      BTFBuilder Input;
+      Input.addType({0, mkInfo(BTF::BTF_KIND_PTR), {InvalidId}});
+      SmallVector<uint8_t, 0> Blob;
+      Input.write(Blob, LittleEndian);
+
+      // A wrapped reference must not capture an existing type or become void.
+      BTFBuilder B;
+      B.addType({B.addString("existing"), mkInfo(BTF::BTF_KIND_FWD), {0}});
+      SmallVector<uint8_t, 0> Before, After;
+      B.write(Before, LittleEndian);
+      EXPECT_THAT_ERROR(
+          B.merge(blobRef(Blob), LittleEndian).takeError(),
+          FailedWithMessage(testing::HasSubstr("type reference")));
+      B.write(After, LittleEndian);
+      EXPECT_EQ(Before, After);
+    }
+  }
+}
+
 TEST(BTFBuilderTest, invalidTypeIdLookups) {
   BTFBuilder B;
   uint32_t S = B.addString("x");

@@ -85,6 +85,53 @@ TEST(BTFDedupTest, singleType) {
   EXPECT_EQ(B.findType(1)->getKind(), BTF::BTF_KIND_INT);
 }
 
+TEST(BTFDedupTest, invalidTypeReferences) {
+  for (uint32_t InvalidId : {2u, UINT32_MAX}) {
+    for (uint32_t Kind : {BTF::BTF_KIND_PTR, BTF::BTF_KIND_ARRAY,
+                          BTF::BTF_KIND_STRUCT, BTF::BTF_KIND_UNION,
+                          BTF::BTF_KIND_FUNC_PROTO, BTF::BTF_KIND_DATASEC}) {
+      SCOPED_TRACE(InvalidId);
+      SCOPED_TRACE(Kind);
+      BTFBuilder B;
+      B.addType(
+          {0,
+           mkInfo(Kind) |
+               (Kind == BTF::BTF_KIND_PTR || Kind == BTF::BTF_KIND_ARRAY ? 0u
+                                                                         : 1u),
+           {Kind == BTF::BTF_KIND_PTR ? InvalidId : 0u}});
+      switch (Kind) {
+      case BTF::BTF_KIND_ARRAY:
+        B.addTail(BTF::BTFArray({InvalidId, InvalidId, 1}));
+        break;
+      case BTF::BTF_KIND_STRUCT:
+      case BTF::BTF_KIND_UNION:
+        B.addTail(BTF::BTFMember({0, InvalidId, 0}));
+        break;
+      case BTF::BTF_KIND_FUNC_PROTO:
+        B.addTail(BTF::BTFParam({0, InvalidId}));
+        break;
+      case BTF::BTF_KIND_DATASEC:
+        B.addTail(BTF::BTFDataSec({InvalidId, 0, 4}));
+        break;
+      }
+      SmallVector<uint8_t, 0> Before, After;
+      B.write(Before, sys::IsLittleEndianHost);
+      EXPECT_THAT_ERROR(BTF::dedup(B), FailedWithMessage(testing::HasSubstr(
+                                           "type reference")));
+      B.write(After, sys::IsLittleEndianHost);
+      EXPECT_EQ(Before, After);
+    }
+  }
+}
+
+TEST(BTFDedupTest, differentInvalidTypeReferences) {
+  BTFBuilder B;
+  B.addType({0, mkInfo(BTF::BTF_KIND_PTR), {UINT32_MAX - 1}});
+  B.addType({0, mkInfo(BTF::BTF_KIND_PTR), {UINT32_MAX}});
+  EXPECT_THAT_ERROR(BTF::dedup(B),
+                    FailedWithMessage(testing::HasSubstr("type reference")));
+}
+
 TEST(BTFDedupTest, duplicateInts) {
   BTFBuilder B;
   uint32_t S1 = B.addString("int");
