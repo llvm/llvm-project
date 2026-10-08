@@ -2890,6 +2890,33 @@ Instruction *InstCombinerImpl::foldICmpDivConstant(ICmpInst &Cmp,
   if (!match(Y, m_APInt(C2)))
     return nullptr;
 
+  // icmp ugt (sdiv exact X, C2), C --> range check on X.
+  if (DivIsSigned && Div->isExact() && Pred == ICmpInst::ICMP_UGT) {
+    // Division by 0, 1 and -1 is handled elsewhere.
+    if (C2->isZero() || C2->isOne() || C2->isAllOnes())
+      return nullptr;
+
+    bool Overflow = false;
+    APInt Prod = C2->smul_ov(C, Overflow);
+
+    if (C2->isStrictlyPositive()) {
+      if (Overflow)
+        return new ICmpInst(ICmpInst::ICMP_SLT, X,
+                            ConstantInt::getNullValue(Ty));
+      return new ICmpInst(ICmpInst::ICMP_UGT, X, ConstantInt::get(Ty, Prod));
+    }
+
+    // Negative divisor.
+    if (Overflow)
+      return new ICmpInst(ICmpInst::ICMP_SGT, X, ConstantInt::getNullValue(Ty));
+    if (!Div->hasOneUse())
+      return nullptr;
+    // X-1 <u Prod-1 covers X in (0, Prod) or X outside [Prod, 0].
+    Value *XMinusOne = Builder.CreateSub(X, ConstantInt::get(Ty, 1));
+    return new ICmpInst(ICmpInst::ICMP_ULT, XMinusOne,
+                        ConstantInt::get(Ty, Prod - 1));
+  }
+
   // FIXME: If the operand types don't match the type of the divide
   // then don't attempt this transform. The code below doesn't have the
   // logic to deal with a signed divide and an unsigned compare (and
@@ -6559,6 +6586,7 @@ Instruction *InstCombinerImpl::foldICmpWithTrunc(ICmpInst &ICmp) {
 }
 
 Instruction *InstCombinerImpl::foldICmpWithZextOrSext(ICmpInst &ICmp) {
+
   assert(isa<CastInst>(ICmp.getOperand(0)) && "Expected cast for operand 0");
   auto *CastOp0 = cast<CastInst>(ICmp.getOperand(0));
   Value *X;
