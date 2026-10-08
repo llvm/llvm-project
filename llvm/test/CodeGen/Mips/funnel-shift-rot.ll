@@ -327,8 +327,8 @@ define i32 @rotr_i32_shift_by_bitwidth(i32 %x) {
 define <4 x i32> @rotl_v4i32_shift_by_bitwidth(<4 x i32> %x) {
 ; CHECK-LABEL: rotl_v4i32_shift_by_bitwidth:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    move $2, $4
 ; CHECK-NEXT:    move $3, $5
+; CHECK-NEXT:    move $2, $4
 ; CHECK-NEXT:    move $4, $6
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    move $5, $7
@@ -339,8 +339,8 @@ define <4 x i32> @rotl_v4i32_shift_by_bitwidth(<4 x i32> %x) {
 define <4 x i32> @rotr_v4i32_shift_by_bitwidth(<4 x i32> %x) {
 ; CHECK-LABEL: rotr_v4i32_shift_by_bitwidth:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    move $2, $4
 ; CHECK-NEXT:    move $3, $5
+; CHECK-NEXT:    move $2, $4
 ; CHECK-NEXT:    move $4, $6
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    move $5, $7

@@ -66,8 +66,8 @@ define signext i1 @and_i1(i1 signext %a, i1 signext %b) {
 ;
 ; MM32R3-LABEL: and_i1:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3-NEXT:    and16 $4, $5
 ; MM32R3-NEXT:    move $2, $4
+; MM32R3-NEXT:    and16 $2, $5
 ; MM32R3-NEXT:    jrc $ra
 ;
 ; MM32R6-LABEL: and_i1:
@@ -115,8 +115,8 @@ define signext i8 @and_i8(i8 signext %a, i8 signext %b) {
 ;
 ; MM32R3-LABEL: and_i8:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3-NEXT:    and16 $4, $5
 ; MM32R3-NEXT:    move $2, $4
+; MM32R3-NEXT:    and16 $2, $5
 ; MM32R3-NEXT:    jrc $ra
 ;
 ; MM32R6-LABEL: and_i8:
@@ -164,8 +164,8 @@ define signext i16 @and_i16(i16 signext %a, i16 signext %b) {
 ;
 ; MM32R3-LABEL: and_i16:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3-NEXT:    and16 $4, $5
 ; MM32R3-NEXT:    move $2, $4
+; MM32R3-NEXT:    and16 $2, $5
 ; MM32R3-NEXT:    jrc $ra
 ;
 ; MM32R6-LABEL: and_i16:
@@ -210,8 +210,8 @@ define signext i32 @and_i32(i32 signext %a, i32 signext %b) {
 ;
 ; MM32R3-LABEL: and_i32:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3-NEXT:    and16 $4, $5
 ; MM32R3-NEXT:    move $2, $4
+; MM32R3-NEXT:    and16 $2, $5
 ; MM32R3-NEXT:    jrc $ra
 ;
 ; MM32R6-LABEL: and_i32:
@@ -259,10 +259,10 @@ define signext i64 @and_i64(i64 signext %a, i64 signext %b) {
 ;
 ; MM32R3-LABEL: and_i64:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3-NEXT:    and16 $4, $6
-; MM32R3-NEXT:    and16 $5, $7
-; MM32R3-NEXT:    move $2, $4
 ; MM32R3-NEXT:    move $3, $5
+; MM32R3-NEXT:    move $2, $4
+; MM32R3-NEXT:    and16 $2, $6
+; MM32R3-NEXT:    and16 $3, $7
 ; MM32R3-NEXT:    jrc $ra
 ;
 ; MM32R6-LABEL: and_i64:
@@ -668,16 +668,19 @@ define signext i1 @and_i1_31(i1 signext %b) {
 ;
 ; MIPS64-LABEL: and_i1_31:
 ; MIPS64:       # %bb.0: # %entry
+; MIPS64-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    move $2, $4
 ;
 ; MIPS64R2-LABEL: and_i1_31:
 ; MIPS64R2:       # %bb.0: # %entry
+; MIPS64R2-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
 ; MIPS64R2-NEXT:    jr $ra
 ; MIPS64R2-NEXT:    move $2, $4
 ;
 ; MIPS64R6-LABEL: and_i1_31:
 ; MIPS64R6:       # %bb.0: # %entry
+; MIPS64R6-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
 ; MIPS64R6-NEXT:    jr $ra
 ; MIPS64R6-NEXT:    move $2, $4
 ;
@@ -961,16 +964,19 @@ define signext i1 @and_i1_255(i1 signext %b) {
 ;
 ; MIPS64-LABEL: and_i1_255:
 ; MIPS64:       # %bb.0: # %entry
+; MIPS64-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    move $2, $4
 ;
 ; MIPS64R2-LABEL: and_i1_255:
 ; MIPS64R2:       # %bb.0: # %entry
+; MIPS64R2-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
 ; MIPS64R2-NEXT:    jr $ra
 ; MIPS64R2-NEXT:    move $2, $4
 ;
 ; MIPS64R6-LABEL: and_i1_255:
 ; MIPS64R6:       # %bb.0: # %entry
+; MIPS64R6-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
 ; MIPS64R6-NEXT:    jr $ra
 ; MIPS64R6-NEXT:    move $2, $4
 ;
@@ -1006,16 +1012,19 @@ define signext i8 @and_i8_255(i8 signext %b) {
 ;
 ; MIPS64-LABEL: and_i8_255:
 ; MIPS64:       # %bb.0: # %entry
+; MIPS64-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    move $2, $4
 ;
 ; MIPS64R2-LABEL: and_i8_255:
 ; MIPS64R2:       # %bb.0: # %entry
+; MIPS64R2-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
 ; MIPS64R2-NEXT:    jr $ra
 ; MIPS64R2-NEXT:    move $2, $4
 ;
 ; MIPS64R6-LABEL: and_i8_255:
 ; MIPS64R6:       # %bb.0: # %entry
+; MIPS64R6-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
 ; MIPS64R6-NEXT:    jr $ra
 ; MIPS64R6-NEXT:    move $2, $4
 ;
@@ -1556,16 +1565,19 @@ define signext i1 @and_i1_65(i1 signext %b) {
 ;
 ; MIPS64-LABEL: and_i1_65:
 ; MIPS64:       # %bb.0: # %entry
+; MIPS64-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    move $2, $4
 ;
 ; MIPS64R2-LABEL: and_i1_65:
 ; MIPS64R2:       # %bb.0: # %entry
+; MIPS64R2-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
 ; MIPS64R2-NEXT:    jr $ra
 ; MIPS64R2-NEXT:    move $2, $4
 ;
 ; MIPS64R6-LABEL: and_i1_65:
 ; MIPS64R6:       # %bb.0: # %entry
+; MIPS64R6-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
 ; MIPS64R6-NEXT:    jr $ra
 ; MIPS64R6-NEXT:    move $2, $4
 ;

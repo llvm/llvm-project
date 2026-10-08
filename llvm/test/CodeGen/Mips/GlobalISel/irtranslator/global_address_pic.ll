@@ -20,7 +20,7 @@ entry:
 define i32 @call_global(i32 %a, i32 %b) {
   ; MIPS32_PIC-LABEL: name: call_global
   ; MIPS32_PIC: bb.1.entry:
-  ; MIPS32_PIC:   liveins: $r4, $r5, $r25, $r2
+  ; MIPS32_PIC:   liveins: $r2, $r4, $r5, $r25
   ; MIPS32_PIC:   [[ADDu:%[0-9]+]]:gpr32 = ADDu $r2, $r25
   ; MIPS32_PIC:   [[COPY:%[0-9]+]]:_(s32) = COPY $r4
   ; MIPS32_PIC:   [[COPY1:%[0-9]+]]:_(s32) = COPY $r5
@@ -42,7 +42,7 @@ entry:
 define i32 @call_global_with_local_linkage(i32 %a, i32 %b) {
   ; MIPS32_PIC-LABEL: name: call_global_with_local_linkage
   ; MIPS32_PIC: bb.1.entry:
-  ; MIPS32_PIC:   liveins: $r4, $r5, $r25, $r2
+  ; MIPS32_PIC:   liveins: $r2, $r4, $r5, $r25
   ; MIPS32_PIC:   [[ADDu:%[0-9]+]]:gpr32 = ADDu $r2, $r25
   ; MIPS32_PIC:   [[COPY:%[0-9]+]]:_(s32) = COPY $r4
   ; MIPS32_PIC:   [[COPY1:%[0-9]+]]:_(s32) = COPY $r5

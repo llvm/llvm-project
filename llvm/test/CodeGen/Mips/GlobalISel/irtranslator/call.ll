@@ -23,7 +23,7 @@ define i32 @call_global(i32 %a0, i32 %a1, i32 %x, i32 %y) {
   ; MIPS32:   RetRA implicit $r2
   ; MIPS32_PIC-LABEL: name: call_global
   ; MIPS32_PIC: bb.1.entry:
-  ; MIPS32_PIC:   liveins: $r4, $r5, $r6, $r7, $r25, $r2
+  ; MIPS32_PIC:   liveins: $r2, $r4, $r5, $r6, $r7, $r25
   ; MIPS32_PIC:   [[ADDu:%[0-9]+]]:gpr32 = ADDu $r2, $r25
   ; MIPS32_PIC:   [[COPY:%[0-9]+]]:_(s32) = COPY $r4
   ; MIPS32_PIC:   [[COPY1:%[0-9]+]]:_(s32) = COPY $r5
@@ -87,7 +87,7 @@ define i32 @call_global_with_local_linkage(i32 %a0, i32 %a1, i32 %x, i32 %y) {
   ; MIPS32:   RetRA implicit $r2
   ; MIPS32_PIC-LABEL: name: call_global_with_local_linkage
   ; MIPS32_PIC: bb.1.entry:
-  ; MIPS32_PIC:   liveins: $r4, $r5, $r6, $r7, $r25, $r2
+  ; MIPS32_PIC:   liveins: $r2, $r4, $r5, $r6, $r7, $r25
   ; MIPS32_PIC:   [[ADDu:%[0-9]+]]:gpr32 = ADDu $r2, $r25
   ; MIPS32_PIC:   [[COPY:%[0-9]+]]:_(s32) = COPY $r4
   ; MIPS32_PIC:   [[COPY1:%[0-9]+]]:_(s32) = COPY $r5
@@ -179,7 +179,7 @@ define void @call_f_with_void_ret() {
   ; MIPS32:   RetRA
   ; MIPS32_PIC-LABEL: name: call_f_with_void_ret
   ; MIPS32_PIC: bb.1.entry:
-  ; MIPS32_PIC:   liveins: $r25, $r2
+  ; MIPS32_PIC:   liveins: $r2, $r25
   ; MIPS32_PIC:   [[ADDu:%[0-9]+]]:gpr32 = ADDu $r2, $r25
   ; MIPS32_PIC:   ADJCALLSTACKDOWN 16, 0, implicit-def $r29, implicit $r29
   ; MIPS32_PIC:   [[GV:%[0-9]+]]:gpr32(p0) = G_GLOBAL_VALUE target-flags(mips-got-call) @f_with_void_ret

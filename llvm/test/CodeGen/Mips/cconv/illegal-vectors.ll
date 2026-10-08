@@ -282,11 +282,11 @@ define <3 x i32> @arg_v3i32(<3 x i32> %vec, ptr %p) {
 ;
 ; MIPS32-LABEL: arg_v3i32:
 ; MIPS32:       # %bb.0:
+; MIPS32-NEXT:    move $3, $5
+; MIPS32-NEXT:    move $2, $4
 ; MIPS32-NEXT:    sw $6, 8($7)
 ; MIPS32-NEXT:    sw $5, 4($7)
 ; MIPS32-NEXT:    sw $4, 0($7)
-; MIPS32-NEXT:    move $2, $4
-; MIPS32-NEXT:    move $3, $5
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    move $4, $6
   store <3 x i32> %vec, ptr %p
