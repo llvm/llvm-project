@@ -51,12 +51,12 @@ STATISTIC(NumTransformedToWInstrs,
 STATISTIC(NumTransformedToNonWInstrs,
           "Number of instructions transformed to non-W-ops");
 
-static cl::opt<bool> DisableSExtWRemoval("riscv-disable-sextw-removal",
-                                         cl::desc("Disable removal of sext.w"),
-                                         cl::init(false), cl::Hidden);
-static cl::opt<bool> DisableStripWSuffix("riscv-disable-strip-w-suffix",
-                                         cl::desc("Disable strip W suffix"),
-                                         cl::init(false), cl::Hidden);
+static cl::opt<bool> EnableSExtWRemoval("riscv-sextw-removal",
+                                        cl::desc("Enable removal of sext.w"),
+                                        cl::init(true), cl::Hidden);
+static cl::opt<bool> EnableStripWSuffix("riscv-strip-w-suffix",
+                                        cl::desc("Enable strip W suffix"),
+                                        cl::init(true), cl::Hidden);
 
 namespace {
 
@@ -277,7 +277,8 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
       case RISCV::SRL:
       case RISCV::ROL:
       case RISCV::ROR:
-        // Operand 2 is the shift amount which uses 6 bits.
+      case RISCV::BEXT:
+        // Operand 2 is the shift amount or bit index, using log2(XLEN) bits.
         if (OpIdx == 2 && Bits >= Log2_32(ST.getXLen()))
           break;
         return false;
@@ -490,13 +491,11 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
       const RISCVMachineFunctionInfo *RVFI =
           MF->getInfo<RISCVMachineFunctionInfo>();
 
-      // If this is the entry block and the register is livein, see if we know
-      // it is sign extended.
-      if (MI->getParent() == &MF->front()) {
-        Register VReg = MI->getOperand(0).getReg();
-        if (MF->getRegInfo().isLiveIn(VReg) && RVFI->isSExt32Register(VReg))
-          continue;
-      }
+      // If this is the entry block, see if we know the copied argument register
+      // is sign extended.
+      if (MI->getParent() == &MF->front() &&
+          RVFI->isSExt32Register(MI->getOperand(0).getReg()))
+        continue;
 
       Register CopySrcReg = MI->getOperand(1).getReg();
       if (CopySrcReg == RISCV::X10) {
@@ -747,7 +746,7 @@ bool RISCVOptWInstrsImpl::removeSExtWInstrs(MachineFunction &MF,
                                             const RISCVInstrInfo &TII,
                                             const RISCVSubtarget &ST,
                                             MachineRegisterInfo &MRI) {
-  if (DisableSExtWRemoval)
+  if (!EnableSExtWRemoval)
     return false;
 
   bool MadeChange = false;
@@ -810,7 +809,7 @@ bool RISCVOptWInstrsImpl::canonicalizeWSuffixes(MachineFunction &MF,
                                                 const RISCVInstrInfo &TII,
                                                 const RISCVSubtarget &ST,
                                                 MachineRegisterInfo &MRI) {
-  bool ShouldStripW = !(DisableStripWSuffix || ST.preferWInst());
+  bool ShouldStripW = EnableStripWSuffix && !ST.preferWInst();
   bool ShouldPreferW = ST.preferWInst();
   bool MadeChange = false;
 

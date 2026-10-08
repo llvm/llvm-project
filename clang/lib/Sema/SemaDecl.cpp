@@ -30,7 +30,6 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/Builtins.h"
-#include "clang/Basic/DiagnosticComment.h"
 #include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceManager.h"
@@ -4977,7 +4976,13 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
     // [basic.def]p2 for details, but the basic idea is: if the old declaration
     // contains the extern specifier and doesn't have an initializer, it's fine
     // in C++.
-    if (Old->getStorageClass() != SC_Extern || Old->hasInit()) {
+    if (New->getTLSKind() != VarDecl::TLS_None &&
+        New->isThisDeclarationADefinition() == VarDecl::Definition) {
+      VarDecl *Def = Old->getDefinition();
+      if (Def && checkVarDeclRedefinition(Def, New)) {
+        return;
+      }
+    } else if (Old->getStorageClass() != SC_Extern || Old->hasInit()) {
       Diag(New->getLocation(), diag::warn_cxx_compat_tentative_definition)
           << New;
       Diag(Old->getLocation(), diag::note_previous_declaration);
@@ -6430,6 +6435,7 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
   // declaration. For a template-id, we perform the checks in
   // CheckTemplateSpecializationScope.
   if (!Cur->Encloses(DC) && !(TemplateId || IsMemberSpecialization)) {
+    Cur = Cur->getEnclosingNonExpansionStatementContext();
     if (Cur->isRecord())
       Diag(Loc, diag::err_member_qualification)
         << Name << SS.getRange();
@@ -7167,11 +7173,26 @@ void Sema::deduceOpenCLAddressSpace(VarDecl *Var) {
   Var->assignAddressSpace(Context, ImplAS);
 }
 
+static bool checkWeakAttrCompatibility(Sema &S, const NamedDecl &ND,
+                                       const WeakAttr &Attr) {
+  const NamedDecl *D = &ND;
+  // IFuncAttr is not inherited, so a redeclaration may need to check the
+  // attributes on the definition instead.
+  if (const auto *FD = dyn_cast<FunctionDecl>(&ND))
+    if (const FunctionDecl *Def = FD->getDefinition())
+      D = Def;
+  return DiagnoseMutualExclusions(S, D, &Attr);
+}
+
 static void checkWeakAttr(Sema &S, NamedDecl &ND) {
   // 'weak' only applies to declarations with external linkage.
   if (WeakAttr *Attr = ND.getAttr<WeakAttr>()) {
     if (!ND.isExternallyVisible()) {
       S.Diag(Attr->getLocation(), diag::err_attribute_weak_static);
+      ND.dropAttr<WeakAttr>();
+    } else if (!checkWeakAttrCompatibility(S, ND, *Attr)) {
+      // A forward #pragma weak adds the attribute without checking mutual
+      // exclusions during attribute processing.
       ND.dropAttr<WeakAttr>();
     }
   }
@@ -7191,7 +7212,7 @@ static void checkAliasAttr(Sema &S, NamedDecl &ND) {
     if (VD->hasInit()) {
       if (const auto *Attr = VD->getAttr<AliasAttr>()) {
         assert(VD->isThisDeclarationADefinition() &&
-               !VD->isExternallyVisible() && "Broken AliasAttr handled late!");
+               "Broken AliasAttr handled late!");
         S.Diag(Attr->getLocation(), diag::err_alias_is_definition) << VD << 0;
         VD->dropAttr<AliasAttr>();
       }
@@ -7558,7 +7579,7 @@ static bool hasParsedAttr(Scope *S, const Declarator &PD,
 }
 
 bool Sema::adjustContextForLocalExternDecl(DeclContext *&DC) {
-  if (!DC->getEnclosingNonExpansionStatementContext()->isFunctionOrMethod())
+  if (!DC->isFunctionOrMethod())
     return false;
 
   // If this is a local extern function or variable declared within a function
@@ -8987,6 +9008,10 @@ static bool CheckC23ConstexprVarType(Sema &SemaRef, SourceLocation VarLoc,
   return false;
 }
 
+static bool isSYCLAddressSpace(LangAS AS) {
+  return AS >= LangAS::sycl_global && AS <= LangAS::sycl_constant;
+}
+
 void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
   // If the decl is already known invalid, don't check it.
   if (NewVD->isInvalidDecl())
@@ -9006,6 +9031,18 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
       << FixItHint::CreateInsertion(NewVD->getLocation(), "*");
     T = Context.getObjCObjectPointerType(T);
     NewVD->setType(T);
+  }
+
+  // The top-level type of a variable declaration cannot have a SYCL address
+  // space qualifier.
+  if (getLangOpts().isSYCL()) {
+    LangAS AS = Context.getBaseElementType(T).getAddressSpace();
+    if (isSYCLAddressSpace(AS)) {
+      Diag(NewVD->getLocation(), diag::err_sycl_address_space_qualified_object)
+          << Qualifiers::getAddrSpaceAsString(AS);
+      NewVD->setInvalidDecl();
+      return;
+    }
   }
 
   // Emit an error if an address space was applied to decl with local storage.
@@ -15765,10 +15802,7 @@ void Sema::ActOnDocumentableDecls(ArrayRef<Decl *> Group) {
   if (Group.empty() || !Group[0])
     return;
 
-  if (Diags.isIgnored(diag::warn_doc_param_not_found,
-                      Group[0]->getLocation()) &&
-      Diags.isIgnored(diag::warn_unknown_comment_command_name,
-                      Group[0]->getLocation()))
+  if (!areDocumentationDiagsEnabled(Group[0]->getLocation()))
     return;
 
   if (Group.size() >= 2) {
@@ -19172,7 +19206,12 @@ CreateNewDecl:
   if (!Invalid && SearchDC->isRecord())
     SetMemberAccessSpecifier(New, PrevDecl, AS);
 
-  if (PrevDecl)
+  // FIXME: An elaborated-type-specifier referring to an existing tag should
+  // ideally not introduce a redeclaration. ActOnTag currently creates one, so
+  // avoid diagnosing it as a redeclaration across module boundaries.
+  //
+  // See https://github.com/llvm/llvm-project/pull/194546 for full background.
+  if (PrevDecl && TUK != TagUseKind::Reference)
     CheckRedeclarationInModule(New, PrevDecl);
 
   if (TUK == TagUseKind::Definition) {
@@ -21417,10 +21456,13 @@ void Sema::ActOnPragmaRedefineExtname(IdentifierInfo* Name,
 void Sema::ActOnPragmaWeakID(IdentifierInfo* Name,
                              SourceLocation PragmaLoc,
                              SourceLocation NameLoc) {
-  Decl *PrevDecl = LookupSingleName(TUScope, Name, NameLoc, LookupOrdinaryName);
+  NamedDecl *PrevDecl =
+      LookupSingleName(TUScope, Name, NameLoc, LookupOrdinaryName);
 
   if (PrevDecl) {
-    PrevDecl->addAttr(WeakAttr::CreateImplicit(Context, PragmaLoc));
+    auto *Attr = WeakAttr::CreateImplicit(Context, PragmaLoc);
+    if (checkWeakAttrCompatibility(*this, *PrevDecl, *Attr))
+      PrevDecl->addAttr(Attr);
   } else {
     (void)WeakUndeclaredIdentifiers[Name].insert(WeakInfo(nullptr, NameLoc));
   }
