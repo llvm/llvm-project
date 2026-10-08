@@ -129,6 +129,8 @@ def human_readable_size(size, decimal_places=2):
 
 
 class PRSubscriber:
+    COMMENT_TAG = "<!--LLVM PR SUMMARY COMMENT-->\n"
+
     @property
     def team_name(self) -> str:
         return self._team_name
@@ -142,7 +144,6 @@ class PRSubscriber:
         self._team_name = "pr-subscribers-{}".format(
             label_name.replace("+", "x")
         ).lower()
-        self.COMMENT_TAG = "<!--LLVM PR SUMMARY COMMENT-->\n"
 
     def get_summary_comment(self) -> github.IssueComment.IssueComment:
         for comment in self.pr.as_issue().get_comments():
@@ -441,6 +442,44 @@ How to do this, and the rest of the post-merge process, is covered in detail [he
 If your change does cause a problem, it may be reverted, or you can revert it yourself. This is a normal part of [LLVM development](https://llvm.org/docs/DeveloperPolicy.html#patch-reversion-policy). You can fix your changes and open a new PR to merge them again.
 
 If you don't get any reports, no action is required from you. Your changes are working as expected, well done!
+"""
+        self.pr.as_issue().create_comment(comment)
+        return True
+
+
+class PRSkipApprovalLabelNudge:
+    COMMENT_TAG = "<!--LLVM SKIP PRECOMMIT APPROVAL LABEL NUDGE-->\n"
+
+    def __init__(self, token: str, repo: str, pr_number: int, author: str):
+        repo = github.Github(auth=github.Auth.Token(token)).get_repo(repo)
+        self.pr = repo.get_issue(pr_number).as_pull_request()
+        self.author = author
+
+    def should_comment(self) -> bool:
+        # The skip-precommit-approval label suppresses subscriber notifications
+        # (see PRSubscriber.run), but only if it is present when the subscriber
+        # workflow runs. If the PR summary comment already exists, subscribers
+        # have already been notified, so the label was applied too late to have
+        # that effect.
+        found_summary = False
+        for comment in self.pr.as_issue().get_comments():
+            if PRSubscriber.COMMENT_TAG in comment.body:
+                found_summary = True
+            elif PRSkipApprovalLabelNudge.COMMENT_TAG in comment.body:
+                # Don't nudge more than once per PR (e.g. if the label is
+                # removed and re-added).
+                return False
+        return found_summary
+
+    def run(self) -> bool:
+        if not self.should_comment():
+            return False
+
+        comment = f"""\
+{PRSkipApprovalLabelNudge.COMMENT_TAG}
+@{self.author} Tip: the `skip-precommit-approval` label also stops subscribers from being notified about the PR, but only if it is applied before the PR is labeled for subscribers, i.e. when the PR is created. Subscribers have already been notified about this PR.
+
+If you intend to land a change without precommit approval, please apply the label when creating the PR. See the [LLVM Code-Review Policy](https://llvm.org/docs/CodeReview.html) for more information.
 """
         self.pr.as_issue().create_comment(comment)
         return True
@@ -940,6 +979,15 @@ pr_buildbot_information_parser = subparsers.add_parser("pr-buildbot-information"
 pr_buildbot_information_parser.add_argument("--issue-number", type=int, required=True)
 pr_buildbot_information_parser.add_argument("--author", type=str, required=True)
 
+pr_skip_approval_label_nudge_parser = subparsers.add_parser(
+    "pr-skip-approval-label-nudge",
+    help="Suggest applying skip-precommit-approval when a PR is created, if it was applied after subscribers were notified",
+)
+pr_skip_approval_label_nudge_parser.add_argument(
+    "--issue-number", type=int, required=True
+)
+pr_skip_approval_label_nudge_parser.add_argument("--author", type=str, required=True)
+
 release_workflow_parser = subparsers.add_parser("release-workflow")
 release_workflow_parser.add_argument(
     "--llvm-project-dir",
@@ -1014,6 +1062,11 @@ elif args.command == "pr-buildbot-information":
         args.token, args.repo, args.issue_number, args.author
     )
     pr_buildbot_information.run()
+elif args.command == "pr-skip-approval-label-nudge":
+    pr_skip_approval_label_nudge = PRSkipApprovalLabelNudge(
+        args.token, args.repo, args.issue_number, args.author
+    )
+    pr_skip_approval_label_nudge.run()
 elif args.command == "release-workflow":
     release_workflow = ReleaseWorkflow(
         args.token,
