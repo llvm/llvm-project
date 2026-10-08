@@ -97,6 +97,11 @@ infrastructure are described first, followed by tool-specific sections.
   operator call such as `stream << 42;`), which it previously refused to
   extract.
 
+- The `Extract to function` tweak is now also available in C files, where
+  it previously always refused to apply. Captured variables are passed by
+  value when possible, and otherwise via a pointer parameter, since C has
+  no references.
+
 #### Signature help
 
 - Parameters declared with a `decltype` are now displayed as the type the
@@ -166,6 +171,11 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Changes in existing checks
 
+- Improved {doc}`bugprone-easily-swappable-parameters
+  <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by no longer
+  emitting empty notes for type aliases when {option}`ModelImplicitConversions`
+  is enabled.
+
 - Improved {doc}`bugprone-implicit-widening-of-multiplication-result
   <clang-tidy/checks/bugprone/implicit-widening-of-multiplication-result>` check
   by suggesting a wider type of the same signedness as the original operands,
@@ -208,6 +218,13 @@ infrastructure are described first, followed by tool-specific sections.
 
 - Improved {doc}`cppcoreguidelines-use-enum-class
   <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check by omitting unnamed enums from the `enum class` requirement, as previously the check suggested users an ill-formed fix.
+
+- Improved {doc}`cppcoreguidelines-virtual-class-destructor
+  <clang-tidy/checks/cppcoreguidelines/virtual-class-destructor>` check by
+  emitting the diagnostic and its fix-it notes at the destructor's location
+  instead of the class name, whenever the destructor is user-declared. The
+  diagnostics are still emitted at the class name for implicitly declared
+  destructors.
 
 - Improved {doc}`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check:
@@ -256,6 +273,11 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/modernize/use-nullptr>` to turn `decltype(nullptr)` into
   `std::nullptr_t` from `<cstdef>`.
 
+- Improved {doc}`modernize-use-nullptr
+  <clang-tidy/checks/modernize/use-nullptr>` check to avoid replacing `0`
+  with `nullptr` in comparisons with ordering types such as
+  `std::strong_ordering`.
+
 - Improved {doc}`modernize-use-ranges
   <clang-tidy/checks/modernize/use-ranges>` check by preserving used output
   iterator results when replacing output algorithms such as `std::copy`.
@@ -267,6 +289,11 @@ infrastructure are described first, followed by tool-specific sections.
   copied as written rather than with its parentheses stripped, and no fix is
   offered when an argument covers only part of a macro expansion, as it then
   has no source text of its own.
+
+- Improved {doc}`performance-inefficient-vector-operation
+  <clang-tidy/checks/performance/inefficient-vector-operation>` by adding the
+  {option}`ForRangeLoopClasses` to configure container classes that can be used
+  as sources in range-based `for` loops.
 
 - Improved {doc}`readability-convert-member-functions-to-static
   <clang-tidy/checks/readability/convert-member-functions-to-static>` check by
@@ -323,8 +350,14 @@ infrastructure are described first, followed by tool-specific sections.
   `atomic_compare_exchange_strong()`.
 
 - Improved {doc}`readability-redundant-parentheses
-  <clang-tidy/checks/readability/redundant-parentheses>` check by fixing a false
-  positive on the required parentheses of `typeof` and `typeof_unqual` operands.
+  <clang-tidy/checks/readability/redundant-parentheses>` check:
+
+  - Fixed a false positive on the required parentheses of `typeof` and
+    `typeof_unqual` operands.
+
+  - Fixed false positives and incorrect fixes caused by synthetic parentheses
+    in reference non-type template parameter uses, `__builtin_dump_struct` calls,
+    and OpenMP `linear` clauses.
 
 - Fixed {doc}`readability-simplify-boolean-expr
   <clang-tidy/checks/readability/simplify-boolean-expr>` producing invalid

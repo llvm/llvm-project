@@ -3301,7 +3301,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_FEATURE_SRAMECC_V4``             0xc00 SRAMECC selection mask for
                                                         ``EF_AMDGPU_FEATURE_SRAMECC_*_V4``
                                                         values.
-     ``EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4`` 0x000 SRAMECC unsupported.
+     ``EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4`` 0x000 SRAMECC mode selection unsupported.
      ``EF_AMDGPU_FEATURE_SRAMECC_ANY_V4``         0x400 SRAMECC can have any value.
      ``EF_AMDGPU_FEATURE_SRAMECC_OFF_V4``         0x800 SRAMECC disabled,
      ``EF_AMDGPU_FEATURE_SRAMECC_ON_V4``          0xc00 SRAMECC enabled.
@@ -3328,7 +3328,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_FEATURE_SRAMECC_V4``             0xc00      SRAMECC selection mask for
                                                              ``EF_AMDGPU_FEATURE_SRAMECC_*_V4``
                                                              values.
-     ``EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4`` 0x000      SRAMECC unsupported.
+     ``EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4`` 0x000      SRAMECC mode selection unsupported.
      ``EF_AMDGPU_FEATURE_SRAMECC_ANY_V4``         0x400      SRAMECC can have any value.
      ``EF_AMDGPU_FEATURE_SRAMECC_OFF_V4``         0x800      SRAMECC disabled,
      ``EF_AMDGPU_FEATURE_SRAMECC_ON_V4``          0xc00      SRAMECC enabled.
@@ -3344,6 +3344,12 @@ The AMDGPU backend uses the following ELF header:
   they do not support mode selection. Their XNACK behavior is implied by
   ``EF_AMDGPU_MACH``; a zero XNACK field does not mean replay is disabled on
   these processors.
+
+  For code object V4 and later, processors with hardwired-on SRAMECC use
+  ``EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4`` (zero) because they do not
+  support mode selection. Their SRAMECC behavior is implied by
+  ``EF_AMDGPU_MACH``; a zero SRAMECC field does not mean SRAMECC is disabled
+  on these processors.
 
   .. table:: AMDGPU ``EF_AMDGPU_MACH`` Values
      :name: amdgpu-ef-amdgpu-mach-table
