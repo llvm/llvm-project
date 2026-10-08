@@ -300,14 +300,6 @@ features cannot lower the translation-unit ABI level;
   matching on the presumed source location (accounting for macro expansions
   and `#line` directives). (#GH194210)
 
-- Added the AArch64 option `-mharden-pac-ret=load-return-address` to harden
-  return address signing against PACMAN attacks. The option requires return
-  address signing to be enabled and emits a load from the return address before
-  returning, reducing the cache side channel used to guess pointer
-  authentication codes. See
-  {doc}`Return Address Authentication Hardening <ReturnAddressAuthenticationHardening>`
-  for more information.
-
 ### Deprecated Compiler Flags
 
 ### Modified Compiler Flags
@@ -991,6 +983,12 @@ features cannot lower the translation-unit ABI level;
 - Support `AVX10_V2_AUX` ISA (`-mavx10v2aux`).
 
 #### Arm and AArch64 Support
+
+- Added support for the following Arm processors (command-line identifiers in
+  parentheses):
+
+  - C2-Pro (`c2-pro`).
+  - C2-Ultra (`c2-ultra`).
 
 - Added support for pointer authentication discrimination of C++ virtual table
   pointers stored in VTTs via the `-fptrauth-vtt-vtable-pointer-discrimination`
