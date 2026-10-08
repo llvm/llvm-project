@@ -313,17 +313,17 @@ define void @callee() {
 ; RV32I-WITH-FP-NEXT:    lui a0, %hi(var)
 ; RV32I-WITH-FP-NEXT:    addi a0, a0, %lo(var)
 ; RV32I-WITH-FP-NEXT:    lw a1, 0(a0)
-; RV32I-WITH-FP-NEXT:    sw a1, 24(sp) # 4-byte Folded Spill
-; RV32I-WITH-FP-NEXT:    lw a1, 4(a0)
-; RV32I-WITH-FP-NEXT:    sw a1, 20(sp) # 4-byte Folded Spill
-; RV32I-WITH-FP-NEXT:    lw a1, 8(a0)
-; RV32I-WITH-FP-NEXT:    sw a1, 16(sp) # 4-byte Folded Spill
-; RV32I-WITH-FP-NEXT:    lw a1, 12(a0)
-; RV32I-WITH-FP-NEXT:    sw a1, 12(sp) # 4-byte Folded Spill
-; RV32I-WITH-FP-NEXT:    lw a1, 16(a0)
-; RV32I-WITH-FP-NEXT:    sw a1, 8(sp) # 4-byte Folded Spill
-; RV32I-WITH-FP-NEXT:    lw a1, 20(a0)
 ; RV32I-WITH-FP-NEXT:    sw a1, 4(sp) # 4-byte Folded Spill
+; RV32I-WITH-FP-NEXT:    lw a1, 4(a0)
+; RV32I-WITH-FP-NEXT:    sw a1, 8(sp) # 4-byte Folded Spill
+; RV32I-WITH-FP-NEXT:    lw a1, 8(a0)
+; RV32I-WITH-FP-NEXT:    sw a1, 12(sp) # 4-byte Folded Spill
+; RV32I-WITH-FP-NEXT:    lw a1, 12(a0)
+; RV32I-WITH-FP-NEXT:    sw a1, 16(sp) # 4-byte Folded Spill
+; RV32I-WITH-FP-NEXT:    lw a1, 16(a0)
+; RV32I-WITH-FP-NEXT:    sw a1, 20(sp) # 4-byte Folded Spill
+; RV32I-WITH-FP-NEXT:    lw a1, 20(a0)
+; RV32I-WITH-FP-NEXT:    sw a1, 24(sp) # 4-byte Folded Spill
 ; RV32I-WITH-FP-NEXT:    lw a7, 24(a0)
 ; RV32I-WITH-FP-NEXT:    lw t0, 28(a0)
 ; RV32I-WITH-FP-NEXT:    lw t1, 32(a0)
@@ -376,17 +376,17 @@ define void @callee() {
 ; RV32I-WITH-FP-NEXT:    sw t1, 32(a0)
 ; RV32I-WITH-FP-NEXT:    sw t0, 28(a0)
 ; RV32I-WITH-FP-NEXT:    sw a7, 24(a0)
-; RV32I-WITH-FP-NEXT:    lw a1, 4(sp) # 4-byte Folded Reload
-; RV32I-WITH-FP-NEXT:    sw a1, 20(a0)
-; RV32I-WITH-FP-NEXT:    lw a1, 8(sp) # 4-byte Folded Reload
-; RV32I-WITH-FP-NEXT:    sw a1, 16(a0)
-; RV32I-WITH-FP-NEXT:    lw a1, 12(sp) # 4-byte Folded Reload
-; RV32I-WITH-FP-NEXT:    sw a1, 12(a0)
-; RV32I-WITH-FP-NEXT:    lw a1, 16(sp) # 4-byte Folded Reload
-; RV32I-WITH-FP-NEXT:    sw a1, 8(a0)
-; RV32I-WITH-FP-NEXT:    lw a1, 20(sp) # 4-byte Folded Reload
-; RV32I-WITH-FP-NEXT:    sw a1, 4(a0)
 ; RV32I-WITH-FP-NEXT:    lw a1, 24(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    sw a1, 20(a0)
+; RV32I-WITH-FP-NEXT:    lw a1, 20(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    sw a1, 16(a0)
+; RV32I-WITH-FP-NEXT:    lw a1, 16(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    sw a1, 12(a0)
+; RV32I-WITH-FP-NEXT:    lw a1, 12(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    sw a1, 8(a0)
+; RV32I-WITH-FP-NEXT:    lw a1, 8(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    sw a1, 4(a0)
+; RV32I-WITH-FP-NEXT:    lw a1, 4(sp) # 4-byte Folded Reload
 ; RV32I-WITH-FP-NEXT:    sw a1, 0(a0)
 ; RV32I-WITH-FP-NEXT:    .cfi_def_cfa sp, 80
 ; RV32I-WITH-FP-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
@@ -549,17 +549,17 @@ define void @callee() {
 ; RV32IZCMP-WITH-FP-NEXT:    lui a0, %hi(var)
 ; RV32IZCMP-WITH-FP-NEXT:    addi a0, a0, %lo(var)
 ; RV32IZCMP-WITH-FP-NEXT:    lw a1, 0(a0)
-; RV32IZCMP-WITH-FP-NEXT:    sw a1, 24(sp) # 4-byte Folded Spill
-; RV32IZCMP-WITH-FP-NEXT:    lw a1, 4(a0)
-; RV32IZCMP-WITH-FP-NEXT:    sw a1, 20(sp) # 4-byte Folded Spill
-; RV32IZCMP-WITH-FP-NEXT:    lw a1, 8(a0)
-; RV32IZCMP-WITH-FP-NEXT:    sw a1, 16(sp) # 4-byte Folded Spill
-; RV32IZCMP-WITH-FP-NEXT:    lw a1, 12(a0)
-; RV32IZCMP-WITH-FP-NEXT:    sw a1, 12(sp) # 4-byte Folded Spill
-; RV32IZCMP-WITH-FP-NEXT:    lw a1, 16(a0)
-; RV32IZCMP-WITH-FP-NEXT:    sw a1, 8(sp) # 4-byte Folded Spill
-; RV32IZCMP-WITH-FP-NEXT:    lw a1, 20(a0)
 ; RV32IZCMP-WITH-FP-NEXT:    sw a1, 4(sp) # 4-byte Folded Spill
+; RV32IZCMP-WITH-FP-NEXT:    lw a1, 4(a0)
+; RV32IZCMP-WITH-FP-NEXT:    sw a1, 8(sp) # 4-byte Folded Spill
+; RV32IZCMP-WITH-FP-NEXT:    lw a1, 8(a0)
+; RV32IZCMP-WITH-FP-NEXT:    sw a1, 12(sp) # 4-byte Folded Spill
+; RV32IZCMP-WITH-FP-NEXT:    lw a1, 12(a0)
+; RV32IZCMP-WITH-FP-NEXT:    sw a1, 16(sp) # 4-byte Folded Spill
+; RV32IZCMP-WITH-FP-NEXT:    lw a1, 16(a0)
+; RV32IZCMP-WITH-FP-NEXT:    sw a1, 20(sp) # 4-byte Folded Spill
+; RV32IZCMP-WITH-FP-NEXT:    lw a1, 20(a0)
+; RV32IZCMP-WITH-FP-NEXT:    sw a1, 24(sp) # 4-byte Folded Spill
 ; RV32IZCMP-WITH-FP-NEXT:    lw a7, 24(a0)
 ; RV32IZCMP-WITH-FP-NEXT:    lw t0, 28(a0)
 ; RV32IZCMP-WITH-FP-NEXT:    lw t1, 32(a0)
@@ -612,17 +612,17 @@ define void @callee() {
 ; RV32IZCMP-WITH-FP-NEXT:    sw t1, 32(a0)
 ; RV32IZCMP-WITH-FP-NEXT:    sw t0, 28(a0)
 ; RV32IZCMP-WITH-FP-NEXT:    sw a7, 24(a0)
-; RV32IZCMP-WITH-FP-NEXT:    lw a1, 4(sp) # 4-byte Folded Reload
-; RV32IZCMP-WITH-FP-NEXT:    sw a1, 20(a0)
-; RV32IZCMP-WITH-FP-NEXT:    lw a1, 8(sp) # 4-byte Folded Reload
-; RV32IZCMP-WITH-FP-NEXT:    sw a1, 16(a0)
-; RV32IZCMP-WITH-FP-NEXT:    lw a1, 12(sp) # 4-byte Folded Reload
-; RV32IZCMP-WITH-FP-NEXT:    sw a1, 12(a0)
-; RV32IZCMP-WITH-FP-NEXT:    lw a1, 16(sp) # 4-byte Folded Reload
-; RV32IZCMP-WITH-FP-NEXT:    sw a1, 8(a0)
-; RV32IZCMP-WITH-FP-NEXT:    lw a1, 20(sp) # 4-byte Folded Reload
-; RV32IZCMP-WITH-FP-NEXT:    sw a1, 4(a0)
 ; RV32IZCMP-WITH-FP-NEXT:    lw a1, 24(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    sw a1, 20(a0)
+; RV32IZCMP-WITH-FP-NEXT:    lw a1, 20(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    sw a1, 16(a0)
+; RV32IZCMP-WITH-FP-NEXT:    lw a1, 16(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    sw a1, 12(a0)
+; RV32IZCMP-WITH-FP-NEXT:    lw a1, 12(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    sw a1, 8(a0)
+; RV32IZCMP-WITH-FP-NEXT:    lw a1, 8(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    sw a1, 4(a0)
+; RV32IZCMP-WITH-FP-NEXT:    lw a1, 4(sp) # 4-byte Folded Reload
 ; RV32IZCMP-WITH-FP-NEXT:    sw a1, 0(a0)
 ; RV32IZCMP-WITH-FP-NEXT:    .cfi_def_cfa sp, 80
 ; RV32IZCMP-WITH-FP-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
@@ -922,17 +922,17 @@ define void @callee() {
 ; RV64I-WITH-FP-NEXT:    lui a0, %hi(var)
 ; RV64I-WITH-FP-NEXT:    addi a0, a0, %lo(var)
 ; RV64I-WITH-FP-NEXT:    lw a1, 0(a0)
-; RV64I-WITH-FP-NEXT:    sd a1, 48(sp) # 8-byte Folded Spill
-; RV64I-WITH-FP-NEXT:    lw a1, 4(a0)
-; RV64I-WITH-FP-NEXT:    sd a1, 40(sp) # 8-byte Folded Spill
-; RV64I-WITH-FP-NEXT:    lw a1, 8(a0)
-; RV64I-WITH-FP-NEXT:    sd a1, 32(sp) # 8-byte Folded Spill
-; RV64I-WITH-FP-NEXT:    lw a1, 12(a0)
-; RV64I-WITH-FP-NEXT:    sd a1, 24(sp) # 8-byte Folded Spill
-; RV64I-WITH-FP-NEXT:    lw a1, 16(a0)
-; RV64I-WITH-FP-NEXT:    sd a1, 16(sp) # 8-byte Folded Spill
-; RV64I-WITH-FP-NEXT:    lw a1, 20(a0)
 ; RV64I-WITH-FP-NEXT:    sd a1, 8(sp) # 8-byte Folded Spill
+; RV64I-WITH-FP-NEXT:    lw a1, 4(a0)
+; RV64I-WITH-FP-NEXT:    sd a1, 16(sp) # 8-byte Folded Spill
+; RV64I-WITH-FP-NEXT:    lw a1, 8(a0)
+; RV64I-WITH-FP-NEXT:    sd a1, 24(sp) # 8-byte Folded Spill
+; RV64I-WITH-FP-NEXT:    lw a1, 12(a0)
+; RV64I-WITH-FP-NEXT:    sd a1, 32(sp) # 8-byte Folded Spill
+; RV64I-WITH-FP-NEXT:    lw a1, 16(a0)
+; RV64I-WITH-FP-NEXT:    sd a1, 40(sp) # 8-byte Folded Spill
+; RV64I-WITH-FP-NEXT:    lw a1, 20(a0)
+; RV64I-WITH-FP-NEXT:    sd a1, 48(sp) # 8-byte Folded Spill
 ; RV64I-WITH-FP-NEXT:    lw a7, 24(a0)
 ; RV64I-WITH-FP-NEXT:    lw t0, 28(a0)
 ; RV64I-WITH-FP-NEXT:    lw t1, 32(a0)
@@ -985,17 +985,17 @@ define void @callee() {
 ; RV64I-WITH-FP-NEXT:    sw t1, 32(a0)
 ; RV64I-WITH-FP-NEXT:    sw t0, 28(a0)
 ; RV64I-WITH-FP-NEXT:    sw a7, 24(a0)
-; RV64I-WITH-FP-NEXT:    ld a1, 8(sp) # 8-byte Folded Reload
-; RV64I-WITH-FP-NEXT:    sw a1, 20(a0)
-; RV64I-WITH-FP-NEXT:    ld a1, 16(sp) # 8-byte Folded Reload
-; RV64I-WITH-FP-NEXT:    sw a1, 16(a0)
-; RV64I-WITH-FP-NEXT:    ld a1, 24(sp) # 8-byte Folded Reload
-; RV64I-WITH-FP-NEXT:    sw a1, 12(a0)
-; RV64I-WITH-FP-NEXT:    ld a1, 32(sp) # 8-byte Folded Reload
-; RV64I-WITH-FP-NEXT:    sw a1, 8(a0)
-; RV64I-WITH-FP-NEXT:    ld a1, 40(sp) # 8-byte Folded Reload
-; RV64I-WITH-FP-NEXT:    sw a1, 4(a0)
 ; RV64I-WITH-FP-NEXT:    ld a1, 48(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    sw a1, 20(a0)
+; RV64I-WITH-FP-NEXT:    ld a1, 40(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    sw a1, 16(a0)
+; RV64I-WITH-FP-NEXT:    ld a1, 32(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    sw a1, 12(a0)
+; RV64I-WITH-FP-NEXT:    ld a1, 24(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    sw a1, 8(a0)
+; RV64I-WITH-FP-NEXT:    ld a1, 16(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    sw a1, 4(a0)
+; RV64I-WITH-FP-NEXT:    ld a1, 8(sp) # 8-byte Folded Reload
 ; RV64I-WITH-FP-NEXT:    sw a1, 0(a0)
 ; RV64I-WITH-FP-NEXT:    .cfi_def_cfa sp, 160
 ; RV64I-WITH-FP-NEXT:    ld ra, 152(sp) # 8-byte Folded Reload
@@ -1158,17 +1158,17 @@ define void @callee() {
 ; RV64IZCMP-WITH-FP-NEXT:    lui a0, %hi(var)
 ; RV64IZCMP-WITH-FP-NEXT:    addi a0, a0, %lo(var)
 ; RV64IZCMP-WITH-FP-NEXT:    lw a1, 0(a0)
-; RV64IZCMP-WITH-FP-NEXT:    sd a1, 48(sp) # 8-byte Folded Spill
-; RV64IZCMP-WITH-FP-NEXT:    lw a1, 4(a0)
-; RV64IZCMP-WITH-FP-NEXT:    sd a1, 40(sp) # 8-byte Folded Spill
-; RV64IZCMP-WITH-FP-NEXT:    lw a1, 8(a0)
-; RV64IZCMP-WITH-FP-NEXT:    sd a1, 32(sp) # 8-byte Folded Spill
-; RV64IZCMP-WITH-FP-NEXT:    lw a1, 12(a0)
-; RV64IZCMP-WITH-FP-NEXT:    sd a1, 24(sp) # 8-byte Folded Spill
-; RV64IZCMP-WITH-FP-NEXT:    lw a1, 16(a0)
-; RV64IZCMP-WITH-FP-NEXT:    sd a1, 16(sp) # 8-byte Folded Spill
-; RV64IZCMP-WITH-FP-NEXT:    lw a1, 20(a0)
 ; RV64IZCMP-WITH-FP-NEXT:    sd a1, 8(sp) # 8-byte Folded Spill
+; RV64IZCMP-WITH-FP-NEXT:    lw a1, 4(a0)
+; RV64IZCMP-WITH-FP-NEXT:    sd a1, 16(sp) # 8-byte Folded Spill
+; RV64IZCMP-WITH-FP-NEXT:    lw a1, 8(a0)
+; RV64IZCMP-WITH-FP-NEXT:    sd a1, 24(sp) # 8-byte Folded Spill
+; RV64IZCMP-WITH-FP-NEXT:    lw a1, 12(a0)
+; RV64IZCMP-WITH-FP-NEXT:    sd a1, 32(sp) # 8-byte Folded Spill
+; RV64IZCMP-WITH-FP-NEXT:    lw a1, 16(a0)
+; RV64IZCMP-WITH-FP-NEXT:    sd a1, 40(sp) # 8-byte Folded Spill
+; RV64IZCMP-WITH-FP-NEXT:    lw a1, 20(a0)
+; RV64IZCMP-WITH-FP-NEXT:    sd a1, 48(sp) # 8-byte Folded Spill
 ; RV64IZCMP-WITH-FP-NEXT:    lw a7, 24(a0)
 ; RV64IZCMP-WITH-FP-NEXT:    lw t0, 28(a0)
 ; RV64IZCMP-WITH-FP-NEXT:    lw t1, 32(a0)
@@ -1221,17 +1221,17 @@ define void @callee() {
 ; RV64IZCMP-WITH-FP-NEXT:    sw t1, 32(a0)
 ; RV64IZCMP-WITH-FP-NEXT:    sw t0, 28(a0)
 ; RV64IZCMP-WITH-FP-NEXT:    sw a7, 24(a0)
-; RV64IZCMP-WITH-FP-NEXT:    ld a1, 8(sp) # 8-byte Folded Reload
-; RV64IZCMP-WITH-FP-NEXT:    sw a1, 20(a0)
-; RV64IZCMP-WITH-FP-NEXT:    ld a1, 16(sp) # 8-byte Folded Reload
-; RV64IZCMP-WITH-FP-NEXT:    sw a1, 16(a0)
-; RV64IZCMP-WITH-FP-NEXT:    ld a1, 24(sp) # 8-byte Folded Reload
-; RV64IZCMP-WITH-FP-NEXT:    sw a1, 12(a0)
-; RV64IZCMP-WITH-FP-NEXT:    ld a1, 32(sp) # 8-byte Folded Reload
-; RV64IZCMP-WITH-FP-NEXT:    sw a1, 8(a0)
-; RV64IZCMP-WITH-FP-NEXT:    ld a1, 40(sp) # 8-byte Folded Reload
-; RV64IZCMP-WITH-FP-NEXT:    sw a1, 4(a0)
 ; RV64IZCMP-WITH-FP-NEXT:    ld a1, 48(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    sw a1, 20(a0)
+; RV64IZCMP-WITH-FP-NEXT:    ld a1, 40(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    sw a1, 16(a0)
+; RV64IZCMP-WITH-FP-NEXT:    ld a1, 32(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    sw a1, 12(a0)
+; RV64IZCMP-WITH-FP-NEXT:    ld a1, 24(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    sw a1, 8(a0)
+; RV64IZCMP-WITH-FP-NEXT:    ld a1, 16(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    sw a1, 4(a0)
+; RV64IZCMP-WITH-FP-NEXT:    ld a1, 8(sp) # 8-byte Folded Reload
 ; RV64IZCMP-WITH-FP-NEXT:    sw a1, 0(a0)
 ; RV64IZCMP-WITH-FP-NEXT:    .cfi_def_cfa sp, 160
 ; RV64IZCMP-WITH-FP-NEXT:    ld ra, 152(sp) # 8-byte Folded Reload
@@ -1408,16 +1408,16 @@ define void @callee() {
 ; RV32I-ZILSD-WITH-FP-NEXT:    addi a0, a0, %lo(var)
 ; RV32I-ZILSD-WITH-FP-NEXT:    lw a1, 0(a0)
 ; RV32I-ZILSD-WITH-FP-NEXT:    lw a2, 4(a0)
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a2, 16(sp) # 4-byte Folded Spill
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 20(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a2, 4(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 0(sp) # 4-byte Folded Spill
 ; RV32I-ZILSD-WITH-FP-NEXT:    lw a1, 8(a0)
 ; RV32I-ZILSD-WITH-FP-NEXT:    lw a2, 12(a0)
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a2, 8(sp) # 4-byte Folded Spill
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 12(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a2, 12(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 8(sp) # 4-byte Folded Spill
 ; RV32I-ZILSD-WITH-FP-NEXT:    lw a1, 16(a0)
 ; RV32I-ZILSD-WITH-FP-NEXT:    lw a2, 20(a0)
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a2, 0(sp) # 4-byte Folded Spill
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 4(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a2, 20(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 16(sp) # 4-byte Folded Spill
 ; RV32I-ZILSD-WITH-FP-NEXT:    ld t1, 24(a0)
 ; RV32I-ZILSD-WITH-FP-NEXT:    ld t3, 32(a0)
 ; RV32I-ZILSD-WITH-FP-NEXT:    ld t5, 40(a0)
@@ -1459,17 +1459,17 @@ define void @callee() {
 ; RV32I-ZILSD-WITH-FP-NEXT:    sw t3, 32(a0)
 ; RV32I-ZILSD-WITH-FP-NEXT:    sw t2, 28(a0)
 ; RV32I-ZILSD-WITH-FP-NEXT:    sw t1, 24(a0)
-; RV32I-ZILSD-WITH-FP-NEXT:    lw a1, 0(sp) # 4-byte Folded Reload
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 20(a0)
-; RV32I-ZILSD-WITH-FP-NEXT:    lw a1, 4(sp) # 4-byte Folded Reload
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 16(a0)
-; RV32I-ZILSD-WITH-FP-NEXT:    lw a1, 8(sp) # 4-byte Folded Reload
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 12(a0)
-; RV32I-ZILSD-WITH-FP-NEXT:    lw a1, 12(sp) # 4-byte Folded Reload
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 8(a0)
-; RV32I-ZILSD-WITH-FP-NEXT:    lw a1, 16(sp) # 4-byte Folded Reload
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 4(a0)
 ; RV32I-ZILSD-WITH-FP-NEXT:    lw a1, 20(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 20(a0)
+; RV32I-ZILSD-WITH-FP-NEXT:    lw a1, 16(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 16(a0)
+; RV32I-ZILSD-WITH-FP-NEXT:    lw a1, 12(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 12(a0)
+; RV32I-ZILSD-WITH-FP-NEXT:    lw a1, 8(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 8(a0)
+; RV32I-ZILSD-WITH-FP-NEXT:    lw a1, 4(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 4(a0)
+; RV32I-ZILSD-WITH-FP-NEXT:    lw a1, 0(sp) # 4-byte Folded Reload
 ; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 0(a0)
 ; RV32I-ZILSD-WITH-FP-NEXT:    .cfi_def_cfa sp, 80
 ; RV32I-ZILSD-WITH-FP-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
@@ -2026,49 +2026,49 @@ define void @caller() {
 ; RV32I-WITH-FP-NEXT:    lui s1, %hi(var)
 ; RV32I-WITH-FP-NEXT:    addi s1, s1, %lo(var)
 ; RV32I-WITH-FP-NEXT:    lw a0, 0(s1)
-; RV32I-WITH-FP-NEXT:    sw a0, 88(sp) # 4-byte Folded Spill
-; RV32I-WITH-FP-NEXT:    lw a0, 4(s1)
-; RV32I-WITH-FP-NEXT:    sw a0, 84(sp) # 4-byte Folded Spill
-; RV32I-WITH-FP-NEXT:    lw a0, 8(s1)
-; RV32I-WITH-FP-NEXT:    sw a0, 80(sp) # 4-byte Folded Spill
-; RV32I-WITH-FP-NEXT:    lw a0, 12(s1)
-; RV32I-WITH-FP-NEXT:    sw a0, 76(sp) # 4-byte Folded Spill
-; RV32I-WITH-FP-NEXT:    lw a0, 16(s1)
-; RV32I-WITH-FP-NEXT:    sw a0, 72(sp) # 4-byte Folded Spill
-; RV32I-WITH-FP-NEXT:    lw a0, 20(s1)
-; RV32I-WITH-FP-NEXT:    sw a0, 68(sp) # 4-byte Folded Spill
-; RV32I-WITH-FP-NEXT:    lw a0, 24(s1)
-; RV32I-WITH-FP-NEXT:    sw a0, 64(sp) # 4-byte Folded Spill
-; RV32I-WITH-FP-NEXT:    lw a0, 28(s1)
-; RV32I-WITH-FP-NEXT:    sw a0, 60(sp) # 4-byte Folded Spill
-; RV32I-WITH-FP-NEXT:    lw a0, 32(s1)
-; RV32I-WITH-FP-NEXT:    sw a0, 56(sp) # 4-byte Folded Spill
-; RV32I-WITH-FP-NEXT:    lw a0, 36(s1)
-; RV32I-WITH-FP-NEXT:    sw a0, 52(sp) # 4-byte Folded Spill
-; RV32I-WITH-FP-NEXT:    lw a0, 40(s1)
-; RV32I-WITH-FP-NEXT:    sw a0, 48(sp) # 4-byte Folded Spill
-; RV32I-WITH-FP-NEXT:    lw a0, 44(s1)
-; RV32I-WITH-FP-NEXT:    sw a0, 44(sp) # 4-byte Folded Spill
-; RV32I-WITH-FP-NEXT:    lw a0, 48(s1)
-; RV32I-WITH-FP-NEXT:    sw a0, 40(sp) # 4-byte Folded Spill
-; RV32I-WITH-FP-NEXT:    lw a0, 52(s1)
-; RV32I-WITH-FP-NEXT:    sw a0, 36(sp) # 4-byte Folded Spill
-; RV32I-WITH-FP-NEXT:    lw a0, 56(s1)
-; RV32I-WITH-FP-NEXT:    sw a0, 32(sp) # 4-byte Folded Spill
-; RV32I-WITH-FP-NEXT:    lw a0, 60(s1)
-; RV32I-WITH-FP-NEXT:    sw a0, 28(sp) # 4-byte Folded Spill
-; RV32I-WITH-FP-NEXT:    lw a0, 64(s1)
-; RV32I-WITH-FP-NEXT:    sw a0, 24(sp) # 4-byte Folded Spill
-; RV32I-WITH-FP-NEXT:    lw a0, 68(s1)
-; RV32I-WITH-FP-NEXT:    sw a0, 20(sp) # 4-byte Folded Spill
-; RV32I-WITH-FP-NEXT:    lw a0, 72(s1)
-; RV32I-WITH-FP-NEXT:    sw a0, 16(sp) # 4-byte Folded Spill
-; RV32I-WITH-FP-NEXT:    lw a0, 76(s1)
-; RV32I-WITH-FP-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
-; RV32I-WITH-FP-NEXT:    lw a0, 80(s1)
-; RV32I-WITH-FP-NEXT:    sw a0, 8(sp) # 4-byte Folded Spill
-; RV32I-WITH-FP-NEXT:    lw a0, 84(s1)
 ; RV32I-WITH-FP-NEXT:    sw a0, 4(sp) # 4-byte Folded Spill
+; RV32I-WITH-FP-NEXT:    lw a0, 4(s1)
+; RV32I-WITH-FP-NEXT:    sw a0, 8(sp) # 4-byte Folded Spill
+; RV32I-WITH-FP-NEXT:    lw a0, 8(s1)
+; RV32I-WITH-FP-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
+; RV32I-WITH-FP-NEXT:    lw a0, 12(s1)
+; RV32I-WITH-FP-NEXT:    sw a0, 16(sp) # 4-byte Folded Spill
+; RV32I-WITH-FP-NEXT:    lw a0, 16(s1)
+; RV32I-WITH-FP-NEXT:    sw a0, 20(sp) # 4-byte Folded Spill
+; RV32I-WITH-FP-NEXT:    lw a0, 20(s1)
+; RV32I-WITH-FP-NEXT:    sw a0, 24(sp) # 4-byte Folded Spill
+; RV32I-WITH-FP-NEXT:    lw a0, 24(s1)
+; RV32I-WITH-FP-NEXT:    sw a0, 28(sp) # 4-byte Folded Spill
+; RV32I-WITH-FP-NEXT:    lw a0, 28(s1)
+; RV32I-WITH-FP-NEXT:    sw a0, 32(sp) # 4-byte Folded Spill
+; RV32I-WITH-FP-NEXT:    lw a0, 32(s1)
+; RV32I-WITH-FP-NEXT:    sw a0, 36(sp) # 4-byte Folded Spill
+; RV32I-WITH-FP-NEXT:    lw a0, 36(s1)
+; RV32I-WITH-FP-NEXT:    sw a0, 40(sp) # 4-byte Folded Spill
+; RV32I-WITH-FP-NEXT:    lw a0, 40(s1)
+; RV32I-WITH-FP-NEXT:    sw a0, 44(sp) # 4-byte Folded Spill
+; RV32I-WITH-FP-NEXT:    lw a0, 44(s1)
+; RV32I-WITH-FP-NEXT:    sw a0, 48(sp) # 4-byte Folded Spill
+; RV32I-WITH-FP-NEXT:    lw a0, 48(s1)
+; RV32I-WITH-FP-NEXT:    sw a0, 52(sp) # 4-byte Folded Spill
+; RV32I-WITH-FP-NEXT:    lw a0, 52(s1)
+; RV32I-WITH-FP-NEXT:    sw a0, 56(sp) # 4-byte Folded Spill
+; RV32I-WITH-FP-NEXT:    lw a0, 56(s1)
+; RV32I-WITH-FP-NEXT:    sw a0, 60(sp) # 4-byte Folded Spill
+; RV32I-WITH-FP-NEXT:    lw a0, 60(s1)
+; RV32I-WITH-FP-NEXT:    sw a0, 64(sp) # 4-byte Folded Spill
+; RV32I-WITH-FP-NEXT:    lw a0, 64(s1)
+; RV32I-WITH-FP-NEXT:    sw a0, 68(sp) # 4-byte Folded Spill
+; RV32I-WITH-FP-NEXT:    lw a0, 68(s1)
+; RV32I-WITH-FP-NEXT:    sw a0, 72(sp) # 4-byte Folded Spill
+; RV32I-WITH-FP-NEXT:    lw a0, 72(s1)
+; RV32I-WITH-FP-NEXT:    sw a0, 76(sp) # 4-byte Folded Spill
+; RV32I-WITH-FP-NEXT:    lw a0, 76(s1)
+; RV32I-WITH-FP-NEXT:    sw a0, 80(sp) # 4-byte Folded Spill
+; RV32I-WITH-FP-NEXT:    lw a0, 80(s1)
+; RV32I-WITH-FP-NEXT:    sw a0, 84(sp) # 4-byte Folded Spill
+; RV32I-WITH-FP-NEXT:    lw a0, 84(s1)
+; RV32I-WITH-FP-NEXT:    sw a0, 88(sp) # 4-byte Folded Spill
 ; RV32I-WITH-FP-NEXT:    lw s4, 88(s1)
 ; RV32I-WITH-FP-NEXT:    lw s5, 92(s1)
 ; RV32I-WITH-FP-NEXT:    lw s6, 96(s1)
@@ -2090,49 +2090,49 @@ define void @caller() {
 ; RV32I-WITH-FP-NEXT:    sw s6, 96(s1)
 ; RV32I-WITH-FP-NEXT:    sw s5, 92(s1)
 ; RV32I-WITH-FP-NEXT:    sw s4, 88(s1)
-; RV32I-WITH-FP-NEXT:    lw a0, 4(sp) # 4-byte Folded Reload
-; RV32I-WITH-FP-NEXT:    sw a0, 84(s1)
-; RV32I-WITH-FP-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
-; RV32I-WITH-FP-NEXT:    sw a0, 80(s1)
-; RV32I-WITH-FP-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
-; RV32I-WITH-FP-NEXT:    sw a0, 76(s1)
-; RV32I-WITH-FP-NEXT:    lw a0, 16(sp) # 4-byte Folded Reload
-; RV32I-WITH-FP-NEXT:    sw a0, 72(s1)
-; RV32I-WITH-FP-NEXT:    lw a0, 20(sp) # 4-byte Folded Reload
-; RV32I-WITH-FP-NEXT:    sw a0, 68(s1)
-; RV32I-WITH-FP-NEXT:    lw a0, 24(sp) # 4-byte Folded Reload
-; RV32I-WITH-FP-NEXT:    sw a0, 64(s1)
-; RV32I-WITH-FP-NEXT:    lw a0, 28(sp) # 4-byte Folded Reload
-; RV32I-WITH-FP-NEXT:    sw a0, 60(s1)
-; RV32I-WITH-FP-NEXT:    lw a0, 32(sp) # 4-byte Folded Reload
-; RV32I-WITH-FP-NEXT:    sw a0, 56(s1)
-; RV32I-WITH-FP-NEXT:    lw a0, 36(sp) # 4-byte Folded Reload
-; RV32I-WITH-FP-NEXT:    sw a0, 52(s1)
-; RV32I-WITH-FP-NEXT:    lw a0, 40(sp) # 4-byte Folded Reload
-; RV32I-WITH-FP-NEXT:    sw a0, 48(s1)
-; RV32I-WITH-FP-NEXT:    lw a0, 44(sp) # 4-byte Folded Reload
-; RV32I-WITH-FP-NEXT:    sw a0, 44(s1)
-; RV32I-WITH-FP-NEXT:    lw a0, 48(sp) # 4-byte Folded Reload
-; RV32I-WITH-FP-NEXT:    sw a0, 40(s1)
-; RV32I-WITH-FP-NEXT:    lw a0, 52(sp) # 4-byte Folded Reload
-; RV32I-WITH-FP-NEXT:    sw a0, 36(s1)
-; RV32I-WITH-FP-NEXT:    lw a0, 56(sp) # 4-byte Folded Reload
-; RV32I-WITH-FP-NEXT:    sw a0, 32(s1)
-; RV32I-WITH-FP-NEXT:    lw a0, 60(sp) # 4-byte Folded Reload
-; RV32I-WITH-FP-NEXT:    sw a0, 28(s1)
-; RV32I-WITH-FP-NEXT:    lw a0, 64(sp) # 4-byte Folded Reload
-; RV32I-WITH-FP-NEXT:    sw a0, 24(s1)
-; RV32I-WITH-FP-NEXT:    lw a0, 68(sp) # 4-byte Folded Reload
-; RV32I-WITH-FP-NEXT:    sw a0, 20(s1)
-; RV32I-WITH-FP-NEXT:    lw a0, 72(sp) # 4-byte Folded Reload
-; RV32I-WITH-FP-NEXT:    sw a0, 16(s1)
-; RV32I-WITH-FP-NEXT:    lw a0, 76(sp) # 4-byte Folded Reload
-; RV32I-WITH-FP-NEXT:    sw a0, 12(s1)
-; RV32I-WITH-FP-NEXT:    lw a0, 80(sp) # 4-byte Folded Reload
-; RV32I-WITH-FP-NEXT:    sw a0, 8(s1)
-; RV32I-WITH-FP-NEXT:    lw a0, 84(sp) # 4-byte Folded Reload
-; RV32I-WITH-FP-NEXT:    sw a0, 4(s1)
 ; RV32I-WITH-FP-NEXT:    lw a0, 88(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    sw a0, 84(s1)
+; RV32I-WITH-FP-NEXT:    lw a0, 84(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    sw a0, 80(s1)
+; RV32I-WITH-FP-NEXT:    lw a0, 80(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    sw a0, 76(s1)
+; RV32I-WITH-FP-NEXT:    lw a0, 76(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    sw a0, 72(s1)
+; RV32I-WITH-FP-NEXT:    lw a0, 72(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    sw a0, 68(s1)
+; RV32I-WITH-FP-NEXT:    lw a0, 68(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    sw a0, 64(s1)
+; RV32I-WITH-FP-NEXT:    lw a0, 64(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    sw a0, 60(s1)
+; RV32I-WITH-FP-NEXT:    lw a0, 60(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    sw a0, 56(s1)
+; RV32I-WITH-FP-NEXT:    lw a0, 56(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    sw a0, 52(s1)
+; RV32I-WITH-FP-NEXT:    lw a0, 52(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    sw a0, 48(s1)
+; RV32I-WITH-FP-NEXT:    lw a0, 48(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    sw a0, 44(s1)
+; RV32I-WITH-FP-NEXT:    lw a0, 44(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    sw a0, 40(s1)
+; RV32I-WITH-FP-NEXT:    lw a0, 40(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    sw a0, 36(s1)
+; RV32I-WITH-FP-NEXT:    lw a0, 36(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    sw a0, 32(s1)
+; RV32I-WITH-FP-NEXT:    lw a0, 32(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    sw a0, 28(s1)
+; RV32I-WITH-FP-NEXT:    lw a0, 28(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    sw a0, 24(s1)
+; RV32I-WITH-FP-NEXT:    lw a0, 24(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    sw a0, 20(s1)
+; RV32I-WITH-FP-NEXT:    lw a0, 20(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    sw a0, 16(s1)
+; RV32I-WITH-FP-NEXT:    lw a0, 16(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    sw a0, 12(s1)
+; RV32I-WITH-FP-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    sw a0, 8(s1)
+; RV32I-WITH-FP-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    sw a0, 4(s1)
+; RV32I-WITH-FP-NEXT:    lw a0, 4(sp) # 4-byte Folded Reload
 ; RV32I-WITH-FP-NEXT:    sw a0, 0(s1)
 ; RV32I-WITH-FP-NEXT:    .cfi_def_cfa sp, 144
 ; RV32I-WITH-FP-NEXT:    lw ra, 140(sp) # 4-byte Folded Reload
@@ -2332,49 +2332,49 @@ define void @caller() {
 ; RV32IZCMP-WITH-FP-NEXT:    lui s1, %hi(var)
 ; RV32IZCMP-WITH-FP-NEXT:    addi s1, s1, %lo(var)
 ; RV32IZCMP-WITH-FP-NEXT:    lw a0, 0(s1)
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 88(sp) # 4-byte Folded Spill
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 4(s1)
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 84(sp) # 4-byte Folded Spill
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 8(s1)
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 80(sp) # 4-byte Folded Spill
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 12(s1)
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 76(sp) # 4-byte Folded Spill
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 16(s1)
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 72(sp) # 4-byte Folded Spill
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 20(s1)
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 68(sp) # 4-byte Folded Spill
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 24(s1)
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 64(sp) # 4-byte Folded Spill
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 28(s1)
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 60(sp) # 4-byte Folded Spill
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 32(s1)
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 56(sp) # 4-byte Folded Spill
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 36(s1)
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 52(sp) # 4-byte Folded Spill
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 40(s1)
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 48(sp) # 4-byte Folded Spill
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 44(s1)
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 44(sp) # 4-byte Folded Spill
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 48(s1)
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 40(sp) # 4-byte Folded Spill
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 52(s1)
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 36(sp) # 4-byte Folded Spill
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 56(s1)
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 32(sp) # 4-byte Folded Spill
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 60(s1)
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 28(sp) # 4-byte Folded Spill
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 64(s1)
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 24(sp) # 4-byte Folded Spill
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 68(s1)
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 20(sp) # 4-byte Folded Spill
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 72(s1)
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 16(sp) # 4-byte Folded Spill
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 76(s1)
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 80(s1)
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 8(sp) # 4-byte Folded Spill
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 84(s1)
 ; RV32IZCMP-WITH-FP-NEXT:    sw a0, 4(sp) # 4-byte Folded Spill
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 4(s1)
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 8(sp) # 4-byte Folded Spill
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 8(s1)
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 12(s1)
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 16(sp) # 4-byte Folded Spill
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 16(s1)
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 20(sp) # 4-byte Folded Spill
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 20(s1)
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 24(sp) # 4-byte Folded Spill
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 24(s1)
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 28(sp) # 4-byte Folded Spill
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 28(s1)
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 32(sp) # 4-byte Folded Spill
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 32(s1)
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 36(sp) # 4-byte Folded Spill
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 36(s1)
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 40(sp) # 4-byte Folded Spill
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 40(s1)
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 44(sp) # 4-byte Folded Spill
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 44(s1)
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 48(sp) # 4-byte Folded Spill
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 48(s1)
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 52(sp) # 4-byte Folded Spill
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 52(s1)
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 56(sp) # 4-byte Folded Spill
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 56(s1)
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 60(sp) # 4-byte Folded Spill
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 60(s1)
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 64(sp) # 4-byte Folded Spill
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 64(s1)
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 68(sp) # 4-byte Folded Spill
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 68(s1)
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 72(sp) # 4-byte Folded Spill
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 72(s1)
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 76(sp) # 4-byte Folded Spill
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 76(s1)
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 80(sp) # 4-byte Folded Spill
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 80(s1)
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 84(sp) # 4-byte Folded Spill
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 84(s1)
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 88(sp) # 4-byte Folded Spill
 ; RV32IZCMP-WITH-FP-NEXT:    lw s4, 88(s1)
 ; RV32IZCMP-WITH-FP-NEXT:    lw s5, 92(s1)
 ; RV32IZCMP-WITH-FP-NEXT:    lw s6, 96(s1)
@@ -2396,49 +2396,49 @@ define void @caller() {
 ; RV32IZCMP-WITH-FP-NEXT:    sw s6, 96(s1)
 ; RV32IZCMP-WITH-FP-NEXT:    sw s5, 92(s1)
 ; RV32IZCMP-WITH-FP-NEXT:    sw s4, 88(s1)
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 4(sp) # 4-byte Folded Reload
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 84(s1)
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 80(s1)
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 76(s1)
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 16(sp) # 4-byte Folded Reload
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 72(s1)
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 20(sp) # 4-byte Folded Reload
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 68(s1)
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 24(sp) # 4-byte Folded Reload
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 64(s1)
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 28(sp) # 4-byte Folded Reload
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 60(s1)
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 32(sp) # 4-byte Folded Reload
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 56(s1)
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 36(sp) # 4-byte Folded Reload
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 52(s1)
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 40(sp) # 4-byte Folded Reload
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 48(s1)
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 44(sp) # 4-byte Folded Reload
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 44(s1)
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 48(sp) # 4-byte Folded Reload
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 40(s1)
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 52(sp) # 4-byte Folded Reload
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 36(s1)
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 56(sp) # 4-byte Folded Reload
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 32(s1)
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 60(sp) # 4-byte Folded Reload
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 28(s1)
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 64(sp) # 4-byte Folded Reload
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 24(s1)
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 68(sp) # 4-byte Folded Reload
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 20(s1)
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 72(sp) # 4-byte Folded Reload
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 16(s1)
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 76(sp) # 4-byte Folded Reload
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 12(s1)
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 80(sp) # 4-byte Folded Reload
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 8(s1)
-; RV32IZCMP-WITH-FP-NEXT:    lw a0, 84(sp) # 4-byte Folded Reload
-; RV32IZCMP-WITH-FP-NEXT:    sw a0, 4(s1)
 ; RV32IZCMP-WITH-FP-NEXT:    lw a0, 88(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 84(s1)
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 84(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 80(s1)
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 80(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 76(s1)
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 76(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 72(s1)
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 72(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 68(s1)
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 68(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 64(s1)
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 64(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 60(s1)
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 60(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 56(s1)
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 56(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 52(s1)
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 52(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 48(s1)
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 48(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 44(s1)
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 44(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 40(s1)
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 40(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 36(s1)
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 36(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 32(s1)
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 32(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 28(s1)
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 28(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 24(s1)
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 24(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 20(s1)
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 20(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 16(s1)
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 16(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 12(s1)
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 8(s1)
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    sw a0, 4(s1)
+; RV32IZCMP-WITH-FP-NEXT:    lw a0, 4(sp) # 4-byte Folded Reload
 ; RV32IZCMP-WITH-FP-NEXT:    sw a0, 0(s1)
 ; RV32IZCMP-WITH-FP-NEXT:    .cfi_def_cfa sp, 144
 ; RV32IZCMP-WITH-FP-NEXT:    lw ra, 140(sp) # 4-byte Folded Reload
@@ -2824,49 +2824,49 @@ define void @caller() {
 ; RV64I-WITH-FP-NEXT:    lui s1, %hi(var)
 ; RV64I-WITH-FP-NEXT:    addi s1, s1, %lo(var)
 ; RV64I-WITH-FP-NEXT:    lw a0, 0(s1)
-; RV64I-WITH-FP-NEXT:    sd a0, 176(sp) # 8-byte Folded Spill
-; RV64I-WITH-FP-NEXT:    lw a0, 4(s1)
-; RV64I-WITH-FP-NEXT:    sd a0, 168(sp) # 8-byte Folded Spill
-; RV64I-WITH-FP-NEXT:    lw a0, 8(s1)
-; RV64I-WITH-FP-NEXT:    sd a0, 160(sp) # 8-byte Folded Spill
-; RV64I-WITH-FP-NEXT:    lw a0, 12(s1)
-; RV64I-WITH-FP-NEXT:    sd a0, 152(sp) # 8-byte Folded Spill
-; RV64I-WITH-FP-NEXT:    lw a0, 16(s1)
-; RV64I-WITH-FP-NEXT:    sd a0, 144(sp) # 8-byte Folded Spill
-; RV64I-WITH-FP-NEXT:    lw a0, 20(s1)
-; RV64I-WITH-FP-NEXT:    sd a0, 136(sp) # 8-byte Folded Spill
-; RV64I-WITH-FP-NEXT:    lw a0, 24(s1)
-; RV64I-WITH-FP-NEXT:    sd a0, 128(sp) # 8-byte Folded Spill
-; RV64I-WITH-FP-NEXT:    lw a0, 28(s1)
-; RV64I-WITH-FP-NEXT:    sd a0, 120(sp) # 8-byte Folded Spill
-; RV64I-WITH-FP-NEXT:    lw a0, 32(s1)
-; RV64I-WITH-FP-NEXT:    sd a0, 112(sp) # 8-byte Folded Spill
-; RV64I-WITH-FP-NEXT:    lw a0, 36(s1)
-; RV64I-WITH-FP-NEXT:    sd a0, 104(sp) # 8-byte Folded Spill
-; RV64I-WITH-FP-NEXT:    lw a0, 40(s1)
-; RV64I-WITH-FP-NEXT:    sd a0, 96(sp) # 8-byte Folded Spill
-; RV64I-WITH-FP-NEXT:    lw a0, 44(s1)
-; RV64I-WITH-FP-NEXT:    sd a0, 88(sp) # 8-byte Folded Spill
-; RV64I-WITH-FP-NEXT:    lw a0, 48(s1)
-; RV64I-WITH-FP-NEXT:    sd a0, 80(sp) # 8-byte Folded Spill
-; RV64I-WITH-FP-NEXT:    lw a0, 52(s1)
-; RV64I-WITH-FP-NEXT:    sd a0, 72(sp) # 8-byte Folded Spill
-; RV64I-WITH-FP-NEXT:    lw a0, 56(s1)
-; RV64I-WITH-FP-NEXT:    sd a0, 64(sp) # 8-byte Folded Spill
-; RV64I-WITH-FP-NEXT:    lw a0, 60(s1)
-; RV64I-WITH-FP-NEXT:    sd a0, 56(sp) # 8-byte Folded Spill
-; RV64I-WITH-FP-NEXT:    lw a0, 64(s1)
-; RV64I-WITH-FP-NEXT:    sd a0, 48(sp) # 8-byte Folded Spill
-; RV64I-WITH-FP-NEXT:    lw a0, 68(s1)
-; RV64I-WITH-FP-NEXT:    sd a0, 40(sp) # 8-byte Folded Spill
-; RV64I-WITH-FP-NEXT:    lw a0, 72(s1)
-; RV64I-WITH-FP-NEXT:    sd a0, 32(sp) # 8-byte Folded Spill
-; RV64I-WITH-FP-NEXT:    lw a0, 76(s1)
-; RV64I-WITH-FP-NEXT:    sd a0, 24(sp) # 8-byte Folded Spill
-; RV64I-WITH-FP-NEXT:    lw a0, 80(s1)
-; RV64I-WITH-FP-NEXT:    sd a0, 16(sp) # 8-byte Folded Spill
-; RV64I-WITH-FP-NEXT:    lw a0, 84(s1)
 ; RV64I-WITH-FP-NEXT:    sd a0, 8(sp) # 8-byte Folded Spill
+; RV64I-WITH-FP-NEXT:    lw a0, 4(s1)
+; RV64I-WITH-FP-NEXT:    sd a0, 16(sp) # 8-byte Folded Spill
+; RV64I-WITH-FP-NEXT:    lw a0, 8(s1)
+; RV64I-WITH-FP-NEXT:    sd a0, 24(sp) # 8-byte Folded Spill
+; RV64I-WITH-FP-NEXT:    lw a0, 12(s1)
+; RV64I-WITH-FP-NEXT:    sd a0, 32(sp) # 8-byte Folded Spill
+; RV64I-WITH-FP-NEXT:    lw a0, 16(s1)
+; RV64I-WITH-FP-NEXT:    sd a0, 40(sp) # 8-byte Folded Spill
+; RV64I-WITH-FP-NEXT:    lw a0, 20(s1)
+; RV64I-WITH-FP-NEXT:    sd a0, 48(sp) # 8-byte Folded Spill
+; RV64I-WITH-FP-NEXT:    lw a0, 24(s1)
+; RV64I-WITH-FP-NEXT:    sd a0, 56(sp) # 8-byte Folded Spill
+; RV64I-WITH-FP-NEXT:    lw a0, 28(s1)
+; RV64I-WITH-FP-NEXT:    sd a0, 64(sp) # 8-byte Folded Spill
+; RV64I-WITH-FP-NEXT:    lw a0, 32(s1)
+; RV64I-WITH-FP-NEXT:    sd a0, 72(sp) # 8-byte Folded Spill
+; RV64I-WITH-FP-NEXT:    lw a0, 36(s1)
+; RV64I-WITH-FP-NEXT:    sd a0, 80(sp) # 8-byte Folded Spill
+; RV64I-WITH-FP-NEXT:    lw a0, 40(s1)
+; RV64I-WITH-FP-NEXT:    sd a0, 88(sp) # 8-byte Folded Spill
+; RV64I-WITH-FP-NEXT:    lw a0, 44(s1)
+; RV64I-WITH-FP-NEXT:    sd a0, 96(sp) # 8-byte Folded Spill
+; RV64I-WITH-FP-NEXT:    lw a0, 48(s1)
+; RV64I-WITH-FP-NEXT:    sd a0, 104(sp) # 8-byte Folded Spill
+; RV64I-WITH-FP-NEXT:    lw a0, 52(s1)
+; RV64I-WITH-FP-NEXT:    sd a0, 112(sp) # 8-byte Folded Spill
+; RV64I-WITH-FP-NEXT:    lw a0, 56(s1)
+; RV64I-WITH-FP-NEXT:    sd a0, 120(sp) # 8-byte Folded Spill
+; RV64I-WITH-FP-NEXT:    lw a0, 60(s1)
+; RV64I-WITH-FP-NEXT:    sd a0, 128(sp) # 8-byte Folded Spill
+; RV64I-WITH-FP-NEXT:    lw a0, 64(s1)
+; RV64I-WITH-FP-NEXT:    sd a0, 136(sp) # 8-byte Folded Spill
+; RV64I-WITH-FP-NEXT:    lw a0, 68(s1)
+; RV64I-WITH-FP-NEXT:    sd a0, 144(sp) # 8-byte Folded Spill
+; RV64I-WITH-FP-NEXT:    lw a0, 72(s1)
+; RV64I-WITH-FP-NEXT:    sd a0, 152(sp) # 8-byte Folded Spill
+; RV64I-WITH-FP-NEXT:    lw a0, 76(s1)
+; RV64I-WITH-FP-NEXT:    sd a0, 160(sp) # 8-byte Folded Spill
+; RV64I-WITH-FP-NEXT:    lw a0, 80(s1)
+; RV64I-WITH-FP-NEXT:    sd a0, 168(sp) # 8-byte Folded Spill
+; RV64I-WITH-FP-NEXT:    lw a0, 84(s1)
+; RV64I-WITH-FP-NEXT:    sd a0, 176(sp) # 8-byte Folded Spill
 ; RV64I-WITH-FP-NEXT:    lw s4, 88(s1)
 ; RV64I-WITH-FP-NEXT:    lw s5, 92(s1)
 ; RV64I-WITH-FP-NEXT:    lw s6, 96(s1)
@@ -2888,49 +2888,49 @@ define void @caller() {
 ; RV64I-WITH-FP-NEXT:    sw s6, 96(s1)
 ; RV64I-WITH-FP-NEXT:    sw s5, 92(s1)
 ; RV64I-WITH-FP-NEXT:    sw s4, 88(s1)
-; RV64I-WITH-FP-NEXT:    ld a0, 8(sp) # 8-byte Folded Reload
-; RV64I-WITH-FP-NEXT:    sw a0, 84(s1)
-; RV64I-WITH-FP-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
-; RV64I-WITH-FP-NEXT:    sw a0, 80(s1)
-; RV64I-WITH-FP-NEXT:    ld a0, 24(sp) # 8-byte Folded Reload
-; RV64I-WITH-FP-NEXT:    sw a0, 76(s1)
-; RV64I-WITH-FP-NEXT:    ld a0, 32(sp) # 8-byte Folded Reload
-; RV64I-WITH-FP-NEXT:    sw a0, 72(s1)
-; RV64I-WITH-FP-NEXT:    ld a0, 40(sp) # 8-byte Folded Reload
-; RV64I-WITH-FP-NEXT:    sw a0, 68(s1)
-; RV64I-WITH-FP-NEXT:    ld a0, 48(sp) # 8-byte Folded Reload
-; RV64I-WITH-FP-NEXT:    sw a0, 64(s1)
-; RV64I-WITH-FP-NEXT:    ld a0, 56(sp) # 8-byte Folded Reload
-; RV64I-WITH-FP-NEXT:    sw a0, 60(s1)
-; RV64I-WITH-FP-NEXT:    ld a0, 64(sp) # 8-byte Folded Reload
-; RV64I-WITH-FP-NEXT:    sw a0, 56(s1)
-; RV64I-WITH-FP-NEXT:    ld a0, 72(sp) # 8-byte Folded Reload
-; RV64I-WITH-FP-NEXT:    sw a0, 52(s1)
-; RV64I-WITH-FP-NEXT:    ld a0, 80(sp) # 8-byte Folded Reload
-; RV64I-WITH-FP-NEXT:    sw a0, 48(s1)
-; RV64I-WITH-FP-NEXT:    ld a0, 88(sp) # 8-byte Folded Reload
-; RV64I-WITH-FP-NEXT:    sw a0, 44(s1)
-; RV64I-WITH-FP-NEXT:    ld a0, 96(sp) # 8-byte Folded Reload
-; RV64I-WITH-FP-NEXT:    sw a0, 40(s1)
-; RV64I-WITH-FP-NEXT:    ld a0, 104(sp) # 8-byte Folded Reload
-; RV64I-WITH-FP-NEXT:    sw a0, 36(s1)
-; RV64I-WITH-FP-NEXT:    ld a0, 112(sp) # 8-byte Folded Reload
-; RV64I-WITH-FP-NEXT:    sw a0, 32(s1)
-; RV64I-WITH-FP-NEXT:    ld a0, 120(sp) # 8-byte Folded Reload
-; RV64I-WITH-FP-NEXT:    sw a0, 28(s1)
-; RV64I-WITH-FP-NEXT:    ld a0, 128(sp) # 8-byte Folded Reload
-; RV64I-WITH-FP-NEXT:    sw a0, 24(s1)
-; RV64I-WITH-FP-NEXT:    ld a0, 136(sp) # 8-byte Folded Reload
-; RV64I-WITH-FP-NEXT:    sw a0, 20(s1)
-; RV64I-WITH-FP-NEXT:    ld a0, 144(sp) # 8-byte Folded Reload
-; RV64I-WITH-FP-NEXT:    sw a0, 16(s1)
-; RV64I-WITH-FP-NEXT:    ld a0, 152(sp) # 8-byte Folded Reload
-; RV64I-WITH-FP-NEXT:    sw a0, 12(s1)
-; RV64I-WITH-FP-NEXT:    ld a0, 160(sp) # 8-byte Folded Reload
-; RV64I-WITH-FP-NEXT:    sw a0, 8(s1)
-; RV64I-WITH-FP-NEXT:    ld a0, 168(sp) # 8-byte Folded Reload
-; RV64I-WITH-FP-NEXT:    sw a0, 4(s1)
 ; RV64I-WITH-FP-NEXT:    ld a0, 176(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    sw a0, 84(s1)
+; RV64I-WITH-FP-NEXT:    ld a0, 168(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    sw a0, 80(s1)
+; RV64I-WITH-FP-NEXT:    ld a0, 160(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    sw a0, 76(s1)
+; RV64I-WITH-FP-NEXT:    ld a0, 152(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    sw a0, 72(s1)
+; RV64I-WITH-FP-NEXT:    ld a0, 144(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    sw a0, 68(s1)
+; RV64I-WITH-FP-NEXT:    ld a0, 136(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    sw a0, 64(s1)
+; RV64I-WITH-FP-NEXT:    ld a0, 128(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    sw a0, 60(s1)
+; RV64I-WITH-FP-NEXT:    ld a0, 120(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    sw a0, 56(s1)
+; RV64I-WITH-FP-NEXT:    ld a0, 112(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    sw a0, 52(s1)
+; RV64I-WITH-FP-NEXT:    ld a0, 104(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    sw a0, 48(s1)
+; RV64I-WITH-FP-NEXT:    ld a0, 96(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    sw a0, 44(s1)
+; RV64I-WITH-FP-NEXT:    ld a0, 88(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    sw a0, 40(s1)
+; RV64I-WITH-FP-NEXT:    ld a0, 80(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    sw a0, 36(s1)
+; RV64I-WITH-FP-NEXT:    ld a0, 72(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    sw a0, 32(s1)
+; RV64I-WITH-FP-NEXT:    ld a0, 64(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    sw a0, 28(s1)
+; RV64I-WITH-FP-NEXT:    ld a0, 56(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    sw a0, 24(s1)
+; RV64I-WITH-FP-NEXT:    ld a0, 48(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    sw a0, 20(s1)
+; RV64I-WITH-FP-NEXT:    ld a0, 40(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    sw a0, 16(s1)
+; RV64I-WITH-FP-NEXT:    ld a0, 32(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    sw a0, 12(s1)
+; RV64I-WITH-FP-NEXT:    ld a0, 24(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    sw a0, 8(s1)
+; RV64I-WITH-FP-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    sw a0, 4(s1)
+; RV64I-WITH-FP-NEXT:    ld a0, 8(sp) # 8-byte Folded Reload
 ; RV64I-WITH-FP-NEXT:    sw a0, 0(s1)
 ; RV64I-WITH-FP-NEXT:    .cfi_def_cfa sp, 288
 ; RV64I-WITH-FP-NEXT:    ld ra, 280(sp) # 8-byte Folded Reload
@@ -3130,49 +3130,49 @@ define void @caller() {
 ; RV64IZCMP-WITH-FP-NEXT:    lui s1, %hi(var)
 ; RV64IZCMP-WITH-FP-NEXT:    addi s1, s1, %lo(var)
 ; RV64IZCMP-WITH-FP-NEXT:    lw a0, 0(s1)
-; RV64IZCMP-WITH-FP-NEXT:    sd a0, 176(sp) # 8-byte Folded Spill
-; RV64IZCMP-WITH-FP-NEXT:    lw a0, 4(s1)
-; RV64IZCMP-WITH-FP-NEXT:    sd a0, 168(sp) # 8-byte Folded Spill
-; RV64IZCMP-WITH-FP-NEXT:    lw a0, 8(s1)
-; RV64IZCMP-WITH-FP-NEXT:    sd a0, 160(sp) # 8-byte Folded Spill
-; RV64IZCMP-WITH-FP-NEXT:    lw a0, 12(s1)
-; RV64IZCMP-WITH-FP-NEXT:    sd a0, 152(sp) # 8-byte Folded Spill
-; RV64IZCMP-WITH-FP-NEXT:    lw a0, 16(s1)
-; RV64IZCMP-WITH-FP-NEXT:    sd a0, 144(sp) # 8-byte Folded Spill
-; RV64IZCMP-WITH-FP-NEXT:    lw a0, 20(s1)
-; RV64IZCMP-WITH-FP-NEXT:    sd a0, 136(sp) # 8-byte Folded Spill
-; RV64IZCMP-WITH-FP-NEXT:    lw a0, 24(s1)
-; RV64IZCMP-WITH-FP-NEXT:    sd a0, 128(sp) # 8-byte Folded Spill
-; RV64IZCMP-WITH-FP-NEXT:    lw a0, 28(s1)
-; RV64IZCMP-WITH-FP-NEXT:    sd a0, 120(sp) # 8-byte Folded Spill
-; RV64IZCMP-WITH-FP-NEXT:    lw a0, 32(s1)
-; RV64IZCMP-WITH-FP-NEXT:    sd a0, 112(sp) # 8-byte Folded Spill
-; RV64IZCMP-WITH-FP-NEXT:    lw a0, 36(s1)
-; RV64IZCMP-WITH-FP-NEXT:    sd a0, 104(sp) # 8-byte Folded Spill
-; RV64IZCMP-WITH-FP-NEXT:    lw a0, 40(s1)
-; RV64IZCMP-WITH-FP-NEXT:    sd a0, 96(sp) # 8-byte Folded Spill
-; RV64IZCMP-WITH-FP-NEXT:    lw a0, 44(s1)
-; RV64IZCMP-WITH-FP-NEXT:    sd a0, 88(sp) # 8-byte Folded Spill
-; RV64IZCMP-WITH-FP-NEXT:    lw a0, 48(s1)
-; RV64IZCMP-WITH-FP-NEXT:    sd a0, 80(sp) # 8-byte Folded Spill
-; RV64IZCMP-WITH-FP-NEXT:    lw a0, 52(s1)
-; RV64IZCMP-WITH-FP-NEXT:    sd a0, 72(sp) # 8-byte Folded Spill
-; RV64IZCMP-WITH-FP-NEXT:    lw a0, 56(s1)
-; RV64IZCMP-WITH-FP-NEXT:    sd a0, 64(sp) # 8-byte Folded Spill
-; RV64IZCMP-WITH-FP-NEXT:    lw a0, 60(s1)
-; RV64IZCMP-WITH-FP-NEXT:    sd a0, 56(sp) # 8-byte Folded Spill
-; RV64IZCMP-WITH-FP-NEXT:    lw a0, 64(s1)
-; RV64IZCMP-WITH-FP-NEXT:    sd a0, 48(sp) # 8-byte Folded Spill
-; RV64IZCMP-WITH-FP-NEXT:    lw a0, 68(s1)
-; RV64IZCMP-WITH-FP-NEXT:    sd a0, 40(sp) # 8-byte Folded Spill
-; RV64IZCMP-WITH-FP-NEXT:    lw a0, 72(s1)
-; RV64IZCMP-WITH-FP-NEXT:    sd a0, 32(sp) # 8-byte Folded Spill
-; RV64IZCMP-WITH-FP-NEXT:    lw a0, 76(s1)
-; RV64IZCMP-WITH-FP-NEXT:    sd a0, 24(sp) # 8-byte Folded Spill
-; RV64IZCMP-WITH-FP-NEXT:    lw a0, 80(s1)
-; RV64IZCMP-WITH-FP-NEXT:    sd a0, 16(sp) # 8-byte Folded Spill
-; RV64IZCMP-WITH-FP-NEXT:    lw a0, 84(s1)
 ; RV64IZCMP-WITH-FP-NEXT:    sd a0, 8(sp) # 8-byte Folded Spill
+; RV64IZCMP-WITH-FP-NEXT:    lw a0, 4(s1)
+; RV64IZCMP-WITH-FP-NEXT:    sd a0, 16(sp) # 8-byte Folded Spill
+; RV64IZCMP-WITH-FP-NEXT:    lw a0, 8(s1)
+; RV64IZCMP-WITH-FP-NEXT:    sd a0, 24(sp) # 8-byte Folded Spill
+; RV64IZCMP-WITH-FP-NEXT:    lw a0, 12(s1)
+; RV64IZCMP-WITH-FP-NEXT:    sd a0, 32(sp) # 8-byte Folded Spill
+; RV64IZCMP-WITH-FP-NEXT:    lw a0, 16(s1)
+; RV64IZCMP-WITH-FP-NEXT:    sd a0, 40(sp) # 8-byte Folded Spill
+; RV64IZCMP-WITH-FP-NEXT:    lw a0, 20(s1)
+; RV64IZCMP-WITH-FP-NEXT:    sd a0, 48(sp) # 8-byte Folded Spill
+; RV64IZCMP-WITH-FP-NEXT:    lw a0, 24(s1)
+; RV64IZCMP-WITH-FP-NEXT:    sd a0, 56(sp) # 8-byte Folded Spill
+; RV64IZCMP-WITH-FP-NEXT:    lw a0, 28(s1)
+; RV64IZCMP-WITH-FP-NEXT:    sd a0, 64(sp) # 8-byte Folded Spill
+; RV64IZCMP-WITH-FP-NEXT:    lw a0, 32(s1)
+; RV64IZCMP-WITH-FP-NEXT:    sd a0, 72(sp) # 8-byte Folded Spill
+; RV64IZCMP-WITH-FP-NEXT:    lw a0, 36(s1)
+; RV64IZCMP-WITH-FP-NEXT:    sd a0, 80(sp) # 8-byte Folded Spill
+; RV64IZCMP-WITH-FP-NEXT:    lw a0, 40(s1)
+; RV64IZCMP-WITH-FP-NEXT:    sd a0, 88(sp) # 8-byte Folded Spill
+; RV64IZCMP-WITH-FP-NEXT:    lw a0, 44(s1)
+; RV64IZCMP-WITH-FP-NEXT:    sd a0, 96(sp) # 8-byte Folded Spill
+; RV64IZCMP-WITH-FP-NEXT:    lw a0, 48(s1)
+; RV64IZCMP-WITH-FP-NEXT:    sd a0, 104(sp) # 8-byte Folded Spill
+; RV64IZCMP-WITH-FP-NEXT:    lw a0, 52(s1)
+; RV64IZCMP-WITH-FP-NEXT:    sd a0, 112(sp) # 8-byte Folded Spill
+; RV64IZCMP-WITH-FP-NEXT:    lw a0, 56(s1)
+; RV64IZCMP-WITH-FP-NEXT:    sd a0, 120(sp) # 8-byte Folded Spill
+; RV64IZCMP-WITH-FP-NEXT:    lw a0, 60(s1)
+; RV64IZCMP-WITH-FP-NEXT:    sd a0, 128(sp) # 8-byte Folded Spill
+; RV64IZCMP-WITH-FP-NEXT:    lw a0, 64(s1)
+; RV64IZCMP-WITH-FP-NEXT:    sd a0, 136(sp) # 8-byte Folded Spill
+; RV64IZCMP-WITH-FP-NEXT:    lw a0, 68(s1)
+; RV64IZCMP-WITH-FP-NEXT:    sd a0, 144(sp) # 8-byte Folded Spill
+; RV64IZCMP-WITH-FP-NEXT:    lw a0, 72(s1)
+; RV64IZCMP-WITH-FP-NEXT:    sd a0, 152(sp) # 8-byte Folded Spill
+; RV64IZCMP-WITH-FP-NEXT:    lw a0, 76(s1)
+; RV64IZCMP-WITH-FP-NEXT:    sd a0, 160(sp) # 8-byte Folded Spill
+; RV64IZCMP-WITH-FP-NEXT:    lw a0, 80(s1)
+; RV64IZCMP-WITH-FP-NEXT:    sd a0, 168(sp) # 8-byte Folded Spill
+; RV64IZCMP-WITH-FP-NEXT:    lw a0, 84(s1)
+; RV64IZCMP-WITH-FP-NEXT:    sd a0, 176(sp) # 8-byte Folded Spill
 ; RV64IZCMP-WITH-FP-NEXT:    lw s4, 88(s1)
 ; RV64IZCMP-WITH-FP-NEXT:    lw s5, 92(s1)
 ; RV64IZCMP-WITH-FP-NEXT:    lw s6, 96(s1)
@@ -3194,49 +3194,49 @@ define void @caller() {
 ; RV64IZCMP-WITH-FP-NEXT:    sw s6, 96(s1)
 ; RV64IZCMP-WITH-FP-NEXT:    sw s5, 92(s1)
 ; RV64IZCMP-WITH-FP-NEXT:    sw s4, 88(s1)
-; RV64IZCMP-WITH-FP-NEXT:    ld a0, 8(sp) # 8-byte Folded Reload
-; RV64IZCMP-WITH-FP-NEXT:    sw a0, 84(s1)
-; RV64IZCMP-WITH-FP-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
-; RV64IZCMP-WITH-FP-NEXT:    sw a0, 80(s1)
-; RV64IZCMP-WITH-FP-NEXT:    ld a0, 24(sp) # 8-byte Folded Reload
-; RV64IZCMP-WITH-FP-NEXT:    sw a0, 76(s1)
-; RV64IZCMP-WITH-FP-NEXT:    ld a0, 32(sp) # 8-byte Folded Reload
-; RV64IZCMP-WITH-FP-NEXT:    sw a0, 72(s1)
-; RV64IZCMP-WITH-FP-NEXT:    ld a0, 40(sp) # 8-byte Folded Reload
-; RV64IZCMP-WITH-FP-NEXT:    sw a0, 68(s1)
-; RV64IZCMP-WITH-FP-NEXT:    ld a0, 48(sp) # 8-byte Folded Reload
-; RV64IZCMP-WITH-FP-NEXT:    sw a0, 64(s1)
-; RV64IZCMP-WITH-FP-NEXT:    ld a0, 56(sp) # 8-byte Folded Reload
-; RV64IZCMP-WITH-FP-NEXT:    sw a0, 60(s1)
-; RV64IZCMP-WITH-FP-NEXT:    ld a0, 64(sp) # 8-byte Folded Reload
-; RV64IZCMP-WITH-FP-NEXT:    sw a0, 56(s1)
-; RV64IZCMP-WITH-FP-NEXT:    ld a0, 72(sp) # 8-byte Folded Reload
-; RV64IZCMP-WITH-FP-NEXT:    sw a0, 52(s1)
-; RV64IZCMP-WITH-FP-NEXT:    ld a0, 80(sp) # 8-byte Folded Reload
-; RV64IZCMP-WITH-FP-NEXT:    sw a0, 48(s1)
-; RV64IZCMP-WITH-FP-NEXT:    ld a0, 88(sp) # 8-byte Folded Reload
-; RV64IZCMP-WITH-FP-NEXT:    sw a0, 44(s1)
-; RV64IZCMP-WITH-FP-NEXT:    ld a0, 96(sp) # 8-byte Folded Reload
-; RV64IZCMP-WITH-FP-NEXT:    sw a0, 40(s1)
-; RV64IZCMP-WITH-FP-NEXT:    ld a0, 104(sp) # 8-byte Folded Reload
-; RV64IZCMP-WITH-FP-NEXT:    sw a0, 36(s1)
-; RV64IZCMP-WITH-FP-NEXT:    ld a0, 112(sp) # 8-byte Folded Reload
-; RV64IZCMP-WITH-FP-NEXT:    sw a0, 32(s1)
-; RV64IZCMP-WITH-FP-NEXT:    ld a0, 120(sp) # 8-byte Folded Reload
-; RV64IZCMP-WITH-FP-NEXT:    sw a0, 28(s1)
-; RV64IZCMP-WITH-FP-NEXT:    ld a0, 128(sp) # 8-byte Folded Reload
-; RV64IZCMP-WITH-FP-NEXT:    sw a0, 24(s1)
-; RV64IZCMP-WITH-FP-NEXT:    ld a0, 136(sp) # 8-byte Folded Reload
-; RV64IZCMP-WITH-FP-NEXT:    sw a0, 20(s1)
-; RV64IZCMP-WITH-FP-NEXT:    ld a0, 144(sp) # 8-byte Folded Reload
-; RV64IZCMP-WITH-FP-NEXT:    sw a0, 16(s1)
-; RV64IZCMP-WITH-FP-NEXT:    ld a0, 152(sp) # 8-byte Folded Reload
-; RV64IZCMP-WITH-FP-NEXT:    sw a0, 12(s1)
-; RV64IZCMP-WITH-FP-NEXT:    ld a0, 160(sp) # 8-byte Folded Reload
-; RV64IZCMP-WITH-FP-NEXT:    sw a0, 8(s1)
-; RV64IZCMP-WITH-FP-NEXT:    ld a0, 168(sp) # 8-byte Folded Reload
-; RV64IZCMP-WITH-FP-NEXT:    sw a0, 4(s1)
 ; RV64IZCMP-WITH-FP-NEXT:    ld a0, 176(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    sw a0, 84(s1)
+; RV64IZCMP-WITH-FP-NEXT:    ld a0, 168(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    sw a0, 80(s1)
+; RV64IZCMP-WITH-FP-NEXT:    ld a0, 160(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    sw a0, 76(s1)
+; RV64IZCMP-WITH-FP-NEXT:    ld a0, 152(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    sw a0, 72(s1)
+; RV64IZCMP-WITH-FP-NEXT:    ld a0, 144(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    sw a0, 68(s1)
+; RV64IZCMP-WITH-FP-NEXT:    ld a0, 136(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    sw a0, 64(s1)
+; RV64IZCMP-WITH-FP-NEXT:    ld a0, 128(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    sw a0, 60(s1)
+; RV64IZCMP-WITH-FP-NEXT:    ld a0, 120(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    sw a0, 56(s1)
+; RV64IZCMP-WITH-FP-NEXT:    ld a0, 112(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    sw a0, 52(s1)
+; RV64IZCMP-WITH-FP-NEXT:    ld a0, 104(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    sw a0, 48(s1)
+; RV64IZCMP-WITH-FP-NEXT:    ld a0, 96(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    sw a0, 44(s1)
+; RV64IZCMP-WITH-FP-NEXT:    ld a0, 88(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    sw a0, 40(s1)
+; RV64IZCMP-WITH-FP-NEXT:    ld a0, 80(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    sw a0, 36(s1)
+; RV64IZCMP-WITH-FP-NEXT:    ld a0, 72(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    sw a0, 32(s1)
+; RV64IZCMP-WITH-FP-NEXT:    ld a0, 64(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    sw a0, 28(s1)
+; RV64IZCMP-WITH-FP-NEXT:    ld a0, 56(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    sw a0, 24(s1)
+; RV64IZCMP-WITH-FP-NEXT:    ld a0, 48(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    sw a0, 20(s1)
+; RV64IZCMP-WITH-FP-NEXT:    ld a0, 40(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    sw a0, 16(s1)
+; RV64IZCMP-WITH-FP-NEXT:    ld a0, 32(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    sw a0, 12(s1)
+; RV64IZCMP-WITH-FP-NEXT:    ld a0, 24(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    sw a0, 8(s1)
+; RV64IZCMP-WITH-FP-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    sw a0, 4(s1)
+; RV64IZCMP-WITH-FP-NEXT:    ld a0, 8(sp) # 8-byte Folded Reload
 ; RV64IZCMP-WITH-FP-NEXT:    sw a0, 0(s1)
 ; RV64IZCMP-WITH-FP-NEXT:    .cfi_def_cfa sp, 288
 ; RV64IZCMP-WITH-FP-NEXT:    ld ra, 280(sp) # 8-byte Folded Reload
@@ -3441,38 +3441,38 @@ define void @caller() {
 ; RV32I-ZILSD-WITH-FP-NEXT:    lui s1, %hi(var)
 ; RV32I-ZILSD-WITH-FP-NEXT:    addi s1, s1, %lo(var)
 ; RV32I-ZILSD-WITH-FP-NEXT:    ld a0, 0(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 80(sp) # 4-byte Folded Spill
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 84(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 4(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 0(sp) # 4-byte Folded Spill
 ; RV32I-ZILSD-WITH-FP-NEXT:    ld a0, 8(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 72(sp) # 4-byte Folded Spill
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 76(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 12(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 8(sp) # 4-byte Folded Spill
 ; RV32I-ZILSD-WITH-FP-NEXT:    ld a0, 16(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 64(sp) # 4-byte Folded Spill
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 68(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 20(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 16(sp) # 4-byte Folded Spill
 ; RV32I-ZILSD-WITH-FP-NEXT:    ld a0, 24(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 56(sp) # 4-byte Folded Spill
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 60(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 28(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 24(sp) # 4-byte Folded Spill
 ; RV32I-ZILSD-WITH-FP-NEXT:    ld a0, 32(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 48(sp) # 4-byte Folded Spill
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 52(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 36(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 32(sp) # 4-byte Folded Spill
 ; RV32I-ZILSD-WITH-FP-NEXT:    ld a0, 40(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 40(sp) # 4-byte Folded Spill
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 44(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 44(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 40(sp) # 4-byte Folded Spill
 ; RV32I-ZILSD-WITH-FP-NEXT:    ld a0, 48(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 32(sp) # 4-byte Folded Spill
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 36(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 52(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 48(sp) # 4-byte Folded Spill
 ; RV32I-ZILSD-WITH-FP-NEXT:    ld a0, 56(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 24(sp) # 4-byte Folded Spill
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 28(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 60(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 56(sp) # 4-byte Folded Spill
 ; RV32I-ZILSD-WITH-FP-NEXT:    ld a0, 64(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 16(sp) # 4-byte Folded Spill
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 20(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 68(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 64(sp) # 4-byte Folded Spill
 ; RV32I-ZILSD-WITH-FP-NEXT:    ld a0, 72(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 8(sp) # 4-byte Folded Spill
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 76(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 72(sp) # 4-byte Folded Spill
 ; RV32I-ZILSD-WITH-FP-NEXT:    ld a0, 80(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 0(sp) # 4-byte Folded Spill
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 4(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a1, 84(sp) # 4-byte Folded Spill
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 80(sp) # 4-byte Folded Spill
 ; RV32I-ZILSD-WITH-FP-NEXT:    ld s10, 88(s1)
 ; RV32I-ZILSD-WITH-FP-NEXT:    ld s8, 96(s1)
 ; RV32I-ZILSD-WITH-FP-NEXT:    ld s6, 104(s1)
@@ -3489,49 +3489,49 @@ define void @caller() {
 ; RV32I-ZILSD-WITH-FP-NEXT:    sw s8, 96(s1)
 ; RV32I-ZILSD-WITH-FP-NEXT:    sw s11, 92(s1)
 ; RV32I-ZILSD-WITH-FP-NEXT:    sw s10, 88(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 0(sp) # 4-byte Folded Reload
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 84(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 4(sp) # 4-byte Folded Reload
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 80(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 76(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 72(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 16(sp) # 4-byte Folded Reload
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 68(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 20(sp) # 4-byte Folded Reload
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 64(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 24(sp) # 4-byte Folded Reload
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 60(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 28(sp) # 4-byte Folded Reload
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 56(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 32(sp) # 4-byte Folded Reload
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 52(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 36(sp) # 4-byte Folded Reload
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 48(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 40(sp) # 4-byte Folded Reload
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 44(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 44(sp) # 4-byte Folded Reload
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 40(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 48(sp) # 4-byte Folded Reload
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 36(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 52(sp) # 4-byte Folded Reload
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 32(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 56(sp) # 4-byte Folded Reload
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 28(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 60(sp) # 4-byte Folded Reload
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 24(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 64(sp) # 4-byte Folded Reload
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 20(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 68(sp) # 4-byte Folded Reload
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 16(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 72(sp) # 4-byte Folded Reload
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 12(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 76(sp) # 4-byte Folded Reload
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 8(s1)
-; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 80(sp) # 4-byte Folded Reload
-; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 4(s1)
 ; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 84(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 84(s1)
+; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 80(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 80(s1)
+; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 76(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 76(s1)
+; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 72(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 72(s1)
+; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 68(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 68(s1)
+; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 64(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 64(s1)
+; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 60(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 60(s1)
+; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 56(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 56(s1)
+; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 52(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 52(s1)
+; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 48(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 48(s1)
+; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 44(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 44(s1)
+; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 40(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 40(s1)
+; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 36(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 36(s1)
+; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 32(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 32(s1)
+; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 28(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 28(s1)
+; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 24(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 24(s1)
+; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 20(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 20(s1)
+; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 16(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 16(s1)
+; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 12(s1)
+; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 8(s1)
+; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 4(sp) # 4-byte Folded Reload
+; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 4(s1)
+; RV32I-ZILSD-WITH-FP-NEXT:    lw a0, 0(sp) # 4-byte Folded Reload
 ; RV32I-ZILSD-WITH-FP-NEXT:    sw a0, 0(s1)
 ; RV32I-ZILSD-WITH-FP-NEXT:    .cfi_def_cfa sp, 144
 ; RV32I-ZILSD-WITH-FP-NEXT:    lw ra, 140(sp) # 4-byte Folded Reload

@@ -292,11 +292,11 @@ define void @local_var_m2_with_bp(i64 %n) {
 ; RV64IV-NEXT:    add s2, s1, s2
 ; RV64IV-NEXT:    addi s2, s2, 224
 ; RV64IV-NEXT:    call notdead2
-; RV64IV-NEXT:    lw zero, 124(s1)
+; RV64IV-NEXT:    lw zero, 220(s1)
 ; RV64IV-NEXT:    vl2r.v v8, (s2)
 ; RV64IV-NEXT:    addi a0, s1, 224
 ; RV64IV-NEXT:    vl2r.v v8, (a0)
-; RV64IV-NEXT:    lw zero, 120(s1)
+; RV64IV-NEXT:    lw zero, 216(s1)
 ; RV64IV-NEXT:    addi sp, s0, -256
 ; RV64IV-NEXT:    .cfi_def_cfa sp, 256
 ; RV64IV-NEXT:    ld ra, 248(sp) # 8-byte Folded Reload
