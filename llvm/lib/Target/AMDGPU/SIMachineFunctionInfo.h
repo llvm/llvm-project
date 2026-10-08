@@ -1250,10 +1250,6 @@ public:
     return !MFMAVGPRForm && getMinNumAGPRs() >= NumRegs;
   }
 
-  // \returns true if a function has a use of AGPRs via inline asm or
-  // has a call which may use it.
-  bool mayUseAGPRs(const Function &F) const;
-
   /// \returns Default/requested number of work groups for this function.
   SmallVector<unsigned> getMaxNumWorkGroups() const { return MaxNumWorkGroups; }
 

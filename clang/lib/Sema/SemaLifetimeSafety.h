@@ -158,7 +158,8 @@ public:
   }
 
   void reportUseAfterReturn(const Expr *IssueExpr, const Expr *ReturnExpr,
-                            const Expr *MovedExpr) override {
+                            const Expr *MovedExpr,
+                            llvm::ArrayRef<const Expr *> ExprChain) override {
     unsigned DiagID = MovedExpr
                           ? diag::warn_lifetime_safety_return_stack_addr_moved
                           : diag::warn_lifetime_safety_return_stack_addr;
@@ -169,6 +170,9 @@ public:
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
+
+    reportAliasingChain(ExprChain);
+
     S.Diag(ReturnExpr->getExprLoc(), diag::note_lifetime_safety_returned_here)
         << ReturnExpr->getSourceRange();
   }
@@ -343,11 +347,11 @@ public:
         << ParmToAnnotate->getSourceRange()
         << FixItHint::CreateInsertion(InsertionPoint, FixItText);
 
-    if (const auto *EscapeExpr = Target.dyn_cast<const Expr *>())
+    if (const auto *EscapeExpr = dyn_cast<const Expr *>(Target))
       S.Diag(EscapeExpr->getBeginLoc(),
              diag::note_lifetime_safety_suggestion_returned_here)
           << EscapeExpr->getSourceRange();
-    else if (const auto *EscapeField = Target.dyn_cast<const FieldDecl *>())
+    else if (const auto *EscapeField = dyn_cast<const FieldDecl *>(Target))
       S.Diag(EscapeField->getLocation(),
              diag::note_lifetime_safety_escapes_to_field_here)
           << EscapeField->getSourceRange();
