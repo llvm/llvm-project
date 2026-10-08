@@ -489,13 +489,19 @@ struct KnownFPClass {
   LLVM_ABI void propagateCanonicalizingSrc(const KnownFPClass &Src,
                                            DenormalMode Mode);
 
-  /// Propagate known class for fpext.
-  LLVM_ABI static KnownFPClass fpext(const KnownFPClass &KnownSrc,
-                                     const fltSemantics &DstTy,
-                                     const fltSemantics &SrcTy);
+  /// Propagate known class for fpext. \p DstMode and \p SrcMode are the
+  /// denormal modes of the destination and source types.
+  LLVM_ABI static KnownFPClass
+  fpext(const KnownFPClass &KnownSrc, const fltSemantics &DstTy,
+        const fltSemantics &SrcTy, DenormalMode DstMode, DenormalMode SrcMode);
 
-  /// Propagate known class for fptrunc.
-  LLVM_ABI static KnownFPClass fptrunc(const KnownFPClass &KnownSrc);
+  /// Propagate known class for fptrunc and fptrunc_round. \p DstMode and
+  /// \p SrcMode are the denormal modes of the destination and source types.
+  LLVM_ABI static KnownFPClass fptrunc(const KnownFPClass &KnownSrc,
+                                       const fltSemantics &DstTy,
+                                       const fltSemantics &SrcTy,
+                                       DenormalMode DstMode,
+                                       DenormalMode SrcMode);
 
   /// Propagate known class for rounding intrinsics (trunc, floor, ceil, rint,
   /// nearbyint, round, roundeven). This is trunc if \p IsTrunc. \p

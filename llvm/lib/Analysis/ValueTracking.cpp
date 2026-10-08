@@ -5199,7 +5199,19 @@ static void computeKnownFPClassForFPTrunc(const Operator *Op,
   KnownFPClass KnownSrc;
   computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedClasses,
                       KnownSrc, Q, Depth + 1);
-  Known = KnownFPClass::fptrunc(KnownSrc);
+
+  const fltSemantics &DstTy = Op->getType()->getScalarType()->getFltSemantics();
+  const fltSemantics &SrcTy =
+      Op->getOperand(0)->getType()->getScalarType()->getFltSemantics();
+
+  const auto *I = dyn_cast<Instruction>(Op);
+  const Function *F = I ? I->getFunction() : nullptr;
+  DenormalMode DstMode =
+      F ? F->getDenormalMode(DstTy) : DenormalMode::getDynamic();
+  DenormalMode SrcMode =
+      F ? F->getDenormalMode(SrcTy) : DenormalMode::getDynamic();
+
+  Known = KnownFPClass::fptrunc(KnownSrc, DstTy, SrcTy, DstMode, SrcMode);
 }
 
 static constexpr KnownFPClass::MinMaxKind getMinMaxKind(Intrinsic::ID IID) {
@@ -6218,7 +6230,14 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     const fltSemantics &SrcTy =
         Op->getOperand(0)->getType()->getScalarType()->getFltSemantics();
 
-    Known = KnownFPClass::fpext(KnownSrc, DstTy, SrcTy);
+    const auto *I = dyn_cast<Instruction>(Op);
+    const Function *F = I ? I->getFunction() : nullptr;
+    DenormalMode DstMode =
+        F ? F->getDenormalMode(DstTy) : DenormalMode::getDynamic();
+    DenormalMode SrcMode =
+        F ? F->getDenormalMode(SrcTy) : DenormalMode::getDynamic();
+
+    Known = KnownFPClass::fpext(KnownSrc, DstTy, SrcTy, DstMode, SrcMode);
     break;
   }
   case Instruction::FPTrunc: {
