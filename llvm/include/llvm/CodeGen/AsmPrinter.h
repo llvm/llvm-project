@@ -527,8 +527,6 @@ public:
   /// Returns true if valid debug info is present.
   bool hasDebugInfo() const { return DbgInfoAvailable; }
 
-  bool needsSEHMoves();
-
   /// Since emitting CFI unwind information is entangled with supporting the
   /// exceptions, this returns true for platforms which use CFI unwind
   /// information for other purposes (debugging, sanitizers, ...) when

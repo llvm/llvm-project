@@ -1435,10 +1435,6 @@ AsmPrinter::getFunctionCFISectionType(const MachineFunction &MF) const {
   return getFunctionCFISectionType(MF.getFunction());
 }
 
-bool AsmPrinter::needsSEHMoves() {
-  return MAI.usesWindowsCFI() && MF->getFunction().needsUnwindTableEntry();
-}
-
 bool AsmPrinter::usesCFIWithoutEH() const {
   return MAI.usesCFIWithoutEH() && ModuleCFISection != CFISection::None;
 }

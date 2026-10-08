@@ -2821,7 +2821,7 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     return false;
   case Intrinsic::frameaddress: {
     MachineFunction *MF = FuncInfo.MF;
-    if (MF->getTarget().getMCAsmInfo().usesWindowsCFI())
+    if (MF->usesWindowsUnwindInfo())
       return false;
 
     Type *RetTy = II->getCalledFunction()->getReturnType();

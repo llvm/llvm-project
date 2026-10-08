@@ -130,7 +130,7 @@ bool X86FrameLowering::hasFPImpl(const MachineFunction &MF) const {
           MF.getInfo<X86MachineFunctionInfo>()->hasPreallocatedCall() ||
           MF.callsUnwindInit() || MF.hasEHFunclets() || MF.callsEHReturn() ||
           MFI.hasStackMap() || MFI.hasPatchPoint() ||
-          (isWin64Prologue(MF) && MFI.hasCopyImplyingStackAdjustment()));
+          (MFI.hasCopyImplyingStackAdjustment() && MF.usesWindowsUnwindInfo()));
 }
 
 static unsigned getSUBriOpcode(bool IsLP64) {
@@ -428,8 +428,7 @@ MachineInstrBuilder X86FrameLowering::BuildStackAdjustment(
     // describe epilogues, but X86WinEHUnwindV2 expects the ADD spelling
     // too.
     if (AbsOffset == 128 &&
-        !(InEpilogue &&
-          MBB.getParent()->getTarget().getMCAsmInfo().usesWindowsCFI())) {
+        !(InEpilogue && MBB.getParent()->usesWindowsUnwindInfo())) {
       Opc = IsSub ? getADDriOpcode(Uses64BitFramePtr)
                   : getSUBriOpcode(Uses64BitFramePtr);
       Imm = -128;
@@ -1550,15 +1549,8 @@ bool X86FrameLowering::has128ByteRedZone(const MachineFunction &MF) const {
   return Is64Bit && !IsWin64CC && !Fn.hasFnAttribute(Attribute::NoRedZone);
 }
 
-/// Return true if we need to use the restricted Windows x64 prologue and
-/// epilogue code patterns that can be described with WinCFI (.seh_*
-/// directives).
-bool X86FrameLowering::isWin64Prologue(const MachineFunction &MF) const {
-  return MF.getTarget().getMCAsmInfo().usesWindowsCFI();
-}
-
 bool X86FrameLowering::needsDwarfCFI(const MachineFunction &MF) const {
-  return !isWin64Prologue(MF) && MF.needsFrameMoves();
+  return !MF.usesWindowsUnwindInfo() && MF.needsFrameMoves();
 }
 
 /// Return true if an opcode is part of the REP group of instructions
@@ -1718,7 +1710,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
       MF.hasEHFunclets() && Personality == EHPersonality::CoreCLR;
   bool IsClrFunclet = IsFunclet && FnHasClrFunclet;
   bool HasFP = hasFP(MF);
-  bool IsWin64Prologue = isWin64Prologue(MF);
+  bool IsWin64Prologue = MF.usesWindowsUnwindInfo();
   bool NeedsWin64CFI = IsWin64Prologue && Fn.needsUnwindTableEntry();
   // FIXME: Emit FPO data for EH funclets.
   bool NeedsWinFPO = !IsFunclet && STI.isTargetWin32() &&
@@ -2531,7 +2523,7 @@ bool X86FrameLowering::canUseLEAForSPInEpilogue(
   // This means that we can use LEA for SP in two situations:
   // 1. We *aren't* using the Win64 ABI which means we are free to use LEA.
   // 2. We *have* a frame pointer which means we are permitted to use LEA.
-  return !MF.getTarget().getMCAsmInfo().usesWindowsCFI() || hasFP(MF);
+  return !MF.usesWindowsUnwindInfo() || hasFP(MF);
 }
 
 static bool isFuncletReturnInstr(MachineInstr &MI) {
@@ -2623,7 +2615,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   Register MachineFramePtr =
       Is64BitILP32 ? Register(getX86SubSuperRegister(FramePtr, 64)) : FramePtr;
 
-  bool IsWin64Prologue = MF.getTarget().getMCAsmInfo().usesWindowsCFI();
+  bool IsWin64Prologue = MF.usesWindowsUnwindInfo();
   bool NeedsWin64CFI =
       IsWin64Prologue && MF.getFunction().needsUnwindTableEntry();
   // For V3 unwind, epilog SEH pseudos are emitted inline before each
@@ -2956,7 +2948,7 @@ StackOffset X86FrameLowering::getFrameIndexReference(const MachineFunction &MF,
   const X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
   unsigned CSSize = X86FI->getCalleeSavedFrameSize();
   uint64_t StackSize = MFI.getStackSize();
-  bool IsWin64Prologue = MF.getTarget().getMCAsmInfo().usesWindowsCFI();
+  bool IsWin64Prologue = MF.usesWindowsUnwindInfo();
   int64_t FPDelta = 0;
 
   // In an x86 interrupt, remove the offset we added to account for the return
@@ -3412,8 +3404,7 @@ bool X86FrameLowering::restoreCalleeSavedRegisters(
   MachineFunction &MF = *MBB.getParent();
   const X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
 
-  bool NeedsWin64CFI =
-      isWin64Prologue(MF) && MF.getFunction().needsUnwindTableEntry();
+  bool NeedsWin64CFI = MF.needsWinCFI();
   bool IsWin64UnwindV3 = NeedsWin64CFI && requireWinX64UnwindV3(MF);
 
   // Reload XMMs from stack frame.
@@ -4094,7 +4085,7 @@ MachineBasicBlock::iterator X86FrameLowering::eliminateCallFramePseudoInstr(
     Amount = alignTo(Amount, getStackAlign());
 
     const Function &F = MF.getFunction();
-    bool WindowsCFI = MF.getTarget().getMCAsmInfo().usesWindowsCFI();
+    bool WindowsCFI = MF.usesWindowsUnwindInfo();
     bool DwarfCFI = !WindowsCFI && MF.needsFrameMoves();
 
     // If we have any exception handlers in this function, and we adjust
@@ -4501,7 +4492,7 @@ void X86FrameLowering::processFunctionBeforeFrameFinalized(
 
   // If we are using Windows x64 CFI, ensure that the stack is always 8 byte
   // aligned. The format doesn't support misaligned stack adjustments.
-  if (MF.getTarget().getMCAsmInfo().usesWindowsCFI())
+  if (MF.usesWindowsUnwindInfo())
     MF.getFrameInfo().ensureMaxAlignment(Align(SlotSize));
 
   // If this function isn't doing Win64-style C++ EH, we don't need to do

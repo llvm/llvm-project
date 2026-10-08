@@ -225,8 +225,7 @@ bool AArch64FunctionInfo::needsShadowCallStackPrologueEpilogue(
 bool AArch64FunctionInfo::needsDwarfUnwindInfo(
     const MachineFunction &MF) const {
   if (!NeedsDwarfUnwindInfo)
-    NeedsDwarfUnwindInfo =
-        MF.needsFrameMoves() && !MF.getTarget().getMCAsmInfo().usesWindowsCFI();
+    NeedsDwarfUnwindInfo = !MF.usesWindowsUnwindInfo() && MF.needsFrameMoves();
 
   return *NeedsDwarfUnwindInfo;
 }
