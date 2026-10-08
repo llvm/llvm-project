@@ -381,16 +381,29 @@ values representing the result of unsigned 64-bit integer addition.
 
 // Returns True if all components of the x parameter are non-zero;
 // otherwise, false.
-def hlsl_all : HLSLOneArgBuiltin<"all", "__builtin_hlsl_all"> {
+def hlsl_all : HLSLBuiltin<"all"> {
   let Doc = [{
 \fn bool all(T x)
 \brief Returns True if all components of the \a x parameter are non-zero;
 otherwise, false.
 \param x The input value.
 }];
+  let ParamNames = ["V"];
+  let Body = "return V != 0;";
+  let Args = [Varying];
   let ReturnType = BoolTy;
   let VaryingTypes = AllTypesWithBool;
-  let VaryingMatDims = [];
+  let VaryingScalar = 1;
+}
+
+def hlsl_all_vector : HLSLBuiltin<"all"> {
+  let ParamNames = ["V"];
+  let DetailFunc = "all_impl";
+  let Args = [Varying];
+  let ReturnType = BoolTy;
+  let VaryingTypes = AllTypesWithBool;
+  let VaryingVecSizes = [2, 3, 4];
+  let VaryingLongVector = 1;
 }
 
 // Returns the boolean AND of two boolean scalars, vectors, or matrices.
@@ -405,16 +418,29 @@ produces a bool vector or matrix output.
 
 // Returns True if any components of the x parameter are non-zero;
 // otherwise, false.
-def hlsl_any : HLSLOneArgBuiltin<"any", "__builtin_hlsl_any"> {
+def hlsl_any : HLSLBuiltin<"any"> {
   let Doc = [{
 \fn bool any(T x)
 \brief Returns True if any components of the \a x parameter are non-zero;
 otherwise, false.
 \param x The input value.
 }];
+  let ParamNames = ["V"];
+  let Body = "return V != 0;";
+  let Args = [Varying];
   let ReturnType = BoolTy;
   let VaryingTypes = AllTypesWithBool;
-  let VaryingMatDims = [];
+  let VaryingScalar = 1;
+}
+
+def hlsl_any_vector : HLSLBuiltin<"any"> {
+  let ParamNames = ["V"];
+  let DetailFunc = "any_impl";
+  let Args = [Varying];
+  let ReturnType = BoolTy;
+  let VaryingTypes = AllTypesWithBool;
+  let VaryingVecSizes = [2, 3, 4];
+  let VaryingLongVector = 1;
 }
 
 // Reinterprets a cast value (two 32-bit values) into a double.
