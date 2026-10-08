@@ -1907,8 +1907,9 @@ class AsmParser {
 
   // Set to true to make the assembler matcher emitter produce a fatal error
   // for any pair of matchables that are indistinguishable to the asm parser.
-  // The check relies on mutually exclusive assembler predicates declared using
-  // MutuallyExclusiveAssemblerPredicates.
+  // Matchables that no subtarget can make available at once are not ambiguous;
+  // that is worked out from their assembler predicates and the subtarget
+  // features those are written in terms of.
   bit ErrorOnAmbiguousMatchables = false;
 }
 def DefaultAsmParser : AsmParser;
@@ -1962,17 +1963,6 @@ class AssemblerPredicate<dag cond, string name = ""> {
   dag AssemblerCondDag = cond;
   // See: Predicate.PredicateName
   string PredicateName = name;
-}
-
-/// MutuallyExclusiveAssemblerPredicates - Declares that predicate A is
-/// mutually exclusive with every predicate in list B, meaning no target
-/// configuration can satisfy A and any predicate from B simultaneously.
-/// The assembler matcher emitter uses this information to disambiguate
-/// differently predicated but otherwise identical instructions.
-class MutuallyExclusiveAssemblerPredicates<AssemblerPredicate A,
-                                           list<AssemblerPredicate> B> {
-  AssemblerPredicate PredicateA = A;
-  list<AssemblerPredicate> PredicatesB = B;
 }
 
 /// TokenAlias - This class allows targets to define assembler token

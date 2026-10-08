@@ -4,7 +4,8 @@
 // RUN:     -DEXCLUSIVE %s 2>/dev/null | FileCheck %s
 
 // Check that ErrorOnAmbiguousMatchables catches genuinely ambiguous matchables,
-// and that MutuallyExclusiveAssemblerPredicates suppresses false positives.
+// and that predicates no subtarget can satisfy at once suppress false
+// positives.
 
 include "llvm/Target/Target.td"
 
@@ -23,7 +24,12 @@ def FeatureA : SubtargetFeature<"featureA", "featureA", "true", "">;
 def FeatureB : SubtargetFeature<"featureB", "featureB", "true", "">;
 
 def PredA : Predicate<"PredA">, AssemblerPredicate<(all_of FeatureA)>;
+#ifdef EXCLUSIVE
+def PredB : Predicate<"PredB">,
+            AssemblerPredicate<(all_of FeatureB, (not FeatureA))>;
+#else
 def PredB : Predicate<"PredB">, AssemblerPredicate<(all_of FeatureB)>;
+#endif
 
 let Namespace = "arch" in
 def R0 : Register<"r0">;
@@ -42,15 +48,11 @@ class TestInsn<int Opc, string Asm, list<Predicate> Preds> : Instruction {
 def InsnA : TestInsn<0, "insn", [PredA]>;
 def InsnB : TestInsn<1, "insn", [PredB]>;
 
-#ifdef EXCLUSIVE
-def : MutuallyExclusiveAssemblerPredicates<PredA, [PredB]>;
-#endif
-
-// Without EXCLUSIVE: InsnA and InsnB have the same asm string with no declared
-// mutual exclusion, so the clash check fires.
+// Without EXCLUSIVE: a subtarget can have both FeatureA and FeatureB, so
+// InsnA and InsnB really do compete and the clash check fires.
 // ERR: error: matchable is indistinguishable to the parser
 // ERR: error: 1 ambiguous matchables found
 
-// With EXCLUSIVE: PredA and PredB are declared mutually exclusive, so no clash
-// is reported and the output is generated normally.
+// With EXCLUSIVE: PredB requires FeatureA to be off, so no subtarget can make
+// both available, no clash is reported and the output is generated normally.
 // CHECK: MatchTable

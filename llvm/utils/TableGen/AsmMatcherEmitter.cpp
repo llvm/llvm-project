@@ -133,12 +133,6 @@ static cl::opt<std::string>
                 cl::desc("Only match instructions with the given prefix"),
                 cl::cat(AsmMatcherEmitterCat));
 
-static cl::opt<bool> ReportUnprovenExclusions(
-    "report-unproven-exclusions", cl::init(false), cl::Hidden,
-    cl::desc("Report pairs declared with MutuallyExclusiveAssemblerPredicates "
-             "that do not follow from the subtarget features"),
-    cl::cat(AsmMatcherEmitterCat));
-
 namespace {
 class AsmMatcherInfo;
 
@@ -407,19 +401,14 @@ bool getPreferSmallerInstructions(CodeGenTarget const &Target) {
 /// Decides whether two matchables are told apart by their subtarget features
 /// alone, that is, whether no subtarget can enable both.
 ///
-/// A pair is exclusive if it is declared so with
-/// MutuallyExclusiveAssemblerPredicates, which is taken on trust, or if the
-/// requirements of the two matchables are provably unsatisfiable together.
-/// The proof is by unit propagation, which is incomplete, so a pair that is
-/// in truth exclusive may still fail to be recognised as such. That only
-/// costs a false report of ambiguity, never a missed one.
+/// A pair is exclusive if the requirements of the two matchables are provably
+/// unsatisfiable together. The proof is by unit propagation, which is
+/// incomplete, so a pair that is in truth exclusive may still fail to be
+/// recognised as such. That only costs a false report of ambiguity, never a
+/// missed one.
 class ExclusivePredicates {
   /// Feature implications, as clauses (!F || I).
   SubtargetFeatureConstraints Implications;
-
-  /// Pairs declared mutually exclusive, normalized with the smaller pointer
-  /// first for cheap symmetric lookup.
-  DenseSet<std::pair<const Record *, const Record *>> Declared;
 
   /// The requirements of each distinct list of predicates seen so far, and
   /// the index into Constraints that such a list maps to. Matchables share
@@ -431,9 +420,13 @@ class ExclusivePredicates {
   /// Constraints.
   DenseMap<std::pair<unsigned, unsigned>, bool> Conflicts;
 
-  /// Returns the index into Constraints of the requirements of \p Preds,
+  /// Returns the index into Constraints of the requirements of \p Features,
   /// computing them the first time that list of predicates is seen.
-  unsigned getConstraintsIdx(std::vector<const Record *> Preds) {
+  unsigned getConstraintsIdx(ArrayRef<const SubtargetFeatureInfo *> Features) {
+    std::vector<const Record *> Preds;
+    Preds.reserve(Features.size());
+    for (const SubtargetFeatureInfo *F : Features)
+      Preds.push_back(F->TheDef);
     sort(Preds);
     Preds.erase(unique(Preds), Preds.end());
 
@@ -446,37 +439,8 @@ class ExclusivePredicates {
     return It->second;
   }
 
-  unsigned getConstraintsIdx(ArrayRef<const SubtargetFeatureInfo *> Features) {
-    std::vector<const Record *> Preds;
-    Preds.reserve(Features.size());
-    for (const SubtargetFeatureInfo *F : Features)
-      Preds.push_back(F->TheDef);
-    return getConstraintsIdx(std::move(Preds));
-  }
-
-  /// Returns true if the requirements held at \p IdxA and \p IdxB are provably
-  /// unsatisfiable together.
-  bool isProvenExclusive(unsigned IdxA, unsigned IdxB) {
-    auto Key = std::minmax(IdxA, IdxB);
-    auto [It, Inserted] = Conflicts.try_emplace(Key, false);
-    if (Inserted) {
-      SubtargetFeatureConstraints Combined = Constraints[Key.first];
-      Combined.add(Constraints[Key.second]);
-      Combined.add(Implications);
-      It->second = Combined.isSelfContradictory();
-    }
-    return It->second;
-  }
-
 public:
   ExclusivePredicates(const RecordKeeper &Records) {
-    for (const Record *R : Records.getAllDerivedDefinitions(
-             "MutuallyExclusiveAssemblerPredicates")) {
-      const Record *PA = R->getValueAsDef("PredicateA");
-      for (const Record *PB : R->getValueAsListOfDefs("PredicatesB"))
-        Declared.insert(std::minmax(PA, PB));
-    }
-
     // A feature implying another is the clause (!F || I). Only direct edges
     // are needed, as propagation follows the chains.
     for (const Record *F :
@@ -492,34 +456,19 @@ public:
 
   bool areExclusive(ArrayRef<const SubtargetFeatureInfo *> A,
                     ArrayRef<const SubtargetFeatureInfo *> B) {
-    for (const SubtargetFeatureInfo *FA : A)
-      for (const SubtargetFeatureInfo *FB : B)
-        if (Declared.count(std::minmax(FA->TheDef, FB->TheDef)))
-          return true;
-
     // A matchable with no requirements is available on every subtarget.
     if (A.empty() || B.empty())
       return false;
 
-    return isProvenExclusive(getConstraintsIdx(A), getConstraintsIdx(B));
-  }
-
-  /// Prints the declared pairs that inference cannot prove. Each one is a
-  /// place where the features do not say what the declaration asserts, so
-  /// either a feature implication or a predicate term is missing, or the
-  /// declaration does not actually hold.
-  void reportUnprovenDeclarations() {
-    std::vector<std::pair<StringRef, StringRef>> Unproven;
-    for (auto [PA, PB] : Declared)
-      if (!isProvenExclusive(getConstraintsIdx({PA}), getConstraintsIdx({PB})))
-        Unproven.emplace_back(PA->getName(), PB->getName());
-
-    // Declared is keyed on pointers, so sort to keep the output stable.
-    sort(Unproven);
-    for (auto [A, B] : Unproven)
-      errs() << "unproven exclusion: " << A << " and " << B << '\n';
-    errs() << Unproven.size() << " of " << Declared.size()
-           << " declared exclusions unproven\n";
+    auto Key = std::minmax(getConstraintsIdx(A), getConstraintsIdx(B));
+    auto [It, Inserted] = Conflicts.try_emplace(Key, false);
+    if (Inserted) {
+      SubtargetFeatureConstraints Combined = Constraints[Key.first];
+      Combined.add(Constraints[Key.second]);
+      Combined.add(Implications);
+      It->second = Combined.isSelfContradictory();
+    }
+    return It->second;
   }
 };
 
@@ -3736,22 +3685,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   bool CheckAmbiguousMatchables = ErrorOnAmbiguousMatchables;
   DEBUG_WITH_TYPE("ambiguous_instrs", CheckAmbiguousMatchables = true);
 
-  ArrayRef<const Record *> ExclusivePredDecls =
-      Records.getAllDerivedDefinitions("MutuallyExclusiveAssemblerPredicates");
-  for (const Record *R : ExclusivePredDecls) {
-    const Record *PA = R->getValueAsDef("PredicateA");
-    for (const Record *PB : R->getValueAsListOfDefs("PredicatesB"))
-      if (PA == PB)
-        PrintFatalError(R->getLoc(),
-                        "predicate '" + PA->getName() +
-                            "' declared mutually exclusive with itself");
-  }
-
   if (CheckAmbiguousMatchables) {
     ExclusivePredicates ExclusivePreds(Records);
-    if (ReportUnprovenExclusions)
-      ExclusivePreds.reportUnprovenDeclarations();
-
     unsigned NumAmbiguous = 0;
     for (auto I = Info.Matchables.begin(), E = Info.Matchables.end(); I != E;
          ++I) {
