@@ -1,125 +1,80 @@
 ; Check MSVC's /GS (Buffer Security Check) heuristic, selected by the
 ; "stack-protector-gs-buffer" function attribute.
 ;
-; A "GS buffer" is an array larger than 4 bytes with more than two elements and
-; a non-pointer element type, a pointer-free aggregate larger than 8 bytes, an
-; alloca of any size, or any aggregate containing one of those.
+; Under this heuristic the only allocas that require a protector are calls to
+; alloca and the ones the frontend marked with "stack-protector" metadata;
+; nothing is inferred from the alloca's type.
 ;
 ; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s | FileCheck %s
 
 declare void @use(ptr)
+declare void @make(ptr sret([64 x i8]))
+declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
 
-;; --- Arrays that are not GS buffers ------------------------------------------
+;; --- Unmarked allocas --------------------------------------------------------
 
-; Exactly 4 bytes, so not larger than 4.
-; CHECK-LABEL: array_4_bytes:
+; An obvious buffer is not protected unless the frontend says so, because the
+; IR type is not what the heuristic is defined in terms of.
+; CHECK-LABEL: unmarked_array:
 ; CHECK-NOT:     __security_cookie
 ; CHECK:       .seh_endproc
-define void @array_4_bytes() #0 {
-  %a = alloca [4 x i8]
+define void @unmarked_array() #0 {
+  %a = alloca [64 x i8]
   call void @use(ptr %a)
   ret void
 }
 
-; 8 bytes, but only two elements.
-; CHECK-LABEL: array_2_elements:
+; Unlike sspstrong, merely taking a local's address does not protect a function.
+; CHECK-LABEL: address_taken:
 ; CHECK-NOT:     __security_cookie
 ; CHECK:       .seh_endproc
-define void @array_2_elements() #0 {
-  %a = alloca [2 x i32]
+define void @address_taken() #0 {
+  %a = alloca i32
   call void @use(ptr %a)
   ret void
 }
 
-; Large and many elements, but the element type is a pointer.
-; CHECK-LABEL: array_of_pointers:
+;; --- Marked allocas ----------------------------------------------------------
+
+; CHECK-LABEL: marked_small:
+; CHECK:         __security_cookie
+define void @marked_small() #0 {
+  %a = alloca [6 x i8], !stack-protector !1
+  call void @use(ptr %a)
+  ret void
+}
+
+; CHECK-LABEL: marked_large:
+; CHECK:         __security_cookie
+define void @marked_large() #0 {
+  %a = alloca [64 x i8], !stack-protector !2
+  call void @use(ptr %a)
+  ret void
+}
+
+; The mark is what matters, not the type: an i32 carrying it is protected.
+; CHECK-LABEL: marked_scalar:
+; CHECK:         __security_cookie
+define void @marked_scalar() #0 {
+  %a = alloca i32, !stack-protector !1
+  call void @use(ptr %a)
+  ret void
+}
+
+; A zero mark opts out, as it does in every other mode.
+; CHECK-LABEL: marked_ignore:
 ; CHECK-NOT:     __security_cookie
 ; CHECK:       .seh_endproc
-define void @array_of_pointers() #0 {
-  %a = alloca [8 x ptr]
-  call void @use(ptr %a)
-  ret void
-}
-
-;; --- Arrays that are GS buffers ----------------------------------------------
-
-; CHECK-LABEL: array_8_bytes:
-; CHECK:         __security_cookie
-define void @array_8_bytes() #0 {
-  %a = alloca [8 x i8]
-  call void @use(ptr %a)
-  ret void
-}
-
-; 6 bytes and three elements: over both thresholds.
-; CHECK-LABEL: array_3_shorts:
-; CHECK:         __security_cookie
-define void @array_3_shorts() #0 {
-  %a = alloca [3 x i16]
-  call void @use(ptr %a)
-  ret void
-}
-
-; Two elements, so the array itself is not a GS buffer, but each element is.
-; CHECK-LABEL: array_2_buffers:
-; CHECK:         __security_cookie
-define void @array_2_buffers() #0 {
-  %a = alloca [2 x [8 x i8]]
-  call void @use(ptr %a)
-  ret void
-}
-
-;; --- Aggregates --------------------------------------------------------------
-
-; 12 bytes with no pointers.
-; CHECK-LABEL: struct_pointer_free:
-; CHECK:         __security_cookie
-define void @struct_pointer_free() #0 {
-  %a = alloca { i32, i32, i32 }
-  call void @use(ptr %a)
-  ret void
-}
-
-; 16 bytes, but it holds a pointer, so it is not itself a GS buffer.
-; CHECK-LABEL: struct_with_pointer:
-; CHECK-NOT:     __security_cookie
-; CHECK:       .seh_endproc
-define void @struct_with_pointer() #0 {
-  %a = alloca { ptr, i32, i32 }
-  call void @use(ptr %a)
-  ret void
-}
-
-; Exactly 8 bytes, so not larger than 8.
-; CHECK-LABEL: struct_8_bytes:
-; CHECK-NOT:     __security_cookie
-; CHECK:       .seh_endproc
-define void @struct_8_bytes() #0 {
-  %a = alloca { i32, i32 }
-  call void @use(ptr %a)
-  ret void
-}
-
-; Holds a pointer, but also contains a GS buffer.
-; CHECK-LABEL: struct_containing_buffer:
-; CHECK:         __security_cookie
-define void @struct_containing_buffer() #0 {
-  %a = alloca { ptr, [8 x i8] }
-  call void @use(ptr %a)
-  ret void
-}
-
-; The GS buffer is two aggregates down.
-; CHECK-LABEL: struct_nested_buffer:
-; CHECK:         __security_cookie
-define void @struct_nested_buffer() #0 {
-  %a = alloca { ptr, { i32, [8 x i8] } }
+define void @marked_ignore() #0 {
+  %a = alloca [64 x i8], !stack-protector !0
   call void @use(ptr %a)
   ret void
 }
 
 ;; --- alloca ------------------------------------------------------------------
 
+; A call to alloca is a GS buffer, and is visible as such in the IR, so it
+; needs no mark.
 ; CHECK-LABEL: dynamic_alloca:
 ; CHECK:         __security_cookie
 define void @dynamic_alloca(i64 %n) #0 {
@@ -137,17 +92,97 @@ define void @small_alloca() #0 {
   ret void
 }
 
-;; --- Exclusions --------------------------------------------------------------
+;; --- Indirect return slots ---------------------------------------------------
 
-; Unlike sspstrong, merely taking a local's address does not protect a function.
-; CHECK-LABEL: address_taken:
+; MSVC gives an object it is free to relocate and that only ever receives a
+; call's indirect return value a frame slot the cookie does not guard. The
+; frontend cannot see that, so the second metadata operand tells the backend the
+; object is trivial and the backend checks the uses.
+; CHECK-LABEL: sret_only:
 ; CHECK-NOT:     __security_cookie
 ; CHECK:       .seh_endproc
-define void @address_taken() #0 {
-  %a = alloca i32
+define void @sret_only() #0 {
+  %a = alloca [64 x i8], !stack-protector !3
+  call void @make(ptr sret([64 x i8]) %a)
+  %v = load i8, ptr %a
+  store i8 %v, ptr %a
+  ret void
+}
+
+; Reading and writing through the pointer, including with a memcpy, is not an
+; escape, and several returns into the same slot are still just returns.
+; CHECK-LABEL: sret_twice_and_memcpy:
+; CHECK-NOT:     __security_cookie
+; CHECK:       .seh_endproc
+define void @sret_twice_and_memcpy(ptr %p) #0 {
+  %a = alloca [64 x i8], !stack-protector !3
+  call void @make(ptr sret([64 x i8]) %a)
+  call void @make(ptr sret([64 x i8]) %a)
+  call void @llvm.memcpy.p0.p0.i64(ptr %p, ptr %a, i64 64, i1 false)
+  ret void
+}
+
+; As soon as the address reaches anywhere else, MSVC moves the object into the
+; guarded region instead.
+; CHECK-LABEL: sret_escapes:
+; CHECK:         __security_cookie
+define void @sret_escapes() #0 {
+  %a = alloca [64 x i8], !stack-protector !3
+  call void @make(ptr sret([64 x i8]) %a)
   call void @use(ptr %a)
   ret void
 }
+
+; A derived pointer escaping counts just the same.
+; CHECK-LABEL: sret_gep_escapes:
+; CHECK:         __security_cookie
+define void @sret_gep_escapes() #0 {
+  %a = alloca [64 x i8], !stack-protector !3
+  call void @make(ptr sret([64 x i8]) %a)
+  %g = getelementptr [64 x i8], ptr %a, i64 0, i64 8
+  call void @use(ptr %g)
+  ret void
+}
+
+; Storing the pointer itself is an escape; storing through it is not.
+; CHECK-LABEL: sret_pointer_stored:
+; CHECK:         __security_cookie
+define void @sret_pointer_stored(ptr %p) #0 {
+  %a = alloca [64 x i8], !stack-protector !3
+  call void @make(ptr sret([64 x i8]) %a)
+  store ptr %a, ptr %p
+  ret void
+}
+
+; Without an indirect return there is nothing to exempt.
+; CHECK-LABEL: trivial_without_sret:
+; CHECK:         __security_cookie
+define void @trivial_without_sret() #0 {
+  %a = alloca [64 x i8], !stack-protector !3
+  store i8 0, ptr %a
+  ret void
+}
+
+; The exemption needs the object to be one MSVC may relocate, which is what the
+; second operand says. Without it the slot is protected.
+; CHECK-LABEL: nontrivial_sret:
+; CHECK:         __security_cookie
+define void @nontrivial_sret() #0 {
+  %a = alloca [64 x i8], !stack-protector !2
+  call void @make(ptr sret([64 x i8]) %a)
+  ret void
+}
+
+; The exemption is specific to the /GS heuristic.
+; CHECK-LABEL: strong_sret:
+; CHECK:         __security_cookie
+define void @strong_sret() #2 {
+  %a = alloca [64 x i8], !stack-protector !3
+  call void @make(ptr sret([64 x i8]) %a)
+  ret void
+}
+
+;; --- Exclusions --------------------------------------------------------------
 
 ; MSVC never protects a function that takes a variable argument list, even one
 ; holding an obvious GS buffer.
@@ -155,13 +190,13 @@ define void @address_taken() #0 {
 ; CHECK-NOT:     __security_cookie
 ; CHECK:       .seh_endproc
 define void @variadic(i32 %n, ...) #0 {
-  %a = alloca [64 x i8]
+  %a = alloca [64 x i8], !stack-protector !2
   call void @use(ptr %a)
   ret void
 }
 
-; sspreq overrides the heuristic entirely, so the varargs exclusion and the
-; GS-buffer rules do not apply.
+; sspreq overrides the heuristic entirely, so the varargs exclusion does not
+; apply.
 ; CHECK-LABEL: sspreq_wins:
 ; CHECK:         __security_cookie
 define void @sspreq_wins(i32 %n, ...) #1 {
@@ -180,6 +215,21 @@ define void @strong_still_protects() #2 {
   ret void
 }
 
+; The marker is honoured under the other heuristics too: sspstrong would not
+; protect this function on its own.
+; CHECK-LABEL: strong_honours_mark:
+; CHECK:         __security_cookie
+define void @strong_honours_mark() #2 {
+  %a = alloca i32, !stack-protector !1
+  store i32 0, ptr %a
+  ret void
+}
+
 attributes #0 = { sspstrong uwtable "stack-protector-gs-buffer"="true" }
 attributes #1 = { sspreq uwtable "stack-protector-gs-buffer"="true" }
 attributes #2 = { sspstrong uwtable }
+
+!0 = !{i32 0}
+!1 = !{i32 1}
+!2 = !{i32 2}
+!3 = !{i32 2, i1 true}

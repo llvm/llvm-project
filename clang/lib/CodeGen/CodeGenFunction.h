@@ -1572,6 +1572,11 @@ private:
   /// calling llvm.stacksave for multiple VLAs in the same scope.
   bool DidCallStackSave = false;
 
+  /// Whether this function is compiled with MSVC's /GS heuristic, so that its
+  /// allocas have to be classified here rather than in the backend. See
+  /// EmitGSBufferStackProtectorMD.
+  bool MarkGSBuffers = false;
+
   /// IndirectBranch - The first time an indirect goto is seen we create a block
   /// with an indirect branch.  Every time we see the address of a label taken,
   /// we add the label to the indirect goto.  Every subsequent indirect goto is
@@ -2992,6 +2997,23 @@ public:
   /// ConvertType instead of ConvertTypeForMem.
   RawAddress CreateIRTempWithoutCast(QualType T, const Twine &Name = "tmp");
 
+  /// What kind of stack object an alloca holds, for MSVC's /GS heuristic.
+  enum class GSObjectKind {
+    /// An object the source declares: a local variable, a by-value parameter,
+    /// or a temporary bound to a reference. Always classified.
+    Named,
+    /// A slot clang materialises to satisfy the ABI, such as an sret return
+    /// slot. cl.exe keeps these out of its GS analysis unless the type needs a
+    /// constructor or destructor to run, in which case it becomes a real local
+    /// object.
+    Temporary,
+    /// The copy of an outgoing by-value argument. Like Temporary, except that
+    /// cl.exe also leaves it out when the object cannot be copied bitwise:
+    /// then it has to be constructed in the outgoing argument area directly,
+    /// which lies outside the guarded region.
+    ArgumentCopy,
+  };
+
   /// CreateMemTemp - Create a temporary memory object of the given type, with
   /// appropriate alignmen and cast it to the default address space. Returns
   /// the original alloca instruction by \p Alloca if it is not nullptr.
@@ -2999,7 +3021,8 @@ public:
                            RawAddress *Alloca = nullptr);
   RawAddress CreateMemTemp(QualType T, CharUnits Align,
                            const Twine &Name = "tmp",
-                           RawAddress *Alloca = nullptr);
+                           RawAddress *Alloca = nullptr,
+                           GSObjectKind GSKind = GSObjectKind::Temporary);
 
   /// CreateMemTemp - Create a temporary memory object of the given type, with
   /// appropriate alignmen without casting it to the default address space.
@@ -3010,8 +3033,10 @@ public:
   /// CreateAggTemp - Create a temporary memory object for the given
   /// aggregate type.
   AggValueSlot CreateAggTemp(QualType T, const Twine &Name = "tmp",
-                             RawAddress *Alloca = nullptr) {
-    RawAddress Addr = CreateMemTemp(T, Name, Alloca);
+                             RawAddress *Alloca = nullptr,
+                             GSObjectKind GSKind = GSObjectKind::Temporary) {
+    RawAddress Addr = CreateMemTemp(T, getContext().getTypeAlignInChars(T),
+                                    Name, Alloca, GSKind);
     return AggValueSlot::forAddr(
         Addr, T.getQualifiers(), AggValueSlot::IsNotDestructed,
         AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
@@ -3587,6 +3612,29 @@ public:
     }
   };
   AutoVarEmission EmitAutoVarAlloca(const VarDecl &var);
+
+  /// If this function uses MSVC's /GS (Buffer Security Check) heuristic,
+  /// attach "stack-protector" metadata to \p AllocaPtr when \p Ty is a "GS
+  /// buffer". Whether it is depends on source-level type information that
+  /// lowering to IR does not preserve, so the backend cannot work it out.
+  void EmitGSBufferStackProtectorMD(llvm::Value *AllocaPtr, QualType Ty,
+                                    GSObjectKind Kind = GSObjectKind::Named);
+
+  /// If this function uses MSVC's /GS (Buffer Security Check) heuristic and
+  /// \p Ty is a "GS buffer", copy the by-value parameter at \p ParamAddr into
+  /// a fresh local so that it is covered by this frame's stack guard, and
+  /// return the copy. cl.exe does the same, naming the copy "<param>$GSCopy$".
+  Address EmitGSBufferParamCopy(const VarDecl &D, Address ParamAddr);
+
+  /// If this function uses MSVC's /GS (Buffer Security Check) heuristic, mark
+  /// \p AI as a "GS buffer", so that the function requires a stack protector.
+  /// \p IsLarge says the buffer should be laid out closest to the guard.
+  /// \p IsTrivial says the allocation holds an object of trivial type, which
+  /// cl.exe is willing to leave in the unguarded temporary area; see the
+  /// "stack-protector" metadata in LLVM's LangRef.
+  void MarkGSBufferAlloca(llvm::AllocaInst *AI, bool IsLarge,
+                          bool IsTrivial = false);
+
   void EmitAutoVarInit(const AutoVarEmission &emission);
   void EmitAutoVarCleanups(const AutoVarEmission &emission);
   void emitAutoVarTypeCleanup(const AutoVarEmission &emission,

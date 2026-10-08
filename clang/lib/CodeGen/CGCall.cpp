@@ -5293,9 +5293,11 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
       type->castAsRecordDecl()->isParamDestroyedInCallee()) {
     // If we're using inalloca, use the argument memory.  Otherwise, use a
     // temporary.
-    AggValueSlot Slot = args.isUsingInAlloca()
-                            ? createPlaceholderSlot(*this, type)
-                            : CreateAggTemp(type, "agg.tmp");
+    AggValueSlot Slot =
+        args.isUsingInAlloca()
+            ? createPlaceholderSlot(*this, type)
+            : CreateAggTemp(type, "agg.tmp", /*Alloca=*/nullptr,
+                            GSObjectKind::ArgumentCopy);
 
     bool DestroyedInCallee = true, NeedsCleanup = true;
     if (const auto *RD = type->getAsCXXRecordDecl())

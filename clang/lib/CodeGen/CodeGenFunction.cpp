@@ -756,6 +756,11 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   if (FD && FD->usesSEHTry())
     CurSEHParent = GD;
   CurFuncDecl = (D ? D->getNonClosureContext() : nullptr);
+  // Under MSVC's /GS heuristic the frontend decides which allocas are buffers,
+  // so mark them as they are created. Only worth doing if the function ends up
+  // with a stack protector attribute at all.
+  MarkGSBuffers = CGM.useMSVCGSBufferHeuristic(D) &&
+                  CGM.StackProtectorAttribute(D).has_value();
   FnRetTy = RetTy;
   CurFn = Fn;
   CurFnInfo = &FnInfo;

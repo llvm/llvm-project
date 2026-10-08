@@ -67,12 +67,100 @@ static cl::opt<bool> DisableCheckNoReturn("disable-check-noreturn-call",
 /// Emitted by clang-cl.
 static constexpr const char *GSBufferAttr = "stack-protector-gs-buffer";
 
-/// An array is only an MSVC "GS buffer" if it is strictly larger than this.
-static constexpr uint64_t MinGSArraySize = 4;
+/// Values of the "stack-protector" metadata that may be attached to an alloca
+/// to override the heuristic for that allocation. See LangRef.
+enum SSPAllocaMD : uint32_t {
+  /// Ignore this alloca when deciding whether the function needs a protector.
+  SSPAMD_Ignore = 0,
+  /// This alloca is a buffer that requires a protector, and is laid out like a
+  /// small (< ssp-buffer-size) array.
+  SSPAMD_SmallBuffer = 1,
+  /// This alloca is a buffer that requires a protector, and is laid out like a
+  /// large (>= ssp-buffer-size) array.
+  SSPAMD_LargeBuffer = 2,
+};
 
-/// A pointer-free aggregate is only an MSVC "GS buffer" if it is strictly
-/// larger than this.
-static constexpr uint64_t MinGSAggregateSize = 8;
+/// Read the "stack-protector" metadata of \p AI, if it has any. \p IsTrivial is
+/// set from the optional second operand, which says the allocation holds an
+/// object of trivial type.
+static std::optional<uint32_t> getSSPAllocaMD(const AllocaInst &AI,
+                                              bool &IsTrivial) {
+  IsTrivial = false;
+  const MDNode *MD = AI.getMetadata("stack-protector");
+  if (!MD || MD->getNumOperands() < 1 || MD->getNumOperands() > 2)
+    return std::nullopt;
+  const auto *CI = mdconst::dyn_extract<ConstantInt>(MD->getOperand(0));
+  if (!CI)
+    return std::nullopt;
+  if (MD->getNumOperands() == 2)
+    if (const auto *Flag = mdconst::dyn_extract<ConstantInt>(MD->getOperand(1)))
+      IsTrivial = !Flag->isZero();
+  // Clamp, so that a value from a newer producer errs towards more protection
+  // rather than less.
+  return CI->getLimitedValue(SSPAMD_LargeBuffer);
+}
+
+/// Returns true if the only thing \p AI's address is ever used for, besides
+/// being read and written here, is receiving the indirect return value of a
+/// call.
+///
+/// cl.exe gives such an allocation a slot in the frame's temporary area, which
+/// the cookie does not cover, and leaves it out of the GS analysis: the only
+/// code that writes it from outside is a callee, and a callee writes exactly one
+/// object of the type it returns. As soon as the address reaches anywhere else,
+/// cl.exe relocates the object into the protected region instead, so look for
+/// that here rather than in the frontend, which cannot see the uses.
+///
+/// Only an object cl.exe is free to relocate can end up in that area, which is
+/// why the caller also requires the allocation to hold a trivial object.
+static bool isIndirectReturnSlot(const AllocaInst &AI) {
+  bool FoundSRet = false;
+  SmallVector<const Instruction *, 8> Worklist = {&AI};
+  SmallPtrSet<const Instruction *, 8> Visited = {&AI};
+
+  while (!Worklist.empty()) {
+    for (const Use &U : Worklist.pop_back_val()->uses()) {
+      const auto *User = cast<Instruction>(U.getUser());
+
+      if (const auto *CB = dyn_cast<CallBase>(User)) {
+        const auto *II = dyn_cast<IntrinsicInst>(CB);
+        if (II && (II->isLifetimeStartOrEnd() || II->isAssumeLikeIntrinsic()))
+          continue;
+        // A memory intrinsic reads or writes through the pointer, just as a
+        // load or a store does, and does not let it escape.
+        if (isa_and_nonnull<MemIntrinsic>(II))
+          continue;
+        if (!CB->isArgOperand(&U) ||
+            !CB->paramHasAttr(CB->getArgOperandNo(&U), Attribute::StructRet))
+          return false;
+        FoundSRet = true;
+        continue;
+      }
+
+      switch (User->getOpcode()) {
+      case Instruction::Load:
+        continue;
+      case Instruction::Store:
+        // Writing through the pointer is fine; writing the pointer itself
+        // somewhere else lets it escape.
+        if (U.getOperandNo() != StoreInst::getPointerOperandIndex())
+          return false;
+        continue;
+      case Instruction::BitCast:
+      case Instruction::AddrSpaceCast:
+      case Instruction::GetElementPtr:
+      case Instruction::PHI:
+      case Instruction::Select:
+        if (Visited.insert(User).second)
+          Worklist.push_back(User);
+        continue;
+      default:
+        return false;
+      }
+    }
+  }
+  return FoundSRet;
+}
 
 /// InsertStackProtectors - Insert code into the prologue and epilogue of the
 /// function.
@@ -286,75 +374,6 @@ static bool ContainsProtectableArray(Type *Ty, Module *M, unsigned SSPBufferSize
   return NeedsProtector;
 }
 
-/// Returns true if \p Ty holds a pointer anywhere within it. MSVC's GS-buffer
-/// rules treat a pointer-free aggregate as something that may be used as a
-/// buffer, so the presence of a pointer is what disqualifies it.
-static bool ContainsPointer(Type *Ty) {
-  if (Ty->isPointerTy())
-    return true;
-  if (auto *AT = dyn_cast<ArrayType>(Ty))
-    return ContainsPointer(AT->getElementType());
-  if (auto *ST = dyn_cast<StructType>(Ty))
-    return any_of(ST->elements(), ContainsPointer);
-  return false;
-}
-
-/// Returns true if \p Ty is, or contains, a "GS buffer" as defined by MSVC's
-/// /GS (Buffer Security Check) documentation:
-///
-///   - an array that is larger than 4 bytes, has more than two elements, and
-///     has an element type that is not a pointer type;
-///   - a data structure whose size is more than 8 bytes and that contains no
-///     pointers;
-///   - any class or structure that contains a GS buffer.
-///
-/// \param [out] IsLarge is set to true if the GS buffer that was found is
-/// "large" (>= ssp-buffer-size), so that it is laid out closest to the stack
-/// guard. In an aggregate holding several GS buffers this is set if any of
-/// them is large.
-static bool ContainsGSBuffer(Type *Ty, Module *M, unsigned SSPBufferSize,
-                             bool &IsLarge) {
-  if (!Ty)
-    return false;
-
-  const DataLayout &DL = M->getDataLayout();
-  auto Found = [&](Type *BufferTy) {
-    if (DL.getTypeAllocSize(BufferTy).getKnownMinValue() >= SSPBufferSize)
-      IsLarge = true;
-    return true;
-  };
-
-  if (auto *AT = dyn_cast<ArrayType>(Ty)) {
-    if (!AT->getElementType()->isPointerTy() && AT->getNumElements() > 2 &&
-        DL.getTypeAllocSize(AT).getKnownMinValue() > MinGSArraySize)
-      return Found(AT);
-
-    // The array itself is not a GS buffer, but its elements may still be or
-    // contain one, e.g. an array of two structs that each hold a buffer.
-    return ContainsGSBuffer(AT->getElementType(), M, SSPBufferSize, IsLarge);
-  }
-
-  auto *ST = dyn_cast<StructType>(Ty);
-  if (!ST || ST->isOpaque())
-    return false;
-
-  if (DL.getTypeAllocSize(ST).getKnownMinValue() > MinGSAggregateSize &&
-      !ContainsPointer(ST))
-    return Found(ST);
-
-  bool NeedsProtector = false;
-  for (Type *ET : ST->elements())
-    if (ContainsGSBuffer(ET, M, SSPBufferSize, IsLarge)) {
-      // If a member is a large GS buffer then we are done. Otherwise keep
-      // looking, in case a later member is a large one.
-      if (IsLarge)
-        return true;
-      NeedsProtector = true;
-    }
-
-  return NeedsProtector;
-}
-
 /// Maximum remaining allocation size observed for a phi node, and how often
 /// the allocation size has already been decreased. We only allow a limited
 /// number of decreases.
@@ -496,9 +515,15 @@ static const CallInst *findStackProtectorIntrinsic(Function &F) {
 /// size, and functions that contain stack-based variables that have had their
 /// address taken. The MSVC heuristic implements /GS (Buffer Security Check):
 /// it adds a guard variable to functions that call alloca regardless of size
-/// and to functions holding a "GS buffer" (see ContainsGSBuffer), but it does
-/// not consider a variable's address being taken, and it never protects a
-/// function that takes a variable argument list.
+/// and to functions with an alloca that the frontend marked as a "GS buffer"
+/// using "stack-protector" metadata, but it does not consider a variable's
+/// address being taken, and it never protects a function that takes a variable
+/// argument list. Deciding what a GS buffer is needs source-level type
+/// information that lowering to IR does not preserve, which is why that part
+/// of the heuristic lives in the frontend.
+///
+/// In every mode, "stack-protector" metadata on an alloca overrides the
+/// heuristic for that allocation.
 bool SSPLayoutAnalysis::requiresStackProtector(Function *F,
                                                SSPLayoutMap *Layout) {
   Module *M = F->getParent();
@@ -552,11 +577,37 @@ bool SSPLayoutAnalysis::requiresStackProtector(Function *F,
   for (const BasicBlock &BB : *F) {
     for (const Instruction &I : BB) {
       if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
-        if (const MDNode *MD = AI->getMetadata("stack-protector")) {
-          const auto *CI = mdconst::dyn_extract<ConstantInt>(MD->getOperand(0));
-          if (CI->isZero())
+        bool IsTrivial = false;
+        if (std::optional<uint32_t> MD = getSSPAllocaMD(*AI, IsTrivial)) {
+          if (*MD == SSPAMD_Ignore)
             continue;
+
+          // MSVC leaves a trivial object that is only an indirect-return
+          // destination out of its GS analysis.
+          if (GSBuffer && IsTrivial && isIndirectReturnSlot(*AI))
+            continue;
+
+          // The frontend classified this allocation as a buffer, which is
+          // final: it knows things about the allocation that the IR no longer
+          // records. This is how clang-cl communicates MSVC's "GS buffer"
+          // analysis.
+          if (!Layout)
+            return true;
+          Layout->insert(
+              std::make_pair(AI, *MD == SSPAMD_LargeBuffer
+                                     ? MachineFrameInfo::SSPLK_LargeArray
+                                     : MachineFrameInfo::SSPLK_SmallArray));
+          ORE.emit([&]() {
+            return OptimizationRemark(DEBUG_TYPE, "StackProtectorBuffer", &I)
+                   << "Stack protection applied to function "
+                   << ore::NV("Function", F)
+                   << " due to a stack allocated buffer or struct containing a "
+                      "buffer";
+          });
+          NeedsProtector = true;
+          continue;
         }
+
         if (AI->isArrayAllocation()) {
           auto RemarkBuilder = [&]() {
             return OptimizationRemark(DEBUG_TYPE, "StackProtectorAllocaOrArray",
@@ -599,14 +650,14 @@ bool SSPLayoutAnalysis::requiresStackProtector(Function *F,
           continue;
         }
 
+        // Under MSVC's /GS the frontend has already picked out the buffers, so
+        // an unmarked alloca never requires a protector.
+        if (GSBuffer)
+          continue;
+
         bool IsLarge = false;
-        bool Protect =
-            GSBuffer ? ContainsGSBuffer(AI->getAllocatedType(), M,
-                                        SSPBufferSize, IsLarge)
-                     : ContainsProtectableArray(AI->getAllocatedType(), M,
-                                                SSPBufferSize, IsLarge, Strong,
-                                                /*InStruct=*/false);
-        if (Protect) {
+        if (ContainsProtectableArray(AI->getAllocatedType(), M, SSPBufferSize,
+                                     IsLarge, Strong, /*InStruct=*/false)) {
           if (!Layout)
             return true;
           Layout->insert(std::make_pair(
