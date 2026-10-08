@@ -7,6 +7,13 @@ func.func @assert(%arg : i1) {
   return
 }
 
+// CHECK-LABEL: @assume
+func.func @assume(%arg : i1) {
+  // CHECK: cf.assume %{{.*}}
+  cf.assume %arg
+  return
+}
+
 // CHECK-LABEL: func @switch(
 func.func @switch(%flag : i32, %caseOperand : i32) {
   cf.switch %flag : i32, [
