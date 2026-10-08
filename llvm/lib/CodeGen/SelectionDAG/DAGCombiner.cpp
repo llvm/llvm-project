@@ -4417,6 +4417,21 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
   if (N1.getOpcode() == ISD::SUB && N0 == N1.getOperand(0))
     return N1.getOperand(1);
 
+  // fold zext(A)-zext(A-B) -> zext(B) if A-B is nuw
+  {
+    SDValue A, B, Y;
+    if (sd_match(N1, m_ZExt(m_Sub(m_Value(A), m_Value(B)))) &&
+        N1.getOperand(0)->getFlags().hasNoUnsignedWrap()) {
+      APInt LowMask =
+          APInt::getLowBitsSet(BitWidth, A.getScalarValueSizeInBits());
+      if (sd_match(N0, m_ZExt(m_Specific(A))) ||
+          (sd_match(A, m_Trunc(m_Value(Y))) && Y.getValueType() == VT &&
+           (sd_match(N0, m_And(m_Specific(Y), m_SpecificInt(LowMask))) ||
+            (N0 == Y && DAG.MaskedValueIsZero(N0, ~LowMask)))))
+        return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, B);
+    }
+  }
+
   // fold (A+B)-A -> B
   if (N0.getOpcode() == ISD::ADD && N0.getOperand(0) == N1)
     return N0.getOperand(1);
@@ -5642,8 +5657,10 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
       if (SDNode *DivNode = DAG.getNodeIfExists(DivOpcode, N->getVTList(),
                                                 { N0, N1 }))
         CombineTo(DivNode, OptimizedDiv);
-      SDValue Mul = DAG.getNode(ISD::MUL, DL, VT, OptimizedDiv, N1);
-      SDValue Sub = DAG.getNode(ISD::SUB, DL, VT, N0, Mul);
+      SDNodeFlags Flags;
+      Flags.setNoUnsignedWrap(!isSigned);
+      SDValue Mul = DAG.getNode(ISD::MUL, DL, VT, OptimizedDiv, N1, Flags);
+      SDValue Sub = DAG.getNode(ISD::SUB, DL, VT, N0, Mul, Flags);
       AddToWorklist(OptimizedDiv.getNode());
       AddToWorklist(Mul.getNode());
       return Sub;
