@@ -132,39 +132,37 @@ The mask is wave-uniform and passed in the `M0` register:
   workgroup with cluster index `i`. Each workgroup that wants to participate in
   the multicast must set its own bit and all participating workgroups must
   supply an identical mask (and the same address). If the mask is all-zero, the
-  operation behaves like an ordinary, non-cluster load: it returns only to the
-  requesting workgroup.
+  operation is performed as an ordinary load.
 - Bit `[16]` selects the timeout behavior. When clear, a target-defined timeout
-  is used: requests may be combined if they arrive within that window. When set,
-  an *early timeout* is used: as soon as data is available, it is returned to
-  whichever waves have already issued their requests.
+  is used: loads may be combined if they arrive within that window. When set,
+  an *early timeout* is used: outstanding loads are completed as soon as data is
+  available.
 
-Each participating thread receives a copy of the loaded data into its own
-workgroup's LDS at `%lds_base` plus `%offset`. This is an ordinary
-`addrspace(3)` access with scope "workgroup", exactly like a non-cluster variant
-of this load.
+Completion is tracked using {ref}`asyncmarks<amdgpu-async-operations>`. Each
+participating thread receives a copy of the loaded data into its own workgroup's
+LDS at `%lds_base` plus `%offset`. In the memory model, this behaves in the same
+way as an equivalent non-multicast operation.
 
-**Combining multicast requests**
+Completion of a multicast load operation does not establish any synchronization
+with the participating workgroups. The application must separately synchronize
+across the participating workgroups if required.
+
+**Combining Load Operations**
 
 [This section is informational]
 
-Two multicast requests are candidates for combining only if they satisfy the
+When two threads execute a multicast instruction, the resulting load operations
+are candidates for combining into a multicast load only if they satisfy the
 following conditions:
 - Both specify the same global source location.
-- Either both requests originate from converged dynamic instances in the same
-  wave, or they originate from different participating workgroups.
+- Either both loads originate from converged dynamic instances in the same wave,
+  or they originate from different participating workgroups.
 
-Actual combining depends on implementation-specific details such as the
-target-defined request matching criteria, timeout, availability of tracking
-slots, etc.
+The actual combining of these load operations depends on target-defined matching
+criteria, timeout, availability of tracking slots, etc.
 
-A request that does not join a combined load can proceed separately and may
-combine with other requests. All requests complete eventually.
-
-Completion is tracked using {ref}`asyncmarks<amdgpu-async-operations>`.
-Completion of a multicast load does not establish any synchronization with
-participating workgroups. The application must separately synchronize across the
-participating workgroups if required.
+A load operation that is not combined into a multicast load eventually
+completes, either as part of a subsequent multicast load or by itself.
 
 **Target-specific notes**
 
