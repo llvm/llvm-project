@@ -700,7 +700,8 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
     if (Kind.isReadOnly() || Kind.isReadOnlyWithRel() || Kind.isData() ||
         Kind.isBSS()) {
       AddSectionPrefix =
-          !SectionPrefix.starts_with(".hot") || PreserveHotDataSectionPrefix;
+          TM.getEnableStaticDataPartitioning() &&
+          (!SectionPrefix.starts_with(".hot") || PreserveHotDataSectionPrefix);
     }
 
     if (AddSectionPrefix) {
@@ -857,7 +858,7 @@ static MCSection *selectExplicitSectionGlobal(const GlobalObject *GO,
   // Infer section flags from the section name if we can.
   Kind = getELFKindForNamedSection(SectionName, Kind);
 
-  unsigned Flags = getELFSectionFlags(Kind, TM.getTargetTriple());
+  unsigned Flags = getELFSectionFlags(Kind, GO->getParent()->getTargetTriple());
   auto [Group, IsComdat, ExtraFlags, Type, EntrySize] =
       getGlobalObjectInfo(GO, TM, SectionName, Kind);
   Flags |= ExtraFlags;
@@ -962,7 +963,7 @@ static MCSection *selectELFSectionForGlobal(
 
 MCSection *TargetLoweringObjectFileELF::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
-  unsigned Flags = getELFSectionFlags(Kind, TM.getTargetTriple());
+  unsigned Flags = getELFSectionFlags(Kind, GO->getParent()->getTargetTriple());
 
   // If we have -ffunction-section or -fdata-section then we should emit the
   // global value to a uniqued section specifically for it.
@@ -982,7 +983,7 @@ MCSection *TargetLoweringObjectFileELF::SelectSectionForGlobal(
 MCSection *TargetLoweringObjectFileELF::getUniqueSectionForFunction(
     const Function &F, const TargetMachine &TM) const {
   SectionKind Kind = SectionKind::getText();
-  unsigned Flags = getELFSectionFlags(Kind, TM.getTargetTriple());
+  unsigned Flags = getELFSectionFlags(Kind, F.getParent()->getTargetTriple());
   // If the function's section names is pre-determined via pragma or a
   // section attribute, call selectExplicitSectionGlobal.
   if (F.hasSection())
@@ -1108,8 +1109,9 @@ MCSection *TargetLoweringObjectFileELF::getSectionForConstantImpl(
     return Context.getELFSection(CstPrefix + ".cst32" + SectionSuffixStr,
                                  ELF::SHT_PROGBITS, MergeableCstFlags, 32);
   if (Kind.isReadOnly())
-    return Context.getELFSection(CstPrefix + SectionSuffixStr,
-                                 ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
+    return Context.getELFSection(
+        CstPrefix + SectionSuffixStr, ELF::SHT_PROGBITS,
+        ELF::SHF_ALLOC | (IsLarge ? ELF::SHF_X86_64_LARGE : 0));
 
   assert(Kind.isReadOnlyWithRel() && "Unknown section kind");
   return Context.getELFSection(".data.rel.ro" + SectionSuffixStr,
@@ -2042,7 +2044,6 @@ void TargetLoweringObjectFileCOFF::emitLinkerDirectives(
 void TargetLoweringObjectFileCOFF::Initialize(MCContext &Ctx,
                                               const TargetMachine &TM) {
   TargetLoweringObjectFile::Initialize(Ctx, TM);
-  this->TM = &TM;
   const Triple &T = TM.getTargetTriple();
   if (T.isWindowsMSVCEnvironment() || T.isWindowsItaniumEnvironment()) {
     StaticCtorSection =
@@ -2127,7 +2128,7 @@ MCSection *TargetLoweringObjectFileCOFF::getStaticDtorSection(
 const MCExpr *TargetLoweringObjectFileCOFF::lowerRelativeReference(
     const GlobalValue *LHS, const GlobalValue *RHS, int64_t Addend,
     std::optional<int64_t> PCRelativeOffset, const TargetMachine &TM) const {
-  const Triple &T = TM.getTargetTriple();
+  const Triple &T = LHS->getParent()->getTargetTriple();
   if (T.isOSCygMing())
     return nullptr;
 
@@ -2905,27 +2906,33 @@ MCSection *TargetLoweringObjectFileGOFF::getExplicitSectionGlobal(
 
 MCSection *TargetLoweringObjectFileGOFF::getSectionForLSDA(
     const Function &F, const MCSymbol &FnSym, const TargetMachine &TM) const {
-  std::string Name = ".gcc_exception_table." + F.getName().str();
+  std::string Name = "GCC_except." + F.getName().str();
 
+  MCSectionGOFF *SD = getContext().getGOFFSection(
+      SectionKind::getMetadata(), Name,
+      GOFF::SDAttr{GOFF::ESD_TA_Unspecified, GOFF::ESD_BSC_Section});
   MCSectionGOFF *WSA = getContext().getGOFFSection(
       SectionKind::getMetadata(), GOFF::CLASS_WSA,
       GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
                    GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
-                   GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0, 0},
-      static_cast<MCSectionGOFF *>(TextSection)->getParent());
-  WSA->setAlignment(Align(4)); // Fullword
-  return getContext().getGOFFSection(SectionKind::getData(), Name,
-                                     GOFF::PRAttr{true, GOFF::ESD_EXE_DATA,
-                                                  GOFF::ESD_LT_XPLink,
-                                                  GOFF::ESD_BSC_Section, 0},
-                                     WSA);
+                   GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_0, 0},
+      SD);
+  WSA->setAlignment(Align(8));
+  return getContext().getGOFFSection(
+      SectionKind::getData(), Name,
+      GOFF::PRAttr{false, GOFF::ESD_EXE_DATA, GOFF::ESD_BST_Strong,
+                   GOFF::ESD_LT_XPLink, GOFF::ESD_BSC_Section, 0},
+      WSA);
 }
 
 MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   auto *Symbol = TM.getSymbol(GO);
 
-  if (Kind.isBSS() || Kind.isData() || Kind.isReadOnlyWithRel()) {
+  // Read-only data stays in the code section only if it is local: references
+  // from other translation units are always parts in the WSA.
+  if (Kind.isBSS() || Kind.isData() || Kind.isReadOnlyWithRel() ||
+      (Kind.isReadOnly() && !GO->hasLocalLinkage())) {
     GOFF::ESDBindingScope PRBindingScope =
         GO->hasExternalLinkage()
             ? (GO->hasDefaultVisibility() ? GOFF::ESD_BSC_ImportExport
@@ -2951,8 +2958,8 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
     ED->setAlignment(Alignment.value_or(llvm::Align(8)));
     MCSectionGOFF *PR = getContext().getGOFFSection(
         Kind, Symbol->getName(),
-        GOFF::PRAttr{false, GOFF::ESD_EXE_DATA, GOFF::ESD_LT_XPLink,
-                     PRBindingScope, 0},
+        GOFF::PRAttr{false, GOFF::ESD_EXE_DATA, GOFF::ESD_BST_Strong,
+                     GOFF::ESD_LT_XPLink, PRBindingScope, 0},
         ED);
     // The binder rejects zero-length PR sections. Mark the PR so the writer
     // inflates it to a valid length if needed.
@@ -2988,8 +2995,8 @@ TargetLoweringObjectFileGOFF::getStaticXtorSection(unsigned Priority) const {
 
   MCSectionGOFF *Xtor = Ctx.getGOFFSection(
       SectionKind::getData(), Name,
-      GOFF::PRAttr{true, GOFF::ESD_EXE_DATA, GOFF::ESD_LT_XPLink,
-                   GOFF::ESD_BSC_Section, Prio},
+      GOFF::PRAttr{true, GOFF::ESD_EXE_DATA, GOFF::ESD_BST_Strong,
+                   GOFF::ESD_LT_XPLink, GOFF::ESD_BSC_Section, Prio},
       SInit);
   return Xtor;
 }

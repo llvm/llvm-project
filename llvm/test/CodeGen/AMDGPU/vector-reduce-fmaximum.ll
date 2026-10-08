@@ -80,9 +80,7 @@ define half @test_vector_reduce_fmaximum_v2half(<2 x half> %v) {
 ; GFX1170-SDAG-FAKE16-LABEL: test_vector_reduce_fmaximum_v2half:
 ; GFX1170-SDAG-FAKE16:       ; %bb.0: ; %entry
 ; GFX1170-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX1170-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1170-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v1
+; GFX1170-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX1170-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: test_vector_reduce_fmaximum_v2half:
@@ -102,9 +100,7 @@ define half @test_vector_reduce_fmaximum_v2half(<2 x half> %v) {
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v1
+; GFX12-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX12-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %res = call half @llvm.vector.reduce.fmaximum.v2half(<2 x half> %v)
@@ -212,9 +208,8 @@ define half @test_vector_reduce_fmaximum_v3half(<3 x half> %v) {
 ; GFX1170-SDAG-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1170-SDAG-FAKE16-NEXT:    v_perm_b32 v1, s0, v1, 0x5040100
 ; GFX1170-SDAG-FAKE16-NEXT:    v_pk_maximum_f16 v0, v0, v1
-; GFX1170-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1170-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX1170-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v1
+; GFX1170-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX1170-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: test_vector_reduce_fmaximum_v3half:
@@ -242,9 +237,7 @@ define half @test_vector_reduce_fmaximum_v3half(<3 x half> %v) {
 ; GFX12-SDAG-FAKE16-NEXT:    v_perm_b32 v1, s0, v1, 0x5040100
 ; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-SDAG-FAKE16-NEXT:    v_pk_maximum_f16 v0, v0, v1
-; GFX12-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v1
+; GFX12-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX12-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %res = call half @llvm.vector.reduce.fmaximum.v3half(<3 x half> %v)
@@ -374,9 +367,8 @@ define half @test_vector_reduce_fmaximum_v4half(<4 x half> %v) {
 ; GFX1170-SDAG-FAKE16:       ; %bb.0: ; %entry
 ; GFX1170-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1170-SDAG-FAKE16-NEXT:    v_pk_maximum_f16 v0, v0, v1
-; GFX1170-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1170-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX1170-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v1
+; GFX1170-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX1170-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: test_vector_reduce_fmaximum_v4half:
@@ -399,9 +391,8 @@ define half @test_vector_reduce_fmaximum_v4half(<4 x half> %v) {
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    v_pk_maximum_f16 v0, v0, v1
-; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX12-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v1
+; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX12-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %res = call half @llvm.vector.reduce.fmaximum.v4half(<4 x half> %v)
@@ -634,9 +625,7 @@ define half @test_vector_reduce_fmaximum_v8half(<8 x half> %v) {
 ; GFX1170-SDAG-FAKE16-NEXT:    v_pk_maximum_f16 v0, v0, v2
 ; GFX1170-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1170-SDAG-FAKE16-NEXT:    v_pk_maximum_f16 v0, v0, v1
-; GFX1170-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX1170-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1170-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v1
+; GFX1170-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX1170-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: test_vector_reduce_fmaximum_v8half:
@@ -664,9 +653,7 @@ define half @test_vector_reduce_fmaximum_v8half(<8 x half> %v) {
 ; GFX12-SDAG-FAKE16-NEXT:    v_pk_maximum_f16 v0, v0, v2
 ; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-SDAG-FAKE16-NEXT:    v_pk_maximum_f16 v0, v0, v1
-; GFX12-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v1
+; GFX12-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX12-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %res = call half @llvm.vector.reduce.fmaximum.v8half(<8 x half> %v)
@@ -1106,9 +1093,7 @@ define half @test_vector_reduce_fmaximum_v16half(<16 x half> %v) {
 ; GFX1170-SDAG-FAKE16-NEXT:    v_pk_maximum_f16 v0, v0, v2
 ; GFX1170-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1170-SDAG-FAKE16-NEXT:    v_pk_maximum_f16 v0, v0, v1
-; GFX1170-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX1170-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1170-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v1
+; GFX1170-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX1170-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: test_vector_reduce_fmaximum_v16half:
@@ -1146,9 +1131,7 @@ define half @test_vector_reduce_fmaximum_v16half(<16 x half> %v) {
 ; GFX12-SDAG-FAKE16-NEXT:    v_pk_maximum_f16 v0, v0, v2
 ; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-SDAG-FAKE16-NEXT:    v_pk_maximum_f16 v0, v0, v1
-; GFX12-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v1
+; GFX12-SDAG-FAKE16-NEXT:    v_maximum_f16 v0, v0, v0 op_sel:[0,1,0]
 ; GFX12-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %res = call half @llvm.vector.reduce.fmaximum.v16half(<16 x half> %v)
@@ -2542,76 +2525,76 @@ define double @test_vector_reduce_fmaximum_v16double(<16 x double> %v) {
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    scratch_load_dword v31, off, s32
-; GFX9-NEXT:    v_mov_b32_e32 v36, 0x7ff80000
+; GFX9-NEXT:    v_mov_b32_e32 v50, 0x7ff80000
 ; GFX9-NEXT:    v_max_f64 v[32:33], v[8:9], v[24:25]
 ; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[8:9], v[24:25]
 ; GFX9-NEXT:    v_max_f64 v[34:35], v[0:1], v[16:17]
-; GFX9-NEXT:    v_max_f64 v[38:39], v[12:13], v[28:29]
-; GFX9-NEXT:    v_cndmask_b32_e32 v9, v33, v36, vcc
+; GFX9-NEXT:    v_max_f64 v[36:37], v[12:13], v[28:29]
+; GFX9-NEXT:    v_cndmask_b32_e32 v9, v33, v50, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e64 v8, v32, 0, vcc
 ; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[16:17]
-; GFX9-NEXT:    v_max_f64 v[48:49], v[4:5], v[20:21]
-; GFX9-NEXT:    v_max_f64 v[50:51], v[6:7], v[22:23]
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v35, v36, vcc
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, v34, 0, vcc
+; GFX9-NEXT:    v_max_f64 v[38:39], v[4:5], v[20:21]
+; GFX9-NEXT:    v_max_f64 v[48:49], v[6:7], v[22:23]
+; GFX9-NEXT:    v_cndmask_b32_e32 v17, v35, v50, vcc
+; GFX9-NEXT:    v_cndmask_b32_e64 v16, v34, 0, vcc
 ; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[12:13], v[28:29]
 ; GFX9-NEXT:    v_max_f64 v[52:53], v[10:11], v[26:27]
 ; GFX9-NEXT:    v_max_f64 v[54:55], v[2:3], v[18:19]
-; GFX9-NEXT:    v_cndmask_b32_e32 v13, v39, v36, vcc
-; GFX9-NEXT:    v_cndmask_b32_e64 v12, v38, 0, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v13, v37, v50, vcc
+; GFX9-NEXT:    v_cndmask_b32_e64 v12, v36, 0, vcc
 ; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[4:5], v[20:21]
-; GFX9-NEXT:    v_max_f64 v[20:21], v[0:1], v[8:9]
+; GFX9-NEXT:    v_max_f64 v[20:21], v[16:17], v[8:9]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_cmp_u_f64_e64 s[0:1], v[14:15], v[30:31]
-; GFX9-NEXT:    v_cndmask_b32_e32 v5, v49, v36, vcc
-; GFX9-NEXT:    v_cndmask_b32_e64 v4, v48, 0, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v5, v39, v50, vcc
+; GFX9-NEXT:    v_cndmask_b32_e64 v4, v38, 0, vcc
 ; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[6:7], v[22:23]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e32 v7, v51, v36, vcc
-; GFX9-NEXT:    v_cndmask_b32_e64 v6, v50, 0, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v49, v50, vcc
+; GFX9-NEXT:    v_cndmask_b32_e64 v0, v48, 0, vcc
 ; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[10:11], v[26:27]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e32 v11, v53, v36, vcc
-; GFX9-NEXT:    v_cndmask_b32_e64 v10, v52, 0, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v7, v53, v50, vcc
+; GFX9-NEXT:    v_cndmask_b32_e64 v6, v52, 0, vcc
 ; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[2:3], v[18:19]
 ; GFX9-NEXT:    v_max_f64 v[18:19], v[4:5], v[12:13]
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    v_cndmask_b32_e32 v3, v55, v36, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v3, v55, v50, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e64 v2, v54, 0, vcc
-; GFX9-NEXT:    v_max_f64 v[16:17], v[2:3], v[10:11]
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[2:3], v[10:11]
+; GFX9-NEXT:    v_max_f64 v[10:11], v[2:3], v[6:7]
+; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[2:3], v[6:7]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e32 v3, v17, v36, vcc
-; GFX9-NEXT:    v_cndmask_b32_e64 v2, v16, 0, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v3, v11, v50, vcc
+; GFX9-NEXT:    v_cndmask_b32_e64 v2, v10, 0, vcc
 ; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[4:5], v[12:13]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e32 v5, v19, v36, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v5, v19, v50, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e64 v4, v18, 0, vcc
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[8:9]
+; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[16:17], v[8:9]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v21, v36, vcc
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, v20, 0, vcc
-; GFX9-NEXT:    v_max_f64 v[8:9], v[0:1], v[4:5]
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[4:5]
-; GFX9-NEXT:    v_max_f64 v[4:5], v[14:15], v[30:31]
-; GFX9-NEXT:    v_cndmask_b32_e64 v5, v5, v36, s[0:1]
-; GFX9-NEXT:    v_cndmask_b32_e64 v4, v4, 0, s[0:1]
-; GFX9-NEXT:    v_max_f64 v[10:11], v[6:7], v[4:5]
-; GFX9-NEXT:    v_cmp_u_f64_e64 s[0:1], v[6:7], v[4:5]
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v9, v36, vcc
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, v8, 0, vcc
-; GFX9-NEXT:    v_cndmask_b32_e64 v5, v11, v36, s[0:1]
-; GFX9-NEXT:    v_cndmask_b32_e64 v4, v10, 0, s[0:1]
-; GFX9-NEXT:    v_max_f64 v[6:7], v[2:3], v[4:5]
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[2:3], v[4:5]
+; GFX9-NEXT:    v_cndmask_b32_e32 v7, v21, v50, vcc
+; GFX9-NEXT:    v_cndmask_b32_e64 v6, v20, 0, vcc
+; GFX9-NEXT:    v_max_f64 v[8:9], v[6:7], v[4:5]
+; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[6:7], v[4:5]
+; GFX9-NEXT:    v_max_f64 v[6:7], v[14:15], v[30:31]
+; GFX9-NEXT:    v_cndmask_b32_e64 v7, v7, v50, s[0:1]
+; GFX9-NEXT:    v_cndmask_b32_e64 v6, v6, 0, s[0:1]
+; GFX9-NEXT:    v_max_f64 v[10:11], v[0:1], v[6:7]
+; GFX9-NEXT:    v_cmp_u_f64_e64 s[0:1], v[0:1], v[6:7]
+; GFX9-NEXT:    v_cndmask_b32_e32 v5, v9, v50, vcc
+; GFX9-NEXT:    v_cndmask_b32_e64 v4, v8, 0, vcc
+; GFX9-NEXT:    v_cndmask_b32_e64 v1, v11, v50, s[0:1]
+; GFX9-NEXT:    v_cndmask_b32_e64 v0, v10, 0, s[0:1]
+; GFX9-NEXT:    v_max_f64 v[6:7], v[2:3], v[0:1]
+; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[2:3], v[0:1]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e32 v3, v7, v36, vcc
-; GFX9-NEXT:    v_cndmask_b32_e64 v2, v6, 0, vcc
-; GFX9-NEXT:    v_max_f64 v[4:5], v[0:1], v[2:3]
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[2:3]
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v7, v50, vcc
+; GFX9-NEXT:    v_cndmask_b32_e64 v0, v6, 0, vcc
+; GFX9-NEXT:    v_max_f64 v[2:3], v[4:5], v[0:1]
+; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[4:5], v[0:1]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, v4, 0, vcc
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v5, v36, vcc
+; GFX9-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v3, v50, vcc
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: test_vector_reduce_fmaximum_v16double:

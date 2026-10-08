@@ -18,7 +18,7 @@ define float @call_changes_mode(float %x, float %y) #0 {
   ; SDAG-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @maybe_defs_mode, target-flags(amdgpu-rel32-hi) @maybe_defs_mode, implicit-def dead $scc
   ; SDAG-NEXT:   [[COPY2:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; SDAG-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY2]]
-  ; SDAG-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[SI_PC_ADD_REL_OFFSET]], @maybe_defs_mode, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $mode
+  ; SDAG-NEXT:   dead $sgpr30_sgpr31 = SI_CALL [[SI_PC_ADD_REL_OFFSET]], @maybe_defs_mode, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $mode
   ; SDAG-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; SDAG-NEXT:   [[V_ADD_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
   ; SDAG-NEXT:   $vgpr0 = COPY [[V_ADD_F32_e64_]]
@@ -34,7 +34,7 @@ define float @call_changes_mode(float %x, float %y) #0 {
   ; GISEL-NEXT:   [[COPY2:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; GISEL-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY2]]
   ; GISEL-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @maybe_defs_mode, target-flags(amdgpu-rel32-hi) @maybe_defs_mode, implicit-def $scc
-  ; GISEL-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[SI_PC_ADD_REL_OFFSET]], @maybe_defs_mode, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GISEL-NEXT:   dead $sgpr30_sgpr31 = noconvergent SI_CALL [[SI_PC_ADD_REL_OFFSET]], @maybe_defs_mode, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3
   ; GISEL-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-NEXT:   [[V_ADD_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
   ; GISEL-NEXT:   $vgpr0 = COPY [[V_ADD_F32_e64_]]
@@ -48,7 +48,7 @@ define void @tail_call_changes_mode() #0 {
   ; SDAG-LABEL: name: tail_call_changes_mode
   ; SDAG: bb.0 (%ir-block.0):
   ; SDAG-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:ccr_sgpr_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @maybe_defs_mode, target-flags(amdgpu-rel32-hi) @maybe_defs_mode, implicit-def dead $scc
-  ; SDAG-NEXT:   SI_TCRETURN killed [[SI_PC_ADD_REL_OFFSET]], @maybe_defs_mode, 0, csr_amdgpu, implicit-def $mode
+  ; SDAG-NEXT:   SI_TCRETURN [[SI_PC_ADD_REL_OFFSET]], @maybe_defs_mode, 0, csr_amdgpu, implicit-def $mode
   ;
   ; GISEL-LABEL: name: tail_call_changes_mode
   ; GISEL: bb.1 (%ir-block.0):
