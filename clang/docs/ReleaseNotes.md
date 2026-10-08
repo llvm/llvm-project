@@ -148,6 +148,11 @@ features cannot lower the translation-unit ABI level;
   As a result, the `__str__` representation of its return values changed.
   Like other libclang enums, it now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`.
 
+- Change the behavior of the deprecated `CodeCompletionResults.results` property.
+  It is used as an implementation detail now and should not be accessed directly.
+  Existing uses of it should be changed to use `CodeCompletionResults` directly:
+  it nows supports `__len__` and `__getitem__`, so it can be used the same as `CodeCompletionResults.results` previously.
+
 - `Cursor` instance's `enum_value` method now returns 1 instead of -1 for `true` bool enumeration values
 
 ### OpenCL Potentially Breaking Changes
@@ -323,6 +328,11 @@ features cannot lower the translation-unit ABI level;
 - Fixed a bug with handling a `nonnull` attribute with an invalid argument
   index such that it would inadvertently apply the attribute with no arguments,
   causing all function parameters of pointer type to be considered nonnull. (#GH228670)
+
+- Added `[[clang::unsafe_buffer_usage_in_container]]` (and equivalent spelling
+  `[[clang::unsafe_buffer_usage("container")]]`) to allow two-parameter container
+  and view constructors and factory functions to opt in to
+  `-Wunsafe-buffer-usage-in-container` diagnostics.
 
 ### Improvements to Clang's diagnostics
 
@@ -541,6 +551,14 @@ features cannot lower the translation-unit ABI level;
 - `-Wno-unsafe-buffer-usage-in-static-sized-array` now also suppresses warnings
   for pointer arithmetic on statically-sized arrays when the offset is a
   non-negative constant within the array bounds.
+
+- `-Wunsafe-buffer-usage-in-container` now warns on unsafe calls to
+  two-parameter constructors and factory functions annotated with
+  `[[clang::unsafe_buffer_usage_in_container]]` or
+  `[[clang::unsafe_buffer_usage("container")]]`. For these annotated functions,
+  the safe `(.data(), .size())` and `(.begin(), .end())` argument checks use
+  duck typing rather than a hardcoded type list, suppressing false positives
+  when both methods are called on the same user-defined container object.
 
 - `-Wc++98-compat` now diagnoses explicit conversion functions in C++20 and
   later, matching the behavior in C++11 through C++17. (#GH161689)
