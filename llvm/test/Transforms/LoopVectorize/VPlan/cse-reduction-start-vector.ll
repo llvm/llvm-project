@@ -3,8 +3,9 @@
 ; RUN:   -epilogue-vectorization-force-VF=2 -vplan-print-after="printFinalVPlan$" \
 ; RUN:   -disable-output %s 2>&1 | FileCheck %s
 
-define i32 @cse_rdx(ptr %a, i64 %n) {
-; CHECK-LABEL: VPlan for loop in 'cse_rdx'
+; After we CSE a VPI::ReductionStartVector, it is shared by the WidenReductionPHI users.
+define i32 @cse_reduction_start_vector_multiple_users(ptr %a, i64 %n) {
+; CHECK-LABEL: VPlan for loop in 'cse_reduction_start_vector_multiple_users'
 ; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
 ; CHECK-NEXT:  Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
