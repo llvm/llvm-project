@@ -85,7 +85,7 @@ bugprone-unsafe-format-string.CustomPrintfFunctions="
 ```
 
 The first parameter in the pairs is a function regular expression matching
-the function name, the second parameter is the count of the format string
+the function name, the second parameter is the index of the format string
 literal argument.
 
 The following configuration will give a warning:

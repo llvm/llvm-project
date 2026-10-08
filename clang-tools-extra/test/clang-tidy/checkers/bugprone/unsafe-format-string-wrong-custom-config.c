@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s bugprone-unsafe-format-string %t --\
-// RUN:  -config="{CheckOptions: {bugprone-unsafe-format-string.CustomPrintfFunctions: 'mysprintf, 1; mylogger, 1', bugprone-unsafe-format-string.CustomScanfFunctions: 'myscanf, 0;'  }}"\
+// RUN:  -config="{CheckOptions: {bugprone-unsafe-format-string.CustomPrintfFunctions: 'mysprintf, 0; mylogger, 1', bugprone-unsafe-format-string.CustomScanfFunctions: 'myscanf, 0;'  }}"\
 // RUN: -- -I %S/../Inputs/Headers/std
 
 #include "system-header-simulator.h"
@@ -14,7 +14,7 @@ void test_sprintf() {
 
   /* unsafe %s without field width */
   mysprintf(buffer, "%s", input);
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: format specifier '%s' without precision may cause buffer overflow; consider using '%.Ns' where N limits output length [bugprone-unsafe-format-string]
+  // no warning as mysprintf config is wrong
 
   mylogger(buffer, "%s", input);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: format specifier '%s' without precision may cause buffer overflow; consider using '%.Ns' where N limits output length [bugprone-unsafe-format-string]
