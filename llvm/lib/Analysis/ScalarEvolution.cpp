@@ -14650,13 +14650,13 @@ void ScalarEvolution::forgetMemoizedResults(
 void ScalarEvolution::dropFlagsDerivedFromOldBECount(const SCEV *S) {
   if (auto *AR = dyn_cast<SCEVAddRecExpr>(S))
     const_cast<SCEVAddRecExpr *>(AR)->SubclassData &=
-        ~static_cast<unsigned short>(SCEV::NoWrapMask);
+        ~static_cast<unsigned short>(SCEV::FlagsNoWrapMask);
   else if (auto *Add = dyn_cast<SCEVAddExpr>(S))
     const_cast<SCEVAddExpr *>(Add)->SubclassData &=
-        ~static_cast<unsigned short>(SCEV::NoWrapMask);
+        ~static_cast<unsigned short>(SCEV::FlagsNoWrapMask);
   else if (auto *Mul = dyn_cast<SCEVMulExpr>(S))
     const_cast<SCEVMulExpr *>(Mul)->SubclassData &=
-        ~static_cast<unsigned short>(SCEV::NoWrapMask);
+        ~static_cast<unsigned short>(SCEV::FlagsNoWrapMask);
 }
 
 void ScalarEvolution::forgetMemoizedResultsImpl(
