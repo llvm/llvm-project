@@ -1,11 +1,4 @@
-// clang/test/SemaOpenCL/coop_mat_type_infra.cl
-//
-// Patch 1: CooperativeMatrixType AST node and type infrastructure.
-//
-// Tests: TypeNodes.td registration, CooperativeMatrixType class accessors,
-//        ASTContext::getCooperativeMatrixType uniquing, TypePrinter,
-//        RecursiveASTVisitor traversal, mergeTypes compatibility,
-//        TypeLoc operand slots, sizeof / getTypeInfoImpl.
+// CooperativeMatrixType AST node and type infrastructure tests
 //
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown \
 // RUN:   -cl-std=CL2.0 -cl-ext=+cl_khr_cooperative_matrix \
@@ -21,9 +14,6 @@
 // RUN:   -finclude-default-header -O0 -include-pch %t.pch -ast-dump %t.aux.cl \
 // RUN:   | FileCheck %s --check-prefix=PCH
 
-// ---------------------------------------------------------------------------
-// Enum constants (from opencl-c-base.h via -finclude-default-header)
-// ---------------------------------------------------------------------------
 #define SCOPE  memory_scope_sub_group
 #define USE_A  CLK_COOPERATIVE_MATRIX_A
 #define USE_B  CLK_COOPERATIVE_MATRIX_B
