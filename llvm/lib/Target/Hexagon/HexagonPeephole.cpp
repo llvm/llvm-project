@@ -44,8 +44,10 @@
 
 #include "Hexagon.h"
 #include "HexagonTargetMachine.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -303,20 +305,33 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
 }
 
 // Return true if both instructions have identical input operands in order.
-static bool hasCommonInputOps(const MachineInstr *I1, const MachineInstr *I2) {
-  if (I1->getNumOperands() != I2->getNumOperands())
+static bool hasCommonInputOps(const MachineInstr &I1, const MachineInstr &I2) {
+  auto I1Uses = I1.explicit_uses();
+  auto I2Uses = I2.explicit_uses();
+  unsigned I1NumUses = I1.getNumExplicitOperands() - I1.getNumExplicitDefs();
+  unsigned I2NumUses = I2.getNumExplicitOperands() - I2.getNumExplicitDefs();
+  if (!I1NumUses || I1NumUses != I2NumUses)
     return false;
 
-  for (unsigned i = 0, e = I1->getNumOperands(); i != e; ++i) {
-    const MachineOperand &Op1 = I1->getOperand(i);
-    if (!Op1.isDef() && !Op1.isIdenticalTo(I2->getOperand(i)))
+  auto I2Use = I2Uses.begin();
+  for (const MachineOperand &I1Use : I1Uses)
+    if (!I1Use.isIdenticalTo(*I2Use++))
       return false;
-  }
   return true;
+}
+
+static bool modifiesPhysicalInput(ArrayRef<Register> Inputs,
+                                  const MachineInstr &Between,
+                                  const TargetRegisterInfo *TRI) {
+  for (Register Input : Inputs)
+    if (Between.modifiesRegister(Input, TRI))
+      return true;
+  return false;
 }
 
 bool HexagonPeephole::fuseIntrinsicVMinUB(MachineFunction &MF) {
   bool Changed = false;
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
 
   for (MachineBasicBlock &MBB : MF) {
     SmallPtrSet<MachineInstr *, 8> DeadMIs;
@@ -329,14 +344,21 @@ bool HexagonPeephole::fuseIntrinsicVMinUB(MachineFunction &MF) {
 
       unsigned SiblingOpc =
           Opc == Hexagon::A2_vminub ? Hexagon::C2_cmpgtup : Hexagon::A2_vminub;
+      SmallVector<Register, 2> PhysicalInputs;
+      for (const MachineOperand &MO : MI.operands())
+        if (MO.isReg() && !MO.isDef() && MO.getReg().isPhysical())
+          PhysicalInputs.push_back(MO.getReg());
       MachineInstr *Sibling = nullptr;
       auto It = MI.getIterator();
-      for (++It; It != MBB.end(); ++It)
+      for (++It; It != MBB.end(); ++It) {
         if (!DeadMIs.count(&*It) && It->getOpcode() == SiblingOpc &&
-            hasCommonInputOps(&MI, &*It)) {
+            hasCommonInputOps(MI, *It)) {
           Sibling = &*It;
           break;
         }
+        if (modifiesPhysicalInput(PhysicalInputs, *It, TRI))
+          break;
+      }
       if (!Sibling)
         continue;
 
@@ -354,6 +376,8 @@ bool HexagonPeephole::fuseIntrinsicVMinUB(MachineFunction &MF) {
 
       Register VMinDef = VMin->getOperand(0).getReg();
       Register CmpDef = Cmp->getOperand(0).getReg();
+      assert(VMinDef.isVirtual() && CmpDef.isVirtual() &&
+             "vminub fusion requires virtual result registers");
       MRI->replaceRegWith(VMinDef, VMinReg);
       VMin->getOperand(0).setReg(VMinDef);
       MRI->replaceRegWith(CmpDef, CmpReg);
