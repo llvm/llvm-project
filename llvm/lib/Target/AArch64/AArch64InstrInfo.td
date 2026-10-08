@@ -1065,7 +1065,12 @@ def AArch64uqsub:   SDNode<"AArch64ISD::UQSUB",   SDTFPBinOp>;
 def AArch64sqdmull: SDNode<"AArch64ISD::SQDMULL",
                            SDTypeProfile<1, 2, [ SDTCisSameAs<1, 2>,
                            SDTCisFP<0>, SDTCisFP<1>]>>;
-def AArch64sqabs:   SDNode<"AArch64ISD::SQABS",   SDTFPUnaryOp>;
+// Scalar integer operations use FP types; vectors retain their integer types.
+def AArch64sqabs:   SDNode<"AArch64ISD::SQABS",
+                          SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>]>>;
+def AArch64sqabsv : PatFrags<(ops node:$Rn),
+                            [(int_aarch64_neon_sqabs node:$Rn),
+                             (AArch64sqabs node:$Rn)]>;
 def AArch64sqneg:   SDNode<"AArch64ISD::SQNEG",   SDTFPUnaryOp>;
 def AArch64sqshrun: SDNode<"AArch64ISD::SQSHRUN", SDTFPTruncRoundOp>;
 def AArch64sqrshrun: SDNode<"AArch64ISD::SQRSHRUN", SDTFPTruncRoundOp>;
@@ -6352,7 +6357,7 @@ defm SADALP : SIMDLongTwoVectorTied<0, 0b00110, "sadalp",
 defm SADDLP : SIMDLongTwoVector<0, 0b00010, "saddlp", AArch64saddlp>;
 defm SCVTF  : SIMDTwoVectorIntToFP<0, 0, 0b11101, "scvtf", any_sint_to_fp>;
 defm SHLL   : SIMDVectorLShiftLongBySizeBHS;
-defm SQABS  : SIMDTwoVectorBHSD<0, 0b00111, "sqabs", int_aarch64_neon_sqabs>;
+defm SQABS  : SIMDTwoVectorBHSD<0, 0b00111, "sqabs", AArch64sqabsv>;
 defm SQNEG  : SIMDTwoVectorBHSD<1, 0b00111, "sqneg", int_aarch64_neon_sqneg>;
 defm SQXTN  : SIMDMixedTwoVector<0, 0b10100, "sqxtn", truncssat_s>;
 defm SQXTUN : SIMDMixedTwoVector<1, 0b10010, "sqxtun", truncssat_u>;
@@ -7049,6 +7054,10 @@ defm UCVTF  : SIMDFPTwoScalarCVT<   1, 0, 0b11101, "ucvtf", AArch64uitof>;
 defm UQXTN  : SIMDTwoScalarMixedBHS<1, 0b10100, "uqxtn", int_aarch64_neon_scalar_uqxtn>;
 defm USQADD : SIMDTwoScalarBHSDTied< 1, 0b00011, "usqadd", AArch64usqadd,
                                     int_aarch64_neon_usqadd>;
+
+let Predicates = [HasNEON] in
+def : Pat<(v1i64 (AArch64sqabs (v1i64 FPR64:$Rn))),
+          (SQABSv1i64 FPR64:$Rn)>;
 
 // Scalar i32 -> i64 extend
 def : Pat<(i32 (int_aarch64_neon_scalar_uqxtn (i64 FPR64:$Rn))),

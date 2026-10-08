@@ -31773,9 +31773,7 @@ static SDValue trySQABSCombine(SDNode *N, SelectionDAG &DAG,
   if (!Subtarget.isNeonAvailable() ||
       !(VT.is64BitVector() || VT.is128BitVector()))
     return SDValue();
-  return DAG.getNode(
-      ISD::INTRINSIC_WO_CHAIN, DL, VT,
-      DAG.getTargetConstant(Intrinsic::aarch64_neon_sqabs, DL, MVT::i32), X);
+  return DAG.getNode(AArch64ISD::SQABS, DL, VT, X);
 }
 
 static SDValue performMINMAXCombine(SDNode *N, SelectionDAG &DAG,
