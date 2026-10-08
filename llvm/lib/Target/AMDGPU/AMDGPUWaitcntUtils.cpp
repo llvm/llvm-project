@@ -7,8 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUWaitcntUtils.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "GCNSubtarget.h"
+#include "SIInstrInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 
 namespace llvm::AMDGPU {
 
@@ -165,6 +168,78 @@ std::optional<AMDGPU::InstCounterType> counterTypeForInstr(unsigned Opcode) {
   default:
     return {};
   }
+}
+
+//===----------------------------------------------------------------------===//
+// VMEM-load classification primitives.
+//===----------------------------------------------------------------------===//
+
+bool updateVMCntOnly(const MachineInstr &MI) {
+  return (SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isFLAT(MI)) ||
+         SIInstrInfo::isFLATGlobal(MI) || SIInstrInfo::isFLATScratch(MI);
+}
+
+InstCounterType getVmemFamily(const MachineInstr &MI) {
+  assert(updateVMCntOnly(MI));
+  if (!SIInstrInfo::isImage(MI))
+    return LOAD_CNT;
+
+  const MIMGInfo *Info = getMIMGInfo(MI.getOpcode());
+  if (!Info)
+    return LOAD_CNT;
+  const MIMGBaseOpcodeInfo *BaseInfo = getMIMGBaseOpcodeInfo(Info->BaseOpcode);
+
+  if (BaseInfo->BVH)
+    return BVH_CNT;
+
+  // isVSAMPLE is included because some instructions don't have a sampler but
+  // are still classified as sampler instructions for waitcnt purposes.
+  if (BaseInfo->Sampler || BaseInfo->MSAA || SIInstrInfo::isVSAMPLE(MI))
+    return SAMPLE_CNT;
+
+  return LOAD_CNT;
+}
+
+InstCounterType getVmemLoadCounter(const MachineInstr &MI,
+                                   const GCNSubtarget &ST) {
+  if (!ST.hasExtendedWaitCounts())
+    return LOAD_CNT;
+  // Only image instructions increment SAMPLE_CNT/BVH_CNT; anything else that is
+  // not updateVMCntOnly (e.g. generic FLAT) is LOAD_CNT.  This also keeps
+  // getVmemFamily's updateVMCntOnly precondition satisfied.
+  if (!updateVMCntOnly(MI))
+    return LOAD_CNT;
+  return getVmemFamily(MI);
+}
+
+bool isVmemCounterLoad(const MachineInstr &MI, const GCNSubtarget &ST) {
+  if (updateVMCntOnly(MI))
+    return true;
+  // Generic FLAT bumps both vmcnt and lgkmcnt; a partial vmcnt wait only
+  // reliably signals the load is done where the two counters complete in order.
+  return SIInstrInfo::isFLAT(MI) && ST.hasFlatLgkmVMemCountInOrder();
+}
+
+bool isPureVMemLoad(const MachineInstr &MI, const GCNSubtarget &ST) {
+  if (!MI.mayLoad() || MI.mayStore() || MI.hasUnmodeledSideEffects())
+    return false;
+  for (const MachineMemOperand *MMO : MI.memoperands())
+    if (MMO->getPseudoValue())
+      return false;
+  if (MI.getOpcode() != TargetOpcode::BUNDLE)
+    return isVmemCounterLoad(MI, ST);
+  bool SawMember = false;
+  for (auto It = std::next(MI.getIterator()), E = MI.getParent()->instr_end();
+       It != E && It->isBundledWithPred(); ++It) {
+    if (It->isMetaInstruction())
+      continue;
+    if (!It->mayLoad() || It->mayStore() || It->hasUnmodeledSideEffects())
+      return false;
+    if (!isVmemCounterLoad(*It, ST))
+      return false;
+    SawMember = true;
+  }
+  return SawMember;
 }
 
 } // namespace llvm::AMDGPU
