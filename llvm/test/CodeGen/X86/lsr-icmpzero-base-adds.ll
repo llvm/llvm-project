@@ -11,28 +11,22 @@ define float @three_eq_exits(ptr %p, i64 %start, i64 %a, i64 %b, i64 %n) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    negq %r8
-; CHECK-NEXT:    incq %rsi
-; CHECK-NEXT:    negq %rcx
-; CHECK-NEXT:    negq %rdx
+; CHECK-NEXT:    incq %r8
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    leaq (%rdx,%rsi), %rax
-; CHECK-NEXT:    cmpq $1, %rax
+; CHECK-NEXT:    cmpq %rsi, %rdx
 ; CHECK-NEXT:    je .LBB0_5
 ; CHECK-NEXT:  # %bb.2: # %bb2
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    leaq (%rcx,%rsi), %rax
-; CHECK-NEXT:    cmpq $1, %rax
+; CHECK-NEXT:    cmpq %rsi, %rcx
 ; CHECK-NEXT:    je .LBB0_5
 ; CHECK-NEXT:  # %bb.3: # %latch
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    addss -4(%rdi,%rsi,4), %xmm0
-; CHECK-NEXT:    leaq 1(%r8,%rsi), %rax
+; CHECK-NEXT:    addss (%rdi,%rsi,4), %xmm0
 ; CHECK-NEXT:    incq %rsi
-; CHECK-NEXT:    cmpq $2, %rax
+; CHECK-NEXT:    cmpq %rsi, %r8
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.4: # %exit
 ; CHECK-NEXT:    popq %rax
@@ -40,6 +34,7 @@ define float @three_eq_exits(ptr %p, i64 %start, i64 %a, i64 %b, i64 %n) {
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_5: # %exit2
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    incq %rsi
 ; CHECK-NEXT:    movq %rsi, %rdi
 ; CHECK-NEXT:    callq throw@PLT
 entry:
@@ -86,20 +81,21 @@ define i64 @inner_exit_values(ptr %tags, ptr %data, i64 %off, i64 %n) {
 ; CHECK-NEXT:    jle .LBB1_1
 ; CHECK-NEXT:  # %bb.3: # %first.ph
 ; CHECK-NEXT:    movq %rdi, %r8
+; CHECK-NEXT:    leaq (%rdi,%rdx), %r9
 ; CHECK-NEXT:    movq $-1, %rdi
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    movq %rdx, %r9
+; CHECK-NEXT:    movq %rdx, %r10
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_4: # %first
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    cmpb $0, (%r8,%r9)
+; CHECK-NEXT:    cmpb $0, (%r8,%r10)
 ; CHECK-NEXT:    jne .LBB1_6
 ; CHECK-NEXT:  # %bb.5: # %first.skip
 ; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=1
-; CHECK-NEXT:    incq %r9
-; CHECK-NEXT:    leaq -1(%rcx,%rdi), %r10
+; CHECK-NEXT:    incq %r10
+; CHECK-NEXT:    leaq -1(%rcx,%rdi), %r11
 ; CHECK-NEXT:    decq %rdi
-; CHECK-NEXT:    cmpq $-1, %r10
+; CHECK-NEXT:    cmpq $-1, %r11
 ; CHECK-NEXT:    jne .LBB1_4
 ; CHECK-NEXT:  .LBB1_2: # %done
 ; CHECK-NEXT:    retq
@@ -108,42 +104,40 @@ define i64 @inner_exit_values(ptr %tags, ptr %data, i64 %off, i64 %n) {
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB1_6: # %found
 ; CHECK-NEXT:    negq %rdi
-; CHECK-NEXT:    cmpb $0, (%r8,%r9)
-; CHECK-NEXT:    je .LBB1_13
+; CHECK-NEXT:    cmpb $0, (%r8,%r10)
+; CHECK-NEXT:    je .LBB1_10
 ; CHECK-NEXT:  # %bb.7: # %outer.preheader
-; CHECK-NEXT:    movq %rcx, %r10
-; CHECK-NEXT:    negq %r10
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:  .LBB1_8: # %outer
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
-; CHECK-NEXT:    # Child Loop BB1_11 Depth 2
-; CHECK-NEXT:    addq (%rsi,%r9,8), %rax
+; CHECK-NEXT:    # Child Loop BB1_12 Depth 2
+; CHECK-NEXT:    addq (%rsi,%r10,8), %rax
 ; CHECK-NEXT:    cmpq %rcx, %rdi
+; CHECK-NEXT:    movq %rdi, %r8
 ; CHECK-NEXT:    je .LBB1_2
-; CHECK-NEXT:  # %bb.9: # %inner.preheader
-; CHECK-NEXT:    # in Loop: Header=BB1_8 Depth=1
-; CHECK-NEXT:    leaq (%rdx,%rdi), %r9
-; CHECK-NEXT:    incq %rdi
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB1_11: # %inner
+; CHECK-NEXT:  .LBB1_12: # %inner
 ; CHECK-NEXT:    # Parent Loop BB1_8 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    cmpb $0, (%r8,%r9)
+; CHECK-NEXT:    cmpb $0, (%r9,%r8)
+; CHECK-NEXT:    jne .LBB1_13
+; CHECK-NEXT:  # %bb.11: # %inner.latch
+; CHECK-NEXT:    # in Loop: Header=BB1_12 Depth=2
+; CHECK-NEXT:    incq %r8
+; CHECK-NEXT:    cmpq %r8, %rcx
 ; CHECK-NEXT:    jne .LBB1_12
-; CHECK-NEXT:  # %bb.10: # %inner.latch
-; CHECK-NEXT:    # in Loop: Header=BB1_11 Depth=2
-; CHECK-NEXT:    incq %r9
-; CHECK-NEXT:    leaq 1(%r10,%rdi), %r11
-; CHECK-NEXT:    incq %rdi
-; CHECK-NEXT:    cmpq $1, %r11
-; CHECK-NEXT:    jne .LBB1_11
 ; CHECK-NEXT:    jmp .LBB1_2
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB1_12: # %inner.exit
+; CHECK-NEXT:  .LBB1_13: # %inner.exit
 ; CHECK-NEXT:    # in Loop: Header=BB1_8 Depth=1
-; CHECK-NEXT:    cmpb $0, (%r8,%r9)
+; CHECK-NEXT:    leaq (%rdx,%r8), %r10
+; CHECK-NEXT:    leaq 1(%r8), %rdi
+; CHECK-NEXT:    cmpb $0, (%r9,%r8)
 ; CHECK-NEXT:    jne .LBB1_8
-; CHECK-NEXT:  .LBB1_13: # %fail
+; CHECK-NEXT:  # %bb.9: # %fail.loopexit
+; CHECK-NEXT:    incq %r8
+; CHECK-NEXT:    movq %r8, %rdi
+; CHECK-NEXT:  .LBB1_10: # %fail
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq throw@PLT
