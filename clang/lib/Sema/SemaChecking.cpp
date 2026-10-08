@@ -17478,7 +17478,7 @@ bool Sema::CheckCoopMatrixLoadStoreElementType(QualType MatrixType,
                                                SourceLocation MatrixLoc) {
   auto *MTy = MatrixType->getAs<CooperativeMatrixType>();
   if (!MTy) {
-    Diag(MatrixLoc, diag::err_coop_matrix_arg);
+    Diag(MatrixLoc, diag::err_invalid_coopmat_arg);
     return true;
   }
 
@@ -17487,7 +17487,7 @@ bool Sema::CheckCoopMatrixLoadStoreElementType(QualType MatrixType,
 
   if (MTy->getElementType().getUnqualifiedType() !=
       PTy->getPointeeType().getUnqualifiedType()) {
-    Diag(MatrixLoc, diag::err_coop_element_and_pointer_type);
+    Diag(MatrixLoc, diag::err_coopmat_mismatch_element_and_pointer_type);
     return true;
   }
   return false;
@@ -17522,7 +17522,7 @@ bool Sema::CheckCoopMatrixLoadStoreLayout(Expr *LayoutExpr) {
     ArgError = true;
 
   if (ArgError)
-    Diag(LayoutExpr->getBeginLoc(), diag::err_coop_mem_layout_enum);
+    Diag(LayoutExpr->getBeginLoc(), diag::err_invalid_coopmat_mem_layout);
 
   return ArgError;
 }
@@ -17530,8 +17530,16 @@ bool Sema::CheckCoopMatrixLoadStoreLayout(Expr *LayoutExpr) {
 bool Sema::CheckCoopMatrixLoadStoreStride(CallExpr *TheCall, unsigned ArgIdx) {
   assert(TheCall->getNumArgs() >= ArgIdx + 1);
   Expr *Stride = TheCall->getArg(ArgIdx);
-  if (convertArgumentToType(Stride, Context.getSizeType())) {
-    Diag(Stride->getExprLoc(), diag::err_coop_mat_stride_type);
+  QualType StrideType = Stride->getType();
+  QualType SizeType = Context.getSizeType();
+  bool IsSizeT = Context.hasSameType(StrideType, SizeType);
+  bool IsIntegerConstant = Stride->isIntegerConstantExpr(Context);
+  if (!IsSizeT && !IsIntegerConstant) {
+    Diag(Stride->getExprLoc(), diag::err_invalid_coopmat_stride_type);
+    return true;
+  }
+  if (convertArgumentToType(Stride, SizeType)) {
+    Diag(Stride->getExprLoc(), diag::err_invalid_coopmat_stride_type);
     return true;
   }
   TheCall->setArg(ArgIdx, Stride);
@@ -17584,20 +17592,21 @@ bool Sema::CheckCoopMatrixMatMulOutput(CallExpr *TheCall) {
   auto Loc = TheCall->getBeginLoc();
 
   if (!MOutTy)
-    Diag(Loc, diag::err_coop_matrix_arg);
+    Diag(Loc, diag::err_invalid_coopmat_arg);
   if (!M2Ty)
-    Diag(MC->getBeginLoc(), diag::err_coop_matrix_arg);
+    Diag(MC->getBeginLoc(), diag::err_invalid_coopmat_arg);
   if (!MOutTy || !M2Ty)
     return true;
 
   if (MOutTy->getUse() != 2) {
-    Diag(Loc, diag::err_coop_matrix_useACC);
+    Diag(Loc, diag::err_invalid_coopmat_use)
+        << "CLK_COOPERATIVE_MATRIX_ACCUMULATOR";
     return true;
   }
 
   if (MOutTy->getElementType().getUnqualifiedType() !=
       M2Ty->getElementType().getUnqualifiedType()) {
-    Diag(Loc, diag::err_mismatched_coop_matrix_element_type);
+    Diag(Loc, diag::err_mismatched_coopmat_element_types);
     return true;
   }
 
@@ -17613,9 +17622,9 @@ bool Sema::CheckCoopMatrixTypes(QualType ATy, SourceLocation ALoc, QualType BTy,
   auto *M0Ty = ATy->getAs<CooperativeMatrixType>();
   auto *M1Ty = BTy->getAs<CooperativeMatrixType>();
   if (!M0Ty)
-    Diag(ALoc, diag::err_coop_matrix_arg);
+    Diag(ALoc, diag::err_invalid_coopmat_arg);
   if (!M1Ty)
-    Diag(BLoc, diag::err_coop_matrix_arg);
+    Diag(BLoc, diag::err_invalid_coopmat_arg);
   if (!M0Ty || !M1Ty)
     return true;
 
@@ -17626,7 +17635,7 @@ bool Sema::CheckCoopMatrixTypes(QualType ATy, SourceLocation ALoc, QualType BTy,
 
   if (M0Ty->getElementType().getUnqualifiedType() !=
       M1Ty->getElementType().getUnqualifiedType()) {
-    Diag(ALoc, diag::err_mismatched_coop_matrix_element_type);
+    Diag(ALoc, diag::err_mismatched_coopmat_element_types);
     return true;
   }
   return false;
@@ -17668,7 +17677,8 @@ ExprResult Sema::BuiltinCoopMatrixMulAdd(CallExpr *TheCall,
     QualType OperandsTy = Operands->getType().getCanonicalType();
 
     if (!OperandsTy->isIntegerType() && !OperandsTy->isEnumeralType()) {
-      Diag(Operands->getBeginLoc(), diag::err_coop_matrix_operands_type);
+      Diag(Operands->getBeginLoc(),
+           diag::err_invalid_coopmat_memory_operand_type);
       return ExprError();
     }
   }
@@ -17684,24 +17694,27 @@ ExprResult Sema::BuiltinCoopMatrixMulAdd(CallExpr *TheCall,
   auto Loc1 = Arg1->getBeginLoc();
 
   if (!M0Ty)
-    Diag(Arg0->getBeginLoc(), diag::err_coop_matrix_arg);
+    Diag(Arg0->getBeginLoc(), diag::err_invalid_coopmat_arg);
   if (!M1Ty)
-    Diag(Arg1->getBeginLoc(), diag::err_coop_matrix_arg);
+    Diag(Arg1->getBeginLoc(), diag::err_invalid_coopmat_arg);
   if (!M2Ty)
-    Diag(Arg2->getBeginLoc(), diag::err_coop_matrix_arg);
+    Diag(Arg2->getBeginLoc(), diag::err_invalid_coopmat_arg);
   if (!M0Ty || !M1Ty || !M2Ty)
     return ExprError();
 
   if (M0Ty->getUse() != 0) {
-    Diag(Arg0->getBeginLoc(), diag::err_coop_matrix_useA);
+    Diag(Arg0->getBeginLoc(), diag::err_invalid_coopmat_use)
+        << "CLK_COOPERATIVE_MATRIX_A";
     return ExprError();
   }
   if (M1Ty->getUse() != 1) {
-    Diag(Arg0->getBeginLoc(), diag::err_coop_matrix_useB);
+    Diag(Arg0->getBeginLoc(), diag::err_invalid_coopmat_use)
+        << "CLK_COOPERATIVE_MATRIX_B";
     return ExprError();
   }
   if (M2Ty->getUse() != 2) {
-    Diag(Arg0->getBeginLoc(), diag::err_coop_matrix_useACC);
+    Diag(Arg0->getBeginLoc(), diag::err_invalid_coopmat_use)
+        << "CLK_COOPERATIVE_MATRIX_ACCUMULATOR";
     return ExprError();
   }
 
@@ -17715,18 +17728,18 @@ ExprResult Sema::BuiltinCoopMatrixMulAdd(CallExpr *TheCall,
       Context.getTypeSize(M0ElemTy) == Context.getTypeSize(M1ElemTy);
 
   if (!SameElementType && !SameIntegerWidth) {
-    return ExprError(Diag(Loc0, diag::err_mismatched_coop_matrix_element_type));
+    return ExprError(Diag(Loc0, diag::err_mismatched_coopmat_element_types));
   }
 
   if (!isValidMatAMatCElementTypeCombination(M0Ty->getElementType(),
                                              M2Ty->getElementType()))
-    return ExprError(Diag(Loc1, diag::err_mismatched_coop_matrix_element_type));
+    return ExprError(Diag(Loc1, diag::err_mismatched_coopmat_element_types));
 
   if (M0Ty->getNumRows() != M2Ty->getNumRows())
-    return ExprError(Diag(Loc0, diag::err_coop_matrix_row_or_col_mismatch));
+    return ExprError(Diag(Loc0, diag::err_coopmat_shapes_incompatible));
   if ((M1Ty->getNumColumns() != M2Ty->getNumColumns()) ||
       (M0Ty->getNumColumns() != M1Ty->getNumRows()))
-    return ExprError(Diag(Loc1, diag::err_coop_matrix_row_or_col_mismatch));
+    return ExprError(Diag(Loc1, diag::err_coopmat_shapes_incompatible));
 
   return CallResult;
 }
@@ -17741,20 +17754,12 @@ ExprResult Sema::BuiltinCoopMatrixScalarOp(CallExpr *TheCall,
   auto Loc0 = Arg0->getBeginLoc();
 
   if (!M0Ty) {
-    Diag(Arg0->getBeginLoc(), diag::err_coop_matrix_arg);
-    return ExprError();
-  }
-
-  Expr *Arg1 = TheCall->getArg(1);
-  QualType Ty = Arg1->getType();
-  if (!Ty->isScalarType()) {
-    Diag(Arg1->getBeginLoc(),
-         diag::err_invalid_operand_for_coopmat_scalar_operator);
+    Diag(Arg0->getBeginLoc(), diag::err_invalid_coopmat_arg);
     return ExprError();
   }
 
   if (M0Ty->getElementType().getUnqualifiedType() != Ty.getUnqualifiedType())
-    return ExprError(Diag(Loc0, diag::err_mismatched_coop_matrix_element_type));
+    return ExprError(Diag(Loc0, diag::err_mismatched_coopmat_element_types));
   TheCall->setType(Arg0->getType());
 
   return CallResult;
@@ -17768,7 +17773,7 @@ ExprResult Sema::BuiltinCoopMatrixScalarUnaryOp(CallExpr *TheCall,
   Expr *Arg0 = TheCall->getArg(0);
   auto *M0Ty = Arg0->getType()->getAs<CooperativeMatrixType>();
   if (!M0Ty) {
-    Diag(Arg0->getBeginLoc(), diag::err_coop_matrix_arg);
+    Diag(Arg0->getBeginLoc(), diag::err_invalid_coopmat_arg);
     return ExprError();
   }
   TheCall->setType(Arg0->getType());

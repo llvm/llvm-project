@@ -11989,61 +11989,51 @@ def err_openclcxx_placement_new : Error<
   "use of placement new requires explicit declaration">;
 
 // OpenCL C Cooperative Matrix.
-def ext_coopmat_without_pragma
+def err_coopmat_without_pragma
     : Error<"cooperative matrix types require OpenCL extension '%0' to be enabled via pragma">;
 
 def err_invalid_coopmat_attr
-    : Error<"invalid argument of cooperative matrix attribute">;
+    : Error<"invalid '%0' argument of cooperative matrix attribute">;
 
-def err_coop_mem_layout_enum
-    : Error<"memory layout for cooperative matrix should be "
+def err_invalid_coopmat_mem_layout
+    : Error<"memory layout for cooperative matrix load/store should be "
             "CLK_COOPERATIVE_MATRIX_LAYOUT_ROW_MAJOR or "
             "CLK_COOPERATIVE_MATRIX_LAYOUT_COLUMN_MAJOR">;
 
-def err_coop_mat_stride_type
+def err_invalid_coopmat_stride_type
     : Error<"stride argument for load/store of cooperative matrix must have "
             "type 'size_t'">;
 
-def err_coop_element_and_pointer_type
+def err_coopmat_mismatch_element_and_pointer_type
     : Error<"inconsistent between cooperative matrix element type and buffer "
             "pointer type">;
 
-def err_coop_matrix_arg
+def err_invalid_coopmat_arg
     : Error<"argument must be a valid cooperative matrix type">;
 
-def err_coop_matrix_operands_type
+def err_invalid_coopmat_memory_operand_type
     : Error<"fourth argument of 'coop_mat_mulAdd' must have enum type">;
 
 def err_invalid_coopmat_assignment
     : Error<"builtin return value should be assigned to cooperative matrix "
             "type variable">;
 
-def err_coop_matrix_useA : Error<"argument of cooperative matrix must be "
-                                 "CLK_COOPERATIVE_MATRIX_A">;
+def err_invalid_coopmat_use : Error<"argument of cooperative matrix must have '%0' use">;
 
-def err_coop_matrix_useB : Error<"argument of cooperative matrix must be "
-                                 "CLK_COOPERATIVE_MATRIX_B">;
+def err_mismatched_coopmat_element_types
+    : Error<"inconsistent cooperative matrix element types">;
 
-def err_coop_matrix_useACC : Error<"argument of cooperative matrix must be "
-                                   "CLK_COOPERATIVE_MATRIX_ACCUMULATOR">;
+def err_invalid_coopmat_element_type
+    : Error<"%0 is invalid cooperative matrix element type">;
 
-def err_mismatched_coop_matrix_element_type
-    : Error<"inconsistent cooperative matrix element type">;
-
-def err_invalid_coop_matrix_element_type
-    : Error<"invalid cooperative matrix element type">;
-
-def err_coop_matrix_row_or_col_mismatch
-    : Error<"mismatch of cooperative matrix row or column">;
+def err_coopmat_shapes_incompatible
+    : Error<"two cooperative matrices with incompatible shapes">;
 
 def err_unsupported_coopmat_binary_operator
     : Error<"unsupported cooperative matrix binary operator">;
 
 def err_unsupported_coopmat_scalar_operator
     : Error<"unsupported cooperative matrix scalar operator">;
-
-def err_invalid_operand_for_coopmat_scalar_operator
-    : Error<"unsupported type for cooperative matrix scalar operator">;
 
 def err_incompatible_coopmat_types
     : Error<"incompatible cooperative matrix types">;

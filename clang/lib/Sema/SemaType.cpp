@@ -2683,15 +2683,15 @@ QualType Sema::BuildCoopMatrixType(QualType ElementTy, Expr *ScopeExpr,
   unsigned Use = static_cast<unsigned>(ValueUse->getZExtValue());
 
   if (!CooperativeMatrixType::isScopeValid(Scope)) {
-    Diag(AttrLoc, diag::err_invalid_coopmat_attr) << Scope << "matrix scope";
+    Diag(AttrLoc, diag::err_invalid_coopmat_attr) << "scope";
     return QualType();
   }
   if (!CooperativeMatrixType::isUseValid(Use)) {
-    Diag(AttrLoc, diag::err_invalid_coopmat_attr) << Use << "matrix use";
+    Diag(AttrLoc, diag::err_invalid_coopmat_attr) << "use";
     return QualType();
   }
   if (!CooperativeMatrixType::isValidElementType(ElementTy)) {
-    Diag(AttrLoc, diag::err_invalid_coop_matrix_element_type) << ElementTy;
+    Diag(AttrLoc, diag::err_invalid_coopmat_element_type) << ElementTy;
     return QualType();
   }
   auto Result = Context.getCooperativeMatrixType(ElementTy, Scope, MatrixRows,
@@ -2703,7 +2703,7 @@ QualType Sema::BuildCoopMatrixType(QualType ElementTy, Expr *ScopeExpr,
           << 0 << Result << "cl_khr_cooperative_matrix";
     else if (!getOpenCLOptions().isAvailableOption("cl_khr_cooperative_matrix",
                                                    getLangOpts()))
-      Diag(AttrLoc, diag::ext_coopmat_without_pragma)
+      Diag(AttrLoc, diag::err_coopmat_without_pragma)
           << "cl_khr_cooperative_matrix";
   }
   return Result;
