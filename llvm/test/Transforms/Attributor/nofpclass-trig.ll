@@ -184,6 +184,49 @@ define float @ret_tanh_nonneg(float nofpclass(ninf nzero nsub nnorm) %arg) {
   ret float %call
 }
 
+; -0.0 is preserved: tanh(-0.0) = -0.0, so it cannot be ruled out.
+define float @ret_tanh_nonneg_allow_nzero(float nofpclass(ninf nsub nnorm) %arg) {
+; CHECK-LABEL: define nofpclass(inf nsub nnorm) float @ret_tanh_nonneg_allow_nzero
+; CHECK-SAME: (float nofpclass(ninf nsub nnorm) [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf nsub nnorm) float @llvm.tanh.f32(float nofpclass(ninf nsub nnorm) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.tanh.f32(float %arg)
+  ret float %call
+}
+
+; tanh(-inf) = -1.0, so a possible -inf input must not rule out negative
+; normals.
+define float @ret_tanh_ninf_possible(float nofpclass(nsub nnorm) %arg) {
+; CHECK-LABEL: define nofpclass(inf) float @ret_tanh_ninf_possible
+; CHECK-SAME: (float nofpclass(nsub nnorm) [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.tanh.f32(float nofpclass(nsub nnorm) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.tanh.f32(float %arg)
+  ret float %call
+}
+
+define float @ret_tanh_nnorm_possible(float nofpclass(ninf nsub) %arg) {
+; CHECK-LABEL: define nofpclass(inf) float @ret_tanh_nnorm_possible
+; CHECK-SAME: (float nofpclass(ninf nsub) [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.tanh.f32(float nofpclass(ninf nsub) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.tanh.f32(float %arg)
+  ret float %call
+}
+
+define float @ret_tanh_nsub_possible(float nofpclass(ninf nnorm) %arg) {
+; CHECK-LABEL: define nofpclass(inf) float @ret_tanh_nsub_possible
+; CHECK-SAME: (float nofpclass(ninf nnorm) [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.tanh.f32(float nofpclass(ninf nnorm) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.tanh.f32(float %arg)
+  ret float %call
+}
+
 define float @ret_tanh_nonpos(float nofpclass(pinf pzero psub pnorm) %arg) {
 ; CHECK-LABEL: define nofpclass(inf psub pnorm) float @ret_tanh_nonpos
 ; CHECK-SAME: (float nofpclass(pinf pzero psub pnorm) [[ARG:%.*]]) #[[ATTR1]] {

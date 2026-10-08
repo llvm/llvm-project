@@ -898,8 +898,13 @@ KnownFPClass KnownFPClass::tanh(const KnownFPClass &KnownSrc) {
   Known.knownNot(fcInf);
 
   // tanh is sign-preserving: tanh(x) < 0 iff x < 0.
-  if (KnownSrc.isKnownNever(fcNegative))
-    Known.knownNot(fcNegative);
+  if (KnownSrc.isKnownNever(fcNegSubnormal | fcNegNormal | fcNegInf)) {
+    Known.knownNot(fcNegSubnormal | fcNegNormal);
+
+    // -0.0 is preserved: tanh(-0.0) = -0.0.
+    if (KnownSrc.isKnownNeverNegZero())
+      Known.knownNot(fcNegZero);
+  }
 
   // Likewise, tanh(x) > 0 iff x > 0. Zero is not ruled out: tanh(+-0.0) =
   // +-0.0, and a flushed subnormal may become +0.0.
