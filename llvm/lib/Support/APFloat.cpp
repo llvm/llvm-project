@@ -1859,10 +1859,6 @@ lostFraction IEEEFloat::addOrSubtractSignificand(const IEEEFloat &rhs,
 
   /* Subtraction is more subtle than one might naively expect.  */
   if (subtract) {
-    if ((bits < 0) && !semantics->hasSignedRepr)
-      llvm_unreachable(
-          "This floating point format does not support signed values");
-
     IEEEFloat temp_rhs(rhs);
     bool lost_fraction_is_from_rhs = false;
 
@@ -2139,6 +2135,16 @@ APFloat::opStatus IEEEFloat::addOrSubtract(const IEEEFloat &rhs,
     // NaN-in-negative-zero means zeros need to be normalized to +0.
     if (semantics->nanEncoding == fltNanEncoding::NegativeZero)
       sign = false;
+  }
+
+  // A format without a sign cannot represent a negative result.
+  if (sign && !semantics->hasSignedRepr) {
+    if (category == fcZero) {
+      sign = false;
+    } else {
+      makeNaN();
+      fs = opInvalidOp;
+    }
   }
 
   return fs;
@@ -2552,6 +2558,13 @@ APFloat::opStatus IEEEFloat::convert(const fltSemantics &toSemantics,
   const fltSemantics &fromSemantics = *semantics;
   bool is_signaling = isSignaling();
 
+  // A format without a sign has no encoding for a negative value. A negative
+  // zero or NaN only loses its sign; any other negative value becomes NaN.
+  bool droppedSign = sign && !toSemantics.hasSignedRepr;
+  bool negativeValue = droppedSign && category != fcZero && category != fcNaN;
+  if (droppedSign)
+    sign = false;
+
   lostFraction lostFraction = lfExactlyZero;
   unsigned newPartCount = partCountForBits(toSemantics.precision + 1);
   unsigned oldPartCount = partCount();
@@ -2684,8 +2697,13 @@ APFloat::opStatus IEEEFloat::convert(const fltSemantics &toSemantics,
   // The paths above only report what rounding lost, so report these here too:
   // a caller that checks losesInfo would otherwise accept a result the target
   // cannot represent, and printing that result asserts.
-  if ((sign && !semantics->hasSignedRepr) ||
-      (category == fcZero && !semantics->hasZero)) {
+  if (negativeValue) {
+    makeNaN();
+    *losesInfo = true;
+    return opInvalidOp;
+  }
+
+  if (droppedSign || (category == fcZero && !semantics->hasZero)) {
     *losesInfo = true;
     if (fs == opOK)
       fs = opInexact;
