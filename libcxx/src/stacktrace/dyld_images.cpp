@@ -45,11 +45,11 @@ void add_image(const struct mach_header* mh, intptr_t vmaddr_slide) {
     return;
   }
 
-  auto is_first        = (images.count_ == 0);
-  auto& image          = images.images_.at(images.count_++);
-  image.load_addr_     = load_addr;
-  image.slide_offset_  = uintptr_t(vmaddr_slide);
-  image.is_main_prog_  = is_first;
+  auto is_first       = (images.count_ == 0);
+  auto& image         = images.images_.at(images.count_++);
+  image.load_addr_    = load_addr;
+  image.slide_offset_ = uintptr_t(vmaddr_slide);
+  image.is_main_prog_ = is_first;
   Dl_info __dl_info{};
   if (dladdr(mh, &__dl_info) && __dl_info.dli_fname) {
     image.name_ = _Names::instance_.intern(__dl_info.dli_fname);
