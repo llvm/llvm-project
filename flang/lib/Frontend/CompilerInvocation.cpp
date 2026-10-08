@@ -380,6 +380,10 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (args.hasArg(clang::options::OPT_finstrument_functions))
     opts.InstrumentFunctions = 1;
 
+  // -fkeep-inline-functions. The driver forwards only the positive flag.
+  opts.KeepInlineFunctions =
+      args.hasArg(clang::options::OPT_fkeep_inline_functions);
+
   // -fno-integrated-as: emit GNU Assembler compatible assembly.
   if (!args.hasFlag(clang::options::OPT_fintegrated_as,
                     clang::options::OPT_fno_integrated_as, true))

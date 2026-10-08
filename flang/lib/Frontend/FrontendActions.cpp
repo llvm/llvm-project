@@ -1103,6 +1103,28 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
     return;
   }
 
+  // -fkeep-inline-functions: retain definitions of inline functions (those
+  // marked alwaysinline) after they have been inlined into every caller.
+  // On ELF this uses llvm.compiler.used so the compiler keeps the definition
+  // but the linker may still drop it. Other object formats use llvm.used.
+  // This is matching Clang functionality.
+  if (opts.KeepInlineFunctions) {
+    llvm::SmallVector<llvm::GlobalValue *, 8> kept;
+    for (llvm::Function &func : *llvmModule) {
+      if (func.isDeclaration() || func.hasAvailableExternallyLinkage())
+        continue;
+      if (!func.hasFnAttribute(llvm::Attribute::AlwaysInline))
+        continue;
+      kept.push_back(&func);
+    }
+    if (!kept.empty()) {
+      if (triple.isOSBinFormatELF())
+        llvm::appendToCompilerUsed(*llvmModule, kept);
+      else
+        llvm::appendToUsed(*llvmModule, kept);
+    }
+  }
+
   // Run the passes.
   mpm.run(*llvmModule, mam);
 

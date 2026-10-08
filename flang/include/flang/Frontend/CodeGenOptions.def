@@ -30,6 +30,7 @@ ENUM_CODEGENOPT(ProfileInstr, llvm::driver::ProfileInstrKind, 2, llvm::driver::P
 /// Choose profile kind for PGO use compilation.
 ENUM_CODEGENOPT(ProfileUse, llvm::driver::ProfileInstrKind, 2, llvm::driver::ProfileInstrKind::ProfileNone)
 
+CODEGENOPT(KeepInlineFunctions, 1, 0) ///< -fkeep-inline-functions.
 CODEGENOPT(InstrumentFunctions, 1, 0) ///< Set when -finstrument_functions is
                                       ///< enabled on the compile step.
 
