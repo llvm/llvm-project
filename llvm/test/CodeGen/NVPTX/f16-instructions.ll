@@ -1019,9 +1019,9 @@ define half @test_maxnum(half %a, half %b) #0 {
 ; CHECK-LABEL: test_copysign(
 ; CHECK-DAG:  ld.param.b16    [[AH:%rs[0-9]+]], [test_copysign_param_0];
 ; CHECK-DAG:  ld.param.b16    [[BH:%rs[0-9]+]], [test_copysign_param_1];
-; CHECK-DAG:  and.b16         [[AX:%rs[0-9]+]], [[AH]], 32767;
-; CHECK-DAG:  and.b16         [[BX:%rs[0-9]+]], [[BH]], -32768;
-; CHECK:      or.b16          [[RX:%rs[0-9]+]], [[AX]], [[BX]];
+; CHECK-DAG:  xor.b16         [[DIFF:%rs[0-9]+]], [[AH]], [[BH]];
+; CHECK-DAG:  and.b16         [[MASK:%rs[0-9]+]], [[DIFF]], -32768;
+; CHECK:      xor.b16         [[RX:%rs[0-9]+]], [[AH]], [[MASK]];
 ; CHECK:      st.param.b16    [func_retval0], [[RX]];
 ; CHECK:      ret;
 define half @test_copysign(half %a, half %b) #0 {
@@ -1032,10 +1032,10 @@ define half @test_copysign(half %a, half %b) #0 {
 ; CHECK-LABEL: test_copysign_f32(
 ; CHECK-DAG:  ld.param.b16    [[AH:%rs[0-9]+]], [test_copysign_f32_param_0];
 ; CHECK-DAG:  ld.param.b32    [[B:%r[0-9]+]], [test_copysign_f32_param_1];
-; CHECK-DAG:  and.b16         [[AX:%rs[0-9]+]], [[AH]], 32767;
-; CHECK-DAG:  and.b32         [[BX0:%r[0-9]+]], [[B]], -2147483648;
-; CHECK-DAG:  mov.b32         {tmp, [[BX2:%rs[0-9]+]]}, [[BX0]];
-; CHECK:      or.b16          [[RX:%rs[0-9]+]], [[AX]], [[BX2]];
+; CHECK-DAG:  mov.b32         {tmp, [[BX0:%rs[0-9]+]]}, [[B]];
+; CHECK-DAG:  xor.b16         [[DIFF:%rs[0-9]+]], [[AH]], [[BX0]];
+; CHECK-DAG:  and.b16         [[MASK:%rs[0-9]+]], [[DIFF]], -32768;
+; CHECK:      xor.b16         [[RX:%rs[0-9]+]], [[AH]], [[MASK]];
 ; CHECK:      st.param.b16    [func_retval0], [[RX]];
 ; CHECK:      ret;
 define half @test_copysign_f32(half %a, float %b) #0 {
@@ -1047,11 +1047,11 @@ define half @test_copysign_f32(half %a, float %b) #0 {
 ; CHECK-LABEL: test_copysign_f64(
 ; CHECK-DAG:  ld.param.b16    [[AH:%rs[0-9]+]], [test_copysign_f64_param_0];
 ; CHECK-DAG:  ld.param.b64    [[B:%rd[0-9]+]], [test_copysign_f64_param_1];
-; CHECK-DAG:  and.b16         [[AX:%rs[0-9]+]], [[AH]], 32767;
-; CHECK-DAG:  and.b64         [[BX0:%rd[0-9]+]], [[B]], -9223372036854775808;
-; CHECK-DAG:  shr.u64         [[BX1:%rd[0-9]+]], [[BX0]], 48;
-; CHECK-DAG:  cvt.u16.u64     [[BX2:%rs[0-9]+]], [[BX1]];
-; CHECK:      or.b16          [[RX:%rs[0-9]+]], [[AX]], [[BX2]];
+; CHECK-DAG:  shr.u64         [[BX0:%rd[0-9]+]], [[B]], 48;
+; CHECK-DAG:  cvt.u16.u64     [[BX1:%rs[0-9]+]], [[BX0]];
+; CHECK-DAG:  xor.b16         [[DIFF:%rs[0-9]+]], [[AH]], [[BX1]];
+; CHECK-DAG:  and.b16         [[MASK:%rs[0-9]+]], [[DIFF]], -32768;
+; CHECK:      xor.b16         [[RX:%rs[0-9]+]], [[AH]], [[MASK]];
 ; CHECK:      st.param.b16    [func_retval0], [[RX]];
 ; CHECK:      ret;
 define half @test_copysign_f64(half %a, double %b) #0 {
@@ -1063,9 +1063,9 @@ define half @test_copysign_f64(half %a, double %b) #0 {
 ; CHECK-LABEL: test_copysign_extended(
 ; CHECK-DAG:  ld.param.b16    [[AH:%rs[0-9]+]], [test_copysign_extended_param_0];
 ; CHECK-DAG:  ld.param.b16    [[BH:%rs[0-9]+]], [test_copysign_extended_param_1];
-; CHECK-DAG:  and.b16         [[AX:%rs[0-9]+]], [[AH]], 32767;
-; CHECK-DAG:  and.b16         [[BX:%rs[0-9]+]], [[BH]], -32768;
-; CHECK:      or.b16          [[RX:%rs[0-9]+]], [[AX]], [[BX]];
+; CHECK-DAG:  xor.b16         [[DIFF:%rs[0-9]+]], [[AH]], [[BH]];
+; CHECK-DAG:  and.b16         [[MASK:%rs[0-9]+]], [[DIFF]], -32768;
+; CHECK:      xor.b16         [[RX:%rs[0-9]+]], [[AH]], [[MASK]];
 ; CHECK-NOFTZ: cvt.f32.f16     [[XR:%r[0-9]+]], [[RX]];
 ; CHECK-F16-FTZ:   cvt.ftz.f32.f16 [[XR:%r[0-9]+]], [[RX]];
 ; CHECK:      st.param.b32    [func_retval0], [[XR]];

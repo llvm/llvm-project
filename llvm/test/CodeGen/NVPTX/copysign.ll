@@ -128,5 +128,188 @@ define double @fcopysign_d_h(double %a, half %b) {
 }
 
 
+define half @fcopysign_h_h(half %a, half %b) {
+; CHECK-LABEL: fcopysign_h_h(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<6>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [fcopysign_h_h_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [fcopysign_h_h_param_1];
+; CHECK-NEXT:    xor.b16 %rs3, %rs1, %rs2;
+; CHECK-NEXT:    and.b16 %rs4, %rs3, -32768;
+; CHECK-NEXT:    xor.b16 %rs5, %rs1, %rs4;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %rs5;
+; CHECK-NEXT:    ret;
+  %val = call half @llvm.copysign.f16(half %a, half %b)
+  ret half %val
+}
+
+define half @fcopysign_h_f(half %a, float %b) {
+; CHECK-LABEL: fcopysign_h_f(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<6>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [fcopysign_h_f_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [fcopysign_h_f_param_1+2];
+; CHECK-NEXT:    xor.b16 %rs3, %rs1, %rs2;
+; CHECK-NEXT:    and.b16 %rs4, %rs3, -32768;
+; CHECK-NEXT:    xor.b16 %rs5, %rs1, %rs4;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %rs5;
+; CHECK-NEXT:    ret;
+  %c = fptrunc float %b to half
+  %val = call half @llvm.copysign.f16(half %a, half %c)
+  ret half %val
+}
+
+define half @fcopysign_h_d(half %a, double %b) {
+; CHECK-LABEL: fcopysign_h_d(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<6>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [fcopysign_h_d_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [fcopysign_h_d_param_1+6];
+; CHECK-NEXT:    xor.b16 %rs3, %rs1, %rs2;
+; CHECK-NEXT:    and.b16 %rs4, %rs3, -32768;
+; CHECK-NEXT:    xor.b16 %rs5, %rs1, %rs4;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %rs5;
+; CHECK-NEXT:    ret;
+  %c = fptrunc double %b to half
+  %val = call half @llvm.copysign.f16(half %a, half %c)
+  ret half %val
+}
+
+define half @fcopysign_h_b(half %a, bfloat %b) {
+; CHECK-LABEL: fcopysign_h_b(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<6>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [fcopysign_h_b_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [fcopysign_h_b_param_1];
+; CHECK-NEXT:    xor.b16 %rs3, %rs1, %rs2;
+; CHECK-NEXT:    and.b16 %rs4, %rs3, -32768;
+; CHECK-NEXT:    xor.b16 %rs5, %rs1, %rs4;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %rs5;
+; CHECK-NEXT:    ret;
+  %ext = fpext bfloat %b to float
+  %c = fptrunc float %ext to half
+  %val = call half @llvm.copysign.f16(half %a, half %c)
+  ret half %val
+}
+
+define <2 x half> @fcopysign_v2h(<2 x half> %a, <2 x half> %b) {
+; CHECK-LABEL: fcopysign_v2h(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<6>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [fcopysign_v2h_param_1];
+; CHECK-NEXT:    and.b32 %r2, %r1, -2147450880;
+; CHECK-NEXT:    ld.param.b32 %r3, [fcopysign_v2h_param_0];
+; CHECK-NEXT:    and.b32 %r4, %r3, 2147450879;
+; CHECK-NEXT:    or.b32 %r5, %r4, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
+; CHECK-NEXT:    ret;
+  %val = call <2 x half> @llvm.copysign.v2f16(<2 x half> %a, <2 x half> %b)
+  ret <2 x half> %val
+}
+
+define bfloat @fcopysign_b_b(bfloat %a, bfloat %b) {
+; CHECK-LABEL: fcopysign_b_b(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<6>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [fcopysign_b_b_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [fcopysign_b_b_param_1];
+; CHECK-NEXT:    xor.b16 %rs3, %rs1, %rs2;
+; CHECK-NEXT:    and.b16 %rs4, %rs3, -32768;
+; CHECK-NEXT:    xor.b16 %rs5, %rs1, %rs4;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %rs5;
+; CHECK-NEXT:    ret;
+  %val = call bfloat @llvm.copysign.bf16(bfloat %a, bfloat %b)
+  ret bfloat %val
+}
+
+define bfloat @fcopysign_b_f(bfloat %a, float %b) {
+; CHECK-LABEL: fcopysign_b_f(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<6>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [fcopysign_b_f_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [fcopysign_b_f_param_1+2];
+; CHECK-NEXT:    xor.b16 %rs3, %rs1, %rs2;
+; CHECK-NEXT:    and.b16 %rs4, %rs3, -32768;
+; CHECK-NEXT:    xor.b16 %rs5, %rs1, %rs4;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %rs5;
+; CHECK-NEXT:    ret;
+  %c = fptrunc float %b to bfloat
+  %val = call bfloat @llvm.copysign.bf16(bfloat %a, bfloat %c)
+  ret bfloat %val
+}
+
+define bfloat @fcopysign_b_d(bfloat %a, double %b) {
+; CHECK-LABEL: fcopysign_b_d(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<6>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [fcopysign_b_d_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [fcopysign_b_d_param_1+6];
+; CHECK-NEXT:    xor.b16 %rs3, %rs1, %rs2;
+; CHECK-NEXT:    and.b16 %rs4, %rs3, -32768;
+; CHECK-NEXT:    xor.b16 %rs5, %rs1, %rs4;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %rs5;
+; CHECK-NEXT:    ret;
+  %c = fptrunc double %b to bfloat
+  %val = call bfloat @llvm.copysign.bf16(bfloat %a, bfloat %c)
+  ret bfloat %val
+}
+
+define bfloat @fcopysign_b_h(bfloat %a, half %b) {
+; CHECK-LABEL: fcopysign_b_h(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<6>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %rs1, [fcopysign_b_h_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [fcopysign_b_h_param_1];
+; CHECK-NEXT:    xor.b16 %rs3, %rs1, %rs2;
+; CHECK-NEXT:    and.b16 %rs4, %rs3, -32768;
+; CHECK-NEXT:    xor.b16 %rs5, %rs1, %rs4;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %rs5;
+; CHECK-NEXT:    ret;
+  %ext = fpext half %b to float
+  %c = fptrunc float %ext to bfloat
+  %val = call bfloat @llvm.copysign.bf16(bfloat %a, bfloat %c)
+  ret bfloat %val
+}
+
+define <2 x bfloat> @fcopysign_v2b(<2 x bfloat> %a, <2 x bfloat> %b) {
+; CHECK-LABEL: fcopysign_v2b(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<6>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [fcopysign_v2b_param_1];
+; CHECK-NEXT:    and.b32 %r2, %r1, -2147450880;
+; CHECK-NEXT:    ld.param.b32 %r3, [fcopysign_v2b_param_0];
+; CHECK-NEXT:    and.b32 %r4, %r3, 2147450879;
+; CHECK-NEXT:    or.b32 %r5, %r4, %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
+; CHECK-NEXT:    ret;
+  %val = call <2 x bfloat> @llvm.copysign.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b)
+  ret <2 x bfloat> %val
+}
+
 declare float @llvm.copysign.f32(float, float)
 declare double @llvm.copysign.f64(double, double)
+
+declare half @llvm.copysign.f16(half, half)
+declare bfloat @llvm.copysign.bf16(bfloat, bfloat)
+declare <2 x half> @llvm.copysign.v2f16(<2 x half>, <2 x half>)
+declare <2 x bfloat> @llvm.copysign.v2bf16(<2 x bfloat>, <2 x bfloat>)
