@@ -125,8 +125,7 @@ public:
   }
 
   size_t hash() const {
-    return std::hash<RegisterId>{}(Id) ^
-           std::hash<LaneBitmask::Type>{}(Mask.getAsInteger());
+    return std::hash<RegisterId>{}(Id) ^ std::hash<LaneBitmask>{}(Mask);
   }
 
   static constexpr bool isRegId(RegisterId Id) {
