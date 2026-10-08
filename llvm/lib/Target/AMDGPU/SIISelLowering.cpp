@@ -17034,6 +17034,35 @@ SDValue SITargetLowering::performCvtPkRTZCombine(SDNode *N,
   return SDValue();
 }
 
+/// V_CVT_SCALEF32_* conversions to a narrow format only read the exponent
+/// field of their f32 scale operand.
+SDValue
+SITargetLowering::performExponentOnlyScaleCombine(SDNode *N,
+                                                  DAGCombinerInfo &DCI) const {
+  std::optional<unsigned> ScaleArgIdx =
+      AMDGPU::getExponentOnlyScaleArgIdx(N->getConstantOperandVal(0));
+  if (!ScaleArgIdx)
+    return SDValue();
+
+  // Operand 0 is the intrinsic ID.
+  unsigned OpIdx = *ScaleArgIdx + 1;
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue Scale = N->getOperand(OpIdx);
+  APInt Demanded = AMDGPU::getExponentOnlyScaleDemandedBits();
+
+  if (SDValue DemandedScale =
+          SimplifyMultipleUseDemandedBits(Scale, Demanded, DAG)) {
+    SmallVector<SDValue> Ops(N->ops());
+    Ops[OpIdx] = DemandedScale;
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SDLoc(N), N->getVTList(), Ops);
+  }
+
+  if (SimplifyDemandedBits(Scale, Demanded, DCI))
+    return SDValue(N, 0);
+
+  return SDValue();
+}
+
 // Check if EXTRACT_VECTOR_ELT/INSERT_VECTOR_ELT (<n x e>, var-idx) should be
 // expanded into a set of cmp/select instructions.
 bool SITargetLowering::shouldExpandVectorDynExt(unsigned EltSize,
@@ -19370,6 +19399,10 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return performFMed3Combine(N, DCI);
   case AMDGPUISD::CVT_PKRTZ_F16_F32:
     return performCvtPkRTZCombine(N, DCI);
+  case ISD::INTRINSIC_WO_CHAIN:
+    if (SDValue Res = performExponentOnlyScaleCombine(N, DCI))
+      return Res;
+    break;
   case AMDGPUISD::CLAMP:
     return performClampCombine(N, DCI);
   case ISD::SCALAR_TO_VECTOR: {
