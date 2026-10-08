@@ -481,6 +481,31 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
   ];
 }
 
+def LoopTripCountVersioning
+    : Pass<"loop-tripcount-versioning", "mlir::func::FuncOp"> {
+  let summary = "Version innermost loops on a likely constant trip count";
+  let description = [{
+    Adds a runtime check and two variants of an innermost loop whose trip count
+    is likely to equal a compile-time constant, so that one variant has a
+    constant trip count that LLVM can fully unroll, or at least vectorize
+    without a minimum-iteration check and remainder loop. Both variants are the
+    original loop with only the bound changed, so the transformation is always
+    legal; the heuristics decide only where it is worthwhile.
+
+    The first heuristic takes the constant from the declared extent of an
+    explicit-shape array whose leading dimension the loop indexes: for
+    `a(1:n, :)` on `a(4, :)` the innermost loop runs `1..n`, and versioning on
+    `n == 4` gives the fast variant a trip count of 4. Further heuristics may
+    be added in the future.
+  }];
+  let dependentDialects = [ "fir::FIROpsDialect", "mlir::arith::ArithDialect" ];
+  let options = [
+    Option<"maxSectionExtent", "max-section-extent", "unsigned",
+           /*default=*/"32",
+           "Do not version on declared extents larger than this; 0 disables">
+  ];
+}
+
 def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
   let summary = "Add vscale_range attribute to functions";
   let description = [{
