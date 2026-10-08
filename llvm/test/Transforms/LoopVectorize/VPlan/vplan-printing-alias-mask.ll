@@ -8,13 +8,12 @@ define void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; INITIAL-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; INITIAL-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; INITIAL-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; INITIAL-NEXT:  Live-in ir<%n> = original trip-count
 ; INITIAL-EMPTY:
 ; INITIAL-NEXT:  ir-bb<entry>:
 ; INITIAL-NEXT:  Successor(s): scalar.ph, vector.ph
 ; INITIAL-EMPTY:
 ; INITIAL-NEXT:  vector.ph:
-; INITIAL-NEXT:    EMIT vp<%incoming.alias.mask> = incoming-alias-mask 
+; INITIAL-NEXT:    EMIT vp<%incoming.alias.mask> = incoming-alias-mask
 ; INITIAL-NEXT:  Successor(s): vector loop
 ; INITIAL-EMPTY:
 ; INITIAL-NEXT:  <x1> vector loop: {
@@ -37,8 +36,6 @@ define void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; INITIAL-NEXT:      CLONE ir<%ptr.c> = getelementptr inbounds ir<%c>, ir<%iv>
 ; INITIAL-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer inbounds i8, ir<%ptr.c>, ir<1>
 ; INITIAL-NEXT:      WIDEN store vp<[[VP8]]>, ir<%add>, vp<[[VP5]]>
-; INITIAL-NEXT:      CLONE ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
-; INITIAL-NEXT:      CLONE ir<%exitcond.not> = icmp eq ir<%iv.next>, ir<%n>
 ; INITIAL-NEXT:    Successor(s): vector.latch
 ; INITIAL-EMPTY:
 ; INITIAL-NEXT:    vector.latch:

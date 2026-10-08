@@ -675,7 +675,7 @@ static void removeRedundantInductionCasts(VPlan &Plan) {
   for (VPWidenIntOrFpInductionRecipe &IV :
        make_isa_range<VPWidenIntOrFpInductionRecipe>(
            Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis())) {
-    if (IV.getTruncInst())
+    if (IV.isTruncated())
       continue;
 
     // A sequence of IR Casts has potentially been recorded for IV, which
@@ -851,8 +851,8 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
     VPScalarIVStepsRecipe *Steps = vputils::createScalarIVSteps(
         Plan, ID.getKind(), ID.getInductionOpcode(),
         dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()),
-        WideIV->getTruncInst(), WideIV->getStartValue(), WideIV->getStepValue(),
-        WideIV->getDebugLoc(), Builder, WrapFlags);
+        WideIV->getStartValue(), WideIV->getStepValue(), WideIV->getDebugLoc(),
+        Builder, WrapFlags);
 
     // Update scalar users of IV to use Step instead.
     if (!HasOnlyVectorVFs) {
@@ -880,7 +880,7 @@ getOptimizableIVOf(VPValue *VPV, PredicatedScalarEvolution &PSE) {
     // VPV itself is a wide induction, separately compute the end value for exit
     // users if it is not a truncated IV.
     auto *IntOrFpIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(WideIV);
-    return (IntOrFpIV && IntOrFpIV->getTruncInst()) ? nullptr : WideIV;
+    return (IntOrFpIV && IntOrFpIV->isTruncated()) ? nullptr : WideIV;
   }
 
   // Check if VPV is an optimizable induction increment.
@@ -983,7 +983,7 @@ static VPValue *tryToComputeEndValueForInduction(VPWidenInductionRecipe *WideIV,
   auto *WideIntOrFp = dyn_cast<VPWidenIntOrFpInductionRecipe>(WideIV);
   // Truncated wide inductions resume from the last lane of their vector value
   // in the last vector iteration which is handled elsewhere.
-  if (WideIntOrFp && WideIntOrFp->getTruncInst())
+  if (WideIntOrFp && WideIntOrFp->isTruncated())
     return nullptr;
 
   VPValue *Start = WideIV->getStartValue();
@@ -1099,7 +1099,7 @@ void VPlanTransforms::optimizeInductionLiveOutUsers(
   // Compute end values for all inductions.
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
   auto *VectorPH = cast<VPBasicBlock>(VectorRegion->getSinglePredecessor());
-  VPBuilder VectorPHBuilder(VectorPH, VectorPH->getFirstNonPhi());
+  VPBuilder VectorPHBuilder(VectorPH);
   DenseMap<VPValue *, VPValue *> EndValues;
   VPValue *ResumeTC =
       Plan.hasTailFolded() ? Plan.getTripCount() : &Plan.getVectorTripCount();
@@ -2078,13 +2078,11 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
                       m_Broadcast(m_Specific(Plan.getBackedgeTakenCount())))))
       continue;
 
-    // Update IV operands and comparison bound to use new narrower type.
-    assert(!WideIV->getTruncInst() &&
-           "canonical IV is not expected to have a truncation");
     auto *NewWideIV = new VPWidenIntOrFpInductionRecipe(
         WideIV->getPHINode(), Plan.getZero(NewIVTy),
         Plan.getConstantInt(NewIVTy, 1), WideIV->getVFValue(),
-        WideIV->getInductionDescriptor(), *WideIV, WideIV->getDebugLoc());
+        WideIV->getInductionDescriptor(), WideIV->isTruncated(), *WideIV,
+        WideIV->getDebugLoc());
     NewWideIV->insertBefore(WideIV);
 
     auto *NewBTC = new VPWidenCastRecipe(
@@ -6196,24 +6194,47 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
       if (Op != WideIV)
         continue;
 
+      // Partial replacing a WideIV with a narrower widen-induction recipe
+      // provides no benefit for a scalar VF. Also, generating both wider and
+      // narrower IVs prevents the DerivedIV from being eliminated by CSE.
       // Replacing a free truncate would add an induction update instruction to
       // each iteration of the loop. The canonical induction is exempt, as it
       // needs an update instruction regardless.
       auto IsNarrowingProfitable = [&](ElementCount VF) {
-        return match(WideIV, m_CanonicalWidenIV()) ||
-               !TTI.isTruncateFree(
-                   toVectorTy(VPI.getOperand(0)->getScalarType(), VF),
-                   toVectorTy(VPI.getScalarType(), VF));
+        return (!VF.isScalar() ||
+                all_of(
+                    WideIV->users(),
+                    [&](VPUser *U) {
+                      // ExitingIV with wider type can be optimized by
+                      // optimizeInductionLiveOutUsers.
+                      return U == &VPI ||
+                             match(
+                                 U,
+                                 m_VPInstruction<VPInstruction::ExitingIVValue>(
+                                     m_VPValue()));
+                    })) &&
+               (match(WideIV, m_CanonicalWidenIV()) ||
+                !TTI.isTruncateFree(
+                    toVectorTy(VPI.getOperand(0)->getScalarType(), VF),
+                    toVectorTy(VPI.getScalarType(), VF)));
       };
       if (!LoopVectorizationPlanner::getDecisionAndClampRange(
               IsNarrowingProfitable, Range))
         continue;
 
+      VPBuilder PHBuilder(Plan.getVectorPreheader());
+      auto *NewStart = PHBuilder.createScalarZExtOrTrunc(
+          WideIV->getStartValue(), VPI.getScalarType(), VPI.getDebugLoc());
+      auto *NewStep = PHBuilder.createScalarZExtOrTrunc(
+          WideIV->getStepValue(), VPI.getScalarType(), VPI.getDebugLoc());
+      auto *NewVF = PHBuilder.createScalarZExtOrTrunc(
+          WideIV->getVFValue(), VPI.getScalarType(), VPI.getDebugLoc());
+
       // Wrap flags of the original induction do not hold in the truncated
       // type, so do not propagate them.
       auto *NarrowIV = new VPWidenIntOrFpInductionRecipe(
-          WideIV->getPHINode(), WideIV->getStartValue(), WideIV->getStepValue(),
-          WideIV->getVFValue(), WideIV->getInductionDescriptor(), Trunc,
+          WideIV->getPHINode(), NewStart, NewStep, NewVF,
+          WideIV->getInductionDescriptor(), /*Truncated=*/true,
           VPIRFlags::WrapFlagsTy(false, false), VPI.getDebugLoc());
       NarrowIV->insertBefore(*HeaderVPBB, HeaderVPBB->getFirstNonPhi());
       VPI.replaceAllUsesWith(NarrowIV);

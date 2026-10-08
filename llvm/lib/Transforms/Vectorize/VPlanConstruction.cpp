@@ -729,7 +729,7 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   VPIRFlags Flags = vputils::getFlagsForInduction(IndDesc, PhiR);
 
   auto *WideIV = new VPWidenIntOrFpInductionRecipe(
-      Phi, Start, Step, &Plan.getVF(), IndDesc, Flags, DL);
+      Phi, Start, Step, &Plan.getVF(), IndDesc, /*Truncated=*/false, Flags, DL);
 
   ReplaceExtractsWithExitingIVValueIfPossible(WideIV);
   return WideIV;
@@ -2069,7 +2069,7 @@ static bool handleFirstArgMinOrMax(
     VPIRValue *One = Plan.getConstantInt(Ty, 1);
     auto *WidenCanIV = new VPWidenIntOrFpInductionRecipe(
         nullptr, Zero, One, WideIV->getVFValue(),
-        WideIV->getInductionDescriptor(),
+        WideIV->getInductionDescriptor(), /*Truncated=*/false,
         VPIRFlags::WrapFlagsTy(/*HasNUW=*/true, /*HasNSW=*/false),
         WideIV->getDebugLoc());
     WidenCanIV->insertBefore(WideIV);

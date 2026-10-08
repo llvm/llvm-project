@@ -58,7 +58,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
     VPBuilder Builder(WideCanIV);
     WideCanIV->replaceAllUsesWith(vputils::createScalarIVSteps(
         Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
-        nullptr, Plan.getZero(CanIVTy), Plan.getConstantInt(CanIVTy, 1),
+        Plan.getZero(CanIVTy), Plan.getConstantInt(CanIVTy, 1),
         WideCanIV->getDebugLoc(), Builder,
         {static_cast<bool>(WideCanIV->getNoWrapFlags().HasNUW), false}));
     WideCanIV->eraseFromParent();
@@ -109,7 +109,8 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
   VPValue *StepV = Plan.getConstantInt(CanIVTy, 1);
   auto *NewWideIV = new VPWidenIntOrFpInductionRecipe(
       /*IV=*/nullptr, Plan.getZero(CanIVTy), StepV, &Plan.getVF(), ID,
-      WideCanIV->getNoWrapFlags(), WideCanIV->getDebugLoc());
+      /*Truncated=*/false, WideCanIV->getNoWrapFlags(),
+      WideCanIV->getDebugLoc());
   NewWideIV->insertBefore(&*Header->getFirstNonPhi());
   WideCanIV->replaceAllUsesWith(NewWideIV);
   WideCanIV->eraseFromParent();
@@ -259,10 +260,6 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR) {
   VPValue *VF = WidenIVR->getVFValue();
   DebugLoc DL = WidenIVR->getDebugLoc();
 
-  // The value from the original loop to which we are mapping the new induction
-  // variable.
-  Type *Ty = WidenIVR->getScalarType();
-
   const InductionDescriptor &ID = WidenIVR->getInductionDescriptor();
   Instruction::BinaryOps AddOp;
   Instruction::BinaryOps MulOp;
@@ -275,17 +272,9 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR) {
     MulOp = Instruction::FMul;
   }
 
-  // If the phi is truncated, truncate the start and step values.
+  // Construct the initial value of the vector IV in the vector loop preheader.
   VPBuilder Builder(Plan->getVectorPreheader());
   Type *StepTy = Step->getScalarType();
-  if (Ty->getScalarSizeInBits() < StepTy->getScalarSizeInBits()) {
-    assert(StepTy->isIntegerTy() && "Truncation requires an integer type");
-    Step = Builder.createScalarCast(Instruction::Trunc, Step, Ty, DL);
-    Start = Builder.createScalarCast(Instruction::Trunc, Start, Ty, DL);
-    StepTy = Ty;
-  }
-
-  // Construct the initial value of the vector IV in the vector loop preheader.
   Type *IVIntTy =
       IntegerType::get(Plan->getContext(), StepTy->getScalarSizeInBits());
   VPValue *Init = Builder.createNaryOp(VPInstruction::StepVector, {}, IVIntTy);

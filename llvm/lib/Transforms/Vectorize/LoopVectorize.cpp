@@ -6630,6 +6630,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   RUN_VPLAN_PASS(VPlanTransforms::makeCallWideningDecisions, *Plan, Range,
                  RecipeBuilder, CostCtx);
 
+  RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, *Plan);
   RUN_VPLAN_PASS(VPlanTransforms::narrowInductionTruncates, *Plan, Range, TTI,
                  PSE);
 
@@ -7523,6 +7524,19 @@ static void preparePlanForEpilogueVectorLoop(
           IRPhiToResumeForEpi.at(IndPhi)->getUnderlyingValue());
     }
     assert(ResumeVPV && "Must have a resume value");
+    auto *PhiR = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R);
+    // A truncated widen induction has narrower type than resume value, so
+    // create a scalar cast to match the type.
+    if (PhiR) {
+      assert(ResumeVPV->getScalarType()->getScalarSizeInBits() >=
+                 PhiR->getScalarType()->getScalarSizeInBits() &&
+             "Widen induction type should always narrower or same as resume "
+             "value type.");
+      VPBuilder PHBuilder(Plan.getVectorPreheader(),
+                          Plan.getVectorPreheader()->getFirstNonPhi());
+      ResumeVPV = PHBuilder.createScalarZExtOrTrunc(
+          ResumeVPV, PhiR->getScalarType(), PhiR->getDebugLoc());
+    }
     cast<VPHeaderPHIRecipe>(&R)->setStartValue(ResumeVPV);
   }
 
