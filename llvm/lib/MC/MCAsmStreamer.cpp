@@ -641,13 +641,16 @@ void MCAsmStreamer::addExplicitComment(const Twine &T) {
     // emit each line in comment as separate newline.
     do {
       size_t newp = std::min(len, c.find_first_of("\r\n", p));
+      // Determine if we have a line-ending (CR, CRLF or LF) and include it
+      // in the slice below, to ensure we are agnostic to EOL in the input.
+      if (newp < len && c[newp] == '\r')
+        ++newp;
+      if (newp < len && c[newp] == '\n')
+        ++newp;
       ExplicitCommentToEmit.append("\t");
       ExplicitCommentToEmit.append(MAI->getCommentString());
       ExplicitCommentToEmit.append(c.slice(p, newp).str());
-      // If we have another line in this comment add line
-      if (newp < len)
-        ExplicitCommentToEmit.append("\n");
-      p = newp + 1;
+      p = newp;
     } while (p < len);
   } else if (c.starts_with(StringRef(MAI->getCommentString()))) {
     ExplicitCommentToEmit.append("\t");
