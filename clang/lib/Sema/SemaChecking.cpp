@@ -17527,7 +17527,8 @@ bool Sema::CheckCoopMatrixLoadStoreLayout(Expr *LayoutExpr) {
   return ArgError;
 }
 
-bool Sema::CheckCoopMatrixLoadStoreStride(CallExpr *TheCall, unsigned ArgIdx) {
+bool Sema::CheckCoopMatrixLoadStoreStride(CallExpr *TheCall,
+                                          unsigned ArgIdx) {
   assert(TheCall->getNumArgs() >= ArgIdx + 1);
   Expr *Stride = TheCall->getArg(ArgIdx);
   QualType StrideType = Stride->getType();
@@ -17599,8 +17600,7 @@ bool Sema::CheckCoopMatrixMatMulOutput(CallExpr *TheCall) {
     return true;
 
   if (MOutTy->getUse() != 2) {
-    Diag(Loc, diag::err_invalid_coopmat_use)
-        << "CLK_COOPERATIVE_MATRIX_ACCUMULATOR";
+    Diag(Loc, diag::err_invalid_coopmat_use) << "CLK_COOPERATIVE_MATRIX_ACCUMULATOR";
     return true;
   }
 
@@ -17677,8 +17677,7 @@ ExprResult Sema::BuiltinCoopMatrixMulAdd(CallExpr *TheCall,
     QualType OperandsTy = Operands->getType().getCanonicalType();
 
     if (!OperandsTy->isIntegerType() && !OperandsTy->isEnumeralType()) {
-      Diag(Operands->getBeginLoc(),
-           diag::err_invalid_coopmat_memory_operand_type);
+      Diag(Operands->getBeginLoc(), diag::err_invalid_coopmat_memory_operand_type);
       return ExprError();
     }
   }
@@ -17703,18 +17702,15 @@ ExprResult Sema::BuiltinCoopMatrixMulAdd(CallExpr *TheCall,
     return ExprError();
 
   if (M0Ty->getUse() != 0) {
-    Diag(Arg0->getBeginLoc(), diag::err_invalid_coopmat_use)
-        << "CLK_COOPERATIVE_MATRIX_A";
+    Diag(Arg0->getBeginLoc(), diag::err_invalid_coopmat_use) << "CLK_COOPERATIVE_MATRIX_A";
     return ExprError();
   }
   if (M1Ty->getUse() != 1) {
-    Diag(Arg0->getBeginLoc(), diag::err_invalid_coopmat_use)
-        << "CLK_COOPERATIVE_MATRIX_B";
+    Diag(Arg0->getBeginLoc(), diag::err_invalid_coopmat_use) << "CLK_COOPERATIVE_MATRIX_B";
     return ExprError();
   }
   if (M2Ty->getUse() != 2) {
-    Diag(Arg0->getBeginLoc(), diag::err_invalid_coopmat_use)
-        << "CLK_COOPERATIVE_MATRIX_ACCUMULATOR";
+    Diag(Arg0->getBeginLoc(), diag::err_invalid_coopmat_use) << "CLK_COOPERATIVE_MATRIX_ACCUMULATOR";
     return ExprError();
   }
 
@@ -17758,6 +17754,8 @@ ExprResult Sema::BuiltinCoopMatrixScalarOp(CallExpr *TheCall,
     return ExprError();
   }
 
+  Expr *Arg1 = TheCall->getArg(1);
+  QualType Ty = Arg1->getType();
   if (M0Ty->getElementType().getUnqualifiedType() != Ty.getUnqualifiedType())
     return ExprError(Diag(Loc0, diag::err_mismatched_coopmat_element_types));
   TheCall->setType(Arg0->getType());

@@ -1,11 +1,4 @@
-// clang/test/CodeGenOpenCL/coop-mat-codegen-mangling.cl
-//
-// Tests for function-name mangling of SPIR-V cooperative matrix intrinsics.
-// Covers three mangling axes:
-//   (A) coop_mat_mulAdd  -- same element type, different matrix dimensions / scope / use
-//   (B) coop_mat_mulAdd  -- different element types (float vs int)
-//   (C) coop_mat_load    -- different pointer address spaces
-//   (D) coop_mat_store   -- different pointer address spaces
+// Tests for function-name mangling of SPIR-V friendly cooperative matrix intrinsics.
 //
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown \
 // RUN:   -cl-std=CL2.0 -cl-ext=+cl_khr_cooperative_matrix \
