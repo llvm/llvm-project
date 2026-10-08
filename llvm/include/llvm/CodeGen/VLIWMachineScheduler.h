@@ -15,6 +15,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetSchedule.h"
+#include <iterator>
 #include <limits>
 #include <memory>
 #include <utility>
