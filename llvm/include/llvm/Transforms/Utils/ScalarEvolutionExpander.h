@@ -74,6 +74,9 @@ class SCEVExpander : public SCEVUseVisitor<SCEVExpander, Value *> {
   /// Indicates whether LCSSA phis should be created for inserted values.
   bool PreserveLCSSA;
 
+  /// Optional list for deferred deletion; see setDisjointOrReplacementSink().
+  SmallVectorImpl<WeakTrackingVH> *DisjointOrReplacementSink = nullptr;
+
   // InsertedExpressions caches Values for reuse, so must track RAUW.
   DenseMap<std::pair<SCEVUse, Instruction *>, TrackingVH<Value>>
       InsertedExpressions;
@@ -417,6 +420,28 @@ public:
   /// that had been serving as the insertion point may have been deleted.
   void clearInsertPoint() { Builder.ClearInsertionPoint(); }
 
+  /// Allow instruction reuse to replace disjoint ors with adds. Disabled when
+  /// \p DeadInsts is null.
+  ///
+  /// Replaced ors are left in the IR and appended to \p DeadInsts because they
+  /// may still be used as insertion points or InsertedExpressions keys.
+  /// The caller must keep the list alive while registered and defer deletion
+  /// until expansion has finished and clear() or destruction has released the
+  /// expander's references. Only delete instructions that are still dead.
+  /// Passing nullptr disables further replacement but does not clear the list
+  /// or allow earlier deletion.
+  ///
+  /// Do not enable this for expansions that may be rolled back:
+  /// SCEVExpanderCleaner cannot undo the replacements.
+  ///
+  /// Values held across expansion must track RAUW, e.g. using WeakTrackingVH.
+  /// SCEVUnknown follows the replacement, so a raw pointer to the old or may no
+  /// longer match its SCEV even though the instruction has not been deleted.
+  void
+  setDisjointOrReplacementSink(SmallVectorImpl<WeakTrackingVH> *DeadInsts) {
+    DisjointOrReplacementSink = DeadInsts;
+  }
+
   /// Set location information used by debugging information.
   void SetCurrentDebugLocation(DebugLoc L) {
     Builder.SetCurrentDebugLocation(std::move(L));
@@ -492,14 +517,18 @@ private:
   /// Find a previous Value in ExprValueMap for expand.
   /// DropPoisonGeneratingInsts is populated with instructions for which
   /// poison-generating flags must be dropped if the value is reused.
+  /// If non-null, ReplaceDisjointOrs collects disjoint ors to replace with
+  /// adds. See canReuseInstruction().
   Value *FindValueInExprValueMap(
       SCEVUse S, const Instruction *InsertPt,
-      SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts);
+      SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts,
+      SmallVectorImpl<BinaryOperator *> *ReplaceDisjointOrs);
 
-  /// Like FindValueInExprValueMap, but on a successful lookup also drops the
-  /// poison-generating flags that reusing the value requires.
-  Value *findExistingExpansionAndDropPoisonFlags(SCEVUse S,
-                                                 const Instruction *InsertPt);
+  /// Find an existing value and apply the changes required for reuse: drop
+  /// poison-generating flags and, if enabled, replace disjoint ors with adds.
+  /// Return the replacement if the reused value is itself replaced.
+  Value *findExistingExpansionAndApplyReuseFixups(SCEVUse S,
+                                                  const Instruction *InsertPt);
 
   LLVM_ABI Value *expand(SCEVUse S);
   Value *expand(SCEVUse S, BasicBlock::iterator I) {
