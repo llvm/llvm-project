@@ -895,10 +895,10 @@ void CXXABILoweringPass::runOnOperation() {
 
   auto diag = [&] {
     return mod.emitWarning("cannot create a CIR lower module, skipping the ")
-              << getName() << " pass: ";
+           << getName() << " pass: ";
   };
-  std::unique_ptr<cir::LowerModule> lowerModule = cir::createLowerModule(
-      mod, diag);
+  std::unique_ptr<cir::LowerModule> lowerModule =
+      cir::createLowerModule(mod, diag);
   // If lower module is not available, skip the ABI lowering pass.
   if (!lowerModule)
     return;

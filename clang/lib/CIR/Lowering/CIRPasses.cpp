@@ -78,8 +78,8 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
 
   llvm::TimeTraceScope scope("CIR To CIR Passes");
 
-  std::optional<llvm::Triple> triple = cir::getTripleFromModule(theModule,
-      [&]{ return theModule.emitError(); });
+  std::optional<llvm::Triple> triple = cir::getTripleFromModule(
+      theModule, [&] { return theModule.emitError(); });
   if (!triple)
     return mlir::LogicalResult::failure();
 

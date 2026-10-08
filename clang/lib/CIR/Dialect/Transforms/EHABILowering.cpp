@@ -1088,7 +1088,8 @@ void CIREHABILoweringPass::runOnOperation() {
   // The target triple is attached to the module as the "cir.triple"
   // attribute. If it is absent (e.g. a CIR module parsed from text without a
   // triple) we cannot determine the ABI and must skip the pass.
-  std::optional<llvm::Triple> triple = cir::getTripleFromModule(mod, [&] { return mod.emitWarning(); });
+  std::optional<llvm::Triple> triple =
+      cir::getTripleFromModule(mod, [&] { return mod.emitWarning(); });
   if (!triple)
     return;
 

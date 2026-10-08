@@ -3063,7 +3063,7 @@ void LoweringPreparePass::runOnOperation() {
 
   auto diag = [&] {
     return mlirModule.emitError("cannot create a CIR lower module for ")
-       << getName() << " pass: ";
+           << getName() << " pass: ";
   };
   lowerModule = cir::createLowerModule(mlirModule, diag);
   if (!lowerModule)

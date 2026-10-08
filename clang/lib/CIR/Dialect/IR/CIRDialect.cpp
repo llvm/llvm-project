@@ -403,8 +403,8 @@ static LogicalResult verifyProducedBy(Operation *op, Value operand,
 }
 
 std::optional<llvm::Triple> cir::getTripleFromModule(
-  mlir::ModuleOp mod,
-  llvm::function_ref<mlir::InFlightDiagnostic()> emitDiag) {
+    mlir::ModuleOp mod,
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitDiag) {
   if (!mod->hasAttr(cir::CIRDialect::getTripleAttrName())) {
     if (emitDiag)
       emitDiag() << "module is missing " << cir::CIRDialect::getTripleAttrName()
