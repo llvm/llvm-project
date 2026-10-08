@@ -4976,7 +4976,13 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
     // [basic.def]p2 for details, but the basic idea is: if the old declaration
     // contains the extern specifier and doesn't have an initializer, it's fine
     // in C++.
-    if (Old->getStorageClass() != SC_Extern || Old->hasInit()) {
+    if (New->getTLSKind() != VarDecl::TLS_None &&
+        New->isThisDeclarationADefinition() == VarDecl::Definition) {
+      VarDecl *Def = Old->getDefinition();
+      if (Def && checkVarDeclRedefinition(Def, New)) {
+        return;
+      }
+    } else if (Old->getStorageClass() != SC_Extern || Old->hasInit()) {
       Diag(New->getLocation(), diag::warn_cxx_compat_tentative_definition)
           << New;
       Diag(Old->getLocation(), diag::note_previous_declaration);
@@ -7167,11 +7173,26 @@ void Sema::deduceOpenCLAddressSpace(VarDecl *Var) {
   Var->assignAddressSpace(Context, ImplAS);
 }
 
+static bool checkWeakAttrCompatibility(Sema &S, const NamedDecl &ND,
+                                       const WeakAttr &Attr) {
+  const NamedDecl *D = &ND;
+  // IFuncAttr is not inherited, so a redeclaration may need to check the
+  // attributes on the definition instead.
+  if (const auto *FD = dyn_cast<FunctionDecl>(&ND))
+    if (const FunctionDecl *Def = FD->getDefinition())
+      D = Def;
+  return DiagnoseMutualExclusions(S, D, &Attr);
+}
+
 static void checkWeakAttr(Sema &S, NamedDecl &ND) {
   // 'weak' only applies to declarations with external linkage.
   if (WeakAttr *Attr = ND.getAttr<WeakAttr>()) {
     if (!ND.isExternallyVisible()) {
       S.Diag(Attr->getLocation(), diag::err_attribute_weak_static);
+      ND.dropAttr<WeakAttr>();
+    } else if (!checkWeakAttrCompatibility(S, ND, *Attr)) {
+      // A forward #pragma weak adds the attribute without checking mutual
+      // exclusions during attribute processing.
       ND.dropAttr<WeakAttr>();
     }
   }
@@ -21435,10 +21456,13 @@ void Sema::ActOnPragmaRedefineExtname(IdentifierInfo* Name,
 void Sema::ActOnPragmaWeakID(IdentifierInfo* Name,
                              SourceLocation PragmaLoc,
                              SourceLocation NameLoc) {
-  Decl *PrevDecl = LookupSingleName(TUScope, Name, NameLoc, LookupOrdinaryName);
+  NamedDecl *PrevDecl =
+      LookupSingleName(TUScope, Name, NameLoc, LookupOrdinaryName);
 
   if (PrevDecl) {
-    PrevDecl->addAttr(WeakAttr::CreateImplicit(Context, PragmaLoc));
+    auto *Attr = WeakAttr::CreateImplicit(Context, PragmaLoc);
+    if (checkWeakAttrCompatibility(*this, *PrevDecl, *Attr))
+      PrevDecl->addAttr(Attr);
   } else {
     (void)WeakUndeclaredIdentifiers[Name].insert(WeakInfo(nullptr, NameLoc));
   }

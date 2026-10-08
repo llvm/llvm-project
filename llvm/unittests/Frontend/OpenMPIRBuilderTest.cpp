@@ -77,7 +77,7 @@ namespace {
 /// executed here.
 static CallInst *createPrintfCall(IRBuilder<> &Builder, StringRef FormatStr,
                                   ArrayRef<Value *> Values) {
-  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Module *M = Builder.getModule();
 
   GlobalVariable *GV = Builder.CreateGlobalString(FormatStr, "", 0, M);
 
