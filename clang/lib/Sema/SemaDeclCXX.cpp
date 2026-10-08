@@ -9558,7 +9558,9 @@ analyzeDefaultedPostfixOperator(Sema &S, FunctionDecl *FD,
   //   context equivalent to its function-body.
   Sema::ContextRAII SavedContext(S, FD);
 
-  // Let c be an lvalue of type C.
+  // Let c be an lvalue of type C. c stands for the first parameter (or the
+  // implicit object), which is always an lvalue when named in the function
+  // body, even if it is declared as an rvalue reference.
   OpaqueValueExpr Obj(Loc, C, VK_LValue);
   Expr *Args[] = {&Obj};
 
