@@ -835,32 +835,6 @@ static bool shouldUseExternalRttiDescriptor(CIRGenModule &cgm, QualType ty) {
   return false;
 }
 
-// Return whether the given record decl has a "single,
-// public, non-virtual base at offset zero (i.e. the derived class is dynamic
-// iff the base is)", according to Itanium C++ ABI, 2.95p6b.
-// TODO(cir): this can unified with LLVM codegen
-static bool canUseSingleInheritance(const CXXRecordDecl *rd) {
-  // Check the number of bases.
-  if (rd->getNumBases() != 1)
-    return false;
-
-  // Get the base.
-  CXXRecordDecl::base_class_const_iterator base = rd->bases_begin();
-
-  // Check that the base is not virtual.
-  if (base->isVirtual())
-    return false;
-
-  // Check that the base is public.
-  if (base->getAccessSpecifier() != AS_public)
-    return false;
-
-  // Check that the class is dynamic iff the base is.
-  auto *baseDecl = base->getType()->castAsCXXRecordDecl();
-  return baseDecl->isEmpty() ||
-         baseDecl->isDynamicClass() == rd->isDynamicClass();
-}
-
 const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
   // abi::__class_type_info.
   static const char *const classTypeInfo =
@@ -929,7 +903,7 @@ const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
       return classTypeInfo;
     }
 
-    if (canUseSingleInheritance(rd)) {
+    if (CodeGenUtils::canUseSingleInheritance(rd)) {
       return siClassTypeInfo;
     }
 
@@ -1425,7 +1399,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
       break;
     }
 
-    if (canUseSingleInheritance(rd)) {
+    if (CodeGenUtils::canUseSingleInheritance(rd)) {
       buildSIClassTypeInfo(loc, rd);
     } else {
       buildVMIClassTypeInfo(loc, rd);

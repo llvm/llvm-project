@@ -346,8 +346,12 @@ endif()
 # Host offload helpers for device sanitizers.
 include(FindLibcCommonUtils)
 if(OS_NAME MATCHES "Linux" AND TARGET llvm-libc-common-utilities)
+  set(ALL_SANITIZER_OFFLOAD_SUPPORTED_HOST_ARCH ${X86_64} ${ARM64} ${PPC64})
+  list_intersect(SANITIZER_OFFLOAD_SUPPORTED_HOST_ARCH
+    SANITIZER_COMMON_SUPPORTED_ARCH
+    ALL_SANITIZER_OFFLOAD_SUPPORTED_HOST_ARCH)
   add_compiler_rt_object_libraries(RTSanitizerOffload
-    ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
+    ARCHS ${SANITIZER_OFFLOAD_SUPPORTED_HOST_ARCH}
     SOURCES
       sanitizer_offload.cpp
       sanitizer_offload_image.cpp
@@ -359,7 +363,7 @@ if(OS_NAME MATCHES "Linux" AND TARGET llvm-libc-common-utilities)
       sanitizer_offload_rpc.h
     CFLAGS ${SANITIZER_CFLAGS}
     DEFS ${SANITIZER_COMMON_DEFINITIONS})
-  foreach(arch ${SANITIZER_COMMON_SUPPORTED_ARCH})
+  foreach(arch ${SANITIZER_OFFLOAD_SUPPORTED_HOST_ARCH})
     target_link_libraries(RTSanitizerOffload.${arch} PRIVATE
                           llvm-libc-common-utilities)
   endforeach()

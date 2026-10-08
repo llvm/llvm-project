@@ -1,4 +1,4 @@
-# RUN: llc --run-pass=livedebugvalues -o - %s | FileCheck %s --implicit-check-not=DBG_VALUE 
+# RUN: llc --run-pass=live-debug-values -o - %s | FileCheck %s --implicit-check-not=DBG_VALUE
 # REQUIRES: x86-registered-target
 
 # This test covers the scenario where a DBG_VALUE created prior to LiveDebugValues has an entry-value expression.

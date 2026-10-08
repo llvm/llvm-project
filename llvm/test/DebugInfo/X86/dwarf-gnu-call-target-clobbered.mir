@@ -1,7 +1,7 @@
-# RUN: llc %s -start-after=livedebugvalues -debugger-tune=gdb --filetype=obj -o - \
+# RUN: llc %s -start-after=live-debug-values -debugger-tune=gdb --filetype=obj -o - \
 # RUN: | llvm-dwarfdump - | FileCheck %s
 
-# Generated from IR crash reproducer with `llc -stop-after=livedebugvalues -simplify-mir`.
+# Generated from IR crash reproducer with `llc -stop-after=live-debug-values -simplify-mir`.
 # Check the GNU equivalent of DW_AT_call_target_clobbered is emitted without
 # hitting assertions (DWARF version 4, -debugger-tune=gdb).
 

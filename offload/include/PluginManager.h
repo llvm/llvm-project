@@ -18,6 +18,7 @@
 
 #include "DeviceImage.h"
 #include "ExclusiveAccess.h"
+#include "OmpAccError.h"
 #include "Shared/APITypes.h"
 #include "Shared/Requirements.h"
 
@@ -208,9 +209,9 @@ template <typename CallbackTy> llvm::Error iterateDevices(CallbackTy Callback) {
     return true;
   };
   if (auto Res = olIterateDevices(Wrapper, &Callback))
-    return error::createOffloadError(error::ErrorCode::BACKEND_FAILURE,
-                                     "Failed to iterate devices: %d",
-                                     Res->Details);
+    return llvm::omp::target::error::createError(
+        llvm::omp::target::error::ErrorCode::BackendFailure,
+        "Failed to iterate devices: %s", Res->Details);
   return llvm::Error::success();
 }
 #endif // OMPTARGET_PLUGIN_MANAGER_H

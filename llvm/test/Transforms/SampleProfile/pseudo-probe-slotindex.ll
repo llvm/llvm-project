@@ -1,6 +1,6 @@
 ; REQUIRES: x86-registered-target
-; RUN: llc -print-after=slotindexes -stop-after=slotindexes -mtriple=x86_64-unknown-linux-gnu %s -filetype=asm -o %t 2>&1 | FileCheck %s
-; RUN: llc -print-after=slotindexes -stop-after=slotindexes -mtriple=x86_64-unknown-windows-msvc %s -filetype=asm -o %t 2>&1 | FileCheck %s
+; RUN: llc -print-after=slot-indexes -stop-after=slot-indexes -mtriple=x86_64-unknown-linux-gnu %s -filetype=asm -o %t 2>&1 | FileCheck %s
+; RUN: llc -print-after=slot-indexes -stop-after=slot-indexes -mtriple=x86_64-unknown-windows-msvc %s -filetype=asm -o %t 2>&1 | FileCheck %s
 
 define void @foo(ptr %p) {
   store i32 0, ptr %p

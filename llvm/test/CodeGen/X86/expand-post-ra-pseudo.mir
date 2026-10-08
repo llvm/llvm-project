@@ -1,4 +1,4 @@
-# RUN: llc -o - %s -mtriple=x86_64-- -run-pass=postrapseudos | FileCheck %s
+# RUN: llc -o - %s -mtriple=x86_64-- -run-pass=post-ra-pseudos | FileCheck %s
 ---
 # CHECK-LABEL: name: func
 name: func

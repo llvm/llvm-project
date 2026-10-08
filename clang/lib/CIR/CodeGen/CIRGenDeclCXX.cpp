@@ -30,33 +30,28 @@ void CIRGenFunction::emitCXXGuardedInit(const VarDecl &varDecl,
   if (cgm.getCodeGenOpts().ForbidGuardVariables)
     cgm.error(varDecl.getLocation(), "guard variables are forbidden");
 
-  // Compute the mangled guard variable name and set the static_local attribute
-  // BEFORE emitting initialization. This ensures that GetGlobalOps created
-  // during initialization (e.g., in the ctor region) will see the attribute
-  // and be marked with static_local accordingly.
+  // Compute the mangled guard variable name and set the dynamic_init_guard
+  // attribute BEFORE emitting initialization. This ensures that GetGlobalOps
+  // created during initialization (e.g., in the ctor region) will see the
+  // attribute and be marked with static_local accordingly.
   llvm::SmallString<256> guardName;
   {
     llvm::raw_svector_ostream out(guardName);
     cgm.getCXXABI().getMangleContext().mangleStaticGuardVariable(&varDecl, out);
   }
 
-  // Mark the global as static local with the guard name. The emission of the
-  // guard/acquire is done during LoweringPrepare.
+  // Mark the global as requiring guarded dynamic initialization, with the
+  // guard name. The emission of the guard/acquire is done during
+  // LoweringPrepare.
   auto guardAttr = mlir::StringAttr::get(&cgm.getMLIRContext(), guardName);
-  if (!varDecl.isStaticLocal())
-    cgm.errorNYI(
-        varDecl.getSourceRange(),
-        "Static local guard attr only valid on static local variables");
-  globalOp.setStaticLocalGuardAttr(
-      cir::StaticLocalGuardAttr::get(&cgm.getMLIRContext(), guardAttr));
 
-  // Emit the initializer and add a global destructor if appropriate.
-  // TODO(cir): classic codegen calls emitCXXGlobalVarDeclInit for this as well,
-  // and this is meant to handle cases with weak linkage (see comment in
-  // emitCXXGlobalVarDeclInitFunc). At one point we'll have to do some level of
-  // split here depending on whether this is a global (which should/can have
-  // ctor/dtor regions), or should have in-function initialization.
-  cgm.emitCXXStaticLocalVarDeclInit(&varDecl, globalOp, performInit);
+  globalOp.setDynamicInitGuardAttr(
+      cir::DynamicInitGuardAttr::get(&cgm.getMLIRContext(), guardAttr));
+
+  if (varDecl.isStaticLocal())
+    cgm.emitCXXStaticLocalVarDeclInit(&varDecl, globalOp, performInit);
+  else
+    cgm.emitCXXGlobalVarDeclInit(&varDecl, globalOp, performInit);
 }
 
 void CIRGenModule::setGlobalTlsReferences(const VarDecl &vd,
@@ -104,19 +99,18 @@ void CIRGenModule::emitCXXGlobalVarDeclInitFunc(const VarDecl *vd,
                                                 bool performInit) {
   assert(!cir::MissingFeatures::cudaSupport());
 
-  assert(!cir::MissingFeatures::deferredCXXGlobalInit());
+  // Classic CodeGen dispatches guarded initialization through
+  // CGCXXABI::EmitGuardedInit, which the Microsoft ABI overrides with a
+  // completely different (bitmask-based "magic statics") guard scheme
+  // instead of the Itanium __cxa_guard_acquire/__cxa_guard_release calls
+  // that emitCXXGuardedInit/LoweringPrepare unconditionally assume here.
+  assert(!cir::MissingFeatures::msabi());
 
-  // TODO(cir): Classic codegen calls emitCXXGuardedInit in the following case:
-  // template<typename T> struct Templ {
-  //   static T f;
-  // };
-  // template<typename T> T Templ<T>::f = get_i();
-  // auto func() {
-  //   Templ<int> t;
-  //   return decltype(t)::f;
-  // }
-  //
-  // However, at the moment it is only suitable for static-local variables, so
-  // we will have to modify it to work for this case as well.
-  emitCXXGlobalVarDeclInit(vd, addr, performInit);
+  if (addr.hasWeakLinkage() || addr.hasLinkOnceLinkage() ||
+      (vd->getTLSKind() == VarDecl::TLS_Dynamic &&
+       isTemplateInstantiation(vd->getTemplateSpecializationKind()))) {
+    CIRGenFunction(*this, builder).emitCXXGuardedInit(*vd, addr, performInit);
+  } else {
+    emitCXXGlobalVarDeclInit(vd, addr, performInit);
+  }
 }

@@ -12,9 +12,6 @@
 
 #include "clang/Interpreter/IncrementalExecutor.h"
 #include "OrcIncrementalExecutor.h"
-#ifdef __EMSCRIPTEN__
-#include "Wasm.h"
-#endif // __EMSCRIPTEN__
 
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Config/config.h"
@@ -427,12 +424,8 @@ IncrementalExecutorBuilder::create(llvm::orc::ThreadSafeContext &TSC,
   }
 
   llvm::Error Err = llvm::Error::success();
-  std::unique_ptr<IncrementalExecutor> Executor;
-#ifdef __EMSCRIPTEN__
-  Executor = std::make_unique<WasmIncrementalExecutor>(Err);
-#else
-  Executor = std::make_unique<OrcIncrementalExecutor>(TSC, *JITBuilder, Err);
-#endif
+  std::unique_ptr<IncrementalExecutor> Executor =
+      std::make_unique<OrcIncrementalExecutor>(TSC, *JITBuilder, Err);
 
   if (Err)
     return std::move(Err);

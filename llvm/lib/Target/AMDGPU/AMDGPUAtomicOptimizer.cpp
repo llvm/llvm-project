@@ -411,7 +411,7 @@ Value *AMDGPUAtomicOptimizerImpl::buildReduction(IRBuilder<> &B,
                                                  Value *V,
                                                  Value *const Identity) const {
   Type *AtomicTy = V->getType();
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
 
   // Reduce within each row of 16 lanes.
   for (unsigned Idx = 0; Idx < 4; Idx++) {
@@ -455,7 +455,7 @@ Value *AMDGPUAtomicOptimizerImpl::buildScan(IRBuilder<> &B,
                                             AtomicRMWInst::BinOp Op, Value *V,
                                             Value *Identity) const {
   Type *AtomicTy = V->getType();
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   Function *UpdateDPP = Intrinsic::getOrInsertDeclaration(
       M, Intrinsic::amdgcn_update_dpp, AtomicTy);
 
@@ -515,7 +515,7 @@ Value *AMDGPUAtomicOptimizerImpl::buildScan(IRBuilder<> &B,
 Value *AMDGPUAtomicOptimizerImpl::buildShiftRight(IRBuilder<> &B, Value *V,
                                                   Value *Identity) const {
   Type *AtomicTy = V->getType();
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   Function *UpdateDPP = Intrinsic::getOrInsertDeclaration(
       M, Intrinsic::amdgcn_update_dpp, AtomicTy);
   if (ST.hasDPPWavefrontShifts()) {

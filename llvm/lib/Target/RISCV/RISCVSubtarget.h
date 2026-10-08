@@ -303,8 +303,11 @@ public:
     return nullptr;
   };
 
-  // XRay support - require D and C extensions.
-  bool isXRaySupported() const override { return hasStdExtD() && hasStdExtC(); }
+  // XRay support - require D and Zcf/Zcd extensions. Effectively D and C
+  // without checking the C feature.
+  bool isXRaySupported() const override {
+    return hasStdExtD() && (is64Bit() || hasStdExtZcf()) && hasStdExtZcd();
+  }
 
   // Vector codegen related methods.
   bool hasVInstructions() const { return HasStdExtZve32x; }

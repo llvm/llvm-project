@@ -9324,8 +9324,8 @@ emitPseudoVMSKCOND(MachineInstr &MI, MachineBasicBlock *BB,
     Register Tmp = MRI.createVirtualRegister(RC);
     BuildMI(*BB, MI, DL, TII->get(MskOpc), Tmp).addReg(Src);
     BuildMI(*BB, MI, DL, TII->get(NotOpc), Msk)
-        .addReg(Tmp, RegState::Kill)
-        .addReg(Tmp, RegState::Kill);
+        .addReg(Tmp)
+        .addReg(Tmp);
   } else {
     BuildMI(*BB, MI, DL, TII->get(MskOpc), Msk).addReg(Src);
   }
@@ -9337,19 +9337,19 @@ emitPseudoVMSKCOND(MachineInstr &MI, MachineBasicBlock *BB,
         .addReg(Msk)
         .addImm(0);
     BuildMI(*BB, MI, DL, TII->get(LoongArch::XVPICKVE2GR_WU), Hi)
-        .addReg(Msk, RegState::Kill)
+        .addReg(Msk)
         .addImm(4);
     BuildMI(*BB, MI, DL,
             TII->get(Subtarget.is64Bit() ? LoongArch::BSTRINS_D
                                          : LoongArch::BSTRINS_W),
             Dst)
-        .addReg(Lo, RegState::Kill)
-        .addReg(Hi, RegState::Kill)
+        .addReg(Lo)
+        .addReg(Hi)
         .addImm(256 / EleBits - 1)
         .addImm(128 / EleBits);
   } else {
     BuildMI(*BB, MI, DL, TII->get(LoongArch::VPICKVE2GR_HU), Dst)
-        .addReg(Msk, RegState::Kill)
+        .addReg(Msk)
         .addImm(0);
   }
 
@@ -9395,7 +9395,7 @@ emitBuildPairF64Pseudo(MachineInstr &MI, MachineBasicBlock *BB,
   BuildMI(*BB, MI, DL, TII.get(LoongArch::MOVGR2FR_W_64), TmpReg)
       .addReg(LoReg, getKillRegState(MI.getOperand(1).isKill()));
   BuildMI(*BB, MI, DL, TII.get(LoongArch::MOVGR2FRH_W), DstReg)
-      .addReg(TmpReg, RegState::Kill)
+      .addReg(TmpReg)
       .addReg(HiReg, getKillRegState(MI.getOperand(2).isKill()));
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;

@@ -3008,6 +3008,15 @@ bool X86::mayFoldIntoZeroExtend(SDValue Op) {
   return false;
 }
 
+// Return true if its cheap to bitcast this to a scalar integer type on a GPR.
+static bool mayFoldIntoScalarInteger(SDValue Op) {
+  if (peekThroughBitcasts(Op).getValueType().isScalarInteger())
+    return true;
+  if (isa<ConstantSDNode>(Op) || isa<ConstantFPSDNode>(Op))
+    return true;
+  return false;
+}
+
 // Return true if its cheap to bitcast this to a vector type.
 static bool mayFoldIntoVector(SDValue Op, const SelectionDAG &DAG,
                               const X86Subtarget &Subtarget) {
@@ -31063,7 +31072,7 @@ static bool supportedVectorShiftWithImm(EVT VT, const X86Subtarget &Subtarget,
   if (!(VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()))
     return false;
 
-  if (VT.getScalarSizeInBits() < 16)
+  if (VT.getScalarSizeInBits() < 16 || VT.getScalarSizeInBits() > 64)
     return false;
 
   if (VT.is512BitVector() && Subtarget.useAVX512Regs() &&
@@ -31577,7 +31586,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     }
     APInt APIntShiftAmt;
     bool IsConstantSplat = X86::isConstantSplat(Amt, APIntShiftAmt);
-    bool Profitable = Subtarget.getCLOpts().widen_shift;
+    bool Profitable = true;
     // AVX512BW brings support for vpsllvw.
     if (WideEltSizeInBits * AmtWideElts.size() >= 512 &&
         WideEltSizeInBits < 32 && !Subtarget.hasBWI()) {
@@ -37664,7 +37673,8 @@ X86TargetLowering::EmitLoweredSelect(MachineInstr &MI,
       NextMIIt->getOpcode() == MI.getOpcode() &&
       NextMIIt->getOperand(2).getReg() == MI.getOperand(2).getReg() &&
       NextMIIt->getOperand(1).getReg() == MI.getOperand(0).getReg() &&
-      NextMIIt->getOperand(1).isKill()) {
+      ThisMBB->getParent()->getRegInfo().hasOneNonDBGUse(
+          MI.getOperand(0).getReg())) {
     return EmitLoweredCascadedSelect(MI, *NextMIIt, ThisMBB);
   }
 
@@ -48990,16 +49000,11 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   // (cheaper as immediates) and compare-driven conds (CMOV already reuses
   // the flags).
   if (N->getOpcode() == ISD::SELECT && !CondVT.isVector() &&
-      Subtarget.hasSSE2() && !isIntOrFPConstant(LHS) &&
-      !isIntOrFPConstant(RHS)) {
+      Subtarget.hasSSE2()) {
     // Only worth it if both operands already live in a vector register
-    auto IsBitcastFromGPR = [](SDValue Op) {
-      return Op.getOpcode() == ISD::BITCAST &&
-             Op.getOperand(0).getValueType().isScalarInteger();
-    };
     SDValue F16LHS, F16RHS;
     if (!VT.isVector() && isSoftF16(VT, Subtarget)) {
-      if (!IsBitcastFromGPR(LHS) || !IsBitcastFromGPR(RHS)) {
+      if (!mayFoldIntoScalarInteger(LHS) || !mayFoldIntoScalarInteger(RHS)) {
         F16LHS = DAG.getBitcast(MVT::f16, LHS);
         F16RHS = DAG.getBitcast(MVT::f16, RHS);
       }

@@ -592,12 +592,10 @@ EXTERN void __tgt_set_info_flag(uint32_t NewInfoLevel) {
 }
 
 EXTERN int __tgt_print_device_info(int64_t DeviceId) {
-  assert(PM && "Runtime not initialized");
-  auto DeviceOrErr = PM->getDevice(DeviceId);
-  if (!DeviceOrErr)
-    FATAL_MESSAGE(DeviceId, "%s", toString(DeviceOrErr.takeError()).c_str());
-
-  return DeviceOrErr->printDeviceInfo();
+  MESSAGE("The %s function is deprecated and no longer prints any "
+          "information. Use olGetDeviceInfo instead",
+          __PRETTY_FUNCTION__);
+  return false;
 }
 
 EXTERN void __tgt_target_nowait_query(void **AsyncHandle) {

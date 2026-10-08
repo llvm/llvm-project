@@ -94,3 +94,87 @@ loop:
 exit:
   ret void
 }
+
+define void @indirect_unsafe_dep_after_unknown_deps(ptr %A, i64 %off) {
+; DEFAULT-LABEL: 'indirect_unsafe_dep_after_unknown_deps'
+; DEFAULT-NEXT:    loop:
+; DEFAULT-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; DEFAULT-NEXT:  Unknown data dependence.
+; DEFAULT-NEXT:      Dependences:
+; DEFAULT-NEXT:        Unknown:
+; DEFAULT-NEXT:            %l.0 = load i8, ptr %gep.A.off, align 1 ->
+; DEFAULT-NEXT:            store i8 %l.0, ptr %gep.A, align 1
+; DEFAULT-EMPTY:
+; DEFAULT-NEXT:        Unknown:
+; DEFAULT-NEXT:            %l.1 = load i8, ptr %gep.A.off, align 1 ->
+; DEFAULT-NEXT:            store i8 %l.0, ptr %gep.A, align 1
+; DEFAULT-EMPTY:
+; DEFAULT-NEXT:        Unknown:
+; DEFAULT-NEXT:            %l.2 = load i8, ptr %gep.A.off, align 1 ->
+; DEFAULT-NEXT:            store i8 %l.0, ptr %gep.A, align 1
+; DEFAULT-EMPTY:
+; DEFAULT-NEXT:        Unknown:
+; DEFAULT-NEXT:            %l.3 = load i8, ptr %gep.A.off, align 1 ->
+; DEFAULT-NEXT:            store i8 %l.0, ptr %gep.A, align 1
+; DEFAULT-EMPTY:
+; DEFAULT-NEXT:        Unknown:
+; DEFAULT-NEXT:            %l.4 = load i8, ptr %gep.A.off, align 1 ->
+; DEFAULT-NEXT:            store i8 %l.0, ptr %gep.A, align 1
+; DEFAULT-EMPTY:
+; DEFAULT-NEXT:        IndirectUnsafe:
+; DEFAULT-NEXT:            store i8 %l.0, ptr %gep.A, align 1 ->
+; DEFAULT-NEXT:            %l.wide = load i16, ptr %gep.A, align 1
+; DEFAULT-EMPTY:
+; DEFAULT-NEXT:      Run-time memory checks:
+; DEFAULT-NEXT:      Grouped accesses:
+; DEFAULT-EMPTY:
+; DEFAULT-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; DEFAULT-NEXT:      SCEV assumptions:
+; DEFAULT-EMPTY:
+; DEFAULT-NEXT:      Expressions re-written:
+;
+; MAXDEP5-LABEL: 'indirect_unsafe_dep_after_unknown_deps'
+; MAXDEP5-NEXT:    loop:
+; MAXDEP5-NEXT:      Memory dependences are safe with run-time checks
+; MAXDEP5-NEXT:      Too many dependences, not recorded
+; MAXDEP5-NEXT:      Run-time memory checks:
+; MAXDEP5-NEXT:      Check 0:
+; MAXDEP5-NEXT:        Comparing group GRP0:
+; MAXDEP5-NEXT:          %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv
+; MAXDEP5-NEXT:        Against group GRP1:
+; MAXDEP5-NEXT:          %gep.A.off = getelementptr inbounds i8, ptr %A.off, i64 %iv
+; MAXDEP5-NEXT:      Grouped accesses:
+; MAXDEP5-NEXT:        Group GRP0:
+; MAXDEP5-NEXT:          (Low: %A High: (100 + %A))
+; MAXDEP5-NEXT:            Member: {%A,+,1}<nuw><%loop>
+; MAXDEP5-NEXT:        Group GRP1:
+; MAXDEP5-NEXT:          (Low: (%off + %A) High: (100 + %off + %A))
+; MAXDEP5-NEXT:            Member: {(%off + %A),+,1}<nw><%loop>
+; MAXDEP5-EMPTY:
+; MAXDEP5-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; MAXDEP5-NEXT:      SCEV assumptions:
+; MAXDEP5-EMPTY:
+; MAXDEP5-NEXT:      Expressions re-written:
+;
+entry:
+  %A.off = getelementptr i8, ptr %A, i64 %off
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.A.off = getelementptr inbounds i8, ptr %A.off, i64 %iv
+  %l.0 = load i8, ptr %gep.A.off, align 1
+  %l.1 = load i8, ptr %gep.A.off, align 1
+  %l.2 = load i8, ptr %gep.A.off, align 1
+  %l.3 = load i8, ptr %gep.A.off, align 1
+  %l.4 = load i8, ptr %gep.A.off, align 1
+  %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv
+  store i8 %l.0, ptr %gep.A, align 1
+  %l.wide = load i16, ptr %gep.A, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 100
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
+}

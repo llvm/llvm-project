@@ -5924,6 +5924,12 @@ def HLSLGroupMemoryBarrierWithGroupSync: LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void()";
 }
 
+def HLSLBarrier : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_barrier"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 class HLSLScalarTemplate
     : Template<["bool", "char", "short", "int", "long long int",
                 "unsigned short", "unsigned int", "unsigned long long int",

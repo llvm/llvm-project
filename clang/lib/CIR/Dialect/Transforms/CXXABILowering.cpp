@@ -615,9 +615,16 @@ mlir::LogicalResult CIRGlobalOpABILowering::matchAndRewrite(
   mlir::Attribute loweredInit = lowerInitialValue(
       lowerModule, layout, *getTypeConverter(), ty, op.getInitialValueAttr());
 
-  auto newOp = mlir::cast<cir::GlobalOp>(rewriter.clone(*op.getOperation()));
+  cir::GlobalOp newOp = rewriter.cloneWithoutRegions(op);
   newOp.setInitialValueAttr(loweredInit);
   newOp.setSymType(loweredTy);
+  // Regions have to be separately moved(rather than cloned), else we cause
+  // multi-block regions/eh stuff to be double-referenced, and thus can't be
+  // removed properly during collectUnreachable.
+  rewriter.inlineRegionBefore(op.getCtorRegion(), newOp.getCtorRegion(),
+                              newOp.getCtorRegion().end());
+  rewriter.inlineRegionBefore(op.getDtorRegion(), newOp.getDtorRegion(),
+                              newOp.getDtorRegion().end());
   rewriter.replaceOp(op, newOp);
   return mlir::success();
 }

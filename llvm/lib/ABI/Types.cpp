@@ -7,10 +7,46 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ABI/Types.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <algorithm>
 
 using namespace llvm;
 using namespace llvm::abi;
+
+uint64_t llvm::abi::Type::getABISizeInBits() const {
+  switch (getKind()) {
+  case TypeKind::Integer:
+    if (cast<IntegerType>(this)->isBitInt())
+      return getTypeAllocSize().getFixedValue() * 8;
+    return getTypeStoreSizeInBits().getFixedValue();
+  case TypeKind::Float:
+    return getTypeAllocSize().getFixedValue() * 8;
+  case TypeKind::Complex:
+    return 2 * cast<ComplexType>(this)->getElementType()->getABISizeInBits();
+  case TypeKind::Vector: {
+    const auto *VT = cast<VectorType>(this);
+    if (VT->isScalable())
+      return 0;
+    const Type *EltTy = VT->getElementType();
+    const auto *IT = dyn_cast<IntegerType>(EltTy);
+    uint64_t EltWidth = IT && !IT->isBitInt() ? IT->getFixedSizeInBitsOrZero()
+                                              : EltTy->getABISizeInBits();
+    uint64_t Width = EltWidth * VT->getNumElements().getFixedValue();
+    return bit_ceil(std::max<uint64_t>(Width, 8));
+  }
+  case TypeKind::Void:
+  case TypeKind::Atomic:
+  case TypeKind::MemberPointer:
+  case TypeKind::Pointer:
+  case TypeKind::Array:
+  case TypeKind::Tuple:
+  case TypeKind::Record:
+    return getFixedSizeInBitsOrZero();
+  }
+  llvm_unreachable("unknown ABI type kind");
+}
 
 bool llvm::abi::Type::isSVESizelessType() const {
   if (getKind() == TypeKind::Vector) {

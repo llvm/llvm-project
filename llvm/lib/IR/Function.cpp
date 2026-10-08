@@ -432,6 +432,10 @@ Function *Function::createWithDefaultAttr(FunctionType *Ty,
                        ? "b_key"
                        : "a_key");
   }
+
+  if (auto Value = dyn_cast_if_present<MDString>(
+          M->getModuleFlag("sign-return-address-harden")))
+    B.addAttribute("sign-return-address-harden", Value->getString());
   AddAttributeIfSet("branch-target-enforcement");
   AddAttributeIfSet("branch-protection-pauth-lr");
   AddAttributeIfSet("guarded-control-stack");

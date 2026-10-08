@@ -156,7 +156,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "livedebugvalues"
+#define DEBUG_TYPE "live-debug-values"
 
 STATISTIC(NumInserted, "Number of DBG_VALUE instructions inserted");
 

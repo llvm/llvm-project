@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -verify-machineinstrs -run-pass=postrapseudos -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -verify-machineinstrs -run-pass=post-ra-pseudos -o - %s | FileCheck %s
 
 # This test verifies that target flags on 64-bit global-address pseudos
 # are split into correct lo/hi flags when post-RA pseudos are expanded.

@@ -463,25 +463,3 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
          "Lowering should have eliminated any uses of the intrinsic call!");
   CI->eraseFromParent();
 }
-
-bool IntrinsicLowering::LowerToByteSwap(CallInst *CI) {
-  // Verify this is a simple bswap.
-  if (CI->arg_size() != 1 || CI->getType() != CI->getArgOperand(0)->getType() ||
-      !CI->getType()->isIntegerTy())
-    return false;
-
-  IntegerType *Ty = dyn_cast<IntegerType>(CI->getType());
-  if (!Ty)
-    return false;
-
-  // Okay, we can do this xform, do so now.
-  Module *M = CI->getModule();
-  Function *Int = Intrinsic::getOrInsertDeclaration(M, Intrinsic::bswap, Ty);
-
-  Value *Op = CI->getArgOperand(0);
-  Op = CallInst::Create(Int, Op, CI->getName(), CI->getIterator());
-
-  CI->replaceAllUsesWith(Op);
-  CI->eraseFromParent();
-  return true;
-}

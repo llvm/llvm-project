@@ -512,16 +512,16 @@ static void initCatchParam(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
   CanQualType catchType =
       cgf.cgm.getASTContext().getCanonicalType(catchParam.getType());
   cir::InitCatchKind kind;
-  bool shouldInitFromExnDirectly = false;
 
-  // If we're catching by reference, we can just cast the object
-  // pointer to the appropriate pointer.
   if (isa<ReferenceType>(catchType)) {
     QualType caughtType = cast<ReferenceType>(catchType)->getPointeeType();
-    if (const PointerType *ptr = dyn_cast<PointerType>(caughtType)) {
-      shouldInitFromExnDirectly = !ptr->getPointeeType()->isRecordType();
-    }
-    kind = cir::InitCatchKind::Reference;
+    const PointerType *ptr = dyn_cast<PointerType>(caughtType);
+    if (!ptr)
+      kind = cir::InitCatchKind::Reference;
+    else if (ptr->getPointeeType()->isRecordType())
+      kind = cir::InitCatchKind::ReferenceToRecordPointer;
+    else
+      kind = cir::InitCatchKind::ReferenceToPointer;
   } else {
     cir::TypeEvaluationKind tek = cgf.getEvaluationKind(catchType);
     if (tek == cir::TEK_Aggregate) {
@@ -555,7 +555,7 @@ static void initCatchParam(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
   mlir::Location mloc = cgf.getLoc(loc);
 
   if (kind == cir::InitCatchKind::NonTrivialCopy ||
-      (kind == cir::InitCatchKind::Reference && shouldInitFromExnDirectly)) {
+      kind == cir::InitCatchKind::ReferenceToPointer) {
     // Sanitizer-checked construction (UBSan vptr/derived-class checks, etc.)
     // would require additional adornments that cir.construct_catch_param does
     // not yet carry.

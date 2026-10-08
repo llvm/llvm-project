@@ -968,22 +968,25 @@ std::string TreePredicateFn::getPredCode() const {
         getAddressSpaces() == nullptr && getMinAlignment() < 1)
       PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
                       "IsStore cannot be used by itself");
-  } else {
-    if (isNonTruncStore())
+  } else if (!isAtomic()) {
+    if (isNonTruncStore()) {
       PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsNonTruncStore requires IsStore");
-    if (isTruncStore())
+                      "IsNonTruncStore requires IsStore or IsAtomic");
+    }
+
+    if (isTruncStore()) {
       PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsTruncStore requires IsStore");
+                      "IsTruncStore requires IsStore or IsAtomic");
+    }
   }
 
   if (isAtomic()) {
     if (getMemoryVT() == nullptr && getAddressSpaces() == nullptr &&
         // FIXME: Should atomic loads be IsLoad, IsAtomic, or both?
         !isNonExtLoad() && !isAnyExtLoad() && !isZeroExtLoad() &&
-        !isSignExtLoad() && !isAtomicOrderingMonotonic() &&
-        !isAtomicOrderingAcquire() && !isAtomicOrderingRelease() &&
-        !isAtomicOrderingAcquireRelease() &&
+        !isSignExtLoad() && !isNonTruncStore() && !isTruncStore() &&
+        !isAtomicOrderingMonotonic() && !isAtomicOrderingAcquire() &&
+        !isAtomicOrderingRelease() && !isAtomicOrderingAcquireRelease() &&
         !isAtomicOrderingSequentiallyConsistent() &&
         !isAtomicOrderingAcquireOrStronger() &&
         !isAtomicOrderingReleaseOrStronger() &&
@@ -1107,6 +1110,24 @@ std::string TreePredicateFn::getPredCode() const {
     if (isZeroExtLoad())
       Code += "if (cast<AtomicSDNode>(N)->getExtensionType() != ISD::ZEXTLOAD) "
               "return false;\n";
+
+    if ((isNonTruncStore() + isTruncStore()) > 1) {
+      PrintFatalError(
+          getOrigPatFragRecord()->getRecord()->getLoc(),
+          "IsNonTruncStore, and IsTruncStore are mutually exclusive");
+    }
+
+    if (isNonTruncStore()) {
+      Code += "if (cast<AtomicSDNode>(N)->getMemoryVT().getSizeInBits() != "
+              "cast<AtomicSDNode>(N)->getVal().getValueSizeInBits()) "
+              "return false;\n";
+    }
+
+    if (isTruncStore()) {
+      Code += "if (cast<AtomicSDNode>(N)->getMemoryVT().getSizeInBits() == "
+              "cast<AtomicSDNode>(N)->getVal().getValueSizeInBits()) "
+              "return false;\n";
+    }
   }
 
   if (isLoad() || isStore()) {

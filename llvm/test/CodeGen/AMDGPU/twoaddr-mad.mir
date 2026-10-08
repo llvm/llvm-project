@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgpu9.00 %s -run-pass twoaddressinstruction -verify-machineinstrs -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgpu9.00 %s -run-pass two-address-instruction -verify-machineinstrs -o - | FileCheck -check-prefix=GCN %s
 # RUN: llc -mtriple=amdgpu9.00 %s --passes=two-address-instruction -verify-each -o - | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: test_madmk_reg_imm_f32
