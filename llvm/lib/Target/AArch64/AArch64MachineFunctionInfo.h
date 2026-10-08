@@ -211,6 +211,13 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// extended record.
   bool HasSwiftAsyncContext = false;
 
+  /// Whether this function makes a non-tail call to a function using a
+  /// calling convention with guaranteed tail calls, on Windows. Such a callee
+  /// may tail call something that needs more stack argument space, leaving SP
+  /// lower than this function's unwind info expects when it is unwound to; a
+  /// frame pointer lets the unwinder recover the correct SP.
+  bool HasWinCallToGuaranteedTCOFunction = false;
+
   /// The stack slot where the Swift asynchronous context is stored.
   int SwiftAsyncContextFrameIdx = std::numeric_limits<int>::max();
 
@@ -599,6 +606,13 @@ public:
     HasSwiftAsyncContext = HasContext;
   }
   bool hasSwiftAsyncContext() const { return HasSwiftAsyncContext; }
+
+  void setHasWinCallToGuaranteedTCOFunction(bool Has) {
+    HasWinCallToGuaranteedTCOFunction = Has;
+  }
+  bool hasWinCallToGuaranteedTCOFunction() const {
+    return HasWinCallToGuaranteedTCOFunction;
+  }
 
   void setSwiftAsyncContextFrameIdx(int FI) {
     SwiftAsyncContextFrameIdx = FI;

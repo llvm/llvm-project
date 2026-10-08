@@ -372,6 +372,15 @@ void AArch64PointerAuthImpl::authenticateLR(
     return;
   }
 
+  // Windows unwind info describes the authentication as a single pac_sign_lr
+  // unwind code, which the unwinder applies with the SP it has at that point.
+  // That is the signing SP only if the epilogue leaves SP at its entry value,
+  // and a single code can't stand in for the multi-instruction sequence below.
+  if (NeedsWinCFI)
+    report_fatal_error("Can't handle a tail call that changes the stack "
+                       "argument size in a function that signs its return "
+                       "address on Windows");
+
   // When ArgumentStackToRestore > 0, this function received more argument
   // space than the tail callee pops. The epilogue contains an SP adjustment
   // (e.g. "add sp, sp, #N") to discard the leftover argument space.
