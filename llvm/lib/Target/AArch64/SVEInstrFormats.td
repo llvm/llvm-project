@@ -3264,9 +3264,11 @@ multiclass sve_fp_2op_p_zd_HSD<bits<5> opc, string asm, SDPatternOperator op> {
   def : SVE_1_Op_Passthru_Pat<nxv2f32, op, nxv2i1, nxv2f32, !cast<Instruction>(NAME # _S)>;
   def : SVE_1_Op_Passthru_Pat<nxv2f64, op, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _D)>;
 
-  def _H_UNDEF : PredOneOpPassthruPseudo<NAME # _H, ZPR16, FalseLanesUndef>;
-  def _S_UNDEF : PredOneOpPassthruPseudo<NAME # _S, ZPR32, FalseLanesUndef>;
-  def _D_UNDEF : PredOneOpPassthruPseudo<NAME # _D, ZPR64, FalseLanesUndef>;
+  let mayRaiseFPException = 1 in {
+    def _H_UNDEF : PredOneOpPassthruPseudo<NAME # _H, ZPR16, FalseLanesUndef>;
+    def _S_UNDEF : PredOneOpPassthruPseudo<NAME # _S, ZPR32, FalseLanesUndef>;
+    def _D_UNDEF : PredOneOpPassthruPseudo<NAME # _D, ZPR64, FalseLanesUndef>;
+  }
 
   defm : SVE_1_Op_PassthruUndef_Pat<nxv8f16, op, nxv8i1, nxv8f16, !cast<Instruction>(NAME # _H_UNDEF)>;
   defm : SVE_1_Op_PassthruUndef_Pat<nxv4f16, op, nxv4i1, nxv4f16, !cast<Instruction>(NAME # _H_UNDEF)>;
