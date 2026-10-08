@@ -721,12 +721,8 @@ features cannot lower the translation-unit ABI level;
   `alias` are now correctly diagnosed as definitions when followed by an
   out-of-line definition. (#GH204762)
 
-- An explicit `visibility` attribute (or a `#pragma GCC visibility`) on the
-  declaration of the weak name in `#pragma weak X = Y` is no longer dropped. The
-  alias used to silently take the `-fvisibility` default instead, which could
-  make symbols meant to be exported local to a shared object. Matching GCC, the
-  alias now takes the visibility of the weak name's own declaration,
-  independently of the aliasee's.
+- `#pragma weak X = Y` no longer drops an explicit visibility on the declaration
+  of `X`; as in GCC, the alias takes `X`'s visibility rather than `Y`'s.
 
 #### Bug Fixes to C++ Support
 

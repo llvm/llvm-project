@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fvisibility=hidden -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,HIDDEN
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,DEFAULT
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fvisibility=hidden -DLATE_DECL -verify -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,HIDDEN,LATE
 
 // Check the visibility of the alias that #pragma weak alias = target creates.
 // As in GCC, the alias takes the visibility explicitly written on its own
@@ -66,16 +65,22 @@ extern int alias_variable __attribute__((visibility("default")));
 #pragma weak alias_variable = target_variable
 int target_variable = 7;
 
-#ifdef LATE_DECL
-// When the alias is declared only *after* the pragma has synthesized it, the
-// declaration is a redeclaration of the alias, and its visibility attribute
-// does not apply: the alias already counts as a definition, so the attribute
-// arrives too late and is diagnosed. GCC instead accepts this and gives the
-// alias default visibility; the case is pinned here so that following GCC,
-// which would mean changing the diagnostic path, is a deliberate change.
-// LATE-DAG: @alias_declared_late = weak hidden alias i32 (), ptr @target_of_late_alias
+// As in GCC, a later declaration may set the visibility too.
+// CHECK-DAG: @alias_declared_late = weak alias i32 (), ptr @target_of_late_alias
 int target_of_late_alias(void);
-#pragma weak alias_declared_late = target_of_late_alias // expected-note {{previous definition is here}}
-int alias_declared_late(void) __attribute__((visibility("default"))); // expected-warning {{attribute declaration must precede definition}}
+#pragma weak alias_declared_late = target_of_late_alias
+int alias_declared_late(void) __attribute__((visibility("default")));
 int target_of_late_alias(void) { return 1; }
-#endif
+
+// CHECK-DAG: @alias_late_gcc_pragma = weak alias i32 (), ptr @target_of_late_gcc_pragma
+int target_of_late_gcc_pragma(void);
+#pragma weak alias_late_gcc_pragma = target_of_late_gcc_pragma
+#pragma GCC visibility push(default)
+int alias_late_gcc_pragma(void);
+#pragma GCC visibility pop
+int target_of_late_gcc_pragma(void) { return 1; }
+
+// CHECK-DAG: @alias_variable_late = weak alias i32, ptr @target_variable_late
+int target_variable_late = 7;
+#pragma weak alias_variable_late = target_variable_late
+extern int alias_variable_late __attribute__((visibility("default")));

@@ -3236,6 +3236,11 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
       // SYCLExternalAttr may be added after a definition.
       ++I;
       continue;
+    } else if (isa<VisibilityAttr>(NewAttribute) &&
+               llvm::is_contained(S.WeakTopLevelDecls(), Def)) {
+      // A #pragma weak alias is emitted at the end of the TU (as in GCC).
+      ++I;
+      continue;
     }
 
     S.Diag(NewAttribute->getLocation(),
