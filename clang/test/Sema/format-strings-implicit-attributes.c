@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -std=c11 -ast-dump -Wno-gcc-compat -DNO_PROTOTYPE -verify %s | FileCheck %s --check-prefix=NO-FORMAT-ARG
 // RUN: %clang_cc1 -std=c11 -ast-dump -Wno-gcc-compat -DMISSING_FORMAT_PARAM -verify %s | FileCheck %s --check-prefix=NO-FORMAT-ARG
 // RUN: %clang_cc1 -std=c11 -ast-dump -DCFSTRING_VALID_PROTO -verify %s | FileCheck %s --check-prefix=FORMAT-ARG
+// RUN: %clang_cc1 -std=c11 -fsyntax-only -Wno-gcc-compat -DCFSTRING_INT_PARAM -verify %s
 
 #ifdef CFSTRING_VALID_PROTO
 // expected-no-diagnostics
@@ -11,6 +12,17 @@ char *__CFStringMakeConstantString(const char *);
 
 // FORMAT-ARG-LABEL: FunctionDecl{{.*}} __CFStringMakeConstantString
 // FORMAT-ARG: FormatArgAttr{{.*}}Implicit 1
+#elif defined(CFSTRING_INT_PARAM)
+
+// A non-string parameter must not crash format checking.
+char *__CFStringMakeConstantString(int);
+
+void a(char *) __attribute__((format(__CFString__, 1, 2)));
+
+void b(void) {
+  a(__CFStringMakeConstantString(1)); // expected-warning {{format string is not a string literal (potentially insecure)}}
+  // expected-note@-1 {{treat the string as an argument to avoid this}}
+}
 #else
 
 // Do not infer format attributes without a prototype or the format parameter.
