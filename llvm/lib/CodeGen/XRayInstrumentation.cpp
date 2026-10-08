@@ -272,10 +272,10 @@ bool XRayInstrumentation::run(MachineFunction &MF) {
   }
 
   if (!F.hasFnAttribute("xray-skip-entry")) {
-    // The sled always goes in the entry block rather than in the first block holding
-    // code. Optimizations such as tail recursion elimination can make the
-    // latter a loop header, and a sled inside the loop would report an entry
-    // per iteration but only a single exit.
+    // The sled always goes in the entry block rather than in the first block
+    // holding code. Optimizations such as tail recursion elimination can make
+    // the latter a loop header, and a sled inside the loop would report an
+    // entry per iteration but only a single exit.
     MachineBasicBlock &EntryMBB = MF.front();
     assert(EntryMBB.pred_empty() &&
            "Function entry block has predecessors, the sled would be "
