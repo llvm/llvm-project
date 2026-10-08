@@ -4323,7 +4323,11 @@ Error BitcodeReader::parseGlobalVarRecord(ArrayRef<uint64_t> Record) {
   inferDSOLocal(NewGV);
 
   // Check whether we have enough values to read a partition name.
-  if (Record.size() > 15)
+  // Also make sure Strtab has enough values. Compare without adding: both
+  // values are read from the file, so an out-of-bounds offset/length would
+  // otherwise build a StringRef pointing outside the string table.
+  if (Record.size() > 15 && Strtab.data() && Record[14] <= Strtab.size() &&
+      Record[15] <= Strtab.size() - Record[14])
     NewGV->setPartition(StringRef(Strtab.data() + Record[14], Record[15]));
 
   if (Record.size() > 16 && Record[16]) {
@@ -4505,9 +4509,11 @@ Error BitcodeReader::parseFunctionRecord(ArrayRef<uint64_t> Record) {
   // Record[16] is the address space number.
 
   // Check whether we have enough values to read a partition name. Also make
-  // sure Strtab has enough values.
-  if (Record.size() > 18 && Strtab.data() &&
-      Record[17] + Record[18] <= Strtab.size()) {
+  // sure Strtab has enough values. Compare without adding: both values are
+  // read from the file, so their sum can wrap and pass the check with an
+  // out-of-bounds offset (cf. the fix in readNameFromStrtab).
+  if (Record.size() > 18 && Strtab.data() && Record[17] <= Strtab.size() &&
+      Record[18] <= Strtab.size() - Record[17]) {
     Func->setPartition(StringRef(Strtab.data() + Record[17], Record[18]));
   }
 
@@ -4608,11 +4614,15 @@ Error BitcodeReader::parseGlobalIndirectSymbolRecord(
 
   // Check whether we have enough values to read a partition name.
   if (OpNum + 1 < Record.size()) {
-    // Check Strtab has enough values for the partition.
-    if (Record[OpNum] + Record[OpNum + 1] > Strtab.size())
+    // Check Strtab has enough values for the partition. Compare without
+    // adding: both values are read from the file, so their sum can wrap and
+    // pass the check with an out-of-bounds offset (cf. the fix in
+    // readNameFromStrtab).
+    uint64_t PartOffset = Record[OpNum], PartLength = Record[OpNum + 1];
+    if (PartOffset > Strtab.size() || PartLength > Strtab.size() - PartOffset)
       return error("Malformed partition, too large.");
     NewGA->setPartition(
-        StringRef(Strtab.data() + Record[OpNum], Record[OpNum + 1]));
+        StringRef(Strtab.data() + PartOffset, PartLength));
   }
 
   ValueList.push_back(NewGA, getVirtualTypeID(NewGA->getType(), TypeID));
