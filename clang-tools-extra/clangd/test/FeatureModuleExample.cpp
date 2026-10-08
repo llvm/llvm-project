@@ -8,7 +8,6 @@
 
 #include "FeatureModule.h"
 #include "refactor/Tweak.h"
-#include "support/Logger.h"
 
 namespace clang::clangd {
 namespace {
