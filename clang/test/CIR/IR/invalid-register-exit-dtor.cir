@@ -57,6 +57,27 @@ module {
 
 module {
   cir.func private @_ZN3TmpD1Ev(!cir.ptr<!rec_Tmp>)
+  cir.global "private" internal @_ZGR1r_ = #cir.zero : !rec_Tmp
+
+  cir.global external @r = ctor : !rec_Tmp {
+    // expected-error @below {{expects region #0 to have 0 or 1 blocks}}
+    cir.register_exit_dtor @_ZGR1r_ {
+      %0 = cir.get_global @_ZGR1r_ : !cir.ptr<!rec_Tmp>
+      cir.br ^bb1
+    ^bb1:
+      cir.call @_ZN3TmpD1Ev(%0) : (!cir.ptr<!rec_Tmp>) -> ()
+      cir.yield
+    }
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!rec_Tmp = !cir.struct<"Tmp" {pad !u8i}>
+
+module {
+  cir.func private @_ZN3TmpD1Ev(!cir.ptr<!rec_Tmp>)
 
   cir.global external @r = ctor : !rec_Tmp {
     // expected-error @below {{'missing' does not reference a valid cir.global}}
