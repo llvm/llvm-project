@@ -10,6 +10,7 @@ set(LLVM_LINK_COMPONENTS
 add_bolt_unittest(CoreTests
   BinaryContext.cpp
   ClusteredRows.cpp
+  JITLinkLinker.cpp
   MCPlusBuilder.cpp
   MemoryMaps.cpp
   DynoStats.cpp
