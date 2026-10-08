@@ -1172,20 +1172,20 @@ define <4 x i32> @pr_mla_4xi32(<4 x i32> %acc, <4 x i32> %lhs, <4 x i32> %rhs) #
 define <vscale x 2 x double> @pr_fma_nx2xdouble(<vscale x 2 x double> %acc, <vscale x 2 x double> %lhs, <vscale x 2 x double> %rhs) #0 {
 ; NEON-NOBF16-LABEL: pr_fma_nx2xdouble:
 ; NEON-NOBF16:       // %bb.0:
-; NEON-NOBF16-NEXT:    fmul z1.d, z1.d, z2.d
-; NEON-NOBF16-NEXT:    fadd z0.d, z0.d, z1.d
+; NEON-NOBF16-NEXT:    ptrue p0.d
+; NEON-NOBF16-NEXT:    fmla z0.d, p0/m, z1.d, z2.d
 ; NEON-NOBF16-NEXT:    ret
 ;
 ; NEON-BF16-LABEL: pr_fma_nx2xdouble:
 ; NEON-BF16:       // %bb.0:
-; NEON-BF16-NEXT:    fmul z1.d, z1.d, z2.d
-; NEON-BF16-NEXT:    fadd z0.d, z0.d, z1.d
+; NEON-BF16-NEXT:    ptrue p0.d
+; NEON-BF16-NEXT:    fmla z0.d, p0/m, z1.d, z2.d
 ; NEON-BF16-NEXT:    ret
 ;
 ; SVE-LABEL: pr_fma_nx2xdouble:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    fmul z1.d, z1.d, z2.d
-; SVE-NEXT:    fadd z0.d, z0.d, z1.d
+; SVE-NEXT:    ptrue p0.d
+; SVE-NEXT:    fmla z0.d, p0/m, z1.d, z2.d
 ; SVE-NEXT:    ret
   %fmul = fmul contract <vscale x 2 x double> %lhs, %rhs
   %res = call <vscale x 2 x double> @llvm.vector.partial.reduce.fadd(<vscale x 2 x double> %acc, <vscale x 2 x double> %fmul)
