@@ -9779,18 +9779,18 @@ define amdgpu_kernel void @test_limited_sgpr(ptr addrspace(1) %out, ptr addrspac
 ; GFX6-NEXT:    s_mov_b32 s2, 0x84c00
 ; GFX6-NEXT:    s_mov_b64 s[8:9], exec
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
-; GFX6-NEXT:    buffer_store_dword v0, off, s[40:43], s2 ; 4-byte Folded Spill
-; GFX6-NEXT:    buffer_store_dword v1, off, s[40:43], s2 offset:4 ; 4-byte Folded Spill
-; GFX6-NEXT:    buffer_store_dword v2, off, s[40:43], s2 offset:8 ; 4-byte Folded Spill
-; GFX6-NEXT:    buffer_store_dword v3, off, s[40:43], s2 offset:12 ; 4-byte Folded Spill
+; GFX6-NEXT:    buffer_store_dword v7, off, s[40:43], s2 ; 4-byte Folded Spill
+; GFX6-NEXT:    buffer_store_dword v8, off, s[40:43], s2 offset:4 ; 4-byte Folded Spill
+; GFX6-NEXT:    buffer_store_dword v9, off, s[40:43], s2 offset:8 ; 4-byte Folded Spill
+; GFX6-NEXT:    buffer_store_dword v10, off, s[40:43], s2 offset:12 ; 4-byte Folded Spill
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
 ; GFX6-NEXT:    buffer_load_dwordx4 v[0:3], v[9:10], s[4:7], 0 addr64 offset:224
 ; GFX6-NEXT:    s_mov_b32 s2, 0x84800
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
-; GFX6-NEXT:    buffer_store_dword v0, off, s[40:43], s2 ; 4-byte Folded Spill
-; GFX6-NEXT:    buffer_store_dword v1, off, s[40:43], s2 offset:4 ; 4-byte Folded Spill
-; GFX6-NEXT:    buffer_store_dword v2, off, s[40:43], s2 offset:8 ; 4-byte Folded Spill
-; GFX6-NEXT:    buffer_store_dword v3, off, s[40:43], s2 offset:12 ; 4-byte Folded Spill
+; GFX6-NEXT:    buffer_store_dword v7, off, s[40:43], s2 ; 4-byte Folded Spill
+; GFX6-NEXT:    buffer_store_dword v8, off, s[40:43], s2 offset:4 ; 4-byte Folded Spill
+; GFX6-NEXT:    buffer_store_dword v9, off, s[40:43], s2 offset:8 ; 4-byte Folded Spill
+; GFX6-NEXT:    buffer_store_dword v10, off, s[40:43], s2 offset:12 ; 4-byte Folded Spill
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
 ; GFX6-NEXT:    buffer_load_dwordx4 v[0:3], v[9:10], s[4:7], 0 addr64 offset:208
 ; GFX6-NEXT:    s_mov_b32 s2, 0x84400
@@ -9972,6 +9972,11 @@ define amdgpu_kernel void @test_limited_sgpr(ptr addrspace(1) %out, ptr addrspac
 ; GFX6-NEXT:    ;;#ASMSTART
 ; GFX6-NEXT:    ; def s33
 ; GFX6-NEXT:    ;;#ASMEND
+; GFX6-NEXT:    buffer_store_dword v8, off, s[40:43], s6 ; 4-byte Folded Spill
+; GFX6-NEXT:    buffer_store_dword v9, off, s[40:43], s6 offset:4 ; 4-byte Folded Spill
+; GFX6-NEXT:    buffer_store_dword v10, off, s[40:43], s6 offset:8 ; 4-byte Folded Spill
+; GFX6-NEXT:    buffer_store_dword v11, off, s[40:43], s6 offset:12 ; 4-byte Folded Spill
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v8
 ; GFX6-NEXT:    s_and_saveexec_b64 s[34:35], vcc
 ; GFX6-NEXT:    s_cbranch_execz .LBB1_2
 ; GFX6-NEXT:  ; %bb.1: ; %bb0

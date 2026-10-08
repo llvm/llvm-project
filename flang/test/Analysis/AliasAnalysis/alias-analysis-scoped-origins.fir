@@ -27,10 +27,10 @@ func.func @_QPtest_two_dummies(
     %arg1: !fir.ref<f32> {fir.bindc_name = "y"}) {
   %scope = fir.dummy_scope : !fir.dscope
   %x:2 = hlfir.declare %arg0 dummy_scope %scope
-      {test.ptr = "x", uniq_name = "_QFtest_two_dummiesEx"}
+      uniq_name("_QFtest_two_dummiesEx") {test.ptr = "x"}
       : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   %y:2 = hlfir.declare %arg1 dummy_scope %scope
-      {test.ptr = "y", uniq_name = "_QFtest_two_dummiesEy"}
+      uniq_name("_QFtest_two_dummiesEy") {test.ptr = "y"}
       : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
@@ -48,11 +48,11 @@ func.func @_QPtest_dummy_vs_local(
     %arg0: !fir.ref<f32> {fir.bindc_name = "x"}) {
   %scope = fir.dummy_scope : !fir.dscope
   %x:2 = hlfir.declare %arg0 dummy_scope %scope
-      {test.ptr = "x", uniq_name = "_QFtest_dummy_vs_localEx"}
+      uniq_name("_QFtest_dummy_vs_localEx") {test.ptr = "x"}
       : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   %alloca = fir.alloca f32 {bindc_name = "l", uniq_name = "_QFtest_dummy_vs_localEl"}
   %l:2 = hlfir.declare %alloca
-      {test.ptr = "l", uniq_name = "_QFtest_dummy_vs_localEl"}
+      uniq_name("_QFtest_dummy_vs_localEl") {test.ptr = "l"}
       : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
@@ -70,12 +70,10 @@ func.func @_QPtest_target_dummy(
     %arg1: !fir.ref<f32> {fir.bindc_name = "y"}) {
   %scope = fir.dummy_scope : !fir.dscope
   %xt:2 = hlfir.declare %arg0 dummy_scope %scope
-      {fortran_attrs = #fir.var_attrs<target>, test.ptr = "xt",
-       uniq_name = "_QFtest_target_dummyExt"}
+      uniq_name("_QFtest_target_dummyExt") fortran_attrs<target> {test.ptr = "xt"}
       : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   %y:2 = hlfir.declare %arg1 dummy_scope %scope
-      {fortran_attrs = #fir.var_attrs<target>, test.ptr = "y",
-       uniq_name = "_QFtest_target_dummyEy"}
+      uniq_name("_QFtest_target_dummyEy") fortran_attrs<target> {test.ptr = "y"}
       : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
@@ -93,7 +91,7 @@ func.func @_QPtest_same_declare(
     %arg0: !fir.ref<f32> {fir.bindc_name = "x"}) {
   %scope = fir.dummy_scope : !fir.dscope
   %x:2 = hlfir.declare %arg0 dummy_scope %scope
-      {test.ptr = "x", uniq_name = "_QFtest_same_declareEx"}
+      uniq_name("_QFtest_same_declareEx") {test.ptr = "x"}
       : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
@@ -112,10 +110,10 @@ func.func @_QPtest_two_dummies_fir(
     %arg1: !fir.ref<f32> {fir.bindc_name = "y"}) {
   %scope = fir.dummy_scope : !fir.dscope
   %x = fir.declare %arg0 dummy_scope %scope
-      {test.ptr = "x.fir", uniq_name = "_QFtest_two_dummies_firEx"}
+      uniq_name("_QFtest_two_dummies_firEx") {test.ptr = "x.fir"}
       : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
   %y = fir.declare %arg1 dummy_scope %scope
-      {test.ptr = "y.fir", uniq_name = "_QFtest_two_dummies_firEy"}
+      uniq_name("_QFtest_two_dummies_firEy") {test.ptr = "y.fir"}
       : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
   return
 }
@@ -153,12 +151,10 @@ func.func @_QPtest_nested_inline_region_branch(
   // its own fir.dummy_scope.
   %outer = fir.dummy_scope : !fir.dscope
   %f_outer = fir.declare %arg0 dummy_scope %outer
-      {fortran_attrs = #fir.var_attrs<intent_inout>,
-       uniq_name = "_QFcallerEfield"}
+      uniq_name("_QFcallerEfield") fortran_attrs<intent_inout>
       : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
   %v_outer = fir.declare %arg1 dummy_scope %outer
-      {fortran_attrs = #fir.var_attrs<intent_in, optional>,
-       uniq_name = "_QFcallerEvalue"}
+      uniq_name("_QFcallerEvalue") fortran_attrs<intent_in, optional>
       : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
   // field: contiguity copy-in select -> caller actual or a local temp.
   %ftmp = fir.alloca f32
@@ -178,12 +174,10 @@ func.func @_QPtest_nested_inline_region_branch(
   // Inner (inlined) frame: distinct dummies sharing one fir.dummy_scope.
   %inner = fir.dummy_scope : !fir.dscope
   %f_inner = fir.declare %f_sel dummy_scope %inner
-      {fortran_attrs = #fir.var_attrs<intent_inout>, test.ptr = "field",
-       uniq_name = "_QFinnerEfield"}
+      uniq_name("_QFinnerEfield") fortran_attrs<intent_inout> {test.ptr = "field"}
       : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
   %v_inner = fir.declare %v_sel dummy_scope %inner
-      {fortran_attrs = #fir.var_attrs<intent_in>, test.ptr = "value",
-       uniq_name = "_QFinnerEvalue"}
+      uniq_name("_QFinnerEvalue") fortran_attrs<intent_in> {test.ptr = "value"}
       : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
   return
 }
@@ -208,11 +202,11 @@ func.func @_QPtest_associate_rename_dummy(
     %arg0: !fir.ref<f32> {fir.bindc_name = "x"}) {
   %scope = fir.dummy_scope : !fir.dscope
   %x:2 = hlfir.declare %arg0 dummy_scope %scope
-      {test.ptr = "x", uniq_name = "_QFtest_associate_rename_dummyEx"}
+      uniq_name("_QFtest_associate_rename_dummyEx") {test.ptr = "x"}
       : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   // associate(y => x): chained declare, no dummy_scope.
   %y:2 = hlfir.declare %x#0
-      {test.ptr = "y", uniq_name = "_QFtest_associate_rename_dummyEy"}
+      uniq_name("_QFtest_associate_rename_dummyEy") {test.ptr = "y"}
       : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
@@ -233,17 +227,17 @@ func.func @_QPtest_associate_two_dummies(
     %arg1: !fir.ref<f32> {fir.bindc_name = "y"}) {
   %scope = fir.dummy_scope : !fir.dscope
   %x:2 = hlfir.declare %arg0 dummy_scope %scope
-      {uniq_name = "_QFtest_associate_two_dummiesEx"}
+      uniq_name("_QFtest_associate_two_dummiesEx")
       : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   %y:2 = hlfir.declare %arg1 dummy_scope %scope
-      {uniq_name = "_QFtest_associate_two_dummiesEy"}
+      uniq_name("_QFtest_associate_two_dummiesEy")
       : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   // associate(a => x, b => y): chained declares, no dummy_scope.
   %a:2 = hlfir.declare %x#0
-      {test.ptr = "a", uniq_name = "_QFtest_associate_two_dummiesEa"}
+      uniq_name("_QFtest_associate_two_dummiesEa") {test.ptr = "a"}
       : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   %b:2 = hlfir.declare %y#0
-      {test.ptr = "b", uniq_name = "_QFtest_associate_two_dummiesEb"}
+      uniq_name("_QFtest_associate_two_dummiesEb") {test.ptr = "b"}
       : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
@@ -267,17 +261,16 @@ func.func @_QPtest_associate_same_array(
   %scope = fir.dummy_scope : !fir.dscope
   %shape = fir.shape %n : (index) -> !fir.shape<1>
   %v = fir.declare %arg0(%shape) dummy_scope %scope
-      {fortran_attrs = #fir.var_attrs<intent_inout>,
-       uniq_name = "_QFtest_associate_same_arrayEv"}
+      uniq_name("_QFtest_associate_same_arrayEv") fortran_attrs<intent_inout>
       : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope)
         -> !fir.ref<!fir.array<?xf32>>
   // associate(a => v, b => v): chained declares, no dummy_scope.
   %a = fir.declare %v(%shape)
-      {uniq_name = "_QFtest_associate_same_arrayEa"}
+      uniq_name("_QFtest_associate_same_arrayEa")
       : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>)
         -> !fir.ref<!fir.array<?xf32>>
   %b = fir.declare %v(%shape)
-      {uniq_name = "_QFtest_associate_same_arrayEb"}
+      uniq_name("_QFtest_associate_same_arrayEb")
       : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>)
         -> !fir.ref<!fir.array<?xf32>>
   %a_elem = fir.array_coor %a(%shape) %i {test.ptr = "a_elem"}

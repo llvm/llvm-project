@@ -12,6 +12,7 @@
 #include <optional>
 
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/Threading.h"
 
@@ -200,6 +201,12 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
     m_collection_sp->SetValueChangedCallback(
         ePropertyDisableLangRuntimeUnwindPlans,
         [this] { DisableLanguageRuntimeUnwindPlansCallback(); });
+    m_collection_sp->SetValueChangedCallback(
+        ePropertyVirtualAddressableBits,
+        [this] { AddressMaskChangedCallback(); });
+    m_collection_sp->SetValueChangedCallback(
+        ePropertyHighmemVirtualAddressableBits,
+        [this] { AddressMaskChangedCallback(); });
   }
 }
 
@@ -262,6 +269,18 @@ uint32_t ProcessProperties::GetHighmemVirtualAddressableBits() const {
 void ProcessProperties::SetHighmemVirtualAddressableBits(uint32_t bits) {
   const uint32_t idx = ePropertyHighmemVirtualAddressableBits;
   SetPropertyAtIndex(idx, static_cast<uint64_t>(bits));
+}
+
+void ProcessProperties::AddressMaskChangedCallback() {
+  if (!m_process)
+    return;
+  Process::StopLocker stop_locker;
+  if (!stop_locker.TryLock(&m_process->GetRunLock()))
+    return;
+  // Never call this from address-fixing code, which runs while frames are being
+  // constructed.
+  for (ThreadSP thread_sp : m_process->Threads())
+    thread_sp->ClearStackFrames();
 }
 
 void ProcessProperties::SetPythonOSPluginPath(const FileSpec &file) {
@@ -560,6 +579,9 @@ Process::~Process() {
   Log *log = GetLog(LLDBLog::Object);
   LLDB_LOGF(log, "%p Process::~Process()", static_cast<void *>(this));
   StopPrivateStateThread();
+
+  // Close the secondary to make sure the pty is not retained.
+  CloseSTDIOSecondaryFileDescriptor();
 
   // ThreadList::Clear() will try to acquire this process's mutex, so
   // explicitly clear the thread list here to ensure that the mutex is not
@@ -1238,7 +1260,8 @@ bool Process::PruneThreadPlansForTID(lldb::tid_t tid) {
 }
 
 void Process::PruneThreadPlans() {
-  m_thread_plans.Update(GetThreadList(), true, false);
+  UpdateThreadListIfNeeded();
+  m_thread_plans.Update(m_thread_list, true, false);
 }
 
 bool Process::DumpThreadPlansForTID(Stream &strm, lldb::tid_t tid,
@@ -2739,27 +2762,9 @@ addr_t Process::CallocateMemory(size_t size, uint32_t permissions,
 bool Process::CanJIT() {
   if (m_can_jit == eCanJITDontKnow) {
     Log *log = GetLog(LLDBLog::Process);
-    Status err;
-
-    uint64_t allocated_memory = AllocateMemory(
-        8, ePermissionsReadable | ePermissionsWritable | ePermissionsExecutable,
-        err);
-
-    if (err.Success()) {
-      m_can_jit = eCanJITYes;
-      LLDB_LOGF(log,
-                "Process::%s pid %" PRIu64
-                " allocation test passed, CanJIT () is true",
-                __FUNCTION__, GetID());
-    } else {
-      m_can_jit = eCanJITNo;
-      LLDB_LOGF(log,
-                "Process::%s pid %" PRIu64
-                " allocation test failed, CanJIT () is false: %s",
-                __FUNCTION__, GetID(), err.AsCString());
-    }
-
-    DeallocateMemory(allocated_memory);
+    m_can_jit = DoCanAllocateMemory() ? eCanJITYes : eCanJITNo;
+    LLDB_LOGF(log, "Process::%s pid %" PRIu64 " CanJIT () is %s", __FUNCTION__,
+              GetID(), m_can_jit == eCanJITYes ? "true" : "false");
   }
 
   return m_can_jit == eCanJITYes;
@@ -3483,8 +3488,13 @@ void Process::CompleteAttach() {
     }
   }
   if (new_executable_module_sp) {
-    GetTarget().SetExecutableModule(new_executable_module_sp,
-                                    eLoadDependentsNo);
+    // Replacing an executable clears the images, which would drop the
+    // modules the loader already found.
+    if (GetTarget().GetExecutableModulePointer())
+      GetTarget().RebuildModuleListWithExecutable(new_executable_module_sp,
+                                                  eLoadDependentsNo);
+    else
+      GetTarget().MarkExecutableModule(new_executable_module_sp);
     if (log) {
       ModuleSP exe_module_sp = GetTarget().GetExecutableModule();
       LLDB_LOGF(
@@ -3883,9 +3893,9 @@ Status Process::DestroyImpl(bool force_kill) {
       DidDestroy();
       StopPrivateStateThread();
     }
-    m_stdio_communication.StopReadThread();
-    m_stdio_communication.Disconnect();
-    m_stdin_forward = false;
+    // Not draining: We are tearing the process down, so we don't care about its
+    // remaining output as no one could read it.
+    StopSTDIOMonitoring(/*drain=*/false);
 
     {
       std::lock_guard<std::mutex> guard(m_process_input_reader_mutex);
@@ -3954,10 +3964,9 @@ bool Process::ShouldBroadcastEvent(Event *event_ptr) {
   case eStateDetached:
   case eStateExited:
   case eStateUnloaded:
-    m_stdio_communication.SynchronizeWithReadThread();
-    m_stdio_communication.StopReadThread();
-    m_stdio_communication.Disconnect();
-    m_stdin_forward = false;
+    // The inferior is gone, so this is our last chance to pick up whatever it
+    // wrote before it went away.
+    StopSTDIOMonitoring(/*drain=*/true);
 
     [[fallthrough]];
   case eStateConnected:
@@ -4989,7 +4998,13 @@ void Process::STDIOReadThreadBytesReceived(void *baton, const void *src,
   process->AppendSTDOUT(static_cast<const char *>(src), src_len);
 }
 
-void Process::SetSTDIOFileDescriptor(int fd) {
+void Process::SetSTDIOFileDescriptor(int fd, std::optional<int> secondary_fd) {
+  {
+    auto stdio_secondary_fd = m_stdio_secondary_fd.Lock();
+    assert(!*stdio_secondary_fd && "process stdio is already set up");
+    *stdio_secondary_fd = secondary_fd;
+  }
+
   // First set up the Read Thread for reading/handling process I/O
   m_stdio_communication.SetConnection(
       std::make_unique<ConnectionFileDescriptor>(fd, true));
@@ -5005,7 +5020,46 @@ void Process::SetSTDIOFileDescriptor(int fd) {
         m_process_input_reader =
             std::make_shared<IOHandlerProcessSTDIO>(this, fd);
     }
+  } else {
+    // Nobody is going to read the primary side, so there is no point in keeping
+    // the terminal alive.
+    CloseSTDIOSecondaryFileDescriptor();
   }
+}
+
+#if !defined(_WIN32)
+void Process::SetSTDIOPseudoTerminal(PseudoTerminal &pty) {
+  // Take a descriptor for the secondary side so it is kept alive.
+  if (llvm::Error err = pty.OpenSecondary(O_RDWR | O_NOCTTY | O_CLOEXEC))
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Process), std::move(err),
+                   "failed to open the secondary side of the inferior's "
+                   "terminal: {0}");
+
+  std::optional<int> secondary_fd;
+  if (int fd = pty.ReleaseSecondaryFileDescriptor();
+      fd != PseudoTerminal::invalid_fd)
+    secondary_fd = fd;
+  SetSTDIOFileDescriptor(pty.ReleasePrimaryFileDescriptor(), secondary_fd);
+}
+#endif
+
+void Process::StopSTDIOMonitoring(bool drain) {
+  if (drain) {
+    // Collect everything the inferior has written.
+    m_stdio_communication.SynchronizeWithReadThread();
+  }
+
+  // Nothing is left to read, so let go of the terminal.
+  CloseSTDIOSecondaryFileDescriptor();
+
+  m_stdio_communication.StopReadThread();
+  m_stdio_communication.Disconnect();
+  m_stdin_forward = false;
+}
+
+void Process::CloseSTDIOSecondaryFileDescriptor() {
+  if (std::optional<int> fd = std::exchange(*m_stdio_secondary_fd.Lock(), {}))
+    llvm::sys::Process::SafelyCloseFileDescriptor(*fd);
 }
 
 bool Process::ProcessIOHandlerIsActive() {
@@ -5184,7 +5238,7 @@ HandleStoppedEvent(lldb::tid_t thread_id, const ThreadPlanSP &thread_plan_sp,
 ExpressionResults
 Process::RunThreadPlan(ExecutionContext &exe_ctx,
                        lldb::ThreadPlanSP &thread_plan_sp,
-                       const EvaluateExpressionOptions &options,
+                       const EvaluateExpressionOptions &requested_options,
                        DiagnosticManager &diagnostic_manager) {
   ExpressionResults return_value = eExpressionSetupError;
 
@@ -5219,6 +5273,31 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
   // Record the thread's id so we can tell when a thread we were using
   // to run the expression exits during the expression evaluation.
   lldb::tid_t expr_thread_id = thread->GetID();
+
+  // Clearing stop-others is a request to run the inferior's other threads, and
+  // it is not the default, so refuse it outright rather than quietly running
+  // single-threaded. Asking for the all-threads retry is refused the same way,
+  // since it resumes those same threads a moment later.
+  EvaluateExpressionOptions options = requested_options;
+  const Policy policy = PolicyStack::Get().Current();
+  if (!policy.capabilities.can_run_all_threads) {
+    if (!options.GetStopOthers()) {
+      diagnostic_manager.PutString(
+          lldb::eSeverityError,
+          "cannot run the process's other threads to evaluate this "
+          "expression: the current context does not allow resuming them");
+      return eExpressionSetupError;
+    }
+    options.SetTryAllThreads(false);
+  } else if (!policy.capabilities.can_try_all_threads) {
+    if (options.GetTryAllThreads()) {
+      diagnostic_manager.PutString(
+          lldb::eSeverityError,
+          "cannot retry this expression with the process's other threads "
+          "running: the current context does not allow that fallback");
+      return eExpressionSetupError;
+    }
+  }
 
   // We need to change some of the thread plan attributes for the thread plan
   // runner.  This will restore them when we are done:
@@ -6667,14 +6746,25 @@ Status Process::UpdateAutomaticSignalFiltering() {
   return Status();
 }
 
-UtilityFunction *Process::GetLoadImageUtilityFunction(
+llvm::Expected<UtilityFunction &> Process::GetLoadImageUtilityFunction(
     Platform *platform,
-    llvm::function_ref<std::unique_ptr<UtilityFunction>()> factory) {
+    llvm::function_ref<llvm::Expected<std::unique_ptr<UtilityFunction>>()>
+        factory) {
   if (platform != GetTarget().GetPlatform().get())
-    return nullptr;
-  llvm::call_once(m_dlopen_utility_func_flag_once,
-                  [&] { m_dlopen_utility_func_up = factory(); });
-  return m_dlopen_utility_func_up.get();
+    return llvm::createStringError(
+        "the platform requesting the load-image utility function is not "
+        "the target's platform");
+  llvm::call_once(m_dlopen_utility_func_flag_once, [&] {
+    llvm::Expected<std::unique_ptr<UtilityFunction>> factory_result = factory();
+    if (factory_result)
+      m_dlopen_utility_func_up = std::move(*factory_result);
+    else
+      m_dlopen_utility_func_error =
+          Status::FromError(factory_result.takeError());
+  });
+  if (m_dlopen_utility_func_up)
+    return *m_dlopen_utility_func_up;
+  return m_dlopen_utility_func_error.ToError();
 }
 
 llvm::Expected<TraceSupportedResponse> Process::TraceSupported() {

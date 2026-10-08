@@ -463,6 +463,7 @@ define amdgpu_kernel void @single_exit_copy(
 ; CHECK-NEXT:    global_store_dwordx4 v0, v[248:251], s[0:1] offset:1984
 ; CHECK-NEXT:    global_store_dwordx4 v0, v[228:231], s[0:1] offset:1968
 ; CHECK-NEXT:    v_accvgpr_read_b32 v243, a3
+; CHECK-NEXT:    v_mov_b32_e32 v248, 0
 ; CHECK-NEXT:    v_accvgpr_read_b32 v242, a2
 ; CHECK-NEXT:    v_accvgpr_read_b32 v241, a1
 ; CHECK-NEXT:    v_accvgpr_read_b32 v240, a0

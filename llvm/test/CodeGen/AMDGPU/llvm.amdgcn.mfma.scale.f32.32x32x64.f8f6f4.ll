@@ -6172,15 +6172,15 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_0_0_sgpr_vgpr_sgpr__vgp
 ; SDAG-NEXT:    v_mov_b32_e32 v31, s17
 ; SDAG-NEXT:    v_mov_b32_e32 v32, s18
 ; SDAG-NEXT:    v_mov_b32_e32 v33, s19
-; SDAG-NEXT:    v_mov_b32_e32 v16, v15
+; SDAG-NEXT:    v_mov_b32_e32 v17, v15
 ; SDAG-NEXT:    v_readfirstlane_b32 s4, v13
 ; SDAG-NEXT:    v_readfirstlane_b32 s5, v12
 ; SDAG-NEXT:    v_readfirstlane_b32 s6, v11
 ; SDAG-NEXT:    v_readfirstlane_b32 s7, v10
 ; SDAG-NEXT:    v_readfirstlane_b32 s8, v9
 ; SDAG-NEXT:    v_readfirstlane_b32 s9, v8
-; SDAG-NEXT:    v_readfirstlane_b32 s0, v16
-; SDAG-NEXT:    v_mov_b32_e32 v17, v14
+; SDAG-NEXT:    v_readfirstlane_b32 s0, v17
+; SDAG-NEXT:    v_mov_b32_e32 v16, v14
 ; SDAG-NEXT:    v_mov_b32_e32 v25, v7
 ; SDAG-NEXT:    v_mov_b32_e32 v24, v6
 ; SDAG-NEXT:    v_mov_b32_e32 v23, v5
@@ -6205,9 +6205,9 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_0_0_sgpr_vgpr_sgpr__vgp
 ; SDAG-NEXT:    v_mov_b32_e32 v13, s6
 ; SDAG-NEXT:    v_mov_b32_e32 v14, s5
 ; SDAG-NEXT:    v_mov_b32_e32 v15, s4
-; SDAG-NEXT:    v_mov_b32_e32 v16, s0
+; SDAG-NEXT:    v_mov_b32_e32 v17, s0
 ; SDAG-NEXT:    s_nop 1
-; SDAG-NEXT:    v_mfma_scale_f32_32x32x64_f8f6f4 v[0:15], v[26:33], v[18:25], v[0:15], v17, v16 op_sel_hi:[0,0,0]
+; SDAG-NEXT:    v_mfma_scale_f32_32x32x64_f8f6f4 v[0:15], v[26:33], v[18:25], v[0:15], v16, v17 op_sel_hi:[0,0,0]
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: test_mfma_scale_f32_32x32x64_f8f6f4_0_0_sgpr_vgpr_sgpr__vgpr_sgpr:

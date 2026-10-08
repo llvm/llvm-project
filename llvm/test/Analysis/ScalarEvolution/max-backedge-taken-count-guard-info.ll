@@ -2042,3 +2042,33 @@ loop:
 exit:
   ret void
 }
+
+define void @guard_on_ptrtoaddr(ptr %p) {
+; CHECK-LABEL: 'guard_on_ptrtoaddr'
+; CHECK-NEXT:  Classifying expressions for: @guard_on_ptrtoaddr
+; CHECK-NEXT:    %n = ptrtoaddr ptr %p to i64
+; CHECK-NEXT:    --> (ptrtoaddr ptr %p to i64) U: full-set S: full-set
+; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,1001) S: [0,1001) Exits: (ptrtoaddr ptr %p to i64) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,1002) S: [1,1002) Exits: (1 + (ptrtoaddr ptr %p to i64))<u nuw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @guard_on_ptrtoaddr
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (ptrtoaddr ptr %p to i64)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 1000
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (ptrtoaddr ptr %p to i64)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %n = ptrtoaddr ptr %p to i64
+  %c = icmp ugt i64 %n, 1000
+  br i1 %c, label %exit, label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
