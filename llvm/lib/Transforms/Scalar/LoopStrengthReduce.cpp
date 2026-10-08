@@ -1253,6 +1253,8 @@ public:
 
   bool isLess(const Cost &Other) const;
 
+  unsigned getNumInsns() const { return C.Insns; }
+
   void Lose();
 
 #ifndef NDEBUG
@@ -2332,6 +2334,7 @@ class LSRInstance {
   void NarrowSearchSpaceByFilterPostInc();
   void NarrowSearchSpaceByMergingUsesOutsideLoop();
   void NarrowSearchSpaceByDeletingCostlyFormulas();
+  Cost rateWinnerRegCandidate(const SCEV *Reg) const;
   void NarrowSearchSpaceByPickingWinnerRegs();
   void NarrowSearchSpaceUsingHeuristics();
 
@@ -5498,6 +5501,33 @@ static bool IsSimplerBaseSCEVForTarget(const TargetTransformInfo &TTI,
              /*HasBaseReg=*/true, /*Scale=*/0, AccessType.AddrSpace);
 }
 
+/// Estimate what committing to \p Reg costs: in each use that references it,
+/// take the cheapest formula that does, and rate the chosen formulae together
+/// so that registers they share are counted once.
+Cost LSRInstance::rateWinnerRegCandidate(const SCEV *Reg) const {
+  Cost Total(L, SE, TTI, AMK);
+  SmallPtrSet<const SCEV *, 16> TotalRegs;
+  for (int LUIdx : RegUses.getUsedByIndices(Reg).set_bits()) {
+    const LSRUse &LU = Uses[LUIdx];
+    const Formula *BestF = nullptr;
+    std::optional<Cost> BestFCost;
+    for (const Formula &F : LU.Formulae) {
+      if (!F.referencesReg(Reg))
+        continue;
+      Cost FCost(L, SE, TTI, AMK);
+      SmallPtrSet<const SCEV *, 4> Regs;
+      FCost.RateFormula(F, Regs, {}, LU, HardwareLoopProfitable);
+      if (!BestFCost || FCost.isLess(*BestFCost)) {
+        BestF = &F;
+        BestFCost = FCost;
+      }
+    }
+    if (BestF)
+      Total.RateFormula(*BestF, TotalRegs, {}, LU, HardwareLoopProfitable);
+  }
+  return Total;
+}
+
 /// Pick a register which seems likely to be profitable, and then in any use
 /// which has any reference to that register, delete all formulae which do not
 /// reference that register.
@@ -5514,6 +5544,8 @@ void LSRInstance::NarrowSearchSpaceByPickingWinnerRegs() {
     // to be a good reuse register candidate.
     const SCEV *Best = nullptr;
     unsigned BestNum = 0;
+    // The cost of committing to Best, computed when a tie needs it.
+    std::optional<Cost> BestCost;
     for (const SCEV *Reg : RegUses) {
       if (Taken.count(Reg))
         continue;
@@ -5525,18 +5557,33 @@ void LSRInstance::NarrowSearchSpaceByPickingWinnerRegs() {
         if (Count > BestNum) {
           Best = Reg;
           BestNum = Count;
-        }
-
-        // If the scores are the same, but the Reg is simpler for the target
-        // (for example {x,+,1} as opposed to {x+C,+,1}, where the target can
-        // handle +C but not -C), opt for the simpler formula.
-        if (Count == BestNum) {
+          BestCost.reset();
+        } else if (Count == BestNum) {
+          // If the scores are the same, but the Reg is simpler for the target
+          // (for example {x,+,1} as opposed to {x+C,+,1}, where the target can
+          // handle +C but not -C), opt for the simpler formula. If neither is
+          // simpler, opt for the one whose formulae are cheaper, e.g. {x,+,1}
+          // over {x+1,+,1} when the latter makes equality compares against x
+          // add up the IV and a negated bound.
           int LUIdx = RegUses.getUsedByIndices(Reg).find_first();
-          if (LUIdx >= 0 && Uses[LUIdx].Kind == LSRUse::Address &&
-              IsSimplerBaseSCEVForTarget(TTI, SE, Best, Reg,
-                                         Uses[LUIdx].AccessTy)) {
+          bool IsAddress = LUIdx >= 0 && Uses[LUIdx].Kind == LSRUse::Address;
+          if (IsAddress && IsSimplerBaseSCEVForTarget(TTI, SE, Best, Reg,
+                                                      Uses[LUIdx].AccessTy)) {
             Best = Reg;
-            BestNum = Count;
+            BestCost.reset();
+          } else if ((!IsAddress ||
+                      !IsSimplerBaseSCEVForTarget(TTI, SE, Reg, Best,
+                                                  Uses[LUIdx].AccessTy)) &&
+                     InsnsCost && Best->getType() == Reg->getType() &&
+                     SE.computeConstantDifference(Best, Reg)) {
+            if (!BestCost)
+              BestCost = rateWinnerRegCandidate(Best);
+            Cost RegCost = rateWinnerRegCandidate(Reg);
+            if (RegCost.getNumInsns() < BestCost->getNumInsns() &&
+                RegCost.isLess(*BestCost)) {
+              Best = Reg;
+              BestCost = RegCost;
+            }
           }
         }
       }

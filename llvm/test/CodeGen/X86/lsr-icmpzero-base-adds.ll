@@ -221,35 +221,29 @@ define float @winner_reg_tie(ptr %p, i64 %start, i64 %stop, i64 %a, i64 %b, i64 
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    cmpq %rsi, %rcx
 ; CHECK-NEXT:    cmovbeq %rsi, %rcx
-; CHECK-NEXT:    negq %rdx
+; CHECK-NEXT:    incq %rdx
 ; CHECK-NEXT:    leaq (%rdi,%rax,4), %rax
 ; CHECK-NEXT:    movq %r9, %rdi
 ; CHECK-NEXT:    imulq %rsi, %rdi
-; CHECK-NEXT:    incq %rsi
 ; CHECK-NEXT:    decq %rdi
-; CHECK-NEXT:    negq %r8
-; CHECK-NEXT:    negq %rcx
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB2_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    leaq (%rcx,%rsi), %r10
-; CHECK-NEXT:    cmpq $1, %r10
+; CHECK-NEXT:    cmpq %rsi, %rcx
 ; CHECK-NEXT:    je .LBB2_5
 ; CHECK-NEXT:  # %bb.2: # %bb2
 ; CHECK-NEXT:    # in Loop: Header=BB2_1 Depth=1
-; CHECK-NEXT:    leaq (%r8,%rsi), %r10
-; CHECK-NEXT:    cmpq $1, %r10
+; CHECK-NEXT:    cmpq %rsi, %r8
 ; CHECK-NEXT:    je .LBB2_5
 ; CHECK-NEXT:  # %bb.3: # %latch
 ; CHECK-NEXT:    # in Loop: Header=BB2_1 Depth=1
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    mulss -4(%rax,%rsi,4), %xmm1
-; CHECK-NEXT:    addss %xmm1, %xmm0
-; CHECK-NEXT:    leaq 1(%rdx,%rsi), %r10
+; CHECK-NEXT:    mulss (%rax,%rsi,4), %xmm1
 ; CHECK-NEXT:    incq %rsi
+; CHECK-NEXT:    addss %xmm1, %xmm0
 ; CHECK-NEXT:    addq %r9, %rdi
-; CHECK-NEXT:    cmpq $2, %r10
+; CHECK-NEXT:    cmpq %rsi, %rdx
 ; CHECK-NEXT:    jne .LBB2_1
 ; CHECK-NEXT:  # %bb.4: # %exit
 ; CHECK-NEXT:    popq %rax
@@ -257,6 +251,7 @@ define float @winner_reg_tie(ptr %p, i64 %start, i64 %stop, i64 %a, i64 %b, i64 
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB2_5: # %exit2
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    incq %rsi
 ; CHECK-NEXT:    movq %rsi, %rdi
 ; CHECK-NEXT:    callq throw@PLT
 entry:
