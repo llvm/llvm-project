@@ -8,13 +8,13 @@
 
 define void @pdep() {
 ; NOBMI2-LABEL: 'pdep'
-; NOBMI2-NEXT:  Cost Model: Found costs of 95 for: %i8 = call i8 @llvm.pdep.i8(i8 poison, i8 poison)
-; NOBMI2-NEXT:  Cost Model: Found costs of 222 for: %i16 = call i16 @llvm.pdep.i16(i16 poison, i16 poison)
+; NOBMI2-NEXT:  Cost Model: Found costs of RThru:86 CodeSize:62 Lat:98 SizeLat:62 for: %i8 = call i8 @llvm.pdep.i8(i8 poison, i8 poison)
+; NOBMI2-NEXT:  Cost Model: Found costs of RThru:170 CodeSize:134 Lat:242 SizeLat:134 for: %i16 = call i16 @llvm.pdep.i16(i16 poison, i16 poison)
 ; NOBMI2-NEXT:  Cost Model: Found costs of RThru:252 CodeSize:252 Lat:492 SizeLat:252 for: %i32 = call i32 @llvm.pdep.i32(i32 poison, i32 poison)
 ; NOBMI2-NEXT:  Cost Model: Found costs of RThru:398 CodeSize:302 Lat:782 SizeLat:398 for: %i64 = call i64 @llvm.pdep.i64(i64 poison, i64 poison)
 ; NOBMI2-NEXT:  Cost Model: Found costs of RThru:5478 CodeSize:5463 Lat:4531 SizeLat:4531 for: %i128 = call i128 @llvm.pdep.i128(i128 poison, i128 poison)
-; NOBMI2-NEXT:  Cost Model: Found costs of 1551 for: %v16i8 = call <16 x i8> @llvm.pdep.v16i8(<16 x i8> poison, <16 x i8> poison)
-; NOBMI2-NEXT:  Cost Model: Found costs of 1784 for: %v8i16 = call <8 x i16> @llvm.pdep.v8i16(<8 x i16> poison, <8 x i16> poison)
+; NOBMI2-NEXT:  Cost Model: Found costs of RThru:1407 CodeSize:1023 Lat:1599 SizeLat:1023 for: %v16i8 = call <16 x i8> @llvm.pdep.v16i8(<16 x i8> poison, <16 x i8> poison)
+; NOBMI2-NEXT:  Cost Model: Found costs of RThru:1368 CodeSize:1080 Lat:1944 SizeLat:1080 for: %v8i16 = call <8 x i16> @llvm.pdep.v8i16(<8 x i16> poison, <8 x i16> poison)
 ; NOBMI2-NEXT:  Cost Model: Found costs of RThru:1015 CodeSize:1015 Lat:1975 SizeLat:1015 for: %v4i32 = call <4 x i32> @llvm.pdep.v4i32(<4 x i32> poison, <4 x i32> poison)
 ; NOBMI2-NEXT:  Cost Model: Found costs of RThru:799 CodeSize:607 Lat:1567 SizeLat:799 for: %v2i64 = call <2 x i64> @llvm.pdep.v2i64(<2 x i64> poison, <2 x i64> poison)
 ; NOBMI2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
@@ -45,13 +45,13 @@ define void @pdep() {
 
 define void @pext() {
 ; NOBMI2-LABEL: 'pext'
-; NOBMI2-NEXT:  Cost Model: Found costs of 95 for: %i8 = call i8 @llvm.pext.i8(i8 poison, i8 poison)
-; NOBMI2-NEXT:  Cost Model: Found costs of 222 for: %i16 = call i16 @llvm.pext.i16(i16 poison, i16 poison)
+; NOBMI2-NEXT:  Cost Model: Found costs of RThru:86 CodeSize:62 Lat:98 SizeLat:62 for: %i8 = call i8 @llvm.pext.i8(i8 poison, i8 poison)
+; NOBMI2-NEXT:  Cost Model: Found costs of RThru:170 CodeSize:134 Lat:242 SizeLat:134 for: %i16 = call i16 @llvm.pext.i16(i16 poison, i16 poison)
 ; NOBMI2-NEXT:  Cost Model: Found costs of RThru:252 CodeSize:252 Lat:492 SizeLat:252 for: %i32 = call i32 @llvm.pext.i32(i32 poison, i32 poison)
 ; NOBMI2-NEXT:  Cost Model: Found costs of RThru:398 CodeSize:302 Lat:782 SizeLat:398 for: %i64 = call i64 @llvm.pext.i64(i64 poison, i64 poison)
 ; NOBMI2-NEXT:  Cost Model: Found costs of RThru:5478 CodeSize:5463 Lat:4531 SizeLat:4531 for: %i128 = call i128 @llvm.pext.i128(i128 poison, i128 poison)
-; NOBMI2-NEXT:  Cost Model: Found costs of 1551 for: %v16i8 = call <16 x i8> @llvm.pext.v16i8(<16 x i8> poison, <16 x i8> poison)
-; NOBMI2-NEXT:  Cost Model: Found costs of 1784 for: %v8i16 = call <8 x i16> @llvm.pext.v8i16(<8 x i16> poison, <8 x i16> poison)
+; NOBMI2-NEXT:  Cost Model: Found costs of RThru:1407 CodeSize:1023 Lat:1599 SizeLat:1023 for: %v16i8 = call <16 x i8> @llvm.pext.v16i8(<16 x i8> poison, <16 x i8> poison)
+; NOBMI2-NEXT:  Cost Model: Found costs of RThru:1368 CodeSize:1080 Lat:1944 SizeLat:1080 for: %v8i16 = call <8 x i16> @llvm.pext.v8i16(<8 x i16> poison, <8 x i16> poison)
 ; NOBMI2-NEXT:  Cost Model: Found costs of RThru:1015 CodeSize:1015 Lat:1975 SizeLat:1015 for: %v4i32 = call <4 x i32> @llvm.pext.v4i32(<4 x i32> poison, <4 x i32> poison)
 ; NOBMI2-NEXT:  Cost Model: Found costs of RThru:799 CodeSize:607 Lat:1567 SizeLat:799 for: %v2i64 = call <2 x i64> @llvm.pext.v2i64(<2 x i64> poison, <2 x i64> poison)
 ; NOBMI2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
