@@ -673,6 +673,13 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
   // to benefit from cache locality. Deferring code generation is necessary to
   // avoid adding initializers to external declarations.
   if (mustBeEmitted(global) && mayBeEmittedEagerly(global)) {
+    // Make sure we don't double-emit this declaration.
+    if (auto existing = dyn_cast_if_present<cir::CIRGlobalValueInterface>(
+            getGlobalValue(getMangledName(gd)));
+        existing && !existing.isDeclaration())
+      if (!existing.isDeclaration())
+        return;
+
     // Emit the definition if it can't be deferred.
     emitGlobalDefinition(gd);
     return;
