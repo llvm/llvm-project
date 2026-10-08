@@ -1787,10 +1787,11 @@ public:
   /// \return The cost the backend saves on \p NumLoads consecutive loads of
   /// \p LoadTy from address space \p AddrSpace by coalescing them into one
   /// wider access, \p Alignment being the best alignment known among them.
-  /// Zero when the loads stay separate.
-  LLVM_ABI InstructionCost
-  getLoadCoalescingSaving(Type *LoadTy, unsigned NumLoads, Align Alignment,
-                          unsigned AddrSpace, TargetCostKind CostKind) const;
+  /// \p WidenedTy, when given, is the type a cast widens the loaded lanes to
+  /// before they are used. Zero when the loads stay separate.
+  LLVM_ABI InstructionCost getLoadCoalescingSaving(
+      Type *LoadTy, unsigned NumLoads, Align Alignment, unsigned AddrSpace,
+      TargetCostKind CostKind, Type *WidenedTy = nullptr) const;
 
   /// \return The cost of the interleaved memory operation.
   /// \p Opcode is the memory operation code

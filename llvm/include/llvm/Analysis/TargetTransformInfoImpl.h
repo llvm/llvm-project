@@ -929,8 +929,8 @@ public:
 
   virtual InstructionCost
   getLoadCoalescingSaving(Type *LoadTy, unsigned NumLoads, Align Alignment,
-                          unsigned AddrSpace,
-                          TTI::TargetCostKind CostKind) const {
+                          unsigned AddrSpace, TTI::TargetCostKind CostKind,
+                          Type *WidenedTy) const {
     return 0;
   }
 
