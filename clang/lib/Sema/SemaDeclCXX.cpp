@@ -9453,15 +9453,14 @@ static void defineDefaultedFunctionWithSynthesizedBody(
 
 void Sema::DefineDefaultedComparison(SourceLocation UseLoc, FunctionDecl *FD,
                                      DefaultedComparisonKind DCK) {
-  defineDefaultedFunctionWithSynthesizedBody(
-      *this, UseLoc, FD, [&](SourceLocation BodyLoc) {
-        // The first parameter has type maybe-ref-to maybe-const T, use that to
-        // get the type of the class being compared.
-        auto PT = FD->getParamDecl(0)->getType();
-        CXXRecordDecl *RD = PT.getNonReferenceType()->getAsCXXRecordDecl();
-        return DefaultedComparisonSynthesizer(*this, RD, FD, DCK, BodyLoc)
-            .build();
-      });
+  auto BuildBody = [&](SourceLocation BodyLoc) {
+    // The first parameter has type maybe-ref-to maybe-const T, use that to
+    // get the type of the class being compared.
+    auto PT = FD->getParamDecl(0)->getType();
+    CXXRecordDecl *RD = PT.getNonReferenceType()->getAsCXXRecordDecl();
+    return DefaultedComparisonSynthesizer(*this, RD, FD, DCK, BodyLoc).build();
+  };
+  defineDefaultedFunctionWithSynthesizedBody(*this, UseLoc, FD, BuildBody);
 }
 
 /// Compute the exception specification of a defaulted function whose body is
@@ -9513,14 +9512,14 @@ static Sema::ImplicitExceptionSpecification
 ComputeDefaultedComparisonExceptionSpec(Sema &S, SourceLocation Loc,
                                         FunctionDecl *FD,
                                         DefaultedComparisonKind DCK) {
-  return computeExceptionSpecFromSynthesizedBody(
-      S, Loc, FD, [&](SourceLocation BodyLoc) {
-        CXXRecordDecl *RD =
-            cast<CXXRecordDecl>(FD->getFriendObjectKind() == Decl::FOK_None
-                                    ? FD->getDeclContext()
-                                    : FD->getLexicalDeclContext());
-        return DefaultedComparisonSynthesizer(S, RD, FD, DCK, BodyLoc).build();
-      });
+  auto BuildBody = [&](SourceLocation BodyLoc) {
+    CXXRecordDecl *RD =
+        cast<CXXRecordDecl>(FD->getFriendObjectKind() == Decl::FOK_None
+                                ? FD->getDeclContext()
+                                : FD->getLexicalDeclContext());
+    return DefaultedComparisonSynthesizer(S, RD, FD, DCK, BodyLoc).build();
+  };
+  return computeExceptionSpecFromSynthesizedBody(S, Loc, FD, BuildBody);
 }
 
 // C++2d [over.inc.default]: defaulted postfix increment and decrement operator
