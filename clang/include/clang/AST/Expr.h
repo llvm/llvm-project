@@ -7097,10 +7097,9 @@ public:
            Op <= AO__hip_atomic_store;
   }
 
-  /// Return true if atomics operations targeting allocations in private memory
-  /// are undefined.
-  bool threadPrivateMemoryAtomicsAreUndefined() const {
-    return isOpenCL() || isHIP();
+  bool isScopedAtomic() const {
+    return getOp() >= AO__scoped_atomic_add_fetch &&
+           getOp() <= AO__scoped_atomic_xor_fetch;
   }
 
   SourceLocation getBuiltinLoc() const { return BuiltinLoc; }
