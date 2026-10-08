@@ -168,6 +168,15 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       setLoadExtAction(ISD::EXTLOAD, T, MVT::f16, Expand);
       setTruncStoreAction(T, MVT::f16, Expand);
     }
+    // bf16 is not a WebAssembly type either; expand the soft conversions
+    // and the bf16 extending loads / truncating stores to the generic
+    // bit-shift sequences, mirroring the fp16 handling above.
+    if (T == MVT::f32 || T == MVT::f64) {
+      setOperationAction(ISD::BF16_TO_FP, T, Expand);
+      setOperationAction(ISD::FP_TO_BF16, T, Expand);
+      setLoadExtAction(ISD::EXTLOAD, T, MVT::bf16, Expand);
+      setTruncStoreAction(T, MVT::bf16, Expand);
+    }
   }
 
   // Expand unavailable integer operations.
