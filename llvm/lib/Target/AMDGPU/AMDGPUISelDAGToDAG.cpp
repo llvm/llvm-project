@@ -4877,6 +4877,33 @@ void AMDGPUDAGToDAGISel::PostprocessISelDAG() {
   } while (IsModified);
 }
 
+bool AMDGPUDAGToDAGISel::SelectInlineAsmMemoryOperand(
+    const SDValue &Op, InlineAsm::ConstraintCode ConstraintID,
+    std::vector<SDValue> &OutOps) {
+  switch (ConstraintID) {
+  case InlineAsm::ConstraintCode::m:
+    OutOps.push_back(Op);
+    return false;
+  case InlineAsm::ConstraintCode::RF: {
+    // flat_load/flat_store require the address in a VGPR. Always force a copy
+    // to the appropriate VGPR class.
+    const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
+    MVT VT = Op.getSimpleValueType();
+    const TargetRegisterClass *VRC =
+        TRI->getVGPRClassForBitWidth(VT.getSizeInBits());
+    assert(VRC && "Expected valid VGPR class for RF constraint operand");
+    SDLoc DL(Op);
+    SDValue RCVal = CurDAG->getTargetConstant(VRC->getID(), DL, MVT::i32);
+    SDNode *Copy =
+        CurDAG->getMachineNode(AMDGPU::COPY_TO_REGCLASS, DL, VT, {Op, RCVal});
+    OutOps.push_back(SDValue(Copy, 0));
+    return false;
+  }
+  default:
+    return true;
+  }
+}
+
 AMDGPUDAGToDAGISelLegacy::AMDGPUDAGToDAGISelLegacy(TargetMachine &TM,
                                                    CodeGenOptLevel OptLevel)
     : SelectionDAGISelLegacy(
