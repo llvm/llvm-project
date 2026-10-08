@@ -2263,16 +2263,14 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::amdgcn_wmma_scale16_f32_16x16x128_f8f6f4: {
     Value *Src0 = II.getArgOperand(1);
     Value *Src1 = II.getArgOperand(3);
-    unsigned FmtA = static_cast<unsigned>(
-        cast<ConstantInt>(II.getArgOperand(0))->getZExtValue());
+    unsigned FmtA = cast<ConstantInt>(II.getArgOperand(0))->getZExtValue();
     uint64_t FmtB = cast<ConstantInt>(II.getArgOperand(2))->getZExtValue();
     auto *Src0Ty = cast<FixedVectorType>(Src0->getType());
     auto *Src1Ty = cast<FixedVectorType>(Src1->getType());
 
     bool MadeChange = false;
     unsigned Src0NumElts = AMDGPU::wmmaScaleF8F6F4FormatToNumRegs(FmtA);
-    unsigned Src1NumElts =
-        AMDGPU::wmmaScaleF8F6F4FormatToNumRegs(static_cast<unsigned>(FmtB));
+    unsigned Src1NumElts = AMDGPU::wmmaScaleF8F6F4FormatToNumRegs(FmtB);
 
     // Depending on the used format, fewer registers are required so shrink the
     // vector type.
