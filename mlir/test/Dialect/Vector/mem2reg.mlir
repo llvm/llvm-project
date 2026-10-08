@@ -574,7 +574,7 @@ func.func @gemm_k_early_exit(%A: memref<4x16xf32>, %B: memref<16x4xf32>,
 
 // -----
 
-// A whole-buffer read WITH A MASK promotes to select(mask, reachingDef, padding).
+// A whole-buffer read with a mask promotes to select(mask, reachingDef, padding).
 // CHECK-LABEL: func.func @read_with_mask(
 // CHECK-SAME:      %[[V:.*]]: vector<8xf32>, %[[M:.*]]: vector<8xi1>, %[[PAD:.*]]: f32
 // CHECK-NOT:     memref.alloca
@@ -591,7 +591,7 @@ func.func @read_with_mask(%v: vector<8xf32>, %m: vector<8xi1>, %pad: f32) -> vec
 
 // -----
 
-// A whole-buffer write WITH A MASK composes select(mask, stored, reachingDef); a
+// A whole-buffer write with a mask composes select(mask, stored, reachingDef); a
 // later read observes that composed value.
 // CHECK-LABEL: func.func @write_with_mask(
 // CHECK-SAME:      %[[V:.*]]: vector<8xf32>, %[[W:.*]]: vector<8xf32>, %[[M:.*]]: vector<8xi1>
@@ -609,7 +609,7 @@ func.func @write_with_mask(%v: vector<8xf32>, %w: vector<8xf32>, %m: vector<8xi1
 
 // -----
 
-// A write WITH A MASK into a static subview composes through the subview aliaser:
+// A write with a mask into a static subview composes through the subview aliaser:
 // the region is projected out (extract_strided_slice), the mask selects the
 // stored value, and the result is inserted back (insert_strided_slice).
 // CHECK-LABEL: func.func @write_with_mask_static_subview(
@@ -631,7 +631,7 @@ func.func @write_with_mask_static_subview(%v: vector<4xf32>, %init: vector<8xf32
 
 // -----
 
-// NEGATIVE: the MASKED form (`vector.mask` wrapping the transfer) is not
+// NEGATIVE: the masked form (`vector.mask` wrapping the transfer) is not
 // promoted. The transfer's use of the buffer is inside a region, and Mem2Reg
 // only promotes through regions whose parent op implements
 // `PromotableRegionOpInterface`, which `vector.mask` does not.
