@@ -3008,6 +3008,15 @@ bool X86::mayFoldIntoZeroExtend(SDValue Op) {
   return false;
 }
 
+// Return true if its cheap to bitcast this to a scalar integer type on a GPR.
+static bool mayFoldIntoScalarInteger(SDValue Op) {
+  if (peekThroughBitcasts(Op).getValueType().isScalarInteger())
+    return true;
+  if (isa<ConstantSDNode>(Op) || isa<ConstantFPSDNode>(Op))
+    return true;
+  return false;
+}
+
 // Return true if its cheap to bitcast this to a vector type.
 static bool mayFoldIntoVector(SDValue Op, const SelectionDAG &DAG,
                               const X86Subtarget &Subtarget) {
@@ -31063,7 +31072,7 @@ static bool supportedVectorShiftWithImm(EVT VT, const X86Subtarget &Subtarget,
   if (!(VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()))
     return false;
 
-  if (VT.getScalarSizeInBits() < 16)
+  if (VT.getScalarSizeInBits() < 16 || VT.getScalarSizeInBits() > 64)
     return false;
 
   if (VT.is512BitVector() && Subtarget.useAVX512Regs() &&
@@ -48991,24 +49000,19 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   // (cheaper as immediates) and compare-driven conds (CMOV already reuses
   // the flags).
   if (N->getOpcode() == ISD::SELECT && !CondVT.isVector() &&
-      Subtarget.hasSSE2() && !isIntOrFPConstant(LHS) &&
-      !isIntOrFPConstant(RHS)) {
+      Subtarget.hasSSE2()) {
     // Only worth it if both operands already live in a vector register
-    auto IsBitcastFromGPR = [](SDValue Op) {
-      return Op.getOpcode() == ISD::BITCAST &&
-             Op.getOperand(0).getValueType().isScalarInteger();
-    };
     SDValue F16LHS, F16RHS;
     if (!VT.isVector() && isSoftF16(VT, Subtarget)) {
-      if (!IsBitcastFromGPR(LHS) || !IsBitcastFromGPR(RHS)) {
+      if (!mayFoldIntoScalarInteger(LHS) || !mayFoldIntoScalarInteger(RHS)) {
         F16LHS = DAG.getBitcast(MVT::f16, LHS);
         F16RHS = DAG.getBitcast(MVT::f16, RHS);
       }
     } else if (VT == MVT::i16 && LHS.getOpcode() == ISD::BITCAST &&
                RHS.getOpcode() == ISD::BITCAST) {
-      MVT SVT = LHS.getOperand(0).getSimpleValueType();
+      EVT SVT = LHS.getOperand(0).getValueType();
       if ((SVT == MVT::f16 || SVT == MVT::bf16) &&
-          SVT == RHS.getOperand(0).getSimpleValueType()) {
+          SVT == RHS.getOperand(0).getValueType()) {
         F16LHS = DAG.getBitcast(MVT::f16, LHS.getOperand(0));
         F16RHS = DAG.getBitcast(MVT::f16, RHS.getOperand(0));
       }
