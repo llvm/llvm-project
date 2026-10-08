@@ -199,3 +199,22 @@ define <8 x i16> @sqabs_widened(<8 x i16> %x) {
   %narrow = trunc <8 x i32> %r to <8 x i16>
   ret <8 x i16> %narrow
 }
+
+; The intrinsic remains selectable alongside the target node used by the combine.
+define <1 x i64> @sqabs_intrinsic_v1i64(<1 x i64> %x) {
+; CHECK-LABEL: sqabs_intrinsic_v1i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqabs d0, d0
+; CHECK-NEXT:    ret
+  %r = call <1 x i64> @llvm.aarch64.neon.sqabs.v1i64(<1 x i64> %x)
+  ret <1 x i64> %r
+}
+
+define <2 x i64> @sqabs_intrinsic_v2i64(<2 x i64> %x) {
+; CHECK-LABEL: sqabs_intrinsic_v2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqabs v0.2d, v0.2d
+; CHECK-NEXT:    ret
+  %r = call <2 x i64> @llvm.aarch64.neon.sqabs.v2i64(<2 x i64> %x)
+  ret <2 x i64> %r
+}
