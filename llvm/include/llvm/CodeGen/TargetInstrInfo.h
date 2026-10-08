@@ -2225,6 +2225,16 @@ public:
   virtual void mergeOutliningCandidateAttributes(
       Function &F, std::vector<outliner::Candidate> &Candidates) const;
 
+  /// Return true if the target supports outlining candidates from multiple
+  /// input sections in one pass. When enabled, candidates are partitioned by
+  /// input section before target-specific outlining checks are performed, and
+  /// each outlined function is placed in the input section of its parents.
+  ///
+  /// A target that enables this must not independently reject functions with
+  /// a section marking in isFunctionSafeToOutlineFrom(), otherwise such
+  /// functions never reach the outliner and this hook has no effect.
+  virtual bool supportsSectionAwareOutlining() const { return false; }
+
 protected:
   /// Target-dependent implementation for getOutliningTypeImpl.
   virtual outliner::InstrType

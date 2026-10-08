@@ -233,6 +233,8 @@ public:
 
   bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
 
+  bool supportsSectionAwareOutlining() const override { return true; }
+
   // Return true if the candidate should be discarded from outlining.
   bool analyzeCandidate(outliner::Candidate &C) const;
   // Calculate target-specific information for a set of outlining candidates.
