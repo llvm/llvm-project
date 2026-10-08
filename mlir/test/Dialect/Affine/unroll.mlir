@@ -733,6 +733,24 @@ func.func @unroll_zero_trip_count_case() {
   return
 }
 
+// The upper bounds are below the lower bounds, so neither loop executes.
+// UNROLL-FULL-LABEL: func @unroll_zero_trip_count_nonconstant_bounds
+func.func @unroll_zero_trip_count_nonconstant_bounds(%N: index) {
+  // UNROLL-FULL:      affine.for
+  // UNROLL-FULL-NEXT:   "foo"() : () -> ()
+  // UNROLL-FULL-NEXT: }
+  affine.for %i = affine_map<(d0) -> (d0)>(%N) to affine_map<(d0) -> (d0 - 2)>(%N) {
+    "foo"() : () -> ()
+  }
+  // UNROLL-FULL:      affine.for
+  // UNROLL-FULL-NEXT:   "foo"() : () -> ()
+  // UNROLL-FULL-NEXT: }
+  affine.for %i = max affine_map<(d0) -> (d0)>(%N) to min affine_map<(d0) -> (d0 - 4, d0 + 4)>(%N) {
+    "foo"() : () -> ()
+  }
+  return
+}
+
 // UNROLL-CLEANUP-LOOP-LABEL: func @unroll_cleanup_loop_with_larger_unroll_factor()
 func.func @unroll_cleanup_loop_with_larger_unroll_factor() {
   affine.for %i = 0 to 3 {
