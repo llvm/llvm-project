@@ -3968,7 +3968,7 @@ static bool IsExternalCalledImplicitly(
 
 std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
     parser::CharBlock callSite, const ProcedureDesignator &proc,
-    ActualArguments &arguments) {
+    ActualArguments &arguments, parser::CharBlock definedOp) {
   bool treatExternalAsImplicit{
       IsExternalCalledImplicitly(callSite, proc.GetSymbol())};
   const Symbol *procSymbol{proc.GetSymbol()};
@@ -4037,6 +4037,9 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
           name = "'"s + procSymbol->name().ToString() + "'";
         } else if (const auto *intrinsic{proc.GetSpecificIntrinsic()}) {
           name = "'"s + intrinsic->name + "'";
+        }
+        if (!definedOp.empty()) {
+          name += " (as "s + semantics::MakeOpName(definedOp) + ')';
         }
         Say(callSite,
             "Procedure %s referenced in pure subprogram '%s' must be pure too"_err_en_US,
@@ -4368,12 +4371,17 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::Concat &x) {
 // If the actuals match one of the specific procedures, return a function ref.
 // Otherwise report the error in messages.
 MaybeExpr ExpressionAnalyzer::AnalyzeDefinedOp(const parser::Name &name,
-    ActualArguments &&actuals, const Symbol *&symbol) {
+    ActualArguments &&actuals, const Symbol *&symbol,
+    parser::CharBlock callSite) {
+  // Reference checks, such as F2023 C1595 (which requires that a procedure
+  // referenced within a pure subprogram be pure), must be performed at the
+  // point of use. Therefore, callSite is used instead of the current source
+  // location.
   if (auto callee{GetCalleeAndArguments(name, std::move(actuals))}) {
     auto &proc{std::get<evaluate::ProcedureDesignator>(callee->u)};
     symbol = proc.GetSymbol();
     return MakeFunctionRef(
-        name.source, std::move(proc), std::move(callee->arguments));
+        callSite, std::move(proc), std::move(callee->arguments), name.source);
   } else {
     return std::nullopt;
   }
@@ -4882,7 +4890,8 @@ bool ExpressionAnalyzer::EnforceTypeConstraint(parser::CharBlock at,
 }
 
 MaybeExpr ExpressionAnalyzer::MakeFunctionRef(parser::CharBlock callSite,
-    ProcedureDesignator &&proc, ActualArguments &&arguments) {
+    ProcedureDesignator &&proc, ActualArguments &&arguments,
+    parser::CharBlock definedOp) {
   if (const auto *intrinsic{std::get_if<SpecificIntrinsic>(&proc.u)}) {
     if (intrinsic->characteristics.value().attrs.test(
             characteristics::Procedure::Attr::NullPointer) &&
@@ -4895,7 +4904,7 @@ MaybeExpr ExpressionAnalyzer::MakeFunctionRef(parser::CharBlock callSite,
       return std::nullopt;
     }
   }
-  if (auto chars{CheckCall(callSite, proc, arguments)}) {
+  if (auto chars{CheckCall(callSite, proc, arguments, definedOp)}) {
     if (chars->functionResult) {
       const auto &result{*chars->functionResult};
       ProcedureRef procRef{std::move(proc), std::move(arguments)};
@@ -5422,7 +5431,7 @@ bool ArgumentAnalyzer::HasDeviceDefinedIntrinsicOpOverride(
       parser::Name name{generic->name(), generic};
       const Symbol *resultSymbol{nullptr};
       if (context_.AnalyzeDefinedOp(
-              name, ActualArguments{actuals_}, resultSymbol)) {
+              name, ActualArguments{actuals_}, resultSymbol, source_)) {
         return true;
       }
     }
@@ -5487,7 +5496,7 @@ MaybeExpr ArgumentAnalyzer::TryDefinedOp(const char *opr,
       parser::Name name{generic->name(), generic};
       const Symbol *resultSymbol{nullptr};
       MaybeExpr possibleResult{context_.AnalyzeDefinedOp(
-          name, ActualArguments{actuals_}, resultSymbol)};
+          name, ActualArguments{actuals_}, resultSymbol, source_)};
       FoundOne(std::move(possibleResult), *generic, resultSymbol);
     }
     for (std::size_t passIndex{0}; passIndex < actuals_.size(); ++passIndex) {
