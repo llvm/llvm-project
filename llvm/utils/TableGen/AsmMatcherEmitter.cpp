@@ -398,6 +398,95 @@ bool getPreferSmallerInstructions(CodeGenTarget const &Target) {
   return Target.getAsmParser()->getValueAsBit("PreferSmallerInstructions");
 }
 
+/// Decides whether two matchables are told apart by their subtarget features
+/// alone, that is, whether no subtarget can enable both.
+///
+/// A pair is exclusive if it is declared so with
+/// MutuallyExclusiveAssemblerPredicates, which is taken on trust, or if the
+/// requirements of the two matchables are provably unsatisfiable together.
+/// The proof is by unit propagation, which is incomplete, so a pair that is
+/// in truth exclusive may still fail to be recognised as such. That only
+/// costs a false report of ambiguity, never a missed one.
+class ExclusivePredicates {
+  /// Feature implications, as clauses (!F || I).
+  SubtargetFeatureConstraints Implications;
+
+  /// Pairs declared mutually exclusive, normalized with the smaller pointer
+  /// first for cheap symmetric lookup.
+  DenseSet<std::pair<const Record *, const Record *>> Declared;
+
+  /// The requirements of each distinct list of predicates seen so far, and
+  /// the index into Constraints that such a list maps to. Matchables share
+  /// their predicates heavily, so this keeps the number of solves down.
+  std::vector<SubtargetFeatureConstraints> Constraints;
+  std::map<std::vector<const Record *>, unsigned> ConstraintsIdx;
+
+  /// Results already computed, keyed on a normalized pair of indices into
+  /// Constraints.
+  DenseMap<std::pair<unsigned, unsigned>, bool> Conflicts;
+
+  unsigned getConstraintsIdx(ArrayRef<const SubtargetFeatureInfo *> Features) {
+    std::vector<const Record *> Preds;
+    Preds.reserve(Features.size());
+    for (const SubtargetFeatureInfo *F : Features)
+      Preds.push_back(F->TheDef);
+    sort(Preds);
+    Preds.erase(unique(Preds), Preds.end());
+
+    auto [It, Inserted] = ConstraintsIdx.try_emplace(Preds, Constraints.size());
+    if (Inserted) {
+      SubtargetFeatureConstraints C;
+      getRequiredFeatures(C.FeaturesSet, C.AnyOfFeatureSets, Preds);
+      Constraints.push_back(std::move(C));
+    }
+    return It->second;
+  }
+
+public:
+  ExclusivePredicates(const RecordKeeper &Records) {
+    for (const Record *R : Records.getAllDerivedDefinitions(
+             "MutuallyExclusiveAssemblerPredicates")) {
+      const Record *PA = R->getValueAsDef("PredicateA");
+      for (const Record *PB : R->getValueAsListOfDefs("PredicatesB"))
+        Declared.insert(std::minmax(PA, PB));
+    }
+
+    // A feature implying another is the clause (!F || I). Only direct edges
+    // are needed, as propagation follows the chains.
+    for (const Record *F :
+         Records.getAllDerivedDefinitions("SubtargetFeature")) {
+      for (const Record *I : F->getValueAsListOfDefs("Implies")) {
+        if (I != F)
+          Implications.AnyOfFeatureSets.insert(
+              {{F->getName(), /*IsNot=*/true},
+               {I->getName(), /*IsNot=*/false}});
+      }
+    }
+  }
+
+  bool areExclusive(ArrayRef<const SubtargetFeatureInfo *> A,
+                    ArrayRef<const SubtargetFeatureInfo *> B) {
+    for (const SubtargetFeatureInfo *FA : A)
+      for (const SubtargetFeatureInfo *FB : B)
+        if (Declared.count(std::minmax(FA->TheDef, FB->TheDef)))
+          return true;
+
+    // A matchable with no requirements is available on every subtarget.
+    if (A.empty() || B.empty())
+      return false;
+
+    auto Key = std::minmax(getConstraintsIdx(A), getConstraintsIdx(B));
+    auto [It, Inserted] = Conflicts.try_emplace(Key, false);
+    if (Inserted) {
+      SubtargetFeatureConstraints Combined = Constraints[Key.first];
+      Combined.add(Constraints[Key.second]);
+      Combined.add(Implications);
+      It->second = Combined.isSelfContradictory();
+    }
+    return It->second;
+  }
+};
+
 /// MatchableInfo - Helper class for storing the necessary information for an
 /// instruction or alias which is capable of being matched.
 struct MatchableInfo {
@@ -687,10 +776,9 @@ struct MatchableInfo {
   /// couldMatchAmbiguouslyWith - Check whether this matchable could
   /// ambiguously match the same set of operands as \p RHS (without being a
   /// strictly superior match).
-  bool couldMatchAmbiguouslyWith(
-      const MatchableInfo &RHS, bool PreferSmallerInstructions,
-      const DenseSet<std::pair<const Record *, const Record *>> &ExclusivePreds)
-      const {
+  bool couldMatchAmbiguouslyWith(const MatchableInfo &RHS,
+                                 bool PreferSmallerInstructions,
+                                 ExclusivePredicates &ExclusivePreds) const {
     // The primary comparator is the instruction mnemonic.
     if (Mnemonic != RHS.Mnemonic)
       return false;
@@ -705,12 +793,9 @@ struct MatchableInfo {
     if (PreferSmallerInstructions && ResInstSize != RHS.ResInstSize)
       return false;
 
-    for (const SubtargetFeatureInfo *FA : RequiredFeatures) {
-      for (const SubtargetFeatureInfo *FB : RHS.RequiredFeatures) {
-        if (ExclusivePreds.count(std::minmax(FA->TheDef, FB->TheDef)))
-          return false;
-      }
-    }
+    // No subtarget can enable both, so the parser never has to choose.
+    if (ExclusivePreds.areExclusive(RequiredFeatures, RHS.RequiredFeatures))
+      return false;
 
     // Ignore optional operands as they can't be used to disasmbiguate
     // otherwise identical matchables.
@@ -3627,15 +3712,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   }
 
   if (CheckAmbiguousMatchables) {
-    // Build a flat set of mutually exclusive assembler predicate pairs from
-    // MutuallyExclusiveAssemblerPredicates declarations. Pairs are normalized
-    // (smaller pointer first) for cheap symmetric lookup.
-    DenseSet<std::pair<const Record *, const Record *>> ExclusivePreds;
-    for (const Record *R : ExclusivePredDecls) {
-      const Record *PA = R->getValueAsDef("PredicateA");
-      for (const Record *PB : R->getValueAsListOfDefs("PredicatesB"))
-        ExclusivePreds.insert(std::minmax(PA, PB));
-    }
+    ExclusivePredicates ExclusivePreds(Records);
     unsigned NumAmbiguous = 0;
     for (auto I = Info.Matchables.begin(), E = Info.Matchables.end(); I != E;
          ++I) {
