@@ -39,6 +39,34 @@ struct RefQualified {
   RefQualified operator++(int) && = default; // OK, an rvalue reference is a "reference to C"
 };
 
+// __restrict__ is not part of the type of the implicit object parameter.
+struct Restrict {
+  Restrict &operator++();
+  Restrict operator++(int) __restrict__ = default; // OK
+};
+struct RestrictBoth {
+  RestrictBoth &operator--() __restrict__;
+  RestrictBoth operator--(int) __restrict__ = default; // OK
+};
+struct RestrictRvalue {
+  RestrictRvalue &operator++();
+  RestrictRvalue operator++(int) __restrict__ && = default; // OK
+};
+struct RestrictVolatile {
+  RestrictVolatile &operator++() volatile;
+  RestrictVolatile(const volatile RestrictVolatile &);
+  RestrictVolatile(RestrictVolatile &&);
+  RestrictVolatile operator++(int) volatile __restrict__ = default; // OK
+};
+struct RestrictConst {
+  RestrictConst &operator++();
+  RestrictConst operator++(int) const __restrict__ = default; // expected-error {{defaulted member postfix increment operator cannot be const-qualified}}
+};
+struct ExplicitRestrict {
+  ExplicitRestrict &operator++();
+  ExplicitRestrict operator++(this ExplicitRestrict &__restrict__, int) = default; // OK
+};
+
 // Explicit object parameters.
 struct Explicit {
   Explicit &operator++();
@@ -91,6 +119,33 @@ struct ReturnsAlias {
   Self &operator++();
   Self operator++(int) = default; // OK
 };
+struct ReturnsTrailing {
+  ReturnsTrailing &operator++();
+  auto operator++(int) -> ReturnsTrailing = default; // OK, not a deduced return type
+};
+
+// A placeholder type is not C, even if deduction would produce C.
+template <typename T> concept Any = true;
+struct ReturnsConstrainedAuto {
+  ReturnsConstrainedAuto &operator++();
+  Any auto operator++(int) = default; // expected-error {{defaulted postfix increment operator cannot have a deduced return type}}
+};
+struct ReturnsAutoPointer {
+  ReturnsAutoPointer &operator++();
+  auto *operator++(int) = default; // expected-error {{defaulted postfix increment operator cannot have a deduced return type}}
+};
+struct ReturnsAutoRef {
+  ReturnsAutoRef &operator--();
+  auto &operator--(int) = default; // expected-error {{defaulted postfix decrement operator cannot have a deduced return type}}
+};
+struct ReturnsConstAuto {
+  ReturnsConstAuto &operator++();
+  const auto operator++(int) = default; // expected-error {{defaulted postfix increment operator cannot have a deduced return type}}
+};
+struct ReturnsConstrainedAutoRef {
+  ReturnsConstrainedAutoRef &operator++();
+  const Any auto &operator++(int) = default; // expected-error {{defaulted postfix increment operator cannot have a deduced return type}}
+};
 
 // Non-member functions.
 struct N {
@@ -117,6 +172,16 @@ struct NMismatch { NMismatch &operator++(); };
 S operator++(NMismatch &, int) = default; // expected-error {{return type for defaulted postfix increment operator must be 'NMismatch', not 'S'}}
 struct NUnknown { NUnknown &operator++(); };
 S &operator++(NUnknown, int) = default; // expected-error {{invalid first parameter type for defaulted non-member postfix increment operator; found 'NUnknown', expected reference to a non-const class or enumeration type}}
+struct NAuto {
+  NAuto &operator++();
+  NAuto &operator--();
+};
+auto operator++(NAuto &, int) = default;           // expected-error {{defaulted postfix increment operator cannot have a deduced return type}}
+Any auto operator--(NAuto &, int) = default;       // expected-error {{defaulted postfix decrement operator cannot have a deduced return type}}
+decltype(auto) operator++(NAuto &&, int) = default; // expected-error {{defaulted postfix increment operator cannot have a deduced return type}}
+auto operator--(NAuto &&, int) -> NAuto = default;  // OK
+struct NRestrict { NRestrict &operator++(); };
+NRestrict operator++(NRestrict &__restrict__, int) = default; // OK
 
 // Enumerations.
 enum E { e };
@@ -171,6 +236,44 @@ struct Template {
 };
 template <typename T = void> S operator--(S &, int) = default; // expected-error {{postfix decrement operator template cannot be defaulted}}
 
+// A parameter declared with a placeholder type makes the function an
+// abbreviated function template.
+struct AutoFirst {
+  AutoFirst &operator++();
+  AutoFirst &operator--();
+  AutoFirst operator++(this auto &, int) = default;   // expected-error {{postfix increment operator template cannot be defaulted}}
+  friend AutoFirst operator--(auto &, int) = default; // expected-error {{postfix decrement operator template cannot be defaulted}}
+};
+AutoFirst operator++(Any auto &, int) = default; // expected-error {{postfix increment operator template cannot be defaulted}}
+AutoFirst operator--(auto &&, int) = default;    // expected-error {{postfix decrement operator template cannot be defaulted}}
+
+// The second parameter of a postfix operator always has type int.
+struct AutoSecond {
+  AutoSecond &operator++();
+  AutoSecond &operator--();
+  AutoSecond operator++(auto) = default;                    // expected-error {{postfix increment operator template cannot be defaulted}}
+  AutoSecond operator--(this AutoSecond &, auto) = default; // expected-error {{postfix decrement operator template cannot be defaulted}}
+};
+AutoSecond operator++(AutoSecond &&, Any auto) = default; // expected-error {{postfix increment operator template cannot be defaulted}}
+struct NotInt {
+  NotInt &operator++();
+  NotInt &operator--();
+  NotInt operator++(long) = default;                    // expected-error {{parameter of overloaded post-increment operator must have type 'int' (not 'long')}}
+  NotInt operator--(this NotInt &, unsigned) = default; // expected-error {{parameter of overloaded post-decrement operator must have type 'int' (not 'unsigned int')}}
+};
+NotInt operator++(NotInt &&, char) = default; // expected-error {{parameter of overloaded post-increment operator must have type 'int' (not 'char')}}
+struct IntSpellings {
+  using Int = int;
+  IntSpellings &operator++();
+  IntSpellings &operator--();
+  IntSpellings operator++(const int) = default; // OK
+  IntSpellings operator--(Int) = default;       // OK
+};
+struct DefaultArgument {
+  DefaultArgument &operator++();
+  DefaultArgument operator++(int = 0) = default; // expected-error {{parameter of overloaded 'operator++' cannot have a default argument}}
+};
+
 // Only the postfix forms can be defaulted.
 struct Prefix {
   Prefix &operator++() = default; // expected-error {{only the postfix form of 'operator++' can be defaulted}}
@@ -210,3 +313,57 @@ template <typename T> struct DependentAuto {
   friend auto operator++(T &, int) = default; // expected-error {{defaulted postfix increment operator cannot have a deduced return type}}
   auto operator--(this T &, int) = default;   // expected-error {{defaulted postfix decrement operator cannot have a deduced return type}}
 };
+
+template <typename T> struct DependentDeducedReturn {
+  DependentDeducedReturn &operator++();
+  DependentDeducedReturn &operator--();
+  auto operator++(int) = default;     // expected-error {{defaulted postfix increment operator cannot have a deduced return type}}
+  Any auto operator--(int) = default; // expected-error {{defaulted postfix decrement operator cannot have a deduced return type}}
+};
+template <typename T> struct DependentDeducedReturn2 {
+  DependentDeducedReturn2 &operator++();
+  DependentDeducedReturn2 &operator--();
+  decltype(auto) operator++(int) = default;                // expected-error {{defaulted postfix increment operator cannot have a deduced return type}}
+  friend T *operator--(DependentDeducedReturn2 &, int) = default; // OK, checked when instantiated
+};
+template <typename T> struct DependentConstrainedFriend {
+  DependentConstrainedFriend &operator++();
+  friend Any auto operator++(DependentConstrainedFriend &, int) = default; // expected-error {{defaulted postfix increment operator cannot have a deduced return type}}
+};
+
+// A trailing return type that names C is not deduced.
+template <typename T> struct DependentTrailing {
+  DependentTrailing &operator++();
+  auto operator++(int) -> T = default; // expected-error {{return type for defaulted postfix increment operator must be 'DependentTrailing<int>', not 'int'}}
+};
+DependentTrailing<int> dt1; // expected-note {{in instantiation of template class 'DependentTrailing<int>' requested here}}
+template <typename T> struct DependentTrailingOK {
+  DependentTrailingOK &operator++();
+  auto operator++(int) -> DependentTrailingOK = default; // OK
+};
+DependentTrailingOK<int> dt2;
+
+// A placeholder parameter makes the function a template even in a class
+// template.
+template <typename T> struct DependentAutoParam {
+  DependentAutoParam &operator++();
+  DependentAutoParam &operator--();
+  DependentAutoParam operator++(this auto &, int) = default;  // expected-error {{postfix increment operator template cannot be defaulted}}
+  friend DependentAutoParam operator--(auto &, int) = default; // expected-error {{postfix decrement operator template cannot be defaulted}}
+  DependentAutoParam operator++(auto) = default;               // expected-error {{postfix increment operator template cannot be defaulted}}
+};
+
+// A dependent second parameter is checked when instantiated.
+template <typename T> struct DependentSecond {
+  DependentSecond &operator++();
+  DependentSecond operator++(T) = default; // expected-error {{parameter of overloaded post-increment operator must have type 'int' (not 'long')}}
+};
+DependentSecond<int> ds1;  // OK
+DependentSecond<long> ds2; // expected-note {{in instantiation of template class 'DependentSecond<long>' requested here}}
+
+template <typename T> struct DependentRestrict {
+  DependentRestrict &operator++();
+  DependentRestrict operator++(int) __restrict__ = default;       // OK
+  DependentRestrict operator--(int) const __restrict__ = default; // expected-error {{defaulted member postfix decrement operator cannot be const-qualified}}
+};
+DependentRestrict<int> dres1; // expected-note {{in instantiation of template class 'DependentRestrict<int>' requested here}}
