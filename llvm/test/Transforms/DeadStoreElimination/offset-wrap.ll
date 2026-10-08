@@ -32,6 +32,7 @@ define i32 @wrap_not_redundant(ptr %b) {
 ; CHECK-NEXT:    store i32 1, ptr [[K]], align 1
 ; CHECK-NEXT:    store i32 2, ptr [[D]], align 1
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[K]], align 1
+; CHECK-NEXT:    store i32 1, ptr [[K]], align 1
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
   %d = getelementptr i8, ptr %b, i8 127
@@ -72,6 +73,7 @@ define i32 @wrap_killing_not_redundant(ptr %b) {
 ; CHECK-NEXT:    store i32 1, ptr [[D]], align 1
 ; CHECK-NEXT:    store i64 2, ptr [[K]], align 1
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[D]], align 1
+; CHECK-NEXT:    store i32 1, ptr [[D]], align 1
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
   %d = getelementptr i8, ptr %b, i8 127
@@ -104,7 +106,9 @@ define void @partial_idx128(ptr addrspace(1) %b, i64 %x, i32 %y, i32 %z) {
 define void @wrap_i64(ptr addrspace(2) %b) {
 ; CHECK-LABEL: define void @wrap_i64(
 ; CHECK-SAME: ptr addrspace(2) [[B:%.*]]) {
+; CHECK-NEXT:    [[D:%.*]] = getelementptr i8, ptr addrspace(2) [[B]], i64 9223372036854775807
 ; CHECK-NEXT:    [[K:%.*]] = getelementptr i8, ptr addrspace(2) [[B]], i64 -9223372036854775808
+; CHECK-NEXT:    store i32 1, ptr addrspace(2) [[D]], align 1
 ; CHECK-NEXT:    store i64 2, ptr addrspace(2) [[K]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -178,11 +182,19 @@ define void @wrap_complete(ptr %b) {
 
 ; Same as @wrap_complete, but the dead store also wraps.
 define void @wrap_complete_both_wrap(ptr %b) {
-; CHECK-LABEL: define void @wrap_complete_both_wrap(
-; CHECK-SAME: ptr [[B:%.*]]) {
-; CHECK-NEXT:    [[K:%.*]] = getelementptr i8, ptr [[B]], i8 126
-; CHECK-NEXT:    store i64 2, ptr [[K]], align 1
-; CHECK-NEXT:    ret void
+; AA-LABEL: define void @wrap_complete_both_wrap(
+; AA-SAME: ptr [[B:%.*]]) {
+; AA-NEXT:    [[K:%.*]] = getelementptr i8, ptr [[B]], i8 126
+; AA-NEXT:    store i64 2, ptr [[K]], align 1
+; AA-NEXT:    ret void
+;
+; NOAA-LABEL: define void @wrap_complete_both_wrap(
+; NOAA-SAME: ptr [[B:%.*]]) {
+; NOAA-NEXT:    [[D:%.*]] = getelementptr i8, ptr [[B]], i8 127
+; NOAA-NEXT:    [[K:%.*]] = getelementptr i8, ptr [[B]], i8 126
+; NOAA-NEXT:    store i32 1, ptr [[D]], align 1
+; NOAA-NEXT:    store i64 2, ptr [[K]], align 1
+; NOAA-NEXT:    ret void
 ;
   %d = getelementptr i8, ptr %b, i8 127
   %k = getelementptr i8, ptr %b, i8 126

@@ -1358,6 +1358,21 @@ OverwriteResult DSEState::isOverwrite(const Instruction *KillingI,
   if (DeadBasePtr != KillingBasePtr)
     return OW_Unknown;
 
+  if (DeadPtr->getType() != KillingPtr->getType())
+    return OW_Unknown;
+
+  // Offsets wrap around in the index width. Give up if either access crosses
+  // the end of the signed index range, so the int64_t math below is exact.
+  unsigned IdxWidth = DL.getIndexTypeSizeInBits(DeadPtr->getType());
+  uint64_t DeadSz = DeadSize.getFixedValue();
+  uint64_t KillingSz = KillingSize.getFixedValue();
+  int64_t DeadEnd, KillingEnd;
+  if (!isUInt<63>(DeadSz) || !isUInt<63>(KillingSz) ||
+      AddOverflow(DeadOff, int64_t(DeadSz), DeadEnd) ||
+      AddOverflow(KillingOff, int64_t(KillingSz), KillingEnd) ||
+      !isIntN(IdxWidth, DeadEnd) || !isIntN(IdxWidth, KillingEnd))
+    return OW_Unknown;
+
   // The killing access completely overlaps the dead store if and only if
   // both start and end of the dead one is "inside" the killing one:
   //    |<->|--dead--|<->|
