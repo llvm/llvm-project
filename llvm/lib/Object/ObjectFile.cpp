@@ -11,23 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/BinaryFormat/Magic.h"
-#include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
-#include "llvm/Object/DXContainer.h"
-#include "llvm/Object/Error.h"
-#include "llvm/Object/MachO.h"
-#include "llvm/Object/Wasm.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cstdint>
-#include <memory>
-#include <system_error>
 
 using namespace llvm;
 using namespace object;
