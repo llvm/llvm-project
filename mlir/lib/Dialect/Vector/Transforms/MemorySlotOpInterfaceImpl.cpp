@@ -19,7 +19,9 @@
 // criteria in `isPromotableTransfer`. A read becomes a use of the slot's
 // current value; a write becomes a new definition of it. A transfer with a mask
 // operand covers only its active lanes, so it is composed with an
-// `arith.select`.
+// `arith.select`. A transfer wrapped in `vector.mask` is not promoted: its use
+// of the slot is inside a region, and Mem2Reg only promotes through regions
+// whose parent op implements `PromotableRegionOpInterface`.
 //
 //===----------------------------------------------------------------------===//
 
@@ -105,7 +107,6 @@ isPromotableTransfer(VectorTransferOpInterface xferOp, const MemorySlot &slot,
 //===----------------------------------------------------------------------===//
 
 namespace {
-
 /// Mem2Reg model for a `vector.transfer_read` of the slot.
 struct TransferReadOpMemOpModel
     : public PromotableMemOpInterface::ExternalModel<TransferReadOpMemOpModel,
@@ -171,7 +172,7 @@ struct TransferWriteOpMemOpModel
 
   // Promotion replaces the slot with a vector value, so the write becomes the
   // code producing that value: the transfer's vector, or a select of it over
-  // the previous value when the write is masked.
+  // the previous value when the write has a mask.
   Value getStored(Operation *op, const MemorySlot &slot, OpBuilder &builder,
                   Value reachingDef, const DataLayout &dataLayout) const {
     auto writeOp = cast<vector::TransferWriteOp>(op);
@@ -203,8 +204,6 @@ struct TransferWriteOpMemOpModel
     return DeletionKind::Delete;
   }
 };
-
-
 } // namespace
 
 //===----------------------------------------------------------------------===//

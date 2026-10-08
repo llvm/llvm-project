@@ -56,16 +56,16 @@ func.func @write_then_read_dyn_subview(%v: vector<8x16xf32>, %w: vector<8x16xf32
 
 // -----
 
-// A masked read through a dynamic subview combines both masks: the subview
-// extent (create_mask) AND the transfer's own mask.
-// CHECK-LABEL: func.func @masked_read_dyn_subview(
+// A read with a mask through a dynamic subview combines both masks: the subview
+// extent (create_mask) AND the transfer's own mask operand.
+// CHECK-LABEL: func.func @read_with_mask_dyn_subview(
 // CHECK-SAME:      %[[V:.*]]: vector<8x16xf32>, %[[N:.*]]: index, %[[M:.*]]: vector<8x16xi1>, %[[PAD:.*]]: f32
 // CHECK-NOT:     memref.alloca
 // CHECK:         %[[CM:.*]] = vector.create_mask %{{.*}}, %[[N]] : vector<8x16xi1>
 // CHECK:         %[[AND:.*]] = arith.andi %[[CM]], %[[M]]
 // CHECK:         %[[SEL:.*]] = arith.select %[[AND]], %[[V]], %{{.*}}
 // CHECK:         return %[[SEL]]
-func.func @masked_read_dyn_subview(%v: vector<8x16xf32>, %n: index, %m: vector<8x16xi1>, %pad: f32) -> vector<8x16xf32> {
+func.func @read_with_mask_dyn_subview(%v: vector<8x16xf32>, %n: index, %m: vector<8x16xi1>, %pad: f32) -> vector<8x16xf32> {
   %c0 = arith.constant 0 : index
   %a = memref.alloca() : memref<8x16xf32>
   vector.transfer_write %v, %a[%c0, %c0] {in_bounds = [true, true]} : vector<8x16xf32>, memref<8x16xf32>

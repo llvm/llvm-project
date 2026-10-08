@@ -574,14 +574,14 @@ func.func @gemm_k_early_exit(%A: memref<4x16xf32>, %B: memref<16x4xf32>,
 
 // -----
 
-// A masked whole-buffer read promotes to select(mask, reachingDef, padding).
-// CHECK-LABEL: func.func @masked_read(
+// A whole-buffer read WITH A MASK promotes to select(mask, reachingDef, padding).
+// CHECK-LABEL: func.func @read_with_mask(
 // CHECK-SAME:      %[[V:.*]]: vector<8xf32>, %[[M:.*]]: vector<8xi1>, %[[PAD:.*]]: f32
 // CHECK-NOT:     memref.alloca
 // CHECK:         %[[PS:.*]] = vector.broadcast %[[PAD]] : f32 to vector<8xf32>
 // CHECK:         %[[SEL:.*]] = arith.select %[[M]], %[[V]], %[[PS]]
 // CHECK:         return %[[SEL]]
-func.func @masked_read(%v: vector<8xf32>, %m: vector<8xi1>, %pad: f32) -> vector<8xf32> {
+func.func @read_with_mask(%v: vector<8xf32>, %m: vector<8xi1>, %pad: f32) -> vector<8xf32> {
   %c0 = arith.constant 0 : index
   %a = memref.alloca() : memref<8xf32>
   vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
@@ -591,14 +591,14 @@ func.func @masked_read(%v: vector<8xf32>, %m: vector<8xi1>, %pad: f32) -> vector
 
 // -----
 
-// A masked whole-buffer write composes select(mask, stored, reachingDef); a
+// A whole-buffer write WITH A MASK composes select(mask, stored, reachingDef); a
 // later read observes that composed value.
-// CHECK-LABEL: func.func @masked_write(
+// CHECK-LABEL: func.func @write_with_mask(
 // CHECK-SAME:      %[[V:.*]]: vector<8xf32>, %[[W:.*]]: vector<8xf32>, %[[M:.*]]: vector<8xi1>
 // CHECK-NOT:     memref.alloca
 // CHECK:         %[[SEL:.*]] = arith.select %[[M]], %[[W]], %[[V]]
 // CHECK:         return %[[SEL]]
-func.func @masked_write(%v: vector<8xf32>, %w: vector<8xf32>, %m: vector<8xi1>, %pad: f32) -> vector<8xf32> {
+func.func @write_with_mask(%v: vector<8xf32>, %w: vector<8xf32>, %m: vector<8xi1>, %pad: f32) -> vector<8xf32> {
   %c0 = arith.constant 0 : index
   %a = memref.alloca() : memref<8xf32>
   vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
@@ -609,22 +609,56 @@ func.func @masked_write(%v: vector<8xf32>, %w: vector<8xf32>, %m: vector<8xi1>, 
 
 // -----
 
-// A masked write into a static subview composes through the subview aliaser:
+// A write WITH A MASK into a static subview composes through the subview aliaser:
 // the region is projected out (extract_strided_slice), the mask selects the
 // stored value, and the result is inserted back (insert_strided_slice).
-// CHECK-LABEL: func.func @masked_write_static_subview(
+// CHECK-LABEL: func.func @write_with_mask_static_subview(
 // CHECK-SAME:      %[[V:.*]]: vector<4xf32>, %[[INIT:.*]]: vector<8xf32>, %{{.*}}: f32, %[[M:.*]]: vector<4xi1>
 // CHECK-NOT:     memref.alloca
 // CHECK:         %[[EX:.*]] = vector.extract_strided_slice %[[INIT]] offsets = [2], sizes = [4]
 // CHECK:         %[[SEL:.*]] = arith.select %[[M]], %[[V]], %[[EX]]
 // CHECK:         %[[INS:.*]] = vector.insert_strided_slice %[[SEL]], %[[INIT]] offsets = [2]
 // CHECK:         return %[[INS]]
-func.func @masked_write_static_subview(%v: vector<4xf32>, %init: vector<8xf32>, %pad: f32, %m: vector<4xi1>) -> vector<8xf32> {
+func.func @write_with_mask_static_subview(%v: vector<4xf32>, %init: vector<8xf32>, %pad: f32, %m: vector<4xi1>) -> vector<8xf32> {
   %c0 = arith.constant 0 : index
   %a = memref.alloca() : memref<8xf32>
   vector.transfer_write %init, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
   %sv = memref.subview %a[2] [4] [1] : memref<8xf32> to memref<4xf32, strided<[1], offset: 2>>
   vector.transfer_write %v, %sv[%c0], %m {in_bounds = [true]} : vector<4xf32>, memref<4xf32, strided<[1], offset: 2>>
+  %r = vector.transfer_read %a[%c0], %pad {in_bounds = [true]} : memref<8xf32>, vector<8xf32>
+  return %r : vector<8xf32>
+}
+
+// -----
+
+// NEGATIVE: the MASKED form (`vector.mask` wrapping the transfer) is not
+// promoted. The transfer's use of the buffer is inside a region, and Mem2Reg
+// only promotes through regions whose parent op implements
+// `PromotableRegionOpInterface`, which `vector.mask` does not.
+
+// CHECK-LABEL: func.func @negative_masked_read(
+//        CHECK:   memref.alloca
+//        CHECK:   vector.mask
+func.func @negative_masked_read(%v: vector<8xf32>, %m: vector<8xi1>, %pad: f32) -> vector<8xf32> {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<8xf32>
+  vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  %r = vector.mask %m { vector.transfer_read %a[%c0], %pad {in_bounds = [true]} : memref<8xf32>, vector<8xf32> } : vector<8xi1> -> vector<8xf32>
+  return %r : vector<8xf32>
+}
+
+// -----
+
+// NEGATIVE: the same for a write.
+
+// CHECK-LABEL: func.func @negative_masked_write(
+//        CHECK:   memref.alloca
+//        CHECK:   vector.mask
+func.func @negative_masked_write(%v: vector<8xf32>, %w: vector<8xf32>, %m: vector<8xi1>, %pad: f32) -> vector<8xf32> {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<8xf32>
+  vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  vector.mask %m { vector.transfer_write %w, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32> } : vector<8xi1>
   %r = vector.transfer_read %a[%c0], %pad {in_bounds = [true]} : memref<8xf32>, vector<8xf32>
   return %r : vector<8xf32>
 }

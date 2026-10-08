@@ -241,7 +241,6 @@ static void writeVectorToMemRef(OpBuilder &builder, Location loc, Value vec,
 //  memref.subview aliaser
 //===----------------------------------------------------------------------===//
 namespace {
-
 /// Mem2Reg model for `memref.copy`.
 ///
 /// Mem2Reg turns a memref slot into one vector SSA value and tracks which value
@@ -445,7 +444,6 @@ struct SubViewOpAliasModel
         .getResult();
   }
 };
-
 } // namespace
 
 //===----------------------------------------------------------------------===//
