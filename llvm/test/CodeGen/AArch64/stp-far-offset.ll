@@ -174,3 +174,53 @@ define void @stp_far_offset_q_4k_aligned(ptr %p, <2 x i64> %v0, <2 x i64> %v1) {
   store <2 x i64> %v1, ptr %gep1
   ret void
 }
+
+; The preceding SUBXri that defines the pair's base register can be folded
+; with the base-adjust ADDXri: sub x8, x0, #4096 + add x9, x8, #3696 merges
+; into sub x8, x0, #400, saving one instruction.
+define void @stp_far_offset_merge_sub(ptr %p, i32 %v0, i32 %v1) {
+; ENABLED-LABEL: stp_far_offset_merge_sub:
+; ENABLED:       // %bb.0:
+; ENABLED-NEXT:    sub x[[TMP:[0-9]+]], x0, #400
+; ENABLED-NEXT:    stp w1, w2, [x[[TMP]]]
+; ENABLED-NEXT:    ret
+;
+; DISABLED-LABEL: stp_far_offset_merge_sub:
+; DISABLED:       // %bb.0:
+; DISABLED-NOT:     stp w
+; DISABLED-NOT:     stp x
+; DISABLED:        ret
+  %base = getelementptr i8, ptr %p, i64 -4096
+  %g0 = getelementptr i8, ptr %base, i64 3696
+  %g1 = getelementptr i8, ptr %base, i64 3700
+  store i32 %v0, ptr %g0
+  store i32 %v1, ptr %g1
+  ret void
+}
+
+; A third store reads the base register BETWEEN the two paired stores.
+; The fold must be blocked: rewriting the SUBXri would change the base
+; for the interleaved store, causing a miscompile.
+define void @stp_far_offset_merge_blocked_interleaved(ptr %p, i32 %v0, i32 %vmid, i32 %v1) {
+; ENABLED-LABEL: stp_far_offset_merge_blocked_interleaved:
+; ENABLED:       // %bb.0:
+; ENABLED-NEXT:    sub x[[BASE:[0-9]+]], x0, #1, lsl #12 // =4096
+; ENABLED-NEXT:    add x[[ADJ:[0-9]+]], x[[BASE]], #3696
+; ENABLED-NEXT:    str w[[RMID:[0-9]+]], [x[[BASE]], #200]
+; ENABLED-NEXT:    stp w[[R0:[0-9]+]], w[[R1:[0-9]+]], [x[[ADJ]]]
+; ENABLED-NEXT:    ret
+;
+; DISABLED-LABEL: stp_far_offset_merge_blocked_interleaved:
+; DISABLED:       // %bb.0:
+; DISABLED-NOT:     stp w
+; DISABLED-NOT:     stp x
+; DISABLED:        ret
+  %base = getelementptr i8, ptr %p, i64 -4096
+  %g0 = getelementptr i8, ptr %base, i64 3696
+  %g_mid = getelementptr i8, ptr %base, i64 200
+  %g1 = getelementptr i8, ptr %base, i64 3700
+  store i32 %v0, ptr %g0
+  store i32 %vmid, ptr %g_mid
+  store i32 %v1, ptr %g1
+  ret void
+}
