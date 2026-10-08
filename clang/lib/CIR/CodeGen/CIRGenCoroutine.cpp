@@ -157,9 +157,9 @@ emitBodyAndFallthrough(CIRGenFunction &cgf, const CoroutineBodyStmt &s,
                        const CIRGenFunction::LexicalScope *currLexScope) {
   {
     // Destroy the body's local variables, and the temporaries they extend, when
-    // the body ends, before the fall-through handler, the implicit `co_return;`,
-    // calls return_void(). The body stays in the current lexical scope so that a
-    // co_return at its top level is recorded in currLexScope.
+    // the body ends, before the fall-through handler, the implicit
+    // `co_return;`, calls return_void(). The body stays in the current lexical
+    // scope so that a co_return at its top level is recorded in currLexScope.
     CIRGenFunction::RunCleanupsScope bodyScope(cgf);
     if (cgf.emitStmt(body, /*useCurrentScope=*/true).failed())
       return mlir::failure();
