@@ -18976,7 +18976,7 @@ void Sema::SetDeclDeleted(Decl *Dcl, SourceLocation DelLoc,
   Fn->setDeletedAsWritten(true, Message);
 }
 
-void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {
+void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc, Scope *S) {
   if (!Dcl || Dcl->isInvalidDecl())
     return;
 
@@ -19051,8 +19051,9 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {
 
   // Only allocate DefaultedOrDeletedFunctionInfo if we actually have
   // non-default FP features to stash. This avoids memory overhead for
-  // the vast majority of defaulted functions.
-  if (!FD->getDefaultedOrDeletedInfo() &&
+  // the vast majority of defaulted functions. Comparisons with a scope save
+  // these features along with their unqualified lookups below.
+  if (!FD->getDefaultedOrDeletedInfo() && (!DefKind.isComparison() || !S) &&
       CurFPFeatureOverrides().requiresTrailingStorage()) {
     FD->setDefaultedOrDeletedInfo(
         FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
@@ -19060,7 +19061,7 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {
   }
 
   if (DefKind.isComparison()) {
-    if (CheckExplicitlyDefaultedComparison(nullptr, FD, DefKind.asComparison()))
+    if (CheckExplicitlyDefaultedComparison(S, FD, DefKind.asComparison()))
       FD->setInvalidDecl();
     else
       DefineDefaultedComparison(DefaultLoc, FD, DefKind.asComparison());
@@ -19094,14 +19095,15 @@ void Sema::DiagnoseReturnInConstructorExceptionHandler(CXXTryStmt *TryBlock) {
   }
 }
 
-void Sema::SetFunctionBodyKind(Decl *D, SourceLocation Loc, FnBodyKind BodyKind,
+void Sema::SetFunctionBodyKind(Scope *S, Decl *D, SourceLocation Loc,
+                               FnBodyKind BodyKind,
                                StringLiteral *DeletedMessage) {
   switch (BodyKind) {
   case FnBodyKind::Delete:
     SetDeclDeleted(D, Loc, DeletedMessage);
     break;
   case FnBodyKind::Default:
-    SetDeclDefaulted(D, Loc);
+    SetDeclDefaulted(D, Loc, S);
     break;
   case FnBodyKind::Other:
     llvm_unreachable(
