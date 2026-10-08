@@ -30328,6 +30328,16 @@ static SDValue performDUPCombine(SDNode *N,
     }
 
     return performPostLD1Combine(N, DCI, false);
+  } else { // AArch64ISD::DUPLANE8/16/32/64
+    SDValue SrcOp = N->getOperand(0);
+    APInt InDemandedElts =
+        APInt::getOneBitSet(SrcOp.getValueType().getVectorNumElements(),
+                            N->getConstantOperandVal(1));
+    KnownBits Known = DCI.DAG.computeKnownBits(SrcOp, InDemandedElts);
+    if (Known.isZero())
+      return DCI.DAG.getBitcast(
+          VT, DCI.DAG.getConstant(Known.getConstant(), DL,
+                                  VT.changeVectorElementTypeToInteger()));
   }
 
   return SDValue();
