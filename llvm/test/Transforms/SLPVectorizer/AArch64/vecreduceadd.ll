@@ -930,7 +930,7 @@ entry:
 
 
 ; COST-LABEL: Function:  mla_v8i8_i32
-; COST: Cost:            '-32'
+; COST: Cost:            '-26'
 define i32 @mla_v8i8_i32(ptr %x, ptr %y) "target-features"="+dotprod" {
 ; CHECK-LABEL: @mla_v8i8_i32(
 ; CHECK-NEXT:  entry:
@@ -1009,7 +1009,7 @@ entry:
 
 
 ; COST-LABEL: Function:  mla_v16i8_i32
-; COST: Cost:            '-70'
+; COST: Cost:            '-58'
 define i32 @mla_v16i8_i32(ptr %x, ptr %y) "target-features"="+dotprod" {
 ; CHECK-LABEL: @mla_v16i8_i32(
 ; CHECK-NEXT:  entry:
@@ -1409,4 +1409,218 @@ entry:
   %mul.15 = mul nsw i32 %conv3.15, %conv.15
   %sub.15 = sub nsw i32 %mul.15, %sub.14
   ret i32 %sub.15
+}
+
+
+; Both factors of the square share one extend.
+; COST-LABEL: Function:  mla_sq_v16i8_i32
+; COST: Cost:            '-43'
+define i32 @mla_sq_v16i8_i32(ptr %x) "target-features"="+dotprod" {
+; CHECK-LABEL: @mla_sq_v16i8_i32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[X:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = sext <16 x i8> [[TMP0]] to <16 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nsw <16 x i32> [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP2]])
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+entry:
+  %0 = load i8, ptr %x
+  %conv = sext i8 %0 to i32
+  %mul = mul nsw i32 %conv, %conv
+  %arrayidx.1 = getelementptr inbounds nuw i8, ptr %x, i64 1
+  %1 = load i8, ptr %arrayidx.1
+  %conv.1 = sext i8 %1 to i32
+  %mul.1 = mul nsw i32 %conv.1, %conv.1
+  %add.1 = add nsw i32 %mul.1, %mul
+  %arrayidx.2 = getelementptr inbounds nuw i8, ptr %x, i64 2
+  %2 = load i8, ptr %arrayidx.2
+  %conv.2 = sext i8 %2 to i32
+  %mul.2 = mul nsw i32 %conv.2, %conv.2
+  %add.2 = add nsw i32 %mul.2, %add.1
+  %arrayidx.3 = getelementptr inbounds nuw i8, ptr %x, i64 3
+  %3 = load i8, ptr %arrayidx.3
+  %conv.3 = sext i8 %3 to i32
+  %mul.3 = mul nsw i32 %conv.3, %conv.3
+  %add.3 = add nsw i32 %mul.3, %add.2
+  %arrayidx.4 = getelementptr inbounds nuw i8, ptr %x, i64 4
+  %4 = load i8, ptr %arrayidx.4
+  %conv.4 = sext i8 %4 to i32
+  %mul.4 = mul nsw i32 %conv.4, %conv.4
+  %add.4 = add nsw i32 %mul.4, %add.3
+  %arrayidx.5 = getelementptr inbounds nuw i8, ptr %x, i64 5
+  %5 = load i8, ptr %arrayidx.5
+  %conv.5 = sext i8 %5 to i32
+  %mul.5 = mul nsw i32 %conv.5, %conv.5
+  %add.5 = add nsw i32 %mul.5, %add.4
+  %arrayidx.6 = getelementptr inbounds nuw i8, ptr %x, i64 6
+  %6 = load i8, ptr %arrayidx.6
+  %conv.6 = sext i8 %6 to i32
+  %mul.6 = mul nsw i32 %conv.6, %conv.6
+  %add.6 = add nsw i32 %mul.6, %add.5
+  %arrayidx.7 = getelementptr inbounds nuw i8, ptr %x, i64 7
+  %7 = load i8, ptr %arrayidx.7
+  %conv.7 = sext i8 %7 to i32
+  %mul.7 = mul nsw i32 %conv.7, %conv.7
+  %add.7 = add nsw i32 %mul.7, %add.6
+  %arrayidx.8 = getelementptr inbounds nuw i8, ptr %x, i64 8
+  %8 = load i8, ptr %arrayidx.8
+  %conv.8 = sext i8 %8 to i32
+  %mul.8 = mul nsw i32 %conv.8, %conv.8
+  %add.8 = add nsw i32 %mul.8, %add.7
+  %arrayidx.9 = getelementptr inbounds nuw i8, ptr %x, i64 9
+  %9 = load i8, ptr %arrayidx.9
+  %conv.9 = sext i8 %9 to i32
+  %mul.9 = mul nsw i32 %conv.9, %conv.9
+  %add.9 = add nsw i32 %mul.9, %add.8
+  %arrayidx.10 = getelementptr inbounds nuw i8, ptr %x, i64 10
+  %10 = load i8, ptr %arrayidx.10
+  %conv.10 = sext i8 %10 to i32
+  %mul.10 = mul nsw i32 %conv.10, %conv.10
+  %add.10 = add nsw i32 %mul.10, %add.9
+  %arrayidx.11 = getelementptr inbounds nuw i8, ptr %x, i64 11
+  %11 = load i8, ptr %arrayidx.11
+  %conv.11 = sext i8 %11 to i32
+  %mul.11 = mul nsw i32 %conv.11, %conv.11
+  %add.11 = add nsw i32 %mul.11, %add.10
+  %arrayidx.12 = getelementptr inbounds nuw i8, ptr %x, i64 12
+  %12 = load i8, ptr %arrayidx.12
+  %conv.12 = sext i8 %12 to i32
+  %mul.12 = mul nsw i32 %conv.12, %conv.12
+  %add.12 = add nsw i32 %mul.12, %add.11
+  %arrayidx.13 = getelementptr inbounds nuw i8, ptr %x, i64 13
+  %13 = load i8, ptr %arrayidx.13
+  %conv.13 = sext i8 %13 to i32
+  %mul.13 = mul nsw i32 %conv.13, %conv.13
+  %add.13 = add nsw i32 %mul.13, %add.12
+  %arrayidx.14 = getelementptr inbounds nuw i8, ptr %x, i64 14
+  %14 = load i8, ptr %arrayidx.14
+  %conv.14 = sext i8 %14 to i32
+  %mul.14 = mul nsw i32 %conv.14, %conv.14
+  %add.14 = add nsw i32 %mul.14, %add.13
+  %arrayidx.15 = getelementptr inbounds nuw i8, ptr %x, i64 15
+  %15 = load i8, ptr %arrayidx.15
+  %conv.15 = sext i8 %15 to i32
+  %mul.15 = mul nsw i32 %conv.15, %conv.15
+  %add.15 = add nsw i32 %mul.15, %add.14
+  ret i32 %add.15
+}
+
+
+; The extend also feeds a plain sum, so it is still emitted.
+; COST-LABEL: Function:  mla_sq_sum_v16i8_i32
+; COST: Cost:            '-11'
+define i64 @mla_sq_sum_v16i8_i32(ptr %x) "target-features"="+dotprod" {
+; CHECK-LABEL: @mla_sq_sum_v16i8_i32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[X:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <16 x i8> [[TMP0]] to <16 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw <16 x i32> [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP1]])
+; CHECK-NEXT:    [[SQR_EXT:%.*]] = zext i32 [[TMP3]] to i64
+; CHECK-NEXT:    [[SUM_EXT:%.*]] = zext i32 [[TMP4]] to i64
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i64 [[SUM_EXT]], 32
+; CHECK-NEXT:    [[RES:%.*]] = or disjoint i64 [[SHL]], [[SQR_EXT]]
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+entry:
+  %0 = load i8, ptr %x
+  %conv = zext i8 %0 to i32
+  %mul = mul nuw nsw i32 %conv, %conv
+  %arrayidx.1 = getelementptr inbounds nuw i8, ptr %x, i64 1
+  %1 = load i8, ptr %arrayidx.1
+  %conv.1 = zext i8 %1 to i32
+  %mul.1 = mul nuw nsw i32 %conv.1, %conv.1
+  %sqr.1 = add nuw nsw i32 %mul.1, %mul
+  %sum.1 = add nuw nsw i32 %conv.1, %conv
+  %arrayidx.2 = getelementptr inbounds nuw i8, ptr %x, i64 2
+  %2 = load i8, ptr %arrayidx.2
+  %conv.2 = zext i8 %2 to i32
+  %mul.2 = mul nuw nsw i32 %conv.2, %conv.2
+  %sqr.2 = add nuw nsw i32 %sqr.1, %mul.2
+  %sum.2 = add nuw nsw i32 %sum.1, %conv.2
+  %arrayidx.3 = getelementptr inbounds nuw i8, ptr %x, i64 3
+  %3 = load i8, ptr %arrayidx.3
+  %conv.3 = zext i8 %3 to i32
+  %mul.3 = mul nuw nsw i32 %conv.3, %conv.3
+  %sqr.3 = add nuw nsw i32 %sqr.2, %mul.3
+  %sum.3 = add nuw nsw i32 %sum.2, %conv.3
+  %arrayidx.4 = getelementptr inbounds nuw i8, ptr %x, i64 4
+  %4 = load i8, ptr %arrayidx.4
+  %conv.4 = zext i8 %4 to i32
+  %mul.4 = mul nuw nsw i32 %conv.4, %conv.4
+  %sqr.4 = add nuw nsw i32 %sqr.3, %mul.4
+  %sum.4 = add nuw nsw i32 %sum.3, %conv.4
+  %arrayidx.5 = getelementptr inbounds nuw i8, ptr %x, i64 5
+  %5 = load i8, ptr %arrayidx.5
+  %conv.5 = zext i8 %5 to i32
+  %mul.5 = mul nuw nsw i32 %conv.5, %conv.5
+  %sqr.5 = add nuw nsw i32 %sqr.4, %mul.5
+  %sum.5 = add nuw nsw i32 %sum.4, %conv.5
+  %arrayidx.6 = getelementptr inbounds nuw i8, ptr %x, i64 6
+  %6 = load i8, ptr %arrayidx.6
+  %conv.6 = zext i8 %6 to i32
+  %mul.6 = mul nuw nsw i32 %conv.6, %conv.6
+  %sqr.6 = add nuw nsw i32 %sqr.5, %mul.6
+  %sum.6 = add nuw nsw i32 %sum.5, %conv.6
+  %arrayidx.7 = getelementptr inbounds nuw i8, ptr %x, i64 7
+  %7 = load i8, ptr %arrayidx.7
+  %conv.7 = zext i8 %7 to i32
+  %mul.7 = mul nuw nsw i32 %conv.7, %conv.7
+  %sqr.7 = add nuw nsw i32 %sqr.6, %mul.7
+  %sum.7 = add nuw nsw i32 %sum.6, %conv.7
+  %arrayidx.8 = getelementptr inbounds nuw i8, ptr %x, i64 8
+  %8 = load i8, ptr %arrayidx.8
+  %conv.8 = zext i8 %8 to i32
+  %mul.8 = mul nuw nsw i32 %conv.8, %conv.8
+  %sqr.8 = add nuw nsw i32 %sqr.7, %mul.8
+  %sum.8 = add nuw nsw i32 %sum.7, %conv.8
+  %arrayidx.9 = getelementptr inbounds nuw i8, ptr %x, i64 9
+  %9 = load i8, ptr %arrayidx.9
+  %conv.9 = zext i8 %9 to i32
+  %mul.9 = mul nuw nsw i32 %conv.9, %conv.9
+  %sqr.9 = add nuw nsw i32 %sqr.8, %mul.9
+  %sum.9 = add nuw nsw i32 %sum.8, %conv.9
+  %arrayidx.10 = getelementptr inbounds nuw i8, ptr %x, i64 10
+  %10 = load i8, ptr %arrayidx.10
+  %conv.10 = zext i8 %10 to i32
+  %mul.10 = mul nuw nsw i32 %conv.10, %conv.10
+  %sqr.10 = add nuw nsw i32 %sqr.9, %mul.10
+  %sum.10 = add nuw nsw i32 %sum.9, %conv.10
+  %arrayidx.11 = getelementptr inbounds nuw i8, ptr %x, i64 11
+  %11 = load i8, ptr %arrayidx.11
+  %conv.11 = zext i8 %11 to i32
+  %mul.11 = mul nuw nsw i32 %conv.11, %conv.11
+  %sqr.11 = add nuw nsw i32 %sqr.10, %mul.11
+  %sum.11 = add nuw nsw i32 %sum.10, %conv.11
+  %arrayidx.12 = getelementptr inbounds nuw i8, ptr %x, i64 12
+  %12 = load i8, ptr %arrayidx.12
+  %conv.12 = zext i8 %12 to i32
+  %mul.12 = mul nuw nsw i32 %conv.12, %conv.12
+  %sqr.12 = add nuw nsw i32 %sqr.11, %mul.12
+  %sum.12 = add nuw nsw i32 %sum.11, %conv.12
+  %arrayidx.13 = getelementptr inbounds nuw i8, ptr %x, i64 13
+  %13 = load i8, ptr %arrayidx.13
+  %conv.13 = zext i8 %13 to i32
+  %mul.13 = mul nuw nsw i32 %conv.13, %conv.13
+  %sqr.13 = add nuw nsw i32 %sqr.12, %mul.13
+  %sum.13 = add nuw nsw i32 %sum.12, %conv.13
+  %arrayidx.14 = getelementptr inbounds nuw i8, ptr %x, i64 14
+  %14 = load i8, ptr %arrayidx.14
+  %conv.14 = zext i8 %14 to i32
+  %mul.14 = mul nuw nsw i32 %conv.14, %conv.14
+  %sqr.14 = add nuw nsw i32 %sqr.13, %mul.14
+  %sum.14 = add nuw nsw i32 %sum.13, %conv.14
+  %arrayidx.15 = getelementptr inbounds nuw i8, ptr %x, i64 15
+  %15 = load i8, ptr %arrayidx.15
+  %conv.15 = zext i8 %15 to i32
+  %mul.15 = mul nuw nsw i32 %conv.15, %conv.15
+  %sqr.15 = add nuw nsw i32 %sqr.14, %mul.15
+  %sum.15 = add nuw nsw i32 %sum.14, %conv.15
+  %sqr.ext = zext i32 %sqr.15 to i64
+  %sum.ext = zext i32 %sum.15 to i64
+  %shl = shl nuw i64 %sum.ext, 32
+  %res = or disjoint i64 %shl, %sqr.ext
+  ret i64 %res
 }

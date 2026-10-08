@@ -1037,10 +1037,11 @@ public:
     return 1;
   }
 
-  virtual InstructionCost getMulAccReductionCost(
-      bool IsUnsigned, unsigned RedOpcode, Type *ResTy, VectorType *Ty,
-      TTI::TargetCostKind CostKind,
-      TTI::CastContextHint CCH = TTI::CastContextHint::None) const {
+  virtual InstructionCost
+  getMulAccReductionCost(bool IsUnsigned, unsigned RedOpcode, Type *ResTy,
+                         VectorType *Ty, TTI::TargetCostKind CostKind,
+                         TTI::CastContextHint CCH = TTI::CastContextHint::None,
+                         bool SameOperands = false) const {
     return 1;
   }
 

@@ -3555,10 +3555,11 @@ public:
     return RedCost + ExtCost;
   }
 
-  InstructionCost getMulAccReductionCost(
-      bool IsUnsigned, unsigned RedOpcode, Type *ResTy, VectorType *Ty,
-      TTI::TargetCostKind CostKind,
-      TTI::CastContextHint CCH = TTI::CastContextHint::None) const override {
+  InstructionCost
+  getMulAccReductionCost(bool IsUnsigned, unsigned RedOpcode, Type *ResTy,
+                         VectorType *Ty, TTI::TargetCostKind CostKind,
+                         TTI::CastContextHint CCH = TTI::CastContextHint::None,
+                         bool SameOperands = false) const override {
     // Without any native support, this is equivalent to the cost of
     // vecreduce.add(mul(ext(Ty A), ext(Ty B))) or
     // vecreduce.add(mul(A, B)).
@@ -3574,7 +3575,7 @@ public:
     InstructionCost MulCost =
         thisT()->getArithmeticInstrCost(Instruction::Mul, ExtTy, CostKind);
 
-    return RedCost + MulCost + 2 * ExtCost;
+    return RedCost + MulCost + (SameOperands ? 1 : 2) * ExtCost;
   }
 
   InstructionCost getPartialReductionCost(
