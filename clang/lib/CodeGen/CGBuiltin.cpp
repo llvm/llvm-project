@@ -177,6 +177,21 @@ static void initializeAlloca(CodeGenFunction &CGF, AllocaInst *AI, Value *Size,
   I->addAnnotationMetadata("auto-init");
 }
 
+/// MSVC's /GS treats a buffer allocated by _alloca as a GS buffer whatever its
+/// size, so mark \p AI as one. The element count that would let the backend
+/// recognise it on its own does not survive InstCombine folding a
+/// constant-sized alloca to an array type, so record it here.
+static void markAllocaAsGSBuffer(CodeGenFunction &CGF, AllocaInst *AI,
+                                 Value *Size) {
+  unsigned SSPBufferSize = CGF.CGM.getCodeGenOpts().SSPBufferSize;
+  const auto *CI = dyn_cast<llvm::ConstantInt>(Size);
+  // Lay it out as the backend would if the element count were still visible:
+  // a variable size, or one of at least ssp-buffer-size bytes, goes closest to
+  // the stack guard.
+  CGF.MarkGSBufferAlloca(AI, !CI || CI->getLimitedValue(SSPBufferSize) >=
+                                        SSPBufferSize);
+}
+
 /// getBuiltinLibFunction - Given a builtin id for a function like
 /// "__builtin_fabsf", return a Function* for "fabsf".
 llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
@@ -4815,6 +4830,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
             .getAsAlign();
     AllocaInst *AI = Builder.CreateAlloca(Builder.getInt8Ty(), Size);
     AI->setAlignment(SuitableAlignmentInBytes);
+    markAllocaAsGSBuffer(*this, AI, Size);
     if (BuiltinID != Builtin::BI__builtin_alloca_uninitialized)
       initializeAlloca(*this, AI, Size, SuitableAlignmentInBytes);
     if (AI->getAddressSpace() !=
@@ -4836,6 +4852,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         CGM.getContext().toCharUnitsFromBits(AlignmentInBits).getAsAlign();
     AllocaInst *AI = Builder.CreateAlloca(Builder.getInt8Ty(), Size);
     AI->setAlignment(AlignmentInBytes);
+    markAllocaAsGSBuffer(*this, AI, Size);
     if (BuiltinID != Builtin::BI__builtin_alloca_with_align_uninitialized)
       initializeAlloca(*this, AI, Size, AlignmentInBytes);
     if (AI->getAddressSpace() !=

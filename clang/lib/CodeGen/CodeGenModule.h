@@ -1998,6 +1998,8 @@ public:
   std::optional<llvm::Attribute::AttrKind>
   StackProtectorAttribute(const Decl *D) const;
 
+  bool useMSVCGSBufferHeuristic(const Decl *D) const;
+
   std::string getPFPFieldName(const FieldDecl *FD);
   llvm::GlobalValue *getPFPDeactivationSymbol(const FieldDecl *FD);
 

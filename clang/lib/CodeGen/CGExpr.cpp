@@ -203,11 +203,14 @@ RawAddress CodeGenFunction::CreateMemTemp(QualType Ty, const Twine &Name,
 }
 
 RawAddress CodeGenFunction::CreateMemTemp(QualType Ty, CharUnits Align,
-                                          const Twine &Name,
-                                          RawAddress *Alloca) {
+                                          const Twine &Name, RawAddress *Alloca,
+                                          GSObjectKind GSKind) {
   RawAddress Result =
       CreateTempAlloca(ConvertTypeForMem(Ty), Ty.getAddressSpace(), Align, Name,
                        /*ArraySize=*/nullptr, Alloca);
+
+  EmitGSBufferStackProtectorMD(
+      Alloca ? Alloca->getPointer() : Result.getPointer(), Ty, GSKind);
 
   if (Ty->isConstantMatrixType()) {
     auto *ArrayTy = cast<llvm::ArrayType>(Result.getElementType());
@@ -229,7 +232,11 @@ RawAddress CodeGenFunction::CreateMemTemp(QualType Ty, CharUnits Align,
 RawAddress CodeGenFunction::CreateMemTempWithoutCast(QualType Ty,
                                                      CharUnits Align,
                                                      const Twine &Name) {
-  return CreateTempAllocaWithoutCast(ConvertTypeForMem(Ty), Align, Name);
+  RawAddress Result =
+      CreateTempAllocaWithoutCast(ConvertTypeForMem(Ty), Align, Name);
+  EmitGSBufferStackProtectorMD(Result.getPointer(), Ty,
+                               GSObjectKind::Temporary);
+  return Result;
 }
 
 RawAddress CodeGenFunction::CreateMemTempWithoutCast(QualType Ty,
@@ -512,7 +519,13 @@ static RawAddress createReferenceTemporary(CodeGenFunction &CGF,
         // FIXME: Should we put the new global into a COMDAT?
         return RawAddress(C, GV->getValueType(), alignment);
       }
-    return CGF.CreateMemTemp(Ty, "ref.tmp", Alloca);
+    RawAddress Object = CGF.CreateMemTemp(Ty, "ref.tmp", Alloca);
+    // A temporary bound to a reference outlives the full-expression and has an
+    // address the program can pass around, so cl.exe treats it as a real local
+    // object rather than an anonymous ABI slot.
+    CGF.EmitGSBufferStackProtectorMD(
+        Alloca ? Alloca->getPointer() : Object.getPointer(), Ty);
+    return Object;
   }
   case SD_Thread:
   case SD_Static:

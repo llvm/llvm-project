@@ -1018,6 +1018,14 @@ features cannot lower the translation-unit ABI level;
   subsequent base; Clang now does the same.
   ([#210174](https://github.com/llvm/llvm-project/issues/210174))
 
+- `clang-cl`'s `/GS` now uses MSVC's buffer heuristic instead of
+  `-fstack-protector-strong`. MSVC decides from the declared type of each stack
+  object, so it protects functions Clang previously left alone — an array of
+  pointers, or a struct whose pointer-free member array is only two bytes wide —
+  and leaves alone functions Clang previously protected, such as one whose only
+  address-taken local is a scalar. `/GS-`, and the GCC-style
+  `-fstack-protector*` options when passed through `/clang:`, are unaffected.
+
 #### LoongArch Support
 
 - `loongarch32-*-none-elf` and `loongarch64-*-none-elf` targets now use the

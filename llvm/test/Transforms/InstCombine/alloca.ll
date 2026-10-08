@@ -259,3 +259,21 @@ define void @test_inalloca_with_element_count(ptr %a) {
   call void @test9_aux(ptr inalloca(%struct_type) %alloca)
   ret void
 }
+
+; Folding the element count into the allocated type must not lose what was
+; said about the allocation.
+define void @test_metadata_is_preserved() {
+; ALL-LABEL: @test_metadata_is_preserved(
+; ALL-NEXT:    [[ALLOCA1:%.*]] = alloca [10 x i8], align 1, !stack-protector [[META0:![0-9]+]]
+; ALL-NEXT:    call void (...) @use(ptr nonnull [[ALLOCA1]])
+; ALL-NEXT:    ret void
+;
+  %alloca = alloca i8, i32 10, !stack-protector !0
+  call void (...) @use(ptr %alloca)
+  ret void
+}
+
+!0 = !{i32 2}
+;.
+; ALL: [[META0]] = !{i32 2}
+;.

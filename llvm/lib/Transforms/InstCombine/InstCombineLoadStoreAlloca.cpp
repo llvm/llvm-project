@@ -193,6 +193,9 @@ static Instruction *simplifyAllocaArraySize(InstCombinerImpl &IC,
                                                 nullptr, AI.getName());
       New->setAlignment(AI.getAlign());
       New->setUsedWithInAlloca(AI.isUsedWithInAlloca());
+      // It is the same allocation, so it keeps what was said about it, e.g.
+      // "stack-protector".
+      New->copyMetadata(AI);
 
       replaceAllDbgUsesWith(AI, *New, *New, DT);
       return IC.replaceInstUsesWith(AI, New);

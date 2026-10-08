@@ -5297,7 +5297,8 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     // temporary.
     AggValueSlot Slot = args.isUsingInAlloca()
                             ? createPlaceholderSlot(*this, type)
-                            : CreateAggTemp(type, "agg.tmp");
+                            : CreateAggTemp(type, "agg.tmp", /*Alloca=*/nullptr,
+                                            GSObjectKind::ArgumentCopy);
 
     bool DestroyedInCallee = true, NeedsCleanup = true;
     if (const auto *RD = type->getAsCXXRecordDecl())

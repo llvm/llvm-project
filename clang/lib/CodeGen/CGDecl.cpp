@@ -1488,6 +1488,327 @@ static bool shouldExtendLifetime(const ASTContext &Context,
   return true;
 }
 
+/// An array is only an MSVC "GS buffer" if it is strictly larger than this.
+static constexpr int64_t MinGSArraySize = 4;
+
+/// A pointer-free aggregate is only an MSVC "GS buffer" if it is strictly
+/// larger than this.
+static constexpr int64_t MinGSAggregateSize = 8;
+
+/// Returns true if \p Ty is a pointer as far as MSVC's GS-buffer rules are
+/// concerned, i.e. something that holds an address rather than data.
+static bool isGSPointerType(QualType Ty) {
+  return Ty->isAnyPointerType() || Ty->isReferenceType() ||
+         Ty->isBlockPointerType() || Ty->isMemberFunctionPointerType() ||
+         Ty->isNullPtrType();
+}
+
+/// Returns true if \p Ty holds a pointer anywhere within it. MSVC's GS-buffer
+/// rules treat a pointer-free aggregate as something that may be used as a
+/// buffer, so the presence of a pointer is what disqualifies it.
+///
+/// A pointer a class inherits does not count, at any depth: cl.exe sees
+/// `struct B { void *p; }; struct D : B { long long a; };` as a GS buffer, and
+/// likewise an aggregate with a `D` member, while the same shapes built out of
+/// `B` members are not. The base classes get their own chance to make the
+/// derived class a buffer, in isGSBuffer.
+static bool containsGSPointer(const ASTContext &Ctx, QualType Ty,
+                              llvm::SmallPtrSetImpl<const RecordDecl *> &Seen) {
+  if (isGSPointerType(Ty))
+    return true;
+  if (const ArrayType *AT = Ctx.getAsArrayType(Ty))
+    return containsGSPointer(Ctx, AT->getElementType(), Seen);
+  if (const auto *AT = Ty->getAs<AtomicType>())
+    return containsGSPointer(Ctx, AT->getValueType(), Seen);
+
+  const RecordDecl *RD = Ty->getAsRecordDecl();
+  if (!RD || !RD->isCompleteDefinition() || !Seen.insert(RD).second)
+    return false;
+
+  // A polymorphic class stores a vptr, and a virtual base is reached through a
+  // pointer, neither of which shows up as a field. Both are properties of the
+  // class itself rather than of a base, even when the vptr physically lives in
+  // a base subobject.
+  if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+    if (CXXRD->isDynamicClass() || CXXRD->getNumVBases() != 0)
+      return true;
+
+  return llvm::any_of(RD->fields(), [&](const FieldDecl *FD) {
+    return containsGSPointer(Ctx, FD->getType(), Seen);
+  });
+}
+
+static bool containsGSPointer(const ASTContext &Ctx, QualType Ty) {
+  llvm::SmallPtrSet<const RecordDecl *, 4> Seen;
+  return containsGSPointer(Ctx, Ty, Seen);
+}
+
+/// Returns true if \p RD is laid out as plain, publicly accessible data, which
+/// is what MSVC's GS-buffer rules require of an aggregate before its size alone
+/// makes it a buffer. MSDN does not mention this condition, but cl.exe applies
+/// it: `struct S { long long a, b; };` is a GS buffer while the otherwise
+/// identical `class C { long long a, b; };` is not.
+///
+/// No standard type trait captures this; __is_pod, __is_trivial,
+/// __is_standard_layout and __is_aggregate each disagree with cl.exe on at
+/// least one case, so it is computed here.
+static bool isGSPlainData(const ASTContext &Ctx, const RecordDecl *RD,
+                          llvm::DenseMap<const RecordDecl *, bool> &Cache) {
+  if (!RD || !RD->isCompleteDefinition())
+    return false;
+
+  auto [It, Inserted] = Cache.try_emplace(RD, true);
+  if (!Inserted)
+    return It->second;
+
+  auto Reject = [&] {
+    Cache[RD] = false;
+    return false;
+  };
+
+  if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+    // Anything that needs a constructor, a destructor or a non-trivial copy is
+    // not a raw data buffer as far as cl.exe is concerned. This covers the base
+    // classes too, since a class with a non-trivial base is not trivial.
+    if (!CXXRD->isTrivial() || CXXRD->isDynamicClass() ||
+        CXXRD->getNumVBases() != 0)
+      return Reject();
+  }
+
+  // Access control only exists in C++; a C struct has no AS_public on its
+  // fields to find. Only the class's own fields are checked: a base class is
+  // not, and neither is the access specifier it is inherited with, so
+  // `struct D : private B {}` is plain data even when `B` is not.
+  bool CheckAccess = isa<CXXRecordDecl>(RD);
+  for (const FieldDecl *FD : RD->fields()) {
+    if (CheckAccess && FD->getAccess() != AS_public)
+      return Reject();
+    // A member that is too small to be a buffer in its own right is just
+    // bytes, so cl.exe does not care whether it is plain data. A larger one
+    // disqualifies the enclosing aggregate. An array member is exempt: cl.exe
+    // treats `struct { Opaque m[1]; }` as plain data but `struct { Opaque m; }`
+    // not.
+    QualType FieldTy = FD->getType();
+    const RecordDecl *FieldRD = FieldTy->getAsRecordDecl();
+    if (FieldRD && !FieldTy->isArrayType() &&
+        Ctx.getTypeSizeInChars(FieldTy).getQuantity() > MinGSAggregateSize &&
+        !isGSPlainData(Ctx, FieldRD, Cache))
+      return Reject();
+  }
+  return true;
+}
+
+static bool isGSPlainData(const ASTContext &Ctx, const RecordDecl *RD) {
+  llvm::DenseMap<const RecordDecl *, bool> Cache;
+  return isGSPlainData(Ctx, RD, Cache);
+}
+
+/// Where in a type a candidate GS buffer sits. cl.exe applies a different array
+/// rule below the top level, dropping the element-count condition and adding
+/// one on the element type, so `struct { int m[1]; }` is a GS buffer while
+/// `struct { void *m[4]; }` is not -- the other way round from how the two
+/// types fare as locals.
+enum class GSTypePosition {
+  /// The type of the stack object itself.
+  TopLevel,
+  /// The type of a non-static data member, or of a nested array's elements.
+  Nested,
+};
+
+/// Returns true if \p Ty is an array of more than two elements, counting a
+/// multidimensional array as the flat array it is laid out as: cl.exe sees
+/// `void *a[2][2]` as four elements, not two.
+static bool hasMoreThanTwoGSElements(const ASTContext &Ctx, QualType Ty) {
+  uint64_t N = 1;
+  while (const ConstantArrayType *CAT = Ctx.getAsConstantArrayType(Ty)) {
+    // N is at most two here, or the previous round would have returned, so
+    // this cannot overflow.
+    N *= CAT->getSize().getLimitedValue(3);
+    if (N > 2)
+      return true;
+    Ty = CAT->getElementType();
+  }
+  return false;
+}
+
+/// Returns true if \p Ty is, or contains, a "GS buffer" as MSVC's /GS (Buffer
+/// Security Check) defines one. MSDN describes it as:
+///
+///   - an array that is larger than 4 bytes, has more than two elements, and
+///     has an element type that is not a pointer type;
+///   - a data structure whose size is more than 8 bytes and that contains no
+///     pointers;
+///   - any class or structure that contains a GS buffer.
+///
+/// cl.exe differs from that description in three ways, each confirmed against
+/// cl.exe 19.44 and each reproduced here:
+///
+///   - the two array conditions do not both apply in both positions. For the
+///     type of the stack object itself only the element count matters, so
+///     `void *a[8]` is a GS buffer; for the type of a member only the element
+///     type matters, so `struct { int m[1]; }` is one but
+///     `struct { void *m[4]; }` is not (see GSTypePosition);
+///   - the element count of a multidimensional array is the flattened one, so
+///     `void *a[2][2]` is a GS buffer;
+///   - the size rule for an aggregate additionally requires it to be plain
+///     data (see isGSPlainData).
+///
+/// (A buffer allocated by _alloca is also a GS buffer, but that one is visible
+/// in the IR and so is left to the backend.)
+///
+/// \param [out] IsLarge is set to true if the GS buffer that was found is
+/// "large" (>= ssp-buffer-size), so that it is laid out closest to the stack
+/// guard. In an aggregate holding several GS buffers this is set if any of
+/// them is large.
+static bool isGSBuffer(const ASTContext &Ctx, QualType Ty,
+                       unsigned SSPBufferSize, bool &IsLarge,
+                       GSTypePosition Position = GSTypePosition::TopLevel) {
+  if (Ty.isNull() || Ty->isDependentType() || Ty->isIncompleteType())
+    return false;
+
+  auto Found = [&](QualType BufferTy) {
+    if (Ctx.getTypeSizeInChars(BufferTy).getQuantity() >=
+        static_cast<int64_t>(SSPBufferSize))
+      IsLarge = true;
+    return true;
+  };
+
+  if (const ConstantArrayType *CAT = Ctx.getAsConstantArrayType(Ty)) {
+    QualType ElemTy = CAT->getElementType();
+    if (Ctx.getTypeSizeInChars(Ty).getQuantity() > MinGSArraySize &&
+        (Position == GSTypePosition::TopLevel
+             ? hasMoreThanTwoGSElements(Ctx, Ty)
+             : !isGSPointerType(ElemTy)))
+      return Found(Ty);
+
+    // The array itself is not a GS buffer, but its elements may still be or
+    // contain one, e.g. an array of two structs that each hold a buffer.
+    return isGSBuffer(Ctx, ElemTy, SSPBufferSize, IsLarge,
+                      GSTypePosition::Nested);
+  }
+
+  const RecordDecl *RD = Ty->getAsRecordDecl();
+  if (!RD || !RD->isCompleteDefinition())
+    return false;
+
+  if (Ctx.getTypeSizeInChars(Ty).getQuantity() > MinGSAggregateSize &&
+      !containsGSPointer(Ctx, Ty) && isGSPlainData(Ctx, RD))
+    return Found(Ty);
+
+  // If a member is a large GS buffer then we are done. Otherwise keep looking,
+  // in case a later member is a large one.
+  bool NeedsProtector = false;
+  auto Check = [&](QualType MemberTy) {
+    if (isGSBuffer(Ctx, MemberTy, SSPBufferSize, IsLarge,
+                   GSTypePosition::Nested))
+      NeedsProtector = true;
+    return IsLarge;
+  };
+  if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+    for (const CXXBaseSpecifier &Base : CXXRD->bases())
+      if (Check(Base.getType()))
+        return true;
+  for (const FieldDecl *FD : RD->fields()) {
+    // cl.exe does not look inside an anonymous struct or union, so
+    // `struct { union { char b[16]; }; void *p; }` is not a GS buffer while
+    // the same thing with a named union member is. Its size still counts
+    // towards the enclosing aggregate, and a pointer in it still disqualifies
+    // the aggregate.
+    if (FD->isAnonymousStructOrUnion())
+      continue;
+    if (Check(FD->getType()))
+      return true;
+  }
+
+  return NeedsProtector;
+}
+
+void CodeGenFunction::MarkGSBufferAlloca(llvm::AllocaInst *AI, bool IsLarge,
+                                         bool IsTrivial) {
+  if (!MarkGSBuffers || !AI)
+    return;
+
+  // An explicit opt-out (see StackProtectorIgnoreAttr) has the last word.
+  if (AI->getMetadata("stack-protector"))
+    return;
+
+  // 2 is a large buffer and 1 a small one. The second operand says the object
+  // is trivial, and is left out when it is not, which is the common case; see
+  // the "stack-protector" metadata in LLVM's LangRef.
+  llvm::LLVMContext &Ctx = Builder.getContext();
+  SmallVector<llvm::Metadata *, 2> Ops = {
+      llvm::ConstantAsMetadata::get(Builder.getInt32(IsLarge ? 2 : 1))};
+  if (IsTrivial)
+    Ops.push_back(llvm::ConstantAsMetadata::get(Builder.getTrue()));
+  AI->setMetadata("stack-protector", llvm::MDNode::get(Ctx, Ops));
+}
+
+void CodeGenFunction::EmitGSBufferStackProtectorMD(llvm::Value *AllocaPtr,
+                                                   QualType Ty,
+                                                   GSObjectKind Kind) {
+  if (!MarkGSBuffers)
+    return;
+
+  auto *AI = dyn_cast_or_null<llvm::AllocaInst>(AllocaPtr);
+  if (!AI)
+    return;
+
+  // An ABI slot holding a trivial object is anonymous storage, which cl.exe
+  // does not analyse; it protects the callee instead (see
+  // EmitGSBufferParamCopy). Once the type needs a constructor or a destructor
+  // the temporary becomes a real object, and cl.exe covers it.
+  bool IsTrivial = Ty.isTrivialType(getContext());
+  if (Kind != GSObjectKind::Named && IsTrivial)
+    return;
+
+  // For an outgoing by-value argument that is a real object, cl.exe only gets
+  // to put it inside the guarded region if it can then copy it into the
+  // argument area bitwise. Otherwise it has to construct it there directly,
+  // where the guard does not reach. The destructor plays no part: an object
+  // with a trivial copy constructor and a user-provided destructor is copied,
+  // and the destructor runs on the original.
+  if (Kind == GSObjectKind::ArgumentCopy) {
+    const auto *RD = Ty->getAsCXXRecordDecl();
+    if (RD &&
+        !(RD->hasSimpleCopyConstructor() && RD->hasTrivialCopyConstructor()))
+      return;
+  }
+
+  bool IsLarge = false;
+  if (!isGSBuffer(getContext(), Ty, CGM.getCodeGenOpts().SSPBufferSize,
+                  IsLarge))
+    return;
+
+  MarkGSBufferAlloca(AI, IsLarge, IsTrivial);
+}
+
+Address CodeGenFunction::EmitGSBufferParamCopy(const VarDecl &D,
+                                               Address ParamAddr) {
+  QualType Ty = D.getType();
+  bool IsLarge = false;
+  if (!MarkGSBuffers ||
+      !isGSBuffer(getContext(), Ty, CGM.getCodeGenOpts().SSPBufferSize,
+                  IsLarge))
+    return ParamAddr;
+
+  // Only copy what can be copied by memcpy and needs no destructor, so that
+  // the copy is indistinguishable from the original. cl.exe likewise leaves
+  // parameters of non-trivial type in the caller's storage.
+  if (!Ty.isTriviallyCopyableType(getContext()) || Ty.isDestructedType())
+    return ParamAddr;
+
+  RawAddress GSCopy = CreateMemTempWithoutCast(
+      Ty, getContext().getDeclAlign(&D), D.getName() + "$GSCopy$");
+  EmitAggregateCopy(MakeAddrLValue(GSCopy, Ty), MakeAddrLValue(ParamAddr, Ty),
+                    Ty, AggValueSlot::DoesNotOverlap);
+  // This copy exists only so that the object sits inside the guarded region,
+  // so it is never a candidate for the unguarded temporary area.
+  MarkGSBufferAlloca(
+      dyn_cast<llvm::AllocaInst>(GSCopy.getPointer()->stripPointerCasts()),
+      IsLarge, /*IsTrivial=*/false);
+  return GSCopy;
+}
+
 /// EmitAutoVarAlloca - Emit the alloca and debug information for a
 /// local variable.  Does not emit initialization or destruction.
 CodeGenFunction::AutoVarEmission
@@ -1756,6 +2077,8 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
     // dimensions.
     EmitAndRegisterVariableArrayDimensions(DI, D, EmitDebugInfo);
   }
+
+  EmitGSBufferStackProtectorMD(address.getBasePointer(), Ty);
 
   setAddrOfLocalVar(&D, address);
   emission.Addr = address;
@@ -2783,12 +3106,23 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
   if (Arg.isIndirect()) {
     DeclPtr = Arg.getIndirectAddress();
     DeclPtr = DeclPtr.withElementType(ConvertTypeForMem(Ty));
+    ABIArgInfo ArgInfo = CurFnInfo->arguments()[ArgNo - 1].info;
+
+    // An indirectly passed parameter lives in storage the caller allocated, so
+    // this frame's stack guard does not cover it. When it is a GS buffer,
+    // relocate it the way cl.exe does. Only `byval` and plain `indirect` own
+    // their storage; for `byref` the callee's writes are visible to the caller,
+    // so a copy would change behaviour.
+    if (MarkGSBuffers && !CurFuncIsThunk && isa<ParmVarDecl>(&D) &&
+        ArgInfo.isIndirect() &&
+        CurFnInfo->getExtParameterInfo(ArgNo - 1).getABI() ==
+            ParameterABI::Ordinary)
+      DeclPtr = EmitGSBufferParamCopy(D, DeclPtr);
     auto *V = DeclPtr.emitRawPointer(*this);
     AllocaPtr = RawAddress(V, DeclPtr.getElementType(), DeclPtr.getAlignment());
 
     // For truly ABI indirect arguments -- those that are not `byval` -- store
     // the address of the argument on the stack to preserve debug information.
-    ABIArgInfo ArgInfo = CurFnInfo->arguments()[ArgNo - 1].info;
     if (ArgInfo.isIndirect())
       UseIndirectDebugAddress = !ArgInfo.getIndirectByVal();
     if (UseIndirectDebugAddress) {
@@ -2835,6 +3169,9 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
       // Otherwise, create a casted temporary to hold the value.
       DeclPtr = CreateMemTemp(Ty, getContext().getDeclAlign(&D),
                               D.getName() + ".addr", &AllocaPtr);
+      // This alloca holds a parameter, not an anonymous ABI slot, and it is on
+      // this frame, so cl.exe's GS analysis covers it.
+      EmitGSBufferStackProtectorMD(AllocaPtr.getPointer(), Ty);
     }
     DoStore = true;
   }
