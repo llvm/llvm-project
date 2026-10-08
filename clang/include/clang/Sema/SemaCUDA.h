@@ -264,6 +264,9 @@ public:
   // for __constant__ and __device__ variables.
   void checkAllowedInitializer(VarDecl *VD);
 
+  /// Warn if \p VD is a zero-length __shared__ array in device compilation.
+  void checkZeroLengthSharedArray(const VarDecl *VD);
+
   /// Check whether NewFD is a valid overload for CUDA. Emits
   /// diagnostics and invalidates NewFD if not.
   void checkTargetOverload(FunctionDecl *NewFD, const LookupResult &Previous);

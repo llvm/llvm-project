@@ -1050,6 +1050,9 @@ features cannot lower the translation-unit ABI level;
   libhipcxx headers to be included with paths such as `<cuda/std/atomic>`.
   The `-nogpuinc` option disables this path together with the other HIP include
   paths.
+- Zero-length arrays are now allowed in HIP device code, matching CUDA.
+- Added `-Wzero-length-shared-array`, enabled by default, which warns on
+  zero-length `__shared__` arrays in both CUDA and HIP device compilation.
 
 #### CUDA Support
 
