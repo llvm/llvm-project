@@ -1,4 +1,4 @@
-! RUN: bbc -fopenacc -emit-hlfir %s -o - 2>/dev/null | FileCheck %s
+! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
 
 ! Check that same-kind duplicate variables in OpenACC private/firstprivate
 ! clauses lower without failure, and that each variable produces exactly one
@@ -20,7 +20,7 @@ end subroutine
 ! CHECK-NOT: acc.private varPtr({{.*}}) recipe(@privatization_ref_i32) name("x") -> !fir.ref<i32>
 
 ! -----------------------------------------------------------------------
-! private(x, x, x) -- two duplicates (from the triple-occurrence review note)
+! private(x, x, x) -- two duplicates
 
 subroutine test_private_triple(i)
   integer :: x, i

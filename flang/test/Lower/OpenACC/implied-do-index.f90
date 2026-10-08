@@ -13,8 +13,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPimplied_do_index_host
 ! CHECK: hlfir.elemental
 ! CHECK: %[[HOST_INDEX:.*]] = fir.convert %{{.*}} : (index) -> i64
-! CHECK-NEXT: %[[HOST_KIND:.*]] = fir.convert %[[HOST_INDEX]] : (i64) -> i32
-! CHECK-NEXT: %[[HOST_SUBSCRIPT:.*]] = fir.convert %[[HOST_KIND]] : (i32) -> i64
+! CHECK: %[[HOST_KIND:.*]] = fir.convert %[[HOST_INDEX]] : (i64) -> i32
+! CHECK: %[[HOST_SUBSCRIPT:.*]] = fir.convert %[[HOST_KIND]] : (i32) -> i64
 ! CHECK: hlfir.designate {{.*}}%[[HOST_SUBSCRIPT]]
 
 ! Preserve the explicit kind of an implied-do index when its resolved symbol,

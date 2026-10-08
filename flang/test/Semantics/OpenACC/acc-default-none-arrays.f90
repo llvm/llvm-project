@@ -227,3 +227,56 @@ subroutine test_cross_kind_sections2(n)
   end do
   !$acc end parallel loop
 end subroutine
+
+! 11. Containment of a reference in a listed section is decided exactly when
+!     the subscripts are constant.  A scalar element and a one-element section
+!     select the same element, in either order.
+subroutine test_default_none_element_covers_one_element_section()
+  implicit none
+  real :: a(10)
+  !$acc parallel default(none) copy(a(1))
+  a(1:1) = 1.0
+  !$acc end parallel
+end subroutine
+
+subroutine test_default_none_one_element_section_covers_element()
+  implicit none
+  real :: a(10)
+  !$acc parallel default(none) copy(a(1:1))
+  a(1) = 1.0
+  !$acc end parallel
+end subroutine
+
+subroutine test_default_none_element_rejects_longer_section()
+  implicit none
+  real :: a(10)
+  !$acc parallel default(none) copy(a(1))
+  !ERROR: The DEFAULT(NONE) clause requires that 'a' must be listed in a data-mapping clause
+  a(1:2) = 1.0
+  !$acc end parallel
+end subroutine
+
+! 12. A strided section covers only the elements that it selects.
+subroutine test_default_none_strided_section_covers_selected_elements()
+  implicit none
+  real :: a(10)
+  !$acc parallel default(none) copy(a(1:9:2))
+  a(1) = 1.0
+  a(5) = 1.0
+  a(9) = 1.0
+  a(3:7:2) = 1.0
+  !$acc end parallel
+end subroutine
+
+subroutine test_default_none_strided_section_rejects_unselected_elements()
+  implicit none
+  real :: a(10)
+  !$acc parallel default(none) copy(a(1:5:2))
+  !ERROR: The DEFAULT(NONE) clause requires that 'a' must be listed in a data-mapping clause
+  a(4) = 1.0
+  !ERROR: The DEFAULT(NONE) clause requires that 'a' must be listed in a data-mapping clause
+  a(8) = 1.0
+  !ERROR: The DEFAULT(NONE) clause requires that 'a' must be listed in a data-mapping clause
+  a(1:5) = 1.0
+  !$acc end parallel
+end subroutine

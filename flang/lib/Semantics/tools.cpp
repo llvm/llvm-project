@@ -40,8 +40,10 @@ namespace Fortran::semantics {
 template <typename A>
 static std::optional<evaluate::Expr<evaluate::SubscriptInteger>>
 AnalyzeSubscriptExpr(SemanticsContext &context, const A &expr) {
-  if (auto maybe{evaluate::Fold(
-          context.foldingContext(), AnalyzeExpr(context, expr))}) {
+  // The analyzer returns an expression that it has already folded with the
+  // source location of the subscript. Folding it again here would repeat any
+  // folding diagnostic without a location.
+  if (auto maybe{AnalyzeExpr(context, expr)}) {
     if (auto *intExpr{
             evaluate::UnwrapExpr<evaluate::Expr<evaluate::SomeInteger>>(
                 maybe)}) {
@@ -104,6 +106,10 @@ static std::optional<std::vector<evaluate::Subscript>> AnalyzeSectionSubscripts(
 }
 
 static bool AddDesignatorPath(SemanticsContext &context,
+    const parser::StructureComponent &component,
+    evaluate::DesignatorPath &path);
+
+static bool AddDesignatorPath(SemanticsContext &context,
     const parser::DataRef &dataRef, evaluate::DesignatorPath &path) {
   return common::visit(
       common::visitors{
@@ -116,15 +122,7 @@ static bool AddDesignatorPath(SemanticsContext &context,
           },
           [&](const common::Indirection<parser::StructureComponent>
                   &component) {
-            if (!AddDesignatorPath(context, component.value().Base(), path)) {
-              return false;
-            }
-            if (const parser::Name &name{component.value().Component()};
-                name.symbol) {
-              path.AddComponent(name.symbol->GetUltimate());
-              return true;
-            }
-            return false;
+            return AddDesignatorPath(context, component.value(), path);
           },
           [&](const common::Indirection<parser::ArrayElement> &arrayElement) {
             if (!AddDesignatorPath(
@@ -145,6 +143,19 @@ static bool AddDesignatorPath(SemanticsContext &context,
           },
       },
       dataRef.u);
+}
+
+static bool AddDesignatorPath(SemanticsContext &context,
+    const parser::StructureComponent &component,
+    evaluate::DesignatorPath &path) {
+  if (!AddDesignatorPath(context, component.Base(), path)) {
+    return false;
+  }
+  if (const parser::Name &name{component.Component()}; name.symbol) {
+    path.AddComponent(name.symbol->GetUltimate());
+    return true;
+  }
+  return false;
 }
 
 std::optional<evaluate::DesignatorPath> GetDesignatorPath(
@@ -168,8 +179,25 @@ std::optional<evaluate::DesignatorPath> GetDesignatorPath(
   const auto &call{funcRef.v};
   const auto &procedureDesignator{
       std::get<parser::ProcedureDesignator>(call.t)};
-  const auto *name{std::get_if<parser::Name>(&procedureDesignator.u)};
-  if (!name || !name->symbol || !name->symbol->has<ObjectEntityDetails>()) {
+  evaluate::DesignatorPath path;
+  // Name resolution has not yet rewritten `a(i)` or `x%b(i)` into an array
+  // element, so the base of the subscripts is a bare name or a component.
+  if (const auto *name{std::get_if<parser::Name>(&procedureDesignator.u)}) {
+    if (!name->symbol || !name->symbol->has<ObjectEntityDetails>()) {
+      return std::nullopt;
+    }
+    path.SetBase(evaluate::NamedEntity{name->symbol->GetUltimate()});
+  } else if (const auto *procComponent{std::get_if<parser::ProcComponentRef>(
+                 &procedureDesignator.u)}) {
+    // A procedure pointer or type-bound procedure is a call, not a subscripted
+    // array component.
+    const parser::StructureComponent &component{procComponent->v.thing};
+    const Symbol *symbol{component.Component().symbol};
+    if (!symbol || !symbol->GetUltimate().has<ObjectEntityDetails>() ||
+        !AddDesignatorPath(context, component, path)) {
+      return std::nullopt;
+    }
+  } else {
     return std::nullopt;
   }
   std::vector<evaluate::Subscript> subscripts;
@@ -192,8 +220,6 @@ std::optional<evaluate::DesignatorPath> GetDesignatorPath(
   if (subscripts.empty()) {
     return std::nullopt;
   }
-  evaluate::DesignatorPath path;
-  path.SetBase(evaluate::NamedEntity{name->symbol->GetUltimate()});
   path.AddSubscripts(std::move(subscripts));
   return path;
 }

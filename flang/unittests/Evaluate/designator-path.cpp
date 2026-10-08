@@ -16,6 +16,7 @@
 #include "flang/Support/LangOptions.h"
 #include "flang/Support/default-kinds.h"
 #include "flang/Testing/testing.h"
+#include <initializer_list>
 
 using namespace Fortran::evaluate;
 
@@ -61,6 +62,17 @@ void CheckRelation(const DesignatorPath &x, const DesignatorPath &y,
   TEST(x.Compare(y) == relation);
 }
 
+// Compare the selection of a single subscript with that of another.
+void CheckSubscriptRelation(
+    const Subscript &x, const Subscript &y, DesignatorRelation relation) {
+  CheckRelation(PathWithSubscripts({x}), PathWithSubscripts({y}), relation);
+}
+
+void CheckSubscriptMayContain(
+    const Subscript &x, const Subscript &y, bool expected) {
+  TEST(PathWithSubscripts({x}).MayContain(PathWithSubscripts({y})) == expected);
+}
+
 class SymbolFixture {
 public:
   const semantics::Symbol &MakeSymbol(const char *name) {
@@ -100,103 +112,74 @@ private:
       context_.globalScope().MakeScope(semantics::Scope::Kind::MainProgram)};
 };
 
-void TestGetConstantSubscriptRange() {
-  auto scalarRange{DesignatorPath::GetConstantSubscriptRange(Scalar(4))};
-  TEST(scalarRange.has_value());
-  TEST(scalarRange->lower == 4);
-  TEST(scalarRange->upper == 4);
-
-  auto sectionRange{DesignatorPath::GetConstantSubscriptRange(Section(2, 7))};
-  TEST(sectionRange.has_value());
-  TEST(sectionRange->lower == 2);
-  TEST(sectionRange->upper == 7);
-
-  TEST(!DesignatorPath::GetConstantSubscriptRange(Section(2, 7, 2)));
-  TEST(!DesignatorPath::GetConstantSubscriptRange(FullSection()));
-}
-
-void TestFullTripletDetection() {
-  TEST(DesignatorPath::IsFullTriplet(TripletSubscript({}, {})));
-  TEST(!DesignatorPath::IsFullTriplet(TripletSubscript(1, {})));
-  TEST(!DesignatorPath::IsFullTriplet(TripletSubscript({}, 10)));
-  TEST(!DesignatorPath::IsFullTriplet(TripletSubscript({}, {}, 2)));
-}
-
 void TestCompareSubscripts() {
-  TEST(DesignatorPath::CompareSubscripts(Scalar(3), Scalar(3)) ==
-      DesignatorRelation::Equal);
-  TEST(DesignatorPath::CompareSubscripts(FullSection(), Scalar(3)) ==
-      DesignatorRelation::Contains);
-  TEST(DesignatorPath::CompareSubscripts(FullSection(), FullSection()) ==
-      DesignatorRelation::Equal);
-  TEST(DesignatorPath::CompareSubscripts(Scalar(3), FullSection()) ==
-      DesignatorRelation::ContainedBy);
-  TEST(DesignatorPath::CompareSubscripts(Section(1, 5), Section(6, 10)) ==
-      DesignatorRelation::Disjoint);
-  TEST(DesignatorPath::CompareSubscripts(Section(1, 5), Section(1, 5)) ==
-      DesignatorRelation::Equal);
-  TEST(DesignatorPath::CompareSubscripts(Section(1, 10), Section(3, 5)) ==
-      DesignatorRelation::Contains);
-  TEST(DesignatorPath::CompareSubscripts(Section(3, 5), Section(1, 10)) ==
-      DesignatorRelation::ContainedBy);
-  TEST(DesignatorPath::CompareSubscripts(Section(1, 5), Section(5, 10)) ==
-      DesignatorRelation::Overlaps);
-  TEST(DesignatorPath::CompareSubscripts(Section(1, 5, 2), Section(1, 5)) ==
-      DesignatorRelation::Disjoint);
+  CheckSubscriptRelation(Scalar(3), Scalar(3), DesignatorRelation::Equal);
+  CheckSubscriptRelation(Scalar(3), Scalar(4), DesignatorRelation::Disjoint);
+  CheckSubscriptRelation(
+      FullSection(), Scalar(3), DesignatorRelation::Contains);
+  CheckSubscriptRelation(
+      FullSection(), FullSection(), DesignatorRelation::Equal);
+  CheckSubscriptRelation(
+      Scalar(3), FullSection(), DesignatorRelation::ContainedBy);
+  CheckSubscriptRelation(
+      Section(1, 5), Section(6, 10), DesignatorRelation::Disjoint);
+  CheckSubscriptRelation(
+      Section(1, 5), Section(1, 5), DesignatorRelation::Equal);
+  CheckSubscriptRelation(
+      Section(1, 10), Section(3, 5), DesignatorRelation::Contains);
+  CheckSubscriptRelation(
+      Section(3, 5), Section(1, 10), DesignatorRelation::ContainedBy);
+  CheckSubscriptRelation(
+      Section(1, 5), Section(5, 10), DesignatorRelation::Overlaps);
+  // A scalar and a one-element section select the same element.
+  CheckSubscriptRelation(Scalar(3), Section(3, 3), DesignatorRelation::Equal);
+  // Strided sections are not compared precisely and are reported as Disjoint.
+  CheckSubscriptRelation(
+      Section(1, 5, 2), Section(1, 5), DesignatorRelation::Disjoint);
 }
 
 void TestCompareSubscriptLists() {
-  TEST(DesignatorPath::CompareSubscriptLists({}, {FullSection()}) ==
+  CheckRelation(PathWithSubscripts({}), PathWithSubscripts({FullSection()}),
       DesignatorRelation::Equal);
-  TEST(DesignatorPath::CompareSubscriptLists({FullSection()}, {}) ==
+  CheckRelation(PathWithSubscripts({FullSection()}), PathWithSubscripts({}),
       DesignatorRelation::Equal);
-  TEST(DesignatorPath::CompareSubscriptLists({FullSection()},
-           {FullSection(), FullSection()}) == DesignatorRelation::Disjoint);
-  TEST(DesignatorPath::CompareSubscriptLists({Scalar(1)},
-           {Scalar(1), Scalar(2)}) == DesignatorRelation::Disjoint);
-  TEST(DesignatorPath::CompareSubscriptLists({Scalar(1), Scalar(2)},
-           {Scalar(1), Scalar(2)}) == DesignatorRelation::Equal);
-  TEST(DesignatorPath::CompareSubscriptLists({Section(1, 10), Scalar(2)},
-           {Section(3, 5), Scalar(2)}) == DesignatorRelation::Contains);
-  TEST(DesignatorPath::CompareSubscriptLists({Section(3, 5), Scalar(2)},
-           {Section(1, 10), Scalar(2)}) == DesignatorRelation::ContainedBy);
-  TEST(DesignatorPath::CompareSubscriptLists({Section(1, 10), Scalar(2)},
-           {Section(3, 5), FullSection()}) == DesignatorRelation::Overlaps);
-  TEST(DesignatorPath::CompareSubscriptLists({Section(1, 5), Scalar(2)},
-           {Section(6, 10), Scalar(2)}) == DesignatorRelation::Disjoint);
+  CheckRelation(PathWithSubscripts({FullSection()}),
+      PathWithSubscripts({FullSection(), FullSection()}),
+      DesignatorRelation::Disjoint);
+  CheckRelation(PathWithSubscripts({Scalar(1)}),
+      PathWithSubscripts({Scalar(1), Scalar(2)}), DesignatorRelation::Disjoint);
+  CheckRelation(PathWithSubscripts({Scalar(1), Scalar(2)}),
+      PathWithSubscripts({Scalar(1), Scalar(2)}), DesignatorRelation::Equal);
+  CheckRelation(PathWithSubscripts({Section(1, 10), Scalar(2)}),
+      PathWithSubscripts({Section(3, 5), Scalar(2)}),
+      DesignatorRelation::Contains);
+  CheckRelation(PathWithSubscripts({Section(3, 5), Scalar(2)}),
+      PathWithSubscripts({Section(1, 10), Scalar(2)}),
+      DesignatorRelation::ContainedBy);
+  // One dimension contains and the other is contained, so they only overlap.
+  CheckRelation(PathWithSubscripts({Section(1, 10), Scalar(2)}),
+      PathWithSubscripts({Section(3, 5), FullSection()}),
+      DesignatorRelation::Overlaps);
+  CheckRelation(PathWithSubscripts({Section(1, 5), Scalar(2)}),
+      PathWithSubscripts({Section(6, 10), Scalar(2)}),
+      DesignatorRelation::Disjoint);
 }
 
 void TestCompareParts() {
   SymbolFixture symbols;
   const semantics::Symbol &symbol1{symbols.MakeSymbol("a")};
   const semantics::Symbol &symbol2{symbols.MakeSymbol("b")};
-  DesignatorPath::Part component1{{}, &symbol1};
-  DesignatorPath::Part component1Again{{}, &symbol1};
-  DesignatorPath::Part component2{{}, &symbol2};
-  DesignatorPath::Part subscripts{{Section(1, 5)}, nullptr};
-  DesignatorPath::Part subscriptedComponent{{Scalar(3)}, &symbol1};
+  DesignatorPath component1{PathWithComponent(&symbol1)};
+  DesignatorPath component1Again{PathWithComponent(&symbol1)};
+  DesignatorPath component2{PathWithComponent(&symbol2)};
+  DesignatorPath subscripts{PathWithSubscripts({Section(1, 5)})};
+  DesignatorPath subscriptedComponent{PathWithSubscripts({Scalar(3)})};
+  subscriptedComponent.AddComponent(symbol1);
 
-  TEST(DesignatorPath::CompareParts(component1, component1Again) ==
-      DesignatorRelation::Equal);
-  TEST(DesignatorPath::CompareParts(component1, component2) ==
-      DesignatorRelation::Disjoint);
-  TEST(DesignatorPath::CompareParts(component1, subscripts) ==
-      DesignatorRelation::Overlaps);
-  TEST(DesignatorPath::CompareParts(subscripts, subscriptedComponent) ==
-      DesignatorRelation::Contains);
-}
-
-void TestCombineRelations() {
-  TEST(DesignatorPath::CombineRelations(false, false, false) ==
-      DesignatorRelation::Equal);
-  TEST(DesignatorPath::CombineRelations(true, false, false) ==
-      DesignatorRelation::Contains);
-  TEST(DesignatorPath::CombineRelations(false, true, false) ==
-      DesignatorRelation::ContainedBy);
-  TEST(DesignatorPath::CombineRelations(false, false, true) ==
-      DesignatorRelation::Overlaps);
-  TEST(DesignatorPath::CombineRelations(true, true, false) ==
-      DesignatorRelation::Overlaps);
+  CheckRelation(component1, component1Again, DesignatorRelation::Equal);
+  CheckRelation(component1, component2, DesignatorRelation::Disjoint);
+  CheckRelation(component1, subscripts, DesignatorRelation::Overlaps);
+  CheckRelation(subscripts, subscriptedComponent, DesignatorRelation::Contains);
 }
 
 void TestComparePaths() {
@@ -204,17 +187,6 @@ void TestComparePaths() {
   CheckRelation(empty, empty, DesignatorRelation::Equal);
   CheckRelation(
       empty, PathWithSubscripts({Scalar(1)}), DesignatorRelation::Disjoint);
-
-  CheckRelation(PathWithSubscripts({Scalar(1)}),
-      PathWithSubscripts({Scalar(1)}), DesignatorRelation::Equal);
-  CheckRelation(PathWithSubscripts({Section(1, 10)}),
-      PathWithSubscripts({Scalar(5)}), DesignatorRelation::Contains);
-  CheckRelation(PathWithSubscripts({Scalar(5)}),
-      PathWithSubscripts({Section(1, 10)}), DesignatorRelation::ContainedBy);
-  CheckRelation(PathWithSubscripts({Section(1, 5)}),
-      PathWithSubscripts({Section(5, 10)}), DesignatorRelation::Overlaps);
-  CheckRelation(PathWithSubscripts({Section(1, 5)}),
-      PathWithSubscripts({Section(6, 10)}), DesignatorRelation::Disjoint);
 
   SymbolFixture symbols;
   const semantics::Symbol &symbol{symbols.MakeSymbol("c")};
@@ -226,36 +198,58 @@ void TestComparePaths() {
 }
 
 void TestMayContainSubscripts() {
-  TEST(DesignatorPath::SubscriptMayContain(Scalar(1), Scalar(1)));
-  TEST(DesignatorPath::SubscriptMayContain(FullSection(), Scalar(7)));
-  TEST(!DesignatorPath::SubscriptMayContain(Scalar(7), FullSection()));
-  TEST(!DesignatorPath::SubscriptMayContain(Section(1, 5), FullSection()));
-  TEST(DesignatorPath::SubscriptMayContain(Section(1, 10), Scalar(7)));
-  TEST(!DesignatorPath::SubscriptMayContain(Section(1, 5), Scalar(7)));
-  TEST(DesignatorPath::SubscriptMayContain(Section(1, 5, 2), Scalar(7)));
-  TEST(!DesignatorPath::SubscriptListMayContain(
-      {Scalar(1)}, {Scalar(1), Scalar(2)}));
-  TEST(DesignatorPath::SubscriptListMayContain({FullSection()}, {}));
-  TEST(!DesignatorPath::SubscriptListMayContain(
-      {FullSection()}, {Scalar(1), Scalar(2)}));
-  TEST(DesignatorPath::SubscriptListMayContain(
-      {FullSection(), Section(1, 10)}, {Scalar(2), Scalar(5)}));
+  CheckSubscriptMayContain(Scalar(1), Scalar(1), true);
+  CheckSubscriptMayContain(FullSection(), Scalar(7), true);
+  CheckSubscriptMayContain(Scalar(7), FullSection(), false);
+  CheckSubscriptMayContain(Section(1, 5), FullSection(), false);
+  CheckSubscriptMayContain(Section(1, 10), Scalar(7), true);
+  CheckSubscriptMayContain(Section(1, 5), Scalar(7), false);
+
+  // A scalar covers a one-element section of the same element, and only that.
+  CheckSubscriptMayContain(Scalar(1), Section(1, 1), true);
+  CheckSubscriptMayContain(Section(1, 1), Scalar(1), true);
+  CheckSubscriptMayContain(Scalar(1), Section(1, 2), false);
+  CheckSubscriptMayContain(Scalar(2), Section(1, 1), false);
+
+  // Constant strides decide containment exactly.
+  CheckSubscriptMayContain(Section(1, 5, 2), Scalar(1), true);
+  CheckSubscriptMayContain(Section(1, 5, 2), Scalar(3), true);
+  CheckSubscriptMayContain(Section(1, 5, 2), Scalar(5), true);
+  CheckSubscriptMayContain(Section(1, 5, 2), Scalar(4), false);
+  CheckSubscriptMayContain(Section(1, 5, 2), Scalar(7), false);
+  CheckSubscriptMayContain(Section(1, 9, 2), Section(3, 7, 2), true);
+  CheckSubscriptMayContain(Section(1, 9, 2), Section(3, 7, 4), true);
+  CheckSubscriptMayContain(Section(1, 9, 2), Section(3, 7, 3), false);
+  CheckSubscriptMayContain(Section(1, 9, 4), Section(1, 9, 2), false);
+  CheckSubscriptMayContain(Section(9, 1, -2), Scalar(5), true);
+  CheckSubscriptMayContain(Section(9, 1, -2), Scalar(4), false);
+
+  CheckSubscriptMayContain(Scalar(1), Scalar(2), false);
+
+  TEST(!PathWithSubscripts({Scalar(1)})
+          .MayContain(PathWithSubscripts({Scalar(1), Scalar(2)})));
+  TEST(PathWithSubscripts({FullSection()}).MayContain(PathWithSubscripts({})));
+  TEST(!PathWithSubscripts({FullSection()})
+          .MayContain(PathWithSubscripts({Scalar(1), Scalar(2)})));
+  TEST(PathWithSubscripts({FullSection(), Section(1, 10)})
+          .MayContain(PathWithSubscripts({Scalar(2), Scalar(5)})));
 }
 
 void TestMayContainPartsAndPaths() {
   SymbolFixture symbols;
   const semantics::Symbol &symbol1{symbols.MakeSymbol("d")};
   const semantics::Symbol &symbol2{symbols.MakeSymbol("e")};
-  DesignatorPath::Part component1{{}, &symbol1};
-  DesignatorPath::Part component2{{}, &symbol2};
-  DesignatorPath::Part subscripts{{Section(1, 10)}, nullptr};
-  DesignatorPath::Part scalarSubscript{{Scalar(5)}, nullptr};
-  DesignatorPath::Part scalarComponent{{Scalar(5)}, &symbol1};
+  DesignatorPath component1{PathWithComponent(&symbol1)};
+  DesignatorPath component2{PathWithComponent(&symbol2)};
+  DesignatorPath subscripts{PathWithSubscripts({Section(1, 10)})};
+  DesignatorPath scalarSubscript{PathWithSubscripts({Scalar(5)})};
+  DesignatorPath scalarComponent{PathWithSubscripts({Scalar(5)})};
+  scalarComponent.AddComponent(symbol1);
 
-  TEST(DesignatorPath::PartMayContain(component1, component1));
-  TEST(!DesignatorPath::PartMayContain(component1, component2));
-  TEST(DesignatorPath::PartMayContain(subscripts, scalarComponent));
-  TEST(DesignatorPath::PartMayContain(subscripts, scalarSubscript));
+  TEST(component1.MayContain(component1));
+  TEST(!component1.MayContain(component2));
+  TEST(subscripts.MayContain(scalarComponent));
+  TEST(subscripts.MayContain(scalarSubscript));
 
   DesignatorPath empty;
   DesignatorPath parent{PathWithComponent(&symbol1)};
@@ -271,29 +265,79 @@ void TestMayContainPartsAndPaths() {
   TEST(!parent.MayContain(sibling));
 }
 
-void TestAddFunctionsAndMap() {
+// DEFAULT(NONE) relies on MayContain agreeing with Compare, and the conflict
+// analysis relies on Compare being symmetric.
+void TestCompareIsSymmetricAndAgreesWithMayContain() {
+  SymbolFixture symbols;
+  auto &block{symbols.MakeCommonBlock("blk")};
+  const auto &member{symbols.MakeCommonMember("m", block)};
+  const auto &sibling{symbols.MakeCommonMember("n", block)};
+  const auto &component1{symbols.MakeSymbol("p")};
+  const auto &component2{symbols.MakeSymbol("q")};
+
+  std::vector<DesignatorPath> paths;
+  paths.emplace_back();
+  for (const Subscript &subscript :
+      {Scalar(1), Scalar(5), Scalar(7), Section(1, 1), Section(1, 5),
+          Section(1, 10), Section(5, 10), Section(6, 10), FullSection(),
+          Section(1, 5, 2), Section(2, 10, 4), Section(10, 1, -1)}) {
+    paths.push_back(PathWithSubscripts({subscript}));
+    DesignatorPath withComponent{PathWithSubscripts({subscript})};
+    withComponent.AddComponent(component1);
+    paths.push_back(withComponent);
+  }
+  paths.push_back(PathWithComponent(&component1));
+  paths.push_back(PathWithComponent(&component2));
+  for (const semantics::Symbol *base :
+      std::initializer_list<const semantics::Symbol *>{
+          &block, &member, &sibling}) {
+    DesignatorPath path;
+    path.SetBase(NamedEntity{*base});
+    paths.push_back(path);
+    path.AddSubscripts({Section(1, 5)});
+    paths.push_back(path);
+  }
+
+  for (const DesignatorPath &x : paths) {
+    for (const DesignatorPath &y : paths) {
+      DesignatorRelation relation{x.Compare(y)};
+      DesignatorRelation reverse{y.Compare(x)};
+      switch (relation) {
+      case DesignatorRelation::Equal:
+      case DesignatorRelation::Overlaps:
+      case DesignatorRelation::Disjoint:
+        TEST(reverse == relation);
+        break;
+      case DesignatorRelation::Contains:
+        TEST(reverse == DesignatorRelation::ContainedBy);
+        break;
+      case DesignatorRelation::ContainedBy:
+        TEST(reverse == DesignatorRelation::Contains);
+        break;
+      }
+      if (relation == DesignatorRelation::Equal) {
+        TEST(x.MayContain(y));
+        TEST(y.MayContain(x));
+      } else if (relation == DesignatorRelation::Contains) {
+        TEST(x.MayContain(y));
+      }
+    }
+  }
+}
+
+void TestPathConstruction() {
   SymbolFixture symbols;
   const semantics::Symbol &symbol{symbols.MakeSymbol("f")};
   DesignatorPath path;
   TEST(path.empty());
   path.AddComponent(symbol);
   path.AddSubscripts({Scalar(1), Scalar(2)});
-  TEST(path.Parts().size() == 2);
-  TEST(path.Parts()[0].subscripts.empty());
-  TEST(path.Parts()[0].symbol == &symbol);
-  TEST(path.Parts()[1].subscripts.size() == 2);
-  TEST(path.Parts()[1].symbol == nullptr);
-
-  DesignatorPathMap<int> map;
-  TEST(map.empty());
-  map.push_back(path, 42);
-  TEST(!map.empty());
-  TEST(map.begin()->value == 42);
-  map.erase(map.begin());
-  TEST(map.empty());
-  map.push_back(DesignatorPath{}, 7);
-  map.clear();
-  TEST(map.empty());
+  TEST(!path.empty());
+  TEST(path.parts().size() == 2);
+  TEST(path.parts()[0].subscripts.empty());
+  TEST(path.parts()[0].symbol == &symbol);
+  TEST(path.parts()[1].subscripts.size() == 2);
+  TEST(path.parts()[1].symbol == nullptr);
 }
 
 void TestSubscriptsPrecedeComponentWithinPart() {
@@ -304,8 +348,9 @@ void TestSubscriptsPrecedeComponentWithinPart() {
 
   DesignatorPath x;
   x.SetBase(NamedEntity{base});
-  TEST(x.Base().has_value());
-  TEST(x.Parts().empty());
+  TEST(x.base().has_value());
+  TEST(x.parts().empty());
+  TEST(x.HasBaseOnly());
 
   DesignatorPath differentBase;
   differentBase.SetBase(NamedEntity{y});
@@ -313,18 +358,17 @@ void TestSubscriptsPrecedeComponentWithinPart() {
   DesignatorPath xFull;
   xFull.SetBase(NamedEntity{base});
   xFull.AddSubscripts({FullSection()});
-  TEST(xFull.Parts().size() == 1);
-  TEST(xFull.Parts()[0].subscripts.size() == 1);
-  TEST(xFull.Parts()[0].subscripts[0] == FullSection());
+  TEST(xFull.parts().size() == 1);
+  TEST(xFull.parts()[0].subscripts.size() == 1);
+  TEST(xFull.parts()[0].subscripts[0] == FullSection());
   const auto *fullTriplet{
-      std::get_if<Triplet>(&xFull.Parts()[0].subscripts[0].u)};
+      std::get_if<Triplet>(&xFull.parts()[0].subscripts[0].u)};
   TEST(fullTriplet != nullptr);
   if (fullTriplet) {
     TEST(!fullTriplet->GetLower());
     TEST(!fullTriplet->GetUpper());
-    TEST(DesignatorPath::IsFullTriplet(*fullTriplet));
   }
-  TEST(xFull.Parts()[0].symbol == nullptr);
+  TEST(xFull.parts()[0].symbol == nullptr);
   TEST(!(xFull == x));
   TEST(x.Compare(xFull) == DesignatorRelation::Equal);
   TEST(xFull.Compare(x) == DesignatorRelation::Equal);
@@ -335,27 +379,27 @@ void TestSubscriptsPrecedeComponentWithinPart() {
   DesignatorPath xSection;
   xSection.SetBase(NamedEntity{base});
   xSection.AddSubscripts({Section(1, 10)});
-  TEST(xSection.Base().has_value());
-  TEST(xSection.Parts().size() == 1);
-  TEST(xSection.Parts()[0].subscripts.size() == 1);
-  TEST(xSection.Parts()[0].symbol == nullptr);
+  TEST(xSection.base().has_value());
+  TEST(xSection.parts().size() == 1);
+  TEST(xSection.parts()[0].subscripts.size() == 1);
+  TEST(xSection.parts()[0].symbol == nullptr);
 
   DesignatorPath xSectionY;
   xSectionY.SetBase(NamedEntity{base});
   xSectionY.AddSubscripts({Section(1, 10)});
   xSectionY.AddComponent(y);
-  TEST(xSectionY.Parts().size() == 1);
-  TEST(xSectionY.Parts()[0].subscripts.size() == 1);
-  TEST(xSectionY.Parts()[0].symbol == &y);
+  TEST(xSectionY.parts().size() == 1);
+  TEST(xSectionY.parts()[0].subscripts.size() == 1);
+  TEST(xSectionY.parts()[0].symbol == &y);
 
   DesignatorPath xSectionYFull{xSectionY};
   xSectionYFull.AddSubscripts({FullSection()});
-  TEST(xSectionYFull.Parts().size() == 2);
-  TEST(xSectionYFull.Parts()[0].subscripts.size() == 1);
-  TEST(xSectionYFull.Parts()[0].symbol == &y);
-  TEST(xSectionYFull.Parts()[1].subscripts.size() == 1);
-  TEST(xSectionYFull.Parts()[1].subscripts[0] == FullSection());
-  TEST(xSectionYFull.Parts()[1].symbol == nullptr);
+  TEST(xSectionYFull.parts().size() == 2);
+  TEST(xSectionYFull.parts()[0].subscripts.size() == 1);
+  TEST(xSectionYFull.parts()[0].symbol == &y);
+  TEST(xSectionYFull.parts()[1].subscripts.size() == 1);
+  TEST(xSectionYFull.parts()[1].subscripts[0] == FullSection());
+  TEST(xSectionYFull.parts()[1].symbol == nullptr);
   TEST(!(xSectionYFull == xSectionY));
   TEST(xSectionYFull.Compare(xSectionY) == DesignatorRelation::Equal);
   TEST(xSectionY.Compare(xSectionYFull) == DesignatorRelation::Equal);
@@ -368,12 +412,12 @@ void TestSubscriptsPrecedeComponentWithinPart() {
   xSectionYFullZ.AddComponent(y);
   xSectionYFullZ.AddSubscripts({FullSection()});
   xSectionYFullZ.AddComponent(z);
-  TEST(xSectionYFullZ.Parts().size() == 2);
-  TEST(xSectionYFullZ.Parts()[0].subscripts.size() == 1);
-  TEST(xSectionYFullZ.Parts()[0].symbol == &y);
-  TEST(xSectionYFullZ.Parts()[1].subscripts.size() == 1);
-  TEST(xSectionYFullZ.Parts()[1].subscripts[0] == FullSection());
-  TEST(xSectionYFullZ.Parts()[1].symbol == &z);
+  TEST(xSectionYFullZ.parts().size() == 2);
+  TEST(xSectionYFullZ.parts()[0].subscripts.size() == 1);
+  TEST(xSectionYFullZ.parts()[0].symbol == &y);
+  TEST(xSectionYFullZ.parts()[1].subscripts.size() == 1);
+  TEST(xSectionYFullZ.parts()[1].subscripts[0] == FullSection());
+  TEST(xSectionYFullZ.parts()[1].symbol == &z);
 }
 
 void TestAsFortran() {
@@ -411,10 +455,10 @@ void TestCommonBlockPaths() {
   other.SetBase(NamedEntity{c});
   outside.SetBase(NamedEntity{unrelated});
   hostAssociated.SetBase(NamedEntity{alias});
-  TEST(wholeBlock.CommonBlock() == &block);
-  TEST(member.CommonBlock() == &block);
-  TEST(hostAssociated.CommonBlock() == &block);
-  TEST(!outside.CommonBlock());
+  TEST(wholeBlock.commonBlock() == &block);
+  TEST(member.commonBlock() == &block);
+  TEST(hostAssociated.commonBlock() == &block);
+  TEST(!outside.commonBlock());
 
   CheckRelation(wholeBlock, member, DesignatorRelation::Contains);
   CheckRelation(member, wholeBlock, DesignatorRelation::ContainedBy);
@@ -436,28 +480,26 @@ void TestCommonBlockPaths() {
   CheckRelation(wholeBlock, subobject, DesignatorRelation::Contains);
   TEST(wholeBlock.MayContain(section));
   TEST(wholeBlock.MayContain(subobject));
-  TEST(section.CommonBlock() == &block);
+  TEST(section.commonBlock() == &block);
 
   auto copied{wholeBlock};
   TEST(copied == wholeBlock);
   copied.SetBase(NamedEntity{unrelated});
-  TEST(!copied.CommonBlock());
+  TEST(!copied.commonBlock());
   CheckRelation(copied, member, DesignatorRelation::Disjoint);
 }
 
 } // namespace
 
 int main() {
-  TestGetConstantSubscriptRange();
-  TestFullTripletDetection();
   TestCompareSubscripts();
   TestCompareSubscriptLists();
   TestCompareParts();
-  TestCombineRelations();
   TestComparePaths();
   TestMayContainSubscripts();
   TestMayContainPartsAndPaths();
-  TestAddFunctionsAndMap();
+  TestCompareIsSymmetricAndAgreesWithMayContain();
+  TestPathConstruction();
   TestSubscriptsPrecedeComponentWithinPart();
   TestAsFortran();
   TestCommonBlockPaths();

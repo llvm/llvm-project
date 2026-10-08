@@ -1,4 +1,4 @@
-! RUN: bbc -fopenacc -emit-hlfir %s -o - 2>/dev/null | FileCheck %s
+! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
 
 ! Retain the whole COMMON operand and drop redundant explicit members.
 

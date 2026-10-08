@@ -10,14 +10,17 @@
 #define FORTRAN_EVALUATE_DESIGNATOR_PATH_H_
 
 #include "flang/Evaluate/expression.h"
-#include <cstdint>
+#include "llvm/Support/raw_ostream.h"
 #include <optional>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace Fortran::evaluate {
 
+// The relation between the parts of an object selected by two designators.
+// Disjoint is also the answer when two selections cannot be compared, for
+// example because a subscript is not constant or a triplet has a stride other
+// than one. It is therefore not a proof that the selections do not overlap.
 enum class DesignatorRelation {
   Equal,
   Contains,
@@ -26,7 +29,8 @@ enum class DesignatorRelation {
   Disjoint,
 };
 
-struct DesignatorPath {
+class DesignatorPath {
+public:
   // A DesignatorPath represents a constrained prefix of a valid Fortran
   // designator:
   //   - an optional NamedEntity base, and
@@ -49,81 +53,36 @@ struct DesignatorPath {
     }
   };
 
-  static std::optional<DesignatorPath> Get(
-      const std::optional<Expr<SomeType>> &);
+  // Describes how the parts selected by this path relate to those selected by
+  // the other path.
   DesignatorRelation Compare(const DesignatorPath &) const;
+  // Returns false only when this path certainly cannot cover the other path.
+  // It is optimistic where the two cannot be compared, and is used to avoid
+  // false DEFAULT(NONE) errors. A path that Compare reports as Equal to or as
+  // containing the other path always may contain it.
   bool MayContain(const DesignatorPath &) const;
   std::string AsFortran() const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
   void SetBase(NamedEntity);
   void AddComponent(const Symbol &);
   void AddSubscripts(std::vector<Subscript>);
-  const std::optional<NamedEntity> &Base() const { return base; }
+  const std::optional<NamedEntity> &base() const { return base_; }
   // The enclosing COMMON block, or nullptr when the base is not in COMMON.
-  const Symbol *CommonBlock() const { return commonBlock; }
-  const std::vector<Part> &Parts() const { return parts; }
-  bool empty() const { return !base && parts.empty(); }
-  bool HasBaseOnly() const { return base && parts.empty(); }
+  const Symbol *commonBlock() const { return commonBlock_; }
+  const std::vector<Part> &parts() const { return parts_; }
+  bool empty() const { return !base_ && parts_.empty(); }
+  bool HasBaseOnly() const { return base_ && parts_.empty(); }
   bool operator==(const DesignatorPath &that) const {
-    return base == that.base && commonBlock == that.commonBlock &&
-        parts == that.parts;
+    return base_ == that.base_ && commonBlock_ == that.commonBlock_ &&
+        parts_ == that.parts_;
   }
-
-  struct ConstantSubscriptRange {
-    std::int64_t lower;
-    std::int64_t upper;
-  };
-
-  static std::optional<ConstantSubscriptRange> GetConstantSubscriptRange(
-      const Subscript &);
-  static bool IsFullTriplet(const Triplet &);
-  static DesignatorRelation CompareSubscripts(
-      const Subscript &, const Subscript &);
-  static DesignatorRelation CompareSubscriptLists(
-      const std::vector<Subscript> &, const std::vector<Subscript> &);
-  static DesignatorRelation CompareParts(const Part &, const Part &);
-  static DesignatorRelation CombineRelations(
-      bool contains, bool containedBy, bool overlaps);
-  static bool SubscriptMayContain(const Subscript &, const Subscript &);
-  static bool SubscriptListMayContain(
-      const std::vector<Subscript> &, const std::vector<Subscript> &);
-  static bool PartMayContain(const Part &, const Part &);
 
 private:
   bool IsWholeCommonBlock() const;
-  void AddDataRef(const DataRef &);
-  void AddComponent(const Component &);
-  void AddNamedEntity(const NamedEntity &);
-  void AddArrayRef(const ArrayRef &);
-  void AddCoarrayRef(const CoarrayRef &);
 
-  std::optional<NamedEntity> base;
-  const Symbol *commonBlock{nullptr};
-  std::vector<Part> parts;
-};
-
-template <typename A> class DesignatorPathMap {
-public:
-  struct Entry {
-    DesignatorPath path;
-    A value;
-  };
-  using iterator = typename std::vector<Entry>::iterator;
-  using const_iterator = typename std::vector<Entry>::const_iterator;
-
-  iterator begin() { return entries_.begin(); }
-  iterator end() { return entries_.end(); }
-  const_iterator begin() const { return entries_.begin(); }
-  const_iterator end() const { return entries_.end(); }
-  bool empty() const { return entries_.empty(); }
-  void clear() { entries_.clear(); }
-  iterator erase(iterator iter) { return entries_.erase(iter); }
-  void push_back(DesignatorPath path, A value) {
-    entries_.push_back({std::move(path), std::move(value)});
-  }
-
-private:
-  std::vector<Entry> entries_;
+  std::optional<NamedEntity> base_;
+  const Symbol *commonBlock_{nullptr};
+  std::vector<Part> parts_;
 };
 
 } // namespace Fortran::evaluate

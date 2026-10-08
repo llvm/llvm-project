@@ -1,10 +1,12 @@
 ! RUN: %python %S/../test_errors.py %s %flang -fopenacc -fno-openacc-default-none-scalars-strict
 
-! Derived-type component references in OpenACC clauses are accepted. Exact
-! duplicate and conflicting component references in data-sharing clauses are
-! diagnosed, but broader containment is deliberately limited for now:
-! - component clauses satisfy DEFAULT(NONE) only for contained references;
-! - bare whole-object/component conflicts are not diagnosed.
+! Derived-type component references in OpenACC clauses are accepted. Each
+! component reference is tracked as a path, so in data-sharing clauses:
+! - a repeated or contained component in the same kind of clause is warned
+!   about and ignored;
+! - a component that equals, contains, or is contained in an object in a clause
+!   of a different kind is an error, whereas sibling components do not conflict;
+! - component clauses satisfy DEFAULT(NONE) only for contained references.
 
 module component_ref_types
   implicit none
@@ -216,6 +218,18 @@ subroutine test_indexed_component_refs_conflict()
 
   !ERROR: 'v%arr(1:5)' appears in more than one data-sharing clause on the same OpenACC directive
   !$acc parallel loop firstprivate(v%arr(6:10)) private(v%arr(1:5))
+  do i = 1, 10
+    v%arr(i) = real(i)
+  end do
+  !$acc end parallel loop
+end subroutine
+
+subroutine test_indexed_component_parts_not_yet_implemented()
+  use component_ref_types, only: vec_t
+  type(vec_t) :: v
+  integer :: i
+  !ERROR: not yet implemented: multiple parts of the same object in the same kind of data-sharing clause on an OpenACC directive, as in 'v%arr(6:10)'
+  !$acc parallel loop private(v%arr(1:5), v%arr(6:10))
   do i = 1, 10
     v%arr(i) = real(i)
   end do

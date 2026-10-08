@@ -214,6 +214,9 @@ bool HasCoarray(const parser::Expr &);
 // already-resolved base symbol and component structure, and analyzes and folds
 // subscript expressions. Returns std::nullopt when the designator cannot be
 // represented (e.g. an unresolved name or a non-integer/erroneous subscript).
+// Until the parse tree is rewritten, a subscripted array or array component
+// such as `a(i)` or `x%b(i)` is a FunctionReference, so that overload builds
+// the path for those and returns std::nullopt for a real procedure reference.
 std::optional<evaluate::DesignatorPath> GetDesignatorPath(
     SemanticsContext &, const parser::Designator &);
 std::optional<evaluate::DesignatorPath> GetDesignatorPath(

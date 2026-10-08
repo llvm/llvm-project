@@ -7,13 +7,28 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Evaluate/designator-path.h"
+#include "flang/Common/idioms.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Semantics/symbol.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
+#include <cstdint>
 
 namespace Fortran::evaluate {
+
+namespace {
+// The values selected by a subscript with constant bounds and stride, as the
+// ascending arithmetic progression first, first + stride, ..., last.
+struct ConstantSection {
+  std::int64_t first;
+  std::int64_t last;
+  std::int64_t stride;
+};
+
+struct ConstantSubscriptRange {
+  std::int64_t lower;
+  std::int64_t upper;
+};
+} // namespace
 
 static DesignatorRelation ComparePartSymbols(const Symbol *x, const Symbol *y) {
   if (x == y) {
@@ -28,13 +43,20 @@ static DesignatorRelation ComparePartSymbols(const Symbol *x, const Symbol *y) {
   return DesignatorRelation::Disjoint;
 }
 
+static bool IsFullTriplet(const Triplet &triplet) {
+  // Surface syntax `x(:)` maps to a Triplet with no lower or upper bound and
+  // an implicit stride of one.
+  auto stride{ToInt64(triplet.GetStride())};
+  return !triplet.GetLower() && !triplet.GetUpper() && stride && *stride == 1;
+}
+
 static bool IsFullSubscriptList(const std::vector<Subscript> &subscripts) {
   if (subscripts.empty()) {
     return false;
   }
   for (const Subscript &subscript : subscripts) {
     const auto *triplet{std::get_if<Triplet>(&subscript.u)};
-    if (!triplet || !DesignatorPath::IsFullTriplet(*triplet)) {
+    if (!triplet || !IsFullTriplet(*triplet)) {
       return false;
     }
   }
@@ -55,8 +77,8 @@ static bool AreAllFullSliceParts(
   return true;
 }
 
-std::optional<DesignatorPath::ConstantSubscriptRange>
-DesignatorPath::GetConstantSubscriptRange(const Subscript &subscript) {
+static std::optional<ConstantSubscriptRange> GetConstantSubscriptRange(
+    const Subscript &subscript) {
   // Surface syntax `x(i)` maps to a scalar Subscript that holds the integer
   // expression `i`, not a Triplet.
   if (const auto *expr{
@@ -83,14 +105,56 @@ DesignatorPath::GetConstantSubscriptRange(const Subscript &subscript) {
   return std::nullopt;
 }
 
-bool DesignatorPath::IsFullTriplet(const Triplet &triplet) {
-  // Surface syntax `x(:)` maps to a Triplet with no lower or upper bound and
-  // an implicit stride of one.
-  auto stride{ToInt64(triplet.GetStride())};
-  return !triplet.GetLower() && !triplet.GetUpper() && stride && *stride == 1;
+// Like GetConstantSubscriptRange, but accepts any nonzero constant stride.
+// Returns nothing for a selection with a nonconstant or missing bound or
+// stride, and for an empty section.
+static std::optional<ConstantSection> GetConstantSection(
+    const Subscript &subscript) {
+  if (const auto *expr{
+          std::get_if<IndirectSubscriptIntegerExpr>(&subscript.u)}) {
+    if (auto value{ToInt64(expr->value())}) {
+      return ConstantSection{*value, *value, 1};
+    }
+    return std::nullopt;
+  }
+  const auto *triplet{std::get_if<Triplet>(&subscript.u)};
+  if (!triplet || !triplet->GetLower() || !triplet->GetUpper()) {
+    return std::nullopt;
+  }
+  auto lower{ToInt64(*triplet->GetLower())};
+  auto upper{ToInt64(*triplet->GetUpper())};
+  auto stride{ToInt64(triplet->GetStride())};
+  if (!lower || !upper || !stride || *stride == 0) {
+    return std::nullopt;
+  }
+  if (*stride > 0) {
+    if (*lower > *upper) {
+      return std::nullopt;
+    }
+    std::int64_t count{(*upper - *lower) / *stride};
+    return ConstantSection{*lower, *lower + count * *stride, *stride};
+  }
+  if (*lower < *upper) {
+    return std::nullopt;
+  }
+  std::int64_t count{(*lower - *upper) / -*stride};
+  return ConstantSection{*lower + count * *stride, *lower, -*stride};
 }
 
-DesignatorRelation DesignatorPath::CompareSubscripts(
+// Every value of y is a value of x. The values of y are an arithmetic
+// progression, so they lie in x exactly when the ends do and, if y has more
+// than one value, the step of y is a multiple of the step of x.
+static bool SectionContains(
+    const ConstantSection &x, const ConstantSection &y) {
+  auto inX{[&](std::int64_t value) {
+    return value >= x.first && value <= x.last &&
+        (value - x.first) % x.stride == 0;
+  }};
+  return inX(y.first) && inX(y.last) &&
+      (y.first == y.last || y.stride % x.stride == 0);
+}
+
+static DesignatorRelation CompareSubscripts(
     const Subscript &x, const Subscript &y) {
   if (x == y) {
     return DesignatorRelation::Equal;
@@ -110,7 +174,8 @@ DesignatorRelation DesignatorPath::CompareSubscripts(
   auto yRange{GetConstantSubscriptRange(y)};
   if (!xRange || !yRange) {
     // Nonconstant selectors and constant triplets with non-unit strides cannot
-    // be compared precisely, so treat them as disjoint for now. Constant
+    // be compared precisely, so report them as Disjoint for now. Callers must
+    // not read that as proof that the selections do not overlap. Constant
     // triplets could be made more precise by expanding them into index sets.
     return DesignatorRelation::Disjoint;
   }
@@ -129,8 +194,7 @@ DesignatorRelation DesignatorPath::CompareSubscripts(
   return DesignatorRelation::Overlaps;
 }
 
-bool DesignatorPath::SubscriptMayContain(
-    const Subscript &x, const Subscript &y) {
+static bool SubscriptMayContain(const Subscript &x, const Subscript &y) {
   if (x == y) {
     return true;
   }
@@ -142,13 +206,15 @@ bool DesignatorPath::SubscriptMayContain(
   if (yTriplet && IsFullTriplet(*yTriplet)) {
     return false;
   }
+  // Decide exactly whenever both selections are constant, including a scalar
+  // against a one-element triplet and any constant stride.
+  auto xSection{GetConstantSection(x)};
+  auto ySection{GetConstantSection(y)};
+  if (xSection && ySection) {
+    return SectionContains(*xSection, *ySection);
+  }
   if (!xTriplet && yTriplet) {
     return false;
-  }
-  auto xRange{GetConstantSubscriptRange(x)};
-  auto yRange{GetConstantSubscriptRange(y)};
-  if (xRange && yRange) {
-    return xRange->lower <= yRange->lower && xRange->upper >= yRange->upper;
   }
   if (xTriplet) {
     return true;
@@ -157,7 +223,7 @@ bool DesignatorPath::SubscriptMayContain(
       !ToInt64(std::get<IndirectSubscriptIntegerExpr>(y.u).value());
 }
 
-bool DesignatorPath::SubscriptListMayContain(
+static bool SubscriptListMayContain(
     const std::vector<Subscript> &x, const std::vector<Subscript> &y) {
   if (x.empty()) {
     return true;
@@ -179,12 +245,13 @@ bool DesignatorPath::SubscriptListMayContain(
   return true;
 }
 
-bool DesignatorPath::PartMayContain(const Part &x, const Part &y) {
+static bool PartMayContain(
+    const DesignatorPath::Part &x, const DesignatorPath::Part &y) {
   return SubscriptListMayContain(x.subscripts, y.subscripts) &&
       (!x.symbol || x.symbol == y.symbol);
 }
 
-DesignatorRelation DesignatorPath::CombineRelations(
+static DesignatorRelation CombineRelations(
     bool contains, bool containedBy, bool overlaps) {
   if (overlaps || (contains && containedBy)) {
     return DesignatorRelation::Overlaps;
@@ -198,7 +265,30 @@ DesignatorRelation DesignatorPath::CombineRelations(
   return DesignatorRelation::Equal;
 }
 
-DesignatorRelation DesignatorPath::CompareSubscriptLists(
+// Folds the relation of one subscript or part into the running summary of a
+// comparison. Returns false for Disjoint, which decides the whole comparison.
+static bool Accumulate(DesignatorRelation relation, bool &contains,
+    bool &containedBy, bool &overlaps) {
+  switch (relation) {
+    SWITCH_COVERS_ALL_CASES
+  case DesignatorRelation::Equal:
+    break;
+  case DesignatorRelation::Contains:
+    contains = true;
+    break;
+  case DesignatorRelation::ContainedBy:
+    containedBy = true;
+    break;
+  case DesignatorRelation::Overlaps:
+    overlaps = true;
+    break;
+  case DesignatorRelation::Disjoint:
+    return false;
+  }
+  return true;
+}
+
+static DesignatorRelation CompareSubscriptLists(
     const std::vector<Subscript> &x, const std::vector<Subscript> &y) {
   if (x.empty() && y.empty()) {
     return DesignatorRelation::Equal;
@@ -230,26 +320,16 @@ DesignatorRelation DesignatorPath::CompareSubscriptLists(
   bool containedBy{false};
   bool overlaps{false};
   for (std::size_t i{0}; i < x.size(); ++i) {
-    switch (CompareSubscripts(x[i], y[i])) {
-    case DesignatorRelation::Equal:
-      break;
-    case DesignatorRelation::Contains:
-      contains = true;
-      break;
-    case DesignatorRelation::ContainedBy:
-      containedBy = true;
-      break;
-    case DesignatorRelation::Overlaps:
-      overlaps = true;
-      break;
-    case DesignatorRelation::Disjoint:
+    if (!Accumulate(
+            CompareSubscripts(x[i], y[i]), contains, containedBy, overlaps)) {
       return DesignatorRelation::Disjoint;
     }
   }
   return CombineRelations(contains, containedBy, overlaps);
 }
 
-DesignatorRelation DesignatorPath::CompareParts(const Part &x, const Part &y) {
+static DesignatorRelation CompareParts(
+    const DesignatorPath::Part &x, const DesignatorPath::Part &y) {
   DesignatorRelation subscriptRelation{
       CompareSubscriptLists(x.subscripts, y.subscripts)};
   if (subscriptRelation == DesignatorRelation::Disjoint) {
@@ -275,7 +355,7 @@ DesignatorRelation DesignatorPath::Compare(const DesignatorPath &that) const {
   if (empty() || that.empty()) {
     return DesignatorRelation::Disjoint;
   }
-  if (commonBlock && commonBlock == that.commonBlock) {
+  if (commonBlock_ && commonBlock_ == that.commonBlock_) {
     if (IsWholeCommonBlock()) {
       return that.IsWholeCommonBlock() ? DesignatorRelation::Equal
                                        : DesignatorRelation::Contains;
@@ -284,47 +364,36 @@ DesignatorRelation DesignatorPath::Compare(const DesignatorPath &that) const {
       return DesignatorRelation::ContainedBy;
     }
   }
-  if (base || that.base) {
-    if (!base || !that.base || !(*base == *that.base)) {
+  if (base_ || that.base_) {
+    if (!base_ || !that.base_ || !(*base_ == *that.base_)) {
       return DesignatorRelation::Disjoint;
     }
   }
-  if (parts.empty() || that.parts.empty()) {
-    if ((!parts.empty() && AreAllFullSliceParts(parts, 0)) ||
-        (!that.parts.empty() && AreAllFullSliceParts(that.parts, 0))) {
+  if (parts_.empty() || that.parts_.empty()) {
+    if ((!parts_.empty() && AreAllFullSliceParts(parts_, 0)) ||
+        (!that.parts_.empty() && AreAllFullSliceParts(that.parts_, 0))) {
       return DesignatorRelation::Equal;
     }
-    return parts.empty() ? DesignatorRelation::Contains
-                         : DesignatorRelation::ContainedBy;
+    return parts_.empty() ? DesignatorRelation::Contains
+                          : DesignatorRelation::ContainedBy;
   }
   bool contains{false};
   bool containedBy{false};
   bool overlaps{false};
   const std::size_t commonSize{
-      parts.size() < that.parts.size() ? parts.size() : that.parts.size()};
+      parts_.size() < that.parts_.size() ? parts_.size() : that.parts_.size()};
   for (std::size_t i{0}; i < commonSize; ++i) {
-    switch (CompareParts(parts[i], that.parts[i])) {
-    case DesignatorRelation::Equal:
-      break;
-    case DesignatorRelation::Contains:
-      contains = true;
-      break;
-    case DesignatorRelation::ContainedBy:
-      containedBy = true;
-      break;
-    case DesignatorRelation::Overlaps:
-      overlaps = true;
-      break;
-    case DesignatorRelation::Disjoint:
+    if (!Accumulate(CompareParts(parts_[i], that.parts_[i]), contains,
+            containedBy, overlaps)) {
       return DesignatorRelation::Disjoint;
     }
   }
-  if (parts.size() < that.parts.size()) {
-    if (!AreAllFullSliceParts(that.parts, parts.size())) {
+  if (parts_.size() < that.parts_.size()) {
+    if (!AreAllFullSliceParts(that.parts_, parts_.size())) {
       contains = true;
     }
-  } else if (that.parts.size() < parts.size()) {
-    if (!AreAllFullSliceParts(parts, that.parts.size())) {
+  } else if (that.parts_.size() < parts_.size()) {
+    if (!AreAllFullSliceParts(parts_, that.parts_.size())) {
       containedBy = true;
     }
   }
@@ -335,29 +404,30 @@ bool DesignatorPath::MayContain(const DesignatorPath &that) const {
   if (*this == that || empty()) {
     return true;
   }
-  if (commonBlock && commonBlock == that.commonBlock && IsWholeCommonBlock()) {
+  if (commonBlock_ && commonBlock_ == that.commonBlock_ &&
+      IsWholeCommonBlock()) {
     return true;
   }
-  if (base || that.base) {
-    if (!base || !that.base || !(*base == *that.base)) {
+  if (base_ || that.base_) {
+    if (!base_ || !that.base_ || !(*base_ == *that.base_)) {
       return false;
     }
   }
-  if (that.parts.empty()) {
-    return AreAllFullSliceParts(parts, 0);
+  if (that.parts_.empty()) {
+    return AreAllFullSliceParts(parts_, 0);
   }
-  if (parts.size() > that.parts.size() &&
-      !AreAllFullSliceParts(parts, that.parts.size())) {
+  if (parts_.size() > that.parts_.size() &&
+      !AreAllFullSliceParts(parts_, that.parts_.size())) {
     return false;
   }
-  if (parts.empty()) {
+  if (parts_.empty()) {
     return true;
   }
-  for (std::size_t i{0}; i < parts.size(); ++i) {
-    if (i >= that.parts.size()) {
-      return AreAllFullSliceParts(parts, i);
+  for (std::size_t i{0}; i < parts_.size(); ++i) {
+    if (i >= that.parts_.size()) {
+      return AreAllFullSliceParts(parts_, i);
     }
-    if (!PartMayContain(parts[i], that.parts[i])) {
+    if (!PartMayContain(parts_[i], that.parts_[i])) {
       return false;
     }
   }
@@ -372,11 +442,11 @@ std::string DesignatorPath::AsFortran() const {
 }
 
 llvm::raw_ostream &DesignatorPath::AsFortran(llvm::raw_ostream &o) const {
-  if (!base) {
+  if (!base_) {
     return o;
   }
-  base->AsFortran(o);
-  for (const Part &part : parts) {
+  base_->AsFortran(o);
+  for (const Part &part : parts_) {
     if (!part.subscripts.empty()) {
       char separator{'('};
       for (const Subscript &subscript : part.subscripts) {
@@ -393,79 +463,34 @@ llvm::raw_ostream &DesignatorPath::AsFortran(llvm::raw_ostream &o) const {
 }
 
 bool DesignatorPath::IsWholeCommonBlock() const {
-  return commonBlock && HasBaseOnly() && base->IsSymbol() &&
-      &base->GetFirstSymbol().GetUltimate() == commonBlock;
+  return commonBlock_ && HasBaseOnly() && base_->IsSymbol() &&
+      &base_->GetFirstSymbol().GetUltimate() == commonBlock_;
 }
 
 void DesignatorPath::SetBase(NamedEntity entity) {
-  base = std::move(entity);
-  commonBlock = nullptr;
-  const Symbol &symbol{base->GetFirstSymbol().GetUltimate()};
+  base_ = std::move(entity);
+  commonBlock_ = nullptr;
+  const Symbol &symbol{base_->GetFirstSymbol().GetUltimate()};
   if (symbol.has<semantics::CommonBlockDetails>()) {
-    commonBlock = &symbol;
+    commonBlock_ = &symbol;
   } else if (const auto *details{
                  symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
     if (const Symbol *block{details->commonBlock()}) {
-      commonBlock = &block->GetUltimate();
+      commonBlock_ = &block->GetUltimate();
     }
   }
 }
 
 void DesignatorPath::AddComponent(const Symbol &symbol) {
-  if (!parts.empty() && !parts.back().symbol) {
-    parts.back().symbol = &symbol;
+  if (!parts_.empty() && !parts_.back().symbol) {
+    parts_.back().symbol = &symbol;
   } else {
-    parts.push_back({{}, &symbol});
+    parts_.push_back({{}, &symbol});
   }
 }
 
 void DesignatorPath::AddSubscripts(std::vector<Subscript> subscripts) {
-  parts.push_back({std::move(subscripts), nullptr});
-}
-
-void DesignatorPath::AddComponent(const Component &component) {
-  AddDataRef(component.base());
-  AddComponent(*component.symbol());
-}
-
-void DesignatorPath::AddNamedEntity(const NamedEntity &entity) {
-  if (const auto *symbol{entity.UnwrapSymbolRef()}) {
-    SetBase(NamedEntity{symbol->get()});
-  } else if (const auto *component{entity.UnwrapComponent()}) {
-    AddComponent(*component);
-  }
-}
-
-void DesignatorPath::AddArrayRef(const ArrayRef &arrayRef) {
-  AddNamedEntity(arrayRef.base());
-  AddSubscripts(arrayRef.subscript());
-}
-
-void DesignatorPath::AddCoarrayRef(const CoarrayRef &coarrayRef) {
-  AddDataRef(coarrayRef.base());
-}
-
-void DesignatorPath::AddDataRef(const DataRef &dataRef) {
-  common::visit(
-      common::visitors{
-          [&](SymbolRef symbol) { SetBase(NamedEntity{symbol.get()}); },
-          [&](const Component &component) { AddComponent(component); },
-          [&](const ArrayRef &arrayRef) { AddArrayRef(arrayRef); },
-          [&](const CoarrayRef &coarrayRef) { AddCoarrayRef(coarrayRef); },
-      },
-      dataRef.u);
-}
-
-std::optional<DesignatorPath> DesignatorPath::Get(
-    const std::optional<Expr<SomeType>> &expr) {
-  if (std::optional<DataRef> dataRef{ExtractDataRef(expr)}) {
-    DesignatorPath path;
-    path.AddDataRef(*dataRef);
-    if (!path.empty()) {
-      return path;
-    }
-  }
-  return std::nullopt;
+  parts_.push_back({std::move(subscripts), nullptr});
 }
 
 } // namespace Fortran::evaluate

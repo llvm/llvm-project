@@ -5,8 +5,11 @@
 ! resolve-directives warns and rewrite-parse-tree drops the duplicate
 ! occurrences from the clause object lists. When one same-kind object contains
 ! another, the contained occurrence is likewise dropped. Cross-kind
-! duplicates (e.g. private(x) firstprivate(x)), partial overlaps, disjoint
-! parts of one array, and reduction duplicates remain hard errors.
+! duplicates (e.g. private(x) firstprivate(x)), partial overlaps, and reduction
+! duplicates remain hard errors. Several parts of one array in the same kind of
+! data-sharing clause are not yet implemented and are rejected with a message
+! that does not claim the parts are separate, because parts whose subscripts
+! cannot be compared are rejected the same way.
 
 program test_dataclause_dedup
   implicit none
@@ -89,6 +92,29 @@ program test_dataclause_dedup
     x = x + i
   end do
 
+  ! The conflict does not depend on the order of the clauses.
+  !ERROR: 'x' appears in more than one data-sharing clause on the same OpenACC directive
+  !$acc parallel reduction(+:x) private(x)
+  x = x + 1
+  !$acc end parallel
+
+  !ERROR: 'x' appears in more than one data-sharing clause on the same OpenACC directive
+  !$acc serial reduction(+:x) firstprivate(x)
+  x = x + 1
+  !$acc end serial
+
+  !ERROR: 'x' appears in more than one data-sharing clause on the same OpenACC directive
+  !$acc parallel loop reduction(+:x) private(x)
+  do i = 1, 10
+    x = x + i
+  end do
+
+  !ERROR: 'x' appears in more than one data-sharing clause on the same OpenACC directive
+  !$acc serial loop reduction(+:x) firstprivate(x)
+  do i = 1, 10
+    x = x + i
+  end do
+
   ! Reduction is excluded from the benign case: same-flag duplicates may
   ! differ in operator, which is a real conflict.
   !ERROR: 'x' appears in more than one data-sharing clause on the same OpenACC directive
@@ -112,13 +138,13 @@ program test_dataclause_dedup
     type(pt) :: s
 
     ! Distinct elements of one array still represent the same data-sharing
-    ! entity and cannot be lowered as separate private operands.
-    !ERROR: 'arr(2)' is a different part of an object that already appears in the same kind of data-sharing clause on the same OpenACC directive
+    ! entity and cannot yet be lowered as separate private operands.
+    !ERROR: not yet implemented: multiple parts of the same object in the same kind of data-sharing clause on an OpenACC directive, as in 'arr(2)'
     !$acc parallel loop private(arr(1), arr(2))
     do i = 1, 10
     end do
 
-    !ERROR: 'arr(6:10)' is a different part of an object that already appears in the same kind of data-sharing clause on the same OpenACC directive
+    !ERROR: not yet implemented: multiple parts of the same object in the same kind of data-sharing clause on an OpenACC directive, as in 'arr(6:10)'
     !$acc parallel loop private(arr(1:5), arr(6:10))
     do i = 1, 10
     end do
@@ -234,7 +260,7 @@ program test_dataclause_dedup
 
     ! Variable index/section containment cannot be proven, so separate
     ! appearances of the same array entity are rejected.
-    !ERROR: 'arr(lo:hi)' is a different part of an object that already appears in the same kind of data-sharing clause on the same OpenACC directive
+    !ERROR: not yet implemented: multiple parts of the same object in the same kind of data-sharing clause on an OpenACC directive, as in 'arr(lo:hi)'
     !$acc parallel loop private(arr(idx), arr(lo:hi))
     do i = 1, 10
     end do
@@ -253,7 +279,7 @@ program test_dataclause_dedup
 
     ! Variable section overlap cannot be proven, so separate appearances of
     ! the same array entity are rejected.
-    !ERROR: 'arr(mid:hi)' is a different part of an object that already appears in the same kind of data-sharing clause on the same OpenACC directive
+    !ERROR: not yet implemented: multiple parts of the same object in the same kind of data-sharing clause on an OpenACC directive, as in 'arr(mid:hi)'
     !$acc parallel loop private(arr(lo:hi), arr(mid:hi))
     do i = 1, 10
     end do
@@ -261,6 +287,20 @@ program test_dataclause_dedup
     ! Variable section overlap is ambiguous across data-sharing kinds.
     !ERROR: 'arr(mid:hi)' appears in more than one data-sharing clause on the same OpenACC directive
     !$acc parallel loop private(arr(lo:hi)) firstprivate(arr(mid:hi))
+    do i = 1, 10
+    end do
+
+    ! Sections that cannot be compared exactly are rejected with the same
+    ! wording, even when they certainly overlap. A strided section is such a
+    ! section.
+    !ERROR: not yet implemented: multiple parts of the same object in the same kind of data-sharing clause on an OpenACC directive, as in 'arr(1:5)'
+    !$acc parallel loop private(arr(1:10:2), arr(1:5))
+    do i = 1, 10
+    end do
+
+    ! The same holds for subscripts that are equal but not folded to constants.
+    !ERROR: not yet implemented: multiple parts of the same object in the same kind of data-sharing clause on an OpenACC directive, as in 'arr(idx+1-1)'
+    !$acc parallel loop private(arr(idx), arr(idx+1-1))
     do i = 1, 10
     end do
 
@@ -272,6 +312,18 @@ program test_dataclause_dedup
     ! Identical variable sections conflict across data-sharing kinds.
     !ERROR: 'arr(lo:hi)' appears in more than one data-sharing clause on the same OpenACC directive
     !$acc parallel loop private(arr(lo:hi)) firstprivate(arr(lo:hi))
+    do i = 1, 10
+    end do
+
+    ! A reduction conflicts with a different data-sharing clause for another
+    ! part of the same array, whichever clause comes first.
+    !ERROR: 'arr(6:10)' appears in more than one data-sharing clause on the same OpenACC directive
+    !$acc parallel loop private(arr(1:5)) reduction(+:arr(6:10))
+    do i = 1, 10
+    end do
+
+    !ERROR: 'arr(1:5)' appears in more than one data-sharing clause on the same OpenACC directive
+    !$acc parallel loop reduction(+:arr(6:10)) private(arr(1:5))
     do i = 1, 10
     end do
 
