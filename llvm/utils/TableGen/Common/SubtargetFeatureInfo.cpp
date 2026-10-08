@@ -9,9 +9,12 @@
 #include "SubtargetFeatureInfo.h"
 #include "Basic/PredicateExpanderDag.h"
 #include "Types.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include <iterator>
+#include <vector>
 
 using namespace llvm;
 
@@ -211,6 +214,79 @@ void SubtargetFeatureInfo::emitComputeAssemblerAvailableFeatures(
   OS << "}\n\n";
 }
 
+/// A disjunction of literals. The empty clause is unsatisfiable.
+using CNFClause = std::set<SubtargetFeatureLiteral>;
+/// A conjunction of clauses. The empty formula is trivially satisfiable.
+using CNFFormula = std::vector<CNFClause>;
+
+/// Returns true if \p Clause holds a literal together with its negation, which
+/// makes the clause true regardless of how the features are assigned.
+static bool isTautology(const CNFClause &Clause) {
+  return any_of(Clause, [&Clause](const SubtargetFeatureLiteral &Lit) {
+    return Clause.count({Lit.Feature, !Lit.IsNot}) != 0;
+  });
+}
+
+/// Disjoins two formulas by distributing the clauses of one over the other:
+/// (A && B) || (C && D) becomes (A || C) && (A || D) && (B || C) && (B || D).
+static CNFFormula disjoin(const CNFFormula &LHS, const CNFFormula &RHS) {
+  CNFFormula Result;
+  for (const CNFClause &L : LHS) {
+    for (const CNFClause &R : RHS) {
+      CNFClause Clause = L;
+      Clause.insert(R.begin(), R.end());
+      if (!isTautology(Clause))
+        Result.push_back(std::move(Clause));
+    }
+  }
+  return Result;
+}
+
+/// Converts the predicate dag \p Val, owned by \p R, to conjunctive normal
+/// form. \p Negate requests the form of the negation of \p Val instead, which
+/// is how 'not' is pushed down to the leaves rather than represented
+/// explicitly. The accepted grammar is the one emitPredicateDag() accepts:
+/// arbitrarily nested all_of/any_of/not over SubtargetFeature leaves.
+static CNFFormula convertToCNF(const Record *R, const Init &Val, bool Negate) {
+  const auto *D = dyn_cast<DagInit>(&Val);
+  if (!D) {
+    const auto *Leaf = dyn_cast<DefInit>(&Val);
+    if (!Leaf || !Leaf->getDef()->isSubClassOf("SubtargetFeature"))
+      PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
+    return {{{Leaf->getDef()->getName(), Negate}}};
+  }
+
+  const auto *Op = dyn_cast<DefInit>(D->getOperator());
+  if (!Op)
+    PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
+  StringRef OpName = Op->getDef()->getName();
+
+  if (OpName == "not") {
+    if (D->getNumArgs() != 1)
+      PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
+    return convertToCNF(R, *D->getArg(0), !Negate);
+  }
+
+  if (OpName != "any_of" && OpName != "all_of")
+    PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
+  if (D->getNumArgs() == 0)
+    PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
+
+  // By De Morgan, negating turns a conjunction into a disjunction and back.
+  bool IsConjunction = (OpName == "all_of") != Negate;
+
+  CNFFormula Result = convertToCNF(R, *D->getArg(0), Negate);
+  for (const Init *Arg : D->getArgs().drop_front()) {
+    CNFFormula ArgCNF = convertToCNF(R, *Arg, Negate);
+    if (IsConjunction)
+      Result.insert(Result.end(), std::make_move_iterator(ArgCNF.begin()),
+                    std::make_move_iterator(ArgCNF.end()));
+    else
+      Result = disjoin(Result, ArgCNF);
+  }
+  return Result;
+}
+
 bool llvm::getRequiredFeatures(
     std::set<SubtargetFeatureLiteral> &FeaturesSet,
     std::set<std::set<SubtargetFeatureLiteral>> &AnyOfFeatureSets,
@@ -228,35 +304,16 @@ bool llvm::getRequiredFeatures(
       AllPredicatesParsed = false;
       continue;
     }
-    const DagInit *D = cast<DagInit>(V->getValue());
-    std::string CombineType = D->getOperator()->getAsString();
-    if (CombineType != "any_of" && CombineType != "all_of")
-      PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
-    if (D->getNumArgs() == 0)
-      PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
-    bool IsOr = CombineType == "any_of";
-    std::set<SubtargetFeatureLiteral> AnyOfSet;
 
-    for (auto *Arg : D->getArgs()) {
-      bool IsNot = false;
-      if (auto *NotArg = dyn_cast<DagInit>(Arg)) {
-        if (NotArg->getOperator()->getAsString() != "not" ||
-            NotArg->getNumArgs() != 1)
-          PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
-        Arg = NotArg->getArg(0);
-        IsNot = true;
-      }
-      if (!isa<DefInit>(Arg) ||
-          !cast<DefInit>(Arg)->getDef()->isSubClassOf("SubtargetFeature"))
-        PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
-      if (IsOr)
-        AnyOfSet.insert({cast<DefInit>(Arg)->getDef()->getName(), IsNot});
+    // A clause of one literal says that literal must hold, so it belongs with
+    // the unconditionally required features rather than among the groups.
+    for (CNFClause &Clause :
+         convertToCNF(R, *V->getValue(), /*Negate=*/false)) {
+      if (Clause.size() == 1)
+        FeaturesSet.insert(*Clause.begin());
       else
-        FeaturesSet.insert({cast<DefInit>(Arg)->getDef()->getName(), IsNot});
+        AnyOfFeatureSets.insert(std::move(Clause));
     }
-
-    if (IsOr)
-      AnyOfFeatureSets.insert(std::move(AnyOfSet));
   }
   return AllPredicatesParsed;
 }
