@@ -165,6 +165,12 @@
       "doc": "Configures sorting algorithm for qsort and qsort_r. Values accepted are LIBC_QSORT_QUICK_SORT, LIBC_QSORT_HEAP_SORT."
     }
   },
+  "stdlib": {
+    "LIBC_CONF_EXIT_FLUSH_STREAMS": {
+      "value": true,
+      "doc": "Flush all open stdio streams when exit is called, as required by the C standard. Can be disabled in configurations without stdio streams (e.g. baremetal without files) so that exit does not depend on stdio."
+    }
+  },
   "setjmp": {
     "LIBC_CONF_SETJMP_AARCH64_RESTORE_PLATFORM_REGISTER": {
       "value": true,

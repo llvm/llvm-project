@@ -69,6 +69,9 @@ LIBC_CONFIGURE_FULL_BUILD_OPTIONS = [
 
     # Defined for targets which support threads.
     "LIBC_COPT_SUPPORT_THREADS",
+
+    # Documentation in libc/config/config.json (LIBC_CONF_EXIT_FLUSH_STREAMS).
+    "LIBC_COPT_EXIT_FLUSH_STREAMS",
 ]
 
 LIBC_CONFIGURE_OPTIONS = LIBC_CONFIGURE_COMMON_OPTIONS + select({

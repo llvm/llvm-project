@@ -15543,6 +15543,7 @@ libc_function(
         ":__support_macros_config",
         ":__support_osutil_exit",
         ":__support_threads_thread_headers",
+        ":fflush_internal",
     ],
 )
 
@@ -17482,20 +17483,34 @@ libc_support_library(
     ],
 )
 
-libc_function(
-    name = "fflush",
-    srcs = ["src/stdio/generic/fflush.cpp"],
-    hdrs = ["src/stdio/fflush.h"],
+libc_support_library(
+    name = "fflush_internal",
+    srcs = ["src/stdio/generic/fflush_internal.cpp"],
+    hdrs = ["src/stdio/fflush_internal.h"],
     deps = [
-        ":__support_common",
+        ":__support_error_or",
         ":__support_file_file",
         ":__support_file_platform_file",
-        ":__support_libc_errno",
         ":__support_macros_config",
-        ":errno",
         ":stderr",
         ":stdin",
         ":stdout",
+        ":types_FILE",
+    ],
+)
+
+libc_function(
+    name = "fflush",
+    srcs = ["src/stdio/fflush.cpp"],
+    hdrs = ["src/stdio/fflush.h"],
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":errno",
+        ":fflush_internal",
+        ":hdr_stdio_macros",
         ":types_FILE",
     ],
 )

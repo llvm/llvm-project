@@ -582,15 +582,40 @@ if(LLVM_LIBC_FULL_BUILD AND LIBC_TEST_SUBPROCESS_TESTS)
       libc.src.stdlib._Exit
   )
 
+  set(exit_test_copts "")
+  set(exit_test_deps
+    libc.src.__support.macros.config
+    libc.src.stdlib.exit
+  )
+  if(LIBC_CONF_EXIT_FLUSH_STREAMS AND TARGET libc.src.stdio.fflush_internal)
+    libc_add_definition(exit_test_copts "LIBC_COPT_EXIT_FLUSH_STREAMS")
+    list(APPEND exit_test_deps
+      libc.hdr.types.FILE
+      libc.hdr.types.size_t
+      libc.src.__support.CPP.scope
+      libc.src.stdio.fclose
+      libc.src.stdio.fopen
+      libc.src.stdio.fputs
+      libc.src.stdio.fread
+      libc.src.stdio.freopen
+      libc.src.stdio.remove
+      libc.src.stdio.stdout
+      libc.src.stdlib.atexit
+      libc.test.UnitTest.ErrnoCheckingTest
+      libc.test.UnitTest.ErrnoSetterMatcher
+    )
+  endif()
+
   add_libc_test(
     exit_test
     SUITE
       libc-stdlib-tests
     SRCS
       exit_test.cpp
+    COMPILE_OPTIONS
+      ${exit_test_copts}
     DEPENDS
-      libc.src.stdlib._Exit
-      libc.src.stdlib.exit
+      ${exit_test_deps}
   )
 
   add_libc_test(
