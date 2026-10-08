@@ -681,7 +681,10 @@ public:
 
 class MaxPool2dConverter : public OpConversionPattern<tosa::MaxPool2dOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  MaxPool2dConverter(const TypeConverter &typeConverter, MLIRContext *context,
+                     bool allowNonFinites)
+      : OpConversionPattern(typeConverter, context),
+        allowNonFinites(allowNonFinites) {}
 
   // Compute the dynamic output sizes of the maxpool operation.
   static SmallVector<Value>
@@ -754,9 +757,11 @@ public:
           cast<FloatType>(resultETy).getFloatSemantics();
       if (llvm::APFloat::semanticsHasNaN(semantics))
         initialAttr = rewriter.getFloatAttr(
-            resultETy, nanMode == NanPropagationMode::IGNORE
-                           ? APFloat::getNaN(semantics)
-                           : APFloat::getLargest(semantics, true));
+            resultETy,
+            nanMode == NanPropagationMode::IGNORE
+                ? APFloat::getNaN(semantics)
+                : getFloatMinMaxIdentity(semantics,
+                                         /*negative=*/true, allowNonFinites));
     }
 
     else if (isUnsigned)
@@ -777,6 +782,9 @@ public:
     llvm::append_range(pad, op.getPad());
     pad.resize(pad.size() + 2, 0);
 
+    // The initial value doubles as the padding value. This is safe for every
+    // seed above because the verifier rejects a pad as wide as the kernel on
+    // any side, so no window consists purely of padding.
     Value paddedInput = applyPad(loc, input, pad, initialAttr, rewriter);
 
     Value initialValue = arith::ConstantOp::create(rewriter, loc, initialAttr);
@@ -855,6 +863,9 @@ public:
 
     return success();
   }
+
+private:
+  bool allowNonFinites;
 };
 
 class AvgPool2dConverter : public OpRewritePattern<tosa::AvgPool2dOp> {
@@ -1152,6 +1163,6 @@ void mlir::tosa::populateTosaToLinalgNamedConversionPatterns(
 
   patterns->add<
       MaxPool2dConverter
-    >(converter, patterns->getContext());
+    >(converter, patterns->getContext(), options.allowNonFinites);
   // clang-format on
 }

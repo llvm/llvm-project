@@ -26,7 +26,7 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
+#include "clang/CodeGenUtils/FunctionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -83,6 +83,15 @@ static RValue emitBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
                                Args... args) {
   mlir::Value arg = cgf.emitScalarExpr(e->getArg(0));
   return RValue::get(createBuiltinBitOp<Op>(cgf, e, arg, args...));
+}
+
+template <typename Op>
+static RValue emitBuiltinVectorReduction(CIRGenFunction &cgf,
+                                         const CallExpr *e) {
+  mlir::Value input = cgf.emitScalarExpr(e->getArg(0));
+  return RValue::get(
+      Op::create(cgf.getBuilder(), cgf.getLoc(e->getExprLoc()), input)
+          .getResult());
 }
 
 /// Emit a clz/ctz bit op with optional fallback for __builtin_c[lt]zg.
@@ -1825,12 +1834,13 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   }
   case Builtin::BI__builtin_coro_done:
     return RValue::get(emitCoroDoneBuiltinCall(e).getResult());
-  case Builtin::BI__builtin_coro_suspend:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_suspend NYI");
-    return getUndefRValue(e->getType());
+  case Builtin::BI__builtin_coro_suspend: {
+    mlir::Value result = emitCoroSuspendBuiltinCall(e).getResult();
+    return RValue::get(
+        builder.createIntCast(result, convertType(e->getType())));
+  }
   case Builtin::BI__builtin_coro_align:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_align NYI");
-    return getUndefRValue(e->getType());
+    return RValue::get(emitCoroAlignBuiltinCall(e).getResult());
 
   case Builtin::BI__builtin_coro_frame: {
     return emitCoroutineFrame();
@@ -2193,60 +2203,57 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI__builtin_reduce_max:
   case Builtin::BI__builtin_reduce_min: {
-    auto getIntrinsicName = [this, builtinIDIfNoAsmLabel](QualType type) {
-      if (const auto *vecTy = type->getAs<VectorType>())
-        type = vecTy->getElementType();
-      else if (type->isSizelessVectorType())
-        type = type->getSizelessVectorEltType(getContext());
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
+    QualType type = e->getArg(0)->getType();
+    if (const auto *vecTy = type->getAs<VectorType>())
+      type = vecTy->getElementType();
+    else if (type->isSizelessVectorType())
+      type = type->getSizelessVectorEltType(getContext());
 
-      if (builtinIDIfNoAsmLabel == Builtin::BI__builtin_reduce_max) {
-        if (type->isSignedIntegerType())
-          return "vector.reduce.smax";
-        if (type->isUnsignedIntegerType())
-          return "vector.reduce.umax";
-        assert(type->isFloatingType() && "must have a float here");
-        return "vector.reduce.fmax";
-      }
+    mlir::Value input = emitScalarExpr(e->getArg(0));
+    mlir::Location loc = getLoc(e->getExprLoc());
+    const bool isMax = builtinIDIfNoAsmLabel == Builtin::BI__builtin_reduce_max;
 
-      if (type->isSignedIntegerType())
-        return "vector.reduce.smin";
-      if (type->isUnsignedIntegerType())
-        return "vector.reduce.umin";
-      assert(type->isFloatingType() && "must have a float here");
-      return "vector.reduce.fmin";
-    };
-    return emitBuiltinWithOneOverloadedType<1>(
-        e, getIntrinsicName(e->getArg(0)->getType()),
-        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
-            .getElementType());
+    if (type->isSignedIntegerType()) {
+      if (isMax)
+        return RValue::get(
+            cir::VecReduceSMaxOp::create(builder, loc, input).getResult());
+      return RValue::get(
+          cir::VecReduceSMinOp::create(builder, loc, input).getResult());
+    }
+
+    if (type->isUnsignedIntegerType()) {
+      if (isMax)
+        return RValue::get(
+            cir::VecReduceUMaxOp::create(builder, loc, input).getResult());
+      return RValue::get(
+          cir::VecReduceUMinOp::create(builder, loc, input).getResult());
+    }
+
+    assert(type->isFloatingType() && "must have a float here");
+    cir::FastMathFlagsAttr fastMath =
+        getFastMathFlagsAttr(getCurrentFastMathFlags());
+    if (isMax)
+      return RValue::get(
+          cir::VecReduceFMaxOp::create(builder, loc, input, fastMath)
+              .getResult());
+    return RValue::get(
+        cir::VecReduceFMinOp::create(builder, loc, input, fastMath)
+            .getResult());
   }
   case Builtin::BI__builtin_reduce_add:
-    return emitBuiltinWithOneOverloadedType<1>(
-        e, "vector.reduce.add",
-        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
-            .getElementType());
+    return emitBuiltinVectorReduction<cir::VecReduceAddOp>(*this, e);
   case Builtin::BI__builtin_reduce_mul:
-    return emitBuiltinWithOneOverloadedType<1>(
-        e, "vector.reduce.mul",
-        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
-            .getElementType());
+    return emitBuiltinVectorReduction<cir::VecReduceMulOp>(*this, e);
   case Builtin::BI__builtin_reduce_xor:
-    return emitBuiltinWithOneOverloadedType<1>(
-        e, "vector.reduce.xor",
-        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
-            .getElementType());
+    return emitBuiltinVectorReduction<cir::VecReduceXorOp>(*this, e);
   case Builtin::BI__builtin_reduce_or:
-    return emitBuiltinWithOneOverloadedType<1>(
-        e, "vector.reduce.or",
-        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
-            .getElementType());
+    return emitBuiltinVectorReduction<cir::VecReduceOrOp>(*this, e);
   case Builtin::BI__builtin_reduce_and:
-    return emitBuiltinWithOneOverloadedType<1>(
-        e, "vector.reduce.and",
-        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
-            .getElementType());
+    return emitBuiltinVectorReduction<cir::VecReduceAndOp>(*this, e);
   case Builtin::BI__builtin_reduce_assoc_fadd:
   case Builtin::BI__builtin_reduce_in_order_fadd: {
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
     bool isAssociative =
         builtinIDIfNoAsmLabel == Builtin::BI__builtin_reduce_assoc_fadd;
 
@@ -2273,15 +2280,14 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                                                   /*Negative=*/true)));
     }
 
-    SmallVector<mlir::Value, 2> args = {startValue, vector};
-    cir::FastMathFlagsAttr fastMath;
+    cir::FastMathFlags fastMathFlags = getCurrentFastMathFlags();
     if (isAssociative)
-      fastMath = cir::FastMathFlagsAttr::get(&getMLIRContext(),
-                                             cir::FastMathFlags::reassoc);
+      fastMathFlags |= cir::FastMathFlags::reassoc;
+    cir::FastMathFlagsAttr fastMath = getFastMathFlagsAttr(fastMathFlags);
 
-    mlir::Value result = builder.emitIntrinsicCallOp(loc, "vector.reduce.fadd",
-                                                     scalarTy, fastMath, args);
-    return RValue::get(result);
+    auto reduction = cir::VecReduceFAddOp::create(builder, loc, startValue,
+                                                  vector, fastMath);
+    return RValue::get(reduction.getResult());
   }
   case Builtin::BI__builtin_reduce_maximum:
   case Builtin::BI__builtin_reduce_minimum:
@@ -2308,7 +2314,22 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
         loc, resultType, dataPtr, stride, isVolatile);
     return RValue::get(result);
   }
-  case Builtin::BI__builtin_matrix_column_major_store:
+  case Builtin::BI__builtin_matrix_column_major_store: {
+    mlir::Value matrix = emitScalarExpr(e->getArg(0));
+    Address dst = emitPointerWithAlignment(e->getArg(1));
+    mlir::Value stride = emitScalarExpr(e->getArg(2));
+
+    auto *ptrTy = e->getArg(1)->getType()->getAs<PointerType>();
+    assert(ptrTy && "arg1 must be of pointer type");
+    bool isVolatile = ptrTy->getPointeeType().isVolatileQualified();
+
+    emitNonNullArgCheck(RValue::get(dst.emitRawPointer()),
+                        e->getArg(1)->getType(), e->getArg(1)->getExprLoc(), fd,
+                        0);
+    builder.createMatrixColumnMajorStore(loc, matrix, dst.emitRawPointer(),
+                                         stride, isVolatile);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__builtin_masked_load:
   case Builtin::BI__builtin_masked_expand_load:
   case Builtin::BI__builtin_masked_gather:

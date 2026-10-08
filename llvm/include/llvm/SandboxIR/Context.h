@@ -154,9 +154,6 @@ protected:
   BasicBlock *createBasicBlock(llvm::BasicBlock *BB);
   friend class BasicBlock; // For getOrCreateValue().
 
-  IRBuilder<ConstantFolder> LLVMIRBuilder;
-  auto &getLLVMIRBuilder() { return LLVMIRBuilder; }
-
   VAArgInst *createVAArgInst(llvm::VAArgInst *SI);
   friend VAArgInst; // For createVAArgInst()
   FreezeInst *createFreezeInst(llvm::FreezeInst *SI);

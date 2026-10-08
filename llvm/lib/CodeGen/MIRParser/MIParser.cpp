@@ -745,6 +745,7 @@ bool MIParser::parseBasicBlockDefinition(
   bool IsEHFuncletEntry = false;
   bool IsEHScopeEntry = false;
   bool IsCleanupFuncletEntry = false;
+  bool IsEHContTarget = false;
   std::optional<MBBSectionID> SectionID;
   uint64_t Alignment = 0;
   unsigned MaxBytesForAlignment = 0;
@@ -781,6 +782,10 @@ bool MIParser::parseBasicBlockDefinition(
         break;
       case MIToken::kw_cleanup_funclet_entry:
         IsCleanupFuncletEntry = true;
+        lex();
+        break;
+      case MIToken::kw_ehcont_target:
+        IsEHContTarget = true;
         lex();
         break;
       case MIToken::kw_align:
@@ -848,6 +853,7 @@ bool MIParser::parseBasicBlockDefinition(
   MBB->setIsEHFuncletEntry(IsEHFuncletEntry);
   MBB->setIsEHScopeEntry(IsEHScopeEntry);
   MBB->setIsCleanupFuncletEntry(IsCleanupFuncletEntry);
+  MBB->setIsEHContTarget(IsEHContTarget);
   if (SectionID) {
     MBB->setSectionID(*SectionID);
     MF.setBBSectionsType(BasicBlockSection::List);
@@ -2459,6 +2465,7 @@ bool MIParser::parseDILocation(MDNode *&Loc) {
   bool ImplicitCode = false;
   uint64_t AtomGroup = 0;
   uint64_t AtomRank = 0;
+  MDNode *IRLayers = nullptr;
 
   if (expectAndConsume(MIToken::lparen))
     return true;
@@ -2556,6 +2563,16 @@ bool MIParser::parseDILocation(MDNode *&Loc) {
           lex();
           continue;
         }
+        if (Token.stringValue() == "irlayers") {
+          lex();
+          if (expectAndConsume(MIToken::colon))
+            return true;
+          if (parseMDNode(IRLayers))
+            return error("expected metadata node");
+          if (!isa<DILayerLocList>(IRLayers))
+            return error("expected DILayerLocList node");
+          continue;
+        }
       }
       return error(Twine("invalid DILocation argument '") +
                    Token.stringValue() + "'");
@@ -2571,7 +2588,7 @@ bool MIParser::parseDILocation(MDNode *&Loc) {
     return error("DILocation requires a scope");
 
   Loc = DILocation::get(MF.getFunction().getContext(), Line, Column, Scope,
-                        InlinedAt, ImplicitCode, AtomGroup, AtomRank);
+                        InlinedAt, ImplicitCode, AtomGroup, AtomRank, IRLayers);
   return false;
 }
 
