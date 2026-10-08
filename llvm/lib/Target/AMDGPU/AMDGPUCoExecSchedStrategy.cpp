@@ -590,9 +590,8 @@ unsigned CandidateHeuristics::getHWUICyclesForMI(MachineInstr *MI) {
 }
 
 void CandidateHeuristics::updateForScheduling(SUnit *SU) {
-  MachineInstr *MI = SU->getInstr(); 
-  HardwareUnitInfo *HWUI =
-      getHWUIFromFlavor(classifyFlavor(*MI, *SII));
+  MachineInstr *MI = SU->getInstr();
+  HardwareUnitInfo *HWUI = getHWUIFromFlavor(classifyFlavor(*MI, *SII));
   assert(HWUI);
   HWUI->markScheduled(SU, getHWUICyclesForMI(MI));
 }
