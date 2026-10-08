@@ -10,13 +10,19 @@ unsigned char _RigidArray_formatter[] =
     // version
     "\x02"
     // remaining record size
-    "\x86\x01"
+    "\x97\x01"
     // type name size
     "\x0a"
     // type name
     "RigidArray"
     // flags
     "\x00"
+    // sig_init
+    "\x01"
+    // program size
+    "\x0f"
+    // program
+    "\x24\x00\x03\x22\x06\x76\x61\x6c\x6f\x62\x6a\x24\x01\x03\x71"
     // sig_update
     "\x06"
     // program size
