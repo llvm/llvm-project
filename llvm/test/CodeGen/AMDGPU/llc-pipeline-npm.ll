@@ -103,7 +103,7 @@
 ; GCN-O0-NEXT:       amdgpu-preload-kern-arg-prolog
 ; GCN-O0-NEXT:       stack-frame-layout
 ; GCN-O0-NEXT:       amdgpu-asm-printer
-; GCN-O0-NEXT:     free-machine-function 
+; GCN-O0-NEXT:     free-machine-function
 ; GCN-O0-NEXT: amdgpu-asm-printer-end
 
 ; GCN-O2: require<MachineModuleAnalysis>
@@ -219,13 +219,14 @@
 ; GCN-O2-NEXT:       detect-dead-lanes
 ; GCN-O2-NEXT:       dead-mi-elimination
 ; GCN-O2-NEXT:       init-undef
-; GCN-O2-NEXT:       process-imp-defs
+; GCN-O2-NEXT:       process-implicit-defs
 ; GCN-O2-NEXT:       unreachable-mbb-elimination
 ; GCN-O2-NEXT:       require<live-vars>
-; GCN-O2-NEXT:       si-opt-vgpr-liverange
 ; GCN-O2-NEXT:       require<machine-loops>
+; GCN-O2-NEXT:       si-opt-vgpr-liverange
 ; GCN-O2-NEXT:       phi-node-elimination
 ; GCN-O2-NEXT:       si-lower-control-flow
+; GCN-O2-NEXT:       require<live-intervals>
 ; GCN-O2-NEXT:       two-address-instruction
 ; GCN-O2-NEXT:       register-coalescer
 ; GCN-O2-NEXT:       rename-independent-subregs
@@ -407,13 +408,14 @@
 ; GCN-O3-NEXT:       detect-dead-lanes
 ; GCN-O3-NEXT:       dead-mi-elimination
 ; GCN-O3-NEXT:       init-undef
-; GCN-O3-NEXT:       process-imp-defs
+; GCN-O3-NEXT:       process-implicit-defs
 ; GCN-O3-NEXT:       unreachable-mbb-elimination
 ; GCN-O3-NEXT:       require<live-vars>
-; GCN-O3-NEXT:       si-opt-vgpr-liverange
 ; GCN-O3-NEXT:       require<machine-loops>
+; GCN-O3-NEXT:       si-opt-vgpr-liverange
 ; GCN-O3-NEXT:       phi-node-elimination
 ; GCN-O3-NEXT:       si-lower-control-flow
+; GCN-O3-NEXT:       require<live-intervals>
 ; GCN-O3-NEXT:       two-address-instruction
 ; GCN-O3-NEXT:       register-coalescer
 ; GCN-O3-NEXT:       rename-independent-subregs

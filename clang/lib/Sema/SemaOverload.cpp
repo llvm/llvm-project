@@ -196,6 +196,7 @@ ImplicitConversionRank clang::GetConversionRank(ImplicitConversionKind Kind) {
       ICR_Conversion,
       ICR_HLSL_Scalar_Widening,
       ICR_HLSL_Scalar_Widening,
+      ICR_Conversion,
   };
   static_assert(std::size(Rank) == (int)ICK_Num_Conversion_Kinds);
   return Rank[(int)Kind];
@@ -260,6 +261,7 @@ static const char *GetImplicitConversionName(ImplicitConversionKind Kind) {
       "Non-decaying array conversion",
       "HLSL vector splat",
       "HLSL matrix splat",
+      "HLSL packed type conversion",
   };
   static_assert(std::size(Name) == (int)ICK_Num_Conversion_Kinds);
   return Name[Kind];
@@ -483,7 +485,7 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
       Expr::EvalResult R;
       if ((Ctx.getLangOpts().C23 && Initializer->EvaluateAsRValue(R, Ctx)) ||
           ((Ctx.getLangOpts().CPlusPlus &&
-            Initializer->isCXX11ConstantExpr(Ctx, &ConstantValue,
+            Initializer->isCXX11ConstantExpr(Ctx, ConstantValue,
                                              AllowRelaxedEval)))) {
         // Constant!
         if (Ctx.getLangOpts().C23)
@@ -2345,6 +2347,45 @@ static bool IsVectorConversion(Sema &S, QualType FromType, QualType ToType,
   return false;
 }
 
+static bool IsHLSLPackedTypeConversion(Sema &S, QualType FromType,
+                                       QualType ToType,
+                                       ImplicitConversionKind &ICK,
+                                       ImplicitConversionKind &DimensionICK,
+                                       Expr *From) {
+  if (!S.getLangOpts().HLSL)
+    return false;
+  if (S.Context.hasSameUnqualifiedType(FromType, ToType))
+    return false;
+
+  const bool FromPacked = FromType->isHLSLBuiltinPackedType();
+  const bool ToPacked = ToType->isHLSLBuiltinPackedType();
+
+  if (FromPacked && ToPacked) {
+    ICK = ICK_Integral_Conversion;
+    DimensionICK = ICK_Identity;
+    return true;
+  }
+
+  // Only convert packed types to and from uint
+  QualType UIntTy = S.Context.UnsignedIntTy;
+  const bool ToIsUint = S.Context.hasSameUnqualifiedType(ToType, UIntTy);
+  if (FromPacked && !ToIsUint)
+    return false;
+
+  const bool FromIsUint = S.Context.hasSameUnqualifiedType(FromType, UIntTy);
+  if (ToPacked && !FromIsUint)
+    return false;
+
+  // Converting to or from uint
+  if (FromIsUint || ToIsUint) {
+    ICK = ICK_HLSL_Packed_Type_Conversion;
+    DimensionICK = ICK_Identity;
+    return true;
+  }
+
+  return false;
+}
+
 static bool tryAtomicConversion(Sema &S, Expr *From, QualType ToType,
                                 bool InOverloadResolution,
                                 StandardConversionSequence &SCS,
@@ -2609,6 +2650,11 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     FromType = ToType.getUnqualifiedType();
   } else if (IsMatrixConversion(S, FromType, ToType, SecondICK, DimensionICK,
                                 From, InOverloadResolution, CStyle)) {
+    SCS.Second = SecondICK;
+    SCS.Dimension = DimensionICK;
+    FromType = ToType.getUnqualifiedType();
+  } else if (IsHLSLPackedTypeConversion(S, FromType, ToType, SecondICK,
+                                        DimensionICK, From)) {
     SCS.Second = SecondICK;
     SCS.Dimension = DimensionICK;
     FromType = ToType.getUnqualifiedType();
@@ -6491,6 +6537,7 @@ static bool CheckConvertedConstantConversions(Sema &S,
   case ICK_Fixed_Point_Conversion:
   case ICK_HLSL_Vector_Truncation:
   case ICK_HLSL_Matrix_Truncation:
+  case ICK_HLSL_Packed_Type_Conversion:
     return false;
 
   case ICK_Lvalue_To_Rvalue:
@@ -9150,9 +9197,19 @@ class BuiltinCandidateTypeSet  {
   /// were present in the candidate set.
   bool HasArithmeticOrEnumeralTypes;
 
+  /// A flag indicating whether the candidate set has a type that might
+  /// convert to a promoted arithmetic type or to a vector type. This is
+  /// conservative: only scoped enumerations, pointers, member pointers,
+  /// nullptr_t, and classes that convert to nothing else are known not to.
+  bool MayConvertToArithmetic;
+
   /// A flag indicating whether the nullptr type was present in the
   /// candidate set.
   bool HasNullPtrType;
+
+  /// A flag indicating whether the reflection type was present in the
+  /// candidate set.
+  bool HasReflectionType;
 
   /// Sema - The semantic analysis instance where we are building the
   /// candidate type set.
@@ -9171,7 +9228,8 @@ public:
 
   BuiltinCandidateTypeSet(Sema &SemaRef)
       : HasNonRecordTypes(false), HasArithmeticOrEnumeralTypes(false),
-        HasNullPtrType(false), SemaRef(SemaRef), Context(SemaRef.Context) {}
+        MayConvertToArithmetic(false), HasNullPtrType(false),
+        HasReflectionType(false), SemaRef(SemaRef), Context(SemaRef.Context) {}
 
   void AddTypesConvertedFrom(QualType Ty,
                              SourceLocation Loc,
@@ -9193,7 +9251,9 @@ public:
   bool containsMatrixType(QualType Ty) const { return MatrixTypes.count(Ty); }
   bool hasNonRecordTypes() { return HasNonRecordTypes; }
   bool hasArithmeticOrEnumeralTypes() { return HasArithmeticOrEnumeralTypes; }
+  bool mayConvertToArithmetic() const { return MayConvertToArithmetic; }
   bool hasNullPtrType() const { return HasNullPtrType; }
+  bool hasReflectionType() const { return HasReflectionType; }
 };
 
 } // end anonymous namespace
@@ -9346,6 +9406,13 @@ BuiltinCandidateTypeSet::AddTypesConvertedFrom(QualType Ty,
   HasArithmeticOrEnumeralTypes =
     HasArithmeticOrEnumeralTypes || Ty->isArithmeticType();
 
+  // Flag if the type might convert to a promoted arithmetic or vector type.
+  // For records, this is set below when visiting their conversion functions.
+  MayConvertToArithmetic =
+      MayConvertToArithmetic ||
+      !(TyIsRec || Ty->isScopedEnumeralType() || Ty->isAnyPointerType() ||
+        Ty->isMemberPointerType() || Ty->isNullPtrType());
+
   if (Ty->isObjCIdType() || Ty->isObjCClassType())
     PointerTypes.insert(Ty);
   else if (Ty->getAs<PointerType>() || Ty->getAs<ObjCObjectPointerType>()) {
@@ -9375,6 +9442,8 @@ BuiltinCandidateTypeSet::AddTypesConvertedFrom(QualType Ty,
     MatrixTypes.insert(Ty);
   } else if (Ty->isNullPtrType()) {
     HasNullPtrType = true;
+  } else if (Ty->isMetaInfoType()) {
+    HasReflectionType = true;
   } else if (AllowUserConversions && TyIsRec) {
     // No conversion functions in incomplete types.
     if (!SemaRef.isCompleteType(Loc, Ty))
@@ -9387,8 +9456,10 @@ BuiltinCandidateTypeSet::AddTypesConvertedFrom(QualType Ty,
 
       // Skip conversion function templates; they don't tell us anything
       // about which builtin types we can convert to.
-      if (isa<FunctionTemplateDecl>(D))
+      if (isa<FunctionTemplateDecl>(D)) {
+        MayConvertToArithmetic = true;
         continue;
+      }
 
       CXXConversionDecl *Conv = cast<CXXConversionDecl>(D);
       if (AllowExplicitConversions || !Conv->isExplicit()) {
@@ -9535,7 +9606,10 @@ class BuiltinOperatorOverloadBuilder {
   Sema &S;
   ArrayRef<Expr *> Args;
   QualifiersAndAtomic VisibleTypeConversionsQuals;
-  bool HasArithmeticOrEnumeralCandidateType;
+  // Whether a candidate whose parameters are all arithmetic, vector or matrix
+  // types can be viable. It is viable if there is an arithmetic or enumeral
+  // candidate type, and every argument might convert to such a type.
+  bool ArithmeticCandidatesMayBeViable;
   SmallVectorImpl<BuiltinCandidateTypeSet> &CandidateTypes;
   OverloadCandidateSet &CandidateSet;
 
@@ -9681,8 +9755,12 @@ public:
       OverloadCandidateSet &CandidateSet)
       : S(S), Args(Args),
         VisibleTypeConversionsQuals(VisibleTypeConversionsQuals),
-        HasArithmeticOrEnumeralCandidateType(
-            HasArithmeticOrEnumeralCandidateType),
+        ArithmeticCandidatesMayBeViable(
+            HasArithmeticOrEnumeralCandidateType &&
+            llvm::all_of(CandidateTypes,
+                         [](const BuiltinCandidateTypeSet &Types) {
+                           return Types.mayConvertToArithmetic();
+                         })),
         CandidateTypes(CandidateTypes), CandidateSet(CandidateSet) {
     InitArithmeticTypes();
   }
@@ -9707,7 +9785,7 @@ public:
   //       VQ T&      operator--(VQ T&);
   //       T          operator--(VQ T&, int);
   void addPlusPlusMinusMinusArithmeticOverloads(OverloadedOperatorKind Op) {
-    if (!HasArithmeticOrEnumeralCandidateType)
+    if (!ArithmeticCandidatesMayBeViable)
       return;
 
     for (unsigned Arith = 0; Arith < NumArithmeticTypes; ++Arith) {
@@ -9781,7 +9859,7 @@ public:
   //       T         operator+(T);
   //       T         operator-(T);
   void addUnaryPlusOrMinusArithmeticOverloads() {
-    if (!HasArithmeticOrEnumeralCandidateType)
+    if (!ArithmeticCandidatesMayBeViable)
       return;
 
     for (unsigned Arith = FirstPromotedArithmeticType;
@@ -9811,7 +9889,7 @@ public:
   //
   //        T         operator~(T);
   void addUnaryTildePromotedIntegralOverloads() {
-    if (!HasArithmeticOrEnumeralCandidateType)
+    if (!ArithmeticCandidatesMayBeViable)
       return;
 
     for (unsigned Int = FirstPromotedIntegralType;
@@ -9849,6 +9927,14 @@ public:
         CanQualType NullPtrTy = S.Context.getCanonicalType(S.Context.NullPtrTy);
         if (AddedTypes.insert(NullPtrTy).second) {
           QualType ParamTypes[2] = { NullPtrTy, NullPtrTy };
+          S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet);
+        }
+      }
+
+      if (CandidateTypes[ArgIdx].hasReflectionType()) {
+        CanQualType MetaInfoTy = S.Context.MetaInfoTy;
+        if (AddedTypes.insert(MetaInfoTy).second) {
+          QualType ParamTypes[2] = {MetaInfoTy, MetaInfoTy};
           S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet);
         }
       }
@@ -10026,7 +10112,7 @@ public:
   //   between types L and R.
   // Our candidates ignore the first parameter.
   void addGenericBinaryArithmeticOverloads() {
-    if (!HasArithmeticOrEnumeralCandidateType)
+    if (!ArithmeticCandidatesMayBeViable)
       return;
 
     for (unsigned Left = FirstPromotedArithmeticType;
@@ -10054,7 +10140,7 @@ public:
   ///  * (M2.getElementType(), M2) -> M2
   ///  * (M2, M2) -> M2 // Only if M2 is not part of CandidateTypes[0].
   void addMatrixBinaryArithmeticOverloads() {
-    if (!HasArithmeticOrEnumeralCandidateType)
+    if (!ArithmeticCandidatesMayBeViable)
       return;
 
     for (QualType M1 : CandidateTypes[0].matrix_types()) {
@@ -10119,7 +10205,7 @@ public:
   //   where LR is the result of the usual arithmetic conversions
   //   between types L and R.
   void addBinaryBitwiseArithmeticOverloads() {
-    if (!HasArithmeticOrEnumeralCandidateType)
+    if (!ArithmeticCandidatesMayBeViable)
       return;
 
     for (unsigned Left = FirstPromotedIntegralType;
@@ -10284,7 +10370,7 @@ public:
   //        VQ L&      operator+=(VQ L&, R);
   //        VQ L&      operator-=(VQ L&, R);
   void addAssignmentArithmeticOverloads(bool isEqualOp) {
-    if (!HasArithmeticOrEnumeralCandidateType)
+    if (!ArithmeticCandidatesMayBeViable)
       return;
 
     for (unsigned Left = 0; Left < NumArithmeticTypes; ++Left) {
@@ -10338,7 +10424,7 @@ public:
   //        VQ L&       operator^=(VQ L&, R);
   //        VQ L&       operator|=(VQ L&, R);
   void addAssignmentIntegralOverloads() {
-    if (!HasArithmeticOrEnumeralCandidateType)
+    if (!ArithmeticCandidatesMayBeViable)
       return;
 
     for (unsigned Left = FirstIntegralType; Left < LastIntegralType; ++Left) {
