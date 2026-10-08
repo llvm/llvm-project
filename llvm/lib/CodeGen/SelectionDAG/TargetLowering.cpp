@@ -12843,6 +12843,21 @@ void TargetLowering::forceExpandWideMUL(SelectionDAG &DAG, const SDLoc &dl,
     return;
   }
 
+  // The libcall takes and returns WideVT values as packed VT halves. This only
+  // works if VT is legal and WideVT isn't. Otherwise, emit a wide multiply and
+  // let it legalise normally, possibly into a wider libcall.
+  if (isTypeLegal(WideVT) || !isTypeLegal(VT)) {
+    SDValue Mul = DAG.getNode(ISD::MUL, dl, WideVT,
+                              DAG.getExtOrTrunc(Signed, LHS, dl, WideVT),
+                              DAG.getExtOrTrunc(Signed, RHS, dl, WideVT));
+    SDValue Shift =
+        DAG.getShiftAmountConstant(VT.getScalarSizeInBits(), WideVT, dl);
+    Lo = DAG.getNode(ISD::TRUNCATE, dl, VT, Mul);
+    Hi = DAG.getNode(ISD::TRUNCATE, dl, VT,
+                     DAG.getNode(ISD::SRL, dl, WideVT, Mul, Shift));
+    return;
+  }
+
   SDValue HiLHS, HiRHS;
   if (Signed) {
     // The high part is obtained by SRA'ing all but one of the bits of low
