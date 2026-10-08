@@ -77,6 +77,10 @@ struct ArgClassification {
   /// For Indirect: whether the callee gets ownership (byval).
   bool byVal = false;
 
+  /// For Indirect: target address space of the pointer passed in place of
+  /// the value.  Zero is the default address space.
+  unsigned indirectAddrSpace = 0;
+
   /// For Direct with coercion: the byte offset within the original aggregate
   /// at which the coerced value lives.  Non-zero when the low eightbyte is
   /// NO_CLASS and the value is carried in a later eightbyte (x86-64 SysV).
@@ -100,7 +104,9 @@ struct ArgClassification {
     return kind == other.kind && coercedType == other.coercedType &&
            indirectAlign == other.indirectAlign &&
            signExtend == other.signExtend && canFlatten == other.canFlatten &&
-           byVal == other.byVal && directOffset == other.directOffset &&
+           byVal == other.byVal &&
+           indirectAddrSpace == other.indirectAddrSpace &&
+           directOffset == other.directOffset &&
            neededIntRegs == other.neededIntRegs &&
            neededSseRegs == other.neededSseRegs;
   }
@@ -127,11 +133,13 @@ struct ArgClassification {
     return c;
   }
 
-  static ArgClassification getIndirect(llvm::Align align, bool byVal = true) {
+  static ArgClassification getIndirect(llvm::Align align, bool byVal = true,
+                                       unsigned addrSpace = 0) {
     ArgClassification c;
     c.kind = ArgKind::Indirect;
     c.indirectAlign = align;
     c.byVal = byVal;
+    c.indirectAddrSpace = addrSpace;
     return c;
   }
 

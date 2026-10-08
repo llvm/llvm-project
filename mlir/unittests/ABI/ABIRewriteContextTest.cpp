@@ -60,6 +60,7 @@ TEST(ABIRewriteContextTest, ArgClassificationIndirect) {
   EXPECT_EQ(c.kind, ArgKind::Indirect);
   EXPECT_EQ(c.indirectAlign, llvm::Align(8));
   EXPECT_TRUE(c.byVal);
+  EXPECT_EQ(c.indirectAddrSpace, 0u);
 }
 
 TEST(ABIRewriteContextTest, ArgClassificationIndirectNoByVal) {
@@ -67,6 +68,13 @@ TEST(ABIRewriteContextTest, ArgClassificationIndirectNoByVal) {
   EXPECT_EQ(c.kind, ArgKind::Indirect);
   EXPECT_EQ(c.indirectAlign, llvm::Align(16));
   EXPECT_FALSE(c.byVal);
+}
+
+TEST(ABIRewriteContextTest, ArgClassificationIndirectAddrSpace) {
+  auto c = ArgClassification::getIndirect(llvm::Align(8), true, 5);
+  EXPECT_EQ(c.kind, ArgKind::Indirect);
+  EXPECT_EQ(c.indirectAddrSpace, 5u);
+  EXPECT_FALSE(c == ArgClassification::getIndirect(llvm::Align(8), true));
 }
 
 TEST(ABIRewriteContextTest, ArgClassificationExtend) {
