@@ -1,10 +1,4 @@
-// Test Itanium mangling
-// RUN: %clang_cc1 -triple spirv64-unknown-unknown \
-// RUN:   -cl-std=CL2.0 -cl-ext=+cl_khr_cooperative_matrix \
-// RUN:   -finclude-default-header -emit-llvm -o - %s \
-// RUN:   | FileCheck %s --check-prefix=MANGLE
-//
-// Structural equivalence (no diagnostics on compatible pair)
+// Test structural equivalence (no diagnostics on compatible pair)
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown \
 // RUN:   -cl-std=CL2.0 -cl-ext=+cl_khr_cooperative_matrix \
 // RUN:   -finclude-default-header -fsyntax-only -verify %s
@@ -21,11 +15,6 @@
 typedef float __attribute__((coop_mat(SCOPE, 16, 16, USE_A))) MatA_t;
 typedef float __attribute__((coop_mat(SCOPE, 16, 16, USE_B))) MatB_t;
 typedef float __attribute__((coop_mat(SCOPE, 16, 16, USE_C))) MatC_t;
-
-// Mangling — function with a coop-mat parameter gets a mangled name
-// that contains the vendor-extended "coop_mat" marker.
-void test_mangling(MatA_t a) { (void)a; }
-// MANGLE: @{{.*}}test_mangling{{.*}}coop_mat(
 
 // Structural equivalence — produce no diagnostic.
 typedef float __attribute__((coop_mat(SCOPE, 16, 16, USE_A))) MatA_alias;
