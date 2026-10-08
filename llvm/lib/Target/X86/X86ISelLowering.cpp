@@ -31063,7 +31063,7 @@ static bool supportedVectorShiftWithImm(EVT VT, const X86Subtarget &Subtarget,
   if (!(VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()))
     return false;
 
-  if (VT.getScalarSizeInBits() < 16)
+  if (VT.getScalarSizeInBits() < 16 || VT.getScalarSizeInBits() > 64)
     return false;
 
   if (VT.is512BitVector() && Subtarget.useAVX512Regs() &&
