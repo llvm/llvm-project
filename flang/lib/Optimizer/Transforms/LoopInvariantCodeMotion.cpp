@@ -19,7 +19,10 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtilsCG.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
@@ -248,6 +251,28 @@ static bool canHoistLoad(Operation *op, LoopLikeOpInterface loopLike,
   return false;
 }
 
+/// Mark the loops in \p op that it now executes in gang-redundant mode.
+///
+/// In a compute region from an acc.parallel construct, code outside a loop
+/// with gang-level worksharing is executed redundantly by all gangs. A loop
+/// moved into such code, for example out of an scf.parallel, is in
+/// gang-redundant mode: every gang executes all of its iterations. Mark it with
+/// acc.gpu_block_redundant so that it is not later distributed across gangs.
+static void markGangRedundantLoops(Operation *op) {
+  auto computeRegion = op->getParentOfType<acc::ComputeRegionOp>();
+  if (!computeRegion ||
+      computeRegion.getOrigin() != acc::ParallelOp::getOperationName())
+    return;
+
+  op->walk([&](scf::ForOp forOp) {
+    auto parallelOp = forOp->getParentOfType<scf::ParallelOp>();
+    if (parallelOp && computeRegion->isProperAncestor(parallelOp))
+      return;
+    LDBG() << "Marking gang-redundant loop: " << forOp;
+    acc::setGPUBlockRedundantAttr(forOp);
+  });
+}
+
 /// Returns true iff hoisting \p op out of a nested region is expected to be
 /// inexpensive. This is a cost heuristic only; the safety of the hoisting is
 /// established separately.
@@ -454,6 +479,7 @@ void LoopInvariantCodeMotion::runOnOperation() {
     };
     auto moveOutOfRegion = [&](Operation *op, Region *) {
       loopLike.moveOutOfLoop(op);
+      markGangRedundantLoops(op);
     };
 
     moveLoopInvariantCode(
