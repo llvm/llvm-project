@@ -190,6 +190,10 @@ static DecodeStatus DecodeGPRPairRegisterClass(MCInst &Inst, uint32_t RegNo,
   if (RegNo >= 32 || RegNo % 2)
     return MCDisassembler::Fail;
 
+  bool IsRVE = Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureStdExtE);
+  if (IsRVE && RegNo >= 16)
+    return MCDisassembler::Fail;
+
   const RISCVDisassembler *Dis =
       static_cast<const RISCVDisassembler *>(Decoder);
   const MCRegisterInfo *RI = Dis->getContext().getRegisterInfo();

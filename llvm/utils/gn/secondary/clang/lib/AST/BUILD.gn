@@ -49,6 +49,7 @@ static_library("AST") {
     "//clang/include/clang/AST:StmtNodes",
     "//clang/include/clang/AST:TypeNodes",
   ]
+  include_dirs = [ "." ]
   sources = [
     "APValue.cpp",
     "ASTConcept.cpp",
