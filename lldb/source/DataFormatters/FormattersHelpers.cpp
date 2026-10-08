@@ -102,12 +102,12 @@ std::optional<size_t>
 lldb_private::formatters::ExtractIndexFromString(llvm::StringRef item_name) {
   if (item_name.empty())
     return std::nullopt;
-  if (item_name.front() != '[')
+  if (item_name.front() != '[' || item_name.back() != ']')
     return std::nullopt;
   item_name = item_name.drop_front();
 
   unsigned long long idx = 0;
-  if (llvm::consumeUnsignedInteger(item_name, /*Radix=*/10, idx))
+  if (llvm::consumeUnsignedInteger(item_name, /*Radix=*/0, idx))
     return std::nullopt;
   return idx;
 }
