@@ -126,7 +126,7 @@ class InstrItineraryData;
     void dump() const override;
     void dumpSchedule() const;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifndef NDEBUG
     std::string getGraphNodeLabel(const SUnit *SU) const override;
 #endif
 

@@ -281,7 +281,7 @@ void SelectionDAG::setSubgraphColor(SDNode *N, const char *Color) {
 #endif
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifndef NDEBUG
 std::string ScheduleDAGSDNodes::getGraphNodeLabel(const SUnit *SU) const {
   std::string s;
   raw_string_ostream O(s);

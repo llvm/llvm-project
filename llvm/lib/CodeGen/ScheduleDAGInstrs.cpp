@@ -1164,7 +1164,7 @@ void ScheduleDAGInstrs::dump() const {
 #endif
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifndef NDEBUG
 std::string ScheduleDAGInstrs::getGraphNodeLabel(const SUnit *SU) const {
   std::string s;
   raw_string_ostream oss(s);

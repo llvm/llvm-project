@@ -634,7 +634,7 @@ class TargetRegisterInfo;
     virtual void dump() const = 0;
     void dumpNodeName(const SUnit &SU) const;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifndef NDEBUG
     /// Returns a label for an SUnit node in a visualization of the ScheduleDAG.
     virtual std::string getGraphNodeLabel(const SUnit *SU) const = 0;
 #endif

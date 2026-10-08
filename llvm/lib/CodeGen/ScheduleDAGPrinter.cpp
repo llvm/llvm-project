@@ -16,7 +16,7 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifndef NDEBUG
 template <>
 struct llvm::DOTGraphTraits<ScheduleDAG *> : public DefaultDOTGraphTraits {
 
