@@ -3,6 +3,7 @@
 
 // RUN: %libomptarget-compile-generic -O3 -fopenmp-assume-threads-oversubscription -fopenmp-assume-teams-oversubscription
 // RUN: env LIBOMPTARGET_INFO=16 OMP_NUM_TEAMS=16 OMP_TEAMS_THREAD_LIMIT=16 %libomptarget-run-generic 2>&1 | %fcheck-generic
+// RUN: env LIBOMPTARGET_INFO=16 %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefix=DEFAULT
 // REQUIRES: gpu
 // XFAIL: intelgpu
 
@@ -89,3 +90,14 @@ int main(void) {
 // CHECK:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD mode
 // CHECK:  info: #Args: 3 Teams x Thrds:   16x  16 {{.*}}
 // CHECK:  number of errors: 0
+
+// DEFAULT:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD-No-Loop mode
+// DEFAULT:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD mode
+// DEFAULT:  info: #Args: 2 Teams x Thrds:    3x{{ *[0-9]+}}
+// DEFAULT:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD-No-Loop mode
+// DEFAULT:  info: #Args: 2 Teams x Thrds: {{ *[0-9]+}}x  64
+// DEFAULT:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD mode
+// DEFAULT:  info: #Args: 2 Teams x Thrds:    1x{{ *[0-9]+}}
+// DEFAULT:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} Generic-SPMD mode
+// DEFAULT:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD mode
+// DEFAULT:  number of errors: 0
