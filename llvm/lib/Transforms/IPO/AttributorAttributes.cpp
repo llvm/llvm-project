@@ -6934,9 +6934,8 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
       if (SizeAPI) {
         Size = ConstantInt::get(AI.CB->getContext(), *SizeAPI);
       } else {
-        LLVMContext &Ctx = AI.CB->getContext();
         ObjectSizeOpts Opts;
-        ObjectSizeOffsetEvaluator Eval(DL, TLI, Ctx, Opts);
+        ObjectSizeOffsetEvaluator Eval(*AI.CB->getModule(), TLI, Opts);
         SizeOffsetValue SizeOffsetPair = Eval.compute(AI.CB);
         assert(SizeOffsetPair != ObjectSizeOffsetEvaluator::unknown() &&
                cast<ConstantInt>(SizeOffsetPair.Offset)->isZero());
