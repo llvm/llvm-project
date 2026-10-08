@@ -1151,6 +1151,16 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
         if (Arg *IncompatArg = C.getInputArgs().getLastArg(ID))
           Diag(clang::diag::err_drv_argument_not_allowed_with)
               << IncompatArg->getSpelling() << "-fsycl";
+
+      // SYCL cannot target NVIDIA GPUs yet; report it instead of asserting.
+      bool UsesLLVMOffloading =
+          C.getInputArgs().hasFlag(options::OPT_foffload_via_llvm,
+                                   options::OPT_fno_offload_via_llvm, false);
+      if (Target.isNVPTX() && !UsesLLVMOffloading) {
+        Diag(diag::err_drv_invalid_or_unsupported_offload_target)
+            << Target.str();
+        return;
+      }
     }
 
     // Create a device toolchain for every specified kind and triple.
