@@ -218,16 +218,30 @@ public:
     *this << attrOrType;
   }
 
-  /// Print `uint8_t`/`int8_t` parameters numerically. Streaming them through
-  /// `operator<<` would reach `raw_ostream`'s `char` overloads and emit the
-  /// byte as a glyph.
-  void printStrippedAttrOrType(uint8_t value) { printInteger(value); }
-  void printStrippedAttrOrType(int8_t value) { printInteger(value); }
   /// Print a plain `char` parameter as a bare keyword for identifier characters
   /// (e.g. `A`) or as a quoted+escaped string for everything else, so that all
   /// 256 byte values round-trip correctly.
   void printStrippedAttrOrType(char value) {
     printKeywordOrString(StringRef(&value, 1));
+  }
+
+  /// Print an array of plain `char` parameters element-wise with the `char`
+  /// overload above, matching the element-wise `FieldParser<char>` used to
+  /// parse them.
+  void printStrippedAttrOrType(ArrayRef<char> values) {
+    llvm::interleaveComma(values, getStream(), [this](char value) {
+      printStrippedAttrOrType(value);
+    });
+  }
+
+  /// Print a present optional integer parameter through the overloads for its
+  /// underlying type, mirroring `FieldParser<std::optional<IntT>>`.
+  template <typename IntT,
+            std::enable_if_t<std::is_integral_v<IntT> &&
+                             !std::is_same_v<IntT, bool>> *sfinae = nullptr>
+  void printStrippedAttrOrType(std::optional<IntT> value) {
+    if (value)
+      printStrippedAttrOrType(*value);
   }
 
   /// Print the given attribute without its type. The corresponding parser must
@@ -401,6 +415,23 @@ inline AsmPrinterT &operator<<(AsmPrinterT &p, double value) {
   return p << APFloat(value);
 }
 
+// Print `int8_t`/`uint8_t` numerically instead of reaching `raw_ostream`'s
+// character overloads. Plain `char` is still printed as a character.
+template <typename AsmPrinterT,
+          typename =
+              std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value>>
+inline AsmPrinterT &operator<<(AsmPrinterT &p, int8_t value) {
+  p.printInteger(value);
+  return p;
+}
+template <typename AsmPrinterT,
+          typename =
+              std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value>>
+inline AsmPrinterT &operator<<(AsmPrinterT &p, uint8_t value) {
+  p.printInteger(value);
+  return p;
+}
+
 // Support printing anything that isn't convertible to one of the other
 // streamable types, even if it isn't exactly one of them. For example, we want
 // to print FunctionType with the Type version above, not have it match this.
@@ -410,7 +441,8 @@ template <typename AsmPrinterT, typename T,
                                !std::is_convertible<T &, Attribute &>::value &&
                                !std::is_convertible<T &, ValueRange>::value &&
                                !std::is_convertible<T &, APFloat &>::value &&
-                               !llvm::is_one_of<T, bool, float, double>::value,
+                               !llvm::is_one_of<T, bool, float, double, int8_t,
+                                                uint8_t>::value,
                            T> * = nullptr,
           typename =
               std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value>>
