@@ -9827,7 +9827,14 @@ bool Sema::CheckExplicitlyDefaultedPostfixOperator(Scope *S, FunctionDecl *FD,
   //   Name lookups and access checks in the implicit definition of a defaulted
   //   postfix increment or decrement operator function are performed from a
   //   context equivalent to its function-body.
+  // The lookup is performed from S, not from CurContext. S is either the body
+  // scope of an out-of-line definition, or the scope of the class in which the
+  // function is defaulted on its first declaration; for a lookup that ignores
+  // member functions, both are equivalent to the function-body.
   if (S) {
+    assert((S->getEntity() == FD ||
+            S->getEntity() == FD->getLexicalDeclContext()) &&
+           "lookup scope is not equivalent to the function-body");
     UnresolvedSet<16> Operators;
     LookupOverloadedOperatorName(IsIncrement ? OO_PlusPlus : OO_MinusMinus, S,
                                  Operators);
