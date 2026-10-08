@@ -24,8 +24,6 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/Loads.h"
-#include "llvm/Analysis/LoopAccessAnalysis.h"
-#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -80,10 +78,10 @@ class VectorCombine {
 public:
   VectorCombine(Function &F, const TargetTransformInfo &TTI,
                 const DominatorTree &DT, AAResults &AA, AssumptionCache &AC,
-                ScalarEvolution *SE, const DataLayout *DL,
-                TTI::TargetCostKind CostKind, bool TryEarlyFoldsOnly)
+                const DataLayout *DL, TTI::TargetCostKind CostKind,
+                bool TryEarlyFoldsOnly)
       : F(F), Builder(*F.getParent(), InstSimplifyFolder(*DL)), TTI(TTI),
-        DT(DT), AA(AA), SE(SE), DL(DL), CostKind(CostKind),
+        DT(DT), AA(AA), DL(DL), CostKind(CostKind),
         SQ(*DL, /*TLI=*/nullptr, &DT, &AC),
         TryEarlyFoldsOnly(TryEarlyFoldsOnly) {}
 
@@ -95,7 +93,6 @@ private:
   const TargetTransformInfo &TTI;
   const DominatorTree &DT;
   AAResults &AA;
-  ScalarEvolution *SE;
   const DataLayout *DL;
   TTI::TargetCostKind CostKind;
   const SimplifyQuery SQ;
@@ -6985,14 +6982,28 @@ bool VectorCombine::foldShuffleOfAdjacentLoads(Instruction &I) {
     return false;
 
   // Determine which load is at the lower address and confirm the two loads are
-  // exactly contiguous. isConsecutiveAccess(A, B) is true only when B directly
-  // follows A, so we probe both orderings to also handle the reversed case.
+  // exactly contiguous: both pointers must strip to the same base, and their
+  // constant offsets from it must differ by exactly the store size of LoadTy.
+  unsigned AS = Load0->getPointerAddressSpace();
+  unsigned IdxWidth = DL->getIndexSizeInBits(AS);
+  APInt Offset0(IdxWidth, 0), Offset1(IdxWidth, 0);
+  const Value *Base0 =
+      Load0->getPointerOperand()->stripAndAccumulateConstantOffsets(
+          *DL, Offset0, /*AllowNonInbounds=*/true);
+  const Value *Base1 =
+      Load1->getPointerOperand()->stripAndAccumulateConstantOffsets(
+          *DL, Offset1, /*AllowNonInbounds=*/true);
+  // Offsets accumulated across an addrspacecast are not comparable.
+  if (Base0 != Base1 || Base0->getType()->getPointerAddressSpace() != AS)
+    return false;
+
+  int64_t LoadSize = DL->getTypeStoreSize(LoadTy).getFixedValue();
+  std::optional<int64_t> Dist = (Offset1 - Offset0).trySExtValue();
   LoadInst *LowLoad, *HighLoad;
-  assert(SE && "ScalarEvolution is only available for late folds");
-  if (isConsecutiveAccess(Load0, Load1, *DL, *SE)) {
+  if (Dist == LoadSize) {
     LowLoad = Load0;
     HighLoad = Load1;
-  } else if (isConsecutiveAccess(Load1, Load0, *DL, *SE)) {
+  } else if (Dist == -LoadSize) {
     LowLoad = Load1;
     HighLoad = Load0;
   } else {
@@ -7449,13 +7460,10 @@ PreservedAnalyses VectorCombinePass::run(Function &F,
   TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
   DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   AAResults &AA = FAM.getResult<AAManager>(F);
-  ScalarEvolution *SE =
-      TryEarlyFoldsOnly ? nullptr : &FAM.getResult<ScalarEvolutionAnalysis>(F);
   const DataLayout *DL = &F.getDataLayout();
   TTI::TargetCostKind CostKind =
       F.hasOptSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput;
-  VectorCombine Combiner(F, TTI, DT, AA, AC, SE, DL, CostKind,
-                         TryEarlyFoldsOnly);
+  VectorCombine Combiner(F, TTI, DT, AA, AC, DL, CostKind, TryEarlyFoldsOnly);
   if (!Combiner.run())
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
