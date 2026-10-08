@@ -88,12 +88,10 @@ public:
                                   EVT VT) const override;
 
   Register
-  getExceptionPointerRegister(ExceptionHandling EH,
-                              const Constant *PersonalityFn) const override;
+  getExceptionPointerRegister(const Constant *PersonalityFn) const override;
 
   Register
-  getExceptionSelectorRegister(ExceptionHandling EH,
-                               const Constant *PersonalityFn) const override;
+  getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
 
   bool isFsqrtCheap(SDValue Operand, SelectionDAG &DAG) const override {
     return true;
