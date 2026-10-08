@@ -954,11 +954,12 @@ def binop_right_to_zero: GICombineRule<
   (apply (GIReplaceReg $dst, $zero))
 >;
 
-// Erase stores of undef values.
+// Erase unordered stores of undef. Volatile and ordered atomic stores stay.
 def erase_undef_store : GICombineRule<
   (defs root:$root),
   (match (G_IMPLICIT_DEF $val),
-         (G_STORE $val, $ptr):$root),
+         (G_STORE $val, $ptr):$root,
+         [{ return cast<GStore>(${root})->isUnordered(); }]),
   (apply (GIEraseRoot))
 >;
 
@@ -2102,62 +2103,35 @@ def minmax_nan_num_frags
 def minmax_nan_ieee_frags
     : combine_minmax_nan_frags<[G_FMINIMUM, G_FMAXIMUM]>;
 
-// Match:  (frags $dst, $lhs, $rhs), $lhs is NaN
-// Apply:  GIReplaceReg $dst, $rhs
-class minmax_nan_lhs_keep_rhs<GICombinePatFrag frags> : GICombineRule<
+defvar minmax_lhs_is_nan = [{
+  return Helper.isConstantNaN(${lhs}.getReg());
+}];
+defvar minmax_rhs_is_nan_only = [{
+  return Helper.isConstantNaN(${rhs}.getReg()) &&
+         !Helper.isConstantNaN(${lhs}.getReg());
+}];
+
+class minmax_nan_keep_rhs<GICombinePatFrag frags, code pred> : GICombineRule<
   (defs root:$dst),
-  (match (frags $dst, $lhs, $rhs),
-         [{
-           const ConstantFP *C = getConstantFPVRegVal(${lhs}.getReg(), MRI);
-           return C && C->getValueAPF().isNaN();
-         }]),
+  (match (frags $dst, $lhs, $rhs), pred),
   (apply (GIReplaceReg $dst, $rhs))>;
-
-// Match:  (frags $dst, $lhs, $rhs), $rhs is NaN and $lhs is not
-// Apply:  GIReplaceReg $dst, $lhs
-class minmax_nan_rhs_keep_lhs<GICombinePatFrag frags> : GICombineRule<
+class minmax_nan_keep_lhs<GICombinePatFrag frags, code pred> : GICombineRule<
   (defs root:$dst),
-  (match (frags $dst, $lhs, $rhs),
-         [{
-           const ConstantFP *RHS = getConstantFPVRegVal(${rhs}.getReg(), MRI);
-           const ConstantFP *LHS = getConstantFPVRegVal(${lhs}.getReg(), MRI);
-           return RHS && RHS->getValueAPF().isNaN() &&
-                  (!LHS || !LHS->getValueAPF().isNaN());
-         }]),
+  (match (frags $dst, $lhs, $rhs), pred),
   (apply (GIReplaceReg $dst, $lhs))>;
-
-// Match:  (frags $dst, $lhs, $rhs), $lhs is NaN
-// Apply:  GIReplaceReg $dst, $lhs
-class minmax_nan_lhs_keep_lhs<GICombinePatFrag frags> : GICombineRule<
-  (defs root:$dst),
-  (match (frags $dst, $lhs, $rhs),
-         [{
-           const ConstantFP *C = getConstantFPVRegVal(${lhs}.getReg(), MRI);
-           return C && C->getValueAPF().isNaN();
-         }]),
-  (apply (GIReplaceReg $dst, $lhs))>;
-
-// Match:  (frags $dst, $lhs, $rhs), $rhs is NaN and $lhs is not
-// Apply:  GIReplaceReg $dst, $rhs
-class minmax_nan_rhs_keep_rhs<GICombinePatFrag frags> : GICombineRule<
-  (defs root:$dst),
-  (match (frags $dst, $lhs, $rhs),
-         [{
-           const ConstantFP *RHS = getConstantFPVRegVal(${rhs}.getReg(), MRI);
-           const ConstantFP *LHS = getConstantFPVRegVal(${lhs}.getReg(), MRI);
-           return RHS && RHS->getValueAPF().isNaN() &&
-                  (!LHS || !LHS->getValueAPF().isNaN());
-         }]),
-  (apply (GIReplaceReg $dst, $rhs))>;
 
 // (G_FMINNUM|G_FMAXNUM $dst, NaN, $rhs) -> $rhs
-def minmax_nan_num_lhs : minmax_nan_lhs_keep_rhs<minmax_nan_num_frags>;
+def minmax_nan_num_lhs
+    : minmax_nan_keep_rhs<minmax_nan_num_frags, minmax_lhs_is_nan>;
 // (G_FMINNUM|G_FMAXNUM $dst, $lhs, NaN) -> $lhs
-def minmax_nan_num_rhs : minmax_nan_rhs_keep_lhs<minmax_nan_num_frags>;
+def minmax_nan_num_rhs
+    : minmax_nan_keep_lhs<minmax_nan_num_frags, minmax_rhs_is_nan_only>;
 // (G_FMINIMUM|G_FMAXIMUM $dst, NaN, $rhs) -> $lhs
-def minmax_nan_ieee_lhs : minmax_nan_lhs_keep_lhs<minmax_nan_ieee_frags>;
+def minmax_nan_ieee_lhs
+    : minmax_nan_keep_lhs<minmax_nan_ieee_frags, minmax_lhs_is_nan>;
 // (G_FMINIMUM|G_FMAXIMUM $dst, $lhs, NaN) -> $rhs
-def minmax_nan_ieee_rhs : minmax_nan_rhs_keep_rhs<minmax_nan_ieee_frags>;
+def minmax_nan_ieee_rhs
+    : minmax_nan_keep_rhs<minmax_nan_ieee_frags, minmax_rhs_is_nan_only>;
 
 def combine_minmax_nan: GICombineGroup<[
   minmax_nan_num_lhs, minmax_nan_num_rhs,
@@ -2207,30 +2181,44 @@ def trunc_lshr_buildvector_fold : GICombineRule<
   (apply [{ Helper.replaceSingleDefInstWithReg(*${op}, ${matchinfo}); }])>;
 
 // Transform:
-//   (x + y) - y -> x
-//   (x + y) - x -> y
-//   x - (y + x) -> 0 - y
-//   x - (x + z) -> 0 - z
+// (x + y) - z -> x     (if y == z)
+// (x + y) - z -> y     (if x == z)
+// x - (y + z) -> 0 - y (if x == z)
+// x - (y + z) -> 0 - z (if x == y)
 def sub_add_reg_rhs: GICombineRule<
   (defs root:$dst),
   (match (G_ADD $sum, $x, $y),
-         (G_SUB $dst, $sum, $y)),
+         (G_SUB $dst, $sum, $z),
+         [{ return Helper.matchSameRegOrICstOrSplat(${y}.getReg(),
+                                                    ${z}.getReg()); }]),
   (apply (GIReplaceReg $dst, $x))>;
 
 def sub_add_reg_lhs: GICombineRule<
   (defs root:$dst),
   (match (G_ADD $sum, $x, $y),
-         (G_SUB $dst, $sum, $x)),
+         (G_SUB $dst, $sum, $z),
+         [{ return Helper.matchSameRegOrICstOrSplat(${x}.getReg(),
+                                                    ${z}.getReg()); }]),
   (apply (GIReplaceReg $dst, $y))>;
 
-// Keep the value-equivalent and negating cases in C++.
-def sub_add_reg_fallback: GICombineRule <
-  (defs root:$root, build_fn_matchinfo:$matchinfo),
-  (match (G_SUB $dst, $src1, $src2):$root,
-         [{ return Helper.matchSubAddSameReg(*${root}, ${matchinfo}); }]),
-  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+def sub_add_neg_rhs: GICombineRule<
+  (defs root:$dst),
+  (match (G_ADD $sum, $y, $z),
+         (G_SUB $dst, $x, $sum),
+         [{ return Helper.matchSameRegOrICstOrSplat(${x}.getReg(),
+                                                    ${z}.getReg()); }]),
+  (apply (G_SUB $dst, 0, $y))>;
+
+def sub_add_neg_lhs: GICombineRule<
+  (defs root:$dst),
+  (match (G_ADD $sum, $y, $z),
+         (G_SUB $dst, $x, $sum),
+         [{ return Helper.matchSameRegOrICstOrSplat(${x}.getReg(),
+                                                    ${y}.getReg()); }]),
+  (apply (G_SUB $dst, 0, $z))>;
+
 def sub_add_reg : GICombineGroup<[
-  sub_add_reg_rhs, sub_add_reg_lhs, sub_add_reg_fallback]>;
+  sub_add_reg_rhs, sub_add_reg_lhs, sub_add_neg_rhs, sub_add_neg_lhs]>;
 
 def bitcast_bitcast_fold : GICombineRule<
   (defs root:$dst),
@@ -2934,7 +2922,9 @@ class count_zero_to_zero_poison<Instruction opc, Instruction zero_poison_opc>
     : GICombineRule<
   (defs root:$root),
   (match (opc $dst, $src):$root,
-         [{ return Helper.matchCountZeroToZeroPoison(*${root}); }]),
+         [{ return Helper.matchCountZeroToZeroPoison(*${root},
+                       TargetOpcode::}] # opc # [{, TargetOpcode::}] #
+             zero_poison_opc # [{); }]),
   (apply (zero_poison_opc $dst, $src, (MIFlags $root)))>;
 
 def ctlz_to_ctlz_zero_poison
