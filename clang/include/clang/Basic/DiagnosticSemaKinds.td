@@ -10681,7 +10681,7 @@ def err_ref_qualifier_comparison_operator : Error<
 // C++2d defaulted postfix increment and decrement operators
 // This corresponds to values of PostfixOperatorKind.
 def select_defaulted_postfix_operator_kind : TextSubstitution<
-  "%select{<ERROR>|postfix increment|postfix decrement}0 operator">;
+  "postfix %select{<ERROR>|increment|decrement}0 operator">;
 def err_defaulted_prefix_operator : Error<
   "only the postfix form of 'operator%select{++|--}0' can be defaulted">;
 def err_defaulted_postfix_operator_const : Error<
