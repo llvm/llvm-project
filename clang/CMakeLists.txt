@@ -190,7 +190,17 @@ if(CLANG_ENABLE_LIBXML2)
   endif()
 endif()
 
-cmake_dependent_option(CLANG_ENABLE_CIR "Build ClangIR support into the compiler" ON "NOT CLANG_BUILT_STANDALONE" OFF)
+# ClangIR is on by default, except in standalone builds where it is unsupported.
+# Use a plain option (rather than cmake_dependent_option) so an explicit
+# -DCLANG_ENABLE_CIR=ON in a standalone build reaches the error below instead of
+# being silently forced to OFF.
+if(CLANG_BUILT_STANDALONE)
+  set(CLANG_ENABLE_CIR_DEFAULT OFF)
+else()
+  set(CLANG_ENABLE_CIR_DEFAULT ON)
+endif()
+option(CLANG_ENABLE_CIR "Build ClangIR support into the compiler"
+       ${CLANG_ENABLE_CIR_DEFAULT})
 
 if(CLANG_ENABLE_CIR)
   if (CLANG_BUILT_STANDALONE)
