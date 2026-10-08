@@ -33,9 +33,10 @@ AsyncInfoTy::AsyncInfoTy(DeviceTy &Device, SyncTy SyncType)
 
 AsyncInfoTy::~AsyncInfoTy() {
   synchronize();
-  if (Queue)
+  if (Queue) {
     if (auto Res = olDestroyQueue(Queue))
       REPORT() << "Failed to destroy queue " << Queue << ": " << Res->Details;
+  }
 }
 
 AsyncInfoTy::operator __tgt_async_info *() {

@@ -142,6 +142,13 @@ public:
   AsyncInfoTy(DeviceTy &Device, SyncTy SyncType = SyncTy::BLOCKING);
   ~AsyncInfoTy();
 
+  // If we ever need to enable one of this methods we need to ensure
+  // that the underlying queue is not freed more than once.
+  AsyncInfoTy(const AsyncInfoTy &) = delete;
+  AsyncInfoTy &operator=(const AsyncInfoTy &) = delete;
+  AsyncInfoTy(AsyncInfoTy &&) = delete;
+  AsyncInfoTy &operator=(AsyncInfoTy &&) = delete;
+
   /// Implicit conversion to the __tgt_async_info which is used in the
   /// plugin interface.
   operator __tgt_async_info *();

@@ -74,10 +74,11 @@ void PluginManager::deinit() {
   ODBG(ODT_Deinit) << "Unloading RTLs...";
 
   auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
-  for (DeviceTy &Device : devices(ExclusiveDevicesAccessor))
+  for (DeviceTy &Device : devices(ExclusiveDevicesAccessor)) {
     if (auto Err = Device.deinit())
       REPORT() << "Failed to deinitialize device " << Device.DeviceID << ": "
                << toString(std::move(Err));
+  }
 
   Plugins.clear();
   if (auto Err = olShutDown())
