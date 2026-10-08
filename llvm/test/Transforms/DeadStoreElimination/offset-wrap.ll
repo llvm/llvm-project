@@ -12,6 +12,7 @@ define i32 @wrap_not_redundant(ptr %b) {
 ; CHECK-NEXT:    store i32 1, ptr [[K]], align 1
 ; CHECK-NEXT:    store i32 2, ptr [[D]], align 1
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[K]], align 1
+; CHECK-NEXT:    store i32 1, ptr [[K]], align 1
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
   %d = getelementptr i8, ptr %b, i8 127
@@ -28,7 +29,9 @@ define i32 @wrap_not_redundant(ptr %b) {
 define void @wrap_i64(ptr addrspace(2) %b) {
 ; CHECK-LABEL: define void @wrap_i64(
 ; CHECK-SAME: ptr addrspace(2) [[B:%.*]]) {
+; CHECK-NEXT:    [[D:%.*]] = getelementptr i8, ptr addrspace(2) [[B]], i64 9223372036854775807
 ; CHECK-NEXT:    [[K:%.*]] = getelementptr i8, ptr addrspace(2) [[B]], i64 -9223372036854775808
+; CHECK-NEXT:    store i32 1, ptr addrspace(2) [[D]], align 1
 ; CHECK-NEXT:    store i64 2, ptr addrspace(2) [[K]], align 1
 ; CHECK-NEXT:    ret void
 ;
