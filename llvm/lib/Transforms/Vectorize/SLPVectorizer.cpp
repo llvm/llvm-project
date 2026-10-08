@@ -3083,7 +3083,7 @@ private:
     TreeEntry *Last = Candidate.VectorizableTree.back().get();
     Last->Idx = Candidate.VectorizableTree.size() - 1;
     Last->State = EntryState;
-    if (UserTreeIdx.UserTE)
+    if (UserTreeIdx.UserTE && UserTreeIdx.EdgeIdx != UINT_MAX)
       Candidate.OperandsToTreeEntry.try_emplace(
           std::make_pair(UserTreeIdx.UserTE, UserTreeIdx.EdgeIdx), Last);
     Last->ReuseShuffleIndices.append(ReuseShuffleIndices.begin(),
@@ -3305,7 +3305,7 @@ private:
   /// refers to its graph.
   /// Analysis caches, search history and reusable block scheduling storage
   /// remain in BoUpSLP and survive a candidate reset.
-  struct CandidateState {
+  class CandidateState {
     friend class BoUpSLP;
 
     CandidateState() = default;
@@ -3772,7 +3772,6 @@ private:
       ExternalUsesWithNonUsers.clear();
       ExternalUseReplacements.clear();
       RTChecks.clear();
-      RTOrigBodyOrder.clear();
       HasRuntimeCheckableBlockers = false;
       HasNonCheckableMemBlocker = false;
       RTChecksFinalized = false;
@@ -3807,7 +3806,7 @@ private:
   /// When true, scheduling drops may-alias memory dependencies between
   /// distinct, range-checkable base objects and records them as runtime alias
   /// checks instead.
-  // The caller sets this before buildTree(), so it survives resetCandidate().
+  // Set by the caller per attempt; kept across candidate resets.
   bool TryRuntimeAliasChecks = false;
 
   /// When true, the stored values of the root store node are split into
@@ -5549,7 +5548,7 @@ private:
   };
 
   /// Attaches the BlockScheduling structures to basic blocks. Storage and
-  /// scheduling budgets survive resetCandidate(), which clears their references
+  /// scheduling budgets survive candidate resets, which clear their references
   /// to candidate entries.
   MapVector<BasicBlock *, std::unique_ptr<BlockScheduling>> BlocksSchedules;
 
@@ -8520,10 +8519,7 @@ void BoUpSLP::verifyCandidateOwnership() const {
     VerifyEntry(P.first);
   for (const auto &P : Candidate.OperandsToTreeEntry) {
     VerifyEntry(P.first.first);
-    // Artificial gather edges are traversed through combined-entry indices.
-    // Their unused UINT_MAX lookup entries can outlive a discarded gather.
-    if (P.first.second != UINT_MAX)
-      VerifyEntry(P.second);
+    VerifyEntry(P.second);
   }
   for (const auto &P : Candidate.ScalarsInSplitNodes)
     for (const TreeEntry *TE : P.second)
@@ -24671,9 +24667,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             OpTE->VectorizedValue = VecOp;
             // The combined nodes of the reused gather node still must be
             // emitted.
-            if (OpTE->isGather() && !DeletedNodes.contains(OpTE))
+            if (OpTE->isGather() && !Candidate.DeletedNodes.contains(OpTE))
               for (auto [EIdx, _] : OpTE->CombinedEntriesWithIndices)
-                (void)vectorizeTree(VectorizableTree[EIdx].get());
+                (void)vectorizeTree(Candidate.VectorizableTree[EIdx].get());
             continue;
           }
         }
