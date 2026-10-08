@@ -6,23 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements Mem2Reg-related interfaces that let a memref be promoted
-// into a single vector SSA value: `PromotableMemOpInterface` models for the ops
-// that access such a memref and `PromotableAliaserInterface` models for the ops
-// that view it. Mem2Reg calls the memory it promotes a *slot*: a pointer paired
-// with the type of the value it becomes, here a memref and its vector type.
-// Promoting a slot replaces it with that value, used as the slot's reaching
-// definition.
+// This file implements the Mem2Reg `PromotableMemOpInterface` models for the
+// vector transfer ops, which let a memref be promoted into a single vector SSA
+// value. The models for the memref ops that view or copy such a buffer live in
+// the MemRef dialect. Mem2Reg calls the memory it promotes a *slot*: a pointer
+// paired with the type of the value it becomes, here a memref and its vector
+// type. Promoting a slot replaces it with that value, used as the slot's
+// reaching definition.
 //
 // A slot is promoted when each of its uses is an access these models can
 // rewrite: a `vector.transfer_read` or `vector.transfer_write` meeting the
-// criteria in `isPromotableTransfer`.
-//
-// The accesses are rewritten as follows:
-//
-//   * `vector.transfer_read` becomes a use of the current vector value;
-//   * `vector.transfer_write` becomes a new definition of it. A masked transfer
-//     covers only its active lanes, so it is composed with an `arith.select`.
+// criteria in `isPromotableTransfer`. A read becomes a use of the slot's
+// current value; a write becomes a new definition of it. A transfer with a mask
+// operand covers only its active lanes, so it is composed with an
+// `arith.select`.
 //
 //===----------------------------------------------------------------------===//
 
@@ -49,11 +46,24 @@ using namespace mlir::vector;
 /// all zero (origin), and the permutation map is the identity.
 ///
 /// Two forms of partial access are accepted (rather than rejected) and
-/// reconstructed with a `select` during promotion (see the transfer models):
-///   - a masked transfer, and
-///   - an out-of-bounds transfer through a dynamic-subview alias.
-/// Their active lanes take the reaching value; the inactive lanes take the
-/// transfer's padding (read) or keep the reaching value (write).
+/// reconstructed with a `select` during promotion: an out-of-bounds transfer
+/// through a dynamic-subview alias, and a transfer with a mask operand.
+///
+/// Promoting the former takes two steps: the subview aliaser projects between
+/// the parent's value and the alias's -- down to the alias for a read, up to
+/// the parent for a write -- and the models here rewrite the transfer itself.
+/// The view's mask is applied in the projection for a write and in the rewrite
+/// for a read:
+///   - a write is masked by the up projection: it selects the stored value over
+///     the reaching value the aliaser is handed, so lanes outside the extent
+///     keep what the parent held;
+///   - a read is masked by the rewrite here, because the down projection is the
+///     identity: it selects the parent's value over the read's own padding
+///     operand, which the aliaser never sees.
+///
+/// A mask operand is composed on top of that: `arith.andi` with the view's mask
+/// on a read, a second `select` over the reaching value in `getStored` on a
+/// write.
 static bool
 isPromotableTransfer(VectorTransferOpInterface xferOp, const MemorySlot &slot,
                      const SmallPtrSetImpl<OpOperand *> &blockingUses) {

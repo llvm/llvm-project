@@ -10,16 +10,17 @@
 // into a single vector SSA value: `PromotableMemOpInterface` models for the ops
 // that access such a memref and `PromotableAliaserInterface` models for the ops
 // that view it. Mem2Reg calls the memory it promotes a *slot*: a pointer paired
-// with the type of the value it can be promoted to, here a memref and its vector 
-// type. Promoting a slot replaces it with that value, used as the slot's reaching
-// definition.
+// with the type of the value it can be promoted to, here a memref and its
+// vector type. Promoting a slot replaces it with that value, used as the slot's
+// reaching definition.
 //
-// A slot is promoted when each of its uses is an access these models can rewrite:
-// a `memref.copy`，a `vector.transfer_read`, or `vector.transfer_write`. 
-// 
-// A `memref.subview` of the slot is allowed: the view becomes an alias slot of its 
-// own, promoted with its parent, as long as every use of the view is in turn such
-// an access, or another such view.
+// A slot is promoted when each of its uses is an access these models can
+// rewrite: a `memref.copy` here, or a vector transfer op in the Vector dialect.
+//
+// A `memref.subview` of the slot is allowed: the view gets its own slot,
+// pairing its result with the vector type corresponding to the view, and is
+// promoted together with the parent, as long as every use of the view is in
+// turn such an access, or another such view.
 //
 // The accesses are rewritten as follows:
 //
@@ -175,8 +176,8 @@ static memref::SubViewOp getDynamicSubView(Value slotPtr) {
 
 /// Builds the mask of `subView`'s valid region: a `vector.create_mask` of the
 /// subview's sizes, in the shape of the whole parent that its alias holds.
-static Value buildDynamicViewMask(OpBuilder &builder, Location loc,
-                                  memref::SubViewOp subView) {
+static Value buildSubViewMask(OpBuilder &builder, Location loc,
+                              memref::SubViewOp subView) {
   VectorType parentVecType = getWholeParentVectorType(subView);
   SmallVector<Value> bounds =
       getValueOrCreateConstantIndexOp(builder, loc, subView.getMixedSizes());
@@ -358,7 +359,7 @@ struct CopyOpMemOpModel
       Location loc = op->getLoc();
       Value mask;
       if (memref::SubViewOp subView = getDynamicSubView(slot.ptr))
-        mask = buildDynamicViewMask(builder, loc, subView);
+        mask = buildSubViewMask(builder, loc, subView);
       writeVectorToMemRef(builder, loc, reachingDefinition, copyOp.getTarget(),
                           mask);
     }
@@ -479,7 +480,7 @@ struct SubViewOpAliasModel
     // of the parent value untouched.
     if (isAliasableDynamicShapeSubView(subView)) {
       Location loc = op->getLoc();
-      Value mask = buildDynamicViewMask(builder, loc, subView);
+      Value mask = buildSubViewMask(builder, loc, subView);
       return arith::SelectOp::create(builder, loc, mask, aliasValue,
                                      reachingDef);
     }
@@ -507,7 +508,7 @@ Value mlir::memref::buildDynamicViewMask(OpBuilder &builder, Location loc,
   memref::SubViewOp subView = getDynamicSubView(slotPtr);
   if (!subView)
     return {};
-  return buildDynamicViewMask(builder, loc, subView);
+  return buildSubViewMask(builder, loc, subView);
 }
 
 //===----------------------------------------------------------------------===//
