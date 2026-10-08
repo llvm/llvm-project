@@ -345,6 +345,8 @@ cl::opt<RuntimeLibInitHookTarget> RuntimeLibInitHook(
                           "use ELF .init_array entry")),
     cl::cat(BoltOptCategory));
 
+extern cl::opt<unsigned> BoundaryRefDistance;
+
 } // namespace opts
 
 // FIXME: implement a better way to mark sections for replacement.
@@ -1201,6 +1203,7 @@ void RewriteInstance::discoverFileObjects() {
       if (!AlternativeName.empty())
         BC->registerNameAtAddress(AlternativeName, SymbolAddress, FinalSize,
                                   SymbolAlignment, SymbolFlags);
+      BC->getBinaryDataAtAddress(SymbolAddress)->setIsFromSymbolTable();
     };
 
     section_iterator Section =
@@ -3409,6 +3412,13 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
 
   const bool IsToCode = ReferencedSection && ReferencedSection->isText();
 
+  // PC-relative references are recorded by the symbolizer.
+  if (IsX86 && IsFromCode && IsSectionRelocation && IsToCode &&
+      !Relocation::isPCRelative(RType))
+    BC->addUnanchoredCodeReference(
+        ContainingBF, Rel.getOffset(), Address,
+        BinaryContext::UnanchoredCodeReference::Absolute);
+
   // Special handling of PC-relative relocations.
   if (IsX86 && Relocation::isPCRelative(RType)) {
     if (!IsFromCode && IsToCode) {
@@ -3487,27 +3497,27 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     }
   }
 
-  // Workaround for a member function pointer de-virtualization bug. We check
-  // if a non-pc-relative relocation in the code is pointing to (fptr - 1).
-  if (IsToCode && ContainingBF && !Relocation::isPCRelative(RType) &&
-      (!ReferencedBF || (ReferencedBF->getAddress() != Address))) {
-    if (const BinaryFunction *RogueBF =
-            BC->getBinaryFunctionAtAddress(Address + 1)) {
-      // Do an extra check that the function was referenced previously.
-      // It's a linear search, but it should rarely happen.
-      auto CheckReloc = [&](const Relocation &Rel) {
-        return Rel.Symbol == RogueBF->getSymbol() &&
-               !Relocation::isPCRelative(Rel.Type);
-      };
-      bool Found = llvm::any_of(
-          llvm::make_second_range(ContainingBF->Relocations), CheckReloc);
-
-      if (Found) {
-        BC->errs()
-            << "BOLT-WARNING: detected possible compiler de-virtualization "
-               "bug: -1 addend used with non-pc-relative relocation against "
-            << formatv("function {0} in function {1}\n", *RogueBF,
-                       *ContainingBF);
+  // Make an absolute reference right before a function start, e.g. "fptr - 1"
+  // in a de-virtualized member function pointer call, relative to that
+  // function. BinaryContext::processUnanchoredCodeReferences() keeps the
+  // preceding function next to it, except for the references it skips.
+  auto isReanchorable = [&]() {
+    if (!IsToCode || !IsFromCode || !IsSectionRelocation ||
+        Relocation::isPCRelative(RType))
+      return false;
+    if (ReferencedBF &&
+        (ReferencedBF == ContainingBF || ReferencedBF->getAddress() == Address))
+      return false;
+    const BinaryData *BD = BC->getBinaryDataAtAddress(Address);
+    return !BD || !BD->isFromSymbolTable();
+  };
+  if (isReanchorable()) {
+    for (unsigned Delta = 1; Delta <= opts::BoundaryRefDistance; ++Delta) {
+      if (BinaryFunction *NextBF =
+              BC->getBinaryFunctionAtAddress(Address + Delta)) {
+        ContainingBF->addRelocation(Rel.getOffset(), NextBF->getSymbol(), RType,
+                                    -static_cast<int64_t>(Delta),
+                                    ExtractedValue);
         return;
       }
     }
@@ -4224,6 +4234,17 @@ void RewriteInstance::postProcessFunctions() {
   BC->skipMarkedFragments();
   BC->clearFragmentsToSkip();
 
+  // Functions that are not simple are emitted in their original layout.
+  for (BinaryFunction *BF : BC->FrozenFunctions) {
+    if (!BF->hasCFG()) {
+      BC->errs() << "BOLT-ERROR: cannot freeze function " << *BF
+                 << " without CFG\n";
+      exit(1);
+    }
+    BF->setSimple(false);
+    BF->setPreserveNops(true);
+  }
+
   BC->TotalScore = 0;
   BC->SumExecutionCount = 0;
   for (auto &BFI : BC->getBinaryFunctions()) {
@@ -4401,6 +4422,21 @@ void RewriteInstance::emitAndLink() {
   // Update output addresses based on the new section map and
   // layout. Only do this for the object created by ourselves.
   updateOutputValues(*Linker);
+
+  // Ambiguous references rely on frozen functions keeping their size and their
+  // distance to the function fused after them.
+  for (const BinaryFunction *BF : BC->FrozenFunctions) {
+    const BinaryFunction *Succ = BC->getFusedSuccessor(*BF);
+    if (BF->getOutputSize() == BF->getSize() &&
+        (!Succ || Succ->getOutputAddress() - BF->getOutputAddress() ==
+                      Succ->getAddress() - BF->getAddress()))
+      continue;
+    BC->errs() << "BOLT-ERROR: frozen function " << *BF
+               << " changed size or position relative to "
+               << (Succ ? Succ->getPrintName() : "itself")
+               << ", breaking an ambiguous reference\n";
+    exit(1);
+  }
 
   if (opts::UpdateDebugSections) {
     DebugInfoRewriter->updateLineTableOffsets(
