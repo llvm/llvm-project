@@ -67,18 +67,10 @@ static bool isVerboseLoggingEnabled() {
   return Enabled;
 }
 
-static bool shouldSimulate(const MachineInstr &MI) {
-  if (MI.isBundle() || MI.isMetaInstruction())
-    return false;
-  if (MI.isDebugInstr() || MI.isImplicitDef())
-    return false;
-  return true;
-}
-
 static const MachineInstr *findNextSimulatedInstr(const MachineInstr &MI) {
   const MachineBasicBlock &MBB = *MI.getParent();
   for (auto I = std::next(MI.getIterator()), E = MBB.instr_end(); I != E; ++I)
-    if (shouldSimulate(*I))
+    if (!I->isBundle() && !I->isMetaInstruction())
       return &*I;
   return nullptr;
 }
@@ -179,12 +171,19 @@ static void attributeStall(const InstrSimInfo &Info, InstClass IC,
 
 // Count \p MI in the instruction categories used by the summary report.
 static void countInstruction(const MachineInstr &MI, const SimInst &SI,
-                             const SIInstrInfo &TII,
                              StaticSimulatorBlockMetrics &Metrics) {
   unsigned Opc = MI.getOpcode();
-  if (Opc == AMDGPU::S_NOP || TII.getName(Opc).starts_with("V_NOP")) {
+  switch (Opc) {
+  case AMDGPU::S_NOP:
+  case AMDGPU::V_NOP_e32:
+  case AMDGPU::V_NOP_e64:
+  case AMDGPU::V_NOP_sdwa:
+  case AMDGPU::V_NOP_dpp:
+  case AMDGPU::V_NOP_dpp8:
     ++Metrics.NumNop;
     return;
+  default:
+    break;
   }
 
   switch (SI.Class) {
@@ -391,9 +390,10 @@ static void logSimulationResult(unsigned EntryCycle, const SimInst &SI,
   dbgs() << "  -> NextCycle: " << State.CurrentCycle << "\n";
 }
 
-static StaticSimulatorBlockMetrics
-analyzeBlock(MachineBasicBlock &MBB, Simulator &Sim, MachineInstrInfo &MII,
-             const SIInstrInfo &TII, bool Verbose) {
+static StaticSimulatorBlockMetrics analyzeBlock(MachineBasicBlock &MBB,
+                                                Simulator &Sim,
+                                                MachineInstrInfo &MII,
+                                                bool Verbose) {
   if (Verbose)
     dbgs() << "\n=== BB#" << MBB.getNumber() << " [Cycle "
            << Sim.getState().CurrentCycle << "] ===\n";
@@ -402,7 +402,7 @@ analyzeBlock(MachineBasicBlock &MBB, Simulator &Sim, MachineInstrInfo &MII,
   unsigned StartCycle = Sim.getState().CurrentCycle;
 
   for (MachineInstr &MI : MBB.instrs()) {
-    if (!shouldSimulate(MI))
+    if (MI.isBundle() || MI.isMetaInstruction())
       continue;
 
     SimInst SI = MII.createSimInst(MI);
@@ -424,7 +424,7 @@ analyzeBlock(MachineBasicBlock &MBB, Simulator &Sim, MachineInstrInfo &MII,
     ++Metrics.NumInstructions;
     Metrics.NumBytes += MII.getInstBytes(SI);
     attributeStall(Info, SI.Class, Sim.getState().inWMMAWindow(), Metrics);
-    countInstruction(MI, SI, TII, Metrics);
+    countInstruction(MI, SI, Metrics);
     trackWMMACoExec(Info, SI.Class, Sim.getState(), Metrics);
 
     if (Verbose)
@@ -454,8 +454,7 @@ analyzeFunction(MachineFunction &MF, const SIInstrInfo &TII, bool Verbose) {
   Simulator Sim(MII, *Model, Config);
 
   for (MachineBasicBlock &MBB : MF) {
-    StaticSimulatorBlockMetrics Metrics =
-        analyzeBlock(MBB, Sim, MII, TII, Verbose);
+    StaticSimulatorBlockMetrics Metrics = analyzeBlock(MBB, Sim, MII, Verbose);
     Report.PerBlock[&MBB] = Metrics;
     Report.Total.add(Metrics);
   }
@@ -471,8 +470,6 @@ static void runStaticSimulator(MachineFunction &MF) {
     return;
 
   const SIInstrInfo *TII = ST.getInstrInfo();
-  if (!TII)
-    return;
 
   if (!AMDGPU::isExpertSchedulingMode(ST, MF.getFunction())) {
     Function &F = MF.getFunction();
