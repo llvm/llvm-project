@@ -67,30 +67,6 @@ f:
   ret i1 %rf
 }
 
-define i1 @f3_dangling(i1 %c) {
-; CHECK-LABEL: define i1 @f3_dangling(
-; CHECK-SAME: i1 [[C:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[DANGLES:%.*]] = select i1 [[C]], i64 0, i64 1
-; CHECK-NEXT:    br i1 [[C]], label %[[T:.*]], label %[[F:.*]]
-; CHECK:       [[T]]:
-; CHECK-NEXT:    ret i1 false
-; CHECK:       [[F]]:
-; CHECK-NEXT:    ret i1 false
-;
-entry:
-  %dangles = select i1 %c, i64 0, i64 1
-  br i1 %c, label %t, label %f
-
-t:
-  %rt = icmp eq i1 %c, 0
-  ret i1 %rt
-
-f:
-  %rf = icmp eq i1 %c, 1
-  ret i1 %rf
-}
-
 define i1 @f3_cond_and(i1 %c, i1 %d) {
 ; CHECK-LABEL: define i1 @f3_cond_and(
 ; CHECK-SAME: i1 [[C:%.*]], i1 [[D:%.*]]) {

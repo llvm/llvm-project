@@ -56,28 +56,3 @@ f:
   %rf = icmp eq i64 %s, 1
   ret i1 %rf
 }
-
-define i1 @f3_same_value(i1 %c) {
-; CHECK-LABEL: @f3_same_value(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i64 0, i64 0
-; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
-; CHECK:       t:
-; CHECK-NEXT:    [[RT:%.*]] = icmp eq i64 [[S]], 0
-; CHECK-NEXT:    ret i1 [[RT]]
-; CHECK:       f:
-; CHECK-NEXT:    [[RF:%.*]] = icmp eq i64 [[S]], 1
-; CHECK-NEXT:    ret i1 [[RF]]
-;
-entry:
-  %s = select i1 %c, i64 0, i64 0
-  br i1 %c, label %t, label %f
-
-t:
-  %rt = icmp eq i64 %s, 0
-  ret i1 %rt
-
-f:
-  %rf = icmp eq i64 %s, 1
-  ret i1 %rf
-}

@@ -457,9 +457,7 @@ void PredicateInfoBuilder::processBranch(
       if (shouldRename(Cond)) {
         for (User *U : Cond->users()) {
           auto *SI = dyn_cast<SelectInst>(U);
-          if (!SI || SI->getCondition() != Cond ||
-              SI->getParent() != BranchBB ||
-              SI->getTrueValue() == SI->getFalseValue() || SI->use_empty())
+          if (!SI || SI->getCondition() != Cond || SI->getParent() != BranchBB)
             continue;
 
           // Skip selects that are logically equivalent to and/or, which are
