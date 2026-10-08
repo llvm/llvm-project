@@ -1,5 +1,10 @@
 ; RUN: llc < %s -mtriple=riscv32 -mattr=+zca,+zcb,+zcmp,+zcmt -filetype=obj --filetype=obj -o /dev/null
 
+; Previously we inferred C from the -mattr due to Zca and no F or D. When we
+; later merged this with the riscv-isa attribute F and D were enabled which
+; caused the inferred C to imply Zcf and Zcd which conflict with Zcmp and Zcmt.
+; We no longer infer C from -mattr, preventing this crash.
+
 target triple = "riscv32-unknown-elf"
 
 define void @f() {
