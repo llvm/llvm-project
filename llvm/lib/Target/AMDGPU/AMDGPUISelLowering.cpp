@@ -4298,33 +4298,11 @@ simplifyExponentOnlyScaleOperand(SDNode *N, unsigned OpIdx,
   SDValue Scale = N->getOperand(OpIdx);
   APInt Demanded = AMDGPU::getExponentOnlyScaleDemandedBits();
 
-  auto ReplaceScale = [&](SDValue NewScale) {
-    SmallVector<SDValue> Ops(N->ops());
-    Ops[OpIdx] = NewScale;
-    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SDLoc(N), N->getVTList(), Ops);
-  };
-
   if (SDValue DemandedScale =
-          TLI.SimplifyMultipleUseDemandedBits(Scale, Demanded, DAG))
-    return ReplaceScale(DemandedScale);
-
-  // SimplifyMultipleUseDemandedBits does not look through vector extracts, and
-  // SimplifyDemandedBits demands all bits of a multi-use extract, so simplify
-  // the extracted lane of the source vector directly.
-  if (Scale.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
-    SDValue Vec = Scale.getOperand(0);
-    EVT VecVT = Vec.getValueType();
-    auto *Idx = dyn_cast<ConstantSDNode>(Scale.getOperand(1));
-    if (Idx && VecVT.isFixedLengthVector() &&
-        Idx->getAPIntValue().ult(VecVT.getVectorNumElements())) {
-      APInt DemandedElts = APInt::getOneBitSet(VecVT.getVectorNumElements(),
-                                               Idx->getZExtValue());
-      if (SDValue DemandedVec = TLI.SimplifyMultipleUseDemandedBits(
-              Vec, Demanded, DemandedElts, DAG))
-        return ReplaceScale(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(Scale),
-                                        Scale.getValueType(), DemandedVec,
-                                        Scale.getOperand(1)));
-    }
+          TLI.SimplifyMultipleUseDemandedBits(Scale, Demanded, DAG)) {
+    SmallVector<SDValue> Ops(N->ops());
+    Ops[OpIdx] = DemandedScale;
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SDLoc(N), N->getVTList(), Ops);
   }
 
   if (TLI.SimplifyDemandedBits(Scale, Demanded, DCI))
