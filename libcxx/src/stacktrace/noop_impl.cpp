@@ -26,3 +26,25 @@ _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif
+
+// Fallback for targets where dladdr_symbols.cpp doesn't provide `__populate_symbols()`: AIX
+// (has `dlfcn.h`, but no `dladdr()`), and bare-metal targets with no `dlfcn.h` at all. Windows
+// doesn't need an entry here since it never reaches `__populate_symbols()` in the first place --
+// `current()` dispatches to `__windows_impl()` instead of `__stacktrace::__collect()`.
+#if !defined(_WIN32) && (defined(_AIX) || !__has_include(<dlfcn.h>))
+
+#  include "symbols.h"
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+
+namespace __stacktrace {
+
+void __populate_symbols(_Context&) {}
+
+} // namespace __stacktrace
+
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
+_LIBCPP_END_NAMESPACE_STD
+
+#endif
