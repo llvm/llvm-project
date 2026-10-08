@@ -314,12 +314,14 @@ static RVVRegisterRegAlloc fastRegAllocRVVReg("fast", "fast register allocator",
                                               createFastRVVRegisterAllocator);
 
 class RISCVPassConfig : public TargetPassConfig {
+  const RISCVOptions &CLOpts;
+
 public:
   RISCVPassConfig(RISCVTargetMachine &TM, PassManagerBase &PM)
-      : TargetPassConfig(TM, PM) {
+      : TargetPassConfig(TM, PM), CLOpts(TM.getCLOpts()) {
     if (TM.getOptLevel() != CodeGenOptLevel::None)
       substitutePass(&PostRASchedulerID, &PostMachineSchedulerID);
-    setEnableSinkAndFold(TM.getCLOpts().enable_sink_fold);
+    setEnableSinkAndFold(CLOpts.enable_sink_fold);
     EnableLoopTermFold = true;
   }
 
@@ -379,8 +381,7 @@ FunctionPass *RISCVPassConfig::createRVVRegAllocPass(bool Optimized) {
 bool RISCVPassConfig::addRegAssignAndRewriteFast() {
   addPass(createRVVRegAllocPass(false));
   addPass(createRISCVInsertVSETVLIPass());
-  if (TM->getOptLevel() != CodeGenOptLevel::None &&
-      getRISCVTargetMachine().getCLOpts().enable_dead_defs)
+  if (TM->getOptLevel() != CodeGenOptLevel::None && CLOpts.enable_dead_defs)
     addPass(createRISCVDeadRegisterDefinitionsPass());
   return TargetPassConfig::addRegAssignAndRewriteFast();
 }
@@ -389,8 +390,7 @@ bool RISCVPassConfig::addRegAssignAndRewriteOptimized() {
   addPass(createRVVRegAllocPass(true));
   addPass(createVirtRegRewriter(false));
   addPass(createRISCVInsertVSETVLIPass());
-  if (TM->getOptLevel() != CodeGenOptLevel::None &&
-      getRISCVTargetMachine().getCLOpts().enable_dead_defs)
+  if (TM->getOptLevel() != CodeGenOptLevel::None && CLOpts.enable_dead_defs)
     addPass(createRISCVDeadRegisterDefinitionsPass());
   return TargetPassConfig::addRegAssignAndRewriteOptimized();
 }
@@ -400,7 +400,7 @@ void RISCVPassConfig::addIRPasses() {
   addPass(createRISCVZacasABIFixLegacyPass());
 
   if (getOptLevel() != CodeGenOptLevel::None) {
-    if (getRISCVTargetMachine().getCLOpts().enable_loop_data_prefetch)
+    if (CLOpts.enable_loop_data_prefetch)
       addPass(createLoopDataPrefetchPass());
 
     addPass(createRISCVGatherScatterLoweringLegacyPass());
@@ -410,8 +410,7 @@ void RISCVPassConfig::addIRPasses() {
 
   TargetPassConfig::addIRPasses();
 
-  if (getOptLevel() == CodeGenOptLevel::Aggressive &&
-      getRISCVTargetMachine().getCLOpts().select_opt)
+  if (getOptLevel() == CodeGenOptLevel::Aggressive && CLOpts.select_opt)
     addPass(createSelectOptimizePass());
 }
 
@@ -425,7 +424,7 @@ bool RISCVPassConfig::addPreISel() {
     addPass(createBarrierNoopPass());
   }
 
-  if (valueOr(getRISCVTargetMachine().getCLOpts().enable_global_merge,
+  if (valueOr(CLOpts.enable_global_merge,
               TM->getOptLevel() != CodeGenOptLevel::None)) {
     // FIXME: Like AArch64, we disable extern global merging by default due to
     // concerns it might regress some workloads. Unlike AArch64, we don't
@@ -500,7 +499,7 @@ void RISCVPassConfig::addPreEmitPass() {
   // currently leads to incorrect code-gen, where copies to registers within
   // outlined functions are removed erroneously.
   if (TM->getOptLevel() >= CodeGenOptLevel::Default &&
-      getRISCVTargetMachine().getCLOpts().enable_copy_propagation)
+      CLOpts.enable_copy_propagation)
     addPass(createMachineCopyPropagationPass(true));
   if (TM->getOptLevel() >= CodeGenOptLevel::Default)
     addPass(createRISCVLateBranchOptPass());
@@ -536,7 +535,7 @@ void RISCVPassConfig::addPreEmitPass2() {
     return MF.getFunction().getParent()->getModuleFlag("kcfi");
   }));
 
-  if (getRISCVTargetMachine().getCLOpts().enable_cfi_instr_inserter)
+  if (CLOpts.enable_cfi_instr_inserter)
     addPass(createCFIInstrInserterLegacy());
 }
 
@@ -576,8 +575,7 @@ void RISCVPassConfig::addPreRegAlloc() {
   addPass(createRISCVInsertWriteVXRMPass());
   addPass(createRISCVLandingPadSetupPass());
 
-  if (TM->getOptLevel() != CodeGenOptLevel::None &&
-      getRISCVTargetMachine().getCLOpts().enable_pipeliner)
+  if (TM->getOptLevel() != CodeGenOptLevel::None && CLOpts.enable_pipeliner)
     addPass(&MachinePipelinerID);
 
   addPass(createRISCVVMV0EliminationPass());
@@ -590,13 +588,12 @@ void RISCVPassConfig::addFastRegAlloc() {
 
 
 void RISCVPassConfig::addPostRegAlloc() {
-  if (TM->getOptLevel() != CodeGenOptLevel::None &&
-      getRISCVTargetMachine().getCLOpts().enable_copyelim)
+  if (TM->getOptLevel() != CodeGenOptLevel::None && CLOpts.enable_copyelim)
     addPass(createRISCVRedundantCopyEliminationPass());
 }
 
 bool RISCVPassConfig::addILPOpts() {
-  if (getRISCVTargetMachine().getCLOpts().enable_machine_combiner)
+  if (CLOpts.enable_machine_combiner)
     addPass(&MachineCombinerID);
 
   return true;
