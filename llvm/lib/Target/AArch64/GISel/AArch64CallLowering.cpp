@@ -1436,6 +1436,14 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   if (CanTailCallOpt)
     return lowerTailCall(MIRBuilder, Info, OutArgs);
 
+  // Unwinding through a callee that tail calls with a different stack argument
+  // size only works on Windows if this frame is found via a frame pointer.
+  if (Subtarget.isTargetWindows() &&
+      canGuaranteeTCO(Info.CallConv,
+                      MF.getTarget().Options.GuaranteedTailCallOpt))
+    MF.getInfo<AArch64FunctionInfo>()->setHasWinCallToGuaranteedTCOFunction(
+        true);
+
   // Find out which ABI gets to decide where things go.
   CCAssignFn *AssignFnFixed;
   CCAssignFn *AssignFnVarArg;

@@ -10536,6 +10536,12 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     report_fatal_error("failed to perform tail call elimination on a call "
                        "site marked musttail");
 
+  // Unwinding through a callee that tail calls with a different stack argument
+  // size only works on Windows if this frame is found via a frame pointer.
+  if (!IsTailCall && Subtarget->isTargetWindows() &&
+      canGuaranteeTCO(CallConv, TailCallOpt))
+    FuncInfo->setHasWinCallToGuaranteedTCOFunction(true);
+
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = CCInfo.getStackSize();
 

@@ -464,13 +464,13 @@ AArch64FrameLowering::getFixedObjectSize(const MachineFunction &MF,
                                          bool IsWin64, bool IsFunclet) const {
   assert(AFI->getTailCallReservedStack() % 16 == 0 &&
          "Tail call reserved stack must be aligned to 16 bytes");
-  if (!IsWin64 || IsFunclet) {
+  if (!IsWin64) {
     return AFI->getTailCallReservedStack();
+  } else if (IsFunclet) {
+    // A funclet has its own frame; the tail call reserve belongs to the parent
+    // function's incoming argument area.
+    return 0;
   } else {
-    if (AFI->getTailCallReservedStack() != 0 &&
-        !MF.getFunction().getAttributes().hasAttrSomewhere(
-            Attribute::SwiftAsync))
-      report_fatal_error("cannot generate ABI-changing tail call for Win64");
     unsigned FixedObjectSize = AFI->getTailCallReservedStack();
 
     // Var args are stored here in the primary function.
@@ -538,6 +538,12 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   // are accessed off the frame pointer in both the parent function and the
   // funclets.
   if (MF.hasEHFunclets())
+    return true;
+
+  // Unwinding through a callee that tail calls with a larger stack argument
+  // area leaves SP lower than our unwind info expects, so on Windows we must
+  // be found via the frame pointer instead.
+  if (AFI.hasWinCallToGuaranteedTCOFunction())
     return true;
 
   // When the stack guard is mixed with the frame pointer, a dedicated FP is
