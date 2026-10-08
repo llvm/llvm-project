@@ -322,14 +322,17 @@ void FormatTokenLexer::tryMergePreviousTokens() {
                            {tok::plus, tok::star, tok::greater},
                            {tok::minusequal, tok::greater},
                            {tok::minus, tok::star, tok::greater},
-                           {tok::less, tok::arrow},
                            {tok::equal, tok::greater},
                            {tok::star, tok::greater},
                            {tok::pipeequal, tok::greater},
                            {tok::pipe, tok::arrow}},
-                          TT_BinaryOperator) ||
-        Tokens.back()->is(tok::arrow)) {
+                          TT_BinaryOperator)) {
       Tokens.back()->ForcedPrecedence = prec::Comma;
+      return;
+    }
+    if (tryMergeTokens({tok::less, tok::arrow}, TT_BinaryOperator) ||
+        Tokens.back()->is(tok::arrow)) {
+      Tokens.back()->Tok.setKind(tok::equalequal);
       return;
     }
     if (Tokens.size() >= 3 &&
