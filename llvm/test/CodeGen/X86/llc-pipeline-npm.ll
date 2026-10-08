@@ -1,13 +1,13 @@
-; RUN: llc -enable-new-pm -mtriple=x86_64 -O0 -print-pipeline-passes=tree < %s 2>&1 \
+; RUN: llc -enable-new-pm -mtriple=x86_64 -O0 -print-pipeline-passes -print-pipeline-passes-format=tree < %s 2>&1 \
 ; RUN:   | FileCheck -check-prefix=O0 %s
 
-; RUN: llc -enable-new-pm -mtriple=x86_64 -O2 -print-pipeline-passes=tree < %s 2>&1 \
+; RUN: llc -enable-new-pm -mtriple=x86_64 -O2 -print-pipeline-passes -print-pipeline-passes-format=tree < %s 2>&1 \
 ; RUN:   | FileCheck -check-prefix=O2 %s
 
-; RUN: llc -enable-new-pm -mtriple=x86_64-windows -O0 -print-pipeline-passes=tree < %s 2>&1 \
+; RUN: llc -enable-new-pm -mtriple=x86_64-windows -O0 -print-pipeline-passes -print-pipeline-passes-format=tree < %s 2>&1 \
 ; RUN:   | FileCheck -check-prefix=O0-WINDOWS %s
 
-; RUN: llc -enable-new-pm -mtriple=x86_64-windows -O3 -print-pipeline-passes=tree < %s 2>&1 \
+; RUN: llc -enable-new-pm -mtriple=x86_64-windows -O3 -print-pipeline-passes -print-pipeline-passes-format=tree < %s 2>&1 \
 ; RUN:   | FileCheck -check-prefix=O3-WINDOWS %s
 
 ; O0: require<MachineModuleAnalysis>

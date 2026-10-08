@@ -1035,17 +1035,9 @@ enum class PrintPipelinePassesFormat {
   Tree,
 };
 
-struct PrintPipelinePassesFormatParser
-    : public cl::parser<std::optional<PrintPipelinePassesFormat>> {
-  using cl::parser<std::optional<PrintPipelinePassesFormat>>::parser;
-  LLVM_ABI bool parse(cl::Option &O, StringRef ArgName, StringRef ArgValue,
-                      std::optional<PrintPipelinePassesFormat> &Val);
-};
-
-/// Common option used by multiple tools to print pipeline passes
-LLVM_ABI extern cl::opt<std::optional<PrintPipelinePassesFormat>, false,
-                        PrintPipelinePassesFormatParser>
-    PrintPipelinePasses;
+/// The format -print-pipeline-passes requests, or std::nullopt if it is not
+/// given.
+LLVM_ABI std::optional<PrintPipelinePassesFormat> getPrintPipelinePasses();
 
 LLVM_ABI void printFormattedPipelinePasses(
     raw_ostream &OS, StringRef Pipeline,

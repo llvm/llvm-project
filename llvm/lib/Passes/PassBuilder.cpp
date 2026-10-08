@@ -219,7 +219,6 @@
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Passes/TriggerCrashPasses.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -425,32 +424,11 @@
 
 using namespace llvm;
 
-cl::opt<std::optional<PrintPipelinePassesFormat>, false,
-        PrintPipelinePassesFormatParser>
-    llvm::PrintPipelinePasses(
-        "print-pipeline-passes", cl::ValueOptional,
-        cl::desc(
-            "Print string describing the pipeline (best-effort only).\n"
-            "  - =text\tPrint a '-passes' compatible string describing the "
-            "pipeline.\n"
-            "  - =tree\tPrint a tree-like structure describing the pipeline."));
-
-bool PrintPipelinePassesFormatParser::parse(
-    cl::Option &O, StringRef ArgName, StringRef Arg,
-    std::optional<PrintPipelinePassesFormat> &Val) {
-  std::optional<PrintPipelinePassesFormat> Format =
-      StringSwitch<std::optional<PrintPipelinePassesFormat>>(Arg)
-          .Case("text", PrintPipelinePassesFormat::Text)
-          .Case("", PrintPipelinePassesFormat::Text)
-          .Case("tree", PrintPipelinePassesFormat::Tree)
-          .Default(std::nullopt);
-
-  if (!Format)
-    return O.error(formatv(
-        "'{0}' value invalid for print-pipeline-passes argument!", Arg));
-
-  Val = Format;
-  return false;
+std::optional<PrintPipelinePassesFormat> llvm::getPrintPipelinePasses() {
+  const PassesOptions &Opts = PassesOptions::Global;
+  if (!Opts.print_pipeline_passes)
+    return std::nullopt;
+  return Opts.print_pipeline_passes_format;
 }
 
 void llvm::printFormattedPipelinePasses(raw_ostream &OS, StringRef Pipeline,

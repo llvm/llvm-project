@@ -1185,7 +1185,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   // This should be done for both clang and flang simultaneously.
   // Print a textual, '-passes=' compatible, representation of pipeline if
   // requested.
-  if (PrintPipelinePasses) {
+  if (getPrintPipelinePasses()) {
     MPM.printPipeline(outs(), [&PIC](StringRef ClassName) {
       auto PassName = PIC.getPassNameForClassName(ClassName);
       return PassName.empty() ? ClassName : PassName;
@@ -1234,7 +1234,7 @@ void EmitAssemblyHelper::RunCodegenPipeline(
 
   TimeCodegenPasses([&]() {
     Error CodeGenError = runCodeGenPipeline(
-        *TM, *TheModule, *OS, DwoOS, CGFT, PrintPipelinePasses.has_value(),
+        *TM, *TheModule, *OS, DwoOS, CGFT, getPrintPipelinePasses().has_value(),
         !CodeGenOpts.VerifyModule, /*DisableSimplifyLibCalls=*/false,
         CI.getVirtualFileSystemPtr());
     if (CodeGenError)
