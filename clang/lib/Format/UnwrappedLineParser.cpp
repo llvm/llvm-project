@@ -3918,9 +3918,9 @@ bool UnwrappedLineParser::parseEnum() {
   if (Style.Language == FormatStyle::LK_Proto && FormatTok->is(tok::equal))
     return false;
 
-         // Eat up enum class ...
-  if (IsCpp&&FormatTok->isOneOf(tok::kw_class, tok::kw_struct))
-      nextToken();
+  // Eat up enum class ...
+  if (IsCpp && FormatTok->isOneOf(tok::kw_class, tok::kw_struct))
+    nextToken();
 
   while (FormatTok->Tok.getIdentifierInfo() ||
          FormatTok->isOneOf(tok::colon, tok::coloncolon, tok::less,
