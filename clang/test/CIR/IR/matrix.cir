@@ -17,4 +17,32 @@ cir.func @valid_matrix_type() {
 // CHECK:   cir.return
 // CHECK: }
 
+cir.func @matrix_add(%arg0: !cir.matrix<2 x 3 x !s32i>, %arg1: !cir.matrix<2 x 3 x !s32i>,
+                     %arg2: !cir.matrix<3 x 3 x !cir.float>, %arg3: !cir.matrix<3 x 3 x !cir.float>) {
+  %0 = cir.add %arg0, %arg1 : !cir.matrix<2 x 3 x !s32i>
+  %1 = cir.add nsw %arg0, %arg1 : !cir.matrix<2 x 3 x !s32i>
+  %2 = cir.fadd %arg2, %arg3 : !cir.matrix<3 x 3 x !cir.float>
+  cir.return
+}
+
+// CHECK: cir.func @matrix_add(%[[A:.*]]: !cir.matrix<2 x 3 x !s32i>, %[[B:.*]]: !cir.matrix<2 x 3 x !s32i>,
+// CHECK-SAME: %[[C:.*]]: !cir.matrix<3 x 3 x !cir.float>, %[[D:.*]]: !cir.matrix<3 x 3 x !cir.float>) {
+// CHECK:   %{{.*}} = cir.add %[[A]], %[[B]] : !cir.matrix<2 x 3 x !s32i>
+// CHECK:   %{{.*}} = cir.add nsw %[[A]], %[[B]] : !cir.matrix<2 x 3 x !s32i>
+// CHECK:   %{{.*}} = cir.fadd %[[C]], %[[D]] : !cir.matrix<3 x 3 x !cir.float>
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @matrix_splat(%arg0: !s32i, %arg1: !cir.float) {
+  %0 = cir.vec.splat %arg0 : !s32i, !cir.matrix<2 x 3 x !s32i>
+  %1 = cir.vec.splat %arg1 : !cir.float, !cir.matrix<3 x 3 x !cir.float>
+  cir.return
+}
+
+// CHECK: cir.func @matrix_splat(%[[I:.*]]: !s32i, %[[F:.*]]: !cir.float) {
+// CHECK:   %{{.*}} = cir.vec.splat %[[I]] : !s32i, !cir.matrix<2 x 3 x !s32i>
+// CHECK:   %{{.*}} = cir.vec.splat %[[F]] : !cir.float, !cir.matrix<3 x 3 x !cir.float>
+// CHECK:   cir.return
+// CHECK: }
+
 }
