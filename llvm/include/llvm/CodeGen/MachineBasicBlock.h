@@ -15,7 +15,6 @@
 
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/GraphTraits.h"
-#include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
