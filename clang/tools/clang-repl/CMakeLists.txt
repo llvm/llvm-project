@@ -7,10 +7,6 @@ set( LLVM_LINK_COMPONENTS
   TargetParser
   )
 
-if(NOT EMSCRIPTEN)
-  list(APPEND LLVM_LINK_COMPONENTS OrcJIT OrcShared)
-endif()
-
 add_clang_tool(clang-repl
   ClangRepl.cpp
 
