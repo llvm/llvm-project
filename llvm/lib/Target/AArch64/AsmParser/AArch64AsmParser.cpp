@@ -8800,13 +8800,18 @@ ParseStatus AArch64AsmParser::tryParseAdjImm0_63(OperandVector &Operands) {
   SMLoc S = getLoc();
 
   parseOptionalToken(AsmToken::Hash);
+  bool IsNegative = parseOptionalToken(AsmToken::Minus);
 
-  if (getTok().isNot(AsmToken::Integer) && getTok().isNot(AsmToken::Minus))
+  if (getTok().isNot(AsmToken::Integer))
     return ParseStatus::NoMatch;
 
-  int64_t Imm;
-  if (parseImmExpr(Imm))
-    return ParseStatus::Failure;
+  const MCExpr *Ex;
+  if (getParser().parseExpression(Ex))
+    return ParseStatus::NoMatch;
+
+  int64_t Imm = dyn_cast<MCConstantExpr>(Ex)->getValue();
+  if (IsNegative)
+    Imm = -Imm;
 
   // We want an adjusted immediate in the range [0, 63]. If we don't have one,
   // return a value, which is certain to trigger a error message about invalid

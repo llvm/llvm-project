@@ -527,6 +527,7 @@ def uimm9 : Operand<i64> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
+// TODO: Use AdjImmAsmOperand for the uimm6m1 and uimm6p1 operands too.
 class AdjImmAsmOperand<string name, string diagnostic, int adjustment,
                        int low, int high> : AsmOperandClass {
   let Name = name;
@@ -1162,6 +1163,7 @@ def imm0_31 : Operand<i64>, ImmLeaf<i64, [{
   return ((uint64_t)Imm) < 32;
 }]> {
   let ParserMatchClass = Imm0_31Operand;
+  let MCOperandPredicate = [{ return MCOp.isImm() && isUInt<5>(MCOp.getImm()); }];
 }
 
 // timm0_31 predicate - same ass imm0_31, but use TargetConstant (TimmLeaf)
@@ -13773,17 +13775,12 @@ multiclass CFLTImmAlias<string mnemonic, string inst, Operand immtype> {
                    GPR64:$Rt, immtype:$imm), 0>;
 }
 
-def tflt_imm32_63 : Operand<i64> {
-  let ParserMatchClass = TBZImm32_63Operand;
-  let OperandType = "OPERAND_IMMEDIATE";
-  let DecoderMethod = "DecodeTFLTImm32_63";
-}
-
-class BaseTFLT<RegisterClass regtype, Operand immtype, bit sf, bit op,
+class BaseTFLT<RegisterClass regtype, Operand immtype, bit op,
                string asm>
-    : BaseFLT<sf, (ins imm0_3:$reason, regtype:$Rt, immtype:$bit_off),
+    : BaseFLT<0, (ins imm0_3:$reason, regtype:$Rt, immtype:$bit_off),
               asm, "\t$reason, $Rt, $bit_off"> {
   bits<6> bit_off;
+  let Inst{31} = bit_off{5};
   let Inst{23-19} = bit_off{4-0};
   let Inst{18-16} = 0b000;
   let Inst{9-6}   = 0b1001;
@@ -13791,10 +13788,9 @@ class BaseTFLT<RegisterClass regtype, Operand immtype, bit sf, bit op,
 }
 
 multiclass TFLT<bit op, string asm> {
-  def W : BaseTFLT<GPR32, tbz_imm0_31_diag, 0, op, asm>;
-  def X : BaseTFLT<GPR64, tflt_imm32_63, 1, op, asm>;
+  def NAME : BaseTFLT<GPR64, imm0_63, op, asm>;
 
   def : InstAlias<asm # "\t$reason, $Rt, $imm",
-                  (!cast<Instruction>(NAME # "W") imm0_3:$reason,
-                   GPR32as64:$Rt, tbz_imm0_31_nodiag:$imm), 0>;
+                  (!cast<Instruction>(NAME) imm0_3:$reason,
+                   GPR64as32:$Rt, imm0_31:$imm), 1>;
 }

@@ -310,6 +310,12 @@ tfltz #1, x1, #32
 // CHECK-UNKNOWN: f6000641
 // CHECK-ERROR: error: instruction requires: cflt
 
+tfltz #3, wzr, #31
+// CHECK-INST: tfltz #3, wzr, #31
+// CHECK-ENCODING: [0x5f,0x0e,0xf8,0x76]
+// CHECK-UNKNOWN: 76f80e5f
+// CHECK-ERROR: error: instruction requires: cflt
+
 tfltnz #2, w3, #31
 // CHECK-INST: tfltnz #2, w3, #31
 // CHECK-ENCODING: [0x63,0x0a,0xf8,0x76]
@@ -320,6 +326,12 @@ tfltnz #3, xzr, #31
 // CHECK-INST: tfltnz #3, wzr, #31
 // CHECK-ENCODING: [0x7f,0x0e,0xf8,0x76]
 // CHECK-UNKNOWN: 76f80e7f
+// CHECK-ERROR: error: instruction requires: cflt
+
+tfltnz #3, xzr, #32
+// CHECK-INST: tfltnz #3, xzr, #32
+// CHECK-ENCODING: [0x7f,0x0e,0x00,0xf6]
+// CHECK-UNKNOWN: f6000e7f
 // CHECK-ERROR: error: instruction requires: cflt
 
 tfltnz #3, x4, #63

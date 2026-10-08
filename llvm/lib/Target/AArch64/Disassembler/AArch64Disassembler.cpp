@@ -1356,13 +1356,6 @@ static DecodeStatus DecodeTestAndBranch(MCInst &Inst, uint32_t insn,
   return Success;
 }
 
-static DecodeStatus DecodeTFLTImm32_63(MCInst &Inst, unsigned Imm,
-                                       uint64_t Addr,
-                                       const MCDisassembler *Decoder) {
-  Inst.addOperand(MCOperand::createImm(Imm | 0x20));
-  return Success;
-}
-
 static DecodeStatus
 DecodeGPRSeqPairsClassRegisterClass(MCInst &Inst, unsigned RegClassID,
                                     unsigned RegNo, uint64_t Addr,

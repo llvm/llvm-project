@@ -82,8 +82,14 @@ tfltz #4, w0, #0
 tfltz #0, w0, #32
 // CHECK: [[@LINE-1]]:15: error: immediate must be an integer in range [0, 31].
 
+tfltz #0, w0, #-1
+// CHECK: [[@LINE-1]]:15: error: immediate must be an integer in range [0, 31].
+
 tfltnz #4, x0, #32
 // CHECK: [[@LINE-1]]:8: error: immediate must be an integer in range [0, 3].
 
 tfltnz #0, x0, #64
+// CHECK: [[@LINE-1]]:16: error: immediate must be an integer in range [0, 63].
+
+tfltnz #0, x0, #-1
 // CHECK: [[@LINE-1]]:16: error: immediate must be an integer in range [0, 63].
