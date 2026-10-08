@@ -139,9 +139,14 @@ createLowerModule(mlir::ModuleOp module,
   assert(!cir::MissingFeatures::lowerModuleCodeGenOpts());
   clang::CodeGenOptions codeGenOpts;
 
-  // TODO(optinfo): this cast should be more secure?
-  if (auto optInfo = mlir::cast_if_present<cir::OptInfoAttr>(
-          module->getAttr(cir::CIRDialect::getOptInfoAttrName()))) {
+  if (auto optAttr = module->getAttr(cir::CIRDialect::getOptInfoAttrName())) {
+    auto optInfo = mlir::dyn_cast<cir::OptInfoAttr>(optAttr);
+    if (!optInfo) {
+      if (emitDiag)
+        emitDiag() << "malformed " << cir::CIRDialect::getOptInfoAttrName()
+                   << " attribute";
+      return nullptr;
+    }
     codeGenOpts.OptimizationLevel = optInfo.getLevel();
     codeGenOpts.OptimizeSize = optInfo.getSize();
   }
