@@ -1938,6 +1938,8 @@ void AccAttributeVisitor::PopAccContext() {
   dirContext_.pop_back();
 }
 
+// Complete explicit-clause analysis before body references and implicit loop
+// attributes are checked against it.
 void AccAttributeVisitor::FinishAccDirectiveHeader() {
   FinalizeAccClauseObjects();
   GetContext().withinConstruct = true;
@@ -2331,6 +2333,17 @@ Symbol *AccAttributeVisitor::DeclareOrMarkOtherAccessEntity(
   return &object;
 }
 
+// DesignatorPath::Compare describes the relation between the selected parts of
+// objects, not whether OpenACC permits them in data-sharing clauses. For example,
+// a(1:5) and a(6:10) are Disjoint, but both select parts of the same data-sharing
+// entity and must still be checked for the multiple-appearance restriction.
+// Ignore array selectors here while retaining the base and component symbols:
+// sections of a%x identify the same entity, whereas a%x and a%y do not.
+// Keep this OpenACC policy separate from Compare. Making Compare report overlap
+// for disjoint sections would lose its structural meaning for other callers and
+// would conflate overlap diagnostics with the different-part diagnostic here.
+// Finalization also needs the actual equality and containment relations to prune
+// redundant same-kind objects before checking the surviving objects for conflicts.
 static bool HaveSameAccDataSharingEntity(
     const DesignatorPath &x, const DesignatorPath &y) {
   if (x.Base().has_value() != y.Base().has_value() ||
@@ -2357,6 +2370,9 @@ static bool HaveSameAccDataSharingEntity(
   }
 }
 
+// Register coverage for body-reference checks without adding a clause-conflict
+// candidate. For example, a COMMON clause makes each member visible, but the
+// whole-block path represents the clause in conflict analysis.
 void AccAttributeVisitor::RecordAccVisibleObject(Symbol::Flag accFlag,
     DesignatorPath designator, const parser::AccObject *occurrence) {
   if (designator.empty()) {
@@ -2366,6 +2382,8 @@ void AccAttributeVisitor::RecordAccVisibleObject(Symbol::Flag accFlag,
       std::move(designator), {accFlag, occurrence});
 }
 
+// Collect candidates without comparing them yet: a later containing object can
+// make earlier sections redundant and change which conflicts need diagnosing.
 void AccAttributeVisitor::RecordAccClauseObject(Symbol::Flag accFlag,
     DesignatorPath designator, const parser::AccObject *occurrence) {
   if (designator.empty()) {
@@ -2375,6 +2393,10 @@ void AccAttributeVisitor::RecordAccClauseObject(Symbol::Flag accFlag,
   RecordAccVisibleObject(accFlag, std::move(designator), occurrence);
 }
 
+// Analyze the complete header in two phases: prune redundant same-kind objects,
+// then diagnose conflicts among survivors. Mark removed source occurrences so
+// lowering also ignores them. The guard permits both header completion and
+// context teardown to call this without repeating diagnostics.
 void AccAttributeVisitor::FinalizeAccClauseObjects() {
   AccDirContext &context{GetContext()};
   if (context.clauseObjectsFinalized) {
@@ -2503,6 +2525,9 @@ void AccAttributeVisitor::FinalizeAccClauseObjects() {
   }
 }
 
+// Check implicit attributes against finalized clauses. New implicit entries have
+// no source occurrence: they participate in consistency and visibility checks,
+// but cannot be marked as removable clause objects.
 void AccAttributeVisitor::CheckImplicitClauseConsistencyInCurrentConstruct(
     const parser::Name &name, Symbol::Flag accFlag, DesignatorPath designator) {
   if (designator.empty()) {
