@@ -79,6 +79,8 @@ public:
   /// Selects the correct CCAssignFn for a given CallingConvention value.
   CCAssignFn *CCAssignFnForReturn(CallingConv::ID CC) const;
 
+  bool isTargetAssertNode(SDValue Op) const override;
+
   /// Determine which of the bits specified in Mask are known to be either zero
   /// or one and return them in the KnownZero/KnownOne bitsets.
   void computeKnownBitsForTargetNode(const SDValue Op, KnownBits &Known,
