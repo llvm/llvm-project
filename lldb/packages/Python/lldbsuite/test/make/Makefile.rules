@@ -593,9 +593,10 @@ endif
 #----------------------------------------------------------------------
 # Make the dSYM file from the executable if $(MAKE_DSYM) != "NO"
 #
-# Splitting the debug info rewrites $(EXE) after writing $(DSYM). Touch
-# $(DSYM) last, or the next make would split the stripped $(EXE) again and
-# leave a debug file without debug info.
+# On non-Darwin platforms with SPLIT_DEBUG_SYMBOLS, objcopy copies the debug
+# info of $(EXE) into $(DSYM) and then strips it from $(EXE), which leaves
+# $(EXE) newer than $(DSYM). Touch $(DSYM) last, or the next make would rerun
+# objcopy on the stripped $(EXE) and leave $(DSYM) without debug info.
 #----------------------------------------------------------------------
 $(DSYM) : $(EXE) \
           $(call tool_prereq,$(DS)) \
