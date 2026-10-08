@@ -16,12 +16,15 @@
 using namespace clang;
 
 bool clang::loadLinkModules(CompilerInstance &CI, llvm::LLVMContext &Ctx,
-                            llvm::SmallVectorImpl<LinkModule> &LinkModules) {
+                            llvm::SmallVectorImpl<LinkModule> &LinkModules,
+                            bool OnlyInternalized) {
   if (!LinkModules.empty())
     return false;
 
   for (const CodeGenOptions::BitcodeFileToLink &F :
        CI.getCodeGenOpts().LinkBitcodeFiles) {
+    if (OnlyInternalized && !F.Internalize)
+      continue;
     auto BCBuf = CI.getFileManager().getBufferForFile(F.Filename);
     if (!BCBuf) {
       CI.getDiagnostics().Report(diag::err_cannot_open_file)

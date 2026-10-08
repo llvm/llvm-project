@@ -110,40 +110,59 @@ TEST_F(DeviceOffloadTest, EmptyDeviceModule) {
   EXPECT_TRUE((*Buf)->getBuffer().contains(".target"));
 }
 
-TEST_F(DeviceOffloadTest, BuiltinBitcodeLinkedIntoEveryModule) {
-  // A bitcode library with one function stands in for libdevice.
-  llvm::SmallString<128> LibPath;
-  int LibFD;
-  ASSERT_FALSE(llvm::sys::fs::createTemporaryFile("lib", "bc", LibFD, LibPath));
-  llvm::FileRemover LibRemover(LibPath);
-  {
-    llvm::LLVMContext Ctx;
-    llvm::Module Lib("lib", Ctx);
-    Lib.setTargetTriple(llvm::Triple("nvptx64-nvidia-cuda"));
-    Lib.setDataLayout(Lib.getTargetTriple().computeDataLayout());
+// A bitcode library with one float(float) function that doubles its argument,
+// or an empty one when Name is empty.
+static void writeLibrary(int FD, llvm::StringRef Name) {
+  llvm::LLVMContext Ctx;
+  llvm::Module Lib("lib", Ctx);
+  Lib.setTargetTriple(llvm::Triple("nvptx64-nvidia-cuda"));
+  Lib.setDataLayout(Lib.getTargetTriple().computeDataLayout());
+  if (!Name.empty()) {
     llvm::Type *FloatTy = llvm::Type::getFloatTy(Ctx);
-    llvm::Function *Twice = llvm::Function::Create(
+    llvm::Function *Fn = llvm::Function::Create(
         llvm::FunctionType::get(FloatTy, {FloatTy}, /*isVarArg=*/false),
-        llvm::GlobalValue::ExternalLinkage, "twice", Lib);
-    llvm::IRBuilder<> Builder(llvm::BasicBlock::Create(Ctx, "", Twice));
-    Builder.CreateRet(Builder.CreateFAdd(Twice->getArg(0), Twice->getArg(0)));
-    llvm::raw_fd_ostream OS(LibFD, /*shouldClose=*/true);
-    llvm::WriteBitcodeToFile(Lib, OS);
+        llvm::GlobalValue::ExternalLinkage, Name, Lib);
+    llvm::IRBuilder<> Builder(llvm::BasicBlock::Create(Ctx, "", Fn));
+    Builder.CreateRet(Builder.CreateFAdd(Fn->getArg(0), Fn->getArg(0)));
   }
+  llvm::raw_fd_ostream OS(FD, /*shouldClose=*/true);
+  llvm::WriteBitcodeToFile(Lib, OS);
+}
+
+TEST_F(DeviceOffloadTest, BuiltinBitcodeLinkedIntoEveryModule) {
+  // Two libraries stand in for libdevice and for a plain bitcode file. The
+  // plain one is linked whole into the initial module, which stays empty, so
+  // it carries nothing.
+  llvm::SmallString<128> BuiltinPath, PlainPath;
+  int BuiltinFD, PlainFD;
+  ASSERT_FALSE(llvm::sys::fs::createTemporaryFile("builtin", "bc", BuiltinFD,
+                                                  BuiltinPath));
+  llvm::FileRemover BuiltinRemover(BuiltinPath);
+  writeLibrary(BuiltinFD, "twice");
+  ASSERT_FALSE(
+      llvm::sys::fs::createTemporaryFile("plain", "bc", PlainFD, PlainPath));
+  llvm::FileRemover PlainRemover(PlainPath);
+  writeLibrary(PlainFD, /*Name=*/"");
 
   IncrementalCompilerBuilder CB;
   CB.SetCompilerArgs({"-nocudainc", "-nocudalib"});
   auto DeviceCI = CB.CreateCudaDevice();
   ASSERT_THAT_EXPECTED(DeviceCI, llvm::Succeeded());
-  // The entry the driver adds for libdevice with -mlink-builtin-bitcode.
-  (*DeviceCI)->getCodeGenOpts().LinkBitcodeFiles.push_back(
-      {std::string(LibPath), /*PropagateAttrs=*/true, /*Internalize=*/true,
-       llvm::Linker::Flags::LinkOnlyNeeded});
+  // The entries the driver adds for -mlink-builtin-bitcode and for
+  // -mlink-bitcode-file.
+  auto &Files = (*DeviceCI)->getCodeGenOpts().LinkBitcodeFiles;
+  Files.push_back({std::string(BuiltinPath), /*PropagateAttrs=*/true,
+                   /*Internalize=*/true, llvm::Linker::Flags::LinkOnlyNeeded});
+  Files.push_back({std::string(PlainPath), /*PropagateAttrs=*/false,
+                   /*Internalize=*/false, llvm::Linker::Flags::None});
   auto HostCI = CB.CreateCudaHost();
   ASSERT_THAT_EXPECTED(HostCI, llvm::Succeeded());
   auto Interp =
       Interpreter::createWithCUDA(std::move(*HostCI), std::move(*DeviceCI));
   ASSERT_THAT_EXPECTED(Interp, llvm::Succeeded());
+  // The plain file is linked once, into the initial module, and never
+  // reopened.
+  ASSERT_FALSE(llvm::sys::fs::remove(PlainPath));
 
   // Every device module that calls twice() must define it.
   for (const char *Code :
