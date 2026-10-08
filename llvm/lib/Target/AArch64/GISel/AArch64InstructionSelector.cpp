@@ -2551,6 +2551,22 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
     I.eraseFromParent();
     return true;
   }
+  case TargetOpcode::G_BRINDIRECT: {
+    const Function &Fn = MF.getFunction();
+    if (std::optional<uint16_t> BADisc =
+            STI.getPtrAuthBlockAddressDiscriminatorIfEnabled(Fn)) {
+      auto MI = MIB.buildInstr(AArch64::BRA, {}, {I.getOperand(0).getReg()});
+      MI.addImm(AArch64PACKey::IA);
+      MI.addImm(*BADisc);
+      MI.addReg(/*AddrDisc=*/AArch64::XZR);
+      I.eraseFromParent();
+      constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+      return true;
+    }
+    // Use table-based selection.
+    return false;
+  }
+
   default:
     return false;
   }
@@ -2674,23 +2690,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   }
   case TargetOpcode::G_BRCOND:
     return selectCompareBranch(I, MF, MRI);
-
-  case TargetOpcode::G_BRINDIRECT: {
-    const Function &Fn = MF.getFunction();
-    if (std::optional<uint16_t> BADisc =
-            STI.getPtrAuthBlockAddressDiscriminatorIfEnabled(Fn)) {
-      auto MI = MIB.buildInstr(AArch64::BRA, {}, {I.getOperand(0).getReg()});
-      MI.addImm(AArch64PACKey::IA);
-      MI.addImm(*BADisc);
-      MI.addReg(/*AddrDisc=*/AArch64::XZR);
-      I.eraseFromParent();
-      constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
-      return true;
-    }
-    I.setDesc(TII.get(AArch64::BR));
-    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-    return true;
-  }
 
   case TargetOpcode::G_BRJT:
     return selectBrJT(I, MRI);
