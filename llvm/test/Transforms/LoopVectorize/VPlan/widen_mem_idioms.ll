@@ -20,7 +20,7 @@ define void @simple_histogram(ptr noalias %buckets, ptr readonly %indices, i64 %
 ; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%gep.indices> = getelementptr inbounds ir<%indices>, ir<%iv>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%l.idx> = load ir<%gep.indices>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%idxprom1> = zext ir<%l.idx> to i64
@@ -102,7 +102,7 @@ define void @reduc_store_inside_unrolled(ptr noalias %dst, ptr noalias readonly 
 ; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<2>, vp<[[VP0]]>
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<2>, vp<[[VP0]]>
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%sum> = phi (add) ir<0>, ir<%sum.2>
 ; CHECK-NEXT:      EMIT ir<%gep.src> = getelementptr inbounds ir<%src>, ir<%iv>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%0> = load ir<%gep.src>

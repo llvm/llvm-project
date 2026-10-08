@@ -1665,7 +1665,7 @@ for.end:
 
 
 ; Test for multiuse-reductions that are tailfolded using strict predicates.
-define i64 @argmin_first_index(ptr %arr, i64 %n, i64 %start) {
+define i64 @argmin_first_index(ptr %arr, i64 %n, i64 %start) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: @argmin_first_index(
 ; IF-EVL-NEXT:  entry:
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
@@ -1790,7 +1790,7 @@ for.end:
 }
 
 
-define i64 @argmin_last_index(ptr %arr, i64 %n, i64 %start) {
+define i64 @argmin_last_index(ptr %arr, i64 %n, i64 %start) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: @argmin_last_index(
 ; IF-EVL-NEXT:  entry:
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
@@ -1915,7 +1915,7 @@ for.end:
 }
 
 
-define i64 @argmax_first_index(ptr %arr, i64 %n, i64 %start) {
+define i64 @argmax_first_index(ptr %arr, i64 %n, i64 %start) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: @argmax_first_index(
 ; IF-EVL-NEXT:  entry:
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
@@ -2040,7 +2040,7 @@ for.end:
 }
 
 
-define i64 @argmax_last_index(ptr %arr, i64 %n, i64 %start) {
+define i64 @argmax_last_index(ptr %arr, i64 %n, i64 %start) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: @argmax_last_index(
 ; IF-EVL-NEXT:  entry:
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
