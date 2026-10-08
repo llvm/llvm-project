@@ -61,6 +61,11 @@ cl::opt<bool> useOldAliasTags(
              "the FIR alias tags pass"),
     cl::init(false), cl::Hidden);
 DisableOption(FirLICM, "fir-licm", "FIR loop invariant code motion");
+cl::opt<unsigned> loopTripCountVersioningMaxSectionExtent(
+    "loop-tripcount-versioning-max-section-extent",
+    cl::desc("largest declared array extent to version an innermost loop on; "
+             "0 disables"),
+    cl::init(32), cl::Hidden);
 EnableOption(AllocationPlacement, "allocation-placement",
              "unified array allocation placement (experimental; replaces "
              "stack-arrays and memory-allocation-opt)");

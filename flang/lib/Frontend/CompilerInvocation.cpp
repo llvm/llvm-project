@@ -343,6 +343,10 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::options::OPT_fno_loop_versioning, false))
     opts.LoopVersioning = 1;
 
+  if (args.hasFlag(clang::options::OPT_floop_tripcount_versioning,
+                   clang::options::OPT_fno_loop_tripcount_versioning, false))
+    opts.LoopTripCountVersioning = 1;
+
   opts.UnrollLoops = args.hasFlag(clang::options::OPT_funroll_loops,
                                   clang::options::OPT_fno_unroll_loops,
                                   (opts.OptimizationLevel > 1));

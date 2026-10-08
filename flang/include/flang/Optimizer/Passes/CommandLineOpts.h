@@ -55,6 +55,7 @@ extern llvm::cl::opt<bool> disableCfgConversion;
 extern llvm::cl::opt<bool> disableFirAliasTags;
 extern llvm::cl::opt<bool> disableFirLICM;
 extern llvm::cl::opt<bool> disableFirMao;
+extern llvm::cl::opt<unsigned> loopTripCountVersioningMaxSectionExtent;
 extern llvm::cl::opt<bool> useOldAliasTags;
 
 /// Experimental option to replace the stack-arrays and memory-allocation-opt
