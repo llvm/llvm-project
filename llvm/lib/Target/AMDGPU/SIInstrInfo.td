@@ -465,18 +465,6 @@ def atomic_load_nonext_16_glue : PatFrag<(ops node:$ptr),
   let MemoryVT = i16;
 }
 
-def atomic_load_nonext_32_glue : PatFrag<(ops node:$ptr),
-  (atomic_load_nonext_glue node:$ptr)> {
-  let IsAtomic = 1;
-  let MemoryVT = i32;
-}
-
-def atomic_load_nonext_64_glue : PatFrag<(ops node:$ptr),
-  (atomic_load_nonext_glue node:$ptr)> {
-  let IsAtomic = 1;
-  let MemoryVT = i64;
-}
-
 def atomic_load_zext_8_glue : PatFrag<(ops node:$ptr),
   (atomic_load_zext_glue node:$ptr)> {
   let IsAtomic = 1;
@@ -587,12 +575,10 @@ def load_align16_#as#_m0 : PatFrag<(ops node:$ptr),
 }
 
 let IsAtomic = 1, AddressSpaces = !cast<AddressSpaceList>("LoadAddress_"#as).AddrSpaces in {
+def atomic_load_#as#_m0 : PatFrag<(ops node:$ptr),
+                                  (atomic_load_nonext_glue node:$ptr)>;
 def atomic_load_nonext_16_#as#_m0 : PatFrag<(ops node:$ptr),
                                       (atomic_load_nonext_16_glue node:$ptr)>;
-def atomic_load_nonext_32_#as#_m0 : PatFrag<(ops node:$ptr),
-                                      (atomic_load_nonext_32_glue node:$ptr)>;
-def atomic_load_nonext_64_#as#_m0 : PatFrag<(ops node:$ptr),
-                                       (atomic_load_nonext_64_glue node:$ptr)>;
 
 def atomic_load_zext_8_#as#_m0 : PatFrag<(ops node:$ptr),
                                       (atomic_load_zext_8_glue node:$ptr)>;
@@ -705,6 +691,13 @@ def store_align_less_than_4_#as#_m0 : PatFrag <(ops node:$value, node:$ptr),
 }
 }
 
+def atomic_store_glue : PatFrag <
+  (ops node:$ptr, node:$value),
+  (AMDGPUatomic_st_glue node:$ptr, node:$value)> {
+  let IsAtomic = 1;
+  let IsTruncStore = 0;
+}
+
 def atomic_store_8_glue : PatFrag <
   (ops node:$ptr, node:$value),
   (AMDGPUatomic_st_glue node:$ptr, node:$value)> {
@@ -719,30 +712,14 @@ def atomic_store_16_glue : PatFrag <
   let MemoryVT = i16;
 }
 
-def atomic_store_32_glue : PatFrag <
-  (ops node:$ptr, node:$value),
-  (AMDGPUatomic_st_glue node:$ptr, node:$value)> {
-  let IsAtomic = 1;
-  let MemoryVT = i32;
-}
-
-def atomic_store_64_glue : PatFrag <
-  (ops node:$ptr, node:$value),
-  (AMDGPUatomic_st_glue node:$ptr, node:$value)> {
-  let IsAtomic = 1;
-  let MemoryVT = i64;
-}
-
 foreach as = [ "local", "region" ] in
 let IsAtomic = 1, AddressSpaces = !cast<AddressSpaceList>("StoreAddress_"#as).AddrSpaces in {
+def atomic_store_#as#_m0 : PatFrag<(ops node:$val, node:$ptr),
+                                   (atomic_store_glue node:$val, node:$ptr)>;
 def atomic_store_8_#as#_m0 : PatFrag<(ops node:$val, node:$ptr),
                                      (atomic_store_8_glue node:$val, node:$ptr)>;
 def atomic_store_16_#as#_m0 : PatFrag<(ops node:$val, node:$ptr),
                                       (atomic_store_16_glue node:$val, node:$ptr)>;
-def atomic_store_32_#as#_m0 : PatFrag<(ops node:$val, node:$ptr),
-                                      (atomic_store_32_glue node:$val, node:$ptr)>;
-def atomic_store_64_#as#_m0 : PatFrag<(ops node:$val, node:$ptr),
-                                      (atomic_store_64_glue node:$val, node:$ptr)>;
 } // End let IsAtomic = 1, AddressSpaces = StoreAddress_#as.AddrSpaces
 
 

@@ -97,6 +97,11 @@ infrastructure are described first, followed by tool-specific sections.
   operator call such as `stream << 42;`), which it previously refused to
   extract.
 
+- The `Extract to function` tweak is now also available in C files, where
+  it previously always refused to apply. Captured variables are passed by
+  value when possible, and otherwise via a pointer parameter, since C has
+  no references.
+
 #### Signature help
 
 - Parameters declared with a `decltype` are now displayed as the type the
@@ -165,6 +170,11 @@ infrastructure are described first, followed by tool-specific sections.
 #### New check aliases
 
 #### Changes in existing checks
+
+- Improved {doc}`bugprone-easily-swappable-parameters
+  <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by no longer
+  emitting empty notes for type aliases when {option}`ModelImplicitConversions`
+  is enabled.
 
 - Improved {doc}`bugprone-implicit-widening-of-multiplication-result
   <clang-tidy/checks/bugprone/implicit-widening-of-multiplication-result>` check
@@ -263,6 +273,11 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/modernize/use-nullptr>` to turn `decltype(nullptr)` into
   `std::nullptr_t` from `<cstdef>`.
 
+- Improved {doc}`modernize-use-nullptr
+  <clang-tidy/checks/modernize/use-nullptr>` check to avoid replacing `0`
+  with `nullptr` in comparisons with ordering types such as
+  `std::strong_ordering`.
+
 - Improved {doc}`modernize-use-ranges
   <clang-tidy/checks/modernize/use-ranges>` check by preserving used output
   iterator results when replacing output algorithms such as `std::copy`.
@@ -279,6 +294,11 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/performance/inefficient-vector-operation>` by adding the
   {option}`ForRangeLoopClasses` to configure container classes that can be used
   as sources in range-based `for` loops.
+
+- Improved {doc}`performance-prefer-single-char-overloads
+  <clang-tidy/checks/performance/prefer-single-char-overloads>` check to
+  avoid offering fix-its for string literals originating from macro
+  expansions.
 
 - Improved {doc}`readability-convert-member-functions-to-static
   <clang-tidy/checks/readability/convert-member-functions-to-static>` check by

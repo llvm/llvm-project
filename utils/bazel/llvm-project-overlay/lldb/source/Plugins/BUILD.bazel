@@ -1213,6 +1213,30 @@ cc_library(
 )
 
 cc_library(
+    name = "PluginBugReporterNone",
+    srcs = glob(["BugReporter/None/*.cpp"]),
+    hdrs = glob(["BugReporter/None/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Config",
+        "//lldb:Core",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "PluginGitHubReporter",
+    srcs = glob(["BugReporter/GitHub/*.cpp"]),
+    hdrs = glob(["BugReporter/GitHub/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Host",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "PluginDisassemblerLLVMC",
     srcs = glob(["Disassembler/LLVMC/*.cpp"]),
     hdrs = glob(["Disassembler/LLVMC/*.h"]),
