@@ -254,25 +254,7 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
 
   Clang->LoadRequestedPlugins();
 
-  // Honor -mllvm.
-  //
-  // FIXME: Remove this, one day.
-  // This should happen AFTER plugins have been loaded!
-  if (!Clang->getFrontendOpts().LLVMArgs.empty()) {
-    unsigned NumArgs = Clang->getFrontendOpts().LLVMArgs.size();
-    auto Args = std::make_unique<const char*[]>(NumArgs + 2);
-    Args[0] = "clang (LLVM option parsing)";
-    for (unsigned i = 0; i != NumArgs; ++i)
-      Args[i + 1] = Clang->getFrontendOpts().LLVMArgs[i].c_str();
-    Args[NumArgs + 1] = nullptr;
-    // With no stream to report to, the parser calls exit(), which ends the
-    // process that embeds clang. Keep its output where it already went.
-    if (!llvm::cl::ParseCommandLineOptions(
-            NumArgs + 1, Args.get(), /*Overview=*/"", /*Errs=*/&llvm::errs(),
-            /*VFS=*/&Clang->getVirtualFileSystem()))
-      Clang->getDiagnostics().Report(diag::err_fe_invalid_forwarded_option)
-          << 0;
-  }
+  Clang->parseLLVMArgs();
 
 #if CLANG_ENABLE_STATIC_ANALYZER
   // These should happen AFTER plugins have been loaded!

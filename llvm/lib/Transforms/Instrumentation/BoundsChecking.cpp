@@ -48,7 +48,7 @@ public:
   NoSanitizeInserter() = default;
 
   void InsertHelper(Instruction *I, const Twine &Name,
-                    BasicBlock::iterator InsertPt) const override {
+                    BasicBlock::iterator InsertPt) const {
     IRBuilderDefaultInserter::InsertHelper(I, Name, InsertPt);
     if (!NoSanitizeMD)
       NoSanitizeMD = MDNode::get(I->getContext(), {});

@@ -1135,6 +1135,23 @@ void CompilerInstance::LoadRequestedPlugins() {
   }
 }
 
+void CompilerInstance::parseLLVMArgs() {
+  if (!getFrontendOpts().LLVMArgs.empty()) {
+    unsigned NumArgs = getFrontendOpts().LLVMArgs.size();
+    auto Args = std::make_unique<const char *[]>(NumArgs + 2);
+    Args[0] = "clang (LLVM option parsing)";
+    for (unsigned i = 0; i != NumArgs; ++i)
+      Args[i + 1] = getFrontendOpts().LLVMArgs[i].c_str();
+    Args[NumArgs + 1] = nullptr;
+    // With no stream to report to, the parser calls exit(), which ends the
+    // process that embeds clang. Keep its output where it already went.
+    if (!llvm::cl::ParseCommandLineOptions(
+            NumArgs + 1, Args.get(), /*Overview=*/"", /*Errs=*/&llvm::errs(),
+            /*VFS=*/&getVirtualFileSystem()))
+      getDiagnostics().Report(diag::err_fe_invalid_forwarded_option) << 0;
+  }
+}
+
 /// Determine the appropriate source input kind based on language
 /// options.
 static Language getLanguageFromOptions(const LangOptions &LangOpts) {
