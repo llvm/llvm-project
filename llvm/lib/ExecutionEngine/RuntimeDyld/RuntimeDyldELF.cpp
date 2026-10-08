@@ -1453,10 +1453,11 @@ bool RuntimeDyldELF::resolveRISCVShortBranch(
 
   uint64_t SourceOffset = RelI->getOffset();
 
-  // R_RISCV_CALL/R_RISCV_CALL_PLT's auipc+jalr encoding requires the
-  // immediate to be representable as a signed 32-bit value. If distance
-  // between source and target is out of range then we should create a stub.
-  if (!isInt<32>(TargetOffset + Value.Addend - SourceOffset))
+  // The auipc+jalr pair used by R_RISCV_CALL/R_RISCV_CALL_PLT can only encode
+  // offsets in the range [-0x80000800, 0x7ffff7ff]. If the distance between the
+  // source and the target is out of this range, a stub is required.
+  int64_t Delta = TargetOffset + Value.Addend - SourceOffset;
+  if (!isInt<32>(Delta + 0x800))
     return false;
 
   RelocationEntry RE(SectionID, SourceOffset, RelI->getType(), Value.Addend);
@@ -1475,7 +1476,7 @@ void RuntimeDyldELF::resolveRISCVBranch(unsigned SectionID,
                                         const RelocationValueRef &Value,
                                         relocation_iterator RelI,
                                         StubMap &Stubs) {
-  LLVM_DEBUG(dbgs() << "\t\tThis is a RISCV branch relocation.");
+  LLVM_DEBUG(dbgs() << "\t\tThis is a RISC-V branch relocation.");
   SectionEntry &Section = Sections[SectionID];
 
   uint64_t Offset = RelI->getOffset();
