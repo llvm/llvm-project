@@ -292,7 +292,10 @@ private:
     // Check for recipes that do not have opcodes.
     if constexpr (std::is_same_v<RecipeTy, VPScalarIVStepsRecipe> ||
                   std::is_same_v<RecipeTy, VPDerivedIVRecipe> ||
-                  std::is_same_v<RecipeTy, VPVectorEndPointerRecipe>)
+                  std::is_same_v<RecipeTy, VPVectorEndPointerRecipe> ||
+                  std::is_same_v<RecipeTy, VPVectorPointerRecipe> ||
+                  std::is_same_v<RecipeTy, VPWidenLoadRecipe> ||
+                  std::is_same_v<RecipeTy, VPWidenStoreRecipe>)
       return DefR;
     else
       return DefR && DefR->getOpcode() == Opcode;
@@ -593,8 +596,12 @@ m_ZExtOrSelf(const Op0_t &Op0) {
   return m_CombineOr(m_ZExt(Op0), Op0);
 }
 
+template <typename Op0_t> inline auto m_ZExtOrTrunc(const Op0_t &Op0) {
+  return m_CombineOr(m_ZExt(Op0), m_Trunc(Op0));
+}
+
 template <typename Op0_t> inline auto m_ZExtOrTruncOrSelf(const Op0_t &Op0) {
-  return m_CombineOr(m_ZExt(Op0), m_Trunc(Op0), Op0);
+  return m_CombineOr(m_ZExtOrTrunc(Op0), Op0);
 }
 
 template <unsigned Opcode, typename Op0_t, typename Op1_t>
@@ -787,6 +794,12 @@ inline Cmp_match<Op0_t, Op1_t, Instruction::ICmp> m_ICmp(const Op0_t &Op0,
 }
 
 template <typename Op0_t, typename Op1_t>
+inline auto m_c_ICmp(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_CombineOr(Cmp_match<Op0_t, Op1_t, Instruction::ICmp>(Op0, Op1),
+                     Cmp_match<Op1_t, Op0_t, Instruction::ICmp>(Op1, Op0));
+}
+
+template <typename Op0_t, typename Op1_t>
 inline Cmp_match<Op0_t, Op1_t, Instruction::ICmp>
 m_ICmp(CmpPredicate &Pred, const Op0_t &Op0, const Op1_t &Op1) {
   return Cmp_match<Op0_t, Op1_t, Instruction::ICmp>(Pred, Op0, Op1);
@@ -804,6 +817,13 @@ inline Cmp_match<Op0_t, Op1_t, Instruction::ICmp, Instruction::FCmp>
 m_Cmp(const Op0_t &Op0, const Op1_t &Op1) {
   return Cmp_match<Op0_t, Op1_t, Instruction::ICmp, Instruction::FCmp>(Op0,
                                                                        Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline auto m_c_Cmp(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_CombineOr(
+      Cmp_match<Op0_t, Op1_t, Instruction::ICmp, Instruction::FCmp>(Op0, Op1),
+      Cmp_match<Op1_t, Op0_t, Instruction::ICmp, Instruction::FCmp>(Op1, Op0));
 }
 
 template <typename Op0_t, typename Op1_t>
@@ -923,7 +943,8 @@ inline auto m_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
 
 template <typename Op0_t, typename Op1_t>
 inline auto m_c_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_c_Select(Op0, m_True(), Op1);
+  return m_CombineOr(m_c_Select(Op0, m_True(), Op1),
+                     m_c_Select(Op1, m_True(), Op0));
 }
 
 /// Match the canonical induction variable (IV) of any loop region.
@@ -1029,6 +1050,38 @@ template <typename Addr_t, typename Val_t, typename Mask_t>
 inline Store_match<Addr_t, Val_t, Mask_t>
 m_MaskedStore(const Addr_t &Addr, const Val_t &Val, const Mask_t &Mask) {
   return Store_match<Addr_t, Val_t, Mask_t>(Addr, Val, Mask);
+}
+
+template <typename Op0_t, typename Op1_t>
+using VectorPointerRecipe_match =
+    Recipe_match<std::tuple<Op0_t, Op1_t>, 0,
+                 /*Commutative*/ false, VPVectorPointerRecipe>;
+
+template <typename Op0_t, typename Op1_t>
+VectorPointerRecipe_match<Op0_t, Op1_t> m_VecPtr(const Op0_t &Op0,
+                                                 const Op1_t &Op1) {
+  return VectorPointerRecipe_match<Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t>
+using VPWidenLoadRecipe_match =
+    Recipe_match<std::tuple<Op0_t>, 0,
+                 /*Commutative*/ false, VPWidenLoadRecipe>;
+
+template <typename Op0_t>
+VPWidenLoadRecipe_match<Op0_t> m_WidenLoad(const Op0_t &Op0) {
+  return VPWidenLoadRecipe_match<Op0_t>(Op0);
+}
+
+template <typename Op0_t, typename Op1_t>
+using VPWidenStoreRecipe_match =
+    Recipe_match<std::tuple<Op0_t, Op1_t>, 0,
+                 /*Commutative*/ false, VPWidenStoreRecipe>;
+
+template <typename Op0_t, typename Op1_t>
+VPWidenStoreRecipe_match<Op0_t, Op1_t> m_WidenStore(const Op0_t &Op0,
+                                                    const Op1_t &Op1) {
+  return VPWidenStoreRecipe_match<Op0_t, Op1_t>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>

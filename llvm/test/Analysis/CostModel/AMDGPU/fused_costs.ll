@@ -251,6 +251,112 @@ define void @fmul_fadd_f64(double %a, double %b, double %c, <2 x double> %va, <2
   ret void
 }
 
+define void @fmul_fmul_fadd_f32(float %a, float %b, float %c, float %d) #0 {
+; SLOWF32-LABEL: 'fmul_fmul_fadd_f32'
+; SLOWF32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %add.m0 = fmul contract float %a, %b
+; SLOWF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add.m1 = fmul contract float %c, %d
+; SLOWF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add = fadd contract float %add.m0, %add.m1
+; SLOWF32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sub.m0 = fmul contract float %a, %b
+; SLOWF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sub.m1 = fmul contract float %c, %d
+; SLOWF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sub = fsub contract float %sub.m0, %sub.m1
+; SLOWF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %multi.m0 = fmul contract float %a, %b
+; SLOWF32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %multi.m1 = fmul contract float %c, %d
+; SLOWF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %multi = fadd contract float %multi.m0, %multi.m1
+; SLOWF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %multi.use = fadd contract float %multi.m0, %c
+; SLOWF32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %nc.m0 = fmul float %a, %b
+; SLOWF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nc.m1 = fmul contract float %c, %d
+; SLOWF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nc = fadd contract float %nc.m0, %nc.m1
+; SLOWF32-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; FASTF32-LABEL: 'fmul_fmul_fadd_f32'
+; FASTF32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %add.m0 = fmul contract float %a, %b
+; FASTF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add.m1 = fmul contract float %c, %d
+; FASTF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add = fadd contract float %add.m0, %add.m1
+; FASTF32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sub.m0 = fmul contract float %a, %b
+; FASTF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sub.m1 = fmul contract float %c, %d
+; FASTF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sub = fsub contract float %sub.m0, %sub.m1
+; FASTF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %multi.m0 = fmul contract float %a, %b
+; FASTF32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %multi.m1 = fmul contract float %c, %d
+; FASTF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %multi = fadd contract float %multi.m0, %multi.m1
+; FASTF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %multi.use = fadd contract float %multi.m0, %c
+; FASTF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nc.m0 = fmul float %a, %b
+; FASTF32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %nc.m1 = fmul contract float %c, %d
+; FASTF32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nc = fadd contract float %nc.m0, %nc.m1
+; FASTF32-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; SLOWF32-SIZE-LABEL: 'fmul_fmul_fadd_f32'
+; SLOWF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %add.m0 = fmul contract float %a, %b
+; SLOWF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add.m1 = fmul contract float %c, %d
+; SLOWF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add = fadd contract float %add.m0, %add.m1
+; SLOWF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sub.m0 = fmul contract float %a, %b
+; SLOWF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sub.m1 = fmul contract float %c, %d
+; SLOWF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sub = fsub contract float %sub.m0, %sub.m1
+; SLOWF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %multi.m0 = fmul contract float %a, %b
+; SLOWF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %multi.m1 = fmul contract float %c, %d
+; SLOWF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %multi = fadd contract float %multi.m0, %multi.m1
+; SLOWF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %multi.use = fadd contract float %multi.m0, %c
+; SLOWF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %nc.m0 = fmul float %a, %b
+; SLOWF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nc.m1 = fmul contract float %c, %d
+; SLOWF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nc = fadd contract float %nc.m0, %nc.m1
+; SLOWF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; FASTF32-SIZE-LABEL: 'fmul_fmul_fadd_f32'
+; FASTF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %add.m0 = fmul contract float %a, %b
+; FASTF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add.m1 = fmul contract float %c, %d
+; FASTF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add = fadd contract float %add.m0, %add.m1
+; FASTF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sub.m0 = fmul contract float %a, %b
+; FASTF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sub.m1 = fmul contract float %c, %d
+; FASTF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sub = fsub contract float %sub.m0, %sub.m1
+; FASTF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %multi.m0 = fmul contract float %a, %b
+; FASTF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %multi.m1 = fmul contract float %c, %d
+; FASTF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %multi = fadd contract float %multi.m0, %multi.m1
+; FASTF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %multi.use = fadd contract float %multi.m0, %c
+; FASTF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nc.m0 = fmul float %a, %b
+; FASTF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %nc.m1 = fmul contract float %c, %d
+; FASTF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nc = fadd contract float %nc.m0, %nc.m1
+; FASTF32-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  %add.m0 = fmul contract float %a, %b
+  %add.m1 = fmul contract float %c, %d
+  %add = fadd contract float %add.m0, %add.m1
+
+  %sub.m0 = fmul contract float %a, %b
+  %sub.m1 = fmul contract float %c, %d
+  %sub = fsub contract float %sub.m0, %sub.m1
+
+  %multi.m0 = fmul contract float %a, %b
+  %multi.m1 = fmul contract float %c, %d
+  %multi = fadd contract float %multi.m0, %multi.m1
+  %multi.use = fadd contract float %multi.m0, %c
+
+  %nc.m0 = fmul float %a, %b
+  %nc.m1 = fmul contract float %c, %d
+  %nc = fadd contract float %nc.m0, %nc.m1
+  ret void
+}
+
+define float @fmul_fmul_fadd_reassoc_f32(float %a, float %b, float %c, float %d, float %val) #0 {
+; SLOWF64-LABEL: 'fmul_fmul_fadd_reassoc_f32'
+; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %m0 = fmul contract float %a, %b
+; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %m1 = fmul contract float %c, %d
+; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sum = fadd contract float %m0, %m1
+; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ret = fadd reassoc contract float %sum, %val
+; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret float %ret
+;
+; SLOWF64-SIZE-LABEL: 'fmul_fmul_fadd_reassoc_f32'
+; SLOWF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %m0 = fmul contract float %a, %b
+; SLOWF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %m1 = fmul contract float %c, %d
+; SLOWF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sum = fadd contract float %m0, %m1
+; SLOWF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ret = fadd reassoc contract float %sum, %val
+; SLOWF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret float %ret
+;
+  %m0 = fmul contract float %a, %b
+  %m1 = fmul contract float %c, %d
+  %sum = fadd contract float %m0, %m1
+  %ret = fadd reassoc contract float %sum, %val
+  ret float %ret
+}
+
 attributes #0 = { nounwind }
 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
