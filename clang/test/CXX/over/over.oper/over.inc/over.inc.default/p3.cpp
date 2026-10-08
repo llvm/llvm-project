@@ -316,6 +316,14 @@ struct ThrowingDestructor {
   ThrowingDestructor operator++(int) = default;
 };
 static_assert(!noexcept(ThrowingDestructor{}++));
+struct ThrowingDestructorDefined {
+  ThrowingDestructorDefined();
+  ~ThrowingDestructorDefined() noexcept(false);
+  ThrowingDestructorDefined &operator++() noexcept;
+  ThrowingDestructorDefined operator++(int) = default;
+};
+void throwing_destructor_defined(ThrowingDestructorDefined t) { t++; }
+static_assert(!noexcept(ThrowingDestructorDefined{}++));
 struct ExplicitNoexcept {
   ExplicitNoexcept &operator++();
   ExplicitNoexcept operator++(int) noexcept = default;

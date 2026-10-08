@@ -10105,11 +10105,6 @@ ComputeDefaultedPostfixOperatorExceptionSpec(Sema &S, SourceLocation Loc,
       ExceptSpec.CalledStmt(Body.get());
   }
 
-  // The implicit definition also destroys the temporary copy.
-  if (CXXRecordDecl *RD = FD->getReturnType()->getAsCXXRecordDecl())
-    if (CXXDestructorDecl *Dtor = S.LookupDestructor(RD))
-      ExceptSpec.CalledDecl(Loc, Dtor);
-
   return ExceptSpec;
 }
 
