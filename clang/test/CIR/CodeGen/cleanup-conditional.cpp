@@ -80,7 +80,7 @@ void test_ternary_temporary(bool c, int x) {
 // LLVMCIR:         store i32 %[[RESULT]], ptr %{{.*}}
 
 // OGCG-LABEL: define dso_local void @_Z22test_ternary_temporarybi(
-// OGCG:       entry:
+// OGCG:       [[ENTRY:.*]]:
 // OGCG:         store i1 false, ptr %[[ACTIVE:.*]]
 // OGCG:         br i1 %[[COND_BOOL:.*]], label %[[TRUE_BR:.*]], label %[[FALSE_BR:.*]]
 // OGCG:       [[TRUE_BR]]:
@@ -203,7 +203,7 @@ void test_ternary_both_branches(bool c) {
 // LLVMCIR:         br label %{{.*}}
 
 // OGCG-LABEL: define dso_local void @_Z26test_ternary_both_branchesb(
-// OGCG:       entry:
+// OGCG:       [[ENTRY:.*]]:
 // OGCG:         store i1 false, ptr %[[ACTA:.*]]
 // OGCG:         store i1 false, ptr %[[ACTB:.*]]
 // OGCG:         br i1 %[[COND_BOOL:.*]], label %[[TRUE_BR:.*]], label %[[FALSE_BR:.*]]
@@ -327,7 +327,7 @@ int test_return_ternary(bool c) {
 // LLVMCIR:         ret i32 %[[RET]]
 
 // OGCG-LABEL: define dso_local noundef i32 @_Z19test_return_ternaryb(
-// OGCG:       entry:
+// OGCG:       [[ENTRY:.*]]:
 // OGCG:         store i1 false, ptr %[[ACTA:.*]]
 // OGCG:         store i1 false, ptr %[[ACTB:.*]]
 // OGCG:         br i1 %[[COND_BOOL:.*]], label %[[TRUE_BR:.*]], label %[[FALSE_BR:.*]]
@@ -1205,8 +1205,9 @@ void default_argument() { f(); }
 // OGCG-LABEL: define {{.*}} void @_Z16default_argumentv(
 // OGCG:         call void @_ZN1SC1Ev(ptr {{.*}} %[[TMP:.*]])
 // OGCG:         call void @_Z1fb(
-// OGCG:         br i1 %cleanup.is_active, label %cleanup.action
-// OGCG:       cleanup.action:
+// OGCG:         %[[IS_ACTIVE:.*]] = load i1, ptr %{{.*}}
+// OGCG-NEXT:    br i1 %[[IS_ACTIVE]], label %[[DTOR:.*]], label
+// OGCG:       [[DTOR]]:
 // OGCG-NEXT:    call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
 
 struct D {
@@ -1241,8 +1242,9 @@ void default_ctor_argument() { D d; }
 // OGCG-LABEL: define {{.*}} void @_Z21default_ctor_argumentv(
 // OGCG:         call void @_ZN1SC1Ev(ptr {{.*}} %[[TMP:.*]])
 // OGCG:         call void @_ZN1DC1Eb(
-// OGCG:         br i1 %cleanup.is_active, label %cleanup.action
-// OGCG:       cleanup.action:
+// OGCG:         %[[IS_ACTIVE:.*]] = load i1, ptr %{{.*}}
+// OGCG-NEXT:    br i1 %[[IS_ACTIVE]], label %[[DTOR:.*]], label
+// OGCG:       [[DTOR]]:
 // OGCG-NEXT:    call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
 
 struct DefaultInit {
@@ -1285,8 +1287,9 @@ void aggregate_default_member_init() {
 
 // OGCG-LABEL: define {{.*}} void @_Z29aggregate_default_member_initv(
 // OGCG:         call void @_ZN1SC1Ev(ptr {{.*}} %[[TMP:.*]])
-// OGCG:         br i1 %cleanup.is_active, label %cleanup.action
-// OGCG:       cleanup.action:
+// OGCG:         %[[IS_ACTIVE:.*]] = load i1, ptr %{{.*}}
+// OGCG-NEXT:    br i1 %[[IS_ACTIVE]], label %[[DTOR:.*]], label
+// OGCG:       [[DTOR]]:
 // OGCG-NEXT:    call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
 // OGCG:         call void @_Z3use11DefaultInit(
 
@@ -1315,8 +1318,9 @@ void empty_aggregate_default_member_init() {
 
 // OGCG-LABEL: define {{.*}} void @_Z35empty_aggregate_default_member_initv(
 // OGCG:         call void @_ZN1SC1Ev(ptr {{.*}} %[[TMP:.*]])
-// OGCG:         br i1 %cleanup.is_active, label %cleanup.action
-// OGCG:       cleanup.action:
+// OGCG:         %[[IS_ACTIVE:.*]] = load i1, ptr %{{.*}}
+// OGCG-NEXT:    br i1 %[[IS_ACTIVE]], label %[[DTOR:.*]], label
+// OGCG:       [[DTOR]]:
 // OGCG-NEXT:    call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
 // OGCG:         call void @_Z3use11DefaultInit(
 
@@ -1347,7 +1351,8 @@ void lambda_init_capture() {
 
 // OGCG-LABEL: define {{.*}} void @_Z19lambda_init_capturev(
 // OGCG:         call void @_ZN1SC1Ev(ptr {{.*}} %[[TMP:.*]])
-// OGCG:         br i1 %cleanup.is_active, label %cleanup.action
-// OGCG:       cleanup.action:
+// OGCG:         %[[IS_ACTIVE:.*]] = load i1, ptr %{{.*}}
+// OGCG-NEXT:    br i1 %[[IS_ACTIVE]], label %[[DTOR:.*]], label
+// OGCG:       [[DTOR]]:
 // OGCG-NEXT:    call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
 // OGCG:         call void @"_ZZ19lambda_init_capturevENK3$_0clEv"(
