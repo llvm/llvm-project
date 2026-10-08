@@ -113,6 +113,13 @@ define dso_local signext i32 @main() #0 {
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sd t1, 8(sp)
 ; CHECK-NEXT:    sd t0, 0(sp)
+; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    sext.w a1, a1
+; CHECK-NEXT:    sext.w a2, a2
+; CHECK-NEXT:    sext.w a3, a3
+; CHECK-NEXT:    sext.w a4, a4
+; CHECK-NEXT:    sext.w a5, a5
+; CHECK-NEXT:    sext.w a6, a6
 ; CHECK-NEXT:    call lots_args
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    lw a0, -76(s0)
@@ -130,6 +137,13 @@ define dso_local signext i32 @main() #0 {
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sd t1, 8(sp)
 ; CHECK-NEXT:    sd t0, 0(sp)
+; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    sext.w a1, a1
+; CHECK-NEXT:    sext.w a2, a2
+; CHECK-NEXT:    sext.w a3, a3
+; CHECK-NEXT:    sext.w a4, a4
+; CHECK-NEXT:    sext.w a5, a5
+; CHECK-NEXT:    sext.w a6, a6
 ; CHECK-NEXT:    call lots_args
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    li a0, 0
