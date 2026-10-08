@@ -298,6 +298,17 @@ uint64_t __getpid() {
   return ret;
 }
 
+uint64_t __gettid() {
+  uint64_t ret;
+  register uint32_t w8 __asm__("w8") = 178;
+  __asm__ __volatile__("svc #0\n"
+                       "mov %0, x0"
+                       : "=r"(ret)
+                       : "r"(w8)
+                       : "cc", "memory", "x0", "x1");
+  return ret;
+}
+
 uint64_t __getppid() {
   uint64_t ret;
   register uint32_t w8 __asm__("w8") = 173;

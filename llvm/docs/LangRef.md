@@ -432,13 +432,10 @@ added in the future:
     on the hot path and definitely executed a lot. Furthermore `preserve_mostcc`
     doesn't prevent the inliner from inlining the function call.
 
-    This calling convention will be used by a future version of the Objective-C
-    runtime and should therefore still be considered experimental at this time.
-    Although this convention was created to optimize certain runtime calls to
-    the Objective-C runtime, it is not limited to this runtime and might be used
-    by other runtimes in the future too. The current implementation only
-    supports X86-64, but the intention is to support more architectures in the
-    future.
+    This convention was created to optimize certain runtime calls to the
+    Objective-C runtime, but it is not limited to that runtime; it is also used
+    by other runtimes and libraries, such as the Swift runtime and the Linux
+    kernel.
 
 "`preserve_allcc`" - The `PreserveAll` calling convention
 :   This calling convention attempts to make the code in the caller even less
@@ -1378,6 +1375,7 @@ Currently, only the following parameter attributes are defined:
     interpreted as a call to memcpy with the allocation size of the specified type,
     instead of loading from the pointee and storing back into the copy in the type.
     In particular, the padding between field types of a struct type is still copied.
+    The type's allocation size must be known at compile time.
 
     The byval attribute also supports specifying an alignment with the
     `align` attribute. It indicates the alignment of the stack slot to
@@ -2529,6 +2527,12 @@ fn -> other_fn -> other_fn ; fn is norecurse
     If an invocation of an annotated function does not return control back
     to a point in the call stack, the behavior is undefined.
 
+    If the annotated function has observable behavior (such as I/O or a volatile
+    access), note that the annotation can cause UB to time-travel around such
+    behavior, i.e., code that is after the function can cause UB to occur before
+    the observable behavior of the function. See the {doc}`UB documentation
+    <UndefinedBehavior>` for further details.
+
 `nosync`
 :   This function attribute indicates that the function does not introduce any
     *synchronizes-with* edges in the sense of the memory model.
@@ -2741,7 +2745,7 @@ fn -> other_fn -> other_fn ; fn is norecurse
 
 `speculative_load_hardening`
 :   This attribute indicates that
-    [Speculative Load Hardening](https://llvm.org/docs/SpeculativeLoadHardening.html)
+    [Speculative Load Hardening](SpeculativeLoadHardening.md)
     should be enabled for the function body.
 
     Speculative Load Hardening is a best-effort mitigation against
@@ -4179,11 +4183,29 @@ happens-before must be perfectly overlapping to act atomically.
     read-modify-write operation M ({ref}`cmpxchg <i_cmpxchg>` and
     {ref}`atomicrmw <i_atomicrmw>`) reads from a perfectly overlapping
     `monotonic` (or stronger) write W, W must be immediately before M in
-    the relevant modification order. If one atomic read happens before
-    another perfectly overlapping atomic read and both are at least
-    `monotonic`, the later read must not see an earlier value in the
-    address's modification order. This disallows reordering of perfectly
-    overlapping `monotonic` (or stronger) operations. If an address is
+    the relevant modification order.
+
+    Atomic accesses that are `monotonic` (or stronger) satisfy coherence
+    rules. Let the reads R, R1, R2 and the writes W, W1, W2 referenced
+    below be perfectly overlapping atomics with at least `monotonic`
+    memory ordering. Then the following hold:
+    - write-write coherence: If the write W1 happens before the write
+        W2, then W1 is earlier than W2 in the address's modification
+        order.
+    - read-read coherence: If the read R1 happens before the read R2
+        and if R1 reads from the write W, then R2 must not read from
+        writes that are earlier than W in the address's modification
+        order.
+    - read-write coherence: If the read R happens before the write W,
+        then R must not read from W or writes that are later than W in
+        the address's modification order.
+    - write-read coherence: If the write W happens before the read R,
+        then R must not read from writes that are earlier than W in the
+        address's modification order.
+
+    This disallows reordering of perfectly overlapping `monotonic` (or
+    stronger) operations. Note: These coherence rules do not hold for
+    `unordered` atomics. If an address is
     written `monotonic`-ally by one thread, and other threads
     `monotonic`-ally read that address repeatedly with perfectly
     overlapping accesses, the other threads must eventually see
@@ -7205,6 +7227,57 @@ mandatory, and points at an {ref}`DILexicalBlockFile`, an
 !0 = !DILocation(line: 2900, column: 42, scope: !1, inlinedAt: !2)
 ```
 
+The optional `irlayers:` field points at a {ref}`DILayerLocList`, giving the
+instruction's position in one or more intermediate IRs it was lowered through, in
+addition to its primary source position. It is independent of `inlinedAt:`; a
+location may have either, both, or neither. A location with no intermediate
+position omits the field entirely. The field belongs to the location that
+carries it: locations in an `inlinedAt:` chain may each have their own, and LLVM
+defines no relationship between them.
+
+```text
+!0 = !DILocation(line: 2900, column: 42, scope: !1, irlayers: !3)
+```
+
+(DILayerLoc)=
+
+##### DILayerLoc
+
+`DILayerLoc` nodes represent a source position in one intermediate IR level that
+a program was lowered through — for example an MLIR module produced
+part-way through compilation. The `kind:` field names the level and the `file:`
+field points at a {ref}`DIFile` for it; both are mandatory. `line:` and
+`column:` are the position within that file.
+
+Unlike a {ref}`DILocation`, a `DILayerLoc` has no scope and no inlined-at
+context: it is a bare coordinate in a file, not a location in a scope tree.
+
+```text
+!0 = !DILayerLoc(line: 100, column: 1, file: !1, kind: "HighLevelIR")
+```
+
+(DILayerLocList)=
+
+##### DILayerLocList
+
+`DILayerLocList` nodes hold a non-empty list of {ref}`DILayerLoc` operands, and
+are referenced by a {ref}`DILocation`'s `irlayers:` field. A location with no
+intermediate position omits `irlayers:` rather than referencing an empty list.
+
+The operands are a sequence: order is part of the node's identity, so two lists
+with the same entries in a different order are different nodes. LLVM attaches no
+meaning to the order and does not require any particular arrangement.
+
+Both node types are normally uniqued, so instructions sharing a position at some
+level share the corresponding node. `distinct` forms are legal; nothing in LLVM
+requires a layer node to be shared.
+
+```text
+!0 = !DILayerLocList(!1, !2)
+!1 = !DILayerLoc(line: 100, column: 1, file: !3, kind: "HighLevelIR")
+!2 = !DILayerLoc(line: 7, column: 3, file: !4, kind: "LowLevelIR")
+```
+
 (DILocalVariable)=
 
 ##### DILocalVariable
@@ -7392,9 +7465,11 @@ The `name:` field is mandatory. The `configMacros:`, `includePath:`,
 dynamic length and location encoded as an expression.
 The `tag:` field is optional and defaults to `DW_TAG_string_type`. The `name:`,
 `stringLength:`, `stringLengthExpression`, `stringLocationExpression:`,
-`size:`, `align:`, and `encoding:` fields are optional.
+`size:`, `align:`, `encoding:`, and `charType:` fields are optional.
 
 If not present, the `size:` and `align:` fields default to the value zero.
+
+`charType:` specifies a non-default character type.
 
 The length in bits of the string is specified by the first of the following
 fields present:
@@ -7611,17 +7686,32 @@ subset of (or equal to) the set of scopes for that domain in another
 instruction's `noalias` list, then the two memory accesses are assumed not to
 alias.
 
+If a domain is declared as having disjoint scopes, two memory accesses are
+assumed not to alias if they both have entries for that domain in their
+`alias.scope` list and their `alias.scope` lists have no scopes in common for that
+domain. Equivalently, an instruction with a set of scopes from a disjoint-scope
+domain in its `alias.scope` list implicitly has all other scopes in that domain
+in its `noalias` set. This removes the need to spell out the complement of each
+alias scope when there is a set of N objects that mutually don't alias each other,
+simplifying the IR and reducing its size for this straightforward case.
+
 Because scopes in one domain don't affect scopes in other domains, separate
 domains can be used to compose multiple independent noalias sets.  This is
 used for example during inlining.  As the noalias function parameters are
 turned into noalias scope metadata, a new domain is used every time the
 function is inlined.
 
-The metadata identifying each domain is itself a list containing one or two
+The metadata identifying each domain is itself a list containing two or three
 entries. The first entry is the name of the domain. Note that if the name is a
 string then it can be combined across functions and translation units. A
-self-reference can be used to create globally unique domain names. A
-descriptive string may optionally be provided as a second list entry.
+self-reference can be used to create globally unique domain names. The second
+entry is an `i1` constant that marks the domain as having disjoint scopes when
+it is `true`. A descriptive string may optionally be provided as a third list
+entry.
+
+String names should not be used with disjoint-scope domains, as they will be
+uniqued across different invocations of the same function, and this is unlikely
+to be desirable behavior.
 
 The metadata identifying each scope is also itself a list containing two or
 three entries. The first entry is the name of the scope. Note that if the name
@@ -7634,8 +7724,8 @@ For example,
 
 ```llvm
 ; Two scope domains:
-!0 = !{!0}
-!1 = !{!1}
+!0 = !{!0, i1 false}
+!1 = !{!1, i1 false}
 
 ; Some scopes in these domains:
 !2 = !{!2, !0}
@@ -7661,6 +7751,32 @@ store float %2, ptr %arrayidx.i2, align 4, !noalias !6
 ; !alias.scope list):
 %2 = load float, ptr %c, align 4, !alias.scope !6
 store float %0, ptr %arrayidx.i, align 4, !noalias !7
+```
+
+And, with a domain whose scopes are disjoint,
+
+```llvm
+; A domain with disjoint scopes and three scopes within it:
+!0 = !{!0, i1 true, !"disjoint domain"}
+!1 = !{!1, !0}
+!2 = !{!2, !0}
+!3 = !{!3, !0}
+
+; Some scope lists:
+!4 = !{!1}
+!5 = !{!2}
+!6 = !{!2, !3}
+!7 = !{!1, !3}
+
+; These two instructions don't alias, because tagging them with !4 and !5
+; means that they are both tagged with scopes from a disjoint-scope domain (!1
+; and !2, respectively) and have no scopes from that domain in common. This is
+; equivalent to tagging them with !noalias !6 and !noalias !7, respectively:
+%0 = load float, ptr %a, align 4, !alias.scope !4
+store float %0, ptr %b, align 4, !alias.scope !5
+
+; This instruction could be either in scope !1 or !3, so is implicitly !noalias !5.
+%1 = load float, ptr %ac, align 4, !alias.scope !7
 ```
 
 (fpmath-metadata)=
@@ -8631,6 +8747,21 @@ via a volatile memory access, I/O, or other synchronization. If such a loop is
 not found to interact with the environment in an observable way, the loop may
 be removed. This corresponds to the `mustprogress` function attribute.
 
+#### '`llvm.loop.align`' Metadata
+
+This metadata suggests an alignment (in bytes) for the loop to the backend. The
+first operand is the string `llvm.loop.align` and the second operand is a
+positive power-of-two integer constant of type `i32` specifying the alignment.
+For example:
+
+```llvm
+!0 = !{!"llvm.loop.align", i32 64}
+```
+
+The backend aligns the loop to the maximum of this value and the target's
+preferred loop alignment. This corresponds to the Clang `[[clang::code_align(N)]]`
+statement attribute.
+
 #### '`irr_loop`' Metadata
 
 `irr_loop` metadata may be attached to the terminator instruction of a basic
@@ -8741,6 +8872,33 @@ to the SSA value of the pointer operand.
 
 Note that this is an experimental feature, which means that its semantics might
 change in the future.
+
+(md_atomic.ignore.denormal.mode)=
+
+#### '`atomic.ignore.denormal.mode`' Metadata
+
+The `atomic.ignore.denormal.mode` metadata may be attached to floating-point
+{ref}`atomicrmw <i_atomicrmw>` instructions. It indicates that the handling of
+denormal inputs and results is insignificant, and may be inconsistent with the
+denormal mode the function otherwise operates in, as described by
+{ref}`denormal_fpenv <denormal_fpenv>`.
+
+This is necessary to emit a native atomic instruction on targets and address
+spaces where the atomic unit has a fixed denormal behavior which need not match
+the denormal mode of the containing function. For example, AMDGPU global memory
+atomics unconditionally flush float denormals, as does the NVPTX `atom.add`
+instruction.
+
+The metadata must reference a single metadata node with no entries; the contents
+of the node are ignored.
+
+```llvm
+%res = atomicrmw fadd ptr %ptr, float %value seq_cst, align 4, !atomic.ignore.denormal.mode !0
+
+!0 = !{}
+```
+
+This metadata was previously spelled `amdgpu.ignore.denormal.mode`.
 
 #### '`type`' Metadata
 
@@ -9135,12 +9293,15 @@ allocation. This information is consumed by the `alloc-token` pass to
 instrument such calls with allocation token IDs.
 
 The metadata contains: string with the type of an allocation, and a boolean
-denoting if the type contains a pointer.
+denoting if the type contains a pointer. Optionally, it contains a string with
+the name of the function containing the allocation.
 
 ```
 call ptr @malloc(i64 64), !alloc_token !0
+call ptr @malloc(i64 64), !alloc_token !1
 
 !0 = !{!"<type-name>", i1 <contains-pointer>}
+!1 = !{!"<type-name>", i1 <contains-pointer>, !"<function-name>"}
 ```
 
 #### '`stack-protector`' Metadata
@@ -9223,6 +9384,8 @@ Example:
 This defines a global with type `SHT_LLVM_CFI_JUMP_TABLE` and entry
 size 8.
 
+
+(module-flags-metadata)=
 
 ## Module Flags Metadata
 
@@ -9348,6 +9511,23 @@ An example of module flags:
    The behavior is to emit an error if the `llvm.module.flags` does not
    contain a flag with the ID `!"foo"` that has the value '1' after linking is
    performed.
+
+### Microsoft Hotpatch Module Flag
+
+The `ms-hotpatch` module flag records whether the module was compiled with
+Microsoft hotpatch support. Its value is an `i32` integer, either 0 or 1. A value
+of 1 requests that the `HotPatch` bit be set in the CodeView `S_COMPILE3` record.
+The flag does not itself make function entries hotpatchable; that is controlled
+by the `"patchable-function"` function attribute.
+
+The flag uses the **Min** merge behavior, so linking modules preserves a value
+of 1 only if every module has the flag set to 1. If any module has a value of 0
+or lacks the flag, the merged value is 0.
+
+```llvm
+!llvm.module.flags = !{!0}
+!0 = !{i32 8, !"ms-hotpatch", i32 1}
+```
 
 ### Synthesized Functions Module Flags Metadata
 
@@ -9489,6 +9669,36 @@ conflicting floating-point ABIs is rejected. For example:
 !0 = !{i32 1, !"float-abi", !"hard"}
 ```
 
+### Thread Model Module Flags Metadata
+
+This module flag describes the threading model that the module was
+compiled for, which may influence how atomic operations are
+lowered. The value is a string and must be one of:
+
+```{list-table}
+:header-rows: 1
+:widths: 30 70
+* - Value
+  - Meaning
+
+* - `"posix"`
+  - The POSIX threading model: the module may run in a multi-threaded
+    environment.
+
+* - `"single"`
+  - The single-threaded model: the module runs in a known single-threaded
+    environment, so atomic operations may be lowered to their non-atomic
+    equivalents.
+```
+
+When the flag is absent, the target's default thread model is used. The flag
+must use the `error` merge behavior. For example:
+
+```llvm
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"thread-model", !"single"}
+```
+
 ### Target ABI Module Flags Metadata
 
 This module flag names the target ABI that the module was compiled
@@ -9497,14 +9707,61 @@ interpretation target-specific.
 
 For example, RISC-V uses names such as `"ilp32"`, `"ilp32d"`, `"lp64"`, and
 `"lp64d"`:
-```
+
+```llvm
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"target-abi", !"lp64d"}
 ```
 while ARM uses names such as `"aapcs"` and `"apcs-gnu"`:
-```
+
+```llvm
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"target-abi", !"aapcs"}
+...
+```
+
+### Exception Model Module Flags Metadata
+
+This module flag describes the exception-handling model that the module was
+compiled for. The value is an `MDString` and must be one of:
+
+```{list-table}
+:header-rows: 1
+:widths: 30 70
+* - Value
+  - Meaning
+
+* - `"none"`
+  - Exceptions are explicitly disabled.
+
+* - `"dwarf"`
+  - DWARF-like table-based (CFI) exception handling.
+
+* - `"sjlj"`
+  - setjmp/longjmp based exception handling.
+
+* - `"arm"`
+  - ARM EHABI exception handling.
+
+* - `"wineh"`
+  - Windows exception handling.
+
+* - `"wasm"`
+  - WebAssembly exception handling.
+
+* - `"emscripten"`
+  - Emscripten JavaScript-based exception handling.
+
+```
+
+When the flag is absent, the exception model is unspecified and the target's
+default is used. This is distinct from an explicit `"none"`, which disables
+exceptions even on targets that support them by default. The flag must use the
+`error` merge behavior, so that linking modules with conflicting exception
+models is rejected. For example:
+```
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"exception-model", !"sjlj"}
 ```
 
 ### Long Double Type Module Flags Metadata
@@ -11588,6 +11845,107 @@ The truth table used for the '`xor`' instruction is:
 <result> = xor i32 15, 40          ; yields i32:result = 39
 <result> = xor i32 4, 8            ; yields i32:result = 12
 <result> = xor i32 %V, -1          ; yields i32:result = ~%V
+```
+
+### Byte Operations
+
+Instructions for bit-range manipulation on {ref}`byte type <t_byte>` values.
+
+(i_bitextract)=
+
+#### '`bitextract`' Instruction
+
+##### Syntax:
+
+```
+<result> = bitextract <ty>, <bty> <source>, i32 <offset>
+```
+
+##### Overview:
+
+The '`bitextract`' instruction reads a contiguous range of bits from a
+{ref}`byte type <t_byte>` value and returns them as a value of type `ty`.
+
+##### Arguments:
+
+`<ty>` must be an {ref}`integer <t_integer>`, {ref}`floating-point
+<t_floating>`, {ref}`pointer <t_pointer>`, or {ref}`byte <t_byte>` type
+and specifies the result type. The first operand, `source`, must be a value
+of {ref}`byte type <t_byte>`. The `offset` operand is an `i32` giving the bit
+position at which the extraction begins within `source`.
+
+```{note}
+Vector types are not currently supported as the result type.
+```
+
+##### Semantics:
+
+The result is the bit range `source[offset : offset + bitwidth(ty))`,
+reinterpreted as a value of type `ty` as if by a {ref}`bitcast <i_bitcast>`.
+Bit `0` is the least significant bit of `source`.
+
+If `offset + bitwidth(ty)` is greater than `bitwidth(source)`,
+{ref}`poison value <poisonvalues>` is returned.
+
+##### Example:
+
+```text
+%result = bitextract i8, b32 %src, i32 24 ; Extract the 8 most-significant bits (bits [24..31]) of %src and return an 8-bit integer
+
+%result = bitextract i1, b32 %src, i32 5  ; Extract a single bit (bit 5) of %src and return it as an i1
+
+%result = bitextract i16, b64 %src, i32 16 ; Extract bits [16..31] of %src and return a 16-bit integer
+
+%result = bitextract float, b32 %src, i32 0 ; Extract bits [0..31] of %src and reinterpret them as a 32-bit float
+```
+
+(i_bitinsert)=
+
+#### '`bitinsert`' Instruction
+
+##### Syntax:
+```
+<result> = bitinsert <bty> <base>, <ty> <val>, i32 <offset>
+```
+##### Overview:
+
+The '`bitinsert`' instruction writes a contiguous range of bits from a
+value of type `ty` into a {ref}`byte type <t_byte>` value and returns
+the result as a value of the same byte type.
+
+##### Arguments:
+
+`<ty>` must be an {ref}`integer <t_integer>`, {ref}`floating-point
+<t_floating>`, {ref}`pointer <t_pointer>`, or {ref}`byte <t_byte>` type
+and specifies the type of the value to insert. The first operand, `base`,
+must be a value of {ref}`byte type <t_byte>`. The second operand, `val`, must
+be a value of type `ty`. The `offset` operand is an `i32` giving the bit
+position at which the insertion begins within `base`.
+
+```{note}
+Vector types are not currently supported as the type of the value
+to insert.
+```
+
+##### Semantics:
+
+The result is `base` with the bit range `[offset : offset + bitwidth(ty))`
+replaced by the bits of `val`, reinterpreted as if by a {ref}`bitcast <i_bitcast>`.
+Bit `0` is the least significant bit of `base`.
+
+If `offset + bitwidth(ty)` is greater than `bitwidth(base)`,
+{ref}`poison value <poisonvalues>` is returned.
+
+##### Example:
+
+```text
+%result = bitinsert b32 %x, i8 %y, i32 3 ; Inserts the %y bits into %x with an offset of 3
+
+%result = bitinsert b32 %x, i1 %flag, i32 7 ; Inserts a single bit (%flag) into bit 7 of %x, leaving all other bits unchanged
+
+%result = bitinsert b64 %x, i16 %y, i32 32 ; Inserts a 16-bit value into bits [32..47] of %x
+
+%result = bitinsert b32 %x, float %f, i32 0 ; Inserts the bit pattern of %f into bits [0..31] of %x, overwriting it entirely
 ```
 
 ### Vector Operations
@@ -13744,9 +14102,13 @@ This instruction requires several arguments:
       the return value of the callee is returned to the caller's caller, even
       if a void return type is in use.
 
-   Both markers imply that the callee does not access allocas, va_args, or
-   byval arguments from the caller. As an exception to that, an alloca or byval
-   argument may be passed to the callee as a byval argument, which can be
+   Both markers imply that the callee does not access any value derived from
+   the caller's stack frame, which is torn down before the callee runs. That
+   covers allocas, va_args, and byval arguments, and equally an address of the
+   frame itself, including pointers returned by intrinsics such as
+   `llvm.frameaddress` with a level of zero, `llvm.localaddress`, or
+   `llvm.stacksave` evaluated in the caller. As an exception, an alloca or
+   byval argument may be passed to the callee as a byval argument, which can be
    dereferenced inside the callee. For example:
 
    ```llvm
@@ -13799,6 +14161,15 @@ This instruction requires several arguments:
    define void @invalid_byval(ptr byval(i64) %x) {
    entry:
      tail call void @take_ptr(ptr %x)
+     ret void
+   }
+
+   ; Invalid (assuming @take_ptr dereferences the pointer), because the frame
+   ; @frameaddress names is torn down before @take_ptr runs.
+   define void @invalid_frameaddress() {
+   entry:
+     %fp = call ptr @llvm.frameaddress.p0(i32 0)
+     tail call void @take_ptr(ptr %fp)
      ret void
    }
    ```
@@ -19812,6 +20183,84 @@ This never sets errno, just as '`llvm.fma.*`'.
 %r2 = call float @llvm.fmuladd.f32(float %a, float %b, float %c) ; yields float:r2 = (a * b) + c
 ```
 
+(int_smulh)=
+
+#### '`llvm.smulh.*`' Intrinsic
+
+##### Syntax:
+
+This is an overloaded intrinsic. You can use `llvm.smulh` on any integer
+or vector of integers.
+
+```
+declare i16 @llvm.smulh.i16(i16 %a, i16 %b)
+declare i32 @llvm.smulh.i32(i32 %a, i32 %b)
+declare i64 @llvm.smulh.i64(i64 %a, i64 %b)
+declare <4 x i32> @llvm.smulh.v4i32(<4 x i32> %a, <4 x i32> %b)
+```
+
+##### Overview:
+
+The '`llvm.smulh`' family of intrinsic functions performs a signed
+multiplication of the two arguments, and returns the high half of the result.
+
+##### Arguments:
+
+The arguments may be any integer type or vector of integer type. Both
+arguments and result must have the same type.
+
+##### Semantics:
+
+The '`llvm.smulh`' intrinsic computes signed multiply-high of its arguments,
+which is the upper N-bit half of the 2N-bit product for signed iN types.
+
+##### Example:
+
+```llvm
+%r = call i4 @llvm.smulh.i4(i4 1, i4 2)   ; %r = 0
+%r = call i4 @llvm.smulh.i4(i4 5, i4 6)   ; %r = 1
+%r = call i4 @llvm.smulh.i4(i4 -4, i4 6)  ; %r = -2
+```
+
+(int_umulh)=
+
+#### '`llvm.umulh.*`' Intrinsic
+
+##### Syntax:
+
+This is an overloaded intrinsic. You can use `llvm.umulh` on any integer
+or vector of integers.
+
+```
+declare i16 @llvm.umulh.i16(i16 %a, i16 %b)
+declare i32 @llvm.umulh.i32(i32 %a, i32 %b)
+declare i64 @llvm.umulh.i64(i64 %a, i64 %b)
+declare <4 x i32> @llvm.umulh.v4i32(<4 x i32> %a, <4 x i32> %b)
+```
+
+##### Overview:
+
+The '`llvm.umulh`' family of intrinsic functions performs an unsigned
+multiplication of the two arguments, and returns the high half of the result.
+
+##### Arguments:
+
+The arguments may be any integer type or vector of integer type. Both
+arguments and result must have the same type.
+
+##### Semantics:
+
+The '`llvm.umulh`' intrinsic computes unsigned multiply-high of its arguments,
+which is the upper N-bit half of the 2N-bit product for unsigned iN types.
+
+##### Example:
+
+```llvm
+%r = call i4 @llvm.umulh.i4(i4 1, i4 2)   ; %r = 0
+%r = call i4 @llvm.umulh.i4(i4 5, i4 6)   ; %r = 1
+%r = call i4 @llvm.umulh.i4(i4 4, i4 10)  ; %r = 2
+```
+
 ### Hardware-Loop Intrinsics
 
 LLVM support several intrinsics to mark a loop as a hardware-loop. They are
@@ -20605,6 +21054,28 @@ runtime, then the result vector is a {ref}`poison value <poisonvalues>`. The
 `idx` parameter must be a vector index constant type (for most targets this
 will be an integer pointer type).
 
+#### '`llvm.vector.repeat`' Intrinsic
+
+##### Syntax:
+This is an overloaded intrinsic.
+
+```
+declare <vscale x 16 x i8> @llvm.vector.repeat.nxv16i8.v16i8(<16 x i8> %vec)
+```
+
+##### Overview:
+
+The '`llvm.vector.repeat.*`' intrinsic repeatedly copies the elements of the
+source fixed-length vector, in order, until the result scalable vector is
+filled. For example, repeating `<A, B>` produces a scalable vector containing
+`vscale` copies of `<A, B>`.
+
+##### Arguments:
+
+The argument must be a fixed-length vector (i.e. `<N x Ty>`) and the result a
+scalable vector that is exactly `vscale` times longer (i.e.
+`<vscale x N x Ty>`).
+
 #### '`llvm.vector.reverse`' Intrinsic
 
 ##### Syntax:
@@ -21046,6 +21517,38 @@ call @llvm.masked.store.v4i32.p0(<4 x i32> %vecA, ptr align 4 %ptrA, <4 x i1> %l
 ; completion of the store.
 ```
 
+#### '`llvm.mask.beforefirst.*`' Intrinsic
+
+##### Syntax:
+
+This is an overloaded intrinsic.
+
+```llvm
+declare <4 x i1> @llvm.mask.beforefirst.v4i1(<4 x i1> %mask)
+declare <vscale x 8 x i1> @llvm.mask.beforefirst.nxv8i1(<vscale x 8 x i1> %mask)
+```
+
+##### Overview:
+
+Given a vector mask, returns a new mask with all elements before the first active element in the input set to 1, and every element afterwards set to 0.
+
+##### Arguments:
+
+Takes one argument which must be an i1 vector, and returns a vector of the same type.
+
+##### Semantics:
+
+When the input is all zeroes, the result is all ones.
+
+##### Examples:
+
+```llvm
+@llvm.mask.beforefirst(<0,0,1,1>); ==> <1,1,0,0>
+@llvm.mask.beforefirst(<0,0,0,0>); ==> <1,1,1,1>
+@llvm.mask.beforefirst(<0,1,0,1>); ==> <1,0,0,0>
+@llvm.mask.beforefirst(<1,0,0,1>); ==> <0,0,0,0>
+```
+
 ### Experimental Vector Intrinsics
 
 #### '`llvm.experimental.cttz.elts`' Intrinsic
@@ -21082,6 +21585,7 @@ The '`llvm.experimental.cttz.elts`' intrinsic counts the trailing (least
 significant) zero elements in a vector. If `src == 0` the result is the
 number of elements in the input vector.
 
+If any element in the input vector is poison, the result is poison.
 
 #### '`llvm.experimental.get.vector.length`' Intrinsic
 
@@ -23854,6 +24358,138 @@ The first two arguments and the result have the same vector of integer type. The
 
 Follows the same semantics as {ref}`srem <i_srem>` with the exception that disabled lanes cannot produce undefined behaviour and always result in poison.
 
+### Speculative Load Intrinsics
+
+LLVM provides intrinsics for speculatively loading memory that may be
+out-of-bounds. These intrinsics enable optimizations like early-exit loop
+vectorization where the vectorized loop may read beyond the end of an array,
+provided the access is guaranteed to be valid by target-specific checks.
+
+(int_speculative_load)=
+
+#### '`llvm.speculative.load`' Intrinsic
+
+##### Syntax:
+This is an overloaded intrinsic.
+
+```
+declare b128               @llvm.speculative.load.b128.p0(ptr <ptr>, i1 <from_end>, ...)
+declare <4 x i32>          @llvm.speculative.load.v4i32.p0(ptr <ptr>, i1 <from_end>, ...)
+declare <vscale x 4 x i32> @llvm.speculative.load.nxv4i32.p0(ptr <ptr>, i1 <from_end>, ...)
+```
+
+The trailing arguments are variadic and select between two forms.
+
+```llvm
+; Direct form: the number of accessible bytes is given as an i64.
+%a = call <4 x i32> (ptr, i1, ...)
+       @llvm.speculative.load.v4i32.p0(ptr %ptr, i1 false, i64 16)
+
+; Oracle form: the number of accessible bytes is the value returned by
+; @oracle(%n).
+%b = call <4 x i32> (ptr, i1, ...)
+       @llvm.speculative.load.v4i32.p0(ptr %ptr, i1 false, ptr @oracle, i64 %n)
+```
+
+##### Overview:
+
+The '`llvm.speculative.load`' intrinsic loads a value from memory. Unlike a
+regular load, the memory access may extend beyond the bounds of the allocated
+object, provided the memory can be safely accessed on the underlying hardware.
+{ref}`llvm.can.load.speculatively <int_can_load_speculatively>` can be used to
+check if the access is safe.
+
+##### Arguments:
+
+The first argument is a pointer to the memory location to load from. The return
+type must be a byte type or a vector type, and its size in bytes must be a
+positive power of 2. The second argument is an `i1` constant flag `from_end`
+selecting whether the `N` accessible bytes are counted from the start or end
+of the loaded value (see Semantics). The remaining arguments determine the
+*number of accessible bytes*, denoted `N` below.
+
+In the **direct form**, the third argument is an `i64` specifying `N`
+directly. In the **oracle form**, the third argument must be a direct
+reference to a non-variadic function returning `i64` that is `nounwind`,
+`nosync` and `willreturn` and may only read memory through its arguments;
+the remaining arguments are forwarded to it, and its return value is `N`.
+
+##### Semantics:
+
+Let `S` denote the size of the return type in bytes.
+
+When `from_end` is `false`, the first `N` bytes (offsets `[0, N)`)
+are the stored values read from memory. Bytes at offsets `[N, S)` are
+`poison`.
+
+When `from_end` is `true`, the last `N` bytes (offsets `[S - N, S)`)
+are the stored values read from memory. Bytes at offsets `[0, S - N)` are
+`poison`.
+
+In both cases, the `N` accessible bytes must lie within the bounds of an
+allocated object that `ptr` is {ref}`based <pointeraliasing>` on, and
+poison bytes are not considered accessed for the purposes of data races or
+`noalias` constraints. The behavior is undefined if `N` exceeds `S`.
+
+The behavior is undefined if any byte the underlying load actually reads is
+not safe to speculatively access.
+{ref}`llvm.can.load.speculatively <int_can_load_speculatively>` can be used
+to check safety.
+
+(int_can_load_speculatively)=
+
+#### '`llvm.can.load.speculatively`' Intrinsic
+
+##### Syntax:
+This is an overloaded intrinsic.
+
+```
+declare i1 @llvm.can.load.speculatively.p0(ptr <ptr>, i64 <num_bytes>)
+declare i1 @llvm.can.load.speculatively.p1(ptr addrspace(1) <ptr>, i64 <num_bytes>)
+```
+
+##### Overview:
+
+The '`llvm.can.load.speculatively`' intrinsic returns true if it is safe
+to speculatively load `num_bytes` bytes starting from `ptr`,
+even if the memory may be beyond the bounds of an allocated object.
+
+##### Arguments:
+
+The first argument is a pointer to the memory location.
+
+The second argument is an i64 specifying the number of accessed bytes,
+and must be a positive power of 2. If the size is not a power-of-2, the
+result is `poison`.
+
+##### Semantics:
+
+This intrinsic has **target-dependent** semantics. It may return `true` only if
+`num_bytes` bytes starting at `ptr + I * num_bytes` can be loaded
+speculatively, for all non-negative integers `I` where the computed address
+does not wrap around the address space and its first or last byte is part of
+the same underlying object as `ptr`.
+
+The specific conditions under which this intrinsic returns `true` are
+determined by the target. For example, a target may check whether the pointer
+alignment guarantees all such loads cannot cross a page boundary.
+
+```llvm
+; Check if we can safely load 16 bytes from %ptr
+%can_load = call i1 @llvm.can.load.speculatively.p0(ptr %ptr, i64 16)
+br i1 %can_load, label %speculative_path, label %safe_path
+
+speculative_path:
+  ; Safe to speculatively load from %ptr
+  %vec = call <4 x i32> (ptr, i1, ...)
+           @llvm.speculative.load.v4i32.p0(ptr %ptr, i1 false, i64 16)
+  ...
+
+safe_path:
+  ; Fall back to masked load or scalar operations
+  ...
+```
+
 ### Memory Use Markers
 
 This class of intrinsics provides information about the
@@ -24013,36 +24649,6 @@ to the memory.
 Returns another pointer that aliases its argument but which is considered different
 for the purposes of `load`/`store` `invariant.group` metadata.
 It does not read any accessible memory and the execution can be speculated.
-
-#### '`llvm.strip.invariant.group`' Intrinsic
-
-##### Syntax:
-This is an overloaded intrinsic. The {ref}`allocated object<allocatedobjects>`
-can belong to any address space. The returned pointer must belong to the same
-address space as the argument.
-
-```
-declare ptr @llvm.strip.invariant.group.p0(ptr <ptr>)
-```
-
-##### Overview:
-
-The '`llvm.strip.invariant.group`' intrinsic can be used when an invariant
-established by `invariant.group` metadata no longer holds, to obtain a new pointer
-value that does not carry the invariant information. It is an experimental
-intrinsic, which means that its semantics might change in the future.
-
-
-##### Arguments:
-
-The `llvm.strip.invariant.group` takes only one argument, which is a pointer
-to the memory.
-
-##### Semantics:
-
-Returns another pointer that aliases its argument but which has no associated
-`invariant.group` metadata.
-It does not read any memory and can be speculated.
 
 
 
@@ -25825,7 +26431,7 @@ exit:
   ret void
 }
 
-!0 = !{!0} ; domain
+!0 = !{!0, i1 false} ; domain
 !1 = !{!1, !0} ; scope
 !2 = !{!1} ; scope list
 ```
@@ -27070,6 +27676,74 @@ None.
 
 This intrinsic actually does nothing, but optimizers must assume that it
 has externally observable side effects.
+
+(llvm_pseudoprobe)=
+
+#### '`llvm.pseudoprobe`' Intrinsic
+
+##### Syntax:
+
+```
+declare void @llvm.pseudoprobe(i64 <guid>, i64 <index>, i32 <attributes>, i64 <factor>) nounwind willreturn memory(inaccessiblemem: readwrite)
+```
+
+##### Overview:
+
+The `llvm.pseudoprobe` intrinsic identifies a basic block in a function before
+the module was optimized, so that samples collected from an optimized binary
+can be attributed back to it. It is emitted for sample-based profile-guided
+optimization.
+
+Probes are inserted in the first pass of the pipeline and indexed by walking a
+function, so a probe keeps naming the same original block however that block is
+later inlined, cloned or rearranged. It is a pseudo intrinsic: it performs no
+operation and lowers to no machine instruction, only to a label recorded in the
+`.pseudo_probe` section.
+
+##### Arguments:
+
+The first argument is the GUID of the function the probe was created for, which
+after inlining need not be the function that contains it. It names an entry in
+the module-level `!llvm.pseudo_probe_desc` metadata pairing the GUID with that
+function's name and a hash of its pre-optimized CFG. The second argument is the
+index of the probe, unique within that function.
+
+The third argument is a bit mask of probe attributes, at most three bits wide,
+shared with the encoding of probe records in the object file:
+
+| Value | Name | Meaning |
+| --- | --- | --- |
+| `0x1` | reserved | Not currently used. |
+| `0x2` | sentinel | Not a block probe; anchors the records of a function placed in a separate section, carrying its GUID and an absolute address. |
+| `0x4` | discriminator | The record carries a DWARF discriminator, used by flow-sensitive sample profiling. |
+
+Neither is set on the intrinsic; both are attached when the records are written
+to the object file, so LLVM emits zero here.
+
+The fourth argument is a distribution factor, expressed as a fraction of
+`UINT64_MAX`, recording the share of the original block's executions that this
+copy of the probe accounts for. All four arguments must be constant integers.
+
+##### Semantics:
+
+This intrinsic does nothing, but optimizers must assume that it has memory
+side effects. Without them nothing would stop a pass from deleting the probe or
+sinking it out of its block, and a probe that disappears silently loses the
+correspondence to the original block.
+
+These memory side effects are a default, not a hard rule. A pass should not
+give up a useful optimization just to keep a probe: passes that know about
+probes may update or remove them instead, and the sample profile loader can
+infer a count for a probe that is gone. A pass duplicating a probed block
+should scale the distribution factor of each copy so that the copies sum to
+the original, and may drop a probe when keeping it would misattribute samples.
+Merging blocks with different probes is where the two goals conflict;
+machine-level tail merging currently declines such merges. Otherwise a probe
+should not affect generated code, so cost models and legality checks should
+see through probes rather than account for them.
+
+Only block probes are represented by this intrinsic. A probe for a call site
+is encoded in the DWARF discriminator of the call instruction instead.
 
 #### '`llvm.is.constant.*`' Intrinsic
 

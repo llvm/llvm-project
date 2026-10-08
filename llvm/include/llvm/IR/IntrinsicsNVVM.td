@@ -97,6 +97,12 @@
 //   * llvm.nvvm.clz.ll              --> trunc i64 llvm.ctlz.i64(x) to i32
 //   * llvm.nvvm.popc.i              --> llvm.ctpop.i32
 //   * llvm.nvvm.popc.ll             --> trunc i64 llvm.ctpop.i64 to i32
+//   * llvm.nvvm.mulhi.s             --> llvm.smulh.i16
+//   * llvm.nvvm.mulhi.i             --> llvm.smulh.i32
+//   * llvm.nvvm.mulhi.ll            --> llvm.smulh.i64
+//   * llvm.nvvm.mulhi.us            --> llvm.umulh.i16
+//   * llvm.nvvm.mulhi.ui            --> llvm.umulh.i32
+//   * llvm.nvvm.mulhi.ull           --> llvm.umulh.i64
 //   * llvm.nvvm.abs.i               --> llvm.abs.i32(x, true)
 //   * llvm.nvvm.abs.ll              --> llvm.abs.i64(x, true)
 //   * llvm.nvvm.max.i               --> select(x sge y, x, y)
@@ -145,6 +151,10 @@ def llvm_local_ptr_ty   : LLVMQualPointerType<5>;         // (local)ptr
 def llvm_tmem_ptr_ty    : LLVMQualPointerType<6>;         // (tensor memory)ptr
 def llvm_shared_cluster_ptr_ty : LLVMQualPointerType<7>;  // (shared_cluster)ptr
 
+// A RangeList is a RangeSet with singleton closed ranges for each listed value.
+class RangeList<ArgIndex idx, list<int> values>
+    : RangeSet<idx, !foreach(value, values, [value, value])>;
+
 //
 // MISC
 //
@@ -158,22 +168,44 @@ defvar MAX_GRID_SIZE_X = 0x7fffffff;
 defvar MAX_GRID_SIZE_Y = 0xffff;
 defvar MAX_GRID_SIZE_Z = 0xffff;
 
+// The CTA rank is encoded in a single byte within a shared pointer, so the max
+// value is 255.
+defvar MAX_CLUSTER_RANK = 0xff;
+
 defvar MAX_BLOCK_SIZE_X = 1024;
 defvar MAX_BLOCK_SIZE_Y = 1024;
 defvar MAX_BLOCK_SIZE_Z = 64;
+
+// Helper class that pre-computes the ImmArg property list 
+// with optional trailing defaults.
+class BuildImmArgProps<list<LLVMType> flags, list<LLVMType> param_types,
+                       list<DefaultValue> trailing_defaults = []> {
+  defvar NumFlags = !size(flags);
+  defvar NumDefaults = !size(trailing_defaults);
+  defvar FirstDefault = !sub(NumFlags, NumDefaults);
+  list<IntrinsicProperty> Props =
+      !foreach(i, !range(flags),
+          ImmArg<ArgIndex<!add(i, !size(param_types))>,
+                 !if(!lt(i, FirstDefault),
+                     NoDefault,
+                     trailing_defaults[!sub(i, FirstDefault)])>);
+}
 
 class DefaultAttrsIntrinsicFlags<list<LLVMType> ret_types,
                 list<LLVMType> param_types,
                 list<LLVMType> flags,
                 list<IntrinsicProperty> intr_properties,
-                string name = "">
+                string name = "",
+                list<DefaultValue> trailing_flag_defaults = []>
   : DefaultAttrsIntrinsic<
         ret_types,
         !listconcat(param_types, flags),
         !listconcat(intr_properties,
-                    !foreach(i, !range(flags),
-                        ImmArg<ArgIndex<!add(i, !size(param_types))>>)),
-        name>;
+                    BuildImmArgProps<flags, param_types, trailing_flag_defaults>.Props),
+        name> {
+  assert !le(!size(trailing_flag_defaults), !size(flags)),
+         "number of trailing flag defaults exceeds number of flags";
+}
 
 // Helper class that concatenates list elements with
 // a given separator 'sep' and returns the result.
@@ -463,7 +495,7 @@ class WMMA_REGS<string Geom, string Frag, string PtxEltType, bit IsSparse = fals
       !eq(gf,"m16n16:x1") : !listsplat(llvm_i32_ty, 2),
       !eq(gf,"m16n16:x2") : !listsplat(llvm_i32_ty, 4),
 
-      // ldmatrix b8x16.b6x16_p32, b8x16.b4x16_p64 -> s32 @ m8n16
+      // ldmatrix b8x16.b6x16_p32, b8x16.b4x16_p64, s8.s4 -> s32 @ m8n16
       !eq(gf,"m8n16:x1") : !listsplat(llvm_i32_ty, 1),
       !eq(gf,"m8n16:x2") : !listsplat(llvm_i32_ty, 2),
       !eq(gf,"m8n16:x4") : !listsplat(llvm_i32_ty, 4),
@@ -816,7 +848,7 @@ class NVVM_MMA_OPS {
     ["m16n16"], ["x1", "x2"], ["b8", "b8x16.b6x16_p32", "b8x16.b4x16_p64"]>.ret;
 
   list<WMMA_REGS> ldmatrix_geom_m8n16_ops = LDMATRIX_OPS<
-    ["m8n16"], ["x1", "x2", "x4"], ["b8x16.b6x16_p32", "b8x16.b4x16_p64"]>.ret;
+    ["m8n16"], ["x1", "x2", "x4"], ["b8x16.b6x16_p32", "b8x16.b4x16_p64", "s8.s4"]>.ret;
 
   list<WMMA_REGS> stmatrix_b16_ops = STMATRIX_OPS<
     ["m8n8"], ["x1", "x2", "x4"], ["b16"]>.ret;
@@ -1015,6 +1047,7 @@ class NVVM_LDMATRIX_SUPPORTED<WMMA_REGS frag, bit trans> {
     !and(!eq(g, "m8n16"), !eq(t, "b8"), !eq(trans, 0)): true,
     !and(!eq(g, "m8n16"), !eq(t, "b8x16.b6x16_p32"), !eq(trans, 0)): true,
     !and(!eq(g, "m8n16"), !eq(t, "b8x16.b4x16_p64"), !eq(trans, 0)): true,
+    !and(!eq(g, "m8n16"), !eq(t, "s8.s4"), !eq(trans, 0)): true,
     true: false
   );
 }
@@ -1313,6 +1346,13 @@ class NVVMPureIntrinsic<list<LLVMType> ret_types,
   DefaultAttrsIntrinsic<ret_types, param_types,
                         intr_properties # [IntrNoMem, IntrSpeculatable], name> {}
 
+class NVVM_SP_IDX_ARGPROPS<ArgIndex IdxSizeIdx> {
+  list<IntrinsicProperty> Prop = [
+    RangeList<IdxSizeIdx, [2, 4]>,
+    ArgInfo<IdxSizeIdx, [ArgName<"idx_size">]>
+  ];
+}
+
 // For im2col mode the number of offsets is (dim - 2).
 // For im2col_w / im2col_w_128 modes it is always 2 (wHalo and wOffset),
 // irrespective of dim.
@@ -1445,14 +1485,24 @@ class NVVM_EVICT_POLICY_RANGED_ARGPROP<int argNo, int upperBound = 2> {
   ];
 }
 
-// Helper that emits the intrinsic-property set for the `validate_pattern`
+// Helper that emits the intrinsic-property set for the `flag_valid_pattern`
 // immediate argument used by the TMA g2s (global-to-shared copy) intrinsics.
 // The allowed values correspond to `TMAValidateDataPattern`, i.e. [0, 6).
 class NVVM_TMA_VALIDATE_PATTERN_ARGPROP<int argNo> {
   list<IntrinsicProperty> Prop = [
     Range<ArgIndex<argNo>, 0, 6>,
-    ArgInfo<ArgIndex<argNo>, [ArgName<"validate_pattern">,
+    ArgInfo<ArgIndex<argNo>, [ArgName<"flag_valid_pattern">,
                               ImmArgPrinter<"printTMAValidateDataPattern">]>
+  ];
+}
+
+// Helper that emits the intrinsic-property set for the `flag_scope` immediate
+// argument. The allowed values are: cta, cluster, gpu, sys. i.e. [0, 4).
+class NVVM_MEM_SCOPE_ARGPROP<int argNo> {
+  list<IntrinsicProperty> Prop = [
+    Range<ArgIndex<argNo>, 0, 4>,
+    ArgInfo<ArgIndex<argNo>, [ArgName<"flag_scope">,
+                              ImmArgPrinter<"printMemScope">]>
   ];
 }
 
@@ -1497,7 +1547,7 @@ class CP_ASYNC_BULK_TENSOR_G2S_OVERRIDE_INTR<int dim, string mode, string overri
   list<LLVMType> FlagsTy = [llvm_i1_ty,   // Flag for cta_mask
                             llvm_i1_ty,   // Flag for cache_hint
                             llvm_i32_ty,  // cta_group
-                            llvm_i32_ty]; // validate_pattern
+                            llvm_i32_ty]; // flag_valid_pattern
   defvar CtaGroupIdx = !add(!size(ArgsTy), 2);
   defvar ValidateIdx = !add(!size(ArgsTy), 3);
   list<IntrinsicProperty> IntrProp = !listconcat(
@@ -1519,7 +1569,7 @@ class CP_ASYNC_BULK_TENSOR_G2S_CTA_OVERRIDE_INTR<int dim, string mode, string ov
       Im2ColOffsetsTy,      // im2col offsets
       [llvm_i64_ty]);       // cache_hint
   list<LLVMType> FlagsTy = [llvm_i1_ty,   // Flag for cache_hint
-                            llvm_i32_ty]; // validate_pattern
+                            llvm_i32_ty]; // flag_valid_pattern
   defvar ValidateIdx = !add(!size(ArgsTy), 1);
   list<IntrinsicProperty> IntrProp = !listconcat(
       [IntrConvergent, WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
@@ -1638,15 +1688,6 @@ let TargetPrefix = "nvvm" in {
   let IntrProperties = [IntrNoMem, IntrSpeculatable, Commutative, 
                         IntrNoCreateUndefOrPoison] in {
     foreach sign = ["", "u"] in {
-      def int_nvvm_mulhi_ # sign # s : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i16_ty]>;
-
-      def int_nvvm_mulhi_ # sign # i : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty]>;
-
-      def int_nvvm_mulhi_ # sign # ll : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty]>;
-
       def int_nvvm_mul24_ # sign # i : NVVMBuiltin,
         DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty]>;
     }
@@ -2036,10 +2077,10 @@ let TargetPrefix = "nvvm" in {
   foreach relu = ["", "_relu"] in {
     foreach satfinite = ["", "_satfinite"] in {
       def int_nvvm_ff2f16x2_rs # relu # satfinite : NVVMBuiltin,
-          PureIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty, llvm_i32_ty, llvm_i1_ty], [ImmArg<ArgIndex<3>, DefaultValue<0>>]>;
+          PureIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty, llvm_i32_ty]>;
 
       def int_nvvm_ff2bf16x2_rs # relu # satfinite : NVVMBuiltin,
-          PureIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty, llvm_i32_ty, llvm_i1_ty], [ImmArg<ArgIndex<3>, DefaultValue<0>>]>;
+          PureIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty, llvm_i32_ty]>;
     }
   }
 
@@ -2070,18 +2111,38 @@ let TargetPrefix = "nvvm" in {
 
   foreach type = ["e4m3x2", "e5m2x2"] in {
     foreach relu = ["", "_relu"] in {
-      def int_nvvm_ff_to_ # type # _rn # relu : NVVMBuiltin,
-          PureIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty]>;
+      foreach rnd = ["rn", "rz"] in {
+        def int_nvvm_ff_to_ # type # _ # rnd # relu : NVVMBuiltin,
+            PureIntrinsic<[llvm_i16_ty],
+                          [llvm_float_ty, llvm_float_ty, llvm_i1_ty],
+                          [ImmArg<ArgIndex<2>, DefaultValue<0>>]>;
+        def int_nvvm_ff_to_ # type # _ # rnd # relu # _scale_n1_ue8m0 : NVVMBuiltin,
+            PureIntrinsic<[llvm_i16_ty],
+                          [llvm_float_ty, llvm_float_ty, llvm_i16_ty, llvm_i1_ty],
+                          [ImmArg<ArgIndex<3>, DefaultValue<0>>]>;
 
-      def int_nvvm_f16x2_to_ # type # _rn # relu : NVVMBuiltin,
-          PureIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty]>;
+        def int_nvvm_f16x2_to_ # type # _ # rnd # relu : NVVMBuiltin,
+            PureIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty, llvm_i1_ty],
+                          [ImmArg<ArgIndex<1>, DefaultValue<0>>]>;
+        def int_nvvm_f16x2_to_ # type # _ # rnd # relu # _scale_n1_ue8m0 : NVVMBuiltin,
+            PureIntrinsic<[llvm_i16_ty],
+                          [llvm_v2f16_ty, llvm_i16_ty, llvm_i1_ty],
+                          [ImmArg<ArgIndex<2>, DefaultValue<0>>]>;
+
+        def int_nvvm_bf16x2_to_ # type # _ # rnd # relu # _satfinite :
+            NVVMBuiltin,
+            PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty, llvm_i1_ty],
+                          [ImmArg<ArgIndex<1>, DefaultValue<0>>]>;
+        def int_nvvm_bf16x2_to_ # type # _ # rnd # relu # _satfinite_scale_n1_ue8m0
+            : NVVMBuiltin,
+              PureIntrinsic<[llvm_i16_ty],
+                            [llvm_v2bf16_ty, llvm_i16_ty, llvm_i1_ty],
+                            [ImmArg<ArgIndex<2>, DefaultValue<0>>]>;
+      }
 
       def int_nvvm_ # type # _to_f16x2_rn # relu : NVVMBuiltin,
           PureIntrinsic<[llvm_v2f16_ty], [llvm_i16_ty]>;
-          
-      def int_nvvm_bf16x2_to_ # type # _rn # relu # _satfinite
-        : PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty]>;
-      
+
       foreach satfinite = ["", "_satfinite"] in {
         def int_nvvm_ # type # _to_bf16x2_rn # relu # satfinite # _scale_n2_ue8m0
             : PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty, llvm_i16_ty]>;
@@ -2100,18 +2161,39 @@ let TargetPrefix = "nvvm" in {
 
   // FP4 conversions.
   foreach relu = ["", "_relu"] in {
-    def int_nvvm_ff_to_e2m1x2_rn # relu # _satfinite : NVVMBuiltin,
-        PureIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty]>;
+    foreach rnd = ["rn", "rz"] in {
+      def int_nvvm_ff_to_e2m1x2_ # rnd # relu # _satfinite : NVVMBuiltin,
+          PureIntrinsic<[llvm_i16_ty],
+                        [llvm_float_ty, llvm_float_ty, llvm_i1_ty],
+                        [ImmArg<ArgIndex<2>, DefaultValue<0>>]>;
+      def int_nvvm_ff_to_e2m1x2_ # rnd # relu # _satfinite_scale_n1_ue8m0
+          : NVVMBuiltin,
+            PureIntrinsic<[llvm_i16_ty],
+                          [llvm_float_ty, llvm_float_ty, llvm_i16_ty, llvm_i1_ty],
+                          [ImmArg<ArgIndex<3>, DefaultValue<0>>]>;
+
+      def int_nvvm_f16x2_to_e2m1x2_ # rnd # relu # _satfinite : NVVMBuiltin,
+          PureIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty, llvm_i1_ty],
+                        [ImmArg<ArgIndex<1>, DefaultValue<0>>]>;
+      def int_nvvm_f16x2_to_e2m1x2_ # rnd # relu # _satfinite_scale_n1_ue8m0
+          : NVVMBuiltin,
+            PureIntrinsic<[llvm_i16_ty],
+                          [llvm_v2f16_ty, llvm_i16_ty, llvm_i1_ty],
+                          [ImmArg<ArgIndex<2>, DefaultValue<0>>]>;
+
+      def int_nvvm_bf16x2_to_e2m1x2_ # rnd # relu # _satfinite : NVVMBuiltin,
+          PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty, llvm_i1_ty],
+                        [ImmArg<ArgIndex<1>, DefaultValue<0>>]>;
+      def int_nvvm_bf16x2_to_e2m1x2_ # rnd # relu # _satfinite_scale_n1_ue8m0
+          : NVVMBuiltin,
+            PureIntrinsic<[llvm_i16_ty],
+                          [llvm_v2bf16_ty, llvm_i16_ty, llvm_i1_ty],
+                          [ImmArg<ArgIndex<2>, DefaultValue<0>>]>;
+    }
 
     def int_nvvm_e2m1x2_to_f16x2_rn # relu : NVVMBuiltin,
         PureIntrinsic<[llvm_v2f16_ty], [llvm_i16_ty]>;
-        
-    def int_nvvm_f16x2_to_e2m1x2_rn # relu # _satfinite
-      : PureIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty]>;
 
-    def int_nvvm_bf16x2_to_e2m1x2_rn # relu # _satfinite
-      : PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty]>;
-    
     foreach satfinite = ["", "_satfinite"] in {
       def int_nvvm_e2m1x2_to_bf16x2_rn # relu # satfinite # _scale_n2_ue8m0
         : PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty, llvm_i16_ty]>;
@@ -2128,18 +2210,42 @@ let TargetPrefix = "nvvm" in {
   // FP6 conversions.
   foreach type = ["e2m3x2", "e3m2x2"] in {
     foreach relu = ["", "_relu"] in {
-      def int_nvvm_ff_to_ # type # _rn # relu # _satfinite : NVVMBuiltin,
-          PureIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty]>;
+      foreach rnd = ["rn", "rz"] in {
+        def int_nvvm_ff_to_ # type # _ # rnd # relu # _satfinite :
+            NVVMBuiltin,
+            PureIntrinsic<[llvm_i16_ty],
+                          [llvm_float_ty, llvm_float_ty, llvm_i1_ty],
+                          [ImmArg<ArgIndex<2>, DefaultValue<0>>]>;
+        def int_nvvm_ff_to_ # type # _ # rnd # relu # _satfinite_scale_n1_ue8m0
+            : NVVMBuiltin,
+              PureIntrinsic<[llvm_i16_ty],
+                            [llvm_float_ty, llvm_float_ty, llvm_i16_ty, llvm_i1_ty],
+                            [ImmArg<ArgIndex<3>, DefaultValue<0>>]>;
+
+        def int_nvvm_f16x2_to_ # type # _ # rnd # relu # _satfinite :
+            NVVMBuiltin,
+            PureIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty, llvm_i1_ty],
+                          [ImmArg<ArgIndex<1>, DefaultValue<0>>]>;
+        def int_nvvm_f16x2_to_ # type # _ # rnd # relu # _satfinite_scale_n1_ue8m0
+            : NVVMBuiltin,
+              PureIntrinsic<[llvm_i16_ty],
+                            [llvm_v2f16_ty, llvm_i16_ty, llvm_i1_ty],
+                            [ImmArg<ArgIndex<2>, DefaultValue<0>>]>;
+
+        def int_nvvm_bf16x2_to_ # type # _ # rnd # relu # _satfinite :
+            NVVMBuiltin,
+            PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty, llvm_i1_ty],
+                          [ImmArg<ArgIndex<1>, DefaultValue<0>>]>;
+        def int_nvvm_bf16x2_to_ # type # _ # rnd # relu # _satfinite_scale_n1_ue8m0
+            : NVVMBuiltin,
+              PureIntrinsic<[llvm_i16_ty],
+                            [llvm_v2bf16_ty, llvm_i16_ty, llvm_i1_ty],
+                            [ImmArg<ArgIndex<2>, DefaultValue<0>>]>;
+      }
 
       def int_nvvm_ # type # _to_f16x2_rn # relu : NVVMBuiltin,
           PureIntrinsic<[llvm_v2f16_ty], [llvm_i16_ty]>;
-          
-      def int_nvvm_f16x2_to_ # type # _rn # relu # _satfinite
-        : PureIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty]>;
 
-      def int_nvvm_bf16x2_to_ # type # _rn # relu # _satfinite
-        : PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty]>;
-      
       foreach satfinite = ["", "_satfinite"] in {
         def int_nvvm_ # type # _to_bf16x2_rn # relu # satfinite # _scale_n2_ue8m0
             : PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty, llvm_i16_ty]>;
@@ -2758,8 +2864,14 @@ defm int_nvvm_read_ptx_sreg_nclusterid : PTXReadSRegIntrinsicNB_v4i32<MAX_GRID_N
 defm int_nvvm_read_ptx_sreg_cluster_ctaid : PTXReadSRegIntrinsicNB_v4i32<MAX_GRID_ID_RANGE>;
 defm int_nvvm_read_ptx_sreg_cluster_nctaid : PTXReadSRegIntrinsicNB_v4i32<MAX_GRID_NID_RANGE>;
 
-def int_nvvm_read_ptx_sreg_cluster_ctarank : PTXReadSRegIntrinsicNB_r32;
-def int_nvvm_read_ptx_sreg_cluster_nctarank : PTXReadSRegIntrinsicNB_r32;
+// ctarank is an index within cluster CTA ranks (non-negative).
+// nctarank is the number of CTA ranks in cluster (positive).
+def int_nvvm_read_ptx_sreg_cluster_ctarank
+  : PTXReadSRegIntrinsicNB_r32<
+      [Range<RetIndex, 0, !add(MAX_CLUSTER_RANK, 1)>]>;
+def int_nvvm_read_ptx_sreg_cluster_nctarank
+  : PTXReadSRegIntrinsicNB_r32<
+      [Range<RetIndex, 1, !add(MAX_CLUSTER_RANK, 2)>]>;
 
 //
 // Reserved Shared Memory Intrinsics
@@ -3257,7 +3369,7 @@ foreach dim = 1...5 in {
     defvar g2s_flags = [llvm_i1_ty,             // Flag for cta_mask
                         llvm_i1_ty,             // Flag for cache_hint
                         llvm_i32_ty,            // cta_group
-                        llvm_i32_ty];           // validate_pattern
+                        llvm_i32_ty];           // flag_valid_pattern
     defvar cta_group_idx = !add(
                              !size(g2s_params),
                              !sub(!size(g2s_flags), 2));
@@ -3333,7 +3445,7 @@ foreach dim = 1...5 in {
                        im2col_offsets_args, // im2col offsets
                        [llvm_i64_ty]),      // cache_hint
           [llvm_i1_ty,                      // Flag for cache_hint
-           llvm_i32_ty],                    // validate_pattern
+           llvm_i32_ty],                    // flag_valid_pattern
           !listconcat([IntrConvergent, WriteOnly<ArgIndex<0>>,
                        ReadOnly<ArgIndex<2>>],
                       NVVM_TMA_VALIDATE_PATTERN_ARGPROP<g2s_cta_validate_idx>.Prop)>;
@@ -3353,7 +3465,7 @@ def int_nvvm_cp_async_bulk_tensor_g2s_tile_gather4_2d
       [llvm_i1_ty,                 // Flag for cta_mask
        llvm_i1_ty,                 // Flag for cache_hint
        llvm_i32_ty,                // cta_group
-       llvm_i32_ty],               // validate_pattern
+       llvm_i32_ty],               // flag_valid_pattern
       !listconcat([IntrConvergent,
                    WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
                    // Allowed values for cta_group are [0, 3).
@@ -3369,7 +3481,7 @@ def int_nvvm_cp_async_bulk_tensor_g2s_cta_tile_gather4_2d
        !listsplat(llvm_i32_ty, 5), // co-ordinates
       [llvm_i64_ty]),              // cache_hint
       [llvm_i1_ty,                 // Flag for cache_hint
-       llvm_i32_ty],               // validate_pattern
+       llvm_i32_ty],               // flag_valid_pattern
       !listconcat([IntrConvergent,
                    WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>],
                   NVVM_TMA_VALIDATE_PATTERN_ARGPROP<10>.Prop)>;
@@ -3388,7 +3500,7 @@ def int_nvvm_cp_async_bulk_tensor_g2s_tile_gather4_override_addr_2d
       [llvm_i1_ty,                 // Flag for cta_mask
        llvm_i1_ty,                 // Flag for cache_hint
        llvm_i32_ty,                // cta_group
-       llvm_i32_ty],               // validate_pattern
+       llvm_i32_ty],               // flag_valid_pattern
       !listconcat([IntrConvergent,
                    WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
                    ReadOnly<ArgIndex<3>>,
@@ -3407,7 +3519,7 @@ def int_nvvm_cp_async_bulk_tensor_g2s_cta_tile_gather4_override_addr_2d
        !listsplat(llvm_i32_ty, 5), // co-ordinates
       [llvm_i64_ty]),              // cache_hint
       [llvm_i1_ty,                 // Flag for cache_hint
-       llvm_i32_ty],               // validate_pattern
+       llvm_i32_ty],               // flag_valid_pattern
       !listconcat([IntrConvergent,
                    WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
                    ReadOnly<ArgIndex<3>>],
@@ -3464,6 +3576,9 @@ let IntrProperties = [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<
 
   foreach eviction_priority = ["evict_normal", "evict_last"] in
     def int_nvvm_prefetch_global_L2_ # eviction_priority : DefaultAttrsIntrinsic<[], [llvm_global_ptr_ty]>;
+
+  def int_nvvm_prefetch_L1_32B_valid_addr
+    : DefaultAttrsIntrinsic<[], [llvm_anyptr_ty], [], "llvm.nvvm.prefetch.L1.32B.valid_addr">;
 
   def int_nvvm_prefetchu_L1 : DefaultAttrsIntrinsic<[], [llvm_ptr_ty]>;
 }
@@ -3536,31 +3651,75 @@ let IntrProperties = [NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>, IntrHasSideEf
 }
 
 // Intrinsics for Bulk Copy using TMA (non-tensor)
-// From Global to Shared Cluster
+// From Global to Shared Cluster (weak memory ordering).
 def int_nvvm_cp_async_bulk_global_to_shared_cluster
   : DefaultAttrsIntrinsicFlags<[],
       [llvm_shared_cluster_ptr_ty, // dst_shared_cluster_ptr
        llvm_shared_ptr_ty,         // mbarrier_ptr
        llvm_global_ptr_ty,         // src_gmem_ptr
        llvm_i32_ty,                // copy_size
-       llvm_i16_ty,                // cta_mask
+       llvm_anyint_ty,             // cta_mask (i16 or i32 overload)
        llvm_i64_ty],               // cache_hint
       [llvm_i1_ty,                 // Flag for cta_mask
-       llvm_i1_ty],                // Flag for cache_hint
-      [IntrConvergent, IntrArgMemOnly,
-       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>]>;
+       llvm_i1_ty,                 // Flag for cache_hint
+       llvm_i32_ty],               // flag_valid_pattern
+      !listconcat([IntrConvergent, IntrArgMemOnly,
+                   WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>],
+                   NVVM_TMA_VALIDATE_PATTERN_ARGPROP<8>.Prop)>;
 
-// From Global to Shared CTA
+// From Global to Shared Cluster (relaxed memory ordering semantics).
+def int_nvvm_cp_async_bulk_global_to_shared_cluster_relaxed
+  : DefaultAttrsIntrinsicFlags<[],
+      [llvm_shared_cluster_ptr_ty, // dst_shared_cluster_ptr
+       llvm_shared_ptr_ty,         // mbarrier_ptr
+       llvm_global_ptr_ty,         // src_gmem_ptr
+       llvm_i32_ty,                // copy_size
+       llvm_anyint_ty,             // cta_mask (i16 or i32 overload)
+       llvm_i64_ty],               // cache_hint
+      [llvm_i1_ty,                 // Flag for cta_mask
+       llvm_i1_ty,                 // Flag for cache_hint
+       llvm_i32_ty,                // flag_scope (cta/cluster/gpu/sys)
+       llvm_i32_ty],               // flag_valid_pattern
+      !listconcat([IntrConvergent, IntrArgMemOnly,
+                   WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>],
+                   NVVM_MEM_SCOPE_ARGPROP<8>.Prop,
+                   NVVM_TMA_VALIDATE_PATTERN_ARGPROP<9>.Prop)>;
+
+// From Global to Shared CTA (weak memory ordering).
 def int_nvvm_cp_async_bulk_global_to_shared_cta
   : DefaultAttrsIntrinsicFlags<[],
       [llvm_shared_ptr_ty, // dst_shared_cta_ptr
        llvm_shared_ptr_ty, // mbarrier_ptr
        llvm_global_ptr_ty, // src_gmem_ptr
        llvm_i32_ty,        // copy_size
+       llvm_i32_ty,        // ignore_bytes_left (controlled by flag_oob)
+       llvm_i32_ty,        // ignore_bytes_right (controlled by flag_oob)
        llvm_i64_ty],       // cache_hint
-      [llvm_i1_ty],        // Flag for cache_hint
-      [IntrConvergent, IntrArgMemOnly,
-       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>]>;
+      [llvm_i1_ty,         // Flag for cache_hint
+       llvm_i1_ty,         // Flag for ignore_oob
+       llvm_i32_ty],       // flag_valid_pattern
+      !listconcat([IntrConvergent, IntrArgMemOnly,
+                   WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>],
+                   NVVM_TMA_VALIDATE_PATTERN_ARGPROP<9>.Prop)>;
+
+// From Global to Shared CTA (relaxed memory ordering semantics).
+def int_nvvm_cp_async_bulk_global_to_shared_cta_relaxed
+  : DefaultAttrsIntrinsicFlags<[],
+      [llvm_shared_ptr_ty, // dst_shared_cta_ptr
+       llvm_shared_ptr_ty, // mbarrier_ptr
+       llvm_global_ptr_ty, // src_gmem_ptr
+       llvm_i32_ty,        // copy_size
+       llvm_i32_ty,        // ignore_bytes_left (controlled by flag_oob)
+       llvm_i32_ty,        // ignore_bytes_right (controlled by flag_oob)
+       llvm_i64_ty],       // cache_hint
+      [llvm_i1_ty,         // Flag for cache_hint
+       llvm_i1_ty,         // Flag for ignore_oob
+       llvm_i32_ty,        // flag_scope (cta/cluster/gpu/sys)
+       llvm_i32_ty],       // flag_valid_pattern
+      !listconcat([IntrConvergent, IntrArgMemOnly,
+                   WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>],
+                   NVVM_MEM_SCOPE_ARGPROP<9>.Prop,
+                   NVVM_TMA_VALIDATE_PATTERN_ARGPROP<10>.Prop)>;
 
 // From Shared CTA to Shared Cluster
 def int_nvvm_cp_async_bulk_shared_cta_to_cluster
@@ -3761,10 +3920,7 @@ foreach shape = ["32x32b", "16x32bx2"] in {
 let IntrProperties = [IntrArgMemOnly, IntrWriteMem, WriteOnly<ArgIndex<0>>,
                       NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<2>>] in {
   def int_nvvm_st_bulk :
-      DefaultAttrsIntrinsic<[], [llvm_ptr_ty, llvm_i64_ty, llvm_i64_ty]>;
-
-  def int_nvvm_st_bulk_shared_cta :
-      DefaultAttrsIntrinsic<[], [llvm_shared_ptr_ty, llvm_i64_ty, llvm_i64_ty]>;
+      DefaultAttrsIntrinsic<[], [llvm_anyptr_ty, llvm_anyint_ty, llvm_i64_ty]>;
 }
 
 //
@@ -3855,7 +4011,7 @@ foreach sparse = [0, 1] in {
 
         def mma.record_name:
               DefaultAttrsIntrinsicFlags<[], args, flags, intrinsic_properties,
-                mma.intr_name>;
+                mma.intr_name, [DefaultValue<0>]>;
       } // ashift
     } // scale_d
   } // space
@@ -3899,7 +4055,8 @@ foreach sparse = [0, 1] in {
                   );
 
           def mma.record_name : DefaultAttrsIntrinsicFlags<[], args, flags,
-                                  intrinsic_properties, mma.intr_name>;
+                                  intrinsic_properties, mma.intr_name,
+                                  [DefaultValue<0>]>;
         } // ashift
       } // scale_d
     } // cta_group
@@ -3934,7 +4091,7 @@ foreach sparse = [0, 1] in {
                          ArgInfo<cta_group, [ArgName<"cta_group">]>,
                          NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_a, "a">.Prop,
                          NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_b, "b">.Prop]),
-            mma.intr_name>;
+            mma.intr_name, [DefaultValue<0>]>;
         }
       } // scale_vec_size
     } // kind
@@ -4124,5 +4281,42 @@ def int_nvvm_tensormap_replace_fill_mode :
      Range<ArgIndex<1>, 0, 2>,
      ArgInfo<ArgIndex<1>, [ArgName<"fill_mode">, 
                            ImmArgPrinter<"printTensormapFillMode">]>]>;
+
+//
+// spcompress intrinsics
+//
+
+class SPCompress :
+  DefaultAttrsIntrinsicFlags<
+    [llvm_anyint_ty,          // mdata
+     llvm_any_vector_int_ty], // cdata
+    [llvm_any_vector_int_ty,  // data
+     llvm_i32_ty],            // spdesc
+    [llvm_i32_ty,             // idx_size
+     llvm_i32_ty],            // num_tgt
+    !listconcat([IntrNoMem, IntrSpeculatable],
+                NVVM_SP_IDX_ARGPROPS<ArgIndex<2>>.Prop,
+                [RangeList<ArgIndex<3>, [4]>,
+                 ArgInfo<ArgIndex<3>, [ArgName<"num_tgt">]>])>;
+
+def int_nvvm_spcompress : SPCompress;
+
+//
+// spdecompress intrinsics
+//
+
+class SPDecompress :
+  DefaultAttrsIntrinsicFlags<
+    [llvm_any_vector_int_ty], // data
+    [llvm_anyint_ty,          // mdata
+     llvm_any_vector_int_ty], // cdata
+    [llvm_i32_ty,             // idx_size
+     llvm_i32_ty],            // num_tgt
+    !listconcat([IntrNoMem, IntrSpeculatable],
+                NVVM_SP_IDX_ARGPROPS<ArgIndex<2>>.Prop,
+                [RangeList<ArgIndex<3>, [2, 4, 8, 16]>,
+                 ArgInfo<ArgIndex<3>, [ArgName<"num_tgt">]>])>;
+
+def int_nvvm_spdecompress : SPDecompress;
 
 } // let TargetPrefix = "nvvm"
