@@ -18,6 +18,7 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/ToolChain.h"
+#include "clang/Interpreter/Interpreter.h"
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -87,6 +88,36 @@ OrcIncrementalExecutorBuilder::~OrcIncrementalExecutorBuilder() = default;
 std::unique_ptr<IncrementalExecutorBuilder>
 IncrementalExecutorBuilder::createDefault() {
   return std::make_unique<OrcIncrementalExecutorBuilder>();
+}
+
+llvm::Error
+OrcIncrementalExecutorBuilder::configure(IncrementalCompilerBuilder &CB,
+                                         const Options &Opts) {
+  IsOutOfProcess = Opts.IsOutOfProcess;
+  OOPExecutor = Opts.ExecutorPath;
+  OrcRuntimePath = Opts.RuntimePath;
+  if (OrcRuntimePath.empty())
+    CB.SetDriverCompilationCallback(UpdateOrcRuntimePathCB);
+  SlabAllocateSize = Opts.SlabAllocateSize;
+  UseSharedMemory = Opts.UseSharedMemory;
+  return llvm::Error::success();
+}
+
+bool OrcIncrementalExecutorBuilder::supportsJIT() const {
+  auto Triple = getHostJITTriple();
+  if (!Triple) {
+    llvm::consumeError(Triple.takeError());
+    return false;
+  }
+  return true;
+}
+
+llvm::Expected<llvm::Triple>
+OrcIncrementalExecutorBuilder::getHostJITTriple() const {
+  auto J = llvm::orc::LLJITBuilder().create();
+  if (!J)
+    return J.takeError();
+  return (*J)->getTargetTriple();
 }
 
 static llvm::Expected<llvm::orc::JITTargetMachineBuilder>
