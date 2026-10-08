@@ -5161,8 +5161,7 @@ bool AMDGPUAsmParser::validateDPP(const MCInst &Inst,
   const unsigned Opc = Inst.getOpcode();
   int DppCtrlIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::dpp_ctrl);
   if (DppCtrlIdx >= 0) {
-    unsigned DppCtrl =
-        static_cast<unsigned>(Inst.getOperand(DppCtrlIdx).getImm());
+    unsigned DppCtrl = Inst.getOperand(DppCtrlIdx).getImm();
 
     if (!AMDGPU::isLegalDPALU_DPPControl(getSTI(), DppCtrl) &&
         getSTI().hasFeature(AMDGPU::FeatureDPALU_DPP) &&
