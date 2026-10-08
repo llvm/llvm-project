@@ -23,6 +23,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 
 using namespace llvm;
@@ -215,9 +216,24 @@ static bool isDereferenceableAndAlignedPointer(
                                               Alignment, Size, SQ, IgnoreFree,
                                               Visited, MaxDepth);
 
-  if (const AddrSpaceCastOperator *ASC = dyn_cast<AddrSpaceCastOperator>(V))
-    return isDereferenceableAndAlignedPointer(
-        ASC->getOperand(0), Alignment, Size, SQ, IgnoreFree, Visited, MaxDepth);
+  if (const AddrSpaceCastOperator *ASC = dyn_cast<AddrSpaceCastOperator>(V)) {
+    // Only look through the cast when the target guarantees that a
+    // dereferenceable pointer in the source AS is also dereferenceable in the
+    // destination AS. Otherwise the source's dereferenceability tells us
+    // nothing about the casted pointer, which may denote an unrelated
+    // location. Whether this holds depends on the target.
+    const Module *M = nullptr;
+    if (const auto *I = dyn_cast<Instruction>(ASC))
+      M = I->getModule();
+    else if (SQ.CxtI)
+      M = SQ.CxtI->getModule();
+    if (M && M->getTargetTriple().isValidAddrSpaceCast(
+                 ASC->getSrcAddressSpace(), ASC->getDestAddressSpace()))
+      return isDereferenceableAndAlignedPointer(ASC->getOperand(0), Alignment,
+                                                Size, SQ, IgnoreFree, Visited,
+                                                MaxDepth);
+    return false;
+  }
 
   return SQ.AC &&
          isDereferenceableAndAlignedPointerViaAssumption(
