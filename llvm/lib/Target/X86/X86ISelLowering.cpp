@@ -19,6 +19,7 @@
 #include "X86IntrinsicsInfo.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86TargetMachine.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -2057,6 +2058,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
       // MULHS needs vpmullq (AVX512DQ) for its low multiply to be a win.
       setOperationAction(ISD::MULHS, MVT::v8i64, Custom);
+
+      // AVX512DQ has VFPCLASSPS/PD instructions for vector fpclass tests.
+      for (auto VT : {MVT::v16f32, MVT::v8f64})
+        setOperationAction(ISD::IS_FPCLASS, VT, Custom);
     }
 
     if (Subtarget.hasCDI()) {
@@ -2219,6 +2224,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       // MULHS is only a win when the low multiply can use vpmullq; non-VLX
       // targets handle VPMULLQ by implicit widening.
       setOperationAction(ISD::MULHS, MVT::v4i64, Custom);
+
+      // AVX512DQ+VLX has VFPCLASSPS/PD for 128/256-bit vectors.
+      for (auto VT : {MVT::v4f32, MVT::v2f64, MVT::v8f32, MVT::v4f64})
+        setOperationAction(ISD::IS_FPCLASS, VT, Custom);
     }
 
     if (Subtarget.hasCDI()) {
@@ -23148,6 +23157,83 @@ static SDValue LowerFROUND(SDValue Op, SelectionDAG &DAG) {
   return DAG.getNode(ISD::FTRUNC, dl, VT, N0);
 }
 
+// Convert ISD::IS_FPCLASS to X86ISD::VFPCLASS for AVX512DQ.
+// The VFPCLASS instruction immediate encoding is:
+//   Bit 0: QNaN
+//   Bit 1: Positive Zero
+//   Bit 2: Negative Zero
+//   Bit 3: Positive Infinity
+//   Bit 4: Negative Infinity
+//   Bit 5: Denormal
+//   Bit 6: Negative (finite)
+//   Bit 7: SNaN
+static SDValue LowerIS_FPCLASS(SDValue Op, const X86Subtarget &Subtarget,
+                               SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  MVT ResultVT = Op.getSimpleValueType();
+  SDValue Src = Op.getOperand(0);
+  unsigned Check = Op.getConstantOperandVal(1);
+
+  // Convert LLVM FPClassTest flags to VFPCLASS immediate encoding.
+  // LLVM flags (llvm/include/llvm/ADT/FloatingPointMode.h):
+  //   fcSNan        = 0x0001
+  //   fcQNan        = 0x0002
+  //   fcNegInf      = 0x0004
+  //   fcNegNormal   = 0x0008
+  //   fcNegSubnormal= 0x0010
+  //   fcNegZero     = 0x0020
+  //   fcPosZero     = 0x0040
+  //   fcPosSubnormal= 0x0080
+  //   fcPosNormal   = 0x0100
+  //   fcPosInf      = 0x0200
+  unsigned VFPClassImm = 0;
+  if (Check & fcQNan)
+    VFPClassImm |= 0x01;
+  if (Check & fcPosZero)
+    VFPClassImm |= 0x02;
+  if (Check & fcNegZero)
+    VFPClassImm |= 0x04;
+  if (Check & fcPosInf)
+    VFPClassImm |= 0x08;
+  if (Check & fcNegInf)
+    VFPClassImm |= 0x10;
+  if (Check & (fcPosSubnormal | fcNegSubnormal))
+    VFPClassImm |= 0x20;
+  if (Check & fcSNan)
+    VFPClassImm |= 0x80;
+
+  // VFPCLASS's "Negative" bit (bit 6) tests for negative finite values,
+  // which includes negative normal and negative subnormal.
+  // We only use it if both fcNegNormal and fcNegSubnormal are requested
+  // (since the denormal bit already covers subnormals).
+  // For just fcNegNormal, we can't use bit 6 alone as it includes subnormals.
+  // So we only handle fcNegNormal if fcNegSubnormal is also set.
+  if ((Check & fcNegNormal) && (Check & fcNegSubnormal))
+    VFPClassImm |= 0x40;
+
+  // Check if we can handle this test with VFPCLASS.
+  // We can handle the following flags:
+  //   fcSNan, fcQNan, fcPosInf, fcNegInf, fcPosZero, fcNegZero,
+  //   fcPosSubnormal, fcNegSubnormal
+  // We cannot handle fcPosNormal or fcNegNormal alone (without denormal).
+  unsigned Handled = fcSNan | fcQNan | fcPosInf | fcNegInf | fcPosZero |
+                     fcNegZero | fcPosSubnormal | fcNegSubnormal;
+  // If fcNegNormal is set with fcNegSubnormal, we can handle it.
+  if ((Check & fcNegSubnormal) && (Check & fcNegNormal))
+    Handled |= fcNegNormal;
+
+  // If there are flags we can't handle, fall back to expansion.
+  if (Check & ~Handled)
+    return SDValue();
+
+  // If no flags remain, return a zero mask.
+  if (VFPClassImm == 0)
+    return DAG.getConstant(0, DL, ResultVT);
+
+  SDValue Imm = DAG.getTargetConstant(VFPClassImm, DL, MVT::i32);
+  return DAG.getNode(X86ISD::VFPCLASS, DL, ResultVT, Src, Imm);
+}
+
 /// The only differences between FABS and FNEG are the mask and the logic op.
 /// FNEG also has a folding opportunity for FNEG(FABS(x)).
 static SDValue LowerFABSorFNEG(SDValue Op, SelectionDAG &DAG) {
@@ -34863,6 +34949,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FADD:
   case ISD::FSUB:               return lowerFaddFsub(Op, DAG);
   case ISD::FROUND:             return LowerFROUND(Op, DAG);
+  case ISD::IS_FPCLASS:         return LowerIS_FPCLASS(Op, Subtarget, DAG);
   case ISD::FABS:
   case ISD::FNEG:               return LowerFABSorFNEG(Op, DAG);
   case ISD::FCOPYSIGN:          return LowerFCOPYSIGN(Op, DAG);
