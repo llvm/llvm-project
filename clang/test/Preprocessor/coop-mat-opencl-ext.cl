@@ -1,13 +1,6 @@
-// clang/test/Preprocessor/coop_mat_opencl_ext.cl
+// cl_khr_cooperative_matrix registration test.
 //
-// Patch 2: cl_khr_cooperative_matrix registration in
-//          OpenCLExtensions.def and enum definitions in opencl-c-base.h.
-//
-// Tests: extension macro is predefined when enabled, extension can be
-//        explicitly enabled/disabled via pragma, all four enum types and
-//        their constants are visible under -finclude-default-header.
-
-// ── 2a. Extension macro is predefined when the extension is enabled ─────────
+// Test if extension macro is predefined when the extension is enabled
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown \
 // RUN:   -cl-std=CL2.0 -cl-ext=+cl_khr_cooperative_matrix \
 // RUN:   -finclude-default-header -E -dM %s \
@@ -15,7 +8,7 @@
 
 // EXT: cl_khr_cooperative_matrix
 
-// ── 2b. Extension is NOT predefined when explicitly disabled ────────────────
+// Test if extension is NOT predefined when explicitly disabled
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown \
 // RUN:   -cl-std=CL2.0 -cl-ext=-cl_khr_cooperative_matrix \
 // RUN:   -finclude-default-header -E %s \
@@ -23,7 +16,7 @@
 
 // NOEXT-NOT: cl_khr_cooperative_matrix
 
-// ── 2c. Enum constants are visible when extension is enabled ─────────────────
+// Enum constants are visible when extension is enabled
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown \
 // RUN:   -cl-std=CL2.0 -cl-ext=+cl_khr_cooperative_matrix \
 // RUN:   -finclude-default-header -fsyntax-only -verify %s
@@ -47,7 +40,7 @@ void test_enum_constants(void) {
     (void)op;
 }
 
-// ── 2d. Enum constant values match the spec ──────────────────────────────────
+// Enum constant values match the spec
 void test_enum_values(void) {
     _Static_assert(memory_scope_sub_group                    == 4, "scope subgroup");
     _Static_assert(CLK_COOPERATIVE_MATRIX_A                  == 0, "use A");

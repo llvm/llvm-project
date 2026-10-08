@@ -1,7 +1,5 @@
-// clang/test/CodeGenOpenCL/coop-mat-codegen.cl
-//
-// Patch 5: CodeGen -- TargetExtType lowering, builtin IR emission,
-//          SPIR-V intrinsic names.
+// Cooperative matrix tests for SPIR-V friendly LLVM IR code generation from
+// clang frontend.
 //
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown \
 // RUN:   -cl-std=CL2.0 -cl-ext=+cl_khr_cooperative_matrix \
@@ -21,7 +19,7 @@ typedef float __attribute__((coop_mat(SCOPE, 16, 16, USE_B))) MatB_t;
 typedef float __attribute__((coop_mat(SCOPE, 16, 16, USE_C))) MatC_t;
 
 // ---------------------------------------------------------------------------
-// 5a. coop_mat_load -> __spirv_CooperativeMatrixLoadKHR
+// coop_mat_load -> __spirv_CooperativeMatrixLoadKHR
 //     Also verifies CooperativeMatrixType lowers to spirv.CooperativeMatrixKHR
 //     TargetExtType (visible in the call signature).
 // ---------------------------------------------------------------------------
@@ -36,7 +34,19 @@ kernel void test_load(__global float *ptr) {
 // CHECK-SAME: @__spirv_CooperativeMatrixLoadKHR
 
 // ---------------------------------------------------------------------------
-// 5b. coop_mat_store -> __spirv_CooperativeMatrixStoreKHR
+// Same test as above. But 'a' is initialized directly using the 'load'.
+// ---------------------------------------------------------------------------
+kernel void test_load(__global float *ptr) {
+    MatA_t a = coop_mat_load(ptr, ROW_MAJOR, 16);
+    (void)a;
+}
+// CHECK-LABEL: @__clang_ocl_kern_imp_test_load
+// CHECK: call
+// CHECK-SAME: target("spirv.CooperativeMatrixKHR"
+// CHECK-SAME: @__spirv_CooperativeMatrixLoadKHR
+
+// ---------------------------------------------------------------------------
+// coop_mat_store -> __spirv_CooperativeMatrixStoreKHR
 // ---------------------------------------------------------------------------
 kernel void test_store(__global float *ptr) {
     MatA_t a;
@@ -47,7 +57,7 @@ kernel void test_store(__global float *ptr) {
 // CHECK: call {{.*}} @__spirv_CooperativeMatrixStoreKHR
 
 // ---------------------------------------------------------------------------
-// 5c. coop_mat_mulAdd -> __spirv_CooperativeMatrixMulAddKHR
+// coop_mat_mulAdd -> __spirv_CooperativeMatrixMulAddKHR
 // ---------------------------------------------------------------------------
 kernel void test_muladd(__global float *ptr) {
     MatA_t a; MatB_t b; MatC_t c; MatC_t r;
@@ -61,7 +71,7 @@ kernel void test_muladd(__global float *ptr) {
 // CHECK: call {{.*}} @__spirv_CooperativeMatrixMulAddKHR
 
 // ---------------------------------------------------------------------------
-// 5d. Binary add (float element) -> __spirv_CooperativeMatrixFAdd
+// Binary add (float element) -> __spirv_CooperativeMatrixFAdd
 // ---------------------------------------------------------------------------
 kernel void test_binary_add(__global float *ptr) {
     MatA_t a; MatA_t b; MatA_t r;
@@ -74,7 +84,7 @@ kernel void test_binary_add(__global float *ptr) {
 // CHECK: call {{.*}} @__spirv_CooperativeMatrixFAdd
 
 // ---------------------------------------------------------------------------
-// 5e. Scalar multiply -> __spirv_CooperativeMatrixScalarMulKHR
+// Scalar multiply -> __spirv_CooperativeMatrixScalarMulKHR
 // ---------------------------------------------------------------------------
 kernel void test_scalar_mul(__global float *ptr, float s) {
     MatA_t a; MatA_t r;
@@ -90,7 +100,7 @@ kernel void test_scalar_mul(__global float *ptr, float s) {
 // CHECK: call {{.*}} @__spirv_CooperativeMatrixScalarMulKHR
 
 // ---------------------------------------------------------------------------
-// 5f. Unary minus -> __spirv_CooperativeMatrixScalarNeg
+// Unary minus -> __spirv_CooperativeMatrixScalarNeg
 // ---------------------------------------------------------------------------
 kernel void test_unary_neg(__global float *ptr) {
     MatA_t a; MatA_t r;
