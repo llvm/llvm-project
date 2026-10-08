@@ -8,7 +8,7 @@
 # for relocations.
 #------------------------------------------------------------------------------
 # CHECK-FIXUP: foo:
-# CHECK-FIXUP:   jal bar # encoding: [A,0xf4'A',A,0b000000AA]
+# CHECK-FIXUP:   jal bar # encoding: [A,0b111101AA,A,A]
 # CHECK-FIXUP:           #   fixup A - offset: 0,
 # CHECK-FIXUP:               value: bar, kind: fixup_MICROMIPS_26_S1
 # CHECK-FIXUP:   nop     # encoding: [0x00,0x00,0x00,0x00]

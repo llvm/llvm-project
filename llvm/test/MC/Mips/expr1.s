@@ -24,15 +24,15 @@
 
 # MM-32R2-EL: .globl  foo
 # MM-32R2-EL: foo:
-# MM-32R2-EL: lw   $4, %lo(foo)($4)     # encoding: [0x84'A',0xfc'A',0x00,0x00]
+# MM-32R2-EL: lw   $4, %lo(foo)($4)     # encoding: [0x84,0xfc,A,A]
 # MM-32R2-EL:                           #   fixup A - offset: 0, value: %lo(foo), kind: fixup_MICROMIPS_LO16
 # MM-32R2-EL: lw   $4, 56($4)           # encoding: [0x84,0xfc,0x38,0x00]
-# MM-32R2-EL: lui $1, %hi(%lo(8)+foo)    # encoding: [0xa1'A',0x41'A',0x00,0x00]
+# MM-32R2-EL: lui $1, %hi(%lo(8)+foo)    # encoding: [0xa1,0x41,A,A]
 # MM-32R2-EL:                              #   fixup A - offset: 0, value: %hi(%lo(8)+foo), kind: fixup_MICROMIPS_HI16
 # MM-32R2-EL: addu $1, $1, $4              # encoding: [0x81,0x00,0x50,0x09]
-# MM-32R2-EL: lw $4, %lo(%lo(8)+foo)($1) # encoding: [0x81'A',0xfc'A',0x00,0x00]
+# MM-32R2-EL: lw $4, %lo(%lo(8)+foo)($1) # encoding: [0x81,0xfc,A,A]
 # MM-32R2-EL:                              #   fixup A - offset: 0, value: %lo(%lo(8)+foo), kind: fixup_MICROMIPS_LO16
-# MM-32R2-EL: lw   $4, %lo(12+foo)($4)  # encoding: [0x84'A',0xfc'A',0x00,0x00]
+# MM-32R2-EL: lw   $4, %lo(12+foo)($4)  # encoding: [0x84,0xfc,A,A]
 # MM-32R2-EL:                           #   fixup A - offset: 0, value: %lo(12+foo), kind: fixup_MICROMIPS_LO16
 # MM-32R2-EL: lw   $4, 10($4)           # encoding: [0x84,0xfc,0x0a,0x00]
 # MM-32R2-EL: lw   $4, 15($4)           # encoding: [0x84,0xfc,0x0f,0x00]
