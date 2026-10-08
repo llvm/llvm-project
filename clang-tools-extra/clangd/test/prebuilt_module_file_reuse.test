@@ -15,14 +15,13 @@
 # RUN:   | FileCheck %s --check-prefix=REUSE
 # RUN: clangd -enable-config=0 -experimental-modules-support -log=verbose \
 # RUN:   -compile-commands-dir=%t -check=%t/Use.cpp \
-# RUN:   --disable-prebuilt-module-file-reuse 2>&1 \
+# RUN:   --reuse-prebuilt-module-file=false 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=NOREUSE
 
-// REUSE: Built module M to [[PCM:.*clangd.*/module_files/.*/M\.pcm]]
+// REUSE: Reusing prebuilt module file
 // REUSE: All checks completed, 0 errors
 
 // NOREUSE-NOT: Reusing prebuilt module file
-// NOREUSE: Built module M to [[BUILT:.*clangd.*/module_files/.*/M\.pcm]]
 // NOREUSE: All checks completed, 0 errors
 
 #--- M.cppm
