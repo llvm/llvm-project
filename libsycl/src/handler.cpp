@@ -32,15 +32,16 @@ static void checkCommandGroupFunction(
 }
 
 void handler::submitKernelImpl(detail::DeviceKernelInfo &KernelInfo,
-                               void *ArgData, std::size_t ArgSize) {
+                               void *ArgData, std::size_t ArgSize,
+                               std::size_t LocalMemSize) {
   checkCommandGroupFunction(MImpl.MCGF, MImpl.MQueue.getContext());
   MImpl.MArgData.resize(ArgSize);
   std::memcpy(MImpl.MArgData.data(), ArgData, ArgSize);
-  MImpl.MCGF = [this, &KernelInfo]() {
+  MImpl.MCGF = [this, &KernelInfo, LocalMemSize]() {
     auto EventsImpl = detail::getSyclObjImpls(MDepEvents);
     MImpl.MQueue.setKernelLaunchParams(std::move(EventsImpl), MImpl.MRange);
     MImpl.MQueue.submitKernelImpl(KernelInfo, MImpl.MArgData.data(),
-                                  MImpl.MArgData.size());
+                                  MImpl.MArgData.size(), LocalMemSize);
     return MImpl.MQueue.getLastEvent();
   };
 }

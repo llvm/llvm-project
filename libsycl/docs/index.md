@@ -138,6 +138,15 @@ which doesn't currently support Windows.
 
   - kernel instantiating on host (debugging purposes)
 
+- `accessor`: only the deprecated specialization for `target::local` is implemented; the other targets and `access_mode::atomic` for `target::local` (requires the deprecated `atomic` class) are not implemented
+
+- `local_accessor`:
+
+  - `get_pointer`, `get_multi_ptr` and `accessor_ptr` are not implemented, to add once `multi_ptr` is supported
+  - arrays of local accessors in a kernel object are not supported: a gap in the compiler front end, which does not pass array elements to the callables returned by `sycl_kernel_launch` and `sycl_reify_kernel_parameters`; libsycl needs only tests once it is fixed
+  - the alignment of the start of the local memory block is not guaranteed by the compiler and depends on where the device driver places the local memory argument, so a `DataT` with a stricter alignment may get a misaligned region
+  - the size of the local pointer stored in an accessor depends on the device target, so the host and device layouts differ on targets with 32-bit local pointers (not supported yet); to give the field a fixed size of 8 bytes
+
 - `property_list`: to fully implement and integrate with existing SYCL runtime classes supporting it
 
 - usm allocations:

@@ -733,8 +733,10 @@ private:
   /// \param KernelInfo the information for the kernel being invoked.
   /// \param ArgData a pointer to the kernel argument.
   /// \param ArgSize the size of the kernel argument.
+  /// \param LocalMemSize the size in bytes of the work-group local memory
+  /// block shared by the local accessors of the kernel.
   void submitKernelImpl(detail::DeviceKernelInfo &KernelInfo, void *ArgData,
-                        std::size_t ArgSize);
+                        std::size_t ArgSize, std::size_t LocalMemSize);
 
   /// \return an event representing last kernel invocation.
   event getLastEvent();

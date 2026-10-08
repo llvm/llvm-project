@@ -77,8 +77,9 @@ void queue::setKernelLaunchParams(const std::vector<event> &Events,
 }
 
 void queue::submitKernelImpl(detail::DeviceKernelInfo &KernelInfo,
-                             void *ArgData, std::size_t ArgSize) {
-  impl->submitKernelImpl(KernelInfo, ArgData, ArgSize);
+                             void *ArgData, std::size_t ArgSize,
+                             std::size_t LocalMemSize) {
+  impl->submitKernelImpl(KernelInfo, ArgData, ArgSize, LocalMemSize);
 }
 
 event queue::fillImpl(void *Ptr, const void *Pattern, std::size_t PatternSize,

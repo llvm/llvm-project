@@ -178,7 +178,7 @@ private:
   std::shared_ptr<detail::EventImpl> finalize();
 
   void submitKernelImpl(detail::DeviceKernelInfo &KernelInfo, void *ArgData,
-                        std::size_t ArgSize);
+                        std::size_t ArgSize, std::size_t LocalMemSize);
 
   void setKernelRange(const detail::UnifiedRangeView &Range = {});
 
