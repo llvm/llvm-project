@@ -15,6 +15,7 @@
 ; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=kryo < %s | FileCheck --check-prefixes=ALIGN2,CHECK %s
 ; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=neoverse-e1 < %s | FileCheck --check-prefixes=ALIGN3,CHECK %s
 ; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=neoverse-n1 < %s | FileCheck --check-prefixes=ALIGN4,CHECK %s
+; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=neoverse-v2 < %s | FileCheck --check-prefixes=ALIGN5,CHECK %s
 ; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=thunderx < %s | FileCheck --check-prefixes=ALIGN3,CHECK %s
 ; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=thunderxt81 < %s | FileCheck --check-prefixes=ALIGN3,CHECK %s
 ; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=thunderxt83 < %s | FileCheck --check-prefixes=ALIGN3,CHECK %s
