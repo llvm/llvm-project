@@ -223,6 +223,48 @@ TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_VASHR) {
   EXPECT_EQ(DAG->ComputeNumSignBits(Fr2), 5u);
 }
 
+TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_MUL_DemandedElts) {
+  SDLoc Loc;
+  SDValue LHS = DAG->getRegister(1, MVT::v4i32);
+  SDValue RHS = DAG->getRegister(2, MVT::v4i32);
+  SDValue Zero = DAG->getConstant(0, Loc, MVT::i32);
+  SDValue LHSShift =
+      DAG->getBuildVector(MVT::v4i32, Loc,
+                          {DAG->getConstant(28, Loc, MVT::i32),
+                           DAG->getConstant(24, Loc, MVT::i32), Zero, Zero});
+  SDValue RHSShift =
+      DAG->getBuildVector(MVT::v4i32, Loc,
+                          {DAG->getConstant(26, Loc, MVT::i32),
+                           DAG->getConstant(22, Loc, MVT::i32), Zero, Zero});
+  LHS = DAG->getNode(ISD::SRA, Loc, MVT::v4i32, LHS, LHSShift);
+  RHS = DAG->getNode(ISD::SRA, Loc, MVT::v4i32, RHS, RHSShift);
+  SDValue Mul = DAG->getNode(ISD::MUL, Loc, MVT::v4i32, LHS, RHS);
+
+  EXPECT_EQ(DAG->ComputeNumSignBits(Mul, APInt(4, 0b0001)), 23u);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Mul, APInt(4, 0b0010)), 15u);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Mul, APInt(4, 0b0011)), 15u);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Mul, APInt(4, 0b0100)), 1u);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Mul), 1u);
+}
+
+TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_TRUNCATE_DemandedElts) {
+  SDLoc Loc;
+  SDValue Src = DAG->getRegister(1, MVT::v4i32);
+  SDValue Zero = DAG->getConstant(0, Loc, MVT::i32);
+  SDValue Shift =
+      DAG->getBuildVector(MVT::v4i32, Loc,
+                          {DAG->getConstant(28, Loc, MVT::i32),
+                           DAG->getConstant(24, Loc, MVT::i32), Zero, Zero});
+  Src = DAG->getNode(ISD::SRA, Loc, MVT::v4i32, Src, Shift);
+  SDValue Trunc = DAG->getNode(ISD::TRUNCATE, Loc, MVT::v4i16, Src);
+
+  EXPECT_EQ(DAG->ComputeNumSignBits(Trunc, APInt(4, 0b0001)), 13u);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Trunc, APInt(4, 0b0010)), 9u);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Trunc, APInt(4, 0b0011)), 9u);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Trunc, APInt(4, 0b0100)), 1u);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Trunc), 1u);
+}
+
 TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_SUB) {
   SDLoc Loc;
   auto IntVT = EVT::getIntegerVT(Context, 8);
