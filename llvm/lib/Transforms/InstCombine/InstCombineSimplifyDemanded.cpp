@@ -14,6 +14,7 @@
 #include "InstCombineInternal.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
@@ -24,18 +25,6 @@ using namespace llvm;
 using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
-
-static cl::opt<bool>
-    VerifyKnownBits("instcombine-verify-known-bits",
-                    cl::desc("Verify that computeKnownBits() and "
-                             "SimplifyDemandedBits() are consistent"),
-                    cl::Hidden, cl::init(false));
-
-static cl::opt<unsigned> SimplifyDemandedVectorEltsDepthLimit(
-    "instcombine-simplify-vector-elts-depth",
-    cl::desc(
-        "Depth limit when simplifying vector instructions and their operands"),
-    cl::Hidden, cl::init(10));
 
 /// Check to see if the specified operand of the specified instruction is a
 /// constant integer. If so, check to see if there are any bits set in the
@@ -751,7 +740,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         if (I->hasNoSignedWrap()) {
           unsigned NumHiDemandedBits = BitWidth - DemandedMask.countr_zero();
           unsigned SignBits =
-              ComputeNumSignBits(I->getOperand(0), Q.CxtI, Depth + 1);
+              ComputeNumSignBits(I->getOperand(0), Q.CtxI, Depth + 1);
           if (SignBits > ShiftAmt && SignBits - ShiftAmt >= NumHiDemandedBits)
             return I->getOperand(0);
         }
@@ -833,7 +822,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         // need to shift.
         unsigned NumHiDemandedBits = BitWidth - DemandedMask.countr_zero();
         unsigned SignBits =
-            ComputeNumSignBits(I->getOperand(0), Q.CxtI, Depth + 1);
+            ComputeNumSignBits(I->getOperand(0), Q.CtxI, Depth + 1);
         if (SignBits >= NumHiDemandedBits)
           return I->getOperand(0);
 
@@ -884,7 +873,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
     break;
   }
   case Instruction::AShr: {
-    unsigned SignBits = ComputeNumSignBits(I->getOperand(0), Q.CxtI, Depth + 1);
+    unsigned SignBits = ComputeNumSignBits(I->getOperand(0), Q.CtxI, Depth + 1);
 
     // If we only want bits that already match the signbit then we don't need
     // to shift.
@@ -1208,7 +1197,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
       DemandedMask.isSubsetOf(Known.Zero | Known.One))
     return Constant::getIntegerValue(VTy, Known.One);
 
-  if (VerifyKnownBits) {
+  if (CLOpts.verify_known_bits) {
     KnownBits ReferenceKnown = llvm::computeKnownBits(I, Q, Depth);
     if (Known != ReferenceKnown) {
       errs() << "Mismatched known bits for " << *I << " in "
@@ -1585,7 +1574,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
   }
 
   // Limit search depth.
-  if (Depth == SimplifyDemandedVectorEltsDepthLimit)
+  if (Depth == CLOpts.simplify_vector_elts_depth)
     return nullptr;
 
   if (!AllowMultipleUsers) {
@@ -1663,7 +1652,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     break;
   }
   case Instruction::InsertElement: {
-    unsigned DepthLimit = SimplifyDemandedVectorEltsDepthLimit;
+    unsigned DepthLimit = CLOpts.simplify_vector_elts_depth;
     auto *IE = cast<InsertElementInst>(I);
     // Skip only when SDVE cannot simplify this insert chain before the limit.
     if (Depth == 0 && DemandedElts.isAllOnes() && VWidth > DepthLimit &&
@@ -2002,6 +1991,27 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
           simplifyAndSetOp);
       if (V)
         return *V;
+
+      // Trivially vectorizable intrinsics operate elementwise: each result lane
+      // uses only the matching lane of the (vector) operands, so the demand
+      // passes through unchanged to every vector operand.
+      Intrinsic::ID IID = II->getIntrinsicID();
+      if (isTriviallyVectorizable(IID)) {
+        APInt PoisonEltsAcc(VWidth, 0);
+        for (Use &Arg : II->args()) {
+          unsigned OpNo = Arg.getOperandNo();
+          // Scalar operands do not carry per-lane demand.
+          if (isVectorIntrinsicWithScalarOpAtArg(IID, OpNo, /*TTI=*/nullptr))
+            continue;
+          APInt OpPoisonElts(VWidth, 0);
+          simplifyAndSetOp(II, OpNo, DemandedElts, OpPoisonElts);
+          PoisonEltsAcc |= OpPoisonElts;
+        }
+        // A result lane is poison if any operand lane is poison, but only for
+        // intrinsics that are known to propagate poison elementwise.
+        if (intrinsicPropagatesPoison(IID))
+          PoisonElts = PoisonEltsAcc;
+      }
       break;
     }
     } // switch on IntrinsicID
@@ -2462,7 +2472,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     // fadd x, x can be handled more aggressively.
     if (I->getOperand(0) == I->getOperand(1) &&
         I->getOpcode() == Instruction::FAdd &&
-        isGuaranteedNotToBeUndef(I->getOperand(0), SQ.AC, SQ.CxtI, SQ.DT,
+        isGuaranteedNotToBeUndef(I->getOperand(0), SQ.AC, SQ.CtxI, SQ.DT,
                                  Depth + 1)) {
       Type *EltTy = VTy->getScalarType();
       DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
@@ -2588,7 +2598,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       SrcDemandedMask |= fcNormal | fcSubnormal;
 
     if (X == Y &&
-        isGuaranteedNotToBeUndef(X, SQ.AC, SQ.CxtI, SQ.DT, Depth + 1)) {
+        isGuaranteedNotToBeUndef(X, SQ.AC, SQ.CtxI, SQ.DT, Depth + 1)) {
       if (SimplifyDemandedFPClass(I, 0, SrcDemandedMask, KnownLHS, SQ,
                                   Depth + 1))
         return I;
@@ -2733,7 +2743,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     Value *X = I->getOperand(0);
     Value *Y = I->getOperand(1);
     if (X == Y &&
-        isGuaranteedNotToBeUndef(X, SQ.AC, SQ.CxtI, SQ.DT, Depth + 1)) {
+        isGuaranteedNotToBeUndef(X, SQ.AC, SQ.CtxI, SQ.DT, Depth + 1)) {
       // If the source is 0, inf or nan, the result is a nan
       IRBuilderBase::InsertPointGuard Guard(Builder);
       Builder.SetInsertPoint(I);
@@ -2982,7 +2992,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
       Type *EltTy = VTy->getScalarType();
       if (CI->getArgOperand(0) == CI->getArgOperand(1) &&
-          isGuaranteedNotToBeUndef(CI->getArgOperand(0), SQ.AC, SQ.CxtI, SQ.DT,
+          isGuaranteedNotToBeUndef(CI->getArgOperand(0), SQ.AC, SQ.CtxI, SQ.DT,
                                    Depth + 1)) {
         if (SimplifyDemandedFPClass(CI, 0, SrcDemandedMask, KnownSrc[0], SQ,
                                     Depth + 1) ||
@@ -3310,6 +3320,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     case Intrinsic::nearbyint:
     case Intrinsic::round:
     case Intrinsic::roundeven: {
+      Type *EltTy = VTy->getScalarType();
+      DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+
       FPClassTest DemandedSrcMask = DemandedMask;
       if (DemandedMask & fcNan)
         DemandedSrcMask |= fcNan;
@@ -3318,8 +3331,17 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (DemandedMask & fcNegZero)
         DemandedSrcMask |= fcNegSubnormal | fcNegNormal;
 
-      if (DemandedMask & fcPosZero)
+      if (DemandedMask & fcPosZero) {
         DemandedSrcMask |= fcPosSubnormal | fcPosNormal;
+        if (Mode.inputsMayBePositiveZero())
+          DemandedSrcMask |= fcNegSubnormal;
+      }
+
+      // Rounding a subnormal away from zero may produce a normal value.
+      if (DemandedMask & fcNegNormal)
+        DemandedSrcMask |= fcNegSubnormal;
+      if (DemandedMask & fcPosNormal)
+        DemandedSrcMask |= fcPosSubnormal;
 
       KnownFPClass KnownSrc;
       if (SimplifyDemandedFPClass(CI, 0, DemandedSrcMask, KnownSrc, SQ,
@@ -3350,9 +3372,11 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (IID == Intrinsic::ceil && KnownSrc.isKnownAlways(fcPosSubnormal))
         return ConstantFP::get(VTy, 1.0);
 
-      Known = KnownFPClass::roundToIntegral(
-          KnownSrc, IID == Intrinsic::trunc,
-          VTy->getScalarType()->isMultiUnitFPType());
+      const bool IsMultiUnitFPType = EltTy->isMultiUnitFPType();
+
+      const bool IsTrunc = IID == Intrinsic::trunc;
+      Known = KnownFPClass::roundToIntegral(KnownSrc, IsTrunc,
+                                            IsMultiUnitFPType, Mode);
 
       Known.knownNot(~DemandedMask);
 
@@ -3530,12 +3554,24 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         switch (IID) {
         case Intrinsic::frexp: {
           FPClassTest SrcDemandedMask = fcNone;
+
           if (DemandedMask & fcNan)
             SrcDemandedMask |= fcNan;
-          if (DemandedMask & fcNegFinite)
-            SrcDemandedMask |= fcNegFinite;
-          if (DemandedMask & fcPosFinite)
-            SrcDemandedMask |= fcPosFinite;
+
+          // Positive subnormals and negative subnormals could become positive
+          // zero.
+          if (DemandedMask & fcPosZero)
+            SrcDemandedMask |= fcPosZero | fcSubnormal;
+
+          // Negative subnormals could become negative zero.
+          if (DemandedMask & fcNegZero)
+            SrcDemandedMask |= fcNegZero | fcNegSubnormal;
+
+          if (DemandedMask & (fcNegNormal | fcNegSubnormal))
+            SrcDemandedMask |= fcNegNormal | fcNegSubnormal;
+          if (DemandedMask & (fcPosNormal | fcPosSubnormal))
+            SrcDemandedMask |= fcPosNormal | fcPosSubnormal;
+
           if (DemandedMask & fcPosInf)
             SrcDemandedMask |= fcPosInf;
           if (DemandedMask & fcNegInf)
@@ -3557,7 +3593,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                      /*IsCanonicalizing=*/true))
             return SingleVal;
 
-          if (Known.isKnownAlways(fcInf | fcNan))
+          // frexp returns zero, infinity, and NaN inputs unchanged.
+          if (KnownSrc.isKnownAlways(fcZero | fcInf | fcNan))
             return II->getArgOperand(0);
 
           return nullptr;

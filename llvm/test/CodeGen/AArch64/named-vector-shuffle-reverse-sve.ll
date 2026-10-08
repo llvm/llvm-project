@@ -8,6 +8,26 @@ target triple = "aarch64-unknown-linux-gnu"
 ; VECTOR_REVERSE - PPR
 ;
 
+define <vscale x 1 x i1> @reverse_nxv1i1(<vscale x 1 x i1> %a) #0 {
+; CHECK-SELDAG-LABEL: reverse_nxv1i1:
+; CHECK-SELDAG:       // %bb.0:
+; CHECK-SELDAG-NEXT:    uzp1 p0.d, p0.d, p0.d
+; CHECK-SELDAG-NEXT:    rev p0.d, p0.d
+; CHECK-SELDAG-NEXT:    punpkhi p0.h, p0.b
+; CHECK-SELDAG-NEXT:    ret
+;
+; CHECK-FASTISEL-LABEL: reverse_nxv1i1:
+; CHECK-FASTISEL:       // %bb.0:
+; CHECK-FASTISEL-NEXT:    // implicit-def: $p1
+; CHECK-FASTISEL-NEXT:    uzp1 p0.d, p0.d, p1.d
+; CHECK-FASTISEL-NEXT:    rev p0.d, p0.d
+; CHECK-FASTISEL-NEXT:    punpkhi p0.h, p0.b
+; CHECK-FASTISEL-NEXT:    ret
+
+  %res = call <vscale x 1 x i1> @llvm.vector.reverse.nxv1i1(<vscale x 1 x i1> %a)
+  ret <vscale x 1 x i1> %res
+}
+
 define <vscale x 2 x i1> @reverse_nxv2i1(<vscale x 2 x i1> %a) #0 {
 ; CHECK-LABEL: reverse_nxv2i1:
 ; CHECK:       // %bb.0:

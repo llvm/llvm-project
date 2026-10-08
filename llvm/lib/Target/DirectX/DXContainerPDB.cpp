@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DirectX.h"
+#include "MCTargetDesc/DirectXContainerObjectWriter.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/DXContainer.h"
@@ -24,8 +25,6 @@
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
-
-extern cl::opt<bool> PdbInPrivate;
 
 namespace {
 
@@ -59,6 +58,8 @@ public:
 bool DXContainerPDB::shouldSkipSection(StringRef SectionName,
                                        size_t SectionSize) {
   if (MCDXContainerBaseWriter::shouldSkipSection(SectionName, SectionSize))
+    return true;
+  if (dxil::SlimDebug && SectionName == "ILDB")
     return true;
 
   // Skip sections that are irrelevant for debug info.
@@ -120,7 +121,7 @@ bool DXContainerPDB::runOnModule(Module &M) {
   }
 
   // PDB emission was not requested.
-  if (DebugFileName.empty() && !PdbInPrivate)
+  if (DebugFileName.empty() && !dxil::PdbInPrivate)
     return false;
   if (ModuleHash.empty())
     report_fatal_error("Module hash for PDB not found");
@@ -181,7 +182,7 @@ bool DXContainerPDB::runOnModule(Module &M) {
     reportFatalUsageError("Couldn't write to PDB file: " +
                           Twine(toString(std::move(Err))));
 
-  if (!PdbInPrivate)
+  if (!dxil::PdbInPrivate)
     return false;
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> Buf = MemoryBuffer::getFile(

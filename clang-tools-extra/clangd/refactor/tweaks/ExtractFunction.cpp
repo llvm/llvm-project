@@ -24,8 +24,14 @@
 //
 // - Only extract statements
 // - Extracts from non-templated free functions only.
-// - Parameters are const only if the declaration was const
-//   - Always passed by l-value reference
+// - Parameters that are never (conservatively) mutated in the extracted
+//   code become const references, except scalars (arithmetic, pointer,
+//   enumeration, ...), which are passed by value instead.
+// - Otherwise passed by non-const reference
+// - In C, which has no references, a parameter that would otherwise need
+//   one becomes a real pointer instead (except array types, which decay to
+//   a pointer on their own): the call site takes its address, and every
+//   use inside the extracted body is rewritten into a dereference.
 // - Void return type
 // - Cannot extract declarations that will be needed in the original function
 //   after extraction.
@@ -93,6 +99,17 @@ enum FunctionDeclKind {
   InlineDefinition,
   ForwardDeclaration,
   OutOfLineDefinition
+};
+
+// How a captured variable is passed to the extracted function.
+enum class ParamPassKind {
+  Value,     // A plain copy: `T name`. Also used for a C array, which
+             // decays to a pointer on its own wherever it's used.
+  Reference, // C++ only: `T &name`.
+  Pointer,   // C only (no references there): a real pointer, `T *name`,
+             // with the call site taking the address of the original
+             // variable and every use inside the extracted body rewritten
+             // into a dereference (see createParameters and getFuncBody).
 };
 
 // Whether N, despite being Unselected, may still be a single RootStmt: a
@@ -419,7 +436,7 @@ struct NewFunction {
   struct Parameter {
     std::string Name;
     QualType TypeInfo;
-    bool PassByReference;
+    ParamPassKind Kind;
     unsigned OrderPriority; // Lower value parameters are preferred first.
     std::string render(const DeclContext *Context) const;
     bool operator<(const Parameter &Other) const {
@@ -442,6 +459,23 @@ struct NewFunction {
   ConstexprSpecKind Constexpr = ConstexprSpecKind::Unspecified;
   bool Const = false;
 
+  // For C only: describes how to rewrite a single in-body reference to a
+  // parameter that had to become a real pointer instead of a reference (C
+  // has none), because its corresponding Parameter::Kind is Pointer. See
+  // createParameters and getFuncBody.
+  struct PointerRewriteSite {
+    SourceLocation Loc; // Location of the identifier itself.
+    unsigned NameLength;
+    // Set when this occurrence is the base of a non-arrow member access
+    // (`name.member`) immediately following it: that reads more
+    // naturally rewritten as `name->member` than `(*name).member`. Holds
+    // the location of the '.' token to replace with "->"; the identifier
+    // itself is then left untouched. Unset otherwise, in which case the
+    // identifier is instead wrapped in "(*...)".
+    std::optional<SourceLocation> DotLoc;
+  };
+  std::vector<PointerRewriteSite> PointerRewriteSites;
+
   // Decides whether the extracted function body and the function call need a
   // semicolon after extraction.
   tooling::ExtractionSemicolonPolicy SemicolonPolicy;
@@ -452,10 +486,10 @@ struct NewFunction {
   // Render the call for this function.
   std::string renderCall() const;
   // Render the definition for this function.
-  std::string renderDeclaration(FunctionDeclKind K,
-                                const DeclContext &SemanticDC,
-                                const DeclContext &SyntacticDC,
-                                const SourceManager &SM) const;
+  llvm::Expected<std::string> renderDeclaration(FunctionDeclKind K,
+                                                const DeclContext &SemanticDC,
+                                                const DeclContext &SyntacticDC,
+                                                const SourceManager &SM) const;
 
 private:
   std::string
@@ -465,7 +499,7 @@ private:
   std::string renderQualifiers() const;
   std::string renderDeclarationName(FunctionDeclKind K) const;
   // Generate the function body.
-  std::string getFuncBody(const SourceManager &SM) const;
+  llvm::Expected<std::string> getFuncBody(const SourceManager &SM) const;
 };
 
 std::string NewFunction::renderParametersForDeclaration(
@@ -488,6 +522,8 @@ std::string NewFunction::renderParametersForCall() const {
     if (NeedCommaBefore)
       Result += ", ";
     NeedCommaBefore = true;
+    if (P.Kind == ParamPassKind::Pointer)
+      Result += "&";
     Result += P.Name;
   }
   return Result;
@@ -542,10 +578,9 @@ std::string NewFunction::renderCall() const {
                     (SemicolonPolicy.isNeededInOriginalFunction() ? ";" : "")));
 }
 
-std::string NewFunction::renderDeclaration(FunctionDeclKind K,
-                                           const DeclContext &SemanticDC,
-                                           const DeclContext &SyntacticDC,
-                                           const SourceManager &SM) const {
+llvm::Expected<std::string> NewFunction::renderDeclaration(
+    FunctionDeclKind K, const DeclContext &SemanticDC,
+    const DeclContext &SyntacticDC, const SourceManager &SM) const {
   std::string Declaration = std::string(llvm::formatv(
       "{0}{1} {2}({3}){4}", renderSpecifiers(K),
       printType(ReturnType, SyntacticDC), renderDeclarationName(K),
@@ -555,25 +590,60 @@ std::string NewFunction::renderDeclaration(FunctionDeclKind K,
   case ForwardDeclaration:
     return std::string(llvm::formatv("{0};\n", Declaration));
   case OutOfLineDefinition:
-  case InlineDefinition:
-    return std::string(
-        llvm::formatv("{0} {\n{1}\n}\n", Declaration, getFuncBody(SM)));
-    break;
+  case InlineDefinition: {
+    llvm::Expected<std::string> Body = getFuncBody(SM);
+    if (!Body)
+      return Body.takeError();
+    return std::string(llvm::formatv("{0} {\n{1}\n}\n", Declaration, *Body));
+  }
   }
   llvm_unreachable("Unsupported FunctionDeclKind enum");
 }
 
-std::string NewFunction::getFuncBody(const SourceManager &SM) const {
+llvm::Expected<std::string>
+NewFunction::getFuncBody(const SourceManager &SM) const {
   // FIXME: Generate tooling::Replacements instead of std::string to
   // - hoist decls
   // - add return statement
   // - Add semicolon
-  return toSourceCode(SM, BodyRange).str() +
-         (SemicolonPolicy.isNeededInExtractedFunction() ? ";" : "");
+  std::string Body = toSourceCode(SM, BodyRange).str();
+  if (PointerRewriteSites.empty())
+    return Body + (SemicolonPolicy.isNeededInExtractedFunction() ? ";" : "");
+
+  // Splice in each site's rewrite. These are all independent
+  // insertions/single-token replacements at distinct, non-overlapping
+  // source locations (two DeclRefExprs can't share a location, and a dot
+  // always follows its own identifier), so none of this should actually
+  // be able to fail -- but if that assumption is ever wrong, surface it
+  // as an extraction failure instead of silently emitting broken code.
+  tooling::Replacements Repls;
+  unsigned BodyBeginOffset = SM.getFileOffset(BodyRange.getBegin());
+  for (const auto &Site : PointerRewriteSites) {
+    unsigned SiteOffset = SM.getFileOffset(Site.Loc) - BodyBeginOffset;
+    if (Site.DotLoc) {
+      // Leave the identifier itself untouched; turn the member access
+      // that follows it into "->" instead of wrapping in a dereference.
+      unsigned DotOffset = SM.getFileOffset(*Site.DotLoc) - BodyBeginOffset;
+      if (auto Err = Repls.add(tooling::Replacement("", DotOffset, 1, "->")))
+        return std::move(Err);
+    } else {
+      if (auto Err = Repls.add(tooling::Replacement("", SiteOffset, 0, "(*")))
+        return std::move(Err);
+      if (auto Err = Repls.add(
+              tooling::Replacement("", SiteOffset + Site.NameLength, 0, ")")))
+        return std::move(Err);
+    }
+  }
+  llvm::Expected<std::string> NewBody =
+      tooling::applyAllReplacements(Body, Repls);
+  if (!NewBody)
+    return NewBody.takeError();
+  return *NewBody + (SemicolonPolicy.isNeededInExtractedFunction() ? ";" : "");
 }
 
 std::string NewFunction::Parameter::render(const DeclContext *Context) const {
-  return printType(TypeInfo, *Context) + (PassByReference ? " &" : " ") + Name;
+  return printType(TypeInfo, *Context) +
+         (Kind == ParamPassKind::Reference ? " &" : " ") + Name;
 }
 
 // Stores captured information about Extraction Zone.
@@ -585,7 +655,37 @@ struct CapturedZoneInfo {
     unsigned DeclIndex;
     bool IsReferencedInZone = false;
     bool IsReferencedInPostZone = false;
-    // FIXME: Capture mutation information
+    // Conservatively: could this Decl be mutated somewhere in the zone? See
+    // ExtractionZoneVisitor::markPossiblyMutated() for what "conservatively"
+    // means here.
+    bool IsPossiblyMutated = false;
+    // Describes one reference to this Decl inside the zone (not
+    // before/after it). Used to rewrite each use if this ends up becoming
+    // a C pointer-adapter parameter (see createParameters): C has no
+    // references, so a parameter that needs reference semantics there
+    // becomes a real pointer instead, and every use of it in the
+    // copied-out body must be adjusted accordingly.
+    struct Occurrence {
+      SourceLocation Loc; // Location of the identifier itself.
+      // Set when this occurrence is the base of a non-arrow member access
+      // (`name.member`) immediately following it: holds the location of
+      // the '.' token, so it can be turned into "->" instead of wrapping
+      // the identifier in a dereference. See
+      // NewFunction::PointerRewriteSite.
+      std::optional<SourceLocation> DotLoc;
+    };
+    llvm::SmallVector<Occurrence, 1> ZoneOccurrences;
+    // Whether this Decl is ever the direct operand of a trait that
+    // depends on its exact, undecayed type: `sizeof`/`alignof`/`typeof`
+    // and their spelling variants (e.g. `sizeof arr`/`sizeof(arr)`, as
+    // opposed to `sizeof(T)`, which doesn't reference arr's Decl at all).
+    // If this Decl is an array and ends up decaying to a pointer for a C
+    // pointer-adapter parameter (see createParameters), such a use would
+    // silently start reporting the pointer's properties instead of the
+    // array's (e.g. 8 instead of 20 for `sizeof` on a 5-element `int`
+    // array on a 64-bit target), so that decay is refused whenever this
+    // is set.
+    bool HasUnsafeTypeQueryUseInZone = false;
     DeclInformation(const Decl *TheDecl, ZoneRelative DeclaredIn,
                     unsigned DeclIndex)
         : TheDecl(TheDecl), DeclaredIn(DeclaredIn), DeclIndex(DeclIndex){};
@@ -642,6 +742,68 @@ bool isLoop(const Stmt *S) {
          isa<CXXForRangeStmt>(S);
 }
 
+// Strips E down to the Decl(s) whose storage it ultimately refers to,
+// chaining through parens, casts, and member/array-element access (e.g.
+// `a.b[i]` resolves to `a`), but only when that access reaches through
+// value semantics: mutating `a.b` mutates `a`'s own storage, so we keep
+// chaining. We deliberately stop at a pointer-typed base (e.g. `p->b`,
+// `p[i]`, `p->*pmf`): that only mutates `*p`, never `p`'s own binding, so
+// chaining through it would incorrectly require `p` to stay non-const. For
+// the same reason, a dereference (`*p = 1`) is intentionally not handled
+// at all: it only ever mutates the pointee, never the pointer itself.
+//
+// A genuine array subscript (`arr[i]` where `arr` is an array, not a
+// pointer) also stops here: the base is always wrapped in an
+// ArrayToPointerDecay cast, indistinguishable at this point from
+// subscripting a real pointer. That's fine because createParameters()
+// never makes an array-typed capture const in the first place, regardless
+// of what we compute here.
+//
+// A conditional expression (e.g. `(cond ? a : b).m`) could resolve to
+// either branch at runtime, so both are collected -- this can only grow
+// the result, never replace it, which is why this appends to Decls rather
+// than returning a single Decl the way the rest of this function might
+// suggest. This has to be handled at every level of the chain, not just
+// the top: `(cond ? a : b).m = 1` reaches the conditional through a
+// MemberExpr base, not directly.
+//
+// Appends nothing if E isn't ultimately grounded in a variable this way
+// (e.g. it's a temporary, a call result, or reached through a pointer).
+void collectUnderlyingDecls(const Expr *E,
+                            llvm::SmallVectorImpl<const Decl *> &Decls) {
+  if (!E)
+    return;
+  E = E->IgnoreParenCasts();
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+    Decls.push_back(DRE->getDecl());
+    return;
+  }
+  if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+    if (!ME->getBase()->getType()->isPointerType())
+      collectUnderlyingDecls(ME->getBase(), Decls);
+    return;
+  }
+  if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E)) {
+    if (!ASE->getBase()->getType()->isPointerType())
+      collectUnderlyingDecls(ASE->getBase(), Decls);
+    return;
+  }
+  if (const auto *BO = dyn_cast<BinaryOperator>(E)) {
+    // Only BO_PtrMemD (`.*`) is handled: its LHS is always an object, by
+    // grammar, so the chain always continues (matching MemberExpr's `.`
+    // above). BO_PtrMemI (`->*`) is excluded: its LHS is always a pointer,
+    // by grammar, so the chain should never continue (matching
+    // MemberExpr's `->` above).
+    if (BO->getOpcode() == BO_PtrMemD)
+      collectUnderlyingDecls(BO->getLHS(), Decls);
+    return;
+  }
+  if (const auto *CO = dyn_cast<AbstractConditionalOperator>(E)) {
+    collectUnderlyingDecls(CO->getTrueExpr(), Decls);
+    collectUnderlyingDecls(CO->getFalseExpr(), Decls);
+  }
+}
+
 // Captures information from Extraction Zone
 CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
   // We use the ASTVisitor instead of using the selection tree since we need to
@@ -689,6 +851,54 @@ CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
       return true;
     }
 
+    // Set by VisitMemberExpr right before traversing into a non-arrow
+    // MemberExpr's base, when that base is (possibly parenthesized)
+    // exactly a DeclRefExpr: since that base is always traversed
+    // immediately afterwards (it's the MemberExpr's only child),
+    // VisitDeclRefExpr can rely on this still describing itself, and
+    // must always consume (reset) it, matched or not, so it never leaks
+    // into an unrelated, later DeclRefExpr.
+    std::optional<SourceLocation> PendingMemberDotLoc;
+
+    bool VisitMemberExpr(MemberExpr *ME) {
+      if (!ME->isArrow() && isa<DeclRefExpr>(ME->getBase()->IgnoreParens()))
+        PendingMemberDotLoc = ME->getOperatorLoc();
+      return true;
+    }
+
+    // Marks D as having an unsafe, type-dependent use in the zone (see
+    // DeclInformation::HasUnsafeTypeQueryUseInZone) if it's reached
+    // through a plain (possibly parenthesized) DeclRefExpr -- e.g. not
+    // through a cast, which would already observe the decayed type rather
+    // than the Decl's own declared type.
+    void markUnsafeTypeQueryOperand(const Expr *E) {
+      if (CurrentLocation != ZoneRelative::Inside)
+        return;
+      if (const auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParens()))
+        if (auto *DeclInfo = Info.getDeclInfoFor(DRE->getDecl()))
+          DeclInfo->HasUnsafeTypeQueryUseInZone = true;
+    }
+
+    // Covers sizeof/alignof/__alignof/_Countof and their variants: all
+    // share this one node type, distinguished only by getKind().
+    bool VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *E) {
+      if (!E->isArgumentType())
+        markUnsafeTypeQueryOperand(E->getArgumentExpr());
+      return true;
+    }
+
+    // Covers typeof/typeof_unqual/__typeof__ (decltype itself is C++
+    // only, so can't appear in the C code this matters for, but is
+    // included for completeness/robustness).
+    bool VisitTypeOfExprTypeLoc(TypeOfExprTypeLoc TL) {
+      markUnsafeTypeQueryOperand(TL.getUnderlyingExpr());
+      return true;
+    }
+    bool VisitDecltypeTypeLoc(DecltypeTypeLoc TL) {
+      markUnsafeTypeQueryOperand(TL.getUnderlyingExpr());
+      return true;
+    }
+
     bool VisitDeclRefExpr(DeclRefExpr *DRE) {
       // Find the corresponding Decl and mark it's occurrence.
       const Decl *D = DRE->getDecl();
@@ -697,13 +907,200 @@ CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
       if (!DeclInfo)
         DeclInfo = Info.createDeclInfo(D, ZoneRelative::OutsideFunc);
       DeclInfo->markOccurence(CurrentLocation);
-      // FIXME: check if reference mutates the Decl being referred.
+      if (CurrentLocation == ZoneRelative::Inside)
+        DeclInfo->ZoneOccurrences.push_back(
+            {DRE->getLocation(), PendingMemberDotLoc});
+      PendingMemberDotLoc.reset();
+      return true;
+    }
+
+    // Conservatively marks D as possibly mutated: used both for actual
+    // direct mutations (assignment, increment/decrement, ...) and for
+    // constructs that alias D in a way we don't want to trace further (a
+    // reference bound to D, D's address taken, D captured by reference in a
+    // lambda, ...). We never try to determine whether such an alias is
+    // itself later mutated -- that would require searching beyond this one
+    // occurrence, which is exactly the cost this design avoids (and what
+    // makes ExprMutationAnalyzer prohibitively slow). The price is
+    // that we sometimes keep a parameter non-const where a full alias
+    // analysis could prove it safe to const; we never get this wrong in the
+    // other, unsafe direction.
+    void markPossiblyMutated(const Decl *D) {
+      if (!D || CurrentLocation != ZoneRelative::Inside)
+        return;
+      if (auto *DeclInfo = Info.getDeclInfoFor(D))
+        DeclInfo->IsPossiblyMutated = true;
+    }
+    void markPossiblyMutated(const Expr *E) {
+      llvm::SmallVector<const Decl *, 2> Decls;
+      collectUnderlyingDecls(E, Decls);
+      for (const Decl *D : Decls)
+        markPossiblyMutated(D);
+    }
+
+    bool VisitBinaryOperator(BinaryOperator *BO) {
+      if (BO->isAssignmentOp())
+        markPossiblyMutated(BO->getLHS());
+      return true;
+    }
+
+    bool VisitUnaryOperator(UnaryOperator *UO) {
+      // FIXME: Try to track where the result of the address operator
+      // ends up. If it's a const pointer, this is not a mutating access.
+      if (UO->isIncrementDecrementOp() || UO->getOpcode() == UO_AddrOf)
+        markPossiblyMutated(UO->getSubExpr());
+      return true;
+    }
+
+    bool VisitExplicitCastExpr(ExplicitCastExpr *ECE) {
+      // An explicit cast to a non-const reference type allows mutating the
+      // result as if it were a plain non-const reference.
+      if (ECE->getType()->isReferenceType() &&
+          !ECE->getType()->getPointeeType().isConstQualified())
+        markPossiblyMutated(ECE->getSubExpr());
+      return true;
+    }
+
+    // Marks the object a non-const member function is (or may be) called
+    // on, whether through `.`, `->`, or an overloaded operator. A static
+    // method (possible since C++23 for operator() and operator[]) has no
+    // `this` at all, so it never touches Object regardless of constness.
+    void markPossiblyMutatedCallee(const Expr *Object,
+                                   const CXXMethodDecl *Method) {
+      if (Method && !Method->isStatic() && !Method->isConst())
+        markPossiblyMutated(Object);
+    }
+
+    // Marks the arguments of a call that bind to a non-const reference
+    // parameter of Callee (a FunctionDecl or CXXConstructorDecl). If Callee
+    // is null (e.g. a call through a function pointer), conservatively marks
+    // every argument, since we don't know the parameter types.
+    void markPossiblyMutatedArgs(ArrayRef<const Expr *> Args,
+                                 const FunctionDecl *Callee) {
+      for (unsigned I = 0; I < Args.size(); ++I) {
+        if (!Callee || I >= Callee->getNumParams() ||
+            (Callee->getParamDecl(I)->getType()->isReferenceType() &&
+             !Callee->getParamDecl(I)
+                  ->getType()
+                  ->getPointeeType()
+                  .isConstQualified()))
+          markPossiblyMutated(Args[I]);
+      }
+    }
+
+    bool VisitCXXMemberCallExpr(CXXMemberCallExpr *MCE) {
+      markPossiblyMutatedCallee(MCE->getImplicitObjectArgument(),
+                                MCE->getMethodDecl());
+      // getArgs() here is just the explicit argument list, without the
+      // implicit object handled above, so it aligns directly with the
+      // method's own parameters.
+      markPossiblyMutatedArgs(
+          llvm::ArrayRef<const Expr *>(MCE->getArgs(), MCE->getNumArgs()),
+          MCE->getMethodDecl());
+      return true;
+    }
+
+    bool VisitCXXOperatorCallExpr(CXXOperatorCallExpr *OCE) {
+      // Unlike CXXMemberCallExpr, a member operator's implicit object is
+      // args[0], not split out separately; args[1:] are the real
+      // parameters. A non-member (free function) operator overload has no
+      // implicit object at all, so all args align directly with params.
+      // Every operator has at least one operand, but guard anyway since
+      // the arithmetic below would underflow on an empty argument list.
+      if (OCE->getNumArgs() == 0)
+        return true;
+      const auto *Method =
+          dyn_cast_or_null<CXXMethodDecl>(OCE->getCalleeDecl());
+      if (Method) {
+        markPossiblyMutatedCallee(OCE->getArg(0), Method);
+        markPossiblyMutatedArgs(llvm::ArrayRef<const Expr *>(
+                                    OCE->getArgs() + 1, OCE->getNumArgs() - 1),
+                                Method);
+      } else {
+        markPossiblyMutatedArgs(
+            llvm::ArrayRef<const Expr *>(OCE->getArgs(), OCE->getNumArgs()),
+            OCE->getDirectCallee());
+      }
+      return true;
+    }
+
+    bool VisitCallExpr(CallExpr *CE) {
+      // Both are already fully handled by their own visitors above,
+      // including their arguments: skip CXXMemberCallExpr here to avoid
+      // redundant work (its getArgs()/getDirectCallee() would otherwise
+      // align fine on their own), and skip CXXOperatorCallExpr because its
+      // getArgs() includes the implicit object as args[0], which would
+      // misalign against a member operator's real parameter list if
+      // checked here too.
+      if (isa<CXXMemberCallExpr>(CE) || isa<CXXOperatorCallExpr>(CE))
+        return true;
+      markPossiblyMutatedArgs(
+          llvm::ArrayRef<const Expr *>(CE->getArgs(), CE->getNumArgs()),
+          CE->getDirectCallee());
+      return true;
+    }
+
+    bool VisitCXXConstructExpr(CXXConstructExpr *CCE) {
+      markPossiblyMutatedArgs(
+          llvm::ArrayRef<const Expr *>(CCE->getArgs(), CCE->getNumArgs()),
+          CCE->getConstructor());
+      return true;
+    }
+
+    bool VisitVarDecl(VarDecl *VD) {
+      // A non-const reference bound to a captured Decl aliases it: treat any
+      // such binding as a possible mutation, without checking whether the
+      // reference itself is later mutated (see markPossiblyMutated). This
+      // also covers reference structured bindings (DecompositionDecl is a
+      // VarDecl), since binding `auto &[a, b] = x` conservatively counts as
+      // aliasing all of `x`.
+      if (VD->getType()->isReferenceType() &&
+          !VD->getType()->getPointeeType().isConstQualified() && VD->hasInit())
+        markPossiblyMutated(VD->getInit()->IgnoreParens());
+      return true;
+    }
+
+    bool VisitLambdaExpr(LambdaExpr *LE) {
+      // Init-captures (`[r = x]`/`[&r = x]`) are handled by VisitVarDecl
+      // above, since they introduce a real VarDecl visited independently.
+      // This only needs to handle plain captures (`[&x]`/`[&]`), which don't.
+      for (const LambdaCapture &C : LE->captures())
+        if (C.capturesVariable() && C.getCaptureKind() == LCK_ByRef)
+          markPossiblyMutated(C.getCapturedVar());
+      return true;
+    }
+
+    bool VisitCXXForRangeStmt(CXXForRangeStmt *FRS) {
+      // Conservatively: a non-const reference (or pointer) loop variable
+      // could mutate the range expression's elements, which -- like a
+      // member/array-element write -- requires the range expression's own
+      // Decl to be non-const if it's a value type (e.g. a plain array).
+      // We don't check whether the loop variable is actually mutated, and we
+      // don't special-case containers with const-qualified begin()/end():
+      // those are visited like any other (possibly non-const) member call.
+      QualType LoopVarType = FRS->getLoopVariable()->getType();
+      if ((LoopVarType->isReferenceType() &&
+           !LoopVarType->getPointeeType().isConstQualified()) ||
+          (LoopVarType->isPointerType() &&
+           !LoopVarType->getPointeeType().isConstQualified()))
+        if (const Expr *RangeInit = FRS->getRangeInit())
+          markPossiblyMutated(RangeInit);
       return true;
     }
 
     bool VisitReturnStmt(ReturnStmt *Return) {
-      if (CurrentLocation == ZoneRelative::Inside)
+      if (CurrentLocation == ZoneRelative::Inside) {
         Info.HasReturnStmt = true;
+        // Conservatively treat returning a captured Decl as a possible
+        // mutation, regardless of whether the return is actually by value
+        // (safe) or by non-const reference (not safe). Telling these apart
+        // needs the extracted function's return type, which is only
+        // decided later in generateReturnProperties(); duplicating its
+        // logic here would couple two distant functions for little gain,
+        // since directly returning a capture is rare.
+        if (const Expr *RV = Return->getRetValue())
+          markPossiblyMutated(RV);
+      }
       return true;
     }
 
@@ -742,7 +1139,8 @@ CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
 // needed.
 // FIXME: Check if the declaration has a local/anonymous type
 bool createParameters(NewFunction &ExtractedFunc,
-                      const CapturedZoneInfo &CapturedInfo) {
+                      const CapturedZoneInfo &CapturedInfo,
+                      const ASTContext &Context, const LangOptions &LangOpts) {
   for (const auto &KeyVal : CapturedInfo.DeclInfoMap) {
     const auto &DeclInfo = KeyVal.second;
     // If a Decl was Declared in zone and referenced in post zone, it
@@ -763,17 +1161,73 @@ bool createParameters(NewFunction &ExtractedFunc,
     if (!VD || isa<FunctionDecl>(DeclInfo.TheDecl))
       return false;
     // Parameter qualifiers are same as the Decl's qualifiers.
-    QualType TypeInfo = VD->getType().getNonReferenceType();
-    // FIXME: Need better qualifier checks: check mutated status for
-    // Decl(e.g. was it assigned, passed as nonconst argument, etc)
+    QualType FullTypeInfo = VD->getType();
+    QualType TypeInfo = FullTypeInfo.getNonReferenceType();
     // FIXME: check if parameter will be a non l-value reference.
-    // FIXME: We don't want to always pass variables of types like int,
-    // pointers, etc by reference.
-    bool IsPassedByReference = true;
+    ParamPassKind Kind = ParamPassKind::Reference;
+    if (!DeclInfo.IsPossiblyMutated) {
+      auto WordSize = Context.getTypeSizeInChars(Context.VoidPtrTy);
+      // A scalar (arithmetic, pointer, enumeration, ...) is at least as
+      // cheap to copy as to pass by reference, and less noisy.
+      if (TypeInfo->isScalarType() && !TypeInfo.isVolatileQualified() &&
+          !FullTypeInfo->isReferenceType() &&
+          Context.getTypeSizeInChars(TypeInfo) <= 2 * WordSize) {
+        Kind = ParamPassKind::Value;
+      } else if (!TypeInfo->isArrayType()) {
+        // Still passed by reference to avoid a copy, but the reference
+        // doesn't need to be mutable. Array types are never made const:
+        // mutating array elements through a non-const-ref loop variable
+        // or a decayed pointer argument is common and easy to miss
+        // conservatively, so we don't try.
+        TypeInfo.addConst();
+      }
+    }
+
+    // C has no references. A parameter that would otherwise need one
+    // becomes a real pointer instead: the call site takes the address of
+    // the original variable explicitly, and every use of it in the
+    // copied-out body is rewritten into a dereference (see
+    // NewFunction::getFuncBody). Array types are the exception: they decay
+    // to a pointer on their own wherever they're used, so no rewriting or
+    // address-of is needed for them at all -- except that TypeInfo itself
+    // must be decayed too (NewFunction::Parameter::render() has no special
+    // case for array declarator syntax, so leaving it as an array type
+    // would print as the uncompilable `int[5] name`).
+    if (Kind == ParamPassKind::Reference && !LangOpts.CPlusPlus) {
+      if (TypeInfo->isArrayType()) {
+        // A decayed pointer no longer reports the array's own size,
+        // alignment, or type: bail out rather than silently break a
+        // sizeof/alignof/typeof (or similar) on it.
+        if (DeclInfo.HasUnsafeTypeQueryUseInZone)
+          return false;
+        TypeInfo = Context.getArrayDecayedType(TypeInfo);
+        Kind = ParamPassKind::Value;
+      } else {
+        // Bail out rather than rewrite a use whose location (or, for a
+        // member-access rewrite, whose dot's location) can't be mapped
+        // back to a single, unambiguous spot in the source (e.g. one
+        // produced by macro expansion) -- the dot can be a macro
+        // expansion even when the identifier itself isn't, e.g.
+        // `#define DOT .` used as `s DOT x`.
+        if (llvm::any_of(
+                DeclInfo.ZoneOccurrences,
+                [](const CapturedZoneInfo::DeclInformation::Occurrence &O) {
+                  return O.Loc.isMacroID() ||
+                         (O.DotLoc && O.DotLoc->isMacroID());
+                }))
+          return false;
+        TypeInfo = Context.getPointerType(TypeInfo);
+        Kind = ParamPassKind::Pointer;
+        unsigned NameLength = VD->getName().size();
+        for (const auto &Occ : DeclInfo.ZoneOccurrences)
+          ExtractedFunc.PointerRewriteSites.push_back(
+              {Occ.Loc, NameLength, Occ.DotLoc});
+      }
+    }
+
     // We use the index of declaration as the ordering priority for parameters.
-    ExtractedFunc.Parameters.push_back({std::string(VD->getName()), TypeInfo,
-                                        IsPassedByReference,
-                                        DeclInfo.DeclIndex});
+    ExtractedFunc.Parameters.push_back(
+        {std::string(VD->getName()), TypeInfo, Kind, DeclInfo.DeclIndex});
   }
   llvm::sort(ExtractedFunc.Parameters);
   return true;
@@ -847,6 +1301,16 @@ llvm::Expected<NewFunction> getExtractedFunction(ExtractionZone &ExtZone,
   ExtractedFunc.DefinitionQualifier = ExtZone.EnclosingFunction->getQualifier();
   ExtractedFunc.Constexpr = ExtZone.EnclosingFunction->getConstexprKind();
 
+  // A free function declared `static` has internal linkage: an extracted
+  // sibling should keep that, or it'd default to external linkage instead.
+  // Checked on the canonical (first) declaration, not this one: a
+  // definition following an earlier `static` forward declaration doesn't
+  // need to (and often doesn't) repeat `static` itself, but is still
+  // static. For a method, this gets overridden just below by the more
+  // precise (and differently-meaning) CXXMethodDecl::isStatic().
+  ExtractedFunc.Static =
+      ExtZone.EnclosingFunction->getCanonicalDecl()->getStorageClass() ==
+      SC_Static;
   if (const auto *Method =
           llvm::dyn_cast<CXXMethodDecl>(ExtZone.EnclosingFunction))
     captureMethodInfo(ExtractedFunc, Method);
@@ -868,7 +1332,8 @@ llvm::Expected<NewFunction> getExtractedFunction(ExtractionZone &ExtZone,
   ExtractedFunc.DefinitionPoint = ExtZone.getInsertionPoint();
 
   ExtractedFunc.CallerReturnsValue = CapturedInfo.AlwaysReturns;
-  if (!createParameters(ExtractedFunc, CapturedInfo) ||
+  if (!createParameters(ExtractedFunc, CapturedInfo,
+                        ExtZone.EnclosingFunction->getASTContext(), LangOpts) ||
       !generateReturnProperties(ExtractedFunc, *ExtZone.EnclosingFunction,
                                 CapturedInfo))
     return error("Too complex to extract.");
@@ -898,26 +1363,32 @@ tooling::Replacement replaceWithFuncCall(const NewFunction &ExtractedFunc,
       SM, CharSourceRange(ExtractedFunc.BodyRange, false), FuncCall, LangOpts);
 }
 
-tooling::Replacement createFunctionDefinition(const NewFunction &ExtractedFunc,
-                                              const SourceManager &SM) {
+llvm::Expected<tooling::Replacement>
+createFunctionDefinition(const NewFunction &ExtractedFunc,
+                         const SourceManager &SM) {
   FunctionDeclKind DeclKind = InlineDefinition;
   if (ExtractedFunc.ForwardDeclarationPoint)
     DeclKind = OutOfLineDefinition;
-  std::string FunctionDef = ExtractedFunc.renderDeclaration(
+  llvm::Expected<std::string> FunctionDef = ExtractedFunc.renderDeclaration(
       DeclKind, *ExtractedFunc.SemanticDC, *ExtractedFunc.SyntacticDC, SM);
+  if (!FunctionDef)
+    return FunctionDef.takeError();
 
   return tooling::Replacement(SM, ExtractedFunc.DefinitionPoint, 0,
-                              FunctionDef);
+                              *FunctionDef);
 }
 
-tooling::Replacement createForwardDeclaration(const NewFunction &ExtractedFunc,
-                                              const SourceManager &SM) {
-  std::string FunctionDecl = ExtractedFunc.renderDeclaration(
+llvm::Expected<tooling::Replacement>
+createForwardDeclaration(const NewFunction &ExtractedFunc,
+                         const SourceManager &SM) {
+  llvm::Expected<std::string> FunctionDecl = ExtractedFunc.renderDeclaration(
       ForwardDeclaration, *ExtractedFunc.SemanticDC,
       *ExtractedFunc.ForwardDeclarationSyntacticDC, SM);
+  if (!FunctionDecl)
+    return FunctionDecl.takeError();
   SourceLocation DeclPoint = *ExtractedFunc.ForwardDeclarationPoint;
 
-  return tooling::Replacement(SM, DeclPoint, 0, FunctionDecl);
+  return tooling::Replacement(SM, DeclPoint, 0, *FunctionDecl);
 }
 
 // Returns true if ExtZone contains any ReturnStmts.
@@ -943,8 +1414,6 @@ bool hasReturnStmt(const ExtractionZone &ExtZone) {
 
 bool ExtractFunction::prepare(const Selection &Inputs) {
   const LangOptions &LangOpts = Inputs.AST->getLangOpts();
-  if (!LangOpts.CPlusPlus)
-    return false;
   const Node *CommonAnc = Inputs.ASTSelection.commonAncestor();
   const SourceManager &SM = Inputs.AST->getSourceManager();
   auto MaybeExtZone = findExtractionZone(CommonAnc, SM, LangOpts);
@@ -968,7 +1437,10 @@ Expected<Tweak::Effect> ExtractFunction::apply(const Selection &Inputs) {
   if (!ExtractedFunc)
     return ExtractedFunc.takeError();
   tooling::Replacements Edit;
-  if (auto Err = Edit.add(createFunctionDefinition(*ExtractedFunc, SM)))
+  auto FuncDef = createFunctionDefinition(*ExtractedFunc, SM);
+  if (!FuncDef)
+    return FuncDef.takeError();
+  if (auto Err = Edit.add(*FuncDef))
     return std::move(Err);
   if (auto Err = Edit.add(replaceWithFuncCall(*ExtractedFunc, SM, LangOpts)))
     return std::move(Err);
@@ -977,15 +1449,20 @@ Expected<Tweak::Effect> ExtractFunction::apply(const Selection &Inputs) {
     // If the fwd-declaration goes in the same file, merge into Replacements.
     // Otherwise it needs to be a separate file edit.
     if (SM.isWrittenInSameFile(ExtractedFunc->DefinitionPoint, *FwdLoc)) {
-      if (auto Err = Edit.add(createForwardDeclaration(*ExtractedFunc, SM)))
+      auto FwdDecl = createForwardDeclaration(*ExtractedFunc, SM);
+      if (!FwdDecl)
+        return FwdDecl.takeError();
+      if (auto Err = Edit.add(*FwdDecl))
         return std::move(Err);
     } else {
       auto MultiFileEffect = Effect::mainFileEdit(SM, std::move(Edit));
       if (!MultiFileEffect)
         return MultiFileEffect.takeError();
 
-      tooling::Replacements OtherEdit(
-          createForwardDeclaration(*ExtractedFunc, SM));
+      auto FwdDecl = createForwardDeclaration(*ExtractedFunc, SM);
+      if (!FwdDecl)
+        return FwdDecl.takeError();
+      tooling::Replacements OtherEdit(*FwdDecl);
       if (auto PathAndEdit =
               Tweak::Effect::fileEdit(SM, SM.getFileID(*FwdLoc), OtherEdit))
         MultiFileEffect->ApplyEdits.try_emplace(PathAndEdit->first,
