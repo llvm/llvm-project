@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macosx11.0.0 -fobjc-runtime=macosx-11.0.0 -fobjc-constant-literals -fconstant-nsnumber-literals -fconstant-nsarray-literals -fconstant-nsdictionary-literals -fno-constant-cfstrings -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple arm64-apple-ios14.0 -fobjc-runtime=ios-14.0 -fobjc-constant-literals -fconstant-nsnumber-literals -fconstant-nsarray-literals -fconstant-nsdictionary-literals -fno-constant-cfstrings -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx11.0.0 -fobjc-runtime=macosx-11.0.0 -fobjc-constant-literals -fconstant-nsnumber-literals -fconstant-nsarray-literals -fconstant-nsdictionary-literals -fno-constant-cfstrings -Wno-CFString-literal -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios14.0 -fobjc-runtime=ios-14.0 -fobjc-constant-literals -fconstant-nsnumber-literals -fconstant-nsarray-literals -fconstant-nsdictionary-literals -fno-constant-cfstrings -Wno-CFString-literal -emit-llvm -o - %s | FileCheck %s
 
 // With -fno-constant-cfstrings the keys are emitted as
 // OBJC_CLASS_$_NSConstantString (raw UTF-8 bytes preserved) and compared as
@@ -41,16 +41,30 @@ typedef unsigned int NSUInteger;
 // CHECK: @_unnamed_nsstring_ = private constant %struct.__builtin_NSString { ptr @"OBJC_CLASS_$_NSConstantString", ptr @.str, i32 4 }
 
 // The Private Use Area character U+E000 is stored as the raw UTF-8 bytes EE 80 80.
-// CHECK: @.str.{{[0-9]+}} = private unnamed_addr constant [4 x i8] c"\EE\80\80\00"
-// CHECK: @_unnamed_nsstring_.{{[0-9]+}} = private constant %struct.__builtin_NSString { ptr @"OBJC_CLASS_$_NSConstantString", ptr @.str.{{[0-9]+}}, i32 3 }
+// CHECK: @.str.[[PUA:[0-9]+]] = private unnamed_addr constant [4 x i8] c"\EE\80\80\00"
+// CHECK: @_unnamed_nsstring_.[[NSS:[0-9]+]] = private constant %struct.__builtin_NSString { ptr @"OBJC_CLASS_$_NSConstantString", ptr @.str.[[PUA]], i32 3 }
 
 // The emitted keys array is ordered by UTF-8 byte order: the PUA's first byte
 // 0xEE sorts before the emoji's first byte 0xF0, so the PUA key (suffixed
 // global, emitted second) comes first in the array.
-// CHECK: @_unnamed_array_storage = internal unnamed_addr constant [2 x ptr] [ptr @_unnamed_nsstring_.{{[0-9]+}}, ptr @_unnamed_nsstring_]
+// CHECK: @_unnamed_array_storage = internal unnamed_addr constant [2 x ptr] [ptr @_unnamed_nsstring_.[[NSS]], ptr @_unnamed_nsstring_]
 static NSDictionary *const diverges = @{
     @"\U0001F600" : @1,
     @"\uE000" : @2,
 };
 
+// An ill-formed key (stray 0xFF byte) does not warn here: the truncation
+// warning is only emitted when keys become constant CFStrings. Its raw bytes
+// are preserved and sort by byte order, where 0xFF sorts after ASCII.
+// CHECK: @.str.[[ABC:[0-9]+]] = private unnamed_addr constant [4 x i8] c"abc\00"
+// CHECK: @_unnamed_nsstring_.[[ABCNSS:[0-9]+]] = private constant %struct.__builtin_NSString { ptr @"OBJC_CLASS_$_NSConstantString", ptr @.str.[[ABC]], i32 3 }
+// CHECK: @.str.[[INV:[0-9]+]] = private unnamed_addr constant [2 x i8] c"\FF\00"
+// CHECK: @_unnamed_nsstring_.[[INVNSS:[0-9]+]] = private constant %struct.__builtin_NSString { ptr @"OBJC_CLASS_$_NSConstantString", ptr @.str.[[INV]], i32 1 }
+// CHECK: @_unnamed_array_storage.[[ARR:[0-9]+]] = internal unnamed_addr constant [2 x ptr] [ptr @_unnamed_nsstring_.[[ABCNSS]], ptr @_unnamed_nsstring_.[[INVNSS]]]
+static NSDictionary *const invalid = @{
+    @"abc" : @1,
+    @"\xff" : @2,
+};
+
 const void *use(void) { return (const void *)diverges; }
+const void *useInvalid(void) { return (const void *)invalid; }

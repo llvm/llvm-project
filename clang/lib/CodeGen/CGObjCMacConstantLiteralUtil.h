@@ -134,17 +134,16 @@ public:
     // prefix converts successfully, so we sort by exactly the code units the
     // string is stored and looked up as. Any trailing bytes that fail to
     // convert are dropped from the sort key; this cannot crash and yields a
-    // valid strict-weak ordering regardless of well-formedness. The raw UTF-8
-    // bytes of each key, used for byte-order sorting when the keys are not
-    // emitted as UTF-16 constant CFStrings.
+    // valid strict-weak ordering regardless of well-formedness.
+    //
+    // The raw UTF-8 bytes of each key, used for byte-order sorting when the
+    // keys are not emitted as UTF-16 constant CFStrings.
     SmallVector<StringRef, 16> KeysUTF8;
     KeysUTF8.reserve(NumElements);
     SmallVector<SmallVector<llvm::UTF16, 16>, 16> KeysUTF16(NumElements);
     for (size_t I = 0; I < NumElements; ++I) {
       Expr *const K = E->getKeyValueElement(I).Key->IgnoreImpCasts();
-      auto *SL = dyn_cast<ObjCStringLiteral>(K);
-      assert(SL && "Non-constant literals should not be sorted to "
-                   "maintain existing behavior");
+      auto *SL = cast<ObjCStringLiteral>(K);
       // NOTE: Using the `StringLiteral->getString()` since it checks that
       //       `chars` are 1 byte
       StringRef KS = SL->getString()->getString();

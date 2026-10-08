@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macosx11.0.0 -fobjc-runtime=macosx-11.0.0 -fobjc-constant-literals -fconstant-nsnumber-literals -fconstant-nsarray-literals -fconstant-nsdictionary-literals -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple arm64-apple-ios14.0 -fobjc-runtime=ios-14.0 -fobjc-constant-literals -fconstant-nsnumber-literals -fconstant-nsarray-literals -fconstant-nsdictionary-literals -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx11.0.0 -fobjc-runtime=macosx-11.0.0 -fobjc-constant-literals -fconstant-nsnumber-literals -fconstant-nsarray-literals -fconstant-nsdictionary-literals -Wno-CFString-literal -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios14.0 -fobjc-runtime=ios-14.0 -fobjc-constant-literals -fconstant-nsnumber-literals -fconstant-nsarray-literals -fconstant-nsdictionary-literals -Wno-CFString-literal -emit-llvm -o - %s | FileCheck %s
 
 // The constant dictionary emitter sorts string keys by UTF-16 code unit, which
 // is the order the runtime uses to look them up. This matters for keys that mix
@@ -43,4 +43,18 @@ static NSDictionary *const diverges = @{
     @"\uE000" : @2,
 };
 
+// An ill-formed key (stray 0xFF byte) warns in Sema (see the SemaObjC test for
+// that warning); its UTF-16 conversion yields an empty prefix, which sorts
+// before everything, and emission completes without crashing.
+// CHECK: @.str.[[ABC:[0-9]+]] = private unnamed_addr constant [4 x i8] c"abc\00", section "__TEXT,__cstring,cstring_literals"
+// CHECK: @_unnamed_cfstring_.[[ABCCF:[0-9]+]] = private global %struct.__NSConstantString_tag { ptr @__CFConstantStringClassReference, i32 {{[0-9]+}}, ptr @.str.[[ABC]], i64 3 }
+// CHECK: @.str.[[INV:[0-9]+]] = private unnamed_addr constant [1 x i16] zeroinitializer, section "__TEXT,__ustring"
+// CHECK: @_unnamed_cfstring_.[[INVCF:[0-9]+]] = private global %struct.__NSConstantString_tag { ptr @__CFConstantStringClassReference, i32 {{[0-9]+}}, ptr @.str.[[INV]], i64 0 }
+// CHECK: @_unnamed_array_storage.[[ARR:[0-9]+]] = internal unnamed_addr constant [2 x ptr] [ptr @_unnamed_cfstring_.[[INVCF]], ptr @_unnamed_cfstring_.[[ABCCF]]]
+static NSDictionary *const invalid = @{
+    @"abc" : @1,
+    @"\xff" : @2,
+};
+
 const void *use(void) { return (const void *)diverges; }
+const void *useInvalid(void) { return (const void *)invalid; }
