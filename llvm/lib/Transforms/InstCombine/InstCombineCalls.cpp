@@ -3525,7 +3525,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     ///
     // TODO: If we cared, should insert a canonicalize for x
     Value *SelectCond, *SelectLHS, *SelectRHS;
-    Instruction *SelectInst;
+    Instruction *SelectInst = nullptr;
     if (match(II->getArgOperand(1),
               m_OneUse(m_Instruction(
                   SelectInst, m_Select(m_Value(SelectCond), m_Value(SelectLHS),
