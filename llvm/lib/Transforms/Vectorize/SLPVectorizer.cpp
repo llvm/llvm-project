@@ -346,15 +346,16 @@ static cl::opt<unsigned> SLPVecLoopRTChecksCostPercent(
              "guarded scalar region cost, for blocks of loops already "
              "vectorized by the loop vectorizer."));
 
-/// The loop vectorizer joins its pointer range checks with a long chain of
-/// `or i1`. Each leaf is `and (icmp ult ptr, ptr), (icmp ult ptr, ptr)`. Trying
-/// to reduce such a chain is slow and rarely pays off, because the block runs
+/// The loop vectorizer joins its pointer range or difference checks, possibly
+/// with negative-stride predicates, into a long chain of `or i1`. Trying to
+/// reduce such a chain is slow and rarely pays off, because the block runs
 /// once per loop entry. The skip only applies in front of a loop marked as
 /// vectorized. 0 disables the skip.
 static cl::opt<unsigned> SLPMaxRuntimeCheckReductionLeaves(
     "slp-max-runtime-check-reduction-leaves", cl::init(64), cl::Hidden,
     cl::desc("Skip `or i1` reductions in a loop guard block with more than "
-             "this number of pointer range check leaves (0 = never skip)."));
+             "this number of pointer range or difference check leaves "
+             "(0 = never skip)."));
 
 // Limit the number of alias checks. The limit is chosen so that
 // it has no negative effect on the llvm benchmarks.
@@ -32428,8 +32429,13 @@ public:
   ///   %bound0 = icmp ult ptr %a, %b.end
   ///   %bound1 = icmp ult ptr %b, %a.end
   ///   %found.conflict = and i1 %bound0, %bound1
-  ///   %conflict.rdx = or i1 %conflict.rdx.prev, %found.conflict
+  ///   %stride.check = icmp slt i64 %stride, 0
+  ///   %check = or i1 %found.conflict, %stride.check
+  ///   %conflict.rdx = or i1 %conflict.rdx.prev, %check
   ///   br i1 %conflict.rdx, label %scalar.loop, label %vector.ph
+  /// Difference checks may instead be canonicalized to:
+  ///   %diff = sub i64 %a.addr, %b.addr
+  ///   %diff.check = icmp ugt i64 %diff, -16
   /// The root must be `or i1` with many such leaves. It must be the branch
   /// condition of its block. The block must branch into a loop marked as
   /// vectorized, from outside of that loop.
@@ -32468,13 +32474,35 @@ public:
       return match(V, m_ICmp(Pred, m_Value(A), m_Value())) &&
              Pred == CmpInst::ICMP_ULT && A->getType()->isPointerTy();
     };
-    return all_of(ReducedVals, [&](ArrayRef<Value *> Vals) {
+    auto IsDiffCheck = [](Value *V) {
+      CmpPredicate Pred;
+      ConstantInt *Limit;
+      return match(V, m_ICmp(Pred,
+                             m_Sub(m_PtrToIntOrAddr(m_Value()),
+                                   m_PtrToIntOrAddr(m_Value())),
+                             m_ConstantInt(Limit))) &&
+             Pred == CmpInst::ICMP_UGT && Limit->isNegative();
+    };
+    auto IsNegativeStrideCheck = [](Value *V) {
+      CmpPredicate Pred;
+      return match(V, m_ICmp(Pred, m_Value(), m_Zero())) &&
+             Pred == CmpInst::ICMP_SLT;
+    };
+    // The stride predicates accompany pointer checks but do not count toward
+    // the number of runtime checks controlled by the limit.
+    unsigned NumRuntimeChecks = 0;
+    bool Matches = all_of(ReducedVals, [&](ArrayRef<Value *> Vals) {
       return all_of(Vals, [&](Value *V) {
         Value *L, *R;
-        return match(V, m_And(m_Value(L), m_Value(R))) && IsPtrULT(L) &&
-               IsPtrULT(R);
+        if (IsDiffCheck(V) || (match(V, m_And(m_Value(L), m_Value(R))) &&
+                               IsPtrULT(L) && IsPtrULT(R))) {
+          ++NumRuntimeChecks;
+          return true;
+        }
+        return IsNegativeStrideCheck(V);
       });
     });
+    return Matches && NumRuntimeChecks > SLPMaxRuntimeCheckReductionLeaves;
   }
 
   /// Attempt to vectorize the tree found by matchAssociativeReduction.

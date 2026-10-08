@@ -2394,6 +2394,14 @@ void VPlanTransforms::cse(VPlan &Plan) {
       auto *Def = dyn_cast<VPSingleDefRecipe>(&R);
       if (!Def || !VPCSEDenseMapInfo::canHandle(Def))
         continue;
+      // Each OR in the memory-check reduction adds a distinct conflict to the
+      // chain. Hashing every prefix recursively makes CSE quadratic in the
+      // number of checks, even though none of these ORs can be eliminated.
+      if (auto *VPI = dyn_cast<VPInstruction>(Def);
+          VPI && VPBB->getName() == "vector.memcheck" &&
+          VPI->getOpcode() == Instruction::Or &&
+          VPI->getName() == "conflict.rdx")
+        continue;
       bool IsLoad = isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(Def);
       auto [It, Inserted] =
           (IsLoad ? LoadCSEMap : CSEMap).try_emplace(Def, Def);
