@@ -60,17 +60,12 @@ struct AMDGPUBlockingCyclesInfo {
 
 AMDGPU::WMMAProperties
 SIInstrInfo::getWMMAProperties(const MachineInstr &MI) const {
-  auto GetImmediate =
-      [&](AMDGPU::OpName OperandName) -> std::optional<int64_t> {
-    const MachineOperand *Operand = getNamedOperand(MI, OperandName);
-    if (!Operand || !Operand->isImm())
-      return std::nullopt;
-    return Operand->getImm();
-  };
-
-  return AMDGPU::getWMMAProperties(MI.getOpcode(),
-                                   GetImmediate(AMDGPU::OpName::matrix_a_fmt),
-                                   GetImmediate(AMDGPU::OpName::matrix_b_fmt));
+  unsigned Opc = MI.getOpcode();
+  if (!AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::matrix_a_fmt))
+    return AMDGPU::getWMMAProperties(Opc);
+  return AMDGPU::getWMMAProperties(
+      Opc, getNamedImmOperand(MI, AMDGPU::OpName::matrix_a_fmt),
+      getNamedImmOperand(MI, AMDGPU::OpName::matrix_b_fmt));
 }
 
 AMDGPU::CoExecInfo llvm::AMDGPU::getCoExecInfo(const MachineInstr &MI,

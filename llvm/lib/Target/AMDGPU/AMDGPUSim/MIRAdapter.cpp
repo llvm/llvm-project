@@ -43,13 +43,6 @@ InstClass MachineInstrInfo::classifyInst(const MachineInstr &MI) const {
   if (Opc == AMDGPU::S_SET_VGPR_MSB)
     return InstClass::MSB_SET;
 
-  StringRef Name = TII.getName(Opc);
-  if (Name.starts_with("V_NOP"))
-    return InstClass::VALU;
-
-  if (Opc == AMDGPU::S_NOP || Name.starts_with("S_CLAUSE"))
-    return InstClass::SALU;
-
   if (Opc == AMDGPU::S_BARRIER_SIGNAL_M0 ||
       Opc == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_M0 ||
       Opc == AMDGPU::S_BARRIER_SIGNAL_IMM ||
