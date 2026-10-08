@@ -620,7 +620,7 @@ static bool shouldThreadImpliedEdge(BasicBlock *PredBB, BasicBlock *BB) {
 bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
     Value *V, BasicBlock *BB, PredValueInfo &Result,
     ConstantPreference Preference, SmallPtrSet<Value *, 4> &RecursionSet,
-    Instruction *CxtI) {
+    Instruction *CtxI) {
   const DataLayout &DL = BB->getDataLayout();
 
   // This method walks up use-def chains recursively.  Because of this, we could
@@ -649,7 +649,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
       using namespace PatternMatch;
       // If the value is known by LazyValueInfo to be a constant in a
       // predecessor, use that information to try to thread this block.
-      Constant *PredCst = LVI->getConstantOnEdge(V, P, BB, CxtI);
+      Constant *PredCst = LVI->getConstantOnEdge(V, P, BB, CtxI);
       // If I is a non-local compare-with-constant instruction, use more-rich
       // 'getPredicateOnEdge' method. This would be able to handle value
       // inequalities better, for example if the compare is "X < 4" and "X < 3"
@@ -658,7 +658,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
       Value *Val;
       Constant *Cst;
       if (!PredCst && match(V, m_Cmp(Pred, m_Value(Val), m_Constant(Cst))))
-        PredCst = LVI->getPredicateOnEdge(Pred, Val, Cst, P, BB, CxtI);
+        PredCst = LVI->getPredicateOnEdge(Pred, Val, Cst, P, BB, CtxI);
       if (Constant *KC = getKnownConstant(PredCst, Preference))
         Result.emplace_back(KC, P);
     }
@@ -675,7 +675,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
       } else {
         Constant *CI = LVI->getConstantOnEdge(InVal,
                                               PN->getIncomingBlock(i),
-                                              BB, CxtI);
+                                              BB, CtxI);
         if (Constant *KC = getKnownConstant(CI, Preference))
           Result.emplace_back(KC, PN->getIncomingBlock(i));
       }
@@ -689,7 +689,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
     Value *Source = CI->getOperand(0);
     PredValueInfoTy Vals;
     computeValueKnownInPredecessorsImpl(Source, BB, Vals, Preference,
-                                        RecursionSet, CxtI);
+                                        RecursionSet, CtxI);
     if (Vals.empty())
       return false;
 
@@ -705,7 +705,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
   if (FreezeInst *FI = dyn_cast<FreezeInst>(I)) {
     Value *Source = FI->getOperand(0);
     computeValueKnownInPredecessorsImpl(Source, BB, Result, Preference,
-                                        RecursionSet, CxtI);
+                                        RecursionSet, CtxI);
 
     erase_if(Result, [](auto &Pair) {
       return !isGuaranteedNotToBeUndefOrPoison(Pair.first);
@@ -727,9 +727,9 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
       PredValueInfoTy LHSVals, RHSVals;
 
       computeValueKnownInPredecessorsImpl(Op0, BB, LHSVals, WantInteger,
-                                          RecursionSet, CxtI);
+                                          RecursionSet, CtxI);
       computeValueKnownInPredecessorsImpl(Op1, BB, RHSVals, WantInteger,
-                                          RecursionSet, CxtI);
+                                          RecursionSet, CtxI);
 
       if (LHSVals.empty() && RHSVals.empty())
         return false;
@@ -765,7 +765,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
         isa<ConstantInt>(I->getOperand(1)) &&
         cast<ConstantInt>(I->getOperand(1))->isOne()) {
       computeValueKnownInPredecessorsImpl(I->getOperand(0), BB, Result,
-                                          WantInteger, RecursionSet, CxtI);
+                                          WantInteger, RecursionSet, CtxI);
       if (Result.empty())
         return false;
 
@@ -783,7 +783,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
     if (ConstantInt *CI = dyn_cast<ConstantInt>(BO->getOperand(1))) {
       PredValueInfoTy LHSVals;
       computeValueKnownInPredecessorsImpl(BO->getOperand(0), BB, LHSVals,
-                                          WantInteger, RecursionSet, CxtI);
+                                          WantInteger, RecursionSet, CtxI);
 
       // Try to use constant folding to simplify the binary operator.
       for (const auto &LHSVal : LHSVals) {
@@ -847,7 +847,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
             continue;
 
           Res = LVI->getPredicateOnEdge(Pred, LHS, cast<Constant>(RHS), PredBB,
-                                        BB, CxtI ? CxtI : Cmp);
+                                        BB, CtxI ? CtxI : Cmp);
         }
 
         if (Constant *KC = getKnownConstant(Res, WantInteger))
@@ -868,7 +868,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
           // If the value is known by LazyValueInfo to be a constant in a
           // predecessor, use that information to try to thread this block.
           Constant *Res = LVI->getPredicateOnEdge(Pred, CmpLHS, CmpConst, P, BB,
-                                                  CxtI ? CxtI : Cmp);
+                                                  CtxI ? CtxI : Cmp);
           if (Constant *KC = getKnownConstant(Res, WantInteger))
             Result.emplace_back(KC, P);
         }
@@ -893,7 +893,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
               // a predecessor, use that information to try to thread this
               // block.
               ConstantRange CR = LVI->getConstantRangeOnEdge(
-                  AddLHS, P, BB, CxtI ? CxtI : cast<Instruction>(CmpLHS));
+                  AddLHS, P, BB, CtxI ? CtxI : cast<Instruction>(CmpLHS));
               // Propagate the range through the addition.
               CR = CR.add(AddConst->getValue());
 
@@ -921,7 +921,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
       // and evaluate it statically if we can.
       PredValueInfoTy LHSVals;
       computeValueKnownInPredecessorsImpl(I->getOperand(0), BB, LHSVals,
-                                          WantInteger, RecursionSet, CxtI);
+                                          WantInteger, RecursionSet, CtxI);
 
       for (const auto &LHSVal : LHSVals) {
         Constant *V = LHSVal.first;
@@ -943,7 +943,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
     PredValueInfoTy Conds;
     if ((TrueVal || FalseVal) &&
         computeValueKnownInPredecessorsImpl(SI->getCondition(), BB, Conds,
-                                            WantInteger, RecursionSet, CxtI)) {
+                                            WantInteger, RecursionSet, CtxI)) {
       for (auto &C : Conds) {
         Constant *Cond = C.first;
 
@@ -970,8 +970,8 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
   }
 
   // If all else fails, see if LVI can figure out a constant value for us.
-  assert(CxtI->getParent() == BB && "CxtI should be in BB");
-  Constant *CI = LVI->getConstant(V, CxtI);
+  assert(CtxI->getParent() == BB && "CtxI should be in BB");
+  Constant *CI = LVI->getConstant(V, CtxI);
   if (Constant *KC = getKnownConstant(CI, Preference)) {
     for (BasicBlock *Pred : predecessors(BB))
       Result.emplace_back(KC, Pred);
@@ -1641,7 +1641,7 @@ Constant *JumpThreadingPass::evaluateOnPredecessorEdge(
 
 bool JumpThreadingPass::processThreadableEdges(Value *Cond, BasicBlock *BB,
                                                ConstantPreference Preference,
-                                               Instruction *CxtI) {
+                                               Instruction *CtxI) {
   // If threading this would thread across a loop header, don't even try to
   // thread the edge.
   if (LoopHeaders.count(BB))
@@ -1649,7 +1649,7 @@ bool JumpThreadingPass::processThreadableEdges(Value *Cond, BasicBlock *BB,
 
   PredValueInfoTy PredValues;
   if (!computeValueKnownInPredecessors(Cond, BB, PredValues, Preference,
-                                       CxtI)) {
+                                       CtxI)) {
     // We don't have known values in predecessors.  See if we can thread through
     // BB and its sole predecessor.
     return maybethreadThroughTwoBasicBlocks(BB, Cond);

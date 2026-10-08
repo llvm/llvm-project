@@ -14,27 +14,13 @@
 #include "OffloadImpl.hpp"
 #include "Helpers.hpp"
 #include "OffloadPrint.hpp"
-#include "PluginManager.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <OffloadAPI.h>
 
 #include <cstdint>
+#include <cstdlib>
 #include <mutex>
-
-// TODO: Some plugins expect to be linked into libomptarget which defines these
-// symbols to implement ompt callbacks. The least invasive workaround here is to
-// define them in libLLVMOffload as false/null so they are never used. In future
-// it would be better to allow the plugins to implement callbacks without
-// pulling in details from libomptarget.
-#ifdef OMPT_SUPPORT
-namespace llvm::omp::target {
-namespace ompt {
-LLVM_ATTRIBUTE_WEAK bool Initialized = false;
-LLVM_ATTRIBUTE_WEAK ompt_get_callback_t lookupCallbackByCode = nullptr;
-LLVM_ATTRIBUTE_WEAK ompt_function_lookup_t lookupCallbackByName = nullptr;
-} // namespace ompt
-} // namespace llvm::omp::target
-#endif
 
 using namespace llvm::omp::target;
 using namespace llvm::omp::target::plugin;
@@ -47,18 +33,38 @@ struct ol_platform_impl_t {
   ol_platform_backend_t BackendType;
 
   /// Complete all pending work for this platform and perform any needed
-  /// cleanup.
+  /// cleanup. Does nothing if the platform was never initialized.
   ///
   /// After calling this function, no liboffload functions should be called with
   /// this platform handle.
   llvm::Error destroy();
 
-  /// Initialize the associated plugin and devices.
+  /// Initialize the associated plugin and devices on first use.
   llvm::Error init();
+
+  /// Get the device list, lazily initializing the platform if necessary.
+  llvm::Expected<llvm::ArrayRef<std::unique_ptr<ol_device_impl_t>>>
+  getDevices() {
+    if (llvm::Error Err = init())
+      return std::move(Err);
+    return llvm::ArrayRef(Devices);
+  }
+
+  /// Whether the platform has been initialized and has at least one device.
+  /// Does not trigger initialization.
+  bool isActive() const {
+    return Plugin && Plugin->is_initialized() && Plugin->getNumDevices() > 0;
+  }
 
   /// Direct access to the plugin, may be uninitialized if accessed here.
   std::unique_ptr<GenericPluginTy> Plugin;
 
+private:
+  llvm::Error initImpl();
+
+  // Initialize the platform once per instance of the context.
+  std::once_flag Initialized;
+  std::optional<std::pair<std::error_code, std::string>> InitError;
   llvm::SmallVector<std::unique_ptr<ol_device_impl_t>> Devices;
 };
 
@@ -77,9 +83,34 @@ struct ol_device_impl_t {
   InfoTreeNode Info;
 };
 
-llvm::Error ol_platform_impl_t::destroy() { return Plugin->deinit(); }
+llvm::Error ol_platform_impl_t::destroy() {
+  if (!Plugin || !Plugin->is_initialized())
+    return llvm::Error::success();
+  return Plugin->deinit();
+}
+
+namespace llvm::offload {
+static void shutDownAtExit();
+} // namespace llvm::offload
 
 llvm::Error ol_platform_impl_t::init() {
+  std::call_once(Initialized, [&]() {
+    if (llvm::Error Err = initImpl())
+      llvm::handleAllErrors(std::move(Err), [&](llvm::StringError &E) {
+        InitError.emplace(E.convertToErrorCode(), E.getMessage());
+      });
+
+    // Vendor runtimes register their exit-time teardown when initialized. Exit
+    // handlers run in reverse order, so ours runs while they are still alive.
+    std::atexit(llvm::offload::shutDownAtExit);
+  });
+  if (InitError)
+    return llvm::make_error<error::OffloadError>(InitError->first,
+                                                 InitError->second);
+  return llvm::Error::success();
+}
+
+llvm::Error ol_platform_impl_t::initImpl() {
   if (!Plugin)
     return llvm::Error::success();
 
@@ -270,7 +301,13 @@ struct OffloadContext;
 // This pointer is non-null if and only if the context is valid and fully
 // initialized
 static std::atomic<OffloadContext *> OffloadContextVal;
-std::mutex OffloadContextValMutex;
+static std::mutex &getOffloadContextMutex() {
+  static std::mutex Mutex;
+  return Mutex;
+}
+// Set once the vendor runtimes may have been torn down at process exit.
+// Guarded by getOffloadContextMutex().
+static bool ShutDownAtExit = false;
 struct OffloadContext {
   OffloadContext(OffloadContext &) = delete;
   OffloadContext(OffloadContext &&) = delete;
@@ -337,14 +374,6 @@ Error initPlugins(OffloadContext &Context, const ol_init_args_t *InitArgs) {
   } while (false);
 #include "Shared/Targets.def"
 
-  // Eagerly initialize all of the plugins and devices. We need to make sure
-  // that the platform is initialized at a consistent point to maintain the
-  // expected teardown order in the vendor libraries.
-  for (auto &Platform : Context.Platforms) {
-    if (Error Err = Platform->init())
-      return Err;
-  }
-
   Context.TracingEnabled = std::getenv("OFFLOAD_TRACE");
   Context.ValidationEnabled = !std::getenv("OFFLOAD_DISABLE_VALIDATION");
 
@@ -352,7 +381,11 @@ Error initPlugins(OffloadContext &Context, const ol_init_args_t *InitArgs) {
 }
 
 Error olInit_impl(const ol_init_args_t *InitArgs) {
-  std::lock_guard<std::mutex> Lock(OffloadContextValMutex);
+  std::lock_guard<std::mutex> Lock(getOffloadContextMutex());
+
+  if (ShutDownAtExit)
+    return createOffloadError(ErrorCode::UNINITIALIZED,
+                              "liboffload was shut down during process exit");
 
   if (isOffloadInitialized()) {
     OffloadContext::get().RefCount++;
@@ -378,26 +411,42 @@ Error olInit_impl(const ol_init_args_t *InitArgs) {
   return InitResult;
 }
 
+static Error destroyContext(OffloadContext *Context) {
+  Error Result = Error::success();
+  for (auto &Platform : Context->Platforms)
+    if (auto Res = Platform->destroy())
+      Result = joinErrors(std::move(Result), std::move(Res));
+
+  delete Context;
+  return Result;
+}
+
 Error olShutDown_impl() {
-  std::lock_guard<std::mutex> Lock(OffloadContextValMutex);
+  std::lock_guard<std::mutex> Lock(getOffloadContextMutex());
+
+  // The context may already have been released at process exit, calls that
+  // balance an earlier olInit are still valid.
+  if (!isOffloadInitialized()) {
+    if (ShutDownAtExit)
+      return Error::success();
+    return createOffloadError(ErrorCode::UNINITIALIZED,
+                              "liboffload has not been initialized");
+  }
 
   if (--OffloadContext::get().RefCount != 0)
     return Error::success();
 
-  Error Result = Error::success();
-  auto *OldContext = OffloadContextVal.exchange(nullptr);
+  return destroyContext(OffloadContextVal.exchange(nullptr));
+}
 
-  for (auto &Platform : OldContext->Platforms) {
-    // Host plugin is nullptr and has no deinit
-    if (!Platform->Plugin || !Platform->Plugin->is_initialized())
-      continue;
-
-    if (auto Res = Platform->destroy())
-      Result = joinErrors(std::move(Result), std::move(Res));
-  }
-
-  delete OldContext;
-  return Result;
+// Vendor libraries have specific teardown orders but can be initialized lazily.
+// In these cases we register a specific handler to shut it down with the proper
+// ordering. If this is necessary than the shutdown implementation is skipped.
+static void shutDownAtExit() {
+  std::lock_guard<std::mutex> Lock(getOffloadContextMutex());
+  ShutDownAtExit = true;
+  if (OffloadContext *Context = OffloadContextVal.exchange(nullptr))
+    consumeError(destroyContext(Context));
 }
 
 Error olGetPlatformInfoImplDetail(ol_platform_handle_t Platform,
@@ -421,6 +470,8 @@ Error olGetPlatformInfoImplDetail(ol_platform_handle_t Platform,
   case OL_PLATFORM_INFO_BACKEND: {
     return Info.write<ol_platform_backend_t>(Platform->BackendType);
   }
+  case OL_PLATFORM_INFO_ACTIVE:
+    return Info.write<bool>(Platform->isActive());
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "getPlatformInfo enum '%i' is invalid", PropName);
@@ -443,7 +494,19 @@ Error olGetPlatformInfoSize_impl(ol_platform_handle_t Platform,
 
 Error olPlatformRegisterRPCCallback_impl(ol_platform_handle_t Platform,
                                          ol_platform_rpc_cb_t Callback) {
+  if (Error Err = Platform->init())
+    return Err;
   Platform->Plugin->getRPCServer().registerCallback(Callback);
+  return Error::success();
+}
+
+Error olIteratePlatforms_impl(ol_platform_iterate_cb_t Callback,
+                              void *UserData) {
+  for (auto &Platform : OffloadContext::get().Platforms) {
+    if (!Callback(Platform.get(), UserData))
+      return Error::success();
+  }
+
   return Error::success();
 }
 
@@ -617,10 +680,36 @@ Error olGetDeviceInfoSize_impl(ol_device_handle_t Device,
 
 Error olIterateDevices_impl(ol_device_iterate_cb_t Callback, void *UserData) {
   for (auto &Platform : OffloadContext::get().Platforms) {
-    for (auto &Device : Platform->Devices) {
-      if (!Callback(Device.get(), UserData)) {
+    auto DevicesOrErr = Platform->getDevices();
+    if (!DevicesOrErr)
+      return DevicesOrErr.takeError();
+    for (auto &Device : *DevicesOrErr) {
+      if (!Callback(Device.get(), UserData))
         return Error::success();
-      }
+    }
+  }
+
+  return Error::success();
+}
+
+Error olIterateCompatibleDevices_impl(const void *ProgData, size_t ProgDataSize,
+                                      ol_device_iterate_cb_t Callback,
+                                      void *UserData) {
+  StringRef Buffer(reinterpret_cast<const char *>(ProgData), ProgDataSize);
+
+  for (auto &Platform : OffloadContext::get().Platforms) {
+    if (!Platform->Plugin || !Platform->Plugin->isPluginCompatible(Buffer))
+      continue;
+    auto DevicesOrErr = Platform->getDevices();
+    if (!DevicesOrErr)
+      return DevicesOrErr.takeError();
+    for (auto &Device : *DevicesOrErr) {
+      if (!Device->Platform.Plugin->isDeviceCompatible(Device->DeviceNum,
+                                                       Buffer))
+        continue;
+
+      if (!Callback(Device.get(), UserData))
+        return Error::success();
     }
   }
 
@@ -1242,12 +1331,11 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   LaunchArgs.UserNumBlocks[0] = LaunchSizeArgs->NumGroups.x;
   LaunchArgs.UserNumBlocks[1] = LaunchSizeArgs->NumGroups.y;
   LaunchArgs.UserNumBlocks[2] = LaunchSizeArgs->NumGroups.z;
+  LaunchArgs.KernelLaunchInfo.RequestedNumBlocks = LaunchSizeArgs->NumGroups.x;
   LaunchArgs.UserThreadLimit[0] = LaunchSizeArgs->GroupSize.x;
   LaunchArgs.UserThreadLimit[1] = LaunchSizeArgs->GroupSize.y;
   LaunchArgs.UserThreadLimit[2] = LaunchSizeArgs->GroupSize.z;
   LaunchArgs.DynCGroupMem = LaunchSizeArgs->DynSharedMemory;
-  LaunchArgs.Flags.StrictBlocks = true;
-  LaunchArgs.Flags.StrictThreads = true;
 
   while (Properties && Properties->type != OL_KERNEL_LAUNCH_PROP_TYPE_NONE) {
     switch (Properties->type) {
@@ -1445,6 +1533,17 @@ Error olQueryQueue_impl(ol_queue_handle_t Queue, bool *IsQueueWorkCompleted) {
   }
   return Error::success();
 }
+
+namespace tmp {
+// Temporary helpers to help transition of libomptarget to liboffload
+GenericPluginTy *__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform) {
+  return Platform->Plugin.get();
+}
+
+int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device) {
+  return Device->DeviceNum;
+}
+} // namespace tmp
 
 } // namespace offload
 } // namespace llvm

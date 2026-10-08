@@ -327,7 +327,7 @@ inline MockControllerAccess::PostFn postOnto(QueueingRunner<>::WorkQueue &Q) {
 void waitForShutdown(Session &S) {
   std::promise<void> P;
   auto F = P.get_future();
-  S.shutdown([P = std::move(P)]() mutable { P.set_value(); });
+  S.shutdown([P = std::move(P)]() mutable noexcept { P.set_value(); });
   F.get();
 }
 
@@ -338,12 +338,29 @@ TEST(SessionTest, TrivialConstructionAndDestruction) {
 TEST(SessionTest, ReportError) {
   Error E = Error::success();
   cantFail(std::move(E)); // Force error into checked state.
+  Session *Reporter = nullptr;
 
   Session S(mockExecutorProcessInfo(), noDispatch,
-            [&](Error Err) noexcept { E = std::move(Err); });
+            [&](Session &RS, Error Err) noexcept {
+              Reporter = &RS;
+              E = std::move(Err);
+            });
   S.reportError(make_error<StringError>("foo"));
 
+  // The reporter should be passed the reporting Session.
+  EXPECT_EQ(Reporter, &S);
   EXPECT_THAT_ERROR(std::move(E), FailedWithMessage("foo"));
+}
+
+TEST(SessionTest, LogErrors) {
+#if ORC_RT_LOG_ENABLED(Error)
+  // Check that Session::logErrors can be used as an error reporter, and
+  // consumes the reported error (an unchecked Error would abort).
+  Session S(mockExecutorProcessInfo(), noDispatch, Session::logErrors);
+  S.reportError(make_error<StringError>("foo"));
+#else
+  GTEST_SKIP() << "Test requires ORC_RT_LOG_ENABLED(Error)";
+#endif // ORC_RT_LOG_ENABLED(Error)
 }
 
 TEST(SessionTest, ReportErrorsViaSession) {
@@ -352,7 +369,7 @@ TEST(SessionTest, ReportErrorsViaSession) {
 
   // Check that the ReportErrorsViaSession utility works as advertised.
   Session S(mockExecutorProcessInfo(), noDispatch,
-            [&](Error Err) noexcept { E = std::move(Err); });
+            [&](Session &, Error Err) noexcept { E = std::move(Err); });
   (ReportErrorsViaSession(S))(make_error<StringError>("foo"));
 
   EXPECT_THAT_ERROR(std::move(E), FailedWithMessage("foo"));
@@ -404,10 +421,10 @@ TEST(SessionTest, ScheduleShutdownFromOnDetachHandler) {
   int OnDetachHandlersRun = 0;
   bool OnShutdownHandlerRun = false;
 
-  S.addOnDetach([&]() { ++OnDetachHandlersRun; });
-  S.addOnDetach([&]() { S.shutdown(); });
-  S.addOnDetach([&]() { ++OnDetachHandlersRun; });
-  S.addOnShutdown([&]() {
+  S.addOnDetach([&]() noexcept { ++OnDetachHandlersRun; });
+  S.addOnDetach([&]() noexcept { S.shutdown(); });
+  S.addOnDetach([&]() noexcept { ++OnDetachHandlersRun; });
+  S.addOnShutdown([&]() noexcept {
     EXPECT_EQ(OnDetachHandlersRun, 2);
     OnShutdownHandlerRun = true;
   });
@@ -428,7 +445,7 @@ TEST(SessionTest, RedundantAsyncShutdown) {
 
   // Now try to add a new on-shutdown callback and verify that it runs.
   bool RedundantCallbackRan = false;
-  S.shutdown([&]() { RedundantCallbackRan = true; });
+  S.shutdown([&]() noexcept { RedundantCallbackRan = true; });
   EXPECT_TRUE(RedundantCallbackRan);
 }
 
@@ -448,7 +465,7 @@ TEST(SessionTest, ExpectedShutdownSequenceWithNoOutstandingKeepalives) {
     S.addService(
         std::make_unique<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx));
 
-    S.shutdown([&]() {
+    S.shutdown([&]() noexcept {
       EXPECT_TRUE(ShutdownOpIdx);
       EXPECT_EQ(*ShutdownOpIdx, 1);
       SessionShutdownComplete = true;
@@ -476,7 +493,7 @@ TEST(SessionTest, OutstandingKeepalivesDelayShutdown) {
 
   // We expect shutdown to wait for any outstanding keepalives to be released.
   bool ShutdownComplete = false;
-  S.shutdown([&]() { ShutdownComplete = true; });
+  S.shutdown([&]() noexcept { ShutdownComplete = true; });
 
   // Detach should have happened, but shutdown should be waiting on token.
   EXPECT_EQ(DetachOpIdx, 0U);
@@ -595,20 +612,13 @@ TEST(SessionTest, CreateServiceAndUseRef) {
 
 TEST(SessionTest, TryCreateServiceSuccess) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  auto CS = S.tryCreateService<ConfigurableService>(false);
-  if (auto Err = CS.takeError()) {
-    ADD_FAILURE() << "expected service creation to succeed";
-    consumeError(std::move(Err));
-  }
+  EXPECT_THAT_EXPECTED(S.tryCreateService<ConfigurableService>(false),
+                       Succeeded());
 }
 
 TEST(SessionTest, TryCreateServiceFailure) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  auto CS = S.tryCreateService<ConfigurableService>(true);
-  if (auto Err = CS.takeError())
-    consumeError(std::move(Err));
-  else
-    ADD_FAILURE() << "expected service creation to fail";
+  EXPECT_THAT_EXPECTED(S.tryCreateService<ConfigurableService>(true), Failed());
 }
 
 TEST(ControllerAccessTest, Basics) {
@@ -732,7 +742,11 @@ TEST(ControllerAccessTest, ValidCallToController) {
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
       S.controllerCaller(
           reinterpret_cast<orc_rt_ControllerHandlerTag>(add_sps_wrapper)),
-      [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
+      [&](Expected<int32_t> R) {
+        ASSERT_THAT_EXPECTED(R, Succeeded());
+        Result = *R;
+      },
+      41, 1);
 
   QueueingRunner<>::runFIFOUntilEmpty(Tasks);
 
@@ -754,7 +768,8 @@ TEST(ControllerAccessTest, CallToControllerBeforeAttach) {
       },
       41, 1);
 
-  EXPECT_EQ(toString(std::move(Err)), "no controller attached");
+  EXPECT_THAT_ERROR(std::move(Err),
+                    FailedWithMessage("no controller attached"));
 }
 
 TEST(ControllerAccessTest, CallToControllerAfterDetach) {
@@ -775,7 +790,8 @@ TEST(ControllerAccessTest, CallToControllerAfterDetach) {
       },
       41, 1);
 
-  EXPECT_EQ(toString(std::move(Err)), "no controller attached");
+  EXPECT_THAT_ERROR(std::move(Err),
+                    FailedWithMessage("no controller attached"));
 }
 
 TEST(ControllerAccessTest, CallFromController) {
@@ -789,7 +805,11 @@ TEST(ControllerAccessTest, CallFromController) {
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
       CallFromController(*CA, add_sps_wrapper),
-      [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
+      [&](Expected<int32_t> R) {
+        ASSERT_THAT_EXPECTED(R, Succeeded());
+        Result = *R;
+      },
+      41, 1);
 
   QueueingRunner<>::runFIFOUntilEmpty(Tasks);
 
@@ -829,7 +849,7 @@ TEST(ControllerAccessTest, WrapperCallTokenReleasedWhenFnReturns) {
   SPSWrapperFunction<void(SPSExecutorAddr)>::call(
       CallFromController(*CA, deferred_wrapper),
       [&](Error Err) {
-        cantFail(std::move(Err));
+        EXPECT_THAT_ERROR(std::move(Err), Succeeded());
         GotResult = true;
       },
       &DeferredReturn);
@@ -846,7 +866,7 @@ TEST(ControllerAccessTest, WrapperCallTokenReleasedWhenFnReturns) {
   // drain phase should therefore complete without waiting on the deferred
   // Return call.
   bool ShutdownComplete = false;
-  S.shutdown([&] { ShutdownComplete = true; });
+  S.shutdown([&]() noexcept { ShutdownComplete = true; });
   EXPECT_TRUE(ShutdownComplete);
 }
 
@@ -854,10 +874,11 @@ TEST(ControllerAccessTest, FailConnect) {
   // Simulate failure to connect.
   bool GotError = false;
   std::string ErrMsg = "failed to connect";
-  Session S(mockExecutorProcessInfo(), noDispatch, [&](Error Err) noexcept {
-    GotError = true;
-    EXPECT_THAT_ERROR(std::move(Err), FailedWithMessage(ErrMsg));
-  });
+  Session S(mockExecutorProcessInfo(), noDispatch,
+            [&](Session &, Error Err) noexcept {
+              GotError = true;
+              EXPECT_THAT_ERROR(std::move(Err), FailedWithMessage(ErrMsg));
+            });
   BootstrapInfo BI(S);
   S.attach<MockControllerAccess>(
       std::move(BI), MockControllerAccess::PostFn{},
@@ -878,7 +899,7 @@ TEST(ControllerAccessTest, BootstrapInfoPassedToConnect) {
   BootstrapInfo BI(S);
   std::pair<SymbolNameSpec, const void *> TestSyms[] = {
       {SymbolNameSpec::linker(SymName), static_cast<const void *>(&Sym)}};
-  cantFail(BI.symbols().addUnique(TestSyms));
+  ASSERT_THAT_ERROR(BI.symbols().addUnique(TestSyms), Succeeded());
   BI.values()[SecretKey] = SecretValue;
 
   bool OnConnectRan = false;
@@ -898,14 +919,19 @@ TEST(ControllerAccessTest, PlainAttach) {
   // Attach a with pre-constructed ControllerAccess instance.
   QueueingRunner<>::WorkQueue Tasks;
   Session S(mockExecutorProcessInfo(), QueueingRunner(Tasks), noErrors);
-  auto CA = cantFail(MockControllerAccess::Create(S, false, postOnto(Tasks)));
-  S.attach(std::move(CA), BootstrapInfo(S));
+  auto CA = MockControllerAccess::Create(S, false, postOnto(Tasks));
+  ASSERT_THAT_EXPECTED(CA, Succeeded());
+  S.attach(std::move(*CA), BootstrapInfo(S));
 
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
       S.controllerCaller(
           reinterpret_cast<orc_rt_ControllerHandlerTag>(add_sps_wrapper)),
-      [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
+      [&](Expected<int32_t> R) {
+        ASSERT_THAT_EXPECTED(R, Succeeded());
+        Result = *R;
+      },
+      41, 1);
 
   QueueingRunner<>::runFIFOUntilEmpty(Tasks);
 
@@ -917,14 +943,19 @@ TEST(ControllerAccessTest, TryAttachSuccess) {
   // just like one attached via attach<T>.
   QueueingRunner<>::WorkQueue Tasks;
   Session S(mockExecutorProcessInfo(), QueueingRunner(Tasks), noErrors);
-  cantFail(S.tryAttach<MockControllerAccess>(BootstrapInfo(S), /*Fail=*/false,
-                                             postOnto(Tasks)));
+  ASSERT_THAT_ERROR(S.tryAttach<MockControllerAccess>(
+                        BootstrapInfo(S), /*Fail=*/false, postOnto(Tasks)),
+                    Succeeded());
 
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
       S.controllerCaller(
           reinterpret_cast<orc_rt_ControllerHandlerTag>(add_sps_wrapper)),
-      [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
+      [&](Expected<int32_t> R) {
+        ASSERT_THAT_EXPECTED(R, Succeeded());
+        Result = *R;
+      },
+      41, 1);
 
   QueueingRunner<>::runFIFOUntilEmpty(Tasks);
 
@@ -934,9 +965,9 @@ TEST(ControllerAccessTest, TryAttachSuccess) {
 TEST(ControllerAccessTest, TryAttachFailure) {
   // A failing Create surfaces its Error and leaves the Session unattached.
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  auto Err = S.tryAttach<MockControllerAccess>(BootstrapInfo(S), /*Fail=*/true);
-  ASSERT_TRUE(static_cast<bool>(Err));
-  EXPECT_EQ(toString(std::move(Err)), "failed to create controller access");
+  ASSERT_THAT_ERROR(
+      S.tryAttach<MockControllerAccess>(BootstrapInfo(S), /*Fail=*/true),
+      FailedWithMessage("failed to create controller access"));
 
   // Since nothing was attached, calls to the controller should fail as they
   // would before any attach.
@@ -950,7 +981,8 @@ TEST(ControllerAccessTest, TryAttachFailure) {
       },
       41, 1);
 
-  EXPECT_EQ(toString(std::move(CallErr)), "no controller attached");
+  EXPECT_THAT_ERROR(std::move(CallErr),
+                    FailedWithMessage("no controller attached"));
 }
 
 // A ControllerAccess that reports a caller-supplied disconnection mode, used to
@@ -1008,7 +1040,7 @@ TEST(ControllerAccessTest, OnDisconnectReportsOrderlyDisconnect) {
   size_t HandlerRuns = 0;
   std::string ErrMsg = "<not run>";
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  S.setOnDisconnect([&](Error Err) {
+  S.setOnDisconnect([&](Error Err) noexcept {
     ++HandlerRuns;
     ErrMsg = errMsgOrEmpty(std::move(Err));
   });
@@ -1024,7 +1056,8 @@ TEST(ControllerAccessTest, OnDisconnectReportsAbnormalDisconnect) {
   // An abnormal disconnection reports the ControllerAccess's Error unchanged.
   std::optional<std::string> ErrMsg;
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  S.setOnDisconnect([&](Error Err) { ErrMsg = errMsgOrEmpty(std::move(Err)); });
+  S.setOnDisconnect(
+      [&](Error Err) noexcept { ErrMsg = errMsgOrEmpty(std::move(Err)); });
   S.attach<DisconnectingControllerAccess>(BootstrapInfo(S),
                                           "connection closed without hangup");
 
@@ -1065,8 +1098,9 @@ TEST(ControllerAccessTest, OnDisconnectSuppressesErrorReporterRouting) {
   std::vector<std::string> ErrMsgs;
   std::optional<std::string> HandlerErrMsg;
   Session S(mockExecutorProcessInfo(), noDispatch, AccumulateErrors(ErrMsgs));
-  S.setOnDisconnect(
-      [&](Error Err) { HandlerErrMsg = errMsgOrEmpty(std::move(Err)); });
+  S.setOnDisconnect([&](Error Err) noexcept {
+    HandlerErrMsg = errMsgOrEmpty(std::move(Err));
+  });
   S.attach<DisconnectingControllerAccess>(BootstrapInfo(S),
                                           "connection closed without hangup");
 
@@ -1088,7 +1122,8 @@ TEST(ControllerAccessTest, OnDisconnectReportsConnectFailure) {
   // would still pass if a failed connect were reported as success.
   std::optional<std::string> ErrMsg;
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  S.setOnDisconnect([&](Error Err) { ErrMsg = errMsgOrEmpty(std::move(Err)); });
+  S.setOnDisconnect(
+      [&](Error Err) noexcept { ErrMsg = errMsgOrEmpty(std::move(Err)); });
 
   S.attach<MockControllerAccess>(
       BootstrapInfo(S), MockControllerAccess::PostFn{},
@@ -1110,7 +1145,7 @@ TEST(ControllerAccessTest, OnDisconnectReportsSuccessWithoutAttach) {
   std::string ErrMsg = "<not run>";
   {
     Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-    S.setOnDisconnect([&](Error Err) {
+    S.setOnDisconnect([&](Error Err) noexcept {
       ++HandlerRuns;
       ErrMsg = errMsgOrEmpty(std::move(Err));
     });
@@ -1130,9 +1165,9 @@ TEST(ControllerAccessTest, OnDisconnectRunsBeforeDetachAndShutdown) {
 
   {
     Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-    S.setOnDisconnect([&](Error Err) {
+    S.setOnDisconnect([&](Error Err) noexcept {
       DisconnectOpIdx = OpIdx++;
-      cantFail(std::move(Err));
+      EXPECT_THAT_ERROR(std::move(Err), Succeeded());
     });
     S.addService(
         std::make_unique<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx));
@@ -1161,9 +1196,9 @@ TEST(ControllerAccessTest, ShutdownFromOnDisconnectHandler) {
     Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
     S.addService(
         std::make_unique<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx));
-    S.setOnDisconnect([&](Error Err) {
-      cantFail(std::move(Err));
-      S.shutdown([&]() { OnShutdownRan = true; });
+    S.setOnDisconnect([&](Error Err) noexcept {
+      EXPECT_THAT_ERROR(std::move(Err), Succeeded());
+      S.shutdown([&]() noexcept { OnShutdownRan = true; });
     });
     S.attach<DisconnectingControllerAccess>(BootstrapInfo(S));
 
@@ -1192,9 +1227,9 @@ TEST(ControllerAccessTest, ShutdownFromOnDisconnectHandlerAfterRemoteHangup) {
     Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
     S.addService(
         std::make_unique<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx));
-    S.setOnDisconnect([&](Error Err) {
-      cantFail(std::move(Err));
-      S.shutdown([&]() { OnShutdownRan = true; });
+    S.setOnDisconnect([&](Error Err) noexcept {
+      EXPECT_THAT_ERROR(std::move(Err), Succeeded());
+      S.shutdown([&]() noexcept { OnShutdownRan = true; });
     });
     S.attach<DisconnectingControllerAccess>(BootstrapInfo(S), "", &CA);
     ASSERT_TRUE(CA);

@@ -920,18 +920,6 @@ cir::FuncOp lookupCallee(Operation *callOp, SymbolTable &symbolTable) {
   return symbolTable.lookup<cir::FuncOp>(callee.getValue());
 }
 
-/// The signature an indirect call reaches its callee through, or a null type
-/// for a direct call.  The callee's pointer-to-function shape is asserted
-/// rather than verified: the dialect checks operand types against the callee
-/// only for a direct call, so IR that breaks it fails here instead of in the
-/// verifier.
-cir::FuncType indirectCalleeType(cir::CIRCallOpInterface call) {
-  if (!call.isIndirect())
-    return {};
-  return cast<cir::FuncType>(
-      cast<cir::PointerType>(call.getIndirectCall().getType()).getPointee());
-}
-
 void CallConvLoweringPass::runOnOperation() {
   ModuleOp moduleOp = getOperation();
   MLIRContext *ctx = &getContext();
@@ -956,7 +944,7 @@ void CallConvLoweringPass::runOnOperation() {
   DataLayout dl(moduleOp);
   CIRABIRewriteContext rewriteCtx(moduleOp, dl);
   // A non-byval indirect parameter's slot outlives the rewrite that retypes
-  // the parameter, so that a call forwarding the parameter can still recognise
+  // the parameter, so that a call forwarding the parameter can still recognize
   // it.  Draining on scope exit collapses those slots whichever way this
   // function returns.
   llvm::scope_exit drainParamSlots(
@@ -1099,14 +1087,17 @@ void CallConvLoweringPass::runOnOperation() {
     addressTakers[callee].push_back(getGlobal);
   });
 
-  // Restate every non-byval indirect parameter's slot alignment as the one the
-  // ABI promises for that parameter, before anything reads a slot.  A call is
-  // rewritten together with its callee rather than with the function
-  // containing it, so a call forwarding such a parameter can be reached before
-  // the parameter's own function is rewritten.  Doing this up front makes the
-  // forwarding decision independent of the order the two were declared in.
-  for (auto &kv : classifications)
-    rewriteCtx.normalizeParameterSlotAlignments(kv.first, kv.second);
+  // Restate every non-byval indirect parameter's slot alignment and route any
+  // use of such a parameter as a call argument through a load of that slot,
+  // before any definition or call site is rewritten.  Doing this up front
+  // makes the forwarding decision independent of the order the callee and its
+  // caller were declared in.
+  for (auto &kv : classifications) {
+    if (failed(rewriteCtx.prepareNonByvalParameters(kv.first, kv.second))) {
+      signalPassFailure();
+      return;
+    }
+  }
 
   // An sret slot or an indirect argument is a pointer the source never
   // wrote, and an ellipsis can carry one the declared parameters do not
@@ -1165,7 +1156,7 @@ void CallConvLoweringPass::runOnOperation() {
   // cached as the next one to visit.
   SmallVector<cir::CIRCallOpInterface> indirectCalls;
   moduleOp.walk([&](cir::CIRCallOpInterface c) {
-    if (indirectCalleeType(c))
+    if (c.isIndirect())
       indirectCalls.push_back(c);
   });
   for (cir::CIRCallOpInterface c : indirectCalls) {
@@ -1178,7 +1169,7 @@ void CallConvLoweringPass::runOnOperation() {
       signalPassFailure();
       return;
     }
-    cir::FuncType funcTy = indirectCalleeType(c);
+    cir::FuncType funcTy = getIndirectCalleeType(c);
     auto classifySignature =
         [&](mlir::TypeRange argTypes) -> std::optional<FunctionClassification> {
       // A callee resolved at run time carries no features of its own, so the
@@ -1196,28 +1187,18 @@ void CallConvLoweringPass::runOnOperation() {
     };
 
     // An argument passed through an ellipsis has no counterpart in the
-    // pointee's parameter list, so classify the call's own operands to learn
-    // what the ABI does with it.  If nothing in the full list needs a rewrite
-    // the call already carries its wire form and can stand as written.
-    // Anything else needs a rewrite the pointee's signature cannot describe,
-    // since it has no entry for the arguments past the ellipsis.
-    if (c.getNumArgOperands() > funcTy.getNumInputs()) {
-      std::optional<FunctionClassification> callFc =
-          classifySignature(c.getArgOperands().getTypes());
-      if (!callFc) {
-        signalPassFailure();
-        return;
-      }
-      if (!callFc->needsRewrite())
-        continue;
-      c->emitOpError() << "variadic arguments to an indirect call not yet "
-                          "implemented in CallConvLowering";
-      signalPassFailure();
-      return;
-    }
-
+    // pointee's parameter list.  On x86_64 such a call is classified from its
+    // own operands, as a direct one is.  Under target=test it is classified
+    // from the pointee alone, and rewriteCallSite reports the call.
+    bool classifyCallSite =
+        isX86 && c.getNumArgOperands() > funcTy.getNumInputs();
     std::optional<FunctionClassification> fc =
-        classifySignature(funcTy.getInputs());
+        classifyCallSite
+            ? classifyX86_64VariadicCall(
+                  c, funcTy, dl, *x86TypeMapper,
+                  x86TargetFor(avxLevelFor(c->getParentOfType<cir::FuncOp>())),
+                  moduleOp)
+            : classifySignature(funcTy.getInputs());
     if (!fc) {
       signalPassFailure();
       return;

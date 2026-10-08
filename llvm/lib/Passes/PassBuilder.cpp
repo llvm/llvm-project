@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Passes/PassBuilder.h"
+#include "PassesOptions.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/Analysis/AliasAnalysisEvaluator.h"
@@ -314,6 +315,8 @@
 #include "llvm/Transforms/Scalar/FlattenCFG.h"
 #include "llvm/Transforms/Scalar/Float2Int.h"
 #include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Transforms/Scalar/GVNHoist.h"
+#include "llvm/Transforms/Scalar/GVNSink.h"
 #include "llvm/Transforms/Scalar/GuardWidening.h"
 #include "llvm/Transforms/Scalar/IVUsersPrinter.h"
 #include "llvm/Transforms/Scalar/IndVarSimplify.h"
@@ -591,7 +594,8 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
                          std::optional<PGOOptions> PGOOpt,
                          PassInstrumentationCallbacks *PIC,
                          IntrusiveRefCntPtr<vfs::FileSystem> FS)
-    : TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC), FS(std::move(FS)) {
+    : Opts(PassesOptions::Global), TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC),
+      FS(std::move(FS)) {
   if (TM)
     TM->registerPassBuilderCallbacks(*this);
   if (PIC) {
@@ -1615,11 +1619,6 @@ parseStructuralHashPrinterPassOptions(StringRef Params) {
   return make_error<StringError>(
       formatv("invalid structural hash printer parameter '{}'", Params).str(),
       inconvertibleErrorCode());
-}
-
-Expected<bool> parseWinEHPrepareOptions(StringRef Params) {
-  return PassBuilder::parseSinglePassOption(Params, "demote-catchswitch-only",
-                                            "WinEHPreparePass");
 }
 
 Expected<GlobalMergeOptions> parseGlobalMergeOptions(StringRef Params) {

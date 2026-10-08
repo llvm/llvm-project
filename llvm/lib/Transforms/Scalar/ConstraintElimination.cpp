@@ -217,11 +217,12 @@ struct MonotonicInfo {
 struct State {
   DominatorTree &DT;
   LoopInfo &LI;
-  ScalarEvolution &SE;
+  /// Only available for functions with loops.
+  ScalarEvolution *SE;
   TargetLibraryInfo &TLI;
   SmallVector<FactOrCheck, 64> WorkList;
 
-  State(DominatorTree &DT, LoopInfo &LI, ScalarEvolution &SE,
+  State(DominatorTree &DT, LoopInfo &LI, ScalarEvolution *SE,
         TargetLibraryInfo &TLI)
       : DT(DT), LI(LI), SE(SE), TLI(TLI) {}
 
@@ -414,6 +415,10 @@ public:
   /// Returns true if \p V is known to be non-negative, either because the
   /// signed system implies it or because ValueTracking can prove it.
   bool isKnownNonNegative(Value *V);
+
+  /// Returns true if \p V is known to be positive, either because the signed
+  /// system implies it or because ValueTracking can prove it.
+  bool isKnownPositive(Value *V);
 
   void addFact(CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
                unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack);
@@ -1024,6 +1029,13 @@ bool ConstraintInfo::isKnownNonNegative(Value *V) {
          doesHold(CmpInst::ICMP_SGE, V, ConstantInt::get(V->getType(), 0));
 }
 
+bool ConstraintInfo::isKnownPositive(Value *V) {
+  if (auto *CI = dyn_cast<ConstantInt>(V))
+    return CI->getValue().isStrictlyPositive();
+  return ::isKnownPositive(V, DL) ||
+         doesHold(CmpInst::ICMP_SGT, V, ConstantInt::get(V->getType(), 0));
+}
+
 void ConstraintInfo::transferToOtherSystem(
     CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
     unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack) {
@@ -1139,14 +1151,14 @@ MonotonicInfo State::getMonotonicityInfo(PHINode &PN, Value *Step) {
   if (Info.Unsigned || Info.Signed || !StepOffset)
     return Info;
 
-  const auto *AR = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(&PN));
+  const auto *AR = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(&PN));
   if (!AR)
     return Info;
   ScalarEvolution::MonotonicPredicateType Expected =
       Info.Decreasing ? ScalarEvolution::MonotonicallyDecreasing
                       : ScalarEvolution::MonotonicallyIncreasing;
   auto IsMonotonic = [&](CmpInst::Predicate Pred) {
-    return SE.getMonotonicPredicateType(AR, Pred) == Expected;
+    return SE->getMonotonicPredicateType(AR, Pred) == Expected;
   };
   Info.Signed = IsMonotonic(CmpInst::ICMP_SGT);
   Info.Unsigned = !Info.Decreasing && IsMonotonic(CmpInst::ICMP_UGT);
@@ -1227,16 +1239,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
   }
 
   if (PN->getParent() != Header || PN->getNumIncomingValues() != 2 ||
-      !SE.isSCEVable(PN->getType()))
-    return;
-
-  // For latch conditions, we need to inject the condition that holds for the
-  // next iteration into the header. We limit to post-inc conditions, for which
-  // an original PN + Step != B condition results in a PN < B constraint in the
-  // header, which also holds for the next loop iteration. This would no longer
-  // be correct if the post-inc handling would inject a more precise PN + Step <
-  // B constraint instead.
-  if (&BB == Latch && !IncStep)
+      !SE->isSCEVable(PN->getType()))
     return;
 
   bool ContinueOnTrue =
@@ -1259,16 +1262,42 @@ void State::addInfoForInductions(BasicBlock &BB) {
 
   auto [StartValue, Backedge] = getStartAndBackedgeValue(*PN, LoopPred);
   DomTreeNode *DTN = DT.getNode(InLoopSucc);
+  DomTreeNode *HeaderDTN = DT.getNode(Header);
+
+  // BB is the header or the latch, so every iteration taking the backedge
+  // checked PN ContinuePred B, which guarantees PN != B for NE and LT
+  // predicates. For an increment by one, PN != B together with StartValue <= B
+  // (added precondition) imply PN <= B.
+  const APInt *Step;
+  bool HasHeaderBound =
+      !IncStep && match(Backedge, m_IncrementOf(m_Specific(PN), Step)) &&
+      Step->isOne() &&
+      (ContinuePred == CmpInst::ICMP_NE || ICmpInst::isLT(ContinuePred));
+  if (HasHeaderBound) {
+    for (CmpInst::Predicate BoundPred : {CmpInst::ICMP_ULE, CmpInst::ICMP_SLE})
+      WorkList.push_back(FactOrCheck::getConditionFact(
+          HeaderDTN, BoundPred, PN, B, ConditionTy(BoundPred, StartValue, B)));
+  }
+
+  // For latch conditions, we need to inject the condition that holds for the
+  // next iteration into the header. We limit to post-inc conditions, for which
+  // an original PN + Step != B condition results in a PN < B constraint in the
+  // header, which also holds for the next loop iteration. This would no longer
+  // be correct if the post-inc handling would inject a more precise PN + Step <
+  // B constraint instead.
+  if (&BB == Latch && !IncStep)
+    return;
 
   if (ICmpInst::isRelational(ContinuePred)) {
     if (A != Backedge)
       return;
 
-    // The latch condition ensures ContinuePred holds in the header on each
-    // iteration other than the first. Together with a precondition on the start
-    // value (StartValue ContinuePred B), we can add B as bound of PN.
+    // The condition ensures ContinuePred holds in the header on each iteration
+    // other than the first. Together with a precondition on the start value
+    // (StartValue ContinuePred B), we can add B as bound of PN.
     WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, ContinuePred, PN, B, ConditionTy(ContinuePred, StartValue, B)));
+        HeaderDTN, ContinuePred, PN, B,
+        ConditionTy(ContinuePred, StartValue, B)));
 
     // A signed bound can be translated to the unsigned system if PN is signed
     // non-decreasing (StartValue s<= PN s< B) and StartValue u< B holds.
@@ -1281,7 +1310,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
       if (Info.Signed && !Info.Decreasing) {
         CmpInst::Predicate UPred = ICmpInst::getUnsignedPredicate(ContinuePred);
         WorkList.push_back(FactOrCheck::getConditionFact(
-            DTN, UPred, PN, B, ConditionTy(UPred, StartValue, B)));
+            HeaderDTN, UPred, PN, B, ConditionTy(UPred, StartValue, B)));
       }
     }
 
@@ -1296,7 +1325,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
     if (StepOffset->isZero())
       return;
   } else {
-    const SCEV *Expr = SE.getSCEV(PN);
+    const SCEV *Expr = SE->getSCEV(PN);
     if (!match(Expr,
                m_scev_AffineAddRec(m_SCEV(StartSCEV), m_scev_APInt(StepOffset),
                                    m_SpecificLoop(L))))
@@ -1351,10 +1380,10 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (!StepOffset->isOne()) {
     // Check whether B-Start is known to be a multiple of StepOffset.
     if (!StartSCEV)
-      StartSCEV = SE.getSCEV(StartValue);
-    const SCEV *BMinusStart = SE.getMinusSCEV(SE.getSCEV(B), StartSCEV);
+      StartSCEV = SE->getSCEV(StartValue);
+    const SCEV *BMinusStart = SE->getMinusSCEV(SE->getSCEV(B), StartSCEV);
     if (isa<SCEVCouldNotCompute>(BMinusStart) ||
-        !SE.getConstantMultiple(BMinusStart).urem(*StepOffset).isZero())
+        !SE->getConstantMultiple(BMinusStart).urem(*StepOffset).isZero())
       return;
   }
 
@@ -1376,17 +1405,24 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (!Info.Signed)
     WorkList.push_back(FactOrCheck::getConditionFact(
         DTN, CmpInst::ICMP_SGE, PN, StartValue, StartBeforeBoundSigned));
-  // Add PN < B, as the loop exits once the compared value reaches B.
-  WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_SLT, PN,
-                                                   B, StartBeforeBoundSigned));
-  WorkList.push_back(FactOrCheck::getConditionFact(
-      DTN, CmpInst::ICMP_ULT, PN, B, StartBeforeBoundUnsigned));
+  // Add PN < B, as the loop exits once the compared value reaches B. With a
+  // header bound, the PN != B condition fact in InLoopSucc already tightens it
+  // to PN < B.
+  if (!HasHeaderBound || !canAddSuccessor(BB, InLoopSucc)) {
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, CmpInst::ICMP_SLT, PN, B, StartBeforeBoundSigned));
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, CmpInst::ICMP_ULT, PN, B, StartBeforeBoundUnsigned));
+  }
 
   // Try to add condition from the header or latch to the dedicated exit
   // blocks. When exiting either with EQ or NE, we know that the induction value
   // must be u<= B, as other exits may only exit earlier.
   assert(!StepOffset->isNegative() && "induction must be increasing");
   assert(ContinuePred == CmpInst::ICMP_NE && "unsupported predicate");
+  // The header bound already implies PN u<= B in the exits.
+  if (HasHeaderBound)
+    return;
   SmallVector<BasicBlock *> ExitBBs;
   L->getExitBlocks(ExitBBs);
   for (BasicBlock *EB : ExitBBs) {
@@ -1403,8 +1439,25 @@ static bool getConstraintFromMemoryAccess(GetElementPtrInst &GEP,
                                           CmpPredicate &Pred, Value *&A,
                                           Value *&B, const DataLayout &DL,
                                           const TargetLibraryInfo &TLI) {
+  if (!GEP.hasNoUnsignedWrap())
+    return false;
+
+  Value *Base = GEP.getPointerOperand();
+  if (auto *InnerGEP = dyn_cast<GetElementPtrInst>(Base))
+    Base = InnerGEP->getPointerOperand();
+
+  ObjectSizeOpts Opts;
+  // Workaround for gep inbounds, ptr null, idx.
+  Opts.NullIsUnknownSize = true;
+  // Be conservative since we are not clear on whether an out of bounds access
+  // to the padding is UB or not.
+  Opts.RoundToAlign = true;
+  std::optional<TypeSize> Size = getBaseObjectSize(Base, DL, &TLI, Opts);
+  if (!Size || Size->isScalable())
+    return false;
+
   auto Offset = collectOffsets(cast<GEPOperator>(GEP), DL);
-  if (!Offset.NW.hasNoUnsignedWrap())
+  if (Offset.BasePtr != Base || !Offset.NW.hasNoUnsignedWrap())
     return false;
 
   if (Offset.VariableOffsets.size() != 1)
@@ -1414,17 +1467,6 @@ static bool getConstraintFromMemoryAccess(GetElementPtrInst &GEP,
   auto &[Index, Scale] = Offset.VariableOffsets.front();
   // Bail out on non-canonical GEPs.
   if (Index->getType()->getScalarSizeInBits() != BitWidth)
-    return false;
-
-  ObjectSizeOpts Opts;
-  // Workaround for gep inbounds, ptr null, idx.
-  Opts.NullIsUnknownSize = true;
-  // Be conservative since we are not clear on whether an out of bounds access
-  // to the padding is UB or not.
-  Opts.RoundToAlign = true;
-  std::optional<TypeSize> Size =
-      getBaseObjectSize(Offset.BasePtr, DL, &TLI, Opts);
-  if (!Size || Size->isScalable())
     return false;
 
   // Index * Scale + ConstOffset + AccessSize <= AllocSize
@@ -1595,17 +1637,20 @@ void State::addInfoFor(BasicBlock &BB) {
     }
 
     // Add facts from unsigned division, remainder and logical shift right, and
-    // from signed remainder.
+    // from signed division and remainder.
     //   urem x, n: result < n  and  result <= x
     //   udiv x, n: result <= x
     //   lshr x, n: result <= x
     //   srem x, n: result >= 0 and result <= x, if x >= 0
     //              result < n,                  if n > 0
+    //   sdiv x, n: result >= 0 and result <= x, if x >= 0 and n > 0
+    //              result >= 0 and result < x,  if x > 0 and n > 1
     if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
       if ((BO->getOpcode() == Instruction::URem ||
            BO->getOpcode() == Instruction::UDiv ||
            BO->getOpcode() == Instruction::LShr ||
-           BO->getOpcode() == Instruction::SRem) &&
+           BO->getOpcode() == Instruction::SRem ||
+           BO->getOpcode() == Instruction::SDiv) &&
           isGuaranteedNotToBePoison(BO))
         WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), BO));
     }
@@ -2247,9 +2292,14 @@ void ConstraintInfo::addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B,
   if (R.empty() || R.isNe())
     return;
 
+  auto &CSToUse = getCS(R.IsSigned);
+  // A row implied by a single existing row adds no information. Rows in the
+  // system are removed in reverse order, so the existing row outlives R.
+  if (!R.isEq() && NewVariables.empty() &&
+      CSToUse.isImpliedBySingleRow(R.Coefficients))
+    return;
   LLVM_DEBUG(dbgs() << "Adding '"; dumpUnpackedICmp(dbgs(), Pred, A, B);
              dbgs() << "'\n");
-  auto &CSToUse = getCS(R.IsSigned);
   bool Added = CSToUse.addRow(R.Coefficients, R.NumVars);
   if (!Added)
     return;
@@ -2301,7 +2351,7 @@ void ConstraintInfo::addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B,
 static bool replaceOverflowUses(WithOverflowInst *II,
                                 SmallVectorImpl<Instruction *> &ToRemove) {
   bool Changed = false;
-  IRBuilder<> Builder(II->getParent(), II->getIterator());
+  IRBuilder<> Builder(II->getIterator());
   Value *Res = nullptr;
   for (User *U : make_early_inc_range(II->users())) {
     if (match(U, m_ExtractValue<0>(m_Value()))) {
@@ -2345,7 +2395,7 @@ tryToSimplifyOverflowMath(WithOverflowInst *II, ConstraintInfo &Info,
 }
 
 static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
-                                 ScalarEvolution &SE,
+                                 ScalarEvolution *SE,
                                  OptimizationRemarkEmitter &ORE,
                                  TargetLibraryInfo &TLI) {
   bool Changed = false;
@@ -2594,6 +2644,19 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
           }
           continue;
         }
+        if (BO->getOpcode() == Instruction::SDiv) {
+          Value *X = BO->getOperand(0);
+          Value *N = BO->getOperand(1);
+          if (!Info.isKnownNonNegative(X) || !Info.isKnownPositive(N))
+            continue;
+
+          bool IsStrict = Info.isKnownPositive(X) &&
+                          Info.doesHold(CmpInst::ICMP_SGT, N,
+                                        ConstantInt::get(N->getType(), 1));
+          AddFact(CmpInst::ICMP_SGE, BO, Constant::getNullValue(BO->getType()));
+          AddFact(IsStrict ? CmpInst::ICMP_SLT : CmpInst::ICMP_SLE, BO, X);
+          continue;
+        }
       }
 
       auto &DL = F.getDataLayout();
@@ -2671,7 +2734,8 @@ PreservedAnalyses ConstraintEliminationPass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &LI = AM.getResult<LoopAnalysis>(F);
-  auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
+  // SCEV is only used for loops, only construct it if there are some.
+  auto *SE = LI.empty() ? nullptr : &AM.getResult<ScalarEvolutionAnalysis>(F);
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   if (!eliminateConstraints(F, DT, LI, SE, ORE, TLI))

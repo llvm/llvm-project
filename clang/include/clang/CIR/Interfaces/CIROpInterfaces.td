@@ -169,7 +169,15 @@ let cppNamespace = "::cir" in {
       InterfaceMethod<"",
       "bool", "hasComdat", (ins), [{}],
       /*defaultImplementation=*/[{
-        return $_op.getComdat();
+        return $_op.getComdat().has_value();
+      }]
+      >,
+      InterfaceMethod<"",
+      "void", "setSelfComdat", (ins), [{}],
+      /*defaultImplementation=*/[{
+        // A special case of Comdat, where we set it to be an empty string,
+        // where the comdat is the comdat group of the current symbol.
+        return $_op.setComdat(::llvm::StringRef(""));
       }]
       >,
       InterfaceMethod<"",
