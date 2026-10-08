@@ -2836,13 +2836,15 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   AFI->setSVECalleeSavedStackSize(ZPRCSStackSize, alignTo(PPRCSStackSize, 16));
 }
 
+// Reorder ZPRs to maximize grouping, quads and pairs. The main condition we try
+// to satisfy is the offset and the register number.
+// Quads require a (scaled offset % 4 == 0) && (LowestRegister % 4 == 0),
+// e.g: (z4, z5, z6, z7) where z4 is at offset 8 would be legal quad
+// Pairs require a (scaled offset % 2 == 0) && (LowestRegister % 2 == 0).
+// e.g: (z4, z5) where z4 is at offset 6 would be a legal pair
 static void orderZPRCalleeSavesForGroups(MachineFunction &MF,
                                          const TargetRegisterInfo *RegInfo,
                                          std::vector<CalleeSavedInfo> &CSI) {
-  // Reorder ZPRs to maximize grouping, quads and pairs.
-  // The main condition we try to satisfy is the offset.
-  // Quads require a scaled offset % 4 = 0
-  // Pairs require a scaled offset % 2 = 0
   assert(!isTargetWindows(MF) &&
          "ZPR callee-save reordering not supported on Windows");
 
@@ -2850,15 +2852,12 @@ static void orderZPRCalleeSavesForGroups(MachineFunction &MF,
   if (!AFI->getPredicateRegForFillSpill())
     return;
 
-  SmallVector<CalleeSavedInfo> ZPRSaves;
-  SmallVector<size_t> ZPRPositions;
+  auto IsZPR = [](CalleeSavedInfo &CS) {
+    return AArch64::ZPRRegClass.contains(CS.getReg());
+  };
 
-  for (auto [Index, CS] : llvm::enumerate(CSI)) {
-    if (AArch64::ZPRRegClass.contains(CS.getReg())) {
-      ZPRSaves.push_back(CS);
-      ZPRPositions.push_back(Index);
-    }
-  }
+  MutableArrayRef<CalleeSavedInfo> ZPRSaves(CSI);
+  ZPRSaves = ZPRSaves.drop_until(IsZPR).take_while(IsZPR);
 
   if (ZPRSaves.size() < 2)
     return;
@@ -2878,9 +2877,9 @@ static void orderZPRCalleeSavesForGroups(MachineFunction &MF,
   sort(ZPRSaves,
        [](const auto &A, const auto &B) { return A.getReg() < B.getReg(); });
 
-  SmallVector<std::array<CalleeSavedInfo, 4>> Quads;
-  SmallVector<std::array<CalleeSavedInfo, 2>> Pairs;
   SmallVector<CalleeSavedInfo> Singles;
+  SmallVector<std::array<CalleeSavedInfo, 2>> Pairs;
+  SmallVector<std::array<CalleeSavedInfo, 4>> Quads;
 
   int ZPRsNeededForAlignment = NumToAlign;
   for (size_t i = 0; i < ZPRSaves.size();) {
@@ -2894,7 +2893,9 @@ static void orderZPRCalleeSavesForGroups(MachineFunction &MF,
       i += 4;
       continue;
     }
-
+    // We only need to split a pair if there's no singles. If we have a single
+    // ZPR then all required alignments (1, 2, or 3) can use that single and a
+    // ZPR pair.
     bool MustSplitPairForSingle =
         ZPRsNeededForAlignment == 1 && Singles.empty() && ZPRsRemaining == 2;
 
@@ -2903,22 +2904,17 @@ static void orderZPRCalleeSavesForGroups(MachineFunction &MF,
         ZPRSaves[i].getReg() + 1 == ZPRSaves[i + 1].getReg() &&
         !MustSplitPairForSingle) {
       Pairs.push_back({ZPRSaves[i], ZPRSaves[i + 1]});
-
-      if (ZPRsNeededForAlignment >= 2) {
+      // Don't decrement the ZPRs needed if we require one ZPR for alignment and
+      // we've yet to find a single ZPR. We may still need to split a pair.
+      if (ZPRsNeededForAlignment != 1 || !Singles.empty())
         ZPRsNeededForAlignment -= 2;
-      } else if (ZPRsNeededForAlignment == 1 && !Singles.empty()) {
-        // In this case, we have already found a single to use for alignment but
-        // we prefer to use this pair instead to align the offset
-        ZPRsNeededForAlignment = 0;
-      }
 
       i += 2;
       continue;
     }
 
     Singles.push_back(ZPRSaves[i++]);
-    if (ZPRsNeededForAlignment > 0)
-      ZPRsNeededForAlignment--;
+    ZPRsNeededForAlignment--;
   }
 
   if (Quads.empty() && Pairs.empty())
@@ -2930,10 +2926,10 @@ static void orderZPRCalleeSavesForGroups(MachineFunction &MF,
     // order. This is to ensures that stack indexes remain consistent with the
     // instruction.
     for (const CalleeSavedInfo &CS : Saves)
-      CSI[ZPRPositions[--NumUnassigned]] = CS;
+      ZPRSaves[--NumUnassigned] = CS;
   };
 
-  // Try to align the offset to mul 4 (to allow for the most quads/pairs).
+  // Align the offset to a multiple of 4 (to allow for the most quads/pairs).
   if (NumToAlign & 0b01)
     Emit(Singles.pop_back_val());
   if (NumToAlign & 0b10) {
