@@ -70,8 +70,8 @@ static std::string truncateDiag(std::string str) {
   return str;
 }
 
-// Prints a metadata node through a caller-provided tracker so module-flag
-// conversion shares the importer's tracker instead of building one per call.
+/// Prints a metadata node through a caller-provided tracker so module-flag
+/// conversion shares the importer's tracker instead of building one per call.
 static std::string renderMetadataWithTracker(const llvm::Metadata *node,
                                              llvm::ModuleSlotTracker &tracker,
                                              const llvm::Module *module) {
