@@ -1362,7 +1362,7 @@ bool LoopVectorizationLegality::blockNeedsPredication(
 }
 
 bool LoopVectorizationLegality::blockCanBePredicated(
-    BasicBlock *BB, SmallPtrSetImpl<Value *> &SafePtrs,
+    BasicBlock *BB, SafeAccessesTy &SafePtrs,
     SmallPtrSetImpl<const Instruction *> &MaskedOp) const {
   for (Instruction &I : *BB) {
     // We can predicate blocks with calls to assume, as long as we drop them in
@@ -1390,7 +1390,8 @@ bool LoopVectorizationLegality::blockCanBePredicated(
 
     // Loads are handled via masking (or speculated if safe to do so.)
     if (auto *LI = dyn_cast<LoadInst>(&I)) {
-      if (!SafePtrs.count(LI->getPointerOperand()))
+      auto It = SafePtrs.find({LI->getPointerOperand(), LI->getType()});
+      if (It == SafePtrs.end() || It->second < LI->getAlign())
         MaskedOp.insert(LI);
       continue;
     }
@@ -1412,6 +1413,23 @@ bool LoopVectorizationLegality::blockCanBePredicated(
   return true;
 }
 
+namespace {
+
+struct GEPAccessDenseMapInfo {
+  using KeyTy = std::pair<GetElementPtrInst *, Type *>;
+
+  static unsigned getHashValue(const KeyTy &Key) {
+    return hash_combine(Key.second, Key.first->getSourceElementType(),
+                        hash_combine_range(Key.first->operand_values()));
+  }
+
+  static bool isEqual(const KeyTy &LHS, const KeyTy &RHS) {
+    return LHS.second == RHS.second && LHS.first->isIdenticalTo(RHS.first);
+  }
+};
+
+} // namespace
+
 bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
   if (!EnableIfConversion) {
     reportVectorizationFailure("If-conversion is disabled",
@@ -1426,26 +1444,52 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
   // the memory pointed to can be dereferenced (with the access size implied by
   // the value's type) unconditionally within the loop header without
   // introducing a new fault.
-  SmallPtrSet<Value *, 8> SafePointers;
+  SafeAccessesTy SafePointers;
+  ScalarEvolution &SE = *PSE.getSE();
+  SmallDenseMap<GEPAccessDenseMapInfo::KeyTy, Align, 8,
+                GEPAccessDenseMapInfo>
+      SafeAccesses;
 
   // Collect safe addresses.
   for (BasicBlock *BB : TheLoop->blocks()) {
     if (!blockNeedsPredication(BB)) {
-      for (Instruction &I : *BB)
-        if (auto *Ptr = getLoadStorePointerOperand(&I))
-          SafePointers.insert(Ptr);
-      continue;
+      for (Instruction &I : *BB) {
+        auto *Ptr = getLoadStorePointerOperand(&I);
+        if (!Ptr)
+          continue;
+        auto [PtrIt, PtrInserted] = SafePointers.try_emplace(
+            std::make_pair(Ptr, getLoadStoreType(&I)), getLoadStoreAlignment(&I));
+        if (!PtrInserted)
+          PtrIt->second = std::max(PtrIt->second, getLoadStoreAlignment(&I));
+        auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
+        Type *Ty = getLoadStoreType(&I);
+        if (!GEP || Ty->isVectorTy())
+          continue;
+        Align Alignment = getLoadStoreAlignment(&I);
+        auto [It, Inserted] = SafeAccesses.try_emplace({GEP, Ty}, Alignment);
+        if (!Inserted)
+          It->second = std::max(It->second, Alignment);
+      }
     }
+  }
+
+  for (BasicBlock *BB : TheLoop->blocks()) {
+    if (!blockNeedsPredication(BB))
+      continue;
 
     // For a block which requires predication, a address may be safe to access
     // in the loop w/o predication if we can prove dereferenceability facts
     // sufficient to ensure it'll never fault within the loop. For the moment,
     // we restrict this to loads; stores are more complicated due to
     // concurrency restrictions.
-    ScalarEvolution &SE = *PSE.getSE();
     SmallVector<const SCEVPredicate *, 4> Predicates;
     for (Instruction &I : *BB) {
       LoadInst *LI = dyn_cast<LoadInst>(&I);
+      if (!LI)
+        continue;
+      auto SafeIt = SafePointers.find({LI->getPointerOperand(), LI->getType()});
+      if (SafeIt != SafePointers.end() && SafeIt->second >= LI->getAlign())
+        continue;
 
       // Make sure we can execute all computations feeding into Ptr in the loop
       // w/o triggering UB and that none of the out-of-loop operands are poison.
@@ -1491,11 +1535,23 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
       // Pass the Predicates pointer to isDereferenceableAndAlignedInLoop so
       // that it will consider loops that need guarding by SCEV checks. The
       // vectoriser will generate these checks if we decide to vectorise.
-      if (LI && !LI->getType()->isVectorTy() && !mustSuppressSpeculation(*LI) &&
-          CanSpeculatePointerOp(LI->getPointerOperand()) &&
-          isDereferenceableAndAlignedInLoop(LI, TheLoop, SE, *DT, AC,
-                                            &Predicates))
-        SafePointers.insert(LI->getPointerOperand());
+      if (!LI->getType()->isVectorTy() && !mustSuppressSpeculation(*LI)) {
+        // An identical GEP used by an unconditional access is non-poison
+        // and dereferenceable for that access's type and alignment.
+        auto *GEP = dyn_cast<GetElementPtrInst>(LI->getPointerOperand());
+        auto It =
+            GEP ? SafeAccesses.find({GEP, LI->getType()}) : SafeAccesses.end();
+        bool HasSafeAccess =
+            It != SafeAccesses.end() && It->second >= LI->getAlign();
+        if (HasSafeAccess || (CanSpeculatePointerOp(LI->getPointerOperand()) &&
+                              isDereferenceableAndAlignedInLoop(
+                                  LI, TheLoop, SE, *DT, AC, &Predicates))) {
+          auto [PtrIt, PtrInserted] = SafePointers.try_emplace(
+              std::make_pair(LI->getPointerOperand(), LI->getType()), LI->getAlign());
+          if (!PtrInserted)
+            PtrIt->second = std::max(PtrIt->second, LI->getAlign());
+        }
+      }
       Predicates.clear();
     }
   }
@@ -2067,7 +2123,7 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
   LLVM_DEBUG(dbgs() << "LV: checking if tail can be folded by masking.\n");
 
   // The list of pointers that we can safely read and write to remains empty.
-  SmallPtrSet<Value *, 8> SafePointers;
+  SafeAccessesTy SafePointers;
 
   // Check all blocks for predication, including those that ordinarily do not
   // need predication such as the header block.
@@ -2086,7 +2142,7 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
 
 void LoopVectorizationLegality::prepareToFoldTailByMasking() {
   // The list of pointers that we can safely read and write to remains empty.
-  SmallPtrSet<Value *, 8> SafePointers;
+  SafeAccessesTy SafePointers;
 
   // Mark all blocks for predication, including those that ordinarily do not
   // need predication such as the header block, and collect instructions needing
