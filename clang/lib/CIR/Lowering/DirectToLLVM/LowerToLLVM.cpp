@@ -1793,7 +1793,8 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
     // Compare element widths so this also handles vector bool -> int casts.
     auto srcElemTy = mlir::cast<mlir::IntegerType>(
         elementTypeIfVectorOrMatrix(llvmSrcVal.getType()));
-    auto dstElemTy = mlir::cast<cir::IntType>(elementTypeIfVectorOrMatrix(dstTy));
+    auto dstElemTy =
+        mlir::cast<cir::IntType>(elementTypeIfVectorOrMatrix(dstTy));
 
     if (srcElemTy.getWidth() == dstElemTy.getWidth())
       rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(castOp, llvmDstTy,
@@ -1815,9 +1816,9 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
     mlir::Type dstTy = castOp.getType();
     mlir::Value llvmSrcVal = adaptor.getSrc();
     mlir::Type llvmDstTy = getTypeConverter()->convertType(dstTy);
-    bool isSigned =
-        mlir::cast<cir::IntType>(elementTypeIfVectorOrMatrix(castOp.getSrc().getType()))
-            .isSigned();
+    bool isSigned = mlir::cast<cir::IntType>(
+                        elementTypeIfVectorOrMatrix(castOp.getSrc().getType()))
+                        .isSigned();
     if (cir::FenvAttr fenv = castOp.getFenvAttr()) {
       return lowerToConstrainedFPIntrinsic(
           castOp, llvmSrcVal, fenv, llvmDstTy, rewriter,
@@ -3489,7 +3490,8 @@ mlir::LogicalResult CIRToLLVMSubOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMMulOpLowering::matchAndRewrite(
     cir::MulOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  assert(cir::isIntOrBoolType(elementTypeIfVectorOrMatrix(op.getRhs().getType())) &&
+  assert(cir::isIntOrBoolType(
+             elementTypeIfVectorOrMatrix(op.getRhs().getType())) &&
          "cir.mul expects integer operand types");
   rewriter.replaceOpWithNewOp<mlir::LLVM::MulOp>(
       op, adaptor.getLhs(), adaptor.getRhs(), intOverflowFlag(op));
