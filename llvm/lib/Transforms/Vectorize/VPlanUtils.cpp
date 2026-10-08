@@ -721,22 +721,23 @@ VPBasicBlock *VPBlockUtils::getPlainCFGMiddleBlock(const VPlan &Plan) {
 
 VPIRFlags vputils::getFlagsForInduction(const InductionDescriptor &ID,
                                         const VPPhi *PhiR) {
+  // It is always safe to use the FastMath flags from the induction descriptor.
   if (ID.getKind() == InductionDescriptor::IK_FpInduction)
     return ID.getInductionBinOp()->getFastMathFlags();
 
-  // The flags only bound the induction values if the increment directly
-  // updates PhiR.
+  // Get no-wrap flags for the induction from the induction increment.
   VPValue *Inc = PhiR->getOperand(1);
-  if (match(Inc, m_c_Add(m_Specific(PhiR), m_VPValue())))
-    return cast<VPInstruction>(Inc)->getNoWrapFlagsOrNone();
-
-  if (match(Inc, m_Sub(m_Specific(PhiR), m_VPValue()))) {
-    // The step of a sub induction is negated, so NUW cannot be preserved. NSW
-    // can, if the step is not the signed minimum.
+  if (match(Inc, m_CombineOr(m_c_Add(m_Specific(PhiR), m_VPValue()),
+                             m_Sub(m_Specific(PhiR), m_VPValue())))) {
     ConstantInt *Step = ID.getConstIntStepValue();
-    bool NSW = cast<VPInstruction>(Inc)->getNoWrapFlagsOrNone().HasNSW &&
-               Step && !Step->isMinValue(/*IsSigned=*/true);
-    return VPIRFlags::WrapFlagsTy(/*NUW*/ false, NSW);
+    VPIRFlags::WrapFlagsTy WrapFlags =
+        cast<VPInstruction>(Inc)->getNoWrapFlagsOrNone();
+    // The step of a sub induction is negated, so NUW cannot be preserved. NSW
+    // can be preserved if the step is not the signed minimum.
+    bool NUW =
+        WrapFlags.HasNUW && match(Inc, m_VPInstruction<Instruction::Add>());
+    bool NSW = WrapFlags.HasNSW && Step && !Step->isMinSignedValue();
+    return VPIRFlags::WrapFlagsTy(NUW, NSW);
   }
 
   return VPIRFlags::WrapFlagsTy(false, false);

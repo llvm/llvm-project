@@ -723,9 +723,8 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   if (match(BackedgeVal, m_Add(m_Specific(PhiR), m_VPValue())))
     BackedgeVal->getDefiningRecipe()->setOperand(1, Step);
 
-  // It is always safe to copy over the NoWrap and FastMath flags. In
-  // particular, when folding tail by masking, the masked-off lanes are never
-  // used, so it is safe.
+  // When folding tail by masking, the masked-off lanes are never used, so it is
+  // safe to use the Flags.
   VPIRFlags Flags = vputils::getFlagsForInduction(IndDesc, PhiR);
 
   auto *WideIV = new VPWidenIntOrFpInductionRecipe(
