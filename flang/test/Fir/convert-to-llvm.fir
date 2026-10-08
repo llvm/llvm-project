@@ -1143,7 +1143,7 @@ func.func @alloca_char_array(%l: i32, %e : index) -> !fir.ref<!fir.array<?x?x!fi
 // CHECK-DAG: [[UNUSEDONE:%.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK-DAG: [[LCAST:%.*]] = llvm.sext [[L]] : i32 to i64
 // CHECK: [[PROD1:%.*]] = llvm.mul [[LCAST]], [[E]] : i64
-// CHECK: [[PROD2:%.*]] = llvm.mul [[PROD1]], [[E]] : i64
+// CHECK: [[PROD2:%.*]] = llvm.mul [[E]], [[PROD1]] : i64
 // GENERIC: [[A:%.*]] = llvm.alloca [[PROD2]] x i8
 // AMDGPU: [[AA:%.*]] = llvm.alloca [[PROD2]] x i8 : (i64) -> !llvm.ptr<5>
 // AMDGPU: [[A:%.*]] = llvm.addrspacecast [[AA]] : !llvm.ptr<5> to !llvm.ptr
@@ -1162,7 +1162,7 @@ func.func @alloca_fixed_char_array(%e : index) -> !fir.ref<!fir.array<?x?x!fir.c
 // CHECK-SAME: ([[E:%.*]]: i64) -> !llvm.ptr
 // CHECK-DAG: [[ONE:%.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK: [[PROD1:%.*]] = llvm.mul [[E]], [[ONE]] : i64
-// CHECK: [[PROD2:%.*]] = llvm.mul [[PROD1]], [[E]] : i64
+// CHECK: [[PROD2:%.*]] = llvm.mul [[E]], [[PROD1]] : i64
 // GENERIC: [[A:%.*]] = llvm.alloca [[PROD2]] x !llvm.array<8 x i8>
 // AMDGPU: [[AA:%.*]] = llvm.alloca [[PROD2]] x !llvm.array<8 x i8> : (i64) -> !llvm.ptr<5>
 // AMDGPU: [[A:%.*]] = llvm.addrspacecast [[AA]] : !llvm.ptr<5> to !llvm.ptr
