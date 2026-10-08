@@ -11634,14 +11634,22 @@ multiclass avx512_insert_elt_dq<bits<8> opc, string OpcodeStr,
                                          X86VectorVTInfo _, RegisterClass GRC> {
   let Predicates = [HasDQI] in {
     def rri : AVX512Ii8<opc, MRMSrcReg, (outs _.RC:$dst),
-        (ins _.RC:$src1, GRC:$src2, u8imm:$src3),
+        (ins _.RC:$src1, GRC:$src2, vecidximm:$src3),
         OpcodeStr#"\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}",
         [(set _.RC:$dst,
-            (_.VT (insertelt _.RC:$src1, GRC:$src2, imm:$src3)))]>,
+            (_.VT (insertelt _.RC:$src1, GRC:$src2,
+                             (X86VecIdxVT imm:$src3))))]>,
         EVEX, VVVV, TA, PD, Sched<[WriteVecInsert]>;
 
-    defm NAME : avx512_insert_elt_m<opc, OpcodeStr, insertelt, _,
-                                    _.ScalarLdFrag, imm>, TA, PD;
+    let mayLoad = 1 in
+    def rmi : AVX512Ii8<opc, MRMSrcMem, (outs _.RC:$dst),
+        (ins _.RC:$src1, _.ScalarMemOp:$src2, vecidximm:$src3),
+        OpcodeStr#"\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}",
+        [(set _.RC:$dst,
+            (_.VT (insertelt _.RC:$src1, (_.ScalarLdFrag addr:$src2),
+                             (X86VecIdxVT imm:$src3))))]>,
+        EVEX, VVVV, EVEX_CD8<_.EltSize, CD8VT1>, TA, PD,
+        Sched<[WriteVecInsert.Folded, WriteVecInsert.ReadAfterFold]>;
   }
 }
 

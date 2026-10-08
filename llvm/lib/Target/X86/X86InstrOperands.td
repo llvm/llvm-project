@@ -475,6 +475,15 @@ def u8imm : Operand<i8> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
+// Unsigned 8-bit immediate used as a vector element index. Its value type is
+// the pointer-sized vector index type, so patterns on insertelt/extractelt
+// get a concrete index type per HwMode instead of iPTR.
+def vecidximm : Operand<X86VecIdxVT> {
+  let PrintMethod = "printU8Imm";
+  let ParserMatchClass = ImmUnsignedi8AsmOperand;
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
 // 16-bit immediate but only 8-bits are significant and they are unsigned.
 // Used by BT instructions.
 def i16u8imm : Operand<i16> {
