@@ -131,6 +131,11 @@ class RegisterCommandsTestCase(TestBase):
             substrs=["Invalid register expression 'not_a_register'"],
             error=True,
         )
+        self.expect(
+            "register read $not_a_register",
+            substrs=["Invalid register expression '$not_a_register'"],
+            error=True,
+        )
 
     @skipIfiOSSimulator
     @skipIf(archs=no_match(["amd64", "x86_64"]))
