@@ -11226,12 +11226,11 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
 
     // Create the load.
     Register LoadPtr = Src;
-    Register Offset;
     if (CurrOffset != 0) {
       LLT SrcTy = MRI.getType(Src);
-      Offset =
-          MIB.buildConstant(LLT::integer(SrcTy.getSizeInBits()), CurrOffset)
-              .getReg(0);
+      auto Offset = MIB.buildConstant(
+          LLT::integer(DL.getIndexSizeInBits(SrcTy.getAddressSpace())),
+          CurrOffset);
       LoadPtr = MIB.buildObjectPtrOffset(SrcTy, Src, Offset).getReg(0);
     }
     auto LdVal = MIB.buildLoad(CopyTy, LoadPtr, *LoadMMO);
@@ -11240,10 +11239,9 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
     Register StorePtr = Dst;
     if (CurrOffset != 0) {
       LLT DstTy = MRI.getType(Dst);
-      if (MRI.getType(Offset).getSizeInBits() != DstTy.getSizeInBits())
-        Offset =
-            MIB.buildConstant(LLT::integer(DstTy.getSizeInBits()), CurrOffset)
-                .getReg(0);
+      auto Offset = MIB.buildConstant(
+          LLT::integer(DL.getIndexSizeInBits(DstTy.getAddressSpace())),
+          CurrOffset);
       StorePtr = MIB.buildObjectPtrOffset(DstTy, Dst, Offset).getReg(0);
     }
     MIB.buildStore(LdVal, StorePtr, *StoreMMO);
