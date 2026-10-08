@@ -82,11 +82,7 @@ static const MachineOperand &getNamedOp(const MachineInstr &MI,
 // Check if MI is a VOP3P instruction with operands that satisfy the constraints
 // for mapping it to a VOP2/VOPD opcode: no modifiers, no clamp, src1 and src2
 // are registers (src0 can be register or literal), and src2 is same as dst.
-// An immediate in src1 is accepted if src0 is a register and the operands can
-// be commuted. \p Commute is set if that is needed.
-static bool canMapVOP3PToVOPD(const SIInstrInfo &TII, const MachineInstr &MI,
-                              bool &Commute) {
-  Commute = false;
+static bool canMapVOP3PToVOPD(const MachineInstr &MI) {
   unsigned Opc = MI.getOpcode();
   if (Opc != AMDGPU::V_DOT2_F32_F16 && Opc != AMDGPU::V_DOT2_F32_BF16)
     return false;
@@ -97,14 +93,8 @@ static bool canMapVOP3PToVOPD(const SIInstrInfo &TII, const MachineInstr &MI,
   if (getNamedOp(MI, AMDGPU::OpName::src1_modifiers).getImm() !=
       SISrcMods::OP_SEL_1)
     return false;
-  if (!getNamedOp(MI, AMDGPU::OpName::src1).isReg()) {
-    if (!(getNamedOp(MI, AMDGPU::OpName::src0).isReg() &&
-          getNamedOp(MI, AMDGPU::OpName::src1).isImm() &&
-          TII.isLegalToSwap(MI, getNamedOperandIdx(Opc, AMDGPU::OpName::src0),
-                            getNamedOperandIdx(Opc, AMDGPU::OpName::src1))))
-      return false;
-    Commute = true;
-  }
+  if (!getNamedOp(MI, AMDGPU::OpName::src1).isReg())
+    return false;
   if (getNamedOp(MI, AMDGPU::OpName::src2_modifiers).getImm() !=
       SISrcMods::OP_SEL_1)
     return false;
@@ -166,10 +156,11 @@ static bool canMaterializeVOPDLiterals(const MachineFunction &MF) {
          !MF.getFunction().hasOptSize();
 }
 
-static bool checkVOPDRegConstraints(
-    const SIInstrInfo &TII, const MachineInstr &MIX, const MachineInstr &MIY,
-    bool IsVOPD3, bool AllowSameVGPR,
-    SmallVectorImpl<VOPDLiteralFixup> &LiteralFixups, bool (&CommuteXY)[2]) {
+static bool
+checkVOPDRegConstraints(const SIInstrInfo &TII, const MachineInstr &MIX,
+                        const MachineInstr &MIY, bool IsVOPD3,
+                        bool AllowSameVGPR,
+                        SmallVectorImpl<VOPDLiteralFixup> &LiteralFixups) {
   namespace VOPD = AMDGPU::VOPD;
 
   const MachineFunction *MF = MIX.getMF();
@@ -179,12 +170,8 @@ static bool checkVOPDRegConstraints(
     return false;
   if (IsVOPD3 && isVOPD3F64OPYSrcHazard(TII, MIX, MIY))
     return false;
-  // Components which only map once src0 and src1 are commuted. The checks
-  // below look at their operands as they will be after the commute.
-  bool Commute[2] = {false, false};
-  if (!IsVOPD3 &&
-      ((TII.isVOP3(MIX) && !canMapVOP3PToVOPD(TII, MIX, Commute[VOPD::X])) ||
-       (TII.isVOP3(MIY) && !canMapVOP3PToVOPD(TII, MIY, Commute[VOPD::Y]))))
+  if (!IsVOPD3 && ((TII.isVOP3(MIX) && !canMapVOP3PToVOPD(MIX)) ||
+                   (TII.isVOP3(MIY) && !canMapVOP3PToVOPD(MIY))))
     return false;
   if (TII.isDPP(MIX) || TII.isDPP(MIY))
     return false;
@@ -219,12 +206,8 @@ static bool checkVOPDRegConstraints(
 
   for (auto CompIdx : VOPD::COMPONENTS) {
     const MachineInstr &MI = (CompIdx == VOPD::X) ? MIX : MIY;
-    const AMDGPU::OpName Src0Name =
-        Commute[CompIdx] ? AMDGPU::OpName::src1 : AMDGPU::OpName::src0;
-    const AMDGPU::OpName Src1Name =
-        Commute[CompIdx] ? AMDGPU::OpName::src0 : AMDGPU::OpName::src1;
 
-    const MachineOperand &Src0 = *TII.getNamedOperand(MI, Src0Name);
+    const MachineOperand &Src0 = *TII.getNamedOperand(MI, AMDGPU::OpName::src0);
     if (Src0.isReg()) {
       if (!isValidVOPDSrc(TII, VOPDOpc, CompIdx, 0, Src0.getReg()))
         return false;
@@ -241,7 +224,7 @@ static bool checkVOPDRegConstraints(
           return false;
         // Only a 32-bit slot is handled, because the caller produces the value
         // with a single S_MOV_B32.
-        int OpIdx = getNamedOperandIdx(MI.getOpcode(), Src0Name);
+        int OpIdx = getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src0);
         if (TII.getOpSize(MI, OpIdx) != 4)
           return false;
         const TargetRegisterClass *SlotRC =
@@ -268,7 +251,8 @@ static bool checkVOPDRegConstraints(
     if (MI.getDesc().hasImplicitUseOfPhysReg(AMDGPU::VCC))
       UniqueScalarRegs.insert(AMDGPU::VCC_LO);
 
-    if (const MachineOperand *Src1 = TII.getNamedOperand(MI, Src1Name)) {
+    if (const MachineOperand *Src1 =
+            TII.getNamedOperand(MI, AMDGPU::OpName::src1)) {
       if (Src1->isReg()) {
         if (!isValidVOPDSrc(TII, VOPDOpc, CompIdx, 1, Src1->getReg()))
           return false;
@@ -326,14 +310,6 @@ static bool checkVOPDRegConstraints(
 
   auto GetVRegIdx = [&](unsigned OpcodeIdx, unsigned OperandIdx) {
     const MachineInstr &MI = (OpcodeIdx == VOPD::X) ? MIX : MIY;
-    if (Commute[OpcodeIdx]) {
-      int Src0Idx = getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src0);
-      int Src1Idx = getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src1);
-      if ((int)OperandIdx == Src0Idx)
-        OperandIdx = Src1Idx;
-      else if ((int)OperandIdx == Src1Idx)
-        OperandIdx = Src0Idx;
-    }
     const MachineOperand &Operand = MI.getOperand(OperandIdx);
     if (Operand.isReg() && TRI->isVectorRegister(MRI, Operand.getReg()))
       return Operand.getReg();
@@ -354,8 +330,6 @@ static bool checkVOPDRegConstraints(
   LLVM_DEBUG(dbgs() << "VOPD Reg Constraints Passed\n\tX: " << MIX
                     << "\n\tY: " << MIY << "\n");
   LiteralFixups.assign(Fixups);
-  CommuteXY[VOPD::X] = Commute[VOPD::X];
-  CommuteXY[VOPD::Y] = Commute[VOPD::Y];
   return true;
 }
 
@@ -384,19 +358,14 @@ tryMatchVOPDPairVariant(const SIInstrInfo &TII, unsigned EncodingFamily,
   bool AllowSameVGPR = ST.hasGFX12Insts();
 
   // Only a VOPD3 component can need a fixup; a plain one may hold a literal.
-  // checkVOPDRegConstraints() only writes these when it succeeds.
+  // checkVOPDRegConstraints() only writes this when it succeeds.
   SmallVector<VOPDLiteralFixup, 2> Fixups;
-  bool CommuteXY[2] = {false, false};
 
   if (FirstCanBeVOPD.X && SecondCanBeVOPD.Y) {
     if (checkVOPDRegConstraints(TII, FirstMI, SecondMI, IsVOPD3, AllowSameVGPR,
-                                Fixups, CommuteXY))
+                                Fixups))
       return VOPDMatchInfo{
-          {&FirstMI, &SecondMI},
-          0,
-          IsVOPD3,
-          std::move(Fixups),
-          {CommuteXY[AMDGPU::VOPD::X], CommuteXY[AMDGPU::VOPD::Y]}};
+          {&FirstMI, &SecondMI}, 0, IsVOPD3, std::move(Fixups)};
   }
 
   if (FirstCanBeVOPD.Y && SecondCanBeVOPD.X) {
@@ -407,13 +376,9 @@ tryMatchVOPDPairVariant(const SIInstrInfo &TII, unsigned EncodingFamily,
     if (IsAntiDep && !TII.isVOPDAntidependencyAllowed(SecondMI))
       return std::nullopt;
     if (checkVOPDRegConstraints(TII, SecondMI, FirstMI, IsVOPD3, AllowSameVGPR,
-                                Fixups, CommuteXY))
+                                Fixups))
       return VOPDMatchInfo{
-          {&FirstMI, &SecondMI},
-          1,
-          IsVOPD3,
-          std::move(Fixups),
-          {CommuteXY[AMDGPU::VOPD::Y], CommuteXY[AMDGPU::VOPD::X]}};
+          {&FirstMI, &SecondMI}, 1, IsVOPD3, std::move(Fixups)};
   }
 
   return std::nullopt;

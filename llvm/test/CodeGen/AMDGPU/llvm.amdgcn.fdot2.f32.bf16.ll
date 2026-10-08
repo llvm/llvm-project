@@ -1140,7 +1140,8 @@ define float @v_fdot2_f32_bf16_inline_literal_b_x(<2 x bfloat> %a, <2 x bfloat> 
 ;
 ; GFX11PLUS-LABEL: v_fdot2_f32_bf16_inline_literal_b_x:
 ; GFX11PLUS:  ; %bb.0:
-; GFX11PLUS:    v_dual_dot2acc_f32_bf16 v2, 0x40004000, v0 :: v_dual_dot2acc_f32_bf16 v5, v4, v3
+; GFX11PLUS:    v_dot2_f32_bf16 v2, v0, 0x40004000, v2
+; GFX11PLUS:    v_dot2_f32_bf16 v5, v4, v3, v5
 ; GFX11PLUS:    v_add_f32_e32 v0, v2, v5
   %r0 = call float @llvm.amdgcn.fdot2.f32.bf16(<2 x bfloat> %a, <2 x bfloat> <bfloat 2.0, bfloat 2.0>, float %c, i1 false)
   %r1 = call float @llvm.amdgcn.fdot2.f32.bf16(<2 x bfloat> %e, <2 x bfloat> %d, float %f, i1 false)
@@ -1157,7 +1158,8 @@ define float @v_fdot2_f32_bf16_inline_literal_b_y(<2 x bfloat> %a, <2 x bfloat> 
 ;
 ; GFX11PLUS-LABEL: v_fdot2_f32_bf16_inline_literal_b_y:
 ; GFX11PLUS:  ; %bb.0:
-; GFX11PLUS:    v_dual_dot2acc_f32_bf16 v2, v1, v0 :: v_dual_dot2acc_f32_bf16 v5, 0x40004000, v3
+; GFX11PLUS:    v_dot2_f32_bf16 v2, v1, v0, v2
+; GFX11PLUS:    v_dot2_f32_bf16 v5, v3, 0x40004000, v5
 ; GFX11PLUS:    v_add_f32_e32 v0, v2, v5
   %r0 = call float @llvm.amdgcn.fdot2.f32.bf16(<2 x bfloat> %b, <2 x bfloat> %a, float %c, i1 false)
   %r1 = call float @llvm.amdgcn.fdot2.f32.bf16(<2 x bfloat> %d, <2 x bfloat> <bfloat 2.0, bfloat 2.0>, float %f, i1 false)
@@ -1174,7 +1176,8 @@ define float @v_fdot2_f32_bf16_inline_literal_b_xy(<2 x bfloat> %a, <2 x bfloat>
 ;
 ; GFX11PLUS-LABEL: v_fdot2_f32_bf16_inline_literal_b_xy:
 ; GFX11PLUS:  ; %bb.0:
-; GFX11PLUS:    v_dual_dot2acc_f32_bf16 v2, 0x40004000, v0 :: v_dual_dot2acc_f32_bf16 v5, 0x40004000, v3
+; GFX11PLUS:    v_dot2_f32_bf16 v2, v0, 0x40004000, v2
+; GFX11PLUS:    v_dot2_f32_bf16 v5, v3, 0x40004000, v5
 ; GFX11PLUS:    v_add_f32_e32 v0, v2, v5
   %r0 = call float @llvm.amdgcn.fdot2.f32.bf16(<2 x bfloat> %a, <2 x bfloat> <bfloat 2.0, bfloat 2.0>, float %c, i1 false)
   %r1 = call float @llvm.amdgcn.fdot2.f32.bf16(<2 x bfloat> %d, <2 x bfloat> <bfloat 2.0, bfloat 2.0>, float %f, i1 false)
