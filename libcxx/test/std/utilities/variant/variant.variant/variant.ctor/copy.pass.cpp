@@ -12,7 +12,7 @@
 
 // template <class ...Types> class variant;
 
-// constexpr variant(variant const&);
+// constexpr variant(variant const&) noexcept(see below);
 
 #include <cassert>
 #include <type_traits>
@@ -51,6 +51,16 @@ struct NTCopy {
 
 static_assert(!std::is_trivially_copy_constructible<NTCopy>::value, "");
 static_assert(std::is_copy_constructible<NTCopy>::value, "");
+
+struct NoThrowNTCopy {
+  constexpr NoThrowNTCopy(int v) : value(v) {}
+  NoThrowNTCopy(const NoThrowNTCopy& that) noexcept : value(that.value) {}
+  NoThrowNTCopy(NoThrowNTCopy&&) = delete;
+  int value;
+};
+
+static_assert(!std::is_trivially_copy_constructible<NoThrowNTCopy>::value, "");
+static_assert(std::is_copy_constructible<NoThrowNTCopy>::value, "");
 
 struct TCopy {
   constexpr TCopy(int v) : value(v) {}
@@ -98,6 +108,28 @@ void makeEmpty(Variant& v) {
   }
 }
 #endif // TEST_HAS_NO_EXCEPTIONS
+
+constexpr void test_copy_noexcept() {
+  {
+    using V = std::variant<int, long>;
+    static_assert(std::is_nothrow_copy_constructible<V>::value, "");
+  }
+  {
+    using V = std::variant<int, TCopy>;
+    static_assert(std::is_nothrow_copy_constructible<TCopy>::value, "");
+    static_assert(std::is_nothrow_copy_constructible<V>::value, "");
+  }
+  {
+    using V = std::variant<int, NTCopy>;
+    static_assert(!std::is_nothrow_copy_constructible<NTCopy>::value, "");
+    static_assert(!std::is_nothrow_copy_constructible<V>::value, "");
+  }
+  {
+    using V = std::variant<int, NoThrowNTCopy>;
+    static_assert(std::is_nothrow_copy_constructible<NoThrowNTCopy>::value, "");
+    static_assert(std::is_nothrow_copy_constructible<V>::value, "");
+  }
+}
 
 constexpr void test_copy_ctor_sfinae() {
   {
@@ -268,6 +300,7 @@ TEST_CONSTEXPR_CXX20 void test_constexpr_copy_ctor_non_trivial() {
 void non_constexpr_test() { test_copy_ctor_valueless_by_exception(); }
 
 constexpr bool cxx17_constexpr_test() {
+  test_copy_noexcept();
   test_copy_ctor_sfinae();
   test_constexpr_copy_ctor_trivial();
 
