@@ -28,7 +28,7 @@ typedef NonTrivial NonTrivialArr[2];
 const NonTrivialArr &static_arr_ref = NonTrivialArr{};
 thread_local const NonTrivialArr &thread_arr_ref = NonTrivialArr{};
 
-// CIR-BEFORE: cir.global external @static_ref = ctor : !cir.ptr<!rec_NonTrivial> {
+// CIR-BEFORE: cir.global external @static_ref = #cir.ptr<null> : !cir.ptr<!rec_NonTrivial> ctor {
 // CIR-BEFORE:   %[[STATIC_REF:.*]] = cir.get_global @static_ref
 // CIR-BEFORE:   %[[REF_TEMP:.*]] = cir.get_global @_ZGR10static_ref_
 // CIR-BEFORE:   cir.call @_ZN10NonTrivialC1Ev(%[[REF_TEMP]])
@@ -52,7 +52,7 @@ thread_local const NonTrivialArr &thread_arr_ref = NonTrivialArr{};
 // CIR:   cir.store
 // CIR: cir.global "private" internal @_ZGR10static_ref_ = #cir.zero : !rec_NonTrivial
 
-// CIR-BEFORE: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW10thread_ref", "_ZTH10thread_ref"> @thread_ref = ctor : !cir.ptr<!rec_NonTrivial> {
+// CIR-BEFORE: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW10thread_ref", "_ZTH10thread_ref"> @thread_ref = #cir.ptr<null> : !cir.ptr<!rec_NonTrivial> ctor {
 // CIR-BEFORE:   %[[THREAD_REF:.*]] = cir.get_global thread_local @thread_ref
 // CIR-BEFORE:   %[[REF_TEMP:.*]] = cir.get_global @_ZGR10thread_ref_
 // CIR-BEFORE:   cir.call @_ZN10NonTrivialC1Ev(%[[REF_TEMP]])
@@ -76,7 +76,7 @@ thread_local const NonTrivialArr &thread_arr_ref = NonTrivialArr{};
 // CIR:   cir.store
 // CIR: cir.global "private" internal tls_model = tls_dyn @_ZGR10thread_ref_ = #cir.zero : !rec_NonTrivial
 
-// CIR-BEFORE: cir.global external @static_arr_ref = ctor : !cir.ptr<!cir.array<!rec_NonTrivial x 2>> {
+// CIR-BEFORE: cir.global external @static_arr_ref = #cir.ptr<null> : !cir.ptr<!cir.array<!rec_NonTrivial x 2>> ctor {
 // CIR-BEFORE:   %[[ARRAY_INIT_TEMP:.*]] = cir.alloca {{.*}}"arrayinit.temp"
 // CIR-BEFORE:   %[[STATIC_ARR_REF:.*]] = cir.get_global @static_arr_ref
 // CIR-BEFORE:   %[[STATIC_ARR_REF_TEMP:.*]] = cir.get_global @_ZGR14static_arr_ref_
@@ -115,7 +115,7 @@ thread_local const NonTrivialArr &thread_arr_ref = NonTrivialArr{};
 // CIR:     cir.condition
 // CIR:   }
 
-// CIR-BEFORE: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW14thread_arr_ref", "_ZTH14thread_arr_ref"> @thread_arr_ref = ctor : !cir.ptr<!cir.array<!rec_NonTrivial x 2>> {
+// CIR-BEFORE: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW14thread_arr_ref", "_ZTH14thread_arr_ref"> @thread_arr_ref = #cir.ptr<null> : !cir.ptr<!cir.array<!rec_NonTrivial x 2>> ctor {
 // CIR-BEFORE:   %[[ARRAY_INIT_TEMP:.*]] = cir.alloca {{.*}}"arrayinit.temp"
 // CIR-BEFORE:   %[[THREAD_ARR_REF:.*]] = cir.get_global thread_local @thread_arr_ref
 // CIR-BEFORE:   %[[THREAD_ARR_REF_TEMP:.*]] = cir.get_global @_ZGR14thread_arr_ref_
@@ -244,7 +244,7 @@ struct Holder {
 
 Holder holder{NonTrivial()};
 
-// CIR-BEFORE: cir.global external @two_refs = ctor : !rec_TwoRefs {
+// CIR-BEFORE: cir.global external @two_refs = #cir.zero : !rec_TwoRefs ctor {
 // CIR-BEFORE:   %[[A:.*]] = cir.get_global @_ZGR8two_refs_
 // CIR-BEFORE:   cir.call @_ZN10NonTrivialC1Ev(%[[A]])
 // CIR-BEFORE:   cir.register_exit_dtor @_ZGR8two_refs_ {
@@ -261,7 +261,7 @@ Holder holder{NonTrivial()};
 // CIR-BEFORE:   cir.store{{.*}} %[[B]]
 // CIR-BEFORE: }
 
-// CIR-BEFORE: cir.global external @holder = ctor : !rec_Holder {
+// CIR-BEFORE: cir.global external @holder = #cir.zero : !rec_Holder ctor {
 // CIR-BEFORE:   %[[T:.*]] = cir.get_global @_ZGR6holder_
 // CIR-BEFORE:   cir.call @_ZN10NonTrivialC1Ev(%[[T]])
 // CIR-BEFORE:   cir.register_exit_dtor @_ZGR6holder_ {
@@ -295,7 +295,7 @@ bool pick();
 const NonTrivial &cond_ref =
     pick() ? static_cast<const NonTrivial &>(NonTrivial()) : static_ref;
 
-// CIR-BEFORE: cir.global external @cond_ref = ctor : !cir.ptr<!rec_NonTrivial> {
+// CIR-BEFORE: cir.global external @cond_ref = #cir.ptr<null> : !cir.ptr<!rec_NonTrivial> ctor {
 // CIR-BEFORE:   cir.ternary(%{{.+}}, true {
 // CIR-BEFORE:     %[[TEMP:.*]] = cir.get_global @_ZGR8cond_ref_
 // CIR-BEFORE:     cir.call @_ZN10NonTrivialC1Ev(%[[TEMP]])
@@ -334,7 +334,7 @@ struct Built {
 
 const Built &built_ref = Built(Arg());
 
-// CIR-BEFORE: cir.global external @built_ref = ctor : !cir.ptr<!rec_Built> {
+// CIR-BEFORE: cir.global external @built_ref = #cir.ptr<null> : !cir.ptr<!rec_Built> ctor {
 // CIR-BEFORE:   cir.call @_ZN3ArgC1Ev
 // CIR-BEFORE:   cir.cleanup.scope {
 // CIR-BEFORE:     cir.call @_ZN5BuiltC1ERK3Arg
@@ -358,3 +358,33 @@ const Built &built_ref = Built(Arg());
 // LLVM-EH-NEXT:   to label %{{.+}} unwind label %{{.+}}
 // LLVM-EH:      call i32 @__cxa_atexit(ptr @_ZN5BuiltD1Ev, ptr @_ZGR9built_ref_, ptr @__dso_handle)
 // LLVM-EH:      call void @_ZN3ArgD1Ev(
+
+struct ExtendedTemp {
+  ExtendedTemp();
+  ~ExtendedTemp();
+};
+struct OwnsTemp {
+  const ExtendedTemp &r;
+  ~OwnsTemp();
+};
+OwnsTemp owns_temp{ExtendedTemp()};
+
+// CIR-BEFORE: cir.global external @owns_temp = #cir.zero : !rec_OwnsTemp ctor {
+// CIR-BEFORE:   %[[TEMP:.*]] = cir.get_global @_ZGR9owns_temp_
+// CIR-BEFORE:   cir.call @_ZN12ExtendedTempC1Ev(%[[TEMP]])
+// CIR-BEFORE:   cir.register_exit_dtor @_ZGR9owns_temp_ {
+// CIR-BEFORE:     %[[TEMP_DTOR:.*]] = cir.get_global @_ZGR9owns_temp_
+// CIR-BEFORE:     cir.call @_ZN12ExtendedTempD1Ev(%[[TEMP_DTOR]])
+// CIR-BEFORE:   }
+// CIR-BEFORE:   cir.store{{.*}} %[[TEMP]]
+// CIR-BEFORE: } dtor {
+// CIR-BEFORE-NEXT: %[[OWNER:.*]] = cir.get_global @owns_temp
+// CIR-BEFORE-NEXT: cir.call @_ZN8OwnsTempD1Ev(%[[OWNER]])
+// CIR-BEFORE-NEXT: }
+
+// Each is registered separately; the temporary's goes first so it runs last.
+// LLVM-LABEL: define internal void @__cxx_global_var_init.{{[0-9]+}}()
+// LLVM:         call void @_ZN12ExtendedTempC1Ev(ptr noundef nonnull align 1 dereferenceable(1) @_ZGR9owns_temp_)
+// LLVM:         call i32 @__cxa_atexit(ptr @_ZN12ExtendedTempD1Ev, ptr @_ZGR9owns_temp_, ptr @__dso_handle)
+// LLVM:         store ptr @_ZGR9owns_temp_, ptr @owns_temp
+// LLVM:         call i32 @__cxa_atexit(ptr @_ZN8OwnsTempD1Ev, ptr @owns_temp, ptr @__dso_handle)

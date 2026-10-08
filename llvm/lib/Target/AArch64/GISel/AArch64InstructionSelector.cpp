@@ -2551,6 +2551,22 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
     I.eraseFromParent();
     return true;
   }
+  case TargetOpcode::G_BRINDIRECT: {
+    const Function &Fn = MF.getFunction();
+    if (std::optional<uint16_t> BADisc =
+            STI.getPtrAuthBlockAddressDiscriminatorIfEnabled(Fn)) {
+      auto MI = MIB.buildInstr(AArch64::BRA, {}, {I.getOperand(0).getReg()});
+      MI.addImm(AArch64PACKey::IA);
+      MI.addImm(*BADisc);
+      MI.addReg(/*AddrDisc=*/AArch64::XZR);
+      I.eraseFromParent();
+      constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+      return true;
+    }
+    // Use table-based selection.
+    return false;
+  }
+
   default:
     return false;
   }
@@ -2674,23 +2690,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   }
   case TargetOpcode::G_BRCOND:
     return selectCompareBranch(I, MF, MRI);
-
-  case TargetOpcode::G_BRINDIRECT: {
-    const Function &Fn = MF.getFunction();
-    if (std::optional<uint16_t> BADisc =
-            STI.getPtrAuthBlockAddressDiscriminatorIfEnabled(Fn)) {
-      auto MI = MIB.buildInstr(AArch64::BRA, {}, {I.getOperand(0).getReg()});
-      MI.addImm(AArch64PACKey::IA);
-      MI.addImm(*BADisc);
-      MI.addReg(/*AddrDisc=*/AArch64::XZR);
-      I.eraseFromParent();
-      constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
-      return true;
-    }
-    I.setDesc(TII.get(AArch64::BR));
-    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-    return true;
-  }
 
   case TargetOpcode::G_BRJT:
     return selectBrJT(I, MRI);
@@ -2923,6 +2922,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       I.setDesc(TII.get(IsGOTSigned ? AArch64::LOADgotAUTH : AArch64::LOADgot));
       I.getOperand(1).setTargetFlags(OpFlags);
       I.addImplicitDefUseOperands(MF);
+      I.setImplicitPhysRegDefsDead();
     } else if (TM.getCodeModel() == CodeModel::Large &&
                !TM.isPositionIndependent()) {
       // Materialize the global using movz/movk instructions.
@@ -6889,6 +6889,8 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
         .addImm(PACConstDiscC)
         .addUse(PACAddrDisc)
         .addImm(Addend)
+        .setOperandDead(8) // implicit-def $x17
+        .setOperandDead(9) // implicit-def $nzcv
         .constrainAllUses(TII, TRI, RBI);
     MIB.buildCopy({DstReg}, Register(AArch64::X16));
 
@@ -6935,6 +6937,8 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
         .addImm(PACKey)
         .addImm(PACConstDiscC)
         .addUse(PACAddrDisc)
+        .setOperandDead(7) // implicit-def $x17
+        .setOperandDead(8) // implicit-def $nzcv
         .constrainAllUses(TII, TRI, RBI);
     MIB.buildCopy({DstReg}, Register(AArch64::X16));
 
@@ -6971,6 +6975,9 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
         .addImm(PACKey)
         .addImm(PACConstDiscC)
         .addUse(PACAddrDisc)
+        .setOperandDead(5) // implicit-def $x15
+        .setOperandDead(6) // implicit-def $x16
+        .setOperandDead(7) // implicit-def $nzcv
         .constrainAllUses(TII, TRI, RBI);
 
     MIB.buildCopy({DstReg}, Register(AArch64::X17));
@@ -6995,19 +7002,22 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
           .addImm(AUTKey)
           .addImm(AUTConstDiscC)
           .addUse(AUTAddrDisc)
+          .setOperandDead(4) // implicit-def $x17
+          .setOperandDead(5) // implicit-def $nzcv
           .constrainAllUses(TII, TRI, RBI);
       MIB.buildCopy({DstReg}, Register(AArch64::X16));
     } else {
       Register ScratchReg =
           MRI.createVirtualRegister(&AArch64::GPR64commonRegClass);
-      MIB.buildInstr(AArch64::AUTxMxN)
-          .addDef(DstReg)
-          .addDef(ScratchReg)
-          .addUse(ValReg)
-          .addImm(AUTKey)
-          .addImm(AUTConstDiscC)
-          .addUse(AUTAddrDisc)
-          .constrainAllUses(TII, TRI, RBI);
+      auto Auth = MIB.buildInstr(AArch64::AUTxMxN)
+                      .addDef(DstReg)
+                      .addDef(ScratchReg)
+                      .addUse(ValReg)
+                      .addImm(AUTKey)
+                      .addImm(AUTConstDiscC)
+                      .addUse(AUTAddrDisc);
+      Auth->setImplicitPhysRegDefsDead();
+      Auth.constrainAllUses(TII, TRI, RBI);
     }
 
     RBI.constrainGenericRegister(DstReg, AArch64::GPR64RegClass, MRI);

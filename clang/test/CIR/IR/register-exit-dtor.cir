@@ -10,7 +10,7 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   cir.func private @_ZN3TmpD1Ev(!cir.ptr<!rec_Tmp>)
 
   cir.global "private" internal @_ZGR3ref_ = #cir.zero : !rec_Tmp
-  cir.global external @ref = ctor : !rec_Ref {
+  cir.global external @ref = #cir.zero : !rec_Ref ctor {
     %0 = cir.get_global @_ZGR3ref_ : !cir.ptr<!rec_Tmp>
     cir.call @_ZN3TmpC1Ev(%0) : (!cir.ptr<!rec_Tmp>) -> ()
     cir.register_exit_dtor @_ZGR3ref_ {
@@ -18,7 +18,7 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
       cir.call @_ZN3TmpD1Ev(%1) : (!cir.ptr<!rec_Tmp>) -> ()
     }
   }
-  // CHECK: cir.global external @ref = ctor : !rec_Ref {
+  // CHECK: cir.global external @ref = #cir.zero : !rec_Ref ctor {
   // CHECK:   %[[TMP:.*]] = cir.get_global @_ZGR3ref_ : !cir.ptr<!rec_Tmp>
   // CHECK:   cir.call @_ZN3TmpC1Ev(%[[TMP]]) : (!cir.ptr<!rec_Tmp>) -> ()
   // CHECK:   cir.register_exit_dtor @_ZGR3ref_ {
@@ -28,7 +28,7 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   // CHECK: }
 
   cir.global "private" internal @_ZGR4cond_ = #cir.zero : !rec_Tmp
-  cir.global external @cond = ctor : !rec_Ref {
+  cir.global external @cond = #cir.zero : !rec_Ref ctor {
     %0 = cir.const #cir.bool<true> : !cir.bool
     cir.if %0 {
       %1 = cir.get_global @_ZGR4cond_ : !cir.ptr<!rec_Tmp>
@@ -39,7 +39,7 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
       }
     }
   }
-  // CHECK: cir.global external @cond = ctor : !rec_Ref {
+  // CHECK: cir.global external @cond = #cir.zero : !rec_Ref ctor {
   // CHECK:   cir.if %{{.+}} {
   // CHECK:     cir.call @_ZN3TmpC1Ev
   // CHECK:     cir.register_exit_dtor @_ZGR4cond_ {
@@ -50,8 +50,8 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   // CHECK: }
 
   cir.global "private" internal @_ZGRZ1fvE1r_ = #cir.zero : !rec_Tmp
-  cir.global "private" internal static_local_guard<"_ZGVZ1fvE1r"> @_ZZ1fvE1r = #cir.zero : !rec_Ref
-    static_local_info<local = true, tls = none, is_inline = false, tsk = undeclared>
+  cir.global "private" internal dynamic_init_guard<"_ZGVZ1fvE1r"> @_ZZ1fvE1r = #cir.zero : !rec_Ref
+    dynamic_init_info<local = true, tls = none, is_inline = false, tsk = undeclared>
   cir.func @f() {
     cir.local_init static_local @_ZZ1fvE1r ctor {
       %0 = cir.get_global @_ZGRZ1fvE1r_ : !cir.ptr<!rec_Tmp>

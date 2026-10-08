@@ -391,14 +391,14 @@ def Vector_BroadcastOp :
     the source operand is duplicated to match the given rank and sizes
     in the result vector. The legality rules are:
     * the source operand must have the same element type as the result type
-    * a k-D vector <s_1 x .. x s_k x type> can be broadcast to
-      a n-D vector <t_1 x .. x t_n x type> if
-       * k <= n, and
-       * the sizes in the trailing dimensions n-k < i <= n with j=i+k-n
+    * a K-D vector <s_1 x .. x s_K x type> can be broadcast to
+      a N-D vector <t_1 x .. x t_N x type> if
+       * K <= N, and
+       * the sizes in the trailing dimensions N-K < i <= N with j=i+K-N
           match exactly as s_j = t_i or s_j = 1:
        ```
-           t_1 x   ..  t_n-k x t_n-k+1 x .. x t_i x .. x t_n
-                               s_1     x .. x s_j x .. x s_k
+           t_1 x   ..  t_N-K x t_N-K+1 x .. x t_i x .. x t_N
+                               s_1     x .. x s_j x .. x s_K
                <duplication>         <potential stretch>
        ```
        * in addition, any scalable unit dimension, `[1]`, must match exactly.
@@ -406,7 +406,7 @@ def Vector_BroadcastOp :
     The source operand is duplicated over all the missing leading dimensions
     and stretched over the trailing dimensions where the source has a non-equal
     dimension of 1 (stretching a trailing dimension is also referred to as
-    "dim-1" broadcasting). These rules imply that any scalar broadcast (k=0) to
+    "dim-1" broadcasting). These rules imply that any scalar broadcast (K=0) to
     any shaped vector with the same element type is always legal.
 
     Example:
@@ -416,6 +416,18 @@ def Vector_BroadcastOp :
     %1 = vector.broadcast %0 : f32 to vector<16xf32>
     %2 = vector.broadcast %1 : vector<16xf32> to vector<4x16xf32>
     ```
+
+    For every element in the result vector, the corresponding coordinate in
+    source dimension `j` can be computed from its linear offset `off` in the
+    result vector as follows:
+    ```
+                            / 0, if source_dim(j) == 1
+    source_coord[j](off) = |
+                            \ floor(off / result_stride(N - K + j)) % source_dim(j), otherwise
+
+    ```
+    where `j = 1 .. K` and `result_stride(N - K + j)` is the result stride
+    corresponding to source dimension `j`.
   }];
   let extraClassDeclaration = [{
     Type getSourceType() { return getSource().getType(); }
@@ -1471,7 +1483,7 @@ def Vector_TransferReadOp :
                    "AffineMapAttr":$permutationMapAttr,
                    "ArrayAttr":$inBoundsAttr)>,
     /// 2. Builder that sets padding to `padding` or poison if not provided and
-    /// an empty mask (variant without attrs). 
+    /// an empty mask (variant without attrs).
     /// If `padding` is null, a poison value is used.
     /// If `permutationMap` is null, a minor identity map is used.
     /// If `inBounds` is null, an empty mask is used.

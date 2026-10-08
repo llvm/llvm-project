@@ -2,11 +2,11 @@
 ; REQUIRES: x86-registered-target
 
 ; COM: Machine function splitting with FDO profiles
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -split-machine-functions | FileCheck %s -check-prefixes=MFS-DEFAULTS,MFS-DEFAULTS-X86,MFS-NOBBSECTIONS
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -split-machine-functions -mfs-psi-cutoff=0 -mfs-count-threshold=2000 | FileCheck %s --dump-input=always -check-prefixes=MFS-OPTS1,MFS-OPTS1-X86
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -split-machine-functions -mfs-psi-cutoff=950000 | FileCheck %s -check-prefixes=MFS-OPTS2,MFS-OPTS2-X86
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -split-machine-functions -mfs-split-ehcode | FileCheck %s -check-prefixes=MFS-EH-SPLIT,MFS-EH-SPLIT-X86
-; RUN: llc < %s -mtriple=x86_64 -split-machine-functions -O0 -mfs-psi-cutoff=0 -mfs-count-threshold=10000 | FileCheck %s -check-prefixes=MFS-O0,MFS-O0-X86
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -function-splitting=all | FileCheck %s -check-prefixes=MFS-DEFAULTS,MFS-DEFAULTS-X86,MFS-NOBBSECTIONS
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -function-splitting=all -mfs-psi-cutoff=0 -mfs-count-threshold=2000 | FileCheck %s --dump-input=always -check-prefixes=MFS-OPTS1,MFS-OPTS1-X86
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -function-splitting=all -mfs-psi-cutoff=950000 | FileCheck %s -check-prefixes=MFS-OPTS2,MFS-OPTS2-X86
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -function-splitting=all -mfs-split-ehcode | FileCheck %s -check-prefixes=MFS-EH-SPLIT,MFS-EH-SPLIT-X86
+; RUN: llc < %s -mtriple=x86_64 -function-splitting=all -O0 -mfs-psi-cutoff=0 -mfs-count-threshold=10000 | FileCheck %s -check-prefixes=MFS-O0,MFS-O0-X86
 
 ; COM: Machine function splitting along with -basic-block-sections profile
 ; RUN: echo 'v1' > %t
@@ -15,19 +15,20 @@
 ; RUN: echo 'ffoo22' >> %t
 ; RUN: echo 'c0 1' >> %t
 ; RUN: echo 'c2' >> %t
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -basic-block-sections=%t -split-machine-functions | FileCheck %s --check-prefixes=MFS-BBSECTIONS
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -basic-block-sections=%t -function-splitting=all | FileCheck %s --check-prefixes=MFS-BBSECTIONS,MFS-BBSECTIONS-ALL
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -basic-block-sections=%t -function-splitting=bbsections | FileCheck %s --check-prefixes=MFS-BBSECTIONS,MFS-BBSECTIONS-ONLY
 
-; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -aarch64-min-jump-table-entries=4 -enable-split-machine-functions | FileCheck %s -check-prefixes=MFS-DEFAULTS,MFS-DEFAULTS-AARCH64
-; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -aarch64-min-jump-table-entries=4 -enable-split-machine-functions -mfs-psi-cutoff=0 -mfs-count-threshold=2000 | FileCheck %s --dump-input=always -check-prefixes=MFS-OPTS1,MFS-OPTS1-AARCH64
-; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -aarch64-min-jump-table-entries=4 -enable-split-machine-functions -mfs-psi-cutoff=950000 | FileCheck %s -check-prefixes=MFS-OPTS2,MFS-OPTS2-AARCH64
-; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -aarch64-min-jump-table-entries=4 -enable-split-machine-functions -mfs-split-ehcode | FileCheck %s -check-prefixes=MFS-EH-SPLIT,MFS-EH-SPLIT-AARCH64
-; RUN: llc < %s -mtriple=aarch64 -split-machine-functions -O0 -mfs-psi-cutoff=0 -mfs-count-threshold=10000 | FileCheck %s -check-prefixes=MFS-O0,MFS-O0-AARCH64
-; RUN: llc < %s -mtriple=aarch64 -enable-split-machine-functions -aarch64-redzone | FileCheck %s -check-prefixes=MFS-REDZONE-AARCH64
+; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -aarch64-min-jump-table-entries=4 -function-splitting=all | FileCheck %s -check-prefixes=MFS-DEFAULTS,MFS-DEFAULTS-AARCH64
+; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -aarch64-min-jump-table-entries=4 -function-splitting=all -mfs-psi-cutoff=0 -mfs-count-threshold=2000 | FileCheck %s --dump-input=always -check-prefixes=MFS-OPTS1,MFS-OPTS1-AARCH64
+; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -aarch64-min-jump-table-entries=4 -function-splitting=all -mfs-psi-cutoff=950000 | FileCheck %s -check-prefixes=MFS-OPTS2,MFS-OPTS2-AARCH64
+; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -aarch64-min-jump-table-entries=4 -function-splitting=all -mfs-split-ehcode | FileCheck %s -check-prefixes=MFS-EH-SPLIT,MFS-EH-SPLIT-AARCH64
+; RUN: llc < %s -mtriple=aarch64 -function-splitting=all -O0 -mfs-psi-cutoff=0 -mfs-count-threshold=10000 | FileCheck %s -check-prefixes=MFS-O0,MFS-O0-AARCH64
+; RUN: llc < %s -mtriple=aarch64 -function-splitting=all -aarch64-redzone | FileCheck %s -check-prefixes=MFS-REDZONE-AARCH64
 
 ; COM: Machine function splitting with AFDO profiles
 ; RUN: sed 's/InstrProf/SampleProfile/g' %s > %t.ll
-; RUN: llc < %t.ll -mtriple=x86_64-unknown-linux-gnu -split-machine-functions | FileCheck %s --check-prefix=FSAFDO-MFS
-; RUN: llc < %t.ll -mtriple=x86_64-unknown-linux-gnu -split-machine-functions | FileCheck %s --check-prefix=FSAFDO-MFS2
+; RUN: llc < %t.ll -mtriple=x86_64-unknown-linux-gnu -function-splitting=all | FileCheck %s --check-prefix=FSAFDO-MFS
+; RUN: llc < %t.ll -mtriple=x86_64-unknown-linux-gnu -function-splitting=all | FileCheck %s --check-prefix=FSAFDO-MFS2
 
 define void @foo1(i1 zeroext %0) nounwind !prof !14 !section_prefix !15 {
 ;; Check that cold block is moved to .text.split.
@@ -38,6 +39,15 @@ define void @foo1(i1 zeroext %0) nounwind !prof !14 !section_prefix !15 {
 ; MFS-DEFAULTS-X86-NEXT:      callq   baz
 ; MFS-DEFAULTS-AARCH64-NOT:   bl      bar
 ; MFS-DEFAULTS-AARCH64-NEXT:  bl      baz
+;; Check that with a basic-block-sections profile, a function outside the
+;; profile is still split using PGO with -function-splitting=all.
+; MFS-BBSECTIONS-ALL-LABEL:   foo1:
+; MFS-BBSECTIONS-ALL:         .section        .text.split.foo1
+; MFS-BBSECTIONS-ALL-NEXT:    foo1.cold:
+;; Check that with -function-splitting=bbsections, a function outside the
+;; basic-block-sections profile is not split, even though it has PGO data.
+; MFS-BBSECTIONS-ONLY-LABEL:  foo1:
+; MFS-BBSECTIONS-ONLY-NOT:    foo1.cold:
   br i1 %0, label %2, label %4, !prof !17
 
 2:                                                ; preds = %1
