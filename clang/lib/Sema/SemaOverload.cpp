@@ -6348,10 +6348,10 @@ ExprResult Sema::PerformImplicitObjectArgumentInitialization(
   if (getLangOpts().HLSL &&
       (FromAS == LangAS::hlsl_constant || FromAS == LangAS::hlsl_groupshared)) {
     QualType CastType = From->getType().getLocalUnqualifiedType();
-    From = ImplicitCastExpr::Create(
-        Context,
-        FromAS == LangAS::hlsl_constant ? CastType.withConst() : CastType,
-        CK_LValueToRValue, From,
+    if (FromAS == LangAS::hlsl_constant)
+      CastType = CastType.withConst();
+    
+    From = ImplicitCastExpr::Create(Context, CastType, CK_LValueToRValue, From,
         /*BasePath=*/nullptr, VK_PRValue, FPOptionsOverride());
   }
 
