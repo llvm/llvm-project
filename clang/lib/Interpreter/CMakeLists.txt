@@ -22,7 +22,10 @@ else()
     OrcShared
     OrcTargetProcess
     )
-  set(EXECUTOR_SOURCES IncrementalExecutor.cpp OrcIncrementalExecutor.cpp)
+  set(EXECUTOR_SOURCES
+    IncrementalExecutor.cpp
+    OrcIncrementalExecutor.cpp
+    )
 endif()
 
 add_clang_library(clangInterpreter
