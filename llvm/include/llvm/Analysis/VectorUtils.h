@@ -26,6 +26,7 @@
 
 namespace llvm {
 class TargetLibraryInfo;
+class TargetTransformInfo;
 class IntrinsicInst;
 
 /// The Vector Function Database.
@@ -73,23 +74,16 @@ class VFDatabase {
 
 public:
   /// Retrieve all the VFInfo instances associated to the CallInst CI.
-  static SmallVector<VFInfo, 8> getMappings(const CallInst &CI) {
-    SmallVector<VFInfo, 8> Ret;
-
-    // Get mappings from the Vector Function ABI variants.
-    getVFABIMappings(CI, Ret);
-
-    // Other non-VFABI variants should be retrieved here.
-
-    return Ret;
-  }
+  LLVM_ABI static SmallVector<VFInfo, 8>
+  getMappings(const CallInst &CI, const TargetTransformInfo *TTI = nullptr);
 
   static bool hasMaskedVariant(const CallInst &CI,
-                               std::optional<ElementCount> VF = std::nullopt) {
+                               std::optional<ElementCount> VF = std::nullopt,
+                               const TargetTransformInfo *TTI = nullptr) {
     // Check whether we have at least one masked vector version of a scalar
     // function. If no VF is specified then we check for any masked variant,
     // otherwise we look for one that matches the supplied VF.
-    auto Mappings = VFDatabase::getMappings(CI);
+    auto Mappings = VFDatabase::getMappings(CI, TTI);
     for (VFInfo Info : Mappings)
       if (!VF || Info.Shape.VF == *VF)
         if (Info.isMasked())
@@ -99,9 +93,9 @@ public:
   }
 
   /// Constructor, requires a CallInst instance.
-  VFDatabase(CallInst &CI)
+  VFDatabase(CallInst &CI, const TargetTransformInfo *TTI = nullptr)
       : M(CI.getModule()), CI(CI),
-        ScalarToVectorMappings(VFDatabase::getMappings(CI)) {}
+        ScalarToVectorMappings(VFDatabase::getMappings(CI, TTI)) {}
 
   /// \defgroup VFDatabase query interface.
   ///
