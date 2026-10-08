@@ -29,22 +29,22 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   cir.func @vector_reduce(%svec: !v4s32, %uvec: !v4u32,
                           %fvec: !v4f32,
                           %bvec: !cir.vector<4 x !cir.bool>, %start: !f32) {
-    %0 = cir.vec.reduce(add, %svec) : (!v4s32) -> !s32i
-    %1 = cir.vec.reduce(mul, %svec) : (!v4s32) -> !s32i
-    %2 = cir.vec.reduce(and, %svec) : (!v4s32) -> !s32i
-    %3 = cir.vec.reduce(or, %svec) : (!v4s32) -> !s32i
-    %4 = cir.vec.reduce(xor, %svec) : (!v4s32) -> !s32i
-    %5 = cir.vec.reduce(smax, %svec) : (!v4s32) -> !s32i
-    %6 = cir.vec.reduce(smin, %svec) : (!v4s32) -> !s32i
-    %7 = cir.vec.reduce(umax, %uvec) : (!v4u32) -> !u32i
-    %8 = cir.vec.reduce(umin, %uvec) : (!v4u32) -> !u32i
-    %9 = cir.vec.reduce(fadd, %fvec, %start) : (!v4f32, !f32) -> !f32 <fastmath_flags = [reassoc]>
-    %10 = cir.vec.reduce(fmul, %fvec, %start) : (!v4f32, !f32) -> !f32 <fastmath_flags = [reassoc]>
-    %11 = cir.vec.reduce(fmax, %fvec) : (!v4f32) -> !f32 <fastmath_flags = [nnan]>
-    %12 = cir.vec.reduce(fmin, %fvec) : (!v4f32) -> !f32 <fastmath_flags = [nnan]>
-    %13 = cir.vec.reduce(add, %bvec) : (!cir.vector<4 x !cir.bool>) -> !cir.bool
-    %14 = cir.vec.reduce(umax, %bvec) : (!cir.vector<4 x !cir.bool>) -> !cir.bool
-    %15 = cir.vec.reduce(and, %bvec) : (!cir.vector<4 x !cir.bool>) -> !cir.bool
+    %0 = cir.vec.reduce.add(%svec) : (!v4s32) -> !s32i
+    %1 = cir.vec.reduce.mul(%svec) : (!v4s32) -> !s32i
+    %2 = cir.vec.reduce.and(%svec) : (!v4s32) -> !s32i
+    %3 = cir.vec.reduce.or(%svec) : (!v4s32) -> !s32i
+    %4 = cir.vec.reduce.xor(%svec) : (!v4s32) -> !s32i
+    %5 = cir.vec.reduce.smax(%svec) : (!v4s32) -> !s32i
+    %6 = cir.vec.reduce.smin(%svec) : (!v4s32) -> !s32i
+    %7 = cir.vec.reduce.umax(%uvec) : (!v4u32) -> !u32i
+    %8 = cir.vec.reduce.umin(%uvec) : (!v4u32) -> !u32i
+    %9 = cir.vec.reduce.fadd(%start, %fvec) : (!f32, !v4f32) -> !f32 <fastmath_flags = [reassoc]>
+    %10 = cir.vec.reduce.fmul(%start, %fvec) : (!f32, !v4f32) -> !f32 <fastmath_flags = [reassoc]>
+    %11 = cir.vec.reduce.fmax(%fvec) : (!v4f32) -> !f32 <fastmath_flags = [nnan]>
+    %12 = cir.vec.reduce.fmin(%fvec) : (!v4f32) -> !f32 <fastmath_flags = [nnan]>
+    %13 = cir.vec.reduce.add(%bvec) : (!cir.vector<4 x !cir.bool>) -> !cir.bool
+    %14 = cir.vec.reduce.umax(%bvec) : (!cir.vector<4 x !cir.bool>) -> !cir.bool
+    %15 = cir.vec.reduce.and(%bvec) : (!cir.vector<4 x !cir.bool>) -> !cir.bool
     cir.return
   }
 }

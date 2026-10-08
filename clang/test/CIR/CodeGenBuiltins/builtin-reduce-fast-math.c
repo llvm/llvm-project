@@ -22,9 +22,9 @@ typedef int v4si __attribute__((vector_size(16)));
 
 float test_assoc(v4sf x, float start) {
   // CIR-NNAN-LABEL: @test_assoc
-  // CIR-NNAN: cir.vec.reduce(fadd, {{.*}}) {{.*}} <fastmath_flags = [nnan, reassoc]>
+  // CIR-NNAN: cir.vec.reduce.fadd({{.*}}) {{.*}} <fastmath_flags = [nnan, reassoc]>
   // CIR-FAST-LABEL: @test_assoc
-  // CIR-FAST: cir.vec.reduce(fadd, {{.*}}) {{.*}} <fastmath_flags = [fast]>
+  // CIR-FAST: cir.vec.reduce.fadd({{.*}}) {{.*}} <fastmath_flags = [fast]>
   // LLVM-NNAN-LABEL: @test_assoc
   // LLVM-NNAN: call reassoc nnan float @llvm.vector.reduce.fadd.v4f32(
   // LLVM-FAST-LABEL: @test_assoc
@@ -34,9 +34,9 @@ float test_assoc(v4sf x, float start) {
 
 float test_in_order(v4sf x, float start) {
   // CIR-NNAN-LABEL: @test_in_order
-  // CIR-NNAN: cir.vec.reduce(fadd, {{.*}}) {{.*}} <fastmath_flags = [nnan]>
+  // CIR-NNAN: cir.vec.reduce.fadd({{.*}}) {{.*}} <fastmath_flags = [nnan]>
   // CIR-FAST-LABEL: @test_in_order
-  // CIR-FAST: cir.vec.reduce(fadd, {{.*}}) {{.*}} <fastmath_flags = [fast]>
+  // CIR-FAST: cir.vec.reduce.fadd({{.*}}) {{.*}} <fastmath_flags = [fast]>
   // LLVM-NNAN-LABEL: @test_in_order
   // LLVM-NNAN: call nnan float @llvm.vector.reduce.fadd.v4f32(
   // LLVM-FAST-LABEL: @test_in_order
@@ -46,9 +46,9 @@ float test_in_order(v4sf x, float start) {
 
 float test_max(v4sf x) {
   // CIR-NNAN-LABEL: @test_max
-  // CIR-NNAN: cir.vec.reduce(fmax, {{.*}}) {{.*}} <fastmath_flags = [nnan]>
+  // CIR-NNAN: cir.vec.reduce.fmax({{.*}}) {{.*}} <fastmath_flags = [nnan]>
   // CIR-FAST-LABEL: @test_max
-  // CIR-FAST: cir.vec.reduce(fmax, {{.*}}) {{.*}} <fastmath_flags = [fast]>
+  // CIR-FAST: cir.vec.reduce.fmax({{.*}}) {{.*}} <fastmath_flags = [fast]>
   // LLVM-NNAN-LABEL: @test_max
   // LLVM-NNAN: call nnan float @llvm.vector.reduce.fmax.v4f32(
   // LLVM-FAST-LABEL: @test_max
@@ -58,9 +58,9 @@ float test_max(v4sf x) {
 
 float test_min(v4sf x) {
   // CIR-NNAN-LABEL: @test_min
-  // CIR-NNAN: cir.vec.reduce(fmin, {{.*}}) {{.*}} <fastmath_flags = [nnan]>
+  // CIR-NNAN: cir.vec.reduce.fmin({{.*}}) {{.*}} <fastmath_flags = [nnan]>
   // CIR-FAST-LABEL: @test_min
-  // CIR-FAST: cir.vec.reduce(fmin, {{.*}}) {{.*}} <fastmath_flags = [fast]>
+  // CIR-FAST: cir.vec.reduce.fmin({{.*}}) {{.*}} <fastmath_flags = [fast]>
   // LLVM-NNAN-LABEL: @test_min
   // LLVM-NNAN: call nnan float @llvm.vector.reduce.fmin.v4f32(
   // LLVM-FAST-LABEL: @test_min
@@ -70,9 +70,9 @@ float test_min(v4sf x) {
 
 int test_int_max(v4si x) {
   // CIR-NNAN-LABEL: @test_int_max
-  // CIR-NNAN: cir.vec.reduce(smax, {{.*}}) : (!cir.vector<4 x !s32i>) -> !s32i{{( loc.*)?$}}
+  // CIR-NNAN: cir.vec.reduce.smax({{.*}}) : (!cir.vector<4 x !s32i>) -> !s32i{{( loc.*)?$}}
   // CIR-FAST-LABEL: @test_int_max
-  // CIR-FAST: cir.vec.reduce(smax, {{.*}}) : (!cir.vector<4 x !s32i>) -> !s32i{{( loc.*)?$}}
+  // CIR-FAST: cir.vec.reduce.smax({{.*}}) : (!cir.vector<4 x !s32i>) -> !s32i{{( loc.*)?$}}
   // LLVM-NNAN-LABEL: @test_int_max
   // LLVM-NNAN: call i32 @llvm.vector.reduce.smax.v4i32(
   // LLVM-FAST-LABEL: @test_int_max
@@ -83,7 +83,7 @@ int test_int_max(v4si x) {
 float test_pragma_reassociate(v4sf x, float start) {
 #pragma clang fp reassociate(on)
   // CIR-PRAGMA-LABEL: @test_pragma_reassociate
-  // CIR-PRAGMA: cir.vec.reduce(fadd, {{.*}}) {{.*}} <fastmath_flags = [reassoc]>
+  // CIR-PRAGMA: cir.vec.reduce.fadd({{.*}}) {{.*}} <fastmath_flags = [reassoc]>
   // LLVM-PRAGMA-LABEL: @test_pragma_reassociate
   // LLVM-PRAGMA: call reassoc float @llvm.vector.reduce.fadd.v4f32(
   return __builtin_reduce_in_order_fadd(x, start);
@@ -92,7 +92,7 @@ float test_pragma_reassociate(v4sf x, float start) {
 float test_pragma_no_reassociate(v4sf x, float start) {
 #pragma clang fp reassociate(off)
   // CIR-PRAGMA-LABEL: @test_pragma_no_reassociate
-  // CIR-PRAGMA: cir.vec.reduce(fadd, {{.*}}) : (!cir.vector<4 x !cir.float>, !cir.float) -> !cir.float{{( loc.*)?$}}
+  // CIR-PRAGMA: cir.vec.reduce.fadd({{.*}}) : (!cir.float, !cir.vector<4 x !cir.float>) -> !cir.float{{( loc.*)?$}}
   // LLVM-PRAGMA-LABEL: @test_pragma_no_reassociate
   // LLVM-PRAGMA: call float @llvm.vector.reduce.fadd.v4f32(
   return __builtin_reduce_in_order_fadd(x, start);

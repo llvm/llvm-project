@@ -70,7 +70,7 @@ _Float16 test_mm512_reduce_add_ph(__m512h __W) {
   // CIR: cir.call @_mm512_reduce_add_ph(%[[VEC:.*]]) {nobuiltin, nobuiltins = [{{.*}}]} : (!cir.vector<32 x !cir.f16>{{.*}}) -> !cir.f16
 
   // CIR-LABEL: cir.func{{.*}} @_mm512_reduce_add_ph(
-  // CIR: cir.vec.reduce(fadd, %[[V:.*]], %[[R:.*]]) : (!cir.vector<32 x !cir.f16>, !cir.f16) -> !cir.f16 <fastmath_flags = [reassoc]>
+  // CIR: cir.vec.reduce.fadd(%[[R:.*]], %[[V:.*]]) : (!cir.f16, !cir.vector<32 x !cir.f16>) -> !cir.f16 <fastmath_flags = [reassoc]>
 
   // LLVM-LABEL: test_mm512_reduce_add_ph
   // LLVM: call reassoc half @llvm.vector.reduce.fadd.v32f16(half -0.000000e+00, <32 x half> %{{.*}})
@@ -85,7 +85,7 @@ _Float16 test_mm512_reduce_mul_ph(__m512h __W) {
   // CIR: cir.call @_mm512_reduce_mul_ph(%[[VEC:.*]]) {nobuiltin, nobuiltins = [{{.*}}]} : (!cir.vector<32 x !cir.f16>{{.*}}) -> !cir.f16
 
   // CIR-LABEL: cir.func{{.*}} @_mm512_reduce_mul_ph(
-  // CIR: cir.vec.reduce(fmul, %[[V:.*]], %[[R:.*]]) : (!cir.vector<32 x !cir.f16>, !cir.f16) -> !cir.f16 <fastmath_flags = [reassoc]>
+  // CIR: cir.vec.reduce.fmul(%[[R:.*]], %[[V:.*]]) : (!cir.f16, !cir.vector<32 x !cir.f16>) -> !cir.f16 <fastmath_flags = [reassoc]>
 
   // LLVM-LABEL: test_mm512_reduce_mul_ph
   // LLVM: call reassoc half @llvm.vector.reduce.fmul.v32f16(half 1.000000e+00, <32 x half> %{{.*}})
@@ -100,7 +100,7 @@ _Float16 test_mm512_reduce_max_ph(__m512h __W) {
   // CIR: cir.call @_mm512_reduce_max_ph(%[[VEC:.*]]) {nobuiltin, nobuiltins = [{{.*}}]} : (!cir.vector<32 x !cir.f16>{{.*}}) -> !cir.f16
 
   // CIR-LABEL: cir.func{{.*}} @_mm512_reduce_max_ph(
-  // CIR: cir.vec.reduce(fmax, %[[V:.*]]) : (!cir.vector<32 x !cir.f16>) -> !cir.f16 <fastmath_flags = [nnan]>
+  // CIR: cir.vec.reduce.fmax(%[[V:.*]]) : (!cir.vector<32 x !cir.f16>) -> !cir.f16 <fastmath_flags = [nnan]>
 
   // LLVM-LABEL: test_mm512_reduce_max_ph
   // LLVM: call nnan half @llvm.vector.reduce.fmax.v32f16(<32 x half> %{{.*}})
@@ -115,7 +115,7 @@ _Float16 test_mm512_reduce_min_ph(__m512h __W) {
   // CIR: cir.call @_mm512_reduce_min_ph(%[[VEC:.*]]) {nobuiltin, nobuiltins = [{{.*}}]} : (!cir.vector<32 x !cir.f16>{{.*}}) -> !cir.f16
 
   // CIR-LABEL: cir.func{{.*}} @_mm512_reduce_min_ph(
-  // CIR: cir.vec.reduce(fmin, %[[V:.*]]) : (!cir.vector<32 x !cir.f16>) -> !cir.f16 <fastmath_flags = [nnan]>
+  // CIR: cir.vec.reduce.fmin(%[[V:.*]]) : (!cir.vector<32 x !cir.f16>) -> !cir.f16 <fastmath_flags = [nnan]>
 
   // LLVM-LABEL: test_mm512_reduce_min_ph
   // LLVM: call nnan half @llvm.vector.reduce.fmin.v32f16(<32 x half> %{{.*}})

@@ -2428,8 +2428,8 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     CIRGenFPOptionsRAII FPOptsRAII(*this, expr);
     cir::FastMathFlagsAttr fastMath =
         getFastMathFlagsAttr(cir::FastMathFlags::reassoc);
-    return cir::VecReduceOp::create(builder, getLoc(expr->getExprLoc()), ops[1],
-                                    ops[0], cir::VecReduceKind::FAdd, fastMath)
+    return cir::VecReduceFAddOp::create(builder, getLoc(expr->getExprLoc()),
+                                        ops[0], ops[1], fastMath)
         .getResult();
   }
   case X86::BI__builtin_ia32_reduce_fmul_pd512:
@@ -2440,8 +2440,8 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     CIRGenFPOptionsRAII FPOptsRAII(*this, expr);
     cir::FastMathFlagsAttr fastMath =
         getFastMathFlagsAttr(cir::FastMathFlags::reassoc);
-    return cir::VecReduceOp::create(builder, getLoc(expr->getExprLoc()), ops[1],
-                                    ops[0], cir::VecReduceKind::FMul, fastMath)
+    return cir::VecReduceFMulOp::create(builder, getLoc(expr->getExprLoc()),
+                                        ops[0], ops[1], fastMath)
         .getResult();
   }
   case X86::BI__builtin_ia32_reduce_fmax_pd512:
@@ -2452,9 +2452,8 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     CIRGenFPOptionsRAII FPOptsRAII(*this, expr);
     cir::FastMathFlagsAttr fastMath =
         getFastMathFlagsAttr(cir::FastMathFlags::nnan);
-    return cir::VecReduceOp::create(builder, getLoc(expr->getExprLoc()), ops[0],
-                                    mlir::Value{}, cir::VecReduceKind::FMax,
-                                    fastMath)
+    return cir::VecReduceFMaxOp::create(builder, getLoc(expr->getExprLoc()),
+                                        ops[0], fastMath)
         .getResult();
   }
   case X86::BI__builtin_ia32_reduce_fmin_pd512:
@@ -2465,9 +2464,8 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     CIRGenFPOptionsRAII FPOptsRAII(*this, expr);
     cir::FastMathFlagsAttr fastMath =
         getFastMathFlagsAttr(cir::FastMathFlags::nnan);
-    return cir::VecReduceOp::create(builder, getLoc(expr->getExprLoc()), ops[0],
-                                    mlir::Value{}, cir::VecReduceKind::FMin,
-                                    fastMath)
+    return cir::VecReduceFMinOp::create(builder, getLoc(expr->getExprLoc()),
+                                        ops[0], fastMath)
         .getResult();
   }
   case X86::BI__builtin_ia32_rdrand16_step:
