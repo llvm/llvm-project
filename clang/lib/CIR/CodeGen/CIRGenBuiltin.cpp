@@ -26,7 +26,7 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
+#include "clang/CodeGenUtils/FunctionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/ErrorHandling.h"
