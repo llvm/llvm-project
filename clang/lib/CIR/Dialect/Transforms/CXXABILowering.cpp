@@ -210,7 +210,8 @@ mlir::Attribute rewriteAttribute(const mlir::TypeConverter &tc,
         return cir::GlobalViewAttr::get(
             tc.convertType(gva.getType()), gva.getSymbol(),
             mlir::cast<mlir::ArrayAttr>(
-                rewriteAttribute(tc, ctx, gva.getIndices())));
+                rewriteAttribute(tc, ctx, gva.getIndices())),
+            gva.getAddressPoint());
       })
       .Case<cir::GlobalOffsetAttr>([&tc](cir::GlobalOffsetAttr goa) {
         return cir::GlobalOffsetAttr::get(tc.convertType(goa.getType()),
@@ -504,7 +505,7 @@ static mlir::TypedAttr lowerInitialValue(const LowerModule *lowerModule,
 
     if (auto gva = mlir::dyn_cast_if_present<cir::GlobalViewAttr>(initVal))
       return cir::GlobalViewAttr::get(convertedTy, gva.getSymbol(),
-                                      gva.getIndices());
+                                      gva.getIndices(), gva.getAddressPoint());
 
     if (auto goa = mlir::dyn_cast_if_present<cir::GlobalOffsetAttr>(initVal))
       return cir::GlobalOffsetAttr::get(convertedTy, goa.getSymbol(),
@@ -615,9 +616,16 @@ mlir::LogicalResult CIRGlobalOpABILowering::matchAndRewrite(
   mlir::Attribute loweredInit = lowerInitialValue(
       lowerModule, layout, *getTypeConverter(), ty, op.getInitialValueAttr());
 
-  auto newOp = mlir::cast<cir::GlobalOp>(rewriter.clone(*op.getOperation()));
+  cir::GlobalOp newOp = rewriter.cloneWithoutRegions(op);
   newOp.setInitialValueAttr(loweredInit);
   newOp.setSymType(loweredTy);
+  // Regions have to be separately moved(rather than cloned), else we cause
+  // multi-block regions/eh stuff to be double-referenced, and thus can't be
+  // removed properly during collectUnreachable.
+  rewriter.inlineRegionBefore(op.getCtorRegion(), newOp.getCtorRegion(),
+                              newOp.getCtorRegion().end());
+  rewriter.inlineRegionBefore(op.getDtorRegion(), newOp.getDtorRegion(),
+                              newOp.getDtorRegion().end());
   rewriter.replaceOp(op, newOp);
   return mlir::success();
 }

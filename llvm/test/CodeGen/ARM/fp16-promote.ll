@@ -548,35 +548,20 @@ else:
 declare i1 @test_dummy(ptr %p) #0
 
 define void @test_phi(ptr %p) #0 {
-; CHECK-VFP-LABEL: test_phi:
-; CHECK-VFP:         .save {r4, r5, r6, lr}
-; CHECK-VFP-NEXT:    push {r4, r5, r6, lr}
-; CHECK-VFP-NEXT:    ldrh r6, [r0]
-; CHECK-VFP-NEXT:    mov r4, r0
-; CHECK-VFP-NEXT:  .LBB13_1:
-; CHECK-VFP-NEXT:    mov r0, r4
-; CHECK-VFP-NEXT:    mov r5, r6
-; CHECK-VFP-NEXT:    ldrh r6, [r4]
-; CHECK-VFP-NEXT:    bl test_dummy
-; CHECK-VFP-NEXT:    tst r0, #1
-; CHECK-VFP-NEXT:    bne .LBB13_1
-; CHECK-VFP-NEXT:    strh r5, [r4]
-; CHECK-VFP-NEXT:    pop {r4, r5, r6, pc}
-;
-; CHECK-NOVFP-LABEL: test_phi:
-; CHECK-NOVFP:         .save {r4, r5, r6, lr}
-; CHECK-NOVFP-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NOVFP-NEXT:    ldrh r5, [r0]
-; CHECK-NOVFP-NEXT:    mov r4, r0
-; CHECK-NOVFP-NEXT:  .LBB13_1:
-; CHECK-NOVFP-NEXT:    mov r0, r4
-; CHECK-NOVFP-NEXT:    mov r6, r5
-; CHECK-NOVFP-NEXT:    ldrh r5, [r4]
-; CHECK-NOVFP-NEXT:    bl test_dummy
-; CHECK-NOVFP-NEXT:    tst r0, #1
-; CHECK-NOVFP-NEXT:    bne .LBB13_1
-; CHECK-NOVFP-NEXT:    strh r6, [r4]
-; CHECK-NOVFP-NEXT:    pop {r4, r5, r6, pc}
+; CHECK-ALL-LABEL: test_phi:
+; CHECK-ALL:         .save {r4, r5, r6, lr}
+; CHECK-ALL-NEXT:    push {r4, r5, r6, lr}
+; CHECK-ALL-NEXT:    ldrh r6, [r0]
+; CHECK-ALL-NEXT:    mov r4, r0
+; CHECK-ALL-NEXT:  .LBB13_1:
+; CHECK-ALL-NEXT:    mov r0, r4
+; CHECK-ALL-NEXT:    mov r5, r6
+; CHECK-ALL-NEXT:    ldrh r6, [r4]
+; CHECK-ALL-NEXT:    bl test_dummy
+; CHECK-ALL-NEXT:    tst r0, #1
+; CHECK-ALL-NEXT:    bne .LBB13_1
+; CHECK-ALL-NEXT:    strh r5, [r4]
+; CHECK-ALL-NEXT:    pop {r4, r5, r6, pc}
 entry:
   %a = load half, ptr %p
   br label %loop

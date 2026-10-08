@@ -224,15 +224,9 @@ bool NVPTXInstrInfo::invertPredicateBranchInstr(MachineBasicBlock &MBB) const {
 
 static bool isIntegerSetp(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
-  case NVPTX::SETP_i16rr:
-  case NVPTX::SETP_i16ri:
-  case NVPTX::SETP_i16ir:
-  case NVPTX::SETP_i32rr:
-  case NVPTX::SETP_i32ri:
-  case NVPTX::SETP_i32ir:
-  case NVPTX::SETP_i64rr:
-  case NVPTX::SETP_i64ri:
-  case NVPTX::SETP_i64ir:
+  case NVPTX::SETP_i16:
+  case NVPTX::SETP_i32:
+  case NVPTX::SETP_i64:
     return true;
   default:
     return false;
