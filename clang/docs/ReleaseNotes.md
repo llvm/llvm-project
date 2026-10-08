@@ -918,6 +918,10 @@ features cannot lower the translation-unit ABI level;
   parameters use pack-indexed template template parameters (`TT...[N]<int>`)
   with different template parameter lists. (#GH228870)
 
+- Fixed a use-after-free when parsing a non-type template parameter with a
+  constrained placeholder type (such as `C auto`) whose default argument
+  contains a lambda. (#GH230539)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
