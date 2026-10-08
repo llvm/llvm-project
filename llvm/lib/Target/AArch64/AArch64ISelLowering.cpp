@@ -9329,8 +9329,6 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   // we use a special version of AnalyzeFormalArguments to pass in ValVT and
   // LocVT.
   unsigned NumArgs = Ins.size();
-  Function::const_arg_iterator CurOrigArg = F.arg_begin();
-  unsigned CurArgIdx = 0;
   bool UseVarArgCC = false;
   if (IsWin64)
     UseVarArgCC = isVarArg;
@@ -9340,12 +9338,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   for (unsigned i = 0; i != NumArgs; ++i) {
     MVT ValVT = Ins[i].VT;
     if (Ins[i].isOrigArg()) {
-      std::advance(CurOrigArg, Ins[i].getOrigArgIndex() - CurArgIdx);
-      CurArgIdx = Ins[i].getOrigArgIndex();
-
-      // Get type of the original argument.
-      EVT ActualVT = getValueType(DAG.getDataLayout(), CurOrigArg->getType(),
-                                  /*AllowUnknown*/ true);
+      EVT ActualVT = Ins[i].ArgVT;
       MVT ActualMVT = ActualVT.isSimple() ? ActualVT.getSimpleVT() : MVT::Other;
       // If ActualMVT is i1/i8/i16, we should set LocVT to i8/i8/i16.
       if (ActualMVT == MVT::i1 || ActualMVT == MVT::i8)
@@ -9966,7 +9959,6 @@ static void analyzeCallOperands(const AArch64TargetLowering &TLI,
                                 const AArch64Subtarget *Subtarget,
                                 const TargetLowering::CallLoweringInfo &CLI,
                                 CCState &CCInfo) {
-  const SelectionDAG &DAG = CLI.DAG;
   CallingConv::ID CalleeCC = CLI.CallConv;
   bool IsVarArg = CLI.IsVarArg;
   const SmallVector<ISD::OutputArg, 32> &Outs = CLI.Outs;
@@ -10005,10 +9997,7 @@ static void analyzeCallOperands(const AArch64TargetLowering &TLI,
     bool UseVarArgCC = FixedUseVarArgCC || (IsVarArg && ArgFlags.isVarArg());
 
     if (!UseVarArgCC) {
-      // Get type of the original argument.
-      EVT ActualVT = TLI.getValueType(DAG.getDataLayout(),
-                                      CLI.Args[Outs[i].OrigArgIndex].Ty,
-                                      /*AllowUnknown*/ true);
+      EVT ActualVT = Outs[i].ArgVT;
       MVT ActualMVT = ActualVT.isSimple() ? ActualVT.getSimpleVT() : ArgVT;
       // If ActualMVT is i1/i8/i16, we should set LocVT to i8/i8/i16.
       if (ActualMVT == MVT::i1 || ActualMVT == MVT::i8)
