@@ -741,6 +741,7 @@ def LLVM_InvokeOp
     : LLVM_Op<"invoke", [AttrSizedOperandSegments,
                          DeclareOpInterfaceMethods<BranchOpInterface>,
                          DeclareOpInterfaceMethods<CallOpInterface>,
+                         DeclareOpInterfaceMethods<SymbolUserOpInterface>,
                          DeclareOpInterfaceMethods<WeightedBranchOpInterface>,
                          Terminator]> {
   let arguments = (ins
