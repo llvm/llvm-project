@@ -97,11 +97,15 @@ static bool canMapVOP3PToVOPD(const SIInstrInfo &TII, const MachineInstr &MI,
   if (getNamedOp(MI, AMDGPU::OpName::src1_modifiers).getImm() !=
       SISrcMods::OP_SEL_1)
     return false;
-  if (!getNamedOp(MI, AMDGPU::OpName::src1).isReg()) {
-    if (!(getNamedOp(MI, AMDGPU::OpName::src0).isReg() &&
-          getNamedOp(MI, AMDGPU::OpName::src1).isImm() &&
-          TII.isLegalToSwap(MI, getNamedOperandIdx(Opc, AMDGPU::OpName::src0),
-                            getNamedOperandIdx(Opc, AMDGPU::OpName::src1))))
+  int Src0Idx = getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
+  int Src1Idx = getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
+  const MachineOperand &Src0 = MI.getOperand(Src0Idx);
+  const MachineOperand &Src1 = MI.getOperand(Src1Idx);
+  // VOPD needs a register in src1. If src1 is an immediate, the dot2 can still
+  // be used once src0 and src1 are swapped.
+  if (!Src1.isReg()) {
+    if (!Src0.isReg() || !Src1.isImm() ||
+        !TII.isLegalToSwap(MI, Src0Idx, Src1Idx))
       return false;
     Commute = true;
   }
