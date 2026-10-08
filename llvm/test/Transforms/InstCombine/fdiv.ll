@@ -941,10 +941,11 @@ declare void @use_v2f32(<2 x float>)
 
 define <2 x float> @pow_divisor_splat(float %x, float %y, <2 x float> %z) {
 ; CHECK-LABEL: @pow_divisor_splat(
-; CHECK-NEXT:    [[P:%.*]] = call float @llvm.pow.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg reassoc arcp float [[Y:%.*]]
+; CHECK-NEXT:    [[P:%.*]] = call reassoc arcp float @llvm.pow.f32(float [[X:%.*]], float [[TMP1]])
 ; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x float> poison, float [[P]], i64 0
 ; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <2 x float> [[INS]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc arcp <2 x float> [[Z:%.*]], [[SPLAT]]
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc arcp <2 x float> [[Z:%.*]], [[SPLAT]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %p = call float @llvm.pow.f32(float %x, float %y)
@@ -956,10 +957,11 @@ define <2 x float> @pow_divisor_splat(float %x, float %y, <2 x float> %z) {
 
 define <vscale x 2 x float> @pow_divisor_splat_scalable(float %x, float %y, <vscale x 2 x float> %z) {
 ; CHECK-LABEL: @pow_divisor_splat_scalable(
-; CHECK-NEXT:    [[P:%.*]] = call float @llvm.pow.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg reassoc arcp float [[Y:%.*]]
+; CHECK-NEXT:    [[P:%.*]] = call reassoc arcp float @llvm.pow.f32(float [[X:%.*]], float [[TMP1]])
 ; CHECK-NEXT:    [[INS:%.*]] = insertelement <vscale x 2 x float> poison, float [[P]], i64 0
 ; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 2 x float> [[INS]], <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc arcp <vscale x 2 x float> [[Z:%.*]], [[SPLAT]]
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc arcp <vscale x 2 x float> [[Z:%.*]], [[SPLAT]]
 ; CHECK-NEXT:    ret <vscale x 2 x float> [[R]]
 ;
   %p = call float @llvm.pow.f32(float %x, float %y)
@@ -1073,10 +1075,11 @@ define <2 x float> @pow_recip_splat(float %x, float %y) {
 
 define <2 x float> @exp_divisor_splat(float %y, <2 x float> %z) {
 ; CHECK-LABEL: @exp_divisor_splat(
-; CHECK-NEXT:    [[P:%.*]] = call float @llvm.exp.f32(float [[Y:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg reassoc arcp float [[Y:%.*]]
+; CHECK-NEXT:    [[P:%.*]] = call reassoc arcp float @llvm.exp.f32(float [[TMP1]])
 ; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x float> poison, float [[P]], i64 0
 ; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <2 x float> [[INS]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc arcp <2 x float> [[Z:%.*]], [[SPLAT]]
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc arcp <2 x float> [[Z:%.*]], [[SPLAT]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %p = call float @llvm.exp.f32(float %y)
@@ -1088,10 +1091,11 @@ define <2 x float> @exp_divisor_splat(float %y, <2 x float> %z) {
 
 define <2 x float> @exp2_divisor_splat(float %y, <2 x float> %z) {
 ; CHECK-LABEL: @exp2_divisor_splat(
-; CHECK-NEXT:    [[P:%.*]] = call float @llvm.exp2.f32(float [[Y:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg reassoc arcp float [[Y:%.*]]
+; CHECK-NEXT:    [[P:%.*]] = call reassoc arcp float @llvm.exp2.f32(float [[TMP1]])
 ; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x float> poison, float [[P]], i64 0
 ; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <2 x float> [[INS]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc arcp <2 x float> [[Z:%.*]], [[SPLAT]]
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc arcp <2 x float> [[Z:%.*]], [[SPLAT]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %p = call float @llvm.exp2.f32(float %y)
@@ -1103,10 +1107,11 @@ define <2 x float> @exp2_divisor_splat(float %y, <2 x float> %z) {
 
 define <2 x float> @powi_divisor_splat(float %x, i32 %y, <2 x float> %z) {
 ; CHECK-LABEL: @powi_divisor_splat(
-; CHECK-NEXT:    [[P:%.*]] = call float @llvm.powi.f32.i32(float [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[P:%.*]] = call reassoc ninf arcp float @llvm.powi.f32.i32(float [[X:%.*]], i32 [[TMP1]])
 ; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x float> poison, float [[P]], i64 0
 ; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <2 x float> [[INS]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc ninf arcp <2 x float> [[Z:%.*]], [[SPLAT]]
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc ninf arcp <2 x float> [[Z:%.*]], [[SPLAT]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %p = call float @llvm.powi.f32.i32(float %x, i32 %y)

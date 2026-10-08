@@ -27855,9 +27855,10 @@ static SDValue performSTORECombine(SDNode *N,
     MVT PtrVT = TLI.getPointerTy(DAG.getDataLayout());
     if (PtrVT != Ptr.getSimpleValueType()) {
       SDValue Cast = DAG.getAddrSpaceCast(DL, PtrVT, Ptr, AddrSpace, 0);
-      return DAG.getStore(Chain, DL, Value, Cast, ST->getPointerInfo(),
-                          ST->getBaseAlign(), ST->getMemOperand()->getFlags(),
-                          ST->getAAInfo());
+      if (ST->isTruncatingStore())
+        return DAG.getTruncStore(Chain, DL, Value, Cast, MemVT,
+                                 ST->getMemOperand());
+      return DAG.getStore(Chain, DL, Value, Cast, ST->getMemOperand());
     }
   }
 
@@ -33335,7 +33336,7 @@ AArch64TargetLowering::shouldExpandAtomicCmpXchgInIR(
 Value *AArch64TargetLowering::emitLoadLinked(IRBuilderBase &Builder,
                                              Type *ValueTy, Value *Addr,
                                              AtomicOrdering Ord) const {
-  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Module *M = Builder.getModule();
   bool IsAcquire = isAcquireOrStronger(Ord);
 
   // Since i128 isn't legal and intrinsics don't get type-lowered, the ldrexd
@@ -33383,7 +33384,7 @@ void AArch64TargetLowering::emitAtomicCmpXchgNoStoreLLBalance(
 Value *AArch64TargetLowering::emitStoreConditional(IRBuilderBase &Builder,
                                                    Value *Val, Value *Addr,
                                                    AtomicOrdering Ord) const {
-  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Module *M = Builder.getModule();
   bool IsRelease = isReleaseOrStronger(Ord);
 
   // Since the intrinsics must have legal type, the i128 intrinsics take two
@@ -33494,7 +33495,7 @@ bool AArch64TargetLowering::shouldNormalizeToSelectSequence(LLVMContext &, EVT,
 }
 
 static Value *UseTlsOffset(IRBuilderBase &IRB, unsigned Offset) {
-  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+  Module *M = IRB.getModule();
   Function *ThreadPointerFunc = Intrinsic::getOrInsertDeclaration(
       M, Intrinsic::thread_pointer, IRB.getPtrTy());
   return IRB.CreatePointerCast(
