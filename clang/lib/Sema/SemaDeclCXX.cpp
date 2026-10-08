@@ -9944,7 +9944,7 @@ bool Sema::CheckExplicitlyDefaultedPostfixOperator(Scope *S, FunctionDecl *FD,
   DefaultedPostfixOperatorInfo Info = analyzeDefaultedPostfixOperator(
       *this, FD, Kind, C, PostfixOperatorDiagnoseKind::NoDiagnostics);
 
-  bool First = FD == FD->getCanonicalDecl();
+  bool First = FD == FD->getFirstDecl();
 
   if (!First) {
     if (Info.Deleted) {
