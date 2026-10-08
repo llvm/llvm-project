@@ -94,7 +94,7 @@ isPromotableTransfer(VectorTransferOpInterface xferOp, const MemorySlot &slot,
     return false;
 
   // Out-of-bounds is allowed only for a dynamic view.
-  if (xferOp.hasOutOfBoundsDim() && !memref::isDynamicViewSlot(slot.ptr))
+  if (xferOp.hasOutOfBoundsDim() && !memref::isDynamicSubViewSlot(slot.ptr))
     return false;
 
   return true;
@@ -140,7 +140,7 @@ struct TransferReadOpMemOpModel
                      const DataLayout &dataLayout) const {
     auto readOp = cast<vector::TransferReadOp>(op);
     Location loc = op->getLoc();
-    Value mask = memref::buildDynamicViewMask(builder, loc, slot.ptr);
+    Value mask = memref::buildDynamicSubViewMask(builder, loc, slot.ptr);
     if (Value opMask = readOp.getMask())
       mask = mask
                  ? arith::AndIOp::create(builder, loc, mask, opMask).getResult()

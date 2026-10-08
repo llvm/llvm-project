@@ -240,53 +240,6 @@ static void writeVectorToMemRef(OpBuilder &builder, Location loc, Value vec,
 //===----------------------------------------------------------------------===//
 //  memref.subview aliaser
 //===----------------------------------------------------------------------===//
-
-/// Returns the offsets of `subView` as a static, contiguous, same-rank slice of
-/// its source, or nullopt if the subview is not promotable as a whole-buffer
-/// sub-slice. Promotion projects the parent buffer's vector value through
-/// `vector.extract_strided_slice` / `insert_strided_slice`, which require:
-///   * fully static offsets and sizes,
-///   * unit strides,
-///   * no rank reduction (result rank == source rank),
-/// so a dropped or dynamic dimension disqualifies the subview.
-static std::optional<SmallVector<int64_t>>
-getPromotableSubViewOffsets(memref::SubViewOp subView) {
-  auto srcType = dyn_cast<MemRefType>(subView.getSource().getType());
-  auto resType = dyn_cast<MemRefType>(subView.getResult().getType());
-  if (!srcType || !resType || !srcType.hasStaticShape() ||
-      !resType.hasStaticShape())
-    return std::nullopt;
-
-  // No rank reduction: extract/insert_strided_slice operate at a single rank.
-  if (srcType.getRank() != resType.getRank())
-    return std::nullopt;
-
-  // Unit strides only.
-  for (OpFoldResult stride : subView.getMixedStrides()) {
-    std::optional<int64_t> s = getConstantIntValue(stride);
-    if (!s || *s != 1)
-      return std::nullopt;
-  }
-
-  // Static offsets.
-  SmallVector<int64_t> offsets;
-  for (OpFoldResult offset : subView.getMixedOffsets()) {
-    std::optional<int64_t> o = getConstantIntValue(offset);
-    if (!o)
-      return std::nullopt;
-    offsets.push_back(*o);
-  }
-
-  // Static sizes (already implied by the result's static shape, but the sizes
-  // must match the result shape so the slice covers exactly the subview).
-  for (auto [size, dim] :
-       llvm::zip_equal(subView.getMixedSizes(), resType.getShape())) {
-    std::optional<int64_t> s = getConstantIntValue(size);
-    if (!s || *s != dim)
-      return std::nullopt;
-  }
-  return offsets;
-}
 namespace {
 
 /// Mem2Reg model for `memref.copy`.
@@ -499,12 +452,12 @@ struct SubViewOpAliasModel
 //  Queries for the models of ops that access a slot
 //===----------------------------------------------------------------------===//
 
-bool mlir::memref::isDynamicViewSlot(Value slotPtr) {
+bool mlir::memref::isDynamicSubViewSlot(Value slotPtr) {
   return static_cast<bool>(getDynamicSubView(slotPtr));
 }
 
-Value mlir::memref::buildDynamicViewMask(OpBuilder &builder, Location loc,
-                                         Value slotPtr) {
+Value mlir::memref::buildDynamicSubViewMask(OpBuilder &builder, Location loc,
+                                            Value slotPtr) {
   memref::SubViewOp subView = getDynamicSubView(slotPtr);
   if (!subView)
     return {};
