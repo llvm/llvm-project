@@ -997,9 +997,13 @@ public:
   /// selected by \p OpcodeMask. The mask contains one bit per lane and is a `0`
   /// when \p Opcode0 is selected and `1` when Opcode1 is selected.
   /// \p VecTy is the vector type of the instruction to be generated.
+  /// \p Scalars are the scalar instructions of the lanes, if known. The target
+  /// may use them to find the patterns, which depend on the operands, like
+  /// the alternating fused multiply-add.
   LLVM_ABI bool isLegalAltInstr(VectorType *VecTy, unsigned Opcode0,
                                 unsigned Opcode1,
-                                const SmallBitVector &OpcodeMask) const;
+                                const SmallBitVector &OpcodeMask,
+                                ArrayRef<const Value *> Scalars = {}) const;
 
   /// Enum describing the source/producer of a mask.
   enum class MaskSource {
@@ -1620,10 +1624,13 @@ public:
   /// selected by \p OpcodeMask. The mask contains one bit per lane and is a `0`
   /// when \p Opcode0 is selected and `1` when Opcode1 is selected.
   /// \p VecTy is the vector type of the instruction to be generated.
-  LLVM_ABI InstructionCost getAltInstrCost(VectorType *VecTy, unsigned Opcode0,
-                                           unsigned Opcode1,
-                                           const SmallBitVector &OpcodeMask,
-                                           TTI::TargetCostKind CostKind) const;
+  /// \p Scalars are the scalar instructions of the lanes, if known. The target
+  /// may use them to find the patterns, which depend on the operands, like
+  /// the alternating fused multiply-add.
+  LLVM_ABI InstructionCost getAltInstrCost(
+      VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
+      const SmallBitVector &OpcodeMask, TTI::TargetCostKind CostKind,
+      ArrayRef<const Value *> Scalars = {}) const;
 
   /// \return The cost of a shuffle instruction of kind Kind with inputs of type
   /// SrcTy, producing a vector of type DstTy. The exact mask may be passed as
