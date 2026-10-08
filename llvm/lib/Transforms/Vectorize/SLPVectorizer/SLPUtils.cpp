@@ -11,6 +11,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -119,9 +120,9 @@ bool allSameBlock(ArrayRef<Value *> VL) {
     return true;
 
   BasicBlock *BB = I0->getParent();
-  for (Value *V : iterator_range(It, VL.end())) {
-    if (isa<PoisonValue>(V))
-      continue;
+  for (Value *V : make_filter_range(iterator_range(It, VL.end()), [](Value *V) {
+         return !isa<PoisonValue>(V);
+       })) {
     auto *II = dyn_cast<Instruction>(V);
     if (!II)
       return false;
@@ -140,9 +141,8 @@ bool allConstant(ArrayRef<Value *> VL) {
 
 bool isSplat(ArrayRef<Value *> VL) {
   Value *FirstNonUndef = nullptr;
-  for (Value *V : VL) {
-    if (isa<UndefValue>(V))
-      continue;
+  for (Value *V :
+       make_filter_range(VL, [](Value *V) { return !isa<UndefValue>(V); })) {
     if (!FirstNonUndef) {
       FirstNonUndef = V;
       continue;
@@ -458,12 +458,10 @@ bool areAllOperandsNonInsts(Value *V) {
   if (!I)
     return true;
   return !mayHaveNonDefUseDependency(*I) &&
-         all_of(I->operands(), [I](Value *V) {
-           auto *IO = dyn_cast<Instruction>(V);
-           if (!IO)
-             return true;
-           return isa<PHINode>(IO) || IO->getParent() != I->getParent();
-         });
+         all_of(make_isa_range<Instruction>(I->operands()),
+                [I](Instruction *IO) {
+                  return isa<PHINode>(IO) || IO->getParent() != I->getParent();
+                });
 }
 
 bool isUsedOutsideBlock(Value *V) {
@@ -601,15 +599,13 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
 
   Value *Vec1 = nullptr;
   Value *Vec2 = nullptr;
-  bool HasNonUndefVec = any_of(VL, [&](Value *V) {
-    auto *EE = dyn_cast<ExtractElementInst>(V);
-    if (!EE)
-      return false;
-    Value *Vec = EE->getVectorOperand();
-    if (isa<UndefValue>(Vec))
-      return false;
-    return isGuaranteedNotToBePoison(Vec, AC);
-  });
+  bool HasNonUndefVec = any_of(make_isa_range<ExtractElementInst>(VL),
+                               [&](ExtractElementInst *EE) {
+                                 Value *Vec = EE->getVectorOperand();
+                                 if (isa<UndefValue>(Vec))
+                                   return false;
+                                 return isGuaranteedNotToBePoison(Vec, AC);
+                               });
   enum ShuffleMode { Unknown, Select, Permute };
   ShuffleMode CommonShuffleMode = Unknown;
   Mask.assign(VL.size(), PoisonMaskElem);
@@ -860,6 +856,95 @@ bool isSelectedBaseLoad(Type *ScalarTy, ArrayRef<Value *> PointerOps,
     Conditions[Idx] = Sel->getCondition();
   }
   return TrueBase != nullptr;
+}
+
+Type *getCommonGEPIndexType(ArrayRef<Value *> VL, Instruction *VL0,
+                            function_ref<bool(Value *)> IsGEPLane,
+                            const DataLayout &DL) {
+  constexpr unsigned IndexIdx = 1;
+  Type *VL0Ty = VL0->getOperand(IndexIdx)->getType();
+  Type *PtrIdxTy =
+      DL.getIndexType(VL0->getOperand(0)->getType()->getScalarType());
+  bool AllSameTy = true;
+  bool HasNonConstIdx = false;
+  bool ConstsFitVL0Ty = true;
+  for (Value *V : make_filter_range(VL, IsGEPLane)) {
+    Value *Op = cast<GetElementPtrInst>(V)->getOperand(IndexIdx);
+    if (Op->getType() != VL0Ty)
+      AllSameTy = false;
+    auto *CI = dyn_cast<ConstantInt>(Op);
+    if (!CI) {
+      // Non-constant indices are not cast, they must have the main op type.
+      if (Op->getType() != VL0Ty)
+        return nullptr;
+      HasNonConstIdx = true;
+      continue;
+    }
+    if (!CI->getValue().isSignedIntN(VL0Ty->getIntegerBitWidth()))
+      ConstsFitVL0Ty = false;
+  }
+  if (AllSameTy)
+    return VL0Ty;
+  if (!HasNonConstIdx || VL0Ty == PtrIdxTy)
+    return PtrIdxTy;
+  return ConstsFitVL0Ty ? VL0Ty : nullptr;
+}
+
+bool isCopyableGEPAddressVector(ArrayRef<Value *> PointerOps) {
+  SmallPtrSet<Value *, 16> UniquePtrs(llvm::from_range, PointerOps);
+  if (UniquePtrs.size() != PointerOps.size())
+    return false;
+  auto IsConstantOffsetPtr = [](Value *P) {
+    auto *GEP = dyn_cast<GetElementPtrInst>(P);
+    return !GEP ||
+           (GEP->getNumOperands() == 2 && isConstant(GEP->getOperand(1)));
+  };
+  auto *RefIt = find_if_not(PointerOps, IsConstantOffsetPtr);
+  if (RefIt == PointerOps.end())
+    return false;
+  auto *RefGEP = dyn_cast<GetElementPtrInst>(*RefIt);
+  if (!RefGEP || RefGEP->getNumOperands() != 2)
+    return false;
+  Value *Base = RefGEP->getPointerOperand();
+  Type *PtrTy = RefGEP->getType();
+  Type *SrcElemTy = RefGEP->getSourceElementType();
+  // The stride and the (optional) cast opcode of the runtime indices.
+  Value *Stride = nullptr;
+  unsigned CastOpcode = 0;
+  for (Value *P : PointerOps) {
+    if (P->getType() != PtrTy)
+      return false;
+    if (P == Base)
+      continue;
+    auto *GEP = dyn_cast<GetElementPtrInst>(P);
+    if (!GEP || GEP->getNumOperands() != 2 ||
+        GEP->getPointerOperand() != Base ||
+        GEP->getSourceElementType() != SrcElemTy)
+      return false;
+    Value *Idx = GEP->getOperand(1);
+    if (isConstant(Idx))
+      continue;
+    unsigned LaneCastOpcode = 0;
+    if (auto *Cast = dyn_cast<CastInst>(Idx)) {
+      LaneCastOpcode = Cast->getOpcode();
+      Idx = Cast->getOperand(0);
+    }
+    Value *LaneStride = Idx;
+    if (auto *BO = dyn_cast<BinaryOperator>(Idx)) {
+      if (isa<Constant>(BO->getOperand(1)))
+        LaneStride = BO->getOperand(0);
+      else if (isa<Constant>(BO->getOperand(0)))
+        LaneStride = BO->getOperand(1);
+    }
+    if (!Stride) {
+      Stride = LaneStride;
+      CastOpcode = LaneCastOpcode;
+      continue;
+    }
+    if (LaneStride != Stride || LaneCastOpcode != CastOpcode)
+      return false;
+  }
+  return Stride != nullptr;
 }
 
 void addMask(SmallVectorImpl<int> &Mask, ArrayRef<int> SubMask,
@@ -1166,8 +1251,11 @@ matchExtractedField(Value *V) {
     if (match(Val, m_Trunc(m_Shr(m_Value(Src), m_APInt(Amt)))) ||
         match(Val, m_Shr(m_Value(Src), m_APInt(Amt)))) {
       if (std::optional<unsigned> Offset = GetFieldOffset(
-              Amt, Src->getType()->getIntegerBitWidth(), FieldWidth))
+              Amt, Src->getType()->getIntegerBitWidth(), FieldWidth)) {
+        // The truncation of the shifted value keeps the field, look through it.
+        match(Src, m_Trunc(m_Value(Src)));
         return std::make_pair(Src, *Offset);
+      }
       return std::nullopt;
     }
     if (match(Val, m_Trunc(m_Value(Src))) &&
@@ -1237,9 +1325,9 @@ matchGatheredExtractedFields(ArrayRef<Value *> VL, const DataLayout &DL) {
   Value *Src = nullptr;
   unsigned FieldWidth = 0;
   SmallVector<int> Mask(VL.size(), PoisonMaskElem);
-  for (auto [Idx, V] : enumerate(VL)) {
-    if (isa<UndefValue>(V))
-      continue;
+  for (auto [Idx, V] : make_filter_range(enumerate(VL), [](const auto &P) {
+         return !isa<UndefValue>(P.value());
+       })) {
     if (V->getType() != VL.front()->getType())
       return std::nullopt;
     std::optional<std::tuple<Value *, unsigned, unsigned>> Field =

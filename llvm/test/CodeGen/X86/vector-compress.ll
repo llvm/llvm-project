@@ -240,7 +240,7 @@ define <8 x i32> @test_compress_v8i32(<8 x i32> %vec, <8 x i1> %mask, <8 x i32> 
 ; AVX2-NEXT:    movq %rsp, %rbp
 ; AVX2-NEXT:    pushq %rbx
 ; AVX2-NEXT:    andq $-32, %rsp
-; AVX2-NEXT:    subq $64, %rsp
+; AVX2-NEXT:    subq $32, %rsp
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
 ; AVX2-NEXT:    vpslld $31, %ymm1, %ymm1
 ; AVX2-NEXT:    vmovaps %ymm2, (%rsp)
@@ -336,7 +336,7 @@ define <8 x float> @test_compress_v8f32(<8 x float> %vec, <8 x i1> %mask, <8 x f
 ; AVX2-NEXT:    pushq %rbp
 ; AVX2-NEXT:    movq %rsp, %rbp
 ; AVX2-NEXT:    andq $-32, %rsp
-; AVX2-NEXT:    subq $64, %rsp
+; AVX2-NEXT:    subq $32, %rsp
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
 ; AVX2-NEXT:    vpslld $31, %ymm1, %ymm1
 ; AVX2-NEXT:    vmovaps %ymm2, (%rsp)
@@ -439,7 +439,7 @@ define <4 x i64> @test_compress_v4i64(<4 x i64> %vec, <4 x i1> %mask, <4 x i64> 
 ; AVX2-NEXT:    pushq %rbp
 ; AVX2-NEXT:    movq %rsp, %rbp
 ; AVX2-NEXT:    andq $-32, %rsp
-; AVX2-NEXT:    subq $64, %rsp
+; AVX2-NEXT:    subq $32, %rsp
 ; AVX2-NEXT:    vpslld $31, %xmm1, %xmm1
 ; AVX2-NEXT:    vpsrad $31, %xmm1, %xmm1
 ; AVX2-NEXT:    vpmovsxdq %xmm1, %ymm1
@@ -513,7 +513,7 @@ define <4 x double> @test_compress_v4f64(<4 x double> %vec, <4 x i1> %mask, <4 x
 ; AVX2-NEXT:    pushq %rbp
 ; AVX2-NEXT:    movq %rsp, %rbp
 ; AVX2-NEXT:    andq $-32, %rsp
-; AVX2-NEXT:    subq $64, %rsp
+; AVX2-NEXT:    subq $32, %rsp
 ; AVX2-NEXT:    vpslld $31, %xmm1, %xmm1
 ; AVX2-NEXT:    vpsrad $31, %xmm1, %xmm1
 ; AVX2-NEXT:    vmovaps %ymm2, (%rsp)
@@ -742,7 +742,7 @@ define <16 x float> @test_compress_v16f32(<16 x float> %vec, <16 x i1> %mask, <1
 ; AVX2-NEXT:    pushq %rbp
 ; AVX2-NEXT:    movq %rsp, %rbp
 ; AVX2-NEXT:    andq $-32, %rsp
-; AVX2-NEXT:    subq $96, %rsp
+; AVX2-NEXT:    subq $64, %rsp
 ; AVX2-NEXT:    vmovaps %ymm4, {{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    vmovaps %ymm3, (%rsp)
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm3
@@ -890,7 +890,7 @@ define <8 x i64> @test_compress_v8i64(<8 x i64> %vec, <8 x i1> %mask, <8 x i64> 
 ; AVX2-NEXT:    movq %rsp, %rbp
 ; AVX2-NEXT:    pushq %rbx
 ; AVX2-NEXT:    andq $-32, %rsp
-; AVX2-NEXT:    subq $96, %rsp
+; AVX2-NEXT:    subq $64, %rsp
 ; AVX2-NEXT:    vmovaps %ymm4, {{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    vmovaps %ymm3, (%rsp)
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm3
@@ -982,7 +982,7 @@ define <8 x double> @test_compress_v8f64(<8 x double> %vec, <8 x i1> %mask, <8 x
 ; AVX2-NEXT:    pushq %rbp
 ; AVX2-NEXT:    movq %rsp, %rbp
 ; AVX2-NEXT:    andq $-32, %rsp
-; AVX2-NEXT:    subq $96, %rsp
+; AVX2-NEXT:    subq $64, %rsp
 ; AVX2-NEXT:    vmovaps %ymm4, {{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    vmovaps %ymm3, (%rsp)
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm3
@@ -1349,7 +1349,7 @@ define <32 x i8> @test_compress_v32i8(<32 x i8> %vec, <32 x i1> %mask, <32 x i8>
 ; AVX2-NEXT:    pushq %rbp
 ; AVX2-NEXT:    movq %rsp, %rbp
 ; AVX2-NEXT:    andq $-32, %rsp
-; AVX2-NEXT:    subq $64, %rsp
+; AVX2-NEXT:    subq $32, %rsp
 ; AVX2-NEXT:    vpsllw $7, %ymm1, %ymm1
 ; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX2-NEXT:    vmovaps %ymm2, (%rsp)
@@ -1568,7 +1568,7 @@ define <32 x i8> @test_compress_v32i8(<32 x i8> %vec, <32 x i1> %mask, <32 x i8>
 ; AVX512F-NEXT:    pushq %rbp
 ; AVX512F-NEXT:    movq %rsp, %rbp
 ; AVX512F-NEXT:    andq $-32, %rsp
-; AVX512F-NEXT:    subq $64, %rsp
+; AVX512F-NEXT:    subq $32, %rsp
 ; AVX512F-NEXT:    vpmovzxbd {{.*#+}} zmm4 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero,xmm1[8],zero,zero,zero,xmm1[9],zero,zero,zero,xmm1[10],zero,zero,zero,xmm1[11],zero,zero,zero,xmm1[12],zero,zero,zero,xmm1[13],zero,zero,zero,xmm1[14],zero,zero,zero,xmm1[15],zero,zero,zero
 ; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm3
 ; AVX512F-NEXT:    vpmovsxbd %xmm3, %zmm5
@@ -1629,7 +1629,7 @@ define <32 x i8> @test_compress_v32i8(<32 x i8> %vec, <32 x i1> %mask, <32 x i8>
 ; AVX512VL-ONLY-NEXT:    pushq %rbp
 ; AVX512VL-ONLY-NEXT:    movq %rsp, %rbp
 ; AVX512VL-ONLY-NEXT:    andq $-32, %rsp
-; AVX512VL-ONLY-NEXT:    subq $64, %rsp
+; AVX512VL-ONLY-NEXT:    subq $32, %rsp
 ; AVX512VL-ONLY-NEXT:    vpsllw $7, %ymm1, %ymm1
 ; AVX512VL-ONLY-NEXT:    vpmovb2m %ymm1, %k6
 ; AVX512VL-ONLY-NEXT:    kshiftrd $31, %k6, %k0
@@ -2090,7 +2090,7 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX2-NEXT:    pushq %r12
 ; AVX2-NEXT:    pushq %rbx
 ; AVX2-NEXT:    andq $-32, %rsp
-; AVX2-NEXT:    subq $96, %rsp
+; AVX2-NEXT:    subq $64, %rsp
 ; AVX2-NEXT:    movzbl 360(%rbp), %eax
 ; AVX2-NEXT:    movzbl 352(%rbp), %r10d
 ; AVX2-NEXT:    vmovd %r10d, %xmm4
@@ -2684,7 +2684,7 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX512F-NEXT:    pushq %rbp
 ; AVX512F-NEXT:    movq %rsp, %rbp
 ; AVX512F-NEXT:    andq $-64, %rsp
-; AVX512F-NEXT:    subq $192, %rsp
+; AVX512F-NEXT:    addq $-128, %rsp
 ; AVX512F-NEXT:    vmovdqu64 352(%rbp), %zmm2
 ; AVX512F-NEXT:    vmovdqu64 416(%rbp), %zmm3
 ; AVX512F-NEXT:    vpmovqw %zmm2, %xmm2
@@ -2823,7 +2823,7 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX512VL-ONLY-NEXT:    pushq %rbp
 ; AVX512VL-ONLY-NEXT:    movq %rsp, %rbp
 ; AVX512VL-ONLY-NEXT:    andq $-64, %rsp
-; AVX512VL-ONLY-NEXT:    addq $-128, %rsp
+; AVX512VL-ONLY-NEXT:    subq $64, %rsp
 ; AVX512VL-ONLY-NEXT:    vpsllw $7, %zmm1, %zmm1
 ; AVX512VL-ONLY-NEXT:    vpmovb2m %zmm1, %k6
 ; AVX512VL-ONLY-NEXT:    kshiftrq $63, %k6, %k0
@@ -3620,7 +3620,7 @@ define <32 x i16> @test_compress_v32i16(<32 x i16> %vec, <32 x i1> %mask, <32 x 
 ; AVX512F-NEXT:    pushq %rbp
 ; AVX512F-NEXT:    movq %rsp, %rbp
 ; AVX512F-NEXT:    andq $-64, %rsp
-; AVX512F-NEXT:    addq $-128, %rsp
+; AVX512F-NEXT:    subq $64, %rsp
 ; AVX512F-NEXT:    vpmovzxbd {{.*#+}} zmm4 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero,xmm1[8],zero,zero,zero,xmm1[9],zero,zero,zero,xmm1[10],zero,zero,zero,xmm1[11],zero,zero,zero,xmm1[12],zero,zero,zero,xmm1[13],zero,zero,zero,xmm1[14],zero,zero,zero,xmm1[15],zero,zero,zero
 ; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm3
 ; AVX512F-NEXT:    vpmovsxbd %xmm3, %zmm5
@@ -4015,7 +4015,7 @@ define <64 x i32> @test_compress_large(<64 x i1> %mask, <64 x i32> %vec, <64 x i
 ; AVX2-NEXT:    pushq %rbp
 ; AVX2-NEXT:    movq %rsp, %rbp
 ; AVX2-NEXT:    andq $-32, %rsp
-; AVX2-NEXT:    subq $288, %rsp # imm = 0x120
+; AVX2-NEXT:    subq $256, %rsp # imm = 0x100
 ; AVX2-NEXT:    # kill: def $esi killed $esi def $rsi
 ; AVX2-NEXT:    vmovss %xmm0, (%rsp)
 ; AVX2-NEXT:    andl $1, %esi
@@ -4474,7 +4474,7 @@ define <64 x i32> @test_compress_large(<64 x i1> %mask, <64 x i32> %vec, <64 x i
 ; AVX512F-NEXT:    pushq %rbp
 ; AVX512F-NEXT:    movq %rsp, %rbp
 ; AVX512F-NEXT:    andq $-64, %rsp
-; AVX512F-NEXT:    subq $576, %rsp # imm = 0x240
+; AVX512F-NEXT:    subq $512, %rsp # imm = 0x200
 ; AVX512F-NEXT:    vmovdqu64 352(%rbp), %zmm4
 ; AVX512F-NEXT:    vmovdqu64 416(%rbp), %zmm5
 ; AVX512F-NEXT:    vpmovqw %zmm4, %xmm4
@@ -4581,7 +4581,7 @@ define <64 x i32> @test_compress_large(<64 x i1> %mask, <64 x i32> %vec, <64 x i
 ; AVX512VL-NEXT:    pushq %rbp
 ; AVX512VL-NEXT:    movq %rsp, %rbp
 ; AVX512VL-NEXT:    andq $-64, %rsp
-; AVX512VL-NEXT:    subq $576, %rsp # imm = 0x240
+; AVX512VL-NEXT:    subq $512, %rsp # imm = 0x200
 ; AVX512VL-NEXT:    vpsllw $7, %zmm0, %zmm0
 ; AVX512VL-NEXT:    vpmovb2m %zmm0, %k3
 ; AVX512VL-NEXT:    kshiftrq $48, %k3, %k1
@@ -4658,7 +4658,7 @@ define <8 x i64> @test_compress_knownbits_zext_v8i16_8i64(<8 x i16> %vec, <8 x  
 ; AVX2-NEXT:    movq %rsp, %rbp
 ; AVX2-NEXT:    pushq %rbx
 ; AVX2-NEXT:    andq $-32, %rsp
-; AVX2-NEXT:    subq $96, %rsp
+; AVX2-NEXT:    subq $64, %rsp
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm4 = xmm0[2,3,2,3]
 ; AVX2-NEXT:    vpmovzxwq {{.*#+}} ymm4 = xmm4[0],zero,zero,zero,xmm4[1],zero,zero,zero,xmm4[2],zero,zero,zero,xmm4[3],zero,zero,zero
 ; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm5 = [3,3,3,3]
@@ -4762,7 +4762,7 @@ define <8 x i64> @test_compress_knownbits_sext_v8i16_8i64(<8 x i16> %vec, <8 x i
 ; AVX2-NEXT:    movq %rsp, %rbp
 ; AVX2-NEXT:    pushq %rbx
 ; AVX2-NEXT:    andq $-32, %rsp
-; AVX2-NEXT:    subq $96, %rsp
+; AVX2-NEXT:    subq $64, %rsp
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm4 = xmm0[2,3,2,3]
 ; AVX2-NEXT:    vpmovsxwq %xmm4, %ymm4
 ; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm5 = [3,3,3,3]

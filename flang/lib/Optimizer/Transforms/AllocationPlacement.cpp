@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "StackArrays.h"
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
@@ -207,12 +208,19 @@ void AllocationPlacementPass::runOnOperation() {
                : (allocmem.hasLenParams() || allocmem.hasShapeOperands());
     info.byteSize = getConstantByteSize(op, dl, kindMap);
 
+    // -fstack-arrays cannot be honored in an offload region either: like a
+    // device procedure, it runs on the device stack, which is far smaller than
+    // the host one. The size based part of the policy still applies.
+    fir::AllocationPolicy policy = basePolicy;
+    if (policy.stackArrays && cuf::isExecutingOnDevice(op))
+      policy.stackArrays = false;
+
     // A hook, if provided, fully overrides the default policy; it may delegate
     // back to decideAllocationPlacement after adjusting the policy.
     fir::AllocationPlacement placement =
         placementHook
-            ? placementHook(info, basePolicy, stackBytesUsed)
-            : fir::decideAllocationPlacement(info, basePolicy, stackBytesUsed);
+            ? placementHook(info, policy, stackBytesUsed)
+            : fir::decideAllocationPlacement(info, policy, stackBytesUsed);
 
     // Account for the decision in the running stack budget.
     if (endsUpOnStack(placement, info.isCurrentlyOnStack) && info.byteSize)

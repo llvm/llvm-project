@@ -121,13 +121,13 @@ define void @atomicrmw_fmax_flat_f64_vv_noret(ptr %ptr, double %val) {
   ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
   ; GFX10-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_32 = V_CMP_NE_U32_e64 [[COPY1]], [[COPY7]], implicit $exec
   ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[V_CMP_NE_U32_e64_]]
-  ; GFX10-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec = SI_IF [[COPY8]], %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec = SI_IF [[COPY8]], %bb.2, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX10-NEXT:   S_BRANCH %bb.4
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.2.Flow:
   ; GFX10-NEXT:   successors: %bb.3(0x40000000), %bb.5(0x40000000)
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   [[SI_ELSE:%[0-9]+]]:sreg_32_xm0_xexec = SI_ELSE [[SI_IF]], %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   [[SI_ELSE:%[0-9]+]]:sreg_32_xm0_xexec = SI_ELSE [[SI_IF]], %bb.5, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX10-NEXT:   S_BRANCH %bb.3
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.3.atomicrmw.private:
@@ -158,7 +158,7 @@ define void @atomicrmw_fmax_flat_f64_vv_noret(ptr %ptr, double %val) {
   ; GFX10-NEXT:   S_BRANCH %bb.2
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.5.atomicrmw.phi:
-  ; GFX10-NEXT:   SI_END_CF [[SI_ELSE]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   SI_END_CF [[SI_ELSE]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX10-NEXT:   SI_RETURN
   %old = atomicrmw fmax ptr %ptr, double %val seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
@@ -183,14 +183,14 @@ define double @atomicrmw_fmax_flat_f64_vv_ret(ptr %ptr, double %val) {
   ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
   ; GFX10-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_32 = V_CMP_NE_U32_e64 [[COPY1]], [[COPY7]], implicit $exec
   ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[V_CMP_NE_U32_e64_]]
-  ; GFX10-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec = SI_IF [[COPY8]], %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec = SI_IF [[COPY8]], %bb.2, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX10-NEXT:   S_BRANCH %bb.4
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.2.Flow:
   ; GFX10-NEXT:   successors: %bb.3(0x40000000), %bb.5(0x40000000)
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT:   [[PHI:%[0-9]+]]:vreg_64 = PHI %19, %bb.4, [[DEF]], %bb.1
-  ; GFX10-NEXT:   [[SI_ELSE:%[0-9]+]]:sreg_32_xm0_xexec = SI_ELSE [[SI_IF]], %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   [[SI_ELSE:%[0-9]+]]:sreg_32_xm0_xexec = SI_ELSE [[SI_IF]], %bb.5, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX10-NEXT:   S_BRANCH %bb.3
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.3.atomicrmw.private:
@@ -224,7 +224,7 @@ define double @atomicrmw_fmax_flat_f64_vv_ret(ptr %ptr, double %val) {
   ; GFX10-NEXT:   successors: %bb.6(0x80000000)
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT:   [[PHI1:%[0-9]+]]:vreg_64 = PHI [[PHI]], %bb.2, [[REG_SEQUENCE2]], %bb.3
-  ; GFX10-NEXT:   SI_END_CF [[SI_ELSE]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   SI_END_CF [[SI_ELSE]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.6.atomicrmw.end:
   ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[PHI1]].sub0
@@ -417,13 +417,13 @@ define void @atomicrmw_fmin_flat_f64_vv_noret(ptr %ptr, double %val) {
   ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
   ; GFX10-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_32 = V_CMP_NE_U32_e64 [[COPY1]], [[COPY7]], implicit $exec
   ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[V_CMP_NE_U32_e64_]]
-  ; GFX10-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec = SI_IF [[COPY8]], %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec = SI_IF [[COPY8]], %bb.2, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX10-NEXT:   S_BRANCH %bb.4
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.2.Flow:
   ; GFX10-NEXT:   successors: %bb.3(0x40000000), %bb.5(0x40000000)
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   [[SI_ELSE:%[0-9]+]]:sreg_32_xm0_xexec = SI_ELSE [[SI_IF]], %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   [[SI_ELSE:%[0-9]+]]:sreg_32_xm0_xexec = SI_ELSE [[SI_IF]], %bb.5, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX10-NEXT:   S_BRANCH %bb.3
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.3.atomicrmw.private:
@@ -454,7 +454,7 @@ define void @atomicrmw_fmin_flat_f64_vv_noret(ptr %ptr, double %val) {
   ; GFX10-NEXT:   S_BRANCH %bb.2
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.5.atomicrmw.phi:
-  ; GFX10-NEXT:   SI_END_CF [[SI_ELSE]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   SI_END_CF [[SI_ELSE]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX10-NEXT:   SI_RETURN
   %old = atomicrmw fmin ptr %ptr, double %val seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
@@ -479,14 +479,14 @@ define double @atomicrmw_fmin_flat_f64_vv_ret(ptr %ptr, double %val) {
   ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
   ; GFX10-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_32 = V_CMP_NE_U32_e64 [[COPY1]], [[COPY7]], implicit $exec
   ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[V_CMP_NE_U32_e64_]]
-  ; GFX10-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec = SI_IF [[COPY8]], %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec = SI_IF [[COPY8]], %bb.2, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX10-NEXT:   S_BRANCH %bb.4
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.2.Flow:
   ; GFX10-NEXT:   successors: %bb.3(0x40000000), %bb.5(0x40000000)
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT:   [[PHI:%[0-9]+]]:vreg_64 = PHI %19, %bb.4, [[DEF]], %bb.1
-  ; GFX10-NEXT:   [[SI_ELSE:%[0-9]+]]:sreg_32_xm0_xexec = SI_ELSE [[SI_IF]], %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   [[SI_ELSE:%[0-9]+]]:sreg_32_xm0_xexec = SI_ELSE [[SI_IF]], %bb.5, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX10-NEXT:   S_BRANCH %bb.3
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.3.atomicrmw.private:
@@ -520,7 +520,7 @@ define double @atomicrmw_fmin_flat_f64_vv_ret(ptr %ptr, double %val) {
   ; GFX10-NEXT:   successors: %bb.6(0x80000000)
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT:   [[PHI1:%[0-9]+]]:vreg_64 = PHI [[PHI]], %bb.2, [[REG_SEQUENCE2]], %bb.3
-  ; GFX10-NEXT:   SI_END_CF [[SI_ELSE]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   SI_END_CF [[SI_ELSE]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.6.atomicrmw.end:
   ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[PHI1]].sub0

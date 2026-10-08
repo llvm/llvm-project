@@ -187,6 +187,6 @@ RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E) {
   bool isBuffered = (CGM.getTarget().getTargetOpts().AMDGPUPrintfKindVal ==
                      clang::TargetOptions::AMDGPUPrintfKind::Buffered);
   auto Printf = llvm::emitAMDGPUPrintfCall(IRB, Args, isBuffered);
-  Builder.SetInsertPoint(IRB.GetInsertBlock(), IRB.GetInsertPoint());
+  Builder.SetInsertPoint(IRB.GetInsertPoint());
   return RValue::get(Printf);
 }

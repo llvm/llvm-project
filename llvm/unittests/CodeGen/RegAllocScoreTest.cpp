@@ -24,7 +24,6 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
@@ -32,15 +31,11 @@
 
 using namespace llvm;
 
-namespace llvm {
-LLVM_ABI extern cl::opt<double> CopyWeight;
-LLVM_ABI extern cl::opt<double> LoadWeight;
-LLVM_ABI extern cl::opt<double> StoreWeight;
-LLVM_ABI extern cl::opt<double> CheapRematWeight;
-LLVM_ABI extern cl::opt<double> ExpensiveRematWeight;
-} // namespace llvm
-
 namespace {
+// Defaults of -regalloc-*-weight.
+constexpr double CopyWeight = 0.2, LoadWeight = 4.0, StoreWeight = 1.0,
+                 CheapRematWeight = 0.2, ExpensiveRematWeight = 1.0;
+
 // Include helper functions to ease the manipulation of MachineFunctions.
 #include "MFCommon.inc"
 

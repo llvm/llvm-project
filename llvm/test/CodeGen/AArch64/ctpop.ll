@@ -131,9 +131,8 @@ define void @v2i16(ptr %p1) {
 ; CHECK-SD-NEXT:    cnt v0.8b, v0.8b
 ; CHECK-SD-NEXT:    uaddlp v0.4h, v0.8b
 ; CHECK-SD-NEXT:    uaddlp v0.2s, v0.4h
-; CHECK-SD-NEXT:    mov s1, v0.s[1]
-; CHECK-SD-NEXT:    str h0, [x0]
-; CHECK-SD-NEXT:    str h1, [x0, #2]
+; CHECK-SD-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    str s0, [x0]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v2i16:
