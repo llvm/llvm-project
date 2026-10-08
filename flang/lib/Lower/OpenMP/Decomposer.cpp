@@ -17,6 +17,7 @@
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Parser/provenance.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/semantics.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -65,7 +66,8 @@ struct ConstructDecomposition {
   bool isClauseAllowedOnDirective(llvm::omp::Clause clauseId,
                                   llvm::omp::Directive dirId,
                                   llvm::omp::Version version) const {
-    return llvm::omp::isAllowedClauseForDirective(dirId, clauseId, version);
+    return semantics::omp::IsClauseAllowedOnDirective(clauseId, dirId, version,
+                                                      &semaCtx);
   }
 
   semantics::SemanticsContext &semaCtx;

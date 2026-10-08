@@ -198,6 +198,16 @@ Makes programs 10x faster by doing Special New Thing.
   enabling Clang or MLIR retains the project's complete build, test, and
   install behavior.
 
+* With `CLANG_ENABLE_CIR=ON` and `mlir` in `LLVM_ENABLE_PROJECTS`,
+  `find_package(Clang)` now looks for the associated MLIR CMake package
+  before importing Clang's targets, so consumers no longer need to call
+  `find_package(MLIR)` themselves and can do so in either order.
+  As a consequence the consumer's project also sees the `MLIR_*` variables and
+  targets, as it already does for Flang. When MLIR is only an implicit ClangIR
+  dependency, its build-tree `MLIRConfig.cmake` now reports the package as not
+  found with an explanatory message instead of succeeding with no targets;
+  such a build never provided a usable MLIR SDK.
+
 * LLVM's documentation has largely been rewritten from [reStructuredText] to
   Markdown, and our Sphinx documentation build now has a hard dependency on the
   [`myst-parser` package]. Vendors packaging LLVM will need to install
@@ -233,6 +243,13 @@ Makes programs 10x faster by doing Special New Thing.
 ### Changes to Vectorizers
 
 ### Changes to the AArch64 Backend
+
+* Added support for hardening return address signing against PACMAN attacks.
+  Functions with the `"sign-return-address-harden"="load-return-address"`
+  attribute perform a load from the return address before returning, reducing the
+  cache side channel used to guess pointer authentication codes.
+
+* Added support for C2-Pro and C2-Ultra CPUs.
 
 ### Changes to the AMDGPU Backend
 
@@ -288,6 +305,9 @@ Makes programs 10x faster by doing Special New Thing.
   latest specification, placing ``p`` after ``v`` and removing unused ``n``.
 * Adds experimental assembler support for the `Xqccmi` (Qualcomm 16-bit Instruction Lookup Table) vendor extension.
 * Added `-mcpu=gaisler-gr765` for the 64-bit GR765 processor.
+* Added `-mcpu=tt-ascalon-xg` for the Tenstorrent Ascalon XG processor, the
+  global variant of Ascalon X without `Zvkng` and with reduced vector FP64
+  throughput.
 
 ### Changes to the WebAssembly Backend
 
@@ -308,6 +328,18 @@ Makes programs 10x faster by doing Special New Thing.
 * Removed the `size_of` and `align_of` functions. Create a constant based on
   the result of `DataLayout.abi_size` or `DataLayout.abi_align` instead.
 
+* `DataLayout` has been moved from `Llvm_target` to `Llvm`.
+
+* `data_layout` now returns a `DataLayout` instead of a `string`. Similarly
+  `set_data_layout` now accepts a `DataLayout` instead of a `string`. You can
+  use `DataLayout.of_string` and `DataLayout.as_string` to convert between them.
+
+* `const_gep` and `const_in_bounds_gep` have been removed in favor of
+  `const_ptradd` and `const_ptradd_from_indices`. Both create `getelementptr i8`
+  constant expressions, the former using an integer offset, and the latter using
+  a data layout, base type and index sequence. The latter API returns an option,
+  as it may fail if the indices cannot be converted into ptradd representation.
+
 ### Changes to the Python bindings
 
 ### Changes to the C API
@@ -316,6 +348,17 @@ Makes programs 10x faster by doing Special New Thing.
   based on the result of `LLVMABIAlignmentOfType()` or `LLVMABISizeOfType()`
   instead.
 
+* Bindings operating on data layout (`LLVMTargetDataRef`) have been moved
+  from `Target.h` (`Target` library) to `Core.h` (`IR` library).
+
+* `LLVMConstGEP2()`, `LLVMConstInBoundsGEP2()` and
+  `LLVMConstGEPWithNoWrapFlags()` have been deprecated.
+  `LLVMConstPtrAdd()` and `LLVMConstPtrAddFromIndices()` can be used instead.
+  Both create `getelementptr i8` constant expressions, the former using an
+  integer offset, and the latter using a data layout, base type and index
+  sequence. The latter API may fail if the indices cannot be converted into
+  ptradd representation.
+
 ### Changes to the CodeGen infrastructure
 
 * Fixed a crash
@@ -323,6 +366,12 @@ Makes programs 10x faster by doing Special New Thing.
   compiling a function containing a static alloca of `(size_t)-1` bytes, whose
   size collided with the sentinel value MachineFrameInfo used to mark dead
   stack objects.
+* Fixed a crash
+  ([#220959](https://github.com/llvm/llvm-project/issues/220959)) when
+  compiling a `landingpad` whose result type is not a struct of an exception
+  pointer and an integer selector (for example `{}`). Such a landingpad is now
+  rejected with a clean "unsupported" diagnostic instead of an assertion
+  failure.
 
 ### Changes to the Metadata Info
 

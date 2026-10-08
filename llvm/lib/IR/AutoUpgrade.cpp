@@ -49,6 +49,7 @@
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Support/NVVMAttributes.h"
@@ -60,6 +61,8 @@
 #include <numeric>
 
 using namespace llvm;
+
+#define DEBUG_TYPE "auto-upgrade"
 
 static cl::opt<bool>
     DisableAutoUpgradeDebugInfo("disable-auto-upgrade-debug-info",
@@ -212,6 +215,8 @@ static bool shouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
             Name.starts_with("pmin") ||       // Added in 3.9
             Name.starts_with("pmovsx") ||     // Added in 3.9
             Name.starts_with("pmovzx") ||     // Added in 3.9
+            Name.starts_with("pmulh.w") ||    // Added in 24.0
+            Name.starts_with("pmulhu.w") ||   // Added in 24.0
             Name == "pmul.dq" ||              // Added in 7.0
             Name == "pmulu.dq" ||             // Added in 7.0
             Name.starts_with("psll.dq") ||    // Added in 3.7
@@ -438,6 +443,8 @@ static bool shouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
             Name == "kxor.w" ||                 // Added in 7.0
             Name.starts_with("padds.") ||       // Added in 8.0
             Name.starts_with("pbroadcast") ||   // Added in 3.9
+            Name.starts_with("pmulh.w") ||      // Added in 24.0
+            Name.starts_with("pmulhu.w") ||     // Added in 24.0
             Name.starts_with("prol") ||         // Added in 8.0
             Name.starts_with("pror") ||         // Added in 8.0
             Name.starts_with("psll.dq") ||      // Added in 3.9
@@ -490,6 +497,8 @@ static bool shouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
             Name == "pmaxu.b" ||           // Added in 3.9
             Name == "pmins.w" ||           // Added in 3.9
             Name == "pminu.b" ||           // Added in 3.9
+            Name == "pmulh.w" ||           // Added in 24.0
+            Name == "pmulhu.w" ||          // Added in 24.0
             Name == "pmulu.dq" ||          // Added in 7.0
             Name.starts_with("pshuf") ||   // Added in 3.9
             Name.starts_with("psll.dq") || // Added in 3.7
@@ -2493,8 +2502,7 @@ GlobalVariable *llvm::UpgradeGlobalVariable(GlobalVariable *GV) {
   if (!STy || STy->getNumElements() != 2)
     return nullptr;
 
-  LLVMContext &C = GV->getContext();
-  IRBuilder<> IRB(C);
+  IRBuilder<> IRB(*GV->getParent());
   auto EltTy = StructType::get(STy->getElementType(0), STy->getElementType(1),
                                IRB.getPtrTy());
   Constant *Init = GV->getInitializer();
@@ -3057,24 +3065,16 @@ static bool upgradeAVX512MaskToSelect(StringRef Name, IRBuilder<> &Builder,
       IID = Intrinsic::x86_avx512_pmul_hr_sw_512;
     else
       llvm_unreachable("Unexpected intrinsic");
-  } else if (Name.starts_with("pmulh.w.")) {
-    if (VecWidth == 128)
-      IID = Intrinsic::x86_sse2_pmulh_w;
-    else if (VecWidth == 256)
-      IID = Intrinsic::x86_avx2_pmulh_w;
-    else if (VecWidth == 512)
-      IID = Intrinsic::x86_avx512_pmulh_w_512;
-    else
-      llvm_unreachable("Unexpected intrinsic");
-  } else if (Name.starts_with("pmulhu.w.")) {
-    if (VecWidth == 128)
-      IID = Intrinsic::x86_sse2_pmulhu_w;
-    else if (VecWidth == 256)
-      IID = Intrinsic::x86_avx2_pmulhu_w;
-    else if (VecWidth == 512)
-      IID = Intrinsic::x86_avx512_pmulhu_w_512;
-    else
-      llvm_unreachable("Unexpected intrinsic");
+  } else if (Name.starts_with("pmulh.w")) {
+    assert((VecWidth == 128 || VecWidth == 256 || VecWidth == 512) &&
+           "Unexpected intrinsic");
+    Rep = upgradeX86BinaryIntrinsics(Builder, CI, Intrinsic::smulh);
+    return true;
+  } else if (Name.starts_with("pmulhu.w")) {
+    assert((VecWidth == 128 || VecWidth == 256 || VecWidth == 512) &&
+           "Unexpected intrinsic");
+    Rep = upgradeX86BinaryIntrinsics(Builder, CI, Intrinsic::umulh);
+    return true;
   } else if (Name.starts_with("pmaddw.d.")) {
     if (VecWidth == 128)
       IID = Intrinsic::x86_sse2_pmadd_wd;
@@ -3773,6 +3773,12 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
              Name == "sse41.pminud" || Name.starts_with("avx2.pminu") ||
              Name.starts_with("avx512.mask.pminu")) {
     Rep = upgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::umin);
+  } else if (Name == "sse2.pmulh.w" || Name.starts_with("avx2.pmulh.w") ||
+             Name.starts_with("avx512.pmulh.w")) {
+    Rep = upgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::smulh);
+  } else if (Name == "sse2.pmulhu.w" || Name.starts_with("avx2.pmulhu.w") ||
+             Name.starts_with("avx512.pmulhu.w")) {
+    Rep = upgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::umulh);
   } else if (Name == "sse2.pmulu.dq" || Name == "avx2.pmulu.dq" ||
              Name == "avx512.pmulu.dq.512" ||
              Name.starts_with("avx512.mask.pmulu.dq.")) {
@@ -5762,7 +5768,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     return;
 
   LLVMContext &C = CI->getContext();
-  IRBuilder<> Builder(CI->getParent(), CI->getIterator());
+  IRBuilder<> Builder(CI->getIterator());
   if (isa<FPMathOperator>(CI))
     Builder.setFastMathFlags(CI->getFastMathFlags());
 
@@ -6970,7 +6976,7 @@ void llvm::UpgradeARCRuntime(Module &M) {
       if (!CI || CI->getCalledFunction() != Fn)
         continue;
 
-      IRBuilder<> Builder(CI->getParent(), CI->getIterator());
+      IRBuilder<> Builder(CI->getIterator());
       FunctionType *NewFuncTy = NewFn->getFunctionType();
       SmallVector<Value *, 2> Args;
 
@@ -7235,8 +7241,10 @@ bool llvm::UpgradeModuleFlags(Module &M) {
 
     // Upgrade branch protection and return address signing module flags. The
     // module flag behavior for these fields were Error and now they are Min.
+    // The one exception is "sign-return-address-harden".
     if (ID->getString() == "branch-target-enforcement" ||
-        ID->getString().starts_with("sign-return-address")) {
+        (ID->getString().starts_with("sign-return-address") &&
+         ID->getString() != "sign-return-address-harden")) {
       if (auto *Behavior =
               mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(0))) {
         if (Behavior->getLimitedValue() == Module::Error) {
@@ -7575,8 +7583,11 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
 // Check if the function attribute is not present and set it.
 static void setFunctionAttrIfNotSet(Function &F, StringRef FnAttrName,
                                     StringRef Value) {
-  if (!F.hasFnAttribute(FnAttrName))
+  if (!F.hasFnAttribute(FnAttrName)) {
     F.addFnAttr(FnAttrName, Value);
+    LLVM_DEBUG(dbgs() << "Set attribute: " << FnAttrName << "=\"" << Value
+                      << "\", function: " << F.getName() << "\n");
+  }
 }
 
 // Check if the function attribute is not present and set it if needed.
@@ -7584,17 +7595,31 @@ static void setFunctionAttrIfNotSet(Function &F, StringRef FnAttrName,
 // If the attribute is "true" resets it to a valueless attribute.
 static void ConvertFunctionAttr(Function &F, bool Set, StringRef FnAttrName) {
   if (!F.hasFnAttribute(FnAttrName)) {
-    if (Set)
+    if (Set) {
       F.addFnAttr(FnAttrName);
+      LLVM_DEBUG(dbgs() << "Added attribute: " << FnAttrName
+                        << ", function: " << F.getName() << "\n");
+    }
   } else {
     auto A = F.getFnAttribute(FnAttrName);
-    if ("false" == A.getValueAsString())
+    if ("false" == A.getValueAsString()) {
       F.removeFnAttr(FnAttrName);
-    else if ("true" == A.getValueAsString()) {
+      LLVM_DEBUG(dbgs() << "Removed attribute: " << FnAttrName
+                        << "=\"false\", function: " << F.getName() << "\n");
+    } else if ("true" == A.getValueAsString()) {
       F.removeFnAttr(FnAttrName);
       F.addFnAttr(FnAttrName);
+      LLVM_DEBUG(dbgs() << "Converted attribute: " << FnAttrName
+                        << "=\"true\", function: " << F.getName() << "\n");
     }
   }
+}
+
+static void ConvertModuleFlag(Module &M, Module::ModFlagBehavior Behavior,
+                              StringRef Key, uint32_t Val) {
+  M.setModuleFlag(Behavior, Key, Val);
+  LLVM_DEBUG(dbgs() << "Converted module flag: " << "{" << Behavior << ", "
+                    << Key << ", " << Val << "}\n");
 }
 
 void llvm::copyModuleAttrToFunctions(Module &M) {
@@ -7636,6 +7661,9 @@ void llvm::copyModuleAttrToFunctions(Module &M) {
       *ValPtr = CI->getZExtValue();
       if (*ValPtr == 2)
         return;
+
+      LLVM_DEBUG(dbgs() << "Found module flag: " << IDStr << "(" << *ValPtr
+                        << ")\n");
     }
   }
 
@@ -7672,17 +7700,19 @@ void llvm::copyModuleAttrToFunctions(Module &M) {
   }
 
   if (BTE)
-    M.setModuleFlag(llvm::Module::Min, "branch-target-enforcement", 2);
+    ConvertModuleFlag(M, llvm::Module::Min, "branch-target-enforcement", 2);
   if (BPPLR)
-    M.setModuleFlag(llvm::Module::Min, "branch-protection-pauth-lr", 2);
+    ConvertModuleFlag(M, llvm::Module::Min, "branch-protection-pauth-lr", 2);
   if (GCS)
-    M.setModuleFlag(llvm::Module::Min, "guarded-control-stack", 2);
+    ConvertModuleFlag(M, llvm::Module::Min, "guarded-control-stack", 2);
   if (SRA) {
-    M.setModuleFlag(llvm::Module::Min, "sign-return-address", 2);
+    ConvertModuleFlag(M, llvm::Module::Min, "sign-return-address", 2);
     if (SRAALLValue == 1)
-      M.setModuleFlag(llvm::Module::Min, "sign-return-address-all", 2);
-    if (SRABKeyValue == 1)
-      M.setModuleFlag(llvm::Module::Min, "sign-return-address-with-bkey", 2);
+      ConvertModuleFlag(M, llvm::Module::Min, "sign-return-address-all", 2);
+    if (SRABKeyValue == 1) {
+      ConvertModuleFlag(M, llvm::Module::Min, "sign-return-address-with-bkey",
+                        2);
+    }
   }
 }
 

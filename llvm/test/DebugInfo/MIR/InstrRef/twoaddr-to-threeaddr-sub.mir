@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=twoaddressinstruction -mtriple=x86_64-- -o - %s -experimental-debug-variable-locations | FileCheck %s
+# RUN: llc -run-pass=two-address-instruction -mtriple=x86_64-- -o - %s -experimental-debug-variable-locations | FileCheck %s
 #
 # REQUIRES: x86-registered-target
 #
