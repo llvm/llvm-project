@@ -177,14 +177,14 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.6(0x20000000), %bb.3(0x20000000), %bb.4(0x20000000), %bb.5(0x20000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect
   ; CHECK-NEXT:   [[MOV32ri:%[0-9]+]]:gr32 = MOV32ri 13
   ; CHECK-NEXT:   JMP64m $noreg, 8, [[COPY]], %jump-table.0, $noreg :: (load (s64) from jump-table)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.6(0x20000000), %bb.3(0x20000000), %bb.4(0x20000000), %bb.5(0x20000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect
   ; CHECK-NEXT:   [[MOV32ri1:%[0-9]+]]:gr32 = MOV32ri 42
   ; CHECK-NEXT:   JMP64m $noreg, 8, [[COPY]], %jump-table.0, $noreg :: (load (s64) from jump-table)
   ; CHECK-NEXT: {{  $}}
@@ -220,13 +220,13 @@ body:             |
 
   bb.1:
     successors: %bb.6, %bb.3, %bb.4, %bb.5
-    INLINEASM &"", 1 /* sideeffect attdialect */
+    INLINEASM &"", sideeffect attdialect
     %1:gr32 = MOV32ri 13
     JMP64m $noreg, 8, %0, %jump-table.0, $noreg :: (load (s64) from jump-table)
 
   bb.2:
     successors: %bb.6, %bb.3, %bb.4, %bb.5
-    INLINEASM &"", 1 /* sideeffect attdialect */
+    INLINEASM &"", sideeffect attdialect
     %2:gr32 = MOV32ri 42
     ; This is a 2d user of jump-table.0 . This case is not supported yet;
     ; Should not attempt edge splitting.

@@ -33,13 +33,13 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $w2
     ; CHECK-NEXT: [[SMADDLrrr:%[0-9]+]]:gpr64 = SMADDLrrr [[COPY1]], [[COPY2]], [[COPY]]
     ; CHECK-NEXT: $x0 = COPY [[SMADDLrrr]]
-    %0(s64) = COPY $x0
-    %1(s32) = COPY $w1
-    %2(s32) = COPY $w2
-    %3(s64) = G_SEXT %1
-    %4(s64) = G_SEXT %2
-    %5(s64) = G_MUL %3, %4
-    %6(s64) = G_ADD %0, %5
+    %0(i64) = COPY $x0
+    %1(i32) = COPY $w1
+    %2(i32) = COPY $w2
+    %3(i64) = G_SEXT %1
+    %4(i64) = G_SEXT %2
+    %5(i64) = G_MUL %3, %4
+    %6(i64) = G_ADD %0, %5
     $x0 = COPY %6
 ...
 

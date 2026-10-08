@@ -40,7 +40,7 @@ declare void @sink(i32) cold
 !9 = !DILocalVariable(name: "b", scope: !2, file: !3, type: !7)
 !10 = !DILocalVariable(name: "c", scope: !2, file: !3, type: !7)
 
-; CHECK: define {{.*}}@foo.cold.1(ptr %[[ARG0:.*]], i32 %[[ARG1:.*]], ptr %[[ARG2:.*]]){{.*}} !dbg ![[FN:.*]] {
+; CHECK: define {{.*}}@foo.cold.1(ptr %[[ARG0:.*]], i32 %[[ARG1:.*]], ptr %[[ARG2:.*]]){{.*}} !dbg ![[FN:[0-9]+]] {{.*}} {
 ; CHECK-NEXT: newFuncRoot:
 ; CHECK-NEXT: #dbg_declare(ptr %[[ARG0]], ![[V1:[0-9]+]], {{.*}})
 ; CHECK-NEXT: #dbg_value(i32 %[[ARG1]], ![[V2:[0-9]+]], {{.*}})

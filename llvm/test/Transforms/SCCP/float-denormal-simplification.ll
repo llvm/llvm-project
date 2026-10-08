@@ -3,7 +3,7 @@
 
 define float @test_ieee() #0 {
 ; CHECK-LABEL: @test_ieee(
-; CHECK-NEXT:    ret float 0x36F4000000000000
+; CHECK-NEXT:    ret float 5.605190e-44
 ;
   %1 = fmul float 2.802596928649634e-44, 2.000000e+00
   ret float %1

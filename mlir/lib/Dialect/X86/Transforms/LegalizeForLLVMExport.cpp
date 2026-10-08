@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/X86/Transforms.h"
 
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/X86/X86Dialect.h"
@@ -39,10 +40,33 @@ struct X86IntrinsicOpConversion
 
 /// Populate the given list with patterns that convert from X86 to LLVM.
 void mlir::populateX86LegalizeForLLVMExportPatterns(
-    const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
+    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<X86IntrinsicOpConversion>(converter);
+  converter.addConversion([&](x86::amx::TileType type) {
+    return LLVM::LLVMX86AMXType::get(&converter.getContext());
+  });
 }
 
 void mlir::configureX86LegalizeForExportTarget(LLVMConversionTarget &target) {
   target.addIllegalDialect<X86Dialect>();
+}
+
+namespace {
+/// Implement the interface to convert X86 to LLVM.
+struct X86ToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
+  X86ToLLVMDialectInterface(Dialect *dialect)
+      : ConvertToLLVMPatternInterface(dialect) {}
+
+  void populateConvertToLLVMConversionPatterns(
+      ConversionTarget &target, LLVMTypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
+    populateX86LegalizeForLLVMExportPatterns(typeConverter, patterns);
+  }
+};
+} // namespace
+
+void mlir::registerConvertX86ToLLVMInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, x86::X86Dialect *dialect) {
+    dialect->addInterfaces<X86ToLLVMDialectInterface>();
+  });
 }

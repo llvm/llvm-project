@@ -33,8 +33,8 @@ define i1 @test_signed_i1_f32(float %f) nounwind {
 ; CHECK-GI-NEXT:    fcvtzs w8, s0
 ; CHECK-GI-NEXT:    cmp w8, #0
 ; CHECK-GI-NEXT:    csel w8, w8, wzr, mi
-; CHECK-GI-NEXT:    cmp w8, #0
-; CHECK-GI-NEXT:    csinv w8, w8, wzr, pl
+; CHECK-GI-NEXT:    cmn w8, #1
+; CHECK-GI-NEXT:    csinv w8, w8, wzr, gt
 ; CHECK-GI-NEXT:    and w0, w8, #0x1
 ; CHECK-GI-NEXT:    ret
     %x = call i1 @llvm.fptosi.sat.i1.f32(float %f)
@@ -278,8 +278,8 @@ define i1 @test_signed_i1_f64(double %f) nounwind {
 ; CHECK-GI-NEXT:    fcvtzs w8, d0
 ; CHECK-GI-NEXT:    cmp w8, #0
 ; CHECK-GI-NEXT:    csel w8, w8, wzr, mi
-; CHECK-GI-NEXT:    cmp w8, #0
-; CHECK-GI-NEXT:    csinv w8, w8, wzr, pl
+; CHECK-GI-NEXT:    cmn w8, #1
+; CHECK-GI-NEXT:    csinv w8, w8, wzr, gt
 ; CHECK-GI-NEXT:    and w0, w8, #0x1
 ; CHECK-GI-NEXT:    ret
     %x = call i1 @llvm.fptosi.sat.i1.f64(double %f)
@@ -537,8 +537,8 @@ define i1 @test_signed_i1_f16(half %f) nounwind {
 ; CHECK-GI-CVT-NEXT:    fcvtzs w8, s0
 ; CHECK-GI-CVT-NEXT:    cmp w8, #0
 ; CHECK-GI-CVT-NEXT:    csel w8, w8, wzr, mi
-; CHECK-GI-CVT-NEXT:    cmp w8, #0
-; CHECK-GI-CVT-NEXT:    csinv w8, w8, wzr, pl
+; CHECK-GI-CVT-NEXT:    cmn w8, #1
+; CHECK-GI-CVT-NEXT:    csinv w8, w8, wzr, gt
 ; CHECK-GI-CVT-NEXT:    and w0, w8, #0x1
 ; CHECK-GI-CVT-NEXT:    ret
 ;
@@ -547,8 +547,8 @@ define i1 @test_signed_i1_f16(half %f) nounwind {
 ; CHECK-GI-FP16-NEXT:    fcvtzs w8, h0
 ; CHECK-GI-FP16-NEXT:    cmp w8, #0
 ; CHECK-GI-FP16-NEXT:    csel w8, w8, wzr, mi
-; CHECK-GI-FP16-NEXT:    cmp w8, #0
-; CHECK-GI-FP16-NEXT:    csinv w8, w8, wzr, pl
+; CHECK-GI-FP16-NEXT:    cmn w8, #1
+; CHECK-GI-FP16-NEXT:    csinv w8, w8, wzr, gt
 ; CHECK-GI-FP16-NEXT:    and w0, w8, #0x1
 ; CHECK-GI-FP16-NEXT:    ret
     %x = call i1 @llvm.fptosi.sat.i1.f16(half %f)

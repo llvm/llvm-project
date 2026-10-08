@@ -1,0 +1,49 @@
+Process:               a.out [21606]
+Path:                  /private/tmp/a.out
+Identifier:            a.out
+Version:               0
+Code Type:             ARM-64 (Native)
+Parent Process:        fish [88883]
+User ID:               501
+
+Date/Time:             2020-11-11 14:47:34.600 -0800
+OS Version:            macOS 14.0
+Report Version:        12
+Anonymous UUID:        DCEF35CB-68D5-F524-FF13-060901F52EA8
+
+
+Time Awake Since Boot: 400000 seconds
+
+System Integrity Protection: enabled
+
+Crashed Thread:        0  Dispatch queue: com.apple.main-thread
+
+Exception Type:        EXC_BAD_ACCESS (SIGSEGV)
+Exception Codes:       KERN_INVALID_ADDRESS at 0x0000000000000000
+Exception Note:        EXC_CORPSE_NOTIFY
+
+Termination Signal:    Segmentation fault: 11
+Termination Reason:    Namespace SIGNAL, Code 0xb
+Terminating Process:   exc handler [21606]
+
+Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
+0   a.out                         	@bar@ foo + 16 (inline_test.c:3)
+1   a.out                         	@bar@ bar + 16 (inline_test.c:6)
+2   a.out                         	@main@ main + 20 (inline_test.c:8)
+3   libdyld.dylib                 	0x1000000 start + 1
+
+Thread 0 crashed with ARM Thread State (64-bit):
+    x0: 0x0000000000000000   x1: 0x0000000000000000   x2: 0x0000000000000000   x3: 0x0000000000000000
+    x4: 0x0000000000000000   x5: 0x0000000000000000   x6: 0x0000000000000000   x7: 0x0000000000000000
+    x8: 0x0000000000000001   x9: 0x0000000000000000  x10: 0x0000000000000000  x11: 0x0000000000000000
+   x12: 0x0000000000000000  x13: 0x0000000000000000  x14: 0x0000000000000000  x15: 0x0000000000000000
+   x16: 0x0000000000000000  x17: 0x0000000000000000  x18: 0x0000000000000000  x19: 0x0000000000000000
+   x20: 0x0000000000000000  x21: 0x0000000000000000  x22: 0x0000000000000000  x23: 0x0000000000000000
+   x24: 0x0000000000000000  x25: 0x0000000000000000  x26: 0x0000000000000000  x27: 0x0000000000000000
+   x28: 0x0000000000000000   fp: 0x000000016f04ef00   lr: 0x0000000000000000
+    sp: 0x000000016f04eee0   pc: 0x0000000100000354 cpsr: 0x80001000
+   far: 0x0000000000000000  esr: 0x92000046 (Data Abort) byte write Translation fault
+
+Binary Images:
+       0x100000000 -        0x200000000 +a.out (0) <@UUID@> @EXEC@
+               0x0 - 0xffffffffffffffff ??? (*) <00000000-0000-0000-0000-000000000000> ???

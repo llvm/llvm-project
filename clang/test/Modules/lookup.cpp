@@ -1,9 +1,6 @@
 
-#define import @import
-import lookup_left_cxx;
-#undef import
-#define IMPORT(X) @import X
-IMPORT(lookup_right_cxx);
+@import lookup_left_cxx;
+@import lookup_right_cxx;
 
 // expected-warning@Inputs/lookup_left.hpp:3 {{weak identifier 'weak_identifier' never declared}}
 

@@ -43,6 +43,16 @@ public:
 
   class Replacer : public llvm::RefCountedBase<Replacer> {
   public:
+    struct ResultUsePolicy {
+      enum class Kind {
+        Preserve,
+        AppendAccessorForUsedResult,
+      };
+
+      Kind PolicyKind = Kind::Preserve;
+      StringRef Accessor;
+    };
+
     /// Gets the name to replace a function with, return std::nullopt for a
     /// replacement where we just call a different overload.
     virtual std::optional<std::string>
@@ -56,6 +66,10 @@ public:
     /// Gets an array of all the possible overloads for a function with indexes
     /// where begin and end arguments are.
     virtual ArrayRef<Signature> getReplacementSignatures() const = 0;
+
+    /// Gets how to handle fix-its when the original algorithm result is used.
+    virtual ResultUsePolicy getResultUsePolicy(const NamedDecl &OriginalName,
+                                               bool IsStructuredBinding) const;
     virtual ~Replacer() = default;
   };
 

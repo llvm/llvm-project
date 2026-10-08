@@ -390,7 +390,7 @@ class StringRefParameter<string desc = "", string value = ""> :
 // default APInt comparison operator asserts when the bitwidths differ, so
 // a custom implementation is necessary.
 class APIntParameter<string desc> :
-    AttrOrTypeParameter<"::llvm::APInt", desc> {
+    AttrOrTypeParameter<"::llvm::APInt", desc, "const ::llvm::APInt &"> {
   let comparator = "$_lhs.getBitWidth() == $_rhs.getBitWidth() && $_lhs == $_rhs";
 }
 

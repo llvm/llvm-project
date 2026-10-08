@@ -10,9 +10,9 @@ end
 
 ! CHECK-LABEL: c.func @_QQmain
   ! CHECK:  %[[V_0:[0-9]+]] = fir.address_of(@_QFEn) : !fir.ref<i32> loc("{{.*}}if-loc.f90":3:
-  ! CHECK:  %[[V_1:[0-9]+]]:2 = hlfir.declare %[[V_0]] {uniq_name = "_QFEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>) loc("{{.*}}if-loc.f90":3:
+  ! CHECK:  %[[V_1:[0-9]+]]:2 = hlfir.declare %[[V_0]] uniq_name("_QFEn") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>) loc("{{.*}}if-loc.f90":3:
   ! CHECK:  %[[V_2:[0-9]+]] = fir.address_of(@_QFEx) : !fir.ref<i32> loc("{{.*}}if-loc.f90":3:
-  ! CHECK:  %[[V_3:[0-9]+]]:2 = hlfir.declare %[[V_2]] {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>) loc("{{.*}}if-loc.f90":3:
+  ! CHECK:  %[[V_3:[0-9]+]]:2 = hlfir.declare %[[V_2]] uniq_name("_QFEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>) loc("{{.*}}if-loc.f90":3:
   ! CHECK:  %[[V_4:[0-9]+]] = fir.load %[[V_3]]#0 : !fir.ref<i32> loc("{{.*}}if-loc.f90":4:
   ! CHECK:  %[[V_5:[0-9]+]] = arith.cmpi ne, %[[V_4]], %c1{{.*}} : i32 loc("{{.*}}if-loc.f90":4:
   ! CHECK:  %[[V_6:[0-9]+]] = arith.xori %[[V_5]], %true{{[_0-9]*}} : i1 loc("{{.*}}if-loc.f90":4:

@@ -29,7 +29,8 @@ class TestCase(TestBase):
         )
 
         self.expect(
-            "frame variable *sp_empty", substrs=["(int) *sp_empty = <parent is NULL>"]
+            "frame variable *sp_empty",
+            patterns=[r"\(int\) \*sp_empty = <parent is NULL>\n\Z"],
         )
 
         valobj = self.expect_var_path(

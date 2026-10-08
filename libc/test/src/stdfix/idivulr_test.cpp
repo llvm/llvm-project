@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "IdivTest.h"
+#include "IdivFxTest.h"
 
 #include "llvm-libc-macros/stdfix-macros.h" // unsigned long fract
 #include "src/stdfix/idivulr.h"
 
-LIST_IDIV_TESTS(ulr, unsigned long fract, unsigned long int,
-                LIBC_NAMESPACE::idivulr);
+LIST_IDIVFX_TESTS(ulr, unsigned long fract, unsigned long int,
+                  LIBC_NAMESPACE::idivulr);

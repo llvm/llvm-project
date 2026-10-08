@@ -109,6 +109,8 @@ static void ProcessFunction(const FunctionRec &F, raw_ostream &OS) {
     }
   }
 
+  if (F.isNodiscard())
+    OS << "OL_NODISCARD ";
   OS << formatv("{0}_APIEXPORT {1}_result_t {0}_APICALL ", PrefixUpper,
                 PrefixLower);
   OS << F.getName();
@@ -129,7 +131,8 @@ static void ProcessFunction(const FunctionRec &F, raw_ostream &OS) {
 static void ProcessEnum(const EnumRec &Enum, raw_ostream &OS) {
   OS << CommentsHeader;
   OS << formatv("/// @brief {0}\n", Enum.getDesc());
-  OS << formatv("typedef enum {0} {{\n", Enum.getName());
+  OS << formatv("typedef enum {0}{1} {{\n",
+                Enum.isNodiscard() ? "OL_NODISCARD " : "", Enum.getName());
 
   // Bitfields start from 1, other enums from 0
   uint32_t EtorVal = Enum.isBitField();
@@ -162,7 +165,8 @@ static void ProcessEnum(const EnumRec &Enum, raw_ostream &OS) {
 static void ProcessStruct(const StructRec &Struct, raw_ostream &OS) {
   OS << CommentsHeader;
   OS << formatv("/// @brief {0}\n", Struct.getDesc());
-  OS << formatv("typedef struct {0} {{\n", Struct.getName());
+  OS << formatv("typedef struct {0}{1} {{\n",
+                Struct.isNodiscard() ? "OL_NODISCARD " : "", Struct.getName());
 
   for (const auto &Member : Struct.getMembers()) {
     OS << formatv(TAB_1 "{0} {1}; {2}", Member.getType(), Member.getName(),
@@ -212,9 +216,10 @@ static void ProcessFuncWithCodeLocVariant(const FunctionRec &Func,
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Variant of {0} that also sets source code location information
 /// @details See also ::{0}
-OL_APIEXPORT ol_result_t OL_APICALL {0}WithCodeLoc(
+{1}OL_APIEXPORT ol_result_t OL_APICALL {0}WithCodeLoc(
 )";
-  OS << formatv(FuncWithCodeLocBegin, Func.getName());
+  OS << formatv(FuncWithCodeLocBegin, Func.getName(),
+                Func.isNodiscard() ? "OL_NODISCARD " : "");
   auto Params = Func.getParams();
   for (auto &Param : Params) {
     OS << "  " << Param.getType() << " " << Param.getName();

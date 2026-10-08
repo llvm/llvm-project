@@ -79,11 +79,11 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
         self.expect(
             "register read vg z0 v0 s0 d0",
             substrs=[
-                f"      vg = 0x000000000000000{vg}\n"
-                "      z0 = {" + z0_value + "}\n"
-                "      v0 = {0x01 0x01 0x01 0x01 0x02 0x02 0x02 0x02 0x03 0x03 0x03 0x03 0x04 0x04 0x04 0x04}\n"
-                "      s0 = 2.36942783E-38\n"
-                "      d0 = 5.3779407333977203E-299\n"
+                f"  vg = 0x000000000000000{vg}\n"
+                "  z0 = {" + z0_value + "}\n"
+                "  v0 = {0x01 0x01 0x01 0x01 0x02 0x02 0x02 0x02 0x03 0x03 0x03 0x03 0x04 0x04 0x04 0x04}\n"
+                "  s0 = 2.36942783E-38\n"
+                "  d0 = 5.3779407333977203E-299\n"
             ],
         )
 

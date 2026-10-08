@@ -8,11 +8,11 @@
 
 #include "mlir/Conversion/MathToNVVM/MathToNVVM.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Func/IR/FuncDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialectDecl.h"
 #include "mlir/Dialect/Math/IR/Math.h"
-#include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/IR/VectorDialect.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/Pass/Pass.h"
 
@@ -49,15 +49,53 @@ static void populateIntOpPatterns(const LLVMTypeConverter &converter,
                                            benefit);
 }
 
-template <typename OpTy>
-static void populateFloatIntOpPatterns(const LLVMTypeConverter &converter,
-                                       RewritePatternSet &patterns,
-                                       PatternBenefit benefit,
-                                       StringRef f32Func, StringRef f64Func) {
-  patterns.add<ScalarizeVectorOpLowering<OpTy>>(converter, benefit);
-  patterns.add<OpToFuncCallLowering<OpTy>>(converter, f32Func, f64Func, "", "",
-                                           /*i32Func=*/"", benefit);
+/// libdevice's __nv_powi and __nv_powif take an i32 exponent, so math.fpowi
+/// with a wider or index exponent is not lowered.
+static bool exponentFitsInI32(math::FPowIOp op) {
+  auto type =
+      dyn_cast<IntegerType>(getElementTypeOrSelf(op.getRhs().getType()));
+  return type && type.getWidth() <= 32;
 }
+
+namespace {
+struct FPowIScalarizeLowering
+    : public ScalarizeVectorOpLowering<math::FPowIOp> {
+  using ScalarizeVectorOpLowering::ScalarizeVectorOpLowering;
+
+  LogicalResult
+  matchAndRewrite(math::FPowIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (!exponentFitsInI32(op))
+      return rewriter.notifyMatchFailure(op, "exponent does not fit in i32");
+    return ScalarizeVectorOpLowering::matchAndRewrite(op, adaptor, rewriter);
+  }
+};
+
+struct FPowIOpLowering : public OpToFuncCallLowering<math::FPowIOp> {
+  using OpToFuncCallLowering::OpToFuncCallLowering;
+
+  LogicalResult
+  matchAndRewrite(math::FPowIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (!exponentFitsInI32(op))
+      return rewriter.notifyMatchFailure(op, "exponent does not fit in i32");
+    // Return before creating anything in the cases OpToFuncCallLowering
+    // does not handle.
+    if (!op->getParentOfType<FunctionOpInterface>() ||
+        !isa<Float16Type, BFloat16Type, Float32Type, Float64Type>(
+            adaptor.getLhs().getType()))
+      return rewriter.notifyMatchFailure(op, "cannot be lowered to libdevice");
+    // Sign-extend a narrower exponent.
+    Value exponent = adaptor.getRhs();
+    if (!exponent.getType().isInteger(32))
+      exponent = LLVM::SExtOp::create(rewriter, op.getLoc(),
+                                      rewriter.getI32Type(), exponent);
+    Value operands[] = {adaptor.getLhs(), exponent};
+    return OpToFuncCallLowering::matchAndRewrite(
+        op, OpAdaptor(ValueRange(operands), op), rewriter);
+  }
+};
+} // namespace
 
 // Custom pattern for sincos since it returns two values
 struct SincosOpLowering : public ConvertOpToLLVMPattern<math::SincosOp> {
@@ -223,8 +261,9 @@ void mlir::populateLibDeviceConversionPatterns(
                                    "__nv_log2", "__nv_fast_log2f");
   populateOpPatterns<math::PowFOp>(converter, patterns, benefit, "__nv_powf",
                                    "__nv_pow", "__nv_fast_powf");
-  populateFloatIntOpPatterns<math::FPowIOp>(converter, patterns, benefit,
-                                            "__nv_powif", "__nv_powi");
+  patterns.add<FPowIScalarizeLowering>(converter, benefit);
+  patterns.add<FPowIOpLowering>(converter, "__nv_powif", "__nv_powi", "", "",
+                                /*i32Func=*/"", benefit);
   populateOpPatterns<math::RoundOp>(converter, patterns, benefit, "__nv_roundf",
                                     "__nv_round");
   populateOpPatterns<math::RoundEvenOp>(converter, patterns, benefit,

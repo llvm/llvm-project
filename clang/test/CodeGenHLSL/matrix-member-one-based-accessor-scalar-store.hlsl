@@ -7,6 +7,7 @@
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat11Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -23,57 +24,7 @@ void StoreScalarAtMat11(out int4x4 A, int I) {
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat12Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 1
-// CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
-// CHECK-NEXT:    ret void
-//
-void StoreScalarAtMat12(out int4x4 A, int I) {
-    A._12 = I;
-}
-
-// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat13Ru11matrix_typeILm4ELm4EiEi(
-// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 2
-// CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
-// CHECK-NEXT:    ret void
-//
-void StoreScalarAtMat13(out int4x4 A, int I) {
-    A._13 = I;
-}
-
-// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat14Ru11matrix_typeILm4ELm4EiEi(
-// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 3
-// CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
-// CHECK-NEXT:    ret void
-//
-void StoreScalarAtMat14(out int4x4 A, int I) {
-    A._14 = I;
-}
-
-// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat21Ru11matrix_typeILm4ELm4EiEi(
-// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -84,6 +35,60 @@ void StoreScalarAtMat14(out int4x4 A, int I) {
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
+void StoreScalarAtMat12(out int4x4 A, int I) {
+    A._12 = I;
+}
+
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat13Ru11matrix_typeILm4ELm4EiEi(
+// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
+// CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 8
+// CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
+// CHECK-NEXT:    ret void
+//
+void StoreScalarAtMat13(out int4x4 A, int I) {
+    A._13 = I;
+}
+
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat14Ru11matrix_typeILm4ELm4EiEi(
+// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
+// CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 12
+// CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
+// CHECK-NEXT:    ret void
+//
+void StoreScalarAtMat14(out int4x4 A, int I) {
+    A._14 = I;
+}
+
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat21Ru11matrix_typeILm4ELm4EiEi(
+// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
+// CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 1
+// CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
+// CHECK-NEXT:    ret void
+//
 void StoreScalarAtMat21(out int4x4 A, int I) {
     A._21 = I;
 }
@@ -91,6 +96,7 @@ void StoreScalarAtMat21(out int4x4 A, int I) {
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat22Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -108,57 +114,7 @@ void StoreScalarAtMat22(out int4x4 A, int I) {
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat23Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 6
-// CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
-// CHECK-NEXT:    ret void
-//
-void StoreScalarAtMat23(out int4x4 A, int I) {
-    A._23 = I;
-}
-
-// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat24Ru11matrix_typeILm4ELm4EiEi(
-// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 7
-// CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
-// CHECK-NEXT:    ret void
-//
-void StoreScalarAtMat24(out int4x4 A, int I) {
-    A._24 = I;
-}
-
-// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat31Ru11matrix_typeILm4ELm4EiEi(
-// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 8
-// CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
-// CHECK-NEXT:    ret void
-//
-void StoreScalarAtMat31(out int4x4 A, int I) {
-    A._31 = I;
-}
-
-// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat32Ru11matrix_typeILm4ELm4EiEi(
-// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -169,6 +125,60 @@ void StoreScalarAtMat31(out int4x4 A, int I) {
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
+void StoreScalarAtMat23(out int4x4 A, int I) {
+    A._23 = I;
+}
+
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat24Ru11matrix_typeILm4ELm4EiEi(
+// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
+// CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 13
+// CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
+// CHECK-NEXT:    ret void
+//
+void StoreScalarAtMat24(out int4x4 A, int I) {
+    A._24 = I;
+}
+
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat31Ru11matrix_typeILm4ELm4EiEi(
+// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
+// CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 2
+// CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
+// CHECK-NEXT:    ret void
+//
+void StoreScalarAtMat31(out int4x4 A, int I) {
+    A._31 = I;
+}
+
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat32Ru11matrix_typeILm4ELm4EiEi(
+// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
+// CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 6
+// CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
+// CHECK-NEXT:    ret void
+//
 void StoreScalarAtMat32(out int4x4 A, int I) {
     A._32 = I;
 }
@@ -176,6 +186,7 @@ void StoreScalarAtMat32(out int4x4 A, int I) {
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat33Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -193,57 +204,7 @@ void StoreScalarAtMat33(out int4x4 A, int I) {
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat34Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 11
-// CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
-// CHECK-NEXT:    ret void
-//
-void StoreScalarAtMat34(out int4x4 A, int I) {
-    A._34 = I;
-}
-
-// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat41Ru11matrix_typeILm4ELm4EiEi(
-// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 12
-// CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
-// CHECK-NEXT:    ret void
-//
-void StoreScalarAtMat41(out int4x4 A, int I) {
-    A._41 = I;
-}
-
-// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat42Ru11matrix_typeILm4ELm4EiEi(
-// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 13
-// CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
-// CHECK-NEXT:    ret void
-//
-void StoreScalarAtMat42(out int4x4 A, int I) {
-    A._42 = I;
-}
-
-// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat43Ru11matrix_typeILm4ELm4EiEi(
-// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -254,6 +215,60 @@ void StoreScalarAtMat42(out int4x4 A, int I) {
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
+void StoreScalarAtMat34(out int4x4 A, int I) {
+    A._34 = I;
+}
+
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat41Ru11matrix_typeILm4ELm4EiEi(
+// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
+// CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 3
+// CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
+// CHECK-NEXT:    ret void
+//
+void StoreScalarAtMat41(out int4x4 A, int I) {
+    A._41 = I;
+}
+
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat42Ru11matrix_typeILm4ELm4EiEi(
+// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
+// CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 7
+// CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
+// CHECK-NEXT:    ret void
+//
+void StoreScalarAtMat42(out int4x4 A, int I) {
+    A._42 = I;
+}
+
+// CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat43Ru11matrix_typeILm4ELm4EiEi(
+// CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
+// CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 11
+// CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
+// CHECK-NEXT:    ret void
+//
 void StoreScalarAtMat43(out int4x4 A, int I) {
     A._43 = I;
 }
@@ -261,6 +276,7 @@ void StoreScalarAtMat43(out int4x4 A, int I) {
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat44Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4

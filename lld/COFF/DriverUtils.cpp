@@ -122,17 +122,19 @@ void LinkerDriver::parseSubsystem(StringRef arg, WindowsSubsystem *sys,
   auto [sysStr, ver] = arg.split(',');
   std::string sysStrLower = sysStr.lower();
   *sys = StringSwitch<WindowsSubsystem>(sysStrLower)
-    .Case("boot_application", IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION)
-    .Case("console", IMAGE_SUBSYSTEM_WINDOWS_CUI)
-    .Case("default", IMAGE_SUBSYSTEM_UNKNOWN)
-    .Case("efi_application", IMAGE_SUBSYSTEM_EFI_APPLICATION)
-    .Case("efi_boot_service_driver", IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER)
-    .Case("efi_rom", IMAGE_SUBSYSTEM_EFI_ROM)
-    .Case("efi_runtime_driver", IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER)
-    .Case("native", IMAGE_SUBSYSTEM_NATIVE)
-    .Case("posix", IMAGE_SUBSYSTEM_POSIX_CUI)
-    .Case("windows", IMAGE_SUBSYSTEM_WINDOWS_GUI)
-    .Default(IMAGE_SUBSYSTEM_UNKNOWN);
+             .Case("boot_application", IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION)
+             .Case("console", IMAGE_SUBSYSTEM_WINDOWS_CUI)
+             .Case("default", IMAGE_SUBSYSTEM_UNKNOWN)
+             .Case("efi_application", IMAGE_SUBSYSTEM_EFI_APPLICATION)
+             .Case("efi_boot_service_driver",
+                   IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER)
+             .Case("efi_rom", IMAGE_SUBSYSTEM_EFI_ROM)
+             .Case("efi_runtime_driver", IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER)
+             .Case("native", IMAGE_SUBSYSTEM_NATIVE)
+             .Case("posix", IMAGE_SUBSYSTEM_POSIX_CUI)
+             .Case("windows", IMAGE_SUBSYSTEM_WINDOWS_GUI)
+             .Case("xbox", IMAGE_SUBSYSTEM_XBOX)
+             .Default(IMAGE_SUBSYSTEM_UNKNOWN);
   if (*sys == IMAGE_SUBSYSTEM_UNKNOWN && sysStrLower != "default")
     Fatal(ctx) << "unknown subsystem: " << sysStr;
   if (!ver.empty())
@@ -746,24 +748,10 @@ MemoryBufferRef LinkerDriver::convertResToCOFF(ArrayRef<MemoryBufferRef> mbs,
 
 // Create OptTable
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "Options.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-// Create prefix string literals used in Options.td
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Options.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-// Create table mapping all options defined in Options.td
-static constexpr llvm::opt::OptTable::Info infoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "Options.inc"
-#undef OPTION
-};
-
-COFFOptTable::COFFOptTable()
-    : GenericOptTable(OptionStrTable, OptionPrefixesTable, infoTable, true) {}
+COFFOptTable::COFFOptTable() : OptTable(optionTables(), true) {}
 
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.

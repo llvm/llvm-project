@@ -828,4 +828,4 @@ ldpsw    x0, x1, [x2], #16
 # CHECK-NEXT: 151.   1     0.0    0.0    0.0       ldpsw	x0, x1, [x2, #16]!
 # CHECK-NEXT: 152.   1     0.0    0.0    0.0       add	x2, x3, #1
 # CHECK-NEXT: 153.   1     0.0    0.0    0.0       ldpsw	x0, x1, [x2], #16
-# CHECK-NEXT:        1     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        154   0.0    0.0    0.0       <total>

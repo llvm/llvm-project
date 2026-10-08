@@ -196,4 +196,48 @@ subroutine openacc_clause_validity
 
   !$acc end data
 
+  ! GOTO branching out of compute constructs is not allowed (spec 2.5.4).
+  !$acc parallel
+  do i = 1, N
+    a(i) = 3.14d0
+    !ERROR: GOTO to a label outside of a PARALLEL construct is not allowed
+    if (i == N-1) goto 999
+  end do
+  !$acc end parallel
+999 continue
+
+  !$acc kernels
+  do i = 1, N
+    a(i) = 3.14d0
+    !ERROR: GOTO to a label outside of a KERNELS construct is not allowed
+    if (i == N-1) goto 998
+  end do
+  !$acc end kernels
+998 continue
+
+  !$acc serial
+  do i = 1, N
+    a(i) = 3.14d0
+    !ERROR: GOTO to a label outside of a SERIAL construct is not allowed
+    if (i == N-1) goto 997
+  end do
+  !$acc end serial
+997 continue
+
+  ! GOTO within a compute construct is allowed.
+  !$acc parallel
+  do i = 1, N
+    if (i == N-1) goto 996
+996 a(i) = 3.14d0
+  end do
+  !$acc end parallel
+
+  ! GOTO out of a data construct is allowed.
+  !$acc data create(a)
+  do i = 1, N
+    if (i == N-1) goto 995
+  end do
+  !$acc end data
+995 continue
+
 end subroutine openacc_clause_validity

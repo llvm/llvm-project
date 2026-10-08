@@ -15,9 +15,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #ifndef _LIBCPP_CXX03_LANG
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 struct __check_tuple_constructor_fail {
   static _LIBCPP_HIDE_FROM_ABI constexpr bool __enable_explicit_default() { return false; }
@@ -35,9 +35,8 @@ struct __check_tuple_constructor_fail {
     return false;
   }
 };
-#endif // !defined(_LIBCPP_CXX03_LANG)
 
-#if _LIBCPP_STD_VER >= 17
+#  if _LIBCPP_STD_VER >= 17
 
 template <bool _CanCopy, bool _CanMove>
 struct __sfinae_ctor_base {};
@@ -92,8 +91,10 @@ struct __sfinae_assign_base<false, true> {
   __sfinae_assign_base& operator=(__sfinae_assign_base const&) = delete;
   __sfinae_assign_base& operator=(__sfinae_assign_base&&)      = default;
 };
-#endif // _LIBCPP_STD_VER >= 17
+#  endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // !defined(_LIBCPP_CXX03_LANG)
 
 #endif // _LIBCPP___TUPLE_SFINAE_HELPERS_H

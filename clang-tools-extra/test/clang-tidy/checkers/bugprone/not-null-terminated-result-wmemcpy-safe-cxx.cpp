@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy %s bugprone-not-null-terminated-result %t -- \
-// RUN: -- -std=c++11 -I %S/Inputs/not-null-terminated-result
+// RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-not-null-terminated-result %t -- \
+// RUN: -- -I %S/Inputs/not-null-terminated-result
 
 #include "not-null-terminated-result-cxx.h"
 

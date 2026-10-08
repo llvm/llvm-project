@@ -949,7 +949,7 @@ define void @call_ret_v16bf16(ptr %ptr) #0 {
 ; NOSSE-NEXT:    pushl %edi
 ; NOSSE-NEXT:    pushl %esi
 ; NOSSE-NEXT:    andl $-32, %esp
-; NOSSE-NEXT:    subl $256, %esp # imm = 0x100
+; NOSSE-NEXT:    subl $224, %esp
 ; NOSSE-NEXT:    movl 8(%ebp), %esi
 ; NOSSE-NEXT:    movzwl 2(%esi), %eax
 ; NOSSE-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -1096,7 +1096,7 @@ define void @call_ret_v16bf16(ptr %ptr) #0 {
 ; SSE-NEXT:    pushl %edi
 ; SSE-NEXT:    pushl %esi
 ; SSE-NEXT:    andl $-32, %esp
-; SSE-NEXT:    subl $256, %esp # imm = 0x100
+; SSE-NEXT:    subl $224, %esp
 ; SSE-NEXT:    movl 8(%ebp), %esi
 ; SSE-NEXT:    movzwl 2(%esi), %eax
 ; SSE-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill

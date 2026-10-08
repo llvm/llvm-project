@@ -78,10 +78,12 @@ public:
   lldb::RegisterContextSP GetRegisterContext() override;
 
   VariableList *GetVariableList(bool get_file_globals,
+                                bool include_synthetic_vars,
                                 Status *error_ptr) override;
 
   lldb::VariableListSP
   GetInScopeVariableList(bool get_file_globals,
+                         bool include_synthetic_vars = true,
                          bool must_have_valid_location = false) override;
 
   lldb::ValueObjectSP GetValueForVariableExpressionPath(
@@ -119,7 +121,7 @@ public:
 
   lldb::ValueObjectSP GuessValueForAddress(lldb::addr_t addr) override;
 
-  lldb::ValueObjectSP GuessValueForRegisterAndOffset(ConstString reg,
+  lldb::ValueObjectSP GuessValueForRegisterAndOffset(llvm::StringRef reg,
                                                      int64_t offset) override;
 
   StructuredData::ObjectSP GetLanguageSpecificData() override;

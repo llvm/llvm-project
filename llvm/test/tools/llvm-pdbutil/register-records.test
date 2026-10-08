@@ -9,6 +9,8 @@ CHECK_YAML2PDB: ============================================================
 CHECK_YAML2PDB:   Mod 0000 | `/tmp/test.obj`:
 CHECK_YAML2PDB:        4 | S_REGREL32 [size = 20] `this`
 CHECK_YAML2PDB:            type = 0x118E (<unknown UDT>), register = RSP, offset = 56
+CHECK_YAML2PDB:       24 | S_REGREL32_INDIR [size = 20] `a`
+CHECK_YAML2PDB:            type = 0x0074 (int), register = RSP, offset = 64, offset-in-udt = 4
 
 CHECK_PDB2YAML: - Kind:            S_REGREL32
 CHECK_PDB2YAML:   RegRelativeSym:
@@ -16,3 +18,10 @@ CHECK_PDB2YAML:    Offset:          56
 CHECK_PDB2YAML:    Type:            4494
 CHECK_PDB2YAML:    Register:        RSP
 CHECK_PDB2YAML:    VarName:         this
+CHECK_PDB2YAML: - Kind:            S_REGREL32_INDIR
+CHECK_PDB2YAML:   RegRelativeIndirSym:
+CHECK_PDB2YAML:     Offset:          64
+CHECK_PDB2YAML:     Type:            116
+CHECK_PDB2YAML:     Register:        RSP
+CHECK_PDB2YAML:     OffsetInUdt:     4
+CHECK_PDB2YAML:     VarName:         a

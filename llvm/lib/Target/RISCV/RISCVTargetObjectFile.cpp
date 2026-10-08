@@ -56,6 +56,15 @@ const MCExpr *RISCVELFTargetObjectFile::getIndirectSymViaGOTPCRel(
   return MCSpecifierExpr::create(Res, ELF::R_RISCV_GOT32_PCREL, Ctx);
 }
 
+bool RISCVELFTargetObjectFile::shouldPutJumpTableInFunctionSection(
+    bool UsesLabelDifference, const Function &F) const {
+  // With the large code model, keep the jump table in the function's section.
+  if (TM->getCodeModel() == CodeModel::Large)
+    return true;
+  return TargetLoweringObjectFileELF::shouldPutJumpTableInFunctionSection(
+      UsesLabelDifference, F);
+}
+
 // A address must be loaded from a small section if its size is less than the
 // small section size threshold. Data in this section could be addressed by
 // using gp_rel operator.
@@ -160,8 +169,20 @@ bool RISCVELFTargetObjectFile::isConstantInSmallSection(
 }
 
 MCSection *RISCVELFTargetObjectFile::getSectionForConstant(
-    const DataLayout &DL, SectionKind Kind, const Constant *C,
-    Align &Alignment) const {
+    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
+    const Function *F) const {
+
+  // The large code model has to put constant pools close to the program, so we
+  // put them in the .text section. Large code model doesn't support PIC, so
+  // there should be no dynamic relocations that would require `.data.rel.ro`
+  // (which could be too far away anyway).
+  if (TM->getCodeModel() == CodeModel::Large) {
+    if (F)
+      return SectionForGlobal(F, SectionKind::getText(), *TM);
+    else
+      return TextSection;
+  }
+
   if (C && isConstantInSmallSection(DL, C)) {
     if (Kind.isMergeableConst4())
       return SmallROData4Section;
@@ -178,7 +199,7 @@ MCSection *RISCVELFTargetObjectFile::getSectionForConstant(
 
   // Otherwise, we work the same as ELF.
   return TargetLoweringObjectFileELF::getSectionForConstant(DL, Kind, C,
-                                                            Alignment);
+                                                            Alignment, F);
 }
 
 void RISCVMachOTargetObjectFile::getNameWithPrefix(

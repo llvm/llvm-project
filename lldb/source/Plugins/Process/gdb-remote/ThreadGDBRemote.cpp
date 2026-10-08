@@ -40,7 +40,7 @@ ThreadGDBRemote::ThreadGDBRemote(Process &process, lldb::tid_t tid)
       m_queue_serial_number(LLDB_INVALID_QUEUE_ID),
       m_associated_with_libdispatch_queue(eLazyBoolCalculate) {
   Log *log = GetLog(GDBRLog::Thread);
-  LLDB_LOG(log, "this = {0}, pid = {1}, tid = {2}", this, process.GetID(),
+  LLDB_LOG(log, "this = {0}, pid = {1}, tid = {2:x}", this, process.GetID(),
            GetID());
   // At this point we can clone reg_info for architectures supporting
   // run-time update to register sizes and offsets..
@@ -48,14 +48,14 @@ ThreadGDBRemote::ThreadGDBRemote(Process &process, lldb::tid_t tid)
   if (!gdb_process.m_register_info_sp->IsReconfigurable())
     m_reg_info_sp = gdb_process.m_register_info_sp;
   else
-    m_reg_info_sp = std::make_shared<GDBRemoteDynamicRegisterInfo>(
-        *gdb_process.m_register_info_sp);
+    m_reg_info_sp =
+        std::make_shared<DynamicRegisterInfo>(*gdb_process.m_register_info_sp);
 }
 
 ThreadGDBRemote::~ThreadGDBRemote() {
   ProcessSP process_sp(GetProcess());
   Log *log = GetLog(GDBRLog::Thread);
-  LLDB_LOG(log, "this = {0}, pid = {1}, tid = {2}", this,
+  LLDB_LOG(log, "this = {0}, pid = {1}, tid = {2:x}", this,
            process_sp ? process_sp->GetID() : LLDB_INVALID_PROCESS_ID, GetID());
   DestroyThread();
 }
@@ -339,6 +339,13 @@ bool ThreadGDBRemote::PrivateSetRegisterValue(uint32_t reg, uint64_t regval) {
   return gdb_reg_ctx->PrivateSetRegisterValue(reg, regval);
 }
 
+void ThreadGDBRemote::PrivateSetRegisterUnavailable(uint32_t reg) {
+  GDBRemoteRegisterContext *gdb_reg_ctx =
+      static_cast<GDBRemoteRegisterContext *>(GetRegisterContext().get());
+  assert(gdb_reg_ctx);
+  gdb_reg_ctx->SetRegisterIsUnavailable(reg);
+}
+
 bool ThreadGDBRemote::CalculateStopInfo() {
   ProcessSP process_sp(GetProcess());
   if (process_sp)
@@ -365,4 +372,22 @@ ThreadGDBRemote::GetSiginfo(size_t max_size) const {
     return response.takeError();
 
   return llvm::MemoryBuffer::getMemBufferCopy(response.get());
+}
+
+std::vector<lldb::addr_t> ThreadGDBRemote::FetchNewlyAddedBinaries() {
+  return m_added_binaries;
+}
+
+StructuredData::ObjectSP ThreadGDBRemote::FetchDetailedBinariesInfo() {
+  return m_detailed_binaries_info;
+}
+
+void ThreadGDBRemote::SetNewlyAddedBinaries(
+    const std::vector<lldb::addr_t> &added_binaries) {
+  m_added_binaries = added_binaries;
+}
+
+void ThreadGDBRemote::SetDetailedBinariesInfo(
+    StructuredData::ObjectSP &detailed_info) {
+  m_detailed_binaries_info = detailed_info;
 }

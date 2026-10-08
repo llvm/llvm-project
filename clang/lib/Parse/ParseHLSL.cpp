@@ -185,6 +185,7 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
   if (EndLoc)
     *EndLoc = Tok.getLocation();
 
+  SourceLocation AttrEndLoc = Loc;
   ArgsVector ArgExprs;
   switch (AttrKind) {
   case ParsedAttr::AT_HLSLResourceBinding: {
@@ -227,6 +228,7 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
         fixSeparateAttrArgAndNumber(SpaceStr, SpaceLoc, Tok, ArgExprs, *this,
                                     Actions.Context, PP);
     }
+    AttrEndLoc = Tok.getLocation(); // location of the closing ')'
     if (ExpectAndConsume(tok::r_paren, diag::err_expected)) {
       SkipUntil(tok::r_paren, StopAtSemi); // skip through )
       return;
@@ -337,6 +339,7 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
     break;
   }
 
-  Attrs.addNew(II, Loc, AttributeScopeInfo(), ArgExprs.data(), ArgExprs.size(),
+  Attrs.addNew(II, SourceRange(Loc, AttrEndLoc), AttributeScopeInfo(),
+               ArgExprs.data(), ArgExprs.size(),
                ParsedAttr::Form::HLSLAnnotation());
 }

@@ -203,21 +203,21 @@ define { <3 x float>, <3 x float> } @test_modf_v3f32(<3 x float> %a) {
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    mov r1, sp
 ; CHECK-NEXT:    mov r0, r2
-; CHECK-NEXT:    mov r5, r3
+; CHECK-NEXT:    mov r6, r3
 ; CHECK-NEXT:    vmov d8, r2, r3
 ; CHECK-NEXT:    bl modff
 ; CHECK-NEXT:    add r1, sp, #4
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    mov r0, r5
-; CHECK-NEXT:    bl modff
 ; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    mov r0, r6
+; CHECK-NEXT:    bl modff
+; CHECK-NEXT:    mov r6, r0
 ; CHECK-NEXT:    vmov r0, s18
 ; CHECK-NEXT:    vldmia sp, {s0, s1}
 ; CHECK-NEXT:    add.w r1, r4, #16
 ; CHECK-NEXT:    vst1.32 {d0}, [r1:64]!
 ; CHECK-NEXT:    bl modff
-; CHECK-NEXT:    vmov s1, r5
-; CHECK-NEXT:    vmov s0, r6
+; CHECK-NEXT:    vmov s1, r6
+; CHECK-NEXT:    vmov s0, r5
 ; CHECK-NEXT:    vst1.32 {d0}, [r4:64]!
 ; CHECK-NEXT:    str r0, [r4]
 ; CHECK-NEXT:    add sp, #8

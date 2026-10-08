@@ -135,14 +135,6 @@ struct DenseMapInfo<mlir::PassInstrumentation::PipelineParentInfo> {
   using T = mlir::PassInstrumentation::PipelineParentInfo;
   using PairInfo = DenseMapInfo<std::pair<uint64_t, void *>>;
 
-  static T getEmptyKey() {
-    auto pair = PairInfo::getEmptyKey();
-    return {pair.first, reinterpret_cast<mlir::Pass *>(pair.second)};
-  }
-  static T getTombstoneKey() {
-    auto pair = PairInfo::getTombstoneKey();
-    return {pair.first, reinterpret_cast<mlir::Pass *>(pair.second)};
-  }
   static unsigned getHashValue(T val) {
     return PairInfo::getHashValue({val.parentThreadID, val.parentPass});
   }

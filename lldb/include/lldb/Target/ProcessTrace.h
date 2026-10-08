@@ -54,10 +54,10 @@ public:
 
   bool WarnBeforeDetach() const override { return false; }
 
-  size_t ReadMemory(lldb::addr_t addr, void *buf, size_t size,
+  size_t ReadMemory(const ProcessAddress &addr, void *buf, size_t size,
                     Status &error) override;
 
-  size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
+  size_t DoReadMemory(const ProcessAddress &addr, void *buf, size_t size,
                       Status &error) override;
 
   ArchSpec GetArchitecture();

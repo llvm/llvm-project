@@ -10,21 +10,11 @@
 ;; Run optimizer pass on an IR module without IR functions, and test that global
 ;; variables in the module could be annotated (i.e., no early return),
 ; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' -memprof-annotate-static-data-prefix \
-; RUN: -debug-only=memprof -stats -S funcless-module.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOGCOMMON,IRCOMMON,IR,STAT
-
-;; Add '-memprof-annotate-string-literal-section-prefix' to RUN command above.
-; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' -memprof-annotate-static-data-prefix \
-; RUN: -memprof-annotate-string-literal-section-prefix \
-; RUN: -debug-only=memprof -stats -S funcless-module.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOGCOMMON,LOGSTR,IRCOMMON,IRSTR,STRSTAT
+; RUN: -debug-only=memprof -stats -S funcless-module.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOGCOMMON,IR,STAT
 
 ;; Run optimizer pass on the IR, and check the section prefix.
 ; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' -memprof-annotate-static-data-prefix \
 ; RUN: -debug-only=memprof -stats -S input.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOGCOMMON,IR,STAT
-
-;; Add '-memprof-annotate-string-literal-section-prefix' to RUN command above.
-; RUN: opt -passes='memprof-use<profile-filename=memprof.profdata>' -memprof-annotate-static-data-prefix \
-; RUN: -memprof-annotate-string-literal-section-prefix \
-; RUN: -debug-only=memprof -stats -S input.ll -o - 2>&1 | FileCheck %s --check-prefixes=LOGCOMMON,LOGSTR,IRSTR,STRSTAT
 
 ;; Run memprof without providing memprof data. Test that IR has module flag
 ;; `EnableDataAccessProf` as 0.
@@ -51,44 +41,39 @@
 ; LOGSTR: Global variable .str.llvm.98765 is annotated as unlikely
 ; LOGSTR: Global variable .str.2 is not annotated
 
-;; String literals are not annotated.
-; IR: @.str = unnamed_addr constant [5 x i8] c"abcde"
-; IR-NOT: section_prefix
-; IR-SAME: {{$}}
-
 ;; .str is hot
-; IRSTR: @.str = unnamed_addr constant [5 x i8] c"abcde", !section_prefix !0
+; IR: @.str = unnamed_addr constant [5 x i8] c"abcde", !section_prefix !0
 
-; IRCOMMON: @var1 = global i32 123, !section_prefix !0
+; IR: @var1 = global i32 123, !section_prefix !0
 
 ;; @var.llvm.125 will be canonicalized to @var2 for profile look-up.
-; IRCOMMON-NEXT: @var2.llvm.125 = global i64 0, !section_prefix !0
+; IR-NEXT: @var2.llvm.125 = global i64 0, !section_prefix !0
 
 ;; @bar is not seen in hot symbol or known symbol set, so it won't get a section
 ;; prefix. Test this by testing that there is no section_prefix between @bar and
 ;; @foo.
-; IRCOMMON-NEXT: @bar = global i16 3
-; IRCOMMON-NOT: !section_prefix
-; IRCOMMON-SAME: {{$}}
+; IR-NEXT: @bar = global i16 3
+; IR-NOT: !section_prefix
+; IR-SAME: {{$}}
 
 ;; @foo is unlikely.
-; IRCOMMON-NEXT: @foo = global i8 2, !section_prefix !1
+; IR-NEXT: @foo = global i8 2, !section_prefix !1
 
-; IRCOMMON-NEXT: @var3 = constant [2 x i32] [i32 12345, i32 6789], section "sec1"
-; IRCOMMON-NEXT: @var4 = constant [1 x i64] [i64 98765] #0
+; IR-NEXT: @var3 = constant [2 x i32] [i32 12345, i32 6789], section "sec1"
+; IR-NEXT: @var4 = constant [1 x i64] [i64 98765] #0
 
-; IRCOMMON: @llvm.fake_var = global i32 123
-; IRCOMMON-NOT: !section_prefix
-; IRCOMMON-SAME: {{$}}
-; IRCOMMON: @qux = external global i64
-; IRCOMMON-NOT: !section_prefix
-; IRCOMMON-SAME: {{$}}
+; IR: @llvm.fake_var = global i32 123
+; IR-NOT: !section_prefix
+; IR-SAME: {{$}}
+; IR: @qux = external global i64
+; IR-NOT: !section_prefix
+; IR-SAME: {{$}}
 
 ;; @.str.llvm.98765 is unlikely and @.str.2 has no section prefix.
-; IRSTR: @.str.llvm.98765 = constant [5 x i8] c"Joins", align 1, !section_prefix !1
-; IRSTR: @.str.2 = constant [15 x i8] c"*ptr == nullptr", align 1
-; IRSTR-NOT: section_prefix
-; IRSTR-SAME: {{$}}
+; IR: @.str.llvm.98765 = constant [5 x i8] c"Joins", align 1, !section_prefix !1
+; IR: @.str.2 = constant [15 x i8] c"*ptr == nullptr", align 1
+; IR-NOT: section_prefix
+; IR-SAME: {{$}}
 
 ; IR: attributes #0 = { "rodata-section"="sec2" }
 
@@ -99,15 +84,10 @@
 ; FLAG: !{i32 2, !"EnableDataAccessProf", i32 0}
 ; FLAGLESS-NOT: EnableDataAccessProf
 
-; STAT: 1 memprof - Number of global vars annotated with 'unlikely' section prefix.
+; STAT: 2 memprof - Number of global vars annotated with 'unlikely' section prefix.
 ; STAT: 2 memprof - Number of global vars with user-specified section (not annotated).
-; STAT: 2 memprof - Number of global vars annotated with 'hot' section prefix.
-; STAT: 1 memprof - Number of global vars with unknown hotness (no section prefix).
-
-; STRSTAT: 2 memprof - Number of global vars annotated with 'unlikely' section prefix.
-; STRSTAT: 2 memprof - Number of global vars with user-specified section (not annotated).
-; STRSTAT: 3 memprof - Number of global vars annotated with 'hot' section prefix.
-; STRSTAT: 2 memprof - Number of global vars with unknown hotness (no section prefix).
+; STAT: 3 memprof - Number of global vars annotated with 'hot' section prefix.
+; STAT: 2 memprof - Number of global vars with unknown hotness (no section prefix).
 
 ;--- memprof.yaml
 ---

@@ -130,7 +130,7 @@ public:
                           std::unique_ptr<SpecialCaseList> Ignorelist)
       : Mod(M), Options(transformOptionsFromCl(std::move(Opts))),
         Ignorelist(std::move(Ignorelist)), TargetTriple(M.getTargetTriple()),
-        VersionStr(utostr(getVersion())), IRB(M.getContext()) {
+        VersionStr(utostr(getVersion())), IRB(M) {
     // FIXME: Make it work with other formats.
     assert(TargetTriple.isOSBinFormatELF() && "ELF only");
     assert(!TargetTriple.isGPU() && "Device targets are not supported");

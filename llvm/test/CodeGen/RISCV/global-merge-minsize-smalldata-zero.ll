@@ -29,13 +29,13 @@ define void @f1(i32 %a) nounwind {
 ; MINSIZE-LABEL: f1:
 ; MINSIZE:       # %bb.0:
 ; MINSIZE-NEXT:    lui a1, %hi(ig1)
+; MINSIZE-NEXT:    lui a2, %hi(ig2)
 ; MINSIZE-NEXT:    sw a0, %lo(ig1)(a1)
-; MINSIZE-NEXT:    lui a1, %hi(ig2)
-; MINSIZE-NEXT:    sw a0, %lo(ig2)(a1)
+; MINSIZE-NEXT:    sw a0, %lo(ig2)(a2)
 ; MINSIZE-NEXT:    lui a1, %hi(eg1)
+; MINSIZE-NEXT:    lui a2, %hi(eg2)
 ; MINSIZE-NEXT:    sw a0, %lo(eg1)(a1)
-; MINSIZE-NEXT:    lui a1, %hi(eg2)
-; MINSIZE-NEXT:    sw a0, %lo(eg2)(a1)
+; MINSIZE-NEXT:    sw a0, %lo(eg2)(a2)
 ; MINSIZE-NEXT:    ret
   store i32 %a, ptr @ig1, align 4
   store i32 %a, ptr @ig2, align 4

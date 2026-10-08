@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/math/clc_hypot.h>
+#include "clc/math/clc_hypot.h"
 
 #define __CLC_FUNCTION hypot
-#define __CLC_BODY <clc/shared/binary_def.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc/shared/binary_def.inc"
+#include "clc/math/gentype.inc"

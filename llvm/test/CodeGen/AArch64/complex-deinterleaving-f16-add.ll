@@ -6,10 +6,6 @@
 ; RUN: llc < %s -mtriple=aarch64 --global-isel --global-isel-abort=2 --mattr=+complxnum,+neon,+fullfp16,+sve -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 ; RUN: llc < %s -mtriple=aarch64 --global-isel --global-isel-abort=2 --mattr=+complxnum,+neon,+fullfp16,+sve2 -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for complex_add_v16f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for complex_add_v32f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for complex_add_v16f16_with_intrinsic
-
 ; Expected to not transform
 define <2 x half> @complex_add_v2f16(<2 x half> %a, <2 x half> %b) {
 ; CHECK-SD-LABEL: complex_add_v2f16:
@@ -82,11 +78,17 @@ entry:
 
 ; Expected to transform
 define <16 x half> @complex_add_v16f16(<16 x half> %a, <16 x half> %b) {
-; CHECK-LABEL: complex_add_v16f16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcadd v1.8h, v3.8h, v1.8h, #90
-; CHECK-NEXT:    fcadd v0.8h, v2.8h, v0.8h, #90
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: complex_add_v16f16:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fcadd v1.8h, v3.8h, v1.8h, #90
+; CHECK-SD-NEXT:    fcadd v0.8h, v2.8h, v0.8h, #90
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: complex_add_v16f16:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fcadd v0.8h, v2.8h, v0.8h, #90
+; CHECK-GI-NEXT:    fcadd v1.8h, v3.8h, v1.8h, #90
+; CHECK-GI-NEXT:    ret
 entry:
   %a.real = shufflevector <16 x half> %a, <16 x half> zeroinitializer, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   %a.imag = shufflevector <16 x half> %a, <16 x half> zeroinitializer, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
@@ -158,11 +160,17 @@ entry:
 
 ; Expected to transform
 define <16 x half> @complex_add_v16f16_with_intrinsic(<16 x half> %a, <16 x half> %b) {
-; CHECK-LABEL: complex_add_v16f16_with_intrinsic:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcadd v1.8h, v3.8h, v1.8h, #90
-; CHECK-NEXT:    fcadd v0.8h, v2.8h, v0.8h, #90
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: complex_add_v16f16_with_intrinsic:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fcadd v1.8h, v3.8h, v1.8h, #90
+; CHECK-SD-NEXT:    fcadd v0.8h, v2.8h, v0.8h, #90
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: complex_add_v16f16_with_intrinsic:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fcadd v0.8h, v2.8h, v0.8h, #90
+; CHECK-GI-NEXT:    fcadd v1.8h, v3.8h, v1.8h, #90
+; CHECK-GI-NEXT:    ret
 entry:
   %a.deinterleaved = tail call { <8 x half>, <8 x half> } @llvm.vector.deinterleave2.v16f16(<16 x half> %a)
   %a.real = extractvalue { <8 x half>, <8 x half> } %a.deinterleaved, 0

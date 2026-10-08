@@ -8,6 +8,7 @@
 #ifndef MLIR_CONVERSION_GPUCOMMON_GPUOPSLOWERING_H_
 #define MLIR_CONVERSION_GPUCOMMON_GPUOPSLOWERING_H_
 
+#include "mlir/Conversion/LLVMCommon/LowerFunctionDiscardablesToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
@@ -105,6 +106,12 @@ struct GPUFuncOpLowering : ConvertOpToLLVMPattern<gpu::GPUFuncOp> {
   LogicalResult
   matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
+
+  /// Lower discardable attrs like `func` lowering, then set `llvm.func`
+  /// properties and append GPU / target-specific discardable metadata.
+  FailureOr<LoweredLLVMFuncAttrs>
+  buildLoweredGPULLVMFuncAttrs(gpu::GPUFuncOp gpuFuncOp, Type llvmFuncType,
+                               OpBuilder &rewriter) const;
 
 private:
   /// The address space to use for `alloca`s in private memory.

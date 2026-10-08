@@ -455,19 +455,25 @@ func.func @vector_extract_cst_maskedload_i4() -> vector<8x8x16xi4> {
 
 func.func @vector_store_i8(%arg0: vector<8xi8>, %arg1: index, %arg2: index) {
     %0 = memref.alloc() : memref<4x8xi8>
-    vector.store %arg0, %0[%arg1, %arg2] :memref<4x8xi8>, vector<8xi8>
+    %c0 = arith.constant 0 : index
+    vector.store %arg0, %0[%arg1, %c0] :memref<4x8xi8>, vector<8xi8>
     return
 }
 
 // Expect no conversions, i8 is supported.
 //      CHECK: func @vector_store_i8
+// CHECK-SAME:   %[[ARG0:[a-zA-Z0-9]+]]: vector<8xi8>
+// CHECK-SAME:   %[[ARG1:[a-zA-Z0-9]+]]: index
 //      CHECK: %[[ALLOC:.+]] = memref.alloc() : memref<4x8xi8>
-//      CHECK: vector.store %[[ARG0]], %[[ALLOC:.+]][%[[ARG1]], %[[ARG2]]] : memref<4x8xi8>, vector<8xi8>
+//      CHECK: %[[C0:.+]] = arith.constant 0 : index
+//      CHECK: vector.store %[[ARG0]], %[[ALLOC:.+]][%[[ARG1]], %[[C0]]] : memref<4x8xi8>, vector<8xi8>
 
-//  CHECK32-DAG: affine_map<()[s0, s1] -> (s0 * 2 + s1 floordiv 4)>
+//  CHECK32-DAG: #[[MAP:.+]] = affine_map<()[s0] -> (s0 * 2)>
 //      CHECK32: func @vector_store_i8
+// CHECK32-SAME:   %[[ARG0:[a-zA-Z0-9]+]]: vector<8xi8>
+// CHECK32-SAME:   %[[ARG1:[a-zA-Z0-9]+]]: index
 //      CHECK32: %[[ALLOC:.+]] = memref.alloc() : memref<8xi32>
-//      CHECK32: %[[INDEX:.+]] = affine.apply #[[MAP]]()[%[[ARG1]], %[[ARG2]]]
+//      CHECK32: %[[INDEX:.+]] = affine.apply #[[MAP]]()[%[[ARG1]]]
 //      CHECK32: %[[VEC_I32:.+]] = vector.bitcast %[[ARG0]] : vector<8xi8> to vector<2xi32>
 //      CHECK32: vector.store %[[VEC_I32:.+]], %[[ALLOC:.+]][%[[INDEX:.+]]] : memref<8xi32>, vector<2xi32
 
@@ -475,86 +481,51 @@ func.func @vector_store_i8(%arg0: vector<8xi8>, %arg1: index, %arg2: index) {
 
 func.func @vector_store_i4(%arg0: vector<8xi4>, %arg1: index, %arg2: index) {
     %0 = memref.alloc() : memref<4x8xi4>
-    vector.store %arg0, %0[%arg1, %arg2] :memref<4x8xi4>, vector<8xi4>
+    %c0 = arith.constant 0 : index
+    vector.store %arg0, %0[%arg1, %c0] :memref<4x8xi4>, vector<8xi4>
     return
 }
 
-//  CHECK-DAG: #[[MAP:.+]] = affine_map<()[s0, s1] -> (s0 * 4 + s1 floordiv 2)>
+//  CHECK-DAG: #[[MAP:.+]] = affine_map<()[s0] -> (s0 * 4)>
 //      CHECK: func @vector_store_i4
+// CHECK-SAME:   %[[ARG0:[a-zA-Z0-9]+]]: vector<8xi4>
+// CHECK-SAME:   %[[ARG1:[a-zA-Z0-9]+]]: index
 //      CHECK: %[[ALLOC:.+]] = memref.alloc() : memref<16xi8>
-//      CHECK: %[[INDEX:.+]] = affine.apply #[[MAP]]()[%[[ARG1]], %[[ARG2]]]
+//      CHECK: %[[INDEX:.+]] = affine.apply #[[MAP]]()[%[[ARG1]]]
 //      CHECK: %[[VEC_I8:.+]] = vector.bitcast %[[ARG0]] : vector<8xi4> to vector<4xi8>
 //      CHECK: vector.store %[[VEC_I8:.+]], %[[ALLOC:.+]][%[[INDEX:.+]]] : memref<16xi8>, vector<4xi8>
 
-//  CHECK32-DAG: #[[MAP:.+]] = affine_map<()[s0, s1] -> (s0 + s1 floordiv 8)>
 //      CHECK32: func @vector_store_i4
+// CHECK32-SAME:   %[[ARG0:[a-zA-Z0-9]+]]: vector<8xi4>
+// CHECK32-SAME:   %[[ARG1:[a-zA-Z0-9]+]]: index
 //      CHECK32: %[[ALLOC:.+]] = memref.alloc() : memref<4xi32>
-//      CHECK32: %[[INDEX:.+]] = affine.apply #[[MAP]]()[%[[ARG1]], %[[ARG2]]]
 //      CHECK32: %[[VEC_I32:.+]] = vector.bitcast %[[ARG0]] : vector<8xi4> to vector<1xi32>
-//      CHECK32: vector.store %[[VEC_I32:.+]], %[[ALLOC:.+]][%[[INDEX:.+]]] : memref<4xi32>, vector<1xi32>
+//      CHECK32: vector.store %[[VEC_I32:.+]], %[[ALLOC:.+]][%[[ARG1]]] : memref<4xi32>, vector<1xi32>
 
 // -----
 
 func.func @vector_store_f4(%arg0: vector<8xf4E2M1FN>, %arg1: index, %arg2: index) {
     %0 = memref.alloc() : memref<4x8xf4E2M1FN>
-    vector.store %arg0, %0[%arg1, %arg2] :memref<4x8xf4E2M1FN>, vector<8xf4E2M1FN>
+    %c0 = arith.constant 0 : index
+    vector.store %arg0, %0[%arg1, %c0] :memref<4x8xf4E2M1FN>, vector<8xf4E2M1FN>
     return
 }
 
-//  CHECK-DAG: #[[MAP:.+]] = affine_map<()[s0, s1] -> (s0 * 4 + s1 floordiv 2)>
+//  CHECK-DAG: #[[MAP:.+]] = affine_map<()[s0] -> (s0 * 4)>
 //      CHECK: func @vector_store_f4
+// CHECK-SAME:   %[[ARG0:[a-zA-Z0-9]+]]: vector<8xf4E2M1FN>
+// CHECK-SAME:   %[[ARG1:[a-zA-Z0-9]+]]: index
 //      CHECK: %[[ALLOC:.+]] = memref.alloc() : memref<16xi8>
-//      CHECK: %[[INDEX:.+]] = affine.apply #[[MAP]]()[%[[ARG1]], %[[ARG2]]]
+//      CHECK: %[[INDEX:.+]] = affine.apply #[[MAP]]()[%[[ARG1]]]
 //      CHECK: %[[VEC_I8:.+]] = vector.bitcast %[[ARG0]] : vector<8xf4E2M1FN> to vector<4xi8>
 //      CHECK: vector.store %[[VEC_I8:.+]], %[[ALLOC:.+]][%[[INDEX:.+]]] : memref<16xi8>, vector<4xi8>
 
-//  CHECK32-DAG: #[[MAP:.+]] = affine_map<()[s0, s1] -> (s0 + s1 floordiv 8)>
 //      CHECK32: func @vector_store_f4
-//      CHECK32: %[[ALLOC:.+]] = memref.alloc() : memref<4xi32>
-//      CHECK32: %[[INDEX:.+]] = affine.apply #[[MAP]]()[%[[ARG1]], %[[ARG2]]]
-//      CHECK32: %[[VEC_I32:.+]] = vector.bitcast %[[ARG0]] : vector<8xf4E2M1FN> to vector<1xi32>
-//      CHECK32: vector.store %[[VEC_I32:.+]], %[[ALLOC:.+]][%[[INDEX:.+]]] : memref<4xi32>, vector<1xi32>
-
-// -----
-
-// FIXME: This example assumes that the store happens at a byte boundary, but
-// that's not guaranteed. Below is a counter-example with specific dimensions:
-//    vector.store %arg0, %0[0, 3] : memref<2x13xi4>, vector<8xi4>
-// TODO: Revisit post #136797
-
-func.func @vector_store_i4_dynamic(%arg0: vector<8xi4>, %arg1: index, %arg2: index, %arg3: index, %arg4: index) {
-    %0 = memref.alloc(%arg1, %arg2) : memref<?x?xi4>
-    vector.store %arg0, %0[%arg3, %arg4] : memref<?x?xi4>, vector<8xi4>
-    return
-}
-
-//  CHECK-DAG: #[[MAP:.+]] = affine_map<()[s0, s1] -> ((s0 * s1) floordiv 2, s0 floordiv 2)>
-//  CHECK-DAG: #[[MAP1:.+]] = affine_map<()[s0, s1, s2] -> ((s2 + s0 * s1) floordiv 2)>
-//      CHECK: func @vector_store_i4_dynamic
-// CHECK-SAME:   %[[ARG0:[a-zA-Z0-9]+]]: vector<8xi4>
-// CHECK-SAME:   %[[ARG1:[a-zA-Z0-9]+]]: index
-// CHECK-SAME:   %[[ARG2:[a-zA-Z0-9]+]]: index
-// CHECK-SAME:   %[[ARG3:[a-zA-Z0-9]+]]: index
-// CHECK-SAME:   %[[ARG4:[a-zA-Z0-9]+]]: index
-//      CHECK: %[[SIZE:.+]] = affine.max #[[MAP]]()[%[[ARG2]], %[[ARG1]]]
-//      CHECK: %[[ALLOC:.+]] = memref.alloc(%[[SIZE]]) : memref<?xi8>
-//      CHECK: %[[INDEX:.+]] = affine.apply #[[MAP1]]()[%[[ARG3]], %[[ARG2]], %[[ARG4]]]
-//      CHECK: %[[VEC_I8:.+]] = vector.bitcast %[[ARG0]] : vector<8xi4> to vector<4xi8>
-//      CHECK: vector.store %[[VEC_I8:.+]], %[[ALLOC:.+]][%[[INDEX:.+]]] : memref<?xi8>, vector<4xi8>
-
-//  CHECK32-DAG: #[[MAP:.+]] = affine_map<()[s0, s1] -> ((s0 * s1) floordiv 8, s0 floordiv 8)>
-//  CHECK32-DAG: #[[MAP1:.+]] = affine_map<()[s0, s1, s2] -> ((s2 + s0 * s1) floordiv 8)>
-//      CHECK32: func @vector_store_i4_dynamic
-// CHECK32-SAME:   %[[ARG0:[a-zA-Z0-9]+]]: vector<8xi4>
+// CHECK32-SAME:   %[[ARG0:[a-zA-Z0-9]+]]: vector<8xf4E2M1FN>
 // CHECK32-SAME:   %[[ARG1:[a-zA-Z0-9]+]]: index
-// CHECK32-SAME:   %[[ARG2:[a-zA-Z0-9]+]]: index
-// CHECK32-SAME:   %[[ARG3:[a-zA-Z0-9]+]]: index
-// CHECK32-SAME:   %[[ARG4:[a-zA-Z0-9]+]]: index
-//      CHECK32: %[[SIZE:.+]] = affine.max #[[MAP]]()[%[[ARG2]], %[[ARG1]]]
-//      CHECK32: %[[ALLOC:.+]] = memref.alloc(%[[SIZE]]) : memref<?xi32>
-//      CHECK32: %[[INDEX:.+]] = affine.apply #[[MAP1]]()[%[[ARG3]], %[[ARG2]], %[[ARG4]]]
-//      CHECK32: %[[VEC_I8:.+]] = vector.bitcast %[[ARG0]] : vector<8xi4> to vector<1xi32>
-//      CHECK32: vector.store %[[VEC_I8:.+]], %[[ALLOC:.+]][%[[INDEX:.+]]] : memref<?xi32>, vector<1xi32>
+//      CHECK32: %[[ALLOC:.+]] = memref.alloc() : memref<4xi32>
+//      CHECK32: %[[VEC_I32:.+]] = vector.bitcast %[[ARG0]] : vector<8xf4E2M1FN> to vector<1xi32>
+//      CHECK32: vector.store %[[VEC_I32:.+]], %[[ALLOC:.+]][%[[ARG1]]] : memref<4xi32>, vector<1xi32>
 
 // -----
 

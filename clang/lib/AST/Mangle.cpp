@@ -17,8 +17,10 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/ABI.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DataLayout.h"
@@ -32,8 +34,12 @@ using namespace clang;
 void clang::mangleObjCMethodName(raw_ostream &OS, bool includePrefixByte,
                                  bool isInstanceMethod, StringRef ClassName,
                                  std::optional<StringRef> CategoryName,
-                                 StringRef MethodName) {
+                                 StringRef MethodName, bool useDirectABI) {
+  assert(
+      !(includePrefixByte && useDirectABI) &&
+      "includePrefixByte and useDirectABI shouldn't be set at the same time");
   // \01+[ContainerName(CategoryName) SelectorName]
+  // Or for direct ABI: +[ContainerName(CategoryName) SelectorName]D
   if (includePrefixByte)
     OS << "\01";
   OS << (isInstanceMethod ? '-' : '+');
@@ -44,6 +50,8 @@ void clang::mangleObjCMethodName(raw_ostream &OS, bool includePrefixByte,
   OS << " ";
   OS << MethodName;
   OS << ']';
+  if (useDirectABI)
+    OS << 'D';
 }
 
 // FIXME: For blocks we currently mimic GCC's mangling scheme, which leaves
@@ -152,7 +160,58 @@ bool MangleContext::shouldMangleDeclName(const NamedDecl *D) {
   return shouldMangleCXXName(D);
 }
 
-static llvm::StringRef g_lldb_func_call_label_prefix = "$__lldb_func:";
+namespace {
+// Visits a function body looking for a direct call back to the symbol the
+// function will link as.  Detects both asm-label aliases and __builtin_*
+// wrappers (PR9614 / glibc btowc pattern).
+struct FunctionIsDirectlyRecursive
+    : public ConstStmtVisitor<FunctionIsDirectlyRecursive, bool> {
+  const StringRef Name;
+  const Builtin::Context &BI;
+  FunctionIsDirectlyRecursive(StringRef N, const Builtin::Context &C)
+      : Name(N), BI(C) {}
+
+  bool VisitCallExpr(const CallExpr *E) {
+    const FunctionDecl *FD = E->getDirectCallee();
+    if (!FD)
+      return false;
+    AsmLabelAttr *Attr = FD->getAttr<AsmLabelAttr>();
+    if (Attr && Name == Attr->getLabel())
+      return true;
+    unsigned BuiltinID = FD->getBuiltinID();
+    if (!BuiltinID || !BI.isLibFunction(BuiltinID))
+      return false;
+    std::string BuiltinNameStr = BI.getName(BuiltinID);
+    StringRef BuiltinName = BuiltinNameStr;
+    return BuiltinName.consume_front("__builtin_") && Name == BuiltinName;
+  }
+
+  bool VisitStmt(const Stmt *S) {
+    for (const Stmt *Child : S->children())
+      if (Child && this->Visit(Child))
+        return true;
+    return false;
+  }
+};
+} // namespace
+
+bool MangleContext::isTriviallyRecursive(const FunctionDecl *FD) {
+  StringRef Name;
+  if (shouldMangleDeclName(FD)) {
+    // C++-mangled functions can only recurse into themselves through an
+    // asm label that bypasses the mangled name.
+    AsmLabelAttr *Attr = FD->getAttr<AsmLabelAttr>();
+    if (!Attr)
+      return false;
+    Name = Attr->getLabel();
+  } else {
+    Name = FD->getName();
+  }
+
+  FunctionIsDirectlyRecursive Walker(Name, FD->getASTContext().BuiltinInfo);
+  const Stmt *Body = FD->getBody();
+  return Body ? Walker.Visit(Body) : false;
+}
 
 /// Given an LLDB function call label, this function prints the label
 /// into \c Out, together with the structor type of \c GD (if the
@@ -167,9 +226,9 @@ static llvm::StringRef g_lldb_func_call_label_prefix = "$__lldb_func:";
 ///
 static void emitLLDBAsmLabel(llvm::StringRef label, GlobalDecl GD,
                              llvm::raw_ostream &Out) {
-  assert(label.starts_with(g_lldb_func_call_label_prefix));
+  assert(label.starts_with(LLDBManglingABI::FunctionLabelPrefix));
 
-  Out << g_lldb_func_call_label_prefix;
+  Out << LLDBManglingABI::FunctionLabelPrefix;
 
   if (auto *Ctor = llvm::dyn_cast<clang::CXXConstructorDecl>(GD.getDecl())) {
     Out << "C";
@@ -180,7 +239,7 @@ static void emitLLDBAsmLabel(llvm::StringRef label, GlobalDecl GD,
     Out << "D" << GD.getDtorType();
   }
 
-  Out << label.substr(g_lldb_func_call_label_prefix.size());
+  Out << label.substr(LLDBManglingABI::FunctionLabelPrefix.size());
 }
 
 void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
@@ -216,7 +275,7 @@ void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
     if (!UserLabelPrefix.empty())
       Out << '\01'; // LLVM IR Marker for __asm("foo")
 
-    if (ALA->getLabel().starts_with(g_lldb_func_call_label_prefix))
+    if (ALA->getLabel().starts_with(LLDBManglingABI::FunctionLabelPrefix))
       emitLLDBAsmLabel(ALA->getLabel(), GD, Out);
     else
       Out << ALA->getLabel();
@@ -380,7 +439,8 @@ void MangleContext::mangleBlock(const DeclContext *DC, const BlockDecl *BD,
 void MangleContext::mangleObjCMethodName(const ObjCMethodDecl *MD,
                                          raw_ostream &OS,
                                          bool includePrefixByte,
-                                         bool includeCategoryNamespace) const {
+                                         bool includeCategoryNamespace,
+                                         bool useDirectABI) const {
   if (getASTContext().getLangOpts().ObjCRuntime.isGNUFamily()) {
     // This is the mangling we've always used on the GNU runtimes, but it
     // has obvious collisions in the face of underscores within class
@@ -432,8 +492,16 @@ void MangleContext::mangleObjCMethodName(const ObjCMethodDecl *MD,
   std::string MethodName;
   llvm::raw_string_ostream MethodNameOS(MethodName);
   MD->getSelector().print(MethodNameOS);
-  clang::mangleObjCMethodName(OS, includePrefixByte, MD->isInstanceMethod(),
-                              ClassName, CategoryName, MethodName);
+  // Normal methods always have internal linkage, and we prefix them with '\01'
+  // for reasons that are somewhat lost to time. We suppress this for direct
+  // methods because they have non-internal linkage and we don't want to make it
+  // unnecessarily difficult to refer to them, e.g. in things like export lists.
+  // Direct methods also have a distinct ABI, so we add a suffix to make them
+  // obvious to tools like debuggers and to elevate incompatible uses into
+  // linker errors.
+  clang::mangleObjCMethodName(OS, includePrefixByte && !useDirectABI,
+                              MD->isInstanceMethod(), ClassName, CategoryName,
+                              MethodName, useDirectABI);
 }
 
 void MangleContext::mangleObjCMethodNameAsSourceName(const ObjCMethodDecl *MD,

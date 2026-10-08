@@ -1240,8 +1240,7 @@ define i1 @shl_overflow_2() {
 ; CHECK-LABEL: @shl_overflow_2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SHL_UB:%.*]] = shl nuw nsw i256 0, 64
-; CHECK-NEXT:    [[SHL_CMP:%.*]] = icmp uge i256 [[SHL_UB]], 0
-; CHECK-NEXT:    ret i1 [[SHL_CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %shl.ub = shl nuw nsw i256 0, 64
@@ -1253,8 +1252,7 @@ define i1 @shl_overflow_3() {
 ; CHECK-LABEL: @shl_overflow_3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SHL_UB:%.*]] = shl nuw nsw i256 0, 65
-; CHECK-NEXT:    [[SHL_CMP:%.*]] = icmp uge i256 [[SHL_UB]], 0
-; CHECK-NEXT:    ret i1 [[SHL_CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %shl.ub = shl nuw nsw i256 0, 65
@@ -1362,7 +1360,7 @@ define i1 @shl_nsw_by_bw_minus_1(i64 %x) {
 ; Shift returns poison in this case, just make sure we don't crash.
 define i1 @shl_nsw_by_bw(i64 %x) {
 ; CHECK-LABEL: @shl_nsw_by_bw(
-; CHECK-NEXT:    [[X_SHL:%.*]] = shl nsw i64 [[X:%.*]], 64
+; CHECK-NEXT:    [[X_SHL:%.*]] = shl nuw nsw i64 [[X:%.*]], 64
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i64 [[X_SHL]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp slt i64 [[X]], 0
@@ -1379,7 +1377,7 @@ define i1 @shl_nsw_by_bw(i64 %x) {
 ; Shift returns poison in this case, just make sure we don't crash.
 define i1 @shl_nsw_by_bw_plus_1(i64 %x) {
 ; CHECK-LABEL: @shl_nsw_by_bw_plus_1(
-; CHECK-NEXT:    [[X_SHL:%.*]] = shl nsw i64 [[X:%.*]], 65
+; CHECK-NEXT:    [[X_SHL:%.*]] = shl nuw nsw i64 [[X:%.*]], 65
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i64 [[X_SHL]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp slt i64 [[X]], 0
@@ -1391,4 +1389,139 @@ define i1 @shl_nsw_by_bw_plus_1(i64 %x) {
 
   %t.1 = icmp slt i64 %x, 0
   ret i1 %t.1
+}
+
+; shl nuw %c, 2 can use signed decomposition due to the bound on %c.
+define i1 @shl_nuw_signed_bounded(i64 %c) {
+; CHECK-LABEL: @shl_nuw_signed_bounded(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BND:%.*]] = icmp slt i64 [[C:%.*]], 2305843009213693952
+; CHECK-NEXT:    call void @llvm.assume(i1 [[BND]])
+; CHECK-NEXT:    [[NN:%.*]] = icmp sge i64 [[C]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NN]])
+; CHECK-NEXT:    [[M:%.*]] = shl nuw nsw i64 [[C]], 2
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %bnd = icmp slt i64 %c, 2305843009213693952
+  call void @llvm.assume(i1 %bnd)
+  %nn = icmp sge i64 %c, 0
+  call void @llvm.assume(i1 %nn)
+  %m = shl nuw i64 %c, 2
+  %t = icmp slt i64 %m, 0
+  ret i1 %t
+}
+
+define i1 @shl_nuw_signed_tight_bound(i8 %x) {
+; CHECK-LABEL: @shl_nuw_signed_tight_bound(
+; CHECK-NEXT:    [[B:%.*]] = icmp slt i8 [[X:%.*]], 32
+; CHECK-NEXT:    call void @llvm.assume(i1 [[B]])
+; CHECK-NEXT:    [[NN:%.*]] = icmp sge i8 [[X]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NN]])
+; CHECK-NEXT:    [[M:%.*]] = shl nuw nsw i8 [[X]], 2
+; CHECK-NEXT:    ret i1 false
+;
+  %b = icmp slt i8 %x, 32
+  call void @llvm.assume(i1 %b)
+  %nn = icmp sge i8 %x, 0
+  call void @llvm.assume(i1 %nn)
+  %m = shl nuw i8 %x, 2
+  %t = icmp slt i8 %m, 0
+  ret i1 %t
+}
+
+define i1 @shl_nuw_signed_no_bound(i8 %x) {
+; CHECK-LABEL: @shl_nuw_signed_no_bound(
+; CHECK-NEXT:    [[M:%.*]] = shl nuw i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[T:%.*]] = icmp slt i8 [[M]], 0
+; CHECK-NEXT:    ret i1 [[T]]
+;
+  %m = shl nuw i8 %x, 2
+  %t = icmp slt i8 %m, 0
+  ret i1 %t
+}
+
+define i1 @shl_nuw_signed_weak_bound(i8 %x) {
+; CHECK-LABEL: @shl_nuw_signed_weak_bound(
+; CHECK-NEXT:    [[B:%.*]] = icmp slt i8 [[X:%.*]], 64
+; CHECK-NEXT:    call void @llvm.assume(i1 [[B]])
+; CHECK-NEXT:    [[NN:%.*]] = icmp sge i8 [[X]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NN]])
+; CHECK-NEXT:    [[M:%.*]] = shl nuw i8 [[X]], 2
+; CHECK-NEXT:    [[T:%.*]] = icmp slt i8 [[M]], 0
+; CHECK-NEXT:    ret i1 [[T]]
+;
+  %b = icmp slt i8 %x, 64
+  call void @llvm.assume(i1 %b)
+  %nn = icmp sge i8 %x, 0
+  call void @llvm.assume(i1 %nn)
+  %m = shl nuw i8 %x, 2
+  %t = icmp slt i8 %m, 0
+  ret i1 %t
+}
+
+define i1 @shl_nuw_signed_shift_zero(i8 %x) {
+; CHECK-LABEL: @shl_nuw_signed_shift_zero(
+; CHECK-NEXT:    [[B:%.*]] = icmp slt i8 [[X:%.*]], 32
+; CHECK-NEXT:    call void @llvm.assume(i1 [[B]])
+; CHECK-NEXT:    [[M:%.*]] = shl nuw nsw i8 [[X]], 0
+; CHECK-NEXT:    [[T:%.*]] = icmp slt i8 [[M]], 0
+; CHECK-NEXT:    ret i1 [[T]]
+;
+  %b = icmp slt i8 %x, 32
+  call void @llvm.assume(i1 %b)
+  %m = shl nuw i8 %x, 0
+  %t = icmp slt i8 %m, 0
+  ret i1 %t
+}
+
+define i1 @shl_nuw_by_62(i64 %start, i64 %high) {
+; CHECK-LABEL: @shl_nuw_by_62(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[START_SHL_62:%.*]] = shl nuw i64 [[START:%.*]], 62
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i64 [[START_SHL_62]], [[HIGH:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %start.shl.62 = shl nuw i64 %start, 62
+  %c.1 = icmp ult i64 %start.shl.62, %high
+  call void @llvm.assume(i1 %c.1)
+  %t.1 = icmp ult i64 %start, %high
+  ret i1 %t.1
+}
+
+; A shift of 63 would require a scale of 2^63, which is not representable in
+; the signed i64 coefficient
+define i1 @shl_nuw_by_63(i64 %start, i64 %high) {
+; CHECK-LABEL: @shl_nuw_by_63(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[START_SHL_63:%.*]] = shl nuw i64 [[START:%.*]], 63
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i64 [[START_SHL_63]], [[HIGH:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i64 [[START]], [[HIGH]]
+; CHECK-NEXT:    ret i1 [[T_1]]
+;
+entry:
+  %start.shl.63 = shl nuw i64 %start, 63
+  %c.1 = icmp ult i64 %start.shl.63, %high
+  call void @llvm.assume(i1 %c.1)
+  %t.1 = icmp ult i64 %start, %high
+  ret i1 %t.1
+}
+
+define i1 @shl_nuw_by_63_self(i64 %x, i64 %b) {
+; CHECK-LABEL: @shl_nuw_by_63_self(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S:%.*]] = shl nuw i64 [[X:%.*]], 63
+; CHECK-NEXT:    [[C:%.*]] = icmp ule i64 [[S]], [[B:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %s = shl nuw i64 %x, 63
+  %c = icmp ule i64 %s, %b
+  call void @llvm.assume(i1 %c)
+  %c2 = icmp ule i64 %s, %b
+  ret i1 %c2
 }

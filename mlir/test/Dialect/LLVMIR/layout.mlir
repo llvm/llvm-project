@@ -222,6 +222,59 @@ module {
 // -----
 
 module attributes { dlti.dl_spec = #dlti.dl_spec<
+  i8 = dense<8> : vector<2xi64>,
+  i24 = dense<[32, 64]> : vector<2xi64>,
+  f80 = dense<128> : vector<2xi64>
+>} {
+  // CHECK-LABEL: @struct_element_allocation_size
+  func.func @struct_element_allocation_size() {
+    // A packed element still occupies its allocation size, including padding.
+    // CHECK: alignment = 1
+    // CHECK-SAME: bitsize = 128
+    // CHECK-SAME: size = 16
+    "test.data_layout_query"() : () -> !llvm.struct<packed (f80)>
+
+    // The i8 follows the 16-byte allocation of f80, not its 10-byte store size.
+    // CHECK: alignment = 1
+    // CHECK-SAME: bitsize = 136
+    // CHECK-SAME: size = 17
+    "test.data_layout_query"() : () -> !llvm.struct<packed (f80, i8)>
+
+    // Packing suppresses alignment gaps before elements and at the struct end.
+    // CHECK: alignment = 1
+    // CHECK-SAME: bitsize = 144
+    // CHECK-SAME: size = 18
+    "test.data_layout_query"() : () -> !llvm.struct<packed (i8, f80, i8)>
+
+    // Unpacked structs also use element allocation sizes.
+    // CHECK: alignment = 16
+    // CHECK-SAME: bitsize = 256
+    // CHECK-SAME: size = 32
+    "test.data_layout_query"() : () -> !llvm.struct<(f80, i8)>
+
+    // Integer allocation sizes use ABI alignment, not preferred alignment.
+    // CHECK: alignment = 1
+    // CHECK-SAME: bitsize = 40
+    // CHECK-SAME: size = 5
+    "test.data_layout_query"() : () -> !llvm.struct<packed (i24, i8)>
+
+    // The corrected size propagates through nested structs and arrays.
+    // CHECK: alignment = 1
+    // CHECK-SAME: bitsize = 144
+    // CHECK-SAME: size = 18
+    "test.data_layout_query"() : () -> !llvm.struct<packed (struct<packed (f80, i8)>, i8)>
+
+    // CHECK: alignment = 1
+    // CHECK-SAME: bitsize = 272
+    // CHECK-SAME: size = 34
+    "test.data_layout_query"() : () -> !llvm.array<2 x struct<packed (f80, i8)>>
+    return
+  }
+}
+
+// -----
+
+module attributes { dlti.dl_spec = #dlti.dl_spec<
   #dlti.dl_entry<!llvm.struct<()>, dense<[32, 32]> : vector<2xi64>>
 >} {
     // CHECK: @spec
@@ -366,4 +419,61 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 module attributes { dlti.dl_spec = #dlti.dl_spec<
   #dlti.dl_entry<!llvm.struct<()>, dense<[64]> : vector<1xi32>>
 >} {
+}
+
+// -----
+
+module {
+    // CHECK: @byte_types
+    func.func @byte_types() {
+        // 8-bit byte type: same width as i8
+        // CHECK: alignment = 1
+        // CHECK: bitsize = 8
+        // CHECK: index = 0
+        // CHECK: preferred = 1
+        // CHECK: size = 1
+        "test.data_layout_query"() : () -> !llvm.byte<8>
+
+        // 16-bit byte type
+        // CHECK: alignment = 2
+        // CHECK: bitsize = 16
+        // CHECK: index = 0
+        // CHECK: preferred = 2
+        // CHECK: size = 2
+        "test.data_layout_query"() : () -> !llvm.byte<16>
+
+        // 32-bit byte type: same width as i32/f32
+        // CHECK: alignment = 4
+        // CHECK: bitsize = 32
+        // CHECK: index = 0
+        // CHECK: preferred = 4
+        // CHECK: size = 4
+        "test.data_layout_query"() : () -> !llvm.byte<32>
+
+        // 64-bit byte type: same width as i64/f64
+        // CHECK: alignment = 8
+        // CHECK: bitsize = 64
+        // CHECK: index = 0
+        // CHECK: preferred = 8
+        // CHECK: size = 8
+        "test.data_layout_query"() : () -> !llvm.byte<64>
+
+        // 24-bit byte type: non-power-of-2 byte count (3 bytes), alignment rounds up to 4
+        // CHECK: alignment = 4
+        // CHECK: bitsize = 24
+        // CHECK: index = 0
+        // CHECK: preferred = 4
+        // CHECK: size = 3
+        "test.data_layout_query"() : () -> !llvm.byte<24>
+
+        // 1-bit byte type: sub-byte, still takes up 1 byte in memory
+        // CHECK: alignment = 1
+        // CHECK: bitsize = 1
+        // CHECK: index = 0
+        // CHECK: preferred = 1
+        // CHECK: size = 1
+        "test.data_layout_query"() : () -> !llvm.byte<1>
+
+        return
+    }
 }

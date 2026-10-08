@@ -44,6 +44,12 @@ MipsInstrInfo::MipsInstrInfo(const MipsSubtarget &STI,
     : MipsGenInstrInfo(STI, RI, Mips::ADJCALLSTACKDOWN, Mips::ADJCALLSTACKUP),
       Subtarget(STI), UncondBrOpc(UncondBr) {}
 
+const TargetRegisterClass *MipsInstrInfo::getInlineAsmMemoryOperandRegClass(
+    InlineAsm::ConstraintCode C) const {
+  return Subtarget.getABI().ArePtrs64bit() ? &Mips::GPR64RegClass
+                                           : &Mips::GPR32RegClass;
+}
+
 const MipsInstrInfo *MipsInstrInfo::create(MipsSubtarget &STI) {
   if (STI.inMips16Mode())
     return createMips16InstrInfo(STI);
@@ -139,6 +145,7 @@ void MipsInstrInfo::BuildCondBr(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
     MIB.add(Cond[i]);
   }
   MIB.addMBB(TBB);
+  MIB->setImplicitPhysRegDefsDead();
 }
 
 unsigned MipsInstrInfo::insertBranch(MachineBasicBlock &MBB,
@@ -162,16 +169,22 @@ unsigned MipsInstrInfo::insertBranch(MachineBasicBlock &MBB,
   // Two-way Conditional branch.
   if (FBB) {
     BuildCondBr(MBB, TBB, DL, Cond);
-    BuildMI(&MBB, DL, get(UncondBrOpc)).addMBB(FBB);
+    BuildMI(&MBB, DL, get(UncondBrOpc))
+        .addMBB(FBB)
+        ->setImplicitPhysRegDefsDead();
     return 2;
   }
 
   // One way branch.
   // Unconditional branch.
-  if (Cond.empty())
-    BuildMI(&MBB, DL, get(UncondBrOpc)).addMBB(TBB);
-  else // Conditional branch.
+  if (Cond.empty()) {
+    BuildMI(&MBB, DL, get(UncondBrOpc))
+        .addMBB(TBB)
+        ->setImplicitPhysRegDefsDead();
+  } else {
+    // Conditional branch.
     BuildCondBr(MBB, TBB, DL, Cond);
+  }
   return 1;
 }
 
@@ -636,7 +649,8 @@ bool MipsInstrInfo::SafeInLoadDelaySlot(const MachineInstr &MIInSlot,
     return false;
 
   return !llvm::any_of(LoadMI.defs(), [&](const MachineOperand &Op) {
-    return Op.isReg() && MIInSlot.readsRegister(Op.getReg(), /*TRI=*/nullptr);
+    return Op.isReg() && MIInSlot.readsRegister(Op.getReg(), /*TRI=*/nullptr) &&
+           !MIInSlot.hasRegisterImplicitUseOperand(Op.getReg());
   });
 }
 
@@ -681,6 +695,8 @@ bool MipsInstrInfo::HasLoadDelaySlot(const MachineInstr &MI) const {
   case Mips::LW:
   case Mips::LWR:
   case Mips::LWL:
+  // On MIPS-I, the only float load there is; the rest came with later ISAs.
+  case Mips::LWC1:
     return true;
   default:
     return false;
@@ -707,13 +723,33 @@ bool MipsInstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
 unsigned MipsInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
+    // Handle non-finalized bundle.
+    if (MI.isBundledWithSucc())
+      return MI.getDesc().getSize() + getInstBundleSize(MI);
+    if (MI.hasDelaySlot()) {
+      // instr + 1 nop
+      return MI.getDesc().getSize() + 4;
+    }
     return MI.getDesc().getSize();
   case  TargetOpcode::INLINEASM:
   case  TargetOpcode::INLINEASM_BR: {       // Inline Asm: Variable size.
     const MachineFunction *MF = MI.getParent()->getParent();
     const char *AsmStr = MI.getOperand(0).getSymbolName();
-    return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
+    return getInlineAsmLength(AsmStr, MF->getTarget().getMCAsmInfo());
   }
+  case TargetOpcode::BUNDLE:
+    return getInstBundleSize(MI);
+  case TargetOpcode::PATCHABLE_FUNCTION_ENTER:
+  case TargetOpcode::PATCHABLE_FUNCTION_EXIT:
+  case TargetOpcode::PATCHABLE_TAIL_CALL:
+    // Size of xray sled
+    if (Subtarget.isGP64bit()) {
+      // beq + 15 nops
+      return 16 * 4;
+    } else {
+      // beq + 11 nops + addiu
+      return 13 * 4;
+    }
   case Mips::CONSTPOOL_ENTRY:
     // If this machine instr is a constant pool entry, its size is recorded as
     // operand #2.

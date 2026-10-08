@@ -42,7 +42,6 @@ class EditlineTest(PExpectTest):
                 substrs=["Syntax: print"],
             )
 
-        self.quit()
 
     @skipIfAsan
     @skipIfEditlineSupportMissing

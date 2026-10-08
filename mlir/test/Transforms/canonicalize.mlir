@@ -587,6 +587,22 @@ func.func @indirect_call_folding() {
   return
 }
 
+func.func @attributed_indirect_target(%arg: i32) -> i32 {
+  return %arg : i32
+}
+
+// CHECK-LABEL: func @attributed_indirect_call_folding
+// CHECK-SAME: (%[[ARG:.*]]: i32)
+func.func @attributed_indirect_call_folding(%arg: i32) -> i32 {
+  // CHECK: %[[RESULT:.*]] = call @attributed_indirect_target(%[[ARG]])
+  // CHECK-SAME: <arg_attrs = [{test.arg}], res_attrs = [{test.res}]>
+  // CHECK-SAME: {test.discardable} : (i32) -> i32
+  %fn = constant @attributed_indirect_target : (i32) -> i32
+  %result = call_indirect %fn(%arg) arg_attrs = [{test.arg}],
+      res_attrs = [{test.res}] {test.discardable} : (i32) -> i32
+  return %result : i32
+}
+
 //
 // IMPORTANT NOTE: the operations in this test are exactly those produced by
 // lowering affine.apply affine_map<(i) -> (i mod 42)> to standard operations.  Please only
@@ -895,7 +911,7 @@ func.func @subview(%arg0 : index, %arg1 : index) -> (index, index) {
 // CHECK-LABEL: func @index_cast
 // CHECK-SAME: %[[ARG_0:arg[0-9]+]]: i16
 func.func @index_cast(%arg0: i16) -> (i16) {
-  %11 = arith.index_cast %arg0 exact : i16 to index
+  %11 = arith.index_cast %arg0 : i16 to index
   %12 = arith.index_cast %11 : index to i16
   // CHECK: return %[[ARG_0]] : i16
   return %12 : i16

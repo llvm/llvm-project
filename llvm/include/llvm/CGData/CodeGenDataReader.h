@@ -16,7 +16,6 @@
 #include "llvm/CGData/CodeGenData.h"
 #include "llvm/CGData/OutlinedHashTreeRecord.h"
 #include "llvm/CGData/StableFunctionMapRecord.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -50,14 +49,15 @@ public:
   }
 
   /// Factory method to create an appropriately typed reader for the given
-  /// codegen data file path and file system.
+  /// codegen data file path and file system. \p LazyLoading defers
+  /// deserializing the stable function map of indexed codegen data.
   LLVM_ABI static Expected<std::unique_ptr<CodeGenDataReader>>
-  create(const Twine &Path, vfs::FileSystem &FS);
+  create(const Twine &Path, vfs::FileSystem &FS, bool LazyLoading = false);
 
   /// Factory method to create an appropriately typed reader for the given
   /// memory buffer.
   LLVM_ABI static Expected<std::unique_ptr<CodeGenDataReader>>
-  create(std::unique_ptr<MemoryBuffer> Buffer);
+  create(std::unique_ptr<MemoryBuffer> Buffer, bool LazyLoading = false);
 
   /// Extract the cgdata embedded in sections from the given object file and
   /// merge them into the GlobalOutlineRecord. This is a static helper that
@@ -100,17 +100,17 @@ protected:
   Error success() { return error(cgdata_error::success); }
 };
 
-LLVM_ABI extern cl::opt<bool> IndexedCodeGenDataLazyLoading;
-
 class LLVM_ABI IndexedCodeGenDataReader : public CodeGenDataReader {
   /// The codegen data file contents.
   std::unique_ptr<MemoryBuffer> DataBuffer;
   /// The header
   IndexedCGData::Header Header;
+  bool LazyLoading;
 
 public:
-  IndexedCodeGenDataReader(std::unique_ptr<MemoryBuffer> DataBuffer)
-      : DataBuffer(std::move(DataBuffer)) {}
+  IndexedCodeGenDataReader(std::unique_ptr<MemoryBuffer> DataBuffer,
+                           bool LazyLoading = false)
+      : DataBuffer(std::move(DataBuffer)), LazyLoading(LazyLoading) {}
   IndexedCodeGenDataReader(const IndexedCodeGenDataReader &) = delete;
   IndexedCodeGenDataReader &
   operator=(const IndexedCodeGenDataReader &) = delete;

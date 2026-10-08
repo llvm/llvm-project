@@ -7,7 +7,7 @@ define <1 x float> @constrained_vector_fadd_v1f32() #0 {
 ; CHECK: $xmm0 = COPY [[ADDSSrm]]
 ; CHECK: RET 0, $xmm0
 entry:
-  %add = call <1 x float> @llvm.experimental.constrained.fadd.v1f32(<1 x float> <float 0x7FF0000000000000>, <1 x float> <float 1.0>, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %add = call <1 x float> @llvm.experimental.constrained.fadd.v1f32(<1 x float> <float +inf>, <1 x float> <float 1.0>, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   ret <1 x float> %add
 }
 

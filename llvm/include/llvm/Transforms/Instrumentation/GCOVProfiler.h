@@ -19,7 +19,7 @@
 
 namespace llvm {
 /// The gcov-style instrumentation pass
-class GCOVProfilerPass : public PassInfoMixin<GCOVProfilerPass> {
+class GCOVProfilerPass : public OptionalPassInfoMixin<GCOVProfilerPass> {
 public:
   GCOVProfilerPass(
       const GCOVOptions &Options = GCOVOptions::getDefault(),

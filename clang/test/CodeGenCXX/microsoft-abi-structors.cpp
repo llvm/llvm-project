@@ -487,7 +487,7 @@ void checkH() {
 // DTORS-NEXT:   br i1 %[[CONDITION1]], label %[[CALL_CLASS_DELETE:[0-9a-z._]+]], label %[[CALL_GLOB_DELETE:[0-9a-z._]+]]
 //
 // DTORS:      [[CALL_GLOB_DELETE]]
-// DTORS-NEXT:   call void @"??3@YAXPAX@Z"(ptr %[[THIS]])
+// DTORS-NEXT:   call void @"?__global_delete@@YAXPAX@Z"(ptr %[[THIS]])
 // DTORS-NEXT:   br label %[[CONTINUE_LABEL]]
 //
 // DTORS:      [[CALL_CLASS_DELETE]]

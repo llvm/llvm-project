@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 -pedantic-errors -verify=expected,cxx98 %s
-// RUN: %clang_cc1 -std=c++11 -pedantic-errors -verify=expected,since-cxx11 %s
-// RUN: %clang_cc1 -std=c++14 -pedantic-errors -verify=expected,since-cxx11 %s
-// RUN: %clang_cc1 -std=c++17 -pedantic-errors -verify=expected,since-cxx11 %s
-// RUN: %clang_cc1 -std=c++20 -pedantic-errors -verify=expected,since-cxx11,since-cxx20 %s
-// RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify=expected,since-cxx11,since-cxx20,since-cxx23 %s
-// RUN: %clang_cc1 -std=c++2c -pedantic-errors -verify=expected,since-cxx11,since-cxx20,since-cxx23,since-cxx26 %s
+// RUN: %clang_cc1 -std=c++98 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98 %s
+// RUN: %clang_cc1 -std=c++11 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11 %s
+// RUN: %clang_cc1 -std=c++14 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11 %s
+// RUN: %clang_cc1 -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11 %s
+// RUN: %clang_cc1 -std=c++20 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx20 %s
+// RUN: %clang_cc1 -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx20,since-cxx23 %s
+// RUN: %clang_cc1 -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx20,since-cxx23,since-cxx26 %s
 
 // cxx98-no-diagnostics
 
@@ -175,3 +175,13 @@ constexpr U _ = nondeterministic(true);
 } // namespace cwg2922
 
 // cwg2947 is in cwg2947.cpp
+
+namespace cwg2966 { // cwg2966: 2.7
+#if __cplusplus >= 201103L
+static_assert(sizeof(decltype(nullptr)) == sizeof(void*), "");
+static_assert(alignof(decltype(nullptr)) == alignof(void*), "");
+#endif
+} // namespace cwg2966
+
+// cwg2983: na
+// cwg2992: na

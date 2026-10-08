@@ -75,6 +75,19 @@ ObjectStore::getMemoryBuffer(ObjectHandle Node, StringRef Name,
       RequiresNullTerminator);
 }
 
+std::unique_ptr<MemoryBuffer>
+ObjectStore::getStandaloneMemoryBuffer(ObjectHandle Node, StringRef Name,
+                                       bool RequiresNullTerminator) {
+  return getStandaloneMemoryBufferImpl(Node, Name, RequiresNullTerminator);
+}
+
+std::unique_ptr<MemoryBuffer>
+ObjectStore::getStandaloneMemoryBufferImpl(ObjectHandle Node, StringRef Name,
+                                           bool RequiresNullTerminator) {
+  return MemoryBuffer::getMemBufferCopy(
+      toStringRef(getData(Node, RequiresNullTerminator)), Name);
+}
+
 void ObjectStore::readRefs(ObjectHandle Node,
                            SmallVectorImpl<ObjectRef> &Refs) const {
   consumeError(forEachRef(Node, [&Refs](ObjectRef Ref) -> Error {
@@ -293,4 +306,10 @@ std::unique_ptr<MemoryBuffer>
 ObjectProxy::getMemoryBuffer(StringRef Name,
                              bool RequiresNullTerminator) const {
   return CAS->getMemoryBuffer(H, Name, RequiresNullTerminator);
+}
+
+std::unique_ptr<MemoryBuffer>
+ObjectProxy::getStandaloneMemoryBuffer(StringRef Name,
+                                       bool RequiresNullTerminator) const {
+  return CAS->getStandaloneMemoryBuffer(H, Name, RequiresNullTerminator);
 }

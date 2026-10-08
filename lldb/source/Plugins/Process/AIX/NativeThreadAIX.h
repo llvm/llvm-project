@@ -9,6 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_AIX_NATIVETHREADAIX_H_
 #define LLDB_SOURCE_PLUGINS_PROCESS_AIX_NATIVETHREADAIX_H_
 
+#include "Plugins/Process/AIX/NativeRegisterContextAIX.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
 
 namespace lldb_private::process_aix {
@@ -47,6 +48,7 @@ public:
 
 private:
   lldb::StateType m_state;
+  std::unique_ptr<NativeRegisterContextAIX> m_reg_context_up;
 };
 } // namespace lldb_private::process_aix
 

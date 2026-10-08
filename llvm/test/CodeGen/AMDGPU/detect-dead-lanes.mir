@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn -run-pass detect-dead-lanes -o - %s | FileCheck %s
-# RUN: llc -mtriple=amdgcn -passes detect-dead-lanes -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu6.00 -run-pass detect-dead-lanes -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu6.00 -passes detect-dead-lanes -o - %s | FileCheck %s
 ...
 ---
 # Combined use/def transfer check, the basics.
@@ -401,4 +401,75 @@ body: |
     S_NOP 0, implicit undef %2.sub1
     S_NOP 0, implicit %2.sub2
     S_NOP 0, implicit %2.sub3
+...
+---
+# Check that operands inside a BUNDLE are visited. A register referenced both
+# by the BUNDLE header and by a bundled instruction must have the undef flag
+# set on both, otherwise the two disagree about whether the bundle reads it.
+# CHECK-LABEL: name: bundle_undef
+# CHECK: BUNDLE implicit undef %0 {
+# CHECK-NEXT: S_NOP 0, implicit undef %0
+name: bundle_undef
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:sreg_32_xm0 = IMPLICIT_DEF
+    BUNDLE implicit %0 {
+      S_NOP 0, implicit %0
+    }
+...
+---
+# Check that an undefined subregister use inside a BUNDLE is marked undef while
+# a defined subregister use is unchanged, and that existing kill flags are
+# preserved.
+# CHECK-LABEL: name: bundle_subregs
+# CHECK: %0:sreg_64 = REG_SEQUENCE $sgpr0, %subreg.sub0
+# CHECK: BUNDLE implicit killed %0.sub0, implicit killed undef %0.sub1 {
+# CHECK-NEXT: S_NOP 0, implicit killed %0.sub0
+# CHECK-NEXT: S_NOP 0, implicit killed undef %0.sub1
+name: bundle_subregs
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0
+    %0:sreg_64 = REG_SEQUENCE $sgpr0, %subreg.sub0
+    BUNDLE implicit killed %0.sub0, implicit killed %0.sub1 {
+      S_NOP 0, implicit killed %0.sub0
+      S_NOP 0, implicit killed %0.sub1
+    }
+...
+---
+# Check that unused definitions inside a BUNDLE are marked dead on both the
+# BUNDLE header and the bundled instruction, while used definitions are left
+# unchanged.
+# CHECK-LABEL: name: bundle_defs
+# CHECK: BUNDLE implicit-def %0, implicit-def dead %1 {
+# CHECK-NEXT: S_NOP 0, implicit-def %0
+# CHECK-NEXT: S_NOP 0, implicit-def dead %1
+# CHECK: S_NOP 0, implicit %0.sub0
+name: bundle_defs
+tracksRegLiveness: true
+body: |
+  bb.0:
+    BUNDLE implicit-def %0:sreg_64, implicit-def %1:sreg_64 {
+      S_NOP 0, implicit-def %0
+      S_NOP 0, implicit-def %1
+    }
+    S_NOP 0, implicit %0.sub0
+...
+---
+# Check that a KILL inside a BUNDLE is visited. KILL operands do not count as
+# uses, so the definition becomes dead and the KILL operand becomes undef.
+# CHECK-LABEL: name: bundle_kill
+# CHECK: S_NOP 0, implicit-def dead %0
+# CHECK: BUNDLE implicit undef %0 {
+# CHECK-NEXT: KILL undef %0
+name: bundle_kill
+tracksRegLiveness: true
+body: |
+  bb.0:
+    S_NOP 0, implicit-def %0:sreg_64
+    BUNDLE implicit undef %0 {
+      KILL %0
+    }
 ...

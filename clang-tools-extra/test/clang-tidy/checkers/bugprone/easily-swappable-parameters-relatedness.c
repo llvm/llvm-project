@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c99,c11,c17 -check-suffixes=,BEFORE-C23 %s bugprone-easily-swappable-parameters %t \
+// RUN: %check_clang_tidy -std=c17-or-earlier -check-suffixes=,BEFORE-C23 %s bugprone-easily-swappable-parameters %t \
 // RUN:   -config='{CheckOptions: { \
 // RUN:     bugprone-easily-swappable-parameters.MinimumLength: 2, \
 // RUN:     bugprone-easily-swappable-parameters.IgnoredParameterNames: "", \

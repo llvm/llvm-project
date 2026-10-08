@@ -20,6 +20,7 @@
 // CHECK-SKIP:               define {{.*}} @all_gpr_test({{.*}} #[[ATTR_NUM_ALL_GPR:[0-9]*]]
 // CHECK-SKIP:               define {{.*}} @all_arg_test({{.*}} #[[ATTR_NUM_ALL_ARG:[0-9]*]]
 // CHECK-SKIP:               define {{.*}} @all_test({{.*}} #[[ATTR_NUM_ALL:[0-9]*]]
+// CHECK-SKIP:               define {{.*}} @main({{.*}} #[[ATTR_NUM]]
 //
 // CHECK-SKIP-NOT:           attributes #[[ATTR_NUM]] = {{.*}} "zero-call-used-regs"=
 // CHECK-SKIP:               attributes #[[ATTR_NUM_SKIP]] = {{.*}} "zero-call-used-regs"="skip"
@@ -44,6 +45,7 @@
 // CHECK-USED-GPR-ARG:       define {{.*}} @all_gpr_test({{.*}} #[[ATTR_NUM_ALL_GPR:[0-9]*]]
 // CHECK-USED-GPR-ARG:       define {{.*}} @all_arg_test({{.*}} #[[ATTR_NUM_ALL_ARG:[0-9]*]]
 // CHECK-USED-GPR-ARG:       define {{.*}} @all_test({{.*}} #[[ATTR_NUM_ALL:[0-9]*]]
+// CHECK-USED-GPR-ARG:       define {{.*}} @main({{.*}} #[[ATTR_NUM_MAIN:[0-9]*]]
 //
 // CHECK-USED-GPR-ARG:       attributes #[[ATTR_NUM_USED_GPR_ARG]] = {{.*}} "zero-call-used-regs"="used-gpr-arg"
 // CHECK-USED-GPR-ARG:       attributes #[[ATTR_NUM_SKIP]] = {{.*}} "zero-call-used-regs"="skip"
@@ -54,6 +56,8 @@
 // CHECK-USED-GPR-ARG:       attributes #[[ATTR_NUM_ALL_GPR]] = {{.*}} "zero-call-used-regs"="all-gpr"
 // CHECK-USED-GPR-ARG:       attributes #[[ATTR_NUM_ALL_ARG]] = {{.*}} "zero-call-used-regs"="all-arg"
 // CHECK-USED-GPR-ARG:       attributes #[[ATTR_NUM_ALL]] = {{.*}} "zero-call-used-regs"="all"
+// CHECK-USED-GPR-ARG:       attributes #[[ATTR_NUM_MAIN]] =
+// CHECK-USED-GPR-ARG-NOT:   "zero-call-used-regs"=
 
 // -fzero-call-used-regs=used-gpr:
 //
@@ -67,6 +71,7 @@
 // CHECK-USED-GPR:           define {{.*}} @all_gpr_test({{.*}} #[[ATTR_NUM_ALL_GPR:[0-9]*]]
 // CHECK-USED-GPR:           define {{.*}} @all_arg_test({{.*}} #[[ATTR_NUM_ALL_ARG:[0-9]*]]
 // CHECK-USED-GPR:           define {{.*}} @all_test({{.*}} #[[ATTR_NUM_ALL:[0-9]*]]
+// CHECK-USED-GPR:           define {{.*}} @main({{.*}} #[[ATTR_NUM_MAIN:[0-9]*]]
 //
 // CHECK-USED-GPR:           attributes #[[ATTR_NUM_USED_GPR]] = {{.*}} "zero-call-used-regs"="used-gpr"
 // CHECK-USED-GPR:           attributes #[[ATTR_NUM_SKIP]] = {{.*}} "zero-call-used-regs"="skip"
@@ -77,6 +82,8 @@
 // CHECK-USED-GPR:           attributes #[[ATTR_NUM_ALL_GPR]] = {{.*}} "zero-call-used-regs"="all-gpr"
 // CHECK-USED-GPR:           attributes #[[ATTR_NUM_ALL_ARG]] = {{.*}} "zero-call-used-regs"="all-arg"
 // CHECK-USED-GPR:           attributes #[[ATTR_NUM_ALL]] = {{.*}} "zero-call-used-regs"="all"
+// CHECK-USED-GPR:           attributes #[[ATTR_NUM_MAIN]] =
+// CHECK-USED-GPR-NOT:       "zero-call-used-regs"=
 
 // -fzero-call-used-regs=used-arg:
 //
@@ -90,6 +97,7 @@
 // CHECK-USED-ARG:           define {{.*}} @all_gpr_test({{.*}} #[[ATTR_NUM_ALL_GPR:[0-9]*]]
 // CHECK-USED-ARG:           define {{.*}} @all_arg_test({{.*}} #[[ATTR_NUM_ALL_ARG:[0-9]*]]
 // CHECK-USED-ARG:           define {{.*}} @all_test({{.*}} #[[ATTR_NUM_ALL:[0-9]*]]
+// CHECK-USED-ARG:           define {{.*}} @main({{.*}} #[[ATTR_NUM_MAIN:[0-9]*]]
 //
 // CHECK-USED-ARG:           attributes #[[ATTR_NUM_USED_ARG]] = {{.*}} "zero-call-used-regs"="used-arg"
 // CHECK-USED-ARG:           attributes #[[ATTR_NUM_SKIP]] = {{.*}} "zero-call-used-regs"="skip"
@@ -100,6 +108,8 @@
 // CHECK-USED-ARG:           attributes #[[ATTR_NUM_ALL_GPR]] = {{.*}} "zero-call-used-regs"="all-gpr"
 // CHECK-USED-ARG:           attributes #[[ATTR_NUM_ALL_ARG]] = {{.*}} "zero-call-used-regs"="all-arg"
 // CHECK-USED-ARG:           attributes #[[ATTR_NUM_ALL]] = {{.*}} "zero-call-used-regs"="all"
+// CHECK-USED-ARG:           attributes #[[ATTR_NUM_MAIN]] =
+// CHECK-USED-ARG-NOT:       "zero-call-used-regs"=
 
 // -fzero-call-used-regs=used:
 //
@@ -113,6 +123,7 @@
 // CHECK-USED:               define {{.*}} @all_gpr_test({{.*}} #[[ATTR_NUM_ALL_GPR:[0-9]*]]
 // CHECK-USED:               define {{.*}} @all_arg_test({{.*}} #[[ATTR_NUM_ALL_ARG:[0-9]*]]
 // CHECK-USED:               define {{.*}} @all_test({{.*}} #[[ATTR_NUM_ALL:[0-9]*]]
+// CHECK-USED:               define {{.*}} @main({{.*}} #[[ATTR_NUM_MAIN:[0-9]*]]
 //
 // CHECK-USED:               attributes #[[ATTR_NUM_USED]] = {{.*}} "zero-call-used-regs"="used"
 // CHECK-USED:               attributes #[[ATTR_NUM_SKIP]] = {{.*}} "zero-call-used-regs"="skip"
@@ -123,6 +134,8 @@
 // CHECK-USED:               attributes #[[ATTR_NUM_ALL_GPR]] = {{.*}} "zero-call-used-regs"="all-gpr"
 // CHECK-USED:               attributes #[[ATTR_NUM_ALL_ARG]] = {{.*}} "zero-call-used-regs"="all-arg"
 // CHECK-USED:               attributes #[[ATTR_NUM_ALL]] = {{.*}} "zero-call-used-regs"="all"
+// CHECK-USED:               attributes #[[ATTR_NUM_MAIN]] =
+// CHECK-USED-NOT:           "zero-call-used-regs"=
 
 // -fzero-call-used-regs=all-gpr-arg:
 //
@@ -136,6 +149,7 @@
 // CHECK-ALL-GPR-ARG:        define {{.*}} @all_gpr_test({{.*}} #[[ATTR_NUM_ALL_GPR:[0-9]*]]
 // CHECK-ALL-GPR-ARG:        define {{.*}} @all_arg_test({{.*}} #[[ATTR_NUM_ALL_ARG:[0-9]*]]
 // CHECK-ALL-GPR-ARG:        define {{.*}} @all_test({{.*}} #[[ATTR_NUM_ALL:[0-9]*]]
+// CHECK-ALL-GPR-ARG:        define {{.*}} @main({{.*}} #[[ATTR_NUM_MAIN:[0-9]*]]
 //
 // CHECK-ALL-GPR-ARG:        attributes #[[ATTR_NUM_ALL_GPR_ARG]] = {{.*}} "zero-call-used-regs"="all-gpr-arg"
 // CHECK-ALL-GPR-ARG:        attributes #[[ATTR_NUM_SKIP]] = {{.*}} "zero-call-used-regs"="skip"
@@ -146,6 +160,8 @@
 // CHECK-ALL-GPR-ARG:        attributes #[[ATTR_NUM_ALL_GPR]] = {{.*}} "zero-call-used-regs"="all-gpr"
 // CHECK-ALL-GPR-ARG:        attributes #[[ATTR_NUM_ALL_ARG]] = {{.*}} "zero-call-used-regs"="all-arg"
 // CHECK-ALL-GPR-ARG:        attributes #[[ATTR_NUM_ALL]] = {{.*}} "zero-call-used-regs"="all"
+// CHECK-ALL-GPR-ARG:        attributes #[[ATTR_NUM_MAIN]] =
+// CHECK-ALL-GPR-ARG-NOT:    "zero-call-used-regs"=
 
 // -fzero-call-used-regs=all-gpr:
 //
@@ -159,6 +175,7 @@
 // CHECK-ALL-GPR:            define {{.*}} @all_gpr_test({{.*}} #[[ATTR_NUM_ALL_GPR]]
 // CHECK-ALL-GPR:            define {{.*}} @all_arg_test({{.*}} #[[ATTR_NUM_ALL_ARG:[0-9]*]]
 // CHECK-ALL-GPR:            define {{.*}} @all_test({{.*}} #[[ATTR_NUM_ALL:[0-9]*]]
+// CHECK-ALL-GPR:            define {{.*}} @main({{.*}} #[[ATTR_NUM_MAIN:[0-9]*]]
 //
 // CHECK-ALL-GPR:            attributes #[[ATTR_NUM_ALL_GPR]] = {{.*}} "zero-call-used-regs"="all-gpr"
 // CHECK-ALL-GPR:            attributes #[[ATTR_NUM_SKIP]] = {{.*}} "zero-call-used-regs"="skip"
@@ -169,6 +186,8 @@
 // CHECK-ALL-GPR:            attributes #[[ATTR_NUM_ALL_GPR_ARG]] = {{.*}} "zero-call-used-regs"="all-gpr-arg"
 // CHECK-ALL-GPR:            attributes #[[ATTR_NUM_ALL_ARG]] = {{.*}} "zero-call-used-regs"="all-arg"
 // CHECK-ALL-GPR:            attributes #[[ATTR_NUM_ALL]] = {{.*}} "zero-call-used-regs"="all"
+// CHECK-ALL-GPR:            attributes #[[ATTR_NUM_MAIN]] =
+// CHECK-ALL-GPR-NOT:        "zero-call-used-regs"=
 
 // -fzero-call-used-regs=all-arg:
 //
@@ -182,6 +201,7 @@
 // CHECK-ALL-ARG:            define {{.*}} @all_gpr_test({{.*}} #[[ATTR_NUM_ALL_GPR:[0-9]*]]
 // CHECK-ALL-ARG:            define {{.*}} @all_arg_test({{.*}} #[[ATTR_NUM_ALL_ARG]]
 // CHECK-ALL-ARG:            define {{.*}} @all_test({{.*}} #[[ATTR_NUM_ALL:[0-9]*]]
+// CHECK-ALL-ARG:            define {{.*}} @main({{.*}} #[[ATTR_NUM_MAIN:[0-9]*]]
 //
 // CHECK-ALL-ARG:            attributes #[[ATTR_NUM_ALL_ARG]] = {{.*}} "zero-call-used-regs"="all-arg"
 // CHECK-ALL-ARG:            attributes #[[ATTR_NUM_SKIP]] = {{.*}} "zero-call-used-regs"="skip"
@@ -192,6 +212,8 @@
 // CHECK-ALL-ARG:            attributes #[[ATTR_NUM_ALL_GPR_ARG]] = {{.*}} "zero-call-used-regs"="all-gpr-arg"
 // CHECK-ALL-ARG:            attributes #[[ATTR_NUM_ALL_GPR]] = {{.*}} "zero-call-used-regs"="all-gpr"
 // CHECK-ALL-ARG:            attributes #[[ATTR_NUM_ALL]] = {{.*}} "zero-call-used-regs"="all"
+// CHECK-ALL-ARG:            attributes #[[ATTR_NUM_MAIN]] =
+// CHECK-ALL-ARG-NOT:        "zero-call-used-regs"=
 
 // -fzero-call-used-regs=all:
 //
@@ -205,6 +227,7 @@
 // CHECK-ALL:                define {{.*}} @all_gpr_test({{.*}} #[[ATTR_NUM_ALL_GPR:[0-9]*]]
 // CHECK-ALL:                define {{.*}} @all_arg_test({{.*}} #[[ATTR_NUM_ALL_ARG:[0-9]*]]
 // CHECK-ALL:                define {{.*}} @all_test({{.*}} #[[ATTR_NUM_ALL]]
+// CHECK-ALL:                define {{.*}} @main({{.*}} #[[ATTR_NUM_MAIN:[0-9]*]]
 //
 // CHECK-ALL:                attributes #[[ATTR_NUM_ALL]] = {{.*}} "zero-call-used-regs"="all"
 // CHECK-ALL:                attributes #[[ATTR_NUM_SKIP]] = {{.*}} "zero-call-used-regs"="skip"
@@ -215,6 +238,8 @@
 // CHECK-ALL:                attributes #[[ATTR_NUM_ALL_GPR_ARG]] = {{.*}} "zero-call-used-regs"="all-gpr-arg"
 // CHECK-ALL:                attributes #[[ATTR_NUM_ALL_GPR]] = {{.*}} "zero-call-used-regs"="all-gpr"
 // CHECK-ALL:                attributes #[[ATTR_NUM_ALL_ARG]] = {{.*}} "zero-call-used-regs"="all-arg"
+// CHECK-ALL:                attributes #[[ATTR_NUM_MAIN]] =
+// CHECK-ALL-NOT:            "zero-call-used-regs"=
 
 #define __zero_call_used_regs(kind) __attribute__((zero_call_used_regs(kind)))
 
@@ -246,4 +271,7 @@ void __zero_call_used_regs("all-arg") all_arg_test(void) {
 }
 
 void __zero_call_used_regs("all") all_test(void) {
+}
+
+int main() {
 }

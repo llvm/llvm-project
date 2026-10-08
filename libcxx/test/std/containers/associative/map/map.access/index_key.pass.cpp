@@ -10,7 +10,7 @@
 
 // class map
 
-// mapped_type& operator[](const key_type& k);
+// mapped_type& operator[](const key_type& k); // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -23,7 +23,7 @@
 #  include "container_test_types.h"
 #endif
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef std::pair<const int, double> V;
     V ar[] = {
@@ -74,6 +74,8 @@ int main(int, char**) {
     assert(m[6] == 6.5);
     assert(m.size() == 8);
   }
+#  ifndef TEST_IS_CONSTANT_EVALUATED
+  // static can't be constexpr
   {
     // Use "container_test_types.h" to check what arguments get passed
     // to the allocator for operator[]
@@ -107,6 +109,7 @@ int main(int, char**) {
       }
     }
   }
+#  endif
 #endif
 #if TEST_STD_VER > 11
   {
@@ -135,6 +138,13 @@ int main(int, char**) {
     assert(m.size() == 8);
   }
 #endif
+  return true;
+}
 
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

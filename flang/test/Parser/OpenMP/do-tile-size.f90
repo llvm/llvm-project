@@ -20,10 +20,10 @@ subroutine openmp_do_tiles(x)
 !$omp end do
 
 !PARSE-TREE:| | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE:| | | OmpBeginLoopDirective
+!PARSE-TREE:| | | OmpBeginDirective
 !PARSE-TREE:| | | Block
 !PARSE-TREE:| | | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE:| | | | | OmpBeginLoopDirective
+!PARSE-TREE:| | | | | OmpBeginDirective
 !PARSE-TREE:| | | | | | OmpDirectiveName -> llvm::omp::Directive = tile
 !PARSE-TREE:| | | | | | OmpClauseList -> OmpClause -> Sizes -> Scalar -> Integer -> Expr = '2_4'
 !PARSE-TREE:| | | | | Block

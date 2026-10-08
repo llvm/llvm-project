@@ -1,4 +1,5 @@
 # RUN: llc -global-isel=1 -O0 -run-pass=aarch64-O0-prelegalizer-combiner %s -o - -verify-machineinstrs | FileCheck %s --check-prefix=CHECK
+# RUN: llc -global-isel=1 -O0 -passes='require<libcall-lowering-info>,function(machine-function(aarch64-O0-prelegalizer-combiner))' %s -o - | FileCheck %s --check-prefix=CHECK
 
 --- |
   ; ModuleID = 'salvage-debug-info-dead.mir'
@@ -51,22 +52,22 @@ body:             |
   ; CHECK-NEXT:   DBG_VALUE $x0, $noreg, {{.*}}, !DIExpression(DW_OP_LLVM_convert, 64, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_convert, 16, DW_ATE_unsigned, DW_OP_LLVM_convert, 16, DW_ATE_unsigned, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_stack_value), debug-location !DILocation(line: 8, column: 7, scope: !6)
   ; CHECK: bb.1:
   ; CHECK-NEXT:   DBG_VALUE $x0, $noreg, {{.*}}, !DIExpression(DW_OP_LLVM_convert, 64, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_stack_value), debug-location !DILocation(line: 9, column: 7, scope: !6)
-  ; CHECK-NEXT:   DBG_VALUE %4:_(s32), 0, {{.*}}, !DIExpression(), debug-location !DILocation(line: 9, column: 7, scope: !6)
+  ; CHECK-NEXT:   DBG_VALUE %4:_(i32), 0, {{.*}}, !DIExpression(), debug-location !DILocation(line: 9, column: 7, scope: !6)
   bb.0:
     liveins: $x0
-    %0:_(s64) = COPY $x0
-    %1:_(s32) = G_TRUNC %0:_(s64)
-    DBG_VALUE %1:_(s32), $noreg, !25, !DIExpression(), debug-location !DILocation(line: 6, column: 7, scope: !6)
+    %0:_(i64) = COPY $x0
+    %1:_(i32) = G_TRUNC %0:_(i64)
+    DBG_VALUE %1:_(i32), $noreg, !25, !DIExpression(), debug-location !DILocation(line: 6, column: 7, scope: !6)
 
-    %2:_(s16) = G_TRUNC %1:_(s32)
-    DBG_VALUE %2:_(s16), $noreg, !42, !DIExpression(), debug-location !DILocation(line: 7, column: 7, scope: !6)
+    %2:_(i16) = G_TRUNC %1:_(i32)
+    DBG_VALUE %2:_(i16), $noreg, !42, !DIExpression(), debug-location !DILocation(line: 7, column: 7, scope: !6)
 
-    %3:_(s8) = G_TRUNC %2:_(s16)
-    DBG_VALUE %3:_(s8), $noreg, !52, !DIExpression(), debug-location !DILocation(line: 8, column: 7, scope: !6)
+    %3:_(i8) = G_TRUNC %2:_(i16)
+    DBG_VALUE %3:_(i8), $noreg, !52, !DIExpression(), debug-location !DILocation(line: 8, column: 7, scope: !6)
 
   bb.1:
-    %4:_(s32) = G_TRUNC %0:_(s64)
-    DBG_VALUE %4:_(s32), $noreg, !56, !DIExpression(), debug-location !DILocation(line: 9, column: 7, scope: !6)
-    DBG_VALUE %4:_(s32), 0, !57, !DIExpression(), debug-location !DILocation(line: 9, column: 7, scope: !6)
+    %4:_(i32) = G_TRUNC %0:_(i64)
+    DBG_VALUE %4:_(i32), $noreg, !56, !DIExpression(), debug-location !DILocation(line: 9, column: 7, scope: !6)
+    DBG_VALUE %4:_(i32), 0, !57, !DIExpression(), debug-location !DILocation(line: 9, column: 7, scope: !6)
 
 ...

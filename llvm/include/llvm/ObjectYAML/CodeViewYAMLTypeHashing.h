@@ -45,9 +45,9 @@ struct DebugHSection {
   std::vector<GlobalHash> Hashes;
 };
 
-DebugHSection fromDebugH(ArrayRef<uint8_t> DebugH);
-ArrayRef<uint8_t> toDebugH(const DebugHSection &DebugH,
-                           BumpPtrAllocator &Alloc);
+LLVM_ABI DebugHSection fromDebugH(ArrayRef<uint8_t> DebugH);
+LLVM_ABI ArrayRef<uint8_t> toDebugH(const DebugHSection &DebugH,
+                                    BumpPtrAllocator &Alloc);
 
 } // end namespace CodeViewYAML
 

@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SHARED_MATH_FMAXF_H
 #define LLVM_LIBC_SHARED_MATH_FMAXF_H
 
+#include "shared/libc_common.h"
 #include "src/__support/math/fmaxf.h"
 
 namespace LIBC_NAMESPACE_DECL {

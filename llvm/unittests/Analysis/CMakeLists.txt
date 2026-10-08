@@ -34,7 +34,6 @@ set(ANALYSIS_TEST_SOURCES
   FunctionPropertiesAnalysisTest.cpp
   InlineCostTest.cpp
   IR2VecTest.cpp
-  IRSimilarityIdentifierTest.cpp
   IVDescriptorsTest.cpp
   LastRunTrackingAnalysisTest.cpp
   LazyCallGraphTest.cpp
@@ -44,6 +43,7 @@ set(ANALYSIS_TEST_SOURCES
   MemoryBuiltinsTest.cpp
   MemoryProfileInfoTest.cpp
   MemorySSATest.cpp
+  MLGOUtilsTest.cpp
   MLModelRunnerTest.cpp
   PhiValuesTest.cpp
   PluginInlineAdvisorAnalysisTest.cpp

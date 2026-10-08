@@ -251,8 +251,7 @@ uint32_t g15(StructS *S, StructS3 *S3, uint64_t count) {
 // CHECK: [[META13]] = !{!"short", [[META4]], i64 0}
 // CHECK: [[TBAA16]] = !{[[META4]], [[META4]], i64 0}
 //.
-// OLD-PATH: [[TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// OLD-PATH: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}
+// OLD-PATH: [[META3:![0-9]+]] = !{!"int", [[META4:![0-9]+]], i64 0}
 // OLD-PATH: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // OLD-PATH: [[META5]] = !{!"Simple C++ TBAA"}
 // OLD-PATH: [[TBAA12]] = !{[[META13:![0-9]+]], [[META3]], i64 4}
@@ -279,10 +278,9 @@ uint32_t g15(StructS *S, StructS3 *S3, uint64_t count) {
 // OLD-PATH: [[TBAA37]] = !{[[META38:![0-9]+]], [[META4]], i64 4}
 // OLD-PATH: [[META38]] = !{!"_ZTS3six", [[META4]], i64 0, [[META4]], i64 4, [[META4]], i64 5}
 //.
-// NEW-PATH: [[TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0, i64 4}
-// NEW-PATH: [[META3]] = !{[[META4:![0-9]+]], i64 4, !"int"}
-// NEW-PATH: [[META4]] = !{[[META5:![0-9]+]], i64 1, !"omnipotent char"}
+// NEW-PATH: [[META4:![0-9]+]] = !{[[META5:![0-9]+]], i64 1, !"omnipotent char"}
 // NEW-PATH: [[META5]] = !{!"Simple C++ TBAA"}
+// NEW-PATH: [[META3:![0-9]+]] = !{[[META4]], i64 4, !"int"}
 // NEW-PATH: [[TBAA12]] = !{[[META13:![0-9]+]], [[META3]], i64 4, i64 4}
 // NEW-PATH: [[META13]] = !{[[META4]], i64 16, !"_ZTS7StructA", [[META14:![0-9]+]], i64 0, i64 2, [[META3]], i64 4, i64 4, [[META14]], i64 8, i64 2, [[META3]], i64 12, i64 4}
 // NEW-PATH: [[META14]] = !{[[META4]], i64 2, !"short"}

@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/math/clc_atan2pi.h>
+#include "clc/math/clc_atan2pi.h"
 
 #define __CLC_FUNCTION atan2pi
-#define __CLC_BODY <clc/shared/binary_def.inc>
+#define __CLC_BODY "clc/shared/binary_def.inc"
 
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"

@@ -14,8 +14,8 @@ define <2 x half> @select_v2f16(<2 x half> %op1, <2 x half> %op2, <2 x i1> %mask
 ; CHECK-NEXT:    lsl z2.h, z2.h, #15
 ; CHECK-NEXT:    asr z2.h, z2.h, #15
 ; CHECK-NEXT:    and z2.h, z2.h, #0x1
-; CHECK-NEXT:    cmpne p0.h, p0/z, z2.h, #0
-; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
+; CHECK-NEXT:    cmpne p1.h, p0/z, z2.h, #0
+; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: select_v2f16:
@@ -53,8 +53,8 @@ define <4 x half> @select_v4f16(<4 x half> %op1, <4 x half> %op2, <4 x i1> %mask
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    asr z2.h, z2.h, #15
 ; CHECK-NEXT:    and z2.h, z2.h, #0x1
-; CHECK-NEXT:    cmpne p0.h, p0/z, z2.h, #0
-; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
+; CHECK-NEXT:    cmpne p1.h, p0/z, z2.h, #0
+; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: select_v4f16:
@@ -106,8 +106,8 @@ define <8 x half> @select_v8f16(<8 x half> %op1, <8 x half> %op2, <8 x i1> %mask
 ; CHECK-NEXT:    lsl z2.h, z2.h, #15
 ; CHECK-NEXT:    asr z2.h, z2.h, #15
 ; CHECK-NEXT:    and z2.h, z2.h, #0x1
-; CHECK-NEXT:    cmpne p0.h, p0/z, z2.h, #0
-; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
+; CHECK-NEXT:    cmpne p1.h, p0/z, z2.h, #0
+; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: select_v8f16:
@@ -330,8 +330,8 @@ define <2 x float> @select_v2f32(<2 x float> %op1, <2 x float> %op2, <2 x i1> %m
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    asr z2.s, z2.s, #31
 ; CHECK-NEXT:    and z2.s, z2.s, #0x1
-; CHECK-NEXT:    cmpne p0.s, p0/z, z2.s, #0
-; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    cmpne p1.s, p0/z, z2.s, #0
+; CHECK-NEXT:    sel z0.s, p1, z0.s, z1.s
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: select_v2f32:
@@ -365,8 +365,8 @@ define <4 x float> @select_v4f32(<4 x float> %op1, <4 x float> %op2, <4 x i1> %m
 ; CHECK-NEXT:    lsl z2.s, z2.s, #31
 ; CHECK-NEXT:    asr z2.s, z2.s, #31
 ; CHECK-NEXT:    and z2.s, z2.s, #0x1
-; CHECK-NEXT:    cmpne p0.s, p0/z, z2.s, #0
-; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    cmpne p1.s, p0/z, z2.s, #0
+; CHECK-NEXT:    sel z0.s, p1, z0.s, z1.s
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: select_v4f32:
@@ -496,8 +496,8 @@ define <2 x double> @select_v2f64(<2 x double> %op1, <2 x double> %op2, <2 x i1>
 ; CHECK-NEXT:    lsl z2.d, z2.d, #63
 ; CHECK-NEXT:    asr z2.d, z2.d, #63
 ; CHECK-NEXT:    and z2.d, z2.d, #0x1
-; CHECK-NEXT:    cmpne p0.d, p0/z, z2.d, #0
-; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    cmpne p1.d, p0/z, z2.d, #0
+; CHECK-NEXT:    sel z0.d, p1, z0.d, z1.d
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: select_v2f64:

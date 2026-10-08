@@ -63,29 +63,18 @@ enum RelExpr {
   R_RELAX_HINT,
   R_RELAX_GOT_PC,
   R_RELAX_GOT_PC_NOPIC,
-  R_RELAX_TLS_GD_TO_IE,
-  R_RELAX_TLS_GD_TO_IE_ABS,
-  R_RELAX_TLS_GD_TO_IE_GOT_OFF,
-  R_RELAX_TLS_GD_TO_IE_GOTPLT,
-  R_RELAX_TLS_GD_TO_LE,
-  R_RELAX_TLS_GD_TO_LE_NEG,
-  R_RELAX_TLS_IE_TO_LE,
-  R_RELAX_TLS_LD_TO_LE,
   R_SIZE,
   R_TPREL,
   R_TPREL_NEG,
   R_TLSDESC,
-  R_TLSDESC_CALL,
   R_TLSDESC_PC,
   R_TLSDESC_GOTPLT,
   R_TLSGD_GOT,
   R_TLSGD_GOTPLT,
   R_TLSGD_PC,
-  R_TLSIE_HINT,
   R_TLSLD_GOT,
   R_TLSLD_GOTPLT,
   R_TLSLD_GOT_OFF,
-  R_TLSLD_HINT,
   R_TLSLD_PC,
 
   // The following is abstract relocation types used for only one target.
@@ -127,7 +116,6 @@ enum RelExpr {
   RE_LOONGARCH_PC_INDIRECT,
   RE_LOONGARCH_TLSGD_PAGE_PC,
   RE_LOONGARCH_TLSDESC_PAGE_PC,
-  RE_LOONGARCH_RELAX_TLS_GD_TO_IE_PAGE_PC,
 };
 
 // Architecture-neutral representation of relocation.
@@ -161,9 +149,6 @@ bool maybeReportUndefined(Ctx &, Undefined &sym, InputSectionBase &sec,
                           uint64_t offset);
 void postScanRelocations(Ctx &ctx);
 void addGotEntry(Ctx &ctx, Symbol &sym);
-
-void hexagonTLSSymbolUpdate(Ctx &ctx);
-bool hexagonNeedsTLSSymbol(ArrayRef<OutputSection *> outputSections);
 
 bool isAbsolute(const Symbol &sym);
 

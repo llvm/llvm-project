@@ -625,11 +625,34 @@ define i1 @and_icmps_const_1bit_diff_common_op(i32 %x, i32 %y) {
 
 ; PR44136 - fold cmpeq(or(X,Y),X) --> cmpeq(and(~X,Y),0)
 
+define i1 @or_cmp_eq_i128(i128 %x, i128 %y) {
+; NOBMI-LABEL: or_cmp_eq_i128:
+; NOBMI:       # %bb.0:
+; NOBMI-NEXT:    notq %rdi
+; NOBMI-NEXT:    notq %rsi
+; NOBMI-NEXT:    andq %rcx, %rsi
+; NOBMI-NEXT:    andq %rdx, %rdi
+; NOBMI-NEXT:    orq %rsi, %rdi
+; NOBMI-NEXT:    sete %al
+; NOBMI-NEXT:    retq
+;
+; BMI-LABEL: or_cmp_eq_i128:
+; BMI:       # %bb.0:
+; BMI-NEXT:    andnq %rcx, %rsi, %rax
+; BMI-NEXT:    andnq %rdx, %rdi, %rcx
+; BMI-NEXT:    orq %rax, %rcx
+; BMI-NEXT:    sete %al
+; BMI-NEXT:    retq
+  %o = or i128 %x, %y
+  %c = icmp eq i128 %o, %x
+  ret i1 %c
+}
+
 define i1 @or_cmp_eq_i64(i64 %x, i64 %y) {
 ; NOBMI-LABEL: or_cmp_eq_i64:
 ; NOBMI:       # %bb.0:
 ; NOBMI-NEXT:    notq %rdi
-; NOBMI-NEXT:    testq %rsi, %rdi
+; NOBMI-NEXT:    testq %rdi, %rsi
 ; NOBMI-NEXT:    sete %al
 ; NOBMI-NEXT:    retq
 ;
@@ -647,7 +670,7 @@ define i1 @or_cmp_ne_i32(i32 %x, i32 %y) {
 ; NOBMI-LABEL: or_cmp_ne_i32:
 ; NOBMI:       # %bb.0:
 ; NOBMI-NEXT:    notl %esi
-; NOBMI-NEXT:    testl %edi, %esi
+; NOBMI-NEXT:    testl %esi, %edi
 ; NOBMI-NEXT:    setne %al
 ; NOBMI-NEXT:    retq
 ;
@@ -665,7 +688,7 @@ define i1 @or_cmp_eq_i16(i16 zeroext %x, i16 zeroext %y) {
 ; NOBMI-LABEL: or_cmp_eq_i16:
 ; NOBMI:       # %bb.0:
 ; NOBMI-NEXT:    notl %edi
-; NOBMI-NEXT:    testl %esi, %edi
+; NOBMI-NEXT:    testl %edi, %esi
 ; NOBMI-NEXT:    sete %al
 ; NOBMI-NEXT:    retq
 ;
@@ -683,7 +706,7 @@ define i1 @or_cmp_ne_i8(i8 zeroext %x, i8 zeroext %y) {
 ; CHECK-LABEL: or_cmp_ne_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    notb %sil
-; CHECK-NEXT:    testb %dil, %sil
+; CHECK-NEXT:    testb %sil, %dil
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
   %o = or i8 %x, %y
@@ -716,4 +739,137 @@ define <16 x i8> @or_cmp_ne_v4i32(<16 x i8> %x, <16 x i8> %y) {
   %c = icmp ne <16 x i8> %o, %x
   %s = sext <16 x i1> %c to <16 x i8>
   ret <16 x i8> %s
+}
+
+;PR214772 - Merge bittest comparisions.
+
+define i1 @and_cmp_ne(i8 %x) {
+; CHECK-LABEL: and_cmp_ne:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    notb %dil
+; CHECK-NEXT:    testb $12, %dil
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %a1 = and i8 %x, 4
+  %a2 = and i8 %x, 8
+  %c1 = icmp ne i8 %a1, 0
+  %c2 = icmp ne i8 %a2, 0
+  %res = and i1 %c1, %c2
+  ret i1 %res
+}
+
+define i1 @and_cmp_eq(i8 %x) {
+; CHECK-LABEL: and_cmp_eq:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testb $12, %dil
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %a1 = and i8 %x, 4
+  %a2 = and i8 %x, 8
+  %c1 = icmp eq i8 %a1, 0
+  %c2 = icmp eq i8 %a2, 0
+  %res = and i1 %c1, %c2
+  ret i1 %res
+}
+
+define i1 @or_cmp_eq(i32 %x) {
+; CHECK-LABEL: or_cmp_eq:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    notl %edi
+; CHECK-NEXT:    testb $40, %dil
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+  %a1 = and i32 %x, 8
+  %a2 = and i32 %x, 32
+  %c1 = icmp eq i32 %a1, 0
+  %c2 = icmp eq i32 %a2, 0
+  %res = or i1 %c1, %c2
+  ret i1 %res
+}
+
+define i1 @or_cmp_ne(i32 %x) {
+; CHECK-LABEL: or_cmp_ne:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testb $40, %dil
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+  %a1 = and i32 %x, 8
+  %a2 = and i32 %x, 32
+  %c1 = icmp ne i32 %a1, 0
+  %c2 = icmp ne i32 %a2, 0
+  %res = or i1 %c1, %c2
+  ret i1 %res
+}
+
+define i1 @not_pow2(i8 %x) {
+; CHECK-LABEL: not_pow2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andb $8, %al
+; CHECK-NEXT:    testb $3, %dil
+; CHECK-NEXT:    setne %cl
+; CHECK-NEXT:    shrb $3, %al
+; CHECK-NEXT:    andb %cl, %al
+; CHECK-NEXT:    retq
+  %a1 = and i8 %x, 3
+  %a2 = and i8 %x, 8
+  %c1 = icmp ne i8 %a1, 0
+  %c2 = icmp ne i8 %a2, 0
+  %res = and i1 %c1, %c2
+  ret i1 %res
+}
+
+define i1 @diff_vars(i8 %x, i8 %y) {
+; CHECK-LABEL: diff_vars:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    andb $8, %al
+; CHECK-NEXT:    shrb $2, %dil
+; CHECK-NEXT:    shrb $3, %al
+; CHECK-NEXT:    andb %dil, %al
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retq
+  %a1 = and i8 %x, 4
+  %a2 = and i8 %y, 8
+  %c1 = icmp ne i8 %a1, 0
+  %c2 = icmp ne i8 %a2, 0
+  %res = and i1 %c1, %c2
+  ret i1 %res
+}
+
+define i1 @nonzero_rhs(i8 %x) {
+; CHECK-LABEL: nonzero_rhs:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andb $4, %al
+; CHECK-NEXT:    andb $8, %dil
+; CHECK-NEXT:    cmpb $1, %al
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    shrb $3, %dil
+; CHECK-NEXT:    andb %dil, %al
+; CHECK-NEXT:    retq
+  %a1 = and i8 %x, 4
+  %a2 = and i8 %x, 8
+  %c1 = icmp ne i8 %a1, 1
+  %c2 = icmp ne i8 %a2, 0
+  %res = and i1 %c1, %c2
+  ret i1 %res
+}
+
+define i1 @mixed_cc(i8 %x) {
+; CHECK-LABEL: mixed_cc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andb $8, %al
+; CHECK-NEXT:    testb $4, %dil
+; CHECK-NEXT:    sete %cl
+; CHECK-NEXT:    shrb $3, %al
+; CHECK-NEXT:    andb %cl, %al
+; CHECK-NEXT:    retq
+  %a1 = and i8 %x, 4
+  %a2 = and i8 %x, 8
+  %c1 = icmp eq i8 %a1, 0
+  %c2 = icmp ne i8 %a2, 0
+  %res = and i1 %c1, %c2
+  ret i1 %res
 }

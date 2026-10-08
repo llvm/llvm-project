@@ -48,9 +48,8 @@ static void reduceConditionals(Oracle &O, ReducerWorkItem &WorkItem,
     SmallVector<BasicBlock *, 16> ToSimplify;
 
     for (auto &BB : F) {
-      auto *BR = dyn_cast<BranchInst>(BB.getTerminator());
-      if (!BR || !BR->isConditional() || BR->getCondition() == ConstValToSet ||
-          O.shouldKeep())
+      auto *BR = dyn_cast<CondBrInst>(BB.getTerminator());
+      if (!BR || BR->getCondition() == ConstValToSet || O.shouldKeep())
         continue;
 
       BR->setCondition(ConstValToSet);
@@ -89,14 +88,14 @@ void llvm::reduceUnconditionalBranchDeltaPass(Oracle &O,
     Type *RetTy = F.getReturnType();
 
     for (auto &BB : F) {
-      auto *BR = dyn_cast<BranchInst>(BB.getTerminator());
-      if (!BR || !BR->isUnconditional())
+      auto *BR = dyn_cast<UncondBrInst>(BB.getTerminator());
+      if (!BR)
         continue;
 
       if (O.shouldKeep())
         continue;
 
-      BasicBlock *Succ = BR->getSuccessor(0);
+      BasicBlock *Succ = BR->getSuccessor();
       Succ->removePredecessor(&BB, /*KeepOneInputPHIs=*/true);
       BR->eraseFromParent();
       ToSimplify.push_back(&BB);

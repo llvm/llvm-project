@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: target={{.*-apple.*}}
 // UNSUPPORTED: target={{.*-aix.*}}
 // UNSUPPORTED: target={{.*-windows.*}}
 
@@ -18,6 +17,7 @@
 // See libcxxabi/test/forced_unwind* tests too.
 
 #undef NDEBUG
+#include "support/func_bounds.h"
 #include <assert.h>
 #include <signal.h>
 #include <stdint.h>
@@ -28,12 +28,7 @@
 #include <unistd.h>
 #include <unwind.h>
 
-// Using __attribute__((section("main_func"))) is Linux specific, but then
-// this entire test is marked as requiring Linux, so we should be good.
-//
-// We don't use dladdr() because on musl it's a no-op when statically linked.
-extern char __start_main_func;
-extern char __stop_main_func;
+FUNC_BOUNDS_DECL(main_func);
 
 void foo();
 _Unwind_Exception ex;
@@ -52,8 +47,8 @@ _Unwind_Reason_Code stop(int version, _Unwind_Action actions,
   // Unwind until the main is reached, above frames depend on the platform and
   // architecture.
   uintptr_t ip = _Unwind_GetIP(context);
-  if (ip >= (uintptr_t)&__start_main_func &&
-      ip < (uintptr_t)&__stop_main_func) {
+  if (ip >= (uintptr_t)FUNC_START(main_func) &&
+      ip < (uintptr_t)FUNC_END(main_func)) {
     _Exit(0);
   }
 
@@ -74,7 +69,7 @@ __attribute__((noinline)) void foo() {
   _Unwind_ForcedUnwind(e, stop, (void *)&foo);
 }
 
-__attribute__((section("main_func"))) int main(int, char **) {
+FUNC_ATTR(main_func) int main(int, char **) {
   foo();
   return -2;
 }

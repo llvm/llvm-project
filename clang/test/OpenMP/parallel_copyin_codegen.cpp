@@ -231,7 +231,7 @@ void foo() {
 // CHECK1-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1:[0-9]+]])
 // CHECK1-NEXT:    call void @__kmpc_threadprivate_register(ptr @[[GLOB1]], ptr @_ZZ4mainE5s_arr, ptr @.__kmpc_global_ctor_., ptr null, ptr @.__kmpc_global_dtor_.)
 // CHECK1-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) @_ZZ4mainE5s_arr, float noundef 1.000000e+00)
-// CHECK1-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S]], ptr @_ZZ4mainE5s_arr, i64 1), float noundef 2.000000e+00)
+// CHECK1-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @_ZZ4mainE5s_arr, i64 4), float noundef 2.000000e+00)
 // CHECK1-NEXT:    [[TMP3:%.*]] = call i32 @__cxa_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR2]]
 // CHECK1-NEXT:    call void @__cxa_guard_release(ptr @_ZGVZ4mainE5s_arr) #[[ATTR2]]
 // CHECK1-NEXT:    br label [[INIT_END]]
@@ -342,8 +342,8 @@ void foo() {
 // CHECK1-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK1-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK1:       arraydestroy.body:
-// CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds ([[STRUCT_S:%.*]], ptr @_ZZ4mainE5s_arr, i64 2), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
-// CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
+// CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds nuw (i8, ptr @_ZZ4mainE5s_arr, i64 8), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
+// CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // CHECK1-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR2]]
 // CHECK1-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @_ZZ4mainE5s_arr
 // CHECK1-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY]]
@@ -467,7 +467,7 @@ void foo() {
 // CHECK1-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 // CHECK1-NEXT:    call void @__kmpc_threadprivate_register(ptr @[[GLOB1]], ptr @_ZZ5tmainIiET_vE5s_arr, ptr @.__kmpc_global_ctor_..4, ptr null, ptr @.__kmpc_global_dtor_..5)
 // CHECK1-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) @_ZZ5tmainIiET_vE5s_arr, i32 noundef 1)
-// CHECK1-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S_0]], ptr @_ZZ5tmainIiET_vE5s_arr, i64 1), i32 noundef 2)
+// CHECK1-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @_ZZ5tmainIiET_vE5s_arr, i64 4), i32 noundef 2)
 // CHECK1-NEXT:    [[TMP3:%.*]] = call i32 @__cxa_atexit(ptr @__cxx_global_array_dtor.6, ptr null, ptr @__dso_handle) #[[ATTR2]]
 // CHECK1-NEXT:    call void @__cxa_guard_release(ptr @_ZGVZ5tmainIiET_vE5s_arr) #[[ATTR2]]
 // CHECK1-NEXT:    br label [[INIT_END]]
@@ -618,8 +618,8 @@ void foo() {
 // CHECK1-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK1-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK1:       arraydestroy.body:
-// CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds ([[STRUCT_S_0:%.*]], ptr @_ZZ5tmainIiET_vE5s_arr, i64 2), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
-// CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
+// CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds nuw (i8, ptr @_ZZ5tmainIiET_vE5s_arr, i64 8), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
+// CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // CHECK1-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR2]]
 // CHECK1-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @_ZZ5tmainIiET_vE5s_arr
 // CHECK1-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY]]
@@ -775,7 +775,7 @@ void foo() {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// CHECK4-NEXT:    [[TMP0:%.*]] = load ptr, ptr getelementptr inbounds nuw ([[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr @__block_literal_global, i32 0, i32 3), align 8
+// CHECK4-NEXT:    [[TMP0:%.*]] = load ptr, ptr getelementptr inbounds nuw (i8, ptr @__block_literal_global, i64 16), align 8
 // CHECK4-NEXT:    call void [[TMP0]](ptr noundef @__block_literal_global)
 // CHECK4-NEXT:    ret i32 0
 //
@@ -812,7 +812,7 @@ void foo() {
 // CHECK4-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2:[0-9]+]], i32 [[TMP1]])
 // CHECK4-NEXT:    [[TMP6:%.*]] = call ptr @__kmpc_threadprivate_cached(ptr @[[GLOB1]], i32 [[TMP1]], ptr @g, i64 4, ptr @g.cache.)
 // CHECK4-NEXT:    store volatile i32 1, ptr [[TMP6]], align 128
-// CHECK4-NEXT:    [[TMP7:%.*]] = load ptr, ptr getelementptr inbounds nuw ([[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr @__block_literal_global.2, i32 0, i32 3), align 8
+// CHECK4-NEXT:    [[TMP7:%.*]] = load ptr, ptr getelementptr inbounds nuw (i8, ptr @__block_literal_global.2, i64 16), align 8
 // CHECK4-NEXT:    call void [[TMP7]](ptr noundef @__block_literal_global.2)
 // CHECK4-NEXT:    ret void
 //
@@ -848,7 +848,7 @@ void foo() {
 // CHECK5-NEXT:    [[ARRAYCTOR_CUR:%.*]] = phi ptr [ @_ZZ10array_funcvE1s, [[INIT]] ], [ [[ARRAYCTOR_NEXT:%.*]], [[ARRAYCTOR_LOOP]] ]
 // CHECK5-NEXT:    call void @_ZN2StC1Ev(ptr noundef nonnull align 4 dereferenceable(8) [[ARRAYCTOR_CUR]])
 // CHECK5-NEXT:    [[ARRAYCTOR_NEXT]] = getelementptr inbounds [[STRUCT_ST:%.*]], ptr [[ARRAYCTOR_CUR]], i64 1
-// CHECK5-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq ptr [[ARRAYCTOR_NEXT]], getelementptr inbounds ([[STRUCT_ST]], ptr @_ZZ10array_funcvE1s, i64 2)
+// CHECK5-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq ptr [[ARRAYCTOR_NEXT]], getelementptr inbounds nuw (i8, ptr @_ZZ10array_funcvE1s, i64 16)
 // CHECK5-NEXT:    br i1 [[ARRAYCTOR_DONE]], label [[ARRAYCTOR_CONT:%.*]], label [[ARRAYCTOR_LOOP]]
 // CHECK5:       arrayctor.cont:
 // CHECK5-NEXT:    [[TMP3:%.*]] = call i32 @__cxa_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR1]]
@@ -924,8 +924,8 @@ void foo() {
 // CHECK5-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK5-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK5:       arraydestroy.body:
-// CHECK5-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds ([[STRUCT_ST:%.*]], ptr @_ZZ10array_funcvE1s, i64 2), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
-// CHECK5-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_ST]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
+// CHECK5-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds nuw (i8, ptr @_ZZ10array_funcvE1s, i64 16), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
+// CHECK5-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_ST:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // CHECK5-NEXT:    call void @_ZN2StD1Ev(ptr noundef nonnull align 4 dead_on_return(8) dereferenceable(8) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR1]]
 // CHECK5-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @_ZZ10array_funcvE1s
 // CHECK5-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY]]
@@ -1017,7 +1017,7 @@ void foo() {
 // CHECK11-NEXT:    br i1 [[GUARD_UNINITIALIZED]], label [[INIT_CHECK:%.*]], label [[INIT_END:%.*]], !prof [[PROF3:![0-9]+]]
 // CHECK11:       init.check:
 // CHECK11-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) @_ZZ4mainE5s_arr, float noundef 1.000000e+00)
-// CHECK11-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S]], ptr @_ZZ4mainE5s_arr, i64 1), float noundef 2.000000e+00)
+// CHECK11-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @_ZZ4mainE5s_arr, i64 4), float noundef 2.000000e+00)
 // CHECK11-NEXT:    [[TMP1:%.*]] = call i32 @__cxa_thread_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR3]]
 // CHECK11-NEXT:    store i8 1, ptr @_ZGVZ4mainE5s_arr, align 1
 // CHECK11-NEXT:    br label [[INIT_END]]
@@ -1096,8 +1096,8 @@ void foo() {
 // CHECK11-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK11-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK11:       arraydestroy.body:
-// CHECK11-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds ([[STRUCT_S:%.*]], ptr @_ZZ4mainE5s_arr, i64 2), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
-// CHECK11-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
+// CHECK11-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds nuw (i8, ptr @_ZZ4mainE5s_arr, i64 8), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
+// CHECK11-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // CHECK11-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]]
 // CHECK11-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @_ZZ4mainE5s_arr
 // CHECK11-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY]]
@@ -1211,7 +1211,7 @@ void foo() {
 // CHECK11-NEXT:    br i1 [[GUARD_UNINITIALIZED]], label [[INIT_CHECK:%.*]], label [[INIT_END:%.*]], !prof [[PROF3]]
 // CHECK11:       init.check:
 // CHECK11-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) @_ZZ5tmainIiET_vE5s_arr, i32 noundef 1)
-// CHECK11-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S_0]], ptr @_ZZ5tmainIiET_vE5s_arr, i64 1), i32 noundef 2)
+// CHECK11-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @_ZZ5tmainIiET_vE5s_arr, i64 4), i32 noundef 2)
 // CHECK11-NEXT:    [[TMP1:%.*]] = call i32 @__cxa_thread_atexit(ptr @__cxx_global_array_dtor.2, ptr null, ptr @__dso_handle) #[[ATTR3]]
 // CHECK11-NEXT:    store i8 1, ptr @_ZGVZ5tmainIiET_vE5s_arr, align 8
 // CHECK11-NEXT:    br label [[INIT_END]]
@@ -1328,8 +1328,8 @@ void foo() {
 // CHECK11-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK11-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK11:       arraydestroy.body:
-// CHECK11-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds ([[STRUCT_S_0:%.*]], ptr @_ZZ5tmainIiET_vE5s_arr, i64 2), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
-// CHECK11-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
+// CHECK11-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds nuw (i8, ptr @_ZZ5tmainIiET_vE5s_arr, i64 8), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
+// CHECK11-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // CHECK11-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]]
 // CHECK11-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @_ZZ5tmainIiET_vE5s_arr
 // CHECK11-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY]]
@@ -1491,7 +1491,7 @@ void foo() {
 // CHECK14-NEXT:  entry:
 // CHECK14-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK14-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// CHECK14-NEXT:    [[TMP0:%.*]] = load ptr, ptr getelementptr inbounds nuw ([[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr @__block_literal_global, i32 0, i32 3), align 8
+// CHECK14-NEXT:    [[TMP0:%.*]] = load ptr, ptr getelementptr inbounds nuw (i8, ptr @__block_literal_global, i64 16), align 8
 // CHECK14-NEXT:    call void [[TMP0]](ptr noundef @__block_literal_global)
 // CHECK14-NEXT:    ret i32 0
 //
@@ -1533,7 +1533,7 @@ void foo() {
 // CHECK14-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB1:[0-9]+]], i32 [[TMP7]])
 // CHECK14-NEXT:    [[TMP8:%.*]] = call align 128 ptr @llvm.threadlocal.address.p0(ptr align 128 @g)
 // CHECK14-NEXT:    store volatile i32 1, ptr [[TMP8]], align 128
-// CHECK14-NEXT:    [[TMP9:%.*]] = load ptr, ptr getelementptr inbounds nuw ([[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr @__block_literal_global.2, i32 0, i32 3), align 8
+// CHECK14-NEXT:    [[TMP9:%.*]] = load ptr, ptr getelementptr inbounds nuw (i8, ptr @__block_literal_global.2, i64 16), align 8
 // CHECK14-NEXT:    call void [[TMP9]](ptr noundef @__block_literal_global.2)
 // CHECK14-NEXT:    ret void
 //
@@ -1568,7 +1568,7 @@ void foo() {
 // CHECK15-NEXT:    [[ARRAYCTOR_CUR:%.*]] = phi ptr [ @_ZZ10array_funcvE1s, [[INIT_CHECK]] ], [ [[ARRAYCTOR_NEXT:%.*]], [[ARRAYCTOR_LOOP]] ]
 // CHECK15-NEXT:    call void @_ZN2StC1Ev(ptr noundef nonnull align 4 dereferenceable(8) [[ARRAYCTOR_CUR]])
 // CHECK15-NEXT:    [[ARRAYCTOR_NEXT]] = getelementptr inbounds [[STRUCT_ST:%.*]], ptr [[ARRAYCTOR_CUR]], i64 1
-// CHECK15-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq ptr [[ARRAYCTOR_NEXT]], getelementptr inbounds ([[STRUCT_ST]], ptr @_ZZ10array_funcvE1s, i64 2)
+// CHECK15-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq ptr [[ARRAYCTOR_NEXT]], getelementptr inbounds nuw (i8, ptr @_ZZ10array_funcvE1s, i64 16)
 // CHECK15-NEXT:    br i1 [[ARRAYCTOR_DONE]], label [[ARRAYCTOR_CONT:%.*]], label [[ARRAYCTOR_LOOP]]
 // CHECK15:       arrayctor.cont:
 // CHECK15-NEXT:    [[TMP1:%.*]] = call i32 @__cxa_thread_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR2:[0-9]+]]
@@ -1598,8 +1598,8 @@ void foo() {
 // CHECK15-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK15-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK15:       arraydestroy.body:
-// CHECK15-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds ([[STRUCT_ST:%.*]], ptr @_ZZ10array_funcvE1s, i64 2), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
-// CHECK15-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_ST]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
+// CHECK15-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds nuw (i8, ptr @_ZZ10array_funcvE1s, i64 16), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
+// CHECK15-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_ST:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // CHECK15-NEXT:    call void @_ZN2StD1Ev(ptr noundef nonnull align 4 dead_on_return(8) dereferenceable(8) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR2]]
 // CHECK15-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @_ZZ10array_funcvE1s
 // CHECK15-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY]]

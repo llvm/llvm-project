@@ -10,8 +10,7 @@ define i32 @guards_applied_to_add_rec(ptr %dst) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; CHECK:       [[OUTER_HEADER]]:
-; CHECK-NEXT:    [[OUTER_IV_0:%.*]] = phi i32 [ 2, %[[ENTRY]] ], [ [[OUTER_IV_0_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
-; CHECK-NEXT:    [[OUTER_IV_1:%.*]] = phi i32 [ 1, %[[ENTRY]] ], [ [[OUTER_IV_0]], %[[OUTER_LATCH]] ]
+; CHECK-NEXT:    [[OUTER_IV_1:%.*]] = phi i32 [ [[INDVARS_IV_NEXT2:%.*]], %[[OUTER_LATCH:.*]] ], [ 1, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[SHR28:%.*]] = lshr i32 [[OUTER_IV_1]], 1
 ; CHECK-NEXT:    [[PRE:%.*]] = icmp samesign ult i32 [[OUTER_IV_1]], 2
 ; CHECK-NEXT:    br i1 [[PRE]], label %[[OUTER_LATCH]], label %[[INNER_PREHEADER:.*]]
@@ -24,13 +23,13 @@ define i32 @guards_applied_to_add_rec(ptr %dst) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw nsw i64 [[INDVARS_IV]] to i32
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr [[GEP_DST]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[CMP29:%.*]] = icmp samesign ult i64 [[INDVARS_IV_NEXT]], [[TMP0]]
+; CHECK-NEXT:    [[CMP29:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[CMP29]], label %[[INNER]], label %[[OUTER_LATCH_LOOPEXIT:.*]]
 ; CHECK:       [[OUTER_LATCH_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[OUTER_LATCH]]
 ; CHECK:       [[OUTER_LATCH]]:
-; CHECK-NEXT:    [[OUTER_IV_0_NEXT]] = add nuw i32 [[OUTER_IV_0]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[OUTER_IV_0_NEXT]], -2147483647
+; CHECK-NEXT:    [[INDVARS_IV_NEXT2]] = add nuw i32 [[OUTER_IV_1]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INDVARS_IV_NEXT2]], -2147483648
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[OUTER_HEADER]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i32 0

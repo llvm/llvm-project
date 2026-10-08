@@ -1,0 +1,105 @@
+// Top-level MultiArchSharedLibrary structure tests: type discriminator,
+// namespace identity, members array, and per-member validation including
+// duplicate-target-triple and namespace-mismatch rejection.
+
+// ============================================================================
+// readMultiArchSharedLibrary() / writeMultiArchSharedLibrary() type-field
+// errors
+// ============================================================================
+
+// RUN: not clang-ssaf-format --type multi-arch-shared-library %S/Inputs/missing-type.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MISSING-TYPE
+// MISSING-TYPE:      clang-ssaf-format: error: reading MultiArchSharedLibrary from file '{{.*}}missing-type.json'
+// MISSING-TYPE-NEXT: failed to read summary type from field 'type': expected JSON string
+
+// RUN: not clang-ssaf-format --type multi-arch-shared-library %S/Inputs/mismatched-type.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MISMATCHED-TYPE
+// MISMATCHED-TYPE:      clang-ssaf-format: error: reading MultiArchSharedLibrary from file '{{.*}}mismatched-type.json'
+// MISMATCHED-TYPE-NEXT: expected 'MultiArchSharedLibrary' for field 'type' but got 'MultiArchStaticLibrary'
+
+// ============================================================================
+// namespace field errors
+// ============================================================================
+
+// The top-level namespace is required and must be a JSON array of
+// BuildNamespace steps.
+// RUN: not clang-ssaf-format --type multi-arch-shared-library %S/Inputs/missing-namespace.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MISSING-NAMESPACE
+// MISSING-NAMESPACE:      clang-ssaf-format: error: reading MultiArchSharedLibrary from file '{{.*}}missing-namespace.json'
+// MISSING-NAMESPACE-NEXT: failed to read NestedBuildNamespace from field 'namespace': expected JSON array
+
+// The namespace field must be a JSON array, not a string.
+// RUN: not clang-ssaf-format --type multi-arch-shared-library %S/Inputs/namespace-not-array.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=NAMESPACE-NOT-ARRAY
+// NAMESPACE-NOT-ARRAY:      clang-ssaf-format: error: reading MultiArchSharedLibrary from file '{{.*}}namespace-not-array.json'
+// NAMESPACE-NOT-ARRAY-NEXT: failed to read NestedBuildNamespace from field 'namespace': expected JSON array
+
+// ============================================================================
+// members field errors
+// ============================================================================
+
+// RUN: not clang-ssaf-format --type multi-arch-shared-library %S/Inputs/missing-members.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MISSING-MEMBERS
+// MISSING-MEMBERS:      clang-ssaf-format: error: reading MultiArchSharedLibrary from file '{{.*}}missing-members.json'
+// MISSING-MEMBERS-NEXT: failed to read MultiArchSharedLibrary members from field 'members': expected JSON array
+
+// The members field must be a JSON array, not an object.
+// RUN: not clang-ssaf-format --type multi-arch-shared-library %S/Inputs/members-not-array.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MEMBERS-NOT-ARRAY
+// MEMBERS-NOT-ARRAY:      clang-ssaf-format: error: reading MultiArchSharedLibrary from file '{{.*}}members-not-array.json'
+// MEMBERS-NOT-ARRAY-NEXT: failed to read MultiArchSharedLibrary members from field 'members': expected JSON array
+
+// ============================================================================
+// per-member errors
+// ============================================================================
+
+// RUN: not clang-ssaf-format --type multi-arch-shared-library %S/Inputs/member-not-object.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MEMBER-NOT-OBJECT
+// MEMBER-NOT-OBJECT:      clang-ssaf-format: error: reading MultiArchSharedLibrary from file '{{.*}}member-not-object.json'
+// MEMBER-NOT-OBJECT-NEXT: failed to read MultiArchSharedLibrary member from index '0': expected JSON object
+
+// RUN: not clang-ssaf-format --type multi-arch-shared-library %S/Inputs/member-missing-type.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MEMBER-MISSING-TYPE
+// MEMBER-MISSING-TYPE:      clang-ssaf-format: error: reading MultiArchSharedLibrary from file '{{.*}}member-missing-type.json'
+// MEMBER-MISSING-TYPE-NEXT: reading MultiArchSharedLibrary member from index '0'
+// MEMBER-MISSING-TYPE-NEXT: failed to read summary type from field 'type': expected JSON string
+
+// RUN: not clang-ssaf-format --type multi-arch-shared-library %S/Inputs/member-mismatched-type.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MEMBER-MISMATCHED-TYPE
+// MEMBER-MISMATCHED-TYPE:      clang-ssaf-format: error: reading MultiArchSharedLibrary from file '{{.*}}member-mismatched-type.json'
+// MEMBER-MISMATCHED-TYPE-NEXT: reading MultiArchSharedLibrary member from index '0'
+// MEMBER-MISMATCHED-TYPE-NEXT: expected 'LUSummary' for field 'type' but got 'TUSummary'
+
+// Each member is a per-arch slice of the same shared library, so its
+// lu_namespace must equal the wrapper's namespace exactly. A member
+// whose leaf-step name differs from the wrapper's is rejected.
+// RUN: not clang-ssaf-format --type multi-arch-shared-library %S/Inputs/member-namespace-mismatch.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MEMBER-NAMESPACE-MISMATCH
+// MEMBER-NAMESPACE-MISMATCH:      clang-ssaf-format: error: reading MultiArchSharedLibrary from file '{{.*}}member-namespace-mismatch.json'
+// MEMBER-NAMESPACE-MISMATCH-NEXT: reading MultiArchSharedLibrary member from index '0'
+// MEMBER-NAMESPACE-MISMATCH-NEXT: field 'lu_namespace' does not equal the enclosing artifact's namespace
+
+// A member with an empty lu_namespace array cannot equal the wrapper's
+// (non-empty) namespace, so the equality check also fires.
+// RUN: not clang-ssaf-format --type multi-arch-shared-library %S/Inputs/member-empty-lu-namespace.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MEMBER-EMPTY-LU-NAMESPACE
+// MEMBER-EMPTY-LU-NAMESPACE:      clang-ssaf-format: error: reading MultiArchSharedLibrary from file '{{.*}}member-empty-lu-namespace.json'
+// MEMBER-EMPTY-LU-NAMESPACE-NEXT: reading MultiArchSharedLibrary member from index '0'
+// MEMBER-EMPTY-LU-NAMESPACE-NEXT: field 'lu_namespace' does not equal the enclosing artifact's namespace
+
+// Members are identified by their full target_triple. Two members sharing
+// the same target_triple are rejected.
+// RUN: not clang-ssaf-format --type multi-arch-shared-library %S/Inputs/duplicate-target-triple.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=DUPLICATE-TARGET-TRIPLE
+// DUPLICATE-TARGET-TRIPLE:      clang-ssaf-format: error: reading MultiArchSharedLibrary from file '{{.*}}duplicate-target-triple.json'
+// DUPLICATE-TARGET-TRIPLE-NEXT: failed to insert MultiArchSharedLibrary member at index '1': encountered duplicate 'arm64-apple-macosx'
+
+// Verifies that errors raised inside readLUSummaryEncodingFromObject (here, a
+// missing lu_namespace on the member) are properly wrapped with the
+// "reading MultiArchSharedLibrary member from index 'N'" context, then
+// with the outer "reading MultiArchSharedLibrary from file '...'" context.
+// RUN: not clang-ssaf-format --type multi-arch-shared-library %S/Inputs/member-inner-error.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MEMBER-INNER-ERROR
+// MEMBER-INNER-ERROR:      clang-ssaf-format: error: reading MultiArchSharedLibrary from file '{{.*}}member-inner-error.json'
+// MEMBER-INNER-ERROR-NEXT: reading MultiArchSharedLibrary member from index '0'
+// MEMBER-INNER-ERROR-NEXT: failed to read NestedBuildNamespace from field 'lu_namespace': expected JSON array

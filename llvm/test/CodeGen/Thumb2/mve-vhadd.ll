@@ -223,9 +223,8 @@ define arm_aapcs_vfpcc <4 x i16> @vrhadds_v4i16(<4 x i16> %s0, <4 x i16> %s1) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmovlb.s16 q1, q1
 ; CHECK-NEXT:    vmovlb.s16 q0, q0
-; CHECK-NEXT:    vadd.i32 q0, q0, q1
-; CHECK-NEXT:    movs r0, #1
-; CHECK-NEXT:    vadd.i32 q0, q0, r0
+; CHECK-NEXT:    vmvn q1, q1
+; CHECK-NEXT:    vsub.i32 q0, q0, q1
 ; CHECK-NEXT:    vshr.u32 q0, q0, #1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -292,9 +291,8 @@ define arm_aapcs_vfpcc <4 x i8> @vrhadds_v4i8(<4 x i8> %s0, <4 x i8> %s1) {
 ; CHECK-NEXT:    vmovlb.s8 q0, q0
 ; CHECK-NEXT:    vmovlb.s16 q1, q1
 ; CHECK-NEXT:    vmovlb.s16 q0, q0
-; CHECK-NEXT:    vadd.i32 q0, q0, q1
-; CHECK-NEXT:    movs r0, #1
-; CHECK-NEXT:    vadd.i32 q0, q0, r0
+; CHECK-NEXT:    vmvn q1, q1
+; CHECK-NEXT:    vsub.i32 q0, q0, q1
 ; CHECK-NEXT:    vmovlb.u16 q0, q0
 ; CHECK-NEXT:    vshr.u32 q0, q0, #1
 ; CHECK-NEXT:    bx lr
@@ -331,9 +329,8 @@ define arm_aapcs_vfpcc <8 x i8> @vrhadds_v8i8(<8 x i8> %s0, <8 x i8> %s1) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmovlb.s8 q1, q1
 ; CHECK-NEXT:    vmovlb.s8 q0, q0
-; CHECK-NEXT:    vadd.i16 q0, q0, q1
-; CHECK-NEXT:    movs r0, #1
-; CHECK-NEXT:    vadd.i16 q0, q0, r0
+; CHECK-NEXT:    vmvn q1, q1
+; CHECK-NEXT:    vsub.i16 q0, q0, q1
 ; CHECK-NEXT:    vshr.u16 q0, q0, #1
 ; CHECK-NEXT:    bx lr
 entry:

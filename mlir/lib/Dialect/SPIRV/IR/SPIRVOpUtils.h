@@ -37,4 +37,11 @@ LogicalResult extractValueFromConstOp(Operation *op, int32_t &value);
 LogicalResult verifyMemorySemantics(Operation *op,
                                     spirv::MemorySemantics memorySemantics);
 
+/// Verifies the SPV_KHR_physical_storage_buffer rule that a variable whose
+/// pointee is a pointer (or array of pointers) in the PhysicalStorageBuffer
+/// storage class must be decorated with exactly one of AliasedPointer or
+/// RestrictPointer.
+LogicalResult verifyPhysicalStorageBufferDecorations(Operation *op,
+                                                     Type pointeeType);
+
 } // namespace mlir::spirv

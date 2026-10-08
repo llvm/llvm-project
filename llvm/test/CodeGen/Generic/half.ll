@@ -8,7 +8,7 @@
 ; RUN: %if aarch64-registered-target     %{ llc %s -o - -mtriple=aarch64-pc-windows-msvc         | FileCheck %s --check-prefixes=ALL,CHECK %}
 ; RUN: %if aarch64-registered-target     %{ llc %s -o - -mtriple=aarch64-unknown-linux-gnu       | FileCheck %s --check-prefixes=ALL,CHECK %}
 ; RUN: %if aarch64-registered-target     %{ llc %s -o - -mtriple=arm64ec-pc-windows-msvc         | FileCheck %s --check-prefixes=ALL,CHECK %}
-; RUN: %if amdgpu-registered-target      %{ llc %s -o - -mtriple=amdgcn-amd-amdhsa               | FileCheck %s --check-prefixes=ALL,CHECK %}
+; RUN: %if amdgpu-registered-target      %{ llc %s -o - -mtriple=amdgpu7.00-amd-amdhsa               | FileCheck %s --check-prefixes=ALL,CHECK %}
 ; RUN: %if arc-registered-target         %{ llc %s -o - -mtriple=arc-elf                         | FileCheck %s --check-prefixes=ALL,CHECK %}
 ; RUN: %if arm-registered-target         %{ llc %s -o - -mtriple=arm-unknown-linux-gnueabi       | FileCheck %s --check-prefixes=ALL,CHECK %}
 ; RUN: %if arm-registered-target         %{ llc %s -o - -mtriple=thumbv7em-none-eabi             | FileCheck %s --check-prefixes=ALL,CHECK %}

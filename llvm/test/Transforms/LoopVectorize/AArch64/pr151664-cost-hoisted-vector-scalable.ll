@@ -28,7 +28,7 @@ define void @cost_hoisted_vector_code(ptr %p, float %arg) {
 entry:
   br label %loop
 
-loop:                                              ; preds = %loop, %entry
+loop:
   %iv = phi i64 [ 1, %entry ], [ %iv.next, %loop ]
   %res = tail call float @llvm.minimumnum.f32(float %arg, float 0.0)
   %gep.p.red = getelementptr float, ptr %p, i64 %iv
@@ -37,8 +37,7 @@ loop:                                              ; preds = %loop, %entry
   %exit.cond = icmp eq i64 %iv.next, 0
   br i1 %exit.cond, label %exit, label %loop
 
-exit:                                              ; preds = %loop
+exit:
   ret void
 }
 
-declare float @llvm.minimumnum.f32(float, float)

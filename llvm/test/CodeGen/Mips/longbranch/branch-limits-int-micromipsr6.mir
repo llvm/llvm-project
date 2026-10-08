@@ -183,7 +183,7 @@ body:             |
   ; MMR6:   BC_MMR6 %bb.3
   ; MMR6: bb.2.iftrue:
   ; MMR6:   successors: %bb.3(0x80000000)
-  ; MMR6:   INLINEASM &".space 131068", 1
+  ; MMR6:   INLINEASM &".space 131068", sideeffect attdialect
   ; MMR6: bb.3.tail:
   ; MMR6:   JRC16_MM undef $ra
   ; PIC-LABEL: name: expand_BEQC_MMR6
@@ -206,7 +206,7 @@ body:             |
   ; PIC:   JIC_MMR6 $at, 0, implicit-def $at
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JRC16_MM undef $ra
   bb.0 (%ir-block.0):
@@ -219,7 +219,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -270,7 +270,7 @@ body:             |
   ; MMR6:   BC_MMR6 %bb.3
   ; MMR6: bb.2.iftrue:
   ; MMR6:   successors: %bb.3(0x80000000)
-  ; MMR6:   INLINEASM &".space 131068", 1
+  ; MMR6:   INLINEASM &".space 131068", sideeffect attdialect
   ; MMR6: bb.3.tail:
   ; MMR6:   JRC16_MM undef $ra
   ; PIC-LABEL: name: expand_BNEC_MMR6
@@ -293,7 +293,7 @@ body:             |
   ; PIC:   JIC_MMR6 $at, 0, implicit-def $at
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JRC16_MM undef $ra
   bb.0 (%ir-block.0):
@@ -306,7 +306,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -357,7 +357,7 @@ body:             |
   ; MMR6:   BC_MMR6 %bb.3
   ; MMR6: bb.2.iftrue:
   ; MMR6:   successors: %bb.3(0x80000000)
-  ; MMR6:   INLINEASM &".space 131068", 1
+  ; MMR6:   INLINEASM &".space 131068", sideeffect attdialect
   ; MMR6: bb.3.tail:
   ; MMR6:   JRC16_MM undef $ra
   ; PIC-LABEL: name: expand_BGEC_MMR6
@@ -380,7 +380,7 @@ body:             |
   ; PIC:   JIC_MMR6 $at, 0, implicit-def $at
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JRC16_MM undef $ra
   bb.0 (%ir-block.0):
@@ -393,7 +393,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -444,7 +444,7 @@ body:             |
   ; MMR6:   BC_MMR6 %bb.3
   ; MMR6: bb.2.iftrue:
   ; MMR6:   successors: %bb.3(0x80000000)
-  ; MMR6:   INLINEASM &".space 131068", 1
+  ; MMR6:   INLINEASM &".space 131068", sideeffect attdialect
   ; MMR6: bb.3.tail:
   ; MMR6:   JRC16_MM undef $ra
   ; PIC-LABEL: name: expand_BGEUC_MMR6
@@ -467,7 +467,7 @@ body:             |
   ; PIC:   JIC_MMR6 $at, 0, implicit-def $at
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JRC16_MM undef $ra
   bb.0 (%ir-block.0):
@@ -480,7 +480,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -531,7 +531,7 @@ body:             |
   ; MMR6:   BC_MMR6 %bb.3
   ; MMR6: bb.2.iftrue:
   ; MMR6:   successors: %bb.3(0x80000000)
-  ; MMR6:   INLINEASM &".space 131068", 1
+  ; MMR6:   INLINEASM &".space 131068", sideeffect attdialect
   ; MMR6: bb.3.tail:
   ; MMR6:   JRC16_MM undef $ra
   ; PIC-LABEL: name: expand_BGEZC_MMR6
@@ -554,7 +554,7 @@ body:             |
   ; PIC:   JIC_MMR6 $at, 0, implicit-def $at
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JRC16_MM undef $ra
   bb.0 (%ir-block.0):
@@ -567,7 +567,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -618,7 +618,7 @@ body:             |
   ; MMR6:   BC_MMR6 %bb.3
   ; MMR6: bb.2.iftrue:
   ; MMR6:   successors: %bb.3(0x80000000)
-  ; MMR6:   INLINEASM &".space 131068", 1
+  ; MMR6:   INLINEASM &".space 131068", sideeffect attdialect
   ; MMR6: bb.3.tail:
   ; MMR6:   JRC16_MM undef $ra
   ; PIC-LABEL: name: expand_BGTZC_MMR6
@@ -641,7 +641,7 @@ body:             |
   ; PIC:   JIC_MMR6 $at, 0, implicit-def $at
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JRC16_MM undef $ra
   bb.0 (%ir-block.0):
@@ -654,7 +654,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -705,7 +705,7 @@ body:             |
   ; MMR6:   BC_MMR6 %bb.3
   ; MMR6: bb.2.iftrue:
   ; MMR6:   successors: %bb.3(0x80000000)
-  ; MMR6:   INLINEASM &".space 131068", 1
+  ; MMR6:   INLINEASM &".space 131068", sideeffect attdialect
   ; MMR6: bb.3.tail:
   ; MMR6:   JRC16_MM undef $ra
   ; PIC-LABEL: name: expand_BLEZC_MMR6
@@ -728,7 +728,7 @@ body:             |
   ; PIC:   JIC_MMR6 $at, 0, implicit-def $at
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JRC16_MM undef $ra
   bb.0 (%ir-block.0):
@@ -741,7 +741,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -792,7 +792,7 @@ body:             |
   ; MMR6:   BC_MMR6 %bb.3
   ; MMR6: bb.2.iftrue:
   ; MMR6:   successors: %bb.3(0x80000000)
-  ; MMR6:   INLINEASM &".space 131068", 1
+  ; MMR6:   INLINEASM &".space 131068", sideeffect attdialect
   ; MMR6: bb.3.tail:
   ; MMR6:   JRC16_MM undef $ra
   ; PIC-LABEL: name: expand_BLTC_MMR6
@@ -815,7 +815,7 @@ body:             |
   ; PIC:   JIC_MMR6 $at, 0, implicit-def $at
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JRC16_MM undef $ra
   bb.0 (%ir-block.0):
@@ -828,7 +828,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -879,7 +879,7 @@ body:             |
   ; MMR6:   BC_MMR6 %bb.3
   ; MMR6: bb.2.iftrue:
   ; MMR6:   successors: %bb.3(0x80000000)
-  ; MMR6:   INLINEASM &".space 131068", 1
+  ; MMR6:   INLINEASM &".space 131068", sideeffect attdialect
   ; MMR6: bb.3.tail:
   ; MMR6:   JRC16_MM undef $ra
   ; PIC-LABEL: name: expand_BLTUC_MMR6
@@ -902,7 +902,7 @@ body:             |
   ; PIC:   JIC_MMR6 $at, 0, implicit-def $at
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JRC16_MM undef $ra
   bb.0 (%ir-block.0):
@@ -915,7 +915,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -966,7 +966,7 @@ body:             |
   ; MMR6:   BC_MMR6 %bb.3
   ; MMR6: bb.2.iftrue:
   ; MMR6:   successors: %bb.3(0x80000000)
-  ; MMR6:   INLINEASM &".space 131068", 1
+  ; MMR6:   INLINEASM &".space 131068", sideeffect attdialect
   ; MMR6: bb.3.tail:
   ; MMR6:   JRC16_MM undef $ra
   ; PIC-LABEL: name: expand_BLTZC_MMR6
@@ -989,7 +989,7 @@ body:             |
   ; PIC:   JIC_MMR6 $at, 0, implicit-def $at
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 131068", 1
+  ; PIC:   INLINEASM &".space 131068", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JRC16_MM undef $ra
   bb.0 (%ir-block.0):
@@ -1002,7 +1002,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 131068", 1
+    INLINEASM &".space 131068", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -1053,7 +1053,7 @@ body:             |
   ; MMR6:   BC_MMR6 %bb.3
   ; MMR6: bb.2.iftrue:
   ; MMR6:   successors: %bb.3(0x80000000)
-  ; MMR6:   INLINEASM &".space 8388608", 1
+  ; MMR6:   INLINEASM &".space 8388608", sideeffect attdialect
   ; MMR6: bb.3.tail:
   ; MMR6:   JRC16_MM undef $ra
   ; PIC-LABEL: name: expand_BEQZC_MMR6
@@ -1076,7 +1076,7 @@ body:             |
   ; PIC:   JIC_MMR6 $at, 0, implicit-def $at
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 8388608", 1
+  ; PIC:   INLINEASM &".space 8388608", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JRC16_MM undef $ra
   bb.0 (%ir-block.0):
@@ -1089,7 +1089,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 8388608", 1
+    INLINEASM &".space 8388608", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra
@@ -1140,7 +1140,7 @@ body:             |
   ; MMR6:   BC_MMR6 %bb.3
   ; MMR6: bb.2.iftrue:
   ; MMR6:   successors: %bb.3(0x80000000)
-  ; MMR6:   INLINEASM &".space 8388608", 1
+  ; MMR6:   INLINEASM &".space 8388608", sideeffect attdialect
   ; MMR6: bb.3.tail:
   ; MMR6:   JRC16_MM undef $ra
   ; PIC-LABEL: name: expand_BNEZC_MMR6
@@ -1163,7 +1163,7 @@ body:             |
   ; PIC:   JIC_MMR6 $at, 0, implicit-def $at
   ; PIC: bb.3.iftrue:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   INLINEASM &".space 8388608", 1
+  ; PIC:   INLINEASM &".space 8388608", sideeffect attdialect
   ; PIC: bb.4.tail:
   ; PIC:   JRC16_MM undef $ra
   bb.0 (%ir-block.0):
@@ -1176,7 +1176,7 @@ body:             |
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
 
-    INLINEASM &".space 8388608", 1
+    INLINEASM &".space 8388608", sideeffect attdialect
 
   bb.2.tail:
     PseudoReturn undef $ra

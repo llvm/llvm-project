@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -stop-before=ppc-vsx-copy -vec-extabi \
+; RUN: llc -verify-machineinstrs -stop-before=ppc-vsx-copy -target-abi=vec-extabi \
 ; RUN:     -mcpu=pwr7  -mtriple powerpc-ibm-aix-xcoff < %s 2>&1 | \
 ; RUN: FileCheck %s
 

@@ -79,7 +79,6 @@
 #include "MipsInstrInfo.h"
 #include "MipsMachineFunction.h"
 #include "MipsSubtarget.h"
-#include "MipsTargetMachine.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -298,7 +297,7 @@ void MipsBranchExpansion::initMBBInfo() {
     MachineBasicBlock *MBB = MFp->getBlockNumbered(I);
 
     // Compute size of MBB.
-    for (MachineInstr &MI : MBB->instrs())
+    for (MachineInstr &MI : *MBB)
       MBBInfos[I].Size += TII->getInstSizeInBytes(MI);
   }
 }
@@ -866,7 +865,7 @@ bool MipsBranchExpansion::handleLoadDelaySlot() {
 }
 
 bool MipsBranchExpansion::handlePossibleLongBranch() {
-  if (STI->inMips16Mode() || !STI->enableLongBranchPass())
+  if (STI->inMips16Mode())
     return false;
 
   if (SkipLongBranch)
@@ -922,8 +921,8 @@ bool MipsBranchExpansion::handlePossibleLongBranch() {
 bool MipsBranchExpansion::runOnMachineFunction(MachineFunction &MF) {
   const TargetMachine &TM = MF.getTarget();
   IsPIC = TM.isPositionIndependent();
-  ABI = static_cast<const MipsTargetMachine &>(TM).getABI();
   STI = &MF.getSubtarget<MipsSubtarget>();
+  ABI = STI->getABI();
   TII = STI->getInstrInfo();
 
   if (IsPIC && ABI.IsO32() &&

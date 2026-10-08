@@ -470,7 +470,7 @@ static void updateOperands(MachineInstr &MI, RegImmPair OldRegImm,
 
 bool RISCVMakeCompressibleOpt::runOnMachineFunction(MachineFunction &Fn) {
   // This is a size optimization.
-  if (skipFunction(Fn.getFunction()) || !Fn.getFunction().hasMinSize())
+  if (skipFunction(Fn.getFunction()) || !Fn.getFunction().hasOptSize())
     return false;
 
   const RISCVSubtarget &STI = Fn.getSubtarget<RISCVSubtarget>();

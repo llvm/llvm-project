@@ -84,8 +84,10 @@ public:
 
   ConceptReference *getConceptReference() const { return ConceptRef; }
 
-  ConceptDecl *getNamedConcept() const {
-    return cast<ConceptDecl>(ConceptRef->getNamedConcept());
+  TemplateName getNamedConcept() const { return ConceptRef->getNamedConcept(); }
+
+  ConceptDecl *getConceptDecl() const {
+    return cast<ConceptDecl>(getNamedConcept().getAsTemplateDecl());
   }
 
   // FIXME: Several of the following functions can be removed. Instead the

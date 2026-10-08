@@ -224,17 +224,38 @@ bool isLinearizableVector(VectorType type);
 /// `useInBoundsInsteadOfMasking` to `true` to use the "in_bounds" attribute
 /// instead of explicit masks.
 ///
-/// Note: all read offsets are set to 0.
+/// When `permutationMap` is provided the in_bounds attribute is inferred from
+/// it: dimension i is in-bounds when the map result is an AffineDimExpr
+/// pointing to a static memref dimension divisible by the vector size, or an
+/// AffineConstantExpr (broadcast). Custom`indices` must also be supplied in
+/// that case; if `indices` is empty, all offsets default to 0.
 Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
                              const VectorType &vecToReadTy,
                              std::optional<Value> padValue = std::nullopt,
-                             bool useInBoundsInsteadOfMasking = false);
+                             bool useInBoundsInsteadOfMasking = false,
+                             ArrayRef<Value> indices = {},
+                             AffineMap permutationMap = AffineMap());
 
 Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
                              ArrayRef<int64_t> inputVectorSizes,
                              std::optional<Value> padValue = std::nullopt,
                              bool useInBoundsInsteadOfMasking = false,
                              ArrayRef<bool> inputScalableVecDims = {});
+
+/// Create a TransferWriteOp of `vecToStore` into `dest`.
+///
+/// If the shape of the vector to write differs from the destination shape,
+/// masking is used to avoid out-of-bounds accesses. Set
+/// `useInBoundsInsteadOfMasking` to `true` to use the "in_bounds" attribute
+/// instead of explicit masks.
+/// `writeIndices` specifies the offsets to use. If empty, all indices are set
+/// to 0. When `permutationMap` is provided, the in_bounds attribute is
+/// inferred from the map instead of the destination shape.
+Operation *createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
+                                    Value vecToStore, Value dest,
+                                    SmallVector<Value> writeIndices = {},
+                                    bool useInBoundsInsteadOfMasking = false,
+                                    AffineMap permutationMap = AffineMap());
 
 /// Returns success if `inputVectorSizes` is a valid masking configuraion for
 /// given `shape`, i.e., it meets:

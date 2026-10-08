@@ -191,9 +191,8 @@ TEST_F(FIRBuilderTest, createGlobal1) {
   EXPECT_EQ("global1", global.getSymName());
   EXPECT_TRUE(global.getConstant().has_value());
   EXPECT_EQ(i64Type, global.getType());
-  EXPECT_TRUE(global.getLinkName().has_value());
-  EXPECT_EQ(
-      builder.createInternalLinkage().getValue(), global.getLinkName().value());
+  EXPECT_TRUE(global.getLinkage().has_value());
+  EXPECT_EQ(fir::LinkageEnum::Internal, global.getLinkage().value());
   EXPECT_FALSE(global.getInitVal().has_value());
 
   auto g1 = builder.getNamedGlobal("global1");
@@ -219,9 +218,8 @@ TEST_F(FIRBuilderTest, createGlobal2) {
   EXPECT_TRUE(mlir::isa<mlir::IntegerAttr>(global.getInitVal().value()));
   EXPECT_EQ(16,
       mlir::cast<mlir::IntegerAttr>(global.getInitVal().value()).getValue());
-  EXPECT_TRUE(global.getLinkName().has_value());
-  EXPECT_EQ(
-      builder.createLinkOnceLinkage().getValue(), global.getLinkName().value());
+  EXPECT_TRUE(global.getLinkage().has_value());
+  EXPECT_EQ(fir::LinkageEnum::Linkonce, global.getLinkage().value());
 }
 
 TEST_F(FIRBuilderTest, uniqueCFIdent) {
@@ -310,8 +308,7 @@ TEST_F(FIRBuilderTest, createStringLiteral) {
   auto addrOp = dyn_cast<fir::AddrOfOp>(addr.getDefiningOp());
   auto symbol = addrOp.getSymbol().getRootReference().getValue();
   auto global = builder.getNamedGlobal(symbol);
-  EXPECT_EQ(
-      builder.createLinkOnceLinkage().getValue(), global.getLinkName().value());
+  EXPECT_EQ(fir::LinkageEnum::Linkonce, global.getLinkage().value());
   EXPECT_EQ(fir::CharacterType::get(builder.getContext(), 1, strValue.size()),
       global.getType());
 

@@ -11,6 +11,10 @@
 // RUN: -fexperimental-overflow-behavior-types -fsanitize=implicit-unsigned-integer-truncation,implicit-signed-integer-truncation \
 // RUN: -emit-llvm -o - | FileCheck %s --check-prefix=TRUNC
 
+// RUN: %clang_cc1 -triple x86_64-linux-gnu %t/test.c -fsanitize-ignorelist=%t/sign-change.scl \
+// RUN: -fexperimental-overflow-behavior-types -fsanitize=implicit-integer-sign-change \
+// RUN: -emit-llvm -o - | FileCheck %s --check-prefix=SIGNCHG
+
 //--- sio.scl
 [signed-integer-overflow]
 # ignore signed-integer-overflow instrumentation across all types
@@ -23,6 +27,10 @@ type:*
 
 //--- trunc.scl
 [{implicit-unsigned-integer-truncation,implicit-signed-integer-truncation}]
+type:*
+
+//--- sign-change.scl
+[implicit-integer-sign-change]
 type:*
 
 //--- test.c
@@ -61,4 +69,13 @@ void bar(int value) {
   // TRUNC-NEXT: %[[TCHECK:.*]] = icmp eq i32 %[[ANYEXT]], %[[V0]]
   // TRUNC-NEXT: br i1 %[[TCHECK]], {{.*}}%handler.implicit_conversion
   unsigned char __ob_trap a = value;
+}
+
+// SIGNCHG-LABEL: define {{.*}} @obt_priority_over_scl_for_sign_change_sanitizer
+void obt_priority_over_scl_for_sign_change_sanitizer(unsigned int __ob_trap a) {
+  // SIGNCHG: %[[T0:.*]] = load i32, ptr %a.addr
+  // SIGNCHG-NEXT: %[[NEG0:.*]] = icmp slt i32 %[[T0]], 0
+  // SIGNCHG-NEXT: %[[SIGN0:.*]] = icmp eq i1 false, %[[NEG0]]
+  // SIGNCHG-NEXT: br i1 %[[SIGN0]], {{.*}} %handler.implicit_conversion
+  (signed int)a;
 }

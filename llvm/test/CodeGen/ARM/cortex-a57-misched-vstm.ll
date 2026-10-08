@@ -1,9 +1,9 @@
 ; REQUIRES: asserts
 ; RUN: llc < %s -mtriple=armv8r-eabi -mcpu=cortex-a57 -mattr=use-misched -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s
 
-; CHECK:       ********** MI Scheduling **********
+; CHECK:       Current Schedule Region
 ; We need second, post-ra scheduling to have VSTM instruction combined from single-stores
-; CHECK:       ********** MI Scheduling **********
+; CHECK:       Current Schedule Region
 ; CHECK:       schedule starting
 ; CHECK:       VSTMDIA
 ; CHECK:       rdefs left

@@ -21,7 +21,7 @@
 
 using It = contiguous_iterator<int*>;
 
-using CapIter = std::__capacity_aware_iterator<It, int[], 1>;
+using CapIter = std::__capacity_aware_iterator<It, 1>;
 
 static_assert(std::is_same_v<CapIter::iterator_category, It::iterator_category>);
 static_assert(std::is_same_v<CapIter::iterator_concept, std::contiguous_iterator_tag>);

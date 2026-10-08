@@ -5,7 +5,7 @@ module {
     %0 = fir.emboxchar %arg0, %arg1 : (!fir.ref<!fir.char<1,?>>, i64) -> !fir.boxchar<1>
     %1 = fir.undefined !fir.dscope
     %2:2 = fir.unboxchar %0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)  loc(#loc1)
-    %3 = fircg.ext_declare %2#0 typeparams %2#1 dummy_scope %1 {uniq_name = "_QFtestEstr"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> !fir.ref<!fir.char<1,?>> loc(#loc1)
+    %3 = fircg.ext_declare %2#0 typeparams %2#1 dummy_scope %1 uniq_name("_QFtestEstr") : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> !fir.ref<!fir.char<1,?>> loc(#loc1)
     return
   } loc(#loc2)
 }

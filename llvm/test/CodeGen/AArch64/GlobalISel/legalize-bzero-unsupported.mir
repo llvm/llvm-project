@@ -9,6 +9,6 @@ body:             |
     # CHECK: LLVM ERROR: unable to legalize instruction: G_BZERO
     liveins: $x0, $x1
     %ptr:_(p0) = COPY $x0
-    %width:_(s64) = COPY $x1
-    G_BZERO %ptr(p0), %width(s64), 0 :: (store 4)
+    %width:_(i64) = COPY $x1
+    G_BZERO %ptr(p0), %width(i64), 0 :: (store 4)
     RET_ReallyLR

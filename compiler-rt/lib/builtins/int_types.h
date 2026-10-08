@@ -75,6 +75,11 @@ typedef union {
 #undef CRT_HAS_128BIT
 #endif
 
+// The core SPIR-V specification does not support 128-bit integers.
+#if defined(__SPIRV__)
+#undef CRT_HAS_128BIT
+#endif
+
 #ifdef CRT_HAS_128BIT
 typedef int ti_int __attribute__((mode(TI)));
 typedef unsigned tu_int __attribute__((mode(TI)));

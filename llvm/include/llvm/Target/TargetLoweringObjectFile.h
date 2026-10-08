@@ -108,13 +108,14 @@ public:
   /// placed in.
   virtual MCSection *getSectionForConstant(const DataLayout &DL,
                                            SectionKind Kind, const Constant *C,
-                                           Align &Alignment) const;
+                                           Align &Alignment,
+                                           const Function *F) const;
 
   /// Similar to the function above, but append \p SectionSuffix to the section
   /// name.
   virtual MCSection *getSectionForConstant(const DataLayout &DL,
                                            SectionKind Kind, const Constant *C,
-                                           Align &Alignment,
+                                           Align &Alignment, const Function *F,
                                            StringRef SectionSuffix) const;
 
   virtual MCSection *
@@ -130,6 +131,11 @@ public:
   /// categories embodied in SectionKind.
   static SectionKind getKindForGlobal(const GlobalObject *GO,
                                       const TargetMachine &TM);
+
+  /// Return the section name specified by '#pragma clang section' or the
+  /// section attribute.
+  static StringRef getCustomSectionName(const GlobalObject *GO,
+                                        const TargetMachine &TM);
 
   /// This method computes the appropriate section to emit the specified global
   /// variable or function definition. This should not be passed external (or

@@ -41,12 +41,11 @@ class MTTR_ENC : COP0_MFTTR_MT<FIELD5_MTTR>;
 // MIPS MT Instruction Descriptions
 //===----------------------------------------------------------------------===//
 
-class MT_1R_DESC_BASE<string instr_asm, InstrItinClass Itin = NoItinerary> {
+class MT_1R_DESC_BASE<string instr_asm> {
   dag OutOperandList = (outs GPR32Opnd:$rt);
   dag InOperandList = (ins);
   string AsmString = !strconcat(instr_asm, "\t$rt");
   list<dag> Pattern = [];
-  InstrItinClass Itinerary = Itin;
 }
 
 class MFTR_DESC {
@@ -54,7 +53,6 @@ class MFTR_DESC {
   dag InOperandList = (ins GPR32Opnd:$rt, uimm1:$u, uimm3:$sel, uimm1:$h);
   string AsmString = "mftr\t$rd, $rt, $u, $sel, $h";
   list<dag> Pattern = [];
-  InstrItinClass Itinerary = II_MFTR;
 }
 
 class MTTR_DESC {
@@ -62,7 +60,6 @@ class MTTR_DESC {
   dag InOperandList = (ins GPR32Opnd:$rt, uimm1:$u, uimm3:$sel, uimm1:$h);
   string AsmString = "mttr\t$rt, $rd, $u, $sel, $h";
   list<dag> Pattern = [];
-  InstrItinClass Itinerary = II_MTTR;
 }
 
 class FORK_DESC {
@@ -70,7 +67,6 @@ class FORK_DESC {
   dag InOperandList = (ins GPR32Opnd:$rt);
   string AsmString = "fork\t$rd, $rs, $rt";
   list<dag> Pattern = [];
-  InstrItinClass Itinerary = II_FORK;
 }
 
 class YIELD_DESC {
@@ -78,16 +74,15 @@ class YIELD_DESC {
   dag InOperandList = (ins GPR32Opnd:$rs);
   string AsmString = "yield\t$rd, $rs";
   list<dag> Pattern = [];
-  InstrItinClass Itinerary = II_YIELD;
 }
 
-class DMT_DESC : MT_1R_DESC_BASE<"dmt", II_DMT>;
+class DMT_DESC : MT_1R_DESC_BASE<"dmt">;
 
-class EMT_DESC : MT_1R_DESC_BASE<"emt", II_EMT>;
+class EMT_DESC : MT_1R_DESC_BASE<"emt">;
 
-class DVPE_DESC : MT_1R_DESC_BASE<"dvpe", II_DVPE>;
+class DVPE_DESC : MT_1R_DESC_BASE<"dvpe">;
 
-class EVPE_DESC : MT_1R_DESC_BASE<"evpe", II_EVPE>;
+class EVPE_DESC : MT_1R_DESC_BASE<"evpe">;
 
 //===----------------------------------------------------------------------===//
 // MIPS MT Instruction Definitions

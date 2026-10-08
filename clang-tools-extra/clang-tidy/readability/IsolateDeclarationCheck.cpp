@@ -235,7 +235,7 @@ createIsolatedDecls(llvm::ArrayRef<StringRef> Snippets) {
 
   for (std::size_t I = 1; I < Snippets.size(); ++I)
     Decls[I - 1] = Twine(Snippets[0])
-                       .concat(Snippets[0].ends_with(" ") ? "" : " ")
+                       .concat(Snippets[0].ends_with(' ') ? "" : " ")
                        .concat(Snippets[I].ltrim())
                        .concat(";")
                        .str();
@@ -246,7 +246,7 @@ createIsolatedDecls(llvm::ArrayRef<StringRef> Snippets) {
 void IsolateDeclarationCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *WholeDecl = Result.Nodes.getNodeAs<DeclStmt>("decl_stmt");
 
-  auto Diag =
+  const auto Diag =
       diag(WholeDecl->getBeginLoc(),
            "multiple declarations in a single statement reduces readability");
 

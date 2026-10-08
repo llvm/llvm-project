@@ -678,9 +678,15 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
   ldp    x18,x19, [x0, #0x090]
   ldp    x20,x21, [x0, #0x0A0]
   ldp    x22,x23, [x0, #0x0B0]
+#if defined(__LFI__)
+  ldr    x24,     [x0, #0x0C0]
+  // Skip reloading x25-x28; reserved by LFI ABI.
+  ldr    x29,     [x0, #0x0E8]
+#else
   ldp    x24,x25, [x0, #0x0C0]
   ldp    x26,x27, [x0, #0x0D0]
   ldp    x28,x29, [x0, #0x0E0]
+#endif
 
 #if defined(__ARM_FP) && __ARM_FP != 0
   ldp    d0, d1,  [x0, #0x110]
@@ -941,11 +947,22 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind14Registers_or1k6jumptoEv)
 
 #elif defined(__hexagon__)
 # On entry:
-#  thread_state pointer is in r2
+#  thread_state pointer is in r0
 DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind17Registers_hexagon6jumptoEv)
 #
 # void libunwind::Registers_hexagon::jumpto()
 #
+# The context layout is hexagon_thread_state_t: unsigned int __r[35]
+# __r[0..31] = r0..r31, __r[32] = predicates, __r[33] = PC.
+# Offsets: __r[n] is at byte offset n*4.  r0 is the context pointer, so
+# it is restored last; r31 is loaded with the saved PC as the jumpr target.
+  r2 = memw(r0+#8)
+  r3 = memw(r0+#12)
+  r4 = memw(r0+#16)
+  r5 = memw(r0+#20)
+  r6 = memw(r0+#24)
+  r7 = memw(r0+#28)
+
   r8 = memw(r0+#32)
   r9 = memw(r0+#36)
   r10 = memw(r0+#40)

@@ -10,18 +10,13 @@
 //===--------------------------------------------------------------------===//
 
 #include "llvm/Support/ELFAttrParserCompact.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 using namespace llvm;
 using namespace llvm::ELFAttrs;
-
-static constexpr EnumEntry<unsigned> tagNames[] = {
-    {"Tag_File", ELFAttrs::File},
-    {"Tag_Section", ELFAttrs::Section},
-    {"Tag_Symbol", ELFAttrs::Symbol},
-};
 
 Error ELFCompactAttrParser::parseStringAttribute(
     const char *name, unsigned tag, ArrayRef<const char *> strings) {
@@ -147,7 +142,14 @@ Error ELFCompactAttrParser::parseSubsection(uint32_t length) {
       return cursor.takeError();
 
     if (sw) {
-      sw->printEnum("Tag", tag, ArrayRef(tagNames));
+      constexpr EnumStringDef<unsigned> TagNameDefs[] = {
+          {{"Tag_File"}, ELFAttrs::File},
+          {{"Tag_Section"}, ELFAttrs::Section},
+          {{"Tag_Symbol"}, ELFAttrs::Symbol},
+      };
+      static constexpr auto TagNames = BUILD_ENUM_STRINGS(TagNameDefs);
+
+      sw->printEnum("Tag", tag, EnumStrings(TagNames));
       sw->printNumber("Size", size);
     }
     if (size < 5)
@@ -194,7 +196,7 @@ Error ELFCompactAttrParser::parseSubsection(uint32_t length) {
 Error ELFCompactAttrParser::parse(ArrayRef<uint8_t> section,
                                   llvm::endianness endian) {
   unsigned sectionNumber = 0;
-  de = DataExtractor(section, endian == llvm::endianness::little, 0);
+  de = DataExtractor(section, endian == llvm::endianness::little);
 
   // For early returns, we have more specific errors, consume the Error in
   // cursor.

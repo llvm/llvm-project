@@ -13,16 +13,16 @@ body:             |
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:gpr64sp = COPY $x0
-    ; CHECK-NEXT: [[LD2Twov8b:%[0-9]+]]:dd = LD2Twov8b %ptr :: (load (<8 x s64>))
+    ; CHECK-NEXT: [[LD2Twov8b:%[0-9]+]]:dd = LD2Twov8b %ptr :: (load (<8 x i64>))
     ; CHECK-NEXT: %dst1:fpr64 = COPY [[LD2Twov8b]].dsub0
     ; CHECK-NEXT: %dst2:fpr64 = COPY [[LD2Twov8b]].dsub1
     ; CHECK-NEXT: $d0 = COPY %dst1
     ; CHECK-NEXT: $d1 = COPY %dst2
     ; CHECK-NEXT: RET_ReallyLR implicit $d0, implicit $d1
     %ptr:gpr(p0) = COPY $x0
-    %dst1:fpr(<8 x s8>), %dst2:fpr(<8 x s8>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.ld2), %ptr(p0) :: (load (<8 x s64>))
-    $d0 = COPY %dst1(<8 x s8>)
-    $d1 = COPY %dst2(<8 x s8>)
+    %dst1:fpr(<8 x i8>), %dst2:fpr(<8 x i8>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.ld2), %ptr(p0) :: (load (<8 x i64>))
+    $d0 = COPY %dst1(<8 x i8>)
+    $d1 = COPY %dst2(<8 x i8>)
     RET_ReallyLR implicit $d0, implicit $d1
 ...
 ---
@@ -37,16 +37,16 @@ body:             |
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:gpr64sp = COPY $x0
-    ; CHECK-NEXT: [[LD2Twov16b:%[0-9]+]]:qq = LD2Twov16b %ptr :: (load (<16 x s64>))
+    ; CHECK-NEXT: [[LD2Twov16b:%[0-9]+]]:qq = LD2Twov16b %ptr :: (load (<16 x i64>))
     ; CHECK-NEXT: %dst1:fpr128 = COPY [[LD2Twov16b]].qsub0
     ; CHECK-NEXT: %dst2:fpr128 = COPY [[LD2Twov16b]].qsub1
     ; CHECK-NEXT: $q0 = COPY %dst1
     ; CHECK-NEXT: $q1 = COPY %dst2
     ; CHECK-NEXT: RET_ReallyLR implicit $q0, implicit $q1
     %ptr:gpr(p0) = COPY $x0
-    %dst1:fpr(<16 x s8>), %dst2:fpr(<16 x s8>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.ld2), %ptr(p0) :: (load (<16 x s64>))
-    $q0 = COPY %dst1(<16 x s8>)
-    $q1 = COPY %dst2(<16 x s8>)
+    %dst1:fpr(<16 x i8>), %dst2:fpr(<16 x i8>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.ld2), %ptr(p0) :: (load (<16 x i64>))
+    $q0 = COPY %dst1(<16 x i8>)
+    $q1 = COPY %dst2(<16 x i8>)
     RET_ReallyLR implicit $q0, implicit $q1
 ...
 ---
@@ -61,16 +61,16 @@ body:             |
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:gpr64sp = COPY $x0
-    ; CHECK-NEXT: [[LD2Twov4h:%[0-9]+]]:dd = LD2Twov4h %ptr :: (load (<4 x s64>))
+    ; CHECK-NEXT: [[LD2Twov4h:%[0-9]+]]:dd = LD2Twov4h %ptr :: (load (<4 x i64>))
     ; CHECK-NEXT: %dst1:fpr64 = COPY [[LD2Twov4h]].dsub0
     ; CHECK-NEXT: %dst2:fpr64 = COPY [[LD2Twov4h]].dsub1
     ; CHECK-NEXT: $d0 = COPY %dst1
     ; CHECK-NEXT: $d1 = COPY %dst2
     ; CHECK-NEXT: RET_ReallyLR implicit $d0, implicit $d1
     %ptr:gpr(p0) = COPY $x0
-    %dst1:fpr(<4 x s16>), %dst2:fpr(<4 x s16>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.ld2), %ptr(p0) :: (load (<4 x s64>))
-    $d0 = COPY %dst1(<4 x s16>)
-    $d1 = COPY %dst2(<4 x s16>)
+    %dst1:fpr(<4 x i16>), %dst2:fpr(<4 x i16>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.ld2), %ptr(p0) :: (load (<4 x i64>))
+    $d0 = COPY %dst1(<4 x i16>)
+    $d1 = COPY %dst2(<4 x i16>)
     RET_ReallyLR implicit $d0, implicit $d1
 ...
 ---
@@ -85,16 +85,16 @@ body:             |
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:gpr64sp = COPY $x0
-    ; CHECK-NEXT: [[LD2Twov8h:%[0-9]+]]:qq = LD2Twov8h %ptr :: (load (<8 x s64>))
+    ; CHECK-NEXT: [[LD2Twov8h:%[0-9]+]]:qq = LD2Twov8h %ptr :: (load (<8 x i64>))
     ; CHECK-NEXT: %dst1:fpr128 = COPY [[LD2Twov8h]].qsub0
     ; CHECK-NEXT: %dst2:fpr128 = COPY [[LD2Twov8h]].qsub1
     ; CHECK-NEXT: $q0 = COPY %dst1
     ; CHECK-NEXT: $q1 = COPY %dst2
     ; CHECK-NEXT: RET_ReallyLR implicit $q0, implicit $q1
     %ptr:gpr(p0) = COPY $x0
-    %dst1:fpr(<8 x s16>), %dst2:fpr(<8 x s16>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.ld2), %ptr(p0) :: (load (<8 x s64>))
-    $q0 = COPY %dst1(<8 x s16>)
-    $q1 = COPY %dst2(<8 x s16>)
+    %dst1:fpr(<8 x i16>), %dst2:fpr(<8 x i16>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.ld2), %ptr(p0) :: (load (<8 x i64>))
+    $q0 = COPY %dst1(<8 x i16>)
+    $q1 = COPY %dst2(<8 x i16>)
     RET_ReallyLR implicit $q0, implicit $q1
 ...
 ---
@@ -109,16 +109,16 @@ body:             |
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:gpr64sp = COPY $x0
-    ; CHECK-NEXT: [[LD2Twov2s:%[0-9]+]]:dd = LD2Twov2s %ptr :: (load (<2 x s64>))
+    ; CHECK-NEXT: [[LD2Twov2s:%[0-9]+]]:dd = LD2Twov2s %ptr :: (load (<2 x i64>))
     ; CHECK-NEXT: %dst1:fpr64 = COPY [[LD2Twov2s]].dsub0
     ; CHECK-NEXT: %dst2:fpr64 = COPY [[LD2Twov2s]].dsub1
     ; CHECK-NEXT: $d0 = COPY %dst1
     ; CHECK-NEXT: $d1 = COPY %dst2
     ; CHECK-NEXT: RET_ReallyLR implicit $d0, implicit $d1
     %ptr:gpr(p0) = COPY $x0
-    %dst1:fpr(<2 x s32>), %dst2:fpr(<2 x s32>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.ld2), %ptr(p0) :: (load (<2 x s64>))
-    $d0 = COPY %dst1(<2 x s32>)
-    $d1 = COPY %dst2(<2 x s32>)
+    %dst1:fpr(<2 x i32>), %dst2:fpr(<2 x i32>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.ld2), %ptr(p0) :: (load (<2 x i64>))
+    $d0 = COPY %dst1(<2 x i32>)
+    $d1 = COPY %dst2(<2 x i32>)
     RET_ReallyLR implicit $d0, implicit $d1
 ...
 ---
@@ -133,16 +133,16 @@ body:             |
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:gpr64sp = COPY $x0
-    ; CHECK-NEXT: [[LD2Twov4s:%[0-9]+]]:qq = LD2Twov4s %ptr :: (load (<4 x s64>))
+    ; CHECK-NEXT: [[LD2Twov4s:%[0-9]+]]:qq = LD2Twov4s %ptr :: (load (<4 x i64>))
     ; CHECK-NEXT: %dst1:fpr128 = COPY [[LD2Twov4s]].qsub0
     ; CHECK-NEXT: %dst2:fpr128 = COPY [[LD2Twov4s]].qsub1
     ; CHECK-NEXT: $q0 = COPY %dst1
     ; CHECK-NEXT: $q1 = COPY %dst2
     ; CHECK-NEXT: RET_ReallyLR implicit $q0, implicit $q1
     %ptr:gpr(p0) = COPY $x0
-    %dst1:fpr(<4 x s32>), %dst2:fpr(<4 x s32>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.ld2), %ptr(p0) :: (load (<4 x s64>))
-    $q0 = COPY %dst1(<4 x s32>)
-    $q1 = COPY %dst2(<4 x s32>)
+    %dst1:fpr(<4 x i32>), %dst2:fpr(<4 x i32>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.ld2), %ptr(p0) :: (load (<4 x i64>))
+    $q0 = COPY %dst1(<4 x i32>)
+    $q1 = COPY %dst2(<4 x i32>)
     RET_ReallyLR implicit $q0, implicit $q1
 ...
 ---
@@ -157,16 +157,16 @@ body:             |
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:gpr64sp = COPY $x0
-    ; CHECK-NEXT: [[LD2Twov2d:%[0-9]+]]:qq = LD2Twov2d %ptr :: (load (<2 x s64>))
+    ; CHECK-NEXT: [[LD2Twov2d:%[0-9]+]]:qq = LD2Twov2d %ptr :: (load (<2 x i64>))
     ; CHECK-NEXT: %dst1:fpr128 = COPY [[LD2Twov2d]].qsub0
     ; CHECK-NEXT: %dst2:fpr128 = COPY [[LD2Twov2d]].qsub1
     ; CHECK-NEXT: $q0 = COPY %dst1
     ; CHECK-NEXT: $q1 = COPY %dst2
     ; CHECK-NEXT: RET_ReallyLR implicit $q0, implicit $q1
     %ptr:gpr(p0) = COPY $x0
-    %dst1:fpr(<2 x s64>), %dst2:fpr(<2 x s64>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.ld2), %ptr(p0) :: (load (<2 x s64>))
-    $q0 = COPY %dst1(<2 x s64>)
-    $q1 = COPY %dst2(<2 x s64>)
+    %dst1:fpr(<2 x i64>), %dst2:fpr(<2 x i64>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.ld2), %ptr(p0) :: (load (<2 x i64>))
+    $q0 = COPY %dst1(<2 x i64>)
+    $q1 = COPY %dst2(<2 x i64>)
     RET_ReallyLR implicit $q0, implicit $q1
 ...
 ---
@@ -205,16 +205,16 @@ body:             |
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:gpr64sp = COPY $x0
-    ; CHECK-NEXT: [[LD1Twov1d:%[0-9]+]]:dd = LD1Twov1d %ptr :: (load (s64))
+    ; CHECK-NEXT: [[LD1Twov1d:%[0-9]+]]:dd = LD1Twov1d %ptr :: (load (i64))
     ; CHECK-NEXT: %dst1:fpr64 = COPY [[LD1Twov1d]].dsub0
     ; CHECK-NEXT: %dst2:fpr64 = COPY [[LD1Twov1d]].dsub1
     ; CHECK-NEXT: $d0 = COPY %dst1
     ; CHECK-NEXT: $d1 = COPY %dst2
     ; CHECK-NEXT: RET_ReallyLR implicit $d0, implicit $d1
     %ptr:gpr(p0) = COPY $x0
-    %dst1:fpr(s64), %dst2:fpr(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.ld2), %ptr(p0) :: (load (s64))
-    $d0 = COPY %dst1(s64)
-    $d1 = COPY %dst2(s64)
+    %dst1:fpr(i64), %dst2:fpr(i64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.ld2), %ptr(p0) :: (load (i64))
+    $d0 = COPY %dst1(i64)
+    $d1 = COPY %dst2(i64)
     RET_ReallyLR implicit $d0, implicit $d1
 ...
 ---

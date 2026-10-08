@@ -10,6 +10,7 @@ from lldbsuite.test import lldbutil
 
 
 class StdAtomicTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
     TEST_WITH_PDB_DEBUG_INFO = True
 
     def get_variable(self, name):

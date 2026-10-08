@@ -22,6 +22,10 @@
 # RUN: ld.lld c.o -o c
 # RUN: llvm-readelf -S -l c | FileCheck %s --check-prefix=CHECK4
 
+# RUN: llvm-mc -filetype=obj -triple=x86_64 d.s -o d.o
+# RUN: ld.lld d.o -z keep-text-section-prefix -o d
+# RUN: llvm-readelf -S d | FileCheck %s --check-prefix=CHECK5
+
 # CHECK:       Name              Type            Address          Off    Size   ES Flg Lk Inf Al
 # CHECK-NEXT:                    NULL            0000000000000000 000000 000000 00      0   0  0
 # CHECK-NEXT:  .note             NOTE            0000000000200300 000300 000001 00   A  0   0  1
@@ -132,6 +136,13 @@
 # CHECK4-NEXT: .ltext_w   PROGBITS
 # CHECK4-NEXT: .comment   PROGBITS
 
+## .ltext.hot and .ltext.unlikely are kept separate with -z keep-text-section-prefix.
+# CHECK5:      .ltext.hot      PROGBITS
+# CHECK5-NEXT: .ltext.unlikely PROGBITS
+# CHECK5-NEXT: .ltext          PROGBITS
+# CHECK5:      .text.hot       PROGBITS
+# CHECK5-NEXT: .text.unlikely  PROGBITS
+
 #--- a.s
 .globl _start, _etext, _edata, _end
 _start:
@@ -173,10 +184,15 @@ SECTIONS {
 }
 
 #--- c.s
-## Test .ltext layout
+## Test .ltext layout. .ltext.1 should be merged into .ltext.
 .section .ltext,"axl",@progbits
 .globl f
 f:
+  ret
+
+.section .ltext.1,"axl",@progbits
+.globl f1
+f1:
   ret
 
 .section .ltext_w,"awxl",@progbits
@@ -196,3 +212,12 @@ h:
 .section .lrodata,"al"; .space 1
 .section .ldata,"awl"; .space 1
 .section .lbss,"awl",@nobits; .space 1
+
+#--- d.s
+## Test -z keep-text-section-prefix with .ltext
+.section .ltext.hot.f1,"axl",@progbits; ret
+.section .ltext.unlikely.f2,"axl",@progbits; ret
+.section .ltext.f3,"axl",@progbits; ret
+.section .text.hot.f4,"ax",@progbits; ret
+.section .text.unlikely.f5,"ax",@progbits; ret
+.section .text.f6,"ax",@progbits; ret

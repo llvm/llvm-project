@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 
-; RUN: opt -passes=loop-interchange -debug -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-interchange -debug -disable-output -loop-interchange-profitabilities=cache %s 2>&1 | FileCheck %s
 
 @A = global [16 x [16 x i32]] zeroinitializer
 

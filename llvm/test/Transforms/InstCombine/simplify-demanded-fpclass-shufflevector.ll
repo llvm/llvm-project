@@ -57,7 +57,7 @@ define nofpclass(nan inf nzero sub norm) <4 x half> @ret_only_pzero__shufflevect
 define nofpclass(nan inf pzero sub norm) <4 x half> @ret_only_nzero__shufflevector_unknown(<4 x half> %vec0, <4 x half> %vec1) {
 ; CHECK-LABEL: define nofpclass(nan inf pzero sub norm) <4 x half> @ret_only_nzero__shufflevector_unknown(
 ; CHECK-SAME: <4 x half> [[VEC0:%.*]], <4 x half> [[VEC1:%.*]]) {
-; CHECK-NEXT:    ret <4 x half> splat (half 0xH8000)
+; CHECK-NEXT:    ret <4 x half> splat (half -0.000000e+00)
 ;
   %shuffle = shufflevector <4 x half> %vec0, <4 x half> %vec1, <4 x i32> <i32 6, i32 2, i32 3, i32 0>
   ret <4 x half> %shuffle
@@ -76,7 +76,7 @@ define nofpclass(nan zero sub norm) <4 x half> @ret_only_inf__shufflevector_unkn
 define nofpclass(nan ninf zero sub norm) <4 x half> @ret_only_pinf__shufflevector_unknown(<4 x half> %vec0, <4 x half> %vec1) {
 ; CHECK-LABEL: define nofpclass(nan ninf zero sub norm) <4 x half> @ret_only_pinf__shufflevector_unknown(
 ; CHECK-SAME: <4 x half> [[VEC0:%.*]], <4 x half> [[VEC1:%.*]]) {
-; CHECK-NEXT:    ret <4 x half> splat (half 0xH7C00)
+; CHECK-NEXT:    ret <4 x half> splat (half +inf)
 ;
   %shuffle = shufflevector <4 x half> %vec0, <4 x half> %vec1, <4 x i32> <i32 6, i32 2, i32 3, i32 0>
   ret <4 x half> %shuffle
@@ -85,7 +85,7 @@ define nofpclass(nan ninf zero sub norm) <4 x half> @ret_only_pinf__shufflevecto
 define nofpclass(nan pinf zero sub norm) <4 x half> @ret_only_ninf__shufflevector_unknown(<4 x half> %vec0, <4 x half> %vec1) {
 ; CHECK-LABEL: define nofpclass(nan pinf zero sub norm) <4 x half> @ret_only_ninf__shufflevector_unknown(
 ; CHECK-SAME: <4 x half> [[VEC0:%.*]], <4 x half> [[VEC1:%.*]]) {
-; CHECK-NEXT:    ret <4 x half> splat (half 0xHFC00)
+; CHECK-NEXT:    ret <4 x half> splat (half -inf)
 ;
   %shuffle = shufflevector <4 x half> %vec0, <4 x half> %vec1, <4 x i32> <i32 6, i32 2, i32 3, i32 0>
   ret <4 x half> %shuffle

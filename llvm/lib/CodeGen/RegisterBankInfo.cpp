@@ -104,7 +104,7 @@ RegisterBankInfo::getMinimalPhysRegClass(MCRegister Reg,
                                          const TargetRegisterInfo &TRI) const {
   const auto [RegRCIt, Inserted] = PhysRegMinimalRCs.try_emplace(Reg);
   if (Inserted)
-    RegRCIt->second = TRI.getMinimalPhysRegClassLLT(Reg, LLT());
+    RegRCIt->second = TRI.getMinimalPhysRegClass(Reg);
   return RegRCIt->second;
 }
 
@@ -721,7 +721,7 @@ void RegisterBankInfo::OperandsMapper::createVRegs(unsigned OpIdx) {
     // of the instruction.
     // The rationale is that this generic code cannot guess how the
     // target plans to split the input type.
-    NewVReg = MRI.createGenericVirtualRegister(LLT::scalar(PartMap->Length));
+    NewVReg = MRI.createGenericVirtualRegister(LLT::integer(PartMap->Length));
     MRI.setRegBank(NewVReg, *PartMap->RegBank);
     ++PartMap;
   }

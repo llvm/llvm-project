@@ -11,7 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/EHUtils.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -23,6 +26,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/CRC.h"
@@ -30,7 +34,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
-#include <unordered_set>
 #include <vector>
 
 using namespace llvm;
@@ -77,33 +80,33 @@ bool PseudoProbeVerifier::shouldVerifyFunction(const Function *F) {
   if (F->hasAvailableExternallyLinkage())
     return false;
   // Do a name matching.
-  static std::unordered_set<std::string> VerifyFuncNames(
-      VerifyPseudoProbeFuncList.begin(), VerifyPseudoProbeFuncList.end());
-  return VerifyFuncNames.empty() || VerifyFuncNames.count(F->getName().str());
+  static const StringSet<> VerifyFuncNames(llvm::from_range,
+                                           VerifyPseudoProbeFuncList);
+  return VerifyFuncNames.empty() || VerifyFuncNames.contains(F->getName());
 }
 
 void PseudoProbeVerifier::registerCallbacks(PassInstrumentationCallbacks &PIC) {
   if (VerifyPseudoProbe) {
     PIC.registerAfterPassCallback(
-        [this](StringRef P, Any IR, const PreservedAnalyses &) {
+        [this](StringRef P, IRUnitRef IR, const PreservedAnalyses &) {
           this->runAfterPass(P, IR);
         });
   }
 }
 
 // Callback to run after each transformation for the new pass manager.
-void PseudoProbeVerifier::runAfterPass(StringRef PassID, Any IR) {
+void PseudoProbeVerifier::runAfterPass(StringRef PassID, IRUnitRef IR) {
   std::string Banner =
       "\n*** Pseudo Probe Verification After " + PassID.str() + " ***\n";
   dbgs() << Banner;
-  if (const auto **M = llvm::any_cast<const Module *>(&IR))
-    runAfterPass(*M);
-  else if (const auto **F = llvm::any_cast<const Function *>(&IR))
-    runAfterPass(*F);
-  else if (const auto **C = llvm::any_cast<const LazyCallGraph::SCC *>(&IR))
-    runAfterPass(*C);
-  else if (const auto **L = llvm::any_cast<const Loop *>(&IR))
-    runAfterPass(*L);
+  if (const auto *M = dyn_cast<Module>(IR))
+    runAfterPass(M);
+  else if (const auto *F = dyn_cast<Function>(IR))
+    runAfterPass(F);
+  else if (const auto *C = dyn_cast<LazyCallGraph::SCC>(IR))
+    runAfterPass(C);
+  else if (const auto *L = dyn_cast<Loop>(IR))
+    runAfterPass(L);
   else
     llvm_unreachable("Unknown IR unit");
 }
@@ -217,15 +220,58 @@ void SampleProfileProber::findUnreachableBlocks(
   }
 }
 
+// Follow invoke normal-dest edges and record blocks that sit on a cycle.
+static void
+findInvokeNormalDestCycles(const Function &F,
+                           DenseSet<const BasicBlock *> &CycleBlocks) {
+  DenseSet<const BasicBlock *> Processed;
+  DenseSet<const BasicBlock *> OnCurrentPath;
+  SmallVector<const BasicBlock *, 16> CurrentPath;
+
+  for (const BasicBlock &Start : F) {
+    if (Processed.contains(&Start))
+      continue;
+
+    CurrentPath.clear();
+    OnCurrentPath.clear();
+    const BasicBlock *Cur = &Start;
+    while (Cur) {
+      if (OnCurrentPath.contains(Cur)) {
+        // Back-edge onto CurrentPath: the cycle is the suffix starting at Cur.
+        auto CycleStart = llvm::find(CurrentPath, Cur);
+        assert(CycleStart != CurrentPath.end() &&
+               "OnCurrentPath must hold exactly the blocks in CurrentPath");
+        CycleBlocks.insert(CycleStart, CurrentPath.end());
+        break;
+      }
+      if (Processed.contains(Cur))
+        break;
+      OnCurrentPath.insert(Cur);
+      CurrentPath.push_back(Cur);
+      if (const auto *II = dyn_cast<InvokeInst>(Cur->getTerminator()))
+        Cur = II->getNormalDest();
+      else
+        Cur = nullptr;
+    }
+    for (const BasicBlock *B : CurrentPath)
+      Processed.insert(B);
+  }
+}
+
 // In call-to-invoke conversion, basic block can be split into multiple blocks,
 // only instrument probe in the head block, ignore the normal dests.
 void SampleProfileProber::findInvokeNormalDests(
     DenseSet<BasicBlock *> &InvokeNormalDests) {
+  DenseSet<const BasicBlock *> CycleBlocks;
+  findInvokeNormalDestCycles(*F, CycleBlocks);
+
   for (auto &BB : *F) {
     auto *TI = BB.getTerminator();
     if (auto *II = dyn_cast<InvokeInst>(TI)) {
       auto *ND = II->getNormalDest();
-      InvokeNormalDests.insert(ND);
+      // Cycle members are original loop blocks, not split continuations.
+      if (!CycleBlocks.contains(ND))
+        InvokeNormalDests.insert(ND);
 
       // The normal dest and the try/catch block are connected by an
       // unconditional branch.
@@ -248,15 +294,28 @@ void SampleProfileProber::findInvokeNormalDests(
 // the tail block's successors are the original block's successors.
 const Instruction *SampleProfileProber::getOriginalTerminator(
     const BasicBlock *Head, const DenseSet<BasicBlock *> &BlocksToIgnore) {
-  auto *TI = Head->getTerminator();
-  if (auto *II = dyn_cast<InvokeInst>(TI)) {
-    return getOriginalTerminator(II->getNormalDest(), BlocksToIgnore);
-  } else if (succ_size(Head) == 1 &&
-             BlocksToIgnore.contains(*succ_begin(Head))) {
-    // Go to the unconditional branch dest.
-    return getOriginalTerminator(*succ_begin(Head), BlocksToIgnore);
+  // Follow invoke dests and ignored blocks to the original terminator. Stop
+  // if a block repeats; a cycle of invokes has no unique tail.
+  DenseSet<const BasicBlock *> Visited;
+  const BasicBlock *BB = Head;
+  Visited.insert(BB);
+  while (true) {
+    auto *TI = BB->getTerminator();
+    const BasicBlock *Next = nullptr;
+    if (const auto *II = dyn_cast<InvokeInst>(TI))
+      Next = II->getNormalDest();
+    else if (succ_size(BB) == 1 && BlocksToIgnore.contains(*succ_begin(BB)))
+      Next = *succ_begin(BB);
+    else
+      return TI;
+
+    // A cycle has no tail block whose terminator represents the original
+    // block. Stop at the terminator that closes the cycle.
+    if (!Visited.insert(Next).second)
+      return TI;
+
+    BB = Next;
   }
-  return TI;
 }
 
 // Compute Hash value for the CFG: the lower 32 bits are CRC32 of the index
@@ -392,6 +451,18 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
     while (J != BB->getTerminator() && !HasValidDbgLine(J)) {
       J = J->getNextNode();
     }
+
+    // A pseudo probe must not be inserted between a `musttail` or
+    // `llvm.experimental.deoptimize` call and its following `ret`, as this
+    // produces invalid IR. Such a call is required to immediately precede the
+    // block's `ret`, so only that position needs to be checked. Insert the
+    // probe before the call instead.
+    if (auto *Ret = dyn_cast<ReturnInst>(BB->getTerminator()))
+      if (auto *CI = dyn_cast_or_null<CallInst>(Ret->getPrevNode()))
+        if ((CI->isMustTailCall() ||
+             CI->getIntrinsicID() == Intrinsic::experimental_deoptimize) &&
+            !J->comesBefore(CI))
+          J = CI;
 
     IRBuilder<> Builder(J);
     assert(Builder.GetInsertPoint() != BB->end() &&

@@ -23,7 +23,7 @@ int main(void) {
 }
 
 void foo(const char *str) __attribute__((nonnull("foo"))); // expected-error{{'nonnull' attribute requires parameter 1 to be an integer constant}}
-void bar(int i) __attribute__((nonnull(1))); // expected-warning {{'nonnull' attribute only applies to pointer arguments}} expected-warning {{'nonnull' attribute applied to function with no pointer arguments}}
+void bar(int i) __attribute__((nonnull(1))); // expected-warning {{'nonnull' attribute only applies to pointer arguments}}
 
 void baz(__attribute__((nonnull)) const char *str);
 void baz2(__attribute__((nonnull(1))) const char *str); // expected-warning {{'nonnull' attribute when used on parameters takes no arguments}}
@@ -181,3 +181,21 @@ void gh176638_1(int (*g)(const char *h, ...) __attribute__((nonnull(2147483648))
 void gh176638_2(int (*g)(const char *h, ...) __attribute__((nonnull(1073741825))) __attribute__((nonnull))) {} // expected-error {{attribute parameter 1 is out of bounds}}
 void gh176638_3(int (*g)(const char *h, ...) __attribute__((nonnull(1073741824))) __attribute__((nonnull))) {} // expected-error {{attribute parameter 1 is out of bounds}} 
 void gh176638_4(int (*g)(const char *h, ...) __attribute__((nonnull(1073741823))) __attribute__((nonnull))) {} // no-warning
+
+__attribute__((nonnull(1))) int gh228670_1(int p0, char *p1) { // expected-warning {{'nonnull' attribute only applies to pointer arguments}}
+  // Previously, the ignored attribute was ending up being applied to the
+  // function without any arguments, meaning all parameters are considered
+  // nonnull. That would in turn generate a warning diagnostic about p1 always
+  // being nonnull. This demonstrates that the attribute is being correctly
+  // ignored.
+  return p1 ? 1 : 0;
+}
+
+__attribute__((nonnull(1, 3))) int gh228670_2(int p0, char *p1, char *p2) { // expected-warning {{'nonnull' attribute only applies to pointer arguments}} \
+                                                                               expected-note {{declared 'nonnull' here}}
+  // Similar to the previous test, this verifies that the attribute is not
+  // applied to every parameter, but that the third parameter is still handled
+  // correctly as being non-null because it is explicitly specified.
+  (void)(p1 ? 1 : 0); // No warning here because p1 isn't marked
+  (void)(p2 ? 1 : 0); // expected-warning {{nonnull parameter 'p2' will evaluate to 'true' on first encounter}}
+}

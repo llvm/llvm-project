@@ -24,9 +24,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
@@ -38,8 +38,7 @@ struct __copy_n {
     requires indirectly_copyable<_Ip, _Op>
   _LIBCPP_HIDE_FROM_ABI constexpr copy_n_result<_Ip, _Op>
   operator()(_Ip __first, iter_difference_t<_Ip> __n, _Op __result) const {
-    auto __res = std::__copy_n<_RangeAlgPolicy>(std::move(__first), __n, std::move(__result));
-    return {std::move(__res.first), std::move(__res.second)};
+    return std::__copy_n<_RangeAlgPolicy>(std::move(__first), __n, std::move(__result));
   }
 };
 
@@ -48,9 +47,9 @@ inline constexpr auto copy_n = __copy_n{};
 } // namespace __cpo
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_POP_MACROS
 

@@ -34,18 +34,18 @@ program rank_clause02
       integer :: X0(10,10,10)
 
 ! CHECK: %[[X1_ALLOC:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?x?x!fir.logical<4>>>>
-! CHECK: %[[X1_DECL:.*]]:2 = hlfir.declare %[[X1_ALLOC]] {{{.*}}fortran_attrs = #fir.var_attrs<allocatable>{{.*}}} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?x!fir.logical<4>>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?x!fir.logical<4>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?x!fir.logical<4>>>>>)
+! CHECK: %[[X1_DECL:.*]]:2 = hlfir.declare %[[X1_ALLOC]] {{.*}}fortran_attrs<allocatable>{{.*}} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?x!fir.logical<4>>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?x!fir.logical<4>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?x!fir.logical<4>>>>>)
       logical, rank(rank(X0)), allocatable :: X1 ! Rank 3, deferred shape
 
 ! CHECK: %[[X2_ALLOC:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x?xcomplex<f32>>>>
-! CHECK: %[[X2_DECL:.*]]:2 = hlfir.declare %[[X2_ALLOC]] {{{.*}}fortran_attrs = #fir.var_attrs<pointer>{{.*}}} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xcomplex<f32>>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xcomplex<f32>>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xcomplex<f32>>>>>)
+! CHECK: %[[X2_DECL:.*]]:2 = hlfir.declare %[[X2_ALLOC]] {{.*}}fortran_attrs<pointer>{{.*}} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xcomplex<f32>>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xcomplex<f32>>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xcomplex<f32>>>>>)
       complex, rank(2), pointer :: X2 ! Rank 2, deferred-shape
 
 ! CHECK: %[[X3_DECL:.*]]:2 = hlfir.declare %[[X3_ALLOC]] dummy_scope %{{.*}} arg 1 {{.*}}: (!fir.box<!fir.array<?x?x?x!fir.logical<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x?x?x!fir.logical<4>>>, !fir.box<!fir.array<?x?x?x!fir.logical<4>>>)
       logical, rank(rank(X0)) :: X3 ! Rank 3, assumed-shape
 
 ! CHECK: %[[X4_ALLOC:.*]] = fir.alloca !fir.box<!fir.heap<f32>>
-! CHECK: %[[X4_DECL:.*]]:2 = hlfir.declare %[[X4_ALLOC]] {{{.*}}fortran_attrs = #fir.var_attrs<allocatable>{{.*}}} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+! CHECK: %[[X4_DECL:.*]]:2 = hlfir.declare %[[X4_ALLOC]] {{.*}}fortran_attrs<allocatable>{{.*}} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
       real, rank(0) :: X4 ! Scalar
       allocatable :: X4
 
@@ -60,7 +60,7 @@ subroutine sub02(A)
     integer, rank(2) :: A
 
 ! CHECK: %[[B_ALLOC:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi32>>>
-! CHECK: %[[B_DECL:.*]]:2 = hlfir.declare %[[B_ALLOC]] {{{.*}}fortran_attrs = #fir.var_attrs<allocatable>{{.*}}} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>)
+! CHECK: %[[B_DECL:.*]]:2 = hlfir.declare %[[B_ALLOC]] {{.*}}fortran_attrs<allocatable>{{.*}} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>)
     integer, allocatable, rank(2) :: B
 
 end subroutine

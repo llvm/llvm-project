@@ -376,17 +376,17 @@ define i1 @ne_v4i256(<4 x i256> %a0) {
 ;
 ; AVX1-LABEL: ne_v4i256:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX1-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; AVX1-NEXT:    orq {{[0-9]+}}(%rsp), %r10
+; AVX1-NEXT:    vmovdqa {{[0-9]+}}(%rsp), %xmm0
 ; AVX1-NEXT:    orq {{[0-9]+}}(%rsp), %rcx
-; AVX1-NEXT:    orq %r10, %rcx
-; AVX1-NEXT:    vmovq %rcx, %xmm0
-; AVX1-NEXT:    orq {{[0-9]+}}(%rsp), %rax
+; AVX1-NEXT:    vpor {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; AVX1-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX1-NEXT:    orq %rcx, %rax
+; AVX1-NEXT:    vmovq %rax, %xmm1
 ; AVX1-NEXT:    orq {{[0-9]+}}(%rsp), %rdx
-; AVX1-NEXT:    orq %rax, %rdx
-; AVX1-NEXT:    vmovq %rdx, %xmm1
-; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX1-NEXT:    vmovq %xmm0, %rax
+; AVX1-NEXT:    orq %rdx, %rax
+; AVX1-NEXT:    vmovq %rax, %xmm0
+; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX1-NEXT:    orq {{[0-9]+}}(%rsp), %r9
 ; AVX1-NEXT:    orq {{[0-9]+}}(%rsp), %rsi
 ; AVX1-NEXT:    orq %r9, %rsi
@@ -404,17 +404,17 @@ define i1 @ne_v4i256(<4 x i256> %a0) {
 ;
 ; AVX2-LABEL: ne_v4i256:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; AVX2-NEXT:    orq {{[0-9]+}}(%rsp), %r10
+; AVX2-NEXT:    vmovdqa {{[0-9]+}}(%rsp), %xmm0
 ; AVX2-NEXT:    orq {{[0-9]+}}(%rsp), %rcx
-; AVX2-NEXT:    orq %r10, %rcx
-; AVX2-NEXT:    vmovq %rcx, %xmm0
-; AVX2-NEXT:    orq {{[0-9]+}}(%rsp), %rax
+; AVX2-NEXT:    vpor {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; AVX2-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX2-NEXT:    orq %rcx, %rax
+; AVX2-NEXT:    vmovq %rax, %xmm1
 ; AVX2-NEXT:    orq {{[0-9]+}}(%rsp), %rdx
-; AVX2-NEXT:    orq %rax, %rdx
-; AVX2-NEXT:    vmovq %rdx, %xmm1
-; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX2-NEXT:    vmovq %xmm0, %rax
+; AVX2-NEXT:    orq %rdx, %rax
+; AVX2-NEXT:    vmovq %rax, %xmm0
+; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX2-NEXT:    orq {{[0-9]+}}(%rsp), %r9
 ; AVX2-NEXT:    orq {{[0-9]+}}(%rsp), %rsi
 ; AVX2-NEXT:    orq %r9, %rsi
@@ -1068,27 +1068,49 @@ define i1 @eq_i256_args(i256 %a, i256 %b) {
 }
 
 define i1 @eq_i512_args(i512 %a, i512 %b) {
-; CHECK-LABEL: eq_i512_args:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; CHECK-NEXT:    xorq {{[0-9]+}}(%rsp), %r10
-; CHECK-NEXT:    xorq {{[0-9]+}}(%rsp), %rcx
-; CHECK-NEXT:    orq %r10, %rcx
-; CHECK-NEXT:    xorq {{[0-9]+}}(%rsp), %r9
-; CHECK-NEXT:    xorq {{[0-9]+}}(%rsp), %rsi
-; CHECK-NEXT:    orq %r9, %rsi
-; CHECK-NEXT:    orq %rcx, %rsi
-; CHECK-NEXT:    xorq {{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    xorq {{[0-9]+}}(%rsp), %rdx
-; CHECK-NEXT:    orq %rax, %rdx
-; CHECK-NEXT:    xorq {{[0-9]+}}(%rsp), %r8
-; CHECK-NEXT:    xorq {{[0-9]+}}(%rsp), %rdi
-; CHECK-NEXT:    orq %r8, %rdi
-; CHECK-NEXT:    orq %rdx, %rdi
-; CHECK-NEXT:    orq %rsi, %rdi
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    retq
+; SSE-LABEL: eq_i512_args:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; SSE-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; SSE-NEXT:    xorq {{[0-9]+}}(%rsp), %r10
+; SSE-NEXT:    xorq {{[0-9]+}}(%rsp), %rcx
+; SSE-NEXT:    orq %r10, %rcx
+; SSE-NEXT:    xorq {{[0-9]+}}(%rsp), %r9
+; SSE-NEXT:    xorq {{[0-9]+}}(%rsp), %rsi
+; SSE-NEXT:    orq %r9, %rsi
+; SSE-NEXT:    orq %rcx, %rsi
+; SSE-NEXT:    xorq {{[0-9]+}}(%rsp), %rax
+; SSE-NEXT:    xorq {{[0-9]+}}(%rsp), %rdx
+; SSE-NEXT:    orq %rax, %rdx
+; SSE-NEXT:    xorq {{[0-9]+}}(%rsp), %r8
+; SSE-NEXT:    xorq {{[0-9]+}}(%rsp), %rdi
+; SSE-NEXT:    orq %r8, %rdi
+; SSE-NEXT:    orq %rdx, %rdi
+; SSE-NEXT:    orq %rsi, %rdi
+; SSE-NEXT:    sete %al
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: eq_i512_args:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqa {{[0-9]+}}(%rsp), %xmm0
+; AVX-NEXT:    xorq {{[0-9]+}}(%rsp), %r9
+; AVX-NEXT:    xorq {{[0-9]+}}(%rsp), %rsi
+; AVX-NEXT:    orq %r9, %rsi
+; AVX-NEXT:    xorq {{[0-9]+}}(%rsp), %rcx
+; AVX-NEXT:    vpxor {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; AVX-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX-NEXT:    orq %rcx, %rax
+; AVX-NEXT:    orq %rsi, %rax
+; AVX-NEXT:    xorq {{[0-9]+}}(%rsp), %r8
+; AVX-NEXT:    xorq {{[0-9]+}}(%rsp), %rdi
+; AVX-NEXT:    orq %r8, %rdi
+; AVX-NEXT:    xorq {{[0-9]+}}(%rsp), %rdx
+; AVX-NEXT:    vmovq %xmm0, %rcx
+; AVX-NEXT:    orq %rdx, %rcx
+; AVX-NEXT:    orq %rdi, %rcx
+; AVX-NEXT:    orq %rax, %rcx
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    retq
   %r = icmp eq i512 %a, %b
   ret i1 %r
 }
@@ -1225,28 +1247,51 @@ define i1 @eq_i256_load_arg(ptr%p, i256 %b) {
 }
 
 define i1 @eq_i512_load_arg(ptr%p, i512 %b) {
-; CHECK-LABEL: eq_i512_load_arg:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq 40(%rdi), %rax
-; CHECK-NEXT:    movq 48(%rdi), %r10
-; CHECK-NEXT:    movq 56(%rdi), %r11
-; CHECK-NEXT:    xorq 24(%rdi), %r8
-; CHECK-NEXT:    xorq {{[0-9]+}}(%rsp), %r11
-; CHECK-NEXT:    orq %r8, %r11
-; CHECK-NEXT:    xorq 8(%rdi), %rdx
-; CHECK-NEXT:    xorq {{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    orq %rdx, %rax
-; CHECK-NEXT:    orq %r11, %rax
-; CHECK-NEXT:    xorq 32(%rdi), %r9
-; CHECK-NEXT:    xorq (%rdi), %rsi
-; CHECK-NEXT:    orq %r9, %rsi
-; CHECK-NEXT:    xorq 16(%rdi), %rcx
-; CHECK-NEXT:    xorq {{[0-9]+}}(%rsp), %r10
-; CHECK-NEXT:    orq %rcx, %r10
-; CHECK-NEXT:    orq %rsi, %r10
-; CHECK-NEXT:    orq %rax, %r10
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    retq
+; SSE-LABEL: eq_i512_load_arg:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq 40(%rdi), %rax
+; SSE-NEXT:    movq 48(%rdi), %r10
+; SSE-NEXT:    movq 56(%rdi), %r11
+; SSE-NEXT:    xorq 24(%rdi), %r8
+; SSE-NEXT:    xorq {{[0-9]+}}(%rsp), %r11
+; SSE-NEXT:    orq %r8, %r11
+; SSE-NEXT:    xorq 8(%rdi), %rdx
+; SSE-NEXT:    xorq {{[0-9]+}}(%rsp), %rax
+; SSE-NEXT:    orq %rdx, %rax
+; SSE-NEXT:    orq %r11, %rax
+; SSE-NEXT:    xorq 32(%rdi), %r9
+; SSE-NEXT:    xorq (%rdi), %rsi
+; SSE-NEXT:    orq %r9, %rsi
+; SSE-NEXT:    xorq 16(%rdi), %rcx
+; SSE-NEXT:    xorq {{[0-9]+}}(%rsp), %r10
+; SSE-NEXT:    orq %rcx, %r10
+; SSE-NEXT:    orq %rsi, %r10
+; SSE-NEXT:    orq %rax, %r10
+; SSE-NEXT:    sete %al
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: eq_i512_load_arg:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqa 48(%rdi), %xmm0
+; AVX-NEXT:    movq 40(%rdi), %rax
+; AVX-NEXT:    xorq 8(%rdi), %rdx
+; AVX-NEXT:    xorq {{[0-9]+}}(%rsp), %rax
+; AVX-NEXT:    orq %rdx, %rax
+; AVX-NEXT:    xorq 24(%rdi), %r8
+; AVX-NEXT:    vpxor {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; AVX-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX-NEXT:    orq %r8, %rdx
+; AVX-NEXT:    orq %rax, %rdx
+; AVX-NEXT:    xorq 32(%rdi), %r9
+; AVX-NEXT:    xorq (%rdi), %rsi
+; AVX-NEXT:    orq %r9, %rsi
+; AVX-NEXT:    xorq 16(%rdi), %rcx
+; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    orq %rcx, %rax
+; AVX-NEXT:    orq %rsi, %rax
+; AVX-NEXT:    orq %rdx, %rax
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    retq
   %a = load i512, ptr %p
   %r = icmp eq i512 %a, %b
   ret i1 %r

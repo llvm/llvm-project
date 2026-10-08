@@ -9,6 +9,7 @@ executable("c-index-test") {
     "//clang/lib/Frontend",
     "//clang/lib/Index",
     "//clang/lib/Serialization",
+    "//clang/lib/UnifiedSymbolResolution",
     "//clang/tools/libclang",
     "//llvm/lib/Support",
     "//llvm/utils/gn/build/libs/xml",

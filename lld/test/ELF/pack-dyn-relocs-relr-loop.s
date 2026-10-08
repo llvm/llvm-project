@@ -11,6 +11,8 @@
 
 # CHECK: .relr.dyn needs 1 padding word(s)
 
+## Without AUTH relocations, the empty .rela.dyn is removed.
+# RELR-NOT:  .rela.dyn
 # RELR:      .relr.dyn {
 # RELR-NEXT:   0x2F30 R_AARCH64_RELATIVE -
 # RELR-NEXT:   0x2F38 R_AARCH64_RELATIVE -

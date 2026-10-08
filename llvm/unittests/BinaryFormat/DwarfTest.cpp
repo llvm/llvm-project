@@ -57,6 +57,14 @@ TEST(DwarfTest, getOperationEncoding) {
   EXPECT_EQ(0u, getOperationEncoding("DW_OP_hi_user"));
 }
 
+TEST(DwarfTest, SubOperationEncoding) {
+  // Test that the enum-to-string user encodings roundtrip.
+  EXPECT_EQ("DW_OP_LLVM_nop",
+            SubOperationEncodingString(DW_OP_LLVM_user, DW_OP_LLVM_nop));
+  EXPECT_EQ(DW_OP_LLVM_nop,
+            getSubOperationEncoding(DW_OP_LLVM_user, "DW_OP_LLVM_nop"));
+}
+
 TEST(DwarfTest, LanguageStringOnInvalid) {
   // This is invalid, so it shouldn't be stringified.
   EXPECT_EQ(StringRef(), LanguageString(0));
@@ -293,7 +301,9 @@ LanguageDescriptionTestCase LanguageDescriptionTestCases[] = {
     {DW_LNAME_Fortran, 2008, "Fortran 2008"},
     {DW_LNAME_Fortran, 2017, "Fortran 2018"},
     {DW_LNAME_Fortran, 2018, "Fortran 2018"},
-    {DW_LNAME_Fortran, 2019, "ISO Fortran"},
+    {DW_LNAME_Fortran, 2019, "Fortran 2023"},
+    {DW_LNAME_Fortran, 2023, "Fortran 2023"},
+    {DW_LNAME_Fortran, 2024, "ISO Fortran"},
     {DW_LNAME_C, 0, "C (K&R and ISO)"},
     {DW_LNAME_C, 198911, "C89"},
     {DW_LNAME_C, 198912, "C89"},
@@ -304,7 +314,9 @@ LanguageDescriptionTestCase LanguageDescriptionTestCases[] = {
     {DW_LNAME_C, 201201, "C17"},
     {DW_LNAME_C, 201709, "C17"},
     {DW_LNAME_C, 201710, "C17"},
-    {DW_LNAME_C, 201711, "C (K&R and ISO)"},
+    {DW_LNAME_C, 201711, "C23"},
+    {DW_LNAME_C, 202311, "C23"},
+    {DW_LNAME_C, 202312, "C (K&R and ISO)"},
     {DW_LNAME_C_plus_plus, 0, "ISO C++"},
     {DW_LNAME_C_plus_plus, 199710, "C++98"},
     {DW_LNAME_C_plus_plus, 199711, "C++98"},
@@ -322,7 +334,9 @@ LanguageDescriptionTestCase LanguageDescriptionTestCases[] = {
     {DW_LNAME_C_plus_plus, 201704, "C++20"},
     {DW_LNAME_C_plus_plus, 202001, "C++20"},
     {DW_LNAME_C_plus_plus, 202002, "C++20"},
-    {DW_LNAME_C_plus_plus, 202003, "ISO C++"},
+    {DW_LNAME_C_plus_plus, 202003, "C++23"},
+    {DW_LNAME_C_plus_plus, 202302, "C++23"},
+    {DW_LNAME_C_plus_plus, 202303, "ISO C++"},
     {DW_LNAME_ObjC_plus_plus, 0, LanguageDescription(DW_LNAME_ObjC_plus_plus)},
     {DW_LNAME_ObjC_plus_plus, 1, LanguageDescription(DW_LNAME_ObjC_plus_plus)},
     {DW_LNAME_ObjC, 0, LanguageDescription(DW_LNAME_ObjC)},

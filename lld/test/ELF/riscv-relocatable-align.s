@@ -93,6 +93,17 @@
 # CHECK2-NEXT: <b0>:
 # CHECK2-NEXT:   e: 00158513             addi    a0, a1, 0x1
 
+## A weaker offset-0 ALIGN must not suppress synthesizing the stronger ALIGN required
+## by the subsequent .option norelax .balign 8 (which emits no relocation).
+## https://sourceware.org/bugzilla/show_bug.cgi?id=33236#c4
+# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c,+relax e.s -o ec.o
+# RUN: ld.lld -r ac.o ec.o -o ae.ro
+# RUN: llvm-readelf -r ae.ro | FileCheck %s --check-prefix=CHECK3-REL
+
+# CHECK3-REL:      Relocation section '.rela.text' {{.*}} contains 4 entries:
+# CHECK3-REL:      R_RISCV_ALIGN{{ +}}6
+# CHECK3-REL-NEXT: R_RISCV_ALIGN{{ +}}2
+
 #--- a.s
 .globl _start
 _start:
@@ -138,3 +149,16 @@ c0:
 .balign 4
 d0:
   addi a0, a1, 2
+
+#--- e.s
+## Mimick `.balign 4` that generates 2 NOP padding bytes associated with
+## R_RISCV_ALIGN (addend 2) when assembled by old MC.
+.reloc ., R_RISCV_ALIGN, 2
+c.nop
+
+.option push
+.option norelax
+.balign 8
+e0:
+  .word 0x3a393837
+.option pop

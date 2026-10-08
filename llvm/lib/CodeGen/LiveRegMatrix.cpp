@@ -324,7 +324,51 @@ bool LiveRegMatrix::isValid() const {
       }
     }
   }
-  return NumDanglingPointers == 0;
+
+  // Reverse check: every VRM-assigned vreg with a non-empty live interval
+  // must have its segments present in the Matrix for its assigned phys reg.
+  unsigned NumMissing = 0;
+  for (unsigned RegIdx = 0, NumRegs = VRM->getRegInfo().getNumVirtRegs();
+       RegIdx < NumRegs; ++RegIdx) {
+    Register VReg = Register::index2VirtReg(RegIdx);
+    if (!VRM->hasPhys(VReg) || !LIS->hasInterval(VReg))
+      continue;
+    const LiveInterval &LI = LIS->getInterval(VReg);
+    if (LI.empty())
+      continue;
+    MCRegister PhysReg = VRM->getPhys(VReg);
+    // Check that the first segment of LI is present in the LiveUnion for
+    // at least one reg unit of PhysReg.
+    SlotIndex FirstStart = LI.beginIndex();
+    bool Found = false;
+    for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+      auto It = Matrix[Unit].find(FirstStart);
+      if (It.valid() && It.start() == FirstStart && It.value() == &LI) {
+        Found = true;
+        break;
+      }
+    }
+    if (!Found) {
+      ++NumMissing;
+      dbgs() << "ERROR: VirtReg " << printReg(VReg, TRI) << " assigned to "
+             << printReg(PhysReg, TRI)
+             << " in VirtRegMap but not found in LiveRegMatrix\n";
+      dbgs() << "  LiveInterval: " << LI << "\n";
+      dbgs() << "  FirstStart: " << FirstStart << "\n";
+      for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+        dbgs() << "  RegUnit " << printRegUnit(Unit, TRI) << " segments: ";
+        auto It = Matrix[Unit].find(FirstStart);
+        if (It.valid())
+          dbgs() << "[" << It.start() << "," << It.stop() << ") -> "
+                 << printReg(It.value()->reg(), TRI);
+        else
+          dbgs() << "(none found)";
+        dbgs() << "\n";
+      }
+    }
+  }
+
+  return NumDanglingPointers == 0 && NumMissing == 0;
 }
 #endif
 

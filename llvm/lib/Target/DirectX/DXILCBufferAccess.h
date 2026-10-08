@@ -18,7 +18,7 @@
 
 namespace llvm {
 
-class DXILCBufferAccess : public PassInfoMixin<DXILCBufferAccess> {
+class DXILCBufferAccess : public OptionalPassInfoMixin<DXILCBufferAccess> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };

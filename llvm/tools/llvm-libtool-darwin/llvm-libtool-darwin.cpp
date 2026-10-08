@@ -23,7 +23,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/LLVMDriver.h"
+#include "llvm/Support/Driver.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -48,24 +48,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "Opts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Opts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "Opts.inc"
-#undef OPTION
-};
-
-class LibtoolDarwinOptTable : public opt::GenericOptTable {
+class LibtoolDarwinOptTable : public opt::OptTable {
 public:
-  LibtoolDarwinOptTable()
-      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  LibtoolDarwinOptTable() : OptTable(optionTables()) {}
 };
 } // end anonymous namespace
 
@@ -88,7 +76,6 @@ static std::string DependencyInfoPath;
 static bool VersionOption;
 static bool NoWarningForNoSymbols;
 static bool WarningsAsErrors;
-static std::string IgnoredSyslibRoot;
 
 static const std::array<std::string, 3> StandardSearchDirs{
     "/lib",
@@ -148,7 +135,7 @@ static Error processFileList() {
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
       MemoryBuffer::getFileOrSTDIN(FileName, /*IsText=*/false,
-                                   /*RequiresNullTerminator=*/false);
+                                   /*RequiresNullTerminator=*/true);
   if (std::error_code EC = FileOrErr.getError())
     return createFileError(FileName, errorCodeToError(EC));
   const MemoryBuffer &Ref = *FileOrErr.get();
@@ -658,9 +645,6 @@ static void parseRawArgs(int Argc, char **Argv) {
 
   if (const opt::Arg *A = Args.getLastArg(OPT_dependencyInfoPath))
     DependencyInfoPath = A->getValue();
-
-  if (const opt::Arg *A = Args.getLastArg(OPT_ignoredSyslibRoot))
-    IgnoredSyslibRoot = A->getValue();
 
   LibraryOperation =
       Args.hasArg(OPT_static) ? Operation::Static : Operation::None;

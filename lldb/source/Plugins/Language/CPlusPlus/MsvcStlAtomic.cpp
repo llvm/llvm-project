@@ -9,6 +9,7 @@
 #include "MsvcStl.h"
 
 #include "lldb/DataFormatters/TypeSynthetic.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 
@@ -51,7 +52,7 @@ lldb::ValueObjectSP
 lldb_private::formatters::MsvcStlAtomicSyntheticFrontEnd::GetChildAtIndex(
     uint32_t idx) {
   if (idx == 0 && m_storage && m_element_type.IsValid())
-    return m_storage->Cast(m_element_type)->Clone(ConstString("Value"));
+    return m_storage->Cast(m_element_type)->Clone("Value");
   return nullptr;
 }
 
@@ -85,8 +86,7 @@ llvm::Expected<size_t> lldb_private::formatters::
     MsvcStlAtomicSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (name == "Value")
     return 0;
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 lldb_private::SyntheticChildrenFrontEnd *

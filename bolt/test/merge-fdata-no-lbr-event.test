@@ -1,0 +1,18 @@
+## Check that merge-fdata preserves and propagates event names from the
+## "no_lbr" header line to the merged output.
+
+# REQUIRES: system-linux
+
+# RUN: split-file %s %t
+# RUN: merge-fdata %t/a.fdata %t/b.fdata -o %t/merged.fdata
+# RUN: FileCheck %s --input-file %t/merged.fdata
+
+# CHECK: no_lbr cycles:u
+# CHECK: 1 main 0 2
+
+#--- a.fdata
+no_lbr cycles:u
+1 main 0 1
+#--- b.fdata
+no_lbr cycles:u
+1 main 0 1

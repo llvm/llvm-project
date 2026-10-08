@@ -789,3 +789,33 @@ func.func @loop_nested_alloc_dyn_dependency(
 // CHECK-NEXT: {{.*}} = scf.for
 // CHECK-NEXT: {{.*}} = scf.for
 //      CHECK: %[[ALLOC1:.*]] = memref.alloc({{.*}})
+
+// Verify that --buffer-hoisting does not crash on allocations in unreachable
+// blocks (blocks with no predecessors that are not the function entry block).
+// See: https://github.com/llvm/llvm-project/issues/118445
+// CHECK-LABEL: func @unreachable_alloc
+func.func @unreachable_alloc(%arg0: f32) {
+  %c0 = arith.constant 0 : index
+  return
+^bb1(%0: i32):  // no predecessors
+  %alloc = memref.alloc() : memref<10xf32>
+  // CHECK: memref.alloc
+  return
+}
+
+// -----
+
+// Hoisting must not introduce a capture into an isolated region.
+// CHECK-LABEL: func @no_hoist_isolated_region(
+//  CHECK-NOT: memref.alloc
+//      CHECK: %[[RESULT:.*]] = "test.isolated_region_branch"
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: "test.isolated_region_yield"(%[[ALLOC]])
+//      CHECK: return %[[RESULT]]
+func.func @no_hoist_isolated_region() -> memref<1xi32> {
+  %result = "test.isolated_region_branch"() ({
+    %buffer = memref.alloc() : memref<1xi32>
+    "test.isolated_region_yield"(%buffer) : (memref<1xi32>) -> ()
+  }) : () -> memref<1xi32>
+  return %result : memref<1xi32>
+}

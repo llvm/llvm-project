@@ -101,6 +101,10 @@ static std::string getInstrProfErrString(instrprof_error Err,
   case instrprof_error::bad_header:
     OS << "invalid instrumentation profile data (file header is corrupt)";
     break;
+  case instrprof_error::header_size_mismatch:
+    OS << "invalid instrumentation profile data (file is incomplete or header "
+          "is corrupt)";
+    break;
   case instrprof_error::unsupported_version:
     OS << "unsupported instrumentation profile format version";
     break;
@@ -166,6 +170,9 @@ static std::string getInstrProfErrString(instrprof_error Err,
     break;
   case instrprof_error::counter_value_too_large:
     OS << "excessively large counter value suggests corrupted profile data";
+    break;
+  case instrprof_error::coverage_count_mismatch:
+    OS << "cannot merge single-byte and incrementing counter profiles";
     break;
   }
 
@@ -368,55 +375,24 @@ getIRPGONameForGlobalObject(const GlobalObject &GO,
   return GlobalValue::getGlobalIdentifier(GO.getName(), Linkage, FileName);
 }
 
-static std::optional<std::string> lookupPGONameFromMetadata(MDNode *MD) {
-  if (MD != nullptr) {
-    StringRef S = cast<MDString>(MD->getOperand(0))->getString();
-    return S.str();
-  }
-  return {};
-}
-
 // Returns the PGO object name. This function has some special handling
-// when called in LTO optimization. The following only applies when calling in
-// LTO passes (when \c InLTO is true): LTO's internalization privatizes many
-// global linkage symbols. This happens after value profile annotation, but
-// those internal linkage functions should not have a source prefix.
-// Additionally, for ThinLTO mode, exported internal functions are promoted
-// and renamed. We need to ensure that the original internal PGO name is
-// used when computing the GUID that is compared against the profiled GUIDs.
-// To differentiate compiler generated internal symbols from original ones,
-// PGOFuncName meta data are created and attached to the original internal
-// symbols in the value profile annotation step
-// (PGOUseFunc::annotateIndirectCallSites). If a symbol does not have the meta
-// data, its original linkage must be non-internal.
-static std::string getIRPGOObjectName(const GlobalObject &GO, bool InLTO,
-                                      MDNode *PGONameMetadata) {
+// when called in LTO optimization. In LTO mode (when InLTO is true),
+// LTO's internalization privatizes many global linkage symbols, so we assume
+// non-internal linkage without a source prefix.
+std::string getIRPGOObjectName(const GlobalObject &GO, bool InLTO) {
   if (!InLTO) {
     auto FileName = getStrippedSourceFileName(GO);
     return getIRPGONameForGlobalObject(GO, GO.getLinkage(), FileName);
   }
 
-  // In LTO mode (when InLTO is true), first check if there is a meta data.
-  if (auto IRPGOFuncName = lookupPGONameFromMetadata(PGONameMetadata))
-    return *IRPGOFuncName;
-
-  // If there is no meta data, the function must be a global before the value
-  // profile annotation pass. Its current linkage may be internal if it is
-  // internalized in LTO mode.
   return getIRPGONameForGlobalObject(GO, GlobalValue::ExternalLinkage, "");
 }
 
-// Returns the IRPGO function name and does special handling when called
-// in LTO optimization. See the comments of `getIRPGOObjectName` for details.
-std::string getIRPGOFuncName(const Function &F, bool InLTO) {
-  return getIRPGOObjectName(F, InLTO, getPGOFuncNameMetadata(F));
-}
-
-// Please use getIRPGOFuncName for LLVM IR instrumentation. This function is
+// Please use getIRPGOObjectName for LLVM IR instrumentation. This function is
 // for front-end (Clang, etc) instrumentation.
 // The implementation is kept for profile matching from older profiles.
-// This is similar to `getIRPGOFuncName` except that this function calls
-// 'getPGOFuncName' to get a name and `getIRPGOFuncName` calls
+// This is similar to `getIRPGOObjectName` except that this function calls
+// 'getPGOFuncName' to get a name and `getIRPGOObjectName` calls
 // 'getIRPGONameForGlobalObject'. See the difference between two callees in the
 // comments of `getIRPGONameForGlobalObject`.
 std::string getPGOFuncName(const Function &F, bool InLTO, uint64_t Version) {
@@ -425,21 +401,7 @@ std::string getPGOFuncName(const Function &F, bool InLTO, uint64_t Version) {
     return getPGOFuncName(F.getName(), F.getLinkage(), FileName, Version);
   }
 
-  // In LTO mode (when InLTO is true), first check if there is a meta data.
-  if (auto PGOFuncName = lookupPGONameFromMetadata(getPGOFuncNameMetadata(F)))
-    return *PGOFuncName;
-
-  // If there is no meta data, the function must be a global before the value
-  // profile annotation pass. Its current linkage may be internal if it is
-  // internalized in LTO mode.
   return getPGOFuncName(F.getName(), GlobalValue::ExternalLinkage, "");
-}
-
-std::string getPGOName(const GlobalVariable &V, bool InLTO) {
-  // PGONameMetadata should be set by compiler at profile use time
-  // and read by symtab creation to look up symbols corresponding to
-  // a MD5 hash.
-  return getIRPGOObjectName(V, InLTO, V.getMetadata(getPGONameMetadataName()));
 }
 
 // See getIRPGOObjectName() for a discription of the format.
@@ -486,25 +448,18 @@ bool isGPUProfTarget(const Module &M) {
 }
 
 void setPGOFuncVisibility(Module &M, GlobalVariable *FuncNameVar) {
-  // If the target is a GPU, make the symbol protected so it can
-  // be read from the host device
-  if (isGPUProfTarget(M))
-    FuncNameVar->setVisibility(GlobalValue::ProtectedVisibility);
   // Hide the symbol so that we correctly get a copy for each executable.
-  else if (!GlobalValue::isLocalLinkage(FuncNameVar->getLinkage()))
+  if (!GlobalValue::isLocalLinkage(FuncNameVar->getLinkage()))
     FuncNameVar->setVisibility(GlobalValue::HiddenVisibility);
 }
 
 GlobalVariable *createPGOFuncNameVar(Module &M,
                                      GlobalValue::LinkageTypes Linkage,
                                      StringRef PGOFuncName) {
-  // Ensure profiling variables on GPU are visible to be read from host
-  if (isGPUProfTarget(M))
-    Linkage = GlobalValue::ExternalLinkage;
   // We generally want to match the function's linkage, but available_externally
   // and extern_weak both have the wrong semantics, and anything that doesn't
   // need to link across compilation units doesn't need to be visible at all.
-  else if (Linkage == GlobalValue::ExternalWeakLinkage)
+  if (Linkage == GlobalValue::ExternalWeakLinkage)
     Linkage = GlobalValue::LinkOnceAnyLinkage;
   else if (Linkage == GlobalValue::AvailableExternallyLinkage)
     Linkage = GlobalValue::LinkOnceODRLinkage;
@@ -532,7 +487,7 @@ Error InstrProfSymtab::create(Module &M, bool InLTO, bool AddCanonical) {
     // Ignore in this case.
     if (!F.hasName())
       continue;
-    auto IRPGOFuncName = getIRPGOFuncName(F, InLTO);
+    auto IRPGOFuncName = getIRPGOObjectName(F, InLTO);
     if (Error E = addFuncWithName(F, IRPGOFuncName, AddCanonical))
       return E;
     // Also use getPGOFuncName() so that we can find records from older profiles
@@ -545,7 +500,7 @@ Error InstrProfSymtab::create(Module &M, bool InLTO, bool AddCanonical) {
   for (GlobalVariable &G : M.globals()) {
     if (!G.hasName() || !G.hasMetadata(LLVMContext::MD_type))
       continue;
-    if (Error E = addVTableWithName(G, getPGOName(G, InLTO)))
+    if (Error E = addVTableWithName(G, getIRPGOObjectName(G, InLTO)))
       return E;
   }
 
@@ -556,6 +511,8 @@ Error InstrProfSymtab::create(Module &M, bool InLTO, bool AddCanonical) {
 
 Error InstrProfSymtab::addVTableWithName(GlobalVariable &VTable,
                                          StringRef VTablePGOName) {
+  // Key each name by its own hash, so profiles that recorded that name can find
+  // the vtable.
   auto NameToGUIDMap = [&](StringRef Name) -> Error {
     if (Error E = addSymbolName(Name))
       return E;
@@ -570,8 +527,15 @@ Error InstrProfSymtab::addVTableWithName(GlobalVariable &VTable,
   if (Error E = NameToGUIDMap(VTablePGOName))
     return E;
 
+  // Also key the vtable by its GUID, so it can still be found if LTO has
+  // renamed it. See addFuncWithName.
+  if (auto GUID = VTable.getGUIDIfAssigned();
+      GUID &&
+      *GUID != GlobalValue::getGUIDAssumingExternalLinkage(VTablePGOName))
+    MD5VTableMap.try_emplace(*GUID, &VTable);
+
   StringRef CanonicalName = getCanonicalName(VTablePGOName);
-  if (CanonicalName != VTablePGOName)
+  if (!CanonicalName.empty() && CanonicalName != VTablePGOName)
     return NameToGUIDMap(CanonicalName);
 
   return Error::success();
@@ -667,6 +631,9 @@ StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {
 
 Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName,
                                        bool AddCanonical) {
+  // Key each name by its own hash, so profiles that recorded that name can find
+  // the function. This is called once per name, e.g. a second time with the
+  // deprecated PGO name, for profiles from older compilers.
   auto NameToGUIDMap = [&](StringRef Name) -> Error {
     if (Error E = addFuncName(Name))
       return E;
@@ -676,11 +643,18 @@ Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName,
   if (Error E = NameToGUIDMap(PGOFuncName))
     return E;
 
+  // Also key the function by its GUID, if it has one. The GUID is the hash of
+  // the function's name when the GUID was assigned, so this still finds the
+  // function if LTO has renamed it since. This used to need !PGOFuncName.
+  if (auto GUID = F.getGUIDIfAssigned();
+      GUID && *GUID != Function::getGUIDAssumingExternalLinkage(PGOFuncName))
+    MD5FuncMap.emplace_back(*GUID, &F);
+
   if (!AddCanonical)
     return Error::success();
 
   StringRef CanonicalFuncName = getCanonicalName(PGOFuncName);
-  if (CanonicalFuncName != PGOFuncName)
+  if (!CanonicalFuncName.empty() && CanonicalFuncName != PGOFuncName)
     return NameToGUIDMap(CanonicalFuncName);
 
   return Error::success();
@@ -772,7 +746,7 @@ Error collectVTableStrings(ArrayRef<GlobalVariable *> VTables,
                            std::string &Result, bool DoCompression) {
   std::vector<std::string> VTableNameStrs;
   for (auto *VTable : VTables)
-    VTableNameStrs.push_back(getPGOName(*VTable));
+    VTableNameStrs.push_back(getIRPGOObjectName(*VTable));
   return collectGlobalObjectNameStrings(
       VTableNameStrs, compression::zlib::isAvailable() && DoCompression,
       Result);
@@ -956,6 +930,44 @@ void InstrProfRecord::mergeValueProfData(
     ThisSiteRecords[I].merge(OtherSiteRecords[I], Weight, Warn);
 }
 
+void InstrProfRecord::computeBlockUniformity() {
+  if (UniformCounts.empty())
+    return;
+
+  if (UniformCounts.size() != Counts.size()) {
+    UniformityBits.clear();
+    return;
+  }
+
+  UniformityBits.assign((Counts.size() + 7) / 8, 0xFF);
+  for (size_t I = 0, E = Counts.size(); I < E; ++I) {
+    uint64_t TotalCount = Counts[I];
+    uint64_t UniformCount = UniformCounts[I];
+    uint64_t MinUniformCount = TotalCount - TotalCount / 10;
+    bool IsUniform = UniformCount >= MinUniformCount;
+    if (!IsUniform)
+      UniformityBits[I / 8] &= ~(1 << (I % 8));
+  }
+}
+
+static void mergeUniformityBits(std::vector<uint8_t> &Dst,
+                                ArrayRef<uint8_t> Src) {
+  if (Dst.empty()) {
+    Dst.assign(Src.begin(), Src.end());
+    return;
+  }
+  if (Src.empty())
+    return;
+
+  if (Dst.size() != Src.size()) {
+    Dst.clear();
+    return;
+  }
+
+  for (size_t I = 0, E = Src.size(); I < E; ++I)
+    Dst[I] &= Src[I];
+}
+
 void InstrProfRecord::merge(InstrProfRecord &Other, uint64_t Weight,
                             function_ref<void(instrprof_error)> Warn) {
   // If the number of counters doesn't match we either have bad data
@@ -964,6 +976,9 @@ void InstrProfRecord::merge(InstrProfRecord &Other, uint64_t Weight,
     Warn(instrprof_error::count_mismatch);
     return;
   }
+
+  computeBlockUniformity();
+  Other.computeBlockUniformity();
 
   // Special handling of the first count as the PseudoCount.
   CountPseudoKind OtherKind = Other.getCountPseudoKind();
@@ -982,7 +997,9 @@ void InstrProfRecord::merge(InstrProfRecord &Other, uint64_t Weight,
       setPseudoCount(PseudoWarm);
     return;
   }
-
+  OffloadDeviceWaveSize = Other.OffloadDeviceWaveSize;
+  bool HasUniformCounts = !UniformCounts.empty();
+  bool OtherHasUniformCounts = !Other.UniformCounts.empty();
   for (size_t I = 0, E = Other.Counts.size(); I < E; ++I) {
     bool Overflowed;
     uint64_t Value =
@@ -994,6 +1011,29 @@ void InstrProfRecord::merge(InstrProfRecord &Other, uint64_t Weight,
     Counts[I] = Value;
     if (Overflowed)
       Warn(instrprof_error::counter_overflow);
+  }
+
+  if (HasUniformCounts && OtherHasUniformCounts) {
+    if (UniformCounts.size() != Other.UniformCounts.size()) {
+      UniformCounts.clear();
+      UniformityBits.clear();
+    } else {
+      for (size_t I = 0, E = Other.UniformCounts.size(); I < E; ++I) {
+        bool Overflowed;
+        UniformCounts[I] = SaturatingMultiplyAdd(Other.UniformCounts[I], Weight,
+                                                 UniformCounts[I], &Overflowed);
+        if (UniformCounts[I] > getInstrMaxCountValue()) {
+          UniformCounts[I] = getInstrMaxCountValue();
+          Overflowed = true;
+        }
+        if (Overflowed)
+          Warn(instrprof_error::counter_overflow);
+      }
+      computeBlockUniformity();
+    }
+  } else {
+    UniformCounts.clear();
+    mergeUniformityBits(UniformityBits, Other.UniformityBits);
   }
 
   // If the number of bitmap bytes doesn't match we either have bad data
@@ -1032,6 +1072,17 @@ void InstrProfRecord::scale(uint64_t N, uint64_t D,
     if (Overflowed)
       Warn(instrprof_error::counter_overflow);
   }
+  for (auto &Count : this->UniformCounts) {
+    bool Overflowed;
+    Count = SaturatingMultiply(Count, N, &Overflowed) / D;
+    if (Count > getInstrMaxCountValue()) {
+      Count = getInstrMaxCountValue();
+      Overflowed = true;
+    }
+    if (Overflowed)
+      Warn(instrprof_error::counter_overflow);
+  }
+  computeBlockUniformity();
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
     scaleValueProfData(Kind, N, D, Warn);
 }
@@ -1366,15 +1417,45 @@ void annotateValueSite(Module &M, Instruction &Inst,
 
   // Value Profile Data
   uint32_t MDCount = MaxMDCount;
+  // Zero values might occur multiple times (e.g., multiple functions that
+  // cannot be remapped). Deduplicate them to enforce the variant that
+  // values are unique, which allows passes to make some simplifying
+  // assumptions.
+  // TODO(boomanaiden154): This fits more naturally in addValueData, but
+  // preserving the current behavior is necessary for some error handling
+  // paths. When that gets cleaned up, we should move this there.
+  // TODO(boomanaiden154): We are also deduplicating non-zero values.
+  // These are rare and should only come from corrupted profiles, so we
+  // just skip them. Remove this when they are fixed properly in
+  // llvm-profdata.
+  uint64_t ZeroCount = 0;
+  DenseSet<uint64_t> VisitedValues;
   for (const auto &VD : VDs) {
-    Vals.push_back(MDHelper.createConstant(
-        ConstantInt::get(Type::getInt64Ty(Ctx), VD.Value)));
-    Vals.push_back(MDHelper.createConstant(
-        ConstantInt::get(Type::getInt64Ty(Ctx), VD.Count)));
+    auto [_, ValueInserted] = VisitedValues.insert(VD.Value);
+    if (VD.Value != 0 && !ValueInserted)
+      continue;
+    if (VD.Value == 0) {
+      ZeroCount += VD.Count;
+    } else {
+      Vals.push_back(MDHelper.createConstant(
+          ConstantInt::get(Type::getInt64Ty(Ctx), VD.Value)));
+      Vals.push_back(MDHelper.createConstant(
+          ConstantInt::get(Type::getInt64Ty(Ctx), VD.Count)));
+    }
     if (--MDCount == 0)
       break;
   }
-  Inst.setMetadata(LLVMContext::MD_prof, MDNode::get(Ctx, Vals));
+  if (ZeroCount != 0) {
+    Vals.push_back(
+        MDHelper.createConstant(ConstantInt::get(Type::getInt64Ty(Ctx), 0)));
+    Vals.push_back(MDHelper.createConstant(
+        ConstantInt::get(Type::getInt64Ty(Ctx), ZeroCount)));
+  }
+  // Only add metadata if we have at least one value. Otherwise we will end
+  // up adding invalid metadata in the case where the profile only has a
+  // zero value with a zero count.
+  if (Vals.size() >= 5)
+    Inst.setMetadata(LLVMContext::MD_prof, MDNode::get(Ctx, Vals));
 }
 
 MDNode *mayHaveValueProfileOfKind(const Instruction &Inst,
@@ -1437,34 +1518,6 @@ getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
     ValueData.push_back(V);
   }
   return ValueData;
-}
-
-MDNode *getPGOFuncNameMetadata(const Function &F) {
-  return F.getMetadata(getPGOFuncNameMetadataName());
-}
-
-static void createPGONameMetadata(GlobalObject &GO, StringRef MetadataName,
-                                  StringRef PGOName) {
-  // Only for internal linkage functions or global variables. The name is not
-  // the same as PGO name for these global objects.
-  if (GO.getName() == PGOName)
-    return;
-
-  // Don't create duplicated metadata.
-  if (GO.getMetadata(MetadataName))
-    return;
-
-  LLVMContext &C = GO.getContext();
-  MDNode *N = MDNode::get(C, MDString::get(C, PGOName));
-  GO.setMetadata(MetadataName, N);
-}
-
-void createPGOFuncNameMetadata(Function &F, StringRef PGOFuncName) {
-  return createPGONameMetadata(F, getPGOFuncNameMetadataName(), PGOFuncName);
-}
-
-void createPGONameMetadata(GlobalObject &GO, StringRef PGOName) {
-  return createPGONameMetadata(GO, getPGONameMetadataName(), PGOName);
 }
 
 bool needsComdatForCounter(const GlobalObject &GO, const Module &M) {
@@ -1692,7 +1745,7 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
       IndexedInstrProf::ProfVersion::CurrentVersion)
     return make_error<InstrProfError>(instrprof_error::unsupported_version);
 
-  static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version13,
+  static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version14,
                 "Please update the reader as needed when a new field is added "
                 "or when indexed profile version gets bumped.");
 
@@ -1725,10 +1778,11 @@ size_t Header::size() const {
     // of the header, and byte offset of existing fields shouldn't change when
     // indexed profile version gets incremented.
     static_assert(
-        IndexedInstrProf::ProfVersion::CurrentVersion == Version13,
+        IndexedInstrProf::ProfVersion::CurrentVersion == Version14,
         "Please update the size computation below if a new field has "
         "been added to the header; for a version bump without new "
         "fields, add a case statement to fall through to the latest version.");
+  case 14ull: // UniformityBits added in record data, no header change
   case 13ull:
   case 12ull:
     return 72;

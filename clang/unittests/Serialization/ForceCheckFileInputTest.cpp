@@ -137,9 +137,9 @@ export module a;
 export int aa = 44;
   )cpp");
 
-    auto ReadResult =
-        Clang.getASTReader()->ReadAST(BMIPath, serialization::MK_MainFile,
-                                      SourceLocation(), ASTReader::ARR_None);
+    auto ReadResult = Clang.getASTReader()->ReadAST(
+        ModuleFileName::makeExplicit(BMIPath), serialization::MK_MainFile,
+        SourceLocation(), ASTReader::ARR_None);
 
     // We shall be able to detect the content change here.
     EXPECT_NE(ReadResult, ASTReader::Success);

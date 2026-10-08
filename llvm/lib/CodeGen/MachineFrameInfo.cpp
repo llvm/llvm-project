@@ -63,9 +63,10 @@ int MachineFrameInfo::CreateStackObject(uint64_t Size, Align Alignment,
   return Index;
 }
 
-int MachineFrameInfo::CreateSpillStackObject(uint64_t Size, Align Alignment) {
+int MachineFrameInfo::CreateSpillStackObject(uint64_t Size, Align Alignment,
+                                             TargetStackID::Value StackID) {
   Alignment = clampStackAlignment(!StackRealignable, Alignment, StackAlignment);
-  CreateStackObject(Size, Alignment, true);
+  CreateStackObject(Size, Alignment, true, nullptr, StackID);
   int Index = (int)Objects.size() - NumFixedObjects - 1;
   ensureMaxAlignment(Alignment);
   return Index;
@@ -221,7 +222,7 @@ void MachineFrameInfo::print(const MachineFunction &MF, raw_ostream &OS) const{
     if (SO.StackID != 0)
       OS << "id=" << static_cast<unsigned>(SO.StackID) << ' ';
 
-    if (SO.Size == ~0ULL) {
+    if (SO.isDead) {
       OS << "dead\n";
       continue;
     }

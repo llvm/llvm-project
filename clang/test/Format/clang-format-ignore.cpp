@@ -46,15 +46,51 @@
 // CHECK5-NEXT: {{Formatting \[4/5] .*foo\.c}}
 // CHECK5-NOT: foo.js
 
+// Check that ignored files are unformatted, but still output.
 // RUN: echo "foo.*" > .clang-format-ignore
 // RUN: echo "int i ;" > foo.c
-// RUN: clang-format -assume-filename=foo.c < foo.c \
-// RUN:   | FileCheck %s -check-prefix=CHECK6 -allow-empty
-// CHECK6-NOT: int
-
+// RUN: clang-format -assume-filename=foo.c < foo.c | diff foo.c -
 // RUN: clang-format -assume-filename=bar.c < foo.c \
+// RUN:   | FileCheck %s -check-prefix=CHECK6 -match-full-lines
+// CHECK6: int i;
+
+// RUN: echo "foo.h" > .clang-format-ignore
+// RUN: echo "!foo.c" >> .clang-format-ignore
+// RUN: echo "int i ;" > foo.c
+// RUN: echo "int i ;" > foo.h
+// RUN: clang-format -verbose foo.c 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=CHECK7 -match-full-lines
-// CHECK7: int i;
+// CHECK7: Formatting [1/1] foo.c
+// RUN: clang-format -verbose foo.h 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=CHECK8 -allow-empty
+// CHECK8-NOT: int
+
+// RUN: mkdir -p %t.dir/ignore.dir/format.dir
+// RUN: echo "ignore.dir/*" > .clang-format-ignore
+// RUN: echo "!ignore.dir/format.dir/*" >> .clang-format-ignore
+// RUN: echo "int i ;" > ignore.dir/foo.c
+// RUN: echo "int i ;" > ignore.dir/format.dir/bar.c
+// RUN: clang-format -verbose ignore.dir/**/*.c 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=CHECK9 -match-full-lines
+// CHECK9: {{Formatting \[1/1] .*ignore\.dir[/\\]format\.dir[/\\]bar\.c}}
+
+// RUN: echo "foo.*" > .clang-format-ignore
+// RUN: clang-format -verbose foo.c 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=CHECK10 -allow-empty
+// CHECK10-NOT: int
+// RUN: echo "!foo.c" >> .clang-format-ignore
+// RUN: clang-format -verbose foo.c 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=CHECK11 -match-full-lines
+// CHECK11: Formatting [1/1] foo.c
+
+// RUN: echo "!foo.*" > .clang-format-ignore
+// RUN: clang-format -verbose foo.c 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=CHECK12 -match-full-lines
+// CHECK12: Formatting [1/1] foo.c
+// RUN: echo "foo.c" >> .clang-format-ignore
+// RUN: clang-format -verbose foo.c 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=CHECK13 -allow-empty
+// CHECK13-NOT: int
 
 // RUN: cd ..
 // RUN: rm -r %t.dir

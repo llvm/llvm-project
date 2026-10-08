@@ -380,7 +380,7 @@ define i32 @bit_ceil_plus_nuw(i32 %x) {
 ; CHECK-LABEL: @bit_ceil_plus_nuw(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[CTLZ:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[SUB]], i1 false)
+; CHECK-NEXT:    [[CTLZ:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[SUB]], i1 false)
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw i32 0, [[CTLZ]]
 ; CHECK-NEXT:    [[SUB2:%.*]] = and i32 [[TMP0]], 31
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[SUB2]]

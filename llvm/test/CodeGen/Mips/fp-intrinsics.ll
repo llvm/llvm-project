@@ -164,7 +164,10 @@ define float @roundeven_f32(float %x) #0 {
 
 define float @uitofp_f32_i32(i32 %x) #0 {
 ; CHECK-LABEL: uitofp_f32_i32:
-; CHECK: ldc1
+; CHECK: lui
+; CHECK: sw
+; CHECK: mtc1
+; CHECK: mthc1
 ; CHECK: ldc1
 ; CHECK: cvt.s.d
   %val = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
@@ -467,7 +470,10 @@ define double @roundeven_f64(double %x) #0 {
 
 define double @uitofp_f64_i32(i32 %x) #0 {
 ; CHECK-LABEL: uitofp_f64_i32:
-; CHECK: ldc1 
+; CHECK: lui
+; CHECK: sw
+; CHECK: mtc1
+; CHECK: mthc1
 ; CHECK: ldc1
   %val = call double @llvm.experimental.constrained.uitofp.f64.i32(i32 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val

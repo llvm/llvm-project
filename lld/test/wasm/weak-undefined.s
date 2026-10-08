@@ -68,14 +68,6 @@ _start:
 # CHECK-NEXT:   - Type:            MEMORY
 # CHECK-NEXT:     Memories:
 # CHECK-NEXT:       - Minimum:         0x1
-# CHECK-NEXT:   - Type:            GLOBAL
-# CHECK-NEXT:     Globals:
-# CHECK-NEXT:       - Index:           0
-# CHECK-NEXT:         Type:            I32
-# CHECK-NEXT:         Mutable:         true
-# CHECK-NEXT:         InitExpr:
-# CHECK-NEXT:           Opcode:          I32_CONST
-# CHECK-NEXT:           Value:           65536
 # CHECK-NEXT:   - Type:            EXPORT
 # CHECK-NEXT:     Exports:
 # CHECK-NEXT:       - Name:            memory

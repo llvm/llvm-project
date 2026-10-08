@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_sha1_ostream.h"
 #include "gtest/gtest.h"
@@ -13,20 +14,6 @@
 #include <string>
 
 using namespace llvm;
-
-static std::string toHex(ArrayRef<uint8_t> Input) {
-  static const char *const LUT = "0123456789ABCDEF";
-  size_t Length = Input.size();
-
-  std::string Output;
-  Output.reserve(2 * Length);
-  for (size_t i = 0; i < Length; ++i) {
-    const unsigned char c = Input[i];
-    Output.push_back(LUT[c >> 4]);
-    Output.push_back(LUT[c & 15]);
-  }
-  return Output;
-}
 
 TEST(raw_sha1_ostreamTest, Basic) {
   llvm::raw_sha1_ostream Sha1Stream;

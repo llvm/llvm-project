@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu8.03--amdhsa < %s | FileCheck %s
 
 declare void @func(ptr addrspace(1) %out)
 

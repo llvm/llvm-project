@@ -1,7 +1,7 @@
-; RUN: llc < %s -mtriple=nvptx -mcpu=sm_20 | FileCheck %s
-; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s
-; RUN: %if ptxas-ptr32 %{ llc < %s -mtriple=nvptx -mcpu=sm_20 | %ptxas-verify %}
-; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx -mcpu=sm_53 | FileCheck %s
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_53 | FileCheck %s
+; RUN: %if ptxas-ptr32 %{ llc < %s -mtriple=nvptx -mcpu=sm_53 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_53 | %ptxas-verify %}
 
 define i16 @cvt_u16_f32(float %x) {
 ; CHECK: cvt.rzi.u16.f32 %rs{{[0-9]+}}, %r{{[0-9]+}};
@@ -163,3 +163,34 @@ define i64 @cvt_s64_f64(double %x) {
   %a = fptosi double %x to i64
   ret i64 %a
 }
+
+
+; fptoui/fptosi to i1 truncate toward zero, so the result is just
+; (x >= 1.0) / (x <= -1.0) — a single fp compare.
+; CHECK-LABEL: cvt_u1_f32
+; CHECK: setp.ge.f32 %p{{[0-9]+}}, %r{{[0-9]+}}, 0f3F800000;
+; CHECK: ret;
+define i1 @cvt_u1_f32(float %x) { %a = fptoui float %x to i1   ret i1 %a }
+
+; CHECK-LABEL: cvt_s1_f32
+; CHECK: setp.le.f32 %p{{[0-9]+}}, %r{{[0-9]+}}, 0fBF800000;
+; CHECK: ret;
+define i1 @cvt_s1_f32(float %x) { %a = fptosi float %x to i1 ret i1 %a }
+
+; CHECK-LABEL: cvt_u1_f64(
+; CHECK: setp.ge.f64 %p{{[0-9]+}}, %rd{{[0-9]+}}, 0d3FF0000000000000;
+define i1 @cvt_u1_f64(double %x) { %a = fptoui double %x to i1  ret i1 %a }
+
+; CHECK-LABEL: cvt_s1_f64(
+; CHECK: setp.le.f64 %p{{[0-9]+}}, %rd{{[0-9]+}}, 0dBFF0000000000000;
+define i1 @cvt_s1_f64(double %x) { %a = fptosi double %x to i1  ret i1 %a }
+
+; CHECK-LABEL: cvt_u1_f16(
+; CHECK: mov.b16 %rs{{[0-9]+}}, 0x3C00;
+; CHECK: setp.ge.f16 %p{{[0-9]+}}, %rs{{[0-9]+}}, %rs{{[0-9]+}};
+define i1 @cvt_u1_f16(half %x) { %a = fptoui half %x to i1  ret i1 %a }
+
+; CHECK-LABEL: cvt_s1_f16(
+; CHECK: mov.b16 %rs{{[0-9]+}}, 0xBC00;
+; CHECK: setp.le.f16 %p{{[0-9]+}}, %rs{{[0-9]+}}, %rs{{[0-9]+}};
+define i1 @cvt_s1_f16(half %x) { %a = fptosi half %x to i1  ret i1 %a }

@@ -31,6 +31,21 @@ FLOATING_POINT_OPERATIONS = ["fadd", "fsub", "fmin", "fmax", "fminimum", "fmaxim
 
 ADDRSPACE_NUM_TO_ADDRSPACE = {0: "generic", 1: "global", 3: "shared"}
 
+# A small spread of operations used to exercise the scope and address-space
+# qualifiers, which are emitted orthogonally to the operation: a native integer op
+# at two sizes, signed/unsigned variants, an always-emulated op (lowers to a cas
+# loop), and floating-point add.
+REPRESENTATIVE_OPS = [
+    ("add", "i32"),
+    ("add", "i64"),
+    ("min", "i32"),
+    ("umax", "i32"),
+    ("nand", "i32"),
+    ("nand", "i64"),
+    ("fadd", "float"),
+    ("fadd", "double"),
+]
+
 atomicrmw_func = Template(
     """define ${datatype} @${operation}_${ordering}_${datatype}_${addrspace}_${ptx_scope}(ptr${addrspace_cast} %addr, ${datatype} %val) {
         %retval = atomicrmw ${operation} ptr ${addrspace_cast} %addr, ${datatype} %val syncscope(\"${llvm_scope}\") ${ordering} 
@@ -39,9 +54,24 @@ atomicrmw_func = Template(
 """
 )
 
+# atomicrmw fadd's lowering depends on the function's FTZ (denormal) mode, so we
+# check codegen both with and without it. Lines common to both runs collapse to
+# the SM${sm} prefix; only the FTZ-sensitive ops diverge into SM${sm}-NOFTZ /
+# SM${sm}-FTZ. (-nvptx-allow-ftz-atomics is covered separately in
+# atomicrmw-allow-ftz-atomics.ll.)
 run_statement = Template(
-    """; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} | FileCheck %s --check-prefix=SM${sm}
+    """; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -nvptx-allow-ftz-atomics=false | FileCheck %s --check-prefixes=SM${sm},SM${sm}-NOFTZ-DISALLOW
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -nvptx-allow-ftz-atomics=true | FileCheck %s --check-prefixes=SM${sm},SM${sm}-NOFTZ-ALLOW
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} | FileCheck %s --check-prefixes=SM${sm},SM${sm}-NOFTZ-ALLOW
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -denormal-fp-math-f32=preserve-sign -nvptx-allow-ftz-atomics=false | FileCheck %s --check-prefixes=SM${sm},SM${sm}-FTZ-DISALLOW
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -denormal-fp-math-f32=preserve-sign -nvptx-allow-ftz-atomics=true | FileCheck %s --check-prefixes=SM${sm},SM${sm}-FTZ-ALLOW
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -denormal-fp-math-f32=preserve-sign | FileCheck %s --check-prefixes=SM${sm},SM${sm}-FTZ-ALLOW
+; RUN: %if ptxas-sm_${sm} && ptxas-isa-${ptxfp} %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -nvptx-allow-ftz-atomics=false | %ptxas-verify -arch=sm_${sm} %}
+; RUN: %if ptxas-sm_${sm} && ptxas-isa-${ptxfp} %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -nvptx-allow-ftz-atomics=true | %ptxas-verify -arch=sm_${sm} %}
 ; RUN: %if ptxas-sm_${sm} && ptxas-isa-${ptxfp} %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} | %ptxas-verify -arch=sm_${sm} %}
+; RUN: %if ptxas-sm_${sm} && ptxas-isa-${ptxfp} %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -denormal-fp-math-f32=preserve-sign -nvptx-allow-ftz-atomics=false | %ptxas-verify -arch=sm_${sm} %}
+; RUN: %if ptxas-sm_${sm} && ptxas-isa-${ptxfp} %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -denormal-fp-math-f32=preserve-sign -nvptx-allow-ftz-atomics=true | %ptxas-verify -arch=sm_${sm} %}
+; RUN: %if ptxas-sm_${sm} && ptxas-isa-${ptxfp} %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -denormal-fp-math-f32=preserve-sign | %ptxas-verify -arch=sm_${sm} %}
 """
 )
 
@@ -114,3 +144,39 @@ if __name__ == "__main__":
                     ),
                     file=fp,
                 )
+
+            # Slice 3: Keep addrspace (global) and ordering fixed, vary the scope
+            # qualifier. block/global is already covered by Slice 1.
+            addrspace, ordering = 1, "acq_rel"
+            for llvm_scope in [s for s in SCOPE_LLVM_TO_PTX if s != "block"]:
+                for operation, datatype in REPRESENTATIVE_OPS:
+                    print(
+                        atomicrmw_func.substitute(
+                            operation=operation,
+                            ordering=ordering,
+                            datatype=datatype,
+                            addrspace=ADDRSPACE_NUM_TO_ADDRSPACE[addrspace],
+                            addrspace_cast=get_addrspace_cast(addrspace),
+                            ptx_scope=SCOPE_LLVM_TO_PTX[llvm_scope],
+                            llvm_scope=llvm_scope,
+                        ),
+                        file=fp,
+                    )
+
+            # Slice 4: Keep scope (block) and ordering fixed, vary the address-space
+            # qualifier. global is already covered by Slice 1.
+            llvm_scope, ordering = "block", "acq_rel"
+            for addrspace in [a for a in ADDRSPACE_NUM_TO_ADDRSPACE if a != 1]:
+                for operation, datatype in REPRESENTATIVE_OPS:
+                    print(
+                        atomicrmw_func.substitute(
+                            operation=operation,
+                            ordering=ordering,
+                            datatype=datatype,
+                            addrspace=ADDRSPACE_NUM_TO_ADDRSPACE[addrspace],
+                            addrspace_cast=get_addrspace_cast(addrspace),
+                            ptx_scope=SCOPE_LLVM_TO_PTX[llvm_scope],
+                            llvm_scope=llvm_scope,
+                        ),
+                        file=fp,
+                    )

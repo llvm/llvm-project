@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgcn-unknown-unknown -target-cpu gfx900 -S -verify=gfx,expected -o - %s
-// RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgcn-unknown-unknown -target-cpu gfx942 -S -verify=gfx,expected -o - %s
-// RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgcn-unknown-unknown -target-cpu gfx1010 -S -verify=gfx,expected -o - %s
-// RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgcn-unknown-unknown -target-cpu gfx950 -S -verify=gfx950,expected -o - %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgpu9.00-unknown-unknown -S -verify=gfx,expected -o - %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgpu9.42-unknown-unknown -S -verify=gfx,expected -o - %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgpu10.10-unknown-unknown -S -verify=gfx,expected -o - %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgpu9.50-unknown-unknown -S -verify=gfx950,expected -o - %s
 // REQUIRES: amdgpu-registered-target
 
 typedef unsigned int u32;

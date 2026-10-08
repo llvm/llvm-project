@@ -36,7 +36,7 @@ public:
   /// Returns global type pool.
   TypePool &getTypePool() { return Types; }
 
-  /// TypeUnitAccelInfo extends AccelInfo structure with type specific fileds.
+  /// TypeUnitAccelInfo extends AccelInfo structure with type specific fields.
   /// We need these additional fields to decide whether OutDIE should have an
   /// accelerator record or not. The TypeEntryBodyPtr can refer to the
   /// declaration DIE and definition DIE corresponding to the type entry.

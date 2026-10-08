@@ -193,6 +193,9 @@ protected:
   virtual Error printMatchedElements(bool UseMatchedElements);
   virtual void sortScopes() {}
 
+  void printCollectedElements(LVScope *Root);
+  bool checkIntegrityScopesTree(LVScope *Root);
+
 public:
   LVReader() = delete;
   LVReader(StringRef InputFilename, StringRef FileFormatName, ScopedPrinter &W,

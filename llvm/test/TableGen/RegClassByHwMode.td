@@ -97,39 +97,47 @@ include "Common/RegClassByHwModeCommon.td"
 // ASMMATCHER-NEXT:   MCK_LAST_REGCLASS_BY_HWMODE = MCK_RegByHwMode_YRegs_EvenIfRequired,
 // ASMMATCHER-NEXT:   MCK_Imm, // user defined class 'ImmAsmOperand'
 
+// ASMMATCHER:      static constexpr MatchClassKind RegClassByHwModeMatchTable[4][3] = {
+// ASMMATCHER-NEXT:   { // DefaultMode
+// ASMMATCHER-NEXT:     MCK_PtrRegs32, // MyPtrRC
+// ASMMATCHER-NEXT:     MCK_XRegs, // XRegs_EvenIfRequired
+// ASMMATCHER-NEXT:     MCK_YRegs, // YRegs_EvenIfRequired
+// ASMMATCHER-NEXT:   },
+// ASMMATCHER-NEXT:   { // EvenMode
+// ASMMATCHER-NEXT:     InvalidMatchClass, // Missing mode entry for MyPtrRC
+// ASMMATCHER-NEXT:     MCK_XRegs_Even, // XRegs_EvenIfRequired
+// ASMMATCHER-NEXT:     MCK_YRegs_Even, // YRegs_EvenIfRequired
+// ASMMATCHER-NEXT:   },
+// ASMMATCHER-NEXT:   { // OddMode
+// ASMMATCHER-NEXT:     InvalidMatchClass, // Missing mode entry for MyPtrRC
+// ASMMATCHER-NEXT:     MCK_XRegs_Odd, // XRegs_EvenIfRequired
+// ASMMATCHER-NEXT:     InvalidMatchClass, // Missing mode entry for YRegs_EvenIfRequired
+// ASMMATCHER-NEXT:   },
+// ASMMATCHER-NEXT:   { // Ptr64
+// ASMMATCHER-NEXT:     MCK_PtrRegs64, // MyPtrRC
+// ASMMATCHER-NEXT:     InvalidMatchClass, // Missing mode entry for XRegs_EvenIfRequired
+// ASMMATCHER-NEXT:     InvalidMatchClass, // Missing mode entry for YRegs_EvenIfRequired
+// ASMMATCHER-NEXT:   },
+// ASMMATCHER-NEXT: };
+// ASMMATCHER-EMPTY:
+// ASMMATCHER-NEXT: static_assert(MCK_LAST_REGCLASS_BY_HWMODE - MCK_LAST_REGISTER == 3);
+// ASMMATCHER-EMPTY:
+// ASMMATCHER-NEXT: {{\[\[}}maybe_unused{{\]\]}} static inline MatchClassKind
+// ASMMATCHER-NEXT: remapRegClassByHwMode(unsigned Kind, const MCSubtargetInfo &STI) {
+// ASMMATCHER-NEXT:   if (Kind > MCK_LAST_REGISTER && Kind <= MCK_LAST_REGCLASS_BY_HWMODE) {
+// ASMMATCHER-NEXT:     unsigned HwMode = STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo);
+// ASMMATCHER-NEXT:     assert(HwMode < 4 && "Invalid HwMode");
+// ASMMATCHER-NEXT:     return RegClassByHwModeMatchTable[HwMode][Kind - (MCK_LAST_REGISTER + 1)];
+// ASMMATCHER-NEXT:   }
+// ASMMATCHER-NEXT:   return static_cast<MatchClassKind>(Kind);
+// ASMMATCHER-NEXT: }
+
 // ASMMATCHER: static unsigned validateOperandClass(MCParsedAsmOperand &GOp, MatchClassKind Kind, const MCSubtargetInfo &STI) {
-// ASMMATCHER: if (Operand.isToken() && Kind <= MCK_LAST_TOKEN)
+// ASMMATCHER: if (Kind <= MCK_LAST_TOKEN) {
 
 // ASMMATCHER: switch (Kind) {
 
-// ASMMATCHER: if (Operand.isReg() && Kind > MCK_LAST_REGISTER && Kind <= MCK_LAST_REGCLASS_BY_HWMODE) {
-// ASMMATCHER-NEXT:    static constexpr MatchClassKind RegClassByHwModeMatchTable[4][3] = {
-// ASMMATCHER-NEXT:      { // DefaultMode
-// ASMMATCHER-NEXT:        MCK_PtrRegs32, // MyPtrRC
-// ASMMATCHER-NEXT:        MCK_XRegs, // XRegs_EvenIfRequired
-// ASMMATCHER-NEXT:        MCK_YRegs, // YRegs_EvenIfRequired
-// ASMMATCHER-NEXT:      },
-// ASMMATCHER-NEXT:      { // EvenMode
-// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode entry for MyPtrRC
-// ASMMATCHER-NEXT:        MCK_XRegs_Even, // XRegs_EvenIfRequired
-// ASMMATCHER-NEXT:        MCK_YRegs_Even, // YRegs_EvenIfRequired
-// ASMMATCHER-NEXT:      },
-// ASMMATCHER-NEXT:      { // OddMode
-// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode entry for MyPtrRC
-// ASMMATCHER-NEXT:        MCK_XRegs_Odd, // XRegs_EvenIfRequired
-// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode entry for YRegs_EvenIfRequired
-// ASMMATCHER-NEXT:      },
-// ASMMATCHER-NEXT:      { // Ptr64
-// ASMMATCHER-NEXT:        MCK_PtrRegs64, // MyPtrRC
-// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode entry for XRegs_EvenIfRequired
-// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode entry for YRegs_EvenIfRequired
-// ASMMATCHER-NEXT:      },
-// ASMMATCHER-NEXT:    };
-// ASMMATCHER-EMPTY:
-// ASMMATCHER-NEXT:    static_assert(MCK_LAST_REGCLASS_BY_HWMODE - MCK_LAST_REGISTER == 3);
-// ASMMATCHER-NEXT:    const unsigned HwMode = STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo);
-// ASMMATCHER-NEXT:    Kind = RegClassByHwModeMatchTable[HwMode][Kind - (MCK_LAST_REGISTER + 1)];
-// ASMMATCHER-NEXT:  }
+// ASMMATCHER:   Kind = remapRegClassByHwMode(Kind, STI);
 
 // ASMMATCHER: if (Operand.isReg()) {
 
@@ -235,37 +243,34 @@ include "Common/RegClassByHwModeCommon.td"
 
 
 
-// ISEL-GISEL: GIM_Try, /*On fail goto*//*Label 3*/ GIMT_Encode4(148),
+// ISEL-GISEL: GIM_Try, /*On fail goto*//*Label 3*/ GIMT_Encode4({{[0-9]+}}),
 // ISEL-GISEL-NEXT:   GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s64,
 // ISEL-GISEL-NEXT:   GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
 // ISEL-GISEL-NEXT:   GIM_CheckMemorySizeEqualToLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
 // ISEL-GISEL-NEXT:   GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::XRegsRegClassID),
-// ISEL-GISEL-NEXT:   GIM_Try, /*On fail goto*//*Label 4*/ GIMT_Encode4(101),
+// ISEL-GISEL-NEXT:   GIM_Try, /*On fail goto*//*Label 4*/ GIMT_Encode4({{[0-9]+}}),
 // ISEL-GISEL-NEXT:     GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/32,
 
 // FIXME: This should be a direct check for regbank, not have an incorrect class
 
 // ISEL-GISEL-NEXT:     GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::PtrRegs32RegClassID),
-// ISEL-GISEL-NEXT:     GIM_Try, /*On fail goto*//*Label 5*/ GIMT_Encode4(85), // Rule ID 4 //
-// ISEL-GISEL-NEXT:       GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode0),
+// ISEL-GISEL-NEXT:     GIM_Try_CheckFeatures, /*On fail goto*//*Label 5*/ GIMT_Encode4({{[0-9]+}}), GIMT_Encode2(GIFBS_HwMode0), // Rule ID 4 //
 // ISEL-GISEL-NEXT:       // (ld:{ *:[i64] } PtrRegOperand:{ *:[i32] }:$src)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (MY_LOAD:{ *:[i64] } ?:{ *:[i32] }:$src)
 // ISEL-GISEL-NEXT:       GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MY_LOAD),
 // ISEL-GISEL-NEXT:       GIR_RootConstrainSelectedInstOperands,
 // ISEL-GISEL-NEXT:       // GIR_Coverage, 4,
 // ISEL-GISEL-NEXT:       GIR_Done,
-// ISEL-GISEL-NEXT:     // Label 5: @85
-// ISEL-GISEL-NEXT:     GIM_Try, /*On fail goto*//*Label 6*/ GIMT_Encode4(100), // Rule ID 5 //
-// ISEL-GISEL-NEXT:       GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode1),
+// ISEL-GISEL-NEXT:     // Label 5: @{{[0-9]+}}
+// ISEL-GISEL-NEXT:     GIM_Try_CheckFeatures, /*On fail goto*//*Label 6*/ GIMT_Encode4({{[0-9]+}}), GIMT_Encode2(GIFBS_HwMode1), // Rule ID 5 //
 // ISEL-GISEL-NEXT:       // (ld:{ *:[i64] } PtrRegOperand:{ *:[i32] }:$src)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (MY_LOAD:{ *:[i64] } ?:{ *:[i32] }:$src)
 // ISEL-GISEL-NEXT:       GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MY_LOAD),
 // ISEL-GISEL-NEXT:       GIR_RootConstrainSelectedInstOperands,
 // ISEL-GISEL-NEXT:       // GIR_Coverage, 5,
 // ISEL-GISEL-NEXT:       GIR_Done,
-// ISEL-GISEL-NEXT:     // Label 6: @100
+// ISEL-GISEL-NEXT:     // Label 6: @{{[0-9]+}}
 // ISEL-GISEL-NEXT:     GIM_Reject,
-// ISEL-GISEL-NEXT:   // Label 4: @101
-// ISEL-GISEL-NEXT:   GIM_Try, /*On fail goto*//*Label 7*/ GIMT_Encode4(124), // Rule ID 6 //
-// ISEL-GISEL-NEXT:     GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode2),
+// ISEL-GISEL-NEXT:   // Label 4: @{{[0-9]+}}
+// ISEL-GISEL-NEXT:   GIM_Try_CheckFeatures, /*On fail goto*//*Label 7*/ GIMT_Encode4({{[0-9]+}}), GIMT_Encode2(GIFBS_HwMode2), // Rule ID 6 //
 // ISEL-GISEL-NEXT:     // MIs[0] src
 // ISEL-GISEL-NEXT:     GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/64,
 // ISEL-GISEL-NEXT:     GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::PtrRegs32RegClassID),
@@ -274,9 +279,8 @@ include "Common/RegClassByHwModeCommon.td"
 // ISEL-GISEL-NEXT:     GIR_RootConstrainSelectedInstOperands,
 // ISEL-GISEL-NEXT:     // GIR_Coverage, 6,
 // ISEL-GISEL-NEXT:     GIR_Done,
-// ISEL-GISEL-NEXT:   // Label 7: @124
-// ISEL-GISEL-NEXT:   GIM_Try, /*On fail goto*//*Label 8*/ GIMT_Encode4(147), // Rule ID 7 //
-// ISEL-GISEL-NEXT:     GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode3),
+// ISEL-GISEL-NEXT:   // Label 7: @{{[0-9]+}}
+// ISEL-GISEL-NEXT:   GIM_Try_CheckFeatures, /*On fail goto*//*Label 8*/ GIMT_Encode4({{[0-9]+}}), GIMT_Encode2(GIFBS_HwMode3), // Rule ID 7 //
 // ISEL-GISEL-NEXT:     // MIs[0] src
 // ISEL-GISEL-NEXT:     GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/32,
 // ISEL-GISEL-NEXT:     GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::PtrRegs32RegClassID),
@@ -285,39 +289,36 @@ include "Common/RegClassByHwModeCommon.td"
 // ISEL-GISEL-NEXT:     GIR_RootConstrainSelectedInstOperands,
 // ISEL-GISEL-NEXT:     // GIR_Coverage, 7,
 // ISEL-GISEL-NEXT:     GIR_Done,
-// ISEL-GISEL-NEXT:   // Label 8: @147
+// ISEL-GISEL-NEXT:   // Label 8: @{{[0-9]+}}
 // ISEL-GISEL-NEXT:   GIM_Reject,
-// ISEL-GISEL-NEXT: // Label 3: @148
+// ISEL-GISEL-NEXT: // Label 3: @{{[0-9]+}}
 // ISEL-GISEL-NEXT: GIM_Reject,
-// ISEL-GISEL-NEXT: // Label 1: @149
-// ISEL-GISEL-NEXT: GIM_Try, /*On fail goto*//*Label 9*/ GIMT_Encode4(259),
+// ISEL-GISEL-NEXT: // Label 1: @{{[0-9]+}}
+// ISEL-GISEL-NEXT: GIM_Try, /*On fail goto*//*Label 9*/ GIMT_Encode4({{[0-9]+}}),
 // ISEL-GISEL-NEXT:   GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s64,
 // ISEL-GISEL-NEXT:   GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
 // ISEL-GISEL-NEXT:   GIM_CheckMemorySizeEqualToLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
 // ISEL-GISEL-NEXT:   GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::XRegsRegClassID),
-// ISEL-GISEL-NEXT:   GIM_Try, /*On fail goto*//*Label 10*/ GIMT_Encode4(212),
+// ISEL-GISEL-NEXT:   GIM_Try, /*On fail goto*//*Label 10*/ GIMT_Encode4({{[0-9]+}}),
 // ISEL-GISEL-NEXT:     GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/32,
 // ISEL-GISEL-NEXT:     GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::PtrRegs32RegClassID),
-// ISEL-GISEL-NEXT:     GIM_Try, /*On fail goto*//*Label 11*/ GIMT_Encode4(196), // Rule ID 0 //
-// ISEL-GISEL-NEXT:       GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode0),
+// ISEL-GISEL-NEXT:     GIM_Try_CheckFeatures, /*On fail goto*//*Label 11*/ GIMT_Encode4({{[0-9]+}}), GIMT_Encode2(GIFBS_HwMode0), // Rule ID 0 //
 // ISEL-GISEL-NEXT:       // (st XRegs_EvenIfRequired:{ *:[i64] }:$val, MyPtrRC:{ *:[i32] }:$src)<<P:Predicate_unindexedstore>><<P:Predicate_store>>  =>  (MY_STORE XRegs_EvenIfRequired:{ *:[i64] }:$val, ?:{ *:[i32] }:$src)
 // ISEL-GISEL-NEXT:       GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MY_STORE),
 // ISEL-GISEL-NEXT:       GIR_RootConstrainSelectedInstOperands,
 // ISEL-GISEL-NEXT:       // GIR_Coverage, 0,
 // ISEL-GISEL-NEXT:       GIR_Done,
-// ISEL-GISEL-NEXT:     // Label 11: @196
-// ISEL-GISEL-NEXT:     GIM_Try, /*On fail goto*//*Label 12*/ GIMT_Encode4(211), // Rule ID 1 //
-// ISEL-GISEL-NEXT:       GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode1),
+// ISEL-GISEL-NEXT:     // Label 11: @{{[0-9]+}}
+// ISEL-GISEL-NEXT:     GIM_Try_CheckFeatures, /*On fail goto*//*Label 12*/ GIMT_Encode4({{[0-9]+}}), GIMT_Encode2(GIFBS_HwMode1), // Rule ID 1 //
 // ISEL-GISEL-NEXT:       // (st XRegs_EvenIfRequired:{ *:[i64] }:$val, MyPtrRC:{ *:[i32] }:$src)<<P:Predicate_unindexedstore>><<P:Predicate_store>>  =>  (MY_STORE XRegs_EvenIfRequired:{ *:[i64] }:$val, ?:{ *:[i32] }:$src)
 // ISEL-GISEL-NEXT:       GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MY_STORE),
 // ISEL-GISEL-NEXT:       GIR_RootConstrainSelectedInstOperands,
 // ISEL-GISEL-NEXT:       // GIR_Coverage, 1,
 // ISEL-GISEL-NEXT:       GIR_Done,
-// ISEL-GISEL-NEXT:     // Label 12: @211
+// ISEL-GISEL-NEXT:     // Label 12: @{{[0-9]+}}
 // ISEL-GISEL-NEXT:     GIM_Reject,
-// ISEL-GISEL-NEXT:   // Label 10: @212
-// ISEL-GISEL-NEXT:   GIM_Try, /*On fail goto*//*Label 13*/ GIMT_Encode4(235), // Rule ID 2 //
-// ISEL-GISEL-NEXT:     GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode2),
+// ISEL-GISEL-NEXT:   // Label 10: @{{[0-9]+}}
+// ISEL-GISEL-NEXT:   GIM_Try_CheckFeatures, /*On fail goto*//*Label 13*/ GIMT_Encode4({{[0-9]+}}), GIMT_Encode2(GIFBS_HwMode2), // Rule ID 2 //
 // ISEL-GISEL-NEXT:     // MIs[0] src
 // ISEL-GISEL-NEXT:     GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/64,
 // ISEL-GISEL-NEXT:     GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::PtrRegs32RegClassID),
@@ -326,9 +327,8 @@ include "Common/RegClassByHwModeCommon.td"
 // ISEL-GISEL-NEXT:     GIR_RootConstrainSelectedInstOperands,
 // ISEL-GISEL-NEXT:     // GIR_Coverage, 2,
 // ISEL-GISEL-NEXT:     GIR_Done,
-// ISEL-GISEL-NEXT:   // Label 13: @235
-// ISEL-GISEL-NEXT:   GIM_Try, /*On fail goto*//*Label 14*/ GIMT_Encode4(258), // Rule ID 3 //
-// ISEL-GISEL-NEXT:     GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode3),
+// ISEL-GISEL-NEXT:   // Label 13: @{{[0-9]+}}
+// ISEL-GISEL-NEXT:   GIM_Try_CheckFeatures, /*On fail goto*//*Label 14*/ GIMT_Encode4({{[0-9]+}}), GIMT_Encode2(GIFBS_HwMode3), // Rule ID 3 //
 // ISEL-GISEL-NEXT:     // MIs[0] src
 // ISEL-GISEL-NEXT:     GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/32,
 // ISEL-GISEL-NEXT:     GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::PtrRegs32RegClassID),
@@ -337,13 +337,13 @@ include "Common/RegClassByHwModeCommon.td"
 // ISEL-GISEL-NEXT:     GIR_RootConstrainSelectedInstOperands,
 // ISEL-GISEL-NEXT:     // GIR_Coverage, 3,
 // ISEL-GISEL-NEXT:   GIR_Done,
-// ISEL-GISEL-NEXT:   // Label 14: @258
+// ISEL-GISEL-NEXT:   // Label 14: @{{[0-9]+}}
 // ISEL-GISEL-NEXT:   GIM_Reject,
-// ISEL-GISEL-NEXT: // Label 9: @259
+// ISEL-GISEL-NEXT: // Label 9: @{{[0-9]+}}
 // ISEL-GISEL-NEXT: GIM_Reject,
-// ISEL-GISEL-NEXT: // Label 2: @260
+// ISEL-GISEL-NEXT: // Label 2: @{{[0-9]+}}
 // ISEL-GISEL-NEXT: GIM_Reject,
-// ISEL-GISEL-NEXT: }; // Size: 261 bytes
+// ISEL-GISEL-NEXT: }; // Size: 257 bytes
 
 def HasAlignedRegisters : Predicate<"Subtarget->hasAlignedRegisters()">;
 def HasUnalignedRegisters : Predicate<"Subtarget->hasUnalignedRegisters()">;

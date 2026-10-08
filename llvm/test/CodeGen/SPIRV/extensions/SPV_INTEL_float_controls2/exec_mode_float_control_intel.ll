@@ -1,7 +1,7 @@
 ; Adapted from https://github.com/KhronosGroup/SPIRV-LLVM-Translator/tree/main/test/extensions/INTEL/SPV_INTEL_float_controls2
 
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_float_controls2 %s -o - | FileCheck %s
-; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_float_controls2 %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_float_controls2 %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: Capability RoundToInfinityINTEL
 ; CHECK-DAG: Capability FloatingPointModeINTEL

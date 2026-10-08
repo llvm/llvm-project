@@ -163,6 +163,8 @@ public:
 
   static void Terminate();
 
+  static void DebuggerInitialize(Debugger &debugger);
+
   static TypeSystemClang *GetASTContext(clang::ASTContext *ast_ctx);
 
   /// Returns the display name of this TypeSystemClang that indicates what
@@ -510,6 +512,10 @@ public:
 
   CompilerType GetPointerSizedIntType(bool is_signed);
 
+  CompilerType GetPointerDiffType(bool is_signed) override;
+
+  CompilerType GetSizeType() override;
+
   // Floating point functions
 
   static CompilerType GetFloatTypeFromBitSize(clang::ASTContext *ast,
@@ -670,6 +676,8 @@ public:
 
   bool IsMemberFunctionPointerType(lldb::opaque_compiler_type_t type) override;
 
+  bool IsMemberDataPointerType(lldb::opaque_compiler_type_t type) override;
+
   bool IsBlockPointerType(lldb::opaque_compiler_type_t type,
                           CompilerType *function_pointer_type_ptr) override;
 
@@ -714,6 +722,8 @@ public:
   bool IsTypedefType(lldb::opaque_compiler_type_t type) override;
 
   bool IsVoidType(lldb::opaque_compiler_type_t type) override;
+
+  bool HasPointerAuthQualifier(lldb::opaque_compiler_type_t type) override;
 
   bool CanPassInRegisters(const CompilerType &type) override;
 
@@ -935,13 +945,10 @@ public:
 
   CompilerType GetTypeForFormatters(void *type) override;
 
-  // DIL
-
   bool IsPromotableIntegerType(lldb::opaque_compiler_type_t type) override;
 
-  llvm::Expected<CompilerType>
-  DoIntegralPromotion(CompilerType from,
-                      ExecutionContextScope *exe_scope) override;
+  CompilerType
+  GetPromotedIntegerType(lldb::opaque_compiler_type_t type) override;
 
 #define LLDB_INVALID_DECL_LEVEL UINT32_MAX
   // LLDB_INVALID_DECL_LEVEL is returned by CountDeclLevels if child_decl_ctx

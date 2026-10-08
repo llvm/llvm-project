@@ -207,7 +207,7 @@ vec_insert(unsigned long long __scalar, __vector unsigned long long __vec,
 #if __ARCH__ >= 12
 static inline __ATTRS_o_ai __vector float
 vec_insert(float __scalar, __vector float __vec, int __index) {
-  __vec[__index & 1] = __scalar;
+  __vec[__index & 3] = __scalar;
   return __vec;
 }
 #endif

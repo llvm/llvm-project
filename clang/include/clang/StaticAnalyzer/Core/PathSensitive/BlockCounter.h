@@ -19,7 +19,7 @@
 
 namespace clang {
 
-class StackFrameContext;
+class StackFrame;
 
 namespace ento {
 
@@ -34,8 +34,7 @@ class BlockCounter {
 public:
   BlockCounter() : Data(nullptr) {}
 
-  unsigned getNumVisited(const StackFrameContext *CallSite,
-                         unsigned BlockID) const;
+  unsigned getNumVisited(const StackFrame *CallSite, unsigned BlockID) const;
 
   class Factory {
     void *F;
@@ -44,9 +43,8 @@ public:
     ~Factory();
 
     BlockCounter GetEmptyCounter();
-    BlockCounter IncrementCount(BlockCounter BC,
-                                  const StackFrameContext *CallSite,
-                                  unsigned BlockID);
+    BlockCounter IncrementCount(BlockCounter BC, const StackFrame *CallSite,
+                                unsigned BlockID);
   };
 
   friend class Factory;

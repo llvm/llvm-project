@@ -112,40 +112,38 @@ PrintedStmtObjCMatches(StringRef Code, const T &NodeMatch,
 
 TEST(StmtPrinter, TestIntegerLiteral) {
   ASSERT_TRUE(PrintedStmtCXXMatches(StdVer::CXX98,
-    "void A() {"
-    "  1, -1, 1U, 1u,"
-    "  1L, 1l, -1L, 1UL, 1ul,"
-    "  1LL, -1LL, 1ULL;"
-    "}",
-    FunctionBodyMatcher("A"),
-    "1 , -1 , 1U , 1U , "
-    "1L , 1L , -1L , 1UL , 1UL , "
-    "1LL , -1LL , 1ULL"));
-    // Should be: with semicolon
+                                    "void A() {"
+                                    "  1, -1, 1U, 1u,"
+                                    "  1L, 1l, -1L, 1UL, 1ul,"
+                                    "  1LL, -1LL, 1ULL;"
+                                    "}",
+                                    FunctionBodyMatcher("A"),
+                                    "1, -1, 1U, 1U, "
+                                    "1L, 1L, -1L, 1UL, 1UL, "
+                                    "1LL, -1LL, 1ULL"));
+  // Should be: with semicolon
 }
 
 TEST(StmtPrinter, TestMSIntegerLiteral) {
-  ASSERT_TRUE(PrintedStmtMSMatches(
-    "void A() {"
-    "  1i8, -1i8, 1ui8, "
-    "  1i16, -1i16, 1ui16, "
-    "  1i32, -1i32, 1ui32, "
-    "  1i64, -1i64, 1ui64;"
-    "}",
-    FunctionBodyMatcher("A"),
-    "1i8 , -1i8 , 1Ui8 , "
-    "1i16 , -1i16 , 1Ui16 , "
-    "1 , -1 , 1U , "
-    "1LL , -1LL , 1ULL"));
-    // Should be: with semicolon
+  ASSERT_TRUE(PrintedStmtMSMatches("void A() {"
+                                   "  1i8, -1i8, 1ui8, "
+                                   "  1i16, -1i16, 1ui16, "
+                                   "  1i32, -1i32, 1ui32, "
+                                   "  1i64, -1i64, 1ui64;"
+                                   "}",
+                                   FunctionBodyMatcher("A"),
+                                   "1i8, -1i8, 1Ui8, "
+                                   "1i16, -1i16, 1Ui16, "
+                                   "1, -1, 1U, "
+                                   "1LL, -1LL, 1ULL"));
+  // Should be: with semicolon
 }
 
 TEST(StmtPrinter, TestFloatingPointLiteral) {
-  ASSERT_TRUE(PrintedStmtCXXMatches(StdVer::CXX98,
-    "void A() { 1.0f, -1.0f, 1.0, -1.0, 1.0l, -1.0l; }",
-    FunctionBodyMatcher("A"),
-    "1.F , -1.F , 1. , -1. , 1.L , -1.L"));
-    // Should be: with semicolon
+  ASSERT_TRUE(PrintedStmtCXXMatches(
+      StdVer::CXX98, "void A() { 1.0f, -1.0f, 1.0, -1.0, 1.0l, -1.0l; }",
+      FunctionBodyMatcher("A"), "1.F, -1.F, 1., -1., 1.L, -1.L"));
+  // Should be: with semicolon
 }
 
 TEST(StmtPrinter, TestStringLiteralOperatorTemplate_Pack) {
@@ -297,6 +295,42 @@ TEST(StmtPrinter, TerseOutputWithLambdas) {
       [](PrintingPolicy &PP) { PP.TerseOutput = true; }));
 }
 
+TEST(StmtPrinter, FullyQualifiedDeclRefExpr) {
+  auto FullyQualified = [](PrintingPolicy &Policy) {
+    Policy.FullyQualifiedName = true;
+  };
+
+  ASSERT_TRUE(PrintedStmtCXXMatches(
+      StdVer::CXX17,
+      R"cpp(
+        namespace ns { int value; }
+        using namespace ns;
+        void A() { (void)value; }
+      )cpp",
+      declRefExpr(to(varDecl(hasName("::ns::value")))).bind("id"), "ns::value",
+      FullyQualified));
+
+  ASSERT_TRUE(PrintedStmtCXXMatches(
+      StdVer::CXX17,
+      R"cpp(
+        namespace ns { template <class T> void func(); }
+        using namespace ns;
+        void A() { func<int>(); }
+      )cpp",
+      declRefExpr(to(functionDecl(hasName("::ns::func")))).bind("id"),
+      "ns::func<int>", FullyQualified));
+
+  ASSERT_TRUE(PrintedStmtCXXMatches(
+      StdVer::CXX17, "void A(int param) { (void)param; }",
+      declRefExpr(to(parmVarDecl(hasName("param")))).bind("id"), "param",
+      FullyQualified));
+
+  ASSERT_TRUE(PrintedStmtCXXMatches(
+      StdVer::CXX17, "void A() { int local = 0; (void)local; }",
+      declRefExpr(to(varDecl(hasName("local")))).bind("id"), "local",
+      FullyQualified));
+}
+
 TEST(StmtPrinter, ParamsUglified) {
   llvm::StringLiteral Code = R"cpp(
     template <typename _T, int _I, template <typename> class _C>
@@ -307,6 +341,10 @@ TEST(StmtPrinter, ParamsUglified) {
   auto Clean = [](PrintingPolicy &Policy) {
     Policy.CleanUglifiedParameters = true;
   };
+  auto CleanFullyQualified = [](PrintingPolicy &Policy) {
+    Policy.CleanUglifiedParameters = true;
+    Policy.FullyQualifiedName = true;
+  };
 
   ASSERT_TRUE(PrintedStmtCXXMatches(StdVer::CXX14, Code,
                                     returnStmt().bind("id"),
@@ -314,4 +352,7 @@ TEST(StmtPrinter, ParamsUglified) {
   ASSERT_TRUE(
       PrintedStmtCXXMatches(StdVer::CXX14, Code, returnStmt().bind("id"),
                             "return typename C<T>::_F(I, j);\n", Clean));
+  ASSERT_TRUE(PrintedStmtCXXMatches(
+      StdVer::CXX14, Code, returnStmt().bind("id"),
+      "return typename _C<T>::_F(I, j);\n", CleanFullyQualified));
 }

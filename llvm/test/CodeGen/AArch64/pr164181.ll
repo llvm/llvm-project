@@ -348,10 +348,9 @@ define void @f(i1 %var_0, i16 %var_1, i64 %var_2, i8 %var_3, i16 %var_4, i1 %var
 ; CHECK-NEXT:  .LBB0_35: // %for.inc505.us
 ; CHECK-NEXT:    // in Loop: Header=BB0_36 Depth=5
 ; CHECK-NEXT:    add x22, x22, #1
-; CHECK-NEXT:    add x27, x27, #1
+; CHECK-NEXT:    adds x27, x27, #1
 ; CHECK-NEXT:    mov w28, wzr
-; CHECK-NEXT:    cmp x27, #0
-; CHECK-NEXT:    b.hs .LBB0_9
+; CHECK-NEXT:    b.ne .LBB0_9
 ; CHECK-NEXT:  .LBB0_36: // %for.body380.us
 ; CHECK-NEXT:    // Parent Loop BB0_4 Depth=1
 ; CHECK-NEXT:    // Parent Loop BB0_6 Depth=2
@@ -466,8 +465,8 @@ if.then466.us:                                    ; preds = %if.then436.us
 for.inc505.us:                                    ; preds = %if.then466.us, %if.then436.us, %for.body380.us
   %13 = phi i8 [ %11, %for.body380.us ], [ %.sroa.speculated817.us, %if.then466.us ], [ 0, %if.then436.us ]
   %indvars.iv.next1019 = add i64 %indvars.iv1018, 1
-  %cmp378.us = icmp ult i64 %indvars.iv1018, 0
-  br i1 %cmp378.us, label %for.body380.us, label %for.cond510.preheader.us
+  %cmp378.us = icmp ugt i64 %indvars.iv1018, 0
+  br i1 %cmp378.us, label %for.cond510.preheader.us, label %for.body380.us
 
 for.body194.us:                                   ; preds = %if.end.us.7, %for.inc371.us
   %indvars.iv = phi i64 [ 0, %if.end.us.7 ], [ %indvars.iv.next, %for.inc371.us ]

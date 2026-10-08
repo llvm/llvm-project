@@ -9,13 +9,12 @@ struct S {
 // CHECK-NEXT:  HLSLParsedSemanticAttr 0x{{[0-9a-f]+}} <col:15> "SV_Position" 3
 };
 
-// FIXME(Keenuts): add mandatory output semantic once those are implemented.
-float4 main(S s) : B {
+float4 main(S s) : SV_Target {
 // CHECK: FunctionDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> line:[[@LINE-1]]:8 main 'float4 (S)'
 // CHECK-NEXT: ParmVarDecl 0x{{[0-9a-fA-F]+}} <{{.*}}> col:15 used s 'S'
 // CHECK-NEXT:  HLSLAppliedSemanticAttr 0x{{[0-9a-f]+}} <line:4:15> "SV_Position" 0
 // CHECK-NEXT:  HLSLAppliedSemanticAttr 0x{{[0-9a-f]+}} <line:7:15> "SV_Position" 3
 
-// CHECK:       HLSLAppliedSemanticAttr 0x{{[0-9a-f]+}} <col:20> "B" 0
+// CHECK:       HLSLAppliedSemanticAttr 0x{{[0-9a-f]+}} <col:20> "SV_Target" 0
   return s.f1;
 }

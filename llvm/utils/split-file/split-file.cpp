@@ -14,12 +14,16 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/OptTable.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include <string>
@@ -27,22 +31,25 @@
 
 using namespace llvm;
 
-static cl::OptionCategory cat("split-file Options");
+namespace {
+enum ID {
+  OPT_INVALID = 0, // This is not an option ID.
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
+#include "Opts.inc"
+#undef OPTION
+};
 
-static cl::opt<std::string> input(cl::Positional, cl::desc("filename"),
-                                  cl::cat(cat));
+using namespace llvm::opt;
+#define OPTTABLE_CODE
+#include "Opts.inc"
 
-static cl::opt<std::string> output(cl::Positional, cl::desc("directory"),
-                                   cl::value_desc("directory"), cl::cat(cat));
+class SplitFileOptTable : public opt::OptTable {
+public:
+  SplitFileOptTable() : OptTable(optionTables()) { setDashDashParsing(true); }
+};
+} // namespace
 
-static cl::opt<bool> leadingLines("leading-lines",
-                                    cl::desc("Preserve line numbers"),
-                                    cl::cat(cat));
-
-static cl::opt<bool> noLeadingLines("no-leading-lines",
-                                    cl::desc("Don't preserve line numbers (default)"),
-                                    cl::cat(cat));
-
+static bool leadingLines;
 static StringRef toolName;
 static int errorCount;
 
@@ -68,7 +75,7 @@ struct Part {
 };
 } // namespace
 
-static int handle(MemoryBuffer &inputBuf, StringRef input) {
+static int handle(MemoryBuffer &inputBuf, StringRef input, StringRef output) {
   DenseMap<StringRef, Part> partToBegin;
   StringRef lastPart, separator;
   StringRef EOL = inputBuf.getBuffer().detectEOL();
@@ -140,22 +147,34 @@ static int handle(MemoryBuffer &inputBuf, StringRef input) {
   return 0;
 }
 
-int main(int argc, const char **argv) {
+int main(int argc, char **argv) {
   toolName = sys::path::stem(argv[0]);
-  cl::HideUnrelatedOptions({&cat});
-  cl::ParseCommandLineOptions(
-      argc, argv,
-      "Split input into multiple parts separated by regex '^(.|//)--- ' and "
-      "extract the part specified by '^(.|//)--- <part>'\n",
-      nullptr,
-      /*VFS=*/nullptr,
-      /*EnvVar=*/nullptr,
-      /*LongOptionsUseDoubleDash=*/true);
+  BumpPtrAllocator alloc;
+  StringSaver saver(alloc);
+  SplitFileOptTable tbl;
+  opt::InputArgList args = tbl.parseArgs(argc, argv, OPT_UNKNOWN, saver,
+                                         [](StringRef msg) { fatal("", msg); });
+  if (args.hasArg(OPT_help)) {
+    tbl.printHelp(outs(), "split-file [options] filename directory",
+                  "Split input into multiple parts separated by regex "
+                  "'^(.|//)--- ' and extract the part specified by "
+                  "'^(.|//)--- <part>'");
+    return 0;
+  }
+  if (args.hasArg(OPT_version)) {
+    cl::PrintVersionMessage();
+    return 0;
+  }
+  leadingLines = args.hasFlag(OPT_leading_lines, OPT_no_leading_lines, false);
 
-  if (input.empty())
+  std::vector<std::string> positional = args.getAllArgValues(OPT_INPUT);
+  if (positional.empty())
     fatal("", "input filename is not specified");
-  if (output.empty())
+  if (positional.size() == 1)
     fatal("", "output directory is not specified");
+  if (positional.size() > 2)
+    fatal("", "too many positional arguments");
+  StringRef input = positional[0], output = positional[1];
   ErrorOr<std::unique_ptr<MemoryBuffer>> bufferOrErr =
       MemoryBuffer::getFileOrSTDIN(input, /*IsText=*/true);
   if (std::error_code ec = bufferOrErr.getError())
@@ -175,5 +194,5 @@ int main(int argc, const char **argv) {
     if (ec.value() != static_cast<int>(std::errc::directory_not_empty) &&
         ec.value() != static_cast<int>(std::errc::file_exists))
       fatal(output, ec.message());
-  return handle(**bufferOrErr, input);
+  return handle(**bufferOrErr, input, output);
 }

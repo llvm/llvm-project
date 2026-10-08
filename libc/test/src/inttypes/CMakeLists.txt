@@ -48,3 +48,24 @@ add_libc_test(
     libc.src.inttypes.imaxabs
 )
 
+add_libc_test(
+  wcstoimax_test
+  SUITE
+    libc_inttypes_tests
+  SRCS
+    wcstoimax_test.cpp
+  DEPENDS
+    libc.src.inttypes.wcstoimax
+    libc.test.src.wchar.wcstol_test_support
+)
+
+add_libc_test(
+  wcstoumax_test
+  SUITE
+    libc_inttypes_tests
+  SRCS
+    wcstoumax_test.cpp
+  DEPENDS
+    libc.src.inttypes.wcstoumax
+    libc.test.src.wchar.wcstol_test_support
+)

@@ -79,7 +79,7 @@ entry:
   %cmp.not32 = icmp eq i32 %and, 0
   br i1 %cmp.not32, label %while.end, label %while.body
 
-while.body:                                       ; preds = %entry, %while.body
+while.body:
   %pInVec.addr.042 = phi ptr [ %incdec.ptr, %while.body ], [ %pInVec, %entry ]
   %sum4.041 = phi i32 [ %add14, %while.body ], [ 0, %entry ]
   %sum3.040 = phi i32 [ %add10, %while.body ], [ 0, %entry ]
@@ -117,13 +117,13 @@ while.body:                                       ; preds = %entry, %while.body
   %cmp.not = icmp eq i32 %dec, 0
   br i1 %cmp.not, label %while.end.loopexit, label %while.body
 
-while.end.loopexit:                               ; preds = %while.body
+while.end.loopexit:
   %5 = add nsw i32 %add6, %add
   %6 = add nsw i32 %5, %add10
   %7 = add nsw i32 %6, %add14
   br label %while.end
 
-while.end:                                        ; preds = %while.end.loopexit, %entry
+while.end:
   %add17 = phi i32 [ %7, %while.end.loopexit ], [ 0, %entry ]
   ret i32 %add17
 }

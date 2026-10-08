@@ -913,11 +913,13 @@ void LLVMOrcLLJITBuilderSetJITTargetMachineBuilder(
 void LLVMOrcLLJITBuilderSetObjectLinkingLayerCreator(
     LLVMOrcLLJITBuilderRef Builder,
     LLVMOrcLLJITBuilderObjectLinkingLayerCreatorFunction F, void *Ctx) {
-  unwrap(Builder)->setObjectLinkingLayerCreator([=](ExecutionSession &ES) {
-    auto TTStr = ES.getTargetTriple().str();
-    return std::unique_ptr<ObjectLayer>(
-        unwrap(F(Ctx, wrap(&ES), TTStr.c_str())));
-  });
+  unwrap(Builder)->setObjectLinkingLayerCreator(
+      [=](ExecutionSession &ES,
+          jitlink::JITLinkMemoryManager &MemMgr /* <- Currently ignored */) {
+        auto TTStr = ES.getTargetTriple().str();
+        return std::unique_ptr<ObjectLayer>(
+            unwrap(F(Ctx, wrap(&ES), TTStr.c_str())));
+      });
 }
 
 LLVMErrorRef LLVMOrcCreateLLJIT(LLVMOrcLLJITRef *Result,

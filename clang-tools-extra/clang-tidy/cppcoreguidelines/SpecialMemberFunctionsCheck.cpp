@@ -76,7 +76,7 @@ void SpecialMemberFunctionsCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-static llvm::StringRef
+static StringRef
 toString(SpecialMemberFunctionsCheck::SpecialMemberFunctionKind K) {
   switch (K) {
   case SpecialMemberFunctionsCheck::SpecialMemberFunctionKind::Destructor:
@@ -101,7 +101,7 @@ toString(SpecialMemberFunctionsCheck::SpecialMemberFunctionKind K) {
 
 static std::string
 join(ArrayRef<SpecialMemberFunctionsCheck::SpecialMemberFunctionKind> SMFS,
-     llvm::StringRef AndOr) {
+     StringRef AndOr) {
   assert(!SMFS.empty() &&
          "List of defined or undefined members should never be empty.");
   std::string Buffer;
@@ -125,8 +125,8 @@ void SpecialMemberFunctionsCheck::check(
   ClassDefId ID(MatchedDecl->getLocation(),
                 std::string(MatchedDecl->getName()));
 
-  auto StoreMember = [this, &ID](SpecialMemberFunctionData Data) {
-    llvm::SmallVectorImpl<SpecialMemberFunctionData> &Members =
+  const auto StoreMember = [this, &ID](SpecialMemberFunctionData Data) {
+    SmallVectorImpl<SpecialMemberFunctionData> &Members =
         ClassWithSpecialMembers[ID];
     if (!llvm::is_contained(Members, Data))
       Members.push_back(std::move(Data));
@@ -165,7 +165,7 @@ void SpecialMemberFunctionsCheck::onEndOfTranslationUnit() {
 void SpecialMemberFunctionsCheck::checkForMissingMembers(
     const ClassDefId &ID,
     llvm::ArrayRef<SpecialMemberFunctionData> DefinedMembers) {
-  llvm::SmallVector<SpecialMemberFunctionKind, 5> MissingMembers;
+  SmallVector<SpecialMemberFunctionKind, 5> MissingMembers;
 
   auto HasMember = [&](SpecialMemberFunctionKind Kind) {
     return llvm::any_of(DefinedMembers, [Kind](const auto &Data) {
@@ -179,14 +179,14 @@ void SpecialMemberFunctionsCheck::checkForMissingMembers(
     });
   };
 
-  auto IsDeleted = [&](SpecialMemberFunctionKind Kind) {
+  const auto IsDeleted = [&](SpecialMemberFunctionKind Kind) {
     return llvm::any_of(DefinedMembers, [Kind](const auto &Data) {
       return Data.FunctionKind == Kind && Data.IsDeleted;
     });
   };
 
-  auto RequireMembers = [&](SpecialMemberFunctionKind Kind1,
-                            SpecialMemberFunctionKind Kind2) {
+  const auto RequireMembers = [&](SpecialMemberFunctionKind Kind1,
+                                  SpecialMemberFunctionKind Kind2) {
     if (AllowImplicitlyDeletedCopyOrMove && HasImplicitDeletedMember(Kind1) &&
         HasImplicitDeletedMember(Kind2))
       return;
@@ -224,17 +224,26 @@ void SpecialMemberFunctionsCheck::checkForMissingMembers(
                    SpecialMemberFunctionKind::CopyAssignment);
   }
 
+  const bool CopyImplicitlyDeleted =
+      HasImplicitDeletedMember(SpecialMemberFunctionKind::CopyConstructor) &&
+      HasImplicitDeletedMember(SpecialMemberFunctionKind::CopyAssignment);
+  const bool MoveMissing =
+      !HasMember(SpecialMemberFunctionKind::MoveConstructor) &&
+      !HasMember(SpecialMemberFunctionKind::MoveAssignment);
+
   if (RequireFive &&
       !(AllowMissingMoveFunctionsWhenCopyIsDeleted &&
         (IsDeleted(SpecialMemberFunctionKind::CopyConstructor) &&
-         IsDeleted(SpecialMemberFunctionKind::CopyAssignment)))) {
+         IsDeleted(SpecialMemberFunctionKind::CopyAssignment))) &&
+      !(AllowImplicitlyDeletedCopyOrMove && CopyImplicitlyDeleted &&
+        MoveMissing)) {
     assert(RequireThree);
     RequireMembers(SpecialMemberFunctionKind::MoveConstructor,
                    SpecialMemberFunctionKind::MoveAssignment);
   }
 
   if (!MissingMembers.empty()) {
-    llvm::SmallVector<SpecialMemberFunctionKind, 5> DefinedMemberKinds;
+    SmallVector<SpecialMemberFunctionKind, 5> DefinedMemberKinds;
     for (const auto &Data : DefinedMembers)
       if (!Data.IsImplicit)
         DefinedMemberKinds.push_back(Data.FunctionKind);

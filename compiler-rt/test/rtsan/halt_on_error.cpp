@@ -22,5 +22,5 @@ int main() {
   // CHECK: ==ERROR: RealtimeSanitizer
   // CHECK-NEXT: {{.*`malloc`.*}}
   // CHECK-NO-HALT: ==ERROR: RealtimeSanitizer
-  // CHECK-NO-HALT-NEXT: {{.*`free`.*}}
+  // CHECK-NO-HALT: {{.*`free`.*}}
 }

@@ -13,7 +13,6 @@
 
 #include "llvm/Transforms/Instrumentation/AllocToken.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -43,11 +42,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/SipHash.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <cstddef>
 #include <cstdint>
-#include <limits>
 #include <memory>
 #include <optional>
 #include <string>
@@ -108,7 +104,7 @@ STATISTIC(NumAllocationsInstrumented, "Allocations instrumented");
 
 /// Returns the !alloc_token metadata if available.
 ///
-/// Expected format is: !{<type-name>, <contains-pointer>}
+/// Expected format is: !{<type-name>, <contains-pointer>[, <function-name>]}
 MDNode *getAllocTokenMetadata(const CallBase &CB) {
   MDNode *Ret = nullptr;
   if (auto *II = dyn_cast<IntrinsicInst>(&CB);
@@ -123,9 +119,11 @@ MDNode *getAllocTokenMetadata(const CallBase &CB) {
     if (!Ret)
       return nullptr;
   }
-  assert(Ret->getNumOperands() == 2 && "bad !alloc_token");
+  assert((Ret->getNumOperands() == 2 || Ret->getNumOperands() == 3) &&
+         "bad !alloc_token");
   assert(isa<MDString>(Ret->getOperand(0)));
   assert(isa<ConstantAsMetadata>(Ret->getOperand(1)));
+  assert(Ret->getNumOperands() == 2 || isa<MDString>(Ret->getOperand(2)));
   return Ret;
 }
 
@@ -234,6 +232,39 @@ public:
   }
 };
 
+/// Implementation for TokenMode::TypeFuncHash and
+/// TokenMode::TypeFuncHashPointerSplit.
+class TypeFuncHashMode : public TypeHashMode {
+public:
+  TypeFuncHashMode(const IntegerType &TokenTy, uint64_t MaxTokens,
+                   TokenMode Mode)
+      : TypeHashMode(TokenTy, MaxTokens), Mode(Mode) {}
+
+  uint64_t operator()(const CallBase &CB, OptimizationRemarkEmitter &ORE) {
+    MDNode *N = getAllocTokenMetadata(CB);
+    if (!N) {
+      remarkNoMetadata(CB, ORE);
+      return ClFallbackToken;
+    }
+    // Generated for another mode, whose tokens may already be in the module.
+    if (N->getNumOperands() != 3) {
+      CB.getContext().emitError(
+          &CB, "!alloc_token without function name is incompatible with mode " +
+                   getAllocTokenModeAsString(Mode));
+      return ClFallbackToken;
+    }
+    AllocTokenMetadata Metadata{cast<MDString>(N->getOperand(0))->getString(),
+                                containsPointer(N),
+                                cast<MDString>(N->getOperand(2))->getString()};
+    if (Metadata.TypeName.empty())
+      remarkNoMetadata(CB, ORE);
+    return *getAllocToken(Mode, Metadata, MaxTokens);
+  }
+
+private:
+  const TokenMode Mode;
+};
+
 // Apply opt overrides and module flags.
 static AllocTokenOptions resolveOptions(AllocTokenOptions Opts,
                                         const Module &M) {
@@ -282,6 +313,11 @@ public:
     case TokenMode::TypeHashPointerSplit:
       Mode.emplace<TypeHashPointerSplitMode>(*IntPtrTy, Options.MaxTokens);
       break;
+    case TokenMode::TypeFuncHash:
+    case TokenMode::TypeFuncHashPointerSplit:
+      Mode.emplace<TypeFuncHashMode>(*IntPtrTy, Options.MaxTokens,
+                                     Options.Mode);
+      break;
     }
   }
 
@@ -325,7 +361,7 @@ private:
   DenseMap<std::pair<LibFunc, uint64_t>, FunctionCallee> TokenAllocFunctions;
   // Selected mode.
   std::variant<IncrementMode, RandomMode, TypeHashMode,
-               TypeHashPointerSplitMode>
+               TypeHashPointerSplitMode, TypeFuncHashMode>
       Mode;
 };
 
@@ -399,8 +435,8 @@ AllocToken::shouldInstrumentCall(const CallBase &CB,
   // Ignore nobuiltin of the CallBase, so that we can cover nobuiltin libcalls
   // if requested via isInstrumentableLibFunc(). Note that isAllocationFn() is
   // returning false for nobuiltin calls.
-  LibFunc Func;
-  if (TLI.getLibFunc(*Callee, Func)) {
+  LibFunc Func = TLI.getLibFunc(*Callee);
+  if (Func != NotLibFunc) {
     if (isInstrumentableLibFunc(Func, CB, TLI))
       return Func;
   } else if (Options.Extended && CB.getMetadata(LLVMContext::MD_alloc_token)) {

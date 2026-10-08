@@ -23,7 +23,7 @@ class TestCase(TestBase):
             substrs=[
                 "error: Function name regular expression could "
                 + "not be compiled: repetition-operator operand invalid",
-                "warning: Function name regex does not accept glob patterns.",
+                "warning: function name regex does not accept glob patterns",
             ],
         )
         self.expect(
@@ -32,7 +32,7 @@ class TestCase(TestBase):
             substrs=[
                 "error: Function name regular expression could "
                 + "not be compiled: repetition-operator operand invalid",
-                "warning: Function name regex does not accept glob patterns.",
+                "warning: function name regex does not accept glob patterns",
             ],
         )
         # Make sure that warning is only shown for invalid regular expressions
@@ -41,11 +41,11 @@ class TestCase(TestBase):
             "breakpoint set --func-regex a*+",
             error=True,
             matching=False,
-            substrs=["warning: Function name regex does not accept glob patterns."],
+            substrs=["warning: function name regex does not accept glob patterns"],
         )
         self.expect(
             "breakpoint set --func-regex a?+",
             error=True,
             matching=False,
-            substrs=["warning: Function name regex does not accept glob patterns."],
+            substrs=["warning: function name regex does not accept glob patterns"],
         )

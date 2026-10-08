@@ -1,5 +1,5 @@
-; RUN: opt -passes=print-alias-sets -alias-set-saturation-threshold=4 -S -o - < %s 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=NOSAT
-; RUN: opt -passes=print-alias-sets -alias-set-saturation-threshold=3 -S -o - < %s 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=SAT
+; RUN: opt -passes='print<alias-sets>' -alias-set-saturation-threshold=4 -S -o - < %s 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=NOSAT
+; RUN: opt -passes='print<alias-sets>' -alias-set-saturation-threshold=3 -S -o - < %s 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=SAT
 
 ; CHECK-LABEL: 'nomerge'
 ; CHECK: AliasSet[{{.*}}, 1] must alias, Mod Memory locations: (ptr %a, LocationSize::precise(4))

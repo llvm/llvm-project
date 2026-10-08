@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/llvm-libc-macros/nl-types-macros.h"
+#include "include/llvm-libc-macros/nl_types-macros.h"
 #include "include/llvm-libc-types/nl_catd.h"
 #include "src/nl_types/catclose.h"
 #include "src/nl_types/catgets.h"

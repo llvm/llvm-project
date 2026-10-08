@@ -38,7 +38,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include <algorithm>
-#include <cctype>
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
@@ -145,7 +144,7 @@ void XCoreAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
     report_fatal_error("TLS is not supported by this target!");
   }
   unsigned Size = DL.getTypeAllocSize(C->getType());
-  if (MAI->hasDotTypeDotSizeDirective()) {
+  if (MAI.hasDotTypeDotSizeDirective()) {
     OutStreamer->emitSymbolAttribute(GVSym, MCSA_ELF_TypeObject);
     OutStreamer->emitELFSize(GVSym, MCConstantExpr::create(Size, OutContext));
   }
@@ -213,7 +212,7 @@ void XCoreAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
     PrintSymbolOperand(MO, O);
     break;
   case MachineOperand::MO_ConstantPoolIndex:
-    O << DL.getPrivateGlobalPrefix() << "CPI" << getFunctionNumber() << '_'
+    O << DL.getInternalSymbolPrefix() << "CPI" << getFunctionNumber() << '_'
       << MO.getIndex();
     break;
   case MachineOperand::MO_BlockAddress:

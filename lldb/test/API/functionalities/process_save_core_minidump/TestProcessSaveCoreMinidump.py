@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@requireThreadSupport
 class ProcessSaveCoreMinidumpTestCase(TestBase):
     def verify_core_file(
         self,
@@ -68,24 +69,50 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             register_val_list = stacks_to_registers_map[thread_id]
             frame_register_list = frame.GetRegisters()
             # explicitly verify we collected fs and gs base for x86_64
+            general_purpose_registers = frame_register_list.GetValueAtIndex(0)
             explicit_registers = ["fs_base", "gs_base"]
             for reg in explicit_registers:
-                register = frame_register_list.GetFirstValueByName(reg)
-                self.assertNotEqual(None, register)
+                register = general_purpose_registers.GetChildMemberWithName(reg)
+                self.assertTrue(register.IsValid())
                 self.assertEqual(
                     register.GetValueAsUnsigned(),
                     stacks_to_registers_map[thread_id]
-                    .GetFirstValueByName("fs_base")
+                    .GetValueAtIndex(0)
+                    .GetChildMemberWithName(reg)
                     .GetValueAsUnsigned(),
                 )
 
-            for x in register_val_list:
-                self.assertEqual(
-                    x.GetValueAsUnsigned(),
-                    frame_register_list.GetFirstValueByName(
-                        x.GetName()
-                    ).GetValueAsUnsigned(),
+            # The live process may have had register sets that are not saved to
+            # the minidump. Even when a set is saved, it may not be complete.
+            for frame_regset in frame_register_list:
+                register_val_regset = register_val_list.GetFirstValueByName(
+                    frame_regset.GetName()
                 )
+                self.assertTrue(register_val_regset.IsValid())
+                for reg in frame_regset:
+                    reg_name = reg.GetName()
+                    if reg_name == "sp":
+                        # No way to get "sp" because it always gets redirected to
+                        # "rsp". https://github.com/llvm/llvm-project/issues/212778
+                        continue
+                    register_val_reg = register_val_regset.GetChildMemberWithName(
+                        reg_name
+                    )
+
+                    if not register_val_reg.IsValid() and reg.IsValid():
+                        # Somehow some registers are valid in the minidump but not
+                        # the live process.
+                        continue
+
+                    self.assertEqual(reg.IsValid(), register_val_reg.IsValid())
+
+                    if reg_name in ["xmm13", "fctrl", "ftag", "mxcsr", "mxcsrmask"]:
+                        # These values are "valid", but different from the live process.
+                        continue
+
+                    self.assertEqual(
+                        reg.GetValueAsUnsigned(), register_val_reg.GetValueAsUnsigned()
+                    )
 
         self.dbg.DeleteTarget(target)
 

@@ -11,6 +11,14 @@ define half @ldexp_f16(half %val, i32 %a) {
   ret half %call
 }
 
+; ARM64EC-LABEL: ldexp_bf16 =
+; ARM64EC: fcvt d0, s0
+; ARM64EC: bl "#ldexp"
+define bfloat @ldexp_bf16(bfloat %val, i32 %a) {
+  %call = call bfloat @llvm.ldexp.bf16(bfloat %val, i32 %a)
+  ret bfloat %call
+}
+
 ; ARM64EC-LABEL: ldexp_f32 =
 ; ARM64EC: fcvt d0, s0
 ; ARM64EC: bl "#ldexp"

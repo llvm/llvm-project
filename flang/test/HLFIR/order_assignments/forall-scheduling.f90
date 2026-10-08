@@ -3,7 +3,7 @@
 ! This test test that conflicting actions are not scheduled to be evaluated
 ! in the same loops (same run id).
 
-! RUN: bbc -hlfir -o - -pass-pipeline="builtin.module(lower-hlfir-ordered-assignments)" --debug-only=flang-ordered-assignment -flang-dbg-order-assignment-schedule-only %s 2>&1 | FileCheck %s
+! RUN: bbc -o - -pass-pipeline="builtin.module(lower-hlfir-ordered-assignments)" --debug-only=flang-ordered-assignment -flang-dbg-order-assignment-schedule-only %s 2>&1 | FileCheck %s
 ! REQUIRES: asserts
 
 subroutine no_conflict(x)

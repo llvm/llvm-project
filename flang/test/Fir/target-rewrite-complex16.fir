@@ -1,5 +1,6 @@
 // RUN: fir-opt --target-rewrite="target=x86_64-unknown-linux-gnu" %s | FileCheck %s
 // RUN: fir-opt --target-rewrite="target=loongarch64-unknown-linux-gnu" %s | FileCheck %s
+// RUN: fir-opt --target-rewrite="target=s390x-unknown-linux-gnu" %s | FileCheck %s --check-prefix=SYSTEMZ
 
 // Test that we rewrite the signature and body of a func.function that returns a
 // complex<16>.
@@ -131,3 +132,24 @@ func.func @addrof() {
 // CHECK:           %[[VAL_1:.*]] = fir.address_of(@paramcomplex16) : (!fir.ref<tuple<f128, f128>>) -> ()
 // CHECK:           return
 // CHECK:         }
+
+// SYSTEMZ-LABEL: func.func @returncomplex16(
+// SYSTEMZ-SAME:    %{{.*}}: !fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32, llvm.sret = tuple<f128, f128>}) {
+
+// SYSTEMZ: func.func private @paramcomplex16(!fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32})
+
+// SYSTEMZ-LABEL: func.func @callcomplex16() {
+// SYSTEMZ:         fir.call @returncomplex16(%{{.*}}) : (!fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32, llvm.sret = tuple<f128, f128>}) -> ()
+// SYSTEMZ:         fir.call @paramcomplex16(%{{.*}}) : (!fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32}) -> ()
+
+// SYSTEMZ: func.func private @calleemultipleparamscomplex16(!fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32}, !fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32}, !fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32})
+
+// SYSTEMZ-LABEL: func.func @multipleparamscomplex16(
+// SYSTEMZ-SAME:    %{{.*}}: !fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32}, %{{.*}}: !fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32}, %{{.*}}: !fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32}) {
+
+// SYSTEMZ-LABEL: func.func private @mlircomplexf128(
+// SYSTEMZ-SAME:    %{{.*}}: !fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32, llvm.sret = tuple<f128, f128>}, %{{.*}}: !fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32}, %{{.*}}: !fir.ref<tuple<f128, f128>> {llvm.align = 8 : i32}) {
+
+// SYSTEMZ-LABEL: func.func @addrof() {
+// SYSTEMZ:         fir.address_of(@returncomplex16) : (!fir.ref<tuple<f128, f128>>) -> ()
+// SYSTEMZ:         fir.address_of(@paramcomplex16) : (!fir.ref<tuple<f128, f128>>) -> ()

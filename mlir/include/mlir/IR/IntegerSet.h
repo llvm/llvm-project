@@ -131,14 +131,6 @@ namespace llvm {
 // IntegerSet hash just like pointers.
 template <>
 struct DenseMapInfo<mlir::IntegerSet> {
-  static mlir::IntegerSet getEmptyKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::IntegerSet(static_cast<mlir::IntegerSet::ImplType *>(pointer));
-  }
-  static mlir::IntegerSet getTombstoneKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::IntegerSet(static_cast<mlir::IntegerSet::ImplType *>(pointer));
-  }
   static unsigned getHashValue(mlir::IntegerSet val) {
     return mlir::hash_value(val);
   }

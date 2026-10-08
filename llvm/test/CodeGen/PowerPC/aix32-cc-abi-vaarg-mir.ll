@@ -61,14 +61,12 @@ define i32 @int_stack_va_arg(i32 %one, i32 %two, i32 %three, i32 %four, i32 %fiv
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   liveins: $r3, $r4, $r5, $r6, $r7, $r8, $r9, $r10
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $r11 = LI 4
+  ; CHECK-NEXT:   renamable $r11 = disjoint ADDI %fixed-stack.0, 4
   ; CHECK-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r4, killed renamable $r3
-  ; CHECK-NEXT:   renamable $r4 = ADDI %fixed-stack.0, 0
-  ; CHECK-NEXT:   renamable $r4 = RLWIMI killed renamable $r4, killed renamable $r11, 0, 29, 29
+  ; CHECK-NEXT:   STW killed renamable $r11, 0, %stack.0.arg1 :: (store (s32) into %ir.arg1)
   ; CHECK-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, killed renamable $r5
-  ; CHECK-NEXT:   STW killed renamable $r4, 0, %stack.0.arg1 :: (store (s32) into %ir.arg1)
-  ; CHECK-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, killed renamable $r6
   ; CHECK-NEXT:   renamable $r4 = LWZ 0, %fixed-stack.0 :: (load (s32) from %ir.argp.cur9, align 8)
+  ; CHECK-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, killed renamable $r6
   ; CHECK-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, killed renamable $r7
   ; CHECK-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, killed renamable $r8
   ; CHECK-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, killed renamable $r9

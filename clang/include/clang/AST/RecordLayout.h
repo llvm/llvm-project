@@ -97,6 +97,12 @@ private:
     /// which is the alignment of the object without virtual bases.
     CharUnits NonVirtualAlignment;
 
+    /// NonRequiredNVAlignment - The non-virtual alignment (in chars) of an
+    /// object ignoring any over-alignment imposed via `alignas` /
+    /// `__declspec(align)` (i.e. the record's required alignment) on the record
+    /// or its bases.
+    CharUnits NonRequiredNVAlignment;
+
     /// PreferredNVAlignment - The preferred non-virtual alignment (in chars) of
     /// an object, which is the preferred alignment of the object without
     /// virtual bases.
@@ -164,6 +170,7 @@ private:
                   CharUnits datasize, ArrayRef<uint64_t> fieldoffsets,
                   CharUnits nonvirtualsize, CharUnits nonvirtualalignment,
                   CharUnits preferrednvalignment,
+                  CharUnits nonrequirednvalignment,
                   CharUnits SizeOfLargestEmptySubobject,
                   const CXXRecordDecl *PrimaryBase, bool IsPrimaryBaseVirtual,
                   const CXXRecordDecl *BaseSharingVBPtr,
@@ -220,6 +227,15 @@ public:
     assert(CXXInfo && "Record layout does not have C++ specific info!");
 
     return CXXInfo->NonVirtualAlignment;
+  }
+
+  /// getNonRequiredNVAlignment - Get the non-virtual alignment (in chars) of an
+  /// object ignoring over-alignment imposed via `alignas` / `__declspec(align)`
+  /// on the object or its bases. Only meaningful for the Microsoft ABI.
+  CharUnits getNonRequiredNVAlignment() const {
+    assert(CXXInfo && "Record layout does not have C++ specific info!");
+
+    return CXXInfo->NonRequiredNVAlignment;
   }
 
   /// getPreferredNVAlignment - Get the preferred non-virtual alignment (in

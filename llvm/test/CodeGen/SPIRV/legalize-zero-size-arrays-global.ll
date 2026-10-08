@@ -3,6 +3,6 @@
 
 ; Test that a global variable with zero-size array is transformed to ptr type.
 
-@global_zero_array = global [0 x i32] zeroinitializer
+@global_zero_array = addrspace(1) global [0 x i32] zeroinitializer
 
-; CHECK: @global_zero_array = global ptr addrspace(4) null
+; CHECK: @global_zero_array = addrspace(1) global ptr addrspace(4) null

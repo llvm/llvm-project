@@ -1,4 +1,4 @@
-# RUN: not --crash llc -mtriple=amdgcn -run-pass=none -verify-machineinstrs -filetype=null %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=amdgpu6.00 -run-pass=none -verify-machineinstrs -filetype=null %s 2>&1 | FileCheck %s
 ---
 name:            cycles
 body:             |

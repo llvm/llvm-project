@@ -24,26 +24,9 @@ class InlinedFrameAPITestCase(TestBase):
     def test_stop_at_outer_inline(self):
         """Exercise SBFrame.IsInlined() and SBFrame.GetFunctionName()."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Now create a breakpoint on main.c by the name of 'inner_inline'.
-        breakpoint = target.BreakpointCreateByName("inner_inline", "a.out")
-        self.trace("breakpoint:", breakpoint)
-        self.assertTrue(
-            breakpoint and breakpoint.GetNumLocations() > 1, VALID_BREAKPOINT
+        _, process, thread, _ = lldbutil.run_to_name_breakpoint(
+            self, "inner_inline", bkpt_module="a.out"
         )
-
-        # Now launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        process = target.GetProcess()
-        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-
-        import lldbsuite.test.lldbutil as lldbutil
 
         stack_traces1 = lldbutil.print_stacktraces(process, string_buffer=True)
         if self.TraceOn():
@@ -58,9 +41,6 @@ class InlinedFrameAPITestCase(TestBase):
         #
         #     outer_inline (argc);
         #
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertIsNotNone(thread)
-
         frame0 = thread.GetFrameAtIndex(0)
         if frame0.IsInlined():
             filename = frame0.GetLineEntry().GetFileSpec().GetFilename()

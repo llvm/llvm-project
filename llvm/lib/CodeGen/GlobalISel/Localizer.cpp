@@ -12,11 +12,16 @@
 #include "llvm/CodeGen/GlobalISel/Localizer.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 
@@ -24,34 +29,71 @@
 
 using namespace llvm;
 
-char Localizer::ID = 0;
-INITIALIZE_PASS_BEGIN(Localizer, DEBUG_TYPE,
+namespace {
+
+class LocalizerImpl {
+  /// MRI contains all the register class/bank information that this
+  /// pass uses and updates.
+  MachineRegisterInfo *MRI = nullptr;
+  /// TTI used for getting remat costs for instructions.
+  TargetTransformInfo *TTI = nullptr;
+
+  /// Check if \p MOUse is used in the same basic block as \p Def.
+  /// If the use is in the same block, we say it is local.
+  /// When the use is not local, \p InsertMBB will contain the basic
+  /// block when to insert \p Def to have a local use.
+  static bool isLocalUse(MachineOperand &MOUse, const MachineInstr &Def,
+                         MachineBasicBlock *&InsertMBB);
+
+  /// Initialize the field members using \p MF.
+  void init(MachineFunction &MF, function_ref<TargetTransformInfo *()> GetTTI);
+
+  typedef SmallSetVector<MachineInstr *, 32> LocalizedSetVecT;
+
+  /// If \p Op is a reg operand of a PHI, return the number of total
+  /// operands in the PHI that are the same as \p Op, including itself.
+  unsigned getNumPhiUses(MachineOperand &Op) const;
+
+  /// Do inter-block localization from the entry block.
+  bool localizeInterBlock(MachineFunction &MF,
+                          LocalizedSetVecT &LocalizedInstrs);
+
+  /// Do intra-block localization of already localized instructions.
+  bool localizeIntraBlock(LocalizedSetVecT &LocalizedInstrs);
+
+public:
+  bool runOnMachineFunction(MachineFunction &MF,
+                            function_ref<TargetTransformInfo *()> GetTTI);
+};
+
+} // namespace
+
+char LocalizerLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(LocalizerLegacy, DEBUG_TYPE,
                       "Move/duplicate certain instructions close to their use",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_END(Localizer, DEBUG_TYPE,
+INITIALIZE_PASS_END(LocalizerLegacy, DEBUG_TYPE,
                     "Move/duplicate certain instructions close to their use",
                     false, false)
 
-Localizer::Localizer(std::function<bool(const MachineFunction &)> F)
-    : MachineFunctionPass(ID), DoNotRunPass(F) {}
+LocalizerLegacy::LocalizerLegacy() : MachineFunctionPass(ID) {}
 
-Localizer::Localizer()
-    : Localizer([](const MachineFunction &) { return false; }) {}
-
-void Localizer::init(MachineFunction &MF) {
+void LocalizerImpl::init(MachineFunction &MF,
+                         function_ref<TargetTransformInfo *()> GetTTI) {
   MRI = &MF.getRegInfo();
-  TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(MF.getFunction());
+  TTI = GetTTI();
 }
 
-void Localizer::getAnalysisUsage(AnalysisUsage &AU) const {
+void LocalizerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetTransformInfoWrapperPass>();
+  AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-bool Localizer::isLocalUse(MachineOperand &MOUse, const MachineInstr &Def,
-                           MachineBasicBlock *&InsertMBB) {
+bool LocalizerImpl::isLocalUse(MachineOperand &MOUse, const MachineInstr &Def,
+                               MachineBasicBlock *&InsertMBB) {
   MachineInstr &MIUse = *MOUse.getParent();
   InsertMBB = MIUse.getParent();
   if (MIUse.isPHI())
@@ -59,7 +101,7 @@ bool Localizer::isLocalUse(MachineOperand &MOUse, const MachineInstr &Def,
   return InsertMBB == Def.getParent();
 }
 
-unsigned Localizer::getNumPhiUses(MachineOperand &Op) const {
+unsigned LocalizerImpl::getNumPhiUses(MachineOperand &Op) const {
   auto *MI = dyn_cast<GPhi>(&*Op.getParent());
   if (!MI)
     return 0;
@@ -73,8 +115,8 @@ unsigned Localizer::getNumPhiUses(MachineOperand &Op) const {
   return NumUses;
 }
 
-bool Localizer::localizeInterBlock(MachineFunction &MF,
-                                   LocalizedSetVecT &LocalizedInstrs) {
+bool LocalizerImpl::localizeInterBlock(MachineFunction &MF,
+                                       LocalizedSetVecT &LocalizedInstrs) {
   bool Changed = false;
   DenseMap<std::pair<MachineBasicBlock *, Register>, Register> MBBWithLocalDef;
 
@@ -148,7 +190,7 @@ bool Localizer::localizeInterBlock(MachineFunction &MF,
   return Changed;
 }
 
-bool Localizer::localizeIntraBlock(LocalizedSetVecT &LocalizedInstrs) {
+bool LocalizerImpl::localizeIntraBlock(LocalizedSetVecT &LocalizedInstrs) {
   bool Changed = false;
 
   // For each already-localized instruction which has multiple users, then we
@@ -201,18 +243,15 @@ bool Localizer::localizeIntraBlock(LocalizedSetVecT &LocalizedInstrs) {
   return Changed;
 }
 
-bool Localizer::runOnMachineFunction(MachineFunction &MF) {
+bool LocalizerImpl::runOnMachineFunction(
+    MachineFunction &MF, function_ref<TargetTransformInfo *()> GetTTI) {
   // If the ISel pipeline failed, do not bother running that pass.
   if (MF.getProperties().hasFailedISel())
     return false;
 
-  // Don't run the pass if the target asked so.
-  if (DoNotRunPass(MF))
-    return false;
-
   LLVM_DEBUG(dbgs() << "Localize instructions for: " << MF.getName() << '\n');
 
-  init(MF);
+  init(MF, GetTTI);
 
   // Keep track of the instructions we localized. We'll do a second pass of
   // intra-block localization to further reduce live ranges.
@@ -221,4 +260,28 @@ bool Localizer::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = localizeInterBlock(MF, LocalizedInstrs);
   Changed |= localizeIntraBlock(LocalizedInstrs);
   return Changed;
+}
+
+bool LocalizerLegacy::runOnMachineFunction(MachineFunction &MF) {
+  LocalizerImpl Impl;
+  return Impl.runOnMachineFunction(MF, [&]() {
+    return &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(
+        MF.getFunction());
+  });
+}
+
+PreservedAnalyses LocalizerPass::run(MachineFunction &MF,
+                                     MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier<LocalizerPass> _(*this, MF);
+  LocalizerImpl Impl;
+  bool Changed = Impl.runOnMachineFunction(MF, [&]() {
+    Function &F = MF.getFunction();
+    FunctionAnalysisManager &FAM =
+        MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+            .getManager();
+    return &FAM.getResult<TargetIRAnalysis>(F);
+  });
+  return Changed ? getMachineFunctionPassPreservedAnalyses()
+                       .preserveSet<CFGAnalyses>()
+                 : PreservedAnalyses::all();
 }

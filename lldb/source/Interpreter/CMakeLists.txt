@@ -6,6 +6,10 @@ lldb_tablegen(InterpreterPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE InterpreterProperties.td
   TARGET LLDBInterpreterPropertiesEnumGen)
 
+lldb_tablegen(InterpreterProperties.json -dump-json
+  SOURCE InterpreterProperties.td
+  TARGET LLDBInterpreterPropertiesJsonGen)
+
 add_subdirectory(Interfaces)
 
 add_lldb_library(lldbInterpreter NO_PLUGIN_DEPENDENCIES
@@ -61,12 +65,26 @@ add_lldb_library(lldbInterpreter NO_PLUGIN_DEPENDENCIES
     Support
   LINK_LIBS
     lldbInterpreterInterfaces
+    lldbBreakpoint
     lldbCommands
     lldbCore
     lldbDataFormatters
     lldbHost
+    lldbSymbol
     lldbTarget
     lldbUtility
+    lldbValueObject
+  ALLOWED_INTERNAL_DEPENDENCIES
+    lldbInterpreterInterfaces
+    lldbBreakpoint
+    lldbCommands
+    lldbCore
+    lldbDataFormatters
+    lldbHost
+    lldbSymbol
+    lldbTarget
+    lldbUtility
+    lldbValueObject
   )
 
 add_dependencies(lldbInterpreter

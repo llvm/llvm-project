@@ -13,7 +13,7 @@ __UINTPTR_TYPE__ __ptrauth(3, 1, 23) g3 = (__UINTPTR_TYPE__)&test_int;
 
 __INTPTR_TYPE__ __ptrauth(1, 1, 712) ga[3] = {0,0,(__UINTPTR_TYPE__)&test_int};
 
-// CHECK: @ga = global [3 x i64] [i64 0, i64 0, i64 ptrtoint (ptr ptrauth (ptr @test_int, i32 1, i64 712, ptr getelementptr inbounds ([3 x i64], ptr @ga, i32 0, i32 2)) to i64)]
+// CHECK: @ga = global [3 x i64] [i64 0, i64 0, i64 ptrtoint (ptr ptrauth (ptr @test_int, i32 1, i64 712, ptr getelementptr inbounds (i8, ptr @ga, i64 16)) to i64)]
 
 struct A {
   __INTPTR_TYPE__ __ptrauth(1, 0, 431) f0;
@@ -31,7 +31,7 @@ struct B {
 };
 
 struct B gs2 = {0, 0, (__UINTPTR_TYPE__)&test_int};
-// CHECK: @gs2 = global %struct.B { i64 0, i64 0, i64 ptrtoint (ptr ptrauth (ptr @test_int, i32 1, i64 163, ptr getelementptr inbounds (%struct.B, ptr @gs2, i32 0, i32 2)) to i64) }
+// CHECK: @gs2 = global %struct.B { i64 0, i64 0, i64 ptrtoint (ptr ptrauth (ptr @test_int, i32 1, i64 163, ptr getelementptr inbounds (i8, ptr @gs2, i64 16)) to i64) }
 
 // CHECK-LABEL: i64 @test_read_globals
 __INTPTR_TYPE__ test_read_globals() {
@@ -64,21 +64,21 @@ __INTPTR_TYPE__ test_read_globals() {
 
   result += gs1.f0 + gs1.f1 + gs1.f2;
   // CHECK: resign.cont10:
-  // CHECK: [[ADDR:%.*]] = load i64, ptr getelementptr inbounds nuw (%struct.A, ptr @gs1, i32 0, i32 1
+  // CHECK: [[ADDR:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @gs1, i64 8)
   // CHECK: resign.nonnull11:
   // CHECK: [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[ADDR]], i32 1, i64 9182)
   // CHECK: resign.cont12:
-  // CHECK: [[ADDR:%.*]] = load i64, ptr getelementptr inbounds nuw (%struct.A, ptr @gs1, i32 0, i32 2)
+  // CHECK: [[ADDR:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @gs1, i64 16)
   // CHECK: [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[ADDR]], i32 1, i64 783)
   result += gs2.f0 + gs2.f1 + gs2.f2;
   // CHECK: [[ADDR:%.*]] = load i64, ptr @gs2
   // CHECK: [[BLENDED:%.*]] = call i64 @llvm.ptrauth.blend(i64 ptrtoint (ptr @gs2 to i64), i64 1276)
   // CHECK: [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[ADDR]], i32 1, i64 [[BLENDED]])
-  // CHECK: [[ADDR:%.*]] = load i64, ptr getelementptr inbounds nuw (%struct.B, ptr @gs2, i32 0, i32 1)
-  // CHECK: [[BLENDED:%.*]] = call i64 @llvm.ptrauth.blend(i64 ptrtoint (ptr getelementptr inbounds nuw (%struct.B, ptr @gs2, i32 0, i32 1) to i64), i64 23674)
+  // CHECK: [[ADDR:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @gs2, i64 8)
+  // CHECK: [[BLENDED:%.*]] = call i64 @llvm.ptrauth.blend(i64 ptrtoint (ptr getelementptr inbounds nuw (i8, ptr @gs2, i64 8) to i64), i64 23674)
   // CHECK: [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[ADDR]], i32 1, i64 [[BLENDED]])
-  // CHECK: [[ADDR:%.*]] = load i64, ptr getelementptr inbounds nuw (%struct.B, ptr @gs2, i32 0, i32 2)
-  // CHECK: [[BLENDED:%.*]] = call i64 @llvm.ptrauth.blend(i64 ptrtoint (ptr getelementptr inbounds nuw (%struct.B, ptr @gs2, i32 0, i32 2) to i64), i64 163)
+  // CHECK: [[ADDR:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @gs2, i64 16)
+  // CHECK: [[BLENDED:%.*]] = call i64 @llvm.ptrauth.blend(i64 ptrtoint (ptr getelementptr inbounds nuw (i8, ptr @gs2, i64 16) to i64), i64 163)
 
   return result;
 }

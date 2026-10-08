@@ -62,10 +62,13 @@
 
     /* set API functions */
     extern void   __KAI_KMPC_CONVENTION  omp_set_num_threads (int);
+    extern void   __KAI_KMPC_CONVENTION  kmp_set_num_threads_8 (int64_t);
     extern void   __KAI_KMPC_CONVENTION  omp_set_dynamic     (int);
     extern void   __KAI_KMPC_CONVENTION  omp_set_nested      (int);
     extern void   __KAI_KMPC_CONVENTION  omp_set_max_active_levels (int);
+    extern void   __KAI_KMPC_CONVENTION  kmp_set_max_active_levels_8 (int64_t);
     extern void   __KAI_KMPC_CONVENTION  omp_set_schedule          (omp_sched_t, int);
+    extern void   __KAI_KMPC_CONVENTION  kmp_set_schedule_8        (omp_sched_t, int64_t);
 
     /* query API functions */
     extern int    __KAI_KMPC_CONVENTION  omp_get_num_threads  (void);
@@ -79,10 +82,13 @@
     extern int    __KAI_KMPC_CONVENTION  omp_get_active_level        (void);
     extern int    __KAI_KMPC_CONVENTION  omp_get_level               (void);
     extern int    __KAI_KMPC_CONVENTION  omp_get_ancestor_thread_num (int);
+    extern int    __KAI_KMPC_CONVENTION  kmp_get_ancestor_thread_num_8 (int64_t);
     extern int    __KAI_KMPC_CONVENTION  omp_get_team_size           (int);
+    extern int    __KAI_KMPC_CONVENTION  kmp_get_team_size_8         (int64_t);
     extern int    __KAI_KMPC_CONVENTION  omp_get_thread_limit        (void);
     extern int    __KAI_KMPC_CONVENTION  omp_get_max_active_levels   (void);
     extern void   __KAI_KMPC_CONVENTION  omp_get_schedule            (omp_sched_t *, int *);
+    extern void   __KAI_KMPC_CONVENTION  kmp_get_schedule_8          (omp_sched_t *, int64_t *);
     extern int    __KAI_KMPC_CONVENTION  omp_get_max_task_priority   (void);
 
     /* lock API functions */
@@ -138,6 +144,7 @@
     /* OpenMP 4.0 */
     extern int  __KAI_KMPC_CONVENTION  omp_get_default_device (void);
     extern void __KAI_KMPC_CONVENTION  omp_set_default_device (int);
+    extern void __KAI_KMPC_CONVENTION  kmp_set_default_device_8 (int64_t);
     extern int  __KAI_KMPC_CONVENTION  omp_is_initial_device (void);
     extern int  __KAI_KMPC_CONVENTION  omp_get_num_devices (void);
     extern int  __KAI_KMPC_CONVENTION  omp_get_num_teams (void);
@@ -259,17 +266,21 @@
     /* kmp API functions */
     extern int    __KAI_KMPC_CONVENTION  kmp_get_stacksize          (void);
     extern void   __KAI_KMPC_CONVENTION  kmp_set_stacksize          (int);
+    extern void   __KAI_KMPC_CONVENTION  kmp_set_stacksize_8        (int64_t);
     extern size_t __KAI_KMPC_CONVENTION  kmp_get_stacksize_s        (void);
     extern void   __KAI_KMPC_CONVENTION  kmp_set_stacksize_s        (size_t);
     extern int    __KAI_KMPC_CONVENTION  kmp_get_blocktime          (void);
     extern int    __KAI_KMPC_CONVENTION  kmp_get_library            (void);
     extern void   __KAI_KMPC_CONVENTION  kmp_set_blocktime          (int);
+    extern void   __KAI_KMPC_CONVENTION  kmp_set_blocktime_8        (int64_t);
     extern void   __KAI_KMPC_CONVENTION  kmp_set_library            (int);
+    extern void   __KAI_KMPC_CONVENTION  kmp_set_library_8          (int64_t);
     extern void   __KAI_KMPC_CONVENTION  kmp_set_library_serial     (void);
     extern void   __KAI_KMPC_CONVENTION  kmp_set_library_turnaround (void);
     extern void   __KAI_KMPC_CONVENTION  kmp_set_library_throughput (void);
     extern void   __KAI_KMPC_CONVENTION  kmp_set_defaults           (char const *);
     extern void   __KAI_KMPC_CONVENTION  kmp_set_disp_num_buffers   (int);
+    extern void   __KAI_KMPC_CONVENTION  kmp_set_disp_num_buffers_8 (int64_t);
 
     /* Intel affinity API */
     typedef void * kmp_affinity_mask_t;
@@ -280,8 +291,11 @@
     extern void   __KAI_KMPC_CONVENTION  kmp_create_affinity_mask     (kmp_affinity_mask_t *);
     extern void   __KAI_KMPC_CONVENTION  kmp_destroy_affinity_mask    (kmp_affinity_mask_t *);
     extern int    __KAI_KMPC_CONVENTION  kmp_set_affinity_mask_proc   (int, kmp_affinity_mask_t *);
+    extern int    __KAI_KMPC_CONVENTION  kmp_set_affinity_mask_proc_8 (int64_t, kmp_affinity_mask_t *);
     extern int    __KAI_KMPC_CONVENTION  kmp_unset_affinity_mask_proc (int, kmp_affinity_mask_t *);
+    extern int    __KAI_KMPC_CONVENTION  kmp_unset_affinity_mask_proc_8 (int64_t, kmp_affinity_mask_t *);
     extern int    __KAI_KMPC_CONVENTION  kmp_get_affinity_mask_proc   (int, kmp_affinity_mask_t *);
+    extern int    __KAI_KMPC_CONVENTION  kmp_get_affinity_mask_proc_8 (int64_t, kmp_affinity_mask_t *);
 
     /* OpenMP 4.0 affinity API */
     typedef enum omp_proc_bind_t {
@@ -297,10 +311,13 @@
     /* OpenMP 4.5 affinity API */
     extern int  __KAI_KMPC_CONVENTION omp_get_num_places (void);
     extern int  __KAI_KMPC_CONVENTION omp_get_place_num_procs (int);
+    extern int  __KAI_KMPC_CONVENTION kmp_get_place_num_procs_8 (int64_t);
     extern void __KAI_KMPC_CONVENTION omp_get_place_proc_ids (int, int *);
+    extern void __KAI_KMPC_CONVENTION kmp_get_place_proc_ids_8 (int64_t, int64_t *);
     extern int  __KAI_KMPC_CONVENTION omp_get_place_num (void);
     extern int  __KAI_KMPC_CONVENTION omp_get_partition_num_places (void);
     extern void __KAI_KMPC_CONVENTION omp_get_partition_place_nums (int *);
+    extern void __KAI_KMPC_CONVENTION kmp_get_partition_place_nums_8 (int64_t *);
 
     extern void * __KAI_KMPC_CONVENTION  kmp_malloc  (size_t);
     extern void * __KAI_KMPC_CONVENTION  kmp_aligned_malloc  (size_t, size_t);
@@ -312,6 +329,9 @@
     extern void   __KAI_KMPC_CONVENTION  kmp_set_warnings_off(void);
 
     /* OpenMP 5.0 Tool Control */
+    /* OpenMP 6.1: Define in omp.h and omp-tools.h */
+#ifndef OMPCONTROLENUM
+#define OMPCONTROLENUM
     typedef enum omp_control_tool_result_t {
         omp_control_tool_notool = -2,
         omp_control_tool_nocallback = -1,
@@ -325,6 +345,7 @@
         omp_control_tool_flush = 3,
         omp_control_tool_end = 4
     } omp_control_tool_t;
+#endif /* OMPCONTROLENUM */
 
     extern int __KAI_KMPC_CONVENTION omp_control_tool(int, int, void*);
 
@@ -380,6 +401,11 @@
         omp_uintptr_t value;
     } omp_alloctrait_t;
 
+    typedef enum {
+        omp_access_cgroup = 0,
+        omp_access_pteam = 1
+    } omp_access_t;
+
 #   if defined(_WIN32)
     // On Windows cl and icl do not support 64-bit enum, let's use integer then.
     typedef omp_uintptr_t omp_allocator_handle_t;
@@ -403,6 +429,7 @@
     extern __KMP_IMP omp_memspace_handle_t const omp_const_mem_space;
     extern __KMP_IMP omp_memspace_handle_t const omp_high_bw_mem_space;
     extern __KMP_IMP omp_memspace_handle_t const omp_low_lat_mem_space;
+    extern __KMP_IMP omp_memspace_handle_t const omp_cgroup_mem_space;
     extern __KMP_IMP omp_memspace_handle_t const llvm_omp_target_host_mem_space;
     extern __KMP_IMP omp_memspace_handle_t const llvm_omp_target_shared_mem_space;
     extern __KMP_IMP omp_memspace_handle_t const llvm_omp_target_device_mem_space;
@@ -439,6 +466,7 @@
       omp_const_mem_space = 2,
       omp_high_bw_mem_space = 3,
       omp_low_lat_mem_space = 4,
+      omp_cgroup_mem_space = 5,
       llvm_omp_target_host_mem_space = 100,
       llvm_omp_target_shared_mem_space = 101,
       llvm_omp_target_device_mem_space = 102,
@@ -463,6 +491,11 @@
                                                    omp_allocator_handle_t allocator = omp_null_allocator,
                                                    omp_allocator_handle_t free_allocator = omp_null_allocator);
     extern void __KAI_KMPC_CONVENTION omp_free(void * ptr, omp_allocator_handle_t a = omp_null_allocator);
+    extern void *__KAI_KMPC_CONVENTION omp_get_dyn_gprivate_ptr(size_t offset = 0, omp_access_t access_group = omp_access_cgroup);
+    extern void *__KAI_KMPC_CONVENTION omp_get_dyn_gprivate_nofb_ptr(size_t offset = 0, omp_access_t access_group = omp_access_cgroup);
+    extern size_t __KAI_KMPC_CONVENTION omp_get_dyn_gprivate_size(omp_access_t access_group = omp_access_cgroup);
+    extern omp_memspace_handle_t __KAI_KMPC_CONVENTION omp_get_dyn_gprivate_memspace(omp_access_t access_group = omp_access_cgroup);
+    extern size_t __KAI_KMPC_CONVENTION omp_get_gprivate_limit(int device_num, omp_access_t access_group = omp_access_cgroup);
 #   else
     extern void *__KAI_KMPC_CONVENTION omp_alloc(size_t size, omp_allocator_handle_t a);
     extern void *__KAI_KMPC_CONVENTION omp_aligned_alloc(size_t align, size_t size,
@@ -473,6 +506,11 @@
     extern void *__KAI_KMPC_CONVENTION omp_realloc(void *ptr, size_t size, omp_allocator_handle_t allocator,
                                                    omp_allocator_handle_t free_allocator);
     extern void __KAI_KMPC_CONVENTION omp_free(void *ptr, omp_allocator_handle_t a);
+    extern void *__KAI_KMPC_CONVENTION omp_get_dyn_gprivate_ptr(size_t offset, omp_access_t access_group);
+    extern void *__KAI_KMPC_CONVENTION omp_get_dyn_gprivate_nofb_ptr(size_t offset, omp_access_t access_group);
+    extern size_t __KAI_KMPC_CONVENTION omp_get_dyn_gprivate_size(omp_access_t access_group);
+    extern omp_memspace_handle_t __KAI_KMPC_CONVENTION omp_get_dyn_gprivate_memspace(omp_access_t access_group);
+    extern size_t __KAI_KMPC_CONVENTION omp_get_gprivate_limit(int device_num, omp_access_t access_group);
 #   endif
 
     /* OpenMP TR11 routines to get memory spaces and allocators */
@@ -512,14 +550,17 @@
       omp_pause_stop_tool = 3
     } omp_pause_resource_t;
     extern int __KAI_KMPC_CONVENTION omp_pause_resource(omp_pause_resource_t, int);
+    extern int __KAI_KMPC_CONVENTION kmp_pause_resource_8(omp_pause_resource_t, int64_t);
     extern int __KAI_KMPC_CONVENTION omp_pause_resource_all(omp_pause_resource_t);
 
     extern int __KAI_KMPC_CONVENTION omp_get_supported_active_levels(void);
 
     /* OpenMP 5.1 */
     extern void __KAI_KMPC_CONVENTION omp_set_num_teams(int num_teams);
+    extern void __KAI_KMPC_CONVENTION kmp_set_num_teams_8(int64_t num_teams);
     extern int __KAI_KMPC_CONVENTION omp_get_max_teams(void);
     extern void __KAI_KMPC_CONVENTION omp_set_teams_thread_limit(int limit);
+    extern void __KAI_KMPC_CONVENTION kmp_set_teams_thread_limit_8(int64_t limit);
     extern int __KAI_KMPC_CONVENTION omp_get_teams_thread_limit(void);
 
     /* OpenMP 5.1 Display Environment */
@@ -536,6 +577,7 @@
 
     /* OpenMP 5.2 */
     extern int __KAI_KMPC_CONVENTION omp_in_explicit_task(void);
+    #define omp_initial_device -1
     #define omp_invalid_device -2
 
     /* OpenMP 6.0 */

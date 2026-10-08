@@ -85,6 +85,7 @@ public:
   IRForTarget(lldb_private::ClangExpressionDeclMap *decl_map, bool resolve_vars,
               lldb_private::IRExecutionUnit &execution_unit,
               lldb_private::Stream &error_stream,
+              lldb_private::ExecutionPolicy execution_policy,
               const char *func_name = "$__lldb_expr");
 
   /// Run this IR transformer on a single module
@@ -352,6 +353,8 @@ private:
   /// ASTResultSynthesizer::SynthesizeBodyResult)
   bool m_result_is_pointer = false;
 
+  lldb_private::ExecutionPolicy m_policy;
+
   class FunctionValueCache {
   public:
     typedef std::function<llvm::Value *(llvm::Function *)> Maker;
@@ -379,14 +382,11 @@ private:
   /// expression and places them before FirstEntryInstruction.  These
   /// instructions replace the constant uses, so UnfoldConstant calls itself
   /// recursively for those.
-  ///
-  /// \return
-  ///     True on success; false otherwise
-  static bool UnfoldConstant(llvm::Constant *old_constant,
-                             llvm::Function *llvm_function,
-                             FunctionValueCache &value_maker,
-                             FunctionValueCache &entry_instruction_finder,
-                             lldb_private::Stream &error_stream);
+  static llvm::Error
+  UnfoldConstant(llvm::Constant *old_constant, llvm::Function *llvm_function,
+                 FunctionValueCache &value_maker,
+                 FunctionValueCache &entry_instruction_finder,
+                 lldb_private::Stream &error_stream);
 };
 
 #endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_IRFORTARGET_H

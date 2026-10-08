@@ -26,6 +26,7 @@
 #include <os/security_config.h>
 #endif
 #include <pwd.h>
+#include <set>
 #include <string>
 #include <sys/stat.h>
 #include <sys/sysctl.h>
@@ -255,7 +256,7 @@ int csr_check(csr_config_t mask);
 RNBRemote::RNBRemote()
     : m_ctx(), m_comm(), m_arch(), m_continue_thread(-1), m_thread(-1),
       m_mutex(), m_dispatch_queue_offsets(),
-      m_dispatch_queue_offsets_addr(INVALID_NUB_ADDRESS),
+      m_dispatch_queue_offsets_addr(INVALID_NUB_ADDRESS), m_recent_reads(),
       m_qSymbol_index(UINT32_MAX), m_packets_recvd(0), m_packets(),
       m_rx_packets(), m_rx_partial_data(), m_rx_pthread(0),
       m_max_payload_size(DEFAULT_GDB_REMOTE_PROTOCOL_BUFSIZE - 4),
@@ -481,6 +482,9 @@ void RNBRemote::CreatePacketTable() {
                      "jGetSharedCacheInfo", "Replies with JSON data about the "
                                             "location and uuid of the shared "
                                             "cache in the inferior process."));
+  t.push_back(Packet(
+      json_multi_breakpoint, &RNBRemote::HandlePacket_jMultiBreakpoint, NULL,
+      "jMultiBreakpoint", "Set/remove multiple breakpoints at once"));
   t.push_back(Packet(start_noack_mode, &RNBRemote::HandlePacket_QStartNoAckMode,
                      NULL, "QStartNoAckMode",
                      "Request that " DEBUGSERVER_PROGRAM_NAME
@@ -876,6 +880,13 @@ rnb_err_t RNBRemote::SendErrorPacket(std::string errcode,
     errcode += cstring_to_asciihex_string(errmsg.c_str());
   }
   return SendPacket(errcode);
+}
+
+rnb_err_t RNBRemote::SendErrorPacket(uint32_t errcode,
+                                     const std::string &errmsg) {
+  char error_str[8];
+  snprintf(error_str, sizeof(error_str), "E%02x", errcode);
+  return SendErrorPacket(error_str, errmsg);
 }
 
 /* Get a packet via gdb remote protocol.
@@ -2677,14 +2688,48 @@ void RNBRemote::DispatchQueueOffsets::GetThreadQueueInfo(
   }
 }
 
-struct StackMemory {
-  uint8_t bytes[2 * sizeof(nub_addr_t)];
-  nub_size_t length;
+// A single contiguous chunk of expedited memory.
+struct ExpeditedMemory {
+  nub_addr_t addr;
+  std::vector<uint8_t> bytes;
 };
-typedef std::map<nub_addr_t, StackMemory> StackMemoryMap;
+
+// Read one range and append it as an expedited chunk.
+static void AppendExpeditedMemory(nub_process_t pid, nub_addr_t addr,
+                                  nub_size_t size,
+                                  std::vector<ExpeditedMemory> &chunks) {
+  if (size == 0)
+    return;
+  std::vector<uint8_t> buf(size);
+  if (DNBProcessMemoryRead(pid, addr, size, buf.data()) != size)
+    return;
+  chunks.push_back({addr, std::move(buf)});
+}
+
+static void
+AppendExpeditedMemoryToJSON(const std::vector<ExpeditedMemory> &chunks,
+                            JSONGenerator::ArraySP &memory_array_sp) {
+  for (const ExpeditedMemory &chunk : chunks) {
+    JSONGenerator::DictionarySP chunk_sp(new JSONGenerator::Dictionary());
+    chunk_sp->AddIntegerItem("address", chunk.addr);
+    chunk_sp->AddBytesAsHexASCIIString("bytes", chunk.bytes.data(),
+                                       chunk.bytes.size());
+    memory_array_sp->AddItem(chunk_sp);
+  }
+}
+
+static void
+AppendExpeditedMemoryToStopReply(const std::vector<ExpeditedMemory> &chunks,
+                                 std::ostringstream &ostrm) {
+  for (const ExpeditedMemory &chunk : chunks) {
+    ostrm << "memory:" << HEXBASE << chunk.addr << '=';
+    append_hex_value(ostrm, chunk.bytes.data(), chunk.bytes.size(), false);
+    ostrm << ';';
+  }
+}
 
 static void ReadStackMemory(nub_process_t pid, nub_thread_t tid,
-                            StackMemoryMap &stack_mmap,
+                            std::vector<ExpeditedMemory> &chunks,
                             uint32_t backtrace_limit = 256) {
   std::unique_ptr<DNBRegisterValue> reg_value =
       std::make_unique<DNBRegisterValue>();
@@ -2696,6 +2741,7 @@ static void ReadStackMemory(nub_process_t pid, nub_thread_t tid,
       fp = reg_value->value.uint32;
     else
       fp = reg_value->value.uint64;
+    std::set<uint64_t> visited;
     while (fp != 0) {
       // Make sure we never recurse more than 256 times so we don't recurse too
       // far or
@@ -2704,23 +2750,108 @@ static void ReadStackMemory(nub_process_t pid, nub_thread_t tid,
         break;
 
       const nub_size_t read_size = reg_value->info.size * 2;
-      StackMemory stack_memory;
-      stack_memory.length = read_size;
-      if (DNBProcessMemoryRead(pid, fp, read_size, stack_memory.bytes) !=
-          read_size)
+      std::vector<uint8_t> buf(read_size);
+      if (DNBProcessMemoryRead(pid, fp, read_size, buf.data()) != read_size)
         break;
       // Make sure we don't try to put the same stack memory in more than once
-      if (stack_mmap.find(fp) != stack_mmap.end())
+      if (!visited.insert(fp).second)
         break;
-      // Put the entry into the cache
-      stack_mmap[fp] = stack_memory;
+      const nub_addr_t frame_addr = fp;
       // Dereference the frame pointer to get to the previous frame pointer
       if (reg_value->info.size == 4)
-        fp = ((uint32_t *)stack_memory.bytes)[0];
+        fp = ((uint32_t *)buf.data())[0];
       else
-        fp = ((uint64_t *)stack_memory.bytes)[0];
+        fp = ((uint64_t *)buf.data())[0];
+      chunks.push_back({frame_addr, std::move(buf)});
     }
   }
+}
+
+// The total stack-memory budget we expedite for frame 0, in bytes.  Sized to
+// cover the common case (locals, spilled register arguments, and stack-passed
+// parameters) while bounding the per-frame cost.
+static const nub_size_t k_expedite_stack_window = 1024;
+
+// Bytes reserved for the above-fp "stack-passed parameters" window,
+// [fp + 2*ptr_size, fp + 2*ptr_size + k_expedite_stack_arg_size).
+static const nub_size_t k_expedite_stack_arg_size = 160;
+
+static_assert(k_expedite_stack_arg_size <= k_expedite_stack_window,
+              "above-fp arg window must fit within the total stack budget");
+
+static const size_t k_recent_reads_count = 16;
+static const nub_size_t k_recent_read_max_size = 512;
+
+// Heuristic to decide whether frame 0's $fp looks like a valid frame pointer.
+static bool FrameZeroFPLooksValid(nub_process_t pid, nub_thread_t tid,
+                                  uint64_t sp, uint64_t fp,
+                                  nub_size_t ptr_size) {
+  static const uint64_t k_expedite_max_frame_size = 8 * 1024 * 1024; // 8 MB
+
+  if (sp == 0 || fp == 0 || fp <= sp)
+    return false;
+  if (fp - sp > k_expedite_max_frame_size)
+    return false;
+
+  const nub_size_t rec = 2 * ptr_size;
+  uint8_t bytes[2 * sizeof(uint64_t)];
+  if (DNBProcessMemoryRead(pid, fp, rec, bytes) != rec)
+    return false;
+
+  uint64_t prev_fp =
+      (ptr_size == 4) ? ((uint32_t *)bytes)[0] : ((uint64_t *)bytes)[0];
+  // The saved previous fp must chain upward (stack grows down).
+  return prev_fp > fp;
+}
+
+// Read the innermost frame's stack memory.
+static std::vector<ExpeditedMemory> ReadFrameZeroStackMemory(nub_process_t pid,
+                                                             nub_thread_t tid) {
+  std::vector<ExpeditedMemory> chunks;
+  DNBRegisterValue sp_value;
+  DNBRegisterValue fp_value;
+  if (!DNBThreadGetRegisterValueByID(pid, tid, REGISTER_SET_GENERIC,
+                                     GENERIC_REGNUM_SP, &sp_value) ||
+      !DNBThreadGetRegisterValueByID(pid, tid, REGISTER_SET_GENERIC,
+                                     GENERIC_REGNUM_FP, &fp_value))
+    return chunks;
+
+  const nub_size_t ptr_size = sp_value.info.size;
+  uint64_t sp = (ptr_size == 4) ? sp_value.value.uint32 : sp_value.value.uint64;
+  uint64_t fp = (ptr_size == 4) ? fp_value.value.uint32 : fp_value.value.uint64;
+
+  if (FrameZeroFPLooksValid(pid, tid, sp, fp, ptr_size)) {
+    // above-fp: stack-passed params, skipping the already-expedited frame
+    // record.
+    AppendExpeditedMemory(pid, fp + 2 * ptr_size, k_expedite_stack_arg_size,
+                          chunks);
+
+    // below-fp: locals + spilled register args, clamped at $sp so a small frame
+    // reads only [sp, fp).
+    uint64_t below = std::min<uint64_t>(fp - sp, k_expedite_stack_window -
+                                                     k_expedite_stack_arg_size);
+    AppendExpeditedMemory(pid, fp - below, below, chunks);
+    return chunks;
+  }
+
+  // Frameless / cannot validate $fp: expedite a single window anchored at $sp.
+  if (sp != 0)
+    AppendExpeditedMemory(pid, sp, k_expedite_stack_window, chunks);
+  return chunks;
+}
+
+void RNBRemote::RecordRecentRead(nub_addr_t addr, nub_size_t size) {
+  if (size == 0 || size > k_recent_read_max_size)
+    return;
+
+  auto entry = std::make_pair(addr, size);
+  auto pos = std::find(m_recent_reads.begin(), m_recent_reads.end(), entry);
+  if (pos != m_recent_reads.end())
+    m_recent_reads.erase(pos);
+  m_recent_reads.push_back(entry);
+
+  while (m_recent_reads.size() > k_recent_reads_count)
+    m_recent_reads.pop_front();
 }
 
 rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
@@ -2741,6 +2872,7 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
       // Reset any symbols that need resetting when we exec
       m_dispatch_queue_offsets_addr = INVALID_NUB_ADDRESS;
       m_dispatch_queue_offsets.Clear();
+      m_recent_reads.clear();
     }
 
     std::ostringstream ostrm;
@@ -2830,9 +2962,8 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
               } else if (pc_regval.info.size == 8) {
                 pc = pc_regval.value.uint64;
               }
-              if (pc != INVALID_NUB_ADDRESS) {
+              if (pc != INVALID_NUB_ADDRESS)
                 pc_values.push_back(pc);
-              }
             }
           }
         }
@@ -2902,11 +3033,12 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
         if (!DNBThreadGetRegisterValueByID(pid, tid, regset,
                                            g_reg_entries[reg].nub_info.reg,
                                            reg_value.get()))
-          continue;
-
-        debugserver_regnum_with_fixed_width_hex_register_value(
-            ostrm, pid, tid, &g_reg_entries[reg], reg_value.get(),
-            std::nullopt);
+          // base16(regnum):<no value>; means a register that cannot be fetched.
+          ostrm << RAWHEX8(g_reg_entries[reg].debugserver_regnum) << ":;";
+        else
+          debugserver_regnum_with_fixed_width_hex_register_value(
+              ostrm, pid, tid, &g_reg_entries[reg], reg_value.get(),
+              std::nullopt);
       }
     }
 
@@ -2969,15 +3101,39 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
     }
 
     // Add expedited stack memory so stack backtracing doesn't need to read
-    // anything from the
-    // frame pointer chain.
-    StackMemoryMap stack_mmap;
-    ReadStackMemory(pid, tid, stack_mmap, 2);
-    if (!stack_mmap.empty()) {
-      for (const auto &stack_memory : stack_mmap) {
-        ostrm << "memory:" << HEXBASE << stack_memory.first << '=';
-        append_hex_value(ostrm, stack_memory.second.bytes,
-                         stack_memory.second.length, false);
+    // anything from the frame pointer chain.
+    std::vector<ExpeditedMemory> stack_chunks;
+    ReadStackMemory(pid, tid, stack_chunks, 2);
+    AppendExpeditedMemoryToStopReply(stack_chunks, ostrm);
+
+    std::vector<uint64_t> added_binaries;
+    JSONGenerator::ObjectSP detailed_binary_infos;
+
+    // If we've stopped with a breakpoint exception on this
+    // thread, and we're stopped at the dyld notification
+    // function address, collect information about libraries
+    // that have been loaded, expedite that information in
+    // the stop packet.
+    if (tid_stop_info.details.exception.type == EXC_BREAKPOINT &&
+        DNBGetBinariesLoadedInfo(pid, tid, added_binaries,
+                                 detailed_binary_infos)) {
+      ostrm << std::hex << "added-binaries:";
+      bool first = true;
+      for (nub_addr_t addr : added_binaries) {
+        if (first)
+          first = false;
+        else
+          ostrm << ",";
+        ostrm << addr;
+      }
+      ostrm << ";";
+
+      if (detailed_binary_infos) {
+        ostrm << std::hex << "detailed-binaries-info:";
+        std::ostringstream json_strm;
+        detailed_binary_infos->Dump(json_strm);
+        detailed_binary_infos->Clear();
+        append_hexified_string(ostrm, json_strm.str());
         ostrm << ';';
       }
     }
@@ -3181,6 +3337,7 @@ rnb_err_t RNBRemote::HandlePacket_m(const char *p) {
   // "The reply may contain fewer bytes than requested if the server was able
   //  to read only part of the region of memory."
   length = bytes_read;
+  RecordRecentRead(addr, length);
 
   std::ostringstream ostrm;
   for (unsigned long i = 0; i < length; i++)
@@ -3252,6 +3409,7 @@ rnb_err_t RNBRemote::HandlePacket_MultiMemRead(const char *p) {
     nub_size_t bytes_read = DNBProcessMemoryRead(m_ctx.ProcessID(), base_addr,
                                                  length, buffers.back().data());
     buffers.back().resize(bytes_read);
+    RecordRecentRead(base_addr, bytes_read);
   }
 
   std::ostringstream reply_stream;
@@ -3265,6 +3423,73 @@ rnb_err_t RNBRemote::HandlePacket_MultiMemRead(const char *p) {
   for (const std::vector<uint8_t> &buffer : buffers)
     binary_encode_data_vector(reply_stream, buffer);
 
+  return SendPacket(reply_stream.str());
+}
+
+rnb_err_t RNBRemote::HandlePacket_jMultiBreakpoint(const char *p) {
+  const std::string_view packet_name("jMultiBreakpoint:");
+  std::string_view packet(p);
+
+  if (!starts_with(packet, packet_name))
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  "Invalid MultiBreakpoint packet prefix");
+
+  packet.remove_prefix(packet_name.size());
+
+  JSONParser parser(packet.cbegin());
+  JSONValue::SP parsed = parser.ParseJSONValue();
+  if (!parsed || parsed->GetKind() != JSONValue::Kind::Object)
+    return HandlePacket_ILLFORMED(
+        __FILE__, __LINE__, p,
+        "MultiBreakpoint did not contain a JSON dictionary");
+
+  auto *request_dict = static_cast<JSONObject *>(parsed.get());
+  JSONValue::SP request_array_sp =
+      request_dict->GetObject("breakpoint_requests");
+
+  if (!request_array_sp ||
+      request_array_sp->GetKind() != JSONValue::Kind::Array)
+    return HandlePacket_ILLFORMED(
+        __FILE__, __LINE__, p,
+        "MultiBreakpoint did not contain a valid 'breakpoint_requests' field");
+
+  auto *request_array = static_cast<JSONArray *>(request_array_sp.get());
+  std::vector<std::string> requests;
+  requests.reserve(request_array->GetNumElements());
+  for (JSONValue::SP value : request_array->Elements()) {
+    if (!value || value->GetKind() != JSONValue::Kind::String)
+      return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                    "MultiBreakpoint had a non-string entry");
+    auto *request_str = static_cast<JSONString *>(value.get());
+    requests.push_back(request_str->GetData());
+  }
+
+  auto reply_array = std::make_shared<JSONGenerator::Array>();
+  for (const std::string &request : requests) {
+    BreakpointResult result = ExecuteBreakpointRequest(request.c_str());
+    std::string reply_str;
+    switch (result.kind) {
+    case BreakpointResult::Kind::OK:
+      reply_str = "OK";
+      break;
+    case BreakpointResult::Kind::Error: {
+      char error_str[8];
+      snprintf(error_str, sizeof(error_str), "E%02x", result.error_code);
+      reply_str = error_str;
+      break;
+    }
+    case BreakpointResult::Kind::IllFormed:
+    case BreakpointResult::Kind::Unimplemented:
+      reply_str = "E03";
+      break;
+    }
+    reply_array->AddItem(std::make_shared<JSONGenerator::String>(reply_str));
+  }
+
+  JSONGenerator::Dictionary reply_dict;
+  reply_dict.AddItem("results", reply_array);
+  std::ostringstream reply_stream;
+  reply_dict.DumpBinaryEscaped(reply_stream);
   return SendPacket(reply_stream.str());
 }
 
@@ -3325,6 +3550,7 @@ rnb_err_t RNBRemote::HandlePacket_x(const char *p) {
   }
 
   buf.resize(bytes_read);
+  RecordRecentRead(addr, buf.size());
   std::ostringstream ostrm;
   binary_encode_data_vector(ostrm, buf);
 
@@ -3622,6 +3848,10 @@ rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
     reply << "memory-tagging+;";
 
   reply << "MultiMemRead+;";
+  reply << "jMultiBreakpoint+;";
+  // The stopped thread's frame 0 stack memory is expedited in jThreadsInfo.
+  reply << "ExpediteStack+;";
+  reply << "ExpediteRecentReads+;";
   return SendPacket(reply.str().c_str());
 }
 
@@ -4006,38 +4236,45 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
                             process_username + "'";
           return SendErrorPacket("E96", msg);
         }
+        // The remaining checks can only guess at the cause from the session
+        // environment. When debugserver does have an error of its own, fold in
+        // the actual message so it's never lost.
+        auto with_err_str = [&err_str](std::string explanation) -> std::string {
+          if (err_str[0] != '\0')
+            return explanation + " (" + std::string(err_str) + ")";
+          return explanation;
+        };
         if (!login_session_has_gui_access() && !developer_mode_enabled()) {
           DNBLogError("Developer mode is not enabled and this is a "
                       "non-interactive session");
-          return SendErrorPacket("E96", "developer mode is "
-                                        "not enabled on this machine "
-                                        "and this is a non-interactive "
-                                        "debug session.");
+          return SendErrorPacket(
+              "E96", with_err_str("developer mode is not enabled on this "
+                                  "machine and this is a non-interactive "
+                                  "debug session."));
         }
         if (!login_session_has_gui_access()) {
           DNBLogError("This is a non-interactive session");
-          return SendErrorPacket("E96", "this is a "
-                                        "non-interactive debug session, "
-                                        "cannot get permission to debug "
-                                        "processes.");
+          return SendErrorPacket(
+              "E96", with_err_str("this is a non-interactive debug session, "
+                                  "cannot get permission to debug processes."));
         }
       }
 
       std::string error_explainer = "attach failed";
       if (err_str[0] != '\0') {
-        // This is not a super helpful message for end users
-        if (strcmp (err_str, "unable to start the exception thread") == 0) {
-          snprintf (err_str, sizeof (err_str) - 1,
-                    "Not allowed to attach to process.  Look in the console "
-                    "messages (Console.app), near the debugserver entries, "
-                    "when the attach failed.  The subsystem that denied "
-                    "the attach permission will likely have logged an "
-                    "informative message about why it was denied.");
-          err_str[sizeof (err_str) - 1] = '\0';
-        }
         error_explainer += " (";
         error_explainer += err_str;
         error_explainer += ")";
+        // This is not a super helpful message for end users
+        if (strcmp(err_str, "unable to start the exception thread") == 0) {
+          error_explainer += ".  ";
+          error_explainer += "Not allowed to attach to process.  Look in the "
+                             "console messages (Console.app), near the "
+                             "debugserver entries, when the attach failed.  "
+                             "The subsystem that denied the attach permission "
+                             "will likely have logged an informative message "
+                             "about why it was denied.";
+        }
       }
       DNBLogError("Attach failed: \"%s\".", err_str);
       return SendErrorPacket("E96", error_explainer);
@@ -4077,38 +4314,35 @@ rnb_err_t RNBRemote::HandlePacket_T(const char *p) {
   return SendPacket("OK");
 }
 
-rnb_err_t RNBRemote::HandlePacket_z(const char *p) {
+RNBRemote::BreakpointResult RNBRemote::ExecuteBreakpointRequest(const char *p) {
   if (p == NULL || *p == '\0')
-    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
-                                  "No thread specified in z packet");
+    return BreakpointResult::CreateIllFormed("No thread specified in z packet");
 
   if (!m_ctx.HasValidProcessID())
-    return SendErrorPacket("E15");
+    return BreakpointResult::CreateError(0x15);
 
   char packet_cmd = *p++;
   char break_type = *p++;
 
   if (*p++ != ',')
-    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
-                                  "Comma separator missing in z packet");
+    return BreakpointResult::CreateIllFormed(
+        "Comma separator missing in z packet");
 
   char *c = NULL;
   nub_process_t pid = m_ctx.ProcessID();
   errno = 0;
   nub_addr_t addr = strtoull(p, &c, 16);
   if (errno != 0 && addr == 0)
-    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
-                                  "Invalid address in z packet");
+    return BreakpointResult::CreateIllFormed("Invalid address in z packet");
   p = c;
   if (*p++ != ',')
-    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
-                                  "Comma separator missing in z packet");
+    return BreakpointResult::CreateIllFormed(
+        "Comma separator missing in z packet");
 
   errno = 0;
   auto byte_size = strtoul(p, &c, 16);
   if (errno != 0 && byte_size == 0)
-    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
-                                  "Invalid length in z packet");
+    return BreakpointResult::CreateIllFormed("Invalid length in z packet");
 
   if (packet_cmd == 'Z') {
     // set
@@ -4116,18 +4350,12 @@ rnb_err_t RNBRemote::HandlePacket_z(const char *p) {
     case '0': // set software breakpoint
     case '1': // set hardware breakpoint
     {
-      // gdb can send multiple Z packets for the same address and
-      // these calls must be ref counted.
       bool hardware = (break_type == '1');
 
       if (DNBBreakpointSet(pid, addr, byte_size, hardware)) {
-        // We successfully created a breakpoint, now lets full out
-        // a ref count structure with the breakID and add it to our
-        // map.
-        return SendPacket("OK");
+        return BreakpointResult::CreateOK();
       } else {
-        // We failed to set the software breakpoint
-        return SendErrorPacket("E09");
+        return BreakpointResult::CreateError(0x09);
       }
     } break;
 
@@ -4145,10 +4373,9 @@ rnb_err_t RNBRemote::HandlePacket_z(const char *p) {
         watch_flags = WATCH_TYPE_READ | WATCH_TYPE_WRITE;
 
       if (DNBWatchpointSet(pid, addr, byte_size, watch_flags, hardware)) {
-        return SendPacket("OK");
+        return BreakpointResult::CreateOK();
       } else {
-        // We failed to set the watchpoint
-        return SendErrorPacket("E09");
+        return BreakpointResult::CreateError(0x09);
       }
     } break;
 
@@ -4161,9 +4388,9 @@ rnb_err_t RNBRemote::HandlePacket_z(const char *p) {
     case '0': // remove software breakpoint
     case '1': // remove hardware breakpoint
       if (DNBBreakpointClear(pid, addr)) {
-        return SendPacket("OK");
+        return BreakpointResult::CreateOK();
       } else {
-        return SendErrorPacket("E08");
+        return BreakpointResult::CreateError(0x08);
       }
       break;
 
@@ -4171,9 +4398,9 @@ rnb_err_t RNBRemote::HandlePacket_z(const char *p) {
     case '3': // remove read watchpoint
     case '4': // remove access watchpoint
       if (DNBWatchpointClear(pid, addr)) {
-        return SendPacket("OK");
+        return BreakpointResult::CreateOK();
       } else {
-        return SendErrorPacket("E08");
+        return BreakpointResult::CreateError(0x08);
       }
       break;
 
@@ -4181,7 +4408,23 @@ rnb_err_t RNBRemote::HandlePacket_z(const char *p) {
       break;
     }
   }
-  return HandlePacket_UNIMPLEMENTED(p);
+  return BreakpointResult::CreateUnimplemented();
+}
+
+rnb_err_t RNBRemote::HandlePacket_z(const char *p) {
+  BreakpointResult result = ExecuteBreakpointRequest(p);
+  switch (result.kind) {
+  case BreakpointResult::Kind::OK:
+    return SendPacket("OK");
+  case BreakpointResult::Kind::Error:
+    return SendErrorPacket(result.error_code);
+  case BreakpointResult::Kind::IllFormed:
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  result.message.c_str());
+  case BreakpointResult::Kind::Unimplemented:
+    return HandlePacket_UNIMPLEMENTED(p);
+  }
+  assert(false && "unhandled BreakpointResult kind");
 }
 
 // Extract the thread number from the thread suffix that might be appended to
@@ -5424,6 +5667,53 @@ get_integer_value_for_key_name_from_json(const char *key,
 // Returns true if it was able to find the key name, and sets the 'value'
 // argument to the value found.
 
+static bool get_string_value_for_key_name_from_json(const char *key,
+                                                    const char *json_string,
+                                                    std::string &value) {
+  value.clear();
+  std::string key_with_quotes = "\"";
+  key_with_quotes += key;
+  key_with_quotes += "\"";
+  const char *c = strstr(json_string, key_with_quotes.c_str());
+  if (!c)
+    return false;
+
+  c += key_with_quotes.size();
+
+  while (*c != '\0' && (*c == ' ' || *c == '\t' || *c == '\n' || *c == '\r'))
+    c++;
+
+  if (*c == ':') {
+    c++;
+
+    while (*c != '\0' && (*c == ' ' || *c == '\t' || *c == '\n' || *c == '\r'))
+      c++;
+
+    if (*c == '\0')
+      return false;
+
+    bool escaped_char = false;
+    while (*++c != '\0') {
+      if (escaped_char) {
+        value += *c;
+        escaped_char = false;
+        continue;
+      }
+      if (*c == '\\') {
+        value += *c;
+        escaped_char = true;
+        continue;
+      }
+      if (*c == '"')
+        break;
+
+      value += *c;
+    }
+    return true;
+  }
+  return false;
+}
+
 static bool get_boolean_value_for_key_name_from_json(const char *key,
                                                      const char *json_string,
                                                      bool &value) {
@@ -5656,15 +5946,30 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
               new JSONGenerator::Dictionary());
 
           for (uint32_t reg = 0; reg < g_num_reg_entries; reg++) {
+            bool include_reg = false;
             // Expedite all registers in the first register set that aren't
-            // contained in other registers
+            // contained in other registers.
             if (g_reg_entries[reg].nub_info.set == 1 &&
-                g_reg_entries[reg].nub_info.value_regs == NULL) {
+                g_reg_entries[reg].nub_info.value_regs == NULL)
+              include_reg = true;
+            // Include the SME state register values, whether we can
+            // fetch the value or not.
+            if (strcmp("svcr", g_reg_entries[reg].nub_info.name) == 0 ||
+                strcmp("tpidr2", g_reg_entries[reg].nub_info.name) == 0 ||
+                strcmp("svl", g_reg_entries[reg].nub_info.name) == 0)
+              include_reg = true;
+
+            if (include_reg) {
               if (!DNBThreadGetRegisterValueByID(
                       pid, tid, g_reg_entries[reg].nub_info.set,
-                      g_reg_entries[reg].nub_info.reg, reg_value.get()))
+                      g_reg_entries[reg].nub_info.reg, reg_value.get())) {
+                // Indicate unavailable registers as having an empty value
+                // string.
+                std::ostringstream reg_num;
+                reg_num << std::dec << g_reg_entries[reg].debugserver_regnum;
+                registers_dict_sp->AddStringItem(reg_num.str(), "");
                 continue;
-
+              }
               std::ostringstream reg_num;
               reg_num << std::dec << g_reg_entries[reg].debugserver_regnum;
               // Encode native byte ordered bytes as hex ascii
@@ -5677,22 +5982,49 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
         }
 
         // Add expedited stack memory so stack backtracing doesn't need to read
-        // anything from the
-        // frame pointer chain.
-        StackMemoryMap stack_mmap;
-        ReadStackMemory(pid, tid, stack_mmap);
-        if (!stack_mmap.empty()) {
-          JSONGenerator::ArraySP memory_array_sp(new JSONGenerator::Array());
+        // anything from the frame pointer chain.
+        std::vector<ExpeditedMemory> stack_chunks;
+        ReadStackMemory(pid, tid, stack_chunks);
 
-          for (const auto &stack_memory : stack_mmap) {
-            JSONGenerator::DictionarySP stack_memory_sp(
-                new JSONGenerator::Dictionary());
-            stack_memory_sp->AddIntegerItem("address", stack_memory.first);
-            stack_memory_sp->AddBytesAsHexASCIIString(
-                "bytes", stack_memory.second.bytes, stack_memory.second.length);
-            memory_array_sp->AddItem(stack_memory_sp);
-          }
+        JSONGenerator::ArraySP memory_array_sp(new JSONGenerator::Array());
+        AppendExpeditedMemoryToJSON(stack_chunks, memory_array_sp);
+
+        // Also expedite the innermost frame's stack memory of the thread that
+        // stopped.
+        if (tid == DNBProcessGetCurrentThread(pid)) {
+          std::vector<ExpeditedMemory> frame_zero_chunks =
+              ReadFrameZeroStackMemory(pid, tid);
+          AppendExpeditedMemoryToJSON(frame_zero_chunks, memory_array_sp);
+
+          std::vector<ExpeditedMemory> recent_chunks;
+          for (const auto &[addr, size] : m_recent_reads)
+            AppendExpeditedMemory(pid, addr, size, recent_chunks);
+          AppendExpeditedMemoryToJSON(recent_chunks, memory_array_sp);
+        }
+
+        if (!memory_array_sp->empty())
           thread_dict_sp->AddItem("memory", memory_array_sp);
+
+        std::vector<uint64_t> added_binaries;
+        JSONGenerator::ObjectSP detailed_binary_infos;
+
+        // If we've stopped with a breakpoint exception on this
+        // thread, and we're stopped at the dyld notification
+        // function address, collect information about libraries
+        // that have been loaded, expedite that information in
+        // the stop packet.
+        if (tid_stop_info.details.exception.type == EXC_BREAKPOINT &&
+            DNBGetBinariesLoadedInfo(pid, tid, added_binaries,
+                                     detailed_binary_infos)) {
+          JSONGenerator::ArraySP load_addresses;
+          load_addresses = std::make_shared<JSONGenerator::Array>();
+          for (nub_addr_t addr : added_binaries)
+            load_addresses->AddIntegerItem(addr);
+          thread_dict_sp->AddItem("added-binaries", load_addresses);
+
+          if (detailed_binary_infos)
+            thread_dict_sp->AddItem("detailed-binaries-info",
+                                    detailed_binary_infos);
         }
       }
 
@@ -6015,14 +6347,31 @@ RNBRemote::HandlePacket_jGetLoadedDynamicLibrariesInfos(const char *p) {
     bool report_load_commands = true;
     get_boolean_value_for_key_name_from_json("report_load_commands", p,
                                              report_load_commands);
+    DNBBinaryInformationLevel info_level = eBinaryInformationLevelFull;
+    if (!report_load_commands)
+      info_level = eBinaryInformationLevelAddrOnly;
+
+    std::string level_str;
+    if (get_string_value_for_key_name_from_json("information-level", p,
+                                                level_str)) {
+      if (level_str == "address-only")
+        info_level = eBinaryInformationLevelAddrOnly;
+      else if (level_str == "address-name")
+        info_level = eBinaryInformationLevelAddrName;
+      else if (level_str == "address-name-uuid")
+        info_level = eBinaryInformationLevelAddrNameUUID;
+      else if (level_str == "full")
+        info_level = eBinaryInformationLevelFull;
+    }
 
     if (get_boolean_value_for_key_name_from_json("fetch_all_solibs", p,
                                                  fetch_all_solibs) &&
         fetch_all_solibs) {
-      json_sp = DNBGetAllLoadedLibrariesInfos(pid, report_load_commands);
+      json_sp = DNBGetAllLoadedLibrariesInfos(pid, info_level);
     } else if (get_array_of_ints_value_for_key_name_from_json(
                    "solib_addresses", p, macho_addresses)) {
-      json_sp = DNBGetLibrariesInfoForAddresses(pid, macho_addresses);
+      json_sp =
+          DNBGetLibrariesInfoForAddresses(pid, info_level, macho_addresses);
     }
 
     if (json_sp.get()) {

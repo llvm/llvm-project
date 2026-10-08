@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s modernize-redundant-void-arg %t
 
-#define NULL 0
+#include <cstddef>
 
 int foo();
 

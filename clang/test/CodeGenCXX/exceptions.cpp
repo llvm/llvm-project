@@ -221,7 +221,7 @@ namespace test3 {
     // CHECK-NEXT: [[SAVED1:%.*]] = alloca ptr
     // CHECK-NEXT: [[CLEANUPACTIVE:%.*]] = alloca i1
 
-    // CHECK:      [[COND:%.*]] = trunc i8 {{.*}} to i1
+    // CHECK:      [[COND:%.*]] = icmp ne i8 {{.*}}, 0
     // CHECK-NEXT: store i1 false, ptr [[CLEANUPACTIVE]]
     // CHECK-NEXT: br i1 [[COND]]
     return (cond ?
@@ -475,7 +475,7 @@ namespace test10 {
   // CHECK:      invoke void @_ZN6test107cleanupEv()
   // CHECK:      call ptr @__cxa_begin_catch
   // CHECK-NEXT: load i8, ptr @_ZN6test108suppressE, align 1
-  // CHECK-NEXT: trunc
+  // CHECK-NEXT: icmp ne
   // CHECK-NEXT: br i1
 
   // CHECK98:      call void @__cxa_end_catch()

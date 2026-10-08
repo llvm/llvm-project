@@ -52,6 +52,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -84,6 +85,7 @@
 #include "llvm/Transforms/Utils/LoopConstrainer.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <cassert>
@@ -226,7 +228,7 @@ public:
   /// NB! There may be conditions feeding into \p BI that aren't inductive range
   /// checks, and hence don't end up in \p Checks.
   static void extractRangeChecksFromBranch(
-      BranchInst *BI, Loop *L, ScalarEvolution &SE, BranchProbabilityInfo *BPI,
+      CondBrInst *BI, Loop *L, ScalarEvolution &SE, BranchProbabilityInfo *BPI,
       std::optional<uint64_t> EstimatedTripCount,
       SmallVectorImpl<InductiveRangeCheck> &Checks, bool &Changed);
 };
@@ -423,22 +425,20 @@ bool InductiveRangeCheck::reassociateSubLHS(
   auto getExprScaledIfOverflow = [&](Instruction::BinaryOps BinOp,
                                      const SCEV *LHS,
                                      const SCEV *RHS) -> const SCEV * {
-    const SCEV *(ScalarEvolution::*Operation)(const SCEV *, const SCEV *,
-                                              SCEV::NoWrapFlags, unsigned);
-    switch (BinOp) {
-    default:
-      llvm_unreachable("Unsupported binary op");
-    case Instruction::Add:
-      Operation = &ScalarEvolution::getAddExpr;
-      break;
-    case Instruction::Sub:
-      Operation = &ScalarEvolution::getMinusSCEV;
-      break;
-    }
+    auto Operation = [&SE, BinOp](SCEVUse L, SCEVUse R) -> const SCEV * {
+      switch (BinOp) {
+      default:
+        llvm_unreachable("Unsupported binary op");
+      case Instruction::Add:
+        return SE.getAddExpr(L, R);
+      case Instruction::Sub:
+        return SE.getMinusSCEV(L, R);
+      }
+    };
 
     if (SE.willNotOverflow(BinOp, ICmpInst::isSigned(Pred), LHS, RHS,
                            cast<Instruction>(VariantLHS)))
-      return (SE.*Operation)(LHS, RHS, SCEV::FlagAnyWrap, 0);
+      return Operation(LHS, RHS);
 
     // We couldn't prove that the expression does not overflow.
     // Than scale it to a wider type to check overflow at runtime.
@@ -447,9 +447,8 @@ bool InductiveRangeCheck::reassociateSubLHS(
       return nullptr;
 
     auto WideTy = IntegerType::get(Ty->getContext(), Ty->getBitWidth() * 2);
-    return (SE.*Operation)(SE.getSignExtendExpr(LHS, WideTy),
-                           SE.getSignExtendExpr(RHS, WideTy), SCEV::FlagAnyWrap,
-                           0);
+    return Operation(SE.getSignExtendExpr(LHS, WideTy),
+                     SE.getSignExtendExpr(RHS, WideTy));
   };
 
   if (OffsetSubtracted)
@@ -516,10 +515,10 @@ void InductiveRangeCheck::extractRangeChecksFromCond(
 }
 
 void InductiveRangeCheck::extractRangeChecksFromBranch(
-    BranchInst *BI, Loop *L, ScalarEvolution &SE, BranchProbabilityInfo *BPI,
+    CondBrInst *BI, Loop *L, ScalarEvolution &SE, BranchProbabilityInfo *BPI,
     std::optional<uint64_t> EstimatedTripCount,
     SmallVectorImpl<InductiveRangeCheck> &Checks, bool &Changed) {
-  if (BI->isUnconditional() || BI->getParent() == L->getLoopLatch())
+  if (BI->getParent() == L->getLoopLatch())
     return;
 
   unsigned IndexLoopSucc = L->contains(BI->getSuccessor(0)) ? 0 : 1;
@@ -765,7 +764,7 @@ InductiveRangeCheck::computeSafeIterationSpace(ScalarEvolution &SE,
   const SCEV *Zero = SE.getZero(M->getType());
 
   // This function returns SCEV equal to 1 if X is non-negative 0 otherwise.
-  auto SCEVCheckNonNegative = [&](const SCEV *X) {
+  auto SCEVCheckNonNegative = [&](const SCEV *X) -> const SCEV * {
     const Loop *L = IndVar->getLoop();
     const SCEV *Zero = SE.getZero(X->getType());
     const SCEV *One = SE.getOne(X->getType());
@@ -926,6 +925,7 @@ PreservedAnalyses IRCEPass::run(Function &F, FunctionAnalysisManager &AM) {
 
     if (CFGChanged && !SkipProfitabilityChecks) {
       PreservedAnalyses PA = PreservedAnalyses::all();
+      PA.abandon<CycleAnalysis>();
       PA.abandon<BlockFrequencyAnalysis>();
       AM.invalidate(F, PA);
     }
@@ -944,6 +944,7 @@ PreservedAnalyses IRCEPass::run(Function &F, FunctionAnalysisManager &AM) {
       Changed = true;
       if (!SkipProfitabilityChecks) {
         PreservedAnalyses PA = PreservedAnalyses::all();
+        PA.abandon<CycleAnalysis>();
         PA.abandon<BlockFrequencyAnalysis>();
         AM.invalidate(F, PA);
       }
@@ -972,7 +973,7 @@ InductiveRangeCheckElimination::estimatedTripCount(const Loop &L) {
   auto *Latch = L.getLoopLatch();
   if (!Latch)
     return std::nullopt;
-  auto *LatchBr = dyn_cast<BranchInst>(Latch->getTerminator());
+  auto *LatchBr = dyn_cast<CondBrInst>(Latch->getTerminator());
   if (!LatchBr)
     return std::nullopt;
 
@@ -1012,7 +1013,7 @@ bool InductiveRangeCheckElimination::run(
   bool Changed = false;
 
   for (auto *BBI : L->getBlocks())
-    if (BranchInst *TBI = dyn_cast<BranchInst>(BBI->getTerminator()))
+    if (CondBrInst *TBI = dyn_cast<CondBrInst>(BBI->getTerminator()))
       InductiveRangeCheck::extractRangeChecksFromBranch(
           TBI, L, SE, BPI, EstimatedTripCount, RangeChecks, Changed);
 
@@ -1033,8 +1034,11 @@ bool InductiveRangeCheckElimination::run(
     PrintRecognizedRangeChecks(errs());
 
   const char *FailureReason = nullptr;
+  SCEVExpander LoopStructureExpander(SE, "loop-constrainer");
+  SCEVExpanderCleaner LoopStructureExpanderCleaner(LoopStructureExpander);
   std::optional<LoopStructure> MaybeLoopStructure =
-      LoopStructure::parseLoopStructure(SE, *L, AllowUnsignedLatchCondition,
+      LoopStructure::parseLoopStructure(LoopStructureExpander, *L,
+                                        AllowUnsignedLatchCondition,
                                         FailureReason);
   if (!MaybeLoopStructure) {
     LLVM_DEBUG(dbgs() << "irce: could not parse loop structure: "
@@ -1076,13 +1080,15 @@ bool InductiveRangeCheckElimination::run(
       calculateSubRanges(SE, *L, *SafeIterRange, LS);
   if (!MaybeSR) {
     LLVM_DEBUG(dbgs() << "irce: could not compute subranges\n");
-    return false;
+    return Changed;
   }
 
   LoopConstrainer LC(*L, LI, LPMAddNewLoop, LS, SE, DT,
                      SafeIterRange->getBegin()->getType(), *MaybeSR);
 
   if (LC.run()) {
+    LoopStructureExpanderCleaner.markResultUsed();
+    LS.IndVarStart->setName("indvar.start");
     Changed = true;
 
     auto PrintConstrainedLoopInfo = [L]() {

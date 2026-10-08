@@ -134,7 +134,7 @@ public:
 
   LogicalResult matchAndRewrite(AffineYieldOp op,
                                 PatternRewriter &rewriter) const override {
-    if (isa<scf::ParallelOp>(op->getParentOp())) {
+    if (isa<scf::ParallelOp, AffineParallelOp>(op->getParentOp())) {
       // Terminator is rewritten as part of the "affine.parallel" lowering
       // pattern.
       return failure();
@@ -230,8 +230,12 @@ public:
               static_cast<uint64_t>(cast<IntegerAttr>(reduction).getInt()));
       assert(reductionOp && "Reduction operation cannot be of None Type");
       arith::AtomicRMWKind reductionOpValue = *reductionOp;
-      identityVals.push_back(
-          arith::getIdentityValue(reductionOpValue, resultType, rewriter, loc));
+      Value identityVal =
+          arith::getIdentityValue(reductionOpValue, resultType, rewriter, loc);
+      if (!identityVal)
+        return rewriter.notifyMatchFailure(
+            op, "unsupported reduction kind for identity value");
+      identityVals.push_back(identityVal);
     }
     parOp = scf::ParallelOp::create(rewriter, loc, lowerBoundTuple,
                                     upperBoundTuple, steps, identityVals,
@@ -359,9 +363,10 @@ public:
     if (!resultOperands)
       return failure();
 
-    // Build vector.load memref[expandedMap.results].
-    rewriter.replaceOpWithNewOp<memref::LoadOp>(op, op.getMemRef(),
-                                                *resultOperands);
+    // Build memref.load memref[expandedMap.results].
+    rewriter.replaceOpWithNewOp<memref::LoadOp>(
+        op, op.getMemRef(), *resultOperands,
+        /*nontemporal=*/false, op.getMaybeAlign());
     return success();
   }
 };
@@ -408,7 +413,8 @@ public:
 
     // Build memref.store valueToStore, memref[expandedMap.results].
     rewriter.replaceOpWithNewOp<memref::StoreOp>(
-        op, op.getValueToStore(), op.getMemRef(), *maybeExpandedMap);
+        op, op.getValueToStore(), op.getMemRef(), *maybeExpandedMap,
+        /*nontemporal=*/false, op.getMaybeAlign());
     return success();
   }
 };
@@ -495,7 +501,8 @@ public:
 
     // Build vector.load memref[expandedMap.results].
     rewriter.replaceOpWithNewOp<vector::LoadOp>(
-        op, op.getVectorType(), op.getMemRef(), *resultOperands);
+        op, op.getVectorType(), op.getMemRef(), *resultOperands,
+        /*nontemporal=*/false, op.getMaybeAlign());
     return success();
   }
 };
@@ -517,7 +524,8 @@ public:
       return failure();
 
     rewriter.replaceOpWithNewOp<vector::StoreOp>(
-        op, op.getValueToStore(), op.getMemRef(), *maybeExpandedMap);
+        op, op.getValueToStore(), op.getMemRef(), *maybeExpandedMap,
+        /*nontemporal=*/false, op.getMaybeAlign());
     return success();
   }
 };

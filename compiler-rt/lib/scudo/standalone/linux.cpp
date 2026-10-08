@@ -129,9 +129,15 @@ void HybridMutex::lockSlow() {
             nullptr, nullptr, 0);
     V = atomic_exchange(&M, Sleeping, memory_order_acquire);
   }
+
+  if (SCUDO_DEBUG)
+    assertHeldImpl();
 }
 
 void HybridMutex::unlock() {
+  if (SCUDO_DEBUG)
+    assertHeldImpl();
+
   if (atomic_fetch_sub(&M, 1U, memory_order_release) != Locked) {
     atomic_store(&M, Unlocked, memory_order_release);
     syscall(SYS_futex, reinterpret_cast<uptr>(&M), FUTEX_WAKE_PRIVATE, 1,
@@ -244,38 +250,6 @@ extern "C" WEAK void android_set_abort_message(const char *);
 void setAbortMessage(const char *Message) {
   if (&android_set_abort_message)
     android_set_abort_message(Message);
-}
-
-u64 getResidentPages(uptr BaseAddress, uptr Size) {
-  unsigned char PageData[256];
-
-  uptr PageSize = getPageSizeCached();
-  uptr PageSizeLog = getPageSizeLogCached();
-
-  // Make sure the address is page aligned.
-  uptr CurrentAddress = BaseAddress & ~(PageSize - 1);
-  uptr LastAddress = roundUp(BaseAddress + Size, PageSize);
-  u64 ResidentPages = 0;
-  while (CurrentAddress < LastAddress) {
-    uptr Length = LastAddress - CurrentAddress;
-    if ((Length >> PageSizeLog) > sizeof(PageData)) {
-      Length = sizeof(PageData) << PageSizeLog;
-    }
-    if (mincore(reinterpret_cast<void *>(CurrentAddress), Length, PageData) ==
-        -1) {
-      ScopedString Str;
-      Str.append("mincore failed: %s\n", strerror(errno));
-      Str.output();
-      break;
-    }
-    for (size_t I = 0; I < Length >> PageSizeLog; ++I) {
-      if (PageData[I])
-        ++ResidentPages;
-    }
-    CurrentAddress += Length;
-  }
-
-  return ResidentPages;
 }
 
 } // namespace scudo

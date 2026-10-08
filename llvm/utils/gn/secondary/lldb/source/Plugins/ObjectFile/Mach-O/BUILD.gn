@@ -17,5 +17,8 @@ static_library("Mach-O") {
 
   # Reaches into Plugins/Process/Utility.
   include_dirs = [ "//lldb/source" ]
-  sources = [ "ObjectFileMachO.cpp" ]
+  sources = [
+    "MachOTrie.cpp",
+    "ObjectFileMachO.cpp",
+  ]
 }

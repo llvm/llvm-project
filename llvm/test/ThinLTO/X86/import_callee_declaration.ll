@@ -67,12 +67,12 @@
 ; RUN: llvm-dis main.bc.thinlto.bc -o - | FileCheck %s --check-prefix=MAIN-DIS
 ;
 ; MAIN-DIS: [[LIBMOD:\^[0-9]+]] = module: (path: "lib.bc", hash: (0, 0, 0, 0, 0))
-; MAIN-DIS: gv: (guid: 2418497564662708935, summaries: (function: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), insts: 8, {{.*}})))
+; MAIN-DIS: gv: (guid: 2418497564662708935, summaries: (function: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration, noRenameOnPromotion: 0), insts: 8, {{.*}})))
 ; When alias is imported as a copy of the aliasee, but the aliasee is not being
 ; imported by itself, the aliasee should be null.
-; MAIN-DIS: gv: (guid: 13590951773474913315, summaries: (alias: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), aliasee: null)))
-; MAIN-DIS: [[LARGEINDIRECT:\^[0-9]+]] = gv: (guid: 14343440786664691134, summaries: (function: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), insts: 8, {{.*}})))
-; MAIN-DIS: gv: (guid: 16730173943625350469, summaries: (alias: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), aliasee: [[LARGEINDIRECT]])))
+; MAIN-DIS: gv: (guid: 13590951773474913315, summaries: (alias: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration, noRenameOnPromotion: 0), aliasee: null)))
+; MAIN-DIS: [[LARGEINDIRECT:\^[0-9]+]] = gv: (guid: 14343440786664691134, summaries: (function: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration, noRenameOnPromotion: 0), insts: 8, {{.*}})))
+; MAIN-DIS: gv: (guid: 16730173943625350469, summaries: (alias: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration, noRenameOnPromotion: 0), aliasee: [[LARGEINDIRECT]])))
 
 ; RUN: opt -passes=function-import -import-all-index -summary-file=main.bc.thinlto.bc main.bc -o main-after-import.bc
 ; RUN: llvm-dis -o - main-after-import.bc | FileCheck %s --check-prefix=MAIN-IMPORT

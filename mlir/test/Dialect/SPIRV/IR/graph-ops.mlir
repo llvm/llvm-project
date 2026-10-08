@@ -18,8 +18,8 @@ spirv.ARM.Graph @graphAndOutputs(%arg0: !spirv.arm.tensor<14x19xi16>) -> !spirv.
 
 // CHECK: spirv.ARM.Graph {{@.*}}() -> !spirv.arm.tensor<2x3xi16> {
 spirv.ARM.Graph @graphConstant() -> !spirv.arm.tensor<2x3xi16> {
-  // CHECK: [[CONST:%.*]] = spirv.ARM.GraphConstant {graph_constant_id = 42 : i32} : !spirv.arm.tensor<2x3xi16>
-  %0 = spirv.ARM.GraphConstant { graph_constant_id = 42 : i32 } : !spirv.arm.tensor<2x3xi16>
+  // CHECK: [[CONST:%.*]] = spirv.ARM.GraphConstant id = 42 : !spirv.arm.tensor<2x3xi16>
+  %0 = spirv.ARM.GraphConstant id = 42 : !spirv.arm.tensor<2x3xi16>
   // CHECK: spirv.ARM.GraphOutputs [[CONST:%.*]] : !spirv.arm.tensor<2x3xi16>
   spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<2x3xi16>
 }
@@ -63,7 +63,7 @@ spirv.ARM.Graph @graphNoOutputs(%arg0: !spirv.arm.tensor<14x19xi16>) -> () {
 //===----------------------------------------------------------------------===//
 
 // expected-error @+1 {{'spirv.ARM.GraphConstant' op failed to verify that op must appear in a spirv.ARM.Graph op's block}}
-%0 = spirv.ARM.GraphConstant { graph_constant_id = 42 : i32 } : !spirv.arm.tensor<2x3xi16>
+%0 = spirv.ARM.GraphConstant id = 42 : !spirv.arm.tensor<2x3xi16>
 // -----
 
 //===----------------------------------------------------------------------===//

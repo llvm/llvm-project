@@ -1,0 +1,32 @@
+! RUN: not bbc -emit-hlfir -fcuda -gpu=unified %s -o /dev/null 2>&1 | FileCheck %s
+
+! A device-attributed dummy carrying !dir$ ignore_tkr(m) opts out of
+! the -gpu=mem:unified relaxation that would otherwise let an
+! unattributed host actual bind to it. If a generic exposes ONLY such
+! a specific, no viable candidate remains for a plain host actual and
+! the call must be diagnosed.
+!
+! (cuf14.cuf and cuf-ignore-tkr-m-generic.cuf cover the contrasting
+! cases where the device dummy has no ignore_tkr(m) and either a host
+! specific is present alongside it, or it is the only specific. Those
+! flows are unaffected by this carve-out.)
+
+module m
+  interface gen_only_device
+    module procedure sub_device_ignore_m
+  end interface
+
+contains
+  subroutine sub_device_ignore_m(x)
+    real, device :: x
+    !dir$ ignore_tkr(m) x
+  end subroutine
+end module
+
+subroutine caller
+  use m
+  real :: a
+  call gen_only_device(a)
+end subroutine
+
+! CHECK: No specific subroutine of generic 'gen_only_device' matches the actual arguments

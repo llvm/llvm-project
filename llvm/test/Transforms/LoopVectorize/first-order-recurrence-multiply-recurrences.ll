@@ -27,7 +27,7 @@ define i32 @c(i32 %N) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %iv  = phi i32 [ %inc, %for.body ], [ 10, %entry ]
   %for.1 = phi i32 [ %for.1.next, %for.body ], [ 20, %entry ]
   %for.2 = phi i32 [ %for.2.next, %for.body ], [ 11, %entry ]
@@ -37,7 +37,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %for.cond1.for.end_crit_edge, label %for.body
 
-for.cond1.for.end_crit_edge:                      ; preds = %for.body
+for.cond1.for.end_crit_edge:
   %add.lcssa = phi i32 [ %for.1.next, %for.body ]
   %sext.lcssa = phi i32 [ %for.2.next, %for.body ]
   %res = add i32 %add.lcssa, %sext.lcssa
@@ -144,7 +144,6 @@ exit:
   ret void
 }
 
-declare float @llvm.fmuladd.f32(float, float, float) #1
 
 define void @test_pr54227(ptr noalias %a, ptr noalias %b) {
 ; CHECK-LABEL: @test_pr54227(
@@ -221,7 +220,7 @@ define void @test_pr54233_for_depend_on_each_other(ptr noalias %a, ptr noalias %
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP4]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP4]], i64 3
 ; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -386,8 +385,8 @@ define void @hoist_previous_value_and_operand(ptr %dst, i64 %mask) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 336
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP4]], i32 3
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT2:%.*]] = extractelement <4 x i32> [[TMP6]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP4]], i64 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT2:%.*]] = extractelement <4 x i32> [[TMP6]], i64 3
 ; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]

@@ -373,8 +373,8 @@ define <32 x i8> @shl_32i8(<32 x i8> %r, <32 x i8> %a) nounwind {
 ; X86-NEXT:    vpsllw $4, %ymm0, %ymm2
 ; X86-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %ymm2, %ymm2
 ; X86-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
-; X86-NEXT:    vpsllw $2, %ymm0, %ymm2
-; X86-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %ymm2, %ymm2
+; X86-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
+; X86-NEXT:    vpaddb %ymm2, %ymm2, %ymm2
 ; X86-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
 ; X86-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
 ; X86-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
@@ -388,8 +388,8 @@ define <32 x i8> @shl_32i8(<32 x i8> %r, <32 x i8> %a) nounwind {
 ; X64-NEXT:    vpsllw $4, %ymm0, %ymm2
 ; X64-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
 ; X64-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
-; X64-NEXT:    vpsllw $2, %ymm0, %ymm2
-; X64-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
+; X64-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
+; X64-NEXT:    vpaddb %ymm2, %ymm2, %ymm2
 ; X64-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
 ; X64-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
 ; X64-NEXT:    vpaddb %ymm0, %ymm0, %ymm2

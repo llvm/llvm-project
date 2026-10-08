@@ -1,0 +1,20 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module  {
+
+cir.global external @vec_b = #cir.zero : !cir.matrix<4 x 4 x !s32i>
+// CHECK: cir.global external @vec_b = #cir.zero : !cir.matrix<4 x 4 x !s32i>
+
+cir.func @valid_matrix_type() {
+  %matrix_addr = cir.alloca "a" align(4) : !cir.ptr<!cir.matrix<3 x 3 x !cir.float>>
+  cir.return
+}
+
+// CHECK: cir.func @valid_matrix_type() {
+// CHECK:   %[[MATRIX_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.matrix<3 x 3 x !cir.float>>
+// CHECK:   cir.return
+// CHECK: }
+
+}

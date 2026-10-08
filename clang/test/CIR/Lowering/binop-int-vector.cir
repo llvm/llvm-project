@@ -1,0 +1,24 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+
+module {
+  cir.func @signed_vec(%arg0 : !cir.vector<4 x !s32i>,
+                       %arg1 : !cir.vector<4 x !s32i>) {
+    %0 = cir.max %arg0, %arg1 : !cir.vector<4 x !s32i>
+    // CHECK: = llvm.intr.smax
+    %1 = cir.min %arg0, %arg1 : !cir.vector<4 x !s32i>
+    // CHECK: = llvm.intr.smin
+    cir.return
+  }
+
+  cir.func @unsigned_vec(%arg0 : !cir.vector<4 x !u32i>,
+                         %arg1 : !cir.vector<4 x !u32i>) {
+    %0 = cir.max %arg0, %arg1 : !cir.vector<4 x !u32i>
+    // CHECK: = llvm.intr.umax
+    %1 = cir.min %arg0, %arg1 : !cir.vector<4 x !u32i>
+    // CHECK: = llvm.intr.umin
+    cir.return
+  }
+}

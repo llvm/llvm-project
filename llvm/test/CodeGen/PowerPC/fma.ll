@@ -1,7 +1,7 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -fp-contract=fast -mattr=-vsx -disable-ppc-vsx-fma-mutation=false | FileCheck %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -fp-contract=fast -mattr=+vsx -mcpu=pwr7 -disable-ppc-vsx-fma-mutation=false | FileCheck -check-prefix=CHECK-VSX %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -fp-contract=fast -mcpu=pwr8 -disable-ppc-vsx-fma-mutation=false | FileCheck -check-prefix=CHECK-P8 %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu -fp-contract=fast -mcpu=pwr8 -disable-ppc-vsx-fma-mutation=false | FileCheck -check-prefix=CHECK-P8 %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -mattr=-vsx -disable-ppc-vsx-fma-mutation=false | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mattr=+vsx -mcpu=pwr7 -disable-ppc-vsx-fma-mutation=false | FileCheck -check-prefix=CHECK-VSX %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 -disable-ppc-vsx-fma-mutation=false | FileCheck -check-prefix=CHECK-P8 %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -disable-ppc-vsx-fma-mutation=false | FileCheck -check-prefix=CHECK-P8 %s
 
 declare double @dummy1(double) #0
 declare double @dummy2(double, double) #0
@@ -9,8 +9,8 @@ declare double @dummy3(double, double, double) #0
 declare float @dummy4(float, float) #0
 
 define double @test_FMADD1(double %A, double %B, double %C) {
-	%D = fmul double %A, %B		; <double> [#uses=1]
-	%E = fadd double %C, %D		; <double> [#uses=1]
+	%D = fmul contract double %A, %B		; <double> [#uses=1]
+	%E = fadd contract double %C, %D		; <double> [#uses=1]
 	ret double %E
 ; CHECK-LABEL: test_FMADD1:
 ; CHECK: fmadd
@@ -22,8 +22,8 @@ define double @test_FMADD1(double %A, double %B, double %C) {
 }
 
 define double @test_FMADD2(double %A, double %B, double %C) {
-	%D = fmul double %A, %B		; <double> [#uses=1]
-	%E = fadd double %D, %C		; <double> [#uses=1]
+	%D = fmul contract double %A, %B		; <double> [#uses=1]
+	%E = fadd contract double %D, %C		; <double> [#uses=1]
 	ret double %E
 ; CHECK-LABEL: test_FMADD2:
 ; CHECK: fmadd
@@ -35,8 +35,8 @@ define double @test_FMADD2(double %A, double %B, double %C) {
 }
 
 define double @test_FMSUB1(double %A, double %B, double %C) {
-	%D = fmul double %A, %B		; <double> [#uses=1]
-	%E = fsub double %D, %C		; <double> [#uses=1]
+	%D = fmul contract double %A, %B		; <double> [#uses=1]
+	%E = fsub contract double %D, %C		; <double> [#uses=1]
 	ret double %E
 ; CHECK-LABEL: test_FMSUB1:
 ; CHECK: fmsub
@@ -48,9 +48,9 @@ define double @test_FMSUB1(double %A, double %B, double %C) {
 }
 
 define double @test_FMSUB2(double %A, double %B, double %C, double %D) {
-	%E = fmul double %A, %B 	; <double> [#uses=2]
-	%F = fadd double %E, %C 	; <double> [#uses=1]
-	%G = fsub double %E, %D 	; <double> [#uses=1]
+	%E = fmul contract double %A, %B 	; <double> [#uses=2]
+	%F = fadd contract double %E, %C 	; <double> [#uses=1]
+	%G = fsub contract double %E, %D 	; <double> [#uses=1]
 	%H = call double @dummy2(double %F, double %G)      ; <double> [#uses=1]
 	ret double %H
 ; CHECK-LABEL: test_FMSUB2:
@@ -63,8 +63,8 @@ define double @test_FMSUB2(double %A, double %B, double %C, double %D) {
 }
 
 define double @test_FNMADD1(double %A, double %B, double %C) {
-	%D = fmul double %A, %B		; <double> [#uses=1]
-	%E = fadd double %D, %C		; <double> [#uses=1]
+	%D = fmul contract double %A, %B		; <double> [#uses=1]
+	%E = fadd contract double %D, %C		; <double> [#uses=1]
 	%F = fsub double -0.000000e+00, %E		; <double> [#uses=1]
 	ret double %F
 ; CHECK-LABEL: test_FNMADD1:
@@ -77,8 +77,8 @@ define double @test_FNMADD1(double %A, double %B, double %C) {
 }
 
 define double @test_FNMADD2(double %A, double %B, double %C) {
-	%D = fmul double %A, %B		; <double> [#uses=1]
-	%E = fadd double %C, %D		; <double> [#uses=1]
+	%D = fmul contract double %A, %B		; <double> [#uses=1]
+	%E = fadd contract double %C, %D		; <double> [#uses=1]
 	%F = fsub double -0.000000e+00, %E		; <double> [#uses=1]
 	ret double %F
 ; CHECK-LABEL: test_FNMADD2:
@@ -91,8 +91,8 @@ define double @test_FNMADD2(double %A, double %B, double %C) {
 }
 
 define double @test_FNMSUB1(double %A, double %B, double %C) {
-	%D = fmul double %A, %B		; <double> [#uses=1]
-	%E = fsub double %C, %D		; <double> [#uses=1]
+	%D = fmul contract double %A, %B		; <double> [#uses=1]
+	%E = fsub contract double %C, %D		; <double> [#uses=1]
 	ret double %E
 ; CHECK-LABEL: test_FNMSUB1:
 ; CHECK: fneg
@@ -106,8 +106,8 @@ define double @test_FNMSUB1(double %A, double %B, double %C) {
 
 ; need nsz flag to generate fnmsub since it may affect sign of zero
 define double @test_FNMSUB1_NSZ(double %A, double %B, double %C) {
-	%D = fmul nsz double %A, %B		; <double> [#uses=1]
-	%E = fsub nsz double %C, %D		; <double> [#uses=1]
+	%D = fmul nsz contract double %A, %B		; <double> [#uses=1]
+	%E = fsub nsz contract double %C, %D		; <double> [#uses=1]
 	ret double %E
 ; CHECK-LABEL: test_FNMSUB1_NSZ:
 ; CHECK: fnmsub
@@ -118,8 +118,8 @@ define double @test_FNMSUB1_NSZ(double %A, double %B, double %C) {
 }
 
 define double @test_FNMSUB2(double %A, double %B, double %C) {
-	%D = fmul double %A, %B		; <double> [#uses=1]
-	%E = fsub double %D, %C		; <double> [#uses=1]
+	%D = fmul contract double %A, %B		; <double> [#uses=1]
+	%E = fsub contract double %D, %C		; <double> [#uses=1]
 	%F = fsub double -0.000000e+00, %E		; <double> [#uses=1]
 	ret double %F
 ; CHECK-LABEL: test_FNMSUB2:
@@ -132,8 +132,8 @@ define double @test_FNMSUB2(double %A, double %B, double %C) {
 }
 
 define float @test_FNMSUBS(float %A, float %B, float %C) {
-	%D = fmul float %A, %B		; <float> [#uses=1]
-	%E = fsub float %D, %C		; <float> [#uses=1]
+	%D = fmul contract float %A, %B		; <float> [#uses=1]
+	%E = fsub contract float %D, %C		; <float> [#uses=1]
 	%F = fsub float -0.000000e+00, %E		; <float> [#uses=1]
 	ret float %F
 ; CHECK-LABEL: test_FNMSUBS:
@@ -146,8 +146,8 @@ define float @test_FNMSUBS(float %A, float %B, float %C) {
 }
 
 define float @test_XSMADDMSP(float %A, float %B, float %C) {
-	%D = fmul float %A, %B		; <float> [#uses=1]
-	%E = fadd float %C, %D		; <float> [#uses=1]
+	%D = fmul contract float %A, %B		; <float> [#uses=1]
+	%E = fadd contract float %C, %D		; <float> [#uses=1]
 	ret float %E
 ; CHECK-P8-LABEL: test_XSMADDMSP:
 ; CHECK-P8: xsmaddmsp
@@ -155,8 +155,8 @@ define float @test_XSMADDMSP(float %A, float %B, float %C) {
 }
 
 define float @test_XSMSUBMSP(float %A, float %B, float %C) {
-	%D = fmul float %A, %B		; <float> [#uses=1]
-	%E = fsub float %D, %C		; <float> [#uses=1]
+	%D = fmul contract float %A, %B		; <float> [#uses=1]
+	%E = fsub contract float %D, %C		; <float> [#uses=1]
 	ret float %E
 ; CHECK-P8-LABEL: test_XSMSUBMSP:
 ; CHECK-P8: xsmsubmsp
@@ -164,9 +164,9 @@ define float @test_XSMSUBMSP(float %A, float %B, float %C) {
 }
 
 define float @test_XSMADDASP(float %A, float %B, float %C, float %D) {
-	%E = fmul float %A, %B 	; <float> [#uses=2]
-	%F = fadd float %E, %C 	; <float> [#uses=1]
-	%G = fsub float %E, %D 	; <float> [#uses=1]
+	%E = fmul contract float %A, %B 	; <float> [#uses=2]
+	%F = fadd contract float %E, %C 	; <float> [#uses=1]
+	%G = fsub contract float %E, %D 	; <float> [#uses=1]
 	%H = call float @dummy4(float %F, float %G)      ; <float> [#uses=1]
 	ret float %H
 ; CHECK-P8-LABEL: test_XSMADDASP:
@@ -175,9 +175,9 @@ define float @test_XSMADDASP(float %A, float %B, float %C, float %D) {
 }
 
 define float @test_XSMSUBASP(float %A, float %B, float %C, float %D) {
-	%E = fmul float %A, %B 	; <float> [#uses=2]
-	%F = fsub float %E, %C 	; <float> [#uses=1]
-	%G = fsub float %E, %D 	; <float> [#uses=1]
+	%E = fmul contract float %A, %B 	; <float> [#uses=2]
+	%F = fsub contract float %E, %C 	; <float> [#uses=1]
+	%G = fsub contract float %E, %D 	; <float> [#uses=1]
 	%H = call float @dummy4(float %F, float %G)      ; <float> [#uses=1]
 	ret float %H
 ; CHECK-P8-LABEL: test_XSMSUBASP:
@@ -186,8 +186,8 @@ define float @test_XSMSUBASP(float %A, float %B, float %C, float %D) {
 }
 
 define float @test_XSNMADDMSP(float %A, float %B, float %C) {
-	%D = fmul float %A, %B		; <float> [#uses=1]
-	%E = fadd float %D, %C		; <float> [#uses=1]
+	%D = fmul contract float %A, %B		; <float> [#uses=1]
+	%E = fadd contract float %D, %C		; <float> [#uses=1]
 	%F = fsub float -0.000000e+00, %E		; <float> [#uses=1]
 	ret float %F
 ; CHECK-P8-LABEL: test_XSNMADDMSP:
@@ -196,8 +196,8 @@ define float @test_XSNMADDMSP(float %A, float %B, float %C) {
 }
 
 define float @test_XSNMSUBMSP(float %A, float %B, float %C) {
-	%D = fmul float %A, %B		; <float> [#uses=1]
-	%E = fsub float %D, %C		; <float> [#uses=1]
+	%D = fmul contract float %A, %B		; <float> [#uses=1]
+	%E = fsub contract float %D, %C		; <float> [#uses=1]
 	%F = fsub float -0.000000e+00, %E		; <float> [#uses=1]
 	ret float %F
 ; CHECK-P8-LABEL: test_XSNMSUBMSP:
@@ -206,8 +206,8 @@ define float @test_XSNMSUBMSP(float %A, float %B, float %C) {
 }
 
 define float @test_XSNMADDASP(float %A, float %B, float %C) {
-	%D = fmul float %A, %B		; <float> [#uses=1]
-	%E = fadd float %D, %C		; <float> [#uses=1]
+	%D = fmul contract float %A, %B		; <float> [#uses=1]
+	%E = fadd contract float %D, %C		; <float> [#uses=1]
 	%F = fsub float -0.000000e+00, %E		; <float> [#uses=1]
 	%H = call float @dummy4(float %E, float %F)      ; <float> [#uses=1]
 	ret float %F
@@ -219,8 +219,8 @@ define float @test_XSNMADDASP(float %A, float %B, float %C) {
 }
 
 define float @test_XSNMSUBASP(float %A, float %B, float %C) {
-	%D = fmul float %A, %B		; <float> [#uses=1]
-	%E = fsub float %D, %C		; <float> [#uses=1]
+	%D = fmul contract float %A, %B		; <float> [#uses=1]
+	%E = fsub contract float %D, %C		; <float> [#uses=1]
 	%F = fsub float -0.000000e+00, %E		; <float> [#uses=1]
 	%H = call float @dummy4(float %E, float %F)      ; <float> [#uses=1]
 	ret float %F

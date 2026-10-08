@@ -54,7 +54,8 @@ using fallback_implementation = double;
 using preferred_implementation = int;
 
 // This is the fallback implementation, which should work everywhere.
-template <typename Unused = void> double GetCpuTime(fallback_implementation) {
+template <typename Unused = void>
+[[maybe_unused]] double GetCpuTime(fallback_implementation) {
   std::clock_t timestamp{std::clock()};
   if (timestamp != static_cast<std::clock_t>(-1)) {
     return static_cast<double>(timestamp) / CLOCKS_PER_SEC;
@@ -106,7 +107,7 @@ template <typename Unused = void> double GetCpuTime(fallback_implementation) {
 // POSIX implementation using clock_gettime. This is only enabled where
 // clock_gettime is available.
 template <typename T = int, typename U = struct timespec>
-double GetCpuTime(preferred_implementation,
+[[maybe_unused]] double GetCpuTime(preferred_implementation,
     // We need some dummy parameters to pass to decltype(clock_gettime).
     T ClockId = 0, U *Timespec = nullptr,
     decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
@@ -165,7 +166,8 @@ static count_t ConvertTimevalToCount(int kind, const struct timeval &tval) {
 }
 
 template <typename Unused = void>
-static count_t GetSystemClockCount(int kind, fallback_implementation) {
+[[maybe_unused]] static count_t GetSystemClockCount(
+    int kind, fallback_implementation) {
   struct timeval tval;
 
   if (gettimeofday(&tval, /*timezone=*/nullptr) != 0) {
@@ -192,7 +194,8 @@ count_t ConvertTimeSpecToCount(int kind, const struct timespec &tspec) {
 #ifndef _AIX
 // More accurate version with nanosecond accuracy
 template <typename Unused = void>
-static count_t GetSystemClockCount(int kind, fallback_implementation) {
+[[maybe_unused]] static count_t GetSystemClockCount(
+    int kind, fallback_implementation) {
   struct timespec tspec;
 
   if (timespec_get(&tspec, TIME_UTC) < 0) {
@@ -208,12 +211,14 @@ static count_t GetSystemClockCount(int kind, fallback_implementation) {
 #endif // !NO_TIMESPEC
 
 template <typename Unused = void>
-static count_t GetSystemClockCountRate(int kind, fallback_implementation) {
+[[maybe_unused]] static count_t GetSystemClockCountRate(
+    int kind, fallback_implementation) {
   return kind >= 8 ? NS_PER_SEC : kind >= 2 ? MS_PER_SEC : DS_PER_SEC;
 }
 
 template <typename Unused = void>
-static count_t GetSystemClockCountMax(int kind, fallback_implementation) {
+[[maybe_unused]] static count_t GetSystemClockCountMax(
+    int kind, fallback_implementation) {
   unsigned_count_t maxCount{GetHUGE(kind)};
   return maxCount;
 }
@@ -221,7 +226,8 @@ static count_t GetSystemClockCountMax(int kind, fallback_implementation) {
 #ifndef NO_TIMESPEC
 #ifdef CLOCKID_ELAPSED_TIME
 template <typename T = int, typename U = struct timespec>
-static count_t GetSystemClockCount(int kind, preferred_implementation,
+[[maybe_unused]] static count_t GetSystemClockCount(int kind,
+    preferred_implementation,
     // We need some dummy parameters to pass to decltype(clock_gettime).
     T ClockId = 0, U *Timespec = nullptr,
     decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
@@ -238,7 +244,8 @@ static count_t GetSystemClockCount(int kind, preferred_implementation,
 #endif // CLOCKID_ELAPSED_TIME
 
 template <typename T = int, typename U = struct timespec>
-static count_t GetSystemClockCountRate(int kind, preferred_implementation,
+[[maybe_unused]] static count_t GetSystemClockCountRate(int kind,
+    preferred_implementation,
     // We need some dummy parameters to pass to decltype(clock_gettime).
     T ClockId = 0, U *Timespec = nullptr,
     decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
@@ -246,7 +253,8 @@ static count_t GetSystemClockCountRate(int kind, preferred_implementation,
 }
 
 template <typename T = int, typename U = struct timespec>
-static count_t GetSystemClockCountMax(int kind, preferred_implementation,
+[[maybe_unused]] static count_t GetSystemClockCountMax(int kind,
+    preferred_implementation,
     // We need some dummy parameters to pass to decltype(clock_gettime).
     T ClockId = 0, U *Timespec = nullptr,
     decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
@@ -302,7 +310,6 @@ static void DateAndTimeUnavailable(Fortran::runtime::Terminator &terminator,
   }
 }
 
-#ifndef _WIN32
 #ifdef _AIX
 // Compute the time difference from GMT/UTC to get around the behavior of
 // strfname on AIX that requires setting an environment variable for numeric
@@ -362,21 +369,23 @@ static std::size_t getUTCOffsetToBuffer(
 // SFINAE helper to return the struct tm.tm_gmtoff which is not a POSIX standard
 // field.
 template <int KIND, typename TM = struct tm>
-Fortran::runtime::CppTypeFor<Fortran::common::TypeCategory::Integer, KIND>
+[[maybe_unused]] Fortran::runtime::CppTypeFor<
+    Fortran::common::TypeCategory::Integer, KIND>
 GetGmtOffset(const TM &tm, preferred_implementation,
     decltype(tm.tm_gmtoff) *Enabled = nullptr) {
   // Returns the GMT offset in minutes.
   return tm.tm_gmtoff / 60;
 }
 template <int KIND, typename TM = struct tm>
-Fortran::runtime::CppTypeFor<Fortran::common::TypeCategory::Integer, KIND>
+[[maybe_unused]] Fortran::runtime::CppTypeFor<
+    Fortran::common::TypeCategory::Integer, KIND>
 GetGmtOffset(const TM &tm, fallback_implementation) {
   // tm.tm_gmtoff is not available, there may be platform dependent alternatives
   // (such as using timezone from <time.h> when available), but so far just
   // return -HUGE to report that this information is not available.
   const auto negHuge{-std::numeric_limits<Fortran::runtime::CppTypeFor<
       Fortran::common::TypeCategory::Integer, KIND>>::max()};
-#ifdef _AIX
+#if defined _AIX
   bool err{false};
   auto diff{computeUTCDiff(tm, &err)};
   if (err) {
@@ -384,6 +393,18 @@ GetGmtOffset(const TM &tm, fallback_implementation) {
   } else {
     return diff;
   }
+#elif defined _WIN32
+  DYNAMIC_TIME_ZONE_INFORMATION tzi;
+  std::uint32_t tzid{GetDynamicTimeZoneInformation(&tzi)};
+  if (tzid == TIME_ZONE_ID_INVALID) {
+    return negHuge;
+  }
+
+  std::int32_t bias{tzi.Bias};
+  bias += (tzid == TIME_ZONE_ID_DAYLIGHT ? tzi.DaylightBias : tzi.StandardBias);
+
+  // Bias is minutes behind GMT, and we need minutes ahead.
+  return -bias;
 #else
   return negHuge;
 #endif
@@ -398,6 +419,44 @@ template <typename TM = struct tm> struct GmtOffsetHelper {
     }
   };
 };
+
+#ifdef _WIN32
+struct timeval {
+  std::int64_t tv_sec;
+  std::int64_t tv_usec;
+};
+
+// gettimeofday half-implementation for win32; ignore the timezone as we don't
+// use it anyway
+static int gettimeofday(timeval *tv, void *) {
+  constexpr std::uint64_t epoch_offset{116444736000000000ull};
+
+  FILETIME ftime;
+  GetSystemTimePreciseAsFileTime(&ftime);
+
+  // Convert ftime to a real 64-bit integer
+  std::uint64_t time{
+      ULARGE_INTEGER{{ftime.dwLowDateTime, ftime.dwHighDateTime}}.QuadPart};
+  // Convert to Unix epoch time
+  time -= epoch_offset;
+
+  auto [sec, usec] = std::lldiv(time, 10'000'000l);
+  tv->tv_sec = sec;
+  tv->tv_usec = usec;
+  return 0;
+}
+
+// localtime_s on Windows does the same thing as localtime_r but swaps the
+// arguments
+static struct tm *localtime_r(const time_t *timer, struct tm *buf) {
+  errno_t ec{_localtime64_s(buf, timer)};
+  if (ec != 0) {
+    return nullptr;
+  }
+  return buf;
+}
+
+#endif
 
 // Dispatch to posix implementation where gettimeofday and localtime_r are
 // available.
@@ -470,20 +529,6 @@ static void GetDateAndTime(Fortran::runtime::Terminator &terminator, char *date,
     storeIntegerAt(7, ms);
   }
 }
-
-#else
-// Fallback implementation where gettimeofday or localtime_r are not both
-// available (e.g. windows).
-static void GetDateAndTime(Fortran::runtime::Terminator &terminator, char *date,
-    std::size_t dateChars, char *time, std::size_t timeChars, char *zone,
-    std::size_t zoneChars, const Fortran::runtime::Descriptor *values) {
-  // TODO: An actual implementation for non Posix system should be added.
-  // So far, implement as if the date and time is not available on those
-  // platforms.
-  DateAndTimeUnavailable(
-      terminator, date, dateChars, time, timeChars, zone, zoneChars, values);
-}
-#endif
 } // namespace
 
 namespace Fortran::runtime {

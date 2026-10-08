@@ -11,7 +11,6 @@
 #include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/Lex/Lexer.h"
-#include "llvm/ADT/StringRef.h"
 
 using namespace clang::ast_matchers;
 

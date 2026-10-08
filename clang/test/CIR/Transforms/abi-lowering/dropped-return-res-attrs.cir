@@ -1,0 +1,96 @@
+// RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:   | FileCheck %s
+// RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:   --mlir-print-op-generic | FileCheck %s --check-prefix=GENERIC \
+// RUN:   --implicit-check-not=res_attrs
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#indirect_return = {
+  return = { kind = "indirect", indirect_align = 8 },
+  args   = [ ]
+}
+
+#ignore_return = {
+  return = { kind = "ignore" },
+  args   = [ ]
+}
+
+#caller_cls = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // The llvm.noundef on this return has nowhere to go once the result count
+  // drops to zero, and a stale res_attrs fails the func verifier.
+  cir.func @returns_big_res_attr() -> (!rec_Big {llvm.noundef})
+      attributes { test_classify = #indirect_return } {
+    %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Big>
+    %z = cir.const #cir.zero : !rec_Big
+    cir.store %z, %0 : !rec_Big, !cir.ptr<!rec_Big>
+    %1 = cir.load %0 : !cir.ptr<!rec_Big>, !rec_Big
+    cir.return %1 : !rec_Big
+  }
+
+  // CHECK:      cir.func{{.*}} @returns_big_res_attr(%[[SRET:.*]]: !cir.ptr<!rec_Big> {
+  // CHECK-SAME:     llvm.sret = !rec_Big
+  // CHECK-NOT:    -> !rec_Big
+  // CHECK:        cir.store %{{.*}}, %[[SRET]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK:        cir.return
+  // GENERIC:    sym_name = "returns_big_res_attr"
+
+  cir.func private @returns_big() -> !rec_Big
+      attributes { test_classify = #indirect_return }
+
+  // cir.call prints res_attrs through its result list, which is empty once
+  // the call returns void, so only the generic form catches a stale one.
+  cir.func @caller_res_attr() -> !s32i
+      attributes { test_classify = #caller_cls } {
+    %a = cir.alloca "a" align(8) : !cir.ptr<!rec_Big>
+    %b = cir.alloca "b" align(8) : !cir.ptr<!rec_Big>
+    %0 = cir.call @returns_big() : () -> (!rec_Big {llvm.noundef})
+    cir.store %0, %a : !rec_Big, !cir.ptr<!rec_Big>
+    cir.store %0, %b : !rec_Big, !cir.ptr<!rec_Big>
+    %z = cir.const #cir.int<0> : !s32i
+    cir.return %z : !s32i
+  }
+
+  // CHECK:      cir.call @returns_big(%{{.*}}) : (!cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.sret = !rec_Big
+  // CHECK-SAME:     -> ()
+  // GENERIC:    callee = @returns_big
+
+  // An Ignore return empties the result list without an sret pointer, so it
+  // reaches the same state by a different route.
+  cir.func @ignored_res_attr() -> (!s32i {llvm.noundef})
+      attributes { test_classify = #ignore_return } {
+    %0 = cir.const #cir.int<0> : !s32i
+    cir.return %0 : !s32i
+  }
+
+  // CHECK:      cir.func{{.*}} @ignored_res_attr()
+  // CHECK-NOT:    -> !s32i
+  // CHECK:        cir.return
+  // GENERIC:    sym_name = "ignored_res_attr"
+
+  cir.func private @ignored_ret() -> !s32i
+      attributes { test_classify = #ignore_return }
+
+  cir.func @caller_ignored_res_attr() -> !s32i
+      attributes { test_classify = #caller_cls } {
+    %0 = cir.call @ignored_ret() : () -> (!s32i {llvm.noundef})
+    %z = cir.const #cir.int<0> : !s32i
+    cir.return %z : !s32i
+  }
+
+  // CHECK:      cir.call @ignored_ret() : () -> ()
+  // GENERIC:    callee = @ignored_ret
+}

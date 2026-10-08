@@ -1,5 +1,7 @@
 llvm_canonicalize_cmake_booleans(
   BOLT_ENABLE_RUNTIME
+  LLVM_ENABLE_ZLIB
+  LLVM_ENABLE_ZSTD
   )
 
 configure_lit_site_cfg(
@@ -35,6 +37,7 @@ list(APPEND BOLT_TEST_DEPS
   FileCheck
   llc
   lld
+  llvm-ar
   llvm-config
   llvm-bolt
   llvm-bolt-binary-analysis

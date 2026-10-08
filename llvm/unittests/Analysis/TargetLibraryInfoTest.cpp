@@ -8,11 +8,14 @@
 
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
+
+#include <type_traits>
 
 using namespace llvm;
 
@@ -47,8 +50,7 @@ protected:
     if (!FDecl)
       return ::testing::AssertionFailure() << ExpectedLFName << " not found";
 
-    LibFunc F;
-    if (!TLI.getLibFunc(*FDecl, F))
+    if (TLI.getLibFunc(*FDecl) == NotLibFunc)
       return ::testing::AssertionFailure() << ExpectedLFName << " invalid";
 
     return ::testing::AssertionSuccess() << ExpectedLFName << " is LibFunc";
@@ -688,11 +690,7 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare ptr @vec_calloc(i64, i64)\n"
       "declare ptr @vec_malloc(i64)\n"
       "declare ptr @vec_realloc(ptr, i64)\n"
-      "declare void @vec_free(ptr)\n"
-
-      // These functions are OpenMP Offloading allocation / free routines
-      "declare ptr @__kmpc_alloc_shared(i64)\n"
-      "declare void @__kmpc_free_shared(ptr, i64)\n");
+      "declare void @vec_free(ptr)\n");
 
   for (unsigned FI = LibFunc::Begin_LibFunc; FI != LibFunc::End_LibFunc; ++FI) {
     LibFunc LF = (LibFunc)FI;
@@ -701,6 +699,25 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
     Function *F = M->getFunction(TLI.getName(LF));
     EXPECT_TRUE(isLibFunc(F, LF));
   }
+}
+
+TEST_F(TargetLibraryInfoTest, IsErrnoGlobal) {
+  using TLII = TargetLibraryInfoImpl;
+
+  // Errno is defined as a function call on the following environments.
+  EXPECT_TRUE(TLII(Triple("arm64-apple-macosx")).isErrnoFunctionCall());
+  EXPECT_TRUE(TLII(Triple("arm--linux-androideabi")).isErrnoFunctionCall());
+  EXPECT_TRUE(
+      TLII(Triple("armv7-unknown-freebsd-gnueabihf")).isErrnoFunctionCall());
+  EXPECT_TRUE(TLII(Triple("riscv32-unknown-linux-musl")).isErrnoFunctionCall());
+  EXPECT_TRUE(TLII(Triple("x86_64-pc-windows-msvc")).isErrnoFunctionCall());
+  EXPECT_TRUE(TLII(Triple("x86_64-unknown-linux-gnu")).isErrnoFunctionCall());
+
+  // Unknown.
+  EXPECT_FALSE(TLII(Triple("aarch64-unknown-unknown")).isErrnoFunctionCall());
+  EXPECT_FALSE(TLII(Triple("arm-none-eabi")).isErrnoFunctionCall());
+  EXPECT_FALSE(TLII(Triple("powerpc-none-none")).isErrnoFunctionCall());
+  EXPECT_FALSE(TLII(Triple("x86_64-pc-linux")).isErrnoFunctionCall());
 }
 
 namespace {
@@ -725,8 +742,8 @@ protected:
 
   /// Returns the TLI function name for the given \p Opcode and type \p Ty.
   StringRef getScalarName(unsigned int Opcode, Type *Ty) {
-    LibFunc Func;
-    if (!TLI->getLibFunc(Opcode, Ty, Func))
+    LibFunc Func = TLI->getLibFunc(Opcode, Ty);
+    if (Func == NotLibFunc)
       return "";
     return TLI->getName(Func);
   }
@@ -737,3 +754,48 @@ TEST_F(TLITestAarch64, TestFrem) {
   EXPECT_EQ(getScalarName(Instruction::FRem, Type::getDoubleTy(Ctx)), "fmod");
   EXPECT_EQ(getScalarName(Instruction::FRem, Type::getFloatTy(Ctx)), "fmodf");
 }
+
+namespace {
+
+TEST(VecDescTest, GetCallingConvAbsent) {
+  VecDesc VD("sin", "__svml_sin2", ElementCount::getFixed(2), false,
+             "_ZGV_LLVM_N2v", std::nullopt);
+  EXPECT_FALSE(VD.getCallingConv().has_value());
+}
+
+TEST(VecDescTest, GetCallingConvC) {
+  VecDesc VD("sin", "__svml_sin2", ElementCount::getFixed(2), false,
+             "_ZGV_LLVM_N2v", CallingConv::C);
+  ASSERT_TRUE(VD.getCallingConv().has_value());
+  EXPECT_EQ(VD.getCallingConv().value(), CallingConv::C);
+}
+
+TEST(VecDescTest, GetCallingConvAArch64VectorCall) {
+  VecDesc VD("acos", "armpl_vacosq_f64", ElementCount::getFixed(2), false,
+             "_ZGV_LLVM_N2v", CallingConv::AArch64_VectorCall);
+  ASSERT_TRUE(VD.getCallingConv().has_value());
+  EXPECT_EQ(VD.getCallingConv().value(), CallingConv::AArch64_VectorCall);
+}
+
+static_assert(std::is_trivially_destructible_v<VecDesc>,
+              "VecDesc must not require dynamic static initialization");
+static_assert(std::is_trivially_copyable_v<VecDesc>,
+              "VecDesc static tables must be constexpr-friendly");
+
+TEST(VecDescTest, ConstexprStaticTable) {
+  static constexpr VecDesc Table[] = {
+      {"ceilf", "vceilf", ElementCount::getFixed(4), false, "_ZGV_LLVM_N4v",
+       std::nullopt},
+      {"sin", "__svml_sin2", ElementCount::getFixed(2), false, "_ZGV_LLVM_N2v",
+       CallingConv::C},
+      {"acos", "armpl_vacosq_f64", ElementCount::getFixed(2), false,
+       "_ZGV_LLVM_N2v", CallingConv::AArch64_VectorCall},
+  };
+  EXPECT_FALSE(Table[0].getCallingConv().has_value());
+  ASSERT_TRUE(Table[1].getCallingConv().has_value());
+  EXPECT_EQ(Table[1].getCallingConv().value(), CallingConv::C);
+  ASSERT_TRUE(Table[2].getCallingConv().has_value());
+  EXPECT_EQ(Table[2].getCallingConv().value(), CallingConv::AArch64_VectorCall);
+}
+
+} // namespace

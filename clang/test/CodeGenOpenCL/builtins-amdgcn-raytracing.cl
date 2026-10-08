@@ -1,11 +1,11 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1030 \
+// RUN: %clang_cc1 -triple amdgpu10.30-unknown-unknown \
 // RUN:   -emit-llvm -cl-std=CL2.0 -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1030 -S \
+// RUN: %clang_cc1 -triple amdgpu10.30-unknown-unknown -S \
 // RUN:   -cl-std=CL2.0 -o - %s | FileCheck -check-prefix=ISA %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1200 -emit-llvm \
+// RUN: %clang_cc1 -triple amdgpu12.00-unknown-unknown -emit-llvm \
 // RUN:   -cl-std=CL2.0 -o - %s | FileCheck -check-prefix=GFX12 %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1200 -S \
+// RUN: %clang_cc1 -triple amdgpu12.00-unknown-unknown -S \
 // RUN:   -cl-std=CL2.0 -o - %s | FileCheck -check-prefix=GFX12ISA %s
 
 // Test llvm.amdgcn.image.bvh.intersect.ray intrinsic.

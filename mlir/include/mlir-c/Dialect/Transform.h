@@ -208,31 +208,71 @@ MLIR_CAPI_EXPORTED void mlirTransformOpInterfaceAttachFallbackModel(
     MlirTransformOpInterfaceCallbacks callbacks);
 
 //===---------------------------------------------------------------------===//
+// PatternDescriptorOpInterface
+//===---------------------------------------------------------------------===//
+
+/// Returns the interface TypeID of the PatternDescriptorOpInterface.
+MLIR_CAPI_EXPORTED MlirTypeID mlirPatternDescriptorOpInterfaceTypeID(void);
+
+/// Callbacks for implementing PatternDescriptorOpInterface from external code.
+typedef struct {
+  /// Optional constructor for the user data.
+  /// Set to nullptr to disable it.
+  void (*construct)(void *userData);
+  /// Optional destructor for the user data.
+  /// Set to nullptr to disable it.
+  void (*destruct)(void *userData);
+  /// Callback to populate rewrite patterns into the given pattern set.
+  void (*populatePatterns)(MlirOperation op, MlirRewritePatternSet patterns,
+                           void *userData);
+  /// Optional callback to populate rewrite patterns with transform state.
+  /// Set to nullptr to use the default implementation (calls populatePatterns).
+  void (*populatePatternsWithState)(MlirOperation op,
+                                    MlirRewritePatternSet patterns,
+                                    MlirTransformState state, void *userData);
+  void *userData;
+} MlirPatternDescriptorOpInterfaceCallbacks;
+
+/// Attach PatternDescriptorOpInterface to the operation with the given name
+/// using the provided callbacks.
+MLIR_CAPI_EXPORTED void mlirPatternDescriptorOpInterfaceAttachFallbackModel(
+    MlirContext ctx, MlirStringRef opName,
+    MlirPatternDescriptorOpInterfaceCallbacks callbacks);
+
+//===---------------------------------------------------------------------===//
 // Transform-specifc MemoryEffectsOpInterface helpers
 //===---------------------------------------------------------------------===//
 
-/// Helper to mark operands as only reading handles.
+/// Invokes `callback` with `OnlyReadsHandle` effects corresponding to operands
+/// which have been marked as having those effects.
 MLIR_CAPI_EXPORTED void
 mlirTransformOnlyReadsHandle(MlirOpOperand *operands, intptr_t numOperands,
-                             MlirMemoryEffectInstancesList effects);
+                             MlirMemoryEffectInstancesCallback callback,
+                             void *userData);
 
-/// Helper to mark operands as consuming handles.
+/// Invokes `callback` with `ConsumesHandle` effects corresponding to operands
+/// which have been marked as having those effects.
 MLIR_CAPI_EXPORTED void
 mlirTransformConsumesHandle(MlirOpOperand *operands, intptr_t numOperands,
-                            MlirMemoryEffectInstancesList effects);
+                            MlirMemoryEffectInstancesCallback callback,
+                            void *userData);
 
-/// Helper to mark results as producing handles.
+/// Invokes `callback` with `ProducesHandle` effects corresponding to results
+/// which have been marked as having those effects.
 MLIR_CAPI_EXPORTED void
 mlirTransformProducesHandle(MlirValue *results, intptr_t numResults,
-                            MlirMemoryEffectInstancesList effects);
+                            MlirMemoryEffectInstancesCallback callback,
+                            void *userData);
 
-/// Helper to mark potential modifications to the payload IR.
+/// Invokes `callback` with `ModifiesPayload` effects.
 MLIR_CAPI_EXPORTED void
-mlirTransformModifiesPayload(MlirMemoryEffectInstancesList effects);
+mlirTransformModifiesPayload(MlirMemoryEffectInstancesCallback callback,
+                             void *userData);
 
-/// Helper to mark potential reads from the payload IR.
+/// Invokes `callback` with `OnlyReadsPayload` effects.
 MLIR_CAPI_EXPORTED void
-mlirTransformOnlyReadsPayload(MlirMemoryEffectInstancesList effects);
+mlirTransformOnlyReadsPayload(MlirMemoryEffectInstancesCallback callback,
+                              void *userData);
 
 #ifdef __cplusplus
 }

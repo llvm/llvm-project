@@ -27,17 +27,17 @@ void ScriptedFrameProviderDescriptor::Dump(Stream *s) const {
   if (!s)
     return;
 
-  s->Format("  ID: {0:x}\n", GetID());
-  s->Printf("  Name: %s\n", GetName().str().c_str());
+  s->Format("  ID: {0}\n", GetID());
+  s->Format("  Name: {0}\n", GetName());
 
   std::string description = GetDescription();
   if (!description.empty())
-    s->Printf("  Description: %s\n", description.c_str());
+    s->Format("  Description: {0}\n", description);
 
   // Show priority information.
   std::optional<uint32_t> priority = GetPriority();
   if (priority.has_value())
-    s->Printf("  Priority: %u\n", *priority);
+    s->Format("  Priority: {0}\n", *priority);
   else
     s->PutCString("  Priority: Default (no priority specified)\n");
 
@@ -45,21 +45,21 @@ void ScriptedFrameProviderDescriptor::Dump(Stream *s) const {
   if (thread_specs.empty()) {
     s->PutCString("  Thread Filter: (applies to all threads)\n");
   } else {
-    s->Printf("  Thread Filter: %zu specification(s)\n", thread_specs.size());
+    s->Format("  Thread Filter: {0} specification(s)\n", thread_specs.size());
     for (size_t i = 0; i < thread_specs.size(); ++i) {
       const ThreadSpec &spec = thread_specs[i];
-      s->Printf("    [%zu] ", i);
+      s->Format("    [{0}] ", i);
       spec.GetDescription(s, lldb::eDescriptionLevelVerbose);
-      s->PutChar('\n');
+      s->EOL();
     }
   }
 }
 
-uint32_t ScriptedFrameProviderDescriptor::GetID() const {
+uint32_t ScriptedFrameProviderDescriptor::GetHash() const {
   if (!scripted_metadata_sp)
     return 0;
 
-  return scripted_metadata_sp->GetID();
+  return scripted_metadata_sp->GetHash();
 }
 
 std::string ScriptedFrameProviderDescriptor::GetDescription() const {
@@ -84,12 +84,8 @@ llvm::Expected<SyntheticFrameProviderSP> SyntheticFrameProvider::CreateInstance(
         "cannot create synthetic frame provider: invalid input frames");
 
   // Iterate through all registered ScriptedFrameProvider plugins.
-  ScriptedFrameProviderCreateInstance create_callback = nullptr;
-  for (uint32_t idx = 0;
-       (create_callback =
-            PluginManager::GetScriptedFrameProviderCreateCallbackAtIndex(
-                idx)) != nullptr;
-       ++idx) {
+  for (auto create_callback :
+       PluginManager::GetScriptedFrameProviderCreateCallbacks()) {
     auto provider_or_err = create_callback(input_frames, descriptor);
     if (!provider_or_err) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Target), provider_or_err.takeError(),

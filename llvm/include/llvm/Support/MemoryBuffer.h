@@ -21,23 +21,13 @@
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/File.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 
 namespace llvm {
-namespace sys {
-namespace fs {
-// Duplicated from FileSystem.h to avoid a dependency.
-#if defined(_WIN32)
-// A Win32 HANDLE is a typedef of void*
-using file_t = void *;
-#else
-using file_t = int;
-#endif
-} // namespace fs
-} // namespace sys
 
 /// This interface provides simple read-only access to a block of memory, and
 /// provides simple methods for reading files and standard input into a memory
@@ -87,6 +77,11 @@ public:
   /// prefetching from the storage device and into memory, if possible.
   /// This should be use purely as an read optimization.
   virtual void willNeedIfMmap() {}
+
+  /// For read-only MemoryBuffer_MMap, advise the kernel that accesses will be
+  /// random, disabling readahead. This calls madvise(MADV_RANDOM) on *NIX.
+  /// This function should not be called on a writable buffer.
+  virtual void randomAccessIfMmap() {}
 
   /// Open the specified file as a MemoryBuffer, returning a new MemoryBuffer
   /// if successful, otherwise returning null.

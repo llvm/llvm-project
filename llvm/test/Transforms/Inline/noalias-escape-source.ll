@@ -93,11 +93,11 @@ define void @test_addr_only_capture(ptr %p) {
 ;.
 ; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
 ; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]], !"callee_no_capture: %p"}
-; CHECK: [[META2]] = distinct !{[[META2]], !"callee_no_capture"}
+; CHECK: [[META2]] = distinct !{[[META2]], i1 false, !"callee_no_capture"}
 ; CHECK: [[META3]] = !{[[META4:![0-9]+]]}
 ; CHECK: [[META4]] = distinct !{[[META4]], [[META5:![0-9]+]], !"callee_capture: %p"}
-; CHECK: [[META5]] = distinct !{[[META5]], !"callee_capture"}
+; CHECK: [[META5]] = distinct !{[[META5]], i1 false, !"callee_capture"}
 ; CHECK: [[META6]] = !{[[META7:![0-9]+]]}
 ; CHECK: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]], !"callee_addr_only_capture: %p"}
-; CHECK: [[META8]] = distinct !{[[META8]], !"callee_addr_only_capture"}
+; CHECK: [[META8]] = distinct !{[[META8]], i1 false, !"callee_addr_only_capture"}
 ;.

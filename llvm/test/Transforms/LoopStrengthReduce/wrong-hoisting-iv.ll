@@ -16,9 +16,7 @@ define void @test1() {
 ; CHECK-NEXT:    [[VAL4:%.*]] = sub i32 [[VAL]], [[VAL3]]
 ; CHECK-NEXT:    [[VAL5:%.*]] = ashr i32 undef, undef
 ; CHECK-NEXT:    [[VAL6:%.*]] = sub i32 [[VAL4]], [[VAL5]]
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[VAL]], 7
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[VAL3]], 7
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[VAL]], 7
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[VAL5]], 7
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl i32 [[VAL6]], 3
@@ -58,10 +56,8 @@ define void @test1() {
 ; CHECK:       bb20.bb15splitsplitsplit_crit_edge:
 ; CHECK-NEXT:    [[TMP14:%.*]] = mul i32 [[VAL]], 3
 ; CHECK-NEXT:    [[TMP15:%.*]] = mul i32 [[VAL1]], [[VAL2]]
-; CHECK-NEXT:    [[TMP16:%.*]] = mul i32 [[TMP15]], 3
-; CHECK-NEXT:    [[TMP17:%.*]] = sub i32 [[TMP14]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = mul i32 [[VAL5]], 3
-; CHECK-NEXT:    [[TMP19:%.*]] = sub i32 [[TMP17]], [[TMP18]]
+; CHECK-NEXT:    [[TMP19:%.*]] = sub i32 [[TMP14]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = add i32 [[TMP19]], [[LSR_IV1]]
 ; CHECK-NEXT:    br label [[BB15SPLITSPLITSPLIT]]
 ; CHECK:       bb15splitsplitsplit:
@@ -82,10 +78,8 @@ define void @test1() {
 ; CHECK:       bb26.bb15split_crit_edge:
 ; CHECK-NEXT:    [[TMP28:%.*]] = mul i32 [[VAL]], 5
 ; CHECK-NEXT:    [[TMP29:%.*]] = mul i32 [[VAL1]], [[VAL2]]
-; CHECK-NEXT:    [[TMP30:%.*]] = mul i32 [[TMP29]], 5
-; CHECK-NEXT:    [[TMP31:%.*]] = sub i32 [[TMP28]], [[TMP30]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = mul i32 [[VAL5]], 5
-; CHECK-NEXT:    [[TMP33:%.*]] = sub i32 [[TMP31]], [[TMP32]]
+; CHECK-NEXT:    [[TMP33:%.*]] = sub i32 [[TMP28]], [[TMP32]]
 ; CHECK-NEXT:    [[TMP34:%.*]] = add i32 [[TMP33]], [[LSR_IV1]]
 ; CHECK-NEXT:    br label [[BB15SPLIT]]
 ; CHECK:       bb15split:

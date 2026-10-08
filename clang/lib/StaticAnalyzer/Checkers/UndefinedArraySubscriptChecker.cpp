@@ -40,7 +40,7 @@ UndefinedArraySubscriptChecker::checkPreStmt(const ArraySubscriptExpr *A,
 
   // Sema generates anonymous array variables for copying array struct fields.
   // Don't warn if we're in an implicitly-generated constructor.
-  const Decl *D = C.getLocationContext()->getDecl();
+  const Decl *D = C.getStackFrame()->getDecl();
   if (const CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(D))
     if (Ctor->isDefaulted())
       return;

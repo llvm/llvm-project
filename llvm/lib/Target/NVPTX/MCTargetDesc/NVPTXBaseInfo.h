@@ -16,10 +16,59 @@
 #ifndef LLVM_LIB_TARGET_NVPTX_MCTARGETDESC_NVPTXBASEINFO_H
 #define LLVM_LIB_TARGET_NVPTX_MCTARGETDESC_NVPTXBASEINFO_H
 
+#include "llvm/ADT/StringRef.h"
+#include "llvm/MC/MCRegister.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 namespace llvm {
 
 using namespace NVPTXAS;
+
+namespace NVPTX {
+
+// PTX virtual registers are numbered per register class. The asm printer
+// packs the class into the upper bits of the register number so that the inst
+// printer can recover the name the register was declared with.
+enum class VirtualRegisterKind : unsigned {
+  Physical = 0,
+  B1 = 1,
+  B16 = 2,
+  B32 = 3,
+  B64 = 4,
+  B128 = 5,
+};
+
+constexpr unsigned VirtualRegisterKindShift = 27;
+constexpr unsigned VirtualRegisterNumMask =
+    (1u << VirtualRegisterKindShift) - 1;
+
+// The packed registers are carried in MCOperands, so they must stay inside the
+// range MCRegister reserves for physical registers.
+static_assert(((static_cast<unsigned>(VirtualRegisterKind::B128)
+                << VirtualRegisterKindShift) |
+               VirtualRegisterNumMask) <= MCRegister::LastPhysicalReg,
+              "Packed virtual register does not fit in an MCRegister");
+
+/// The name prefix shared by all virtual registers of \p Kind.
+inline StringRef getVirtualRegisterPrefix(VirtualRegisterKind Kind) {
+  switch (Kind) {
+  case VirtualRegisterKind::B1:
+    return "%p";
+  case VirtualRegisterKind::B16:
+    return "%rs";
+  case VirtualRegisterKind::B32:
+    return "%r";
+  case VirtualRegisterKind::B64:
+    return "%rd";
+  case VirtualRegisterKind::B128:
+    return "%rq";
+  case VirtualRegisterKind::Physical:
+    break;
+  }
+  llvm_unreachable("Invalid virtual register kind");
+}
+
+} // namespace NVPTX
 
 namespace NVPTXII {
 enum {

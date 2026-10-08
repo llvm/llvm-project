@@ -1,7 +1,7 @@
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1170 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1200 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu11.70-unknown-unknown -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu12.00-unknown-unknown -emit-llvm -o - %s | FileCheck %s
 
 typedef unsigned int uint;
 

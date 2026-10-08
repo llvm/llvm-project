@@ -10,4 +10,4 @@
 
 #include "src/math/fmaximumf.h"
 
-LIST_FMAXIMUM_TESTS(float, LIBC_NAMESPACE::fmaximumf)
+LIST_FMAXIMUM_TESTS(Fmaximumf, float, LIBC_NAMESPACE::fmaximumf)

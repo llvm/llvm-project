@@ -49,6 +49,8 @@ TimeTraceProfilerInstances &getTimeTraceProfilerInstances() {
   return Instances;
 }
 
+static const char TimeTraceFileExtension[] = ".time-trace.json";
+
 } // anonymous namespace
 
 // Per Thread instance
@@ -434,7 +436,7 @@ Error llvm::timeTraceProfilerWrite(StringRef PreferredFileName,
   std::string Path = PreferredFileName.str();
   if (Path.empty()) {
     Path = FallbackFileName == "-" ? "out" : FallbackFileName.str();
-    Path += ".time-trace";
+    Path += TimeTraceFileExtension;
   }
 
   std::error_code EC;

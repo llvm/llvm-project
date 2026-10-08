@@ -8,6 +8,7 @@ from lldbsuite.test import lldbutil
 class TestCase(TestBase):
     @no_debug_info_test
     @skipIf(compiler="clang", compiler_version=["<", "20.0"])
+    @skipIfWasm  # wasm32 supports neither _Float16 nor __bf16
     def test(self):
         self.build()
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))

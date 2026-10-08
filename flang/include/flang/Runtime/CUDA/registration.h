@@ -1,4 +1,4 @@
-//===-- include/flang/Runtime/CUDA/registration.h ---------------*- C -*-===//
+//===-- include/flang/Runtime/CUDA/registration.h -----------------*- C -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -27,6 +27,20 @@ void RTDECL(CUFRegisterFunction)(
 /// Register a device variable.
 void RTDECL(CUFRegisterVariable)(
     void **module, char *varSym, const char *varName, int64_t size);
+
+/// Register a managed variable.
+void RTDECL(CUFRegisterManagedVariable)(
+    void **module, void **varSym, char *varName, int64_t size);
+
+/// Initialize a CUDA module after all variables have been registered.
+/// Triggers the runtime to populate managed variable pointers with
+/// unified memory addresses.
+void RTDECL(CUFInitModule)(void **module);
+
+/// Register the pages spanning [\p begin, \p end) with the CUDA runtime so
+/// device code can access them through their host address. Registering the
+/// same range more than once is allowed.
+void RTDECL(CUFRegisterHostMemoryRange)(void *begin, void *end);
 
 } // extern "C"
 

@@ -155,6 +155,10 @@ class ARMFunctionInfo : public MachineFunctionInfo {
   /// destinations.
   bool BranchTargetEnforcement = false;
 
+  /// The result of EstimateFunctionSizeInBytes, if that was run during frame
+  /// lowering. Used to check later that the estimate was conservative.
+  std::optional<unsigned> EstimatedFunctionSizeInBytes;
+
 public:
   ARMFunctionInfo() = default;
 
@@ -225,6 +229,13 @@ public:
   unsigned getArgumentStackToRestore() const { return ArgumentStackToRestore; }
   void setArgumentStackToRestore(unsigned v) { ArgumentStackToRestore = v; }
 
+  std::optional<unsigned> getEstimatedFunctionSizeInBytes() const {
+    return EstimatedFunctionSizeInBytes;
+  }
+  void setEstimatedFunctionSizeInBytes(unsigned v) {
+    EstimatedFunctionSizeInBytes = v;
+  }
+
   void initPICLabelUId(unsigned UId) {
     PICLabelUId = UId;
   }
@@ -252,7 +263,7 @@ public:
   }
 
   unsigned getOriginalCPIdx(unsigned CloneIdx) const {
-    DenseMap<unsigned, unsigned>::const_iterator I = CPEClones.find(CloneIdx);
+    auto I = CPEClones.find(CloneIdx);
     if (I != CPEClones.end())
       return I->second;
     else

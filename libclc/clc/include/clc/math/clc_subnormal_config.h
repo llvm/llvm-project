@@ -8,11 +8,13 @@
 #ifndef __CLC_MATH_CLC_SUBNORMAL_CONFIG_H__
 #define __CLC_MATH_CLC_SUBNORMAL_CONFIG_H__
 
-#include <clc/clcfunc.h>
+#include "clc/clcfunc.h"
 
-_CLC_DECL bool __clc_subnormals_disabled();
-_CLC_DECL bool __clc_fp16_subnormals_supported();
-_CLC_DECL bool __clc_fp32_subnormals_supported();
-_CLC_DECL bool __clc_fp64_subnormals_supported();
+#ifdef cl_khr_fp16
+_CLC_DECL bool __clc_denormals_are_zero_fp16();
+#endif
+
+_CLC_DECL bool __clc_denormals_are_zero_fp32();
+_CLC_DECL bool __clc_denormals_are_zero_fp64();
 
 #endif // __CLC_MATH_CLC_SUBNORMAL_CONFIG_H__

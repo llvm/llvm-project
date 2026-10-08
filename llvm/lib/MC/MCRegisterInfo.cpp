@@ -192,7 +192,7 @@ int64_t MCRegisterInfo::getDwarfRegNumFromDwarfEHRegNum(uint64_t RegNum) const {
 }
 
 int MCRegisterInfo::getSEHRegNum(MCRegister Reg) const {
-  const DenseMap<MCRegister, int>::const_iterator I = L2SEHRegs.find(Reg);
+  const auto I = L2SEHRegs.find(Reg);
   if (I == L2SEHRegs.end())
     return (int)Reg.id();
   return I->second;
@@ -201,7 +201,7 @@ int MCRegisterInfo::getSEHRegNum(MCRegister Reg) const {
 int MCRegisterInfo::getCodeViewRegNum(MCRegister Reg) const {
   if (L2CVRegs.empty())
     report_fatal_error("target does not implement codeview register mapping");
-  const DenseMap<MCRegister, int>::const_iterator I = L2CVRegs.find(Reg);
+  const auto I = L2CVRegs.find(Reg);
   if (I == L2CVRegs.end())
     report_fatal_error("unknown codeview register " + (Reg.id() < getNumRegs()
                                                            ? getName(Reg)

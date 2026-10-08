@@ -20,7 +20,7 @@ class StringRef;
 
 struct MipsABIFlagsSection {
   // Internal representation of the fp_abi related values used in .module.
-  enum class FpABIKind { ANY, XX, S32, S64, SOFT };
+  enum class FpABIKind { ANY, XX, S32, S64, SOFT, SINGLE };
 
   // Version of flags structure.
   uint16_t Version = 0;
@@ -133,6 +133,8 @@ public:
       CPR1Size = Mips::AFL_REG_NONE;
     else if (P.hasMSA())
       CPR1Size = Mips::AFL_REG_128;
+    else if (P.isSingleFloat())
+      CPR1Size = Mips::AFL_REG_32;
     else
       CPR1Size = P.isFP64bit() ? Mips::AFL_REG_64 : Mips::AFL_REG_32;
   }
@@ -179,6 +181,8 @@ public:
     FpABI = FpABIKind::ANY;
     if (P.useSoftFloat())
       FpABI = FpABIKind::SOFT;
+    else if (P.isSingleFloat())
+      FpABI = FpABIKind::SINGLE;
     else if (P.isABI_N32() || P.isABI_N64())
       FpABI = FpABIKind::S64;
     else if (P.isABI_O32()) {

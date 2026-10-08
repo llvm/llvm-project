@@ -17,4 +17,4 @@ int totalordermagl(const long double *x, const long double *y);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_MATH_TOTALORDERMAGl_H
+#endif // LLVM_LIBC_SRC_MATH_TOTALORDERMAGL_H

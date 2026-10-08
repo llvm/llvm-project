@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck --enable-var-scope --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa < %s | FileCheck --enable-var-scope --check-prefix=GCN %s
 
 ; Check that vectorizer does not create slow misaligned loads
 

@@ -156,6 +156,19 @@ constexpr bool test() {
     }
   }
 
+  // const: !forward_range<const P> -> default_sentinel
+  {
+    using V = ForwardView;
+    using P = ForwardOnlyIfNonConstView;
+
+    static_assert(std::ranges::forward_range<const V>);
+    static_assert(std::ranges::common_range<const V>);
+    static_assert(!std::ranges::forward_range<const P>);
+
+    const std::ranges::lazy_split_view<V, P> cv;
+    static_assert(std::same_as<decltype(cv.end()), std::default_sentinel_t>);
+  }
+
   return true;
 }
 

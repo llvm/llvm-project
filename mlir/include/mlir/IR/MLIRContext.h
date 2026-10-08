@@ -145,6 +145,49 @@ public:
   ///  operations) without being caught by assertions or other means.
   void allowUnregisteredDialects(bool allow = true);
 
+  /// Begins a transient scope on the context, freezing the current state (all
+  /// loaded dialects, registered operations, types, attributes, affine
+  /// expressions, and singletons) as the base state. Subsequent types,
+  /// attributes, and expressions allocated will belong to the transient layer.
+  ///
+  /// Preconditions:
+  /// - The context must not already be in a transient scope.
+  /// - Must be called from a single-threaded execution context.
+  /// - Loading dialects, modifying dialect registries, or mutating base
+  ///   storage instances is not supported while in a transient scope.
+  void beginTransientScope();
+
+  /// Ends the transient scope and resets the context to the base state, pruning
+  /// all types, attributes, affine expressions, distinct attributes, and
+  /// unregistered operations created during the transient scope.
+  ///
+  /// Preconditions:
+  /// - The context must be in a transient scope.
+  /// - There must be no remaining IR (operations, blocks, regions,
+  ///   values) referencing the transient types/attributes.
+  /// - Must be called from a single-threaded execution context.
+  void endTransientScope();
+
+  /// Returns true if the context is currently in a transient scope.
+  bool isInTransientScope() const;
+
+  /// RAII scope guard that calls beginTransientScope() on construction and
+  /// endTransientScope() on destruction. Provides exception-safe and
+  /// forgetting-proof transient scope management.
+  class TransientScope {
+  public:
+    explicit TransientScope(MLIRContext &ctx) : ctx(ctx) {
+      ctx.beginTransientScope();
+    }
+    ~TransientScope() { ctx.endTransientScope(); }
+
+    TransientScope(const TransientScope &) = delete;
+    TransientScope &operator=(const TransientScope &) = delete;
+
+  private:
+    MLIRContext &ctx;
+  };
+
   /// Return true if multi-threading is enabled by the context.
   bool isMultithreadingEnabled();
 
@@ -211,6 +254,7 @@ public:
   // This is effectively private given that only MLIRContext.cpp can see the
   // MLIRContextImpl type.
   MLIRContextImpl &getImpl() { return *impl; }
+  const MLIRContextImpl &getImpl() const { return *impl; }
 
   /// Returns the diagnostic engine for this context.
   DiagnosticEngine &getDiagEngine();
@@ -266,6 +310,11 @@ public:
   /// Register a handler for handling actions that are dispatched through this
   /// context. A nullptr handler can be set to disable a previously set handler.
   void registerActionHandler(HandlerTy handler);
+
+  /// Return a reference to the currently registered action handler. Its target
+  /// can be used to gain access to the handler's state, if any.
+  const HandlerTy &getActionHandler() const;
+  HandlerTy &getActionHandler();
 
   /// Return true if a valid ActionHandler is set.
   bool hasActionHandler();

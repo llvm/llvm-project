@@ -7,7 +7,7 @@
 // CHECK-LABEL: @store_and_reload_sve_predicate_nxv1i1(
 // CHECK-SAME:                                         %[[MASK:.*]]: vector<[1]xi1>)
 func.func @store_and_reload_sve_predicate_nxv1i1(%mask: vector<[1]xi1>) -> vector<[1]xi1> {
-  // CHECK-NEXT: %[[ALLOCA:.*]] = memref.alloca() {alignment = 2 : i64} : memref<vector<[16]xi1>>
+  // CHECK-NEXT: %[[ALLOCA:.*]] = memref.alloca() alignment = 2 : memref<vector<[16]xi1>>
   %alloca = memref.alloca() : memref<vector<[1]xi1>>
   // CHECK-NEXT: %[[SVBOOL:.*]] = arm_sve.convert_to_svbool %[[MASK]] : vector<[1]xi1>
   // CHECK-NEXT: memref.store %[[SVBOOL]], %[[ALLOCA]][] : memref<vector<[16]xi1>>
@@ -24,7 +24,7 @@ func.func @store_and_reload_sve_predicate_nxv1i1(%mask: vector<[1]xi1>) -> vecto
 // CHECK-LABEL: @store_and_reload_sve_predicate_nxv2i1(
 // CHECK-SAME:                                         %[[MASK:.*]]: vector<[2]xi1>)
 func.func @store_and_reload_sve_predicate_nxv2i1(%mask: vector<[2]xi1>) -> vector<[2]xi1> {
-  // CHECK-NEXT: %[[ALLOCA:.*]] = memref.alloca() {alignment = 2 : i64} : memref<vector<[16]xi1>>
+  // CHECK-NEXT: %[[ALLOCA:.*]] = memref.alloca() alignment = 2 : memref<vector<[16]xi1>>
   %alloca = memref.alloca() : memref<vector<[2]xi1>>
   // CHECK-NEXT: %[[SVBOOL:.*]] = arm_sve.convert_to_svbool %[[MASK]] : vector<[2]xi1>
   // CHECK-NEXT: memref.store %[[SVBOOL]], %[[ALLOCA]][] : memref<vector<[16]xi1>>
@@ -41,7 +41,7 @@ func.func @store_and_reload_sve_predicate_nxv2i1(%mask: vector<[2]xi1>) -> vecto
 // CHECK-LABEL: @store_and_reload_sve_predicate_nxv4i1(
 // CHECK-SAME:                                         %[[MASK:.*]]: vector<[4]xi1>)
 func.func @store_and_reload_sve_predicate_nxv4i1(%mask: vector<[4]xi1>) -> vector<[4]xi1> {
-  // CHECK-NEXT: %[[ALLOCA:.*]] = memref.alloca() {alignment = 2 : i64} : memref<vector<[16]xi1>>
+  // CHECK-NEXT: %[[ALLOCA:.*]] = memref.alloca() alignment = 2 : memref<vector<[16]xi1>>
   %alloca = memref.alloca() : memref<vector<[4]xi1>>
   // CHECK-NEXT: %[[SVBOOL:.*]] = arm_sve.convert_to_svbool %[[MASK]] : vector<[4]xi1>
   // CHECK-NEXT: memref.store %[[SVBOOL]], %[[ALLOCA]][] : memref<vector<[16]xi1>>
@@ -58,7 +58,7 @@ func.func @store_and_reload_sve_predicate_nxv4i1(%mask: vector<[4]xi1>) -> vecto
 // CHECK-LABEL: @store_and_reload_sve_predicate_nxv8i1(
 // CHECK-SAME:                                         %[[MASK:.*]]: vector<[8]xi1>)
 func.func @store_and_reload_sve_predicate_nxv8i1(%mask: vector<[8]xi1>) -> vector<[8]xi1> {
-  // CHECK-NEXT: %[[ALLOCA:.*]] = memref.alloca() {alignment = 2 : i64} : memref<vector<[16]xi1>>
+  // CHECK-NEXT: %[[ALLOCA:.*]] = memref.alloca() alignment = 2 : memref<vector<[16]xi1>>
   %alloca = memref.alloca() : memref<vector<[8]xi1>>
   // CHECK-NEXT: %[[SVBOOL:.*]] = arm_sve.convert_to_svbool %[[MASK]] : vector<[8]xi1>
   // CHECK-NEXT: memref.store %[[SVBOOL]], %[[ALLOCA]][] : memref<vector<[16]xi1>>
@@ -75,7 +75,7 @@ func.func @store_and_reload_sve_predicate_nxv8i1(%mask: vector<[8]xi1>) -> vecto
 // CHECK-LABEL: @store_and_reload_sve_predicate_nxv16i1(
 // CHECK-SAME:                                         %[[MASK:.*]]: vector<[16]xi1>)
 func.func @store_and_reload_sve_predicate_nxv16i1(%mask: vector<[16]xi1>) -> vector<[16]xi1> {
-  // CHECK-NEXT: %[[ALLOCA:.*]] = memref.alloca() {alignment = 2 : i64} : memref<vector<[16]xi1>>
+  // CHECK-NEXT: %[[ALLOCA:.*]] = memref.alloca() alignment = 2 : memref<vector<[16]xi1>>
   %alloca = memref.alloca() : memref<vector<[16]xi1>>
   // CHECK-NEXT: memref.store %[[MASK]], %[[ALLOCA]][] : memref<vector<[16]xi1>>
   memref.store %mask, %alloca[] : memref<vector<[16]xi1>>
@@ -93,7 +93,7 @@ func.func @store_and_reload_sve_predicate_nxv16i1(%mask: vector<[16]xi1>) -> vec
 // CHECK-LABEL: @store_and_reload_unsupported_type(
 // CHECK-SAME:                                         %[[MASK:.*]]: vector<[7]xi1>)
 func.func @store_and_reload_unsupported_type(%mask: vector<[7]xi1>) -> vector<[7]xi1> {
-  // CHECK-NEXT: %[[ALLOCA:.*]] = memref.alloca() {alignment = 2 : i64} : memref<vector<[7]xi1>>
+  // CHECK-NEXT: %[[ALLOCA:.*]] = memref.alloca() alignment = 2 : memref<vector<[7]xi1>>
   %alloca = memref.alloca() : memref<vector<[7]xi1>>
   // CHECK-NEXT: memref.store %[[MASK]], %[[ALLOCA]][] : memref<vector<[7]xi1>>
   memref.store %mask, %alloca[] : memref<vector<[7]xi1>>
@@ -110,7 +110,7 @@ func.func @store_and_reload_unsupported_type(%mask: vector<[7]xi1>) -> vector<[7
 func.func @store_2d_mask_and_reload_slice(%mask: vector<3x[8]xi1>) -> vector<[8]xi1> {
   // CHECK-NEXT: %[[C0:.*]] = arith.constant 0 : index
   %c0 = arith.constant 0 : index
-  // CHECK-NEXT: %[[ALLOCA:.*]] = memref.alloca() {alignment = 2 : i64} : memref<vector<3x[16]xi1>>
+  // CHECK-NEXT: %[[ALLOCA:.*]] = memref.alloca() alignment = 2 : memref<vector<3x[16]xi1>>
   %alloca = memref.alloca() : memref<vector<3x[8]xi1>>
   // CHECK-NEXT: %[[SVBOOL:.*]] = arm_sve.convert_to_svbool %[[MASK]] : vector<3x[8]xi1>
   // CHECK-NEXT: memref.store %[[SVBOOL]], %[[ALLOCA]][] : memref<vector<3x[16]xi1>>

@@ -55,7 +55,7 @@ public:
     NumUnusedBits += Utils::getNumBits(I);
   }
 
-  virtual void insert(Instruction *I, ScalarEvolution &SE) = 0;
+  virtual bool tryInsert(Instruction *I, ScalarEvolution &SE) = 0;
 
   unsigned getFirstUnusedElementIdx() const {
     for (unsigned ElmIdx : seq<unsigned>(0, Seeds.size()))
@@ -143,8 +143,8 @@ public:
     assert(all_of(Seeds, [](auto *S) { return isa<LoadOrStoreT>(S); }) &&
            "Expected Load or Store instructions!");
     auto Cmp = [&SE](Instruction *I0, Instruction *I1) {
-      return Utils::atLowerAddress(cast<LoadOrStoreT>(I0),
-                                   cast<LoadOrStoreT>(I1), SE);
+      return *Utils::atLowerAddress(cast<LoadOrStoreT>(I0),
+                                    cast<LoadOrStoreT>(I1), SE);
     };
     std::sort(Seeds.begin(), Seeds.end(), Cmp);
   }
@@ -154,14 +154,21 @@ public:
                   "Expected LoadInst or StoreInst!");
     assert(isa<LoadOrStoreT>(MemI) && "Expected Load or Store!");
   }
-  void insert(sandboxir::Instruction *I, ScalarEvolution &SE) override {
+  bool tryInsert(sandboxir::Instruction *I, ScalarEvolution &SE) override {
     assert(isa<LoadOrStoreT>(I) && "Expected a Store or a Load!");
+    // Early return if we can't determine the mem access ordering.
+    auto DiffOpt = Utils::getPointerDiffInBytes(
+        cast<LoadOrStoreT>(Seeds.back()), cast<LoadOrStoreT>(I), SE);
+    if (!DiffOpt)
+      return false;
+
     auto Cmp = [&SE](Instruction *I0, Instruction *I1) {
-      return Utils::atLowerAddress(cast<LoadOrStoreT>(I0),
-                                   cast<LoadOrStoreT>(I1), SE);
+      return *Utils::atLowerAddress(cast<LoadOrStoreT>(I0),
+                                    cast<LoadOrStoreT>(I1), SE);
     };
     // Find the first element after I in mem. Then insert I before it.
     insertAt(llvm::upper_bound(*this, I, Cmp), I);
+    return true;
   }
 };
 

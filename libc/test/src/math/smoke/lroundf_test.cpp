@@ -10,4 +10,4 @@
 
 #include "src/math/lroundf.h"
 
-LIST_ROUND_TO_INTEGER_TESTS(float, long, LIBC_NAMESPACE::lroundf)
+LIST_ROUND_TO_INTEGER_TESTS(Lroundf, float, long, LIBC_NAMESPACE::lroundf)

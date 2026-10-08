@@ -9,6 +9,7 @@
 ; CHECK-SPIRV-DAG: %[[#GlobalIntPtr:]] = OpTypePointer CrossWorkgroup %[[#Int]]
 ; CHECK-SPIRV-DAG: %[[#PrivateIntPtr:]] = OpTypePointer Function %[[#Int]]
 ; CHECK-SPIRV-DAG: %[[#GenericIntPtr:]] = OpTypePointer Generic %[[#Int]]
+; CHECK-SPIRV-DAG: %[[#Eight:]] = OpConstant %[[#Int]] 8
 
 %id = type { %arr }
 %arr = type { [1 x i64] }
@@ -82,6 +83,19 @@ entry:
   ret void
 }
 
+; CHECK-SPIRV:      OpFunction
+; CHECK-SPIRV:      %[[#FencePtr:]] = OpFunctionParameter %[[#GenericCharPtr]]
+; CHECK-SPIRV:      %[[#Sem:]] = OpGenericPtrMemSemantics %[[#Int]] %[[#FencePtr]]
+; CHECK-SPIRV-NEXT: %[[#Fence:]] = OpShiftRightLogical %[[#Int]] %[[#Sem]] %[[#Eight]]
+; CHECK-SPIRV-NEXT: OpReturnValue %[[#Fence]]
+; CHECK-SPIRV:      OpFunctionEnd
+
+define spir_func i32 @test_get_fence(ptr addrspace(4) %p) {
+entry:
+  %r = call spir_func i32 @_Z9get_fencePU3AS4v(ptr addrspace(4) %p)
+  ret i32 %r
+}
+
 declare spir_func ptr addrspace(1) @_Z33__spirv_GenericCastToPtr_ToGlobalPvi(ptr addrspace(4), i32)
 declare spir_func ptr addrspace(3) @_Z32__spirv_GenericCastToPtr_ToLocalPvi(ptr addrspace(4), i32)
 declare spir_func ptr @_Z34__spirv_GenericCastToPtr_ToPrivatePvi(ptr addrspace(4), i32)
@@ -92,6 +106,7 @@ declare spir_func ptr @_Z42__spirv_GenericCastToPtrExplicit_ToPrivatePvi(ptr add
 declare spir_func ptr addrspace(1) @_Z9to_globalPv(ptr addrspace(4))
 declare spir_func ptr addrspace(3) @_Z8to_localPv(ptr addrspace(4))
 declare spir_func ptr @_Z10to_privatePv(ptr addrspace(4))
+declare spir_func i32 @_Z9get_fencePU3AS4v(ptr addrspace(4))
 
 ; No mangling
 

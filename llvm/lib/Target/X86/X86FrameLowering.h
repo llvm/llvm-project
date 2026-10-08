@@ -280,8 +280,8 @@ private:
                                        uint64_t Align) const;
 
   /// Emit target zero call-used regs.
-  void emitZeroCallUsedRegs(BitVector RegsToZero,
-                            MachineBasicBlock &MBB) const override;
+  void emitZeroCallUsedRegs(BitVector RegsToZero, MachineBasicBlock &MBB,
+                            RegScavenger *RS) const override;
 
   void adjustFrameForMsvcCxxEh(MachineFunction &MF) const;
 

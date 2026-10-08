@@ -1,5 +1,5 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=fiji -mattr=-flat-for-global < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgpu6.00 < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgpu8.03 -mattr=-flat-for-global < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=GCN -check-prefix=VI %s
 
 ; FIXME: Can the SI case form the mac through the casts?
 

@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_RISCV_RISCVMACHINEFUNCTIONINFO_H
 
 #include "RISCVSubtarget.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -66,12 +67,12 @@ private:
   /// Size of stack frame to save callee saved registers
   unsigned CalleeSavedStackSize = 0;
 
-  /// amount of bytes on stack consumed by the arguments being passed on the
-  /// stack
-  unsigned ArgumentStackSize = 0;
-
-  /// Incoming ByVal arguments
-  SmallVector<SDValue, 8> IncomingByValArgs;
+  /// Incoming indirect argument pointers saved as virtual registers, keyed by
+  /// formal parameter index. Used for musttail forwarding of indirect args.
+  /// Virtual registers (not SDValues) are used because the SelectionDAG is
+  /// cleared between basic blocks, and musttail calls may be in non-entry
+  /// blocks.
+  DenseMap<unsigned, Register> IncomingIndirectArgs;
 
   /// Is there any vector argument or return?
   bool IsVectorCall = false;
@@ -93,6 +94,9 @@ private:
 
   /// Does it probe the stack for a dynamic allocation?
   bool HasDynamicAllocation = false;
+
+  /// Whether the function has cf-protection-branch module flag set.
+  bool CFProtectionBranch = false;
 
 public:
   RISCVMachineFunctionInfo(const Function &F, const RISCVSubtarget *STI);
@@ -150,12 +154,14 @@ public:
   unsigned getCalleeSavedStackSize() const { return CalleeSavedStackSize; }
   void setCalleeSavedStackSize(unsigned Size) { CalleeSavedStackSize = Size; }
 
-  unsigned getArgumentStackSize() const { return ArgumentStackSize; }
-  void setArgumentStackSize(unsigned size) { ArgumentStackSize = size; }
-
-  void addIncomingByValArgs(SDValue Val) { IncomingByValArgs.push_back(Val); }
-  SDValue getIncomingByValArgs(unsigned Idx) { return IncomingByValArgs[Idx]; }
-  unsigned getIncomingByValArgsSize() const { return IncomingByValArgs.size(); }
+  void setIncomingIndirectArg(unsigned ArgIndex, Register Reg) {
+    IncomingIndirectArgs[ArgIndex] = Reg;
+  }
+  Register getIncomingIndirectArg(unsigned ArgIndex) const {
+    auto It = IncomingIndirectArgs.find(ArgIndex);
+    assert(It != IncomingIndirectArgs.end() && "No incoming indirect arg");
+    return It->second;
+  }
 
   enum class PushPopKind { None = 0, StdExtZcmp, VendorXqccmp };
 
@@ -233,6 +239,8 @@ public:
 
   bool hasDynamicAllocation() const { return HasDynamicAllocation; }
   void setDynamicAllocation() { HasDynamicAllocation = true; }
+
+  bool hasCFProtectionBranch() const { return CFProtectionBranch; }
 };
 
 } // end namespace llvm

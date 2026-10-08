@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}inline_asm_input_v2i16:
 ; GCN: s_mov_b32 s{{[0-9]+}}, s{{[0-9]+}}

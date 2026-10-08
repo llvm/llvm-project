@@ -175,3 +175,121 @@ namespace GH181166 {
   template <class ...Ts> struct B {};
   using T = decltype(f<B>());
 } // namespace GH181166
+
+// Matching of template template arguments whose constant parameters have
+// reference type. The argument value is an expression, so its type drops the
+// top-level reference (`auto &` is seen as `auto`).
+//
+// Names spell out the types of constant template parameters: `TakesFoo` has a
+// template template parameter P whose parameter has type `Foo`, and `Foo_Bar`
+// matches P against a template template argument A whose parameter has type
+// `Bar`. A is a template template parameter, a class template `BarClass`, or a
+// member template `MemberBar`.
+namespace nttp_ref {
+  template <template <auto &> class> struct TakesAutoRef; // #TakesAutoRef
+  template <template <auto &> class TT> using AutoRef_AutoRef = TakesAutoRef<TT>;
+  template <template <auto> class TT> using AutoRef_Auto = TakesAutoRef<TT>;
+  template <template <auto &&> class TT> using AutoRef_AutoRRef = TakesAutoRef<TT>;
+
+  template <template <auto> class> struct TakesAuto; // #TakesAuto
+  template <template <auto &> class TT> using Auto_AutoRef = TakesAuto<TT>;
+  template <template <auto &&> class TT> using Auto_AutoRRef = TakesAuto<TT>;
+  template <template <const auto &> class TT> using Auto_ConstAutoRef = TakesAuto<TT>;
+
+  template <template <const auto &> class> struct TakesConstAutoRef; // #TakesConstAutoRef
+  template <template <const auto &> class TT> using ConstAutoRef_ConstAutoRef = TakesConstAutoRef<TT>;
+  template <template <auto &> class TT> using ConstAutoRef_AutoRef = TakesConstAutoRef<TT>;
+  template <template <auto> class TT> using ConstAutoRef_Auto = TakesConstAutoRef<TT>;
+
+  template <template <auto &...> class> struct TakesAutoRefPack;
+  template <template <auto &...> class TT> using AutoRefPack_AutoRefPack = TakesAutoRefPack<TT>;
+
+  template <template <decltype(auto)> class> struct TakesDecltypeAuto; // #TakesDecltypeAuto
+  template <template <decltype(auto)> class TT> using DecltypeAuto_DecltypeAuto = TakesDecltypeAuto<TT>;
+
+  // A class template argument has its parameters at the same depth as those
+  // of the template template parameter.
+  template <auto &> struct AutoRefClass;
+  template <auto &&> struct AutoRRefClass;
+  template <auto> struct AutoClass;
+  using AutoRef_AutoRefClass = TakesAutoRef<AutoRefClass>;
+  using AutoRef_AutoRRefClass = TakesAutoRef<AutoRRefClass>;
+  using Auto_AutoRefClass = TakesAuto<AutoRefClass>;
+  using AutoRef_AutoClass = TakesAutoRef<AutoClass>;
+
+  template <class U, template <U &> class> struct TakesDependentRef;
+  template <class U, template <U &> class TT> using DependentRef_DependentRef = TakesDependentRef<U, TT>;
+
+  template <class U> struct Outer {
+    template <template <U &> class> struct TakesOuterRef;
+    template <template <U &> class TT> using OuterRef_OuterRef = TakesOuterRef<TT>;
+  };
+
+  template <template <class T, T &> class> struct TakesTypeAndRef;
+  template <template <class T, T &> class TT> using TypeAndRef_TypeAndRef = TakesTypeAndRef<TT>;
+  template <template <class T, T> class TT> using TypeAndRef_TypeAndValue = TakesTypeAndRef<TT>;
+  template <class T, T &> struct TypeAndRefClass;
+  using TypeAndRef_TypeAndRefClass = TakesTypeAndRef<TypeAndRefClass>;
+
+  // The argument for P's parameter must be a valid argument for A's parameter.
+  template <template <int> class> struct TakesInt; // #TakesInt
+  // expected-error@-1 {{value of type 'int' is not implicitly convertible to 'int &'}}
+  template <template <int &> class TT> using Int_IntRef = TakesInt<TT>;
+  // expected-note@-1 {{different template parameters}}
+  template <template <const int &> class TT> using Int_ConstIntRef = TakesInt<TT>;
+  // expected-error@#TakesInt {{conversion from 'int' to 'const int &' in converted constant expression would bind reference to a temporary}}
+  // expected-note@-2 {{different template parameters}}
+  template <template <auto &> class TT> using Int_AutoRef = TakesInt<TT>;
+  // expected-error@#TakesInt {{value of type 'int' is not implicitly convertible to 'int &'}}
+  // expected-note@-2 {{different template parameters}}
+  using Int_AutoRefClass = TakesInt<AutoRefClass>;
+  // expected-error@#TakesInt {{value of type 'int' is not implicitly convertible to 'int &'}}
+  // expected-note@-2 {{different template parameters}}
+  template <template <auto &&> class TT> using Int_AutoRRef = TakesInt<TT>;
+  // expected-error@#TakesInt {{non-type template parameter has rvalue reference type 'int &&'}}
+  // expected-note@-2 {{different template parameters}}
+  template <template <const auto &> class TT> using Int_ConstAutoRef = TakesInt<TT>;
+  // expected-error@#TakesInt {{conversion from 'int' to 'const int &' in converted constant expression would bind reference to a temporary}}
+  // expected-note@-2 {{different template parameters}}
+
+  template <template <int...> class> struct TakesIntPack; // #TakesIntPack
+  template <template <auto &...> class TT> using IntPack_AutoRefPack = TakesIntPack<TT>;
+  // expected-error@#TakesIntPack {{value of type 'int' is not implicitly convertible to 'int &'}}
+  // expected-note@-2 {{different template parameters}}
+
+  template <template <const int &> class> struct TakesConstIntRef; // #TakesConstIntRef
+  template <template <int &> class TT> using ConstIntRef_IntRef = TakesConstIntRef<TT>;
+  // expected-error@#TakesConstIntRef {{value of type 'const int' is not implicitly convertible to 'int &'}}
+  // expected-note@-2 {{different template parameters}}
+
+  template <template <int *> class> struct TakesIntPtr; // #TakesIntPtr
+  template <template <int> class TT> using IntPtr_Int = TakesIntPtr<TT>;
+  // expected-error@#TakesIntPtr {{value of type 'int *' is not implicitly convertible to 'int'}}
+  // expected-note@-2 {{different template parameters}}
+  template <template <auto &> class TT> using IntPtr_AutoRef = TakesIntPtr<TT>;
+  // expected-error@#TakesIntPtr {{value of type 'int *' is not implicitly convertible to 'int *&'}}
+  // expected-note@-2 {{different template parameters}}
+
+  // Only a pointer can initialize a parameter of type `auto *`.
+  template <template <auto *> class TT> using Int_AutoPtr = TakesInt<TT>;
+  // expected-error@#TakesInt {{with type 'auto *' has incompatible initializer of type 'int'}}
+  // expected-note@-2 {{different template parameters}}
+  template <template <auto *> class TT> using AutoRef_AutoPtr = TakesAutoRef<TT>;
+  // expected-error@#TakesAutoRef {{with type 'auto *' has incompatible initializer of type 'auto'}}
+  // expected-note@-2 {{different template parameters}}
+  template <template <auto *> class TT> using Auto_AutoPtr = TakesAuto<TT>;
+  // expected-error@#TakesAuto {{with type 'auto *' has incompatible initializer of type 'auto'}}
+  // expected-note@-2 {{different template parameters}}
+  template <template <auto *> class TT> using ConstAutoRef_AutoPtr = TakesConstAutoRef<TT>;
+  // expected-error@#TakesConstAutoRef {{with type 'auto *' has incompatible initializer of type 'const auto'}}
+  // expected-note@-2 {{different template parameters}}
+  template <template <auto *> class TT> using DecltypeAuto_AutoPtr = TakesDecltypeAuto<TT>;
+  // expected-error@#TakesDecltypeAuto {{with type 'auto *' has incompatible initializer of type 'decltype(auto)'}}
+  // expected-note@-2 {{different template parameters}}
+  template <class> struct DependentAutoPtr {
+    template <auto *> struct MemberAutoPtr;
+    using Auto_MemberAutoPtr = TakesAuto<MemberAutoPtr>;
+    // expected-error@#TakesAuto {{with type 'auto *' has incompatible initializer of type 'auto'}}
+    // expected-note@-2 {{different template parameters}}
+  };
+} // namespace nttp_ref

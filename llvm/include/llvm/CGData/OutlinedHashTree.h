@@ -21,8 +21,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <unordered_map>
-
 namespace llvm {
 
 /// A HashNode is an entry in an OutlinedHashTree, holding a hash value
@@ -35,8 +33,7 @@ struct HashNode {
   /// The number of terminals in the sequence ending at this node.
   std::optional<unsigned> Terminals;
   /// The successors of this node.
-  /// We don't use DenseMap as a stable_hash value can be tombstone.
-  std::unordered_map<stable_hash, std::unique_ptr<HashNode>> Successors;
+  DenseMap<stable_hash, std::unique_ptr<HashNode>> Successors;
 };
 
 class OutlinedHashTree {

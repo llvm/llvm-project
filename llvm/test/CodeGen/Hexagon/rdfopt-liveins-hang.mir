@@ -1,0 +1,541 @@
+# RUN: llc -mtriple=hexagon-unknown-linux-musl -run-pass=hexagon-rdf-opt \
+# RUN:     -verify-machineinstrs -o /dev/null %s
+#
+# Regression test for a HexagonRDFOpt compile-time hang.
+#
+# The pass used to recompute live-in registers for every block in one
+# big batch. On some functions the live-in values never stopped changing,
+# causing the compiler to hang
+#
+# The fix processes blocks one at a time in post-order and stops as
+# soon as nothing changes, with a pass limit as a safety net.
+# This test should finish in well under a second.
+
+--- |
+  target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
+  target triple = "hexagon-unknown-linux-musl"
+
+  %struct.folio = type { %struct.page }
+  %struct.page = type { %struct.memdesc_flags_t, %struct.anon, i32, ptr, i32, i32, i32, i32 }
+  %struct.memdesc_flags_t = type { i32 }
+  %struct.anon = type { %struct.list_head }
+  %struct.list_head = type { ptr, ptr }
+  %struct.dnode_of_data = type { ptr, %struct.folio, ptr, i32, i32 }
+
+  @data_blkaddr_node_folio = dso_local global %struct.folio zeroinitializer, align 4
+  @data_blkaddr_folio = dso_local local_unnamed_addr global ptr @data_blkaddr_node_folio, align 4
+  @f2fs_seek_block_folio = dso_local global %struct.folio zeroinitializer, align 4
+  @f2fs_seek_block___trans_tmp_8 = dso_local local_unnamed_addr global ptr @f2fs_seek_block_folio, align 4
+  @f2fs_seek_block_maxbytes = dso_local local_unnamed_addr global i32 2, align 4
+  @mem_map = dso_local local_unnamed_addr global ptr null, align 4
+  @__phys_offset = dso_local local_unnamed_addr global i32 0, align 4
+  @f2fs_seek_block_pgofs = dso_local local_unnamed_addr global i32 0, align 4
+  @f2fs_seek_block___trans_tmp_7 = dso_local local_unnamed_addr global ptr null, align 4
+  @f2fs_seek_block___trans_tmp_9 = dso_local local_unnamed_addr global i8 0, align 1
+  @f2fs_seek_block___trans_tmp_1 = dso_local local_unnamed_addr global i8 0, align 1
+  @f2fs_seek_block___trans_tmp_14 = dso_local local_unnamed_addr global i32 0, align 4
+  @f2fs_seek_block_end_offset = dso_local local_unnamed_addr global i32 0, align 4
+
+  declare i32 @get_inline_xattr_addrs(ptr noundef) local_unnamed_addr #0
+
+  ; Function Attrs: nounwind
+  define dso_local void @f2fs_seek_block(ptr noundef %file, i32 noundef %whence) local_unnamed_addr #1 {
+  entry:
+    %dn = alloca %struct.dnode_of_data, align 4
+    %0 = load ptr, ptr %file, align 4, !tbaa !9
+    %1 = load ptr, ptr %0, align 4, !tbaa !13
+    call void @llvm.lifetime.start.p0(ptr nonnull %dn) #4
+    call void @llvm.memset.p0.i32(ptr noundef nonnull align 4 dereferenceable(52) %dn, i8 -1, i32 52, i1 false), !annotation !16
+    %call = tail call i64 @i_size_read(ptr noundef %1) #4
+    %cmp = icmp slt i64 %call, 1
+    br i1 %cmp, label %fail, label %for.cond.preheader
+
+  for.cond.preheader:                               ; preds = %entry
+    %conv = trunc i64 %call to i32
+    br label %for.body
+
+  for.body:                                         ; preds = %for.inc34.thread, %for.inc34, %for.cond.preheader
+    %conv374 = phi i64 [ 0, %for.cond.preheader ], [ 2, %for.inc34 ], [ 2, %for.inc34.thread ]
+    %2 = icmp eq i32 %conv, 0
+    store ptr %1, ptr %dn, align 4, !tbaa !17
+    %sunkaddr = getelementptr inbounds i8, ptr %dn, i32 40
+    store ptr null, ptr %sunkaddr, align 4, !tbaa !27
+    %sunkaddr99 = getelementptr inbounds i8, ptr %dn, i32 44
+    store i32 0, ptr %sunkaddr99, align 4, !tbaa !28
+    %3 = load i32, ptr @f2fs_seek_block_pgofs, align 4, !tbaa !29
+    call void @f2fs_get_dnode_of_data(ptr noundef nonnull %dn, i32 noundef %3, i32 noundef 1) #4
+    br i1 %2, label %if.end11, label %if.then6
+
+  if.then6:                                         ; preds = %for.body
+    %4 = icmp eq i32 %whence, 0
+    br i1 %4, label %found, label %for.inc34.thread
+
+  if.end11:                                         ; preds = %for.body
+    %5 = load ptr, ptr @mem_map, align 4, !tbaa !30
+    %sub.ptr.rhs.cast.i = ptrtoint ptr %5 to i32
+    %sub.ptr.sub.i = sub i32 0, %sub.ptr.rhs.cast.i
+    %sub.ptr.div.i = sdiv exact i32 %sub.ptr.sub.i, 36
+    %6 = load i32, ptr @__phys_offset, align 4, !tbaa !32
+    %add1.i = shl i32 %sub.ptr.div.i, 12
+    %shr2.i = add i32 %add1.i, %6
+    %shl.i = and i32 %shr2.i, -4096
+    %7 = inttoptr i32 %shl.i to ptr
+    store ptr %7, ptr @f2fs_seek_block___trans_tmp_7, align 4, !tbaa !33
+    %cgep96 = getelementptr inbounds i8, ptr %7, i32 4
+    %p.sroa.5.0.copyload = load i16, ptr %cgep96, align 4, !tbaa !35
+    %tobool13 = icmp ne i16 %p.sroa.5.0.copyload, 0
+    %storedv = zext i1 %tobool13 to i8
+    store i8 %storedv, ptr @f2fs_seek_block___trans_tmp_9, align 1, !tbaa !37
+    store i8 %storedv, ptr @f2fs_seek_block___trans_tmp_1, align 1, !tbaa !37
+    br i1 %tobool13, label %cond.true, label %cond.end
+
+  cond.true:                                        ; preds = %if.end11
+    %call19 = call i32 @get_inline_xattr_addrs(ptr noundef %1) #4
+    br label %cond.end
+
+  cond.end:                                         ; preds = %cond.true, %if.end11
+    %cond = phi i32 [ %call19, %cond.true ], [ 2, %if.end11 ]
+    store i32 %cond, ptr @f2fs_seek_block___trans_tmp_14, align 4, !tbaa !32
+    store i32 %cond, ptr @f2fs_seek_block_end_offset, align 4, !tbaa !29
+    %cgep95 = getelementptr inbounds i8, ptr %dn, i32 48
+    %8 = load i32, ptr %cgep95, align 4, !tbaa !39
+    %cmp2173 = icmp ult i32 %8, %cond
+    br i1 %cmp2173, label %for.body23, label %for.inc34
+
+  for.body23:                                       ; preds = %for.inc, %cond.end
+    %9 = phi i32 [ %23, %for.inc ], [ %8, %cond.end ]
+    %10 = load ptr, ptr %dn, align 4, !tbaa !17
+    %11 = load ptr, ptr @mem_map, align 4, !tbaa !30
+    %12 = load i32, ptr @__phys_offset, align 4, !tbaa !32
+    %tobool.not.i.i = icmp eq ptr %10, null
+    br i1 %tobool.not.i.i, label %f2fs_data_blkaddr.exit, label %cond.true.i.i
+
+  cond.true.i.i:                                    ; preds = %for.body23
+    %13 = load i32, ptr %10, align 4, !tbaa !40
+    br label %f2fs_data_blkaddr.exit
+
+  f2fs_data_blkaddr.exit:                           ; preds = %cond.true.i.i, %for.body23
+    %cond.i.i = phi i32 [ %13, %cond.true.i.i ], [ 0, %for.body23 ]
+    %sub.ptr.rhs.cast.i.i.i = ptrtoint ptr %11 to i32
+    %sub.ptr.sub.i.i.i = sub i32 0, %sub.ptr.rhs.cast.i.i.i
+    %sub.ptr.div.i.i.i = sdiv exact i32 %sub.ptr.sub.i.i.i, 36
+    %add1.i.i.i = shl i32 %sub.ptr.div.i.i.i, 12
+    %shr2.i.i.i = add i32 %add1.i.i.i, %12
+    %shl.i.i.i = and i32 %shr2.i.i.i, -4096
+    %14 = inttoptr i32 %shl.i.i.i to ptr
+    %cgep97 = getelementptr inbounds [2 x i8], ptr %14, i32 %cond.i.i
+    %15 = load i16, ptr %cgep97, align 2, !tbaa !35
+    %conv.i.i = sext i16 %15 to i32
+    %add.i.i = sub nsw i32 0, %conv.i.i
+    %tobool25.not = icmp eq i32 %9, %add.i.i
+    br i1 %tobool25.not, label %for.inc, label %land.lhs.true
+
+  land.lhs.true:                                    ; preds = %f2fs_data_blkaddr.exit
+    %call26 = call i32 @F2FS_I_SB(ptr noundef %1) #4
+    %tobool27.not = icmp eq i32 %call26, 0
+    %sunkaddr100 = getelementptr inbounds i8, ptr %dn, i32 48
+    %.pre78 = load i32, ptr %sunkaddr100, align 4, !tbaa !32
+    br i1 %tobool27.not, label %for.inc, label %if.then28
+
+  if.then28:                                        ; preds = %land.lhs.true
+    %16 = load ptr, ptr %file, align 4, !tbaa !9
+    %__trans_tmp_18.sroa.0.0.copyload.i = load ptr, ptr %dn, align 4, !tbaa !42
+    %17 = load ptr, ptr @mem_map, align 4, !tbaa !30
+    %18 = load i32, ptr @__phys_offset, align 4, !tbaa !32
+    %tobool.not.i.i56 = icmp eq ptr %__trans_tmp_18.sroa.0.0.copyload.i, null
+    br i1 %tobool.not.i.i56, label %__found_offset.exit, label %cond.true.i.i57
+
+  cond.true.i.i57:                                  ; preds = %if.then28
+    %19 = load i32, ptr %__trans_tmp_18.sroa.0.0.copyload.i, align 4, !tbaa !40
+    br label %__found_offset.exit
+
+  __found_offset.exit:                              ; preds = %cond.true.i.i57, %if.then28
+    %cond.i.i58 = phi i32 [ %19, %cond.true.i.i57 ], [ 0, %if.then28 ]
+    %sub.ptr.rhs.cast.i.i.i59 = ptrtoint ptr %17 to i32
+    %sub.ptr.sub.i.i.i60 = sub i32 0, %sub.ptr.rhs.cast.i.i.i59
+    %sub.ptr.div.i.i.i61 = sdiv exact i32 %sub.ptr.sub.i.i.i60, 36
+    %add1.i.i.i62 = shl i32 %sub.ptr.div.i.i.i61, 12
+    %shr2.i.i.i63 = add i32 %add1.i.i.i62, %18
+    %shl.i.i.i64 = and i32 %shr2.i.i.i63, -4096
+    %20 = inttoptr i32 %shl.i.i.i64 to ptr
+    %cgep98 = getelementptr inbounds [2 x i8], ptr %20, i32 %cond.i.i58
+    %21 = load i16, ptr %cgep98, align 2, !tbaa !35
+    %conv.i.i66 = sext i16 %21 to i32
+    %22 = load ptr, ptr %16, align 4, !tbaa !13
+    %call3.i = call i32 @get_inline_xattr_addrs(ptr noundef %22) #4
+    %add.i.i67 = sub nsw i32 0, %conv.i.i66
+    %tobool4.not.i = icmp ne i32 %.pre78, %add.i.i67
+    %tobool.i = icmp ne i32 %call3.i, 0
+    %retval.0.i = select i1 %tobool4.not.i, i1 %tobool.i, i1 false
+    br i1 %retval.0.i, label %found, label %__found_offset.exit.for.inc_crit_edge
+
+  __found_offset.exit.for.inc_crit_edge:            ; preds = %__found_offset.exit
+    %sunkaddr101 = getelementptr inbounds i8, ptr %dn, i32 48
+    %.pre = load i32, ptr %sunkaddr101, align 4, !tbaa !39
+    br label %for.inc
+
+  for.inc:                                          ; preds = %__found_offset.exit.for.inc_crit_edge, %land.lhs.true, %f2fs_data_blkaddr.exit
+    %23 = phi i32 [ %.pre, %__found_offset.exit.for.inc_crit_edge ], [ %9, %f2fs_data_blkaddr.exit ], [ %.pre78, %land.lhs.true ]
+    %24 = load i32, ptr @f2fs_seek_block_pgofs, align 4, !tbaa !29
+    %inc = add nsw i32 %24, 1
+    store i32 %inc, ptr @f2fs_seek_block_pgofs, align 4, !tbaa !29
+    %25 = load i32, ptr @f2fs_seek_block_end_offset, align 4, !tbaa !29
+    %cmp21 = icmp ult i32 %23, %25
+    br i1 %cmp21, label %for.body23, label %for.inc34, !llvm.loop !43
+
+  for.inc34:                                        ; preds = %for.inc, %cond.end
+    %26 = icmp ugt i64 %call, 2
+    br i1 %26, label %for.body, label %for.end35, !llvm.loop !45
+
+  for.inc34.thread:                                 ; preds = %if.then6
+    %27 = icmp ugt i64 %call, 2
+    %28 = load i32, ptr @f2fs_seek_block_pgofs, align 4, !tbaa !29
+    %call9 = call i32 @f2fs_get_next_page_offset(ptr noundef nonnull %dn, i32 noundef %28) #4
+    store i32 %call9, ptr @f2fs_seek_block_pgofs, align 4, !tbaa !29
+    br i1 %27, label %for.body, label %found, !llvm.loop !45
+
+  for.end35:                                        ; preds = %for.inc34
+    %29 = icmp eq i32 %whence, 0
+    br i1 %29, label %fail, label %found
+
+  found:                                            ; preds = %for.end35, %for.inc34.thread, %__found_offset.exit, %if.then6
+    %conv372 = phi i64 [ %conv374, %__found_offset.exit ], [ 2, %for.end35 ], [ 2, %for.inc34.thread ], [ %conv374, %if.then6 ]
+    %30 = load i32, ptr @f2fs_seek_block_maxbytes, align 4, !tbaa !29
+    %call39 = call i32 @vfs_setpos(ptr noundef nonnull %file, i64 noundef %conv372, i32 noundef %30) #4
+    br label %fail
+
+  fail:                                             ; preds = %found, %for.end35, %entry
+    %call41 = call i32 @inode_unlock_shared(ptr noundef %1) #4
+    call void @llvm.lifetime.end.p0(ptr nonnull %dn) #4
+    ret void
+  }
+
+  declare i64 @i_size_read(ptr noundef) local_unnamed_addr #0
+
+  declare void @f2fs_get_dnode_of_data(ptr noundef, i32 noundef, i32 noundef) local_unnamed_addr #0
+
+  declare i32 @f2fs_get_next_page_offset(ptr noundef, i32 noundef) local_unnamed_addr #0
+
+  declare i32 @F2FS_I_SB(ptr noundef) local_unnamed_addr #0
+
+  declare i32 @vfs_setpos(ptr noundef, i64 noundef, i32 noundef) local_unnamed_addr #0
+
+  declare i32 @inode_unlock_shared(ptr noundef) local_unnamed_addr #0
+
+  ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+  declare void @llvm.lifetime.end.p0(ptr captures(none)) #2
+
+  ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+  declare void @llvm.lifetime.start.p0(ptr captures(none)) #2
+
+  ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: write)
+  declare void @llvm.memset.p0.i32(ptr writeonly captures(none), i8, i32, i1 immarg) #3
+
+  attributes #0 = { "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv68" "target-features"="+reserved-r19,+v68,-long-calls" }
+  attributes #1 = { nounwind "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv68" "target-features"="+reserved-r19,+v68,-long-calls" }
+  attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+  attributes #3 = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+  attributes #4 = { nounwind }
+
+  !llvm.module.flags = !{!0, !1, !2}
+  !llvm.ident = !{!3}
+  !llvm.errno.tbaa = !{!4}
+
+  !0 = !{i32 8, !"PIC Level", i32 2}
+  !1 = !{i32 7, !"PIE Level", i32 2}
+  !2 = !{i32 7, !"frame-pointer", i32 2}
+  !3 = !{!"clang version 23.0.0git (https://github.com/llvm/llvm-project.git 46c2e1fb7698776e97028f6e1aba5b942390249d)"}
+  !4 = !{!5, !6, i64 0}
+  !5 = !{!"__libc_errno", !6, i64 0}
+  !6 = !{!"int", !7, i64 0}
+  !7 = !{!"omnipotent char", !8, i64 0}
+  !8 = !{!"Simple C/C++ TBAA"}
+  !9 = !{!10, !11, i64 0}
+  !10 = !{!"file", !11, i64 0}
+  !11 = !{!"p1 _ZTS13address_space", !12, i64 0}
+  !12 = !{!"any pointer", !7, i64 0}
+  !13 = !{!14, !15, i64 0}
+  !14 = !{!"address_space", !15, i64 0}
+  !15 = !{!"p1 int", !12, i64 0}
+  !16 = !{!"auto-init"}
+  !17 = !{!18, !15, i64 0}
+  !18 = !{!"dnode_of_data", !15, i64 0, !19, i64 4, !26, i64 40, !6, i64 44, !6, i64 48}
+  !19 = !{!"folio", !20, i64 0}
+  !20 = !{!"page", !21, i64 0, !23, i64 4, !22, i64 12, !11, i64 16, !22, i64 20, !6, i64 24, !6, i64 28, !6, i64 32}
+  !21 = !{!"", !22, i64 0}
+  !22 = !{!"long", !7, i64 0}
+  !23 = !{!"", !24, i64 0}
+  !24 = !{!"list_head", !25, i64 0, !25, i64 4}
+  !25 = !{!"p1 _ZTS9list_head", !12, i64 0}
+  !26 = !{!"p1 _ZTS5folio", !12, i64 0}
+  !27 = !{!18, !26, i64 40}
+  !28 = !{!18, !6, i64 44}
+  !29 = !{!22, !22, i64 0}
+  !30 = !{!31, !31, i64 0}
+  !31 = !{!"p1 _ZTS4page", !12, i64 0}
+  !32 = !{!6, !6, i64 0}
+  !33 = !{!34, !34, i64 0}
+  !34 = !{!"p1 _ZTS9f2fs_node", !12, i64 0}
+  !35 = !{!36, !36, i64 0}
+  !36 = !{!"short", !7, i64 0}
+  !37 = !{!38, !38, i64 0}
+  !38 = !{!"_Bool", !7, i64 0}
+  !39 = !{!18, !6, i64 48}
+  !40 = !{!41, !6, i64 0}
+  !41 = !{!"f2fs_inode_info", !6, i64 0}
+  !42 = !{!15, !15, i64 0}
+  !43 = distinct !{!43, !44}
+  !44 = !{!"llvm.loop.mustprogress"}
+  !45 = distinct !{!45, !44}
+...
+---
+name:            f2fs_seek_block
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+hasFakeUses:     false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHContTarget: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: true
+registers:       []
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  framePointerPolicy: all
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  isCalleeSavedInfoValid: false
+  localFrameSize:  0
+fixedStack:      []
+stack:
+  - { id: 0, name: '', type: default, offset: 0, size: 52, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 4, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 5, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 6, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 7, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 8, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 9, name: '', type: spill-slot, offset: 0, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo:
+  stackAlignBaseReg: ''
+body:             |
+  bb.0:
+    successors: %bb.23(0x30000000), %bb.1(0x50000000)
+    liveins: $r0, $r1
+
+    ADJCALLSTACKDOWN 0, 0, implicit-def $r29, implicit-def dead $r30, implicit $r31, implicit $r30, implicit $r29
+    ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit-def dead $r30, implicit-def dead $r31, implicit $r29
+    J2_jumpt killed undef renamable $p0, %bb.23, implicit-def dead $pc
+    J2_jump %bb.1, implicit-def dead $pc
+
+  bb.1:
+    successors: %bb.2(0x80000000)
+    liveins: $d10:0x0000000000000003, $r17, $r18
+
+  bb.2:
+    successors: %bb.4(0x30000000), %bb.3(0x50000000)
+    liveins: $d2:0x0000000000000003, $d10:0x0000000000000003, $d11, $r17, $r24, $r25, $r26, $r27, $r18
+
+    ADJCALLSTACKDOWN 0, 0, implicit-def $r29, implicit-def dead $r30, implicit $r31, implicit $r30, implicit $r29
+    ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit-def dead $r30, implicit-def dead $r31, implicit $r29
+    J2_jumpt killed undef renamable $p0, %bb.4, implicit-def dead $pc
+    J2_jump %bb.3, implicit-def dead $pc
+
+  bb.3:
+    successors: %bb.22(0x04000000), %bb.20(0x7c000000)
+    liveins: $d10:0x0000000000000003, $d11, $r16, $r24, $r25, $r26, $r27, $r18
+
+    J2_jumpt killed undef renamable $p0, %bb.22, implicit-def dead $pc
+    J2_jump %bb.20, implicit-def dead $pc
+
+  bb.4:
+    successors: %bb.5(0x50000000), %bb.6(0x30000000)
+    liveins: $d11, $r16, $r24, $r25, $r26, $r27, $r18
+
+    J2_jumpt killed undef renamable $p0, %bb.6, implicit-def dead $pc
+    J2_jump %bb.5, implicit-def dead $pc
+
+  bb.5:
+    successors: %bb.6(0x80000000)
+    liveins: $d11, $r17, $r18, $r24, $r25, $r26, $r27
+
+    ADJCALLSTACKDOWN 0, 0, implicit-def $r29, implicit-def dead $r30, implicit $r31, implicit $r30, implicit $r29
+    ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit-def dead $r30, implicit-def dead $r31, implicit $r29
+
+  bb.6:
+    successors: %bb.7(0x40000000), %bb.19(0x40000000)
+    liveins: $d2:0x0000000000000003, $d11, $r0, $r17, $r18, $r24, $r25, $r26, $r27
+
+    renamable $r16 = L2_loadri_io %stack.4, 0 :: (load (s32) from %stack.4)
+    J2_jumpf killed undef renamable $p0, %bb.19, implicit-def dead $pc
+    J2_jump %bb.7, implicit-def dead $pc
+
+  bb.7:
+    successors: %bb.9(0x30000000), %bb.8(0x50000000)
+    liveins: $d2:0x0000000000000003, $d11, $r16, $r17, $r18, $r20, $r24, $r25, $r26, $r27
+
+    J2_jumpt killed undef renamable $p0, %bb.9, implicit-def dead $pc
+    J2_jump %bb.8, implicit-def dead $pc
+
+  bb.8:
+    successors: %bb.9(0x80000000)
+    liveins: $d2:0x0000000000000003, $d11, $r0, $r2, $r16, $r17, $r18, $r20, $r24, $r25, $r26, $r27
+
+  bb.9:
+    successors: %bb.18(0x40000000), %bb.10(0x40000000)
+    liveins: $d2:0x0000000000000003, $d11, $r0, $r1, $r16, $r17, $r18, $r20, $r24, $r25, $r26, $r27
+
+    J2_jumpt killed undef renamable $p0, %bb.18, implicit-def dead $pc
+    J2_jump %bb.10, implicit-def dead $pc
+
+  bb.10:
+    successors: %bb.11(0x30000000), %bb.12(0x50000000)
+    liveins: $d11, $r16, $r17, $r18, $r24, $r25, $r26, $r27
+
+    ADJCALLSTACKDOWN 0, 0, implicit-def $r29, implicit-def dead $r30, implicit $r31, implicit $r30, implicit $r29
+    ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit-def dead $r30, implicit-def dead $r31, implicit $r29
+    J2_jumpf killed undef renamable $p0, %bb.12, implicit-def $pc
+
+  bb.11:
+    successors: %bb.18(0x80000000)
+    liveins: $d11, $r16, $r17, $r18, $r20, $r24, $r25, $r26, $r27
+
+    J2_jump %bb.18, implicit-def $pc
+
+  bb.12:
+    successors: %bb.14(0x30000000), %bb.13(0x50000000)
+    liveins: $d11, $r16, $r17, $r18, $r20, $r24, $r25, $r26, $r27
+
+    J2_jumpt killed undef renamable $p0, %bb.14, implicit-def dead $pc
+    J2_jump %bb.13, implicit-def dead $pc
+
+  bb.13:
+    successors: %bb.14(0x80000000)
+    liveins: $d11, $r0, $r2, $r16, $r17, $r18, $r20, $r24, $r25, $r26, $r27
+
+  bb.14:
+    successors: %bb.15(0x42000000), %bb.17(0x3e000000)
+    liveins: $d11, $r0, $r1, $r16, $r17, $r18, $r20, $r24, $r25, $r26, $r27
+
+    renamable $r4 = L2_loadri_io renamable $r16, 0 :: (load (s32), !tbaa !9)
+    ADJCALLSTACKDOWN 0, 0, implicit-def $r29, implicit-def dead $r30, implicit $r31, implicit $r30, implicit $r29
+    renamable $r0 = L2_loadri_io killed renamable $r4, 0 :: (load (s32), !tbaa !13)
+    ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit-def dead $r30, implicit-def dead $r31, implicit $r29
+    J2_jumpt killed undef renamable $p0, %bb.17, implicit-def dead $pc
+    J2_jump %bb.15, implicit-def dead $pc
+
+  bb.15:
+    successors: %bb.16(0x07c1f07c), %bb.17(0x783e0f84)
+    liveins: $d11, $r0, $r16, $r17, $r18, $r24, $r25, $r26, $r27
+
+    renamable $p0 = C2_cmpeqi killed renamable $r0, 0
+    J2_jumpt killed renamable $p0, %bb.17, implicit-def $pc
+
+  bb.16:
+    successors: %bb.22(0x80000000)
+    liveins: $d11, $r17
+
+    J2_jump %bb.22, implicit-def $pc
+
+  bb.17:
+    successors: %bb.18(0x80000000)
+    liveins: $d11, $r16, $r17, $r18, $r24, $r25, $r26, $r27
+
+  bb.18:
+    successors: %bb.7(0x7c000000), %bb.19(0x04000000)
+    liveins: $d2:0x0000000000000003, $d11, $r16, $r17, $r18, $r20, $r24, $r25, $r26, $r27
+
+    J2_jumpt killed undef renamable $p0, %bb.7, implicit-def dead $pc
+    J2_jump %bb.19, implicit-def dead $pc
+
+  bb.19:
+    successors: %bb.2(0x7c000000), %bb.21(0x04000000)
+    liveins: $d2:0x0000000000000003, $r17, $r24, $r25, $r26, $r27, $r18
+
+    J2_jumpt killed undef renamable $p0, %bb.2, implicit-def dead $pc
+    J2_jump %bb.21, implicit-def dead $pc
+
+  bb.20:
+    successors: %bb.2(0x7c000000), %bb.22(0x04000000)
+    liveins: $d10:0x0000000000000003, $r17, $r24, $r25, $r26, $r27, $r18
+
+    ADJCALLSTACKDOWN 0, 0, implicit-def $r29, implicit-def dead $r30, implicit $r31, implicit $r30, implicit $r29
+    ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit-def dead $r30, implicit-def dead $r31, implicit $r29
+    J2_jumpt killed undef renamable $p0, %bb.2, implicit-def dead $pc
+    J2_jump %bb.22, implicit-def dead $pc
+
+  bb.21:
+    successors: %bb.23(0x30000000), %bb.22(0x50000000)
+    liveins: $r17
+
+    J2_jumpt killed undef renamable $p0, %bb.23, implicit-def dead $pc
+    J2_jump %bb.22, implicit-def dead $pc
+
+  bb.22:
+    successors: %bb.23(0x80000000)
+    liveins: $d11, $r17
+
+    ADJCALLSTACKDOWN 0, 0, implicit-def $r29, implicit-def dead $r30, implicit $r31, implicit $r30, implicit $r29
+    ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit-def dead $r30, implicit-def dead $r31, implicit $r29
+
+  bb.23:
+    liveins: $r17
+
+    ADJCALLSTACKDOWN 0, 0, implicit-def $r29, implicit-def dead $r30, implicit $r31, implicit $r30, implicit $r29
+    ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit-def dead $r30, implicit-def dead $r31, implicit $r29
+    PS_jmpret $r31, implicit-def dead $pc
+...

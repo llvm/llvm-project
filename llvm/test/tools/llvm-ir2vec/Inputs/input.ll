@@ -1,3 +1,6 @@
+; Function declaration - should be excluded from all IR2Vec outputs
+declare i32 @external_func(i32 %x)
+
 define i32 @add(i32 %a, i32 %b) {
 entry:
   %sum = add i32 %a, %b

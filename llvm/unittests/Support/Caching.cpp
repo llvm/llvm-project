@@ -105,9 +105,7 @@ TEST(Caching, WriteAfterCommit) {
   (*CFS->OS).write(data, sizeof(data));
   ASSERT_THAT_ERROR(CFS->commit(), Succeeded());
 
-  EXPECT_DEATH(
-      { (*CFS->OS).write(data, sizeof(data)); }, "")
-      << "Write after commit did not cause abort";
+  ASSERT_EQ(CFS->OS, nullptr);
 
   ASSERT_NO_ERROR(sys::fs::remove_directories(CacheDir.str()));
 }

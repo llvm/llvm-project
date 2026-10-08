@@ -19,20 +19,15 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
-
-static cl::opt<bool> MarkBTIProperty(
-    "aarch64-mark-bti-property", cl::Hidden,
-    cl::desc("Add .note.gnu.property with BTI to assembly files"),
-    cl::init(false));
 
 //
 // AArch64TargetStreamer Implementation
 //
 AArch64TargetStreamer::AArch64TargetStreamer(MCStreamer &S)
-    : MCTargetStreamer(S), ConstantPools(new AssemblerConstantPools()) {}
+    : MCTargetStreamer(S), CLOpts(AArch64MCOptions::Global),
+      ConstantPools(new AssemblerConstantPools()) {}
 
 AArch64TargetStreamer::~AArch64TargetStreamer() = default;
 
@@ -65,7 +60,7 @@ void AArch64TargetStreamer::emitConstantPools() {
 // finish() - write out any non-empty assembler constant pools and
 //   write out note.gnu.properties if need.
 void AArch64TargetStreamer::finish() {
-  if (MarkBTIProperty)
+  if (CLOpts.mark_bti_property)
     emitNoteSection(ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI);
 }
 

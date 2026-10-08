@@ -42,10 +42,14 @@ class VarDecl;
 
 /// Extract mangling function name from MangleContext such that swift can call
 /// it to prepare for ObjCDirect in swift.
+/// Produces the mangling:
+///   \01-[ClassName(Category) method:arg1:arg2:]
+/// Or, if useDirectABI is true (for Direct ABI):
+///   -[ClassName(Category) method:arg1:arg2:]D
 void mangleObjCMethodName(raw_ostream &OS, bool includePrefixByte,
                           bool isInstanceMethod, StringRef ClassName,
                           std::optional<StringRef> CategoryName,
-                          StringRef MethodName);
+                          StringRef MethodName, bool useDirectABI);
 
 /// MangleContext - Context for tracking state which persists across multiple
 /// calls to the C++ name mangler.
@@ -125,6 +129,14 @@ public:
   virtual bool shouldMangleCXXName(const NamedDecl *D) = 0;
   virtual bool shouldMangleStringLiteral(const StringLiteral *SL) = 0;
 
+  /// Return true if \p FD's body contains a direct call back to the symbol it
+  /// links as, through an asm label or a __builtin_* alias (PR9614 / glibc's
+  /// btowc pattern).  An available_externally body of such a function is not a
+  /// valid stand-in for the real implementation and should be dropped before
+  /// codegen.  The check keys off the mangled/asm name, hence it lives on
+  /// MangleContext.
+  bool isTriviallyRecursive(const FunctionDecl *FD);
+
   virtual bool isUniqueInternalLinkageDecl(const NamedDecl *ND) {
     return false;
   }
@@ -160,7 +172,8 @@ public:
 
   void mangleObjCMethodName(const ObjCMethodDecl *MD, raw_ostream &OS,
                             bool includePrefixByte = true,
-                            bool includeCategoryNamespace = true) const;
+                            bool includeCategoryNamespace = true,
+                            bool useDirectABI = false) const;
   void mangleObjCMethodNameAsSourceName(const ObjCMethodDecl *MD,
                                         raw_ostream &) const;
 
@@ -316,6 +329,11 @@ public:
 private:
   class Implementation;
   std::unique_ptr<Implementation> Impl;
+};
+
+/// Constants used by LLDB for mangling.
+struct LLDBManglingABI {
+  static constexpr llvm::StringLiteral FunctionLabelPrefix = "$__lldb_func:";
 };
 } // namespace clang
 

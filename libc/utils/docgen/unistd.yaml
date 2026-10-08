@@ -511,6 +511,8 @@ functions:
     in-latest-posix: ""
   chown:
     in-latest-posix: ""
+  chroot:
+    in-latest-posix: ""
   close:
     in-latest-posix: ""
   confstr:

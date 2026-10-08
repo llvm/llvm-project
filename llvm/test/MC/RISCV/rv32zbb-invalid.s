@@ -1,38 +1,38 @@
 # RUN: not llvm-mc -triple riscv32 -mattr=+zbb < %s 2>&1 | FileCheck %s
 
 # Too many operands
-clz t0, t1, t2 # CHECK: :[[@LINE]]:13: error: invalid operand for instruction
+clz t0, t1, t2 # CHECK: :[[@LINE]]:13: error: unexpected extra operand for instruction
 # Too many operands
-ctz t0, t1, t2 # CHECK: :[[@LINE]]:13: error: invalid operand for instruction
+ctz t0, t1, t2 # CHECK: :[[@LINE]]:13: error: unexpected extra operand for instruction
 # Too many operands
-cpop t0, t1, t2 # CHECK: :[[@LINE]]:14: error: invalid operand for instruction
+cpop t0, t1, t2 # CHECK: :[[@LINE]]:14: error: unexpected extra operand for instruction
 # Too many operands
-sext.b t0, t1, t2 # CHECK: :[[@LINE]]:16: error: invalid operand for instruction
+sext.b t0, t1, t2 # CHECK: :[[@LINE]]:16: error: unexpected extra operand for instruction
 # Too many operands
-sext.h t0, t1, t2 # CHECK: :[[@LINE]]:16: error: invalid operand for instruction
+sext.h t0, t1, t2 # CHECK: :[[@LINE]]:16: error: unexpected extra operand for instruction
 # Too few operands
-min t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
+min t0, t1 # CHECK: :[[@LINE]]:11: error: too few operands for instruction
 # Too few operands
-max t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
+max t0, t1 # CHECK: :[[@LINE]]:11: error: too few operands for instruction
 # Too few operands
-minu t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
+minu t0, t1 # CHECK: :[[@LINE]]:12: error: too few operands for instruction
 # Too few operands
-maxu t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
+maxu t0, t1 # CHECK: :[[@LINE]]:12: error: too few operands for instruction
 clzw t0, t1 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set{{$}}
 ctzw t0, t1 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set{{$}}
 cpopw t0, t1 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set{{$}}
 # Too few operands
-andn t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
+andn t0, t1 # CHECK: :[[@LINE]]:12: error: too few operands for instruction
 # Too few operands
-orn t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
+orn t0, t1 # CHECK: :[[@LINE]]:11: error: too few operands for instruction
 # Too few operands
-xnor t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
+xnor t0, t1 # CHECK: :[[@LINE]]:12: error: too few operands for instruction
 # Too few operands
-rol t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
+rol t0, t1 # CHECK: :[[@LINE]]:11: error: too few operands for instruction
 # Too few operands
-ror t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
+ror t0, t1 # CHECK: :[[@LINE]]:11: error: too few operands for instruction
 # Too few operands
-rori t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
+rori t0, t1 # CHECK: :[[@LINE]]:12: error: too few operands for instruction
 # Immediate operand out of range
 rori t0, t1, 32 # CHECK: :[[@LINE]]:14: error: immediate must be an integer in the range [0, 31]
 rori t0, t1, -1 # CHECK: :[[@LINE]]:14: error: immediate must be an integer in the range [0, 31]

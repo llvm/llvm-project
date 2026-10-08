@@ -819,7 +819,7 @@ define i128 @half_to_s128(half %x) {
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $48, %esp
+; X86-NEXT:    subl $32, %esp
 ; X86-NEXT:    .cfi_offset %esi, -12
 ; X86-NEXT:    movl 8(%ebp), %esi
 ; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
@@ -922,7 +922,7 @@ define i128 @half_to_u128(half %x) {
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $48, %esp
+; X86-NEXT:    subl $32, %esp
 ; X86-NEXT:    .cfi_offset %esi, -12
 ; X86-NEXT:    movl 8(%ebp), %esi
 ; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
@@ -1002,7 +1002,7 @@ define fp128 @half_to_f128(half %x) nounwind {
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $48, %esp
+; X86-NEXT:    subl $32, %esp
 ; X86-NEXT:    movl 8(%ebp), %esi
 ; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0

@@ -22,9 +22,9 @@ subroutine simd_ivs
 end subroutine
 
 ! CHECK: func.func @_QPsimd_ivs() {
-! CHECK:   %[[IDO1_HOST_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}Eido1"}
-! CHECK:   %[[IDO2_HOST_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}Eido2"}
-! CHECK:   %[[IDO3_HOST_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}Eido3"}
+! CHECK:   %[[IDO1_HOST_DECL:.*]]:2 = hlfir.declare %{{.*}} uniq_name("{{.*}}Eido1")
+! CHECK:   %[[IDO2_HOST_DECL:.*]]:2 = hlfir.declare %{{.*}} uniq_name("{{.*}}Eido2")
+! CHECK:   %[[IDO3_HOST_DECL:.*]]:2 = hlfir.declare %{{.*}} uniq_name("{{.*}}Eido3")
 
 ! CHECK:   omp.parallel {
 ! CHECK:     omp.simd private(
@@ -34,9 +34,9 @@ end subroutine
 ! CHECK-SAME:  : {{.*}}) {
 
 ! CHECK:       omp.loop_nest (%[[IV1:.*]], %[[IV2:.*]], %[[IV3:.*]]) : {{.*}} {
-! CHECK:         %[[IDO1_PRIV_DECL:.*]]:2 = hlfir.declare %[[IDO1_PRIV_ARG]] {uniq_name = "{{.*}}Eido1"}
-! CHECK:         %[[IDO2_PRIV_DECL:.*]]:2 = hlfir.declare %[[IDO2_PRIV_ARG]] {uniq_name = "{{.*}}Eido2"}
-! CHECK:         %[[IDO3_PRIV_DECL:.*]]:2 = hlfir.declare %[[IDO3_PRIV_ARG]] {uniq_name = "{{.*}}Eido3"}
+! CHECK:         %[[IDO1_PRIV_DECL:.*]]:2 = hlfir.declare %[[IDO1_PRIV_ARG]] uniq_name("{{.*}}Eido1")
+! CHECK:         %[[IDO2_PRIV_DECL:.*]]:2 = hlfir.declare %[[IDO2_PRIV_ARG]] uniq_name("{{.*}}Eido2")
+! CHECK:         %[[IDO3_PRIV_DECL:.*]]:2 = hlfir.declare %[[IDO3_PRIV_ARG]] uniq_name("{{.*}}Eido3")
 
 ! CHECK:         fir.if %{{.*}} {
 ! CHECK:           hlfir.assign %{{.*}} to %[[IDO1_PRIV_DECL]]#0

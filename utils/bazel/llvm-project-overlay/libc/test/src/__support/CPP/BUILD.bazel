@@ -87,7 +87,11 @@ libc_test(
 libc_test(
     name = "stringview_test",
     srcs = ["stringview_test.cpp"],
-    deps = ["//libc:__support_cpp_string_view"],
+    deps = [
+        "//libc:__support_cpp_string_view",
+        "//libc:__support_cpp_type_traits",
+        "//libc:string_memory_utils",
+    ],
 )
 
 libc_test(

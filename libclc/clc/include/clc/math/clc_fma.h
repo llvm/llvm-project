@@ -9,10 +9,12 @@
 #ifndef __CLC_MATH_CLC_FMA_H__
 #define __CLC_MATH_CLC_FMA_H__
 
-#define __CLC_FUNCTION __clc_fma
-#define __CLC_BODY <clc/shared/ternary_decl.inc>
+#include "clc/internal/clc.h"
 
-#include <clc/math/gentype.inc>
+#define __CLC_FUNCTION __clc_fma
+#define __CLC_BODY "clc/shared/ternary_decl.inc"
+
+#include "clc/math/gentype.inc"
 
 #undef __CLC_FUNCTION
 

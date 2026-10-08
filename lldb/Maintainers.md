@@ -195,6 +195,9 @@ jonas@devlieghere.com (email), [jdevlieghere](https://github.com/jdevlieghere) (
 Ed Maste
 emaste@freebsd.org (email), [emaste](https://github.com/emaste) (GitHub), [emaste](https://discourse.llvm.org/u/emaste) (Discourse), emaste (Discord)
 
+Minsoo Choo
+minsoochoo0122@proton.me (email), mchoo7 (GitHub), mchoo (Discourse), minsoochoo (Discord)
+
 #### Linux
 
 Pavel Labath

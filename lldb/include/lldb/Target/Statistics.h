@@ -112,13 +112,10 @@ public:
 
 /// A class to count success/fail statistics.
 struct StatsSuccessFail {
-  StatsSuccessFail(llvm::StringRef n) : name(n.str()) {}
-
   void NotifySuccess() { ++successes; }
   void NotifyFailure() { ++failures; }
 
   llvm::json::Value ToJSON() const;
-  std::string name;
   uint32_t successes = 0;
   uint32_t failures = 0;
 };
@@ -333,8 +330,8 @@ protected:
   std::optional<StatsTimepoint> m_launch_or_attach_time;
   std::optional<StatsTimepoint> m_first_private_stop_time;
   std::optional<StatsTimepoint> m_first_public_stop_time;
-  StatsSuccessFail m_expr_eval{"expressionEvaluation"};
-  StatsSuccessFail m_frame_var{"frameVariable"};
+  StatsSuccessFail m_expr_eval;
+  StatsSuccessFail m_frame_var;
   std::vector<intptr_t> m_module_identifiers;
   uint32_t m_source_map_deduce_count = 0;
   uint32_t m_source_realpath_attempt_count = 0;

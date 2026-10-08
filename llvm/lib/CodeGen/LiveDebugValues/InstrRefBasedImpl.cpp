@@ -983,7 +983,6 @@ public:
 //===----------------------------------------------------------------------===//
 
 ValueIDNum ValueIDNum::EmptyValue = {UINT_MAX, UINT_MAX, UINT_MAX};
-ValueIDNum ValueIDNum::TombstoneValue = {UINT_MAX, UINT_MAX, UINT_MAX - 1};
 
 #ifndef NDEBUG
 void ResolvedDbgOp::dump(const MLocTracker *MTrack) const {
@@ -1079,8 +1078,8 @@ MLocTracker::MLocTracker(MachineFunction &MF, const TargetInstrInfo &TII,
   }
 
   // There may also be strange register class sizes (think x86 fp80s).
-  for (const TargetRegisterClass *RC : TRI.regclasses()) {
-    unsigned Size = TRI.getRegSizeInBits(*RC);
+  for (const TargetRegisterClass &RC : TRI.regclasses()) {
+    unsigned Size = TRI.getRegSizeInBits(RC);
 
     // We might see special reserved values as sizes, and classes for other
     // stuff the machine tries to model. If it's more than 512 bits, then it
@@ -1321,7 +1320,7 @@ MLocTracker::emitLoc(const SmallVectorImpl<ResolvedDbgOp> &DbgOps,
         // manifests as too-little or too-much memory being read from the stack.
         // However we can't solve that without putting more type information in
         // debug-info.
-        if (ValueSizeInBits > MF.getTarget().getPointerSizeInBits(0))
+        if (ValueSizeInBits > MF.getDataLayout().getPointerSizeInBits(0))
           UseDerefSize = false;
 
         SmallVector<uint64_t, 5> OffsetOps;
@@ -1467,7 +1466,7 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
         // debug values.
         if (MO.isReg()) {
           DebugOps.push_back(DbgOpStore.insert(MTracker->readReg(MO.getReg())));
-        } else if (MO.isImm() || MO.isFPImm() || MO.isCImm()) {
+        } else if (MO.isImm() || MO.isFPImm() || MO.isCImm() || MO.isGlobal()) {
           DebugOps.push_back(DbgOpStore.insert(MO));
         } else {
           llvm_unreachable("Unexpected debug operand type.");
@@ -1591,9 +1590,9 @@ std::optional<ValueIDNum> InstrRefBasedLDV::getValueForInstrRef(
       // FIXME: no index for this?
       Register Reg = MTracker->LocIdxToLocID[L];
       const TargetRegisterClass *TRC = nullptr;
-      for (const auto *TRCI : TRI->regclasses())
-        if (TRCI->contains(Reg))
-          TRC = TRCI;
+      for (const auto &TRCI : TRI->regclasses())
+        if (TRCI.contains(Reg))
+          TRC = &TRCI;
       assert(TRC && "Couldn't find target register class?");
 
       // If the register we have isn't the right size or in the right place,

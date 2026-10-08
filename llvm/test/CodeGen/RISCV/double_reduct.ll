@@ -8,9 +8,9 @@ define float @add_f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: add_f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v10, zero
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
-; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vfredusum.vs v8, v8, v9
+; CHECK-NEXT:    vfredusum.vs v8, v8, v10
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fadd.f32.v4f32(float -0.0, <4 x float> %a)
@@ -73,9 +73,9 @@ define i32 @add_i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: add_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v10, zero
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
-; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vredsum.vs v8, v8, v9
+; CHECK-NEXT:    vredsum.vs v8, v8, v10
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %r1 = call i32 @llvm.vector.reduce.add.i32.v4i32(<4 x i32> %a)
@@ -87,11 +87,12 @@ define i32 @add_i32(<4 x i32> %a, <4 x i32> %b) {
 define i16 @add_ext_i16(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: add_ext_i16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 16, e16, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v12, zero
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vwaddu.vv v10, v8, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v8, zero
-; CHECK-NEXT:    vredsum.vs v8, v10, v8
+; CHECK-NEXT:    vredsum.vs v8, v10, v12
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %ae = zext <16 x i8> %a to <16 x i16>
@@ -193,9 +194,9 @@ define i32 @xor_i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: xor_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v10, zero
 ; CHECK-NEXT:    vxor.vv v8, v8, v9
-; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vredxor.vs v8, v8, v9
+; CHECK-NEXT:    vredxor.vs v8, v8, v10
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %r1 = call i32 @llvm.vector.reduce.xor.i32.v4i32(<4 x i32> %a)

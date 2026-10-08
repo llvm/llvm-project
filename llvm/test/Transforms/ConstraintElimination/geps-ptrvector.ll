@@ -5,7 +5,7 @@
 define <2 x i1> @test.vectorgep(<2 x ptr> %vec) {
 ; CHECK-LABEL: @test.vectorgep(
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, <2 x ptr> [[VEC:%.*]], i64 0
-; CHECK-NEXT:    [[COND:%.*]] = icmp ule <2 x ptr> [[GEP]], zeroinitializer
+; CHECK-NEXT:    [[COND:%.*]] = icmp ule <2 x ptr> [[GEP]], splat (ptr null)
 ; CHECK-NEXT:    ret <2 x i1> [[COND]]
 ;
   %gep = getelementptr inbounds i32, <2 x ptr> %vec, i64 0

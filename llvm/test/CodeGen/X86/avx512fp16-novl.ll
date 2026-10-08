@@ -128,75 +128,40 @@ define <8 x half> @select(<8 x half> %x) {
 ; CHECK-LABEL: select:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; CHECK-NEXT:    vmovsh {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; CHECK-NEXT:    vucomish %xmm1, %xmm0
+; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm1
+; CHECK-NEXT:    vmovsh {{.*#+}} xmm2 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    vucomish %xmm2, %xmm1
 ; CHECK-NEXT:    seta %al
-; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    kmovw %eax, %k0
-; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm2
-; CHECK-NEXT:    vucomish %xmm1, %xmm2
+; CHECK-NEXT:    vucomish %xmm2, %xmm0
+; CHECK-NEXT:    seta %cl
+; CHECK-NEXT:    vmovd %ecx, %xmm1
+; CHECK-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm0[1,1,3,3]
+; CHECK-NEXT:    vucomish %xmm2, %xmm3
 ; CHECK-NEXT:    seta %al
-; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    kshiftlw $15, %k1, %k1
-; CHECK-NEXT:    kshiftrw $14, %k1, %k1
-; CHECK-NEXT:    korw %k1, %k0, %k0
-; CHECK-NEXT:    movw $-5, %ax
-; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; CHECK-NEXT:    vucomish %xmm1, %xmm2
+; CHECK-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
+; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm3
+; CHECK-NEXT:    vucomish %xmm2, %xmm3
 ; CHECK-NEXT:    seta %al
-; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    kshiftlw $15, %k1, %k1
-; CHECK-NEXT:    kshiftrw $13, %k1, %k1
-; CHECK-NEXT:    korw %k1, %k0, %k0
-; CHECK-NEXT:    movw $-9, %ax
-; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
-; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm2
-; CHECK-NEXT:    vucomish %xmm1, %xmm2
+; CHECK-NEXT:    vpinsrb $3, %eax, %xmm1, %xmm1
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
+; CHECK-NEXT:    vucomish %xmm2, %xmm3
 ; CHECK-NEXT:    seta %al
-; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    kshiftlw $15, %k1, %k1
-; CHECK-NEXT:    kshiftrw $12, %k1, %k1
-; CHECK-NEXT:    korw %k1, %k0, %k0
-; CHECK-NEXT:    movw $-17, %ax
-; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
-; CHECK-NEXT:    vucomish %xmm1, %xmm2
+; CHECK-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vucomish %xmm2, %xmm3
 ; CHECK-NEXT:    seta %al
-; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    kshiftlw $15, %k1, %k1
-; CHECK-NEXT:    kshiftrw $11, %k1, %k1
-; CHECK-NEXT:    korw %k1, %k0, %k0
-; CHECK-NEXT:    movw $-33, %ax
-; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vucomish %xmm1, %xmm2
+; CHECK-NEXT:    vpinsrb $5, %eax, %xmm1, %xmm1
+; CHECK-NEXT:    vshufps {{.*#+}} xmm3 = xmm0[3,3,3,3]
+; CHECK-NEXT:    vucomish %xmm2, %xmm3
 ; CHECK-NEXT:    seta %al
-; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    kshiftlw $15, %k1, %k1
-; CHECK-NEXT:    kshiftrw $10, %k1, %k1
-; CHECK-NEXT:    korw %k1, %k0, %k0
-; CHECK-NEXT:    movw $-65, %ax
-; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
-; CHECK-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[3,3,3,3]
-; CHECK-NEXT:    vucomish %xmm1, %xmm2
+; CHECK-NEXT:    vpinsrb $6, %eax, %xmm1, %xmm1
+; CHECK-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vucomish %xmm2, %xmm3
 ; CHECK-NEXT:    seta %al
-; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    kshiftlw $6, %k1, %k1
-; CHECK-NEXT:    korw %k1, %k0, %k0
-; CHECK-NEXT:    kshiftlw $9, %k0, %k0
-; CHECK-NEXT:    kshiftrw $9, %k0, %k0
-; CHECK-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vucomish %xmm1, %xmm2
-; CHECK-NEXT:    seta %al
-; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    kshiftlw $7, %k1, %k1
-; CHECK-NEXT:    korw %k1, %k0, %k1
+; CHECK-NEXT:    vpinsrb $7, %eax, %xmm1, %xmm1
+; CHECK-NEXT:    vpmovzxbq {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero,xmm1[2],zero,zero,zero,zero,zero,zero,zero,xmm1[3],zero,zero,zero,zero,zero,zero,zero,xmm1[4],zero,zero,zero,zero,zero,zero,zero,xmm1[5],zero,zero,zero,zero,zero,zero,zero,xmm1[6],zero,zero,zero,zero,zero,zero,zero,xmm1[7],zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %k1
 ; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; CHECK-NEXT:    vmovdqu16 %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0

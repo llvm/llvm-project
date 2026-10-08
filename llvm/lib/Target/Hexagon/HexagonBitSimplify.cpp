@@ -977,13 +977,12 @@ namespace {
 } // end anonymous namespace
 
 bool DeadCodeElimination::isDead(unsigned R) const {
-  for (const MachineOperand &MO : MRI.use_operands(R)) {
-    const MachineInstr *UseI = MO.getParent();
-    if (UseI->isDebugInstr())
+  for (const MachineInstr &UseI : MRI.use_instructions(R)) {
+    if (UseI.isDebugInstr())
       continue;
-    if (UseI->isPHI()) {
-      assert(!UseI->getOperand(0).getSubReg());
-      Register DR = UseI->getOperand(0).getReg();
+    if (UseI.isPHI()) {
+      assert(!UseI.getOperand(0).getSubReg());
+      Register DR = UseI.getOperand(0).getReg();
       if (DR == R)
         continue;
     }
@@ -3114,13 +3113,12 @@ bool HexagonLoopRescheduling::processLoop(LoopCand &C) {
     if (isConst(PR))
       continue;
     bool BadUse = false, GoodUse = false;
-    for (const MachineOperand &MO : MRI->use_operands(PR)) {
-      const MachineInstr *UseI = MO.getParent();
-      if (UseI->getParent() != C.LB) {
+    for (const MachineInstr &UseI : MRI->use_instructions(PR)) {
+      if (UseI.getParent() != C.LB) {
         BadUse = true;
         break;
       }
-      if (isBitShuffle(UseI, PR) || isStoreInput(UseI, PR))
+      if (isBitShuffle(&UseI, PR) || isStoreInput(&UseI, PR))
         GoodUse = true;
     }
     if (BadUse || !GoodUse)

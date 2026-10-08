@@ -6,10 +6,10 @@ define void @test() {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br i1 false, label %[[BB1:.*]], label %[[BB2:.*]]
 ; CHECK:       [[BB2]]:
-; CHECK-NEXT:    [[CMP14_US:%.*]] = fcmp ogt x86_fp80 0xK00000000000000000000, 0xK00000000000000000000
+; CHECK-NEXT:    [[CMP14_US:%.*]] = fcmp ogt x86_fp80 0.000000e+00, 0.000000e+00
 ; CHECK-NEXT:    [[IMAX_2_US:%.*]] = select i1 [[CMP14_US]], i64 0, i64 0
 ; CHECK-NEXT:    [[JMAX_2_US:%.*]] = select i1 [[CMP14_US]], i64 0, i64 0
-; CHECK-NEXT:    [[CMP13_US:%.*]] = fcmp olt x86_fp80 0xK00000000000000000000, 0xK00000000000000000000
+; CHECK-NEXT:    [[CMP13_US:%.*]] = fcmp olt x86_fp80 0.000000e+00, 0.000000e+00
 ; CHECK-NEXT:    [[IMIN_2_US:%.*]] = select i1 [[CMP13_US]], i64 0, i64 0
 ; CHECK-NEXT:    [[JMIN_2_US:%.*]] = select i1 [[CMP13_US]], i64 0, i64 0
 ; CHECK-NEXT:    br label %[[BB1]]

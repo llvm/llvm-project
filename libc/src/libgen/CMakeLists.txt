@@ -1,0 +1,23 @@
+add_entrypoint_object(
+  basename
+  SRCS
+    basename.cpp
+  HDRS
+    basename.h
+  DEPENDS
+    libc.src.__support.CPP.string_view
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  dirname
+  SRCS
+    dirname.cpp
+  HDRS
+    dirname.h
+  DEPENDS
+    libc.src.__support.CPP.string_view
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)

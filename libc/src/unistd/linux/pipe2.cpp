@@ -23,7 +23,7 @@ LLVM_LIBC_FUNCTION(int, pipe2, (int pipefd[2], int flags)) {
     libc_errno = -ret;
     return -1;
   }
-  MSAN_UNPOISON(pipefd, sizeof(int) * 2);
+  LIBC_MSAN_UNPOISON(pipefd, sizeof(int) * 2);
   return ret;
 }
 

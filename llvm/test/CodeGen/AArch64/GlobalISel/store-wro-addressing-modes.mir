@@ -18,12 +18,12 @@ body:             |
     ; CHECK-NEXT: %dst:gpr32 = COPY $w2
     ; CHECK-NEXT: STRWroW %dst, %base, %foo, 1, 1 :: (store (s32))
     %base:gpr(p0) = COPY $x0
-    %foo:gpr(s32) = COPY $w1
-    %ext:gpr(s64) = G_SEXT %foo(s32)
-    %c:gpr(s64) = G_CONSTANT i64 2
-    %offset:gpr(s64) = G_SHL %ext, %c
-    %ptr:gpr(p0) = G_PTR_ADD %base, %offset(s64)
-    %dst:gpr(s32) = COPY $w2
+    %foo:gpr(i32) = COPY $w1
+    %ext:gpr(i64) = G_SEXT %foo(i32)
+    %c:gpr(i64) = G_CONSTANT i64 2
+    %offset:gpr(i64) = G_SHL %ext, %c
+    %ptr:gpr(p0) = G_PTR_ADD %base, %offset(i64)
+    %dst:gpr(i32) = COPY $w2
     G_STORE %dst, %ptr :: (store (s32))
 ...
 ---
@@ -44,12 +44,12 @@ body:             |
     ; CHECK-NEXT: %dst:gpr64 = COPY $x2
     ; CHECK-NEXT: STRXroW %dst, %base, %foo, 1, 1 :: (store (s64))
     %base:gpr(p0) = COPY $x0
-    %foo:gpr(s32) = COPY $w1
-    %ext:gpr(s64) = G_SEXT %foo(s32)
-    %c:gpr(s64) = G_CONSTANT i64 3
-    %offset:gpr(s64) = G_SHL %ext, %c
-    %ptr:gpr(p0) = G_PTR_ADD %base, %offset(s64)
-    %dst:gpr(s64) = COPY $x2
+    %foo:gpr(i32) = COPY $w1
+    %ext:gpr(i64) = G_SEXT %foo(i32)
+    %c:gpr(i64) = G_CONSTANT i64 3
+    %offset:gpr(i64) = G_SHL %ext, %c
+    %ptr:gpr(p0) = G_PTR_ADD %base, %offset(i64)
+    %dst:gpr(i64) = COPY $x2
     G_STORE %dst, %ptr :: (store (s64))
 ...
 ---
@@ -71,11 +71,11 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY %dst
     ; CHECK-NEXT: STRXroW [[COPY]], %base, %foo, 1, 1 :: (store (p0))
     %base:gpr(p0) = COPY $x0
-    %foo:gpr(s32) = COPY $w1
-    %ext:gpr(s64) = G_SEXT %foo(s32)
-    %c:gpr(s64) = G_CONSTANT i64 3
-    %offset:gpr(s64) = G_SHL %ext, %c
-    %ptr:gpr(p0) = G_PTR_ADD %base, %offset(s64)
+    %foo:gpr(i32) = COPY $w1
+    %ext:gpr(i64) = G_SEXT %foo(i32)
+    %c:gpr(i64) = G_CONSTANT i64 3
+    %offset:gpr(i64) = G_SHL %ext, %c
+    %ptr:gpr(p0) = G_PTR_ADD %base, %offset(i64)
     %dst:gpr(p0) = COPY $x2
     G_STORE %dst, %ptr :: (store (p0))
 ...

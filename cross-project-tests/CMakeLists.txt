@@ -26,7 +26,10 @@ set(CROSS_PROJECT_TEST_DEPS
   llvm-config
   llvm-dis
   llvm-dwarfdump
+  llvm-lto2
+  llvm-modextract
   llvm-objdump
+  llvm-readobj
   not
   obj2yaml
   split-file
@@ -60,7 +63,7 @@ if("compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS)
 endif()
 # Many dexter tests depend on lldb.
 if("lldb" IN_LIST LLVM_ENABLE_PROJECTS)
-  list(APPEND CROSS_PROJECT_TEST_DEPS lldb lldb-server)
+  list(APPEND CROSS_PROJECT_TEST_DEPS lldb lldb-server lldb-dap)
 endif()
 
 if ("lld" IN_LIST LLVM_ENABLE_PROJECTS)

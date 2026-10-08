@@ -11,9 +11,9 @@
 #define _LIBCPP___CHRONO_HH_MM_SS_H
 
 #include <__chrono/duration.h>
-#include <__chrono/time_point.h>
 #include <__config>
 #include <__type_traits/common_type.h>
+#include <__type_traits/is_unsigned.h>
 #include <ratio>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -45,6 +45,13 @@ private:
     return 0;
   }
 
+  _LIBCPP_HIDE_FROM_ABI static constexpr _Duration __abs_d(_Duration __d, bool __is_neg) {
+    if constexpr (is_unsigned_v<typename _Duration::rep>)
+      return __d;
+    else
+      return __is_neg ? -__d : __d;
+  }
+
 public:
   _LIBCPP_HIDE_FROM_ABI static unsigned constexpr fractional_width =
       __width(__CommonType::period::den) < 19 ? __width(__CommonType::period::den) : 6u;
@@ -53,11 +60,11 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr hh_mm_ss() noexcept : hh_mm_ss{_Duration::zero()} {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr explicit hh_mm_ss(_Duration __d) noexcept
-      : __is_neg_(__d < _Duration(0)),
-        __h_(chrono::duration_cast<chrono::hours>(chrono::abs(__d))),
-        __m_(chrono::duration_cast<chrono::minutes>(chrono::abs(__d) - hours())),
-        __s_(chrono::duration_cast<chrono::seconds>(chrono::abs(__d) - hours() - minutes())),
-        __f_(chrono::duration_cast<precision>(chrono::abs(__d) - hours() - minutes() - seconds())) {}
+      : __is_neg_(__d < _Duration::zero()),
+        __h_(chrono::duration_cast<chrono::hours>(__abs_d(__d, __is_neg_))),
+        __m_(chrono::duration_cast<chrono::minutes>(__abs_d(__d, __is_neg_) - hours())),
+        __s_(chrono::duration_cast<chrono::seconds>(__abs_d(__d, __is_neg_) - hours() - minutes())),
+        __f_(chrono::duration_cast<precision>(__abs_d(__d, __is_neg_) - hours() - minutes() - seconds())) {}
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool is_negative() const noexcept { return __is_neg_; }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr chrono::hours hours() const noexcept { return __h_; }

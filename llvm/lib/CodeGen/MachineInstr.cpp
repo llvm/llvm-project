@@ -101,8 +101,6 @@ MachineInstr::MachineInstr(MachineFunction &MF, const MCInstrDesc &TID,
                            DebugLoc DL, bool NoImp)
     : MCID(&TID), NumOperands(0), Flags(0), AsmPrinterFlags(0),
       Opcode(TID.Opcode), DebugInstrNum(0), DbgLoc(std::move(DL)) {
-  assert(DbgLoc.hasTrivialDestructor() && "Expected trivial destructor");
-
   // Reserve space for the expected number of operands.
   if (unsigned NumOps = MCID->getNumOperands() + MCID->implicit_defs().size() +
                         MCID->implicit_uses().size()) {
@@ -121,8 +119,6 @@ MachineInstr::MachineInstr(MachineFunction &MF, const MachineInstr &MI)
     : MCID(&MI.getDesc()), NumOperands(0), Flags(0), AsmPrinterFlags(0),
       Opcode(MI.getOpcode()), DebugInstrNum(0), Info(MI.Info),
       DbgLoc(MI.getDebugLoc()) {
-  assert(DbgLoc.hasTrivialDestructor() && "Expected trivial destructor");
-
   CapOperands = OperandCapacity::get(MI.getNumOperands());
   Operands = MF.allocateOperandArray(CapOperands);
 
@@ -384,6 +380,11 @@ void MachineInstr::setMemRefs(MachineFunction &MF,
 
 void MachineInstr::addMemOperand(MachineFunction &MF,
                                  MachineMemOperand *MO) {
+  if (memoperands_empty()) {
+    setMemRefs(MF, {MO});
+    return;
+  }
+
   SmallVector<MachineMemOperand *, 2> MMOs;
   MMOs.append(memoperands_begin(), memoperands_end());
   MMOs.push_back(MO);
@@ -620,6 +621,11 @@ uint32_t MachineInstr::copyFlagsFromInstruction(const Instruction &I) {
     if (ICmp->hasSameSign())
       MIFlags |= MachineInstr::MIFlag::SameSign;
 
+  // Copy the nonnull flag.
+  if (const auto *ASC = dyn_cast<AddrSpaceCastInst>(&I))
+    if (ASC->hasNonNull())
+      MIFlags |= MachineInstr::MIFlag::NonNull;
+
   // Copy the exact flag.
   if (const PossiblyExactOperator *PE = dyn_cast<PossiblyExactOperator>(&I))
     if (PE->isExact())
@@ -797,9 +803,9 @@ MachineInstr *MachineInstr::removeFromBundle() {
   return getParent()->remove_instr(this);
 }
 
-void MachineInstr::eraseFromParent() {
+MachineBasicBlock::iterator MachineInstr::eraseFromParent() {
   assert(getParent() && "Not embedded in a basic block!");
-  getParent()->erase(this);
+  return getParent()->erase(this);
 }
 
 void MachineInstr::eraseFromBundle() {
@@ -927,7 +933,7 @@ bool MachineInstr::isStackAligningInlineAsm() const {
 InlineAsm::AsmDialect MachineInstr::getInlineAsmDialect() const {
   assert(isInlineAsm() && "getInlineAsmDialect() only works for inline asms!");
   unsigned ExtraInfo = getOperand(InlineAsm::MIOp_ExtraInfo).getImm();
-  return InlineAsm::AsmDialect((ExtraInfo & InlineAsm::Extra_AsmDialect) != 0);
+  return InlineAsm::getDialect(ExtraInfo);
 }
 
 int MachineInstr::findInlineAsmFlagIdx(unsigned OpIdx,
@@ -1031,7 +1037,7 @@ MachineInstr::getRegClassConstraint(unsigned OpIdx,
 
   // Assume that all registers in a memory operand are pointers.
   if (F.isMemKind())
-    return TRI->getPointerRegClass();
+    return TII->getInlineAsmMemoryOperandRegClass(F.getMemoryConstraintID());
 
   return nullptr;
 }
@@ -1123,6 +1129,20 @@ int MachineInstr::findRegisterUseOperandIdx(Register Reg,
         return i;
   }
   return -1;
+}
+
+bool MachineInstr::hasTiedAndOtherReadOf(Register Reg, unsigned SubReg) const {
+  bool Tied = false;
+  unsigned Reads = 0;
+  for (const MachineOperand &MO : all_uses()) {
+    if (MO.getReg() != Reg || MO.getSubReg() != SubReg)
+      continue;
+    ++Reads;
+    // A tie its def already satisfies is not rewritten.
+    Tied |= MO.isTied() &&
+            getOperand(findTiedOperandIdx(getOperandNo(&MO))).getReg() != Reg;
+  }
+  return Tied && Reads > 1;
 }
 
 /// readsWritesVirtualRegister - Return a pair of bools (reads, writes)
@@ -1356,8 +1376,7 @@ bool MachineInstr::isSafeToMove(bool &SawStore) const {
   // Treat volatile loads as stores. This is not strictly necessary for
   // volatiles, but it is required for atomic loads. It is not allowed to move
   // a load across an atomic load with Ordering > Monotonic.
-  if (mayStore() || isCall() || isPHI() ||
-      (mayLoad() && hasOrderedMemoryRef())) {
+  if (mayStore() || isCall() || isPHI() || hasOrderedMemoryRef()) {
     SawStore = true;
     return false;
   }
@@ -1365,7 +1384,7 @@ bool MachineInstr::isSafeToMove(bool &SawStore) const {
   // Don't touch instructions that have non-trivial invariants.  For example,
   // terminators have to be at the end of a basic block.
   if (isPosition() || isDebugInstr() || isTerminator() ||
-      isJumpTableDebugInfo())
+      isJumpTableDebugInfo() || isLifetimeMarker())
     return false;
 
   // Don't touch instructions which can have non-load/store effects.
@@ -1406,11 +1425,6 @@ bool MachineInstr::wouldBeTriviallyDead() const {
   // Don't delete FAKE_USE.
   // FIXME: Why is FAKE_USE not considered in MachineInstr::isPosition?
   if (isFakeUse())
-    return false;
-
-  // LIFETIME markers should be preserved.
-  // FIXME: Why are LIFETIME markers not considered in MachineInstr::isPosition?
-  if (isLifetimeMarker())
     return false;
 
   // If we can move an instruction, we can remove it.  Otherwise, it has
@@ -1902,6 +1916,10 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "samesign ";
   if (getFlag(MachineInstr::InBounds))
     OS << "inbounds ";
+  if (getFlag(MachineInstr::LRSplit))
+    OS << "lr-split ";
+  if (getFlag(MachineInstr::NonNull))
+    OS << "nonnull ";
 
   // Print the opcode name.
   if (TII)
@@ -2563,12 +2581,11 @@ void MachineInstr::changeDebugValuesDefReg(Register Reg) {
 
   Register DefReg = getOperand(0).getReg();
   auto *MRI = getRegInfo();
-  for (auto &MO : MRI->use_operands(DefReg)) {
-    auto *DI = MO.getParent();
-    if (!DI->isDebugValue())
+  for (MachineInstr &DI : MRI->use_instructions(DefReg)) {
+    if (!DI.isDebugValue())
       continue;
-    if (DI->hasDebugOperandForReg(DefReg)) {
-      DbgValues.push_back(DI);
+    if (DI.hasDebugOperandForReg(DefReg)) {
+      DbgValues.push_back(&DI);
     }
   }
 
@@ -2614,6 +2631,9 @@ MachineInstr::getSpillSize(const TargetInstrInfo *TII) const {
 
 std::optional<LocationSize>
 MachineInstr::getFoldedSpillSize(const TargetInstrInfo *TII) const {
+  if (!mayStore())
+    return std::nullopt;
+
   MMOList Accesses;
   if (TII->hasStoreToStackSlot(*this, Accesses))
     return getSpillSlotSize(Accesses, getMF()->getFrameInfo());
@@ -2740,16 +2760,10 @@ void MachineInstr::insert(mop_iterator InsertBefore,
   }
 
   unsigned OpIdx = getOperandNo(InsertBefore);
-  unsigned NumOperands = getNumOperands();
-  unsigned OpsToMove = NumOperands - OpIdx;
+  SmallVector<MachineOperand> MovingOps(InsertBefore, operands_end());
 
-  SmallVector<MachineOperand> MovingOps;
-  MovingOps.reserve(OpsToMove);
-
-  for (unsigned I = 0; I < OpsToMove; ++I) {
-    MovingOps.emplace_back(getOperand(OpIdx));
-    removeOperand(OpIdx);
-  }
+  for (unsigned I = getNumOperands(); I > OpIdx; --I)
+    removeOperand(I - 1);
   for (const MachineOperand &MO : Ops)
     addOperand(MO);
   for (const MachineOperand &OpMoved : MovingOps)

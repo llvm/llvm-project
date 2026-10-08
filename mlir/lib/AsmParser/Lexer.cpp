@@ -63,12 +63,7 @@ Location Lexer::getEncodedSourceLocation(SMLoc loc) {
   auto &sourceMgr = getSourceMgr();
   unsigned mainFileID = sourceMgr.getMainFileID();
 
-  // TODO: Fix performance issues in SourceMgr::getLineAndColumn so that we can
-  //       use it here.
-  auto &bufferInfo = sourceMgr.getBufferInfo(mainFileID);
-  unsigned lineNo = bufferInfo.getLineNumber(loc.getPointer());
-  unsigned column =
-      (loc.getPointer() - bufferInfo.getPointerForLineNumber(lineNo)) + 1;
+  auto [lineNo, column] = sourceMgr.getLineAndColumn(loc);
   auto *buffer = sourceMgr.getMemoryBuffer(mainFileID);
 
   return FileLineColLoc::get(context, buffer->getBufferIdentifier(), lineNo,

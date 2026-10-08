@@ -31,6 +31,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -216,6 +217,7 @@ namespace {
       AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
       AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
       AU.addRequired<ProfileSummaryInfoWrapperPass>();
+      AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -1488,7 +1490,7 @@ static void InsertUncondBranch(MachineBasicBlock &MBB, MachineBasicBlock &ToMBB,
   TII->insertBranch(MBB, &ToMBB, nullptr, NoCond, dl);
 }
 
-/// Behaves like LiveRegUnits::StepForward() but also adds implicit uses to all
+/// Behaves like LivePhysRegs::stepForward() but also adds implicit uses to all
 /// values defined in MI which are also live/used by MI.
 static void UpdatePredRedefs(MachineInstr &MI, LivePhysRegs &Redefs) {
   const TargetRegisterInfo *TRI = MI.getMF()->getSubtarget().getRegisterInfo();

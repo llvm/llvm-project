@@ -18,6 +18,7 @@
 #include "flang/Frontend/CompilerInstance.h"
 #include "flang/Frontend/FrontendActions.h"
 #include "flang/Frontend/FrontendPluginRegistry.h"
+#include "flang/Optimizer/Passes/Pipelines.h"
 
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/MLIRContext.h"
@@ -27,7 +28,6 @@
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Plugins/PassPlugin.h"
-#include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace Fortran::frontend {
@@ -182,7 +182,7 @@ bool executeCompilerInvocation(CompilerInstance *flang) {
   for (const std::string &path :
        flang->getInvocation().getCodeGenOpts().LLVMPassPlugins) {
     if (llvm::Expected<llvm::PassPlugin> passPlugin =
-            llvm::PassPlugin::Load(path)) {
+            llvm::PassPlugin::load(path)) {
       flang->addPassPlugin(std::make_unique<llvm::PassPlugin>(*passPlugin));
     } else {
       unsigned diagID = flang->getDiagnostics().getCustomDiagID(
@@ -207,6 +207,8 @@ bool executeCompilerInvocation(CompilerInstance *flang) {
 
   // Honor -mmlir. This should happen AFTER plugins have been loaded!
   if (!flang->getFrontendOpts().mlirArgs.empty()) {
+    fir::registerFlangPipelinePasses(); // Must be called before
+                                        // mlir::registerPassManagerCLOptions()
     mlir::registerMLIRContextCLOptions();
     mlir::registerPassManagerCLOptions();
     mlir::registerAsmPrinterCLOptions();

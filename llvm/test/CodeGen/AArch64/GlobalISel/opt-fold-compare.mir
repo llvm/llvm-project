@@ -50,14 +50,14 @@ body:             |
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY2]], $wzr, 0, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %0:gpr(s32) = COPY $w0
-    %1:gpr(s32) = COPY $w1
-    %2:gpr(s32) = G_CONSTANT i32 0
-    %6:gpr(s32) = G_CONSTANT i32 1
-    %3:gpr(s32) = G_SUB %2, %1
-    %7:gpr(s32) = G_ICMP intpred(ne), %0(s32), %3
-    %5:gpr(s32) = G_SELECT %7, %6, %2
-    $w0 = COPY %5(s32)
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = COPY $w1
+    %2:gpr(i32) = G_CONSTANT i32 0
+    %6:gpr(i32) = G_CONSTANT i32 1
+    %3:gpr(i32) = G_SUB %2, %1
+    %7:gpr(i32) = G_ICMP intpred(ne), %0(i32), %3
+    %5:gpr(i32) = G_SELECT %7, %6, %2
+    $w0 = COPY %5(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -81,14 +81,14 @@ body:             |
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY2]], $wzr, 0, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %0:gpr(s32) = COPY $w0
-    %1:gpr(s32) = COPY $w1
-    %2:gpr(s32) = G_CONSTANT i32 0
-    %6:gpr(s32) = G_CONSTANT i32 1
-    %3:gpr(s32) = G_SUB %2, %0
-    %7:gpr(s32) = G_ICMP intpred(ne), %3(s32), %1
-    %5:gpr(s32) = G_SELECT %7, %6, %2
-    $w0 = COPY %5(s32)
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = COPY $w1
+    %2:gpr(i32) = G_CONSTANT i32 0
+    %6:gpr(i32) = G_CONSTANT i32 1
+    %3:gpr(i32) = G_SUB %2, %0
+    %7:gpr(i32) = G_ICMP intpred(ne), %3(i32), %1
+    %5:gpr(i32) = G_SELECT %7, %6, %2
+    $w0 = COPY %5(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -113,14 +113,14 @@ body:             |
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY2]], $wzr, 10, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %0:gpr(s32) = COPY $w0
-    %1:gpr(s32) = COPY $w1
-    %2:gpr(s32) = G_CONSTANT i32 0
-    %6:gpr(s32) = G_CONSTANT i32 1
-    %3:gpr(s32) = G_SUB %2, %1
-    %7:gpr(s32) = G_ICMP intpred(slt), %0(s32), %3
-    %5:gpr(s32) = G_SELECT %7, %6, %2
-    $w0 = COPY %5(s32)
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = COPY $w1
+    %2:gpr(i32) = G_CONSTANT i32 0
+    %6:gpr(i32) = G_CONSTANT i32 1
+    %3:gpr(i32) = G_SUB %2, %1
+    %7:gpr(i32) = G_ICMP intpred(slt), %0(i32), %3
+    %5:gpr(i32) = G_SELECT %7, %6, %2
+    $w0 = COPY %5(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -145,14 +145,14 @@ body:             |
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY2]], $wzr, 10, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %0:gpr(s32) = COPY $w0
-    %1:gpr(s32) = COPY $w1
-    %2:gpr(s32) = G_CONSTANT i32 0
-    %6:gpr(s32) = G_CONSTANT i32 1
-    %3:gpr(s32) = G_SUB %2, %0
-    %7:gpr(s32) = G_ICMP intpred(slt), %3(s32), %1
-    %5:gpr(s32) = G_SELECT %7, %6, %2
-    $w0 = COPY %5(s32)
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = COPY $w1
+    %2:gpr(i32) = G_CONSTANT i32 0
+    %6:gpr(i32) = G_CONSTANT i32 1
+    %3:gpr(i32) = G_SUB %2, %0
+    %7:gpr(i32) = G_ICMP intpred(slt), %3(i32), %1
+    %5:gpr(i32) = G_SELECT %7, %6, %2
+    $w0 = COPY %5(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -176,14 +176,14 @@ body:             |
     ; CHECK-NEXT: [[CSINCXr:%[0-9]+]]:gpr64 = CSINCXr [[COPY2]], $xzr, 0, implicit $nzcv
     ; CHECK-NEXT: $x0 = COPY [[CSINCXr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %0:gpr(s64) = COPY $x0
-    %1:gpr(s64) = COPY $x1
-    %2:gpr(s64) = G_CONSTANT i64 0
-    %6:gpr(s64) = G_CONSTANT i64 1
-    %3:gpr(s64) = G_SUB %2, %1
-    %7:gpr(s32) = G_ICMP intpred(ne), %0(s64), %3
-    %5:gpr(s64) = G_SELECT %7, %6, %2
-    $x0 = COPY %5(s64)
+    %0:gpr(i64) = COPY $x0
+    %1:gpr(i64) = COPY $x1
+    %2:gpr(i64) = G_CONSTANT i64 0
+    %6:gpr(i64) = G_CONSTANT i64 1
+    %3:gpr(i64) = G_SUB %2, %1
+    %7:gpr(i32) = G_ICMP intpred(ne), %0(i64), %3
+    %5:gpr(i64) = G_SELECT %7, %6, %2
+    $x0 = COPY %5(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -207,14 +207,14 @@ body:             |
     ; CHECK-NEXT: [[CSINCXr:%[0-9]+]]:gpr64 = CSINCXr [[COPY2]], $xzr, 0, implicit $nzcv
     ; CHECK-NEXT: $x0 = COPY [[CSINCXr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %0:gpr(s64) = COPY $x0
-    %1:gpr(s64) = COPY $x1
-    %2:gpr(s64) = G_CONSTANT i64 0
-    %6:gpr(s64) = G_CONSTANT i64 1
-    %3:gpr(s64) = G_SUB %2, %0
-    %7:gpr(s32) = G_ICMP intpred(ne), %3(s64), %1
-    %5:gpr(s64) = G_SELECT %7, %6, %2
-    $x0 = COPY %5(s64)
+    %0:gpr(i64) = COPY $x0
+    %1:gpr(i64) = COPY $x1
+    %2:gpr(i64) = G_CONSTANT i64 0
+    %6:gpr(i64) = G_CONSTANT i64 1
+    %3:gpr(i64) = G_SUB %2, %0
+    %7:gpr(i32) = G_ICMP intpred(ne), %3(i64), %1
+    %5:gpr(i64) = G_SELECT %7, %6, %2
+    $x0 = COPY %5(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -239,14 +239,14 @@ body:             |
     ; CHECK-NEXT: [[CSINCXr:%[0-9]+]]:gpr64 = CSINCXr [[COPY2]], $xzr, 10, implicit $nzcv
     ; CHECK-NEXT: $x0 = COPY [[CSINCXr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %0:gpr(s64) = COPY $x0
-    %1:gpr(s64) = COPY $x1
-    %2:gpr(s64) = G_CONSTANT i64 0
-    %6:gpr(s64) = G_CONSTANT i64 1
-    %3:gpr(s64) = G_SUB %2, %1
-    %7:gpr(s32) = G_ICMP intpred(slt), %0(s64), %3
-    %5:gpr(s64) = G_SELECT %7, %6, %2
-    $x0 = COPY %5(s64)
+    %0:gpr(i64) = COPY $x0
+    %1:gpr(i64) = COPY $x1
+    %2:gpr(i64) = G_CONSTANT i64 0
+    %6:gpr(i64) = G_CONSTANT i64 1
+    %3:gpr(i64) = G_SUB %2, %1
+    %7:gpr(i32) = G_ICMP intpred(slt), %0(i64), %3
+    %5:gpr(i64) = G_SELECT %7, %6, %2
+    $x0 = COPY %5(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -271,14 +271,14 @@ body:             |
     ; CHECK-NEXT: [[CSINCXr:%[0-9]+]]:gpr64 = CSINCXr [[COPY2]], $xzr, 10, implicit $nzcv
     ; CHECK-NEXT: $x0 = COPY [[CSINCXr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %0:gpr(s64) = COPY $x0
-    %1:gpr(s64) = COPY $x1
-    %2:gpr(s64) = G_CONSTANT i64 0
-    %6:gpr(s64) = G_CONSTANT i64 1
-    %3:gpr(s64) = G_SUB %2, %0
-    %7:gpr(s32) = G_ICMP intpred(slt), %3(s64), %1
-    %5:gpr(s64) = G_SELECT %7, %6, %2
-    $x0 = COPY %5(s64)
+    %0:gpr(i64) = COPY $x0
+    %1:gpr(i64) = COPY $x1
+    %2:gpr(i64) = G_CONSTANT i64 0
+    %6:gpr(i64) = G_CONSTANT i64 1
+    %3:gpr(i64) = G_SUB %2, %0
+    %7:gpr(i32) = G_ICMP intpred(slt), %3(i64), %1
+    %5:gpr(i64) = G_SELECT %7, %6, %2
+    $x0 = COPY %5(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -300,15 +300,15 @@ body:             |
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY1]], $wzr, 1, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %0:gpr(s32) = COPY $w0
-    %1:gpr(s32) = COPY $w1
-    %2:gpr(s32) = G_CONSTANT i32 0
-    %6:gpr(s32) = G_CONSTANT i32 1
-    %3:gpr(s32) = G_AND %2, %1
-    %8:gpr(s32) = G_CONSTANT i32 0
-    %7:gpr(s32) = G_ICMP intpred(eq), %3(s32), %8
-    %5:gpr(s32) = G_SELECT %7, %6, %2
-    $w0 = COPY %5(s32)
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = COPY $w1
+    %2:gpr(i32) = G_CONSTANT i32 0
+    %6:gpr(i32) = G_CONSTANT i32 1
+    %3:gpr(i32) = G_AND %2, %1
+    %8:gpr(i32) = G_CONSTANT i32 0
+    %7:gpr(i32) = G_ICMP intpred(eq), %3(i32), %8
+    %5:gpr(i32) = G_SELECT %7, %6, %2
+    $w0 = COPY %5(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -330,15 +330,15 @@ body:             |
     ; CHECK-NEXT: [[CSINCXr:%[0-9]+]]:gpr64 = CSINCXr [[COPY1]], $xzr, 1, implicit $nzcv
     ; CHECK-NEXT: $x0 = COPY [[CSINCXr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %0:gpr(s64) = COPY $x0
-    %1:gpr(s64) = COPY $x1
-    %2:gpr(s64) = G_CONSTANT i64 0
-    %6:gpr(s64) = G_CONSTANT i64 1
-    %3:gpr(s64) = G_AND %2, %1
-    %8:gpr(s64) = G_CONSTANT i64 0
-    %7:gpr(s32) = G_ICMP intpred(eq), %3(s64), %8
-    %5:gpr(s64) = G_SELECT %7, %6, %2
-    $x0 = COPY %5(s64)
+    %0:gpr(i64) = COPY $x0
+    %1:gpr(i64) = COPY $x1
+    %2:gpr(i64) = G_CONSTANT i64 0
+    %6:gpr(i64) = G_CONSTANT i64 1
+    %3:gpr(i64) = G_AND %2, %1
+    %8:gpr(i64) = G_CONSTANT i64 0
+    %7:gpr(i32) = G_ICMP intpred(eq), %3(i64), %8
+    %5:gpr(i64) = G_SELECT %7, %6, %2
+    $x0 = COPY %5(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -361,15 +361,15 @@ body:             |
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY1]], $wzr, 9, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %0:gpr(s32) = COPY $w0
-    %1:gpr(s32) = COPY $w1
-    %2:gpr(s32) = G_CONSTANT i32 0
-    %6:gpr(s32) = G_CONSTANT i32 1
-    %3:gpr(s32) = G_AND %2, %1
-    %8:gpr(s32) = G_CONSTANT i32 0
-    %7:gpr(s32) = G_ICMP intpred(ugt), %3(s32), %8
-    %5:gpr(s32) = G_SELECT %7, %6, %2
-    $w0 = COPY %5(s32)
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = COPY $w1
+    %2:gpr(i32) = G_CONSTANT i32 0
+    %6:gpr(i32) = G_CONSTANT i32 1
+    %3:gpr(i32) = G_AND %2, %1
+    %8:gpr(i32) = G_CONSTANT i32 0
+    %7:gpr(i32) = G_ICMP intpred(ugt), %3(i32), %8
+    %5:gpr(i32) = G_SELECT %7, %6, %2
+    $w0 = COPY %5(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -392,15 +392,15 @@ body:             |
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY1]], $wzr, 9, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %0:gpr(s32) = COPY $w0
-    %1:gpr(s32) = COPY $w1
-    %2:gpr(s32) = G_CONSTANT i32 0
-    %6:gpr(s32) = G_CONSTANT i32 1
-    %3:gpr(s32) = G_AND %2, %1
-    %8:gpr(s32) = G_CONSTANT i32 42
-    %7:gpr(s32) = G_ICMP intpred(ugt), %3(s32), %8
-    %5:gpr(s32) = G_SELECT %7, %6, %2
-    $w0 = COPY %5(s32)
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = COPY $w1
+    %2:gpr(i32) = G_CONSTANT i32 0
+    %6:gpr(i32) = G_CONSTANT i32 1
+    %3:gpr(i32) = G_AND %2, %1
+    %8:gpr(i32) = G_CONSTANT i32 42
+    %7:gpr(i32) = G_ICMP intpred(ugt), %3(i32), %8
+    %5:gpr(i32) = G_SELECT %7, %6, %2
+    $w0 = COPY %5(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -421,18 +421,18 @@ body:             |
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %0:gpr(s32) = COPY $w0
-    %1:gpr(s32) = COPY $w1
-    %2:gpr(s32) = G_CONSTANT i32 0
-    %3:gpr(s32) = G_CONSTANT i32 1
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = COPY $w1
+    %2:gpr(i32) = G_CONSTANT i32 0
+    %3:gpr(i32) = G_CONSTANT i32 1
 
     ; This can be represented as a logical immediate, so we can pull it into
     ; the ANDS. We should get ANDSWri.
-    %4:gpr(s32) = G_CONSTANT i32 3
+    %4:gpr(i32) = G_CONSTANT i32 3
 
-    %5:gpr(s32) = G_AND %1, %4
-    %6:gpr(s32) = G_ICMP intpred(eq), %5(s32), %2
-    $w0 = COPY %6(s32)
+    %5:gpr(i32) = G_AND %1, %4
+    %6:gpr(i32) = G_ICMP intpred(eq), %5(i32), %2
+    $w0 = COPY %6(i32)
     RET_ReallyLR implicit $w0
 
 
@@ -455,18 +455,18 @@ body:             |
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %0:gpr(s32) = COPY $w0
-    %1:gpr(s32) = COPY $w1
-    %2:gpr(s32) = G_CONSTANT i32 0
-    %3:gpr(s32) = G_CONSTANT i32 1
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i32) = COPY $w1
+    %2:gpr(i32) = G_CONSTANT i32 0
+    %3:gpr(i32) = G_CONSTANT i32 1
 
     ; This immediate can't be represented as a logical immediate. We shouldn't
     ; select ANDSWri.
-    %4:gpr(s32) = G_CONSTANT i32 -1
+    %4:gpr(i32) = G_CONSTANT i32 -1
 
-    %5:gpr(s32) = G_AND %1, %4
-    %6:gpr(s32) = G_ICMP intpred(eq), %5(s32), %2
-    $w0 = COPY %6(s32)
+    %5:gpr(i32) = G_AND %1, %4
+    %6:gpr(i32) = G_ICMP intpred(eq), %5(i32), %2
+    $w0 = COPY %6(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -488,13 +488,13 @@ body:             |
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %0:gpr(s64) = COPY $x0
-    %1:gpr(s64) = COPY $x1
+    %0:gpr(i64) = COPY $x0
+    %1:gpr(i64) = COPY $x1
     ; When we find the defs of the LHS and RHS of the compare, we walk over
     ; copies. Make sure that we don't crash when we hit a copy from a physical
     ; register.
-    %7:gpr(s32) = G_ICMP intpred(eq), %0, %1
-    $w0 = COPY %7(s32)
+    %7:gpr(i32) = G_ICMP intpred(eq), %0, %1
+    $w0 = COPY %7(i32)
     RET_ReallyLR implicit $x0
 
 ...
@@ -517,15 +517,15 @@ body:             |
     ; CHECK-NEXT: %select:gpr64 = CSINCXr %zero, $xzr, 1, implicit $nzcv
     ; CHECK-NEXT: $x0 = COPY %select
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %copy:gpr(s64) = COPY $x1
-    %zero:gpr(s64) = G_CONSTANT i64 0
-    %one:gpr(s64) = G_CONSTANT i64 1
-    %cst:gpr(s64) = G_CONSTANT i64 16
-    %shift:gpr(s64) = G_SHL %copy(s64), %cst(s64)
-    %and:gpr(s64) = G_AND %zero, %shift
-    %cmp:gpr(s32) = G_ICMP intpred(eq), %and(s64), %zero
-    %select:gpr(s64) = G_SELECT %cmp, %one, %zero
-    $x0 = COPY %select(s64)
+    %copy:gpr(i64) = COPY $x1
+    %zero:gpr(i64) = G_CONSTANT i64 0
+    %one:gpr(i64) = G_CONSTANT i64 1
+    %cst:gpr(i64) = G_CONSTANT i64 16
+    %shift:gpr(i64) = G_SHL %copy(i64), %cst(i64)
+    %and:gpr(i64) = G_AND %zero, %shift
+    %cmp:gpr(i32) = G_ICMP intpred(eq), %and(i64), %zero
+    %select:gpr(i64) = G_SELECT %cmp, %one, %zero
+    $x0 = COPY %select(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -548,15 +548,15 @@ body:             |
     ; CHECK-NEXT: %select:gpr32 = CSINCWr %zero, $wzr, 1, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY %select
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %copy:gpr(s32) = COPY $w1
-    %zero:gpr(s32) = G_CONSTANT i32 0
-    %one:gpr(s32) = G_CONSTANT i32 1
-    %cst:gpr(s32) = G_CONSTANT i32 16
-    %shift:gpr(s32) = G_SHL %copy(s32), %cst(s32)
-    %and:gpr(s32) = G_AND %zero, %shift
-    %cmp:gpr(s32) = G_ICMP intpred(eq), %and(s32), %zero
-    %select:gpr(s32) = G_SELECT %cmp, %one, %zero
-    $w0 = COPY %select(s32)
+    %copy:gpr(i32) = COPY $w1
+    %zero:gpr(i32) = G_CONSTANT i32 0
+    %one:gpr(i32) = G_CONSTANT i32 1
+    %cst:gpr(i32) = G_CONSTANT i32 16
+    %shift:gpr(i32) = G_SHL %copy(i32), %cst(i32)
+    %and:gpr(i32) = G_AND %zero, %shift
+    %cmp:gpr(i32) = G_ICMP intpred(eq), %and(i32), %zero
+    %select:gpr(i32) = G_SELECT %cmp, %one, %zero
+    $w0 = COPY %select(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -578,12 +578,12 @@ body:             |
     ; CHECK-NEXT: %cmp:gpr32 = CSINCWr $wzr, $wzr, 0, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY %cmp
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %reg0:gpr(s32) = COPY $w0
-    %negative_one:gpr(s32) = G_CONSTANT i32 -1
-    %zero:gpr(s32) = G_CONSTANT i32 0
-    %sub:gpr(s32) = G_SUB %zero, %negative_one
-    %cmp:gpr(s32) = G_ICMP intpred(ne), %reg0(s32), %sub
-    $w0 = COPY %cmp(s32)
+    %reg0:gpr(i32) = COPY $w0
+    %negative_one:gpr(i32) = G_CONSTANT i32 -1
+    %zero:gpr(i32) = G_CONSTANT i32 0
+    %sub:gpr(i32) = G_SUB %zero, %negative_one
+    %cmp:gpr(i32) = G_ICMP intpred(ne), %reg0(i32), %sub
+    $w0 = COPY %cmp(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -607,15 +607,15 @@ body:             |
     ; CHECK-NEXT: %cmp:gpr32 = CSINCWr $wzr, $wzr, 0, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY %cmp
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %reg0:gpr(s64) = COPY $x0
-    %zero:gpr(s64) = G_CONSTANT i64 0
-    %sub:gpr(s64) = G_SUB %zero, %reg0
+    %reg0:gpr(i64) = COPY $x0
+    %zero:gpr(i64) = G_CONSTANT i64 0
+    %sub:gpr(i64) = G_SUB %zero, %reg0
 
-    %reg1:gpr(s32) = COPY $w0
-    %ext:gpr(s64) = G_SEXT %reg1(s32)
-    %cst:gpr(s64) = G_CONSTANT i64 2
-    %shift:gpr(s64) = G_SHL %ext, %cst(s64)
+    %reg1:gpr(i32) = COPY $w0
+    %ext:gpr(i64) = G_SEXT %reg1(i32)
+    %cst:gpr(i64) = G_CONSTANT i64 2
+    %shift:gpr(i64) = G_SHL %ext, %cst(i64)
 
-    %cmp:gpr(s32) = G_ICMP intpred(ne), %sub(s64), %shift
-    $w0 = COPY %cmp(s32)
+    %cmp:gpr(i32) = G_ICMP intpred(ne), %sub(i64), %shift
+    $w0 = COPY %cmp(i32)
     RET_ReallyLR implicit $w0

@@ -1,0 +1,66 @@
+# RUN: llc -march=hexagon -run-pass=hexagon-rdf-opt -hexagon-aggressive-rdf-copy=true -verify-machineinstrs -o - %s | FileCheck %s
+# This test checks that RDF copy propagation works for redundant combine instructions
+# that are feeding values to store instructions.
+# Redundant combine instructions should be removed by RDF dead code elimination.
+# CHECK-LABEL: bb.1:
+# Check that combine defining $d5 has been removed
+# CHECK: renamable $d4 = A2_combinew killed renamable $r13, killed renamable $r12
+# CHECK-NEXT: renamable $d6 = L2_loadrd_io
+# CHECK-NEXT: S2_storerd_io renamable $r{{[0-9]+}}, 0, killed renamable $d4
+# CHECK-NEXT: S2_storerd_io renamable $r{{[0-9]+}}, 24, killed $d8
+# Check that combine defining $d13 has been removed
+# CHECK: renamable $r24 = S2_asr_i_r_rnd renamable $r22, 4
+# CHECK-NEXT: renamable $r25 = S2_asr_i_r_rnd renamable $r23, 4
+# CHECK-NEXT: S2_storerd_io renamable $r{{[0-9]+}}, 120, killed $d12
+--- |
+  ; Function Attrs: nounwind
+  define dso_local i32 @foo(ptr %cgep88, ptr %cgep93, ptr %cgep99, ptr %cgep100, ptr %cgep103, ptr %array) local_unnamed_addr {
+  entry:
+    ret i32 0
+  }
+  !0 = !{!1, !1, i64 0}
+  !1 = !{!"float", !2, i64 0}
+  !2 = !{!"omnipotent char", !3, i64 0}
+  !3 = !{!"Simple C/C++ TBAA"}
+...
+---
+name: foo
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.2, %bb.1
+    liveins: $d6:0x0000000000000003, $d11:0x0000000000000003, $r2, $r3, $r4, $r5, $r9, $r20
+    renamable $p0 = C2_cmpgtui renamable $r9, 1
+    J2_loop0r %bb.1, killed renamable $r9, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+    J2_jumpf $p0, %bb.2, implicit-def $pc
+  bb.1:
+    successors: %bb.2, %bb.1
+    liveins: $d6:0x0000000000000003, $d7:0x0000000000000001, $d11:0x0000000000000003, $r2, $r3, $r4, $r5, $r20
+    renamable $d0 = L2_loadrd_io renamable $r5, 16 :: (load (s64) from %ir.cgep93 + 32, !tbaa !0)
+    renamable $d3 = L2_loadrd_io renamable $r5, 24 :: (load (s64) from %ir.cgep99 + 32, !tbaa !0)
+    renamable $d4 = L2_loadrd_io renamable $r4, 24 :: (load (s64) from %ir.cgep100 + 32, !tbaa !0)
+    renamable $r12 = nnan ninf nsz arcp contract afn reassoc F2_sffms renamable $r12, renamable $r15, renamable $r1, implicit $usr
+    renamable $d8 = L2_loadrd_io $r20, 24 :: (load (s64) from %ir.cgep103 + 32, !tbaa !0)
+    renamable $d5 = L2_loadrd_io renamable $r4, 8 :: (load (s64) from %ir.cgep88 + 32, !tbaa !0)
+    renamable $r16 = nnan ninf nsz arcp contract afn reassoc F2_sffma renamable $r16, renamable $r8, renamable $r6, implicit $usr
+    renamable $r13 = nnan ninf nsz arcp contract afn reassoc F2_sffma renamable $r13, killed renamable $r15, killed renamable $r0, implicit $usr
+    renamable $r17 = nnan ninf nsz arcp contract afn reassoc F2_sffma renamable $r17, renamable $r9, renamable $r6, implicit $usr
+    renamable $r16 = nnan ninf nsz arcp contract afn reassoc F2_sffms renamable $r16, killed renamable $r9, killed renamable $r7, implicit $usr
+    renamable $d7 = L2_loadrd_io renamable $r5, 0 :: (load (s64) from %ir.array + 32, !tbaa !0)
+    renamable $d4 = A2_combinew killed renamable $r13, renamable $r12
+    renamable $d6 = L2_loadrd_io renamable $r3, 0 :: (load (s64) from %ir.array + 32, !tbaa !0)
+    S2_storerd_io killed renamable $r2, 0, killed renamable $d4 :: (store (s64) into %ir.array, !tbaa !0)
+    renamable $d5 = A2_combinew killed renamable $r17, renamable $r16
+    S2_storerd_io renamable $r3, 24, killed renamable $d5 :: (store (s64) into %ir.cgep103 + 32, !tbaa !0)
+    renamable $r24 = S2_asr_i_r_rnd renamable $r22, 4
+    renamable $r25 = S2_asr_i_r_rnd renamable $r23, 4
+    renamable $d13 = A2_combinew killed renamable $r25, killed renamable $r24
+    S2_storerd_io renamable $r3, 120, killed renamable $d13 :: (store (s64) into %ir.cgep103 + 128, !tbaa !0)
+    ENDLOOP0 %bb.1, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
+    J2_jump %bb.2, implicit-def $pc
+  bb.2:
+    liveins: $d0:0x0000000000000003, $r3, $r5
+    S2_storerd_io killed renamable $r3, 0, killed renamable $d0 :: (store unknown-size into %ir.array, align 8, !tbaa !0)
+    renamable $r0 = L2_loadri_io $r5, 0
+    PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+...

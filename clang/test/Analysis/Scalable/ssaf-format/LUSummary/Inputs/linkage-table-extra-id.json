@@ -1,0 +1,20 @@
+{
+  "lu_namespace": [
+    {
+      "kind": "LinkUnit",
+      "name": "test.exe"
+    }
+  ],
+  "id_table": [],
+  "linkage_table": [
+    {
+      "id": 0,
+      "linkage": {
+        "type": "External"
+      }
+    }
+  ],
+  "data": [],
+  "target_triple": "arm64-apple-macosx",
+  "type": "LUSummary"
+}

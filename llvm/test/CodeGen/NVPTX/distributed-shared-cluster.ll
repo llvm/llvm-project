@@ -208,7 +208,7 @@ define void @test_distributed_shared_cluster_cmpxchg(ptr addrspace(7) %dsmem_ptr
 ; CHECK-NEXT:    not.b32 %r2, %r26;
 ; CHECK-NEXT:    mov.b32 %r27, 1;
 ; CHECK-NEXT:    shl.b32 %r3, %r27, %r1;
-; CHECK-NEXT:    ld.shared::cluster.b32 %r28, [%rd1];
+; CHECK-NEXT:    ld.relaxed.sys.shared::cluster.b32 %r28, [%rd1];
 ; CHECK-NEXT:    and.b32 %r38, %r28, %r2;
 ; CHECK-NEXT:  $L__BB4_1: // %partword.cmpxchg.loop33
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -223,7 +223,7 @@ define void @test_distributed_shared_cluster_cmpxchg(ptr addrspace(7) %dsmem_ptr
 ; CHECK-NEXT:    mov.b32 %r38, %r5;
 ; CHECK-NEXT:    @%p2 bra $L__BB4_1;
 ; CHECK-NEXT:  $L__BB4_3: // %partword.cmpxchg.end31
-; CHECK-NEXT:    ld.shared::cluster.b32 %r30, [%rd1];
+; CHECK-NEXT:    ld.relaxed.sys.shared::cluster.b32 %r30, [%rd1];
 ; CHECK-NEXT:    and.b32 %r39, %r30, %r2;
 ; CHECK-NEXT:  $L__BB4_4: // %partword.cmpxchg.loop23
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -240,7 +240,7 @@ define void @test_distributed_shared_cluster_cmpxchg(ptr addrspace(7) %dsmem_ptr
 ; CHECK-NEXT:  $L__BB4_6: // %partword.cmpxchg.end21
 ; CHECK-NEXT:    fence.acq_rel.sys;
 ; CHECK-NEXT:    fence.acq_rel.sys;
-; CHECK-NEXT:    ld.shared::cluster.b32 %r32, [%rd1];
+; CHECK-NEXT:    ld.relaxed.sys.shared::cluster.b32 %r32, [%rd1];
 ; CHECK-NEXT:    and.b32 %r40, %r32, %r2;
 ; CHECK-NEXT:  $L__BB4_7: // %partword.cmpxchg.loop13
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -256,7 +256,7 @@ define void @test_distributed_shared_cluster_cmpxchg(ptr addrspace(7) %dsmem_ptr
 ; CHECK-NEXT:    @%p6 bra $L__BB4_7;
 ; CHECK-NEXT:  $L__BB4_9: // %partword.cmpxchg.end11
 ; CHECK-NEXT:    fence.acq_rel.sys;
-; CHECK-NEXT:    ld.shared::cluster.b32 %r34, [%rd1];
+; CHECK-NEXT:    ld.relaxed.sys.shared::cluster.b32 %r34, [%rd1];
 ; CHECK-NEXT:    and.b32 %r41, %r34, %r2;
 ; CHECK-NEXT:  $L__BB4_10: // %partword.cmpxchg.loop3
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -273,7 +273,7 @@ define void @test_distributed_shared_cluster_cmpxchg(ptr addrspace(7) %dsmem_ptr
 ; CHECK-NEXT:  $L__BB4_12: // %partword.cmpxchg.end1
 ; CHECK-NEXT:    fence.acq_rel.sys;
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.shared::cluster.b32 %r36, [%rd1];
+; CHECK-NEXT:    ld.relaxed.sys.shared::cluster.b32 %r36, [%rd1];
 ; CHECK-NEXT:    and.b32 %r42, %r36, %r2;
 ; CHECK-NEXT:  $L__BB4_13: // %partword.cmpxchg.loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1

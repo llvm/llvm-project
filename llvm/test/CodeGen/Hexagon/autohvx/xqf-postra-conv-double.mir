@@ -1,0 +1,120 @@
+# This test checks that the converts are added based on the qf type of
+# the register defined by the qf producing reaching def of a vector
+# COPY instruction
+
+# REQUIRES: asserts
+# RUN: llc -march=hexagon -mcpu=hexagonv79 -mattr=+hvxv79,+hvx-length128B \
+# RUN: -run-pass=handle-qfp-spills-refills -verify-machineinstrs \
+# RUN: -debug-only=handle-qfp %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -march=hexagon -mcpu=hexagonv81 -mattr=+hvxv81,+hvx-length128B \
+# RUN: -run-pass=handle-qfp-spills-refills -verify-machineinstrs \
+# RUN: -debug-only=handle-qfp %s -o /dev/null 2>&1 | FileCheck %s
+
+#CHECK: Handling COPY: renamable $w{{[0-9]+}} = COPY killed renamable $w{{[0-9]+}}
+#CHECK: Inserting convert instruction:   [[VREG:\$v[0-9]+]] = V6_vconv_sf_qf32 killed renamable [[VREG]]
+#CHECK: after instruction:   renamable [[VREG]] = V6_vmpy_qf32_sf killed renamable $v{{[0-9]+}}, killed renamable $v{{[0-9]+}}
+
+--- |
+  target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
+
+  ; Function Attrs: norecurse
+  define dso_local noundef i32 @foo(i32 %in0, i32 %in1, ptr noundef %out) #0 {
+  entry:
+    %0 = tail call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 %in0)
+    %1 = tail call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 %in1)
+    %2 = tail call <32 x i32> @llvm.hexagon.V6.vmpy.qf32.sf.128B(<32 x i32> %0, <32 x i32> %1)
+    store <32 x i32> %2, ptr %out, align 1
+    ret i32 0
+  }
+
+  ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
+  declare <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32) #1
+
+  ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
+  declare <32 x i32> @llvm.hexagon.V6.vmpy.qf32.sf.128B(<32 x i32>, <32 x i32>) #1
+
+  attributes #0 = { norecurse "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="-long-calls,+hvx-ieee-fp" }
+  attributes #1 = { nocallback nofree nosync nounwind willreturn memory(none) }
+
+...
+---
+name:            foo
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHContTarget: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: true
+registers:       []
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+  - { reg: '$r1', virtual-reg: '' }
+  - { reg: '$r2', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       []
+  restorePoint:    []
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1
+    liveins: $r0, $r1, $r2
+
+    renamable $v0 = V6_lvsplatw killed renamable $r0
+    renamable $v1 = V6_lvsplatw renamable $r1
+    renamable $v3 = V6_lvsplatw killed renamable $r1
+    $r0 = A2_tfrsi 0
+
+  bb.1:
+    successors: %bb.2
+    liveins: $r0, $r2, $v0, $v1, $v3
+
+    renamable $v2 = V6_vmpy_qf32_sf killed renamable $v0, killed renamable $v1
+
+  bb.2:
+    successors: %bb.3
+    liveins: $r0, $r2, $v2, $v3
+
+    renamable $w8 = COPY killed renamable $w1
+
+  bb.3:
+    liveins: $r0, $r2, $w8
+
+    V6_vS32Ub_ai killed renamable $r2, 0, killed renamable $v17 :: (store (s1024) into %ir.out, align 1)
+    PS_jmpret killed $r31, implicit-def $pc, implicit killed $r0
+
+...

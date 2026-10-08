@@ -1,4 +1,4 @@
-//===-- include/flang/Runtime/exceptions.h ----------------*- C++ -*-===//
+//===-- include/flang/Runtime/exceptions.h ----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -46,6 +46,11 @@ void RTNAME(SetUnderflowMode)(bool flag);
 // Get the byte size of ieee_modes_type and ieee_status_type data.
 std::size_t RTNAME(GetModesTypeSize)(void);
 std::size_t RTNAME(GetStatusTypeSize)(void);
+
+// Enable trapping on the specified floating-point exceptions.
+// The excepts argument is a bitmask of IEEE_FLAG_TYPE values
+// (as used by MapException).
+void RTNAME(EnableFPETraps)(std::uint32_t excepts);
 
 } // extern "C"
 } // namespace Fortran::runtime

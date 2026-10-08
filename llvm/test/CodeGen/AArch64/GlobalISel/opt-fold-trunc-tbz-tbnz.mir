@@ -24,12 +24,12 @@ body:             |
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
-    %copy:gpr(s64) = COPY $x0
-    %bit:gpr(s32) = G_CONSTANT i32 8
-    %zero:gpr(s32) = G_CONSTANT i32 0
-    %fold_me:gpr(s32) = G_TRUNC %copy(s64)
-    %and:gpr(s32) = G_AND %fold_me, %bit
-    %cmp:gpr(s32) = G_ICMP intpred(ne), %and(s32), %zero
+    %copy:gpr(i64) = COPY $x0
+    %bit:gpr(i32) = G_CONSTANT i32 8
+    %zero:gpr(i32) = G_CONSTANT i32 0
+    %fold_me:gpr(i32) = G_TRUNC %copy(i64)
+    %and:gpr(i32) = G_AND %fold_me, %bit
+    %cmp:gpr(i32) = G_ICMP intpred(ne), %and(i32), %zero
     G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:

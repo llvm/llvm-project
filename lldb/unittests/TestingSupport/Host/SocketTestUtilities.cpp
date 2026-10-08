@@ -71,7 +71,7 @@ bool lldb_private::CreateTCPConnectedSockets(
   return true;
 }
 
-#if LLDB_ENABLE_POSIX
+#if LLDB_ENABLE_POSIX || defined(_WIN32)
 void lldb_private::CreateDomainConnectedSockets(
     llvm::StringRef path, std::unique_ptr<DomainSocket> *socket_a_up,
     std::unique_ptr<DomainSocket> *socket_b_up) {
@@ -94,7 +94,8 @@ static bool CheckIPSupport(llvm::StringRef Proto, llvm::StringRef Addr) {
   handleAllErrors(std::move(Err), [&](std::unique_ptr<llvm::ECError> ECErr) {
     std::error_code ec = ECErr->convertToErrorCode();
     if (ec == std::make_error_code(std::errc::address_family_not_supported) ||
-        ec == std::make_error_code(std::errc::address_not_available))
+        ec == std::make_error_code(std::errc::address_not_available) ||
+        ec == std::make_error_code(std::errc::operation_not_permitted))
       HasProtocolError = true;
   });
   if (HasProtocolError) {
@@ -143,7 +144,21 @@ llvm::Expected<std::string> lldb_private::GetLocalhostIP() {
     return "127.0.0.1";
   if (HostSupportsIPv6())
     return "[::1]";
-  return llvm::make_error<llvm::StringError>(
-      "Neither IPv4 nor IPv6 appear to be supported",
-      llvm::inconvertibleErrorCode());
+  return llvm::createStringError(
+      "Neither IPv4 nor IPv6 appear to be supported");
 }
+
+#if LLDB_ENABLE_POSIX || defined(_WIN32)
+bool lldb_private::HostSupportsDomainSockets() {
+  llvm::SmallString<64> Path;
+  if (llvm::sys::fs::createUniqueDirectory("SocketTestCanary", Path))
+    return false;
+  auto cleanup_dir = Path;
+  llvm::sys::path::append(Path, "test");
+  DomainSocket sock(true);
+  Status status = sock.Listen(Path, 1);
+  llvm::sys::fs::remove(Path);
+  llvm::sys::fs::remove(cleanup_dir);
+  return status.Success();
+}
+#endif

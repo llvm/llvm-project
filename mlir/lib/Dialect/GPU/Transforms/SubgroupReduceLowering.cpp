@@ -11,12 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
-#include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/GPU/Utils/GPUUtils.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
+#include "mlir/Dialect/LLVMIR/ROCDLTargetInfo.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Location.h"
@@ -370,7 +370,8 @@ private:
 static FailureOr<Value>
 createSubgroupDPPReduction(PatternRewriter &rewriter, gpu::SubgroupReduceOp op,
                            Value input, gpu::AllReduceOperation mode,
-                           const ClusterInfo &ci, amdgpu::Chipset chipset) {
+                           const ClusterInfo &ci,
+                           const ROCDL::TargetInfo &target) {
   Location loc = op.getLoc();
   Value dpp;
   Value res = input;
@@ -414,7 +415,7 @@ createSubgroupDPPReduction(PatternRewriter &rewriter, gpu::SubgroupReduceOp op,
                                      gpu::convertReductionKind(mode), res, dpp);
   }
   if (ci.clusterSize >= 32) {
-    if (chipset.majorVersion <= 9) {
+    if (!target.has(llvm::AMDGPU::FEAT_GFX10_INSTS)) {
       // Broadcast last value from each row to next row.
       // Use row mask to avoid polluting row 0 (and row 2 if wave-64).
       dpp = amdgpu::DPPOp::create(rewriter, loc, res.getType(), res, res,
@@ -449,7 +450,7 @@ createSubgroupDPPReduction(PatternRewriter &rewriter, gpu::SubgroupReduceOp op,
                                              /*or_mask=*/31,
                                              /*xor_mask=*/0);
       }
-    } else if (chipset.majorVersion <= 12) {
+    } else if (!target.has(llvm::AMDGPU::FEAT_GFX13_INSTS)) {
       // Use a permute lane to cross rows (row 1 <-> row 0, row 3 <-> row 2).
       Value uint32Max = arith::ConstantOp::create(
           rewriter, loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(-1));
@@ -472,7 +473,7 @@ createSubgroupDPPReduction(PatternRewriter &rewriter, gpu::SubgroupReduceOp op,
     }
   }
   if (ci.clusterSize >= 64) {
-    if (chipset.majorVersion <= 9) {
+    if (!target.has(llvm::AMDGPU::FEAT_GFX10_INSTS)) {
       // Broadcast 31st lane value to rows 2 and 3.
       dpp = amdgpu::DPPOp::create(rewriter, loc, res.getType(), res, res,
                                   amdgpu::DPPPerm::row_bcast_31,
@@ -486,7 +487,7 @@ createSubgroupDPPReduction(PatternRewriter &rewriter, gpu::SubgroupReduceOp op,
       res =
           ROCDL::ReadlaneOp::create(rewriter, loc, res.getType(), res, lane63);
 
-    } else if (chipset.majorVersion <= 12) {
+    } else if (!target.has(llvm::AMDGPU::FEAT_GFX13_INSTS)) {
       // Assume reduction across 32 lanes has been done.
       // Perform final reduction manually by summing values in lane 0 and
       // lane 32.
@@ -516,10 +517,11 @@ createSubgroupDPPReduction(PatternRewriter &rewriter, gpu::SubgroupReduceOp op,
 struct ScalarSubgroupReduceToDPP final
     : OpRewritePattern<gpu::SubgroupReduceOp> {
   ScalarSubgroupReduceToDPP(MLIRContext *ctx, unsigned subgroupSize,
-                            bool matchClustered, amdgpu::Chipset chipset,
+                            bool matchClustered,
+                            const ROCDL::TargetInfo &target,
                             PatternBenefit benefit)
       : OpRewritePattern(ctx, benefit), subgroupSize(subgroupSize),
-        matchClustered(matchClustered), chipset(chipset) {}
+        matchClustered(matchClustered), target(target) {}
 
   LogicalResult matchAndRewrite(gpu::SubgroupReduceOp op,
                                 PatternRewriter &rewriter) const override {
@@ -545,7 +547,7 @@ struct ScalarSubgroupReduceToDPP final
           op, "Value type is not a compatible scalar.");
 
     FailureOr<Value> dpp = createSubgroupDPPReduction(
-        rewriter, op, op.getValue(), op.getOp(), *ci, chipset);
+        rewriter, op, op.getValue(), op.getOp(), *ci, target);
     if (failed(dpp))
       return failure();
 
@@ -556,7 +558,7 @@ struct ScalarSubgroupReduceToDPP final
 private:
   unsigned subgroupSize = 0;
   bool matchClustered = false;
-  amdgpu::Chipset chipset;
+  ROCDL::TargetInfo target;
 };
 } // namespace
 
@@ -569,18 +571,18 @@ void mlir::populateGpuBreakDownSubgroupReducePatterns(
 }
 
 void mlir::populateGpuLowerSubgroupReduceToDPPPatterns(
-    RewritePatternSet &patterns, unsigned subgroupSize, amdgpu::Chipset chipset,
-    PatternBenefit benefit) {
+    RewritePatternSet &patterns, unsigned subgroupSize,
+    const ROCDL::TargetInfo &target, PatternBenefit benefit) {
   patterns.add<ScalarSubgroupReduceToDPP>(patterns.getContext(), subgroupSize,
-                                          /*matchClustered=*/false, chipset,
+                                          /*matchClustered=*/false, target,
                                           benefit);
 }
 
 void mlir::populateGpuLowerClusteredSubgroupReduceToDPPPatterns(
-    RewritePatternSet &patterns, unsigned subgroupSize, amdgpu::Chipset chipset,
-    PatternBenefit benefit) {
+    RewritePatternSet &patterns, unsigned subgroupSize,
+    const ROCDL::TargetInfo &target, PatternBenefit benefit) {
   patterns.add<ScalarSubgroupReduceToDPP>(patterns.getContext(), subgroupSize,
-                                          /*matchClustered=*/true, chipset,
+                                          /*matchClustered=*/true, target,
                                           benefit);
 }
 

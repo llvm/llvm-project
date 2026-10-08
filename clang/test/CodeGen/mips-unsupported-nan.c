@@ -44,8 +44,8 @@
 // so the next highest bit is set to maintain NAN (not infinity).
 // In regular (2008) mode, the quiet bit is set to indicate QNAN.
 
-// CHECK-NANLEGACY: double 0x7FF4000000000000
-// CHECK-NAN2008: double 0x7FF8000000000000
+// CHECK-NANLEGACY: double +snan(0x4000000000000)
+// CHECK-NAN2008: double +qnan
 
 double d =  __builtin_nan("");
 
@@ -53,7 +53,7 @@ double d =  __builtin_nan("");
 // llvm::APFloat does not know about the inverted quiet bit, so it sets the
 // quiet bit on conversion independently of the setting in clang.
 
-// CHECK-NANLEGACY: float 0x7FFC000000000000
-// CHECK-NAN2008: float 0x7FF8000000000000
+// CHECK-NANLEGACY: float +nan(0x200000)
+// CHECK-NAN2008: float +qnan
 
 float f =  __builtin_nan("");

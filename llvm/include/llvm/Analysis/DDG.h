@@ -421,13 +421,13 @@ private:
 };
 
 /// Textual printer pass for the DDG of a loop.
-class DDGAnalysisPrinterPass : public PassInfoMixin<DDGAnalysisPrinterPass> {
+class DDGAnalysisPrinterPass
+    : public RequiredPassInfoMixin<DDGAnalysisPrinterPass> {
 public:
   explicit DDGAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                                  LoopStandardAnalysisResults &AR,
                                  LPMUpdater &U);
-  static bool isRequired() { return true; }
 
 private:
   raw_ostream &OS;

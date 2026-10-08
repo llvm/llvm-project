@@ -27,17 +27,17 @@ define void @main(i1 %arg) {
 ; CHECK-NEXT:    [[ADD19]] = fadd double undef, [[MUL18]]
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[MUL13]], [[MUL14]]
 ; CHECK-NEXT:    [[ADD20]] = fadd double undef, [[SUB]]
-; CHECK-NEXT:    br i1 %arg, label [[FOR_BODY12]], label [[FOR_INC21]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[FOR_BODY12]], label [[FOR_INC21]]
 ; CHECK:       for.inc21:
-; CHECK-NEXT:    br i1 %arg, label [[FOR_END23:%.*]], label [[FOR_BODY6]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[FOR_END23:%.*]], label [[FOR_BODY6]]
 ; CHECK:       for.end23:
-; CHECK-NEXT:    br i1 %arg, label [[IF_THEN25:%.*]], label [[IF_THEN26:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[IF_THEN25:%.*]], label [[IF_THEN26:%.*]]
 ; CHECK:       if.then25:
-; CHECK-NEXT:    br i1 %arg, label [[FOR_END44:%.*]], label [[FOR_COND4_PREHEADER]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[FOR_END44:%.*]], label [[FOR_COND4_PREHEADER]]
 ; CHECK:       if.then26:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       for.end44:
-; CHECK-NEXT:    br i1 %arg, label [[FOR_END48:%.*]], label [[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[FOR_END48:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end48:
 ; CHECK-NEXT:    ret void
 ;
@@ -96,13 +96,13 @@ define void @zot(ptr %arg, i1 %arg2) {
 ; CHECK-NEXT:    [[TMP:%.*]] = load double, ptr undef, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr undef, align 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT_HOGE:%.*]], ptr [[ARG:%.*]], i64 0, i32 1
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[TMP]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[TMP]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = fsub <2 x double> [[TMP1]], undef
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP2]], undef
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x double> [[TMP3]], undef
 ; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[TMP7]], align 8
-; CHECK-NEXT:    br i1 %arg2, label [[BB11:%.*]], label [[BB12:%.*]]
+; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[BB11:%.*]], label [[BB12:%.*]]
 ; CHECK:       bb11:
 ; CHECK-NEXT:    br label [[BB14:%.*]]
 ; CHECK:       bb12:
@@ -144,11 +144,11 @@ define void @rc4_crypt(ptr nocapture %s, i1 %arg) {
 ; CHECK-LABEL: @rc4_crypt(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[Y2:%.*]] = getelementptr inbounds [[STRUCT_RC4_STATE_0_24:%.*]], ptr [[S:%.*]], i64 0, i32 1
-; CHECK-NEXT:    br i1 %arg, label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[CONV4:%.*]] = and i32 undef, 255
 ; CHECK-NEXT:    [[CONV7:%.*]] = and i32 undef, 255
-; CHECK-NEXT:    br i1 %arg, label [[FOR_END]], label [[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[FOR_END]], label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    [[X_0_LCSSA:%.*]] = phi i32 [ undef, [[ENTRY:%.*]] ], [ [[CONV4]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[Y_0_LCSSA:%.*]] = phi i32 [ undef, [[ENTRY]] ], [ [[CONV7]], [[FOR_BODY]] ]

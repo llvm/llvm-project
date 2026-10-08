@@ -140,36 +140,30 @@ define <16 x i32> @sext_zext_mul_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: sext_zext_mul_v16i8:
 ; CHECK:         .functype sext_zext_mul_v16i8 (i32, v128, v128) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s $push2=, $1
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push3=, $pop2
-; CHECK-NEXT:    i16x8.extend_low_i8x16_u $push0=, $1
-; CHECK-NEXT:    i32x4.extend_low_i16x8_u $push1=, $pop0
-; CHECK-NEXT:    i32x4.mul $push4=, $pop3, $pop1
-; CHECK-NEXT:    v128.store 0($0), $pop4
-; CHECK-NEXT:    i8x16.shuffle $push25=, $1, $1, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    local.tee $push24=, $3=, $pop25
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s $push7=, $pop24
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push8=, $pop7
-; CHECK-NEXT:    i16x8.extend_low_i8x16_u $push5=, $3
-; CHECK-NEXT:    i32x4.extend_low_i16x8_u $push6=, $pop5
-; CHECK-NEXT:    i32x4.mul $push9=, $pop8, $pop6
-; CHECK-NEXT:    v128.store 48($0), $pop9
-; CHECK-NEXT:    i8x16.shuffle $push23=, $1, $1, 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    local.tee $push22=, $3=, $pop23
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s $push12=, $pop22
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push13=, $pop12
-; CHECK-NEXT:    i16x8.extend_low_i8x16_u $push10=, $3
-; CHECK-NEXT:    i32x4.extend_low_i16x8_u $push11=, $pop10
-; CHECK-NEXT:    i32x4.mul $push14=, $pop13, $pop11
-; CHECK-NEXT:    v128.store 32($0), $pop14
-; CHECK-NEXT:    i8x16.shuffle $push21=, $1, $1, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    local.tee $push20=, $1=, $pop21
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s $push17=, $pop20
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push18=, $pop17
-; CHECK-NEXT:    i16x8.extend_low_i8x16_u $push15=, $1
-; CHECK-NEXT:    i32x4.extend_low_i16x8_u $push16=, $pop15
-; CHECK-NEXT:    i32x4.mul $push19=, $pop18, $pop16
-; CHECK-NEXT:    v128.store 16($0), $pop19
+; CHECK-NEXT:    i16x8.extend_high_i8x16_s $push19=, $1
+; CHECK-NEXT:    local.tee $push18=, $4=, $pop19
+; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push1=, $pop18
+; CHECK-NEXT:    i16x8.extend_high_i8x16_u $push17=, $1
+; CHECK-NEXT:    local.tee $push16=, $3=, $pop17
+; CHECK-NEXT:    i32x4.extend_high_i16x8_u $push0=, $pop16
+; CHECK-NEXT:    i32x4.mul $push2=, $pop1, $pop0
+; CHECK-NEXT:    v128.store 48($0), $pop2
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push4=, $4
+; CHECK-NEXT:    i32x4.extend_low_i16x8_u $push3=, $3
+; CHECK-NEXT:    i32x4.mul $push5=, $pop4, $pop3
+; CHECK-NEXT:    v128.store 32($0), $pop5
+; CHECK-NEXT:    i16x8.extend_low_i8x16_s $push15=, $1
+; CHECK-NEXT:    local.tee $push14=, $4=, $pop15
+; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push7=, $pop14
+; CHECK-NEXT:    i16x8.extend_low_i8x16_u $push13=, $1
+; CHECK-NEXT:    local.tee $push12=, $1=, $pop13
+; CHECK-NEXT:    i32x4.extend_high_i16x8_u $push6=, $pop12
+; CHECK-NEXT:    i32x4.mul $push8=, $pop7, $pop6
+; CHECK-NEXT:    v128.store 16($0), $pop8
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push10=, $4
+; CHECK-NEXT:    i32x4.extend_low_i16x8_u $push9=, $1
+; CHECK-NEXT:    i32x4.mul $push11=, $pop10, $pop9
+; CHECK-NEXT:    v128.store 0($0), $pop11
 ; CHECK-NEXT:    return
   %wide.a = sext <16 x i8> %a to <16 x i32>
   %wide.b = zext <16 x i8> %a to <16 x i32>
@@ -194,4 +188,214 @@ define <8 x i32> @zext_sext_mul_v8i16(<8 x i16> %a, <8 x i16> %b) {
   %wide.b = sext <8 x i16> %a to <8 x i32>
   %mul = mul <8 x i32> %wide.a, %wide.b
   ret <8 x i32> %mul
+}
+
+define <4 x i32> @sext_mul_v8i16_with_symmetric_constant_vector(<8 x i16> %v) {
+; CHECK-LABEL: sext_mul_v8i16_with_symmetric_constant_vector:
+; CHECK:         .functype sext_mul_v8i16_with_symmetric_constant_vector (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push0=, 4096, 1, 4096, 1, 4096, 1, 4096, 1
+; CHECK-NEXT:    i32x4.dot_i16x8_s $push1=, $0, $pop0
+; CHECK-NEXT:    return $pop1
+  %sext = sext <8 x i16> %v to <8 x i32>
+  %1 = mul nsw <8 x i32> %sext, <i32 4096, i32 1, i32 4096, i32 1, i32 4096, i32 1, i32 4096, i32 1>
+  %2 = shufflevector <8 x i32> %1, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %3 = shufflevector <8 x i32> %1, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %4 = add <4 x i32> %2, %3
+  ret <4 x i32> %4
+}
+
+define <4 x i32> @sext_mul_v8i16_with_symmetric_constant_vector_comm(<8 x i16> %v) {
+; CHECK-LABEL: sext_mul_v8i16_with_symmetric_constant_vector_comm:
+; CHECK:         .functype sext_mul_v8i16_with_symmetric_constant_vector_comm (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push0=, 4096, 1, 4096, 1, 4096, 1, 4096, 1
+; CHECK-NEXT:    i32x4.dot_i16x8_s $push1=, $0, $pop0
+; CHECK-NEXT:    return $pop1
+  %sext = sext <8 x i16> %v to <8 x i32>
+  %1 = mul nsw <8 x i32> <i32 4096, i32 1, i32 4096, i32 1, i32 4096, i32 1, i32 4096, i32 1>, %sext
+  %2 = shufflevector <8 x i32> %1, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %3 = shufflevector <8 x i32> %1, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %4 = add <4 x i32> %3, %2
+  ret <4 x i32> %4
+}
+
+define <4 x i32> @sext_mul_v8i16_with_constant(<8 x i16> %v) {
+; CHECK-LABEL: sext_mul_v8i16_with_constant:
+; CHECK:         .functype sext_mul_v8i16_with_constant (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push0=, 4096, 1, 4096, 1, 4096, 1, 4096, 1
+; CHECK-NEXT:    i32x4.dot_i16x8_s $push1=, $0, $pop0
+; CHECK-NEXT:    return $pop1
+  %sext = sext <8 x i16> %v to <8 x i32>
+  %1 = mul nsw <8 x i32> %sext, <i32 4096, i32 1, i32 4096, i32 1, i32 4096, i32 1, i32 4096, i32 1>
+  %2 = shufflevector <8 x i32> %1, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %3 = shufflevector <8 x i32> %1, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %4 = add <4 x i32> %2, %3
+  ret <4 x i32> %4
+}
+
+define <4 x i32> @sext_mul_v8i16_with_constant_comm(<8 x i16> %v) {
+; CHECK-LABEL: sext_mul_v8i16_with_constant_comm:
+; CHECK:         .functype sext_mul_v8i16_with_constant_comm (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push0=, 4096, 1, 4096, 1, 4096, 1, 4096, 1
+; CHECK-NEXT:    i32x4.dot_i16x8_s $push1=, $0, $pop0
+; CHECK-NEXT:    return $pop1
+  %sext = sext <8 x i16> %v to <8 x i32>
+  %1 = mul nsw <8 x i32> <i32 4096, i32 1, i32 4096, i32 1, i32 4096, i32 1, i32 4096, i32 1>, %sext
+  %2 = shufflevector <8 x i32> %1, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %3 = shufflevector <8 x i32> %1, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %4 = add <4 x i32> %3, %2
+  ret <4 x i32> %4
+}
+
+; Negative - unsupported type
+define <4 x i32> @sext_mul_v8i1_pow2(<8 x i1> %v) {
+; CHECK-LABEL: sext_mul_v8i1_pow2:
+; CHECK:         .functype sext_mul_v8i1_pow2 (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    i32x4.extend_low_i16x8_u $push3=, $0
+; CHECK-NEXT:    i32.const $push1=, 31
+; CHECK-NEXT:    i32x4.shl $push4=, $pop3, $pop1
+; CHECK-NEXT:    i32.const $push14=, 31
+; CHECK-NEXT:    i32x4.shr_s $push13=, $pop4, $pop14
+; CHECK-NEXT:    local.tee $push12=, $1=, $pop13
+; CHECK-NEXT:    i32x4.extend_high_i16x8_u $push0=, $0
+; CHECK-NEXT:    i32.const $push11=, 31
+; CHECK-NEXT:    i32x4.shl $push2=, $pop0, $pop11
+; CHECK-NEXT:    i32.const $push10=, 31
+; CHECK-NEXT:    i32x4.shr_s $push9=, $pop2, $pop10
+; CHECK-NEXT:    local.tee $push8=, $0=, $pop9
+; CHECK-NEXT:    i8x16.shuffle $push6=, $pop12, $pop8, 4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
+; CHECK-NEXT:    i8x16.shuffle $push5=, $1, $0, 0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
+; CHECK-NEXT:    i32x4.add $push7=, $pop6, $pop5
+; CHECK-NEXT:    return $pop7
+  %sext = sext <8 x i1> %v to <8 x i32>
+  %1 = mul nsw <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>, %sext
+  %2 = shufflevector <8 x i32> %1, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %3 = shufflevector <8 x i32> %1, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %4 = add <4 x i32> %3, %2
+  ret <4 x i32> %4
+}
+
+; Negative - unsupported type
+define <4 x i32> @sext_mul_v8i8_pow2(<8 x i8> %v) {
+; CHECK-LABEL: sext_mul_v8i8_pow2:
+; CHECK:         .functype sext_mul_v8i8_pow2 (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    i16x8.extend_low_i8x16_s $push17=, $0
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push18=, $pop17
+; CHECK-NEXT:    v128.const $push19=, 0, 1, 2, 4
+; CHECK-NEXT:    i32x4.mul $push28=, $pop18, $pop19
+; CHECK-NEXT:    local.tee $push27=, $1=, $pop28
+; CHECK-NEXT:    i8x16.shuffle $push0=, $0, $0, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i16x8.extend_low_i8x16_s $push1=, $pop0
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push26=, $pop1
+; CHECK-NEXT:    local.tee $push25=, $0=, $pop26
+; CHECK-NEXT:    i32x4.extract_lane $push5=, $pop25, 0
+; CHECK-NEXT:    i32.const $push6=, 3
+; CHECK-NEXT:    i32.shl $push7=, $pop5, $pop6
+; CHECK-NEXT:    i32x4.splat $push8=, $pop7
+; CHECK-NEXT:    i32x4.extract_lane $push2=, $0, 1
+; CHECK-NEXT:    i32.const $push3=, 4
+; CHECK-NEXT:    i32.shl $push4=, $pop2, $pop3
+; CHECK-NEXT:    i32x4.replace_lane $push9=, $pop8, 1, $pop4
+; CHECK-NEXT:    i32x4.extract_lane $push10=, $0, 2
+; CHECK-NEXT:    i32.const $push11=, 5
+; CHECK-NEXT:    i32.shl $push12=, $pop10, $pop11
+; CHECK-NEXT:    i32x4.replace_lane $push13=, $pop9, 2, $pop12
+; CHECK-NEXT:    i32x4.extract_lane $push14=, $0, 3
+; CHECK-NEXT:    i32.const $push15=, 6
+; CHECK-NEXT:    i32.shl $push16=, $pop14, $pop15
+; CHECK-NEXT:    i32x4.replace_lane $push24=, $pop13, 3, $pop16
+; CHECK-NEXT:    local.tee $push23=, $0=, $pop24
+; CHECK-NEXT:    i8x16.shuffle $push21=, $pop27, $pop23, 4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
+; CHECK-NEXT:    i8x16.shuffle $push20=, $1, $0, 0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
+; CHECK-NEXT:    i32x4.add $push22=, $pop21, $pop20
+; CHECK-NEXT:    return $pop22
+  %sext = sext <8 x i8> %v to <8 x i32>
+  %1 = mul nsw <8 x i32> <i32 0, i32 1, i32 2, i32 4, i32 8, i32 16, i32 32, i32 64>, %sext
+  %2 = shufflevector <8 x i32> %1, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %3 = shufflevector <8 x i32> %1, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %4 = add <4 x i32> %3, %2
+  ret <4 x i32> %4
+}
+
+; Negative - shifts by 15 overflow
+define <4 x i32> @combine_with_shl_signed_non_overflow(<8 x i16> %v) {
+; CHECK-LABEL: combine_with_shl_signed_non_overflow:
+; CHECK:         .functype combine_with_shl_signed_non_overflow (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s $push24=, $0
+; CHECK-NEXT:    local.tee $push23=, $1=, $pop24
+; CHECK-NEXT:    i32x4.extract_lane $push8=, $1, 1
+; CHECK-NEXT:    i32.const $push1=, 15
+; CHECK-NEXT:    i32.shl $push9=, $pop8, $pop1
+; CHECK-NEXT:    i32x4.replace_lane $push10=, $pop23, 1, $pop9
+; CHECK-NEXT:    i32x4.extract_lane $push6=, $1, 3
+; CHECK-NEXT:    i32.const $push22=, 15
+; CHECK-NEXT:    i32.shl $push7=, $pop6, $pop22
+; CHECK-NEXT:    i32x4.replace_lane $push21=, $pop10, 3, $pop7
+; CHECK-NEXT:    local.tee $push20=, $1=, $pop21
+; CHECK-NEXT:    i32x4.extend_high_i16x8_s $push19=, $0
+; CHECK-NEXT:    local.tee $push18=, $0=, $pop19
+; CHECK-NEXT:    i32x4.extract_lane $push3=, $0, 1
+; CHECK-NEXT:    i32.const $push17=, 15
+; CHECK-NEXT:    i32.shl $push4=, $pop3, $pop17
+; CHECK-NEXT:    i32x4.replace_lane $push5=, $pop18, 1, $pop4
+; CHECK-NEXT:    i32x4.extract_lane $push0=, $0, 3
+; CHECK-NEXT:    i32.const $push16=, 15
+; CHECK-NEXT:    i32.shl $push2=, $pop0, $pop16
+; CHECK-NEXT:    i32x4.replace_lane $push15=, $pop5, 3, $pop2
+; CHECK-NEXT:    local.tee $push14=, $0=, $pop15
+; CHECK-NEXT:    i8x16.shuffle $push12=, $pop20, $pop14, 0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
+; CHECK-NEXT:    i8x16.shuffle $push11=, $1, $0, 4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
+; CHECK-NEXT:    i32x4.add $push13=, $pop12, $pop11
+; CHECK-NEXT:    return $pop13
+  %sext = sext <8 x i16> %v to <8 x i32>
+  %1 = mul <8 x i32> %sext, <i32 1, i32 32768, i32 1, i32 32768, i32 1, i32 32768, i32 1, i32 32768>
+  %2 = shufflevector <8 x i32> %1, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %3 = shufflevector <8 x i32> %1, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %4 = add <4 x i32> %2, %3
+  ret <4 x i32> %4
+}
+
+; Negative - shifts by 16 overflow
+define <4 x i32> @combine_with_shl_unsigned_non_overflow(<8 x i16> %v) {
+; CHECK-LABEL: combine_with_shl_unsigned_non_overflow:
+; CHECK:         .functype combine_with_shl_unsigned_non_overflow (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    i32x4.extend_low_i16x8_u $push24=, $0
+; CHECK-NEXT:    local.tee $push23=, $1=, $pop24
+; CHECK-NEXT:    i32x4.extract_lane $push8=, $1, 1
+; CHECK-NEXT:    i32.const $push1=, 16
+; CHECK-NEXT:    i32.shl $push9=, $pop8, $pop1
+; CHECK-NEXT:    i32x4.replace_lane $push10=, $pop23, 1, $pop9
+; CHECK-NEXT:    i32x4.extract_lane $push6=, $1, 3
+; CHECK-NEXT:    i32.const $push22=, 16
+; CHECK-NEXT:    i32.shl $push7=, $pop6, $pop22
+; CHECK-NEXT:    i32x4.replace_lane $push21=, $pop10, 3, $pop7
+; CHECK-NEXT:    local.tee $push20=, $1=, $pop21
+; CHECK-NEXT:    i32x4.extend_high_i16x8_u $push19=, $0
+; CHECK-NEXT:    local.tee $push18=, $0=, $pop19
+; CHECK-NEXT:    i32x4.extract_lane $push3=, $0, 1
+; CHECK-NEXT:    i32.const $push17=, 16
+; CHECK-NEXT:    i32.shl $push4=, $pop3, $pop17
+; CHECK-NEXT:    i32x4.replace_lane $push5=, $pop18, 1, $pop4
+; CHECK-NEXT:    i32x4.extract_lane $push0=, $0, 3
+; CHECK-NEXT:    i32.const $push16=, 16
+; CHECK-NEXT:    i32.shl $push2=, $pop0, $pop16
+; CHECK-NEXT:    i32x4.replace_lane $push15=, $pop5, 3, $pop2
+; CHECK-NEXT:    local.tee $push14=, $0=, $pop15
+; CHECK-NEXT:    i8x16.shuffle $push12=, $pop20, $pop14, 0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
+; CHECK-NEXT:    i8x16.shuffle $push11=, $1, $0, 4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
+; CHECK-NEXT:    v128.or $push13=, $pop12, $pop11
+; CHECK-NEXT:    return $pop13
+  %zext = zext <8 x i16> %v to <8 x i32>
+  %1 = mul <8 x i32> %zext, <i32 1, i32 65536, i32 1, i32 65536, i32 1, i32 65536, i32 1, i32 65536>
+  %2 = shufflevector <8 x i32> %1, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %3 = shufflevector <8 x i32> %1, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %4 = add <4 x i32> %2, %3
+  ret <4 x i32> %4
 }

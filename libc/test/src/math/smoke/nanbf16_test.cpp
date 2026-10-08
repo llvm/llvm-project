@@ -14,7 +14,7 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-class LlvmLibcNanf16Test : public LIBC_NAMESPACE::testing::FEnvSafeTest {
+class LlvmLibcNanbf16Test : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 public:
   using StorageType = LIBC_NAMESPACE::fputil::FPBits<bfloat16>::StorageType;
 
@@ -26,7 +26,7 @@ public:
   }
 };
 
-TEST_F(LlvmLibcNanf16Test, NCharSeq) {
+TEST_F(LlvmLibcNanbf16Test, NCharSeq) {
   run_test("", 0x7fc0);
 
   // 0x7fc0 + 0x1f (31) = 0x7cdf
@@ -41,7 +41,7 @@ TEST_F(LlvmLibcNanf16Test, NCharSeq) {
   run_test("10000000000000000000000000000", 0x7fc0);
 }
 
-TEST_F(LlvmLibcNanf16Test, RandomString) {
+TEST_F(LlvmLibcNanbf16Test, RandomString) {
   run_test(" 1234", 0x7fc0);
   run_test("-1234", 0x7fc0);
   run_test("asd&f", 0x7fc0);
@@ -49,7 +49,7 @@ TEST_F(LlvmLibcNanf16Test, RandomString) {
 }
 
 #if defined(LIBC_ADD_NULL_CHECKS)
-TEST_F(LlvmLibcNanf16Test, InvalidInput) {
+TEST_F(LlvmLibcNanbf16Test, InvalidInput) {
   EXPECT_DEATH([] { LIBC_NAMESPACE::nanbf16(nullptr); }, WITH_SIGNAL(-1));
 }
 #endif // LIBC_ADD_NULL_CHECKS

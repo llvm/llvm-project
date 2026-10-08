@@ -68,10 +68,10 @@ Error SubprocessMemory::initializeSubprocessMemory(pid_t ProcessID) {
 }
 
 Error SubprocessMemory::addMemoryDefinition(
-    std::unordered_map<std::string, MemoryValue> MemoryDefinitions,
-    pid_t ProcessPID) {
+    StringMap<MemoryValue> MemoryDefinitions, pid_t ProcessPID) {
   SharedMemoryNames.reserve(MemoryDefinitions.size());
-  for (auto &[Name, MemVal] : MemoryDefinitions) {
+  for (const auto &E : MemoryDefinitions) {
+    const MemoryValue &MemVal = E.second;
     std::string SharedMemoryName =
         formatv("/{0}t{1}memdef{2}", ProcessPID, getCurrentTID(), MemVal.Index);
     SharedMemoryNames.push_back(SharedMemoryName);
@@ -112,8 +112,8 @@ Error SubprocessMemory::addMemoryDefinition(
 }
 
 Expected<int> SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
-    std::unordered_map<std::string, MemoryValue> MemoryDefinitions,
-    pid_t ParentPID, long ParentTID, int CounterFileDescriptor) {
+    StringMap<MemoryValue> MemoryDefinitions, pid_t ParentPID, long ParentTID,
+    int CounterFileDescriptor) {
   std::string AuxiliaryMemoryName =
       formatv("/{0}auxmem{1}", ParentTID, ParentPID);
   int AuxiliaryMemoryFileDescriptor =
@@ -129,7 +129,8 @@ Expected<int> SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
   if (reinterpret_cast<intptr_t>(AuxiliaryMemoryMapping) == -1)
     return make_error<Failure>("Mapping auxiliary memory failed");
   AuxiliaryMemoryMapping[0] = CounterFileDescriptor;
-  for (auto &[Name, MemVal] : MemoryDefinitions) {
+  for (const auto &E : MemoryDefinitions) {
+    const MemoryValue &MemVal = E.second;
     std::string MemoryValueName =
         formatv("/{0}t{1}memdef{2}", ParentPID, ParentTID, MemVal.Index);
     AuxiliaryMemoryMapping[AuxiliaryMemoryOffset + MemVal.Index] =
@@ -159,14 +160,13 @@ Error SubprocessMemory::initializeSubprocessMemory(pid_t ProcessPID) {
 }
 
 Error SubprocessMemory::addMemoryDefinition(
-    std::unordered_map<std::string, MemoryValue> MemoryDefinitions,
-    pid_t ProcessPID) {
+    StringMap<MemoryValue> MemoryDefinitions, pid_t ProcessPID) {
   return make_error<Failure>("addMemoryDefinitions is only supported on Linux");
 }
 
 Expected<int> SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
-    std::unordered_map<std::string, MemoryValue> MemoryDefinitions,
-    pid_t ParentPID, long ParentTID, int CounterFileDescriptor) {
+    StringMap<MemoryValue> MemoryDefinitions, pid_t ParentPID, long ParentTID,
+    int CounterFileDescriptor) {
   return make_error<Failure>(
       "setupAuxiliaryMemoryInSubprocess is only supported on Linux");
 }
