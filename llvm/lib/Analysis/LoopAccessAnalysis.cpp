@@ -99,7 +99,7 @@ static cl::opt<unsigned, true> VectorizeMemoryCheckThreshold(
     "vectorize-memory-check-threshold", cl::Hidden,
     cl::desc("The maximum allowed number of runtime memory checks"),
     cl::location(VectorizerParams::VectorizeMemoryCheckThreshold),
-    cl::init(128));
+    cl::init(333));
 unsigned VectorizerParams::VectorizeMemoryCheckThreshold;
 
 /// The maximum iterations used to merge memory checks
