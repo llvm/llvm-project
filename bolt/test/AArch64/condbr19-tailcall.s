@@ -1,8 +1,14 @@
-## Check CONDBR19 conditional tail calls from cold _start to hot foo in lite mode.
+## Check that CONDBR19 branches in skipped original code reach relocated foo
+## directly when in range and through its patched original entry when out of
+## range. Exercise in-range and out-of-range layouts in both code models.
+
+## --lite leaves cold _start at its original address and moves hot foo.
+## --no-huge-pages keeps the unpadded relocated foo within CONDBR19 range.
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-unknown --defsym PAD=0 %s -o %t.o
-# RUN: link_fdata %s %t.o %t.fdata
 # RUN: ld.lld --emit-relocs %t.o -o %t.exe
+# RUN: link_fdata %s %t.exe %t.fdata
+# RUN: llvm-strip --strip-unneeded %t.exe
 # RUN: llvm-bolt %t.exe -o %t.bolt --data %t.fdata --lite --no-huge-pages
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefixes=COMMON,NEAR
 # RUN: llvm-bolt %t.exe -o %t.bolt --data %t.fdata --lite --no-huge-pages \
@@ -12,13 +18,13 @@
 ## Add 1MB of padding after _start to put the relocated foo out of range of CONDBR19.
 # RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-unknown --defsym PAD=0x100000 %s -o %t.o
 # RUN: ld.lld --emit-relocs %t.o -o %t.exe
+# RUN: link_fdata %s %t.exe %t.fdata
+# RUN: llvm-strip --strip-unneeded %t.exe
 # RUN: llvm-bolt %t.exe -o %t.bolt --data %t.fdata --lite --no-huge-pages
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefixes=COMMON,FAR
 # RUN: llvm-bolt %t.exe -o %t.bolt --data %t.fdata --lite --no-huge-pages \
 # RUN:   --compact-code-model
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefixes=COMMON,FAR
-
-# FDATA: 0 [unknown] 0 1 foo 0 0 100
 
 # COMMON: Disassembly of section .bolt.org.text:
 # COMMON: [[#%x,FOO_OLD:]] <foo.org.0>:
@@ -49,6 +55,7 @@
     .type foo,@function
     .globl foo
 foo:
+# FDATA: 0 [unknown] 0 1 foo 0 0 100
   .rept 3
     nop
   .endr

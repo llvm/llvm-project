@@ -1,8 +1,16 @@
-## Check TSTBR14 conditional tail calls from cold _start to hot foo in lite mode.
+## Check that TSTBR14 branches in skipped original code reach relocated foo
+## directly when in range and through its patched original entry when out of
+## range. Exercise in-range and out-of-range layouts in both code models.
+
+## --lite leaves cold _start at its original address and moves hot foo.
+## --no-huge-pages reduces page alignment from 2MB to 64KB.
+## --section-start puts the original text 4KB before a 64KB boundary.
+## --align-text=0x1000 keeps unpadded foo within TSTBR14's 32KB range.
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-unknown --defsym PAD=0 %s -o %t.o
-# RUN: link_fdata %s %t.o %t.fdata
 # RUN: ld.lld --emit-relocs --section-start=.text=0x3ff000 %t.o -o %t.exe
+# RUN: link_fdata %s %t.exe %t.fdata
+# RUN: llvm-strip --strip-unneeded %t.exe
 # RUN: llvm-bolt %t.exe -o %t.bolt --data %t.fdata --lite --no-huge-pages \
 # RUN:   --align-text=0x1000
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefixes=COMMON,NEAR
@@ -13,14 +21,14 @@
 ## Add 32KB of padding after _start to put the relocated foo out of range of TSTBR14.
 # RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-unknown --defsym PAD=0x8000 %s -o %t.o
 # RUN: ld.lld --emit-relocs --section-start=.text=0x3ff000 %t.o -o %t.exe
+# RUN: link_fdata %s %t.exe %t.fdata
+# RUN: llvm-strip --strip-unneeded %t.exe
 # RUN: llvm-bolt %t.exe -o %t.bolt --data %t.fdata --lite --no-huge-pages \
 # RUN:   --align-text=0x1000
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefixes=COMMON,FAR
 # RUN: llvm-bolt %t.exe -o %t.bolt --data %t.fdata --lite --no-huge-pages \
 # RUN:   --align-text=0x1000 --compact-code-model
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefixes=COMMON,FAR
-
-# FDATA: 0 [unknown] 0 1 foo 0 0 100
 
 # COMMON: Disassembly of section .bolt.org.text:
 # COMMON: [[#%x,FOO_OLD:]] <foo.org.0>:
@@ -47,6 +55,7 @@
     .type foo,@function
     .globl foo
 foo:
+# FDATA: 0 [unknown] 0 1 foo 0 0 100
   .rept 3
     nop
   .endr
