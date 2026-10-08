@@ -1,0 +1,108 @@
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=greedy \
+# RUN:   -verify-machineinstrs %s -o - | FileCheck %s
+
+# The greedy register allocator spills a value used by a foldable ("rm")
+# inline asm operand by folding the operand to the value's stack slot. The
+# clobbers below leave six GPRs, and the asm needs seven registers, so one
+# value is spilled. Folding replaces an operand with the five operands of a
+# memory reference, moving every operand after it, which must keep any tied
+# operands tied.
+#
+# Each test is derived from the C function and inline asm statement in its
+# comment, where CLOBBERS is:
+#
+#   "rax", "rbx", "rbp", "r10", "r11", "r12", "r13", "r14", "r15"
+
+---
+# One value passed to two "rm" operands: both operands fold to the same stack
+# slot.
+#
+#   void rm_same_value_twice(long a, long b, long c, long d, long e, long f,
+#                            long g) {
+#     asm volatile("" : : "rm"(a), "rm"(a), "r"(b), "r"(c), "r"(d), "r"(e),
+#                         "r"(f), "r"(g) : CLOBBERS);
+#   }
+name: rm_same_value_twice
+tracksRegLiveness: true
+fixedStack:
+  - { id: 0, size: 8, alignment: 16, isImmutable: true }
+body: |
+  bb.0:
+    liveins: $rdi, $rsi, $rdx, $rcx, $r8, $r9
+
+    ; CHECK-LABEL: name: rm_same_value_twice
+    ; CHECK: INLINEASM &"", sideeffect mayload attdialect, mem:m, %stack.[[SLOT:[0-9]+]], 1, $noreg, 0, $noreg, mem:m, %stack.[[SLOT]], 1, $noreg, 0, $noreg, reguse:GR64,
+    %0:gr64 = COPY $rdi
+    %1:gr64 = COPY $rsi
+    %2:gr64 = COPY $rdx
+    %3:gr64 = COPY $rcx
+    %4:gr64 = COPY $r8
+    %5:gr64 = COPY $r9
+    %6:gr64 = MOV64rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.0, align 16)
+    INLINEASM &"", sideeffect attdialect, reguse:GR64 foldable, %0, reguse:GR64 foldable, %0, reguse:GR64, %1, reguse:GR64, %2, reguse:GR64, %3, reguse:GR64, %4, reguse:GR64, %5, reguse:GR64, %6, clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15
+    RET 0
+...
+---
+# Folding the "rm" input moves the input tied to the "=r" output after it.
+#
+#   long rm_before_tied(long a, long b, long c, long d, long e, long f,
+#                       long g) {
+#     asm volatile("" : "+r"(g) : "rm"(a), "r"(b), "r"(c), "r"(d), "r"(e),
+#                                 "r"(f) : CLOBBERS);
+#     return g;
+#   }
+name: rm_before_tied
+tracksRegLiveness: true
+fixedStack:
+  - { id: 0, size: 8, alignment: 16, isImmutable: true }
+body: |
+  bb.0:
+    liveins: $rdi, $rsi, $rdx, $rcx, $r8, $r9
+
+    ; CHECK-LABEL: name: rm_before_tied
+    ; CHECK: INLINEASM &"", sideeffect mayload attdialect, regdef:GR64, def %{{[0-9]+}}, mem:m, %stack.{{[0-9]+}}, 1, $noreg, 0, $noreg, {{.*}}, reguse tiedto:$0, %{{[0-9]+}}(tied-def 3), clobber,
+    %0:gr64 = COPY $rdi
+    %1:gr64 = COPY $rsi
+    %2:gr64 = COPY $rdx
+    %3:gr64 = COPY $rcx
+    %4:gr64 = COPY $r8
+    %5:gr64 = COPY $r9
+    %6:gr64 = MOV64rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.0, align 16)
+    INLINEASM &"", sideeffect attdialect, regdef:GR64, def %6, reguse:GR64 foldable, %0, reguse:GR64, %1, reguse:GR64, %2, reguse:GR64, %3, reguse:GR64, %4, reguse:GR64, %5, reguse tiedto:$0, %6(tied-def 3), clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15
+    $rax = COPY %6
+    RET 0, $rax
+...
+---
+# Two read-write "+rm" operands: folding one tied pair, which reads and writes
+# the stack slot, keeps the other pair tied.
+#
+#   struct pair { long a, b; };
+#
+#   struct pair two_tied_rm(long a, long b, long c, long d, long e, long f,
+#                           long g) {
+#     asm volatile("" : "+rm"(a), "+rm"(b) : "r"(c), "r"(d), "r"(e), "r"(f),
+#                                            "r"(g) : CLOBBERS);
+#     return (struct pair){a, b};
+#   }
+name: two_tied_rm
+tracksRegLiveness: true
+fixedStack:
+  - { id: 0, size: 8, alignment: 16, isImmutable: true }
+body: |
+  bb.0:
+    liveins: $rdi, $rsi, $rdx, $rcx, $r8, $r9
+
+    ; CHECK-LABEL: name: two_tied_rm
+    ; CHECK: INLINEASM &"", sideeffect mayload maystore attdialect, regdef:GR64 foldable, def %{{[0-9]+}}, mem:m, %stack.[[SLOT:[0-9]+]], 1, $noreg, 0, $noreg, {{.*}}, reguse tiedto:$0, %{{[0-9]+}}(tied-def 3), mem:m, %stack.[[SLOT]], 1, $noreg, 0, $noreg, clobber,
+    %0:gr64 = COPY $rdi
+    %1:gr64 = COPY $rsi
+    %2:gr64 = COPY $rdx
+    %3:gr64 = COPY $rcx
+    %4:gr64 = COPY $r8
+    %5:gr64 = COPY $r9
+    %6:gr64 = MOV64rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.0, align 16)
+    INLINEASM &"", sideeffect attdialect, regdef:GR64 foldable, def %0, regdef:GR64 foldable, def %1, reguse:GR64, %2, reguse:GR64, %3, reguse:GR64, %4, reguse:GR64, %5, reguse:GR64, %6, reguse tiedto:$0, %0(tied-def 3), reguse tiedto:$1, %1(tied-def 5), clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15
+    $rax = COPY %0
+    $rdx = COPY %1
+    RET 0, $rax, $rdx
+...
