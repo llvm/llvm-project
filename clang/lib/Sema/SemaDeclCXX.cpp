@@ -9624,7 +9624,7 @@ analyzeDefaultedPostfixOperator(Sema &S, FunctionDecl *FD,
           Cands.NoteCandidates(
               PartialDiagnosticAt(
                   Loc, S.PDiag(diag::note_defaulted_postfix_operator_ambiguous)
-                           << FD << 0 << C),
+                           << FD << /*copy construction*/ 0 << C),
               S, OCD_AmbiguousCandidates, Args, /*Opc=*/"", Loc);
           break;
         case OR_Success:
@@ -9632,7 +9632,7 @@ analyzeDefaultedPostfixOperator(Sema &S, FunctionDecl *FD,
           Cands.NoteCandidates(
               PartialDiagnosticAt(
                   Loc, S.PDiag(diag::note_defaulted_postfix_operator_no_viable)
-                           << FD << 0 << C),
+                           << FD << /*copy construction*/ 0 << C),
               S, OCD_AllCandidates, Args, /*Opc=*/"", Loc);
           break;
         }
