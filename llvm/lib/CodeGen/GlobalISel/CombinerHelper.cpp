@@ -1434,8 +1434,9 @@ bool CombinerHelper::matchCombineExtractedVectorLoad(
     return false;
   const unsigned MaxIter = 20;
   unsigned Iter = 0;
-  for (auto II = LoadMI->getIterator(), IE = MI.getIterator(); II != IE; ++II) {
-    if (II->isLoadFoldBarrier())
+  for (const auto &Instr :
+       instructionsWithoutDebug(LoadMI->getIterator(), MI.getIterator())) {
+    if (Instr.isLoadFoldBarrier())
       return false;
     if (Iter++ == MaxIter)
       return false;
