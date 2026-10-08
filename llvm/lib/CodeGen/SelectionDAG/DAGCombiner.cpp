@@ -27978,6 +27978,20 @@ SDValue DAGCombiner::visitVECTOR_INTERLEAVE(SDNode *N) {
   return CombineTo(N, &Ops);
 }
 
+SDValue DAGCombiner::visitVECTOR_DEINTERLEAVE(SDNode *N) {
+  EVT VT = N->getValueType(0);
+  SDValue Op0 = N->getOperand(0);
+
+  // Canonicalize shuffle undef -> {undef, undef, ..}
+  if (Op0.isUndef()) {
+    SDLoc DL(N);
+    SmallVector<SDValue> Ops(N->getNumValues(), DAG.getUNDEF(VT));
+    return DAG.getMergeValues(Ops, DL);
+  }
+
+  return SDValue();
+}
+
 // Collect the available SubVT-sized sources from a wide operand. Stop at the
 // first unaligned insert; outermost definitions take precedence.
 static void collectSubVectorSrcs(
@@ -27992,6 +28006,7 @@ static void collectSubVectorSrcs(
     if (!Slot)
       Slot = Sub;
   };
+
   if (V.getOpcode() == ISD::CONCAT_VECTORS &&
       V.getOperand(0).getValueType() == SubVT) {
     for (auto [I, Op] : enumerate(V->op_values()))
