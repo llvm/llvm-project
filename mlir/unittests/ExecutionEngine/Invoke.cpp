@@ -13,6 +13,7 @@
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/ExecutionEngine/CRunnerUtils.h"
 #include "mlir/ExecutionEngine/ExecutionEngine.h"
@@ -25,10 +26,24 @@
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/Mangling.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "gmock/gmock.h"
+
+#include <cstdint>
+#include <initializer_list>
+#include <memory>
+#include <string>
+#include <utility>
 
 // SPARC currently lacks JIT support.
 #ifdef __sparc__
@@ -38,6 +53,10 @@
 #endif
 
 using namespace mlir;
+
+// JITEventListener.h does not expose the GDB descriptor. Match the declaration
+// used by LLVM's OrcCAPITest; JITLoaderGDB.h provides the descriptor layout.
+extern "C" LLVM_ABI struct jit_descriptor __jit_debug_descriptor;
 
 // The JIT isn't supported on Windows at that time
 #if !defined(_WIN32) && !defined(_AIX)
@@ -94,6 +113,66 @@ TEST(MLIRExecutionEngine, SKIP_WITHOUT_JIT(AddInteger)) {
       jit->invoke("foo", 42, ExecutionEngine::Result<int>(result));
   ASSERT_TRUE(!error);
   ASSERT_EQ(result, 42 + 42);
+}
+
+// Exercise the default TargetMachine with both JIT-allocated data and data in
+// the host process. On RISC-V, this requires PC-relative and GOT relocations.
+TEST(MLIRExecutionEngine, SKIP_WITHOUT_JIT(AccessGlobalData)) {
+  // Verify global-data access with notifications enabled and disabled.
+  for (bool enableListeners : {true, false}) {
+    SCOPED_TRACE(enableListeners ? "listeners enabled" : "listeners disabled");
+    StringRef moduleStr = R"mlir(
+    llvm.mlir.global internal @local(7 : i64) : i64
+    llvm.mlir.global external @host() : i64
+    llvm.func @read_globals() -> i64 {
+      %local = llvm.mlir.addressof @local : !llvm.ptr
+      %host = llvm.mlir.addressof @host : !llvm.ptr
+      %a = llvm.load %local : !llvm.ptr -> i64
+      %b = llvm.load %host : !llvm.ptr -> i64
+      %sum = llvm.add %a, %b : i64
+      llvm.return %sum : i64
+    }
+  )mlir";
+    DialectRegistry registry;
+    registry.insert<LLVM::LLVMDialect>();
+    registerBuiltinDialectTranslation(registry);
+    registerLLVMDialectTranslation(registry);
+    MLIRContext context(registry);
+    auto module = parseSourceString<ModuleOp>(moduleStr, &context);
+    ASSERT_TRUE(module);
+    ExecutionEngineOptions options;
+    options.enableGDBNotificationListener = enableListeners;
+    // Notification options must not change the default linker selection.
+    options.enablePerfNotificationListener = false;
+#if defined(__ELF__)
+    auto *before = __jit_debug_descriptor.first_entry;
+#endif
+    auto jitOrError = ExecutionEngine::create(*module, options);
+    ASSERT_TRUE(!!jitOrError) << llvm::toString(jitOrError.takeError());
+    auto jit = std::move(*jitOrError);
+    int64_t host = 42;
+    jit->registerSymbols([&](llvm::orc::MangleAndInterner interner) {
+      return llvm::orc::SymbolMap{{interner("host"),
+                                   {llvm::orc::ExecutorAddr::fromPtr(&host),
+                                    llvm::JITSymbolFlags::Exported}}};
+    });
+    int64_t result = 0;
+    void *args[] = {&result};
+    auto error = jit->invokePacked("read_globals", args);
+    ASSERT_FALSE(!!error) << llvm::toString(std::move(error));
+    EXPECT_EQ(result, 49);
+    host = 100;
+    error = jit->invokePacked("read_globals", args);
+    ASSERT_FALSE(!!error) << llvm::toString(std::move(error));
+    EXPECT_EQ(result, 107);
+#if defined(__ELF__)
+    // Destroying the engine must not leave stale debugger registrations,
+    // whether the target uses JITLink or RuntimeDyld. This assertion checks
+    // cleanup only; it does not verify that registration occurred.
+    jit.reset();
+    EXPECT_EQ(before, __jit_debug_descriptor.first_entry);
+#endif
+  }
 }
 
 TEST(MLIRExecutionEngine, SKIP_WITHOUT_JIT(SubtractFloat)) {

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-/* RUN: mlir-capi-execution-engine-test 2>&1 | FileCheck %s
- */
+// RUN: mlir-capi-execution-engine-test 2>&1 | \
+// RUN: FileCheck %s --implicit-check-not="JIT session error"
 /* REQUIRES: host-supports-jit
  */
 // XFAIL: system-aix
