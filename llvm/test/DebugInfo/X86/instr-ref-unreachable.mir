@@ -1,4 +1,4 @@
-# RUN: llc --run-pass=livedebugvalues %s -o - -experimental-debug-variable-locations | FileCheck %s
+# RUN: llc --run-pass=live-debug-values %s -o - -experimental-debug-variable-locations | FileCheck %s
 
 ## Tests that when a block that is not directly reachable from the entry block
 ## contains a DBG_PHI, we treat those DBG_PHIs as referring to live-in values,

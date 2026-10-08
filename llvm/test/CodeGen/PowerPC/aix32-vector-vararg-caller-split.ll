@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -stop-before=ppc-vsx-copy -vec-extabi \
+; RUN: llc -verify-machineinstrs -stop-before=ppc-vsx-copy -target-abi=vec-extabi \
 ; RUN:     -mcpu=pwr7  -mtriple powerpc-ibm-aix-xcoff < %s 2>&1 | \
 ; RUN: FileCheck %s
 
@@ -12,19 +12,19 @@ declare <4 x i32> @split_spill(double, double, double, ...)
 
 ; CHECK:     ADJCALLSTACKDOWN 64, 0, implicit-def dead $r1, implicit $r1
 ; CHECK:     [[VECCONSTADDR:%[0-9]+]]:gprc = LWZtoc %const.0, $r2 :: (load (s32) from got)
-; CHECK:     [[VECCONST:%[0-9]+]]:vsrc = LXVW4X $zero, killed [[VECCONSTADDR]] :: (load (s128) from constant-pool)
+; CHECK:     [[VECCONST:%[0-9]+]]:vsrc = LXVW4X $zero, [[VECCONSTADDR]] :: (load (s128) from constant-pool)
 ; CHECK:     [[STACKOFFSET:%[0-9]+]]:gprc = LI 48
-; CHECK:     STXVW4X killed [[VECCONST]], $r1, killed [[STACKOFFSET]] :: (store (s128))
+; CHECK:     STXVW4X [[VECCONST]], $r1, [[STACKOFFSET]] :: (store (s128))
 ; CHECK-DAG: [[ELEMENT1:%[0-9]+]]:gprc = LWZ 48, $r1 :: (load (s32))
 ; CHECK-DAG: [[ELEMENT2:%[0-9]+]]:gprc = LWZ 52, $r1 :: (load (s32))
 ; CHECK:     [[FLOAT1SPLAT:%[0-9]+]]:vrrc = VSPLTISW 1
-; CHECK:     [[FLOAT1COPY:%[0-9]+]]:vsrc = COPY killed [[FLOAT1SPLAT]]
-; CHECK:     [[DOUBLE1:%[0-9]+]]:vsrc = XVCVSXWDP killed [[FLOAT1COPY]], implicit $rm
-; CHECK:     [[DOUBLE1COPY:%[0-9]+]]:vsfrc = COPY killed [[DOUBLE1]]
+; CHECK:     [[FLOAT1COPY:%[0-9]+]]:vsrc = COPY [[FLOAT1SPLAT]]
+; CHECK:     [[DOUBLE1:%[0-9]+]]:vsrc = XVCVSXWDP [[FLOAT1COPY]], implicit $rm
+; CHECK:     [[DOUBLE1COPY:%[0-9]+]]:vsfrc = COPY [[DOUBLE1]]
 ; CHECK:     [[FLOAT2SPLAT:%[0-9]+]]:vrrc = VSPLTISW 2
-; CHECK:     [[FLOAT2COPY:%[0-9]+]]:vsrc = COPY killed [[FLOAT2SPLAT]]
-; CHECK:     [[DOUBLE2:%[0-9]+]]:vsrc = XVCVSXWDP killed [[FLOAT2COPY]], implicit $rm
-; CHECK:     [[DOUBLE2COPY:%[0-9]+]]:vsfrc = COPY killed [[DOUBLE2]]
+; CHECK:     [[FLOAT2COPY:%[0-9]+]]:vsrc = COPY [[FLOAT2SPLAT]]
+; CHECK:     [[DOUBLE2:%[0-9]+]]:vsrc = XVCVSXWDP [[FLOAT2COPY]], implicit $rm
+; CHECK:     [[DOUBLE2COPY:%[0-9]+]]:vsfrc = COPY [[DOUBLE2]]
 
 ; CHECK:     [[DZERO:%[0-9]+]]:vsfrc = XXLXORdpz
 ; CHECK:     [[DTOI1:%[0-9]+]]:gprc = LIS 16368
