@@ -27,15 +27,19 @@
 
 namespace clang::CIRGen {
 
-/// isEmptyFieldForLayout - Return true if the field is "empty", that is,
-/// either a zero-width bit-field or an isEmptyRecordForLayout.
-bool isEmptyFieldForLayout(const ASTContext &context, const FieldDecl *fd);
+/// isEmptyFieldForABI - Return true if the field is "empty", that is, it is a
+/// zero-width bit-field or an (array of) empty record(s).  An unnamed
+/// bit-field wider than zero bits is not empty: it is storage the classifier
+/// reads like a named bit-field's.  C++ record fields are never empty unless
+/// marked [[no_unique_address]], and that exception applies only to records,
+/// not arrays of records.
+bool isEmptyFieldForABI(const ASTContext &context, const FieldDecl *fd);
 
-/// isEmptyRecordForLayout - Return true if a structure contains only empty
-/// base classes (per  isEmptyRecordForLayout) and fields (per
-/// isEmptyFieldForLayout). Note, C++ record fields are considered empty
-/// if the [[no_unique_address]] attribute would have made them empty.
-bool isEmptyRecordForLayout(const ASTContext &context, QualType t);
+/// isEmptyRecordForABI - Return true if a structure contains only empty base
+/// classes and fields.  Note that a structure with a flexible array member is
+/// not considered empty, and neither is a polymorphic class, whose vtable
+/// pointer is neither a base nor a field.
+bool isEmptyRecordForABI(const ASTContext &context, QualType t);
 
 class CIRGenFunction;
 
@@ -66,7 +70,16 @@ public:
                                           cir::LangAddressSpace::Default);
   }
 
+  /// Get the CIR value of a null pointer of type \p ptrTy, where \p qt is the
+  /// source pointer type.
+  virtual mlir::Value getNullPointer(CIRGenModule &cgm, cir::PointerType ptrTy,
+                                     QualType qt, mlir::Location loc) const;
+
   virtual mlir::Type getCUDADeviceBuiltinSurfaceDeviceType() const {
+    return nullptr;
+  }
+
+  virtual mlir::Type getCUDADeviceBuiltinTextureDeviceType() const {
     return nullptr;
   }
 
@@ -146,6 +159,12 @@ public:
     return false;
   }
 
+  /// Returns the calling convention used for device kernels on this target.
+  virtual cir::CallingConv getDeviceKernelCallingConv() const;
+
+  virtual void
+  setCUDAKernelCallingConvention(const clang::FunctionType *&ft) const {}
+
   /// Corrects the MLIR type for a given constraint and "usual"
   /// type.
   ///
@@ -171,9 +190,13 @@ void setAMDGPUTargetFunctionAttributes(const clang::Decl *decl,
 
 std::unique_ptr<TargetCIRGenInfo> createX8664TargetCIRGenInfo(CIRGenTypes &cgt);
 
+std::unique_ptr<TargetCIRGenInfo>
+createAArch64TargetCIRGenInfo(CIRGenTypes &cgt);
+
 std::unique_ptr<TargetCIRGenInfo> createNVPTXTargetCIRGenInfo(CIRGenTypes &cgt);
 
-std::unique_ptr<TargetCIRGenInfo> createSPIRVTargetCIRGenInfo(CIRGenTypes &cgt);
+std::unique_ptr<TargetCIRGenInfo>
+createCommonSPIRTargetCIRGenInfo(CIRGenTypes &cgt);
 
 } // namespace clang::CIRGen
 

@@ -9,7 +9,6 @@
 #include "SIMachineFunctionInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIRegisterInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -23,7 +22,6 @@
 #include "llvm/IR/Function.h"
 #include <cassert>
 #include <optional>
-#include <vector>
 
 enum { MAX_LANES = 64 };
 
@@ -63,12 +61,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   MaxNumWorkGroups = AMDGPU::getMaxNumWorkGroups(F);
   assert(MaxNumWorkGroups.size() == 3);
 
-  // Temporarily check both the attribute and the subtarget feature, until the
-  // latter is completely removed.
   DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
-  if (DynamicVGPRBlockSize == 0 && ST.isDynamicVGPREnabled())
-    DynamicVGPRBlockSize = ST.getDynamicVGPRBlockSize();
-
   Occupancy = ST.computeOccupancy(F, getLDSSize()).second;
   CallingConv::ID CC = F.getCallingConv();
 
@@ -831,11 +824,4 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
     ScavengeFI = std::nullopt;
   }
   return false;
-}
-
-bool SIMachineFunctionInfo::mayUseAGPRs(const Function &F) const {
-  auto [MinNumAGPR, MaxNumAGPR] =
-      AMDGPU::getIntegerPairAttribute(F, "amdgpu-agpr-alloc", {~0u, ~0u},
-                                      /*OnlyFirstRequired=*/true);
-  return MinNumAGPR != 0u;
 }

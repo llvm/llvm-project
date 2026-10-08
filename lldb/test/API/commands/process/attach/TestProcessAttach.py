@@ -5,7 +5,6 @@ Test process attach.
 
 import os
 import lldb
-import shutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -13,7 +12,7 @@ from lldbsuite.test import lldbutil
 exe_name = "ProcessAttach"  # Must match Makefile
 
 
-@requireNotWasm  # attaching requires launching the inferior as a host process
+@requireNotWasm("attaching requires launching the inferior as a host process")
 class ProcessAttachTestCase(TestBase):
     SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
@@ -80,7 +79,6 @@ class ProcessAttachTestCase(TestBase):
         self.assertTrue(got_event, "Didn't receive any events after attaching")
         self.assertTrue(got_running, "Process didn't auto-continue")
 
-    @skipIfWindows  # This is flakey on Windows AND when it fails, it hangs: llvm.org/pr48806
     def test_attach_to_process_from_different_dir_by_id(self):
         """Test attach by process id"""
         newdir = self.getBuildArtifact("newdir")
@@ -88,7 +86,6 @@ class ProcessAttachTestCase(TestBase):
         testdir = self.getBuildDir()
         exe = os.path.join(newdir, "proc_attach")
         self.buildProgram("main.cpp", exe)
-        self.addTearDownHook(lambda: shutil.rmtree(newdir))
 
         # Spawn a new process
         popen = self.spawnSubprocess(exe)
@@ -118,7 +115,6 @@ class ProcessAttachTestCase(TestBase):
         process = target.GetProcess()
         self.assertTrue(process, PROCESS_IS_VALID)
 
-    @skipIfWindows  # This test is flaky on Windows
     @expectedFailureNetBSD
     def test_attach_to_process_by_id_correct_executable_offset(self):
         """

@@ -33,7 +33,6 @@
 
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachinePassManager.h"
@@ -190,6 +189,23 @@ public:
     return true;
   }
 
+  // \return if scopes are different on gfx1250 and disallowed to be claused.
+  bool isIncompatibleScope(const MachineInstr &MI1, const MachineInstr &MI2,
+                           const SIInstrInfo *SII) const {
+    assert(ST->getGeneration() == AMDGPUSubtarget::GFX12 &&
+           ST->hasGFX1250Insts());
+    int CPol1 = 0, CPol2 = 0;
+    if (const MachineOperand *Op =
+            SII->getNamedOperand(MI1, AMDGPU::OpName::cpol)) {
+      CPol1 = Op->getImm() & AMDGPU::CPol::SCOPE;
+    }
+    if (const MachineOperand *Op =
+            SII->getNamedOperand(MI2, AMDGPU::OpName::cpol)) {
+      CPol2 = Op->getImm() & AMDGPU::CPol::SCOPE;
+    }
+    return CPol1 != CPol2;
+  }
+
   bool run(MachineFunction &MF) {
     ST = &MF.getSubtarget<GCNSubtarget>();
     if (!ST->hasHardClauses())
@@ -204,7 +220,6 @@ public:
       return false;
 
     const SIInstrInfo *SII = ST->getInstrInfo();
-    const TargetRegisterInfo *TRI = ST->getRegisterInfo();
 
     bool Changed = false;
     for (auto &MBB : MF) {
@@ -231,7 +246,7 @@ public:
         SmallVector<const MachineOperand *, 4> BaseOps;
         if (Type <= LAST_REAL_HARDCLAUSE_TYPE) {
           if (!SII->getMemOperandsWithOffsetWidth(MI, BaseOps, Dummy1, Dummy2,
-                                                  Dummy3, TRI)) {
+                                                  Dummy3)) {
             // We failed to get the base operands, so we'll never clause this
             // instruction with any other, so pretend it's illegal.
             Type = HARDCLAUSE_ILLEGAL;
@@ -250,7 +265,9 @@ public:
               // We also lie about the Offset and OffsetIsScalable parameters,
               // as they aren't used in the SIInstrInfo implementation.
               !SII->shouldClusterMemOps(CI.BaseOps, 0, false, BaseOps, 0, false,
-                                        2, 2)))) {
+                                        2, 2))) ||
+            (CI.Length && ST->hasGFX1250_STRICT() &&
+             isIncompatibleScope(MI, *CI.Last, SII))) {
           // Finish the current clause.
           Changed |= emitClause(CI, SII);
           CI = ClauseInfo();

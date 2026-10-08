@@ -121,6 +121,24 @@ class CIR_Op<string mnemonic, list<Trait> traits = []> :
   LoweringBuilders customLLVMLoweringConstructorDecl = ?;
 }
 
+// Base class for structured control flow ops whose regions take no inputs and
+// yield the parent's results on the way out. Users still have to define
+// `getSuccessorRegions` themselves.
+class CIR_RegionBranchOpBase<string mnemonic, list<Trait> traits = []>
+    : CIR_Op<mnemonic, !listconcat([
+        DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                                  ["getSuccessorInputs"]>], traits)> {
+  let extraClassDefinition = [{
+    ValueRange $cppClass::getSuccessorInputs(
+        mlir::RegionSuccessor successor) {
+      // Regions take no inputs; returning to the parent yields its results.
+      return successor.isOperation()
+                 ? ValueRange(getOperation()->getResults())
+                 : ValueRange();
+    }
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // CIR Operation Traits
 //===----------------------------------------------------------------------===//
@@ -169,8 +187,8 @@ defvar CIR_DynamicMemoryEffects = 0;
 // CastOp
 //===----------------------------------------------------------------------===//
 
-def CIR_CastKind : CIR_I32EnumAttr<"CastKind", "cast kind", [
-  I32EnumAttrCase<"bitcast", 1>,
+def CIR_CastKind : CIR_I32Enum<"CastKind", "cast kind", [
+  I32EnumCase<"bitcast", 1>,
   // CK_LValueBitCast
   // CK_LValueToRValueBitCast
   // CK_LValueToRValue
@@ -180,49 +198,49 @@ def CIR_CastKind : CIR_I32EnumAttr<"CastKind", "cast kind", [
   // CK_UncheckedDerivedToBase
   // CK_Dynamic
   // CK_ToUnion
-  I32EnumAttrCase<"array_to_ptrdecay", 11>,
+  I32EnumCase<"array_to_ptrdecay", 11>,
   // CK_FunctionToPointerDecay
   // CK_NullToPointer
   // CK_NullToMemberPointer
   // CK_BaseToDerivedMemberPointer
   // CK_DerivedToBaseMemberPointer
-  I32EnumAttrCase<"member_ptr_to_bool", 17>,
+  I32EnumCase<"member_ptr_to_bool", 17>,
   // CK_ReinterpretMemberPointer
   // CK_UserDefinedConversion
   // CK_ConstructorConversion
-  I32EnumAttrCase<"int_to_ptr", 21>,
-  I32EnumAttrCase<"ptr_to_int", 22>,
-  I32EnumAttrCase<"ptr_to_bool", 23>,
+  I32EnumCase<"int_to_ptr", 21>,
+  I32EnumCase<"ptr_to_int", 22>,
+  I32EnumCase<"ptr_to_bool", 23>,
   // CK_ToVoid
   // CK_MatrixCast
   // CK_VectorSplat
-  I32EnumAttrCase<"integral", 27>,
-  I32EnumAttrCase<"int_to_bool", 28>,
-  I32EnumAttrCase<"int_to_float", 29>,
+  I32EnumCase<"integral", 27>,
+  I32EnumCase<"int_to_bool", 28>,
+  I32EnumCase<"int_to_float", 29>,
   // CK_FloatingToFixedPoint
   // CK_FixedPointToFloating
   // CK_FixedPointCast
   // CK_FixedPointToIntegral
   // CK_IntegralToFixedPoint
   // CK_FixedPointToBoolean
-  I32EnumAttrCase<"float_to_int", 36>,
-  I32EnumAttrCase<"float_to_bool", 37>,
-  I32EnumAttrCase<"bool_to_int", 38>,
-  I32EnumAttrCase<"floating", 39>,
+  I32EnumCase<"float_to_int", 36>,
+  I32EnumCase<"float_to_bool", 37>,
+  I32EnumCase<"bool_to_int", 38>,
+  I32EnumCase<"floating", 39>,
   // CK_CPointerToObjCPointerCast
   // CK_BlockPointerToObjCPointerCast
   // CK_AnyPointerToBlockPointerCast
   // CK_ObjCObjectLValueCast
-  I32EnumAttrCase<"float_to_complex", 44>,
-  I32EnumAttrCase<"float_complex_to_real", 45>,
-  I32EnumAttrCase<"float_complex_to_bool", 46>,
-  I32EnumAttrCase<"float_complex", 47>,
-  I32EnumAttrCase<"float_complex_to_int_complex", 48>,
-  I32EnumAttrCase<"int_to_complex", 49>,
-  I32EnumAttrCase<"int_complex_to_real", 50>,
-  I32EnumAttrCase<"int_complex_to_bool", 51>,
-  I32EnumAttrCase<"int_complex", 52>,
-  I32EnumAttrCase<"int_complex_to_float_complex", 53>,
+  I32EnumCase<"float_to_complex", 44>,
+  I32EnumCase<"float_complex_to_real", 45>,
+  I32EnumCase<"float_complex_to_bool", 46>,
+  I32EnumCase<"float_complex", 47>,
+  I32EnumCase<"float_complex_to_int_complex", 48>,
+  I32EnumCase<"int_to_complex", 49>,
+  I32EnumCase<"int_complex_to_real", 50>,
+  I32EnumCase<"int_complex_to_bool", 51>,
+  I32EnumCase<"int_complex", 52>,
+  I32EnumCase<"int_complex_to_float_complex", 53>,
   // CK_ARCProduceObject
   // CK_ARCConsumeObject
   // CK_ARCReclaimReturnedObject
@@ -232,7 +250,7 @@ def CIR_CastKind : CIR_I32EnumAttr<"CastKind", "cast kind", [
   // CK_CopyAndAutoreleaseBlockObject
   // CK_BuiltinFnToFnPtr
   // CK_ZeroToOCLOpaqueType
-  I32EnumAttrCase<"address_space", 63>,
+  I32EnumCase<"address_space", 63>,
   // CK_IntToOCLSampler
   // CK_HLSLVectorTruncation
   // CK_HLSLArrayRValue
@@ -241,8 +259,10 @@ def CIR_CastKind : CIR_I32EnumAttr<"CastKind", "cast kind", [
 
   // Enums below are specific to CIR and don't have a correspondence to classic
   // codegen:
-  I32EnumAttrCase<"bool_to_float", 1000>,
+  I32EnumCase<"bool_to_float", 1000>,
 ]>;
+
+def CIR_CastKindAttr : CIR_EnumAttr<CIR_CastKind, "cast">;
 
 def CIR_CastOp : CIR_Op<"cast", !listconcat([
   DeclareOpInterfaceMethods<PromotableOpInterface>
@@ -296,18 +316,17 @@ def CIR_CastOp : CIR_Op<"cast", !listconcat([
     ...
     %x = cir.cast array_to_ptrdecay %0 
        : !cir.ptr<!cir.array<i32 x 10>> -> !cir.ptr<i32>
-    %y = cir.cast floating %f : !cir.double -> !cir.float {
-      fenv = #cir.fenv<>
-    }
+    %y = cir.cast floating %f : !cir.double -> !cir.float fenv<>
     ```
   }];
 
-  let arguments = (ins CIR_CastKind:$kind, CIR_AnyType:$src,
+  let arguments = (ins CIR_CastKindAttr:$kind, CIR_AnyType:$src,
                        OptionalAttr<CIR_FenvAttr>:$fenv);
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
-    $kind $src `:` type($src) `->` type($result) attr-dict
+    enum($kind) $src `:` type($src) `->` type($result)
+    (`fenv` `` $fenv^)? attr-dict
   }];
 
   let builders = [
@@ -391,11 +410,14 @@ def CIR_BuiltinIntCastOp : CIR_Op<"builtin_int_cast", [Pure]> {
 // DynamicCastOp
 //===----------------------------------------------------------------------===//
 
-def CIR_DynamicCastKind : CIR_I32EnumAttr<
+def CIR_DynamicCastKind : CIR_I32Enum<
   "DynamicCastKind", "dynamic cast kind", [
-    I32EnumAttrCase<"Ptr", 0, "ptr">,
-    I32EnumAttrCase<"Ref", 1, "ref">
+    I32EnumCase<"Ptr", 0, "ptr">,
+    I32EnumCase<"Ref", 1, "ref">
 ]>;
+
+def CIR_DynamicCastKindAttr
+    : CIR_EnumAttr<CIR_DynamicCastKind, "dynamic_cast">;
 
 def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
   let summary = "Perform dynamic cast on record pointers";
@@ -450,7 +472,7 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
   }];
 
   let arguments = (ins
-    CIR_DynamicCastKind:$kind,
+    CIR_DynamicCastKindAttr:$kind,
     CIR_PtrToRecordType:$src,
     OptionalAttr<CIR_DynamicCastInfoAttr>:$info,
     UnitAttr:$relative_layout
@@ -461,7 +483,7 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
   );
 
   let assemblyFormat = [{
-    $kind (`relative_layout` $relative_layout^)? $src
+    enum($kind) (`relative_layout` $relative_layout^)? $src
     `:` qualified(type($src)) `->` qualified(type($result))
     (qualified($info)^)? attr-dict
   }];
@@ -519,6 +541,42 @@ def CIR_PtrStrideOp : CIR_Op<"ptr_stride", [
       return getBase().getType().getPointee();
     }
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// PtrMaskOp
+//===----------------------------------------------------------------------===//
+
+def CIR_PtrMaskOp : CIR_Op<"ptr_mask", [
+  Pure, AllTypesMatch<["ptr", "result"]>
+]> {
+  let summary = "Clear bits of a pointer";
+  let description = [{
+    The `cir.ptr_mask` operation clears the bits of `ptr` that are not set in
+    `mask`.  The result stays a pointer, whereas masking it as an integer
+    would lose provenance.
+
+    `mask` must be exactly the target's pointer index width.
+
+    ```
+    %m = cir.const #cir.int<-32> : !s64i
+    %0 = cir.ptr_mask %p, %m : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_PointerType:$ptr,
+    CIR_AnyFundamentalIntType:$mask
+  );
+
+  let results = (outs CIR_PointerType:$result);
+
+  let assemblyFormat = [{
+    $ptr`,` $mask `:` functional-type(operands, results) attr-dict
+  }];
+
+  let llvmOp = "PtrMaskOp";
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -625,42 +683,46 @@ def CIR_SignBitOp : CIR_Op<"signbit", [Pure]> {
 // C/C++ memory order definitions
 //===----------------------------------------------------------------------===//
 
-def CIR_MemOrder : CIR_I32EnumAttr<
+def CIR_MemOrder : CIR_I32Enum<
   "MemOrder", "Memory order according to C++11 memory model", [
-    I32EnumAttrCase<"Relaxed", 0, "relaxed">,
-    I32EnumAttrCase<"Consume", 1, "consume">,
-    I32EnumAttrCase<"Acquire", 2, "acquire">,
-    I32EnumAttrCase<"Release", 3, "release">,
-    I32EnumAttrCase<"AcquireRelease", 4, "acq_rel">,
-    I32EnumAttrCase<"SequentiallyConsistent", 5, "seq_cst">
+    I32EnumCase<"Relaxed", 0, "relaxed">,
+    I32EnumCase<"Consume", 1, "consume">,
+    I32EnumCase<"Acquire", 2, "acquire">,
+    I32EnumCase<"Release", 3, "release">,
+    I32EnumCase<"AcquireRelease", 4, "acq_rel">,
+    I32EnumCase<"SequentiallyConsistent", 5, "seq_cst">
 ]>;
+
+def CIR_MemOrderAttr : CIR_EnumAttr<CIR_MemOrder, "mem_order">;
 
 //===----------------------------------------------------------------------===//
 // C/C++ sync scope definitions
 //===----------------------------------------------------------------------===//
 
-def CIR_SyncScopeKind : CIR_I32EnumAttr<"SyncScopeKind", "sync scope kind", [
-  I32EnumAttrCase<"SingleThread", 0, "single_thread">,
-  I32EnumAttrCase<"System", 1, "system">,
-  I32EnumAttrCase<"Device", 2, "device">,
-  I32EnumAttrCase<"Workgroup", 3, "workgroup">,
-  I32EnumAttrCase<"Wavefront", 4, "wavefront">,
-  I32EnumAttrCase<"Cluster", 5, "cluster">,
+def CIR_SyncScopeKind : CIR_I32Enum<"SyncScopeKind", "sync scope kind", [
+  I32EnumCase<"SingleThread", 0, "single_thread">,
+  I32EnumCase<"System", 1, "system">,
+  I32EnumCase<"Device", 2, "device">,
+  I32EnumCase<"Workgroup", 3, "workgroup">,
+  I32EnumCase<"Wavefront", 4, "wavefront">,
+  I32EnumCase<"Cluster", 5, "cluster">,
 
   // HIP sync scopes
-  I32EnumAttrCase<"HIPSingleThread", 6, "hip_single_thread">,
-  I32EnumAttrCase<"HIPSystem", 7, "hip_system">,
-  I32EnumAttrCase<"HIPAgent", 8, "hip_agent">,
-  I32EnumAttrCase<"HIPWorkgroup", 9, "hip_workgroup">,
-  I32EnumAttrCase<"HIPWavefront", 10, "hip_wavefront">,
-  I32EnumAttrCase<"HIPCluster", 11, "hip_cluster">,
+  I32EnumCase<"HIPSingleThread", 6, "hip_single_thread">,
+  I32EnumCase<"HIPSystem", 7, "hip_system">,
+  I32EnumCase<"HIPAgent", 8, "hip_agent">,
+  I32EnumCase<"HIPWorkgroup", 9, "hip_workgroup">,
+  I32EnumCase<"HIPWavefront", 10, "hip_wavefront">,
+  I32EnumCase<"HIPCluster", 11, "hip_cluster">,
 
   // OpenCL sync scopes
-  I32EnumAttrCase<"OpenCLWorkGroup", 12, "opencl_work_group">,
-  I32EnumAttrCase<"OpenCLDevice", 13, "opencl_device">,
-  I32EnumAttrCase<"OpenCLAllSVMDevices", 14, "opencl_all_svm_devices">,
-  I32EnumAttrCase<"OpenCLSubGroup", 15, "opencl_sub_group">,
+  I32EnumCase<"OpenCLWorkGroup", 12, "opencl_work_group">,
+  I32EnumCase<"OpenCLDevice", 13, "opencl_device">,
+  I32EnumCase<"OpenCLAllSVMDevices", 14, "opencl_all_svm_devices">,
+  I32EnumCase<"OpenCLSubGroup", 15, "opencl_sub_group">,
 ]>;
+
+def CIR_SyncScopeKindAttr : CIR_EnumAttr<CIR_SyncScopeKind, "sync_scope">;
 
 //===----------------------------------------------------------------------===//
 // AllocaOp
@@ -801,8 +863,8 @@ def CIR_LoadOp : CIR_Op<"load", [
                        UnitAttr:$is_volatile,
                        UnitAttr:$is_nontemporal,
                        OptionalAttr<I64Attr>:$alignment,
-                       OptionalAttr<CIR_SyncScopeKind>:$sync_scope,
-                       OptionalAttr<CIR_MemOrder>:$mem_order,
+                       OptionalAttr<CIR_SyncScopeKindAttr>:$sync_scope,
+                       OptionalAttr<CIR_MemOrderAttr>:$mem_order,
                        UnitAttr:$invariant);
   let results = (outs CIR_AnyType:$result);
 
@@ -812,10 +874,25 @@ def CIR_LoadOp : CIR_Op<"load", [
     (`nontemporal` $is_nontemporal^)?
     (`invariant` $invariant^)?
     (`align` `(` $alignment^ `)`)?
-    (`syncscope` `(` $sync_scope^ `)`)?
-    (`atomic` `(` $mem_order^ `)`)?
+    (`syncscope` `(` enum($sync_scope)^ `)`)?
+    (`atomic` `(` enum($mem_order)^ `)`)?
     $addr `:` qualified(type($addr)) `,` type($result) attr-dict
   }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$addr), [{
+      build($_builder, $_state, addr, /*isDeref=*/false,
+            /*is_volatile=*/false, /*is_nontemporal=*/false,
+            /*alignment=*/mlir::IntegerAttr{}, cir::SyncScopeKindAttr{},
+            cir::MemOrderAttr{}, /*invariant=*/false);
+    }]>,
+    OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$addr), [{
+      build($_builder, $_state, result, addr, /*isDeref=*/false,
+            /*is_volatile=*/false, /*is_nontemporal=*/false,
+            /*alignment=*/mlir::IntegerAttr{}, cir::SyncScopeKindAttr{},
+            cir::MemOrderAttr{}, /*invariant=*/false);
+    }]>
+  ];
 
   // FIXME: add verifier.
 }
@@ -904,15 +981,15 @@ def CIR_StoreOp : CIR_Op<"store", [
                        UnitAttr:$is_volatile,
                        UnitAttr:$is_nontemporal,
                        OptionalAttr<I64Attr>:$alignment,
-                       OptionalAttr<CIR_SyncScopeKind>:$sync_scope,
-                       OptionalAttr<CIR_MemOrder>:$mem_order);
+                       OptionalAttr<CIR_SyncScopeKindAttr>:$sync_scope,
+                       OptionalAttr<CIR_MemOrderAttr>:$mem_order);
 
   let assemblyFormat = [{
     (`volatile` $is_volatile^)?
     (`nontemporal` $is_nontemporal^)?
     (`align` `(` $alignment^ `)`)?
-    (`syncscope` `(` $sync_scope^ `)`)?
-    (`atomic` `(` $mem_order^ `)`)?
+    (`syncscope` `(` enum($sync_scope)^ `)`)?
+    (`atomic` `(` enum($mem_order)^ `)`)?
     $value `,` $addr attr-dict `:` type($value) `,` qualified(type($addr))
   }];
 
@@ -936,7 +1013,7 @@ def CIR_StoreOp : CIR_Op<"store", [
 
 defvar CIR_ReturnableScopes = [
   "FuncOp", "ScopeOp", "IfOp", "SwitchOp", "CaseOp", "CleanupScopeOp",
-  "DoWhileOp", "WhileOp", "ForOp", "TryOp"
+  "CoroutineOp", "DoWhileOp", "WhileOp", "ForOp", "TryOp"
 ];
 
 def CIR_ReturnOp : CIR_Op<"return", [
@@ -983,8 +1060,7 @@ def CIR_ReturnOp : CIR_Op<"return", [
 // IfOp
 //===----------------------------------------------------------------------===//
 
-def CIR_IfOp : CIR_Op<"if", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+def CIR_IfOp : CIR_RegionBranchOpBase<"if", [
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
 ]> {
   let summary = "the if-then-else operation";
@@ -1057,8 +1133,8 @@ def CIR_ConditionOp : CIR_Op<"condition", [
     Example:
 
     ```
-    cir.for cond {
-      cir.condition(%val) // Branches to `step` region or exits.
+    cir.for : cond {
+      cir.condition(%val) // Branches to `body` region or exits.
     } body {
       cir.yield
     } step {
@@ -1085,7 +1161,7 @@ def CIR_ConditionOp : CIR_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 defvar CIR_YieldableScopes = [
-  "ArrayCtor", "ArrayDtor", "AwaitOp", "CaseOp", "CleanupScopeOp", "CoroBodyOp",
+  "ArrayCtor", "ArrayDtor", "AwaitOp", "CaseOp", "CleanupScopeOp", "CoroutineOp",
   "DoWhileOp", "ForOp", "GlobalOp", "IfOp", "LocalInitOp", "ScopeOp", "SwitchOp",
   "TernaryOp", "TryOp", "WhileOp"
 ];
@@ -1275,8 +1351,7 @@ def CIR_ResumeFlatOp : CIR_Op<"resume.flat", [
 // ScopeOp
 //===----------------------------------------------------------------------===//
 
-def CIR_ScopeOp : CIR_Op<"scope", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+def CIR_ScopeOp : CIR_RegionBranchOpBase<"scope", [
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
   RecursiveMemoryEffects
 ]> {
@@ -1337,34 +1412,13 @@ def CIR_ScopeOp : CIR_Op<"scope", [
 // CleanupScopeOp
 //===----------------------------------------------------------------------===//
 
-def CIR_CleanupKind : CIR_I32EnumAttr<"CleanupKind", "cleanup kind", [
-  I32EnumAttrCase<"Normal", 1, "normal">,
-  I32EnumAttrCase<"EH", 2, "eh">,
-  I32EnumAttrCase<"All", 3, "all">
-]> {
-  let genSpecializedAttr = 0;
-}
+def CIR_CleanupKind : CIR_I32Enum<"CleanupKind", "cleanup kind", [
+  I32EnumCase<"Normal", 1, "normal">,
+  I32EnumCase<"EH", 2, "eh">,
+  I32EnumCase<"All", 3, "all">
+]>;
 
-def CIR_CleanupKindAttr : CIR_EnumAttr<CIR_CleanupKind, "cleanup_kind"> {
-  let summary = "Cleanup kind attribute";
-  let description = [{
-    Cleanup kind attributes.
-  }];
-
-  let cppClassName = "CleanupKindAttr";
-
-  let skipDefaultBuilders = 1;
-  let builders = [
-    AttrBuilder<(ins CArg<"CleanupKind",
-                          "cir::CleanupKind::All">:$value), [{
-      return $_get($_ctxt, value);
-    }]>
-  ];
-
-  let assemblyFormat = [{
-    $value
-  }];
-
+def CIR_CleanupKindAttr : CIR_EnumAttr<CIR_CleanupKind, "cleanup"> {
   let extraClassDeclaration = [{
     bool isNormal() const {
       return getValue() == CleanupKind::Normal ||
@@ -1377,8 +1431,7 @@ def CIR_CleanupKindAttr : CIR_EnumAttr<CIR_CleanupKind, "cleanup_kind"> {
   }];
 }
 
-def CIR_CleanupScopeOp : CIR_Op<"cleanup.scope", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+def CIR_CleanupScopeOp : CIR_RegionBranchOpBase<"cleanup.scope", [
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
   RecursiveMemoryEffects
 ]> {
@@ -1427,7 +1480,7 @@ def CIR_CleanupScopeOp : CIR_Op<"cleanup.scope", [
   let skipDefaultBuilders = 1;
 
   let assemblyFormat = [{
-    $bodyRegion `cleanup` $cleanupKind $cleanupRegion attr-dict
+    $bodyRegion `cleanup` enum($cleanupKind) $cleanupRegion attr-dict
   }];
 
   let builders = [
@@ -1437,6 +1490,7 @@ def CIR_CleanupScopeOp : CIR_Op<"cleanup.scope", [
   ];
 
   let hasCanonicalizeMethod = 1;
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
@@ -1512,15 +1566,16 @@ def CIR_CmpThreeWayOp : CIR_Op<"cmp3way", [Pure, SameTypeOperands]> {
 // SwitchOp
 //===----------------------------------------------------------------------===//
 
-def CIR_CaseOpKind : CIR_I32EnumAttr<"CaseOpKind", "case kind", [
-  I32EnumAttrCase<"Default", 0, "default">,
-  I32EnumAttrCase<"Equal", 1, "equal">,
-  I32EnumAttrCase<"Anyof", 2, "anyof">,
-  I32EnumAttrCase<"Range", 3, "range">
+def CIR_CaseOpKind : CIR_I32Enum<"CaseOpKind", "case kind", [
+  I32EnumCase<"Default", 0, "default">,
+  I32EnumCase<"Equal", 1, "equal">,
+  I32EnumCase<"Anyof", 2, "anyof">,
+  I32EnumCase<"Range", 3, "range">
 ]>;
 
-def CIR_CaseOp : CIR_Op<"case", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+def CIR_CaseOpKindAttr : CIR_EnumAttr<CIR_CaseOpKind, "case">;
+
+def CIR_CaseOp : CIR_RegionBranchOpBase<"case", [
   RecursivelySpeculatable, AutomaticAllocationScope
 ]> {
   let summary = "Case operation";
@@ -1541,10 +1596,11 @@ def CIR_CaseOp : CIR_Op<"case", [
     Each case region must be explicitly terminated.
   }];
 
-  let arguments = (ins ArrayAttr:$value, CIR_CaseOpKind:$kind);
+  let arguments = (ins ArrayAttr:$value, CIR_CaseOpKindAttr:$kind);
   let regions = (region AnyRegion:$caseRegion);
 
-  let assemblyFormat = "`(` $kind `,` $value `)` $caseRegion attr-dict";
+  let assemblyFormat =
+      "`(` enum($kind) `,` $value `)` $caseRegion attr-dict";
 
   let skipDefaultBuilders = 1;
   let builders = [
@@ -1556,9 +1612,8 @@ def CIR_CaseOp : CIR_Op<"case", [
   let hasLLVMLowering = false;
 }
 
-def CIR_SwitchOp : CIR_Op<"switch", [
+def CIR_SwitchOp : CIR_RegionBranchOpBase<"switch", [
   SameVariadicOperandSize,
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
   RecursiveMemoryEffects
 ]> {
@@ -2051,7 +2106,7 @@ def CIR_DecOp
 //===----------------------------------------------------------------------===//
 
 def CIR_MinusOp
-    : CIR_UnaryOpWithOverflowFlag<"minus", CIR_AnyIntOrVecOfIntType> {
+    : CIR_UnaryOpWithOverflowFlag<"minus", CIR_AnyIntOrVecOfIntOrBoolType> {
   let summary = "Integer unary minus (negation)";
   let description = [{
     The `cir.minus` operation negates the operand. The operand and result
@@ -2296,7 +2351,7 @@ def CIR_WhileOp : CIR_WhileOpBase<"while"> {
   let regions = (region MinSizedRegion<1>:$cond, MinSizedRegion<1>:$body,
                         MaxSizedRegion<1>:$cleanup);
   let assemblyFormat = [{
-    $cond `do` $body (`cleanup` $cleanupKind $cleanup^)? attr-dict
+    $cond `do` $body (`cleanup` enum($cleanupKind) $cleanup^)? attr-dict
   }];
 
   let description = [{
@@ -2316,11 +2371,17 @@ def CIR_WhileOp : CIR_WhileOpBase<"while"> {
 
     ```
     cir.while {
-      cir.break
-    ^bb2:
-      cir.yield
+      cir.condition(%cond)
     } do {
-      cir.condition %cond : cir.bool
+      cir.yield
+    }
+
+    cir.while {
+      cir.condition(%cond)
+    } do {
+      cir.yield
+    } cleanup all {
+      cir.yield
     }
     ```
   }];
@@ -2388,7 +2449,7 @@ def CIR_DoWhileOp : CIR_WhileOpBase<"do"> {
     ^bb2:
       cir.yield
     } while {
-      cir.condition %cond : cir.bool
+      cir.condition(%cond)
     }
     ```
   }];
@@ -2419,13 +2480,23 @@ def CIR_ForOp : CIR_LoopOpBase<"for"> {
     Example:
 
     ```
-    cir.for cond {
+    cir.for : cond {
       cir.condition(%val)
     } body {
       cir.break
     ^bb2:
       cir.yield
     } step {
+      cir.yield
+    }
+
+    cir.for : cond {
+      cir.condition(%val)
+    } body {
+      cir.yield
+    } step {
+      cir.yield
+    } cleanup all {
       cir.yield
     }
     ```
@@ -2440,7 +2511,7 @@ def CIR_ForOp : CIR_LoopOpBase<"for"> {
     `:` `cond` $cond
     `body` $body
     `step` $step
-    (`cleanup` $cleanupKind $cleanup^)?
+    (`cleanup` enum($cleanupKind) $cleanup^)?
     attr-dict
   }];
 
@@ -2501,16 +2572,18 @@ def CIR_ForOp : CIR_LoopOpBase<"for"> {
 // CmpOp
 //===----------------------------------------------------------------------===//
 
-def CIR_CmpOpKind : CIR_I32EnumAttr<"CmpOpKind", "compare operation kind", [
-  I32EnumAttrCase<"lt", 0>,
-  I32EnumAttrCase<"le", 1>,
-  I32EnumAttrCase<"gt", 2>,
-  I32EnumAttrCase<"ge", 3>,
-  I32EnumAttrCase<"eq", 4>,
-  I32EnumAttrCase<"ne", 5>,
-  I32EnumAttrCase<"one", 6>,
-  I32EnumAttrCase<"uno", 7>
+def CIR_CmpOpKind : CIR_I32Enum<"CmpOpKind", "compare operation kind", [
+  I32EnumCase<"lt", 0>,
+  I32EnumCase<"le", 1>,
+  I32EnumCase<"gt", 2>,
+  I32EnumCase<"ge", 3>,
+  I32EnumCase<"eq", 4>,
+  I32EnumCase<"ne", 5>,
+  I32EnumCase<"one", 6>,
+  I32EnumCase<"uno", 7>
 ]>;
+
+def CIR_CmpOpKindAttr : CIR_EnumAttr<CIR_CmpOpKind, "cmp">;
 
 def CIR_CmpOp : CIR_Op<"cmp",
     !listconcat([SameTypeOperands], CIR_FenvOpTraits)> {
@@ -2544,12 +2617,12 @@ def CIR_CmpOp : CIR_Op<"cmp",
     ```
     %0 = cir.cmp gt %1, %2 : !s32i
     %1 = cir.cmp eq %a, %b : !cir.ptr<!u8i>
-    %2 = cir.cmp lt %x, %y : !cir.float {fenv = #cir.fenv<>}
+    %2 = cir.cmp lt %x, %y : !cir.float fenv<>
     ```
   }];
 
   let arguments = (ins
-    CIR_CmpOpKind:$kind,
+    CIR_CmpOpKindAttr:$kind,
     CIR_ComparableType:$lhs,
     CIR_ComparableType:$rhs,
     OptionalAttr<CIR_FenvAttr>:$fenv
@@ -2558,7 +2631,8 @@ def CIR_CmpOp : CIR_Op<"cmp",
   let results = (outs CIR_BoolType:$result);
 
   let assemblyFormat = [{
-    $kind $lhs `,` $rhs `:` type($lhs) attr-dict
+    enum($kind) $lhs `,` $rhs `:` type($lhs)
+    (`fenv` `` $fenv^)? attr-dict
   }];
 
   let builders = [
@@ -2873,6 +2947,9 @@ class CIR_FPBinaryOp<string mnemonic, list<Trait> traits = []>
                    !listconcat(CIR_FenvOpTraits, traits),
                    CIR_DynamicMemoryEffects> {
   let arguments = !con(commonArgs, (ins OptionalAttr<CIR_FenvAttr>:$fenv));
+  let assemblyFormat = [{
+    $lhs `,` $rhs `:` type($lhs) (`fenv` `` $fenv^)? attr-dict
+  }];
 
   let constrainedLLVMIntrinsic = mnemonic;
 
@@ -3208,8 +3285,7 @@ def CIR_SelectOp : CIR_Op<"select", [
 // TernaryOp
 //===----------------------------------------------------------------------===//
 
-def CIR_TernaryOp : CIR_Op<"ternary", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+def CIR_TernaryOp : CIR_RegionBranchOpBase<"ternary", [
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
 ]> {
   let summary = "The `cond ? a : b` C/C++ ternary operation";
@@ -3270,46 +3346,56 @@ def CIR_TernaryOp : CIR_Op<"ternary", [
 // lowering, specially useful for C++ support.
 
 /// An enumeration for the kinds of linkage for global values.
-def CIR_GlobalLinkageKind : CIR_I32EnumAttr<
+def CIR_GlobalLinkageKind : CIR_I32Enum<
   "GlobalLinkageKind", "linkage kind", [
     // Externally visible function
-    I32EnumAttrCase<"ExternalLinkage", 0, "external">,
+    I32EnumCase<"ExternalLinkage", 0, "external">,
     // Available for inspection, not emission.
-    I32EnumAttrCase<"AvailableExternallyLinkage", 1, "available_externally">,
+    I32EnumCase<"AvailableExternallyLinkage", 1, "available_externally">,
     // Keep one copy of function when linking (inline)
-    I32EnumAttrCase<"LinkOnceAnyLinkage", 2, "linkonce">,
+    I32EnumCase<"LinkOnceAnyLinkage", 2, "linkonce">,
     // Same, but only replaced by something equivalent.
-    I32EnumAttrCase<"LinkOnceODRLinkage", 3, "linkonce_odr">,
+    I32EnumCase<"LinkOnceODRLinkage", 3, "linkonce_odr">,
     // Keep one copy of named function when linking (weak)
-    I32EnumAttrCase<"WeakAnyLinkage", 4, "weak">,
+    I32EnumCase<"WeakAnyLinkage", 4, "weak">,
     // Same, but only replaced by something equivalent.
-    I32EnumAttrCase<"WeakODRLinkage", 5, "weak_odr">,
+    I32EnumCase<"WeakODRLinkage", 5, "weak_odr">,
     // Special purpose, only applies to global arrays
-    I32EnumAttrCase<"AppendingLinkage", 6, "appending">,
+    I32EnumCase<"AppendingLinkage", 6, "appending">,
     // Rename collisions when linking (static functions).
-    I32EnumAttrCase<"InternalLinkage", 7, "internal">,
+    I32EnumCase<"InternalLinkage", 7, "internal">,
     // Like Internal, but omit from symbol table, prefix it with
     // "cir_" to prevent clash with MLIR's symbol "private".
-    I32EnumAttrCase<"PrivateLinkage", 8, "cir_private">,
+    I32EnumCase<"PrivateLinkage", 8, "cir_private">,
     // ExternalWeak linkage description.
-    I32EnumAttrCase<"ExternalWeakLinkage", 9, "extern_weak">,
+    I32EnumCase<"ExternalWeakLinkage", 9, "extern_weak">,
     // Tentative definitions.
-    I32EnumAttrCase<"CommonLinkage", 10, "common">
+    I32EnumCase<"CommonLinkage", 10, "common">
 ]>;
+
+def CIR_GlobalLinkageKindAttr
+    : CIR_EnumAttr<CIR_GlobalLinkageKind, "linkage">;
 
 // TODO(CIR): For starters, cir.global has only name and type.  The other
 // properties of a global variable will be added over time as more of ClangIR
 // is upstreamed.
 
-def CIR_TLSModel : CIR_I32EnumAttr<"TLS_Model", "TLS model", [
-  I32EnumAttrCase<"GeneralDynamic", 1, "tls_dyn">,
-  I32EnumAttrCase<"LocalDynamic", 2, "tls_local_dyn">,
-  I32EnumAttrCase<"InitialExec", 3, "tls_init_exec">,
-  I32EnumAttrCase<"LocalExec", 4, "tls_local_exec">
+def CIR_TLSModel : CIR_I32Enum<"TLSModel", "TLS model", [
+  I32EnumCase<"GeneralDynamic", 1, "tls_dyn">,
+  I32EnumCase<"LocalDynamic", 2, "tls_local_dyn">,
+  I32EnumCase<"InitialExec", 3, "tls_init_exec">,
+  I32EnumCase<"LocalExec", 4, "tls_local_exec">
 ]>;
 
-def CIR_GlobalOp : CIR_Op<"global", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+def CIR_TLSModelAttr: CIR_EnumAttr<CIR_TLSModel, "tls_model"> {
+  let description = [{
+     The TLS mode for the global, which comes from either the
+    `tls_model` attribute, or `-ftls-model` flag.
+  }];
+}
+
+def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
+  SymbolName, SymbolVisibility,
   DeclareOpInterfaceMethods<CIRGlobalValueInterface>,
   NoRegionArguments
 ]> {
@@ -3324,15 +3410,22 @@ def CIR_GlobalOp : CIR_Op<"global", [
     Symbol visibility in `sym_visibility` is defined in terms of MLIR's visibility
     and verified to be in accordance to `linkage`.
 
-    The `static_local_guard` attribute indicates that this global represents a
-    function-local static variable that requires guarded initialization
-    (e.g., C++ static local variables with non-constant initializers).
-    It contains the mangled name of the guard variable.
+    The `dynamic_init_guard` attribute indicates that this global requires
+    guarded dynamic initialization via the Itanium `__cxa_guard_*` protocol
+    (e.g., C++ static local variables with non-constant initializers, or
+    namespace-scope variables with vague linkage such as weak/linkonce_odr
+    inline variables). It contains the mangled name of the guard variable.
 
     The `strictfp` attribute indicates that the dynamic initialization emitted
     into the `ctorRegion`/`dtorRegion` runs under a constrained floating-point
     environment. LoweringPrepare forwards it to the `strictfp` attribute of the
     generated `__cxx_global_var_init` function.
+
+    The `init_priority` attribute records the priority specified by a
+    C++ `init_priority` attribute on the source variable declaration.
+    LoweringPrepare uses it to place the dynamic initializer emitted from
+    `ctorRegion` into a priority-specific `_GLOBAL__I_<priority>` function
+    instead of the default `_GLOBAL__sub_I_*` function.
   }];
 
   // Note that both sym_name and sym_visibility are tied to Symbol trait.
@@ -3345,42 +3438,50 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        >:$global_visibility,
                        OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$sym_type,
-                       CIR_GlobalLinkageKind:$linkage,
+                       CIR_GlobalLinkageKindAttr:$linkage,
                        OptionalAttr<MemorySpaceAttrInterface>:$addr_space,
-                       OptionalAttr<CIR_TLSModel>:$tls_model,
-                       OptionalAttr<CIR_ThreadLocalGlobalWrapperInitAttr>:$dyn_tls_refs,
+                       OptionalAttr<CIR_TLSModelAttr>:$tls_model,
+                       OptionalAttr<CIR_ThreadLocalGlobalWrapperInitAttr>:$tls_refs,
                        OptionalAttr<AnyAttr>:$initial_value,
-                       UnitProp:$comdat,
+                       OptionalAttr<StrAttr>:$comdat,
                        UnitProp:$constant,
                        UnitProp:$dso_local,
-                       OptionalAttr<CIR_StaticLocalGuardAttr>:$static_local_guard,
+                       OptionalAttr<CIR_DynamicInitGuardAttr>:$dynamic_init_guard,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<ASTVarDeclInterface>:$ast,
+                       OptionalAttr<CIR_DynamicInitInfoAttr>:$dynamic_init_info,
                        OptionalAttr<StrAttr>:$section,
                        OptionalAttr<CIR_AnnotationArrayAttr>:$annotations,
                        OptionalAttr<FlatSymbolRefAttr>:$aliasee,
-                       UnitAttr:$strictfp
+                       UnitAttr:$strictfp,
+                       OptionalAttr<I32Attr>:$init_priority
                        );
 
-  let regions = (region AnyRegion:$ctorRegion,
-                        AnyRegion:$dtorRegion);
+  let regions = (region MaxSizedRegion<1>:$ctorRegion,
+                        MaxSizedRegion<1>:$dtorRegion);
 
   let assemblyFormat = [{
     ($sym_visibility^)?
     ($global_visibility^)?
     (`constant` $constant^)?
-    $linkage
-    (`comdat` $comdat^)?
-    ($tls_model^)?
-    (`dyn_tls_refs` `=` $dyn_tls_refs^)?
+    enum($linkage)
+    custom<ComdatName>($comdat)
+    (`tls_model` `=` enum($tls_model)^)?
+    (`tls_refs` `=` $tls_refs^)?
     (`dso_local` $dso_local^)?
-    (`static_local_guard` `` $static_local_guard^)?
-    (` ` custom<GlobalAddressSpaceValue>($addr_space)^ )?
+    (`dynamic_init_guard` `` $dynamic_init_guard^)?
+    (` ` custom<GlobalMemorySpace>($addr_space)^ )?
     $sym_name
     (`alias` `(` $aliasee^ `)`)?
     custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value,
                                         $ctorRegion, $dtorRegion)
     ($annotations^)?
+    (`align` `(` $alignment^ `)`)?
+    (`ast` `(` $ast^ `)`)?
+    (`dynamic_init_info` `` $dynamic_init_info^)?
+    (`section` `(` $section^ `)`)?
+    (`strictfp` $strictfp^)?
+    (`init_priority` `(` $init_priority^ `)`)?
     attr-dict
   }];
 
@@ -3751,8 +3852,8 @@ def CIR_SetBitfieldOp : CIR_Op<"set_bitfield"> {
 
     ```
     // 'e' is in the storage with the index 1
-    !record_type = !cir.record<struct "S" packed padded {!u64i, !u16i,
-                               !cir.array<!u8i x 2>} #cir.record.decl.ast>
+    !record_type = !cir.struct<"S" packed {!u64i, !u16i,
+                                           pad !cir.array<!u8i x 2>}>
     #bfi_e = #cir.bitfield_info<name = "e", storage_type = !u16i, size = 15,
                                 offset = 0, is_signed = true>
 
@@ -3777,8 +3878,9 @@ def CIR_SetBitfieldOp : CIR_Op<"set_bitfield"> {
 
   let assemblyFormat = [{
     (`align` `(` $alignment^ `)`)?
-    `(`$bitfield_info`,` $addr`:`qualified(type($addr))`,`
-    $src`:`type($src) `)`  attr-dict `->` type($result) }];
+    ` ` `(`$bitfield_info`,` $addr`:`qualified(type($addr))`,`
+    $src`:`type($src) `)`
+    (`{` `is_volatile` $is_volatile^ `}`)? attr-dict `->` type($result) }];
 
   let builders = [
     OpBuilder<(ins "mlir::Type":$type,
@@ -3842,7 +3944,8 @@ def CIR_GetBitfieldOp : CIR_Op<"get_bitfield"> {
 
     ```
     // 'e' is in the storage with the index 1
-    !cir.record<struct "S" packed padded {!u64i, !u16i, !cir.array<!u8i x 2>}>
+    !cir.struct<"S" packed {!u64i, !u16i,
+                            pad !cir.array<!u8i x 2>}>
     #bfi_e = #cir.bitfield_info<name = "e", storage_type = !u16i, size = 15,
                                 offset = 0, is_signed = true>
 
@@ -3864,7 +3967,8 @@ def CIR_GetBitfieldOp : CIR_Op<"get_bitfield"> {
 
   let assemblyFormat = [{
     (`align` `(` $alignment^ `)`)?
-    `(`$bitfield_info `,` $addr attr-dict `:`
+    ` ` `(`$bitfield_info `,` $addr
+    (` ` `{` `is_volatile` $is_volatile^ `}`)? attr-dict `:`
     qualified(type($addr)) `)` `->` type($result) }];
 
   let builders = [
@@ -3921,7 +4025,7 @@ def CIR_GetMemberOp : CIR_Op<"get_member", [Pure]> {
   let results = (outs Res<CIR_PointerType, "">:$result);
 
   let assemblyFormat = [{
-    $addr `[` $index_attr `]` attr-dict
+    $addr `[` $index_attr `]` `{` `name` `=` $name `}` attr-dict
     `:` qualified(type($addr)) `->` qualified(type($result))
   }];
 
@@ -4127,16 +4231,19 @@ def CIR_OptionalPriorityAttr : OptionalAttr<
 // The enumeration cases are ordered to match `llvm::CallingConv`. The values
 // are CIR-specific and are not in sync with `llvm::CallingConv` or
 // `clang::CallingConv`.
-def CIR_CallingConv : CIR_I32EnumAttr<"CallingConv", "calling convention", [
-  I32EnumAttrCase<"C", 0, "c">,
-  I32EnumAttrCase<"PTXKernel", 1, "ptx_kernel">,
-  I32EnumAttrCase<"SpirFunction", 2, "spir_function">,
-  I32EnumAttrCase<"SpirKernel", 3, "spir_kernel">,
-  I32EnumAttrCase<"AMDGPUKernel", 4, "amdgpu_kernel">
+def CIR_CallingConv : CIR_I32Enum<"CallingConv", "calling convention", [
+  I32EnumCase<"C", 0, "c">,
+  I32EnumCase<"PTXKernel", 1, "ptx_kernel">,
+  I32EnumCase<"SpirFunction", 2, "spir_function">,
+  I32EnumCase<"SpirKernel", 3, "spir_kernel">,
+  I32EnumCase<"AMDGPUKernel", 4, "amdgpu_kernel">
 ]>;
 
+def CIR_CallingConvAttr : CIR_EnumAttr<CIR_CallingConv, "calling_conv">;
+
 def CIR_FuncOp : CIR_Op<"func", [
-  AutomaticAllocationScope, CallableOpInterface, FunctionOpInterface,
+  AutomaticAllocationScope, CallableOpInterface, SymbolName, SymbolVisibility,
+  FunctionOpInterface,
   DeclareOpInterfaceMethods<CIRGlobalValueInterface>,
   HasAtMostOneOfAttrs<["global_ctor_priority", "global_dtor_priority"]>,
   IsolatedFromAbove
@@ -4182,6 +4289,10 @@ def CIR_FuncOp : CIR_Op<"func", [
     exception handling. This is a symbol reference to the personality function
     (e.g., `@__gxx_personality_v0` for C++ exceptions).
 
+    The 'comdat' attribute marks the function as belonging to a COMDAT group.
+    This attribute includes an optional 'group' name, which if not provided,
+    results in the function's symbol name being used.
+
     Example:
 
     ```
@@ -4226,24 +4337,27 @@ def CIR_FuncOp : CIR_Op<"func", [
     UnitAttr:$no_proto,
     UnitAttr:$dso_local,
     DefaultValuedAttr<
-      CIR_GlobalLinkageKind,
+      CIR_GlobalLinkageKindAttr,
       "cir::GlobalLinkageKind::ExternalLinkage"
     >:$linkage,
     DefaultValuedAttr<
-      CIR_CallingConv,
+      CIR_CallingConvAttr,
       "cir::CallingConv::C"
     >:$calling_conv,
     OptionalAttr<StrAttr>:$sym_visibility,
-    UnitAttr:$comdat,
+    OptionalAttr<StrAttr>:$comdat,
+    OptionalAttr<I64Attr>:$alignment,
+    OptionalAttr<I64Attr>:$preferred_alignment,
     OptionalAttr<DictArrayAttr>:$arg_attrs,
     OptionalAttr<DictArrayAttr>:$res_attrs,
     OptionalAttr<FlatSymbolRefAttr>:$aliasee,
-    OptionalAttr<CIR_SideEffect>:$side_effect,
+    OptionalAttr<CIR_MemoryEffectsAttr>:$memory_effects,
     OptionalAttr<FlatSymbolRefAttr>:$personality,
     CIR_OptionalPriorityAttr:$global_ctor_priority,
     CIR_OptionalPriorityAttr:$global_dtor_priority,
     OptionalAttr<CIR_FuncInfoAttr>:$func_info,
-    OptionalAttr<CIR_AnnotationArrayAttr>:$annotations
+    OptionalAttr<CIR_AnnotationArrayAttr>:$annotations,
+    OptionalAttr<CIR_UnwindTableKindAttr>:$uwtable
   );
 
   let regions = (region AnyRegion:$body);
@@ -4319,14 +4433,18 @@ def CIR_FuncOp : CIR_Op<"func", [
   let extraLLVMLoweringPatternDecl = [{
     static mlir::StringRef getLinkageAttrNameString() { return "linkage"; }
 
-    void lowerFuncAttributes(
-        cir::FuncOp func, bool filterArgAndResAttrs,
+    mlir::LogicalResult lowerFuncAttributes(
+        cir::FuncOp func, bool includeFunctionOnlyAttrs,
         mlir::SmallVectorImpl<mlir::NamedAttribute> &result) const;
 
     mlir::LogicalResult
     matchAndRewriteAlias(cir::FuncOp op, llvm::StringRef aliasee, mlir::Type ty,
                          OpAdaptor adaptor,
                          mlir::ConversionPatternRewriter &rewriter) const;
+
+    mutable mlir::LLVM::ComdatOp comdatOp = nullptr;
+    mlir::SymbolRefAttr getComdatAttr(cir::FuncOp &op,
+                                      mlir::OpBuilder &builder) const;
   }];
 }
 
@@ -4408,18 +4526,24 @@ def CIR_LLVMIntrinsicCallOp : CIR_Op<"call_llvm_intrinsic"> {
 
   let results = (outs Optional<CIR_AnyType>:$result);
   let arguments = (ins
-                   StrAttr:$intrinsic_name, Variadic<CIR_AnyType>:$arg_ops);
+                   StrAttr:$intrinsic_name,
+                   OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath_flags,
+                   Variadic<CIR_AnyType>:$arg_ops);
 
   let skipDefaultBuilders = 1;
 
   let assemblyFormat = [{
-    $intrinsic_name $arg_ops `:` functional-type($arg_ops, $result) attr-dict
+    $intrinsic_name $arg_ops `:` functional-type($arg_ops, $result)
+    (`fastmath` `` $fastmath_flags^)? attr-dict
   }];
 
   let builders = [
     OpBuilder<(ins "mlir::StringAttr":$intrinsic_name, "mlir::Type":$resType,
-              CArg<"mlir::ValueRange", "{}">:$operands), [{
+              CArg<"mlir::ValueRange", "{}">:$operands,
+              CArg<"cir::FastMathFlagsAttr", "{}">:$fastmath), [{
       $_state.addAttribute("intrinsic_name", intrinsic_name);
+      if (fastmath)
+        $_state.addAttribute("fastmath_flags", fastmath);
       $_state.addOperands(operands);
       if (resType)
         $_state.addTypes(resType);
@@ -4438,36 +4562,48 @@ def CIR_DeleteArrayOp : CIR_Op<"delete_array"> {
     will be translated to `cir.delete_array %ptr`.
 
     The `delete_fn` attribute specifies the operator delete function to call.
-    The `delete_params` attribute describes the parameters needed by the
-    operator delete call.
+    The optional `delete_params` attribute describes the parameters needed by
+    the operator delete call. When absent, all parameters have default values.
 
     The `element_dtor` attribute, when present, specifies the destructor to call
     on each array element before deallocation.
 
     The `dtor_may_throw` unit property, when present, indicates that the
     element destructor may throw exceptions.
+
+    The `element_align` attribute gives the element type's preferred
+    alignment in bytes, which should be the same value the corresponding `new[]`
+    uses to size its array cookie.
   }];
 
   let arguments = (ins
     CIR_PointerType:$address,
     FlatSymbolRefAttr:$delete_fn,
-    CIR_UsualDeleteParamsAttr:$delete_params,
+    OptionalAttr<CIR_UsualDeleteParamsAttr>:$delete_params,
     OptionalAttr<FlatSymbolRefAttr>:$element_dtor,
-    UnitProp:$dtor_may_throw
+    UnitProp:$dtor_may_throw,
+    I64Attr:$element_align
   );
 
   let builders = [
     OpBuilder<(ins "mlir::Value":$address,
                    "mlir::FlatSymbolRefAttr":$delete_fn,
-                   "cir::UsualDeleteParamsAttr":$delete_params), [{
+                   "cir::UsualDeleteParamsAttr":$delete_params,
+                   "uint64_t":$element_align), [{
       build($_builder, $_state, address, delete_fn, delete_params,
             /*element_dtor=*/mlir::FlatSymbolRefAttr{},
-            /*dtor_may_throw=*/false);
+            /*dtor_may_throw=*/false,
+            $_builder.getI64IntegerAttr(element_align));
     }]>
   ];
 
   let assemblyFormat = [{
-    $address `:` qualified(type($address)) (`dtor_may_throw` $dtor_may_throw^)?
+    $address `:` qualified(type($address))
+    `delete_fn` `(` $delete_fn `)`
+    (`delete_params` `` $delete_params^)?
+    (`element_dtor` `(` $element_dtor^ `)`)?
+    (`dtor_may_throw` $dtor_may_throw^)?
+    `element_align` `(` $element_align `)`
     attr-dict
   }];
 
@@ -4540,9 +4676,11 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
   dag commonArgs = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
       Variadic<CIR_AnyType>:$args,
       UnitAttr:$nothrow,
+      UnitAttr:$nounwind,
+      UnitAttr:$willreturn,
       OptionalAttr<CIR_InlineKindAttr>:$inline_kind,
       UnitAttr:$musttail,
-      DefaultValuedAttr<CIR_SideEffect, "SideEffect::All">:$side_effect,
+      OptionalAttr<CIR_MemoryEffectsAttr>:$memory_effects,
       OptionalAttr<DictArrayAttr>:$arg_attrs,
       OptionalAttr<DictArrayAttr>:$res_attrs
       );
@@ -4638,7 +4776,7 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
                "mlir::Block *":$normalDest,
                "mlir::Block *":$unwindDest,
                CArg<"mlir::ValueRange", "{}">:$callOperands,
-               CArg<"SideEffect", "SideEffect::All">:$sideEffect), [{
+               CArg<"cir::MemoryEffectsAttr", "{}">:$memoryEffects), [{
       $_state.addOperands(callOperands);
 
       if (callee)
@@ -4646,8 +4784,8 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
       if (resType && !isa<VoidType>(resType))
         $_state.addTypes(resType);
 
-      $_state.addAttribute("side_effect",
-        SideEffectAttr::get($_builder.getContext(), sideEffect));
+      if (memoryEffects)
+        $_state.addAttribute("memory_effects", memoryEffects);
 
       // Handle branches
       $_state.addSuccessors(normalDest);
@@ -4658,7 +4796,7 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
                "mlir::Block *":$normalDest,
                "mlir::Block *":$unwindDest,
                CArg<"mlir::ValueRange", "{}">:$callOperands,
-               CArg<"SideEffect", "SideEffect::All">:$sideEffect), [{
+               CArg<"cir::MemoryEffectsAttr", "{}">:$memoryEffects), [{
       ::llvm::SmallVector<mlir::Value, 4> finalCallOperands({ind_target});
       finalCallOperands.append(callOperands.begin(), callOperands.end());
       $_state.addOperands(finalCallOperands);
@@ -4666,8 +4804,8 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
       if (!fn_type.hasVoidReturn())
         $_state.addTypes(fn_type.getReturnType());
 
-      $_state.addAttribute("side_effect",
-        SideEffectAttr::get($_builder.getContext(), sideEffect));
+      if (memoryEffects)
+        $_state.addAttribute("memory_effects", memoryEffects);
 
       // Handle branches
       $_state.addSuccessors(normalDest);
@@ -4677,19 +4815,104 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
 }
 
 //===----------------------------------------------------------------------===//
+// CoroutineOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroutineOp : CIR_Op<"coroutine", [
+  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+  NoRegionArguments, RecursivelySpeculatable, AutomaticAllocationScope
+]> {
+
+  let summary = "Groups a coroutine's structured suspend/resume/destroy control flow";
+  let description = [{
+    `cir.coroutine` is an op consisting of seven regions: `initial_suspend`,
+    `body`, `final_suspend`, grp (TODO),`unwind` (TODO), `destroy`, and`exit`.
+
+    - `initial_suspend`: the coroutine ramp/setup region. Its `cir.await` marked
+      `init` is the ramp boundary: the coroutine frame and its associated state
+      are established before this point, and crossing the await transfers
+      execution to `body`.
+
+    - `body`: the user-written coroutine body, arbitrary CFG, zero or more
+      `cir.await`s at any nesting depth, terminated by `cir.co_return` or a
+      plain `cir.yield` if control simply falls off the end. This region is
+      a structural boundary separating the coroutine's setup and teardown
+      logic (initial suspend, final suspend, destroy) from the
+      user-provided statements of the original function body, including
+      `co_await` and `co_return` expressions. In particular,
+      `cir.co_return` operations inside this region mark coroutine exit
+      points and introduce structured control flow that transfers
+      execution to `final_suspend`.
+
+    - `final_suspend`: exactly one `cir.await`, marked `final`. Nothing
+      else. Corresponds to `co_await promise.final_suspend()`. Resuming
+      past this point is undefined behavior in valid programs, so its
+      `resume` edge is expected to be dead in practice, but is kept for
+      structural symmetry with the other two suspend regions.
+
+    - `gro`: TODO.
+
+    - `unwind`: TODO.
+
+    - `destroy`: destroys the coroutine frame (`coro.free` + `delete`).
+      Reached by an explicit `destroy()` call on a suspended handle, by
+      normal completion through `final_suspend`, or by an exception
+      escaping the coroutine. Falls through to `exit` except when reached
+      due to an escaping exception, where it continues propagating that
+      exception instead.
+
+    - `exit`: the shared return-to-caller path. Reached directly from any
+      suspend point that isn't being destroyed (the coroutine is just
+      pausing), and from `destroy` when it was entered via ordinary
+      dispatch. Holds `coro.end` + the actual `cir.return`.
+
+  }];
+
+  // TODO(cir): Add GRO and EH
+  let regions = (region AnyRegion:$initialSuspend,
+                        AnyRegion:$body,
+                        AnyRegion:$finalSuspend,
+                        AnyRegion:$destroy,
+                        AnyRegion:$exit);
+
+  let skipDefaultBuilders = 1;
+
+  let builders = [
+    OpBuilder<(ins "BuilderCallbackRef":$initialSuspendBuilder,
+      "BuilderCallbackRef":$bodyBuilder,
+      "BuilderCallbackRef":$finalSuspendBuilder,
+      "BuilderCallbackRef":$destroyBuilder,
+      "BuilderCallbackRef":$exitBuilder)>
+  ];
+
+  let assemblyFormat = [{
+    `initialSuspend` `:` $initialSuspend `,`
+    `body` `:` $body `,`
+    `finalSuspend` `:` $finalSuspend `,`
+    `destroy` `:` $destroy `,`
+    `exit` `:` $exit
+    attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // AwaitOp
 //===----------------------------------------------------------------------===//
 
-def CIR_AwaitKind : CIR_I32EnumAttr<"AwaitKind", "await kind", [
-  I32EnumAttrCase<"Init", 0, "init">,
-  I32EnumAttrCase<"User", 1, "user">,
-  I32EnumAttrCase<"Yield", 2, "yield">,
-  I32EnumAttrCase<"Final", 3, "final">
+def CIR_AwaitKind : CIR_I32Enum<"AwaitKind", "await kind", [
+  I32EnumCase<"Init", 0, "init">,
+  I32EnumCase<"User", 1, "user">,
+  I32EnumCase<"Yield", 2, "yield">,
+  I32EnumCase<"Final", 3, "final">
 ]>;
 
-def CIR_AwaitOp : CIR_Op<"await",[
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
-  RecursivelySpeculatable, NoRegionArguments
+def CIR_AwaitKindAttr : CIR_EnumAttr<CIR_AwaitKind, "await">;
+
+def CIR_AwaitOp : CIR_RegionBranchOpBase<"await", [
+  RecursivelySpeculatable, NoRegionArguments, HasAncestor<"CoroutineOp">
 ]> {
   let summary = "Wraps C++ co_await implicit logic";
   let description = [{
@@ -4741,12 +4964,12 @@ def CIR_AwaitOp : CIR_Op<"await",[
     as part of the enclosing await scope.
   }];
 
-  let arguments = (ins CIR_AwaitKind:$kind);
+  let arguments = (ins CIR_AwaitKindAttr:$kind);
   let regions = (region SizedRegion<1>:$ready,
                         SizedRegion<1>:$suspend,
                         SizedRegion<1>:$resume);
   let assemblyFormat = [{
-    `(` $kind `,`
+    `(` enum($kind) `,`
     `ready` `:` $ready `,`
     `suspend` `:` $suspend `,`
     `resume` `:` $resume `,`
@@ -4770,52 +4993,13 @@ def CIR_AwaitOp : CIR_Op<"await",[
   let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
-//===----------------------------------------------------------------------===//
-// CoroBody
-//===----------------------------------------------------------------------===//
-def CIR_CoroBodyOp : CIR_Op<"coro.body", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
-  RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
-  RecursiveMemoryEffects
-]> {
-  let summary = "Region containing the user-authored coroutine body";
-  let description = [{
-    The `cir.coro.body` operation models the region where the user-authored
-    coroutine code is emitted.
-
-    This operation serves as a structural boundary separating the coroutine
-    setup and teardown logic (e.g. initial suspend, final suspend, and cleanup)
-    from the user-provided statements inside the coroutine.
-
-    The body region contains the code corresponding to the original function
-    body, including `co_await` and `co_return` expressions. In particular,
-    `cir.co_return` operations inside this region mark coroutine exit points
-    and introduce structured control flow that transfers execution to the
-    final suspend point of the coroutine.
-  }];
-
-  let regions = (region AnyRegion:$body);
-
-  let skipDefaultBuilders = 1;
-
-  let builders = [
-    OpBuilder<(ins "BuilderCallbackRef":$bodyBuilder)>
-  ];
-
-  let assemblyFormat = [{
-    $body attr-dict
-  }];
-
-  let hasLLVMLowering = false;
-  let hasVerifier = 1;
-}
 
 //===----------------------------------------------------------------------===//
 // CoReturnOp
 //===----------------------------------------------------------------------===//
 
 def CIR_CoReturnOp : CIR_Op<"co_return", [
-  ReturnLike, Pure, Terminator, HasAncestor<"CoroBodyOp">
+  ReturnLike, Pure, Terminator, HasAncestor<"CoroutineOp">
 ]> {
   let summary = "Coroutine return operation";
   let description = [{
@@ -4829,6 +5013,7 @@ def CIR_CoReturnOp : CIR_Op<"co_return", [
     attr-dict
   }];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
@@ -4870,6 +5055,7 @@ def CIR_CoroIdOp : CIR_CoroIntrinsicOp<"id",
     (`coro.alloc`, `coro.begin`, `coro.free`, etc.), tying them all to the
     same coroutine instance.
   }];
+  let llvmOp = "CoroIdOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -4884,6 +5070,7 @@ def CIR_CoroAllocOp : CIR_CoroIntrinsicOp<"alloc", (ins Token:$id),
     allocated frame. Returns `true` if the coroutine frame must be allocated,
     or `false` otherwise.
   }];
+  let llvmOp = "CoroAllocOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -4899,6 +5086,7 @@ def CIR_CoroBeginOp : CIR_CoroIntrinsicOp<"begin",
     from `coro.intrinsic.id`, and `coroframeAddr` points to the memory used
     for the coroutine frame. Returns the coroutine handle.
   }];
+  let llvmOp = "CoroBeginOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -4906,8 +5094,8 @@ def CIR_CoroBeginOp : CIR_CoroIntrinsicOp<"begin",
 //===----------------------------------------------------------------------===//
 
 def CIR_CoroEndOp : CIR_CoroIntrinsicOp<"end",
-    (ins CIR_VoidPtrType:$handle, CIR_AnyBoolType:$unwind),
-    (outs CIR_AnyBoolType:$result)> {
+    (ins CIR_VoidPtrType:$handle, CIR_AnyBoolType:$unwind, Token:$resultToken),
+    (outs CIR_AnyVoidType:$result), [TokenConsumerTrait]> {
   let summary = "Represents llvm.coro.end";
   let description = [{
     Marks a point at which a coroutine must be suspended or destroyed for the
@@ -4917,6 +5105,7 @@ def CIR_CoroEndOp : CIR_CoroIntrinsicOp<"end",
     indicates whether this occurrence of `coro.intrinsic.end` lies on the
     unwind path (`true`) or the normal control-flow path (`false`).
   }];
+  let llvmOp = "CoroEndOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -4933,18 +5122,173 @@ def CIR_CoroFreeOp : CIR_CoroIntrinsicOp<"free",
     be passed to the deallocation function to free the coroutine frame, or a
     null pointer if the coroutine frame was not dynamically allocated.
   }];
+  let llvmOp = "CoroFreeOp";
 }
 
 //===----------------------------------------------------------------------===//
 // Coroutine intrinsic SizeOp
 //===----------------------------------------------------------------------===//
 
-def CIR_CoroSizeOp : CIR_CoroIntrinsicOp<"size", (ins),
-    (outs CIR_UInt64:$result)> {
+def CIR_CoroSizeOp
+    : CIR_CoroIntrinsicOp<"size", (ins),
+                          (outs CIR_AnyFundamentalUIntType:$result)> {
   let summary = "Represents llvm.coro.size";
   let description = [{
     Returns the size, in bytes, of the coroutine frame.
   }];
+  let llvmOp = "CoroSizeOp";
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic AlignOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroAlignOp
+    : CIR_CoroIntrinsicOp<"align", (ins),
+                          (outs CIR_AnyFundamentalUIntType:$result)> {
+  let summary = "Represents llvm.coro.align";
+  let description = [{
+    Returns the alignment requirement, in bytes, of the coroutine frame.
+  }];
+  let llvmOp = "CoroAlignOp";
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic SuspendOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroSuspendOp : CIR_CoroIntrinsicOp<"suspend",
+    (ins Token:$save, CIR_AnyBoolType: $final),
+    (outs CIR_SInt8:$result), [TokenConsumerTrait]> {
+  let summary = "Represents llvm.coro.suspend";
+  let description = [{
+    `cir.coro.intrinsic.suspend` represents the `llvm.coro.suspend` intrinsic.
+
+    It marks the point where execution of a switched-resume coroutine is
+    suspended and control returns to the caller. The result value indicates
+    how the coroutine should proceed: -1 if suspended, 0 if resumed, or 1
+    if destroyed.
+
+    The `id` operand is the token produced by a `cir.coro.save` that marks
+    the point when the coroutine state is prepared for suspension.
+
+    The `final` operand indicates whether this is a final suspend point.
+    If more than one suspend point is marked final, the resume and destroy
+    branches must lead to the same basic blocks.
+  }];
+  let llvmOp = "CoroSuspendOp";
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic PromiseOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroPromiseOp : CIR_CoroIntrinsicOp<"promise",
+    (ins CIR_VoidPtrType:$coroframe, CIR_AnyIntType:$align,
+    CIR_BoolType:$isFromPromise),
+    (outs CIR_VoidPtrType:$result)> {
+  let summary = "Represents llvm.coro.promise";
+  let description = [{
+    Given a coroutine handle (if `isFromPromise` is false) or a pointer to a
+    coroutine promise (if `isFromPromise` is true), obtains a pointer to the
+    coroutine promise or the coroutine handle, respectively. `align` is the
+    alignment requirement of the promise, and `isFromPromise` indicates the
+    direction of the transformation: `true` recovers the coroutine handle
+    from a promise pointer, `false` recovers the promise pointer from a
+    coroutine handle. Using this op on a coroutine without a coroutine
+    promise is undefined behavior.
+  }];
+
+  let llvmOp = "CoroPromiseOp";
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic ResumeOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroResumeOp : CIR_CoroIntrinsicOp<"resume",
+    (ins CIR_VoidPtrType:$handle), (outs )> {
+  let summary = "Represents llvm.coro.resume";
+  let description = [{
+    Resumes a suspended coroutine identified by `handle`. Resuming a
+    coroutine that is not currently suspended is undefined behavior.
+  }];
+  let llvmOp = "CoroResumeOp";
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic DestroyOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroDestroyOp : CIR_CoroIntrinsicOp<"destroy",
+    (ins CIR_VoidPtrType:$handle), (outs )> {
+  let summary = "Represents llvm.coro.destroy";
+  let description = [{
+    Destroys a suspended coroutine identified by `handle`. Destroying a
+    coroutine that is not currently suspended is undefined behavior.
+  }];
+  let llvmOp = "CoroDestroyOp";
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic DoneOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroDoneOp : CIR_CoroIntrinsicOp<"done", (ins CIR_VoidPtrType:$handle),
+    (outs CIR_BoolType:$done)> {
+  let summary = "Represents llvm.coro.done";
+  let description = [{
+    Checks whether the coroutine identified by `handle` is currently
+    suspended at its final suspend point. `handle` must be a handle to a
+    suspended coroutine.
+  }];
+  let llvmOp = "CoroDoneOp";
+}
+
+//===----------------------------------------------------------------------===//
+// CoroSuspendPoint
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroSuspendPoint : CIR_Op<"coro.suspend_point", [
+  Pure, Terminator, HasParent<"AwaitOp">,
+  DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>
+]> {
+  let summary = "Marks the point where a coroutine actually suspends";
+  let description = [{
+    Terminates the `suspend` region of a `cir.await`. It has no explicit
+    successors; the destination is determined by `CoroutineOp`
+    according to how the suspended coroutine is subsequently handled:
+
+    - resume: continues execution through the `cir.await`'s `resume` region
+      when the coroutine handle is resumed.
+
+    - exit: transfers directly to the enclosing `cir.coroutine`'s `exit`
+      region when the coroutine remains suspended. The coroutine frame remains
+      alive and no cleanups are performed.
+
+    - destroy: transfers through the enclosing `cir.cleanup.scope`s to the
+      `cir.coroutine`'s `destroy` region when the coroutine handle is
+      destroyed.
+  }];
+
+  let assemblyFormat = [{
+    attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic NoopOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroNoopOp : CIR_CoroIntrinsicOp<"noop", (ins),
+    (outs CIR_VoidPtrType:$result)> {
+  let summary = "Represents llvm.coro.noop";
+  let description = [{
+    Returns a coroutine handle to a no-op coroutine.
+  }];
+  let llvmOp = "CoroNoopOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -5057,10 +5401,15 @@ def CIR_MemCpyOp : CIR_MemOp<"libc.memcpy"> {
     ```
   }];
 
-  let arguments = !con(commonArgs, (ins CIR_AnyFundamentalUIntType:$len));
+  let arguments = !con(commonArgs, (ins
+    CIR_AnyFundamentalUIntType:$len,
+    OptionalAttr<I64Attr>:$dst_alignment,
+    OptionalAttr<I64Attr>:$src_alignment
+  ));
 
   let assemblyFormat = [{
-    $len `bytes` `from` $src `to` $dst attr-dict
+    $len `bytes` `from` $src (`align` `(` $src_alignment^ `)`)?
+    `to` $dst (`align` `(` $dst_alignment^ `)`)? attr-dict
     `:` type($len) `,` qualified(type($src)) `->` qualified(type($dst))
   }];
 
@@ -5349,11 +5698,14 @@ def CIR_LifetimeEndOp : CIR_Op<"lifetime.end"> {
 // InlineAsmOp
 //===----------------------------------------------------------------------===//
 
-def CIR_AsmFlavor : CIR_I32EnumAttr<"AsmFlavor", "ATT or Intel",
-                                    [I32EnumAttrCase<"x86_att", 0>,
-                                     I32EnumAttrCase<"x86_intel", 1>]>;
+def CIR_AsmFlavor : CIR_I32Enum<"AsmFlavor", "ATT or Intel",
+                                    [I32EnumCase<"x86_att", 0>,
+                                     I32EnumCase<"x86_intel", 1>]>;
 
-def CIR_InlineAsmOp : CIR_Op<"asm", [RecursiveMemoryEffects]> {
+def CIR_AsmFlavorAttr : CIR_EnumAttr<CIR_AsmFlavor, "asm_flavor">;
+
+def CIR_InlineAsmOp : CIR_Op<"asm",
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let description = [{
     The `cir.asm` operation represents C/C++ asm inline.
 
@@ -5414,7 +5766,7 @@ def CIR_InlineAsmOp : CIR_Op<"asm", [RecursiveMemoryEffects]> {
   let arguments =
       (ins VariadicOfVariadic<AnyType, "operands_segments">:$asm_operands,
           StrAttr:$asm_string, StrAttr:$constraints, UnitAttr:$side_effects,
-          CIR_AsmFlavor:$asm_flavor, ArrayAttr:$operand_attrs,
+          CIR_AsmFlavorAttr:$asm_flavor, ArrayAttr:$operand_attrs,
           DenseI32ArrayAttr:$operands_segments);
 
   let builders = [OpBuilder<(ins
@@ -5879,14 +6231,12 @@ def CIR_VecCmpOp : CIR_Op<"vec.cmp",
     ```
     %eq = cir.vec.cmp(eq, %vec_a, %vec_b) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
     %lt = cir.vec.cmp(lt, %vec_a, %vec_b) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
-    %gt = cir.vec.cmp(gt, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> {
-      fenv = #cir.fenv<>
-    }
+    %gt = cir.vec.cmp(gt, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> fenv<>
     ```
   }];
 
   let arguments = (ins
-    CIR_CmpOpKind:$kind,
+    CIR_CmpOpKindAttr:$kind,
     CIR_VectorType:$lhs,
     CIR_VectorType:$rhs,
     OptionalAttr<CIR_FenvAttr>:$fenv
@@ -5895,8 +6245,8 @@ def CIR_VecCmpOp : CIR_Op<"vec.cmp",
   let results = (outs CIR_VectorType:$result);
 
   let assemblyFormat = [{
-    `(` $kind `,` $lhs `,` $rhs `)` `:` qualified(type($lhs)) `,`
-    qualified(type($result)) attr-dict
+    `(` enum($kind) `,` $lhs `,` $rhs `)` `:` qualified(type($lhs)) `,`
+    qualified(type($result)) (`fenv` `` $fenv^)? attr-dict
   }];
 
   let builders = [
@@ -6019,7 +6369,7 @@ def CIR_VecTernaryOp : CIR_Op<"vec.ternary", [
   }];
 
   let arguments = (ins
-    CIR_VectorOfIntType:$cond,
+    CIR_VectorOfIntOrBoolType:$cond,
     CIR_VectorType:$lhs,
     CIR_VectorType:$rhs
   );
@@ -6068,10 +6418,149 @@ def CIR_VecSplatOp : CIR_Op<"vec.splat", [
 }
 
 //===----------------------------------------------------------------------===//
-// BaseClassAddrOp
+// MatrixColumnMajorLoadOp
 //===----------------------------------------------------------------------===//
 
-def CIR_BaseClassAddrOp : CIR_Op<"base_class_addr", [Pure]> {
+def CIR_MatrixColumnMajorLoadOp : CIR_Op<"matrix.column_major_load", [
+  DeclareOpInterfaceMethods<PromotableMemOpInterface>,
+]> {
+  let summary = "Matrix column major load";
+  let description = [{
+    The `cir.matrix.column_major_load` operation provides a representation for
+    the `__builtin_matrix_column_major_load` builtin and corresponds to the
+    `llvm.matrix.column.major.load` intrinsic in LLVM IR.
+
+    This operation performs a load of any matrix type with a stride to compute
+    the start address of the different columns.
+
+    The `stride` argument is the column stride which much be greater than or equal 
+    to `row`, giving the following 2x3 matrix `[[1, 2, 3], [4, 5, 6]]` with a 
+    stride of 2, the result matrix will be `[[1, 3, 5], [2, 4, 6]]`.
+
+    ```
+    %result = cir.matrix.column_major_load %ptr : <!cir.float>, %stride : !u64i, 
+      !cir.matrix<2 x 3 x !cir.float>
+
+    %result = cir.matrix.column_major_load %ptr : <!cir.double>, %stride : !u64i,
+      !cir.matrix<5 x 5 x !cir.double>
+
+    %result = cir.matrix.column_major_load %ptr : <!cir.double>, %stride : !u64i
+      volatile, !cir.matrix<5 x 5 x !cir.double>
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PointerType, "the address to load from", [MemRead]>:$value,
+    CIR_IntType:$stride,
+    UnitAttr:$is_volatile
+  );
+
+  let results = (outs CIR_MatrixType:$result);
+
+  let assemblyFormat = [{
+    $value `:` type($value) `,`
+    $stride `:` type($stride)
+    (`volatile` $is_volatile^)?
+    `,` qualified(type($result)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MatrixColumnMajorStoreOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MatrixColumnMajorStoreOp : CIR_Op<"matrix.column_major_store", [
+  DeclareOpInterfaceMethods<PromotableMemOpInterface>,
+]> {
+  let summary = "Matrix column major store";
+  let description = [{
+    The `cir.matrix.column_major_store` operation provides a representation for
+    the `__builtin_matrix_column_major_store` builtin and corresponds to the
+    `llvm.matrix.column.major.store` intrinsic in LLVM IR.
+
+    This operation performs a store of data from matrix type with a stride to
+    compute the start address of the different columns.
+
+    The `stride` argument is the column stride which much be greater than or equal 
+    to `row`, giving the following 2x3 matrix `[[1, 2, 3], [4, 5, 6]]` with a 
+    stride of 2, the stored data will be `[1, 3, 5, 2, 4, 6]`.
+
+    ```
+    cir.matrix.column_major_store %matrix : <3 x 3 x !cir.float>, 
+      %data : <!cir.float>, %stribe : !u64i
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_MatrixType:$matrix,
+    Arg<CIR_PointerType, "the address to store the value", [MemWrite]>:$value,
+    CIR_IntType:$stride,
+    UnitAttr:$is_volatile
+  );
+
+  let assemblyFormat = [{
+    $matrix `:` type($matrix) `,`
+    $value `:` type($value) `,`
+    $stride `:` type($stride)
+    (`volatile` $is_volatile^)?
+    attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MatrixTransposeOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MatrixTransposeOp : CIR_Op<"matrix.transpose", [
+  Pure,
+]> {
+  let summary = "Matrix transpose";
+  let description = [{
+    The `cir.matrix.transpose` operation provides a representation for the
+    `__builtin_matrix_transpose` builtin and corresponds to the
+    `llvm.matrix.transpose` intrinsic in LLVM IR.
+
+    This operation performs transposition to switch the row and column
+    indices of the matrix and returns the transposed matrix,
+
+    ```
+    %result = cir.matrix.transpose %value : <3 x 2 x !cir.float>, 
+        !cir.matrix<2 x 3 x !cir.float>
+    ```
+  }];
+
+  let arguments = (ins CIR_MatrixType:$value);
+  let results = (outs CIR_MatrixType:$result);
+
+  let assemblyFormat = [{
+    $value `:` type($value) `,` qualified(type($result)) attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// BaseClassAddrOp & DerivedClassAddrOp
+//===----------------------------------------------------------------------===//
+
+class CIR_ClassCastOp<string mnemonic> : CIR_Op<mnemonic, [Pure]> {
+  let arguments = (ins
+    CIR_PointerType:$src_addr,
+    IndexAttr:$offset,
+    UnitAttr:$assume_not_null
+  );
+
+  let results = (outs Res<CIR_PointerType, "">:$result);
+
+  let assemblyFormat = [{
+      (`nonnull` $assume_not_null^)?
+      $src_addr ` ` `[` $offset `]`
+      `:` qualified(type($src_addr)) `->` qualified(type($result))
+      attr-dict
+  }];
+}
+
+def CIR_BaseClassAddrOp : CIR_ClassCastOp<"base_class_addr"> {
   let summary = "Get the base class address for a class/struct";
   let description = [{
     The `cir.base_class_addr` operaration gets the address of a particular
@@ -6095,28 +6584,12 @@ def CIR_BaseClassAddrOp : CIR_Op<"base_class_addr", [Pure]> {
     ```
     will generate
     ```
-    %3 = cir.base_class_addr %1 : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+    %3 = cir.base_class_addr nonnull %1 [0] : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_Base>
     ```
-  }];
-
-  let arguments = (ins
-    CIR_PointerType:$derived_addr,
-    IndexAttr:$offset, UnitAttr:$assume_not_null);
-
-  let results = (outs Res<CIR_PointerType, "">:$base_addr);
-
-  let assemblyFormat = [{
-      $derived_addr `:` qualified(type($derived_addr))
-      (`nonnull` $assume_not_null^)?
-      ` ` `[` $offset `]` `->` qualified(type($base_addr)) attr-dict
   }];
 }
 
-//===----------------------------------------------------------------------===//
-// DerivedClassAddrOp
-//===----------------------------------------------------------------------===//
-
-def CIR_DerivedClassAddrOp : CIR_Op<"derived_class_addr", [Pure]> {
+def CIR_DerivedClassAddrOp : CIR_ClassCastOp<"derived_class_addr"> {
   let summary = "Get the derived class address for a class/struct";
   let description = [{
     The `cir.derived_class_addr` operaration gets the address of a particular
@@ -6145,20 +6618,8 @@ def CIR_DerivedClassAddrOp : CIR_Op<"derived_class_addr", [Pure]> {
     leads to
     ```
       %2 = cir.load %0 : !cir.ptr<!cir.ptr<!rec_A>>, !cir.ptr<!rec_A>
-      %3 = cir.base_class_addr %2 : !cir.ptr<!rec_B> [0] -> !cir.ptr<!rec_A>
+      %3 = cir.derived_class_addr %2 [0] : !cir.ptr<!rec_A> -> !cir.ptr<!rec_B>
     ```
-  }];
-
-  let arguments = (ins
-    CIR_PointerType:$base_addr,
-    IndexAttr:$offset, UnitAttr:$assume_not_null);
-
-  let results = (outs Res<CIR_PointerType, "">:$derived_addr);
-
-  let assemblyFormat = [{
-      $base_addr `:` qualified(type($base_addr))
-      (`nonnull` $assume_not_null^)?
-      ` ` `[` $offset `]` `->` qualified(type($derived_addr)) attr-dict
   }];
 }
 
@@ -6463,26 +6924,30 @@ def CIR_ComplexSubOp : CIR_ComplexBinOp<"complex.sub"> {
 // ComplexMulOp and ComplexDivOp
 //===----------------------------------------------------------------------===//
 
-def CIR_ComplexRangeKind : CIR_I32EnumAttr<
+def CIR_ComplexRangeKind : CIR_I32Enum<
   "ComplexRangeKind", "complex multiplication and division implementation", [
-    I32EnumAttrCase<"Full", 0, "full">,
-    I32EnumAttrCase<"Improved", 1, "improved">,
-    I32EnumAttrCase<"Promoted", 2, "promoted">,
-    I32EnumAttrCase<"Basic", 3, "basic">,
+    I32EnumCase<"Full", 0, "full">,
+    I32EnumCase<"Improved", 1, "improved">,
+    I32EnumCase<"Promoted", 2, "promoted">,
+    I32EnumCase<"Basic", 3, "basic">,
 ]>;
+
+def CIR_ComplexRangeKindAttr
+    : CIR_EnumAttr<CIR_ComplexRangeKind, "complex_range">;
 
 class CIR_ComplexRangeBinOp<string mnemonic>
     : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
   let arguments = (ins
     CIR_ComplexType:$lhs,
     CIR_ComplexType:$rhs,
-    CIR_ComplexRangeKind:$range
+    CIR_ComplexRangeKindAttr:$range
   );
 
   let results = (outs CIR_ComplexType:$result);
 
   let assemblyFormat = [{
-    $lhs `,` $rhs `range` `(` $range `)` `:` qualified(type($result)) attr-dict
+    $lhs `,` $rhs `range` `(` enum($range) `)` `:` qualified(type($result))
+    attr-dict
   }];
 
   let hasLLVMLowering = false;
@@ -6714,9 +7179,7 @@ def CIR_BitParityOp : CIR_BitOpBase<"parity", CIR_UIntOfWidths<[32, 64]>> {
   }];
 }
 
-def CIR_BitPopcountOp : CIR_BitOpBase<"popcount",
-  CIR_UIntOfWidths<[8, 16, 32, 64, 128]>
-> {
+def CIR_BitPopcountOp : CIR_BitOpBase<"popcount", CIR_AnyUIntType > {
   let summary = "Get the number of 1-bits in input";
   let description = [{
     Compute the number of 1-bits in the input.
@@ -6823,52 +7286,114 @@ def CIR_RotateOp : CIR_Op<"rotate", [Pure, SameOperandsAndResultType]> {
 }
 
 //===----------------------------------------------------------------------===//
+// Funnel Shift Operations
+//===----------------------------------------------------------------------===//
+
+// Concatenate `a` and `b`, shift by `c`, and return one half of the doubled
+// width. All operands and the result share an integer or vector-of-integer
+// type.
+class CIR_FunnelShiftOp<string mnemonic, string llvmOpName>
+    : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
+  let arguments = (ins
+    CIR_AnyIntOrVecOfIntType:$a,
+    CIR_AnyIntOrVecOfIntType:$b,
+    CIR_AnyIntOrVecOfIntType:$c
+  );
+
+  let results = (outs CIR_AnyIntOrVecOfIntType:$result);
+
+  let assemblyFormat = "$a `,` $b `,` $c `:` type($a) attr-dict";
+
+  let llvmOp = llvmOpName;
+}
+
+def CIR_FshlOp : CIR_FunnelShiftOp<"fshl", "FshlOp"> {
+  let summary = "Funnel shift left";
+  let description = [{
+    The `cir.fshl` operation concatenates `a` and `b` (with `a` in the high
+    half), shifts the concatenation left by `c` bit positions, and returns the
+    high half of the result. The shift amount is treated modulo the bitwidth
+    of the operands.
+
+    All operands and the result must have the same integer type or
+    vector-of-integer type.
+
+    Example:
+
+    ```
+    %r = cir.fshl %a, %b, %c : !u32i
+    %v = cir.fshl %va, %vb, %vc : !cir.vector<4 x !s32i>
+    ```
+  }];
+}
+
+def CIR_FshrOp : CIR_FunnelShiftOp<"fshr", "FshrOp"> {
+  let summary = "Funnel shift right";
+  let description = [{
+    The `cir.fshr` operation concatenates `a` and `b` (with `a` in the high
+    half), shifts the concatenation right by `c` bit positions, and returns
+    the low half of the result. The shift amount is treated modulo the bitwidth
+    of the operands.
+
+    All operands and the result must have the same integer type or
+    vector-of-integer type.
+
+    Example:
+
+    ```
+    %r = cir.fshr %a, %b, %c : !u32i
+    %v = cir.fshr %va, %vb, %vc : !cir.vector<4 x !s32i>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // FPClass Test Flags
 //===----------------------------------------------------------------------===//
 
 // Individual floating-point classes, one per bit (positions 0-9), matching
 // LLVM's `FPClassTest` bit layout (`llvm/ADT/FloatingPointMode.h`).  Modeled
 // as a bit-enum so `__builtin_isfpclass` can pass any combination of bits.
-def FPClass_None     : I32BitEnumAttrCaseNone<"None", "fcNone">;
-def FPClass_SNan     : I32BitEnumAttrCaseBit<"SignalingNaN", 0, "fcSNan">;
-def FPClass_QNan     : I32BitEnumAttrCaseBit<"QuietNaN", 1, "fcQNan">;
-def FPClass_NegInf   : I32BitEnumAttrCaseBit<"NegativeInfinity", 2, "fcNegInf">;
-def FPClass_NegNorm  : I32BitEnumAttrCaseBit<"NegativeNormal", 3, "fcNegNormal">;
-def FPClass_NegSub   : I32BitEnumAttrCaseBit<"NegativeSubnormal", 4,
+def FPClass_None     : I32BitEnumCaseNone<"None", "fcNone">;
+def FPClass_SNan     : I32BitEnumCaseBit<"SignalingNaN", 0, "fcSNan">;
+def FPClass_QNan     : I32BitEnumCaseBit<"QuietNaN", 1, "fcQNan">;
+def FPClass_NegInf   : I32BitEnumCaseBit<"NegativeInfinity", 2, "fcNegInf">;
+def FPClass_NegNorm  : I32BitEnumCaseBit<"NegativeNormal", 3, "fcNegNormal">;
+def FPClass_NegSub   : I32BitEnumCaseBit<"NegativeSubnormal", 4,
                                              "fcNegSubnormal">;
-def FPClass_NegZero  : I32BitEnumAttrCaseBit<"NegativeZero", 5, "fcNegZero">;
-def FPClass_PosZero  : I32BitEnumAttrCaseBit<"PositiveZero", 6, "fcPosZero">;
-def FPClass_PosSub   : I32BitEnumAttrCaseBit<"PositiveSubnormal", 7,
+def FPClass_NegZero  : I32BitEnumCaseBit<"NegativeZero", 5, "fcNegZero">;
+def FPClass_PosZero  : I32BitEnumCaseBit<"PositiveZero", 6, "fcPosZero">;
+def FPClass_PosSub   : I32BitEnumCaseBit<"PositiveSubnormal", 7,
                                              "fcPosSubnormal">;
-def FPClass_PosNorm  : I32BitEnumAttrCaseBit<"PositiveNormal", 8, "fcPosNormal">;
-def FPClass_PosInf   : I32BitEnumAttrCaseBit<"PositiveInfinity", 9, "fcPosInf">;
+def FPClass_PosNorm  : I32BitEnumCaseBit<"PositiveNormal", 8, "fcPosNormal">;
+def FPClass_PosInf   : I32BitEnumCaseBit<"PositiveInfinity", 9, "fcPosInf">;
 
 // Composite groups (aliases for combinations of the individual classes).
-def FPClass_Nan      : I32BitEnumAttrCaseGroup<"Nan",
+def FPClass_Nan      : BitEnumCaseGroup<"Nan",
     [FPClass_SNan, FPClass_QNan], "fcNan">;
-def FPClass_Inf      : I32BitEnumAttrCaseGroup<"Infinity",
+def FPClass_Inf      : BitEnumCaseGroup<"Infinity",
     [FPClass_NegInf, FPClass_PosInf], "fcInf">;
-def FPClass_Norm     : I32BitEnumAttrCaseGroup<"Normal",
+def FPClass_Norm     : BitEnumCaseGroup<"Normal",
     [FPClass_NegNorm, FPClass_PosNorm], "fcNormal">;
-def FPClass_Sub      : I32BitEnumAttrCaseGroup<"Subnormal",
+def FPClass_Sub      : BitEnumCaseGroup<"Subnormal",
     [FPClass_NegSub, FPClass_PosSub], "fcSubnormal">;
-def FPClass_Zero     : I32BitEnumAttrCaseGroup<"Zero",
+def FPClass_Zero     : BitEnumCaseGroup<"Zero",
     [FPClass_NegZero, FPClass_PosZero], "fcZero">;
-def FPClass_PosFin   : I32BitEnumAttrCaseGroup<"PositiveFinite",
+def FPClass_PosFin   : BitEnumCaseGroup<"PositiveFinite",
     [FPClass_PosNorm, FPClass_PosSub, FPClass_PosZero], "fcPosFinite">;
-def FPClass_NegFin   : I32BitEnumAttrCaseGroup<"NegativeFinite",
+def FPClass_NegFin   : BitEnumCaseGroup<"NegativeFinite",
     [FPClass_NegNorm, FPClass_NegSub, FPClass_NegZero], "fcNegFinite">;
-def FPClass_Fin      : I32BitEnumAttrCaseGroup<"Finite",
+def FPClass_Fin      : BitEnumCaseGroup<"Finite",
     [FPClass_PosFin, FPClass_NegFin], "fcFinite">;
-def FPClass_Pos      : I32BitEnumAttrCaseGroup<"Positive",
+def FPClass_Pos      : BitEnumCaseGroup<"Positive",
     [FPClass_PosFin, FPClass_PosInf], "fcPositive">;
-def FPClass_Neg      : I32BitEnumAttrCaseGroup<"Negative",
+def FPClass_Neg      : BitEnumCaseGroup<"Negative",
     [FPClass_NegFin, FPClass_NegInf], "fcNegative">;
-def FPClass_All      : I32BitEnumAttrCaseGroup<"All",
+def FPClass_All      : BitEnumCaseGroup<"All",
     [FPClass_Nan, FPClass_Inf, FPClass_Fin], "fcAllFlags">;
 
 def FPClassTestEnum
-    : CIR_I32BitEnumAttr<"FPClassTest", "floating-point class test flags", [
+    : CIR_I32BitEnum<"FPClassTest", "floating-point class test flags", [
   FPClass_None, FPClass_SNan, FPClass_QNan, FPClass_NegInf, FPClass_NegNorm,
   FPClass_NegSub, FPClass_NegZero, FPClass_PosZero, FPClass_PosSub,
   FPClass_PosNorm, FPClass_PosInf, FPClass_Nan, FPClass_Inf, FPClass_Norm,
@@ -6876,6 +7401,8 @@ def FPClassTestEnum
   FPClass_Pos, FPClass_Neg, FPClass_All]> {
   let printBitEnumPrimaryGroups = 1;
 }
+
+def CIR_FPClassTestAttr : CIR_EnumAttr<FPClassTestEnum, "fp_class">;
 
 def CIR_IsFPClassOp : CIR_Op<"is_fp_class", [Pure]> {
   let summary = "Corresponding to the `__builtin_fpclassify` builtin function in clang";
@@ -6903,10 +7430,10 @@ def CIR_IsFPClassOp : CIR_Op<"is_fp_class", [Pure]> {
   }];
 
   let arguments = (ins CIR_AnyFloatType:$src,
-                       FPClassTestEnum:$flags);
+                       CIR_FPClassTestAttr:$flags);
   let results = (outs CIR_BoolType:$result);
   let assemblyFormat = [{
-    $src `,` $flags `:` functional-type($src, $result) attr-dict
+    $src `,` enum($flags) `:` functional-type($src, $result) attr-dict
   }];
 }
 
@@ -6914,14 +7441,16 @@ def CIR_IsFPClassOp : CIR_Op<"is_fp_class", [Pure]> {
 // Assume Operations
 //===----------------------------------------------------------------------===//
 
-def CIR_AssumeBundleKind : CIR_I32EnumAttr<
+def CIR_AssumeBundleKind : CIR_I32Enum<
   "AssumeBundleKind", "kind of cir.assume operand bundle", [
-  I32EnumAttrCase<"None", 0>,
-  I32EnumAttrCase<"Align", 1, "align">,
-  I32EnumAttrCase<"SeparateStorage", 2, "separate_storage">,
-  I32EnumAttrCase<"Dereferenceable", 3, "dereferenceable">
-]> {
-}
+  I32EnumCase<"None", 0>,
+  I32EnumCase<"Align", 1, "align">,
+  I32EnumCase<"SeparateStorage", 2, "separate_storage">,
+  I32EnumCase<"Dereferenceable", 3, "dereferenceable">
+]>;
+
+def CIR_AssumeBundleKindAttr
+    : CIR_EnumAttr<CIR_AssumeBundleKind, "assume_bundle">;
 
 def CIR_AssumeOp : CIR_Op<"assume"> {
   let summary = "Tell the optimizer that a boolean value is true";
@@ -6949,7 +7478,7 @@ def CIR_AssumeOp : CIR_Op<"assume"> {
 
   let arguments = (ins
     CIR_BoolType:$predicate,
-    DefaultValuedAttr<CIR_AssumeBundleKind,
+    DefaultValuedAttr<CIR_AssumeBundleKindAttr,
                       "::cir::AssumeBundleKind::None">:$bundle_kind,
     Variadic<CIR_AnyType>:$bundle_args
   );
@@ -7178,7 +7707,7 @@ class CIR_UnaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
                        OptionalAttr<CIR_FenvAttr>:$fenv);
   let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
 
-  let assemblyFormat = "$src `:` type($src) attr-dict";
+  let assemblyFormat = "$src `:` type($src) (`fenv` `` $fenv^)? attr-dict";
 
   let builders = [
     OpBuilder<(ins "mlir::Value":$src), [{
@@ -7506,7 +8035,8 @@ class CIR_UnaryFPToIntBuiltinOp<string mnemonic, string llvmOpName>
   }];
 
   let assemblyFormat = [{
-    $src `:` type($src) `->` type($result) attr-dict
+    $src `:` type($src) `->` type($result)
+    (`fenv` `` $fenv^)? attr-dict
   }];
 
   let builders = [
@@ -7572,7 +8102,8 @@ class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   let results = (outs  CIR_AnyFloatOrVecOfFloatType:$result);
 
   let assemblyFormat = [{
-    $lhs `,` $rhs `:` qualified(type($lhs)) attr-dict
+    $lhs `,` $rhs `:` qualified(type($lhs))
+    (`fenv` `` $fenv^)? attr-dict
   }];
 
   let builders = [
@@ -7723,7 +8254,9 @@ class CIR_TernaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
 
   let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
 
-  let assemblyFormat = "$a `,` $b `,` $c `:` type($a) attr-dict";
+  let assemblyFormat = [{
+    $a `,` $b `,` $c `:` type($a) (`fenv` `` $fenv^)? attr-dict
+  }];
 
   let builders = [
     OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$a, "mlir::Value":$b,
@@ -8094,8 +8627,7 @@ def CIR_AllocExceptionOp : CIR_Op<"alloc.exception"> {
 // TryOp
 //===----------------------------------------------------------------------===//
 
-def CIR_TryOp : CIR_Op<"try",[
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+def CIR_TryOp : CIR_RegionBranchOpBase<"try", [
   RecursivelySpeculatable, AutomaticAllocationScope
 ]> {
   let summary = "C++ try block";
@@ -8114,6 +8646,23 @@ def CIR_TryOp : CIR_Op<"try",[
     operation in its cleanup region. The catch handling code will be emitted
     into the body of the cleanup scope. This ensures that all paths out of the
     catch handler will execute the end_catch operation.
+
+    A `cir.try` operation may instead have a `filter` handler paired with an
+    `unexpected` handler, which together implement the dynamic exception
+    specification of the enclosing function. The `filter` handler lists the
+    permitted type info symbols and holds the path taken when the in-flight
+    exception is permitted, which is a `cir.resume` that continues unwinding
+    to the caller. The `unexpected` handler holds the path taken when the
+    specification is violated, which is a `cir.eh.unexpected`. An empty
+    permitted type list represents `throw()`, which permits nothing, so the
+    filter handler region holds a `cir.unreachable` instead. Like `unwind`,
+    and unlike a catch handler, neither region begins with `cir.begin_catch`.
+
+    The two handlers must appear together, with the filter first, and must be
+    the only handlers on the operation. The try operation created for an
+    exception specification wraps the entire function body, and each try
+    statement written in the source becomes a separate `cir.try` operation
+    nested inside it.
 
     Example:
 
@@ -8134,6 +8683,20 @@ def CIR_TryOp : CIR_Op<"try",[
       cir.yield
     } unwind (%eh_token : !cir.eh_token) {
       cir.resume %eh_token : !cir.eh_token
+    }
+    ```
+
+    Example of a `void f() throw(int)` exception specification:
+
+    ```
+    cir.try {
+      cir.call exception @function() : () -> ()
+      cir.yield
+    } filter [#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>]
+        (%eh_token : !cir.eh_token) {
+      cir.resume %eh_token : !cir.eh_token
+    } unexpected (%eh_token.1 : !cir.eh_token) {
+      cir.eh.unexpected %eh_token.1 : !cir.eh_token
     }
     ```
   }];
@@ -8178,7 +8741,7 @@ def CIR_TryOp : CIR_Op<"try",[
     }]>
   ];
 
-  let hasVerifier = 1;
+  let hasRegionVerifier = 1;
   let hasLLVMLowering = false;
 }
 
@@ -8235,6 +8798,15 @@ def CIR_EhInflightOp : CIR_Op<"eh.inflight_exception"> {
     alongside typed catches, the landing pad will contain both the typed catch
     clauses and a trailing `catch ptr null`.
 
+    The `filter_type_list` attribute lists the type info symbols permitted by
+    the dynamic exception specification of the enclosing function. It lowers to
+    the `filter` clause of the LLVM IR landingpad instruction. An empty list is
+    distinct from an absent one: it represents `throw()` and lowers to a
+    zero-length filter clause, which the personality routine treats as
+    permitting nothing. Since the exception specification encloses the whole
+    function body, the filter clause always comes after any catch clauses, and
+    it terminates the clause list in the same way that `catch_all` does.
+
     Example:
 
     ```
@@ -8242,17 +8814,21 @@ def CIR_EhInflightOp : CIR_Op<"eh.inflight_exception"> {
     %exception_ptr, %type_id = cir.eh.inflight_exception [@_ZTIi, @_ZTIPKc]
     %exception_ptr, %type_id = cir.eh.inflight_exception cleanup
     %exception_ptr, %type_id = cir.eh.inflight_exception catch_all [@_ZTIi]
-    ``
+    %exception_ptr, %type_id = cir.eh.inflight_exception filter [@_ZTIi]
+    %exception_ptr, %type_id = cir.eh.inflight_exception [@_ZTIi] filter []
+    ```
   }];
 
   let arguments = (ins UnitAttr:$cleanup,
                        UnitAttr:$catch_all,
-                       OptionalAttr<FlatSymbolRefArrayAttr>:$catch_type_list);
+                       OptionalAttr<FlatSymbolRefArrayAttr>:$catch_type_list,
+                       OptionalAttr<FlatSymbolRefArrayAttr>:$filter_type_list);
   let results = (outs CIR_VoidPtrType:$exception_ptr, CIR_UInt32:$type_id);
   let assemblyFormat = [{
     (`cleanup` $cleanup^)?
     (`catch_all` $catch_all^)?
     ($catch_type_list^)?
+    (`filter` $filter_type_list^)?
     attr-dict
   }];
 }
@@ -8380,15 +8956,23 @@ def CIR_EhInitiateOp : CIR_Op<"eh.initiate"> {
 def CIR_EhTerminateOp : CIR_Op<"eh.terminate", [
   Terminator
 ]> {
-  let summary = "Terminate due to exception thrown during cleanup";
+  let summary = "Terminate due to an exception that must not escape";
   let description = [{
-    `cir.eh.terminate` terminates program execution when an exception is thrown
-    while executing cleanup code during exception unwinding. The C++ standard
-    requires that `std::terminate()` be called in this scenario.
+    `cir.eh.terminate` terminates program execution when an exception reaches a
+    point from which the C++ standard does not allow it to propagate, and
+    requires `std::terminate()` to be called instead. That happens when an
+    exception is thrown while executing cleanup code during unwinding, and when
+    an exception tries to escape a function that cannot throw.
 
-    This operation takes an `!cir.eh_token` from a `cir.eh.initiate` operation
-    and acts as a terminator. It is produced during CFG flattening when throwing
-    calls are found in EH cleanup regions.
+    This operation takes an `!cir.eh_token` and acts as a terminator. In
+    high-level CIR it appears as the only operation in the catch-all handler
+    region of the `cir.try` that wraps the body of a function that cannot
+    throw, where the token comes from the handler region's block argument. The
+    handler is a catch-all because such a function terminates on any escaping
+    exception, and it has no `cir.begin_catch` because the runtime helper this
+    operation lowers to performs the catch. After CFG flattening the token
+    comes from a `cir.eh.initiate` operation; flattening also produces this
+    operation for throwing calls found in EH cleanup regions.
 
     During EH ABI lowering, this is replaced with target-specific termination
     code. For the Itanium ABI, the `cir.eh.initiate` is lowered to
@@ -8399,9 +8983,62 @@ def CIR_EhTerminateOp : CIR_Op<"eh.terminate", [
     Example:
 
     ```
+    cir.try {
+      ...
+    } catch all (%eh_token : !cir.eh_token) {
+      cir.eh.terminate %eh_token : !cir.eh_token
+    }
+    ```
+
+    And after CFG flattening:
+
+    ```
     ^terminate_unwind:
       %eh_token = cir.eh.initiate : !cir.eh_token
       cir.eh.terminate %eh_token : !cir.eh_token
+    ```
+  }];
+
+  let arguments = (ins CIR_EhTokenType:$eh_token);
+  let assemblyFormat = [{
+    $eh_token `:` type($eh_token) attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// Exception related: EhUnexpectedOp
+//===----------------------------------------------------------------------===//
+
+def CIR_EhUnexpectedOp : CIR_Op<"eh.unexpected", [
+  Terminator
+]> {
+  let summary = "Handle an exception that violates an exception specification";
+  let description = [{
+    `cir.eh.unexpected` signals that the in-flight exception violated the
+    dynamic exception specification of the enclosing function, and that
+    `std::unexpected()` must be called. The C++ standard requires this when an
+    exception that the specification does not permit tries to escape the
+    function.
+
+    This operation takes a `!cir.eh_token` and acts as a terminator. In
+    high-level CIR it is the only operation in the `unexpected` handler region
+    of a `cir.try` operation, where the token comes from the handler region's
+    block argument. After CFG flattening the token comes from a
+    `cir.eh.initiate` operation.
+
+    Like `cir.eh.terminate`, this operation is ABI-agnostic. During EH ABI
+    lowering it is replaced with target-specific code. For the Itanium ABI it
+    becomes a call to `__cxa_call_unexpected` with the exception pointer,
+    followed by an unreachable operation.
+
+    Example:
+
+    ```
+    ^unexpected:
+      %eh_token = cir.eh.initiate : !cir.eh_token
+      cir.eh.unexpected %eh_token : !cir.eh_token
     ```
   }];
 
@@ -8438,6 +9075,17 @@ def CIR_EhDispatchOp : CIR_Op<"eh.dispatch", [
     another type handler. The `unwind` handler is used when no handler is
     matched.
 
+    A handler may also be a `filter`, which carries the list of type info
+    symbols permitted by the dynamic exception specification of the enclosing
+    function. A `filter` handler has the *opposite* polarity from a `catch`
+    handler: its destination is taken when the in-flight exception is **not**
+    one of the listed types. The polarity comes from the Itanium personality
+    routine, which reports a filter failure by selecting the filter clause of
+    the landing pad. A `filter` handler therefore does not take the place of
+    the default destination, and a dispatch that has one always also has an
+    `unwind` handler, whose destination is taken when the exception is
+    permitted. A dispatch has at most one `filter` handler.
+
     Example:
 
     ```
@@ -8450,6 +9098,12 @@ def CIR_EhDispatchOp : CIR_Op<"eh.dispatch", [
     cir.eh.dispatch %eh_token : !cir.eh_token [
       catch (#cir.global_view<type @_ZTIi> : !cir.ptr<!u8i>) : ^catch_int,
       unwind : ^continue_unwind
+    ]
+
+    cir.eh.dispatch %eh_token : !cir.eh_token [
+      filter(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>)
+          : ^specification_violated,
+      unwind : ^exception_permitted
     ]
     ```
   }];
@@ -8464,6 +9118,8 @@ def CIR_EhDispatchOp : CIR_Op<"eh.dispatch", [
      AnySuccessor:$default_destination,
      VariadicSuccessor<AnySuccessor>:$catch_destinations
   );
+
+  let hasVerifier = 1;
 
   let assemblyFormat = [{
     $eh_token `:` type($eh_token)
@@ -8664,15 +9320,19 @@ def CIR_EndCatchOp : CIR_Op<"end_catch"> {
 // EH Operations: InitCatchParamOp
 //===----------------------------------------------------------------------===//
 
-def CIR_InitCatchKind : CIR_I32EnumAttr<
+def CIR_InitCatchKind : CIR_I32Enum<
   "InitCatchKind", "", [
-    I32EnumAttrCase<"Reference", 0, "reference">,
-    I32EnumAttrCase<"Pointer", 1, "pointer">,
-    I32EnumAttrCase<"Scalar", 2, "scalar">,
-    I32EnumAttrCase<"Objc", 3, "objc">,
-    I32EnumAttrCase<"TrivialCopy", 4, "trivial_copy">,
-    I32EnumAttrCase<"NonTrivialCopy", 5, "non_trivial_copy">,
+    I32EnumCase<"Reference", 0, "reference">,
+    I32EnumCase<"Pointer", 1, "pointer">,
+    I32EnumCase<"Scalar", 2, "scalar">,
+    I32EnumCase<"Objc", 3, "objc">,
+    I32EnumCase<"TrivialCopy", 4, "trivial_copy">,
+    I32EnumCase<"NonTrivialCopy", 5, "non_trivial_copy">,
+    I32EnumCase<"ReferenceToPointer", 6, "reference_to_pointer">,
+    I32EnumCase<"ReferenceToRecordPointer", 7, "reference_to_record_pointer">,
 ]>;
+
+def CIR_InitCatchKindAttr : CIR_EnumAttr<CIR_InitCatchKind, "init_catch">;
 
 def CIR_InitCatchParamOp : CIR_Op<"init_catch_param"> {
   let summary = "Initialize a catch parameter from the exception pointer";
@@ -8688,6 +9348,16 @@ def CIR_InitCatchParamOp : CIR_Op<"init_catch_param"> {
     types, an aggregate copy for record types, or a call to a copy
     constructor when one is required).
 
+    A catch parameter that is a reference to a pointer uses the
+    `reference_to_record_pointer` kind when the pointer's source-level pointee
+    type is a record (class, struct, or union), and `reference_to_pointer`
+    otherwise. A reference to any other type uses `reference`.
+
+    A `reference_to_pointer` or `non_trivial_copy` operation requires its catch
+    handler to start with a `cir.construct_catch_param` of the same kind on the
+    same parameter. When the handler starts with a `cir.construct_catch_param`
+    on the parameter of the operation, the two must have the same kind.
+
     Example:
 
     ```
@@ -8702,14 +9372,15 @@ def CIR_InitCatchParamOp : CIR_Op<"init_catch_param"> {
   let arguments = (ins
       CIR_PointerType:$exn_ptr,
       CIR_PointerType:$param_addr,
-      CIR_InitCatchKind:$kind
+      CIR_InitCatchKindAttr:$kind
   );
 
   let assemblyFormat = [{
-    $kind $exn_ptr `to` $param_addr `:`
+    enum($kind) $exn_ptr `to` $param_addr `:`
       qualified(type($exn_ptr)) `,` qualified(type($param_addr)) attr-dict
   }];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
@@ -8733,9 +9404,11 @@ def CIR_ConstructCatchParamOp : CIR_Op<"construct_catch_param", [
     copy of the object before `__cxa_begin_catch` is invoked.
 
     This operation takes a `!cir.eh_token` that represents the in-flight
-    exception and the alloca value that is used for the local copy of the
-    exception object. The `copy_fn` attribute is a flat symbol reference to a
-    `cir.func` thunk that copies the exception object to a local alloca value.
+    exception and the alloca value for the catch parameter. The optional
+    `copy_fn` attribute, present for `non_trivial_copy`, is a flat symbol
+    reference to a `cir.func` thunk that copies the exception object to a
+    local alloca value. For `reference_to_pointer`, the operation binds the
+    reference to the exception object itself.
 
     This operation is replaced with a target-specific representation during
     the EHABI lowering pass. For some targets, such as the Microsoft ABI,
@@ -8752,42 +9425,63 @@ def CIR_ConstructCatchParamOp : CIR_Op<"construct_catch_param", [
   let arguments = (ins
       CIR_EhTokenType:$eh_token,
       CIR_PointerType:$param_addr,
-      CIR_InitCatchKind:$kind,
+      CIR_InitCatchKindAttr:$kind,
       OptionalAttr<FlatSymbolRefAttr>:$copy_fn
   );
 
   let assemblyFormat = [{
-    $kind $eh_token `to` $param_addr `using` ($copy_fn^)? `:`
+    enum($kind) $eh_token `to` $param_addr `using` ($copy_fn^)? `:`
       qualified(type($param_addr)) attr-dict
   }];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// TokenNoneOp
+//===----------------------------------------------------------------------===//
+
+def CIR_TokenNoneOp : CIR_Op<"token.none", [
+  Pure, TokenProducerTrait
+]> {
+  let summary = "Produces an empty token value.";
+  let description = [{
+    Produces a `none` token value, mirroring LLVM IR's `none` token
+    literal. Lowers to `llvm::ConstantTokenNone`.
+  }];
+
+  let results = (outs Token:$result);
+  let assemblyFormat = "attr-dict";
 }
 
 //===----------------------------------------------------------------------===//
 // Atomic operations
 //===----------------------------------------------------------------------===//
 
-def CIR_AtomicFetchKind : CIR_I32EnumAttr<
+def CIR_AtomicFetchKind : CIR_I32Enum<
   "AtomicFetchKind", "Binary opcode for atomic fetch-and-update operations", [
-    I32EnumAttrCase<"Add", 0, "add">,
-    I32EnumAttrCase<"Sub", 1, "sub">,
-    I32EnumAttrCase<"And", 2, "and">,
-    I32EnumAttrCase<"Xor", 3, "xor">,
-    I32EnumAttrCase<"Or", 4, "or">,
-    I32EnumAttrCase<"Nand", 5, "nand">,
-    I32EnumAttrCase<"Max", 6, "max">,
-    I32EnumAttrCase<"Min", 7, "min">,
-    I32EnumAttrCase<"UIncWrap", 8, "uinc_wrap">,
-    I32EnumAttrCase<"UDecWrap", 9, "udec_wrap">,
+    I32EnumCase<"Add", 0, "add">,
+    I32EnumCase<"Sub", 1, "sub">,
+    I32EnumCase<"And", 2, "and">,
+    I32EnumCase<"Xor", 3, "xor">,
+    I32EnumCase<"Or", 4, "or">,
+    I32EnumCase<"Nand", 5, "nand">,
+    I32EnumCase<"Max", 6, "max">,
+    I32EnumCase<"Min", 7, "min">,
+    I32EnumCase<"UIncWrap", 8, "uinc_wrap">,
+    I32EnumCase<"UDecWrap", 9, "udec_wrap">,
     // The primary difference between Max, Maximum, and MaximumNum is primarily
     // about how they handle floating-point inputs. See the description of the
     // CIR_AtomicFetchOp for more information.
-    I32EnumAttrCase<"Maximum", 10, "maximum">,
-    I32EnumAttrCase<"Minimum", 11, "minimum">,
-    I32EnumAttrCase<"MaximumNum", 12, "maximum_num">,
-    I32EnumAttrCase<"MinimumNum", 13, "minimum_num">
+    I32EnumCase<"Maximum", 10, "maximum">,
+    I32EnumCase<"Minimum", 11, "minimum">,
+    I32EnumCase<"MaximumNum", 12, "maximum_num">,
+    I32EnumCase<"MinimumNum", 13, "minimum_num">
 ]>;
+
+def CIR_AtomicFetchKindAttr
+    : CIR_EnumAttr<CIR_AtomicFetchKind, "atomic_fetch">;
 
 def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
   AllTypesMatch<["result", "val"]>,
@@ -8837,16 +9531,16 @@ def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
   let arguments = (ins
     Arg<CIR_PtrToIntOrFloatType, "", [MemRead, MemWrite]>:$ptr,
     CIR_AnyIntOrFloatType:$val,
-    CIR_AtomicFetchKind:$binop,
-    Arg<CIR_MemOrder, "memory order">:$mem_order,
-    Arg<CIR_SyncScopeKind, "synchronization scope">:$sync_scope,
+    CIR_AtomicFetchKindAttr:$binop,
+    Arg<CIR_MemOrderAttr, "memory order">:$mem_order,
+    Arg<CIR_SyncScopeKindAttr, "synchronization scope">:$sync_scope,
     UnitAttr:$is_volatile,
     UnitAttr:$fetch_first
   );
 
   let assemblyFormat = [{
-    $binop $mem_order
-    `syncscope` `(` $sync_scope `)`
+    enum($binop) enum($mem_order)
+    `syncscope` `(` enum($sync_scope) `)`
     (`fetch_first` $fetch_first^)?
     $ptr `,` $val
     (`volatile` $is_volatile^)?
@@ -8894,14 +9588,14 @@ def CIR_AtomicXchgOp : CIR_Op<"atomic.xchg", [
   let arguments = (ins
     Arg<CIR_PointerType, "", [MemRead, MemWrite]>:$ptr,
     CIR_AnyType:$val,
-    Arg<CIR_MemOrder, "memory order">:$mem_order,
-    CIR_SyncScopeKind:$sync_scope,
+    Arg<CIR_MemOrderAttr, "memory order">:$mem_order,
+    CIR_SyncScopeKindAttr:$sync_scope,
     UnitAttr:$is_volatile
   );
 
   let assemblyFormat = [{
-    $mem_order
-    `syncscope` `(` $sync_scope `)`
+    enum($mem_order)
+    `syncscope` `(` enum($sync_scope) `)`
     (`volatile` $is_volatile^)?
     $ptr `,` $val
     `:` functional-type(operands, results) attr-dict
@@ -8958,17 +9652,17 @@ def CIR_AtomicCmpXchgOp : CIR_Op<"atomic.cmpxchg", [
   let arguments = (ins Arg<CIR_PointerType, "", [MemRead, MemWrite]>:$ptr,
                        CIR_AnyType:$expected,
                        CIR_AnyType:$desired,
-                       Arg<CIR_MemOrder, "success memory order">:$succ_order,
-                       Arg<CIR_MemOrder, "failure memory order">:$fail_order,
-                       CIR_SyncScopeKind:$sync_scope,
+                       Arg<CIR_MemOrderAttr, "success memory order">:$succ_order,
+                       Arg<CIR_MemOrderAttr, "failure memory order">:$fail_order,
+                       CIR_SyncScopeKindAttr:$sync_scope,
                        OptionalAttr<I64Attr>:$alignment,
                        UnitAttr:$weak,
                        UnitAttr:$is_volatile);
 
   let assemblyFormat = [{
     (`weak` $weak^)?
-    `success` `(` $succ_order `)` `failure` `(` $fail_order `)`
-    `syncscope` `(` $sync_scope `)`
+    `success` `(` enum($succ_order) `)` `failure` `(` enum($fail_order) `)`
+    `syncscope` `(` enum($sync_scope) `)`
     $ptr `,` $expected `,` $desired
     (`align` `(` $alignment^ `)`)?
     (`volatile` $is_volatile^)?
@@ -8995,7 +9689,7 @@ def CIR_AtomicTestAndSetOp : CIR_Op<"atomic.test_and_set"> {
 
   let arguments = (ins
     Arg<CIR_PtrToType<CIR_SInt8>, "", [MemRead, MemWrite]>:$ptr,
-    Arg<CIR_MemOrder, "memory order">:$mem_order,
+    Arg<CIR_MemOrderAttr, "memory order">:$mem_order,
     OptionalAttr<I64Attr>:$alignment,
     UnitAttr:$is_volatile
   );
@@ -9003,7 +9697,8 @@ def CIR_AtomicTestAndSetOp : CIR_Op<"atomic.test_and_set"> {
   let results = (outs CIR_BoolType:$result);
 
   let assemblyFormat = [{
-    $mem_order $ptr
+    enum($mem_order) $ptr
+    (`align` `(` $alignment^ `)`)?
     (`volatile` $is_volatile^)?
     `:` qualified(type($ptr)) `->` qualified(type($result)) attr-dict
   }];
@@ -9026,13 +9721,14 @@ def CIR_AtomicClearOp : CIR_Op<"atomic.clear"> {
 
   let arguments = (ins
     Arg<CIR_PtrToType<CIR_SInt8>, "", [MemRead, MemWrite]>:$ptr,
-    Arg<CIR_MemOrder, "memory order">:$mem_order,
+    Arg<CIR_MemOrderAttr, "memory order">:$mem_order,
     OptionalAttr<I64Attr>:$alignment,
     UnitAttr:$is_volatile
   );
 
   let assemblyFormat = [{
-    $mem_order $ptr
+    enum($mem_order) $ptr
+    (`align` `(` $alignment^ `)`)?
     (`volatile` $is_volatile^)?
     `:` qualified(type($ptr)) attr-dict
   }];
@@ -9059,12 +9755,12 @@ def CIR_AtomicFenceOp : CIR_Op<"atomic.fence"> {
   }];
 
   let arguments = (ins
-    Arg<CIR_MemOrder, "memory order">:$ordering,
-    OptionalAttr<CIR_SyncScopeKind>:$syncscope
+    Arg<CIR_MemOrderAttr, "memory order">:$ordering,
+    OptionalAttr<CIR_SyncScopeKindAttr>:$syncscope
   );
 
   let assemblyFormat = [{
-    (`syncscope` `(` $syncscope^ `)`)? $ordering attr-dict
+    (`syncscope` `(` enum($syncscope)^ `)`)? enum($ordering) attr-dict
   }];
 }
 
@@ -9149,31 +9845,43 @@ def CIR_CpuIdOp : CIR_Op<"cpuid"> {
 // MemChrOp
 //===----------------------------------------------------------------------===//
 
-def CIR_MemChrOp : CIR_Op<"libc.memchr"> {
+def CIR_MemChrOp : CIR_Op<"libc.memchr",
+    [AllTypesMatch<["src", "result"]>]> {
   let summary = "libc's `memchr`";
   let description = [{
     Search for `pattern` in data range from `src` to `src` + `len`.
     `len` provides a bound to the search in `src`. `result` is a pointer to
     found `pattern` or a null pointer.
 
+    `pattern` has the width of the target int and `len` has the width of
+    the target size_t. The module records these widths as
+    `cir.int_type_width` and `cir.size_type_width`, each a signless i32
+    holding a fundamental integer width, and the verifier checks the
+    operands against them. `src` must be a void pointer in the default
+    address space and `result` has the same type as `src`.
+
     Examples:
 
     ```
-    %p = cir.libc.memchr(%src, %pattern, %len)
+    %p = cir.libc.memchr(%src, %pattern, %len) : !cir.ptr<!void>, !s32i, !u64i
     ```
   }];
 
   let arguments = (ins
     Arg<CIR_VoidPtrType, "", [MemRead]>:$src,
-    CIR_SInt32:$pattern,
-    CIR_UInt64:$len
+    CIR_AnyFundamentalSIntType:$pattern,
+    CIR_AnyFundamentalUIntType:$len
   );
 
   let results = (outs CIR_VoidPtrType:$result);
 
   let assemblyFormat = [{
     `(` $src `,` $pattern `,` $len `)` attr-dict
+    `:` qualified(type($src)) `,` qualified(type($pattern)) `,`
+    qualified(type($len))
   }];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -9202,6 +9910,44 @@ def CIR_LaunderOp : CIR_Op<"launder", [SameOperandsAndResultType]> {
   }];
 
   let llvmOp = "LaunderInvariantGroupOp";
+}
+
+//===----------------------------------------------------------------------===//
+// ClearPaddingOp
+//===----------------------------------------------------------------------===//
+
+def CIR_ClearPaddingOp : CIR_Op<"clear_padding", []> {
+  let summary = "Clear Padding Operation";
+  let description = [{
+    This operation represents a `__builtin_clear_padding` call, which sets all
+    padding bits in the pointee `arg` to zero. The `arg`'s alignment is also
+    stored in this operation so we can properly emit the stores/loads later.
+
+    Offsets into the variable are stored as an `OffsetPairAttr`.
+
+    During LLVM-IR lowering, this is converted into `getelementptr` and `store`
+    operations.
+
+    Example:
+
+    ```
+    cir.clear_padding(align(1) %1,
+                      [#cir.offset_pair<0, 2>, #cir.offset_pair<6, 8>])
+                      : <rec_Type> -> ()
+    ```
+  }];
+
+  let arguments = (ins
+      Arg<CIR_PointerType, "", [MemWrite]> : $arg,
+      ConfinedAttr<I64Attr, [IntMinValue<1>]>:$alignment,
+      CIR_TypedArrayAttrBase<CIR_OffsetPairAttr,
+                             "array of padding locations">:$padding
+      );
+
+  let assemblyFormat = [{
+    `(` `align` `(` $alignment `)` $arg `,`
+        $padding `)` `:` type($arg) `->` `(` `)` attr-dict
+  }];
 }
 
 include "clang/CIR/Dialect/IR/CIRStdOps.td"

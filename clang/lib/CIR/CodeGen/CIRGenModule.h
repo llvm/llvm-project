@@ -32,6 +32,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/Basic/OpenACCKinds.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
@@ -45,6 +46,9 @@ class CodeGenOptions;
 class Decl;
 class GlobalDecl;
 class LangOptions;
+class OpenACCConstructDecl;
+class OpenACCDeclareDecl;
+class OpenACCRoutineDecl;
 class TargetInfo;
 class VarDecl;
 
@@ -136,6 +140,7 @@ private:
 
   void createCUDARuntime();
   void createOpenMPRuntime();
+  void setOpenCLVersionAttr(llvm::StringRef attrName, unsigned version);
 
   /// A helper for constructAttributeList that handles return attributes.
   void constructFunctionReturnAttributes(const CIRGenFunctionInfo &info,
@@ -334,6 +339,10 @@ public:
   getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty = {},
                      ForDefinition_t isForDefinition = NotForDefinition);
 
+  /// Cast \p addr, the address of the global \p vd, to the address space of
+  /// the declared type of \p vd if they differ.
+  mlir::Value castGlobalToDeclAddrSpace(mlir::Value addr, const VarDecl &vd);
+
   /// Get or create a thunk function with the given name and type.
   cir::FuncOp getAddrOfThunk(StringRef name, mlir::Type fnTy, GlobalDecl gd);
 
@@ -361,8 +370,6 @@ public:
   /// contribute to the function attributes and calling convention.
   /// \param attrs [out] - On return, the attribute list to use.
   /// \param callingConv [out] - On return, the calling convention to use.
-  /// \param sideEffect [out] - On return, the side effect type of the
-  /// attributes.
   /// \param attrOnCallSite - Whether or not the attributes are on a call site.
   /// \param isThunk - Whether the function is a thunk.
   void constructAttributeList(
@@ -370,7 +377,7 @@ public:
       CIRGenCalleeInfo calleeInfo, mlir::NamedAttrList &attrs,
       llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs,
       mlir::NamedAttrList &retAttrs, cir::CallingConv &callingConv,
-      cir::SideEffect &sideEffect, bool attrOnCallSite, bool isThunk);
+      bool attrOnCallSite, bool isThunk);
   /// Helper function for constructAttributeList/others.  Builds a set of
   /// function attributes to add to a function based on language opts, codegen
   /// opts, and some small properties.
@@ -637,7 +644,7 @@ public:
                   bool isExtendingDecl = false);
 
   /// Get TLS mode from CodeGenOptions.
-  cir::TLS_Model getDefaultCIRTLSModel() const;
+  cir::TLSModel getDefaultCIRTLSModel() const;
 
   /// Set function attributes for a function declaration.
   void setFunctionAttributes(GlobalDecl gd, cir::FuncOp f,
@@ -651,9 +658,20 @@ public:
   void setCIRFunctionAttributesForDefinition(const clang::FunctionDecl *fd,
                                              cir::FuncOp f);
 
+  /// Generate OpenCL kernel argument metadata for a kernel function.
+  void emitOpenCLKernelArgMetadata(cir::FuncOp func,
+                                   const clang::FunctionDecl *fd);
+
   void emitGlobalDefinition(clang::GlobalDecl gd,
                             mlir::Operation *op = nullptr);
   void emitGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);
+
+  /// Emit the SYCL kernel caller offload entry point function generated for a
+  /// function declared with the sycl_kernel_entry_point attribute.
+  void emitSYCLKernelCaller(const clang::FunctionDecl *kernelEntryPointFn,
+                            clang::ASTContext &ctx);
+
+  void addSYCLModuleIdAttr(cir::FuncOp fn);
   void emitGlobalVarDefinition(const clang::VarDecl *vd,
                                bool isTentative = false);
 
@@ -706,6 +724,10 @@ public:
 
   mlir::TypedAttr emitNullConstantAttr(QualType t);
 
+  /// Get target specific null pointer.
+  mlir::Value getNullPointer(cir::PointerType ptrTy, QualType qt,
+                             mlir::Location loc);
+
   /// Return a null constant appropriate for zero-initializing a base class with
   /// the given type. This is usually, but not always, an LLVM null constant.
   mlir::TypedAttr emitNullConstantForBase(const CXXRecordDecl *record);
@@ -715,16 +737,18 @@ public:
   /// member, depending on the type of mpt.
   mlir::TypedAttr emitNullMemberAttr(QualType t, const MemberPointerType *mpt);
 
-  /// Build a GEP-style field-index path from \p destClass to \p field.
+  /// Build a GEP-style field-index path from \p destClass to \p decl.
+  /// \p decl may be a FieldDecl, or an IndirectFieldDecl(in the case of an
+  /// anonymous struct/union).
   /// Returns std::nullopt and emits errorNYI for virtual-base paths.
   std::optional<llvm::SmallVector<int32_t>>
-  buildMemberPath(const CXXRecordDecl *destClass, const FieldDecl *field);
+  buildMemberPath(const CXXRecordDecl *destClass, const ValueDecl *decl);
 
-  /// Returns true if \p field is an empty field that isn't laid out in the CIR
-  /// record (e.g. a [[no_unique_address]] empty member). Such fields have no
-  /// CIR field index, so a pointer-to-data-member to them is represented by an
-  /// explicit byte offset (#cir.data_member_offset) rather than a field-index
-  /// path.
+  /// Returns true if \p field is a potentially-overlapping field with no CIR
+  /// field index (e.g. a [[no_unique_address]] member that is empty for both
+  /// layout and the ABI). Such fields have no entry in the CIR record, so a
+  /// pointer-to-data-member to them is represented by an explicit byte offset
+  /// (#cir.data_member_offset) rather than a field-index path.
   bool isEmptyFieldForMemberPointer(const FieldDecl *field);
 
   llvm::StringRef getMangledName(clang::GlobalDecl gd);
@@ -862,9 +886,6 @@ public:
 
   static mlir::SymbolTable::Visibility
   getMLIRVisibilityFromCIRLinkage(cir::GlobalLinkageKind GLK);
-  static cir::VisibilityKind getGlobalVisibilityKindFromClangVisibility(
-      clang::VisibilityAttr::VisibilityType visibility);
-  cir::VisibilityAttr getGlobalVisibilityAttrFromDecl(const Decl *decl);
   cir::GlobalLinkageKind getFunctionLinkage(GlobalDecl gd);
   static mlir::SymbolTable::Visibility getMLIRVisibility(cir::GlobalOp op);
   cir::GlobalLinkageKind getCIRLinkageForDeclarator(const DeclaratorDecl *dd,

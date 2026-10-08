@@ -1,0 +1,56 @@
+// RUN: cir-opt %s --cir-lowering-prepare | FileCheck %s --check-prefix=SAFE
+// RUN: sed 's/threadsafe_statics = true/threadsafe_statics = false/' %s \
+// RUN:   | cir-opt --cir-lowering-prepare | FileCheck %s --check-prefix=UNSAFE
+
+// The guard lowering depends on threadsafe_statics, read from
+// #cir.lowering_lang_options rather than from an ASTContext.
+
+!s32i = !cir.int<s, 32>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  cir.lowering_lang_options = #cir.lowering_lang_options<
+    exceptions = false, threadsafe_statics = true, cuda = false,
+    cuda_is_device = false, hip = false, gpu_rdc = false, openmp = false,
+    openmp_is_target_device = false, clang_abi_compat = 16>
+} {
+  cir.global "private" internal dso_local dynamic_init_guard<"_ZGVZ1gvE1x"> @_ZZ1gvE1x = #cir.int<0> : !s32i align(4) dynamic_init_info<local = true, tls = none, is_inline = false, tsk = undeclared>
+
+  cir.func private @_Z1fv() -> !s32i
+
+  cir.func @_Z1gv() -> !s32i {
+    %0 = cir.get_global static_local @_ZZ1gvE1x : !cir.ptr<!s32i>
+    cir.local_init static_local @_ZZ1gvE1x ctor {
+      %2 = cir.get_global static_local @_ZZ1gvE1x : !cir.ptr<!s32i>
+      %3 = cir.call @_Z1fv() : () -> !s32i
+      cir.store align(4) %3, %2 : !s32i, !cir.ptr<!s32i>
+      cir.yield
+    }
+    %1 = cir.load align(4) %0 : !cir.ptr<!s32i>, !s32i
+    cir.return %1 : !s32i
+  }
+}
+
+// SAFE: cir.func private @__cxa_guard_release(!cir.ptr<!s64i>)
+// SAFE: cir.func private @__cxa_guard_acquire(!cir.ptr<!s64i>) -> !s32i
+// SAFE: cir.global "private" internal dso_local @_ZGVZ1gvE1x = #cir.int<0> : !s64i align(8)
+// SAFE: cir.func @_Z1gv()
+// SAFE:   %[[GUARD:.*]] = cir.get_global @_ZGVZ1gvE1x : !cir.ptr<!s64i>
+// SAFE:   %[[GUARD_BYTE_PTR:.*]] = cir.cast bitcast %[[GUARD]] : !cir.ptr<!s64i> -> !cir.ptr<!s8i>
+// SAFE:   %[[GUARD_BYTE:.*]] = cir.load align(8) syncscope(system) atomic(acquire) %[[GUARD_BYTE_PTR]]
+// SAFE:   cir.if
+// SAFE:     %[[ACQ:.*]] = cir.call @__cxa_guard_acquire(%[[GUARD]])
+// SAFE:     cir.if
+// SAFE:       cir.call @_Z1fv()
+// SAFE:       cir.call @__cxa_guard_release(%[[GUARD]])
+
+// UNSAFE-NOT: __cxa_guard
+// UNSAFE: cir.global "private" internal dso_local @_ZGVZ1gvE1x = #cir.int<0> : !s8i align(1)
+// UNSAFE: cir.func @_Z1gv()
+// UNSAFE:   %[[GUARD:.*]] = cir.get_global @_ZGVZ1gvE1x : !cir.ptr<!s8i>
+// UNSAFE:   %[[GUARD_VAL:.*]] = cir.load align(1) %[[GUARD]] : !cir.ptr<!s8i>, !s8i
+// UNSAFE:   cir.if
+// UNSAFE:     cir.call @_Z1fv()
+// UNSAFE:     %[[ONE:.*]] = cir.const #cir.int<1> : !s8i
+// UNSAFE:     cir.store %[[ONE]], %[[GUARD]] : !s8i, !cir.ptr<!s8i>
+// UNSAFE-NOT: __cxa_guard

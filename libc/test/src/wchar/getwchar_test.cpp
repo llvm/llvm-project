@@ -29,8 +29,7 @@
 using LlvmLibcGetwcharTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcGetwcharTest, ReadValidWideCharacters) {
-  const auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("getwchar_valid.test"));
+  const auto FILENAME = libc_make_test_file_path("getwchar_valid.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 
@@ -61,8 +60,7 @@ TEST_F(LlvmLibcGetwcharTest, ReadValidWideCharacters) {
 }
 
 TEST_F(LlvmLibcGetwcharTest, ReadUtf8) {
-  const auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("getwchar_utf8.test"));
+  const auto FILENAME = libc_make_test_file_path("getwchar_utf8.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 
@@ -91,8 +89,7 @@ TEST_F(LlvmLibcGetwcharTest, ReadUtf8) {
 }
 
 TEST_F(LlvmLibcGetwcharTest, EndOfFileBehavior) {
-  const auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("getwchar_eof.test"));
+  const auto FILENAME = libc_make_test_file_path("getwchar_eof.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
@@ -113,8 +110,7 @@ TEST_F(LlvmLibcGetwcharTest, EndOfFileBehavior) {
 }
 
 TEST_F(LlvmLibcGetwcharTest, ReadError) {
-  const auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("getwchar_readerr.test"));
+  const auto FILENAME = libc_make_test_file_path("getwchar_readerr.test");
 
   // Redirect stdin using a write-only stream
   ::FILE *original_stdin = LIBC_NAMESPACE::stdin;
@@ -133,8 +129,7 @@ TEST_F(LlvmLibcGetwcharTest, ReadError) {
 }
 
 TEST_F(LlvmLibcGetwcharTest, ByteOrientedMisuse) {
-  const auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("getwchar_bytemode.test"));
+  const auto FILENAME = libc_make_test_file_path("getwchar_bytemode.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w+");
   ASSERT_FALSE(file == nullptr);
 
@@ -156,8 +151,7 @@ TEST_F(LlvmLibcGetwcharTest, ByteOrientedMisuse) {
 }
 
 TEST_F(LlvmLibcGetwcharTest, InteractionWithUngetwc) {
-  const auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("getwchar_unget.test"));
+  const auto FILENAME = libc_make_test_file_path("getwchar_unget.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 

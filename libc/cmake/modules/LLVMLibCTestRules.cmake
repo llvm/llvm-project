@@ -30,6 +30,11 @@ function(_get_common_test_compile_options output_var c_test flags)
   libc_add_definition(compile_options
     "LIBC_TEST_SUBPROCESS_TESTS=${LIBC_TEST_SUBPROCESS_TESTS}")
 
+  if(LIBC_TEST_MAX_CONCURRENCY)
+    libc_add_definition(compile_options
+      "LIBC_TEST_MAX_CONCURRENCY=${LIBC_TEST_MAX_CONCURRENCY}")
+  endif()
+
   if(LIBC_TEST_SUBPROCESS_TESTS)
     # EXPECT_DEATH and ASSERT_DEATH might be quite slow.  LIBC_TEST_SKIP_DEATH_TESTS
     # will make those tests no-op to reduce the overall test time.
@@ -107,7 +112,6 @@ endfunction()
 
 function(_get_hermetic_test_compile_options output_var c_test flags)
   _get_common_test_compile_options(compile_options "${c_test}" "${flags}")
-  libc_add_definition(compile_options "LIBC_TEST=HERMETIC")
 
   # null check tests are death tests, remove from hermetic tests for now.
   if(LIBC_ADD_NULL_CHECKS)
@@ -206,6 +210,14 @@ function(get_object_files_for_test result skipped_entrypoints_list)
           if(fq_target_name STREQUAL "libc.test.include.issignaling_c_test" OR fq_target_name STREQUAL "libc.test.include.iscanonical_c_test")
             string(REPLACE ".__internal__" "" object_file_raw ${object_file_raw})
           endif()
+          # Adding libc.src.stdlib.exit normally contributes the internal entrypoint
+          # object. External baremetal startup code can reference the public C exit
+          # symbol, so use the public-packaging object for exit in this configuration.
+          if(dep STREQUAL "libc.src.stdlib.exit" AND
+             NOT LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP AND
+             LIBC_TARGET_OS_IS_BAREMETAL)
+            string(REPLACE ".__internal__" "" object_file_raw ${object_file_raw})
+          endif()
           list(APPEND dep_obj ${object_file_raw})
         endif()
       endif()
@@ -274,15 +286,20 @@ function(create_libc_unittest fq_target_name)
   endif()
 
   get_fq_deps_list(fq_deps_list ${LIBC_UNITTEST_DEPENDS})
-  if(NOT LIBC_UNITTEST_C_TEST)
-    list(APPEND fq_deps_list libc.src.__support.StringUtil.error_to_string
-      libc.test.UnitTest.ErrnoSetterMatcher)
+  list(APPEND fq_deps_list libc.test.UnitTest.LibcTest)
+  if(LIBC_UNITTEST_C_TEST)
+    list(APPEND fq_deps_list libc.test.UnitTest.LibcCTest)
+  else()
+    list(APPEND fq_deps_list
+      libc.src.__support.StringUtil.error_to_string
+      libc.test.UnitTest.ErrnoSetterMatcher
+      libc.test.UnitTest.LibcDeathTestExecutors
+    )
   endif()
   list(REMOVE_DUPLICATES fq_deps_list)
 
   _get_common_test_compile_options(compile_options "${LIBC_UNITTEST_C_TEST}"
     "${LIBC_UNITTEST_FLAGS}")
-  libc_add_definition(compile_options "LIBC_TEST=UNIT")
 
   get_link_options(link_options
     ${compile_options}
@@ -357,13 +374,7 @@ function(create_libc_unittest fq_target_name)
 
   set(link_libraries ${link_object_files})
   # Test object files will depend on LINK_LIBRARIES passed down from `add_fp_unittest`
-  foreach(lib IN LISTS LIBC_UNITTEST_LINK_LIBRARIES)
-    if(TARGET ${lib}.unit)
-      list(APPEND link_libraries ${lib}.unit)
-    else()
-      list(APPEND link_libraries ${lib})
-    endif()
-  endforeach()
+  list(APPEND link_libraries ${LIBC_UNITTEST_LINK_LIBRARIES})
 
   set_target_properties(${fq_build_target_name}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
@@ -372,12 +383,6 @@ function(create_libc_unittest fq_target_name)
     ${fq_build_target_name}
     ${fq_deps_list}
   )
-
-  # LibcUnitTest should not depend on anything in LINK_LIBRARIES.
-  list(APPEND link_libraries LibcTest.unit)
-  if(NOT LIBC_UNITTEST_C_TEST)
-    list(APPEND link_libraries LibcDeathTestExecutors.unit)
-  endif()
 
   target_link_libraries(${fq_build_target_name} PRIVATE ${link_libraries})
 
@@ -754,19 +759,49 @@ endfunction()
 #     COMPILE_OPTIONS <list of special compile options for the test>
 #     LINK_LIBRARIES <list of linking libraries for this target>
 #     LOADER_ARGS <list of special args to loaders (like the GPU loader)>
+#     STARTUP <startup object target used when internal startup is disabled>
 #   )
 function(add_libc_hermetic test_name)
-  if(NOT TARGET libc.startup.${LIBC_TARGET_OS}.crt1)
-    message(VERBOSE "Skipping ${fq_target_name} as it is not available on ${LIBC_TARGET_OS}.")
-    return()
-  endif()
+  get_fq_target_name(${test_name} fq_target_name)
+  get_fq_target_name(${test_name}.libc fq_libc_target_name)
+
   cmake_parse_arguments(
     "HERMETIC_TEST"
     "IS_GPU_BENCHMARK;NO_RUN_POSTBUILD;C_TEST" # Optional arguments
-    "SUITE;CXX_STANDARD" # Single value arguments
+    "SUITE;CXX_STANDARD;STARTUP" # Single value arguments
     "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS;LINK_LIBRARIES;FLAGS;LOADER_ARGS" # Multi-value arguments
     ${ARGN}
   )
+
+  set(startup_target libc.startup.${LIBC_TARGET_OS}.crt1)
+  set(startup_target_dep "")
+  if(LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP)
+    if(HERMETIC_TEST_STARTUP)
+      message(FATAL_ERROR
+        "Hermetic test ${fq_target_name} provides an external STARTUP target "
+        "while internal startup is enabled.")
+    endif()
+    if(NOT TARGET ${startup_target})
+      if(LIBC_CMAKE_VERBOSE_LOGGING)
+        message(STATUS "Skipping ${fq_target_name} as ${startup_target} is not available on ${LIBC_TARGET_OS}.")
+      endif()
+      return()
+    endif()
+    set(startup_target_dep ${startup_target})
+  elseif(HERMETIC_TEST_STARTUP)
+    get_fq_dep_name(startup_target_dep ${HERMETIC_TEST_STARTUP})
+    if(NOT TARGET ${startup_target_dep})
+      message(FATAL_ERROR
+        "Hermetic test ${fq_target_name} startup target ${startup_target_dep} does not exist.")
+    endif()
+  endif()
+
+  if(NOT startup_target_dep AND NOT LIBC_TEST_LINK_OPTIONS_DEFAULT)
+    if(LIBC_CMAKE_VERBOSE_LOGGING)
+      message(STATUS "Skipping ${fq_target_name} as it has no startup provider.")
+    endif()
+    return()
+  endif()
 
   if(NOT HERMETIC_TEST_SUITE)
     message(FATAL_ERROR "SUITE not specified for ${fq_target_name}")
@@ -775,14 +810,11 @@ function(add_libc_hermetic test_name)
     message(FATAL_ERROR "The SRCS list for add_integration_test is missing.")
   endif()
 
-  get_fq_target_name(${test_name} fq_target_name)
-  get_fq_target_name(${test_name}.libc fq_libc_target_name)
-
   get_fq_deps_list(fq_deps_list ${HERMETIC_TEST_DEPENDS})
   list(APPEND fq_deps_list
     # Hermetic tests use the platform's startup object. So, their deps also
     # have to be collected.
-    libc.startup.${LIBC_TARGET_OS}.crt1
+    ${startup_target_dep}
     # We always add the memory functions objects. This is because the
     # compiler's codegen can emit calls to the C memory functions.
     libc.src.__support.StringUtil.error_to_string
@@ -792,7 +824,13 @@ function(add_libc_hermetic test_name)
     libc.src.string.memset
     libc.src.strings.bcmp
     libc.src.strings.bzero
+    libc.test.UnitTest.ErrnoSetterMatcher
+    libc.test.UnitTest.LibcTest
+    libc.test.UnitTest.HermeticTestUtils
   )
+  if(HERMETIC_TEST_C_TEST)
+    list(APPEND fq_deps_list libc.test.UnitTest.LibcCTest)
+  endif()
   if(LIBC_TARGET_ARCHITECTURE_IS_AARCH64 AND NOT(LIBC_TARGET_OS_IS_BAREMETAL))
     list(APPEND fq_deps_list libc.src.sys.auxv.getauxval)
   endif()
@@ -800,6 +838,7 @@ function(add_libc_hermetic test_name)
   # Syscalls used by death tests.
   if(LIBC_TEST_SUBPROCESS_TESTS AND NOT HERMETIC_TEST_C_TEST)
     list(APPEND fq_deps_list
+      libc.test.UnitTest.LibcDeathTestExecutors
       libc.src.poll.poll
       libc.src.signal.kill
       libc.src.stdio.fflush
@@ -814,6 +853,16 @@ function(add_libc_hermetic test_name)
     )
   endif()
 
+  if(NOT LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP AND LIBC_TARGET_OS_IS_BAREMETAL)
+    # External baremetal startup objects still need libc's process startup and
+    # termination entrypoints, even when the test itself does not depend on them.
+    list(APPEND fq_deps_list
+      libc.src.stdlib.atexit
+      libc.src.stdlib.exit
+      libc.startup.baremetal.init
+    )
+  endif()
+
   if(libc.src.compiler.__stack_chk_fail IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
     # __stack_chk_fail should always be included if supported to allow building
     # libc with the stack protector enabled.
@@ -823,6 +872,49 @@ function(add_libc_hermetic test_name)
   if(libc.src.time.clock IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
     # We will link in the 'clock' implementation if it exists for test timing.
     list(APPEND fq_deps_list libc.src.time.clock)
+  endif()
+
+  if(LIBC_ENABLE_COVERAGE)
+     set(coverage_deps
+      libc.src.stdio.fclose
+      libc.src.stdio.fdopen
+      libc.src.stdio.feof
+      libc.src.stdio.fflush
+      libc.src.stdio.fileno
+      libc.src.stdio.fopen
+      libc.src.stdio.fprintf
+      libc.src.stdio.fread
+      libc.src.stdio.fseek
+      libc.src.stdio.ftell
+      libc.src.stdio.fwrite
+      libc.src.stdio.snprintf
+      libc.src.stdio.stderr
+      libc.src.stdio.vfprintf
+      libc.src.stdio.vsnprintf
+      libc.src.fcntl.fcntl
+      libc.src.fcntl.open
+      libc.src.stdlib.getenv
+      libc.src.stdlib.setenv
+      libc.src.stdlib.strtol
+      libc.src.string.strchr
+      libc.src.string.strcmp
+      libc.src.string.strdup
+      libc.src.string.strerror
+      libc.src.string.strlen
+      libc.src.string.strncpy
+      libc.src.string.strrchr
+      libc.src.sys.mman.madvise
+      libc.src.sys.mman.mmap
+      libc.src.sys.mman.munmap
+      libc.src.sys.prctl.prctl
+      libc.src.sys.stat.mkdir
+      libc.src.sys.utsname.uname
+      libc.src.unistd.fork
+      libc.src.unistd.ftruncate
+      libc.src.unistd.getpagesize
+      libc.src.unistd.getpid
+    )
+    list(APPEND fq_deps_list ${coverage_deps})
   endif()
 
   list(REMOVE_DUPLICATES fq_deps_list)
@@ -840,6 +932,18 @@ function(add_libc_hermetic test_name)
     return()
   endif()
   list(REMOVE_DUPLICATES link_object_files)
+
+  if(LIBC_ENABLE_COVERAGE)
+    foreach(cov_dep IN LISTS coverage_deps)
+      get_target_property(is_alias ${cov_dep} "IS_ALIAS")
+      if(is_alias)
+        get_target_property(real_target ${cov_dep} "DEPS")
+      else()
+        set(real_target ${cov_dep})
+      endif()
+      string(REPLACE "${real_target}.__internal__" "${real_target}" link_object_files "${link_object_files}")
+    endforeach()
+  endif()
 
   # Make a library of all deps
   add_library(
@@ -883,15 +987,7 @@ function(add_libc_hermetic test_name)
     ${compile_options}
     ${HERMETIC_TEST_COMPILE_OPTIONS})
 
-  set(link_libraries "")
   set(compiler_runtime "")
-  foreach(lib IN LISTS HERMETIC_TEST_LINK_LIBRARIES)
-    if(TARGET ${lib}.hermetic)
-      list(APPEND link_libraries ${lib}.hermetic)
-    else()
-      list(APPEND link_libraries ${lib})
-    endif()
-  endforeach()
 
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
     target_link_options(${fq_build_target_name} PRIVATE
@@ -914,6 +1010,12 @@ function(add_libc_hermetic test_name)
       ${LIBC_LINK_OPTIONS_DEFAULT}
       ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
     )
+    if(LIBC_ENABLE_COVERAGE)
+      list(APPEND link_options
+        -noprofilelib
+        -u__llvm_profile_runtime
+      )
+    endif()
     target_link_options(${fq_build_target_name} PRIVATE ${link_options})
   else()
     # Older version of gcc does not support `nostdlib++` flag.  We use
@@ -925,22 +1027,34 @@ function(add_libc_hermetic test_name)
       ${LIBC_LINK_OPTIONS_DEFAULT}
       ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
     )
+    if(LIBC_ENABLE_COVERAGE)
+      list(APPEND link_options
+        -noprofilelib
+        -u__llvm_profile_runtime
+      )
+    endif()
     target_link_options(${fq_build_target_name} PRIVATE ${link_options})
     list(APPEND compiler_runtime ${LIBGCC_S_LOCATION})
   endif()
+
+  set(coverage_link_libs "")
+  if(LIBC_ENABLE_COVERAGE)
+    set(coverage_link_libs
+      "${LIBC_CLANG_PROFILE_LIB}"
+       ${fq_target_name}.__libc__
+    )
+  endif()
+
   target_link_libraries(
     ${fq_build_target_name}
     PRIVATE
-      libc.startup.${LIBC_TARGET_OS}.crt1
-      ${link_libraries}
-      LibcHermeticTestSupport.hermetic
+      ${startup_target_dep}
+      ${HERMETIC_TEST_LINK_LIBRARIES}
       ${fq_target_name}.__libc__
+      ${coverage_link_libs}
       ${compiler_runtime}
   )
-  add_dependencies(${fq_build_target_name}
-    LibcTest.hermetic
-    libc.test.UnitTest.ErrnoSetterMatcher
-    ${fq_deps_list})
+  add_dependencies(${fq_build_target_name} ${fq_deps_list})
 
   if(NOT HERMETIC_TEST_NO_RUN_POSTBUILD)
     if(LIBC_TEST_CMD)
@@ -1027,13 +1141,7 @@ function(add_libc_test test_name)
   )
   if(LLVM_LIBC_FULL_BUILD)
     if(NOT LIBC_TEST_OVERLAY_BUILD_ONLY)
-      add_libc_hermetic(
-        ${test_name}
-        LINK_LIBRARIES
-          LibcTest.hermetic
-          LibcDeathTestExecutors.hermetic
-          ${LIBC_TEST_UNPARSED_ARGUMENTS}
-      )
+      add_libc_hermetic(${test_name} ${LIBC_TEST_UNPARSED_ARGUMENTS})
     endif()
   else()
     # Overlay mode
@@ -1059,12 +1167,11 @@ function(add_libc_multi_impl_test name suite)
           ${suite}
         COMPILE_OPTIONS
           ${LIBC_COMPILE_OPTIONS_NATIVE}
-        LINK_LIBRARIES
-          LibcMemoryHelpers
         ${ARGN}
         DEPENDS
           ${fq_config_name}
           libc.src.__support.macros.sanitizer
+          libc.test.UnitTest.MemoryMatcher
       )
       get_fq_target_name(${fq_config_name}_test fq_target_name)
     else()

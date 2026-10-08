@@ -218,6 +218,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("disjoint", MIToken::kw_disjoint)
       .Case("samesign", MIToken::kw_samesign)
       .Case("inbounds", MIToken::kw_inbounds)
+      .Case("nonnull", MIToken::kw_nonnull)
       .Case("nofpexcept", MIToken::kw_nofpexcept)
       .Case("unpredictable", MIToken::kw_unpredictable)
       .Case("debug-location", MIToken::kw_debug_location)
@@ -279,6 +280,8 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
             MIToken::kw_inlineasm_br_indirect_target)
       .Case("ehscope-entry", MIToken::kw_ehscope_entry)
       .Case("ehfunclet-entry", MIToken::kw_ehfunclet_entry)
+      .Case("cleanup-funclet-entry", MIToken::kw_cleanup_funclet_entry)
+      .Case("ehcont-target", MIToken::kw_ehcont_target)
       .Case("liveins", MIToken::kw_liveins)
       .Case("successors", MIToken::kw_successors)
       .Case("floatpred", MIToken::kw_floatpred)
@@ -299,6 +302,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("machine-block-address-taken",
             MIToken::kw_machine_block_address_taken)
       .Case("call-frame-size", MIToken::kw_call_frame_size)
+      .Case("max-bytes-for-alignment", MIToken::kw_max_bytes_for_alignment)
       .Case("noconvergent", MIToken::kw_noconvergent)
       .Case("mmra", MIToken::kw_mmra)
       .Case("lr-split", MIToken::kw_lr_split)
@@ -341,6 +345,23 @@ static Cursor maybeLexMachineBasicBlock(Cursor C, MIToken &Token,
   if (C.peek() == '.') {
     C.advance(); // Skip '.'
     ++StringOffset;
+    // The name is quoted if it is not a plain identifier.
+    if (C.peek() == '"') {
+      Cursor R = lexStringConstant(C, ErrorCallback);
+      if (!R) {
+        ErrorCallback(C.location(),
+                      "unable to parse quoted string from opening quote");
+        Token.reset(MIToken::Error, Range.remaining());
+        return Range;
+      }
+      MIToken::TokenKind Kind = IsReference ? MIToken::MachineBasicBlock
+                                            : MIToken::MachineBasicBlockLabel;
+      Token.reset(Kind, Range.upto(R))
+          .setIntegerValue(APSInt(Number))
+          .setOwnedStringValue(
+              unescapeQuotedString(Range.upto(R).drop_front(StringOffset)));
+      return R;
+    }
     while (isIdentifierChar(C.peek()))
       C.advance();
   }

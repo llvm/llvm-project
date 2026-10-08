@@ -61,6 +61,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -134,8 +135,6 @@ static cl::opt<unsigned>
                       cl::desc("Maximum unduplicated blocks with outer uses "
                                "accepted for the transformation"),
                       cl::Hidden, cl::init(40));
-
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 
 } // namespace llvm
 
@@ -276,9 +275,8 @@ void DFAJumpThreading::unfold(DomTreeUpdater *DTU, LoopInfo *LI,
     auto *BI =
         CondBrInst::Create(SI->getCondition(), EndBlock, NewBlock, StartBlock);
     BI->setDebugLoc(SelectBranchLoc);
-    if (!ProfcheckDisableMetadataFixes)
-      BI->setMetadata(LLVMContext::MD_prof,
-                      SI->getMetadata(LLVMContext::MD_prof));
+    BI->setMetadata(LLVMContext::MD_prof,
+                    SI->getMetadata(LLVMContext::MD_prof));
     DTU->applyUpdates({{DominatorTree::Insert, StartBlock, NewBlock}});
   } else {
     BasicBlock *EndBlock = SIUse->getParent();
@@ -319,9 +317,8 @@ void DFAJumpThreading::unfold(DomTreeUpdater *DTU, LoopInfo *LI,
     DebugLoc SelectLoc = SI->getDebugLoc();
     NewFToEnd->setDebugLoc(SelectLoc);
     BI->setDebugLoc(SelectLoc);
-    if (!ProfcheckDisableMetadataFixes)
-      BI->setMetadata(LLVMContext::MD_prof,
-                      SI->getMetadata(LLVMContext::MD_prof));
+    BI->setMetadata(LLVMContext::MD_prof,
+                    SI->getMetadata(LLVMContext::MD_prof));
     DTU->applyUpdates({{DominatorTree::Insert, NewBlockT, NewBlockF},
                        {DominatorTree::Insert, NewBlockT, EndBlock},
                        {DominatorTree::Insert, NewBlockF, EndBlock}});
@@ -1106,7 +1103,7 @@ private:
     DuplicateBlockMap DuplicateMap;
     DefMap NewDefs;
 
-    SmallPtrSet<BasicBlock *, 16> BlocksToClean;
+    SmallSetVector<BasicBlock *, 16> BlocksToClean;
     BlocksToClean.insert_range(successors(SwitchBlock));
 
     for (const ThreadingPath &TPath : SwitchPaths->getThreadingPaths()) {
@@ -1135,7 +1132,7 @@ private:
   /// the predecessors, and phis in the successor blocks.
   void createExitPath(DefMap &NewDefs, const ThreadingPath &Path,
                       DuplicateBlockMap &DuplicateMap,
-                      SmallPtrSet<BasicBlock *, 16> &BlocksToClean,
+                      SmallSetVector<BasicBlock *, 16> &BlocksToClean,
                       DomTreeUpdater *DTU) {
     APInt NextState = Path.getExitValue();
     const BasicBlock *Determinator = Path.getDeterminatorBB();

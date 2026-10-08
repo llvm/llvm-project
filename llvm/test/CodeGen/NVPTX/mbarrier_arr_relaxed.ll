@@ -12,8 +12,8 @@ define void @test_mbarrier_arrive_relaxed_scope_cta_space_cta(ptr addrspace(3) %
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-PTX64-EMPTY:
 ; CHECK-PTX64-NEXT:  // %bb.0:
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [test_mbarrier_arrive_relaxed_scope_cta_space_cta_param_0];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r1, [test_mbarrier_arrive_relaxed_scope_cta_space_cta_param_1];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd1, [test_mbarrier_arrive_relaxed_scope_cta_space_cta_param_0];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r1, [test_mbarrier_arrive_relaxed_scope_cta_space_cta_param_1];
 ; CHECK-PTX64-NEXT:    mbarrier.arrive.relaxed.cta.shared.b64 %rd2, [%rd1], %r1;
 ; CHECK-PTX64-NEXT:    mbarrier.arrive.expect_tx.relaxed.cta.shared.b64 %rd3, [%rd1], %r1;
 ; CHECK-PTX64-NEXT:    mbarrier.arrive_drop.relaxed.cta.shared.b64 %rd4, [%rd1], %r1;
@@ -26,8 +26,8 @@ define void @test_mbarrier_arrive_relaxed_scope_cta_space_cta(ptr addrspace(3) %
 ; CHECK-PTX-SHARED32-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-PTX-SHARED32-EMPTY:
 ; CHECK-PTX-SHARED32-NEXT:  // %bb.0:
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r1, [test_mbarrier_arrive_relaxed_scope_cta_space_cta_param_0];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r2, [test_mbarrier_arrive_relaxed_scope_cta_space_cta_param_1];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r1, [test_mbarrier_arrive_relaxed_scope_cta_space_cta_param_0];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r2, [test_mbarrier_arrive_relaxed_scope_cta_space_cta_param_1];
 ; CHECK-PTX-SHARED32-NEXT:    mbarrier.arrive.relaxed.cta.shared.b64 %rd1, [%r1], %r2;
 ; CHECK-PTX-SHARED32-NEXT:    mbarrier.arrive.expect_tx.relaxed.cta.shared.b64 %rd2, [%r1], %r2;
 ; CHECK-PTX-SHARED32-NEXT:    mbarrier.arrive_drop.relaxed.cta.shared.b64 %rd3, [%r1], %r2;
@@ -47,8 +47,8 @@ define void @test_mbarrier_arrive_relaxed_scope_cluster_space_cta(ptr addrspace(
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-PTX64-EMPTY:
 ; CHECK-PTX64-NEXT:  // %bb.0:
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [test_mbarrier_arrive_relaxed_scope_cluster_space_cta_param_0];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r1, [test_mbarrier_arrive_relaxed_scope_cluster_space_cta_param_1];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd1, [test_mbarrier_arrive_relaxed_scope_cluster_space_cta_param_0];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r1, [test_mbarrier_arrive_relaxed_scope_cluster_space_cta_param_1];
 ; CHECK-PTX64-NEXT:    mbarrier.arrive.relaxed.cluster.shared.b64 %rd2, [%rd1], %r1;
 ; CHECK-PTX64-NEXT:    mbarrier.arrive.expect_tx.relaxed.cluster.shared.b64 %rd3, [%rd1], %r1;
 ; CHECK-PTX64-NEXT:    mbarrier.arrive_drop.relaxed.cluster.shared.b64 %rd4, [%rd1], %r1;
@@ -61,8 +61,8 @@ define void @test_mbarrier_arrive_relaxed_scope_cluster_space_cta(ptr addrspace(
 ; CHECK-PTX-SHARED32-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-PTX-SHARED32-EMPTY:
 ; CHECK-PTX-SHARED32-NEXT:  // %bb.0:
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r1, [test_mbarrier_arrive_relaxed_scope_cluster_space_cta_param_0];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r2, [test_mbarrier_arrive_relaxed_scope_cluster_space_cta_param_1];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r1, [test_mbarrier_arrive_relaxed_scope_cluster_space_cta_param_0];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r2, [test_mbarrier_arrive_relaxed_scope_cluster_space_cta_param_1];
 ; CHECK-PTX-SHARED32-NEXT:    mbarrier.arrive.relaxed.cluster.shared.b64 %rd1, [%r1], %r2;
 ; CHECK-PTX-SHARED32-NEXT:    mbarrier.arrive.expect_tx.relaxed.cluster.shared.b64 %rd2, [%r1], %r2;
 ; CHECK-PTX-SHARED32-NEXT:    mbarrier.arrive_drop.relaxed.cluster.shared.b64 %rd3, [%r1], %r2;
@@ -83,8 +83,8 @@ define void @test_mbarrier_arrive_relaxed_scope_cta_space_cluster(ptr addrspace(
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-PTX64-EMPTY:
 ; CHECK-PTX64-NEXT:  // %bb.0:
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [test_mbarrier_arrive_relaxed_scope_cta_space_cluster_param_0];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r1, [test_mbarrier_arrive_relaxed_scope_cta_space_cluster_param_1];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd1, [test_mbarrier_arrive_relaxed_scope_cta_space_cluster_param_0];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r1, [test_mbarrier_arrive_relaxed_scope_cta_space_cluster_param_1];
 ; CHECK-PTX64-NEXT:    mbarrier.arrive.relaxed.cta.shared::cluster.b64 _, [%rd1], %r1;
 ; CHECK-PTX64-NEXT:    mbarrier.arrive.expect_tx.relaxed.cta.shared::cluster.b64 _, [%rd1], %r1;
 ; CHECK-PTX64-NEXT:    mbarrier.arrive_drop.relaxed.cta.shared::cluster.b64 _, [%rd1], %r1;
@@ -96,8 +96,8 @@ define void @test_mbarrier_arrive_relaxed_scope_cta_space_cluster(ptr addrspace(
 ; CHECK-PTX-SHARED32-NEXT:    .reg .b32 %r<3>;
 ; CHECK-PTX-SHARED32-EMPTY:
 ; CHECK-PTX-SHARED32-NEXT:  // %bb.0:
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r1, [test_mbarrier_arrive_relaxed_scope_cta_space_cluster_param_0];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r2, [test_mbarrier_arrive_relaxed_scope_cta_space_cluster_param_1];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r1, [test_mbarrier_arrive_relaxed_scope_cta_space_cluster_param_0];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r2, [test_mbarrier_arrive_relaxed_scope_cta_space_cluster_param_1];
 ; CHECK-PTX-SHARED32-NEXT:    mbarrier.arrive.relaxed.cta.shared::cluster.b64 _, [%r1], %r2;
 ; CHECK-PTX-SHARED32-NEXT:    mbarrier.arrive.expect_tx.relaxed.cta.shared::cluster.b64 _, [%r1], %r2;
 ; CHECK-PTX-SHARED32-NEXT:    mbarrier.arrive_drop.relaxed.cta.shared::cluster.b64 _, [%r1], %r2;
@@ -117,8 +117,8 @@ define void @test_mbarrier_arrive_relaxed_scope_cluster_space_cluster(ptr addrsp
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-PTX64-EMPTY:
 ; CHECK-PTX64-NEXT:  // %bb.0:
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [test_mbarrier_arrive_relaxed_scope_cluster_space_cluster_param_0];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r1, [test_mbarrier_arrive_relaxed_scope_cluster_space_cluster_param_1];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd1, [test_mbarrier_arrive_relaxed_scope_cluster_space_cluster_param_0];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r1, [test_mbarrier_arrive_relaxed_scope_cluster_space_cluster_param_1];
 ; CHECK-PTX64-NEXT:    mbarrier.arrive.relaxed.cluster.shared::cluster.b64 _, [%rd1], %r1;
 ; CHECK-PTX64-NEXT:    mbarrier.arrive.expect_tx.relaxed.cluster.shared::cluster.b64 _, [%rd1], %r1;
 ; CHECK-PTX64-NEXT:    mbarrier.arrive_drop.relaxed.cluster.shared::cluster.b64 _, [%rd1], %r1;
@@ -130,8 +130,8 @@ define void @test_mbarrier_arrive_relaxed_scope_cluster_space_cluster(ptr addrsp
 ; CHECK-PTX-SHARED32-NEXT:    .reg .b32 %r<3>;
 ; CHECK-PTX-SHARED32-EMPTY:
 ; CHECK-PTX-SHARED32-NEXT:  // %bb.0:
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r1, [test_mbarrier_arrive_relaxed_scope_cluster_space_cluster_param_0];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r2, [test_mbarrier_arrive_relaxed_scope_cluster_space_cluster_param_1];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r1, [test_mbarrier_arrive_relaxed_scope_cluster_space_cluster_param_0];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r2, [test_mbarrier_arrive_relaxed_scope_cluster_space_cluster_param_1];
 ; CHECK-PTX-SHARED32-NEXT:    mbarrier.arrive.relaxed.cluster.shared::cluster.b64 _, [%r1], %r2;
 ; CHECK-PTX-SHARED32-NEXT:    mbarrier.arrive.expect_tx.relaxed.cluster.shared::cluster.b64 _, [%r1], %r2;
 ; CHECK-PTX-SHARED32-NEXT:    mbarrier.arrive_drop.relaxed.cluster.shared::cluster.b64 _, [%r1], %r2;

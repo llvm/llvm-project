@@ -59,6 +59,8 @@ static constexpr LangASMap SPIRDefIsGenMap = {
     {LangAS::sycl_global_device, 5},
     {LangAS::sycl_global_host, 6},
     {LangAS::sycl_local, 3},
+    {LangAS::sycl_generic, 4},
+    {LangAS::sycl_constant, 2},
     {LangAS::hlsl_groupshared, 3},
     {LangAS::hlsl_private, 10},
     {LangAS::hlsl_device, 11},
@@ -183,12 +185,7 @@ public:
   }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
-    return (CC == CC_SpirFunction || CC == CC_DeviceKernel) ? CCCR_OK
-                                                            : CCCR_Warning;
-  }
-
-  CallingConv getDefaultCallingConv() const override {
-    return CC_SpirFunction;
+    return (CC == CC_C || CC == CC_DeviceKernel) ? CCCR_OK : CCCR_Warning;
   }
 
   void setAddressSpaceMap(bool DefaultIsGeneric) {

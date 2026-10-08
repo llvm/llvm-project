@@ -35,8 +35,8 @@ define void @nvvm_clusterlaunchcontrol_try_cancel_multicast(
 ; CHECK-PTX-SHARED64-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-PTX-SHARED64-EMPTY:
 ; CHECK-PTX-SHARED64-NEXT:  // %bb.0:
-; CHECK-PTX-SHARED64-NEXT:    ld.param.b64 %rd1, [nvvm_clusterlaunchcontrol_try_cancel_multicast_param_0];
-; CHECK-PTX-SHARED64-NEXT:    ld.param.b64 %rd2, [nvvm_clusterlaunchcontrol_try_cancel_multicast_param_1];
+; CHECK-PTX-SHARED64-NEXT:    ld.param::func.b64 %rd1, [nvvm_clusterlaunchcontrol_try_cancel_multicast_param_0];
+; CHECK-PTX-SHARED64-NEXT:    ld.param::func.b64 %rd2, [nvvm_clusterlaunchcontrol_try_cancel_multicast_param_1];
 ; CHECK-PTX-SHARED64-NEXT:    clusterlaunchcontrol.try_cancel.async.shared::cta.mbarrier::complete_tx::bytes.multicast::cluster::all.b128 [%rd1], [%rd2];
 ; CHECK-PTX-SHARED64-NEXT:    ret;
 ;
@@ -45,8 +45,8 @@ define void @nvvm_clusterlaunchcontrol_try_cancel_multicast(
 ; CHECK-PTX-SHARED32-NEXT:    .reg .b32 %r<3>;
 ; CHECK-PTX-SHARED32-EMPTY:
 ; CHECK-PTX-SHARED32-NEXT:  // %bb.0:
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r1, [nvvm_clusterlaunchcontrol_try_cancel_multicast_param_0];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r2, [nvvm_clusterlaunchcontrol_try_cancel_multicast_param_1];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r1, [nvvm_clusterlaunchcontrol_try_cancel_multicast_param_0];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r2, [nvvm_clusterlaunchcontrol_try_cancel_multicast_param_1];
 ; CHECK-PTX-SHARED32-NEXT:    clusterlaunchcontrol.try_cancel.async.shared::cta.mbarrier::complete_tx::bytes.multicast::cluster::all.b128 [%r1], [%r2];
 ; CHECK-PTX-SHARED32-NEXT:    ret;
                                              ptr addrspace(3) %saddr, ptr addrspace(3) %smbar,

@@ -747,6 +747,36 @@ bool MachineFunction::needsFrameMoves() const {
          !F.getParent()->debug_compile_units().empty();
 }
 
+bool MachineFunction::disableFramePointerElim() const {
+  FramePointerKind FP = getFrameInfo().getFramePointerPolicy();
+  switch (FP) {
+  case FramePointerKind::All:
+    return true;
+  case FramePointerKind::NonLeaf:
+  case FramePointerKind::NonLeafNoReserve:
+    return getFrameInfo().hasCalls();
+  case FramePointerKind::None:
+  case FramePointerKind::Reserved:
+    return false;
+  }
+  llvm_unreachable("unknown frame pointer flag");
+}
+
+bool MachineFunction::framePointerIsReserved() const {
+  FramePointerKind FP = getFrameInfo().getFramePointerPolicy();
+  switch (FP) {
+  case FramePointerKind::All:
+  case FramePointerKind::NonLeaf:
+  case FramePointerKind::Reserved:
+    return true;
+  case FramePointerKind::NonLeafNoReserve:
+    return getFrameInfo().hasCalls();
+  case FramePointerKind::None:
+    return false;
+  }
+  llvm_unreachable("unknown frame pointer flag");
+}
+
 MachineFunction::CallSiteInfo::CallSiteInfo(const CallBase &CB) {
   if (MDNode *Node = CB.getMetadata(llvm::LLVMContext::MD_call_target))
     CallTarget = Node;
@@ -1200,14 +1230,14 @@ auto MachineFunction::salvageCopySSAImpl(MachineInstr &MI)
     if (State.second)
       SubregsSeen.push_back(State.second);
 
-    assert(MRI.hasOneDef(State.first));
-    MachineInstr &Inst = *MRI.def_begin(State.first)->getParent();
-    CurInst = Inst.getIterator();
+    MachineInstr *Inst = MRI.getVRegDef(State.first);
+    assert(Inst && "Virtual register has no def");
+    CurInst = Inst->getIterator();
 
     // Any non-copy instruction is the defining instruction we're seeking.
-    if (!Inst.isCopyLike() && !TII.isCopyLikeInstr(Inst))
+    if (!Inst->isCopyLike() && !TII.isCopyLikeInstr(*Inst))
       break;
-    State = GetRegAndSubreg(Inst);
+    State = GetRegAndSubreg(*Inst);
   };
 
   // Helper lambda to apply additional subregister substitutions to a known
@@ -1233,7 +1263,7 @@ auto MachineFunction::salvageCopySSAImpl(MachineInstr &MI)
   // instruction / operand pair after adding subregister qualifiers.
   if (State.first.isVirtual()) {
     // Virtual register def -- we can just look up where this happens.
-    MachineInstr *Inst = MRI.def_begin(State.first)->getParent();
+    MachineInstr *Inst = MRI.getVRegDef(State.first);
     for (auto &MO : Inst->all_defs()) {
       if (MO.getReg() != State.first)
         continue;
@@ -1658,7 +1688,7 @@ void MachineConstantPool::print(raw_ostream &OS) const {
     if (Constants[i].isMachineConstantPoolEntry())
       Constants[i].Val.MachineCPVal->print(OS);
     else
-      Constants[i].Val.ConstVal->printAsOperand(OS, /*PrintType=*/false);
+      Constants[i].Val.ConstVal->printAsOperand(OS);
     OS << ", align=" << Constants[i].getAlign().value();
     OS << "\n";
   }

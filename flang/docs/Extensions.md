@@ -8,11 +8,6 @@
 
 # Fortran Extensions supported by Flang
 
-```{contents}
----
-local:
----
-```
 
 As a general principle, this compiler will accept by default and
 without complaint many legacy features, extensions to the standard
@@ -176,7 +171,9 @@ end
 ```
   Note that internally the main program symbol name is all uppercase, unlike
   the names of all other symbols, which are usually all lowercase. This
-  may make a difference in testing/debugging.
+  may make a difference in testing. It is not visible in the debug
+  information, which spells the main program name in lowercase like every
+  other name.
 * A `PROCEDURE()` with no interface name or type may be called as an
   subroutine with an implicit interface, F'2023 15.4.3.6 paragraph 4 and
   C1525 notwithstanding.
@@ -274,7 +271,14 @@ end
 * Outside a character literal, a comment after a continuation marker (&)
   need not begin with a comment marker (!).
 * Classic C-style `/*comments*/` are skipped, so multi-language header
-  files are easier to write and use.
+  files are easier to write and use. In fixed source form label fields, C
+  comments are skipped only when preprocessing is enabled. Otherwise, valid
+  Fortran programs could be rejected. For example:
+```fortran
+      x = x
+     /* 2                           ! fixed-form continuation line
+      print *, x, 'tail */ text'
+```
 * $ and \ edit descriptors are supported in FORMAT to suppress newline
   output on user prompts.
 * Tabs in format strings (not `FORMAT` statements) are allowed on output.
@@ -294,6 +298,7 @@ end
   not be known (e.g., `IAND(X'1',X'2')`, or as arguments of `DIM`, `MOD`,
   `MODULO`, and `SIGN`. Note that while other compilers may accept such usages,
   the type resolution of such BOZ literals usages is highly non portable).
+  A warning is emitted when the BOZ literal is too large for the target.
 * BOZ literals can also be used as REAL values in some contexts where the
   type is unambiguous, such as initializations of REAL parameters.
 * `TRANSFER(boz, MOLD=integer or real scalar)` is accepted as an alternate
@@ -388,6 +393,20 @@ print *, is_contiguous(a(::2))                   ! prints T in Flang
   and defined as `ERROR_UNIT` in the intrinsic `ISO_FORTRAN_ENV` module.
 * Objects in blank COMMON may be initialized.
 * Initialization of COMMON blocks outside of BLOCK DATA subprograms.
+* A named COMMON block may be redundantly initialized (via `DATA`
+  statements or declaration initializers) in more than one program
+  unit, with a portability warning, provided that every appearance
+  that initializes the block does so identically: the same members
+  are initialized to the same values everywhere the block appears. A
+  first initialized appearance that leaves some members uninitialized
+  while a later appearance initializes them (or vice versa) is a
+  conflict, not a duplicate, and remains a hard error, as does any
+  appearance that initializes a shared member to a different value.
+  A member that is only indirectly initialized via an object
+  equivalenced with it, rather than directly by a `DATA` statement or
+  declaration initializer, is conservatively treated as a conflict at
+  every appearance, since the equivalenced objects are not compared
+  for agreement.
 * Multiple specifications of the SAVE attribute on the same object
   are allowed, with a warning.
 * Specific intrinsic functions BABS, IIABS, JIABS, KIABS, ZABS, and CDABS.
@@ -442,6 +461,21 @@ print *, is_contiguous(a(::2))                   ! prints T in Flang
 * When a name is brought into a scope by multiple ways,
   such as USE-association as well as an `IMPORT` from its host,
   it's an error only if the resolution is ambiguous.
+* When USE association brings an equivalent external procedure interface
+  and a legacy BLAS generic from the intrinsic `cublas` or `cublas_v2`
+  module into the same scope under the same local name, Flang selects
+  the intrinsic module's generic, regardless of the order of the two USE
+  statements. A generic already merged from both `cublas` and `cublas_v2`
+  is not covered, including when it is re-exported by another module.
+  The generic must contain a same-named host specific with characteristics
+  equal to those of the external interface, and at least one specific
+  with a CUDA dummy data attribute.
+  Generic names beginning with `cublas` are excluded.
+  A warning is emitted by default, including with `-pedantic`.
+  Use `-Wno-prefer-intrinsic-module-use-association` to suppress the warning,
+  or `-fno-prefer-intrinsic-module-use-association` to disable the extension.
+  This extension is deprecated and may be removed at any time; it was added
+  to support BerkeleyGW.
 * An entity may appear in a `DATA` statement before its explicit
   type declaration under `IMPLICIT NONE(TYPE)`.
 * `INCLUDE` lines can start in any column, can be preceded in
@@ -576,6 +610,19 @@ end program
   [-fimplicit-none-type-always]
 * Ignore occurrences of `IMPLICIT NONE` and `IMPLICIT NONE(TYPE)`
   [-fimplicit-none-type-never]
+* Treat a subprogram in a submodule as if it had a missing `MODULE` prefix
+  when its name matches a separate module procedure interface in an ancestor
+  module [-fimplicit-module-prefix]. This extension is disabled by default
+  because the unprefixed subprogram can instead be a conforming local
+  procedure. Without this extension, `-pedantic` or `-Wportability` diagnoses
+  a likely missing prefix without changing the program. When the extension
+  is enabled, `-Wimplicit-module-prefix` or `-pedantic` reports each repaired
+  prefix. Since the extension cannot distinguish a missing prefix from an
+  intentionally local procedure with the same name as an ancestor interface,
+  it can reject a conforming program when that interface is implemented in a
+  different submodule. This behavior is compatible with gfortran. Only
+  definitions in the current source are repaired; a module file keeps the
+  interpretation chosen when it was compiled.
 * Old-style `PARAMETER pi=3.14` statement without parentheses
   [-falternative-parameter-statement]
 * `UNSIGNED` type (-funsigned)
@@ -631,6 +678,7 @@ end program
   multiple modules, the name must refer to a generic interface; PGI
   allows a name to be a procedure from one module and a generic interface
   from another.
+  Flang supports the limited intrinsic CUBLAS exception described above.
 * Type parameter declarations must come first in a derived type definition;
   some compilers allow them to follow `PRIVATE`, or be intermixed with the
   component declarations.
@@ -677,6 +725,15 @@ end program
   the value of the last mask element, some treat these
   assignment statements as no-ops, and the rest crash during compilation.)
   The compiler flags this case as an error.
+
+* F2023 12.6.3 restricts enumeration types in I/O only for list-directed
+  transfers (prohibited) and formatted transfers (which must use an `I`, `B`,
+  `O`, or `Z` edit descriptor); it places no restriction on unformatted I/O.
+  Flang is currently stricter than the standard here and rejects an
+  enumeration type -- whether a bare item or reached as a component of a
+  derived type not processed by defined I/O -- in unformatted I/O with an
+  error.  This can be a temporary flang limitation while enumeration-type
+  support is incomplete, not a standard requirement.
 
 ## Standard features that might as well not be
 
@@ -1063,6 +1120,26 @@ print *, [(j,j=1,10)]
 * Some expression errors, like out-of-range known subscript values,
   are noted only as warnings when they appear in code known to be
   dead anyway at compilation time.
+
+* A reference with a constant subscript that is out of range is accepted
+  with a warning rather than rejected with an error.  A subscript value is
+  required to be within its bounds only when the reference is executed
+  (F'2023 9.5.3.1 paragraph 2), so a reference that never runs does not
+  render a program nonconforming; that case cannot be recognized in general
+  -- consider a procedure whose only call site is in dead code, or one that
+  is never called at all.  Note that the warning, not an error, is also what
+  appears when the reference *is* executed.  The endpoints of array sections
+  get the same treatment.  Cosubscripts do not: their requirement is F'2023
+  9.6 paragraph 2 and a cosubscript list determines an image index, so an
+  out-of-cobounds constant cosubscript remains an error.  Neither do an
+  out-of-range subscript in a reference to a named constant array, an
+  out-of-range `DATA` statement designator, or an out-of-range substring;
+  those remain errors as well.
+  Use `-fno-out-of-bounds-subscripts` to make these references errors again,
+  or `-Wno-out-of-bounds-subscripts` to silence the warning entirely.
+  Note that a module file compiled with the warning may produce errors in a
+  dependent compilation that uses `-fno-out-of-bounds-subscripts`, since the
+  interface is re-analyzed there; those errors point into the module file.
 
 ## Behavior in cases where the standard is clear but disputed
 
