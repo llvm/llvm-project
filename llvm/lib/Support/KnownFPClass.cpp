@@ -128,85 +128,82 @@ void KnownFPClass::propagateDenormal(const KnownFPClass &Src,
   }
 }
 
-KnownFPClass KnownFPClass::minMaxLike(const KnownFPClass &LHS_,
-                                      const KnownFPClass &RHS_, MinMaxKind Kind,
-                                      DenormalMode Mode) {
-  KnownFPClass KnownLHS = LHS_;
-  KnownFPClass KnownRHS = RHS_;
+KnownFPClass KnownFPClass::minMaxLike(const KnownFPClass &KnownLHS_,
+                                      const KnownFPClass &KnownRHS_,
+                                      MinMaxKind Kind, DenormalMode Mode) {
+  KnownFPClass KnownLHS = applyInputDenormalMode(KnownLHS_, Mode);
+  KnownFPClass KnownRHS = applyInputDenormalMode(KnownRHS_, Mode);
 
-  bool NeverNaN = KnownLHS.isKnownNeverNaN() || KnownRHS.isKnownNeverNaN();
-  KnownFPClass Known = KnownLHS | KnownRHS;
+  KnownFPClass Known;
 
-  // If either operand is not NaN, the result is not NaN.
-  if (NeverNaN &&
+  Known.propagateNonNaN(KnownLHS, KnownRHS);
+
+  // The *num functions return the non-NaN operand if only one operand is NaN.
+  // FIXME: minnum/maxnum may return a NaN if either operand is a signaling NaN.
+  if ((KnownLHS.isKnownNeverNaN() || KnownRHS.isKnownNeverNaN()) &&
       (Kind == MinMaxKind::minnum || Kind == MinMaxKind::maxnum ||
        Kind == MinMaxKind::minimumnum || Kind == MinMaxKind::maximumnum))
     Known.knownNot(fcNan);
 
-  if (Kind == MinMaxKind::maxnum || Kind == MinMaxKind::maximumnum) {
+  switch (Kind) {
+  case MinMaxKind::maxnum: {
     if (KnownLHS.isKnownNeverNaN())
-      Known.knownNot(orderedStrictlyLess(KnownLHS.getKnownFPClasses()));
+      Known.knownNot(orderedStrictlyLess(KnownLHS.getKnownFPClasses(),
+                                         /*OrderedZeroSign=*/false));
     if (KnownRHS.isKnownNeverNaN())
-      Known.knownNot(orderedStrictlyLess(KnownRHS.getKnownFPClasses()));
-  } else if (Kind == MinMaxKind::maximum) {
-    Known.knownNot(orderedStrictlyLess(KnownLHS.getKnownFPClasses()) |
-                   orderedStrictlyLess(KnownRHS.getKnownFPClasses()));
-  } else if (Kind == MinMaxKind::minnum || Kind == MinMaxKind::minimumnum) {
+      Known.knownNot(orderedStrictlyLess(KnownRHS.getKnownFPClasses(),
+                                         /*OrderedZeroSign=*/false));
+    break;
+  }
+  case MinMaxKind::minnum: {
     if (KnownLHS.isKnownNeverNaN())
-      Known.knownNot(orderedStrictlyGreater(KnownLHS.getKnownFPClasses()));
+      Known.knownNot(orderedStrictlyGreater(KnownLHS.getKnownFPClasses(),
+                                            /*OrderedZeroSign=*/false));
     if (KnownRHS.isKnownNeverNaN())
-      Known.knownNot(orderedStrictlyGreater(KnownRHS.getKnownFPClasses()));
-  } else if (Kind == MinMaxKind::minimum) {
-    Known.knownNot(orderedStrictlyGreater(KnownLHS.getKnownFPClasses()) |
-                   orderedStrictlyGreater(KnownRHS.getKnownFPClasses()));
-  } else
-    llvm_unreachable("unhandled intrinsic");
-
-  // Fixup zero handling if denormals could be returned as a zero.
-  //
-  // As there's no spec for denormal flushing, be conservative with the
-  // treatment of denormals that could be flushed to zero. For older
-  // subtargets on AMDGPU the min/max instructions would not flush the
-  // output and return the original value.
-  //
-  if ((Known.getKnownFPClasses() & fcZero) != fcNone &&
-      !Known.isKnownNeverSubnormal()) {
-    if (Mode != DenormalMode::getIEEE())
-      Known.setKnownFPClasses(Known.getKnownFPClasses() | fcZero);
+      Known.knownNot(orderedStrictlyGreater(KnownRHS.getKnownFPClasses(),
+                                            /*OrderedZeroSign=*/false));
+    break;
+  }
+  case MinMaxKind::maximumnum: {
+    if (KnownLHS.isKnownNeverNaN())
+      Known.knownNot(orderedStrictlyLess(KnownLHS.getKnownFPClasses(),
+                                         /*OrderedZeroSign=*/true));
+    if (KnownRHS.isKnownNeverNaN())
+      Known.knownNot(orderedStrictlyLess(KnownRHS.getKnownFPClasses(),
+                                         /*OrderedZeroSign=*/true));
+    break;
+  }
+  case MinMaxKind::minimumnum: {
+    if (KnownLHS.isKnownNeverNaN())
+      Known.knownNot(orderedStrictlyGreater(KnownLHS.getKnownFPClasses(),
+                                            /*OrderedZeroSign=*/true));
+    if (KnownRHS.isKnownNeverNaN())
+      Known.knownNot(orderedStrictlyGreater(KnownRHS.getKnownFPClasses(),
+                                            /*OrderedZeroSign=*/true));
+    break;
+  }
+  case MinMaxKind::maximum: {
+    Known.knownNot(orderedStrictlyLess(KnownLHS.getKnownFPClasses(),
+                                       /*OrderedZeroSign=*/true) |
+                   orderedStrictlyLess(KnownRHS.getKnownFPClasses(),
+                                       /*OrderedZeroSign=*/true));
+    break;
+  }
+  case MinMaxKind::minimum: {
+    Known.knownNot(orderedStrictlyGreater(KnownLHS.getKnownFPClasses(),
+                                          /*OrderedZeroSign=*/true) |
+                   orderedStrictlyGreater(KnownRHS.getKnownFPClasses(),
+                                          /*OrderedZeroSign=*/true));
+    break;
+  }
   }
 
-  if (Known.isKnownNeverNaN()) {
-    if (KnownLHS.getSignBit() && KnownRHS.getSignBit() &&
-        *KnownLHS.getSignBit() == *KnownRHS.getSignBit()) {
-      if (*KnownLHS.getSignBit())
-        Known.signBitMustBeOne();
-      else
-        Known.signBitMustBeZero();
-    } else if ((Kind == MinMaxKind::maximum || Kind == MinMaxKind::minimum ||
-                Kind == MinMaxKind::maximumnum ||
-                Kind == MinMaxKind::minimumnum) ||
-               // FIXME: Should be using logical zero versions
-               ((KnownLHS.isKnownNeverNegZero() ||
-                 KnownRHS.isKnownNeverPosZero()) &&
-                (KnownLHS.isKnownNeverPosZero() ||
-                 KnownRHS.isKnownNeverNegZero()))) {
-      // Don't take sign bit from NaN operands.
-      if (!KnownLHS.isKnownNeverNaN())
-        KnownLHS.setSignBit(std::nullopt);
-      if (!KnownRHS.isKnownNeverNaN())
-        KnownRHS.setSignBit(std::nullopt);
-      if ((Kind == MinMaxKind::maximum || Kind == MinMaxKind::maximumnum ||
-           Kind == MinMaxKind::maxnum) &&
-          (KnownLHS.getSignBit() == false || KnownRHS.getSignBit() == false))
-        Known.signBitMustBeZero();
-      else if ((Kind == MinMaxKind::minimum || Kind == MinMaxKind::minimumnum ||
-                Kind == MinMaxKind::minnum) &&
-               (KnownLHS.getSignBit() == true || KnownRHS.getSignBit() == true))
-        Known.signBitMustBeOne();
-    }
-  }
+  // Remove impossible non-NaN classes.
+  FPClassTest PossibleClasses =
+      KnownLHS.getKnownFPClasses() | KnownRHS.getKnownFPClasses() | fcNan;
+  Known.knownNot(~PossibleClasses);
 
-  return Known;
+  return applyOutputDenormalMode(Known, Mode);
 }
 
 KnownFPClass KnownFPClass::canonicalize(const KnownFPClass &KnownSrc,
