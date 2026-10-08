@@ -4523,10 +4523,25 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     break;
   }
   case Intrinsic::fptoui_sat:
-  case Intrinsic::fptosi_sat:
+  case Intrinsic::fptosi_sat: {
     if (Instruction *I = foldItoFPtoI(*II))
       return I;
+
+    Value *Src = II->getArgOperand(0);
+    Value *X;
+    // select (fcmp ord X, 0.0), X, +-0.0 --> X
+    if (match(Src, m_Select(m_SpecificFCmp(FCmpInst::FCMP_ORD, m_Value(X),
+                                           m_AnyZeroFP()),
+                            m_Deferred(X), m_AnyZeroFP())))
+      return replaceOperand(*II, 0, X);
+
+    // select (fcmp uno X, 0.0), +-0.0, X --> X
+    if (match(Src, m_Select(m_SpecificFCmp(FCmpInst::FCMP_UNO, m_Value(X),
+                                           m_AnyZeroFP()),
+                            m_AnyZeroFP(), m_Deferred(X))))
+      return replaceOperand(*II, 0, X);
     break;
+  }
   case Intrinsic::frexp: {
     // frexp(frexp(x).fract) -> { frexp(x).fract, 0 }: the fraction operand is
     // already normalized, so the first result is idempotent and the second is
