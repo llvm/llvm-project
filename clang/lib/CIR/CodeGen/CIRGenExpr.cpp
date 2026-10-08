@@ -2603,17 +2603,12 @@ Address CIRGenFunction::emitArrayToPointerDecay(const Expr *e,
 
   // If the array type was an incomplete type, we need to make sure
   // the decay ends up being the right type.
-  auto lvalueAddrTy = mlir::cast<cir::PointerType>(addr.getPointer().getType());
-
   if (e->getType()->isVariableArrayType())
     return addr;
 
-  [[maybe_unused]] auto pointeeTy =
-      mlir::cast<cir::ArrayType>(lvalueAddrTy.getPointee());
-
-  [[maybe_unused]] mlir::Type arrayTy = convertType(e->getType());
+  mlir::Type arrayTy = convertType(e->getType());
   assert(mlir::isa<cir::ArrayType>(arrayTy) && "expected array");
-  assert(pointeeTy == arrayTy);
+  addr = addr.withElementType(builder, arrayTy);
 
   // The result of this decay conversion points to an array element within the
   // base lvalue. However, since TBAA currently does not support representing
