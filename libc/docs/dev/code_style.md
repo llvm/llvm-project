@@ -224,14 +224,14 @@ not required.
 ## Warnings in sources
 
 We expect contributions to be free of warnings from the [minimum supported
-compiler versions](https://libc.llvm.org/compiler_support.html#minimum-supported-versions) (and newer).
+compiler versions](../compiler_support.md#minimum-supported-versions) (and newer).
 
 ## Header Inclusion Policy
 
 Because llvm-libc supports
-[Overlay Mode](https://libc.llvm.org/overlay_mode.html),
-[Full Host Build Mode](https://libc.llvm.org/full_host_build.html) and
-[Full Cross Build Mode](https://libc.llvm.org/full_cross_build.html) care
+[Overlay Mode](../overlay_mode.md),
+[Full Host Build Mode](../full_host_build.md) and
+[Full Cross Build Mode](../full_cross_build.md) care
 must be taken when `#include`'ing certain headers.
 
 The `include/` directory contains public facing headers that users must
