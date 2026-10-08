@@ -79,6 +79,7 @@ add_entrypoint_object(
     libc.include.sys_syscall
     libc.src.__support.libc_errno
     libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
