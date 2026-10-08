@@ -5738,11 +5738,12 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       SDValue Target = Node->getOperand(1);
       assert(Target.getValueType() == MVT::i32 && "Unexpected VT!");
       SDValue ZextTarget = CurDAG->getZExtOrTrunc(Target, dl, MVT::i64);
-      SDValue Brind = CurDAG->getNode(Opcode, dl, MVT::Other,
-                                      Node->getOperand(0), ZextTarget);
-      ReplaceNode(Node, Brind.getNode());
-      SelectCode(ZextTarget.getNode());
-      SelectCode(Brind.getNode());
+      insertDAGNode(*CurDAG, SDValue(Node, 0), ZextTarget);
+
+      unsigned Opc = Opcode == X86ISD::NT_BRIND ? X86::JMP64r_NT : X86::JMP64r;
+      SDNode *Res = CurDAG->getMachineNode(Opc, dl, MVT::Other, ZextTarget,
+                                           Node->getOperand(0));
+      ReplaceNode(Node, Res);
       return;
     }
     break;
