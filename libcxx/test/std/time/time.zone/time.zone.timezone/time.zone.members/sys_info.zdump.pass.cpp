@@ -13,6 +13,9 @@
 // XFAIL: libcpp-has-no-experimental-tzdb
 // XFAIL: availability-tzdb-missing
 
+// tzdata mismatch on Africa/Casablanca in 2099
+// XFAIL: LLVM-LIBC-FIXME
+
 #include <chrono>
 #include <format>
 #include <fstream>
