@@ -590,6 +590,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":IR",
+        ":Support",
         "//llvm:BitstreamReader",
         "//llvm:Core",
         "//llvm:Remarks",

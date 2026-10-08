@@ -1,6 +1,8 @@
 #include "mlir/Remark/RemarkStreamer.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Remarks.h"
+#include "mlir/Support/FileUtilities.h"
 
 #include "llvm/Remarks/RemarkSerializer.h"
 #include "llvm/Remarks/RemarkStreamer.h"
@@ -9,20 +11,20 @@
 #include "llvm/Support/ToolOutputFile.h"
 
 namespace mlir::remark::detail {
-
 FailureOr<std::unique_ptr<MLIRRemarkStreamerBase>>
 LLVMRemarkStreamer::createToFile(llvm::StringRef path,
-                                 llvm::remarks::Format fmt) {
-  std::error_code ec;
-  // Use error_code ctor; YAML is text. (Bitstream also works fine here.)
-  auto f =
-      std::make_unique<llvm::ToolOutputFile>(path, ec, llvm::sys::fs::OF_Text);
-  if (ec)
+                                 llvm::remarks::Format fmt,
+                                 std::string *errorMessage) {
+  std::unique_ptr<llvm::ToolOutputFile> f = openOutputFile(path, errorMessage);
+  if (!f)
     return failure();
 
   auto serOr = llvm::remarks::createRemarkSerializer(fmt, f->os());
   if (!serOr) {
-    llvm::consumeError(serOr.takeError());
+    std::string reason = llvm::toString(serOr.takeError());
+    if (errorMessage)
+      *errorMessage =
+          "cannot create remark serializer for '" + path.str() + "': " + reason;
     return failure();
   }
 
@@ -63,10 +65,11 @@ LogicalResult enableOptimizationRemarksWithLLVMStreamer(
     std::unique_ptr<detail::RemarkEmittingPolicyBase> remarkEmittingPolicy,
     const RemarkCategories &cat, bool printAsEmitRemarks) {
 
+  std::string errorMessage;
   FailureOr<std::unique_ptr<detail::MLIRRemarkStreamerBase>> sOr =
-      detail::LLVMRemarkStreamer::createToFile(path, fmt);
+      detail::LLVMRemarkStreamer::createToFile(path, fmt, &errorMessage);
   if (failed(sOr))
-    return failure();
+    return emitError(UnknownLoc::get(&ctx)) << errorMessage;
 
   return remark::enableOptimizationRemarks(ctx, std::move(*sOr),
                                            std::move(remarkEmittingPolicy), cat,
