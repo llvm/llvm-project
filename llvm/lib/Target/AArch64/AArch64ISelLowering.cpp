@@ -28208,7 +28208,6 @@ performInterleavedStoreCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   EVT SubVecTy = ValueInterleaveOps[0].getValueType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  const AArch64Subtarget &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
   if (!TLI.isTypeLegal(SubVecTy))
     return SDValue();
   bool IsScalable = SubVecTy.isScalableVector();
@@ -28218,9 +28217,6 @@ performInterleavedStoreCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   auto *MemN = cast<MemSDNode>(N);
   if (IsScalable) {
-    if (!Subtarget.isSVEorStreamingSVEAvailable())
-      return SDValue();
-
     SDValue Pred;
     if (IsMasked) {
       Pred = getNarrowMaskForInterleavedOps(DAG, DL, Mask, NumParts);
@@ -28252,6 +28248,7 @@ performInterleavedStoreCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                    MemN->getMemoryVT(), MemN->getMemOperand());
   }
 
+  const AArch64Subtarget &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
   // Fixed length vector using NEON
   if (!IsMasked && (SubBits == 64 || SubBits == 128) &&
       Subtarget.isNeonAvailable()) {
@@ -31579,12 +31576,8 @@ static SDValue performVectorDeinterleaveCombine(
   SDVTList ResVTList = DAG.getVTList(ResVTs);
 
   SDValue Res;
-  SmallVector<SDValue, 4> ResOps(NumParts);
   MemSDNode *MemNode = dyn_cast<MemSDNode>(WideVec);
   if (IsScalable) {
-    if (!Subtarget.isSVEorStreamingSVEAvailable())
-      return SDValue();
-
     SDValue Chain, BasePtr, Pred;
     if (auto *MaskedLoad = dyn_cast<MaskedLoadSDNode>(WideVec)) {
       // Bail out if the masked load has an unexpected number of uses, since we
@@ -31635,16 +31628,14 @@ static SDValue performVectorDeinterleaveCombine(
     Res = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, ResVTList,
                                   NewLdOps, MemNode->getMemoryVT(),
                                   MemNode->getMemOperand());
-
-    for (unsigned Idx = 0; Idx < NumParts; ++Idx)
-      ResOps[Idx] = Res.getValue(Idx);
   } else {
+    if (!Subtarget.isNeonAvailable())
+      return SDValue();
     auto *Load = dyn_cast<LoadSDNode>(WideVec);
     if (!Load || !Load->hasNUsesOfValue(NumParts, 0) || !Load->isSimple() ||
         !ISD::isNormalLoad(Load) || !Load->getOffset().isUndef())
       return SDValue();
 
-    if (Subtarget.isNeonAvailable()) {
       static constexpr Intrinsic::ID NEONLoads[] = {
           Intrinsic::aarch64_neon_ld2, Intrinsic::aarch64_neon_ld3,
           Intrinsic::aarch64_neon_ld4};
@@ -31656,35 +31647,10 @@ static SDValue performVectorDeinterleaveCombine(
       Res = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, ResVTList,
                                     NewLdOps, MemNode->getMemoryVT(),
                                     MemNode->getMemOperand());
-
-      for (unsigned Idx = 0; Idx < NumParts; ++Idx)
-        ResOps[Idx] = Res.getValue(Idx);
-    } else {
-      if (!Subtarget.isSVEorStreamingSVEAvailable())
-        return SDValue();
-
-      EVT ContainerVT = getContainerForFixedLengthVector(DAG, SubVecTy);
-      SDValue Pred = getPredicateForFixedLengthVector(DAG, DL, SubVecTy);
-      static constexpr Intrinsic::ID SVELoads[] = {
-          Intrinsic::aarch64_sve_ld2_sret, Intrinsic::aarch64_sve_ld3_sret,
-          Intrinsic::aarch64_sve_ld4_sret};
-      SmallVector<EVT, 5> SVEResVTs(NumParts, ContainerVT);
-      SVEResVTs.push_back(MVT::Other);
-      SDValue NewLdOps[] = {
-          Load->getChain(),
-          DAG.getConstant(SVELoads[NumParts - 2], DL, MVT::i32), Pred,
-          Load->getBasePtr()};
-      // We can now generate a structured load!
-      Res = DAG.getMemIntrinsicNode(
-          ISD::INTRINSIC_W_CHAIN, DL, DAG.getVTList(SVEResVTs), NewLdOps,
-          MemNode->getMemoryVT(), MemNode->getMemOperand());
-
-      for (unsigned Idx = 0; Idx < NumParts; ++Idx)
-        ResOps[Idx] =
-            convertFromScalableVector(DAG, SubVecTy, Res.getValue(Idx));
-    }
   }
-
+  SmallVector<SDValue, 4> ResOps(NumParts);
+  for (unsigned Idx = 0; Idx < NumParts; ++Idx)
+    ResOps[Idx] = Res.getValue(Idx);
   // Replace uses of the original chain result with the new chain result.
   DAG.ReplaceAllUsesOfValueWith(WideVec.getValue(1),
                                 SDValue(Res.getNode(), NumParts));
