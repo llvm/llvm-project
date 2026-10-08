@@ -4139,7 +4139,7 @@ static bool performBranchToCommonDestFolding(CondBrInst *BI, CondBrInst *PBI,
   LLVM_DEBUG(dbgs() << "FOLDING BRANCH TO COMMON DEST:\n" << *PBI << *BB);
 
   IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
-      BB->getContext(), ConstantFolder{},
+      *BB->getModule(), ConstantFolder{},
       IRBuilderCallbackInserter([&BB](Instruction *I) {
         // The builder is used to create instructions to eliminate the branch in
         // BB. If BB's terminator has !annotation metadata, add it to the new

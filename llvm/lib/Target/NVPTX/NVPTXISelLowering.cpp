@@ -52,6 +52,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/IR/Type.h"
@@ -996,6 +997,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
       setOperationAction(ISD::FP_ROUND, VT, Custom);
     }
   }
+
+  // Expand nearest-even rounding and diagnose unsupported conversions.
+  setOperationAction(ISD::FPTRUNC_ROUND, {MVT::f16, MVT::bf16, MVT::f32},
+                     Custom);
 
   // Expand v2f32 = fp_extend
   setOperationAction(ISD::FP_EXTEND, MVT::v2f32, Expand);
@@ -2436,6 +2441,40 @@ SDValue NVPTXTargetLowering::LowerFP_ROUND(SDValue Op,
   return Op;
 }
 
+static SDValue lowerFPTRUNC_ROUND(SDValue Op, SelectionDAG &DAG,
+                                  const NVPTXSubtarget &STI) {
+  EVT SrcVT = Op.getOperand(0).getValueType();
+  EVT DstVT = Op.getValueType();
+  auto RM = static_cast<RoundingMode>(Op.getConstantOperandVal(1));
+  if (RM == RoundingMode::NearestTiesToEven) {
+    // Reuse the native selection and fallback expansion for ordinary fptrunc.
+    SDLoc DL(Op);
+    return DAG.getNode(ISD::FP_ROUND, DL, DstVT, Op.getOperand(0),
+                       DAG.getIntPtrConstant(0, DL, /*isTarget=*/true),
+                       Op.getNode()->getFlags());
+  }
+
+  bool RoundToInfinity =
+      RM == RoundingMode::TowardNegative || RM == RoundingMode::TowardPositive;
+
+  bool Supported = RM == RoundingMode::TowardZero || RoundToInfinity;
+  if (DstVT == MVT::bf16) {
+    if (SrcVT == MVT::f64 || RoundToInfinity)
+      Supported &= STI.hasFeature(NVPTX::SM90);
+    else
+      Supported &= STI.hasFeature(NVPTX::SM80);
+  }
+
+  if (Supported)
+    return Op;
+
+  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+      DAG.getMachineFunction().getFunction(),
+      "unsupported conversion or rounding mode for llvm.fptrunc.round",
+      SDLoc(Op).getDebugLoc()));
+  return DAG.getPOISON(DstVT);
+}
+
 SDValue NVPTXTargetLowering::LowerFP_EXTEND(SDValue Op,
                                             SelectionDAG &DAG) const {
   SDValue Narrow = Op.getOperand(0);
@@ -3202,6 +3241,171 @@ static SDValue lowerIntrinsicWChain(SDValue Op, SelectionDAG &DAG) {
   }
 }
 
+static unsigned getSPNumRegs(EVT VT) {
+  return divideCeil(VT.getSizeInBits(), 32);
+}
+
+static EVT getSPRegType(EVT VT) {
+  assert(VT.isVector() && "Expected a vector type");
+  EVT EltVT = VT.getVectorElementType();
+  if (EltVT == MVT::i8)
+    return MVT::v4i8;
+  if (EltVT == MVT::i16)
+    return MVT::v2i16;
+  return EltVT;
+}
+
+static void appendSplitSPOperands(ArrayRef<SDUse> Input,
+                                  SmallVectorImpl<SDValue> &Output,
+                                  SelectionDAG &DAG) {
+  for (SDValue Operand : Input) {
+    EVT VT = Operand.getValueType();
+    SDLoc DL(Operand);
+    if (!VT.isVector()) {
+      Output.push_back(Operand);
+      continue;
+    }
+
+    // Pack partial .b32 operands at their natural width before extending them
+    // to avoid redundant cvt/prmt sequences.
+    if (VT.getSizeInBits() < 32) {
+      EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
+      Output.push_back(
+          DAG.getAnyExtOrTrunc(DAG.getBitcast(IntVT, Operand), DL, MVT::i32));
+      continue;
+    }
+
+    EVT RegVT = getSPRegType(VT);
+    if (!RegVT.isVector()) {
+      DAG.ExtractVectorElements(Operand, Output);
+      continue;
+    }
+
+    unsigned RegElts = RegVT.getVectorNumElements();
+    for (unsigned I : llvm::seq(getSPNumRegs(VT)))
+      Output.push_back(DAG.getBitcast(
+          MVT::i32, DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, RegVT, Operand,
+                                DAG.getVectorIdxConstant(I * RegElts, DL))));
+  }
+}
+
+static SDValue joinSPRegs(EVT VT, ArrayRef<SDValue> Regs, const SDLoc &DL,
+                          SelectionDAG &DAG) {
+  assert(Regs.size() == getSPNumRegs(VT) && VT.getSizeInBits() % 32 == 0 &&
+         "Incorrect number of SP vector registers");
+  if (!VT.isVector())
+    return Regs.front();
+
+  EVT RegVT = getSPRegType(VT);
+  SmallVector<SDValue> Parts;
+  for (SDValue Reg : Regs)
+    Parts.push_back(DAG.getBitcast(RegVT, Reg));
+
+  if (!RegVT.isVector())
+    return DAG.getBuildVector(VT, DL, Parts);
+  if (Parts.size() == 1)
+    return Parts.front();
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Parts);
+}
+
+static unsigned getSPCompressNodeOpcode(unsigned NumResults) {
+#define SPCOMPRESS_NODE_CASE(NumResults)                                       \
+  case NumResults:                                                             \
+    return NVPTXISD::SPCOMPRESS_R##NumResults
+
+  switch (NumResults) {
+    SPCOMPRESS_NODE_CASE(2);
+    SPCOMPRESS_NODE_CASE(3);
+    SPCOMPRESS_NODE_CASE(5);
+    SPCOMPRESS_NODE_CASE(6);
+    SPCOMPRESS_NODE_CASE(9);
+    SPCOMPRESS_NODE_CASE(10);
+    SPCOMPRESS_NODE_CASE(12);
+    SPCOMPRESS_NODE_CASE(18);
+    SPCOMPRESS_NODE_CASE(20);
+    SPCOMPRESS_NODE_CASE(24);
+    SPCOMPRESS_NODE_CASE(36);
+    SPCOMPRESS_NODE_CASE(40);
+    SPCOMPRESS_NODE_CASE(48);
+    SPCOMPRESS_NODE_CASE(72);
+    SPCOMPRESS_NODE_CASE(80);
+    SPCOMPRESS_NODE_CASE(96);
+  default:
+    llvm_unreachable("Invalid spcompress result count");
+  }
+
+#undef SPCOMPRESS_NODE_CASE
+}
+
+static unsigned getSPDecompressNodeOpcode(unsigned NumResults) {
+#define SPDECOMPRESS_NODE_CASE(NumResults)                                     \
+  case NumResults:                                                             \
+    return NVPTXISD::SPDECOMPRESS_R##NumResults
+
+  switch (NumResults) {
+    SPDECOMPRESS_NODE_CASE(1);
+    SPDECOMPRESS_NODE_CASE(2);
+    SPDECOMPRESS_NODE_CASE(4);
+    SPDECOMPRESS_NODE_CASE(8);
+    SPDECOMPRESS_NODE_CASE(16);
+    SPDECOMPRESS_NODE_CASE(32);
+    SPDECOMPRESS_NODE_CASE(64);
+    SPDECOMPRESS_NODE_CASE(128);
+  default:
+    llvm_unreachable("Invalid spdecompress result count");
+  }
+
+#undef SPDECOMPRESS_NODE_CASE
+}
+
+static SDValue lowerSPIntrinsic(SDValue Op, SelectionDAG &DAG) {
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+
+  auto IID = static_cast<Intrinsic::ID>(N->getConstantOperandVal(0));
+  bool IsCompress = IID == Intrinsic::nvvm_spcompress;
+  assert((IsCompress || IID == Intrinsic::nvvm_spdecompress) &&
+         "Unexpected SP intrinsic");
+
+  EVT DataVT =
+      IsCompress ? N->getOperand(1).getValueType() : N->getValueType(0);
+  EVT CDataVT =
+      IsCompress ? N->getValueType(1) : N->getOperand(2).getValueType();
+
+  unsigned ElemSize = DataVT.getScalarSizeInBits();
+  unsigned IdxSize = N->getConstantOperandVal(3);
+  unsigned NumTgt = N->getConstantOperandVal(4);
+  unsigned NumSrc =
+      NumTgt * CDataVT.getVectorNumElements() / DataVT.getVectorNumElements();
+  unsigned RepeatFactor = IsCompress ? getSPNumRegs(DataVT) / 2
+                                     : DataVT.getVectorNumElements() / NumTgt;
+
+  SmallVector<SDValue, 16> Ops;
+  for (unsigned Qualifier : {ElemSize, IdxSize, RepeatFactor, NumSrc, NumTgt})
+    Ops.push_back(DAG.getTargetConstant(Qualifier, DL, MVT::i32));
+  appendSplitSPOperands(N->ops().slice(1, 2), Ops, DAG);
+
+  SmallVector<EVT, 16> ResultVTs;
+  for (const EVT VT : N->values())
+    ResultVTs.append(getSPNumRegs(VT), MVT::i32);
+
+  unsigned Opcode = IsCompress ? getSPCompressNodeOpcode(ResultVTs.size())
+                               : getSPDecompressNodeOpcode(ResultVTs.size());
+  SDValue Lowered = DAG.getNode(Opcode, DL, ResultVTs, Ops);
+
+  SmallVector<SDValue, 2> Retvals;
+  unsigned Reg = 0;
+  for (const EVT VT : N->values()) {
+    SmallVector<SDValue> Regs;
+    for (unsigned R : llvm::seq(getSPNumRegs(VT)))
+      Regs.push_back(Lowered.getValue(Reg + R));
+    Reg += Regs.size();
+    Retvals.push_back(joinSPRegs(VT, Regs, DL, DAG));
+  }
+
+  return DAG.getMergeValues(Retvals, DL);
+}
+
 static SDValue lowerIntrinsicWOChain(SDValue Op, SelectionDAG &DAG) {
   switch (Op->getConstantOperandVal(0)) {
   default:
@@ -3230,6 +3434,10 @@ static SDValue lowerIntrinsicWOChain(SDValue Op, SelectionDAG &DAG) {
   case Intrinsic::nvvm_f32x4_to_e2m1x4_rs_satfinite:
   case Intrinsic::nvvm_f32x4_to_e2m1x4_rs_relu_satfinite:
     return lowerCvtRSIntrinsics(Op, DAG);
+
+  case Intrinsic::nvvm_spcompress:
+  case Intrinsic::nvvm_spdecompress:
+    return lowerSPIntrinsic(Op, DAG);
   }
 }
 
@@ -3519,6 +3727,8 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerFP_TO_INT(Op, DAG);
   case ISD::FP_ROUND:
     return LowerFP_ROUND(Op, DAG);
+  case ISD::FPTRUNC_ROUND:
+    return lowerFPTRUNC_ROUND(Op, DAG, STI);
   case ISD::FP_EXTEND:
     return LowerFP_EXTEND(Op, DAG);
   case ISD::VAARG:
@@ -4773,6 +4983,17 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.flags =
         MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable;
     Info.align.reset();
+    Infos.push_back(Info);
+    return;
+  }
+
+  case Intrinsic::nvvm_prefetch_L1_32B_valid_addr: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::i8;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align = Align(1);
     Infos.push_back(Info);
     return;
   }
@@ -7308,6 +7529,9 @@ static SDValue combineIntrinsicWOChain(SDNode *N,
       return diagnoseUnsupportedFAdd(N, DCI.DAG, IID, RoundingMode);
     return combineFAddWithNeg(N, DCI.DAG, IID, RoundingMode);
   }
+  case Intrinsic::nvvm_spcompress:
+  case Intrinsic::nvvm_spdecompress:
+    return lowerSPIntrinsic(SDValue(N, 0), DCI.DAG);
   }
   return SDValue();
 }
@@ -7729,11 +7953,18 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
             ? AtomicExpansionKind::Expand
             : AtomicExpansionKind::None;
 
-    // AllowFTZAtomics forces atom.add regardless of the FTZ mismatch.
+    // Both the -nvptx-allow-ftz-atomics option and per-instruction
+    // !atomic.ignore.denormal.mode say that denormal handling is insignificant
+    // here, so atom.add may be used even when its FTZ behavior disagrees with
+    // the function's.
+    const bool IgnoreFTZMismatch =
+        AllowFTZAtomics ||
+        AI->hasMetadata(LLVMContext::MD_atomic_ignore_denormal_mode);
+
     if (Ty->isFloatTy()) {
       const bool FTZ = F->getDenormalMode(APFloat::IEEEsingle()).Output ==
                        DenormalMode::PreserveSign;
-      bool UseNative = AllowFTZAtomics;
+      bool UseNative = IgnoreFTZMismatch;
       switch (AI->getPointerAddressSpace()) {
       case llvm::ADDRESS_SPACE_GLOBAL:
         UseNative |= FTZ;
@@ -7752,7 +7983,7 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
       // function that is not in FTZ mode for f16.
       const bool FTZ = F->getDenormalMode(APFloat::IEEEhalf()).Output ==
                        DenormalMode::PreserveSign;
-      if ((!FTZ || AllowFTZAtomics) && STI.hasFeature(NVPTX::SM70) &&
+      if ((!FTZ || IgnoreFTZMismatch) && STI.hasFeature(NVPTX::SM70) &&
           STI.hasFeature(NVPTX::PTX63))
         return ExpansionKind;
     }

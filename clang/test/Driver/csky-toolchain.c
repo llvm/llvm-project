@@ -1,14 +1,14 @@
 // UNSUPPORTED: system-windows
 // A basic clang -cc1 command-line, and simple environment check.
 
-// RUN: %clang -### %s --target=csky 2>&1 | FileCheck -check-prefix=CC1 %s
+// RUN: %clang --sysroot= -### %s --target=csky 2>&1 | FileCheck -check-prefix=CC1 %s
 // CC1: "-cc1" "-triple" "csky"
 // CC1: "-fno-signed-char"
 
 // In the below tests, --rtlib=platform is used so that the driver ignores
 // the configure-time CLANG_DEFAULT_RTLIB option when choosing the runtime lib
 
-// RUN: %clang -### %s -fuse-ld=ld -no-pie --target=csky-unknown-linux-gnu --rtlib=platform --unwindlib=platform \
+// RUN: %clang --sysroot= -### %s -fuse-ld=ld -no-pie --target=csky-unknown-linux-gnu --rtlib=platform --unwindlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_csky_linux_sdk  2>&1 | FileCheck -check-prefix=C-CSKY-LINUX-MULTI %s
 
 // C-CSKY-LINUX-MULTI: "{{.*}}/Inputs/multilib_csky_linux_sdk/lib/gcc/csky-linux-gnuabiv2/6.3.0/../../..{{/|\\\\}}..{{/|\\\\}}csky-linux-gnuabiv2/bin{{/|\\\\}}ld"
@@ -23,7 +23,7 @@
 // C-CSKY-LINUX-MULTI: "-L{{.*}}/Inputs/multilib_csky_linux_sdk/lib/gcc/csky-linux-gnuabiv2/6.3.0/../../..{{/|\\\\}}..{{/|\\\\}}csky-linux-gnuabiv2/libc/lib"
 // C-CSKY-LINUX-MULTI: "-L{{.*}}/Inputs/multilib_csky_linux_sdk/lib/gcc/csky-linux-gnuabiv2/6.3.0/../../..{{/|\\\\}}..{{/|\\\\}}csky-linux-gnuabiv2/libc/usr/lib"
 
-// RUN: %clang -### %s -fuse-ld=ld -fno-pic -no-pie --target=csky-unknown-linux-gnu --rtlib=platform --unwindlib=platform -march=ck860v \
+// RUN: %clang --sysroot= -### %s -fuse-ld=ld -fno-pic -no-pie --target=csky-unknown-linux-gnu --rtlib=platform --unwindlib=platform -march=ck860v \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_csky_linux_sdk 2>&1 | FileCheck -check-prefix=C-CSKY-LINUX-CK860V %s
 
 // C-CSKY-LINUX-CK860V: "{{.*}}/Inputs/multilib_csky_linux_sdk/lib/gcc/csky-linux-gnuabiv2/6.3.0/../../..{{/|\\\\}}..{{/|\\\\}}csky-linux-gnuabiv2/bin{{/|\\\\}}ld"
