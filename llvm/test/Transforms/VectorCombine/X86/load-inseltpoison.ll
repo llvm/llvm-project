@@ -188,8 +188,8 @@ define <4 x float> @load_f32_insert_v4f32_may_free_prior_access(ptr %p) {
 ; CHECK-LABEL: @load_f32_insert_v4f32_may_free_prior_access(
 ; CHECK-NEXT:    store <4 x float> zeroinitializer, ptr [[P:%.*]], align 16
 ; CHECK-NEXT:    call void @may_free()
-; CHECK-NEXT:    [[S:%.*]] = load float, ptr [[P]], align 4
-; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> poison, float [[S]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P]], align 4
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   store <4 x float> zeroinitializer, ptr %p, align 16
