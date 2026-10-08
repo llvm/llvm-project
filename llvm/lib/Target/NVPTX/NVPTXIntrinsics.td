@@ -1642,6 +1642,16 @@ def PREFETCH_GLOBAL_L2_EVICT_NORMAL : PREFETCH_INTRS<"prefetch.global.L2::evict_
 def PREFETCH_GLOBAL_L2_EVICT_LAST : PREFETCH_INTRS<"prefetch.global.L2::evict_last",
                                     int_nvvm_prefetch_global_L2_evict_last>;
 
+class PREFETCH_SIZE_INTR<NVPTXAddressSpace as>
+  : BasicNVPTXInst<(outs),
+                   (ins ADDR:$addr),
+                   "prefetch" # as.Suffix # ".L1::32B.valid_addr",
+                   [(IntrinsicInAS<int_nvvm_prefetch_L1_32B_valid_addr, as> addr:$addr)]>,
+    Requires<[PTX94, SM90]>;
+
+def PREFETCH_GLOBAL_L1_32B : PREFETCH_SIZE_INTR<AddrSpaceGlobal>;
+def PREFETCH_GENERIC_L1_32B : PREFETCH_SIZE_INTR<AddrSpaceGeneric>;
+
 //Applypriority intrinsics
 class APPLYPRIORITY_L2_INTRS<string addrspace> :
           BasicNVPTXInst<(outs), (ins ADDR:$addr, B64:$size),
@@ -3434,28 +3444,16 @@ def : Pat<(i16 (CVT_F32X4_TO_FPX4_RS_SF_NODE<"E2M1",
 // FNS
 //
 
-class INT_FNS_MBO<dag ins, dag Operands>
-  : BasicNVPTXInst<(outs B32:$dst), ins,
-               "fns.b32",
-               [(set i32:$dst, Operands)]>,
+def INT_FNS
+  : BasicNVPTXInst<(outs B32:$dst),
+                  (ins B32Op:$mask, B32Op:$base, B32Op:$offset),
+                  "fns.b32">,
     Requires<[PTX60, SM30]>;
 
-def INT_FNS_rrr : INT_FNS_MBO<(ins B32:$mask, B32:$base, B32:$offset),
-                     (int_nvvm_fns i32:$mask, i32:$base, i32:$offset)>;
-def INT_FNS_rri : INT_FNS_MBO<(ins B32:$mask, B32:$base,    i32imm:$offset),
-                     (int_nvvm_fns i32:$mask, i32:$base,       imm:$offset)>;
-def INT_FNS_rir : INT_FNS_MBO<(ins B32:$mask,    i32imm:$base, B32:$offset),
-                     (int_nvvm_fns i32:$mask,       imm:$base, i32:$offset)>;
-def INT_FNS_rii : INT_FNS_MBO<(ins B32:$mask,    i32imm:$base,    i32imm:$offset),
-                     (int_nvvm_fns i32:$mask,       imm:$base,       imm:$offset)>;
-def INT_FNS_irr : INT_FNS_MBO<(ins    i32imm:$mask, B32:$base, B32:$offset),
-                     (int_nvvm_fns       imm:$mask, i32:$base, i32:$offset)>;
-def INT_FNS_iri : INT_FNS_MBO<(ins    i32imm:$mask, B32:$base,    i32imm:$offset),
-                     (int_nvvm_fns       imm:$mask, i32:$base,       imm:$offset)>;
-def INT_FNS_iir : INT_FNS_MBO<(ins    i32imm:$mask,    i32imm:$base, B32:$offset),
-                     (int_nvvm_fns       imm:$mask,       imm:$base, i32:$offset)>;
-def INT_FNS_iii : INT_FNS_MBO<(ins    i32imm:$mask,    i32imm:$base,    i32imm:$offset),
-                     (int_nvvm_fns       imm:$mask,       imm:$base,       imm:$offset)>;
+let Predicates = [PTX60, SM30] in
+  def : Pat<(int_nvvm_fns i32:$mask, i32:$base, i32:$offset),
+            (INT_FNS (i32 reg_or_imm:$mask), (i32 reg_or_imm:$base),
+                     (i32 reg_or_imm:$offset))>;
 
 //-----------------------------------
 // Atomic Functions
