@@ -1073,12 +1073,14 @@ Value *VPInstruction::generate(VPTransformState &State,
       // (ReVec + i*ImVec) * (ReNext + i*ImNext)
       // is ReVec * ReNext - InVec * ImNext
       //    + i * (ReVec * ImNext + ImVec * ReNext)
-      Value *NewRe =
-          Builder.CreateFSub(Builder.CreateFMul(ReVec, ReNext),
-                             Builder.CreateFMul(ImVec, ImNext), "rdx.re");
-      Value *NewIm =
-          Builder.CreateFAdd(Builder.CreateFMul(ReVec, ImNext),
-                             Builder.CreateFMul(ImVec, ReNext), "rdx.im");
+      // Creating each of these values in a separate statement so they are
+      // produced in a predictable order across platforms.
+      Value *ReRe = Builder.CreateFMul(ReVec, ReNext);
+      Value *ImIm = Builder.CreateFMul(ImVec, ImNext);
+      Value *NewRe = Builder.CreateFSub(ReRe, ImIm, "rdx.re");
+      Value *ReIm = Builder.CreateFMul(ReVec, ImNext);
+      Value *ImRe = Builder.CreateFMul(ImVec, ReNext);
+      Value *NewIm = Builder.CreateFAdd(ReIm, ImRe, "rdx.im");
 
       ReVec = NewRe;
       ImVec = NewIm;
