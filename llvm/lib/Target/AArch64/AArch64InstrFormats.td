@@ -470,7 +470,6 @@ def uimm6_32b : Operand<i32>, ImmLeaf<i32, [{ return Imm >= 0 && Imm < 64; }]> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
-// TODO: Use AdjImmAsmOperand for the uimm6m1 and uimm6p1 operands too.
 class AdjImmAsmOperand<string name, string diagnostic, int adjustment,
                        int low, int high> : AsmOperandClass {
   let Name = name;
@@ -496,29 +495,27 @@ def CmpBranchBExtOperand
 def CmpBranchHExtOperand
     : ComplexPattern<i32, 2, "SelectCmpBranchExtOperand<false>", []> {}
 
-def UImm6Plus1Operand
-    : AdjImmAsmOperand<"UImm6P1", "InvalidImm1_64", -1, 0, 63>;
-
-def UImm6Minus1Operand
-    : AdjImmAsmOperand<"UImm6M1", "InvalidImmM1_62", 1, 0, 63>;
-
 def uimm6p1_32b : Operand<i32> {
-  let ParserMatchClass = UImm6Plus1Operand;
+  let ParserMatchClass =
+      AdjImmAsmOperand<"UImm6P1", "InvalidImm1_64", -1, 0, 63>;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def uimm6p1_64b : Operand<i64> {
-  let ParserMatchClass = UImm6Plus1Operand;
+  let ParserMatchClass =
+      AdjImmAsmOperand<"UImm6P1", "InvalidImm1_64", -1, 0, 63>;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def uimm6m1_32b : Operand<i32> {
-  let ParserMatchClass = UImm6Minus1Operand;
+  let ParserMatchClass =
+      AdjImmAsmOperand<"UImm6M1", "InvalidImmM1_62", 1, 0, 63>;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def uimm6m1_64b : Operand<i64> {
-  let ParserMatchClass = UImm6Minus1Operand;
+  let ParserMatchClass =
+      AdjImmAsmOperand<"UImm6M1", "InvalidImmM1_62", 1, 0, 63>;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
