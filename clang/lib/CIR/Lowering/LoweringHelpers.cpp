@@ -690,12 +690,10 @@ static mlir::Type adjustGlobalUnionTypeForInit(
 
   uint64_t unionSize = dataLayout.getTypeSize(unionTy).getFixedValue();
   uint64_t initSize = dataLayout.getTypeSize(memberTy).getFixedValue();
-  assert(initSize <= unionSize && "union initializer larger than the union");
-
   llvm::SmallVector<mlir::Type> newBody;
   newBody.push_back(memberTy);
 
-  // Fill the rest of the union's allocated size with byte padding.
+  // Pad to the union size unless a flexible array initializer is larger.
   if (initSize < unionSize)
     newBody.push_back(mlir::LLVM::LLVMArrayType::get(
         mlir::IntegerType::get(structTy.getContext(), 8),
