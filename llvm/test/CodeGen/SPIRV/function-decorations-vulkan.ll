@@ -3,9 +3,12 @@
 
 ; Use a decoration valid for Shader modules to check that function metadata
 ; is also lowered for Vulkan. RelaxedPrecision applies to the return value.
+; Repeated metadata entries must produce only one decoration.
 
-; CHECK-DAG: OpName %[[#Helper:]] "helper"
-; CHECK-DAG: OpDecorate %[[#Helper]] RelaxedPrecision
+; CHECK: OpName %[[#Helper:]] "helper"
+; CHECK-NOT: RelaxedPrecision
+; CHECK: OpDecorate %[[#Helper]] RelaxedPrecision
+; CHECK-NOT: RelaxedPrecision
 ; CHECK: %[[#Helper]] = OpFunction
 
 define internal float @helper(float %x) noinline !spirv.Decorations !0 {
@@ -19,5 +22,5 @@ define void @main() #0 {
 
 attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 
-!0 = !{!1}
+!0 = !{!1, !1}
 !1 = !{i32 0} ; RelaxedPrecision
