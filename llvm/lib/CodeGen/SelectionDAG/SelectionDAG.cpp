@@ -13065,6 +13065,13 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
       TypeSize ToSize = N.getValueSizeInBits(0);
 
       DIExpression *DbgExpression = DV->getExpression();
+      // A terminal dereference describes memory, even for a direct dbg_value.
+      // Adding a stack value would instead load an address-sized value.
+      bool EndsWithDeref = false;
+      for (auto Op : DbgExpression->expr_ops())
+        if (Op.getOp() != dwarf::DW_OP_LLVM_fragment)
+          EndsWithDeref = Op.getOp() == dwarf::DW_OP_deref;
+      bool StackValue = !DV->isIndirect() && !EndsWithDeref;
       auto ExtOps = DIExpression::getExtOps(FromSize, ToSize, false);
       auto NewLocOps = DV->copyLocationOps();
       bool Changed = false;
@@ -13074,7 +13081,8 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
           continue;
 
         NewLocOps[i] = GetLocationOperand(N0.getNode(), N0.getResNo());
-        DbgExpression = DIExpression::appendOpsToArg(DbgExpression, ExtOps, i);
+        DbgExpression =
+            DIExpression::appendOpsToArg(DbgExpression, ExtOps, i, StackValue);
         Changed = true;
       }
       assert(Changed && "Salvage target doesn't use N");
