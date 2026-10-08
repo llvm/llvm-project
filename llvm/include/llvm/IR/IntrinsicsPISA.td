@@ -145,7 +145,7 @@ def int_pisa_dp4a_ss : PISADefaultAttrsIntrinsic<[llvm_i32_ty],
 
 def int_pisa_smad : PISADefaultAttrsIntrinsic<[llvm_anyint_ty],
                         [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
-                        [IntrNoMem, Commutative]>;
+                        [IntrNoMem]>;
 
 //===----------------------------------------------------------------------===//
 // 3. Floating Point
