@@ -36,6 +36,28 @@ entry:
 ; DEFAULT-NOT: call void @__csan_read4(ptr %p, i32 0)
 ; DEFAULT: call void @__csan_write4(ptr %p, i32 0)
 
+define void @read_before_write_limits(ptr %p, ptr %flag) sanitize_concurrency {
+entry:
+  %wide = load i64, ptr %p, align 8
+  store i32 1, ptr %p, align 4
+  %before = load i32, ptr %p, align 4
+  %acquired = load atomic i32, ptr %flag acquire, align 4
+  store i32 %before, ptr %p, align 4
+  %after = load i32, ptr %p, align 4
+  fence release
+  store i32 %after, ptr %p, align 4
+  ret void
+}
+; DEFAULT-LABEL: @read_before_write_limits(
+; DEFAULT: call void @__csan_read8(ptr %p, i32 0)
+; DEFAULT: call void @__csan_write4(ptr %p, i32 0)
+; DEFAULT: call void @__csan_read4(ptr %p, i32 0)
+; DEFAULT: call void @__csan_read4(ptr %flag, i32 1)
+; DEFAULT: call void @__csan_write4(ptr %p, i32 0)
+; DEFAULT-NOT: call void @__csan_read4(ptr %p, i32 0)
+; DEFAULT: call void @__csan_atomic_thread_fence(i32 3)
+; DEFAULT: call void @__csan_write4(ptr %p, i32 0)
+
 define void @call_between_accesses(ptr %p) sanitize_concurrency {
 entry:
   %v = load i32, ptr %p, align 4

@@ -14,7 +14,7 @@
 
 #include "llvm/Transforms/Instrumentation/ConcurrencySanitizer.h"
 #include "llvm/ADT/BitmaskEnum.h"
-#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/bit.h"
@@ -112,6 +112,20 @@ static bool isAtomicMemoryAccess(const Instruction *I) {
   if (isa<LoadInst>(I) || isa<StoreInst>(I))
     return *SSID != SyncScope::SingleThread;
   return true;
+}
+
+static AtomicOrdering getAtomicOrdering(const Instruction *I) {
+  if (auto *CAS = dyn_cast<AtomicCmpXchgInst>(I))
+    return CAS->getMergedOrdering();
+  if (auto *LI = dyn_cast<LoadInst>(I))
+    return LI->getOrdering();
+  if (auto *SI = dyn_cast<StoreInst>(I))
+    return SI->getOrdering();
+  if (auto *FI = dyn_cast<FenceInst>(I))
+    return FI->getOrdering();
+  if (auto *RMW = dyn_cast<AtomicRMWInst>(I))
+    return RMW->getOrdering();
+  return AtomicOrdering::NotAtomic;
 }
 
 static Value *getCallbackAddress(IRBuilderBase &IRB, Value *Addr) {
@@ -406,20 +420,29 @@ bool ConcurrencySanitizer::shouldInstrumentAccess(Instruction *I) const {
 
 void ConcurrencySanitizer::collectMemoryAccesses(Function &F,
                                                  MemoryAccessLists &Out) {
+  const DataLayout &DL = F.getDataLayout();
   SmallVector<Instruction *, 8> LocalLoadsAndStores;
   auto FlushLocalAccesses = [&] {
-    DenseSet<Value *> WriteTargets;
+    // Writes following reads can be dropped if the write covers the whole span.
+    DenseMap<Value *, TypeSize> WriteSizes;
     for (Instruction *Inst : reverse(LocalLoadsAndStores)) {
       const bool IsWrite = isa<StoreInst>(Inst);
       Value *Addr = getLoadStorePointerOperand(Inst);
-      if (!IsWrite && WriteTargets.contains(Addr)) {
-        ++NumOmittedReadsBeforeWrite;
-        continue;
+      TypeSize Size = DL.getTypeStoreSize(getLoadStoreType(Inst));
+      if (!IsWrite) {
+        auto It = WriteSizes.find(Addr);
+        if (It != WriteSizes.end() && TypeSize::isKnownLE(Size, It->second)) {
+          ++NumOmittedReadsBeforeWrite;
+          continue;
+        }
       }
 
       Out.LoadsAndStores.push_back(Inst);
-      if (IsWrite)
-        WriteTargets.insert(Addr);
+      if (IsWrite) {
+        auto [It, Inserted] = WriteSizes.try_emplace(Addr, Size);
+        if (!Inserted && TypeSize::isKnownGE(Size, It->second))
+          It->second = Size;
+      }
     }
     LocalLoadsAndStores.clear();
   };
@@ -429,6 +452,11 @@ void ConcurrencySanitizer::collectMemoryAccesses(Function &F,
       // Skip instructions inserted by another instrumentation.
       if (Inst.hasMetadata(LLVMContext::MD_nosanitize))
         continue;
+      // Prior reads ordered by an acquire need to be flushed.
+      if (auto SSID = getAtomicSyncScopeID(&Inst);
+          SSID && *SSID != SyncScope::SingleThread &&
+          isAcquireOrStronger(getAtomicOrdering(&Inst)))
+        FlushLocalAccesses();
       if (isAtomicMemoryAccess(&Inst))
         Out.AtomicAccesses.push_back(&Inst);
       else if ((isa<LoadInst>(Inst) || isa<StoreInst>(Inst)) &&
