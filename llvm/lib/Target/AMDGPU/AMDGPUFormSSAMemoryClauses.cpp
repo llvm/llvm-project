@@ -62,9 +62,6 @@ char AMDGPUFormSSAMemoryClausesLegacy::ID = 0;
 
 char &llvm::AMDGPUFormSSAMemoryClausesID = AMDGPUFormSSAMemoryClausesLegacy::ID;
 
-FunctionPass *llvm::createAMDGPUFormSSAMemoryClausesLegacyPass() {
-  return new AMDGPUFormSSAMemoryClausesLegacy();
-}
 
 bool AMDGPUFormSSAMemoryClausesLegacy::runOnMachineFunction(
     MachineFunction &MF) {
