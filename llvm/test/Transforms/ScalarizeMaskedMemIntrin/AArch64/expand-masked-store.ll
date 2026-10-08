@@ -147,4 +147,80 @@ define void @scalarize_v1f16(ptr %p, <1 x i1> %mask, <1 x half> %data) vscale_ra
   ret void
 }
 
+define void @scalarize_v1bf16(ptr %p, <1 x i1> %mask, <1 x bfloat> %data) vscale_range(2,2) {
+; CHECK-LE-LABEL: @scalarize_v1bf16(
+; CHECK-LE-NEXT:    [[TMP1:%.*]] = extractelement <1 x i1> [[MASK:%.*]], i64 0
+; CHECK-LE-NEXT:    br i1 [[TMP1]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
+; CHECK-LE:       cond.store:
+; CHECK-LE-NEXT:    [[TMP2:%.*]] = extractelement <1 x bfloat> [[DATA:%.*]], i64 0
+; CHECK-LE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds bfloat, ptr [[P:%.*]], i32 0
+; CHECK-LE-NEXT:    store bfloat [[TMP2]], ptr [[TMP3]], align 2
+; CHECK-LE-NEXT:    br label [[ELSE]]
+; CHECK-LE:       else:
+; CHECK-LE-NEXT:    ret void
+;
+; CHECK-SVE-LE-LABEL: @scalarize_v1bf16(
+; CHECK-SVE-LE-NEXT:    [[TMP1:%.*]] = extractelement <1 x i1> [[MASK:%.*]], i64 0
+; CHECK-SVE-LE-NEXT:    br i1 [[TMP1]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
+; CHECK-SVE-LE:       cond.store:
+; CHECK-SVE-LE-NEXT:    [[TMP2:%.*]] = extractelement <1 x bfloat> [[DATA:%.*]], i64 0
+; CHECK-SVE-LE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds bfloat, ptr [[P:%.*]], i32 0
+; CHECK-SVE-LE-NEXT:    store bfloat [[TMP2]], ptr [[TMP3]], align 2
+; CHECK-SVE-LE-NEXT:    br label [[ELSE]]
+; CHECK-SVE-LE:       else:
+; CHECK-SVE-LE-NEXT:    ret void
+;
+; CHECK-BE-LABEL: @scalarize_v1bf16(
+; CHECK-BE-NEXT:    [[TMP1:%.*]] = extractelement <1 x i1> [[MASK:%.*]], i64 0
+; CHECK-BE-NEXT:    br i1 [[TMP1]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
+; CHECK-BE:       cond.store:
+; CHECK-BE-NEXT:    [[TMP2:%.*]] = extractelement <1 x bfloat> [[DATA:%.*]], i64 0
+; CHECK-BE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds bfloat, ptr [[P:%.*]], i32 0
+; CHECK-BE-NEXT:    store bfloat [[TMP2]], ptr [[TMP3]], align 2
+; CHECK-BE-NEXT:    br label [[ELSE]]
+; CHECK-BE:       else:
+; CHECK-BE-NEXT:    ret void
+;
+  call void @llvm.masked.store.v1bf16.p0(<1 x bfloat> %data, ptr %p, i32 2, <1 x i1> %mask)
+  ret void
+}
+
+define void @scalarize_v1i1(ptr %p, <1 x i1> %mask, <1 x i1> %data) vscale_range(2,2) {
+; CHECK-LE-LABEL: @scalarize_v1i1(
+; CHECK-LE-NEXT:    [[TMP1:%.*]] = extractelement <1 x i1> [[MASK:%.*]], i64 0
+; CHECK-LE-NEXT:    br i1 [[TMP1]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
+; CHECK-LE:       cond.store:
+; CHECK-LE-NEXT:    [[TMP2:%.*]] = extractelement <1 x i1> [[DATA:%.*]], i64 0
+; CHECK-LE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i1, ptr [[P:%.*]], i32 0
+; CHECK-LE-NEXT:    store i1 [[TMP2]], ptr [[TMP3]], align 1
+; CHECK-LE-NEXT:    br label [[ELSE]]
+; CHECK-LE:       else:
+; CHECK-LE-NEXT:    ret void
+;
+; CHECK-SVE-LE-LABEL: @scalarize_v1i1(
+; CHECK-SVE-LE-NEXT:    [[TMP1:%.*]] = extractelement <1 x i1> [[MASK:%.*]], i64 0
+; CHECK-SVE-LE-NEXT:    br i1 [[TMP1]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
+; CHECK-SVE-LE:       cond.store:
+; CHECK-SVE-LE-NEXT:    [[TMP2:%.*]] = extractelement <1 x i1> [[DATA:%.*]], i64 0
+; CHECK-SVE-LE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i1, ptr [[P:%.*]], i32 0
+; CHECK-SVE-LE-NEXT:    store i1 [[TMP2]], ptr [[TMP3]], align 1
+; CHECK-SVE-LE-NEXT:    br label [[ELSE]]
+; CHECK-SVE-LE:       else:
+; CHECK-SVE-LE-NEXT:    ret void
+;
+; CHECK-BE-LABEL: @scalarize_v1i1(
+; CHECK-BE-NEXT:    [[TMP1:%.*]] = extractelement <1 x i1> [[MASK:%.*]], i64 0
+; CHECK-BE-NEXT:    br i1 [[TMP1]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
+; CHECK-BE:       cond.store:
+; CHECK-BE-NEXT:    [[TMP2:%.*]] = extractelement <1 x i1> [[DATA:%.*]], i64 0
+; CHECK-BE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i1, ptr [[P:%.*]], i32 0
+; CHECK-BE-NEXT:    store i1 [[TMP2]], ptr [[TMP3]], align 1
+; CHECK-BE-NEXT:    br label [[ELSE]]
+; CHECK-BE:       else:
+; CHECK-BE-NEXT:    ret void
+;
+  call void @llvm.masked.store.v1i1.p0(<1 x i1> %data, ptr %p, i32 1, <1 x i1> %mask)
+  ret void
+}
+
 declare void @llvm.masked.store.v2i64.p0(<2 x i64>, ptr, i32, <2 x i1>)
