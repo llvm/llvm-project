@@ -11058,9 +11058,11 @@ AArch64InstrInfo::getOutlinableRanges(MachineBasicBlock &MBB,
   // StartPt points to the first place where all unsafe registers
   // are dead (if there is any such point). Begin partitioning the MBB into
   // ranges.
-  for (auto &MI : make_range(FirstPossibleEndPt, MBB.instr_rend())) {
-    if (!MI.isDebugInstr())
-      LRU.stepBackward(MI);
+  // Pseudo probes are ordinary instructions to the mapper, so only skip debug
+  // instructions here.
+  for (auto &MI : instructionsWithoutDebug(FirstPossibleEndPt, MBB.instr_rend(),
+                                           /*SkipPseudoOp=*/false)) {
+    LRU.stepBackward(MI);
     UpdateWholeMBBFlags(MI);
     if (!AreAllUnsafeRegsDead()) {
       SaveRangeIfNonEmpty();
@@ -11068,12 +11070,10 @@ AArch64InstrInfo::getOutlinableRanges(MachineBasicBlock &MBB,
       continue;
     }
     LRAvailableEverywhere &= LRU.available(AArch64::LR);
-    // RangeBegin may point at a debug instruction because the mapper ignores
-    // debug instructions wherever they appear. Only count non-debug
-    // instructions so debug info cannot make a short range outlinable.
+    // Pseudo probes count because the mapper treats them as ordinary
+    // instructions.
     RangeBegin = MI.getIterator();
-    if (!MI.isDebugInstr())
-      ++RangeLen;
+    ++RangeLen;
   }
   // Above loop misses the last (or only) range. If we are still safe, then
   // let's save the range.
