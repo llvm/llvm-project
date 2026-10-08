@@ -137,6 +137,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case CortexX925:
   case C1Premium:
   case C1Ultra:
+  case C2Ultra:
     PrefFunctionAlignment = Align(16);
     VScaleForTuning = 1;
     PrefLoopAlignment = Align(32);

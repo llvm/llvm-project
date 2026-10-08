@@ -992,6 +992,12 @@ features cannot lower the translation-unit ABI level;
 
 #### Arm and AArch64 Support
 
+- Added support for the following Arm processors (command-line identifiers in
+  parentheses):
+
+  - C2-Pro (`c2-pro`).
+  - C2-Ultra (`c2-ultra`).
+
 - Added support for pointer authentication discrimination of C++ virtual table
   pointers stored in VTTs via the `-fptrauth-vtt-vtable-pointer-discrimination`
   option.
