@@ -327,7 +327,7 @@ public:
   /// Note that entry into the reporter is not synchronized: it may be
   /// called from multiple threads concurrently.
   Session(ExecutorProcessInfo EPI, DispatchFn Dispatch,
-          ErrorReporterFn ReportError);
+          ErrorReporterFn ReportError) noexcept;
 
   // Sessions are not copyable or moveable.
   Session(const Session &) = delete;
