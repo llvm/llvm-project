@@ -19591,13 +19591,9 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc, Scope *S) {
     if (auto *FTD = dyn_cast<FunctionTemplateDecl>(Dcl)) {
       FunctionDecl::DefaultedFunctionKind DFK =
           FTD->getTemplatedDecl()->getDefaultedFunctionKind();
-      if (DFK.isComparison()) {
-        Diag(DefaultLoc, diag::err_defaulted_comparison_template);
-        return;
-      }
-      if (DFK.isPostfixOperator()) {
-        Diag(DefaultLoc, diag::err_defaulted_postfix_operator_template)
-            << (int)DFK.asPostfixOperator();
+      if (DFK.isComparison() || DFK.isPostfixOperator()) {
+        Diag(DefaultLoc, diag::err_defaulted_operator_template)
+            << DFK.isPostfixOperator() << (int)DFK.asPostfixOperator();
         return;
       }
     }

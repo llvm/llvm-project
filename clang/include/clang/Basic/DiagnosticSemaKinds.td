@@ -10577,8 +10577,9 @@ def note_vbase_moved_here : Note<
 def select_defaulted_comparison_kind : TextSubstitution<
   "%select{<ERROR>|equality|three-way|equality|relational}0 comparison "
   "operator">;
-def err_defaulted_comparison_template : Error<
-  "comparison operator template cannot be defaulted">;
+def err_defaulted_operator_template : Error<
+  "%select{comparison operator|%sub{select_defaulted_postfix_operator_kind}1}0 "
+  "template cannot be defaulted">;
 def err_defaulted_comparison_num_args : Error<
   "%select{non-member|member}0 %sub{select_defaulted_comparison_kind}1"
   " must have %select{2|1}0 parameters">;
@@ -10683,9 +10684,6 @@ def select_defaulted_postfix_operator_kind : TextSubstitution<
   "%select{<ERROR>|postfix increment|postfix decrement}0 operator">;
 def err_defaulted_prefix_operator : Error<
   "only the postfix form of 'operator%select{++|--}0' can be defaulted">;
-def err_defaulted_postfix_operator_template : Error<
-  "%sub{select_defaulted_postfix_operator_kind}0 template cannot be "
-  "defaulted">;
 def err_defaulted_postfix_operator_const : Error<
   "defaulted member %sub{select_defaulted_postfix_operator_kind}0 cannot be "
   "const-qualified">;
