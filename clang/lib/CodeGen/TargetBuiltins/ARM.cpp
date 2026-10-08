@@ -16,6 +16,7 @@
 #include "TargetInfo.h"
 #include "clang/Basic/AArch64CodeGenUtils.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsARM.h"
@@ -2112,7 +2113,7 @@ static Value *EmitAtomicStoreWithHintBuiltin(CodeGenFunction &CGF,
   unsigned HintArg = Result.Val.getInt().getExtValue();
 
   // Attach the hint if valid
-  if (toAArch64MemoryHint(HintArg) != AArch64MemoryHint::HINT_NONE) {
+  if (toAArch64MemoryHint(HintArg) != AArch64MemoryHint::NONE) {
     LLVMContext &Ctx = CGM.getLLVMContext();
     MDNode *MemHint = MDNode::get(
         Ctx, {MDString::get(Ctx, "aarch64.mem_hint"),
@@ -2125,38 +2126,6 @@ static Value *EmitAtomicStoreWithHintBuiltin(CodeGenFunction &CGF,
   }
 
   return Store;
-}
-
-/// Return true if BuiltinID is an overloaded Neon intrinsic with an extra
-/// argument that specifies the vector type. The additional argument is meant
-/// for Sema checking (see `CheckNeonBuiltinFunctionCall`) and this function
-/// should be kept consistent with the logic in Sema.
-/// TODO: Make this return false for SISD builtins.
-static bool HasExtraNeonArgument(unsigned BuiltinID) {
-  // Required by the headers included below, but not in this particular
-  // function.
-  [[maybe_unused]] int PtrArgNum = -1;
-  [[maybe_unused]] bool HasConstPtr = false;
-
-  // The mask encodes the type. We don't care about the actual value. Instead,
-  // we just check whether its been set.
-  uint64_t mask = 0;
-  switch (BuiltinID) {
-#define GET_NEON_OVERLOAD_CHECK
-#include "clang/Basic/arm_fp16.inc"
-#include "clang/Basic/arm_neon.inc"
-#undef GET_NEON_OVERLOAD_CHECK
-  // Non-neon builtins for controling VFP that take extra argument for
-  // discriminating the type.
-  case ARM::BI__builtin_arm_vcvtr_f:
-  case ARM::BI__builtin_arm_vcvtr_d:
-    mask = 1;
-  }
-
-  if (mask)
-    return true;
-
-  return false;
 }
 
 Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
@@ -2538,7 +2507,7 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
   Address PtrOp0 = Address::invalid();
   Address PtrOp1 = Address::invalid();
   SmallVector<Value*, 4> Ops;
-  bool HasExtraArg = HasExtraNeonArgument(BuiltinID);
+  bool HasExtraArg = CodeGenUtils::hasExtraNeonArgument(BuiltinID);
   unsigned NumArgs = E->getNumArgs() - (HasExtraArg ? 1 : 0);
   for (unsigned i = 0, e = NumArgs; i != e; i++) {
     if (i == 0) {
@@ -4922,6 +4891,37 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     MTEIntrinsicID = Intrinsic::aarch64_subp; break;
   }
 
+  if (BuiltinID == clang::AArch64::BI__arm_set_fpm_lscale) {
+    Value *FPM = EmitScalarExpr(E->getArg(0));
+    Value *Scale = EmitScalarExpr(E->getArg(1));
+    Scale = Builder.CreateAnd(Scale, Builder.getInt64(0x7f));
+
+    Value *MaskedFPM = Builder.CreateAnd(FPM, Builder.getInt64(~0x7f0000ULL));
+    Value *ShiftedScale = Builder.CreateShl(Scale, Builder.getInt64(16));
+
+    return Builder.CreateOr(MaskedFPM, ShiftedScale);
+  }
+  if (BuiltinID == clang::AArch64::BI__arm_set_fpm_nscale) {
+    Value *FPM = EmitScalarExpr(E->getArg(0));
+    Value *Scale = EmitScalarExpr(E->getArg(1));
+    Scale = Builder.CreateAnd(Scale, Builder.getInt64(0xff));
+
+    Value *MaskedFPM = Builder.CreateAnd(FPM, Builder.getInt64(~0xff000000ULL));
+    Value *ShiftedScale = Builder.CreateShl(Scale, Builder.getInt64(24));
+
+    return Builder.CreateOr(MaskedFPM, ShiftedScale);
+  }
+  if (BuiltinID == clang::AArch64::BI__arm_set_fpm_lscale2) {
+    Value *FPM = EmitScalarExpr(E->getArg(0));
+    Value *Scale = EmitScalarExpr(E->getArg(1));
+    Scale = Builder.CreateAnd(Scale, Builder.getInt64(0x3f));
+
+    Value *LowFPM = Builder.CreateAnd(FPM, Builder.getInt64(~0x3f00000000ULL));
+    Value *ShiftedScale = Builder.CreateShl(Scale, Builder.getInt64(32));
+
+    return Builder.CreateOr(LowFPM, ShiftedScale);
+  }
+
   if (MTEIntrinsicID != Intrinsic::not_intrinsic) {
     if (MTEIntrinsicID == Intrinsic::aarch64_irg) {
       Value *Pointer = EmitScalarExpr(E->getArg(0));
@@ -5370,7 +5370,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   // Note the assumption that SISD intrinsics do not contain extra arguments.
   // TODO: Fold this into a single function call instead of, effectively, two
   // separate checks.
-  bool HasExtraArg = !IsSISD && HasExtraNeonArgument(BuiltinID);
+  bool HasExtraArg = !IsSISD && CodeGenUtils::hasExtraNeonArgument(BuiltinID);
   unsigned NumArgs = E->getNumArgs() - (HasExtraArg ? 1 : 0);
   for (unsigned i = 0, e = NumArgs; i != e; i++) {
     if (i == 0) {

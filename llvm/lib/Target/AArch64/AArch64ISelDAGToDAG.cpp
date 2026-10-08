@@ -90,6 +90,9 @@ public:
   bool SelectLogicalShiftedRegister(SDValue N, SDValue &Reg, SDValue &Shift) {
     return SelectShiftedRegister(N, true, Reg, Shift);
   }
+  template <unsigned ShiftWidth>
+  bool SelectShiftMask(SDValue N, SDValue &ShAmt);
+
   bool SelectAddrModeIndexed7S8(SDValue N, SDValue &Base, SDValue &OffImm) {
     return SelectAddrModeIndexed7S(N, 1, Base, OffImm);
   }
@@ -442,7 +445,6 @@ public:
                            unsigned Scale);
 
   bool tryBitfieldExtractOp(SDNode *N);
-  bool tryBitfieldExtractOpFromSExt(SDNode *N);
   bool tryBitfieldInsertOp(SDNode *N);
   bool tryBitfieldInsertInZeroOp(SDNode *N);
   bool tryShiftAmountMod(SDNode *N);
@@ -518,8 +520,7 @@ private:
   bool SelectCMP_SWAP(SDNode *N);
 
   AArch64MemoryHint decodeMemoryHintFlags(MachineMemOperand *MMO) const;
-  bool isAtomicSTSHH_KEEP(SDNode *N) const;
-  bool isAtomicSTSHH_STRM(SDNode *N) const;
+  bool isAtomicMemoryHint(SDNode *N, AArch64MemoryHint Hint) const;
 
   bool SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift,
                           bool Negate);
@@ -769,6 +770,77 @@ bool AArch64DAGToDAGISel::SelectInlineAsmMemoryOperand(
     return false;
   }
   return true;
+}
+
+template <unsigned ShiftWidth>
+bool AArch64DAGToDAGISel::SelectShiftMask(SDValue N, SDValue &ShAmt) {
+  // AArch64 shift instructions only use the low log2(ShiftWidth) bits of the
+  // shift amount. If the shift amount has a redundant AND mask that covers
+  // those bits, we can remove it. Return false if nothing was combined so
+  // other patterns (e.g. zext/sext GPR32 → SUBREG_TO_REG) can match.
+  if (N.getOpcode() == ISD::AND && isa<ConstantSDNode>(N.getOperand(1)) &&
+      N.getValueType() == (ShiftWidth == 32 ? MVT::i32 : MVT::i64)) {
+    uint64_t Mask = N.getConstantOperandVal(1);
+    // Remove AND if the mask covers at least the low log2(ShiftWidth) bits.
+    if ((unsigned)llvm::countr_one(Mask) >= Log2_32(ShiftWidth)) {
+      ShAmt = N.getOperand(0);
+      return true;
+    }
+  }
+  // If shifting by X+/-N where N == 0 mod ShiftWidth, then just shift by X
+  // to avoid the ADD/SUB. The low log2(ShiftWidth) bits are unchanged, so the
+  // shift can use X directly; the original ADD/SUB stays for any other users.
+  if ((N.getOpcode() == ISD::ADD || N.getOpcode() == ISD::SUB) &&
+      N.getValueType() == (ShiftWidth == 32 ? MVT::i32 : MVT::i64)) {
+    uint64_t Imm;
+    if (isIntImmediate(N.getOperand(1).getNode(), Imm) &&
+        (Imm % ShiftWidth == 0)) {
+      ShAmt = N.getOperand(0);
+      return true;
+    }
+  }
+
+  // If shifting by N-X where N == 0 mod ShiftWidth, then just shift by -X
+  // to generate a NEG instead of a SUB from a constant.
+  if (N.getOpcode() == ISD::SUB && N.hasOneUse() &&
+      N.getValueType() == (ShiftWidth == 32 ? MVT::i32 : MVT::i64)) {
+    uint64_t Imm;
+    if (isIntImmediate(N.getOperand(0).getNode(), Imm) && Imm != 0 &&
+        (Imm % ShiftWidth == 0)) {
+      SDLoc DL(N);
+      EVT VT = N.getValueType();
+      unsigned NegOpc = (ShiftWidth == 32) ? AArch64::SUBWrr : AArch64::SUBXrr;
+      unsigned ZeroReg = (ShiftWidth == 32) ? AArch64::WZR : AArch64::XZR;
+      SDValue Zero =
+          CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL, ZeroReg, VT);
+      MachineSDNode *Neg =
+          CurDAG->getMachineNode(NegOpc, DL, VT, Zero, N.getOperand(1));
+      ShAmt = SDValue(Neg, 0);
+      return true;
+    }
+  }
+
+  // If shifting by N-X where N == -1 mod ShiftWidth, then just shift by ~X
+  // to generate a NOT (MVN) instead of a SUB from a constant.
+  if (N.getOpcode() == ISD::SUB && N.hasOneUse() &&
+      N.getValueType() == (ShiftWidth == 32 ? MVT::i32 : MVT::i64)) {
+    uint64_t Imm;
+    if (isIntImmediate(N.getOperand(0).getNode(), Imm) &&
+        (Imm % ShiftWidth == ShiftWidth - 1)) {
+      SDLoc DL(N);
+      EVT VT = N.getValueType();
+      unsigned NotOpc = (ShiftWidth == 32) ? AArch64::ORNWrr : AArch64::ORNXrr;
+      unsigned ZeroReg = (ShiftWidth == 32) ? AArch64::WZR : AArch64::XZR;
+      SDValue Zero =
+          CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL, ZeroReg, VT);
+      MachineSDNode *Not =
+          CurDAG->getMachineNode(NotOpc, DL, VT, Zero, N.getOperand(1));
+      ShAmt = SDValue(Not, 0);
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /// SelectArithImmed - Select an immediate value that can be represented as
@@ -1205,6 +1277,12 @@ bool AArch64DAGToDAGISel::SelectArithExtendedRegister(SDValue N, SDValue &Reg,
         isDef32(Reg))
       return false;
   }
+
+  // Don't match if the sext can be folded with an asr to form an SBFX.
+  if (Ext == AArch64_AM::SXTW && Reg.getOpcode() == ISD::SRA &&
+      Reg.getValueType() == MVT::i32 &&
+      isa<ConstantSDNode>(Reg.getOperand(1)) && Reg.hasOneUse())
+    return false;
 
   // AArch64 mandates that the RHS of the operation must use the smallest
   // register class that could contain the size being extended from.  Thus,
@@ -3084,30 +3162,6 @@ static bool isBitfieldExtractOpFromShr(SDNode *N, unsigned &Opc, SDValue &Opd0,
   return true;
 }
 
-bool AArch64DAGToDAGISel::tryBitfieldExtractOpFromSExt(SDNode *N) {
-  assert(N->getOpcode() == ISD::SIGN_EXTEND);
-
-  EVT VT = N->getValueType(0);
-  EVT NarrowVT = N->getOperand(0)->getValueType(0);
-  if (VT != MVT::i64 || NarrowVT != MVT::i32)
-    return false;
-
-  uint64_t ShiftImm;
-  SDValue Op = N->getOperand(0);
-  if (!isOpcWithIntImmediate(Op.getNode(), ISD::SRA, ShiftImm))
-    return false;
-
-  SDLoc dl(N);
-  // Extend the incoming operand of the shift to 64-bits.
-  SDValue Opd0 = Widen(CurDAG, Op.getOperand(0));
-  unsigned Immr = ShiftImm;
-  unsigned Imms = NarrowVT.getSizeInBits() - 1;
-  SDValue Ops[] = {Opd0, CurDAG->getTargetConstant(Immr, dl, VT),
-                   CurDAG->getTargetConstant(Imms, dl, VT)};
-  CurDAG->SelectNodeTo(N, AArch64::SBFMXri, VT, Ops);
-  return true;
-}
-
 static bool isBitfieldExtractOp(SelectionDAG *CurDAG, SDNode *N, unsigned &Opc,
                                 SDValue &Opd0, unsigned &Immr, unsigned &Imms,
                                 unsigned NumberOfIgnoredLowBits = 0,
@@ -4624,7 +4678,7 @@ AArch64DAGToDAGISel::decodeMemoryHintFlags(MachineMemOperand *MMO) const {
   int MemoryHint = -1;
   const MDNode *MemCacheHint = MMO->getMemCacheHint();
   if (!MemCacheHint)
-    return AArch64MemoryHint::HINT_NONE;
+    return AArch64MemoryHint::NONE;
 
   for (unsigned I = 0; I + 1 < MemCacheHint->getNumOperands(); I += 2) {
     if (MemCacheHint->getOperand(I).equalsStr("aarch64.mem_hint")) {
@@ -4637,14 +4691,9 @@ AArch64DAGToDAGISel::decodeMemoryHintFlags(MachineMemOperand *MMO) const {
   return toAArch64MemoryHint(MemoryHint);
 }
 
-bool AArch64DAGToDAGISel::isAtomicSTSHH_KEEP(SDNode *N) const {
-  return decodeMemoryHintFlags(cast<MemSDNode>(N)->getMemOperand()) ==
-         AArch64MemoryHint::HINT_STSHH_KEEP;
-}
-
-bool AArch64DAGToDAGISel::isAtomicSTSHH_STRM(SDNode *N) const {
-  return decodeMemoryHintFlags(cast<MemSDNode>(N)->getMemOperand()) ==
-         AArch64MemoryHint::HINT_STSHH_STRM;
+bool AArch64DAGToDAGISel::isAtomicMemoryHint(SDNode *N,
+                                             AArch64MemoryHint Hint) const {
+  return decodeMemoryHintFlags(cast<MemSDNode>(N)->getMemOperand()) == Hint;
 }
 
 bool AArch64DAGToDAGISel::SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm,
@@ -5243,11 +5292,6 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
   case ISD::ROTR:
   case ISD::SHL:
     if (tryShiftAmountMod(Node))
-      return;
-    break;
-
-  case ISD::SIGN_EXTEND:
-    if (tryBitfieldExtractOpFromSExt(Node))
       return;
     break;
 

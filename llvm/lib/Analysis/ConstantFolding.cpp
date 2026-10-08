@@ -53,6 +53,7 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/CRC.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -1333,7 +1334,7 @@ Constant *llvm::ConstantFoldCompareInstOperands(unsigned IntPredicate,
                                                 Constant *Ops0, Constant *Ops1,
                                                 const DataLayout &DL,
                                                 const TargetLibraryInfo *TLI,
-                                                const Function *CxtF) {
+                                                const Function *CtxF) {
   CmpInst::Predicate Predicate = (CmpInst::Predicate)IntPredicate;
   // fold: icmp (inttoptr x), null         -> icmp x, 0
   // fold: icmp null, (inttoptr x)         -> icmp 0, x
@@ -1434,10 +1435,10 @@ Constant *llvm::ConstantFoldCompareInstOperands(unsigned IntPredicate,
   if (CmpInst::isFPPredicate(Predicate)) {
     // Flush any denormal constant float input according to denormal handling
     // mode.
-    Ops0 = FlushFPConstant(Ops0, CxtF, /*IsOutput=*/false);
+    Ops0 = FlushFPConstant(Ops0, CtxF, /*IsOutput=*/false);
     if (!Ops0)
       return nullptr;
-    Ops1 = FlushFPConstant(Ops1, CxtF, /*IsOutput=*/false);
+    Ops1 = FlushFPConstant(Ops1, CtxF, /*IsOutput=*/false);
     if (!Ops1)
       return nullptr;
   }
@@ -1493,20 +1494,20 @@ static DenormalMode getInstrDenormalMode(const Function *CtxF, Type *Ty) {
 }
 
 static ConstantFP *
-flushDenormalConstantFP(ConstantFP *CFP, const Function *CxtF, bool IsOutput) {
+flushDenormalConstantFP(ConstantFP *CFP, const Function *CtxF, bool IsOutput) {
   const APFloat &APF = CFP->getValueAPF();
   if (!APF.isDenormal())
     return CFP;
 
-  DenormalMode Mode = getInstrDenormalMode(CxtF, CFP->getType());
+  DenormalMode Mode = getInstrDenormalMode(CtxF, CFP->getType());
   return flushDenormalConstant(CFP->getType(), APF,
                                IsOutput ? Mode.Output : Mode.Input);
 }
 
-Constant *llvm::FlushFPConstant(Constant *Operand, const Function *CxtF,
+Constant *llvm::FlushFPConstant(Constant *Operand, const Function *CtxF,
                                 bool IsOutput) {
   if (ConstantFP *CFP = dyn_cast<ConstantFP>(Operand))
-    return flushDenormalConstantFP(CFP, CxtF, IsOutput);
+    return flushDenormalConstantFP(CFP, CtxF, IsOutput);
 
   if (isa<ConstantAggregateZero, UndefValue>(Operand))
     return Operand;
@@ -1515,7 +1516,7 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Function *CxtF,
   VectorType *VecTy = dyn_cast<VectorType>(Ty);
   if (VecTy) {
     if (auto *Splat = dyn_cast_or_null<ConstantFP>(Operand->getSplatValue())) {
-      ConstantFP *Folded = flushDenormalConstantFP(Splat, CxtF, IsOutput);
+      ConstantFP *Folded = flushDenormalConstantFP(Splat, CtxF, IsOutput);
       if (!Folded)
         return nullptr;
       return ConstantVector::getSplat(VecTy->getElementCount(), Folded);
@@ -1540,7 +1541,7 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Function *CxtF,
       if (!CFP)
         return nullptr;
 
-      ConstantFP *Folded = flushDenormalConstantFP(CFP, CxtF, IsOutput);
+      ConstantFP *Folded = flushDenormalConstantFP(CFP, CtxF, IsOutput);
       if (!Folded)
         return nullptr;
       NewElts.push_back(Folded);
@@ -1556,7 +1557,7 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Function *CxtF,
       if (!Elt.isDenormal()) {
         NewElts.push_back(ConstantFP::get(Ty, Elt));
       } else {
-        DenormalMode Mode = getInstrDenormalMode(CxtF, Ty);
+        DenormalMode Mode = getInstrDenormalMode(CtxF, Ty);
         ConstantFP *Folded =
             flushDenormalConstant(Ty, Elt, IsOutput ? Mode.Output : Mode.Input);
         if (!Folded)
@@ -1817,6 +1818,14 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::arm_mve_vctp16:
   case Intrinsic::arm_mve_vctp32:
   case Intrinsic::arm_mve_vctp64:
+  case Intrinsic::aarch64_crc32b:
+  case Intrinsic::aarch64_crc32h:
+  case Intrinsic::aarch64_crc32w:
+  case Intrinsic::aarch64_crc32x:
+  case Intrinsic::aarch64_crc32cb:
+  case Intrinsic::aarch64_crc32ch:
+  case Intrinsic::aarch64_crc32cw:
+  case Intrinsic::aarch64_crc32cx:
   case Intrinsic::aarch64_sve_convert_from_svbool:
   case Intrinsic::wasm_alltrue:
   case Intrinsic::wasm_anytrue:
@@ -3488,6 +3497,17 @@ static Constant *ConstantFoldLibCall2(StringRef Name, Type *Ty,
   return nullptr;
 }
 
+static Constant *ConstantFoldCRC32(Type *Ty, const APInt *CrcArg,
+                                   const APInt *DataArg, unsigned DataBytes,
+                                   uint32_t Poly) {
+  if (!CrcArg || !DataArg)
+    return nullptr;
+  uint32_t Crc = CrcArg->getZExtValue();
+  uint64_t Data = DataArg->getZExtValue();
+  uint32_t Result = calculateReflectedCRC32(Crc, Data, DataBytes, Poly);
+  return ConstantInt::get(Ty, Result);
+}
+
 static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
                                             ArrayRef<Constant *> Operands,
                                             const CallBase *Call = nullptr) {
@@ -3969,6 +3989,22 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
     case Intrinsic::amdgcn_wave_reduce_and:
     case Intrinsic::amdgcn_wave_reduce_or:
       return Operands[0];
+    case Intrinsic::aarch64_crc32b:
+      return ConstantFoldCRC32(Ty, C0, C1, 1, 0xEDB88320);
+    case Intrinsic::aarch64_crc32h:
+      return ConstantFoldCRC32(Ty, C0, C1, 2, 0xEDB88320);
+    case Intrinsic::aarch64_crc32w:
+      return ConstantFoldCRC32(Ty, C0, C1, 4, 0xEDB88320);
+    case Intrinsic::aarch64_crc32x:
+      return ConstantFoldCRC32(Ty, C0, C1, 8, 0xEDB88320);
+    case Intrinsic::aarch64_crc32cb:
+      return ConstantFoldCRC32(Ty, C0, C1, 1, 0x82F63B78);
+    case Intrinsic::aarch64_crc32ch:
+      return ConstantFoldCRC32(Ty, C0, C1, 2, 0x82F63B78);
+    case Intrinsic::aarch64_crc32cw:
+      return ConstantFoldCRC32(Ty, C0, C1, 4, 0x82F63B78);
+    case Intrinsic::aarch64_crc32cx:
+      return ConstantFoldCRC32(Ty, C0, C1, 8, 0x82F63B78);
     }
 
     return nullptr;
@@ -4788,9 +4824,9 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
 Constant *llvm::ConstantFoldIntrinsic(Intrinsic::ID ID,
                                       ArrayRef<Constant *> Ops, Type *Ty,
                                       const DataLayout &DL,
-                                      const Function *CxtF) {
-  // In the absence of CxtF, assume strictfp conservatively.
-  if (!canConstantFoldIntrinsic(ID, CxtF ? CxtF->isStrictFP() : true) ||
+                                      const Function *CtxF) {
+  // In the absence of CtxF, assume strictfp conservatively.
+  if (!canConstantFoldIntrinsic(ID, CtxF ? CtxF->isStrictFP() : true) ||
       (DisableFPCallFolding &&
        anyTypeContainsFP(
            Ty, ArrayRef<Value *>((Value *const *)Ops.data(), Ops.size()))))

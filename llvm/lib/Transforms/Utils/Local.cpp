@@ -134,7 +134,6 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
                                   const TargetLibraryInfo *TLI,
                                   DomTreeUpdater *DTU) {
   Instruction *T = BB->getTerminator();
-  IRBuilder<> Builder(T);
 
   // Branch - See if we are conditional jumping on constant
   if (auto *BI = dyn_cast<CondBrInst>(T)) {
@@ -151,6 +150,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       Dest1->removePredecessor(BI->getParent());
 
       // Replace the conditional branch with an unconditional one.
+      IRBuilder<> Builder(BI);
       UncondBrInst *NewBI = Builder.CreateBr(Dest1);
 
       // Transfer the metadata to the new branch instruction.
@@ -175,6 +175,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       OldDest->removePredecessor(BB);
 
       // Replace the conditional branch with an unconditional one.
+      IRBuilder<> Builder(BI);
       UncondBrInst *NewBI = Builder.CreateBr(Destination);
 
       // Transfer the metadata to the new branch instruction.
@@ -273,6 +274,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
     // now.
     if (TheOnlyDest) {
       // Insert the new branch.
+      IRBuilder<> Builder(SI);
       Builder.CreateBr(TheOnlyDest);
       BasicBlock *BB = SI->getParent();
 
@@ -310,6 +312,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       // Otherwise, we can fold this switch into a conditional branch
       // instruction if it has only one non-default destination.
       auto FirstCase = *SI->case_begin();
+      IRBuilder<> Builder(SI);
       Value *Cond = Builder.CreateICmpEQ(SI->getCondition(),
           FirstCase.getCaseValue(), "cond");
 
@@ -346,6 +349,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       SmallPtrSet<BasicBlock *, 8> RemovedSuccessors;
 
       // Insert the new branch.
+      IRBuilder<> Builder(IBI);
       Builder.CreateBr(TheOnlyDest);
 
       BasicBlock *SuccToKeep = TheOnlyDest;
@@ -1557,13 +1561,13 @@ Align llvm::tryEnforceAlignment(Value *V, Align PrefAlign,
 
 Align llvm::getOrEnforceKnownAlignment(Value *V, MaybeAlign PrefAlign,
                                        const DataLayout &DL,
-                                       const Instruction *CxtI,
+                                       const Instruction *CtxI,
                                        AssumptionCache *AC,
                                        const DominatorTree *DT) {
   assert(V->getType()->isPointerTy() &&
          "getOrEnforceKnownAlignment expects a pointer!");
 
-  KnownBits Known = computeKnownBits(V, DL, AC, CxtI, DT);
+  KnownBits Known = computeKnownBits(V, DL, AC, CtxI, DT);
   unsigned TrailZ = Known.countMinTrailingZeros();
 
   // Avoid trouble with ridiculously large TrailZ values, such as
