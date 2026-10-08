@@ -255,6 +255,35 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// Unroll-and-jam without an inner loop preserves operation order and may
+// therefore unroll loops with write effects.
+// CHECK-LABEL: @loop_unroll_and_jam_no_inner_loop_with_write
+func.func @loop_unroll_and_jam_no_inner_loop_with_write(
+    %arg0: memref<4xindex>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  scf.for %i = %c0 to %c4 step %c1 {
+    // CHECK-COUNT-2: memref.store
+    memref.store %i, %arg0[%i] : memref<4xindex>
+  } {unroll_jam}
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(
+      %root: !transform.any_op {transform.readonly}) {
+    %loop = transform.structured.match ops{["scf.for"]}
+        attributes{unroll_jam} in %root
+        : (!transform.any_op) -> !transform.op<"scf.for">
+    transform.loop.unroll_and_jam %loop factor = 2
+        : !transform.op<"scf.for">
+    transform.yield
+  }
+}
+
+// -----
+
 // CHECK-LABEL: @loop_unroll_and_jam_op
 // CHECK:       %[[VAL_0:.*]]: memref<96x128xi8, 3>, %[[VAL_1:.*]]: memref<128xi8, 3>) {
 func.func private @loop_unroll_and_jam_op(%arg0: memref<96x128xi8, 3>, %arg1: memref<128xi8, 3>) {
@@ -302,25 +331,13 @@ func.func private @loop_unroll_and_jam_op(%arg0: memref<96x128xi8, 3>, %arg1: me
     // CHECK:               scf.yield %[[SUM_0]], %[[SUM_1]], %[[SUM_2]], %[[SUM_3]]
 		scf.yield %4 : i8
 	  }
-	  memref.store %sum, %arg1[%arg2] : memref<128xi8, 3>
-    // CHECK:             memref.store %[[VAL_39:.*]]#0, %[[VAL_1]]{{\[}}%[[OUTER_I]]]
-    // CHECK:             %[[ONE_2:.*]] = arith.constant 1
-    // CHECK:             %[[INC_STORE1:.*]] = arith.addi %[[OUTER_I]], %[[ONE_2]]
-    // CHECK:             memref.store %[[VAL_39]]#1, %[[VAL_1]]{{\[}}%[[INC_STORE1]]]
-    // CHECK:             %[[TWO_2:.*]] = arith.constant 2
-    // CHECK:             %[[INC_STORE2:.*]] = arith.addi %[[OUTER_I]], %[[TWO_2]]
-    // CHECK:             memref.store %[[VAL_39]]#2, %[[VAL_1]]{{\[}}%[[INC_STORE2]]]
-    // CHECK:             %[[THREE_2:.*]] = arith.constant 3
-    // CHECK:             %[[INC_STORE3:.*]] = arith.addi %[[OUTER_I]], %[[THREE_2]]
-    // CHECK:             memref.store %[[VAL_39]]#3, %[[VAL_1]]{{\[}}%[[INC_STORE3]]]
-	}
+	} {unroll_jam}
   return
 }
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["memref.store"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_parent_op %0 <op_name = "scf.for"> : (!transform.any_op) -> !transform.op<"scf.for">
+    %1 = transform.structured.match ops{["scf.for"]} attributes{unroll_jam} in %arg1 : (!transform.any_op) -> !transform.op<"scf.for">
     transform.loop.unroll_and_jam %1 factor = 4 : !transform.op<"scf.for">
     transform.yield
   }
