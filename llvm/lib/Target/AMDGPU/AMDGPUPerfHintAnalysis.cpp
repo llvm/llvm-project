@@ -218,11 +218,10 @@ AMDGPUPerfHintAnalysis::FuncInfo *AMDGPUPerfHint::visit(const Function &F) {
 
   for (auto &B : F) {
     LastAccess = MemAccessInfo();
-    unsigned UsedGlobalLoadsInBB = 0;
+    uint64_t UsedGlobalLoadsInBB = 0;
     for (auto &I : B) {
       if (const Type *Ty = getMemoryInstrPtrAndType(&I).second) {
-        unsigned Size =
-            static_cast<unsigned>(divideCeil(Ty->getPrimitiveSizeInBits(), 32));
+        uint64_t Size = divideCeil(Ty->getPrimitiveSizeInBits(), 32);
         // TODO: Check if the global load and its user are close to each other
         // instead (Or do this analysis in GCNSchedStrategy?).
         if (isGlobalLoadUsedInBB(I))
@@ -268,7 +267,7 @@ AMDGPUPerfHintAnalysis::FuncInfo *AMDGPUPerfHint::visit(const Function &F) {
     }
 
     if (!FI.HasDenseGlobalMemAcc) {
-      size_t GlobalMemAccPercentage = UsedGlobalLoadsInBB * 100 / B.size();
+      uint64_t GlobalMemAccPercentage = UsedGlobalLoadsInBB * 100 / B.size();
       if (GlobalMemAccPercentage > 50) {
         LLVM_DEBUG(dbgs() << "[HasDenseGlobalMemAcc] Set to true since "
                           << B.getName() << " has " << GlobalMemAccPercentage
