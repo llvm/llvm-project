@@ -39,6 +39,11 @@ std::unique_ptr<BugReporter> GitHubReporter::CreateInstance() {
 llvm::Error GitHubReporter::File(const Diagnostics::Report &report) {
   std::string body;
   llvm::raw_string_ostream os(body);
+  // Lead with the questions: an oversized body is truncated from the end.
+  os << "### Please answer these questions\n\n";
+  for (llvm::StringRef question : GetBugReportQuestions())
+    os << "- " << question << "\n";
+  os << "\n\n";
   os << "### LLDB version\n" << report.version << "\n\n";
   os << "### Host\n" << report.os << "\n\n";
   if (!report.invocation.empty())
@@ -57,9 +62,11 @@ llvm::Error GitHubReporter::File(const Diagnostics::Report &report) {
     body += "\n\n...(truncated, see the attached diagnostics directory)";
   }
 
+  // No title parameter: GitHub blocks submission until the field is filled in,
+  // so an empty one yields a title describing this bug instead of a generic
+  // default nobody edits.
   std::string url = llvm::formatv("https://github.com/llvm/llvm-project/issues/"
-                                  "new?title={0}&body={1}&labels=lldb",
-                                  Host::URLEncode("[lldb] Bug report"),
+                                  "new?body={0}&labels=lldb",
                                   Host::URLEncode(body));
 
   return Host::OpenURL(url);

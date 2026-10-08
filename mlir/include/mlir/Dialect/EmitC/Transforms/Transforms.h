@@ -35,7 +35,7 @@ void populateExpressionPatterns(RewritePatternSet &patterns);
 //===----------------------------------------------------------------------===//
 
 void populateWrapFuncInClass(
-    RewritePatternSet &patterns, StringRef funcName,
+    RewritePatternSet &patterns, StringRef funcName, StringRef classNameFormat,
     DenseMap<FuncOp, llvm::DenseSet<GlobalOp>> &globalsToMove);
 
 //===----------------------------------------------------------------------===//

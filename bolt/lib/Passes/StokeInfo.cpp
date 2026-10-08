@@ -26,7 +26,6 @@ static cl::OptionCategory StokeOptCategory("STOKE pass options");
 static cl::opt<std::string>
 StokeOutputDataFilename("stoke-out",
   cl::desc("output data (.csv) for Stoke's use"),
-  cl::Optional,
   cl::cat(StokeOptCategory));
 }
 

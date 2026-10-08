@@ -12,12 +12,10 @@
 #
 # https://llvm.org/PR117630
 
-# The AIX localization support uses some functions as part of their headers that require a
-# recent value of _XOPEN_SOURCE.
-# UNSUPPORTED: LIBCXX-AIX-FIXME
-
-# This test fails on FreeBSD for an unknown reason.
-# UNSUPPORTED: LIBCXX-FREEBSD-FIXME
+# FreeBSD maps _XOPEN_SOURCE=500 to __ISO_C_VISIBLE=1990 (see <sys/_visible.h>), which hides
+# everything C99 added to the C library, even in C++ mode. libc++ needs some of those
+# additions to provide a conforming library at all.
+# UNSUPPORTED: freebsd
 
 # RUN: %{python} %s %{libcxx-dir}/utils
 # END.

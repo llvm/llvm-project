@@ -40,6 +40,18 @@ config_setting(
     },
 )
 
+# Use LLVM libunwind's per-FDE registration API. This does not link libunwind.
+# Usage: --@llvm-project//llvm:use_libunwind_for_eh_frame_registration=true
+bool_flag(
+    name = "use_libunwind_for_eh_frame_registration",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "libunwind_eh_frame_registration_enabled",
+    flag_values = {":use_libunwind_for_eh_frame_registration": "true"},
+)
+
 exports_files([
     "LICENSE.TXT",
     "cmake/modules/llvm-driver-template.cpp.in",
@@ -51,6 +63,10 @@ exports_files([
     "include/llvm/Frontend/OpenMP/OMP.td",
     "include/llvm/IR/Intrinsics.td",
     "include/llvm/Option/OptParser.td",
+    # Needed to run TargetParser regression lit tests in downstream sandboxed builds.
+    "include/llvm/TargetParser/TripleName.def",
+    "utils/extract_symbols.py",  # Needed for test/tools/extract_symbols tests
+    "utils/get_triple_system_name.py",
     # This one is needed for building and vendoring out lldb from off tree.
     "utils/lldbDataFormatters.py",
 ])
@@ -83,10 +99,19 @@ config_setting(
 )
 
 config_setting(
+    name = "linux_armv7",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:armv7",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
     name = "linux_ppc64le",
     constraint_values = [
         "@platforms//os:linux",
-        "@platforms//cpu:ppc",
+        "@platforms//cpu:ppc64le",
     ],
     visibility = ["//visibility:public"],
 )
@@ -240,7 +265,10 @@ exports_files([
 
 td_library(
     name = "OptParserTdFiles",
-    srcs = ["include/llvm/Option/OptParser.td"],
+    srcs = [
+        "include/llvm/Option/LibraryOptions.td",
+        "include/llvm/Option/OptParser.td",
+    ],
     includes = ["include"],
 )
 
@@ -321,6 +349,33 @@ config_setting(
 )
 
 config_setting(
+    name = "is_aarch64_windows_clang_mingw",
+    constraint_values = [
+        "@platforms//cpu:aarch64",
+        "@platforms//os:windows",
+    ],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "clang"},
+)
+
+config_setting(
+    name = "is_aarch64_windows_clang_cl",
+    constraint_values = [
+        "@platforms//cpu:aarch64",
+        "@platforms//os:windows",
+    ],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "clang-cl"},
+)
+
+config_setting(
+    name = "is_aarch64_windows_msvc",
+    constraint_values = [
+        "@platforms//cpu:aarch64",
+        "@platforms//os:windows",
+    ],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "msvc-cl"},
+)
+
+config_setting(
     name = "is_x86_64_windows_clang_mingw",
     constraint_values = [
         "@platforms//cpu:x86_64",
@@ -329,22 +384,49 @@ config_setting(
     flag_values = {"@rules_cc//cc/compiler:compiler": "clang"},
 )
 
+config_setting(
+    name = "is_x86_64_windows_clang_cl",
+    constraint_values = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:windows",
+    ],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "clang-cl"},
+)
+
+config_setting(
+    name = "is_x86_64_windows_msvc",
+    constraint_values = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:windows",
+    ],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "msvc-cl"},
+)
+
 BLAKE3_x86_64_ASM_SOURCE_PATTERNS = [
-    "lib/Support/BLAKE3/blake3_avx2_x86-64_%s.S",
-    "lib/Support/BLAKE3/blake3_avx512_x86-64_%s.S",
-    "lib/Support/BLAKE3/blake3_sse2_x86-64_%s.S",
-    "lib/Support/BLAKE3/blake3_sse41_x86-64_%s.S",
+    "lib/Support/BLAKE3/blake3_avx2_x86-64_%s",
+    "lib/Support/BLAKE3/blake3_avx512_x86-64_%s",
+    "lib/Support/BLAKE3/blake3_sse2_x86-64_%s",
+    "lib/Support/BLAKE3/blake3_sse41_x86-64_%s",
 ]
 
 filegroup(
     name = "blake3_x86_64_asm",
     srcs = select({
         ":is_x86_64_windows_clang_mingw": [
-            pattern % "windows_gnu"
+            pattern % "windows_gnu.S"
+            for pattern in BLAKE3_x86_64_ASM_SOURCE_PATTERNS
+        ],
+        ":is_x86_64_windows_clang_cl": [
+            pattern % "windows_gnu.S"
+            for pattern in BLAKE3_x86_64_ASM_SOURCE_PATTERNS
+        ],
+        # cl.exe cannot consume GAS syntax; ml64 assembles the MASM variants.
+        ":is_x86_64_windows_msvc": [
+            pattern % "windows_msvc.asm"
             for pattern in BLAKE3_x86_64_ASM_SOURCE_PATTERNS
         ],
         "//conditions:default": [
-            pattern % "unix"
+            pattern % "unix.S"
             for pattern in BLAKE3_x86_64_ASM_SOURCE_PATTERNS
         ],
     }),
@@ -425,7 +507,6 @@ cc_library(
             "-luuid",
             "-lws2_32",
             "-lntdll",
-            "-lwinhttp",
         ],
         ":is_windows_clang_cl": [
             "/STACK:10000000",
@@ -433,7 +514,6 @@ cc_library(
             "uuid.lib",
             "ws2_32.lib",
             "ntdll.lib",
-            "winhttp.lib",
         ],
         ":is_windows_msvc": [
             "/STACK:10000000",
@@ -441,7 +521,6 @@ cc_library(
             "uuid.lib",
             "ws2_32.lib",
             "ntdll.lib",
-            "winhttp.lib",
         ],
         "@platforms//os:freebsd": [
             "-pthread",
@@ -453,11 +532,17 @@ cc_library(
             "-pthread",
             "-ldl",
         ],
+        "@platforms//os:emscripten": [],
         "//conditions:default": [
             "-pthread",
             "-ldl",
             "-lm",
         ],
+    }) + select({
+        # musl's 128 KiB default worker stack is insufficient for recursive
+        # LLVM passes such as DSE's dominator-tree traversal.
+        "@rules_cc//cc/libc:musl": ["-Wl,-z,stack-size=8388608"],
+        "//conditions:default": [],
     }),
     textual_hdrs = glob([
         "include/llvm/Support/*.def",
@@ -474,6 +559,10 @@ cc_library(
         # be an empty library unless zstd is enabled, in which case it will
         # both provide the necessary dependencies and configuration defines.
         "//third-party:zstd",
+        # We unconditionally depend on the custom LLVM lzma wrapper. This only
+        # provides the configuration define unless lzma is enabled, in which
+        # case it also links the system liblzma.
+        "//third-party:lzma",
         "//libc:shared_math_headers_for_apfloat",
     ],
 )
@@ -592,6 +681,7 @@ cc_library(
     hdrs = glob(["include/llvm/DebugInfo/*.h"]),
     copts = llvm_copts,
     deps = [
+        ":BinaryFormat",
         ":BinaryFormatELF",
         ":Object",
         ":Support",
@@ -729,10 +819,20 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "MCCLOptionsTableGen",
+    strip_include_prefix = "lib/MC",
+    tbl_outs = {"lib/MC/MCCLOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/MC/MCCLOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "MC",
     srcs = glob([
         "lib/MC/*.cpp",
+        "lib/MC/*.h",
     ]),
     hdrs = glob([
         "include/llvm/MC/*.h",
@@ -743,6 +843,8 @@ cc_library(
         ":BinaryFormat",
         ":DebugInfoCodeView",
         ":DebugInfoDWARFLowLevel",
+        ":MCCLOptionsTableGen",
+        ":Option",
         ":Support",
         ":TargetParser",
         ":config",
@@ -790,6 +892,7 @@ cc_library(
     hdrs = glob(["include/llvm/DebugInfo/GSYM/*.h"]),
     copts = llvm_copts,
     deps = [
+        ":BinaryFormat",
         ":DebugInfo",
         ":DebugInfoDWARF",
         ":MC",
@@ -852,11 +955,14 @@ cc_binary(
 cc_binary(
     name = "llvm-min-tblgen",
     srcs = glob(["utils/TableGen/Basic/*.h"]) + [
+        "utils/TableGen/Basic/AMDGPUTargetDefEmitter.cpp",
         "utils/TableGen/Basic/ARMTargetDefEmitter.cpp",
         "utils/TableGen/Basic/Attributes.cpp",
         "utils/TableGen/Basic/CodeGenIntrinsics.cpp",
         "utils/TableGen/Basic/DirectiveEmitter.cpp",
         "utils/TableGen/Basic/IntrinsicEmitter.cpp",
+        "utils/TableGen/Basic/OptEmitter.cpp",
+        "utils/TableGen/Basic/OptionParserEmitter.cpp",
         "utils/TableGen/Basic/PredicateExpanderDag.cpp",
         "utils/TableGen/Basic/RISCVTargetDefEmitter.cpp",
         "utils/TableGen/Basic/RuntimeLibcalls.cpp",
@@ -1435,7 +1541,12 @@ cc_library(
             "include/llvm/Analysis/Utils/*.h",
         ],
     ) + ["include/llvm-c/Analysis.h"],
-    copts = llvm_copts + ["-ftrapping-math"],
+    copts = llvm_copts + select({
+        ":is_windows_clang_cl": ["/fp:except"],
+        ":is_windows_msvc": ["/fp:except"],
+        "@platforms//os:emscripten": [],
+        "//conditions:default": ["-ftrapping-math"],
+    }),
     features = ["-parse_headers"],
     textual_hdrs = glob([
         "include/llvm/Analysis/*.def",
@@ -1613,6 +1724,28 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "AMDGPUTargetParserDefGen",
+    tbl_outs = {"include/llvm/TargetParser/AMDGPUTargetParserDef.inc": ["-gen-amdgpu-target-def"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Target/AMDGPU/AMDGPU.td",
+    deps = [
+        ":AMDGPUTargetTdFiles",
+        ":CommonTargetTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "R600TargetParserDefGen",
+    tbl_outs = {"include/llvm/TargetParser/R600TargetParserDef.inc": ["-gen-amdgpu-target-def"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Target/AMDGPU/R600.td",
+    deps = [
+        ":AMDGPUTargetTdFiles",
+        ":CommonTargetTdFiles",
+    ],
+)
+
+gentbl_cc_library(
     name = "PPCGenTargetFeaturesGen",
     tbl_outs = {"include/llvm/TargetParser/PPCGenTargetFeatures.inc": ["-gen-target-features"]},
     tblgen = ":llvm-tblgen",
@@ -1656,8 +1789,10 @@ cc_library(
         "include/llvm/TargetParser/AArch64CPUFeatures.inc",
         "include/llvm/TargetParser/AArch64FeatPriorities.inc",
         "include/llvm/TargetParser/AArch64TargetParserDef.inc",
+        "include/llvm/TargetParser/AMDGPUTargetParserDef.inc",
         "include/llvm/TargetParser/ARMTargetParserDef.inc",
         "include/llvm/TargetParser/RISCVTargetParserDef.inc",
+        "include/llvm/TargetParser/R600TargetParserDef.inc",
     ] + glob([
         "include/llvm/TargetParser/*.def",
     ]),
@@ -1716,6 +1851,17 @@ td_library(
     ]),
 )
 
+gentbl_cc_library(
+    name = "InstCombineCLOptionsTableGen",
+    strip_include_prefix = "lib/Transforms/InstCombine",
+    tbl_outs = {
+        "lib/Transforms/InstCombine/InstCombineCLOptions.inc": ["-gen-opt-parser-defs"],
+    },
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Transforms/InstCombine/InstCombineCLOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "InstCombine",
     srcs = glob([
@@ -1727,6 +1873,8 @@ cc_library(
     deps = [
         ":Analysis",
         ":Core",
+        ":InstCombineCLOptionsTableGen",
+        ":Option",
         ":Support",
         ":Target",
         ":TransformUtils",
@@ -1829,6 +1977,7 @@ cc_library(
     deps = [
         ":AggressiveInstCombine",
         ":Analysis",
+        ":AsmParser",
         ":BinaryFormat",
         ":Core",
         ":InstCombine",
@@ -1910,6 +2059,7 @@ cc_library(
         ":Core",
         ":MC",
         ":Support",
+        ":TargetParser",
     ],
 )
 
@@ -1977,6 +2127,7 @@ cc_library(
     name = "FrontendOpenMP",
     srcs = glob([
         "lib/Frontend/OpenMP/*.cpp",
+        "lib/Frontend/OpenMP/*.inc",
     ]),
     hdrs = glob([
         "include/llvm/Frontend/OpenMP/*.h",
@@ -1987,6 +2138,7 @@ cc_library(
     copts = llvm_copts,
     textual_hdrs = glob([
         "include/llvm/Frontend/OpenMP/*.def",
+        "include/llvm/Frontend/OpenMP/*.h.inc",
     ]),
     deps = [
         ":Analysis",
@@ -2133,6 +2285,9 @@ genrule(
     srcs = ["include/llvm/Transforms/IPO/InstrumentorRuntimeHelper.h"],
     outs = ["include/llvm/Transforms/IPO/InstrumentorVariables.inc"],
     cmd = "printf 'constexpr char InstrumentorRuntimeHelper[] = R\"(' > $@ && cat $(SRCS) >> $@ && echo ')\";' >> $@",
+    # `set /p` writes its prompt without a newline, like printf; it also returns
+    # errorlevel 1 on empty input, hence the single `&` after it.
+    cmd_bat = ">$@ <nul set /p =constexpr char InstrumentorRuntimeHelper[] = R^\"(& >>$@ type $(SRCS)&& >>$@ echo ^)^\";",
 )
 
 cc_library(
@@ -2152,6 +2307,7 @@ cc_library(
     deps = [
         ":AggressiveInstCombine",
         ":Analysis",
+        ":AsmParser",
         ":BinaryFormat",
         ":BitReader",
         ":BitWriter",
@@ -2265,9 +2421,21 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "CGDataOptionsTableGen",
+    strip_include_prefix = "lib/CGData",
+    tbl_outs = {"lib/CGData/CGDataOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/CGData/CGDataOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "CGData",
-    srcs = glob(["lib/CGData/**/*.cpp"]),
+    srcs = glob([
+        "lib/CGData/**/*.cpp",
+        "lib/CGData/**/*.h",
+    ]),
     hdrs = glob([
         "include/llvm/CGData/**/*.h",
         "include/llvm/CGData/**/*.inc",
@@ -2276,12 +2444,23 @@ cc_library(
     deps = [
         ":BitReader",
         ":BitWriter",
+        ":CGDataOptionsTableGen",
         ":Core",
         ":Object",
         ":ObjectYAML",
+        ":Option",
         ":Support",
         ":TargetParser",
     ],
+)
+
+gentbl_cc_library(
+    name = "CodeGenOptionsTableGen",
+    strip_include_prefix = "lib/CodeGen",
+    tbl_outs = {"lib/CodeGen/CodeGenOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/CodeGen/CodeGenOptions.td",
+    deps = [":OptParserTdFiles"],
 )
 
 cc_library(
@@ -2315,6 +2494,7 @@ cc_library(
         ":BitWriter",
         ":CFGuard",
         ":CGData",
+        ":CodeGenOptionsTableGen",
         ":CodeGenTypes",
         ":Core",
         ":DebugInfoCodeView",
@@ -2327,6 +2507,7 @@ cc_library(
         ":MCParser",
         ":ObjCARC",
         ":Object",
+        ":Option",
         ":ProfileData",
         ":Remarks",
         ":Scalar",
@@ -2336,6 +2517,7 @@ cc_library(
         ":TransformUtils",
         ":asm_printer_defs",
         ":config",
+        ":runtime_libcalls_gen",
         ":vt_gen",
     ],
 )
@@ -2474,6 +2656,10 @@ llvm_target_lib_list = [lib for lib in [
                 ["-gen-exegesis"],
                 "lib/Target/AArch64/AArch64GenExegesis.inc",
             ),
+        ],
+        "tbl_deps": [
+            ":AArch64MCOptionsTableGen",
+            ":AArch64OptionsTableGen",
         ],
     },
     {
@@ -3269,6 +3455,9 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/Sparc/SparcGenSDNodeInfo.inc",
             ),
         ],
+        "tbl_deps": [
+            ":SparcOptionsTableGen",
+        ],
     },
     {
         "name": "SPIRV",
@@ -3351,6 +3540,10 @@ llvm_target_lib_list = [lib for lib in [
             (
                 ["-gen-disassembler"],
                 "lib/Target/SystemZ/SystemZGenDisassemblerTables.inc",
+            ),
+            (
+                ["-gen-insn-directive-match-table"],
+                "lib/Target/SystemZ/SystemZGenInsnMatchTable.inc",
             ),
             (
                 ["-gen-emitter"],
@@ -3593,6 +3786,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/X86/X86GenMnemonicTables.inc",
             ),
         ],
+        "tbl_deps": [
+            ":X86MCOptionsTableGen",
+            ":X86OptionsTableGen",
+        ],
     },
     {
         "name": "XCore",
@@ -3807,6 +4004,51 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "AArch64MCOptionsTableGen",
+    strip_include_prefix = "lib/Target/AArch64",
+    tbl_outs = {"lib/Target/AArch64/AArch64MCOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/AArch64/MCTargetDesc/AArch64MCOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "AArch64OptionsTableGen",
+    strip_include_prefix = "lib/Target/AArch64",
+    tbl_outs = {"lib/Target/AArch64/AArch64Options.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/AArch64/AArch64Options.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "SparcOptionsTableGen",
+    strip_include_prefix = "lib/Target/Sparc",
+    tbl_outs = {"lib/Target/Sparc/SparcOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/Sparc/SparcOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "X86MCOptionsTableGen",
+    strip_include_prefix = "lib/Target/X86",
+    tbl_outs = {"lib/Target/X86/X86MCOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/X86/MCTargetDesc/X86MCOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "X86OptionsTableGen",
+    strip_include_prefix = "lib/Target/X86",
+    tbl_outs = {"lib/Target/X86/X86Options.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/X86/X86Options.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
     name = "webassembly_isel_target_gen",
     strip_include_prefix = "lib/Target/WebAssembly",
     tbl_outs = {
@@ -3858,11 +4100,7 @@ gentbl_cc_library(
         srcs = ["lib/Target/" + target["name"] + "/TargetInfo/" + target["name"] + "TargetInfo.cpp"],
         hdrs = glob(["lib/Target/" + target["name"] + "/TargetInfo/*.h"]),
         copts = llvm_copts,
-        # Workaround for https://github.com/bazelbuild/bazel/issues/3828
-        # TODO(gcmn): Remove this when upgrading to a Bazel version containing
-        # https://github.com/bazelbuild/bazel/commit/e3b7e17b05f1
         includes = ["lib/Target/" + target["name"]],
-        strip_include_prefix = "lib/Target/" + target["name"],
         deps = [
             ":" + target["name"] + "CommonTableGen",
             ":MC",
@@ -3882,8 +4120,8 @@ gentbl_cc_library(
                 # We have to include these headers here as well as in the `hdrs`
                 # below to allow the `.cpp` files to use file-relative-inclusion to
                 # find them, even though consumers of this library use inclusion
-                # relative to the target with the `strip_includes_prefix` of this
-                # library. This mixture is likely incompatible with header modules.
+                # relative to the target directory via `includes`. This mixture is
+                # likely incompatible with header modules.
                 "lib/Target/" + target["name"] + "/MCTargetDesc/*.h",
                 "lib/Target/" + target["name"] + "/Utils/*.h",
             ],
@@ -3903,9 +4141,9 @@ gentbl_cc_library(
                 "lib/Target/" + target["name"] + "/*.h",
 
                 # FIXME: The entries below should be `textual_hdrs` instead of
-                # `hdrs`, but unfortunately that doesn't work with
-                # `strip_include_prefix`:
-                # https://github.com/bazelbuild/bazel/issues/12424
+                # `hdrs`. That was blocked by `strip_include_prefix`
+                # (https://github.com/bazelbuild/bazel/issues/12424), which this
+                # rule no longer uses.
                 #
                 # Once that issue is fixed and released, we can switch this to
                 # `textual_hdrs` and remove the feature disabling the various Bazel
@@ -3923,7 +4161,13 @@ gentbl_cc_library(
             "-header_modules",
             "-layering_check",
         ],
-        strip_include_prefix = "lib/Target/" + target["name"],
+        # `includes` rather than `strip_include_prefix`: the prefix exposes the
+        # headers through a `_virtual_includes` copy, and when a header includes
+        # one from its parent directory (MCTargetDesc/RISCVTargetStreamer.h
+        # -> "RISCV.h") clang-cl's Microsoft include rule finds the real file,
+        # sees the ordinary lookup land on the copy, and rejects the mismatch
+        # under -Wmicrosoft-include. With `includes` both lookups agree.
+        includes = ["lib/Target/" + target["name"]],
         deps = [
             ":BinaryFormat",
             ":CodeGen",
@@ -3972,7 +4216,8 @@ gentbl_cc_library(
             "-layering_check",
             "-parse_headers",
         ],
-        strip_include_prefix = "lib/Target/" + target["name"],
+        # See the `includes` note on the `UtilsAndDesc` rule above.
+        includes = ["lib/Target/" + target["name"]],
         textual_hdrs = glob(
             [
                 "lib/Target/" + target["name"] + "/*.def",
@@ -4146,10 +4391,20 @@ cc_library(
     textual_hdrs = ["lib/Passes/PassRegistry.def"],
 )
 
+gentbl_cc_library(
+    name = "PassesOptionsTableGen",
+    strip_include_prefix = "lib/Passes",
+    tbl_outs = {"lib/Passes/PassesOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Passes/PassesOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "Passes",
     srcs = glob([
         "lib/Passes/*.cpp",
+        "lib/Passes/*.h",
     ]),
     hdrs = glob([
         "include/llvm/Passes/*.h",
@@ -4171,6 +4426,8 @@ cc_library(
         ":Instrumentation",
         ":MC",
         ":ObjCARC",
+        ":Option",
+        ":PassesOptionsTableGen",
         ":Plugins",
         ":Scalar",
         ":Support",
@@ -4269,6 +4526,10 @@ cc_library(
     ) + ["include/llvm-c/ExecutionEngine.h"],
     copts = llvm_copts,
     features = ["-parse_headers"],
+    local_defines = select({
+        ":libunwind_eh_frame_registration_enabled": ["HAVE_UNW_ADD_DYNAMIC_FDE=1"],
+        "//conditions:default": [],
+    }),
     deps = [
         ":BinaryFormat",
         ":CodeGen",
@@ -4316,6 +4577,16 @@ gentbl_cc_library(
 )
 
 cc_library(
+    name = "orc_headers",
+    hdrs = glob([
+        "include/llvm/ExecutionEngine/Orc/**/*.h",
+        "include/llvm/ExecutionEngine/JITLink/**/*.h",
+    ]),
+    copts = llvm_copts,
+    features = ["-parse_headers"],
+)
+
+cc_library(
     name = "JITLink",
     srcs = glob([
         "lib/ExecutionEngine/JITLink/*.cpp",
@@ -4323,7 +4594,6 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/ExecutionEngine/JITLink/*.h",
-        "include/llvm/ExecutionEngine/Orc/*.h",
     ]),
     copts = llvm_copts,
     deps = [
@@ -4341,6 +4611,7 @@ cc_library(
         ":TargetParser",
         ":TransformUtils",
         ":config",
+        ":orc_headers",
     ],
 )
 
@@ -4405,6 +4676,7 @@ cc_library(
         ":TransformUtils",
         ":WindowsDriver",
         ":config",
+        ":orc_headers",
     ],
 )
 
@@ -4414,10 +4686,10 @@ cc_library(
         "lib/ExecutionEngine/Orc/Shared/*.cpp",
     ]),
     hdrs = glob([
-        "include/llvm/ExecutionEngine/Orc/Shared/*.h",
-    ] + [
+        "include/llvm/ExecutionEngine/Orc/Shared/**/*.h",
+    ]) + [
         "include/llvm/ExecutionEngine/Orc/SymbolStringPool.h",
-    ]),
+    ],
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
@@ -4430,7 +4702,9 @@ cc_library(
         ":Passes",
         ":Support",
         ":Target",
+        ":TargetParser",
         ":config",
+        ":orc_headers",
     ],
 )
 
@@ -4461,7 +4735,6 @@ cc_library(
     name = "OrcTargetProcess",
     srcs = glob([
         "lib/ExecutionEngine/Orc/TargetProcess/*.cpp",
-        "lib/ExecutionEngine/Orc/TargetProcess/*.h",
     ]),
     hdrs = glob([
         "include/llvm/ExecutionEngine/Orc/TargetProcess/*.h",
@@ -4475,6 +4748,10 @@ cc_library(
         "//conditions:default": [
             "-lrt",
         ],
+    }),
+    local_defines = select({
+        ":libunwind_eh_frame_registration_enabled": ["HAVE_UNW_ADD_DYNAMIC_FDE=1"],
+        "//conditions:default": [],
     }),
     deps = [
         ":BinaryFormat",
@@ -4490,6 +4767,7 @@ cc_library(
         ":Target",
         ":TargetParser",
         ":config",
+        ":orc_headers",
     ],
 )
 
@@ -4650,6 +4928,7 @@ cc_library(
     deps = [
         ":Support",
         ":config",
+        "//third-party:libxml2",
     ],
 )
 
@@ -4816,7 +5095,15 @@ cc_library(
     hdrs = glob(["include/llvm/HTTP/*.h"]),
     includes = ["include"],
     linkopts = select({
-        "@platforms//os:windows": [
+        ":is_windows_clang_mingw": [
+            "-lcrypt32",
+            "-lwinhttp",
+        ],
+        ":is_windows_clang_cl": [
+            "crypt32.lib",
+            "winhttp.lib",
+        ],
+        ":is_windows_msvc": [
             "crypt32.lib",
             "winhttp.lib",
         ],
@@ -4882,14 +5169,16 @@ llvm_driver_cc_binary(
     deps = [":dsymutil-lib"],
 )
 
-cc_binary(
-    name = "llc",
-    srcs = glob([
-        "tools/llc/*.cpp",
-        "tools/llc/*.h",
+cc_library(
+    name = "llc-driver",
+    srcs = [
+        "tools/llc/lib/NewPMDriver.cpp",
+        "tools/llc/lib/llcdriver.cpp",
+    ],
+    hdrs = glob([
+        "tools/llc/lib/*.h",
     ]),
     copts = llvm_copts,
-    stamp = 0,
     deps = [
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
@@ -4914,6 +5203,17 @@ cc_binary(
 )
 
 cc_binary(
+    name = "llc",
+    srcs = ["tools/llc/llc.cpp"],
+    copts = llvm_copts,
+    stamp = 0,
+    deps = [
+        ":Support",
+        ":llc-driver",
+    ],
+)
+
+cc_binary(
     name = "lli",
     srcs = glob([
         "tools/lli/*.cpp",
@@ -4923,6 +5223,7 @@ cc_binary(
     # ll scripts rely on symbols from dependent
     # libraries being resolvable.
     linkopts = select({
+        "@platforms//os:emscripten": [],
         "@platforms//os:macos": [],
         "@platforms//os:windows": [],
         "//conditions:default": [
@@ -5122,6 +5423,15 @@ cc_binary(
     ],
 )
 
+gentbl_cc_library(
+    name = "CovGcovOptsTableGen",
+    strip_include_prefix = "tools/llvm-cov",
+    tbl_outs = {"tools/llvm-cov/GcovOpts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-cov/GcovOpts.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_binary(
     name = "llvm-cov",
     srcs = glob([
@@ -5131,11 +5441,13 @@ cc_binary(
     copts = llvm_copts,
     stamp = 0,
     deps = [
+        ":CovGcovOptsTableGen",
         ":Coverage",
         ":Debuginfod",
         ":HTTP",
         ":Instrumentation",
         ":Object",
+        ":Option",
         ":ProfileData",
         ":Support",
         ":TargetParser",
@@ -5498,6 +5810,7 @@ cc_binary(
     copts = llvm_copts,
     # Make symbols from the standard library dynamically resolvable.
     linkopts = select({
+        "@platforms//os:emscripten": [],
         "@platforms//os:macos": [],
         "@platforms//os:windows": [],
         "//conditions:default": [
@@ -6541,6 +6854,15 @@ cc_binary(
     ],
 )
 
+gentbl_cc_library(
+    name = "SplitFileOptsTableGen",
+    strip_include_prefix = "utils/split-file",
+    tbl_outs = {"utils/split-file/Opts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "utils/split-file/Opts.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_binary(
     name = "split-file",
     srcs = glob([
@@ -6549,6 +6871,8 @@ cc_binary(
     copts = llvm_copts,
     stamp = 0,
     deps = [
+        ":Option",
+        ":SplitFileOptsTableGen",
         ":Support",
     ],
 )
@@ -6598,6 +6922,44 @@ alias(
     name = "lit",
     testonly = True,
     actual = "//llvm/utils/lit:lit_bin",
+)
+
+write_file(
+    name = "llvm_config_lit_py_gen",
+    testonly = True,
+    out = "utils/bazel/llvm_config_lit.py",
+    content = [
+        "import sys",
+        "",
+        "VALUES = {",
+        "    '--assertion-mode': 'ON',",
+        "    '--targets-built': '{}',".format(" ".join(llvm_targets)),
+        "}",
+        "",
+        "for argument in sys.argv[1:]:",
+        "    if argument not in VALUES:",
+        "        print('unsupported llvm-config argument: {}'.format(argument), file=sys.stderr)",
+        "        sys.exit(1)",
+        "    print(VALUES[argument])",
+    ],
+)
+
+py_binary(
+    name = "llvm-config",
+    testonly = True,
+    srcs = [":llvm_config_lit_py_gen"],
+    main = "utils/bazel/llvm_config_lit.py",
+    visibility = ["//lld/test:__pkg__"],
+)
+
+filegroup(
+    name = "dtlto_test_scripts",
+    testonly = True,
+    srcs = [
+        "utils/dtlto/mock.py",
+        "utils/dtlto/validate.py",
+    ],
+    visibility = ["//lld/test:__pkg__"],
 )
 
 py_binary(
@@ -6939,23 +7301,6 @@ cc_binary(
 )
 
 cc_binary(
-    name = "llvm-sim",
-    testonly = True,
-    srcs = glob([
-        "tools/llvm-sim/*.cpp",
-    ]),
-    copts = llvm_copts,
-    stamp = 0,
-    deps = [
-        ":Analysis",
-        ":Core",
-        ":IRReader",
-        ":Support",
-        ":config",
-    ],
-)
-
-cc_binary(
     name = "llvm-ir2vec",
     testonly = True,
     srcs = glob(
@@ -7001,6 +7346,15 @@ cc_binary(
     ],
 )
 
+gentbl_cc_library(
+    name = "Obj2YamlOptsTableGen",
+    strip_include_prefix = "tools/obj2yaml",
+    tbl_outs = {"tools/obj2yaml/Opts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/obj2yaml/Opts.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_binary(
     name = "obj2yaml",
     testonly = True,
@@ -7015,8 +7369,10 @@ cc_binary(
         ":DebugInfoCodeView",
         ":DebugInfoDWARF",
         ":MC",
+        ":Obj2YamlOptsTableGen",
         ":Object",
         ":ObjectYAML",
+        ":Option",
         ":Support",
     ],
 )
@@ -7039,6 +7395,15 @@ cc_binary(
     ],
 )
 
+gentbl_cc_library(
+    name = "Yaml2ObjOptsTableGen",
+    strip_include_prefix = "tools/yaml2obj",
+    tbl_outs = {"tools/yaml2obj/Opts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/yaml2obj/Opts.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_binary(
     name = "yaml2obj",
     testonly = True,
@@ -7053,7 +7418,9 @@ cc_binary(
         ":MC",
         ":Object",
         ":ObjectYAML",
+        ":Option",
         ":Support",
+        ":Yaml2ObjOptsTableGen",
     ],
 )
 

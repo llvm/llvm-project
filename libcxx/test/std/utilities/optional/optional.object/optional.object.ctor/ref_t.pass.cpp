@@ -72,4 +72,6 @@ constexpr bool tests() {
 int main(int, char**) {
   static_assert(tests());
   tests();
+
+  return 0;
 }

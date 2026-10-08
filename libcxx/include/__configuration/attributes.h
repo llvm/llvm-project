@@ -150,10 +150,15 @@
 #  define _LIBCPP_EXCEPTIONS_SIG e
 #endif
 
-#define _LIBCPP_ODR_SIGNATURE                                                                                          \
-  _LIBCPP_CONCAT(                                                                                                      \
-      _LIBCPP_CONCAT(_LIBCPP_CONCAT(_LIBCPP_HARDENING_SIG, _LIBCPP_ASSERTION_SEMANTIC_SIG), _LIBCPP_EXCEPTIONS_SIG),   \
-      _LIBCPP_VERSION)
+// clang-format off
+#define _LIBCPP_ODR_SIGNATURE                                                                                           \
+  _LIBCPP_CONCAT(_LIBCPP_CONCAT(_LIBCPP_CONCAT(_LIBCPP_CONCAT(                                                          \
+    _LIBCPP_HARDENING_SIG,                                                                                              \
+    _LIBCPP_VERSION),                                                                                                   \
+    _LIBCPP_ASSERTION_SEMANTIC_SIG),                                                                                    \
+    _LIBCPP_EXCEPTIONS_SIG),                                                                                            \
+    _LIBCPP_STD_VER)
+// clang-format on
 
 // This macro marks a symbol as being hidden from libc++'s ABI. This is achieved
 // on two levels:
@@ -260,8 +265,7 @@
 #  define _LIBCPP_DIAGNOSE_WARNING(...)
 #endif
 
-#if __has_attribute(__diagnose_if__) && !defined(_LIBCPP_APPLE_CLANG_VER) &&                                           \
-    (!defined(_LIBCPP_CLANG_VER) || _LIBCPP_CLANG_VER >= 2001)
+#if __has_attribute(__diagnose_if__)
 #  define _LIBCPP_DIAGNOSE_IF(...) __attribute__((__diagnose_if__(__VA_ARGS__)))
 #else
 #  define _LIBCPP_DIAGNOSE_IF(...)
@@ -471,6 +475,13 @@
 #  define _LIBCPP_DISABLE_POINTER_FIELD_PROTECTION [[_Clang::__no_field_protection__]]
 #else
 #  define _LIBCPP_DISABLE_POINTER_FIELD_PROTECTION
+#endif
+
+// TODO(LLVM 25): Remove this escape hatch
+#ifndef _LIBCPP_DISABLE_UNUSED_STRUCT_WARNINGS
+#  define _LIBCPP_WARN_UNUSED [[__gnu__::__warn_unused__]]
+#else
+#  define _LIBCPP_WARN_UNUSED
 #endif
 
 #endif // _LIBCPP___CONFIGURATION_ATTRIBUTES_H

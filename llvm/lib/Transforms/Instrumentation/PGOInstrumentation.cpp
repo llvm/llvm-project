@@ -66,6 +66,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -74,7 +75,6 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/Dominators.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
@@ -676,7 +676,7 @@ public:
       NumOfCSPGOBB += MST.bbInfoSize();
     }
 
-    FuncName = getIRPGOFuncName(F);
+    FuncName = getIRPGOObjectName(F);
     DeprecatedFuncName = getPGOFuncName(F);
     computeCFGHash();
     if (!ComdatMembers.empty())
@@ -956,7 +956,7 @@ void FunctionInstrumenter::instrument() {
       Name, PointerType::get(M.getContext(), 0));
   if (PGOFunctionEntryCoverage) {
     auto &EntryBB = F.getEntryBlock();
-    IRBuilder<> Builder(&EntryBB, EntryBB.getFirstNonPHIOrDbgOrAlloca());
+    IRBuilder<> Builder(EntryBB.getFirstNonPHIOrDbgOrAlloca());
     // llvm.instrprof.cover(i8* <name>, i64 <hash>, i32 <num-counters>,
     //                      i32 <index>)
     Builder.CreateIntrinsic(
@@ -1014,7 +1014,7 @@ void FunctionInstrumenter::instrument() {
   if (PGOTemporalInstrumentation) {
     NumCounters += PGOBlockCoverage ? 8 : 1;
     auto &EntryBB = F.getEntryBlock();
-    IRBuilder<> Builder(&EntryBB, EntryBB.getFirstNonPHIOrDbgOrAlloca());
+    IRBuilder<> Builder(EntryBB.getFirstNonPHIOrDbgOrAlloca());
     // llvm.instrprof.timestamp(i8* <name>, i64 <hash>, i32 <num-counters>,
     //                          i32 <index>)
     Builder.CreateIntrinsic(Intrinsic::instrprof_timestamp,
@@ -1025,7 +1025,7 @@ void FunctionInstrumenter::instrument() {
   }
 
   for (auto *InstrBB : InstrumentBBs) {
-    IRBuilder<> Builder(InstrBB, InstrBB->getFirstNonPHIOrDbgOrAlloca());
+    IRBuilder<> Builder(InstrBB->getFirstNonPHIOrDbgOrAlloca());
     assert(Builder.GetInsertPoint() != InstrBB->end() &&
            "Cannot get the Instrumentation point");
     // llvm.instrprof.increment(i8* <name>, i64 <hash>, i32 <num-counters>,
@@ -1582,12 +1582,10 @@ void PGOUseFunc::populateCoverage() {
   }
 
   unsigned NumCorruptCoverage = 0;
-  DominatorTree DT(F);
   CycleInfo CI;
   CI.compute(F);
-  LoopInfo LI(DT);
   BranchProbabilityInfo BPI(F, CI);
-  BlockFrequencyInfo BFI(F, BPI, LI);
+  BlockFrequencyInfo BFI(F, BPI, CI);
   auto IsBlockDead = [&](const BasicBlock &BB) -> std::optional<bool> {
     if (auto C = BFI.getBlockProfileCount(&BB))
       return C == 0;
@@ -1827,7 +1825,12 @@ void SelectInstVisitor::instrumentOneSelectInst(SelectInst &SI) {
   Module *M = F.getParent();
   IRBuilder<> Builder(&SI);
   Type *Int64Ty = Builder.getInt64Ty();
-  auto *Step = Builder.CreateZExt(SI.getCondition(), Int64Ty);
+  Value *Cond = SI.getCondition();
+  // Freeze the condition so that a poison condition can only increment by
+  // 0 or 1, but not some other value.
+  if (!isGuaranteedNotToBePoison(Cond))
+    Cond = Builder.CreateFreeze(Cond);
+  auto *Step = Builder.CreateZExt(Cond, Int64Ty);
   auto *NormalizedFuncNameVarPtr =
       ConstantExpr::getPointerBitCastOrAddrSpaceCast(
           FuncNameVar, PointerType::get(M->getContext(), 0));
@@ -1895,9 +1898,6 @@ static uint32_t getMaxNumAnnotations(InstrProfValueKind ValueProfKind) {
 void PGOUseFunc::annotateValueSites() {
   if (DisableValueProfiling)
     return;
-
-  // Create the PGOFuncName meta data.
-  createPGOFuncNameMetadata(F, FuncInfo.FuncName);
 
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
     annotateValueSites(Kind);
@@ -2086,10 +2086,10 @@ PreservedAnalyses PGOInstrumentationGen::run(Module &M,
 
 // Using the ratio b/w sums of profile count values and BFI count values to
 // adjust the func entry count.
-static void fixFuncEntryCount(PGOUseFunc &Func, LoopInfo &LI,
+static void fixFuncEntryCount(PGOUseFunc &Func, CycleInfo &CI,
                               BranchProbabilityInfo &NBPI) {
   Function &F = Func.getFunc();
-  BlockFrequencyInfo NBFI(F, NBPI, LI);
+  BlockFrequencyInfo NBFI(F, NBPI, CI);
 #ifndef NDEBUG
   auto BFIEntryCount = F.getEntryCount();
   assert(BFIEntryCount && (*BFIEntryCount > 0) && "Invalid BFI Entrycount");
@@ -2132,12 +2132,12 @@ static void fixFuncEntryCount(PGOUseFunc &Func, LoopInfo &LI,
 
 // Compare the profile count values with BFI count values, and print out
 // the non-matching ones.
-static void verifyFuncBFI(PGOUseFunc &Func, LoopInfo &LI,
+static void verifyFuncBFI(PGOUseFunc &Func, CycleInfo &CI,
                           BranchProbabilityInfo &NBPI,
                           uint64_t HotCountThreshold,
                           uint64_t ColdCountThreshold) {
   Function &F = Func.getFunc();
-  BlockFrequencyInfo NBFI(F, NBPI, LI);
+  BlockFrequencyInfo NBFI(F, NBPI, CI);
   //  bool PrintFunc = false;
   bool HotBBOnly = PGOVerifyHotBFI;
   StringRef Msg;
@@ -2251,16 +2251,6 @@ static bool annotateAllFunctions(
     return false;
   }
 
-  if (EnableVTableProfileUse) {
-    for (GlobalVariable &G : M.globals()) {
-      if (!G.hasName() || !G.hasMetadata(LLVMContext::MD_type))
-        continue;
-
-      // Create the PGOFuncName meta data.
-      createPGONameMetadata(G, getPGOName(G, false /* InLTO*/));
-    }
-  }
-
   // Add the profile summary (read from the header of the indexed summary) here
   // so that we can use it below when reading counters (which checks if the
   // function should be marked with a cold or inlinehint attribute).
@@ -2342,13 +2332,12 @@ static bool annotateAllFunctions(
     if (PGOViewCounts != PGOVCT_None &&
         (ViewBlockFreqFuncName.empty() ||
          F.getName() == ViewBlockFreqFuncName)) {
-      LoopInfo LI{DominatorTree(F)};
       CycleInfo CI;
       CI.compute(F);
       std::unique_ptr<BranchProbabilityInfo> NewBPI =
           std::make_unique<BranchProbabilityInfo>(F, CI);
       std::unique_ptr<BlockFrequencyInfo> NewBFI =
-          std::make_unique<BlockFrequencyInfo>(F, *NewBPI, LI);
+          std::make_unique<BlockFrequencyInfo>(F, *NewBPI, CI);
       if (PGOViewCounts == PGOVCT_Graph)
         NewBFI->view();
       else if (PGOViewCounts == PGOVCT_Text) {
@@ -2373,12 +2362,11 @@ static bool annotateAllFunctions(
     if (PGOVerifyBFI || PGOVerifyHotBFI || PGOFixEntryCount) {
       CycleInfo CI;
       CI.compute(F);
-      LoopInfo LI{DominatorTree(F)};
       BranchProbabilityInfo NBPI(F, CI);
 
       // Fix func entry count.
       if (PGOFixEntryCount)
-        fixFuncEntryCount(Func, LI, NBPI);
+        fixFuncEntryCount(Func, CI, NBPI);
 
       // Verify BlockFrequency information.
       uint64_t HotCountThreshold = 0, ColdCountThreshold = 0;
@@ -2386,7 +2374,7 @@ static bool annotateAllFunctions(
         HotCountThreshold = PSI->getOrCompHotCountThreshold();
         ColdCountThreshold = PSI->getOrCompColdCountThreshold();
       }
-      verifyFuncBFI(Func, LI, NBPI, HotCountThreshold, ColdCountThreshold);
+      verifyFuncBFI(Func, CI, NBPI, HotCountThreshold, ColdCountThreshold);
     }
   }
 

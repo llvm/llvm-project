@@ -15,11 +15,16 @@
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "RequestHandler.h"
+#include "lldb/API/SBCommandInterpreter.h"
+#include "lldb/API/SBCommandReturnObject.h"
+#include "lldb/API/SBExecutionContext.h"
+#include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 
 using namespace llvm;
+using namespace lldb;
 using namespace lldb_dap;
 using namespace lldb_dap::protocol;
 
@@ -44,6 +49,19 @@ static bool RunExpressionAsLLDBCommand(DAP &dap, lldb::SBFrame &frame,
   return repl_mode == ReplMode::Command;
 }
 
+static bool IsValidAddress(lldb::SBValue &value, lldb::addr_t addr) {
+  if (addr == LLDB_INVALID_ADDRESS)
+    return false;
+
+  lldb::SBMemoryRegionInfo region;
+  lldb::SBError err = value.GetProcess().GetMemoryRegionInfo(addr, region);
+  if (err.Success())
+    return region.IsMapped() && (region.IsReadable() || region.IsWritable() ||
+                                 region.IsExecutable());
+
+  return false;
+}
+
 static lldb::SBValue EvaluateVariableExpression(lldb::SBTarget &target,
                                                 lldb::SBFrame &frame,
                                                 const std::string &expression,
@@ -55,8 +73,10 @@ static lldb::SBValue EvaluateVariableExpression(lldb::SBTarget &target,
     // Check if it is a variable or an expression path for a variable. i.e.
     // 'foo->bar' finds the 'bar' variable. It is more reliable than the
     // expression parser in many cases and it is faster.
-    value = frame.GetValueForVariablePath(
-        expression_cstr, lldb::eDynamicDontRunTarget, lldb::eDILModeLegacy);
+    lldb::DILMode mode =
+        run_as_expression ? lldb::eDILModeFull : lldb::eDILModeLegacy;
+    value = frame.GetValueForVariablePathWithMode(expression_cstr, mode,
+                                                  lldb::eDynamicDontRunTarget);
     if (value || !run_as_expression)
       return value;
 
@@ -91,11 +111,20 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
       dap.focus_tid = frame.GetThread().GetThreadID();
     }
 
-    bool required_command_failed = false;
-    body.result = RunLLDBCommands(
-        dap.debugger, dap.GetAPIMutex(), llvm::StringRef(), {expression},
-        required_command_failed,
-        /*parse_command_directives=*/false, /*echo_commands=*/false);
+    SBCommandInterpreter interp = dap.debugger.GetCommandInterpreter();
+    auto ctx = frame ? SBExecutionContext(frame) : SBExecutionContext();
+    SBCommandReturnObject result{};
+    interp.HandleCommand(expression.c_str(), ctx, result,
+                         /*add_to_history=*/true);
+
+    if (!result.Succeeded()) {
+      return llvm::make_error<DAPError>(
+          std::string(result.GetError(), result.GetErrorSize()),
+          /**error_code=*/llvm::inconvertibleErrorCode(),
+          /**show_user= */ false);
+    }
+
+    body.result = std::string(result.GetOutput(), result.GetOutputSize());
     return body;
   }
 
@@ -137,13 +166,13 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
     body.variablesReference = dap.reference_storage.Insert(
         value, /*is_permanent=*/is_repl_context, /*is_internal=*/false);
 
-  if (lldb::addr_t addr = value.GetLoadAddress(); addr != LLDB_INVALID_ADDRESS)
-    body.memoryReference = EncodeMemoryReference(addr);
+  if (lldb::addr_t addr = value.GetLoadAddress())
+    if (IsValidAddress(value, addr))
+      body.memoryReference = EncodeMemoryReference(addr);
 
   if (ValuePointsToCode(value) &&
       body.variablesReference.Kind() != eReferenceKindInvalid)
-    body.valueLocationReference =
-        PackLocation(body.variablesReference.AsUInt32(), true);
+    body.valueLocationReference = PackLocation(body.variablesReference, true);
 
   return body;
 }

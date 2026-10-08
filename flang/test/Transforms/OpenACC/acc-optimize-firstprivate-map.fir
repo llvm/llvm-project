@@ -7,7 +7,7 @@ func.func private @use_i32(i32)
 // CHECK-LABEL: func.func @test_trivial_scalar_hoist
 func.func @test_trivial_scalar_hoist() {
   %scalar = fir.alloca i32 {bindc_name = "scalar_var"}
-  %decl = fir.declare %scalar {uniq_name = "_QFtest_trivial_scalarEscalar_var"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %decl = fir.declare %scalar uniq_name("_QFtest_trivial_scalarEscalar_var") : (!fir.ref<i32>) -> !fir.ref<i32>
   %fpmap = acc.firstprivate_map varPtr(%decl : !fir.ref<i32>) -> !fir.ref<i32>
   // CHECK: %[[DECL:.*]] = fir.declare
   // CHECK: %[[LOAD:.*]] = fir.load %[[DECL]] : !fir.ref<i32>
@@ -31,7 +31,7 @@ func.func private @use_i32(i32)
 // CHECK-LABEL: func.func @test_inside_offload_region
 func.func @test_inside_offload_region() {
   %scalar = fir.alloca i32 {bindc_name = "scalar_var"}
-  %decl = fir.declare %scalar {uniq_name = "_QFtest_inside_offloadEscalar_var"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %decl = fir.declare %scalar uniq_name("_QFtest_inside_offloadEscalar_var") : (!fir.ref<i32>) -> !fir.ref<i32>
   %copyin = acc.copyin varPtr(%decl : !fir.ref<i32>) -> !fir.ref<i32>
   // CHECK: %[[DECL:.*]] = fir.declare
   // CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[DECL]] : !fir.ref<i32>) -> !fir.ref<i32>
@@ -57,7 +57,7 @@ func.func private @use_i32(i32)
 func.func @test_local_alloca_inside_offload() {
   acc.parallel {
     %local = fir.alloca i32 {bindc_name = "local_var"}
-    %decl = fir.declare %local {uniq_name = "_QFtest_local_allocaElocal_var"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    %decl = fir.declare %local uniq_name("_QFtest_local_allocaElocal_var") : (!fir.ref<i32>) -> !fir.ref<i32>
     %fpmap = acc.firstprivate_map varPtr(%decl : !fir.ref<i32>) -> !fir.ref<i32>
     %load = fir.load %fpmap : !fir.ref<i32>
     // CHECK: acc.parallel
@@ -80,7 +80,7 @@ func.func private @use_i32(i32)
 // CHECK-LABEL: func.func @test_private_input
 func.func @test_private_input() {
   %scalar = fir.alloca i32 {bindc_name = "scalar_var"}
-  %decl = fir.declare %scalar {uniq_name = "_QFtest_private_inputEscalar_var"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %decl = fir.declare %scalar uniq_name("_QFtest_private_inputEscalar_var") : (!fir.ref<i32>) -> !fir.ref<i32>
   %private = acc.private varPtr(%decl : !fir.ref<i32>) -> !fir.ref<i32>
   // CHECK: %[[DECL:.*]] = fir.declare
   // CHECK: %[[PRIVATE:.*]] = acc.private varPtr(%[[DECL]] : !fir.ref<i32>) -> !fir.ref<i32>
@@ -106,7 +106,7 @@ func.func private @use_i32(i32)
 // CHECK-LABEL: func.func @test_hoist_from_offload_region
 func.func @test_hoist_from_offload_region() {
   %scalar = fir.alloca i32 {bindc_name = "scalar_var"}
-  %decl = fir.declare %scalar {uniq_name = "_QFtest_hoistEscalar_var"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %decl = fir.declare %scalar uniq_name("_QFtest_hoistEscalar_var") : (!fir.ref<i32>) -> !fir.ref<i32>
   // CHECK: %[[DECL:.*]] = fir.declare
   // CHECK: %[[LOAD:.*]] = fir.load %[[DECL]] : !fir.ref<i32>
   // CHECK-NOT: acc.firstprivate_map
@@ -129,9 +129,9 @@ func.func private @use_i32(i32)
 
 // CHECK-LABEL: func.func @test_optional_no_hoist
 func.func @test_optional_no_hoist(%arg0: !fir.ref<i32>) {
-  %decl = fir.declare %arg0 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFtest_optionalEopt_var"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %decl = fir.declare %arg0 uniq_name("_QFtest_optionalEopt_var") fortran_attrs<optional> : (!fir.ref<i32>) -> !fir.ref<i32>
   %fpmap = acc.firstprivate_map varPtr(%decl : !fir.ref<i32>) -> !fir.ref<i32>
-  // CHECK: %[[DECL:.*]] = fir.declare {{.*}} {fortran_attrs = #fir.var_attrs<optional>
+  // CHECK: %[[DECL:.*]] = fir.declare {{.*}} {{.*}}fortran_attrs<optional>
   // CHECK: %[[FPMAP:.*]] = acc.firstprivate_map varPtr(%[[DECL]] : !fir.ref<i32>) -> !fir.ref<i32>
   // CHECK: acc.parallel
   acc.parallel {
@@ -154,7 +154,7 @@ func.func @test_array_no_hoist() {
   %c10 = arith.constant 10 : index
   %array = fir.alloca !fir.array<10xi32> {bindc_name = "array_var"}
   %shape = fir.shape %c10 : (index) -> !fir.shape<1>
-  %decl = fir.declare %array(%shape) {uniq_name = "_QFtest_arrayEarray_var"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xi32>>
+  %decl = fir.declare %array(%shape) uniq_name("_QFtest_arrayEarray_var") : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xi32>>
   %fpmap = acc.firstprivate_map varPtr(%decl : !fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.array<10xi32>>
   // CHECK: %[[DECL:.*]] = fir.declare
   // CHECK: %[[FPMAP:.*]] = acc.firstprivate_map varPtr(%[[DECL]] : !fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.array<10xi32>>
@@ -177,7 +177,7 @@ func.func private @use_i32_i32(i32, i32)
 // CHECK-LABEL: func.func @test_multiple_loads_hoist
 func.func @test_multiple_loads_hoist() {
   %scalar = fir.alloca i32 {bindc_name = "scalar_var"}
-  %decl = fir.declare %scalar {uniq_name = "_QFtest_multiple_loadsEscalar_var"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %decl = fir.declare %scalar uniq_name("_QFtest_multiple_loadsEscalar_var") : (!fir.ref<i32>) -> !fir.ref<i32>
   %fpmap = acc.firstprivate_map varPtr(%decl : !fir.ref<i32>) -> !fir.ref<i32>
   // CHECK: %[[DECL:.*]] = fir.declare
   // CHECK-DAG: %[[LOAD1:.*]] = fir.load %[[DECL]] : !fir.ref<i32>
@@ -202,7 +202,7 @@ func.func private @use_i32(i32)
 // CHECK-LABEL: func.func @test_through_convert
 func.func @test_through_convert() {
   %scalar = fir.alloca i32 {bindc_name = "scalar_var"}
-  %decl = fir.declare %scalar {uniq_name = "_QFtest_convertEscalar_var"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %decl = fir.declare %scalar uniq_name("_QFtest_convertEscalar_var") : (!fir.ref<i32>) -> !fir.ref<i32>
   %convert = fir.convert %decl : (!fir.ref<i32>) -> !fir.ref<i32>
   %fpmap = acc.firstprivate_map varPtr(%convert : !fir.ref<i32>) -> !fir.ref<i32>
   // CHECK: %[[DECL:.*]] = fir.declare

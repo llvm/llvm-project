@@ -1,4 +1,4 @@
-!RUN: bbc -emit-hlfir -fopenacc -fopenmp -o - %s | FileCheck %s
+!RUN: bbc --wrap-unstructured-constructs-in-execute-region -emit-hlfir -fopenacc -fopenmp -o - %s | FileCheck %s
 
 !https://github.com/llvm/llvm-project/issues/91526
 

@@ -41,10 +41,10 @@ define void @hoist_invariant_load(ptr %invariant_ptr, i64 %num_elements, ptr %ar
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP8]], i64 64
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr [32 x i8], ptr [[ARRAY]], i64 [[I2]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP10]], i64 96
-; CHECK-NEXT:    [[TMP12:%.*]] = load <5 x double>, ptr [[TMP5]], align 8, !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <5 x double> [[TMP12]], <5 x double> poison, <2 x i32> <i32 0, i32 4>
-; CHECK-NEXT:    [[TMP13:%.*]] = load <5 x double>, ptr [[TMP9]], align 8, !alias.scope [[META3]], !noalias [[META0]]
-; CHECK-NEXT:    [[STRIDED_VEC5:%.*]] = shufflevector <5 x double> [[TMP13]], <5 x double> poison, <2 x i32> <i32 0, i32 4>
+; CHECK-NEXT:    [[TMP12:%.*]] = load <6 x double>, ptr [[TMP5]], align 8, !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <6 x double> [[TMP12]], <6 x double> poison, <2 x i32> <i32 0, i32 4>
+; CHECK-NEXT:    [[TMP13:%.*]] = load <6 x double>, ptr [[TMP9]], align 8, !alias.scope [[META3]], !noalias [[META0]]
+; CHECK-NEXT:    [[STRIDED_VEC5:%.*]] = shufflevector <6 x double> [[TMP13]], <6 x double> poison, <2 x i32> <i32 0, i32 4>
 ; CHECK-NEXT:    [[TMP14:%.*]] = fadd <2 x double> [[BROADCAST_SPLAT]], [[STRIDED_VEC]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = fadd <2 x double> [[BROADCAST_SPLAT]], [[STRIDED_VEC5]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x double> [[TMP14]], i64 0

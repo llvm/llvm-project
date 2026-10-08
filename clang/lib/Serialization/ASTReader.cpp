@@ -26,6 +26,7 @@
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
@@ -81,6 +82,8 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaOpenMP.h"
+#include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/Weak.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTDeserializationListener.h"
@@ -110,6 +113,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Bitstream/BitstreamReader.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/DJB.h"
@@ -123,6 +127,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -523,13 +528,18 @@ static bool checkTargetOptions(const TargetOptions &TargetOpts,
 
   // We compute the set difference in both directions explicitly so that we can
   // diagnose the differences differently.
+  auto FeatureLess = [](StringRef A, StringRef B) {
+    return A.substr(1) < B.substr(1);
+  };
+
   SmallVector<StringRef, 4> UnmatchedExistingFeatures, UnmatchedReadFeatures;
-  std::set_difference(
-      ExistingFeatures.begin(), ExistingFeatures.end(), ReadFeatures.begin(),
-      ReadFeatures.end(), std::back_inserter(UnmatchedExistingFeatures));
+  std::set_difference(ExistingFeatures.begin(), ExistingFeatures.end(),
+                      ReadFeatures.begin(), ReadFeatures.end(),
+                      std::back_inserter(UnmatchedExistingFeatures),
+                      FeatureLess);
   std::set_difference(ReadFeatures.begin(), ReadFeatures.end(),
                       ExistingFeatures.begin(), ExistingFeatures.end(),
-                      std::back_inserter(UnmatchedReadFeatures));
+                      std::back_inserter(UnmatchedReadFeatures), FeatureLess);
 
   // If we are allowing compatible differences and the read feature set is
   // a strict subset of the existing feature set, there is nothing to diagnose.
@@ -922,6 +932,16 @@ static bool checkPreprocessorOptions(
   }
 
   // Compute the #include and #include_macros lines we need.
+  for (unsigned I = 0, N = ExistingPPOpts.MacroIncludes.size(); I != N; ++I) {
+    StringRef File = ExistingPPOpts.MacroIncludes[I];
+    if (llvm::is_contained(PPOpts.MacroIncludes, File))
+      continue;
+
+    SuggestedPredefines += "#__include_macros \"";
+    SuggestedPredefines += File;
+    SuggestedPredefines += "\"\n##\n";
+  }
+
   for (unsigned I = 0, N = ExistingPPOpts.Includes.size(); I != N; ++I) {
     StringRef File = ExistingPPOpts.Includes[I];
 
@@ -944,16 +964,6 @@ static bool checkPreprocessorOptions(
     SuggestedPredefines += "#include \"";
     SuggestedPredefines += File;
     SuggestedPredefines += "\"\n";
-  }
-
-  for (unsigned I = 0, N = ExistingPPOpts.MacroIncludes.size(); I != N; ++I) {
-    StringRef File = ExistingPPOpts.MacroIncludes[I];
-    if (llvm::is_contained(PPOpts.MacroIncludes, File))
-      continue;
-
-    SuggestedPredefines += "#__include_macros \"";
-    SuggestedPredefines += File;
-    SuggestedPredefines += "\"\n##\n";
   }
 
   return false;
@@ -1952,6 +1962,23 @@ int ASTReader::getSLocEntryID(SourceLocation::UIntTy SLocOffset) {
   return F->SLocEntryBaseID + *std::prev(It);
 }
 
+std::pair<SourceLocation::UIntTy, SourceLocationEncoding::Chain>
+ASTReader::ReadSourceLocationOffset(const RecordDataImpl &Record, unsigned Idx,
+                                    SourceLocation::UIntTy InitialDelta) {
+  SourceLocation::UIntTy Offset = Record[Idx];
+  return {Offset, SourceLocationEncoding::Chain(Offset + InitialDelta)};
+}
+
+std::pair<SourceLocation::UIntTy, SourceLocationEncoding::Chain>
+ASTReader::ReadEntryOffset(const RecordDataImpl &Record) {
+  // Anchor the chain at the entry's own local offset, deriving it exactly as
+  // the writer does -- see ASTWriter::EmitEntryOffset. The field has the dummy
+  // entry subtracted out, so add it back. The anchor stays in the writing
+  // module's local space, which is the space the deltas are differences in;
+  // deltaDecode therefore runs before the locations are translated into ours.
+  return ReadSourceLocationOffset(Record, 0, 2);
+}
+
 bool ASTReader::ReadSLocEntry(int ID) {
   if (ID == 0)
     return false;
@@ -1984,19 +2011,9 @@ bool ASTReader::ReadSLocEntry(int ID) {
     unsigned RecCode = MaybeRecCode.get();
 
     if (RecCode == SM_SLOC_BUFFER_BLOB_COMPRESSED) {
-      // Inspect the first byte to differentiate zlib (\x78) and zstd
-      // (little-endian 0xFD2FB528).
-      const llvm::compression::Format F =
-          Blob.size() > 0 && Blob.data()[0] == 0x78
-              ? llvm::compression::Format::Zlib
-              : llvm::compression::Format::Zstd;
-      if (const char *Reason = llvm::compression::getReasonIfUnsupported(F)) {
-        Error(Reason);
-        return nullptr;
-      }
       SmallVector<uint8_t, 0> Decompressed;
       if (llvm::Error E = llvm::compression::decompress(
-              F, llvm::arrayRefFromStringRef(Blob), Decompressed, Record[0])) {
+              llvm::arrayRefFromStringRef(Blob), Decompressed, Record[0])) {
         Error("could not decompress embedded file contents: " +
               llvm::toString(std::move(E)));
         return nullptr;
@@ -2121,12 +2138,15 @@ bool ASTReader::ReadSLocEntry(int ID) {
   }
 
   case SM_SLOC_EXPANSION_ENTRY: {
-    SourceLocation SpellingLoc = ReadSourceLocation(*F, Record[1]);
-    SourceLocation ExpansionBegin = ReadSourceLocation(*F, Record[2]);
-    SourceLocation ExpansionEnd = ReadSourceLocation(*F, Record[3]);
+    auto [EntryOffset, Chain] = ReadEntryOffset(Record);
+    // The chain is stateful: decode in the same order the writer emitted, each
+    // in its own statement. See CreateSLocExpansionAbbrev for the field order.
+    SourceLocation ExpansionEnd = ReadSourceLocation(*F, Record[1], Chain);
+    SourceLocation ExpansionBegin = ReadSourceLocation(*F, Record[2], Chain);
+    SourceLocation SpellingLoc = ReadSourceLocation(*F, Record[3], Chain);
     SourceMgr.createExpansionLoc(SpellingLoc, ExpansionBegin, ExpansionEnd,
                                  Record[5], Record[4], ID,
-                                 BaseOffset + Record[0]);
+                                 BaseOffset + EntryOffset);
     break;
   }
   }
@@ -3124,6 +3144,10 @@ ASTReader::ResolveImportedPath(SmallString<0> &Buf, StringRef Path,
       Path == "<built-in>" || Path == "<command line>")
     return {Path, Buf};
 
+  // The writer makes the base directory itself relative as ".".
+  if (Path == ".")
+    return {Prefix, Buf};
+
   Buf.clear();
   llvm::sys::path::append(Buf, Prefix, Path);
   StringRef ResolvedPath{Buf.data(), Buf.size()};
@@ -3289,10 +3313,13 @@ ASTReader::getModuleForRelocationChecks(ModuleFile &F, bool DirectoryCheck) {
   // session.
   auto [EnablesBSValidation, WasValidated] =
       wasValidatedInBuildSession(F, HSOpts);
-  if (WasValidated)
-    return {std::nullopt, IgnoreError};
-  if (EnablesBSValidation &&
-      static_cast<uint64_t>(F.ModTime) >= HSOpts.BuildSessionTimestamp)
+  const bool SkipModuleLookup =
+      !PP.getPreprocessorOpts().ModulesForceRedundantLookup &&
+      (WasValidated ||
+       (EnablesBSValidation &&
+        static_cast<uint64_t>(F.ModTime) >= HSOpts.BuildSessionTimestamp));
+
+  if (SkipModuleLookup)
     return {std::nullopt, IgnoreError};
 
   Diag(diag::remark_module_check_relocation) << F.ModuleName << F.FileName;
@@ -3302,7 +3329,7 @@ ASTReader::getModuleForRelocationChecks(ModuleFile &F, bool DirectoryCheck) {
   // check).
   Module *M = PP.getHeaderSearchInfo().lookupModule(
       F.ModuleName, DirectoryCheck ? SourceLocation() : F.ImportLoc,
-      /*AllowSearch=*/DirectoryCheck,
+      /*AllowSearch=*/true,
       /*AllowExtraModuleMapSearch=*/DirectoryCheck);
 
   return {M, IgnoreError};
@@ -3400,6 +3427,13 @@ ASTReader::ReadControlBlock(ModuleFile &F,
           if (!IF.getFile() || IF.isOutOfDate())
             return OutOfDate;
         }
+
+        // A header added to a directory the module enumerated was never
+        // recorded as an input file, so the check above misses it.
+        if (!WasValidated && F.Kind == MK_ImplicitModule &&
+            HSOpts.ModulesValidateDirectoryDependencies &&
+            isDirectoryDependencyOutOfDate(F, Complain))
+          return OutOfDate;
       } else {
         F.InputFilesValidationStatus = InputFilesValidation::Disabled;
       }
@@ -3743,6 +3777,10 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       if (ASTReadResult Result =
               ReadModuleMapFileBlock(Record, F, ImportedBy, ClientLoadCapabilities))
         return Result;
+      break;
+
+    case MODULE_DIRECTORY_DEPENDENCIES:
+      ReadDirectoryDependencies(Record, F);
       break;
 
     case INPUT_FILE_OFFSETS:
@@ -4536,6 +4574,11 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
         DeclsWithEffectsToVerify.push_back(ReadDeclID(F, Record, I));
       break;
 
+    case OMP_REQUIRES_DECLS:
+      for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
+        OpenMPRequiresDecls.push_back(ReadDeclID(F, Record, I));
+      break;
+
     case OPENCL_EXTENSIONS:
       for (unsigned I = 0, E = Record.size(); I != E; ) {
         auto Name = ReadString(Record, I);
@@ -4860,7 +4903,7 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
     for (unsigned I = 0, N = Record[Idx++]; I < N; ++I) {
       // FIXME: we should use input files rather than storing names.
       std::string Filename = ReadPath(F, Record, Idx);
-      auto SF = FileMgr.getOptionalFileRef(Filename, false, false);
+      auto SF = FileMgr.getOptionalFileRef(Filename);
       if (!SF) {
         if (!canRecoverFromOutOfDate(F.FileName, ClientLoadCapabilities))
           Error("could not find file '" + Filename +"' referenced by AST file");
@@ -4897,6 +4940,52 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
   if (Listener)
     Listener->ReadModuleMapFile(F.ModuleMapPath);
   return Success;
+}
+
+void ASTReader::ReadDirectoryDependencies(const RecordData &Record,
+                                          ModuleFile &F) {
+  unsigned Idx = 0;
+  unsigned N = Record[Idx++];
+  F.DirectoryDependencies.reserve(N);
+  for (unsigned I = 0; I != N; ++I)
+    F.DirectoryDependencies.push_back(ReadPath(F, Record, Idx));
+}
+
+bool ASTReader::isDirectoryDependencyOutOfDate(ModuleFile &F, bool Complain) {
+  llvm::vfs::FileSystem &FS = PP.getFileManager().getVirtualFileSystem();
+  // Adding or removing an entry updates the modification time of the directory
+  // holding it, so comparing every directory in the tree against the module
+  // file catches a header that was added, even one whose own modification time
+  // is older. A directory that doesn't exist has no listing to depend on.
+  auto IsNewer = [&](StringRef Dir) {
+    llvm::ErrorOr<llvm::vfs::Status> Status = FS.status(Dir);
+    return Status && Status->isDirectory() &&
+           llvm::sys::toTimeT(Status->getLastModificationTime()) > F.ModTime;
+  };
+
+  for (StringRef Dir : F.DirectoryDependencies) {
+    std::optional<std::string> Changed;
+    if (IsNewer(Dir)) {
+      Changed = Dir.str();
+    } else {
+      std::error_code EC;
+      for (llvm::vfs::recursive_directory_iterator I(FS, Dir, EC), E;
+           I != E && !EC; I.increment(EC)) {
+        if (I->type() == llvm::sys::fs::file_type::directory_file &&
+            IsNewer(I->path())) {
+          Changed = I->path().str();
+          break;
+        }
+      }
+    }
+    if (!Changed)
+      continue;
+    Diag(diag::remark_module_directory_dep_changed) << F.ModuleName << *Changed;
+    if (Complain)
+      Diag(diag::err_module_directory_dep_changed) << F.ModuleName << *Changed;
+    return true;
+  }
+  return false;
 }
 
 /// Move the given method to the back of the global list of methods.
@@ -6735,6 +6824,7 @@ bool ASTReader::ParseLanguageOptions(const RecordData &Record,
                                      bool AllowCompatibleDifferences) {
   LangOptions LangOpts;
   unsigned Idx = 0;
+  LangOpts.LangStd = static_cast<LangStandard::Kind>(Record[Idx++]);
 #define LANGOPT(Name, Bits, Default, Compatibility, Description)               \
   LangOpts.Name = Record[Idx++];
 #define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
@@ -7730,7 +7820,7 @@ ConceptReference *ASTRecordReader::readConceptReference() {
   auto TemplateKWLoc = readSourceLocation();
   auto ConceptNameLoc = readDeclarationNameInfo();
   auto FoundDecl = readDeclAs<NamedDecl>();
-  auto NamedConcept = readDeclAs<ConceptDecl>();
+  auto NamedConcept = readTemplateName();
   auto *CR = ConceptReference::Create(
       getContext(), NNS, TemplateKWLoc, ConceptNameLoc, FoundDecl, NamedConcept,
       (readBool() ? readASTTemplateArgumentListInfo() : nullptr));
@@ -7774,6 +7864,11 @@ void TypeLocReader::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
 
 void TypeLocReader::VisitCountAttributedTypeLoc(CountAttributedTypeLoc TL) {
   // Nothing to do
+}
+
+void TypeLocReader::VisitLateParsedAttrTypeLoc(LateParsedAttrTypeLoc TL) {
+  llvm_unreachable(
+      "should be replaced with a concrete type before serialization");
 }
 
 void TypeLocReader::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
@@ -8124,6 +8219,9 @@ QualType ASTReader::GetType(TypeID ID) {
     case PREDEF_TYPE_NULLPTR_ID:
       T = Context.NullPtrTy;
       break;
+    case PREDEF_TYPE_META_INFO_ID:
+      T = Context.MetaInfoTy;
+      break;
     case PREDEF_TYPE_CHAR8_ID:
       T = Context.Char8Ty;
       break;
@@ -8221,6 +8319,16 @@ QualType ASTReader::GetType(TypeID ID) {
     T = Context.SingletonId;                                                   \
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  case PREDEF_TYPE_##Id##_ID:                                                  \
+    T = Context.SingletonId;                                                   \
+    break;
+#include "clang/Basic/HLSLPackedTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  case PREDEF_TYPE_##Id##_ID:                                                  \
+    T = Context.SingletonId;                                                   \
+    break;
+#include "clang/Basic/SPIRVTypes.def"
     }
 
     assert(!T.isNull() && "Unknown predefined type");
@@ -9338,6 +9446,12 @@ void ASTReader::InitializeSema(Sema &S) {
 void ASTReader::UpdateSema() {
   assert(SemaObj && "no Sema to update");
 
+  // UpdateSema() runs after each AST file is loaded, not only the first, so a
+  // 'requires' directive from a module is registered too.
+  for (GlobalDeclID ID : OpenMPRequiresDecls)
+    SemaObj->OpenMP().addRequiresDecl(cast<OMPRequiresDecl>(GetDecl(ID)));
+  OpenMPRequiresDecls.clear();
+
   // Load the offsets of the declarations that Sema references.
   // They will be lazily deserialized when needed.
   if (!SemaDeclRefs.empty()) {
@@ -9923,29 +10037,6 @@ void ASTReader::ReadLateParsedTemplates(
   }
 
   LateParsedTemplates.clear();
-}
-
-void ASTReader::AssignedLambdaNumbering(CXXRecordDecl *Lambda) {
-  if (!Lambda->getLambdaContextDecl())
-    return;
-
-  auto LambdaInfo =
-      std::make_pair(Lambda->getLambdaContextDecl()->getCanonicalDecl(),
-                     Lambda->getLambdaIndexInContext());
-
-  // Handle the import and then include case for lambdas.
-  if (auto Iter = LambdaDeclarationsForMerging.find(LambdaInfo);
-      Iter != LambdaDeclarationsForMerging.end() &&
-      Iter->second->isFromASTFile() && Lambda->getFirstDecl() == Lambda) {
-    CXXRecordDecl *Previous =
-        cast<CXXRecordDecl>(Iter->second)->getMostRecentDecl();
-    Lambda->setPreviousDecl(Previous);
-    return;
-  }
-
-  // Keep track of this lambda so it can be merged with another lambda that
-  // is loaded later.
-  LambdaDeclarationsForMerging.insert({LambdaInfo, Lambda});
 }
 
 void ASTReader::LoadSelector(Selector Sel) {
@@ -11547,7 +11638,7 @@ OMPClause *OMPClauseReader::readClause() {
     C = new (Context) OMPFinalClause();
     break;
   case llvm::omp::OMPC_num_threads:
-    C = new (Context) OMPNumThreadsClause();
+    C = OMPNumThreadsClause::CreateEmpty(Context, Record.readInt());
     break;
   case llvm::omp::OMPC_safelen:
     C = new (Context) OMPSafelenClause();
@@ -11571,13 +11662,16 @@ OMPClause *OMPClauseReader::readClause() {
     break;
   }
   case llvm::omp::OMPC_full:
-    C = OMPFullClause::CreateEmpty(Context);
+    C = new (Context) OMPFullClause();
     break;
   case llvm::omp::OMPC_partial:
-    C = OMPPartialClause::CreateEmpty(Context);
+    C = new (Context) OMPPartialClause();
+    break;
+  case llvm::omp::OMPC_depth:
+    C = new (Context) OMPDepthClause();
     break;
   case llvm::omp::OMPC_looprange:
-    C = OMPLoopRangeClause::CreateEmpty(Context);
+    C = new (Context) OMPLoopRangeClause();
     break;
   case llvm::omp::OMPC_allocator:
     C = new (Context) OMPAllocatorClause();
@@ -11619,7 +11713,10 @@ OMPClause *OMPClauseReader::readClause() {
     C = new (Context) OMPWriteClause();
     break;
   case llvm::omp::OMPC_update:
-    C = OMPUpdateClause::CreateEmpty(Context, Record.readInt());
+    C = new (Context) OMPUpdateClause();
+    break;
+  case llvm::omp::OMPC_update_depend_objects:
+    C = OMPUpdateDependObjectsClause::CreateEmpty(Context);
     break;
   case llvm::omp::OMPC_capture:
     C = new (Context) OMPCaptureClause();
@@ -11749,7 +11846,7 @@ OMPClause *OMPClauseReader::readClause() {
     C = OMPFlushClause::CreateEmpty(Context, Record.readInt());
     break;
   case llvm::omp::OMPC_depobj:
-    C = OMPDepobjClause::CreateEmpty(Context);
+    C = new (Context) OMPDepobjClause();
     break;
   case llvm::omp::OMPC_depend: {
     unsigned NumVars = Record.readInt();
@@ -11894,7 +11991,7 @@ OMPClause *OMPClauseReader::readClause() {
     C = new (Context) OMPFilterClause();
     break;
   case llvm::omp::OMPC_bind:
-    C = OMPBindClause::CreateEmpty(Context);
+    C = new (Context) OMPBindClause();
     break;
   case llvm::omp::OMPC_align:
     C = new (Context) OMPAlignClause();
@@ -11959,11 +12056,20 @@ void OMPClauseReader::VisitOMPFinalClause(OMPFinalClause *C) {
 }
 
 void OMPClauseReader::VisitOMPNumThreadsClause(OMPNumThreadsClause *C) {
+  C->setPrescriptivenessModifier(
+      Record.readEnum<OpenMPNumThreadsClauseModifier>());
+  C->setPrescriptivenessModifierLoc(Record.readSourceLocation());
+  C->setDimsModifier(Record.readEnum<OpenMPNumThreadsClauseModifier>());
+  C->setDimsModifierLoc(Record.readSourceLocation());
+  C->setDimsModifierExpr(Record.readSubExpr());
   VisitOMPClauseWithPreInit(C);
-  C->setModifier(Record.readEnum<OpenMPNumThreadsClauseModifier>());
-  C->setNumThreads(Record.readSubExpr());
-  C->setModifierLoc(Record.readSourceLocation());
   C->setLParenLoc(Record.readSourceLocation());
+  unsigned NumVars = C->varlist_size();
+  SmallVector<Expr *, 16> Vars;
+  Vars.reserve(NumVars);
+  for (unsigned I = 0; I != NumVars; ++I)
+    Vars.push_back(Record.readSubExpr());
+  C->setVarRefs(Vars);
 }
 
 void OMPClauseReader::VisitOMPSafelenClause(OMPSafelenClause *C) {
@@ -12002,6 +12108,11 @@ void OMPClauseReader::VisitOMPFullClause(OMPFullClause *C) {}
 
 void OMPClauseReader::VisitOMPPartialClause(OMPPartialClause *C) {
   C->setFactor(Record.readSubExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPDepthClause(OMPDepthClause *C) {
+  C->setDepth(Record.readSubExpr());
   C->setLParenLoc(Record.readSourceLocation());
 }
 
@@ -12097,12 +12208,13 @@ void OMPClauseReader::VisitOMPReadClause(OMPReadClause *) {}
 
 void OMPClauseReader::VisitOMPWriteClause(OMPWriteClause *) {}
 
-void OMPClauseReader::VisitOMPUpdateClause(OMPUpdateClause *C) {
-  if (C->isExtended()) {
-    C->setLParenLoc(Record.readSourceLocation());
-    C->setArgumentLoc(Record.readSourceLocation());
-    C->setDependencyKind(Record.readEnum<OpenMPDependClauseKind>());
-  }
+void OMPClauseReader::VisitOMPUpdateClause(OMPUpdateClause *) {}
+
+void OMPClauseReader::VisitOMPUpdateDependObjectsClause(
+    OMPUpdateDependObjectsClause *C) {
+  C->setLParenLoc(Record.readSourceLocation());
+  C->setArgumentLoc(Record.readSourceLocation());
+  C->setDependencyKind(Record.readEnum<OpenMPDependClauseKind>());
 }
 
 void OMPClauseReader::VisitOMPCaptureClause(OMPCaptureClause *) {}

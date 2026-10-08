@@ -71,7 +71,7 @@
 // -----------------------------------------------------------------------------
 // Not Passing -fno-use-init-array when musl is selected
 // -----------------------------------------------------------------------------
-// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-linux-musl \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 %s 2>&1 | FileCheck -check-prefix=CHECK005 %s
 // CHECK005-NOT:          -fno-use-init-array
@@ -87,7 +87,7 @@
 // -----------------------------------------------------------------------------
 // c++ when musl is selected
 // -----------------------------------------------------------------------------
-// RUN: %clangxx -### --target=hexagon-unknown-elf \
+// RUN: %clangxx --sysroot= -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -stdlib=libc++ \
 // RUN:   -mcpu=hexagonv60 %s 2>&1 | FileCheck -check-prefix=CHECK007 %s
@@ -95,14 +95,14 @@
 // -----------------------------------------------------------------------------
 // internal-isystem for linux with and without musl
 // -----------------------------------------------------------------------------
-// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-linux-musl \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -resource-dir=%S/Inputs/resource_dir %s 2>&1 | FileCheck -check-prefix=CHECK008 %s
 // CHECK008:   "-resource-dir" "[[RESOURCE:[^"]+]]"
 // CHECK008-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]{{/|\\\\}}include"
 // CHECK008-SAME: {{^}} "-internal-externc-isystem" "{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}include"
 
-// RUN: %clang -### --target=hexagon-unknown-linux \
+// RUN: %clang --sysroot= -### --target=hexagon-unknown-linux \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -resource-dir=%S/Inputs/resource_dir %s 2>&1 | FileCheck -check-prefix=CHECK009 %s
 // CHECK009:   "-resource-dir" "[[RESOURCE:[^"]+]]"
@@ -110,7 +110,7 @@
 // CHECK009-SAME: {{^}} "-internal-externc-isystem" "{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}include"
 
 // RUN: %clang -Werror -L/tmp \
-// RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
+// RUN:    --target=hexagon-unknown-linux-musl %s --sysroot= -### 2>&1 \
 // RUN:    | FileCheck -check-prefix=CHECK010 %s
 // CHECK010-NOT:  "-lstandalone"
 // CHECK010-NOT:  crt0_standalone.o
@@ -122,7 +122,7 @@
 // unwindlib
 // -----------------------------------------------------------------------------
 // RUN: %clangxx --unwindlib=none \
-// RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
+// RUN:    --target=hexagon-unknown-linux-musl %s --sysroot= -### 2>&1 \
 // RUN:    | FileCheck -check-prefix=CHECK011 %s
 // CHECK011:   "--eh-frame-hdr"
 // CHECK011:   crt1.o
@@ -132,10 +132,10 @@
 
 
 // RUN: %clangxx --rtlib=compiler-rt --unwindlib=libunwind \
-// RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
+// RUN:    --target=hexagon-unknown-linux-musl %s --sysroot= -### 2>&1 \
 // RUN:    | FileCheck -check-prefix=CHECK012 %s
 // RUN: %clangxx \
-// RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
+// RUN:    --target=hexagon-unknown-linux-musl %s --sysroot= -### 2>&1 \
 // RUN:    | FileCheck -check-prefix=CHECK012 %s
 // CHECK012:   crt1.o
 // CHECK012:  "-lunwind"
@@ -143,7 +143,7 @@
 // CHECK012-NOT:  "-lgcc_s"
 
 // RUN: not %clangxx --rtlib=compiler-rt --unwindlib=libgcc \
-// RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
+// RUN:    --target=hexagon-unknown-linux-musl %s --sysroot= -### 2>&1 \
 // RUN:    | FileCheck -check-prefix=CHECK013 %s
 // CHECK013:  error: unsupported unwind library 'libgcc' for platform 'hexagon-unknown-linux-musl'
 // CHECK013-NOT:  "-lgcc_eh"
@@ -272,20 +272,20 @@
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -fuse-ld=lld \
-// RUN:   -fsanitize=shadow-call-stack -ffixed-r19 \
+// RUN:   -fsanitize=shadow-call-stack -ffixed-r18 \
 // RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-SCS %s
 // CHECK-SCS:      "-L{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}scs"
 // CHECK-SCS-SAME: "-L{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib"
 // -----------------------------------------------------------------------------
-// Library paths: -ffixed-r19 alone must NOT select the scs multilib
+// Library paths: -ffixed-r18 alone must NOT select the scs multilib
 // -----------------------------------------------------------------------------
 // RUN: %clang -### --target=hexagon-unknown-linux-musl \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -fuse-ld=lld \
-// RUN:   -ffixed-r19 \
-// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-R19-ONLY %s
-// CHECK-R19-ONLY-NOT: "-L{{.*}}{{/|\\\\}}scs"
+// RUN:   -ffixed-r18 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-R18-ONLY %s
+// CHECK-R18-ONLY-NOT: "-L{{.*}}{{/|\\\\}}scs"
 // -----------------------------------------------------------------------------
 // Startup object: -fsanitize=shadow-call-stack links the scs crt1.o, not the
 // base crt1.o. Selection is on the multilib in effect, not file presence, so
@@ -295,7 +295,7 @@
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -fuse-ld=lld \
-// RUN:   -fsanitize=shadow-call-stack -ffixed-r19 \
+// RUN:   -fsanitize=shadow-call-stack -ffixed-r18 \
 // RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-SCS-CRT %s
 // CHECK-SCS-CRT:     "{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}scs{{/|\\\\}}crt1.o"
 // CHECK-SCS-CRT-NOT: "{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o"

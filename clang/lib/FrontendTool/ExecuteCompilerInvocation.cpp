@@ -27,6 +27,7 @@
 #include "clang/ScalableStaticAnalysis/Frontend/SourceTransformationFrontendAction.h"
 #include "clang/ScalableStaticAnalysis/Frontend/TUSummaryExtractorFrontendAction.h"
 #include "clang/ScalableStaticAnalysis/SSAFForceLinker.h" // IWYU pragma: keep
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Frontend/AnalyzerHelpFlags.h"
 #include "clang/StaticAnalyzer/Frontend/FrontendActions.h"
 #include "llvm/Option/OptTable.h"
@@ -252,21 +253,7 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
 
   Clang->LoadRequestedPlugins();
 
-  // Honor -mllvm.
-  //
-  // FIXME: Remove this, one day.
-  // This should happen AFTER plugins have been loaded!
-  if (!Clang->getFrontendOpts().LLVMArgs.empty()) {
-    unsigned NumArgs = Clang->getFrontendOpts().LLVMArgs.size();
-    auto Args = std::make_unique<const char*[]>(NumArgs + 2);
-    Args[0] = "clang (LLVM option parsing)";
-    for (unsigned i = 0; i != NumArgs; ++i)
-      Args[i + 1] = Clang->getFrontendOpts().LLVMArgs[i].c_str();
-    Args[NumArgs + 1] = nullptr;
-    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get(), /*Overview=*/"",
-                                      /*Errs=*/nullptr,
-                                      /*VFS=*/&Clang->getVirtualFileSystem());
-  }
+  Clang->parseLLVMArgs();
 
 #if CLANG_ENABLE_STATIC_ANALYZER
   // These should happen AFTER plugins have been loaded!

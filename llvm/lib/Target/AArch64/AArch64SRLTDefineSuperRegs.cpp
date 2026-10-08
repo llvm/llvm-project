@@ -86,13 +86,11 @@
 #include "AArch64InstrInfo.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64Subtarget.h"
-#include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/Debug.h"
@@ -130,8 +128,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addPreservedID(MachineLoopInfoID);
-    AU.addPreservedID(MachineDominatorsID);
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -179,9 +175,9 @@ Register AArch64SRLTDefineSuperRegsImpl::getWidestSuperReg(
     return true;
   };
 
-  Register LargestSuperReg = AArch64::NoRegister;
+  Register LargestSuperReg;
   for (Register SR : TRI->superregs(R))
-    if (IsSuitableSuperReg(SR) && (LargestSuperReg == AArch64::NoRegister ||
+    if (IsSuitableSuperReg(SR) && (!LargestSuperReg.isValid() ||
                                    TRI->isSuperRegister(LargestSuperReg, SR)))
       LargestSuperReg = SR;
 
@@ -224,7 +220,7 @@ bool AArch64SRLTDefineSuperRegsImpl::run(MachineFunction &MF) {
       for (const MachineOperand &DefOp : MI.defs())
         if (Register R = getWidestSuperReg(DefOp.getReg(), RequiredBaseRegUnits,
                                            QHiRegUnits);
-            R != AArch64::NoRegister)
+            R.isValid())
           SuperRegs.insert(R);
 
       if (!SuperRegs.size())

@@ -107,7 +107,7 @@ static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
 
 AMDGPUTTIImpl::AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
     : BaseT(TM, F.getDataLayout()),
-      TargetTriple(TM->getTargetTriple()),
+      TargetTriple(F.getParent()->getTargetTriple()),
       ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
       TLI(ST->getTargetLowering()) {}
 
@@ -117,6 +117,8 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
   const Function &F = *L->getHeader()->getParent();
   UP.Threshold =
       F.getFnAttributeAsParsedInteger("amdgpu-unroll-threshold", 300);
+  UP.PartialThreshold =
+      F.getFnAttributeAsParsedInteger("amdgpu-partial-unroll-threshold", 150);
   UP.MaxCount = std::numeric_limits<unsigned>::max();
   UP.Partial = true;
 
@@ -290,8 +292,6 @@ GCNTTIImpl::GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
       IsGraphics(AMDGPU::isGraphics(F.getCallingConv())) {
   SIModeRegisterDefaults Mode(F, *ST);
   HasFP32Denormals = Mode.FP32Denormals != DenormalMode::getPreserveSign();
-  HasFP64FP16Denormals =
-      Mode.FP64FP16Denormals != DenormalMode::getPreserveSign();
 }
 
 bool GCNTTIImpl::hasBranchDivergence(const Function *F) const {
@@ -315,10 +315,10 @@ GCNTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   case TargetTransformInfo::RGK_Scalar:
     return TypeSize::getFixed(32);
   case TargetTransformInfo::RGK_FixedWidthVector:
-    return TypeSize::getFixed((ST->hasPackedFP64Ops() || ST->hasPackedU64Ops())
-                                  ? 128
-                              : ST->hasPackedFP32Ops() ? 64
-                                                       : 32);
+    return TypeSize::getFixed(
+        (ST->hasAnyPackedFP64Ops() || ST->hasAnyPackedU64Ops()) ? 128
+        : ST->hasAnyPackedFP32Ops()                             ? 64
+                                                                : 32);
   case TargetTransformInfo::RGK_ScalableVector:
     return TypeSize::getScalable(0);
   }
@@ -334,11 +334,11 @@ unsigned GCNTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
     return 32 * 4 / ElemWidth;
   // For a given width return the max 0number of elements that can be combined
   // into a wider bit value:
-  return (ElemWidth == 8 && ST->has16BitInsts())       ? 4
-         : (ElemWidth == 16 && ST->has16BitInsts())    ? 2
-         : (ElemWidth == 32 && ST->hasPackedFP32Ops()) ? 2
+  return (ElemWidth == 8 && ST->has16BitInsts())          ? 4
+         : (ElemWidth == 16 && ST->has16BitInsts())       ? 2
+         : (ElemWidth == 32 && ST->hasAnyPackedFP32Ops()) ? 2
          : (ElemWidth == 64 &&
-            (ST->hasPackedFP64Ops() || ST->hasPackedU64Ops()))
+            (ST->hasAnyPackedFP64Ops() || ST->hasAnyPackedU64Ops()))
              ? 2
              : 1;
 }
@@ -524,10 +524,60 @@ bool GCNTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
   }
 }
 
+/// \returns true if \p FMul and its single fadd/fsub user \p FAddSub are
+/// expected to fuse during instruction selection. \p Ty is the type the fused
+/// operation runs on.
+static bool canFuseFMulWithFAddSub(const SITargetLowering &TLI, Type *Ty,
+                                   const Instruction *FMul,
+                                   const Instruction *FAddSub) {
+  assert((FAddSub->getOpcode() == Instruction::FAdd ||
+          FAddSub->getOpcode() == Instruction::FSub) &&
+         "Expected an fadd or an fsub");
+
+  // The mad forms fuse exactly without fast-math flags but flush denormals.
+  // An fma forms only when it is not slower than the separate operations.
+  const Function &F = *FAddSub->getFunction();
+  const bool HasFMAD = TLI.isFMADLegal(F, Ty);
+  const bool HasFMA = TLI.isFMAFasterThanFMulAndFAdd(F, Ty);
+  if (!HasFMAD && !HasFMA)
+    return false;
+
+  // Without a mad the pair fuses only when both carry contract.
+  return HasFMAD || (FAddSub->hasAllowContract() && FMul->hasAllowContract());
+}
+
+/// An fma holds one multiply, so only one fmul operand fuses with \p FAddSub.
+static const Instruction *getFusedFMul(const SITargetLowering &TLI, Type *Ty,
+                                       const Instruction *FAddSub) {
+  for (const Value *Op : FAddSub->operands()) {
+    const auto *FMul = dyn_cast<Instruction>(Op);
+    if (FMul && FMul->getOpcode() == Instruction::FMul && FMul->hasOneUse() &&
+        canFuseFMulWithFAddSub(TLI, Ty, FMul, FAddSub))
+      return FMul;
+  }
+  return nullptr;
+}
+
+static bool isFusedFMul(const SITargetLowering &TLI, Type *Ty,
+                        const Instruction *FMul, const Instruction *FAddSub) {
+  const Instruction *Fused = getFusedFMul(TLI, Ty, FAddSub);
+  if (Fused == FMul)
+    return true;
+  // (a * b + c * d) + e becomes fma(a, b, fma(c, d, e)) if the outer fadd has
+  // reassoc.
+  if (!Fused || FAddSub->getOpcode() != Instruction::FAdd ||
+      !FAddSub->hasOneUse())
+    return false;
+  const auto *Outer = dyn_cast<BinaryOperator>(*FAddSub->user_begin());
+  return Outer && Outer->getOpcode() == Instruction::FAdd &&
+         Outer->hasAllowReassoc() &&
+         canFuseFMulWithFAddSub(TLI, Ty, FMul, Outer);
+}
+
 InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
@@ -554,7 +604,7 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     return getFullRateInstrCost() * LT.first * NElts;
   case ISD::ADD:
   case ISD::SUB:
-    if (SLT == MVT::i64 && ST->hasPackedU64Ops())
+    if (SLT == MVT::i64 && ST->hasAnyPackedU64Ops())
       NElts = (NElts + 1) / 2;
     [[fallthrough]];
   case ISD::AND:
@@ -586,31 +636,23 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     // Check possible fuse {fadd|fsub}(a,fmul(b,c)) and return zero cost for
     // fmul(b,c) supposing the fadd|fsub will get estimated cost for the whole
     // fused operation.
-    if (CxtI && CxtI->hasOneUse())
-      if (const auto *FAdd = dyn_cast<BinaryOperator>(*CxtI->user_begin())) {
-        const int OPC = TLI->InstructionOpcodeToISD(FAdd->getOpcode());
-        if (OPC == ISD::FADD || OPC == ISD::FSUB) {
-          if (ST->hasMadMacF32Insts() && SLT == MVT::f32 && !HasFP32Denormals)
-            return TargetTransformInfo::TCC_Free;
-          if (ST->has16BitInsts() && SLT == MVT::f16 && !HasFP64FP16Denormals)
-            return TargetTransformInfo::TCC_Free;
-
-          // Estimate all types may be fused with contract/unsafe flags
-          const TargetOptions &Options = TLI->getTargetMachine().Options;
-          if (Options.AllowFPOpFusion == FPOpFusion::Fast ||
-              (FAdd->hasAllowContract() && CxtI->hasAllowContract()))
-            return TargetTransformInfo::TCC_Free;
-        }
-      }
+    if (CtxI && CtxI->hasOneUse()) {
+      const auto *FAddSub = dyn_cast<BinaryOperator>(*CtxI->user_begin());
+      if (FAddSub &&
+          (FAddSub->getOpcode() == Instruction::FAdd ||
+           FAddSub->getOpcode() == Instruction::FSub) &&
+          isFusedFMul(*TLI, Ty, CtxI, FAddSub))
+        return TargetTransformInfo::TCC_Free;
+    }
     [[fallthrough]];
   case ISD::FADD:
   case ISD::FSUB:
-    if (ST->hasPackedFP32Ops() && SLT == MVT::f32)
+    if (ST->hasAnyPackedFP32Ops() && SLT == MVT::f32)
       NElts = (NElts + 1) / 2;
     if (ST->hasBF16PackedInsts() && SLT == MVT::bf16)
       NElts = (NElts + 1) / 2;
     if (SLT == MVT::f64) {
-      if (ST->hasPackedFP64Ops())
+      if (ST->hasAnyPackedFP64Ops())
         NElts = (NElts + 1) / 2;
       return LT.first * NElts * get64BitInstrCost(CostKind);
     }
@@ -654,7 +696,7 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
       return LT.first * Cost * NElts;
     }
 
-    if (SLT == MVT::f32 && (CxtI && CxtI->hasApproxFunc())) {
+    if (SLT == MVT::f32 && (CtxI && CtxI->hasApproxFunc())) {
       // Fast unsafe fdiv lowering:
       // f32 rcp
       // f32 fmul
@@ -684,7 +726,7 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
   }
 
   return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                       Args, CxtI);
+                                       Args, CtxI);
 }
 
 // Return true if there's a potential benefit from using v2f16/v2i16
@@ -876,11 +918,11 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   if ((ST->hasVOP3PInsts() &&
        (SLT == MVT::f16 || SLT == MVT::i16 ||
         (SLT == MVT::bf16 && ST->hasBF16PackedInsts()))) ||
-      (ST->hasPackedFP64Ops() && SLT == MVT::f64) ||
-      (ST->hasPackedU64Ops() && SLT == MVT::i64)) {
+      (ST->hasAnyPackedFP64Ops() && SLT == MVT::f64) ||
+      (ST->hasAnyPackedU64Ops() && SLT == MVT::i64)) {
     NElts = (NElts + 1) / 2;
   } else if (SLT == MVT::f32) {
-    bool HasPk2FP32Op = ST->hasPackedFP32Ops() &&
+    bool HasPk2FP32Op = ST->hasAnyPackedFP32Ops() &&
                         IID != Intrinsic::minimumnum &&
                         IID != Intrinsic::maximumnum;
     NElts = HasPk2FP32Op ? (NElts + 1) / 2 : NElts;
@@ -980,12 +1022,273 @@ InstructionCost GCNTTIImpl::getCFInstrCost(unsigned Opcode,
   return BaseT::getCFInstrCost(Opcode, CostKind, I);
 }
 
+InstructionCost GCNTTIImpl::getCmpSelInstrCost(
+    unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
+    TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
+    TTI::OperandValueInfo Op2Info, const Instruction *I) const {
+  // For size and latency cost kinds, return a low cost independent of vector
+  // width to enable SimplifyCFG's speculativelyExecuteBB optimization.
+  if (CostKind == TTI::TCK_SizeAndLatency)
+    return 1;
+
+  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
+                                   Op1Info, Op2Info, I);
+}
+
+// Measured packing cost of i1 for gfx9-12 is 4.0 to 4.8, up to 5.4 with
+// true16; unpacking is 2.6 to 2.9.
+static constexpr unsigned MaskPackCostPerElt = 4;
+static constexpr unsigned MaskUnpackCostPerElt = 3;
+
+static std::optional<unsigned> getNumberOfPackedMaskElts(Type *Ty) {
+  auto *FVT = dyn_cast<FixedVectorType>(Ty);
+  if (FVT && FVT->getElementType()->isIntegerTy(1) && FVT->getNumElements() > 1)
+    return FVT->getNumElements();
+  return std::nullopt;
+}
+
+InstructionCost GCNTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
+                                             Type *Src,
+                                             TTI::CastContextHint CCH,
+                                             TTI::TargetCostKind CostKind,
+                                             const Instruction *I) const {
+  // A bitcast between a vector of i1 and an integer packs or unpacks a mask.
+  if (Opcode == Instruction::BitCast) {
+    if (std::optional<unsigned> Elts = getNumberOfPackedMaskElts(Src);
+        Elts && Dst->isIntegerTy(*Elts))
+      return InstructionCost(MaskPackCostPerElt) * *Elts *
+             getFullRateInstrCost();
+    if (std::optional<unsigned> Elts = getNumberOfPackedMaskElts(Dst);
+        Elts && Src->isIntegerTy(*Elts))
+      return InstructionCost(MaskUnpackCostPerElt) * *Elts *
+             getFullRateInstrCost();
+  }
+
+  // Each f32 lane is rounded and the halves are packed in pairs. A packed
+  // conversion rounds a pair at once and true16 writes either half.
+  if (auto *SrcVTy = dyn_cast<FixedVectorType>(Src);
+      SrcVTy && Opcode == Instruction::FPTrunc && ST->has16BitInsts() &&
+      SrcVTy->getElementType()->isFloatTy() &&
+      Dst->getScalarType()->isHalfTy()) {
+    const unsigned NElts = SrcVTy->getNumElements();
+    const unsigned Ops = ST->hasCvtPkF16F32Inst()   ? divideCeil(NElts, 2)
+                         : ST->useRealTrue16Insts() ? NElts
+                                                    : NElts + NElts / 2;
+    return InstructionCost(Ops) * getFullRateInstrCost();
+  }
+
+  const int ISD = TLI->InstructionOpcodeToISD(Opcode);
+  switch (ISD) {
+  case ISD::SINT_TO_FP:
+  case ISD::UINT_TO_FP:
+  case ISD::FP_TO_SINT:
+  case ISD::FP_TO_UINT:
+    break;
+  default:
+    return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
+  }
+
+  const bool IsIntToFP = ISD == ISD::SINT_TO_FP || ISD == ISD::UINT_TO_FP;
+  Type *FPTy = (IsIntToFP ? Dst : Src)->getScalarType();
+  if (!FPTy->isHalfTy() && !FPTy->isBFloatTy() && !FPTy->isFloatTy() &&
+      !FPTy->isDoubleTy())
+    return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
+
+  unsigned NElts = 1;
+  if (auto *VT = dyn_cast<FixedVectorType>(Src))
+    NElts = VT->getNumElements();
+
+  const unsigned SrcBits = Src->getScalarSizeInBits();
+  const unsigned DstBits = Dst->getScalarSizeInBits();
+  const bool IsSigned = ISD == ISD::SINT_TO_FP || ISD == ISD::FP_TO_SINT;
+  const unsigned IntBits = IsIntToFP ? SrcBits : DstBits;
+  const bool UsesInt64 = IntBits > 32 && IntBits <= 64;
+
+  auto Scale = [&](unsigned FullRateOps,
+                   unsigned FP64Ops = 0) -> InstructionCost {
+    return NElts * (InstructionCost(FullRateOps) * getFullRateInstrCost() +
+                    InstructionCost(FP64Ops) * get64BitInstrCost(CostKind));
+  };
+
+  if (IsIntToFP) {
+    // A scalar load of a whole number of bytes that is not a power of two is
+    // split and its high part load extends the source. A constant address
+    // space or invariant global load aligned to 4 bytes may be widened instead
+    // and then still needs the extension. So does a buffer fat pointer load.
+    const auto *Load =
+        I && Src->isIntegerTy() && I->getOperand(0)->getType() == Src
+            ? dyn_cast<LoadInst>(I->getOperand(0))
+            : nullptr;
+    const unsigned AS = Load ? Load->getPointerAddressSpace() : 0;
+    const bool LoadMayWiden =
+        Load && Load->getAlign() >= Align(4) &&
+        (AS == AMDGPUAS::CONSTANT_ADDRESS ||
+         AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
+         (AS == AMDGPUAS::GLOBAL_ADDRESS &&
+          Load->hasMetadata(LLVMContext::MD_invariant_load)));
+    const bool LoadExtends = Load && Load->isSimple() && Load->hasOneUse() &&
+                             !LoadMayWiden &&
+                             AS != AMDGPUAS::BUFFER_FAT_POINTER &&
+                             AS != AMDGPUAS::BUFFER_STRIDED_POINTER &&
+                             SrcBits % 8 == 0 && !isPowerOf2_32(SrcBits);
+    const unsigned ExtOps =
+        UsesInt64 && SrcBits < 64 && !LoadExtends ? (IsSigned ? 2 : 1) : 0;
+    if (FPTy->isBFloatTy()) {
+      if (SrcBits < 8 || (SrcBits > 32 && !UsesInt64))
+        return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
+
+      // Each integer is converted to f32 first.
+      InstructionCost FloatCost =
+          Scale(UsesInt64 ? ExtOps + (IsSigned ? 12 : 8) : 1);
+      if (SrcBits < 32)
+        FloatCost = getCastInstrCost(
+            Opcode, Dst->getWithNewType(Type::getFloatTy(Dst->getContext())),
+            Src, CCH, CostKind, I);
+
+      // Native rounding can convert a pair. With 16 bit instructions the
+      // expansion extracts the low significand bit, adds the rounding bias,
+      // preserves NaNs and shifts the result. Without gfx9 instructions the two
+      // additions cannot use v_add3_u32.
+      InstructionCost RoundCost =
+          ST->hasBF16ConversionInsts()
+              ? InstructionCost(divideCeil(NElts, 2)) * getFullRateInstrCost()
+              : Scale(!ST->has16BitInsts() ? 1
+                      : ST->hasGFX9Insts() ? 6
+                                           : 7);
+      return FloatCost + RoundCost;
+    }
+
+    // No instruction converts from a 64 bit integer.
+    if (UsesInt64) {
+      if (FPTy->isDoubleTy()) {
+        // Two conversions, ldexp and add, all using the FP64 rate.
+        return Scale(ExtOps, 4);
+      }
+      if (FPTy->isFloatTy())
+        return Scale(ExtOps + (IsSigned ? 12 : 8));
+      return Scale(ExtOps + (IsSigned ? 13 : 9));
+    }
+
+    // A narrow vector source is converted lane by lane.
+    if (SrcBits >= 8 && SrcBits < 32 && isa<FixedVectorType>(Src)) {
+      if (FPTy->isDoubleTy())
+        return Scale(1 + (SrcBits < 16 && IsSigned && ST->has16BitInsts()), 1);
+      if (FPTy->isHalfTy()) {
+        const InstructionCost PairCost =
+            InstructionCost(NElts / 2) * getFullRateInstrCost();
+        // Lanes wider than 16 bits, and every lane without 16 bit instructions,
+        // are converted to f32 first. With the packed conversion each pair is
+        // then converted at once. Otherwise each lane is converted, and without
+        // real true16 each pair of halves is packed.
+        if (!ST->has16BitInsts() || SrcBits > 16) {
+          auto *FloatTy =
+              FixedVectorType::get(Type::getFloatTy(Dst->getContext()), NElts);
+          const InstructionCost FloatCost =
+              getCastInstrCost(Opcode, FloatTy, Src, CCH, CostKind);
+          if (ST->has16BitInsts() && ST->hasCvtPkF16F32Inst())
+            return FloatCost + InstructionCost(divideCeil(NElts, 2)) *
+                                   getFullRateInstrCost();
+          const unsigned PackOps =
+              !ST->has16BitInsts() ? 2 : !ST->useRealTrue16Insts();
+          return FloatCost + Scale(1) + PackOps * PairCost;
+        }
+        // Each lane is converted from a 16 bit subword. Lanes narrower than 16
+        // bits are extended lane by lane, except bytes with SDWA. Signed bytes
+        // are sign extended a pair at a time. Real true16 reads the high
+        // subword in place, so only signed lanes narrower than 16 bits pay per
+        // pair. Otherwise wider lanes shift the high subword of each pair down
+        // without SDWA, and each pair of halves is packed.
+        const unsigned PerElt =
+            1 + (SrcBits == 8 ? !ST->hasSDWA() : SrcBits < 16);
+        const bool RealTrue16 = ST->useRealTrue16Insts();
+        const unsigned PerPair =
+            !RealTrue16 + (SrcBits == 8 || RealTrue16 ? SrcBits < 16 && IsSigned
+                                                      : !ST->hasSDWA());
+        return Scale(PerElt) + PerPair * PairCost;
+      }
+      // An unsigned byte is converted straight out of its register.
+      if (SrcBits == 8 && !IsSigned)
+        return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
+      if (SrcBits < 16 && !IsSigned)
+        return Scale(2);
+      unsigned PerElt = ST->hasSDWA() && SrcBits <= 16 ? 1 : 2;
+      if (SrcBits < 16 && ST->has16BitInsts())
+        ++PerElt;
+      return Scale(PerElt);
+    }
+
+    // A narrow scalar source is extended before the conversion. An unsigned
+    // byte is converted straight out of its register, and a signed one with
+    // SDWA. A source wider than a byte but narrower than 16 bits is masked
+    // or sign extended first. Without 16 bit instructions a half result is
+    // rounded from f32.
+    if (SrcBits >= 8 && SrcBits < 32) {
+      if (LoadExtends) {
+        if (FPTy->isDoubleTy())
+          return Scale(0, 1);
+        return Scale(FPTy->isHalfTy() ? 2 : 1);
+      }
+      const bool Narrow = SrcBits > 8 && SrcBits < 16;
+      const bool SignExtend16 = IsSigned && Narrow && ST->has16BitInsts();
+      if (FPTy->isDoubleTy())
+        return Scale(1 + 2 * SignExtend16, 1);
+      if (SrcBits > 16)
+        return Scale(FPTy->isHalfTy() ? 3 : 2);
+      if (FPTy->isHalfTy() && ST->has16BitInsts())
+        return Scale(Narrow                           ? (IsSigned ? 3 : 2)
+                     : SrcBits == 8 && !ST->hasSDWA() ? 2
+                                                      : 1);
+      const InstructionCost FloatCost =
+          SignExtend16                ? Scale(ST->hasSDWA() ? 3 : 4)
+          : Narrow                    ? Scale(2)
+          : SrcBits == 8 && !IsSigned ? Scale(1)
+                                      : Scale(ST->hasSDWA() ? 1 : 2);
+      return FPTy->isHalfTy() ? FloatCost + Scale(1) : FloatCost;
+    }
+
+    return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
+  }
+
+  // No instruction converts to a 64 bit integer.
+  if (UsesInt64) {
+    const bool IsSigned64 = IsSigned || (DstBits < 64 && NElts == 1);
+    if (FPTy->isDoubleTy()) {
+      // With native trunc/floor there are six FP64 operations. The expanded
+      // rounding sequence has seven, plus integer operations and constants.
+      return ST->haveRoundOpsF64() ? Scale(1, 6) : Scale(22, 7);
+    }
+    // The f32 expansion has one fma, which is quarter rate without fast FMA.
+    const InstructionCost SlowFMACost =
+        ST->hasFastFMAF32() ? 0
+                            : NElts * (getQuarterRateInstrCost(CostKind) -
+                                       getFullRateInstrCost());
+    if (FPTy->isFloatTy())
+      return Scale(IsSigned64 ? 13 : 6) + SlowFMACost;
+    if (FPTy->isBFloatTy()) {
+      // Unlike half, bf16 does not fit in i32. Extend to f32 and use the full
+      // i64 expansion.
+      return Scale(1 + (IsSigned64 ? 13 : 6)) + SlowFMACost;
+    }
+    return Scale(3);
+  }
+
+  return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
+}
+
 InstructionCost
 GCNTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
                                        std::optional<FastMathFlags> FMF,
                                        TTI::TargetCostKind CostKind) const {
   if (TTI::requiresOrderedReduction(FMF))
     return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
+
+  // An add or xor reduction over a vector of i1 becomes a bit count over the
+  // packed mask; the generic model prices a shuffle tree and misses that.
+  if (Opcode == Instruction::Add || Opcode == Instruction::Xor) {
+    if (std::optional<unsigned> Elts = getNumberOfPackedMaskElts(Ty))
+      return InstructionCost(MaskPackCostPerElt) * *Elts *
+             getFullRateInstrCost();
+  }
 
   EVT OrigTy = TLI->getValueType(DL, Ty);
 
@@ -1027,6 +1330,10 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
     if (EltSize < 32) {
       if (EltSize == 16 && Index == 0 && ST->has16BitInsts())
         return 0;
+      // Inserts of booleans are free.
+      // TODO: Extracts are free too.
+      if (EltSize == 1 && Opcode == Instruction::InsertElement)
+        return TargetTransformInfo::TCC_Free;
       // Extract element sequences of consecutive i8 values that match a
       // register size are free most likely. It is not possible to know
       // if this extract is part of a consecutive sequence so this may
@@ -1142,19 +1449,11 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
     switch (IID) {
     case Intrinsic::read_register:
       return isReadRegisterSourceOfDivergence(Intrinsic);
-    case Intrinsic::amdgcn_addrspacecast_nonnull: {
-      unsigned SrcAS =
-          Intrinsic->getOperand(0)->getType()->getPointerAddressSpace();
-      unsigned DstAS = Intrinsic->getType()->getPointerAddressSpace();
-      return SrcAS == AMDGPUAS::PRIVATE_ADDRESS &&
-             DstAS == AMDGPUAS::FLAT_ADDRESS &&
-             ST->hasGloballyAddressableScratch();
-    }
     case Intrinsic::amdgcn_workitem_id_y:
     case Intrinsic::amdgcn_workitem_id_z: {
       const Function *F = Intrinsic->getFunction();
       bool HasUniformYZ =
-          ST->hasWavefrontsEvenlySplittingXDim(*F, /*RequitezUniformYZ=*/true);
+          ST->hasWavefrontsEvenlySplittingXDim(*F, /*RequiresUniformYZ=*/true);
       std::optional<unsigned> ThisDimSize = ST->getReqdWorkGroupSize(
           *F, IID == Intrinsic::amdgcn_workitem_id_y ? 1 : 2);
       return !HasUniformYZ && (!ThisDimSize || *ThisDimSize != 1);
@@ -1217,16 +1516,19 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
   }
   using namespace llvm::PatternMatch;
   uint64_t C;
-  if (match(V, m_LShr(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
-                      m_ConstantInt(C))) ||
-      match(V, m_AShr(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
-                      m_ConstantInt(C)))) {
+  auto MatchTidXCall = m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>();
+  auto MaybeMaskedTidX =
+      m_CombineOr(m_c_And(MatchTidXCall, m_Constant()), MatchTidXCall);
+  auto MaybeCastTidX = m_CastOrSelf(MaybeMaskedTidX);
+  auto MaybeMaskedCastTidX =
+      m_CombineOr(m_c_And(MaybeCastTidX, m_Constant()), MaybeCastTidX);
+  if (match(V, m_LShr(MaybeMaskedCastTidX, m_ConstantInt(C))))
     return C >= ST->getWavefrontSizeLog2() && XDimDoesntResetWithinWaves;
-  }
 
-  Value *Mask;
-  if (match(V, m_c_And(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
-                       m_Value(Mask)))) {
+  Constant *Mask;
+  if (match(V, m_c_And(
+                   m_CastOrSelf(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>()),
+                   m_Constant(Mask)))) {
     return computeKnownBits(Mask, DL).countMinTrailingZeros() >=
                ST->getWavefrontSizeLog2() &&
            XDimDoesntResetWithinWaves;
@@ -1318,9 +1620,10 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
   case Intrinsic::amdgcn_make_buffer_rsrc: {
     Type *SrcTy = NewV->getType();
     Type *DstTy = II->getType();
+    Type *NumRecordsTy = II->getArgOperand(2)->getType();
     Module *M = II->getModule();
     Function *NewDecl = Intrinsic::getOrInsertDeclaration(
-        M, II->getIntrinsicID(), {DstTy, SrcTy});
+        M, II->getIntrinsicID(), {DstTy, SrcTy, NumRecordsTy});
     II->setArgOperand(0, NewV);
     II->setCalledFunction(NewDecl);
     return II;
@@ -1330,15 +1633,13 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
   }
 }
 
-InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
-                                           VectorType *DstTy, VectorType *SrcTy,
-                                           ArrayRef<int> Mask,
-                                           TTI::TargetCostKind CostKind,
-                                           int Index, VectorType *SubTp,
-                                           ArrayRef<const Value *> Args,
-                                           const Instruction *CxtI) const {
+InstructionCost GCNTTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CtxI,
+    TTI::VectorInstrContext VIC) const {
   if (!isa<FixedVectorType>(SrcTy))
-    return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index,
+    return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index,
                                  SubTp);
 
   Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
@@ -1467,7 +1768,7 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     }
   }
 
-  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index,
+  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index,
                                SubTp);
 }
 
@@ -1477,6 +1778,17 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 bool GCNTTIImpl::isProfitableToSinkOperands(Instruction *I,
                                             SmallVectorImpl<Use *> &Ops) const {
   using namespace PatternMatch;
+
+  // The cost model prices this fmul as free assuming it fuses with its
+  // fadd/fsub user, which needs them in one block. Sink a stranded
+  // loop-invariant fmul back to the user when they would fuse. Single use only,
+  // so this stays a move.
+  if (I->getOpcode() == Instruction::FAdd ||
+      I->getOpcode() == Instruction::FSub) {
+    const Instruction *FMul = getFusedFMul(*TLI, I->getType(), I);
+    if (FMul && FMul->getParent() != I->getParent())
+      Ops.push_back(&I->getOperandUse(I->getOperand(0) == FMul ? 0 : 1));
+  }
 
   for (auto &Op : I->operands()) {
     // Ensure we are not already sinking this operand.
@@ -1751,6 +2063,12 @@ GCNTTIImpl::getTypeLegalizationCost(Type *Ty) const {
 
   Cost.first += (Size + 255) / 256;
   return Cost;
+}
+
+unsigned GCNTTIImpl::getCacheLineSize() const {
+  if (ST->hasVmemPrefInsts() || ST->hasSmemPrefetchInsts())
+    return ST->getDataCacheLineSize();
+  return 0;
 }
 
 unsigned GCNTTIImpl::getPrefetchDistance() const {

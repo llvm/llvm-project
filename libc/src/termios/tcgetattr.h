@@ -9,12 +9,12 @@
 #ifndef LLVM_LIBC_SRC_TERMIOS_TCGETATTR_H
 #define LLVM_LIBC_SRC_TERMIOS_TCGETATTR_H
 
+#include "hdr/types/struct_termios.h"
 #include "src/__support/macros/config.h"
-#include <termios.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
-int tcgetattr(int fd, struct termios *t);
+int tcgetattr(int fd, termios *t);
 
 } // namespace LIBC_NAMESPACE_DECL
 

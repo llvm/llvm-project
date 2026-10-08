@@ -49,6 +49,20 @@ add_fp_unittest(
     libc.hdr.limits_macros
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.float128
+    libc.src.__support.macros.properties.types
+)
+
+add_fp_unittest(
+  float80_test
+  NEED_MPFR_F80
+  SUITE
+    libc-fputil-tests
+  SRCS
+    float80_test.cpp
+  DEPENDS
+    libc.hdr.limits_macros
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.float80
 )
 
 # TODO: Temporally disable bfloat16 test until MPCommon target is updated

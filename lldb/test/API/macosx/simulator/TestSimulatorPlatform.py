@@ -99,7 +99,7 @@ class TestSimulatorPlatformLaunching(TestBase):
             )
 
     @skipIfAsan
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIfDarwinEmbedded
     @apple_simulator_test("iphone")
     @skipIf(archs=["x86_64"])
@@ -114,7 +114,7 @@ class TestSimulatorPlatformLaunching(TestBase):
         )
 
     @skipIfAsan
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIfDarwinEmbedded
     @apple_simulator_test("appletv")
     @skipIf(archs=["x86_64"])

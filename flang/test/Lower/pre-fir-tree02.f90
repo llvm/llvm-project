@@ -1,4 +1,4 @@
-! RUN: bbc -pft-test -o %t %s | FileCheck %s
+! RUN: bbc --wrap-unstructured-constructs-in-execute-region -pft-test -o %t %s | FileCheck %s
 
 ! Test Pre-FIR Tree captures all the intended nodes from the parse-tree
 ! Coarray and OpenMP related nodes are tested in other files.

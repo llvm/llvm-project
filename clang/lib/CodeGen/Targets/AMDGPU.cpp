@@ -9,7 +9,10 @@
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 
 using namespace clang;
@@ -323,20 +326,6 @@ public:
 };
 }
 
-static bool requiresAMDGPUProtectedVisibility(const Decl *D,
-                                              llvm::GlobalValue *GV) {
-  if (GV->getVisibility() != llvm::GlobalValue::HiddenVisibility)
-    return false;
-
-  return !D->hasAttr<OMPDeclareTargetDeclAttr>() &&
-         (D->hasAttr<DeviceKernelAttr>() ||
-          (isa<FunctionDecl>(D) && D->hasAttr<CUDAGlobalAttr>()) ||
-          (isa<VarDecl>(D) &&
-           (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>() ||
-            cast<VarDecl>(D)->getType()->isCUDADeviceBuiltinSurfaceType() ||
-            cast<VarDecl>(D)->getType()->isCUDADeviceBuiltinTextureType())));
-}
-
 void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     const FunctionDecl *FD, llvm::Function *F, CodeGenModule &M) const {
   const auto *ReqdWGS =
@@ -346,8 +335,30 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
   const bool IsHIPKernel = M.getLangOpts().HIP && FD->hasAttr<CUDAGlobalAttr>();
 
   const auto *FlatWGS = FD->getAttr<AMDGPUFlatWorkGroupSizeAttr>();
+
+  // __launch_bounds__ only takes effect on kernels and is silently ignored on
+  // other functions The arguments are honored only if the equivalent native
+  // amdgpu_flat_work_group_size / amdgpu_waves_per_eu attribute was not also
+  // used out; those take precedence.
+  const auto *LaunchBounds =
+      IsHIPKernel ? FD->getAttr<CUDALaunchBoundsAttr>() : nullptr;
+  unsigned LBMaxThreads = 0;
+  unsigned LBMinWaves = 0;
+  if (LaunchBounds) {
+    LBMaxThreads = LaunchBounds->getMaxThreads()
+                       ->EvaluateKnownConstInt(M.getContext())
+                       .getExtValue();
+    if (const Expr *MinBlocks = LaunchBounds->getMinBlocks()) {
+      LBMinWaves =
+          MinBlocks->EvaluateKnownConstInt(M.getContext()).getExtValue();
+    }
+  }
+
   if (ReqdWGS || FlatWGS) {
     M.handleAMDGPUFlatWorkGroupSizeAttr(F, FlatWGS, ReqdWGS);
+  } else if (LBMaxThreads > 0) {
+    F->addFnAttr("amdgpu-flat-work-group-size",
+                 "1," + llvm::utostr(LBMaxThreads));
   } else if (IsOpenCLKernel || IsHIPKernel) {
     // By default, restrict the maximum size to a value specified by
     // --gpu-max-threads-per-block=n or its default value for HIP.
@@ -360,8 +371,15 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     F->addFnAttr("amdgpu-flat-work-group-size", AttrVal);
   }
 
-  if (const auto *Attr = FD->getAttr<AMDGPUWavesPerEUAttr>())
+  if (const auto *Attr = FD->getAttr<AMDGPUWavesPerEUAttr>()) {
     M.handleAMDGPUWavesPerEUAttr(F, Attr);
+  } else if (LBMinWaves > 0) {
+    // HIP reinterprets the second argument as the minimum waves per EU.
+    //
+    // TODO: The third argument (maxclusterrank) could be used if the AMDGPU
+    // "clusters" feature is supported for the current subtarget.
+    F->addFnAttr("amdgpu-waves-per-eu", llvm::utostr(LBMinWaves));
+  }
 
   if (const auto *Attr = FD->getAttr<AMDGPUNumSGPRAttr>()) {
     unsigned NumSGPR = Attr->getNumSGPR();
@@ -423,7 +441,8 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
 
 void AMDGPUTargetCodeGenInfo::setTargetAttributes(
     const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
-  if (requiresAMDGPUProtectedVisibility(D, GV)) {
+  if (CodeGenUtils::requiresAMDGPUProtectedVisibility(
+          D, GV->getVisibility() == llvm::GlobalValue::HiddenVisibility)) {
     GV->setVisibility(llvm::GlobalValue::ProtectedVisibility);
     GV->setDSOLocal(true);
   }
@@ -510,32 +529,11 @@ StringRef AMDGPUTargetCodeGenInfo::getLLVMSyncScopeStr(
                   Scope <= SyncScope::OpenCLSubGroup &&
                   Ordering != llvm::AtomicOrdering::SequentiallyConsistent);
 
-  switch (Scope) {
-  case SyncScope::HIPSingleThread:
-  case SyncScope::SingleScope:
-    return IsOneAs ? "singlethread-one-as" : "singlethread";
-  case SyncScope::HIPWavefront:
-  case SyncScope::OpenCLSubGroup:
-  case SyncScope::WavefrontScope:
-    return IsOneAs ? "wavefront-one-as" : "wavefront";
-  case SyncScope::HIPCluster:
-  case SyncScope::ClusterScope:
-    assert(!IsOneAs && "OpenCL does not have cluster scope");
-    return "cluster";
-  case SyncScope::HIPWorkgroup:
-  case SyncScope::OpenCLWorkGroup:
-  case SyncScope::WorkgroupScope:
-    return IsOneAs ? "workgroup-one-as" : "workgroup";
-  case SyncScope::HIPAgent:
-  case SyncScope::OpenCLDevice:
-  case SyncScope::DeviceScope:
-    return IsOneAs ? "agent-one-as" : "agent";
-  case SyncScope::SystemScope:
-  case SyncScope::HIPSystem:
-  case SyncScope::OpenCLAllSVMDevices:
-    return IsOneAs ? "one-as" : "";
-  }
-  llvm_unreachable("Unknown SyncScope enum");
+  llvm::AtomicScope AS = getAtomicScope(Scope);
+  assert((AS != llvm::AtomicScope::Cluster || !IsOneAs) &&
+         "OpenCL does not have cluster scope");
+  return *llvm::getAtomicScopeIRString(getABIInfo().getTarget().getTriple(), AS,
+                                       IsOneAs);
 }
 
 void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(
@@ -560,6 +558,8 @@ void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(
     AtomicInst.setMetadata(llvm::LLVMContext::MD_noalias_addrspace, ASRange);
   }
 
+  CGF.AddAMDGPUAvailableVisibleMMRA(&AtomicInst);
+
   if (!RMW)
     return;
 
@@ -572,7 +572,7 @@ void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(
   if (AO.getOption(clang::AtomicOptionKind::IgnoreDenormalMode) &&
       RMW->getOperation() == llvm::AtomicRMWInst::FAdd &&
       RMW->getType()->isFloatTy())
-    RMW->setMetadata("amdgpu.ignore.denormal.mode", Empty);
+    RMW->setMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode, Empty);
 }
 
 bool AMDGPUTargetCodeGenInfo::shouldEmitStaticExternCAliases() const {

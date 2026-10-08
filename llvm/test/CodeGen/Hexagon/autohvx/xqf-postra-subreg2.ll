@@ -1,7 +1,5 @@
 ; Test passes if we don't generate conversion for both
 ; of the subregisters since only one is live at the use.
-;
-; UNSUPPORTED: asserts
 
 ; REQUIRES: asserts
 ; RUN: llc -O2 -mtriple=hexagon -mattr=+hvxv81,+hvx-length128B \

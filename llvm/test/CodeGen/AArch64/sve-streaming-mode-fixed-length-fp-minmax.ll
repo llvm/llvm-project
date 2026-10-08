@@ -389,10 +389,7 @@ define <1 x double> @fmaxnm_v1f64(<1 x double> %op1, <1 x double> %op2) {
 ;
 ; NONEON-NOSVE-LABEL: fmaxnm_v1f64:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    sub sp, sp, #16
-; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    fmaxnm d0, d0, d1
-; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = call <1 x double> @llvm.maxnum.v1f64(<1 x double> %op1, <1 x double> %op2)
   ret <1 x double> %res
@@ -848,10 +845,7 @@ define <1 x double> @fminnm_v1f64(<1 x double> %op1, <1 x double> %op2) {
 ;
 ; NONEON-NOSVE-LABEL: fminnm_v1f64:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    sub sp, sp, #16
-; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    fminnm d0, d0, d1
-; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = call <1 x double> @llvm.minnum.v1f64(<1 x double> %op1, <1 x double> %op2)
   ret <1 x double> %res
@@ -1307,10 +1301,7 @@ define <1 x double> @fmax_v1f64(<1 x double> %op1, <1 x double> %op2) {
 ;
 ; NONEON-NOSVE-LABEL: fmax_v1f64:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    sub sp, sp, #16
-; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    fmax d0, d0, d1
-; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = call <1 x double> @llvm.maximum.v1f64(<1 x double> %op1, <1 x double> %op2)
   ret <1 x double> %res
@@ -1766,10 +1757,7 @@ define <1 x double> @fmin_v1f64(<1 x double> %op1, <1 x double> %op2) {
 ;
 ; NONEON-NOSVE-LABEL: fmin_v1f64:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    sub sp, sp, #16
-; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    fmin d0, d0, d1
-; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = call <1 x double> @llvm.minimum.v1f64(<1 x double> %op1, <1 x double> %op2)
   ret <1 x double> %res
@@ -2278,12 +2266,9 @@ define <1 x double> @fmaximumnum_v1f64(<1 x double> %op1, <1 x double> %op2) {
 ;
 ; NONEON-NOSVE-LABEL: fmaximumnum_v1f64:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    sub sp, sp, #16
-; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    fminnm d1, d1, d1
 ; NONEON-NOSVE-NEXT:    fminnm d0, d0, d0
 ; NONEON-NOSVE-NEXT:    fmaxnm d0, d0, d1
-; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = call <1 x double> @llvm.maximumnum.v1f64(<1 x double> %op1, <1 x double> %op2)
   ret <1 x double> %res
@@ -2813,12 +2798,9 @@ define <1 x double> @fminimumnum_v1f64(<1 x double> %op1, <1 x double> %op2) {
 ;
 ; NONEON-NOSVE-LABEL: fminimumnum_v1f64:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    sub sp, sp, #16
-; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    fminnm d1, d1, d1
 ; NONEON-NOSVE-NEXT:    fminnm d0, d0, d0
 ; NONEON-NOSVE-NEXT:    fminnm d0, d0, d1
-; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = call <1 x double> @llvm.minimumnum.v1f64(<1 x double> %op1, <1 x double> %op2)
   ret <1 x double> %res

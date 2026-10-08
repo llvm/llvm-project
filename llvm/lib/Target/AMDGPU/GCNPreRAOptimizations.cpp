@@ -33,7 +33,6 @@
 #include "GCNPreRAOptimizations.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -90,10 +89,6 @@ INITIALIZE_PASS_END(GCNPreRAOptimizationsLegacy, DEBUG_TYPE,
 char GCNPreRAOptimizationsLegacy::ID = 0;
 
 char &llvm::GCNPreRAOptimizationsID = GCNPreRAOptimizationsLegacy::ID;
-
-FunctionPass *llvm::createGCNPreRAOptimizationsLegacyPass() {
-  return new GCNPreRAOptimizationsLegacy();
-}
 
 bool GCNPreRAOptimizationsImpl::processReg(Register Reg) {
   MachineInstr *Def0 = nullptr;

@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=inline -disable-output -amdgpu-inline-max-bb=3 -debug-only=AMDGPUtti < %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple=amdgpu7.00-amd-amdhsa -passes=inline -disable-output -amdgpu-inline-max-bb=3 -debug-only=AMDGPUtti < %s 2>&1 | FileCheck %s
 
 ; CHECK: AMDGPU inline max-BB rejected inlining callee into caller: caller BBs=3, callee BBs=4, combined BBs=6, max BBs=3
 

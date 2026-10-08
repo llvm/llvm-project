@@ -136,21 +136,21 @@ TEST(DataEncoderTest, AppendCString) {
   // Make sure default constructed StringRef appends nothing
   encoder.AppendCString(StringRef());
   ASSERT_EQ(encoder.GetData(), ArrayRef<uint8_t>({}));
-  // Make sure empty StringRef appends a NULL character since the StringRef
-  // doesn't contain a NULL in the referenced string.
+  // Make sure empty StringRef appends a null character since the StringRef
+  // doesn't contain a null in the referenced string.
   encoder.AppendCString(StringRef(""));
   ASSERT_EQ(encoder.GetData(), ArrayRef<uint8_t>({0x00}));
-  // Make sure empty StringRef appends only one NULL character if StringRef
-  // does contain a NULL in the referenced string.
+  // Make sure empty StringRef appends only one null character if StringRef
+  // does contain a null in the referenced string.
   encoder.AppendCString(StringRef("\0", 1));
   ASSERT_EQ(encoder.GetData(), ArrayRef<uint8_t>({0x00, 0x00}));
-  // Append a string where the StringRef doesn't contain a NULL termination
-  // and verify the NULL terminate gets added
+  // Append a string where the StringRef doesn't contain a null terminator
+  // and verify the null terminator gets added
   encoder.AppendCString(StringRef("hello"));
   ASSERT_EQ(encoder.GetData(),
             ArrayRef<uint8_t>({0x00, 0x00, 'h', 'e', 'l', 'l', 'o', 0x00}));
-  // Append a string where the StringRef does contain a NULL termination and
-  // verify only one NULL is added
+  // Append a string where the StringRef does contain a null terminator and
+  // verify only one null terminator is added
   encoder.AppendCString(StringRef("world", 6));
   ASSERT_EQ(encoder.GetData(),
             ArrayRef<uint8_t>({0x00, 0x00, 'h', 'e', 'l', 'l', 'o', 0x00,

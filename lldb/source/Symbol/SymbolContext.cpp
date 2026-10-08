@@ -675,7 +675,7 @@ LineEntry SymbolContext::GetFunctionStartLineEntry() const {
   }
 
   if (function) {
-    if (function->GetAddress().CalculateSymbolContextLineEntry(line_entry))
+    if (function->GetStartLineTableEntry(line_entry))
       return line_entry;
   }
   return LineEntry();

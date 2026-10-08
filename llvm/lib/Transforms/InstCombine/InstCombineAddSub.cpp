@@ -24,6 +24,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/AlignOf.h"
@@ -37,6 +38,10 @@ using namespace llvm;
 using namespace PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
 
 namespace {
 
@@ -89,12 +94,12 @@ namespace {
     }
 
     const APFloat &getFpVal() const {
-      assert(IsFp && BufHasFpVal && "Incorret state");
+      assert(IsFp && BufHasFpVal && "Incorrect state");
       return *getFpValPtr();
     }
 
     APFloat &getFpVal() {
-      assert(IsFp && BufHasFpVal && "Incorret state");
+      assert(IsFp && BufHasFpVal && "Incorrect state");
       return *getFpValPtr();
     }
 
@@ -1003,7 +1008,17 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
     return replaceInstUsesWith(
         Add, Builder.CreateBinaryIntrinsic(
                  Intrinsic::usub_sat, X, ConstantInt::get(Add.getType(), -*C)));
-
+  // uadd.sat(X, C) + -C --> umin(X, ~C)
+  // The saturating add gives X + C or UMAX, so subtracting C leaves X or
+  // UMAX - C. Note UMAX - C == ~C.
+  {
+    APInt SatC = -*C;
+    if (match(Op0, m_OneUse(m_Intrinsic<Intrinsic::uadd_sat>(
+                       m_Value(X), m_SpecificInt(SatC)))))
+      return replaceInstUsesWith(
+          Add, Builder.CreateBinaryIntrinsic(Intrinsic::umin, X,
+                                             ConstantInt::get(Ty, ~SatC)));
+  }
   // Fold (add (zext (add X, -C)), C) -> (zext X) if X u>= C.
   // Truncate C to the narrow type to avoid mismatched width comparisons.
   {
@@ -1042,7 +1057,7 @@ static bool matchesSquareSum(BinaryOperator &I, Mul2Rhs M2Rhs, Value *&A,
 
   // (a * a) + (((a * 2) + b) * b)
   if (match(&I, m_c_BinOp(
-                    AddOp, m_OneUse(m_BinOp(MulOp, m_Value(A), m_Deferred(A))),
+                    AddOp, m_BinOp(MulOp, m_Value(A), m_Deferred(A)),
                     m_OneUse(m_c_BinOp(
                         MulOp,
                         m_c_BinOp(AddOp, m_BinOp(Mul2Op, m_Deferred(A), M2Rhs),
@@ -1578,7 +1593,8 @@ Instruction *InstCombinerImpl::foldDivCeil(BinaryOperator &I) {
   auto DivPat = m_OneUse(m_ZExtOrSelf(UDivPat));
   auto ZExtCmpPat = m_OneUse(m_ZExt(ICmpPat));
 
-  if (!match(&I, m_c_Add(DivPat, ZExtCmpPat)) || !checkDivCeilNUW(X, Y, SQ))
+  if (!match(&I, m_c_Add(DivPat, ZExtCmpPat)) ||
+      !checkDivCeilNUW(X, Y, SQ.getWithInstruction(&I)))
     return nullptr;
 
   Value *YMinusOne =
@@ -1811,6 +1827,26 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     return BinaryOperator::CreateAnd(Add, A);
   }
 
+  // Align-up idiom:
+  // X + ((-X) & (C - 1)) --> (X + C - 1) & -C
+  // ((X - 1) | (C - 1)) + 1 -> (X + C - 1) & -C
+  // For a power-of-two C. Note -C == ~(C - 1), so the mask is simply the
+  // inverted low-bit mask.
+  {
+    const APInt *LowMask;
+    if (match(&I,
+              m_c_Add(m_OneUse(m_And(m_Neg(m_Value(A)), m_LowBitMask(LowMask))),
+                      m_Deferred(A))) ||
+        match(&I, m_Add(m_OneUse(m_Or(m_Add(m_Value(A), m_AllOnes()),
+                                      m_LowBitMask(LowMask))),
+                        m_One()))
+
+    ) {
+      Value *NewAdd = Builder.CreateAdd(A, ConstantInt::get(Ty, *LowMask));
+      return BinaryOperator::CreateAnd(NewAdd, ConstantInt::get(Ty, ~*LowMask));
+    }
+  }
+
   // Canonicalize ((A & -A) - 1) --> ((A - 1) & ~A)
   // Forms all commutable operations, and simplifies ctpop -> cttz folds.
   if (match(&I,
@@ -1896,20 +1932,26 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
 
     // Match: (X >> C) + zext((X & Mask) != 0)
     // or:    zext((X & Mask) != 0) + (X >> C)
-    if (match(&I, m_c_Add(m_OneUse(m_LShr(m_Value(X), m_APInt(ShiftAmt))),
-                          m_ZExt(m_SpecificICmp(
-                              ICmpInst::ICMP_NE,
-                              m_And(m_Deferred(X), m_LowBitMask(Mask)),
-                              m_ZeroInt())))) &&
+    if (match(&I,
+              m_c_Add(m_ZExt(m_SpecificICmp(
+                          ICmpInst::ICMP_NE,
+                          m_And(m_Value(X), m_LowBitMask(Mask)), m_ZeroInt())),
+                      m_OneUse(m_ZExtOrSelf(m_OneUse(
+                          m_LShr(m_Deferred(X), m_APInt(ShiftAmt))))))) &&
         Mask->popcount() == *ShiftAmt) {
 
       // Check if X + Mask doesn't overflow
-      Constant *MaskC = ConstantInt::get(X->getType(), *Mask);
-      if (willNotOverflowUnsignedAdd(X, MaskC, I)) {
+      unsigned Xbits = X->getType()->getScalarSizeInBits();
+      unsigned Ibits = Ty->getScalarSizeInBits();
+      bool NeedZext = Ibits > Xbits;
+      Constant *MaskC = ConstantInt::get(Ty, Mask->zext(Ibits));
+      if (NeedZext || willNotOverflowUnsignedAdd(X, MaskC, I)) {
+        if (NeedZext)
+          X = Builder.CreateZExt(X, Ty);
         // (X + Mask) >> ShiftAmt
         Value *Add = Builder.CreateNUWAdd(X, MaskC);
         return BinaryOperator::CreateLShr(
-            Add, ConstantInt::get(X->getType(), *ShiftAmt));
+            Add, ConstantInt::get(Ty, ShiftAmt->zext(Ibits)));
       }
     }
   }
@@ -2590,12 +2632,22 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
 
   if (Constant *C = dyn_cast<Constant>(Op0)) {
     Value *X;
-    if (match(Op1, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1))
+    if (match(Op1, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)) {
       // C - (zext bool) --> bool ? C - 1 : C
-      return SelectInst::Create(X, InstCombiner::SubOne(C), C);
-    if (match(Op1, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1))
+      SelectInst *SI = SelectInst::Create(X, InstCombiner::SubOne(C), C);
+      // We know nothing about the distribution of the condition, so mark the
+      // branch weights as unknown.
+      setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE, &F);
+      return SI;
+    }
+    if (match(Op1, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)) {
       // C - (sext bool) --> bool ? C + 1 : C
-      return SelectInst::Create(X, InstCombiner::AddOne(C), C);
+      SelectInst *SI = SelectInst::Create(X, InstCombiner::AddOne(C), C);
+      // We know nothing about the distribution of the condition, so mark the
+      // branch weights as unknown.
+      setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE, &F);
+      return SI;
+    }
 
     // C - ~X == X + (1+C)
     if (match(Op1, m_Not(m_Value(X))))
@@ -3196,14 +3248,18 @@ Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
     Value *P;
     if (match(X, m_FNeg(m_Value(P)))) {
       Value *NegY = Builder.CreateFNegFMF(Y, &I, Y->getName() + ".neg");
-      SelectInst *NewSel = SelectInst::Create(Cond, P, NegY);
+      SelectInst *NewSel = SelectInst::Create(
+          Cond, P, NegY, "", nullptr,
+          ProfcheckDisableMetadataFixes ? nullptr : cast<SelectInst>(Op));
       propagateSelectFMF(NewSel, P == Y);
       return NewSel;
     }
     // -(Cond ? X : -P) --> Cond ? -X : P
     if (match(Y, m_FNeg(m_Value(P)))) {
       Value *NegX = Builder.CreateFNegFMF(X, &I, X->getName() + ".neg");
-      SelectInst *NewSel = SelectInst::Create(Cond, NegX, P);
+      SelectInst *NewSel = SelectInst::Create(
+          Cond, NegX, P, "", nullptr,
+          ProfcheckDisableMetadataFixes ? nullptr : cast<SelectInst>(Op));
       propagateSelectFMF(NewSel, P == X);
       return NewSel;
     }
@@ -3213,7 +3269,9 @@ Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
     if (match(X, m_ImmConstant()) || match(Y, m_ImmConstant())) {
       Value *NegX = Builder.CreateFNegFMF(X, &I, X->getName() + ".neg");
       Value *NegY = Builder.CreateFNegFMF(Y, &I, Y->getName() + ".neg");
-      SelectInst *NewSel = SelectInst::Create(Cond, NegX, NegY);
+      SelectInst *NewSel = SelectInst::Create(
+          Cond, NegX, NegY, "", nullptr,
+          ProfcheckDisableMetadataFixes ? nullptr : cast<SelectInst>(Op));
       propagateSelectFMF(NewSel, /*CommonOperand=*/true);
       return NewSel;
     }

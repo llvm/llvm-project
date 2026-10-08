@@ -92,19 +92,23 @@ static NamedMDNode *emitResourceMetadata(Module &M, DXILResourceMap &DRM,
   LLVMContext &Context = M.getContext();
 
   for (ResourceInfo &RI : DRM)
-    if (!RI.hasSymbol())
+    if (RI.hasBinding() && !RI.hasSymbol())
       RI.createSymbol(M,
                       DRTM[RI.getHandleTy()].createElementStruct(RI.getName()));
 
   SmallVector<Metadata *> SRVs, UAVs, CBufs, Smps;
   for (const ResourceInfo &RI : DRM.srvs())
-    SRVs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
+    if (RI.hasBinding())
+      SRVs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
   for (const ResourceInfo &RI : DRM.uavs())
-    UAVs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
+    if (RI.hasBinding())
+      UAVs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
   for (const ResourceInfo &RI : DRM.cbuffers())
-    CBufs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
+    if (RI.hasBinding())
+      CBufs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
   for (const ResourceInfo &RI : DRM.samplers())
-    Smps.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
+    if (RI.hasBinding())
+      Smps.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
 
   Metadata *SRVMD = SRVs.empty() ? nullptr : MDNode::get(Context, SRVs);
   Metadata *UAVMD = UAVs.empty() ? nullptr : MDNode::get(Context, UAVs);
@@ -293,7 +297,7 @@ static void emitValidatorVersionMD(Module &M, const ModuleMetadataInfo &MMDI) {
     return;
 
   LLVMContext &Ctx = M.getContext();
-  IRBuilder<> IRB(Ctx);
+  IRBuilder<> IRB(M);
   Metadata *MDVals[2];
   MDVals[0] =
       ConstantAsMetadata::get(IRB.getInt32(MMDI.ValidatorVersion.getMajor()));
@@ -308,7 +312,7 @@ static void emitValidatorVersionMD(Module &M, const ModuleMetadataInfo &MMDI) {
 static void emitShaderModelVersionMD(Module &M,
                                      const ModuleMetadataInfo &MMDI) {
   LLVMContext &Ctx = M.getContext();
-  IRBuilder<> IRB(Ctx);
+  IRBuilder<> IRB(M);
   Metadata *SMVals[3];
   VersionTuple SM = MMDI.ShaderModelVersion;
   SMVals[0] = MDString::get(Ctx, getShortShaderStage(MMDI.ShaderProfile));
@@ -320,7 +324,7 @@ static void emitShaderModelVersionMD(Module &M,
 
 static void emitDXILVersionTupleMD(Module &M, const ModuleMetadataInfo &MMDI) {
   LLVMContext &Ctx = M.getContext();
-  IRBuilder<> IRB(Ctx);
+  IRBuilder<> IRB(M);
   VersionTuple DXILVer = MMDI.DXILVersion;
   Metadata *DXILVals[2];
   DXILVals[0] = ConstantAsMetadata::get(IRB.getInt32(DXILVer.getMajor()));
@@ -531,8 +535,7 @@ static void translateGlobalMetadata(Module &M, DXILResourceMap &DRM,
                                     DXILResourceTypeMap &DRTM,
                                     const ModuleShaderFlags &ShaderFlags,
                                     const ModuleMetadataInfo &MMDI) {
-  LLVMContext &Ctx = M.getContext();
-  IRBuilder<> IRB(Ctx);
+  IRBuilder<> IRB(M);
   SmallVector<MDNode *> EntryFnMDNodes;
 
   emitValidatorVersionMD(M, MMDI);

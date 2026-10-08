@@ -20,7 +20,7 @@ class TestFirmwareCorefiles(TestBase):
     )
     @skipIf(archs=no_match(["x86_64", "arm64", "arm64e", "aarch64"]))
     @skipIfRemote
-    @skipUnlessDarwin
+    @requireDarwin
     def test_lc_note_version_string(self):
         self.build()
         aout_exe_basename = "a.out"
@@ -120,7 +120,7 @@ class TestFirmwareCorefiles(TestBase):
     )
     @skipIf(archs=no_match(["x86_64", "arm64", "arm64e", "aarch64"]))
     @skipIfRemote
-    @skipUnlessDarwin
+    @requireDarwin
     def test_lc_note_main_bin_spec(self):
         self.build()
         aout_exe_basename = "a.out"
@@ -233,7 +233,7 @@ class TestFirmwareCorefiles(TestBase):
     )
     @skipIf(archs=no_match(["x86_64", "arm64", "arm64e", "aarch64"]))
     @skipIfRemote
-    @skipUnlessDarwin
+    @requireDarwin
     def test_lc_note_main_bin_spec_os_plugin(self):
         self.build()
         aout_exe = self.getBuildArtifact("a.out")

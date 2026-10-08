@@ -48,8 +48,8 @@ STATISTIC(NumLDFormed, "Number of LD instructions formed");
 STATISTIC(NumSDFormed, "Number of SD instructions formed");
 
 static cl::opt<bool>
-    DisableZilsdOpt("disable-riscv-zilsd-opt", cl::Hidden, cl::init(false),
-                    cl::desc("Disable Zilsd load/store optimization"));
+    EnableZilsdOpt("riscv-zilsd-opt", cl::Hidden, cl::init(true),
+                   cl::desc("Enable Zilsd load/store optimization"));
 
 static cl::opt<unsigned> MaxRescheduleDistance(
     "riscv-zilsd-max-reschedule-distance", cl::Hidden, cl::init(10),
@@ -130,7 +130,7 @@ INITIALIZE_PASS_END(RISCVPreAllocZilsdOpt, "riscv-prera-zilsd-opt",
 
 bool RISCVPreAllocZilsdOpt::runOnMachineFunction(MachineFunction &MF) {
 
-  if (DisableZilsdOpt || skipFunction(MF.getFunction()))
+  if (!EnableZilsdOpt || skipFunction(MF.getFunction()))
     return false;
 
   STI = &MF.getSubtarget<RISCVSubtarget>();
@@ -212,22 +212,8 @@ bool RISCVPreAllocZilsdOpt::canFormLdSdPair(MachineInstr *MI0,
 
   // Check that the two destination/source registers are different for
   // load/store respectively.
-  // The only case two destinations/sources can be same is (x0, x0). This pass
-  // is run before register coalescer so it will be the form of:
-  //   %0 = COPY $x0
-  //   SW %0, %ptr
-  // instead of:
-  //   SW $x0, %ptr
-  Register FirstReg = MI0->getOperand(0).getReg();
-  Register SecondReg = MI1->getOperand(0).getReg();
-  if (FirstReg == SecondReg) {
-    const MachineInstr *FirstOpDefInst = MRI->getUniqueVRegDef(FirstReg);
-    if (FirstOpDefInst->isCopy() &&
-        FirstOpDefInst->getOperand(1).getReg() == RISCV::X0 &&
-        MRI->getRegClass(FirstReg)->contains(RISCV::X0))
-      return true;
+  if (MI0->getOperand(0).getReg() == MI1->getOperand(0).getReg())
     return false;
-  }
 
   return true;
 }
@@ -365,8 +351,8 @@ bool RISCVPreAllocZilsdOpt::rescheduleOps(
 
     if (IsLoad) {
       MIB = BuildMI(*MBB, InsertPos, DL, TII->get(RISCV::PseudoLD_RV32_OPT))
-                .addReg(FirstReg, RegState::Define)
-                .addReg(SecondReg, RegState::Define);
+                .addDef(FirstReg)
+                .addDef(SecondReg);
       ++NumLDFormed;
       LLVM_DEBUG(dbgs() << "Formed LD: " << *MIB << "\n");
     } else {
