@@ -115,6 +115,9 @@ public:
 
   // Do a linker relaxation pass and return true if we changed something.
   virtual bool relaxOnce(int pass) const { return false; }
+  // Return the minimum and maximum virtual addresses across all SHF_ALLOC
+  // output sections.
+  std::pair<uint64_t, uint64_t> getOutputSectionVaRange() const;
   // Relax CFI jump tables if implemented by target.
   virtual void relaxCFIJumpTables() const {}
   virtual bool synthesizeAlign(uint64_t &dot, InputSection *sec) {
