@@ -253,8 +253,7 @@ struct KnownFPClass {
   minMaxLike(const KnownFPClass &LHS, const KnownFPClass &RHS, MinMaxKind Kind,
              DenormalMode DenormMode = DenormalMode::getDynamic());
 
-  /// Apply the canonicalize intrinsic to this value. This is essentially a
-  /// stronger form of propagateCanonicalizingSrc.
+  /// Apply the canonicalize intrinsic to this value.
   LLVM_ABI static KnownFPClass
   canonicalize(const KnownFPClass &Src,
                DenormalMode DenormMode = DenormalMode::getDynamic());
@@ -471,23 +470,6 @@ struct KnownFPClass {
         knownNot(fcPosZero);
     }
   }
-
-  /// Propagate knowledge from a source value that could be a denormal or
-  /// zero. We have to be conservative since output flushing is not guaranteed,
-  /// so known-never-zero may not hold.
-  ///
-  /// This assumes a copy-like operation and will replace any currently known
-  /// information.
-  LLVM_ABI void propagateDenormal(const KnownFPClass &Src, DenormalMode Mode);
-
-  /// Report known classes if \p Src is evaluated through a potentially
-  /// canonicalizing operation. We can assume signaling nans will not be
-  /// introduced, but cannot assume a denormal will be flushed under FTZ/DAZ.
-  ///
-  /// This assumes a copy-like operation and will replace any currently known
-  /// information.
-  LLVM_ABI void propagateCanonicalizingSrc(const KnownFPClass &Src,
-                                           DenormalMode Mode);
 
   /// Propagate known class for fpext.
   LLVM_ABI static KnownFPClass fpext(const KnownFPClass &KnownSrc,
