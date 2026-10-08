@@ -31636,17 +31636,17 @@ static SDValue performVectorDeinterleaveCombine(
         !ISD::isNormalLoad(Load) || !Load->getOffset().isUndef())
       return SDValue();
 
-      static constexpr Intrinsic::ID NEONLoads[] = {
-          Intrinsic::aarch64_neon_ld2, Intrinsic::aarch64_neon_ld3,
-          Intrinsic::aarch64_neon_ld4};
-      SDValue NewLdOps[] = {
-          Load->getChain(),
-          DAG.getTargetConstant(NEONLoads[NumParts - 2], DL, MVT::i64),
-          Load->getBasePtr()};
-      // We can now generate a structured load!
-      Res = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, ResVTList,
-                                    NewLdOps, MemNode->getMemoryVT(),
-                                    MemNode->getMemOperand());
+    static constexpr Intrinsic::ID NEONLoads[] = {Intrinsic::aarch64_neon_ld2,
+                                                  Intrinsic::aarch64_neon_ld3,
+                                                  Intrinsic::aarch64_neon_ld4};
+    SDValue NewLdOps[] = {
+        Load->getChain(),
+        DAG.getTargetConstant(NEONLoads[NumParts - 2], DL, MVT::i64),
+        Load->getBasePtr()};
+    // We can now generate a structured load!
+    Res = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, ResVTList,
+                                  NewLdOps, MemNode->getMemoryVT(),
+                                  MemNode->getMemOperand());
   }
   SmallVector<SDValue, 4> ResOps(NumParts);
   for (unsigned Idx = 0; Idx < NumParts; ++Idx)
