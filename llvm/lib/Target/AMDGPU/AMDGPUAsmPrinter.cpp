@@ -595,7 +595,7 @@ static void appendTypeEncoding(std::string &Enc, Type *Ty, const DataLayout &DL,
     Enc += 'v';
     return;
   }
-  unsigned Bits = static_cast<unsigned>(DL.getTypeSizeInBits(Ty));
+  uint64_t Bits = DL.getTypeSizeInBits(Ty);
   // Zero-sized non-void types (e.g. `{}` or `[0 x i8]`) consume no ABI
   // registers. For returns, emit the same no-result marker as void so the
   // parameter encoding still has an explicit return-type prefix.
@@ -1813,7 +1813,7 @@ void AMDGPUAsmPrinter::emitPALFunctionMetadata(const MachineFunction &MF) {
   auto *MD = getTargetStreamer()->getPALMetadata();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   StringRef FnName = MF.getFunction().getName();
-  MD->setFunctionScratchSize(FnName, static_cast<unsigned>(MFI.getStackSize()));
+  MD->setFunctionScratchSize(FnName, MFI.getStackSize());
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   MCContext &Ctx = MF.getContext();
 
