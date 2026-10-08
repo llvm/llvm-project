@@ -2628,7 +2628,11 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
           << 0 /* default */;
       else
         Diag(ConsumeToken(), diag::err_default_special_members)
-            << (getLangOpts().CPlusPlus29 ? 2 : getLangOpts().CPlusPlus20);
+            << (getLangOpts().CPlusPlus29
+                    ? diag::DefaultableFunctionKinds::PostfixOperators
+                : getLangOpts().CPlusPlus20
+                    ? diag::DefaultableFunctionKinds::Comparisons
+                    : diag::DefaultableFunctionKinds::SpecialMembers);
     } else {
       InitializerScopeRAII InitScope(*this, D, ThisDecl);
 

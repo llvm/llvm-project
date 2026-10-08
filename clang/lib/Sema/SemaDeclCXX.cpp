@@ -9505,18 +9505,6 @@ ComputeDefaultedComparisonExceptionSpec(Sema &S, SourceLocation Loc,
 //===----------------------------------------------------------------------===//
 
 namespace {
-/// The operations performed by the implicit definition of a defaulted postfix
-/// increment or decrement operator function. The values correspond to %select
-/// indices in the diagnostics explaining why such a function is deleted or is
-/// not constexpr.
-enum class PostfixOperatorStep {
-  Constructor,
-  Destructor,
-  PrefixIncrement,
-  PrefixDecrement,
-  ConversionFunction
-};
-
 /// Which diagnostics to produce while analyzing a defaulted postfix increment
 /// or decrement operator function.
 enum class PostfixOperatorDiagnoseKind {
@@ -9578,29 +9566,28 @@ analyzeDefaultedPostfixOperator(Sema &S, FunctionDecl *FD,
     Info.Deleted = true;
     return Info;
   };
-  auto InaccessibleDiag = [&](PostfixOperatorStep Step) {
+  auto InaccessibleDiag = [&](unsigned Step) {
     return Diagnose == DiagnoseKind::ExplainDeleted
                ? S.PDiag(diag::note_defaulted_postfix_operator_inaccessible)
-                     << FD << (int)Step
+                     << FD << Step
                : S.PDiag();
   };
-  auto NoteCallsDeleted = [&](PostfixOperatorStep Step, FunctionDecl *Callee) {
+  auto NoteCallsDeleted = [&](unsigned Step, FunctionDecl *Callee) {
     if (Diagnose != DiagnoseKind::ExplainDeleted)
       return;
     S.Diag(Loc, diag::note_defaulted_postfix_operator_calls_deleted)
-        << FD << (int)Step;
+        << FD << Step;
     if (Callee)
       S.NoteDeletedFunction(Callee);
   };
-  auto CheckConstexpr = [&](const FunctionDecl *Callee,
-                            PostfixOperatorStep Step) {
+  auto CheckConstexpr = [&](const FunctionDecl *Callee, unsigned Step) {
     if (Callee->isConstexpr())
       return;
     Info.Constexpr = false;
     if (Diagnose == DiagnoseKind::ExplainConstexpr)
       S.Diag(Callee->getLocation(),
              diag::note_defaulted_postfix_operator_not_constexpr_here)
-          << (int)Step;
+          << Step;
   };
 
   // C++2d [over.inc.default]p2:
@@ -9626,7 +9613,7 @@ analyzeDefaultedPostfixOperator(Sema &S, FunctionDecl *FD,
         OverloadCandidateSet::iterator Best;
         switch (OR) {
         case OR_Deleted:
-          NoteCallsDeleted(PostfixOperatorStep::Constructor,
+          NoteCallsDeleted(diag::DefaultedPostfixOperatorStep::Constructor,
                            Cands.BestViableFunction(S, Loc, Best) == OR_Deleted
                                ? Best->Function
                                : nullptr);
@@ -9655,21 +9642,23 @@ analyzeDefaultedPostfixOperator(Sema &S, FunctionDecl *FD,
         continue;
       if (!S.isMemberAccessibleForDeletion(
               RD, Step.Function.FoundDecl, C, Loc,
-              InaccessibleDiag(PostfixOperatorStep::Constructor)))
+              InaccessibleDiag(
+                  diag::DefaultedPostfixOperatorStep::Constructor)))
         return Deleted();
-      CheckConstexpr(Step.Function.Function, PostfixOperatorStep::Constructor);
+      CheckConstexpr(Step.Function.Function,
+                     diag::DefaultedPostfixOperatorStep::Constructor);
     }
 
     //  -- C has a destructor that is deleted or inaccessible from the context
     //     of the function-body, or
     if (CXXDestructorDecl *Dtor = S.LookupDestructor(RD)) {
       if (Dtor->isDeleted()) {
-        NoteCallsDeleted(PostfixOperatorStep::Destructor, Dtor);
+        NoteCallsDeleted(diag::DefaultedPostfixOperatorStep::Destructor, Dtor);
         return Deleted();
       }
       if (!S.isMemberAccessibleForDeletion(
               RD, DeclAccessPair::make(Dtor, Dtor->getAccess()), C, Loc,
-              InaccessibleDiag(PostfixOperatorStep::Destructor)))
+              InaccessibleDiag(diag::DefaultedPostfixOperatorStep::Destructor)))
         return Deleted();
     }
   }
@@ -9678,9 +9667,9 @@ analyzeDefaultedPostfixOperator(Sema &S, FunctionDecl *FD,
   //     postfix increment operator function or --c for a postfix decrement
   //     operator function does not result in a usable candidate.
   bool IsIncrement = Kind == PostfixOperatorKind::Increment;
-  PostfixOperatorStep PrefixStep = IsIncrement
-                                       ? PostfixOperatorStep::PrefixIncrement
-                                       : PostfixOperatorStep::PrefixDecrement;
+  unsigned PrefixStep =
+      IsIncrement ? diag::DefaultedPostfixOperatorStep::PrefixIncrement
+                  : diag::DefaultedPostfixOperatorStep::PrefixDecrement;
   UnresolvedSet<16> Fns;
   if (auto *DFI = FD->getDefaultedOrDeletedInfo())
     Fns.assign(DFI->getUnqualifiedLookups().begin(),
@@ -9705,7 +9694,7 @@ analyzeDefaultedPostfixOperator(Sema &S, FunctionDecl *FD,
                Best->Conversions[0].isUserDefined()) {
       // A built-in candidate, reached through a conversion function.
       CheckConstexpr(Best->Conversions[0].UserDefined.ConversionFunction,
-                     PostfixOperatorStep::ConversionFunction);
+                     diag::DefaultedPostfixOperatorStep::ConversionFunction);
     }
     break;
 
@@ -19587,13 +19576,12 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc, Scope *S) {
   if (!Dcl || Dcl->isInvalidDecl())
     return;
 
-  // The %select index for err_default_special_members: which kinds of
-  // functions can be defaulted in the current language mode.
-  unsigned DefaultableKinds = 0;
+  // Which kinds of functions can be defaulted in the current language mode.
+  unsigned DefaultableKinds = diag::DefaultableFunctionKinds::SpecialMembers;
   if (getLangOpts().CPlusPlus29)
-    DefaultableKinds = 2;
+    DefaultableKinds = diag::DefaultableFunctionKinds::PostfixOperators;
   else if (getLangOpts().CPlusPlus20)
-    DefaultableKinds = 1;
+    DefaultableKinds = diag::DefaultableFunctionKinds::Comparisons;
 
   auto *FD = dyn_cast<FunctionDecl>(Dcl);
   if (!FD) {
