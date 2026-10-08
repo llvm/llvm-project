@@ -1,0 +1,24 @@
+# RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -emit-call-site-info \
+# RUN:   -run-pass=finalize-isel %s -o - | FileCheck %s
+
+# The custom inserter replaces SI_CALL_ISEL with SI_CALL. The call site info,
+# here the register of the first argument, has to move to SI_CALL.
+
+# CHECK:      callSites:
+# CHECK-NEXT:   - { bb: 0, offset: 1, fwdArgRegs:
+# CHECK-NEXT:       - { arg: 0, reg: '$vgpr0' } }
+# CHECK:      %0:sreg_64 = COPY $sgpr0_sgpr1
+# CHECK-NEXT: SI_CALL %0, 0, csr_amdgpu, implicit $vgpr0
+
+---
+name: f
+tracksRegLiveness: true
+callSites:
+  - { bb: 0, offset: 1, fwdArgRegs: [ { arg: 0, reg: '$vgpr0' } ] }
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $vgpr0
+    %0:sreg_64 = COPY $sgpr0_sgpr1
+    SI_CALL_ISEL %0, 0, csr_amdgpu, implicit $vgpr0
+    SI_RETURN
+...
