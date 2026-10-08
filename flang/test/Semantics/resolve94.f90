@@ -49,8 +49,12 @@ subroutine s1()
   !ERROR: Must be a scalar value, but is a rank-1 array
   rVar1 = rCoarray[1,2,3,STAT=intArray]
   !ERROR: STAT= specifier must be a scalar integer variable
+  !ERROR: STAT variable 'mask(2)' is not definable
+  !BECAUSE: 'mask(2_4)' is not a variable or pointer
   rVar1 = rCoarray[1,2,3,STAT=MASK(2)]
   !ERROR: STAT= specifier must be a scalar integer variable
+  !ERROR: STAT variable 'kconst' is not definable
+  !BECAUSE: '1_4' is not a variable or pointer
   rVar1 = rCoarray[1,2,3,STAT=kConst] ! named constant: F'2023 C901
   ! Error on C929, no specifier can appear more than once
   !ERROR: coindexed reference has multiple STAT= specifiers
@@ -89,5 +93,9 @@ subroutine s()
   real :: r
   !ERROR: STAT= specifier must be a scalar integer variable
   !ERROR: STAT= specifier must be a scalar integer variable
+  !ERROR: STAT variable 'mask(2)' is not definable
+  !BECAUSE: 'mask(2_4)' is not a variable or pointer
+  !ERROR: STAT variable 'mask(3)' is not definable
+  !BECAUSE: 'mask(3_4)' is not a variable or pointer
   r = c[1,2,3, STAT=MASK(2), STAT=MASK(3)]
 end subroutine s
