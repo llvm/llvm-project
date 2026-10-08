@@ -334,6 +334,118 @@ define i32 @sdot4_add_x(i32 %a, i32 %b, i32 %x) {
   ret i32 %r
 }
 
+define i32 @sdot4_zero_acc_add_x(i32 %a, i32 %b, i32 %x) {
+; CHECK-LABEL: define i32 @sdot4_zero_acc_add_x(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[DOT:%.*]] = call i32 @llvm.amdgcn.sdot4(i32 [[A]], i32 [[B]], i32 [[X]], i1 false)
+; CHECK-NEXT:    ret i32 [[DOT]]
+;
+  %dot = call i32 @llvm.amdgcn.sdot4(i32 %a, i32 %b, i32 0, i1 false)
+  %r = add i32 %dot, %x
+  ret i32 %r
+}
+
+define i32 @sdot4_zero_acc_add_x_commuted(i32 %a, i32 %b, i32 %x) {
+; CHECK-LABEL: define i32 @sdot4_zero_acc_add_x_commuted(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[DOT:%.*]] = call i32 @llvm.amdgcn.sdot4(i32 [[A]], i32 [[B]], i32 [[X]], i1 false)
+; CHECK-NEXT:    ret i32 [[DOT]]
+;
+  %dot = call i32 @llvm.amdgcn.sdot4(i32 %a, i32 %b, i32 0, i1 false)
+  %r = add i32 %x, %dot
+  ret i32 %r
+}
+
+define i32 @sdot4_zero_acc_add_x_defined_after(i32 %a, i32 %b, ptr %p) {
+; CHECK-LABEL: define i32 @sdot4_zero_acc_add_x_defined_after(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[DOT:%.*]] = call i32 @llvm.amdgcn.sdot4(i32 [[A]], i32 [[B]], i32 [[X]], i1 false)
+; CHECK-NEXT:    ret i32 [[DOT]]
+;
+  %dot = call i32 @llvm.amdgcn.sdot4(i32 %a, i32 %b, i32 0, i1 false)
+  %x = load i32, ptr %p
+  %r = add i32 %dot, %x
+  ret i32 %r
+}
+
+define i32 @sdot4_zero_acc_add_x_sunk_to_user_block(i32 %a, i32 %b, ptr %p) {
+; CHECK-LABEL: define i32 @sdot4_zero_acc_add_x_sunk_to_user_block(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[NEXT:.*]]
+; CHECK:       [[NEXT]]:
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[DOT:%.*]] = call i32 @llvm.amdgcn.sdot4(i32 [[A]], i32 [[B]], i32 [[X]], i1 false)
+; CHECK-NEXT:    ret i32 [[DOT]]
+;
+entry:
+  %dot = call i32 @llvm.amdgcn.sdot4(i32 %a, i32 %b, i32 0, i1 false)
+  br label %next
+
+next:
+  %x = load i32, ptr %p
+  %r = add i32 %dot, %x
+  ret i32 %r
+}
+
+; Negative test - reassociating across a saturating accumulation is not valid.
+define i32 @sdot4_zero_acc_add_x_clamp(i32 %a, i32 %b, i32 %x) {
+; CHECK-LABEL: define i32 @sdot4_zero_acc_add_x_clamp(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[DOT:%.*]] = call i32 @llvm.amdgcn.sdot4(i32 [[A]], i32 [[B]], i32 0, i1 true)
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[DOT]], [[X]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %dot = call i32 @llvm.amdgcn.sdot4(i32 %a, i32 %b, i32 0, i1 true)
+  %r = add i32 %dot, %x
+  ret i32 %r
+}
+
+; Negative test - the dot result has another use.
+define i32 @sdot4_zero_acc_add_x_multi_use(i32 %a, i32 %b, i32 %x) {
+; CHECK-LABEL: define i32 @sdot4_zero_acc_add_x_multi_use(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[DOT:%.*]] = call i32 @llvm.amdgcn.sdot4(i32 [[A]], i32 [[B]], i32 0, i1 false)
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[DOT]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = mul i32 [[ADD]], [[DOT]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %dot = call i32 @llvm.amdgcn.sdot4(i32 %a, i32 %b, i32 0, i1 false)
+  %add = add i32 %dot, %x
+  %r = mul i32 %add, %dot
+  ret i32 %r
+}
+
+; Negative test - folding would sink the dot into the loop.
+define void @sdot4_zero_acc_add_x_loop(i32 %a, i32 %b, ptr %p, i1 %c) {
+; CHECK-LABEL: define void @sdot4_zero_acc_add_x_loop(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], ptr [[P:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[DOT:%.*]] = call i32 @llvm.amdgcn.sdot4(i32 [[A]], i32 [[B]], i32 0, i1 false)
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[DOT]], [[X]]
+; CHECK-NEXT:    store i32 [[R]], ptr [[P]], align 4
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %dot = call i32 @llvm.amdgcn.sdot4(i32 %a, i32 %b, i32 0, i1 false)
+  br label %loop
+
+loop:
+  %x = load i32, ptr %p
+  %r = add i32 %dot, %x
+  store i32 %r, ptr %p
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 define void @sdot4_no_use(i32 %a, i32 %b) {
 ; CHECK-LABEL: define void @sdot4_no_use(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {

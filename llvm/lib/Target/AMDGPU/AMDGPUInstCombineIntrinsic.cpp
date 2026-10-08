@@ -1146,12 +1146,11 @@ tryOptimizeShufflePattern(InstCombiner &IC, IntrinsicInst &II,
   return IC.replaceInstUsesWith(II, Result);
 }
 
-/// Try to fold a constant addition into the accumulator when saturation is
-/// disabled.
-static Instruction *foldConstantIntoDotAccumulator(IntrinsicInst &II,
-                                                   unsigned AccIdx,
-                                                   unsigned ClampIdx,
-                                                   InstCombiner &IC) {
+/// Try to fold an addition into the accumulator when saturation is disabled.
+static Instruction *foldAddIntoDotAccumulator(IntrinsicInst &II,
+                                              unsigned AccIdx,
+                                              unsigned ClampIdx,
+                                              InstCombiner &IC) {
   // Reassociating across a saturating accumulation is not valid.
   if (!match(II.getArgOperand(ClampIdx), m_Zero()) || !II.hasOneUse())
     return nullptr;
@@ -1164,11 +1163,26 @@ static Instruction *foldConstantIntoDotAccumulator(IntrinsicInst &II,
   if (!AccumUser)
     return nullptr;
 
-  const APInt *AccumDelta = nullptr;
-  if (!match(AccumUser, m_c_Add(m_Specific(&II), m_APInt(AccumDelta))))
+  Value *AccumDelta = nullptr;
+  if (!match(AccumUser, m_c_Add(m_Specific(&II), m_Value(AccumDelta))))
     return nullptr;
 
-  Constant *NewAcc = ConstantInt::get(II.getType(), *Acc + *AccumDelta);
+  Value *NewAcc = nullptr;
+  const APInt *AccumDeltaC = nullptr;
+  if (match(AccumDelta, m_APInt(AccumDeltaC)))
+    NewAcc = ConstantInt::get(II.getType(), *Acc + *AccumDeltaC);
+  else if (Acc->isZero())
+    NewAcc = AccumDelta;
+  else
+    return nullptr;
+
+  auto *NewAccI = dyn_cast<Instruction>(NewAcc);
+  if (NewAccI && !IC.getDominatorTree().dominates(NewAccI, &II)) {
+    // Avoid sinking the dot into a loop or other block.
+    if (AccumUser->getParent() != II.getParent())
+      return nullptr;
+    II.moveBefore(AccumUser->getIterator());
+  }
 
   IC.replaceInstUsesWith(*AccumUser, &II);
   IC.eraseInstFromFunction(*AccumUser);
@@ -2029,7 +2043,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (match(Src1, m_Zero()))
       return IC.replaceInstUsesWith(II, II.getArgOperand(2));
 
-    if (Instruction *I = foldConstantIntoDotAccumulator(II, 2, 3, IC))
+    if (Instruction *I = foldAddIntoDotAccumulator(II, 2, 3, IC))
       return I;
 
     break;
@@ -2054,7 +2068,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (match(Src1, m_Zero()))
       return IC.replaceInstUsesWith(II, II.getArgOperand(4));
 
-    if (Instruction *I = foldConstantIntoDotAccumulator(II, 4, 5, IC))
+    if (Instruction *I = foldAddIntoDotAccumulator(II, 4, 5, IC))
       return I;
 
     break;
