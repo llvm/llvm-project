@@ -164,19 +164,6 @@ static bool isNonCopyable(const Function &F) {
          AMDGPU::isEntryFunctionCC(F.getCallingConv());
 }
 
-/// If \p GV has local linkage, make it external + hidden.
-static void externalize(GlobalValue &GV) {
-  if (GV.hasLocalLinkage()) {
-    GV.setLinkage(GlobalValue::ExternalLinkage);
-    GV.setVisibility(GlobalValue::HiddenVisibility);
-  }
-
-  // Unnamed entities must be named consistently between modules. setName will
-  // give a distinct name to each such entity.
-  if (!GV.hasName())
-    GV.setName("__llvmsplit_unnamed");
-}
-
 /// Cost analysis function. Calculates the cost of each function in \p M
 ///
 /// \param GetTTI Abstract getter for TargetTransformInfo.
@@ -402,15 +389,6 @@ public:
   bool hasAnyIncomingEdges() const { return IncomingEdges.size(); }
   bool hasAnyIncomingEdgesOfKind(EdgeKind EK) const {
     return any_of(IncomingEdges, [&](const auto *E) { return E->Kind == EK; });
-  }
-
-  bool hasAnyOutgoingEdges() const { return OutgoingEdges.size(); }
-  bool hasAnyOutgoingEdgesOfKind(EdgeKind EK) const {
-    return any_of(OutgoingEdges, [&](const auto *E) { return E->Kind == EK; });
-  }
-
-  iterator_range<edges_iterator> incoming_edges() const {
-    return IncomingEdges;
   }
 
   iterator_range<edges_iterator> outgoing_edges() const {
@@ -1397,7 +1375,7 @@ static void splitAMDGPUModule(
       if (Fn.hasLocalLinkage() && Fn.hasAddressTaken()) {
         LLVM_DEBUG(dbgs() << "[externalize] "; Fn.printAsOperand(dbgs());
                    dbgs() << " because its address is taken\n");
-        externalize(Fn);
+        Fn.externalize();
       }
     }
   }
@@ -1408,14 +1386,14 @@ static void splitAMDGPUModule(
     for (auto &GV : M.globals()) {
       if (GV.hasLocalLinkage())
         LLVM_DEBUG(dbgs() << "[externalize] GV " << GV.getName() << '\n');
-      externalize(GV);
+      GV.externalize();
     }
   }
 
   for (auto &GA : M.aliases()) {
     if (GA.hasLocalLinkage()) {
       LLVM_DEBUG(dbgs() << "[externalize] alias " << GA.getName() << '\n');
-      externalize(GA);
+      GA.externalize();
     }
   }
 

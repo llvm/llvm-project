@@ -507,16 +507,6 @@ public:
   LLVM_ABI ModRefInfo getModRefInfo(const Instruction *I1,
                                     const Instruction *I2);
 
-  /// Return information about whether a particular call site modifies
-  /// or reads the specified memory location \p MemLoc before instruction \p I
-  /// in a BasicBlock.
-  ModRefInfo callCapturesBefore(const Instruction *I,
-                                const MemoryLocation &MemLoc,
-                                DominatorTree *DT) {
-    SimpleAAQueryInfo AAQIP(*this);
-    return callCapturesBefore(I, MemLoc, DT, AAQIP);
-  }
-
   /// @}
   //===--------------------------------------------------------------------===//
   /// \name Higher level methods for querying mod/ref information.

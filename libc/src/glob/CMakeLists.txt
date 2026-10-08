@@ -1,0 +1,24 @@
+add_entrypoint_object(
+  glob
+  SRCS
+    glob.cpp
+  HDRS
+    glob.h
+  DEPENDS
+    libc.hdr.glob_macros
+    libc.hdr.types.glob_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  globfree
+  SRCS
+    globfree.cpp
+  HDRS
+    globfree.h
+  DEPENDS
+    libc.hdr.types.glob_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)

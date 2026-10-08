@@ -29,8 +29,10 @@ void f(int n) {
 
   // LLVM: call i1 @llvm.coro.alloc(token %[[COROID]])
 
-  // TODO
-  //__builtin_coro_noop();
+  __builtin_coro_noop();
+  // CIR: %[[NOOP:.*]] = cir.coro.intrinsic.noop() : () -> !cir.ptr<!void>
+
+  // LLVM: %[[NOOP:.*]] = call ptr @llvm.coro.noop()
 
   __builtin_coro_begin(myAlloc(__builtin_coro_size()));
   // TODO(CIR): Support both variants of the coroutine size intrinsic, matching
@@ -44,14 +46,17 @@ void f(int n) {
   // LLVM: %[[MEM:.*]] = call noundef ptr @_Z7myAllocx(i64 noundef %[[SIZE]])
   // LLVM: %[[FRAME:.*]] = call ptr @llvm.coro.begin(token %[[COROID]], ptr %[[MEM]])
 
-  // TODO(CIR):
-  //__builtin_coro_resume(__builtin_coro_frame());
+  __builtin_coro_resume(__builtin_coro_frame());
+  // CIR: cir.coro.intrinsic.resume(%[[FRAME]]) : (!cir.ptr<!void>)
+  // LLVM-NEXT: call void @llvm.coro.resume(ptr %[[FRAME]])
 
-  // TODO(CIR):
-  //__builtin_coro_destroy(__builtin_coro_frame());
+  __builtin_coro_destroy(__builtin_coro_frame());
+  // CIR: cir.coro.intrinsic.destroy(%[[FRAME]]) : (!cir.ptr<!void>)
+  // LLVM-NEXT: call void @llvm.coro.destroy(ptr %[[FRAME]])
 
-  // TODO(CIR):
-  //__builtin_coro_done(__builtin_coro_frame());
+  __builtin_coro_done(__builtin_coro_frame());
+  // CIR: cir.coro.intrinsic.done(%[[FRAME]]) : (!cir.ptr<!void>) -> !cir.bool
+  // LLVM-NEXT: call i1 @llvm.coro.done(ptr %[[FRAME]])
 
   __builtin_coro_promise(__builtin_coro_frame(), 48, 0);
   // CIR: %[[ALIGN:.*]] = cir.const #cir.int<48> : !s32i
@@ -72,6 +77,34 @@ void f(int n) {
 
   // LLVM: call void @llvm.coro.end(ptr %[[FRAME]], i1 false, token none)
 
-  // TODO(CIR):
-  //__builtin_coro_suspend(1);
+  __builtin_coro_suspend(true);
+  // CIR: %[[TK_NONE2:.*]] = cir.token.none
+  // CIR: %[[TRUE:.*]] = cir.const #true
+  // CIR: cir.coro.intrinsic.suspend(%[[TK_NONE2]], %[[TRUE]])
+
+  // LLVM: call i8 @llvm.coro.suspend(token none, i1 true)
 }
+
+void test_suspend_switch() {
+  switch (__builtin_coro_suspend(false)) {
+  case -1:
+    return;
+  case 0:
+    break;
+  }
+}
+
+// CIR: cir.func{{.*}} @_Z19test_suspend_switchv
+// CIR: %[[TK_NONE:.*]] = cir.token.none
+// CIR: %[[FALSE:.*]] = cir.const #false
+// CIR: %[[SUSPEND:.*]] = cir.coro.intrinsic.suspend(%[[TK_NONE]], %[[FALSE]]) : (token, !cir.bool) -> !s8i
+// CIR: %[[CAST:.*]] = cir.cast integral %[[SUSPEND]] : !s8i -> !s32i
+// CIR: cir.switch(%[[CAST]] : !s32i)
+
+// LLVM: define{{.*}} void @_Z19test_suspend_switchv
+// LLVM: %[[SUSPEND:.*]] = call i8 @llvm.coro.suspend(token none, i1 false)
+// LLVM: %[[CAST:.*]] = sext i8 %[[SUSPEND]] to i32
+// LLVM: switch i32 %[[CAST]], label %{{.*}} [
+// LLVM:   i32 -1, label %{{.*}}
+// LLVM:   i32 0, label %{{.*}}
+// LLVM: ]

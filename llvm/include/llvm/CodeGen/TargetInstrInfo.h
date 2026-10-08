@@ -164,6 +164,13 @@ public:
   virtual const TargetRegisterClass *getRegClass(const MCInstrDesc &MCID,
                                                  unsigned OpNum) const;
 
+  /// Return the register class to use for the register operand of an inline asm
+  /// memory operand with constraint \p C.
+  virtual const TargetRegisterClass *
+  getInlineAsmMemoryOperandRegClass(InlineAsm::ConstraintCode C) const {
+    llvm_unreachable("target did not implement memory operand support");
+  }
+
   /// Returns true if MI is an instruction we are unable to reason about
   /// (like a call or something with unmodeled side effects).
   virtual bool isGlobalMemoryObject(const MachineInstr *MI) const;
@@ -450,7 +457,7 @@ public:
   /// getInstSizeInBytes() should be verified.
   virtual InstSizeVerifyMode
   getInstSizeVerifyMode(const MachineInstr &MI) const {
-    return InstSizeVerifyMode::NoVerify;
+    return InstSizeVerifyMode::AllowOverEstimate;
   }
 
   /// Return true if the instruction is as cheap as a move instruction.
@@ -517,7 +524,6 @@ public:
   /// replacing \p MI with new instructions, even though this function does not
   /// remove MI.
   virtual MachineInstr *convertToThreeAddress(MachineInstr &MI,
-                                              LiveVariables *LV,
                                               LiveIntervals *LIS) const {
     return nullptr;
   }
@@ -741,6 +747,19 @@ public:
                              SmallVectorImpl<MachineOperand> &Cond,
                              bool AllowModify = false) const {
     return true;
+  }
+
+  bool analyzeBranch(const MachineBasicBlock &MBB,
+                     const MachineBasicBlock *&TBB,
+                     const MachineBasicBlock *&FBB,
+                     SmallVectorImpl<MachineOperand> &Cond) const {
+    MachineBasicBlock *TempTBB = nullptr, *TempFBB = nullptr;
+    bool NotUnderstandable = analyzeBranch(const_cast<MachineBasicBlock &>(MBB),
+                                           TempTBB, TempFBB, Cond,
+                                           /*AllowModify=*/false);
+    TBB = TempTBB;
+    FBB = TempFBB;
+    return NotUnderstandable;
   }
 
   /// Represents a predicate at the MachineFunction level.  The control flow a
@@ -1098,10 +1117,12 @@ public:
   /// (non-PC) registers as offsets or scaling values, which inherently
   /// tags the corresponding MachineOperand with OPERAND_PCREL.
   ///
-  /// @param MO The MachineOperand in question. MO.isReg() should always
-  /// be true.
+  /// @param MI The instruction containing the operand in question.
+  /// @param OpIdx The index of the operand in question. It should always be a
+  /// register operand.
   /// @return Whether this operand is allowed to be used PC-relatively.
-  virtual bool isPCRelRegisterOperandLegal(const MachineOperand &MO) const {
+  virtual bool isPCRelRegisterOperandLegal(const MachineInstr &MI,
+                                           unsigned OpIdx) const {
     return false;
   }
 
@@ -1280,7 +1301,7 @@ public:
 
   /// This function defines the logic to lower COPY instruction to
   /// target specific instruction(s).
-  void lowerCopy(MachineInstr *MI, const TargetRegisterInfo *TRI) const;
+  void lowerCopy(MachineInstr *MI) const;
 
   /// Return true when there is potentially a faster code sequence
   /// for an instruction chain ending in \p Root. All potential patterns are
@@ -1576,8 +1597,7 @@ public:
   /// abstraction that supports negative offsets.
   bool getMemOperandWithOffset(const MachineInstr &MI,
                                const MachineOperand *&BaseOp, int64_t &Offset,
-                               bool &OffsetIsScalable,
-                               const TargetRegisterInfo *TRI) const;
+                               bool &OffsetIsScalable) const;
 
   /// Get zero or more base operands and the byte offset of an instruction that
   /// reads/writes memory. Note that there may be zero base operands if the
@@ -1590,8 +1610,7 @@ public:
   /// abstraction that supports negative offsets.
   virtual bool getMemOperandsWithOffsetWidth(
       const MachineInstr &MI, SmallVectorImpl<const MachineOperand *> &BaseOps,
-      int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
-      const TargetRegisterInfo *TRI) const {
+      int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width) const {
     return false;
   }
 
@@ -1609,8 +1628,7 @@ public:
   /// struct ExtAddrMode which contains all relevant information to make up the
   /// address.
   virtual std::optional<ExtAddrMode>
-  getAddrModeFromMemoryOp(const MachineInstr &MemI,
-                          const TargetRegisterInfo *TRI) const {
+  getAddrModeFromMemoryOp(const MachineInstr &MemI) const {
     return std::nullopt;
   }
 
@@ -1640,8 +1658,7 @@ public:
   /// function can return true even if becomes zero. Specifically cases such as
   /// NullValueReg = shl NullValueReg, 63.
   virtual bool preservesZeroValueInReg(const MachineInstr *MI,
-                                       const Register NullValueReg,
-                                       const TargetRegisterInfo *TRI) const {
+                                       const Register NullValueReg) const {
     return false;
   }
 
@@ -1652,9 +1669,9 @@ public:
 
   /// Returns true if the two given memory operations should be scheduled
   /// adjacent. Note that you have to add:
-  ///   DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
+  ///   DAG->addMutation(createLoadClusterDAGMutation(DAG->TII));
   /// or
-  ///   DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
+  ///   DAG->addMutation(createStoreClusterDAGMutation(DAG->TII));
   /// to TargetMachine::createMachineScheduler() to have an effect.
   ///
   /// \p BaseOps1 and \p BaseOps2 are memory operands of two memory operations.
@@ -1708,9 +1725,9 @@ public:
   }
 
   // Returns a MIRPrinter comment for this machine operand.
-  virtual std::string
-  createMIROperandComment(const MachineInstr &MI, const MachineOperand &Op,
-                          unsigned OpIdx, const TargetRegisterInfo *TRI) const;
+  virtual std::string createMIROperandComment(const MachineInstr &MI,
+                                              const MachineOperand &Op,
+                                              unsigned OpIdx) const;
 
   /// Returns true if the instruction is a
   /// terminator instruction that has not been predicated.
@@ -2017,9 +2034,8 @@ public:
   /// 3. Calling breakPartialRegDependency() with the same arguments.  This
   ///    allows the target to insert a dependency breaking instruction.
   ///
-  virtual unsigned
-  getPartialRegUpdateClearance(const MachineInstr &MI, unsigned OpNum,
-                               const TargetRegisterInfo *TRI) const {
+  virtual unsigned getPartialRegUpdateClearance(const MachineInstr &MI,
+                                                unsigned OpNum) const {
     // The default implementation returns 0 for no partial register dependency.
     return 0;
   }
@@ -2038,8 +2054,8 @@ public:
   /// This hook works similarly to getPartialRegUpdateClearance, except that it
   /// does not take an operand index. Instead sets \p OpNum to the index of the
   /// unused register.
-  virtual unsigned getUndefRegClearance(const MachineInstr &MI, unsigned OpNum,
-                                        const TargetRegisterInfo *TRI) const {
+  virtual unsigned getUndefRegClearance(const MachineInstr &MI,
+                                        unsigned OpNum) const {
     // The default implementation returns 0 for no undef register dependency.
     return 0;
   }
@@ -2061,8 +2077,8 @@ public:
   /// An <imp-kill> operand should be added to MI if an instruction was
   /// inserted.  This ties the instructions together in the post-ra scheduler.
   ///
-  virtual void breakPartialRegDependency(MachineInstr &MI, unsigned OpNum,
-                                         const TargetRegisterInfo *TRI) const {}
+  virtual void breakPartialRegDependency(MachineInstr &MI,
+                                         unsigned OpNum) const {}
 
   /// Create machine specific model for scheduling.
   virtual DFAPacketizer *

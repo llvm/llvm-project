@@ -143,10 +143,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
 
-// This is a replication of fields of object::PGOAnalysisMap::Features. It
-// should match the order of the fields so that
-// `object::PGOAnalysisMap::Features::decode(PgoAnalysisMapFeatures.getBits())`
-// succeeds.
 enum class PGOMapFeaturesEnum {
   None,
   FuncEntryCount,
@@ -155,7 +151,7 @@ enum class PGOMapFeaturesEnum {
   PropellerCFG,
   All,
 };
-static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
+static cl::list<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
     "pgo-analysis-map", cl::Hidden, cl::CommaSeparated,
     cl::values(
         clEnumValN(PGOMapFeaturesEnum::None, "none", "Disable all options"),
@@ -198,8 +194,6 @@ static cl::opt<std::string>
     StackUsageFile("stack-usage-file",
                    cl::desc("Output filename for stack usage information"),
                    cl::value_desc("filename"), cl::Hidden);
-
-extern cl::opt<bool> EmitBBHash;
 
 STATISTIC(EmittedInsts, "Number of machine instrs printed");
 
@@ -411,6 +405,7 @@ AsmPrinter::AsmPrinter(TargetMachine &tm, std::unique_ptr<MCStreamer> Streamer,
                        char &ID)
     : MachineFunctionPass(ID), TM(tm), MAI(tm.getMCAsmInfo()),
       OutContext(Streamer->getContext()), OutStreamer(std::move(Streamer)),
+      PointerSize(tm.getTargetTriple().getArchPointerBitWidth() / 8),
       SM(*this) {
   VerboseAsm = OutStreamer->isVerboseAsm();
   DwarfUsesRelocationsAcrossSections =
@@ -491,12 +486,6 @@ const DataLayout &AsmPrinter::getDataLayout() const {
   return MMI->getModule()->getDataLayout();
 }
 
-// Do not use the cached DataLayout because some client use it without a Module
-// (dsymutil, llvm-dwarfdump).
-unsigned AsmPrinter::getPointerSize() const {
-  return TM.getPointerSize(0); // FIXME: Default address space
-}
-
 const MCSubtargetInfo &AsmPrinter::getSubtargetInfo() const {
   assert(MF && "getSubtargetInfo requires a valid MachineFunction!");
   return MF->getSubtarget<MCSubtargetInfo>();
@@ -521,17 +510,18 @@ void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<GCModuleInfo>();
   AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
   AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
-  if (EmitBBHash)
+  if (shouldEmitBBHash())
     AU.addRequired<MachineBlockHashInfo>();
   AU.addUsedIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>();
 }
 
 bool AsmPrinter::doInitialization(Module &M) {
   MMI = GetMMI();
+  PointerSize = M.getDataLayout().getPointerSize(0);
   HasSplitStack = false;
   HasNoSplitStack = false;
   DbgInfoAvailable = !M.debug_compile_units().empty();
-  const Triple &Target = TM.getTargetTriple();
+  const Triple &Target = M.getTargetTriple();
 
   AddrLabelSymbols = nullptr;
 
@@ -668,7 +658,11 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   EHStreamer *ES = nullptr;
   switch (MAI.getExceptionHandlingType()) {
+  case ExceptionHandling::Default:
+    llvm_unreachable("should have resolved exception model kind");
   case ExceptionHandling::None:
+  case ExceptionHandling::Emscripten:
+    // Emscripten EH is handled in JS glue code and emits no EH tables here.
     if (!usesCFIWithoutEH())
       break;
     [[fallthrough]];
@@ -777,8 +771,8 @@ MCSymbol *AsmPrinter::getSymbolPreferLocal(const GlobalValue &GV) const {
   // assembler would otherwise be conservative and assume a global default
   // visibility symbol can be interposable, even if the code generator already
   // assumed it.
-  if (TM.getTargetTriple().isOSBinFormatELF() && GV.canBenefitFromLocalAlias()) {
-    const Module &M = *GV.getParent();
+  const Module &M = *GV.getParent();
+  if (M.getTargetTriple().isOSBinFormatELF() && GV.canBenefitFromLocalAlias()) {
     if (TM.getRelocationModel() != Reloc::Static &&
         M.getPIELevel() == PIELevel::Default && GV.isDSOLocal())
       return getSymbolWithGlobalValueBase(&GV, "$local");
@@ -833,9 +827,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV,
   emitVisibility(EmittedSym, GV->getVisibility(), !GV->isDeclaration());
 
   if (GV->isTagged()) {
-    Triple T = TM.getTargetTriple();
-
-    if (T.getArch() != Triple::aarch64)
+    if (TM.getTargetTriple().getArch() != Triple::aarch64)
       OutContext.reportError(SMLoc(),
                              "tagged symbols (-fsanitize=memtag-globals) are "
                              "only supported on AArch64");
@@ -1343,6 +1335,12 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
       OS << "!target-index(" << Op.getIndex() << "," << Op.getOffset() << ")";
       break;
     }
+    case MachineOperand::MO_GlobalAddress: {
+      Op.getGlobal()->printAsOperand(OS, /*PrintType=*/false);
+      if (Op.getOffset())
+        OS << '+' << Op.getOffset();
+      break;
+    }
     case MachineOperand::MO_Register:
     case MachineOperand::MO_FrameIndex: {
       Register Reg;
@@ -1489,25 +1487,23 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
                     bool HasCalls, const CFGProfile *FuncCFGProfile) {
   // Ensure that the user has not passed in additional options while also
   // specifying all or none.
-  if ((PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::None) ||
-       PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::All)) &&
-      popcount(PgoAnalysisMapFeatures.getBits()) != 1) {
+  auto IsSet = [](PGOMapFeaturesEnum F) {
+    return is_contained(PgoAnalysisMapFeatures, F);
+  };
+  bool NoFeatures = IsSet(PGOMapFeaturesEnum::None);
+  bool AllFeatures = IsSet(PGOMapFeaturesEnum::All);
+  if ((NoFeatures || AllFeatures) && !all_equal(PgoAnalysisMapFeatures)) {
     MF.getFunction().getContext().emitError(
         "-pgo-analysis-map can accept only all or none with no additional "
         "values.");
   }
 
-  bool NoFeatures = PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::None);
-  bool AllFeatures = PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::All);
   bool FuncEntryCountEnabled =
-      AllFeatures || (!NoFeatures && PgoAnalysisMapFeatures.isSet(
-                                         PGOMapFeaturesEnum::FuncEntryCount));
+      AllFeatures || (!NoFeatures && IsSet(PGOMapFeaturesEnum::FuncEntryCount));
   bool BBFreqEnabled =
-      AllFeatures ||
-      (!NoFeatures && PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::BBFreq));
+      AllFeatures || (!NoFeatures && IsSet(PGOMapFeaturesEnum::BBFreq));
   bool BrProbEnabled =
-      AllFeatures ||
-      (!NoFeatures && PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::BrProb));
+      AllFeatures || (!NoFeatures && IsSet(PGOMapFeaturesEnum::BrProb));
   bool PostLinkCfgEnabled = FuncCFGProfile && PgoAnalysisMapEmitBBSectionsCfg;
 
   if ((BBFreqEnabled || BrProbEnabled) && BBAddrMapSkipEmitBBEntries) {
@@ -1518,7 +1514,7 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
           MF.hasBBSections() && NumMBBSectionRanges > 1,
           // Use static_cast to avoid breakage of tests on windows.
           static_cast<bool>(BBAddrMapSkipEmitBBEntries), HasCalls,
-          static_cast<bool>(EmitBBHash), PostLinkCfgEnabled};
+          shouldEmitBBHash(), PostLinkCfgEnabled};
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
@@ -1733,7 +1729,9 @@ void AsmPrinter::emitStackSizeSection(const MachineFunction &MF) {
   const MCSymbol *FunctionSymbol = getFunctionBegin();
   uint64_t StackSize =
       FrameInfo.getStackSize() + FrameInfo.getUnsafeStackSize();
-  OutStreamer->emitSymbolValue(FunctionSymbol, TM.getProgramPointerSize());
+  const DataLayout &DL = getDataLayout();
+  OutStreamer->emitSymbolValue(FunctionSymbol,
+                               DL.getPointerSize(DL.getProgramAddressSpace()));
   OutStreamer->emitULEB128IntValue(StackSize);
 
   OutStreamer->popSection();
@@ -1839,9 +1837,11 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   // 6) For each unique direct callee, the callee's PC.
   // 7) Number of unique indirect target type IDs, if at least one exists.
   // 8) Each unique indirect target type id.
+  const DataLayout &DL = getDataLayout();
+  unsigned ProgramPointerSize = DL.getPointerSize(DL.getProgramAddressSpace());
   OutStreamer->emitInt8(CallGraphSectionFormatVersion::V_0);
   OutStreamer->emitInt8(static_cast<uint8_t>(CGFlags));
-  OutStreamer->emitSymbolValue(getSymbol(&F), TM.getProgramPointerSize());
+  OutStreamer->emitSymbolValue(getSymbol(&F), ProgramPointerSize);
   const auto *TypeId = extractNumericCGTypeId(F);
   if (IsIndirectTarget && TypeId)
     OutStreamer->emitInt64(TypeId->getZExtValue());
@@ -1851,7 +1851,7 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   if (DirectCallees.size() > 0) {
     OutStreamer->emitULEB128IntValue(DirectCallees.size());
     for (const auto &CalleeSymbol : DirectCallees)
-      OutStreamer->emitSymbolValue(CalleeSymbol, TM.getProgramPointerSize());
+      OutStreamer->emitSymbolValue(CalleeSymbol, ProgramPointerSize);
     FuncCGInfo.DirectCallees.clear();
   }
   if (IndirectCalleeTypeIDs.size() > 0) {
@@ -1999,7 +1999,8 @@ void AsmPrinter::handleCallsiteForCallgraph(
     const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
     const MachineInstr &MI) {
   assert(MI.isCall() && "This method is meant for call instructions only.");
-  const MachineOperand &CalleeOperand = MI.getOperand(0);
+  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
+  const MachineOperand &CalleeOperand = TII->getCalleeOperand(MI);
   if (CalleeOperand.isGlobal() || CalleeOperand.isSymbol()) {
     // Handle direct calls.
     MCSymbol *CalleeSymbol = nullptr;
@@ -2093,7 +2094,10 @@ void AsmPrinter::emitFunctionBody() {
   // Print out code for the function.
   bool HasAnyRealCode = false;
   int NumInstsInFunction = 0;
-  bool IsEHa = MMI->getModule()->getModuleFlag("eh-asynch");
+  // Only x86 needs this padding; the Arm unwinders back the PC up themselves.
+  const Module *M = MMI->getModule();
+  bool NeedsEHaNops =
+      M->getTargetTriple().isX86() && M->getModuleFlag("eh-asynch");
 
   const MCSubtargetInfo *STI = nullptr;
   if (this->MF)
@@ -2186,7 +2190,7 @@ void AsmPrinter::emitFunctionBody() {
         //  an EH region as it must be led by at least a Load
         {
           auto MI2 = std::next(MI.getIterator());
-          if (IsEHa && MI2 != MBB.end() &&
+          if (NeedsEHaNops && MI2 != MBB.end() &&
               (MI2->mayLoadOrStore() || MI2->mayRaiseFPException()))
             emitNops(1);
         }
@@ -2341,7 +2345,7 @@ void AsmPrinter::emitFunctionBody() {
       // If there is a post-instruction symbol, emit a label for it here.
       if (MCSymbol *S = MI.getPostInstrSymbol()) {
         // Emit the weak symbol attribute used for the prefetch target fallback.
-        if (TM.getTargetTriple().isOSBinFormatELF()) {
+        if (M->getTargetTriple().isOSBinFormatELF()) {
           MCSymbolELF *ESym = static_cast<MCSymbolELF *>(S);
           if (ESym->getBinding() == ELF::STB_WEAK)
             OutStreamer->emitSymbolAttribute(S, MCSA_Weak);
@@ -2425,6 +2429,23 @@ void AsmPrinter::emitFunctionBody() {
     << " instructions in function";
   ORE->emit(R);
 
+  if (ORE->allowExtraAnalysis("target-features")) {
+    const Function &F = MF->getFunction();
+    std::string FunctionName;
+    raw_string_ostream OS(FunctionName);
+    F.printAsOperand(OS, /*PrintType=*/false);
+
+    MachineOptimizationRemarkAnalysis Remark(
+        "target-features", "EnabledFeatures", F.getSubprogram(), &MF->front());
+    Remark << "Enabled features for " << ore::NV("Function", FunctionName)
+           << ": ";
+    // The processor feature table is sorted by feature name.
+    ListSeparator LS(",");
+    for (const auto *Feature : MF->getSubtarget().getEnabledProcessorFeatures())
+      Remark << LS << ore::NV("Feature", Feature->key());
+    ORE->emit(Remark);
+  }
+
   // If the function is empty and the object file uses .subsections_via_symbols,
   // then we need to emit *something* to the function body to prevent the
   // labels from collapsing together.  Just emit a noop.
@@ -2433,7 +2454,7 @@ void AsmPrinter::emitFunctionBody() {
   // after linking, causing the kernel not to load the binary:
   // https://developercommunity.visualstudio.com/content/problem/45366/vc-linker-creates-invalid-dll-with-clang-cl.html
   // FIXME: Hide this behind some API in e.g. MCAsmInfo or MCTargetStreamer.
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M->getTargetTriple();
   if (!HasAnyRealCode && (MAI.hasSubsectionsViaSymbols() ||
                           (TT.isOSWindows() && TT.isOSBinFormatCOFF()))) {
     MCInst Noop = MF->getSubtarget().getInstrInfo()->getNop();
@@ -2542,7 +2563,7 @@ void AsmPrinter::emitFunctionBody() {
   if (HasAnyRealCode) {
     if (MF->getTarget().Options.BBAddrMap)
       emitBBAddrMapSection(*MF);
-    else if (PgoAnalysisMapFeatures.getBits() != 0)
+    else if (!PgoAnalysisMapFeatures.empty())
       MF->getContext().reportWarning(
           SMLoc(), "pgo-analysis-map is enabled for function " + MF->getName() +
                        " but it does not have labels");
@@ -2671,7 +2692,7 @@ void AsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
   // so AIX has to use the extra-label-at-definition strategy. At this
   // point, all the extra label is emitted, we just have to emit linkage for
   // those labels.
-  if (TM.getTargetTriple().isOSBinFormatXCOFF()) {
+  if (M.getTargetTriple().isOSBinFormatXCOFF()) {
     // Linkage for alias of global variable has been emitted.
     if (isa_and_nonnull<GlobalVariable>(BaseObject))
       return;
@@ -2696,7 +2717,7 @@ void AsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
   // This affects codegen when the aliasee is not a function.
   if (IsFunction) {
     OutStreamer->emitSymbolAttribute(Name, MCSA_ELF_TypeFunction);
-    if (TM.getTargetTriple().isOSBinFormatCOFF()) {
+    if (M.getTargetTriple().isOSBinFormatCOFF()) {
       OutStreamer->beginCOFFSymbolDef(Name);
       OutStreamer->emitCOFFSymbolStorageClass(
           GA.hasLocalLinkage() ? COFF::IMAGE_SYM_CLASS_STATIC
@@ -2743,7 +2764,7 @@ void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
       assert(GI.hasLocalLinkage() && "Invalid ifunc linkage");
   };
 
-  if (TM.getTargetTriple().isOSBinFormatELF()) {
+  if (M.getTargetTriple().isOSBinFormatELF()) {
     MCSymbol *Name = getSymbol(&GI);
     EmitLinkage(Name);
     OutStreamer->emitSymbolAttribute(Name, MCSA_ELF_TypeIndFunction);
@@ -2759,7 +2780,7 @@ void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
     return;
   }
 
-  if (!TM.getTargetTriple().isOSBinFormatMachO() || !getIFuncMCSubtargetInfo())
+  if (!M.getTargetTriple().isOSBinFormatMachO() || !getIFuncMCSubtargetInfo())
     reportFatalUsageError("IFuncs are not supported on this platform");
 
   // On Darwin platforms, emit a manually-constructed .symbol_resolver that
@@ -2844,8 +2865,7 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
 
 static uint64_t globalSize(const llvm::GlobalVariable &G) {
   const Constant *Initializer = G.getInitializer();
-  return G.getParent()->getDataLayout().getTypeAllocSize(
-      Initializer->getType());
+  return G.getDataLayout().getTypeAllocSize(Initializer->getType());
 }
 
 static bool shouldTagGlobal(const llvm::GlobalVariable &G) {
@@ -2925,7 +2945,7 @@ bool AsmPrinter::doFinalization(Module &M) {
   // accesses to MF specific features at the module level and so that
   // we can conditionalize accesses based on whether or not it is nullptr.
   MF = nullptr;
-  const Triple &Target = TM.getTargetTriple();
+  const Triple &Target = M.getTargetTriple();
 
   std::vector<GlobalVariable *> GlobalsToTag;
   for (GlobalVariable &G : M.globals()) {
@@ -3078,7 +3098,7 @@ bool AsmPrinter::doFinalization(Module &M) {
   // sections after DWARF.
   for (const auto &IFunc : M.ifuncs())
     emitGlobalIFunc(M, IFunc);
-  if (TM.getTargetTriple().isOSBinFormatXCOFF() && hasDebugInfo()) {
+  if (M.getTargetTriple().isOSBinFormatXCOFF() && hasDebugInfo()) {
     // Emit section end. This is used to tell the debug line section where the
     // end is for a text section if we don't use .loc to represent the debug
     // line.
@@ -3139,7 +3159,7 @@ bool AsmPrinter::doFinalization(Module &M) {
 
   // Emit .note.GNU-split-stack and .note.GNU-no-split-stack sections if
   // split-stack is used.
-  if (TM.getTargetTriple().isOSBinFormatELF() && HasSplitStack) {
+  if (M.getTargetTriple().isOSBinFormatELF() && HasSplitStack) {
     OutStreamer->switchSection(OutContext.getELFSection(".note.GNU-split-stack",
                                                         ELF::SHT_PROGBITS, 0));
     if (HasNoSplitStack)
@@ -3547,10 +3567,12 @@ void AsmPrinter::emitJumpTableSizesSection(const MachineJumpTableInfo &MJTI,
 
   OutStreamer->switchSection(JumpTableSizesSection);
 
+  const DataLayout &DL = getDataLayout();
+  unsigned ProgramPointerSize = DL.getPointerSize(DL.getProgramAddressSpace());
   for (unsigned JTI = 0, E = JT.size(); JTI != E; ++JTI) {
     const std::vector<MachineBasicBlock *> &JTBBs = JT[JTI].MBBs;
-    OutStreamer->emitSymbolValue(GetJTISymbol(JTI), TM.getProgramPointerSize());
-    OutStreamer->emitIntValue(JTBBs.size(), TM.getProgramPointerSize());
+    OutStreamer->emitSymbolValue(GetJTISymbol(JTI), ProgramPointerSize);
+    OutStreamer->emitIntValue(JTBBs.size(), ProgramPointerSize);
   }
 }
 
@@ -3949,14 +3971,14 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV,
     const Constant *Op = CE->getOperand(0);
     unsigned DstAS = CE->getType()->getPointerAddressSpace();
     unsigned SrcAS = Op->getType()->getPointerAddressSpace();
-    if (TM.isNoopAddrSpaceCast(SrcAS, DstAS))
+    if (TM.isNoopAddrSpaceCast(getDataLayout(), SrcAS, DstAS))
       return lowerConstant(Op);
 
     break; // Error
   }
   case Instruction::GetElementPtr: {
     // Generate a symbolic expression for the byte address
-    APInt OffsetAI(getDataLayout().getPointerTypeSizeInBits(CE->getType()), 0);
+    APInt OffsetAI(getDataLayout().getIndexTypeSizeInBits(CE->getType()), 0);
     cast<GEPOperator>(CE)->accumulateConstantOffset(getDataLayout(), OffsetAI);
 
     const MCExpr *Base = lowerConstant(CE->getOperand(0));
@@ -5229,7 +5251,7 @@ AsmPrinter::getCodeViewJumpTableInfo(int JTI, const MachineInstr *BranchInstr,
 }
 
 void AsmPrinter::emitCOFFReplaceableFunctionData(Module &M) {
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
   assert(TT.isOSBinFormatCOFF());
 
   bool IsTargetArm64EC = TT.isWindowsArm64EC();
@@ -5294,7 +5316,7 @@ void AsmPrinter::emitCOFFReplaceableFunctionData(Module &M) {
 }
 
 void AsmPrinter::emitCOFFFeatureSymbol(Module &M) {
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
   assert(TT.isOSBinFormatCOFF());
 
   // Emit an absolute @feat.00 symbol.

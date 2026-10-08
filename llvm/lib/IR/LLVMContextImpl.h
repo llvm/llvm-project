@@ -273,7 +273,8 @@ template <> struct MDNodeKeyImpl<MDTuple> : MDNodeOpsKey {
 template <> struct MDNodeKeyImpl<DILocation> {
   Metadata *Scope;
   Metadata *InlinedAt;
-  uint64_t AtomGroup : 61;
+  Metadata *IRLayers;
+  uint64_t AtomGroup : 60;
   uint64_t AtomRank : 3;
   unsigned Line;
   uint16_t Column;
@@ -281,22 +282,23 @@ template <> struct MDNodeKeyImpl<DILocation> {
 
   MDNodeKeyImpl(unsigned Line, uint16_t Column, Metadata *Scope,
                 Metadata *InlinedAt, bool ImplicitCode, uint64_t AtomGroup,
-                uint8_t AtomRank)
-      : Scope(Scope), InlinedAt(InlinedAt), AtomGroup(AtomGroup),
-        AtomRank(AtomRank), Line(Line), Column(Column),
+                uint8_t AtomRank, Metadata *IRLayers)
+      : Scope(Scope), InlinedAt(InlinedAt), IRLayers(IRLayers),
+        AtomGroup(AtomGroup), AtomRank(AtomRank), Line(Line), Column(Column),
         ImplicitCode(ImplicitCode) {}
 
   MDNodeKeyImpl(const DILocation *L)
       : Scope(L->getRawScope()), InlinedAt(L->getRawInlinedAt()),
-        AtomGroup(L->getAtomGroup()), AtomRank(L->getAtomRank()),
-        Line(L->getLine()), Column(L->getColumn()),
+        IRLayers(L->getRawIRLayers()), AtomGroup(L->getAtomGroup()),
+        AtomRank(L->getAtomRank()), Line(L->getLine()), Column(L->getColumn()),
         ImplicitCode(L->isImplicitCode()) {}
 
   bool isKeyOf(const DILocation *RHS) const {
     return Line == RHS->getLine() && Column == RHS->getColumn() &&
            Scope == RHS->getRawScope() && InlinedAt == RHS->getRawInlinedAt() &&
            ImplicitCode == RHS->isImplicitCode() &&
-           AtomGroup == RHS->getAtomGroup() && AtomRank == RHS->getAtomRank();
+           AtomGroup == RHS->getAtomGroup() && AtomRank == RHS->getAtomRank() &&
+           IRLayers == RHS->getRawIRLayers();
   }
 
   unsigned getHashValue() const {
@@ -309,10 +311,56 @@ template <> struct MDNodeKeyImpl<DILocation> {
     // messing with the hash distribution* appear to still be massively
     // outweighed by the overall compile time savings by performing this check.
     // * (hash_combine(x) != hash_combine(x, 0))
-    if (AtomGroup || AtomRank)
+    // irlayers is likewise rare, so it is only mixed in when present to keep
+    // the common no-layers hashes unchanged.
+    if (AtomGroup || AtomRank) {
+      if (IRLayers)
+        return hash_combine(LineColumnAndImplicitCode, Scope, InlinedAt,
+                            AtomGroup | (uint64_t(AtomRank) << 61), IRLayers);
       return hash_combine(LineColumnAndImplicitCode, Scope, InlinedAt,
                           AtomGroup | (uint64_t(AtomRank) << 61));
+    }
+    if (IRLayers)
+      return hash_combine(LineColumnAndImplicitCode, Scope, InlinedAt,
+                          IRLayers);
     return hash_combine(LineColumnAndImplicitCode, Scope, InlinedAt);
+  }
+};
+
+/// DenseMapInfo for DILayerLoc.
+template <> struct MDNodeKeyImpl<DILayerLoc> {
+  Metadata *Kind;
+  Metadata *File;
+  unsigned Line;
+  uint16_t Column;
+
+  MDNodeKeyImpl(Metadata *Kind, Metadata *File, unsigned Line, uint16_t Column)
+      : Kind(Kind), File(File), Line(Line), Column(Column) {}
+  MDNodeKeyImpl(const DILayerLoc *N)
+      : Kind(N->getRawKind()), File(N->getRawFile()), Line(N->getLine()),
+        Column(N->getColumn()) {}
+
+  bool isKeyOf(const DILayerLoc *RHS) const {
+    return Kind == RHS->getRawKind() && File == RHS->getRawFile() &&
+           Line == RHS->getLine() && Column == RHS->getColumn();
+  }
+
+  unsigned getHashValue() const {
+    return hash_combine(Kind, File, Line, Column);
+  }
+};
+
+/// DenseMapInfo for DILayerLocList.
+template <> struct MDNodeKeyImpl<DILayerLocList> : MDNodeOpsKey {
+  MDNodeKeyImpl(ArrayRef<Metadata *> Ops) : MDNodeOpsKey(Ops) {}
+  MDNodeKeyImpl(const DILayerLocList *N) : MDNodeOpsKey(N) {}
+
+  bool isKeyOf(const DILayerLocList *RHS) const { return compareOps(RHS); }
+
+  unsigned getHashValue() const { return getHash(); }
+
+  static unsigned calculateHash(DILayerLocList *N) {
+    return MDNodeOpsKey::calculateHash(N);
   }
 };
 
@@ -539,20 +587,23 @@ template <> struct MDNodeKeyImpl<DIStringType> {
   Metadata *SizeInBits;
   uint32_t AlignInBits;
   unsigned Encoding;
+  Metadata *CharType;
 
   MDNodeKeyImpl(unsigned Tag, MDString *Name, Metadata *StringLength,
                 Metadata *StringLengthExp, Metadata *StringLocationExp,
-                Metadata *SizeInBits, uint32_t AlignInBits, unsigned Encoding)
+                Metadata *SizeInBits, uint32_t AlignInBits, unsigned Encoding,
+                Metadata *CharType)
       : Tag(Tag), Name(Name), StringLength(StringLength),
         StringLengthExp(StringLengthExp), StringLocationExp(StringLocationExp),
-        SizeInBits(SizeInBits), AlignInBits(AlignInBits), Encoding(Encoding) {}
+        SizeInBits(SizeInBits), AlignInBits(AlignInBits), Encoding(Encoding),
+        CharType(CharType) {}
   MDNodeKeyImpl(const DIStringType *N)
       : Tag(N->getTag()), Name(N->getRawName()),
         StringLength(N->getRawStringLength()),
         StringLengthExp(N->getRawStringLengthExp()),
         StringLocationExp(N->getRawStringLocationExp()),
         SizeInBits(N->getRawSizeInBits()), AlignInBits(N->getAlignInBits()),
-        Encoding(N->getEncoding()) {}
+        Encoding(N->getEncoding()), CharType(N->getRawCharType()) {}
 
   bool isKeyOf(const DIStringType *RHS) const {
     return Tag == RHS->getTag() && Name == RHS->getRawName() &&
@@ -561,14 +612,14 @@ template <> struct MDNodeKeyImpl<DIStringType> {
            StringLocationExp == RHS->getRawStringLocationExp() &&
            SizeInBits == RHS->getRawSizeInBits() &&
            AlignInBits == RHS->getAlignInBits() &&
-           Encoding == RHS->getEncoding();
+           Encoding == RHS->getEncoding() && CharType == RHS->getRawCharType();
   }
   unsigned getHashValue() const {
     // Intentionally computes the hash on a subset of the operands for
     // performance reason. The subset has to be significant enough to avoid
     // collision "most of the time". There is no correctness issue in case of
     // collision because of the full check above.
-    return hash_combine(Tag, Name, StringLength, Encoding);
+    return hash_combine(Tag, Name, StringLength, Encoding, CharType);
   }
 };
 
@@ -1557,6 +1608,42 @@ struct MDAttachment {
   TrackingMDNodeRef Node;
 };
 
+/// Head pointer for a Value's ValueHandleBase doubly-linked list, stored in
+/// LLVMContextImpl::ValueHandles. The first node's PrevPtr points to Head, so
+/// relocating the bucket refreshes PrevPtr to the new Head address.
+class ValueHandleHead {
+  // Tag Head with true via PointerIntPair so RemoveFromUseList can
+  // distinguish ValueHandleHead::Head from an untagged ValueHandleBase::Next
+  // when accessed through *PrevPtr.
+  using TaggedPtr = PointerIntPair<ValueHandleBase *, 1, bool>;
+
+  ValueHandleBase *Head =
+      static_cast<ValueHandleBase *>(TaggedPtr(nullptr, true).getOpaqueValue());
+
+public:
+  ValueHandleBase *get() const {
+    return TaggedPtr::getFromOpaqueValue(Head).getPointer();
+  }
+
+  ValueHandleBase **getAddress() { return &Head; }
+
+  // Replace the pointer in *Slot with NewPtr while preserving its tag bit,
+  // and return the old TaggedPtr.
+  static TaggedPtr exchange(ValueHandleBase **Slot, ValueHandleBase *NewPtr) {
+    TaggedPtr Old = TaggedPtr::getFromOpaqueValue(*Slot);
+    TaggedPtr Updated = Old;
+    Updated.setPointer(NewPtr);
+    *Slot = static_cast<ValueHandleBase *>(Updated.getOpaqueValue());
+    return Old;
+  }
+
+  ValueHandleHead() = default;
+  ValueHandleHead(ValueHandleHead &&Other) noexcept;
+  ValueHandleHead &operator=(ValueHandleHead &&) = delete;
+  ValueHandleHead(const ValueHandleHead &) = delete;
+  ValueHandleHead &operator=(const ValueHandleHead &) = delete;
+};
+
 class LLVMContextImpl {
 public:
   /// OwnedModules - The set of modules instantiated in this context, and which
@@ -1624,6 +1711,10 @@ public:
   DenseMap<std::pair<ElementCount, APFloat>, std::unique_ptr<ConstantFP>>
       FPSplatConstants;
 
+  EnumAttributeImpl *EnumAttrs[Attribute::NumEnumAttrKinds] = {};
+  UniquingSet<IntAttributeImpl> IntAttrs;
+  UniquingSet<StringAttributeImpl> StringAttrs;
+  UniquingSet<TypeAttributeImpl> TypeAttrs;
   FoldingSet<AttributeImpl> AttrsSet;
   UniquingSet<AttributeListImpl> AttrsLists;
   UniquingSet<AttributeSetNode> AttrsSetNodes;
@@ -1746,7 +1837,7 @@ public:
   /// ValueHandles - This map keeps track of all of the value handles that are
   /// watching a Value*.  The Value::HasValueHandle bit is used to know
   /// whether or not a value has an entry in this map.
-  using ValueHandlesTy = DenseMap<Value *, ValueHandleBase *>;
+  using ValueHandlesTy = DenseMap<Value *, ValueHandleHead>;
   ValueHandlesTy ValueHandles;
 
   /// CustomMDKindNames - Map to hold the metadata string to ID mapping.
@@ -1759,11 +1850,6 @@ public:
   /// Number of currently unused metadata entries. Only used/updated in debug
   /// builds to ensure that all metadata attachments are properly freed.
   unsigned MetadataRecycleSize = 0;
-
-  /// Map DIAssignID -> Instructions with that attachment.
-  /// Managed by Instruction via Instruction::updateDIAssignIDMapping.
-  /// Query using the at:: functions defined in DebugInfo.h.
-  DenseMap<DIAssignID *, SmallVector<Instruction *, 1>> AssignmentIDToInstrs;
 
   /// Collection of per-GlobalObject sections used in this context.
   DenseMap<const GlobalObject *, StringRef> GlobalObjectSections;

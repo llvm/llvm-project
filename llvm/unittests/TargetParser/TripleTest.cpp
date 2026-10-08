@@ -1787,17 +1787,26 @@ TEST(TripleTest, DefaultLongDoubleFormat) {
       LongDoubleFormat::IEEEdouble,
       Triple("thumbv7-unknown-linux-gnueabi").getDefaultLongDoubleFormat());
 
-  // Targets that use IEEE quad, independent of the environment.
-  EXPECT_EQ(LongDoubleFormat::IEEEquad,
-            Triple("s390x-unknown-linux-gnu").getDefaultLongDoubleFormat());
-  EXPECT_EQ(LongDoubleFormat::IEEEquad,
-            Triple("s390x-unknown-linux").getDefaultLongDoubleFormat());
+  // SPARC V8 uses IEEE double for bare-metal and RTEMS targets. Linux,
+  // Solaris, and other targets use IEEE quad. SPARC V9 always uses IEEE quad.
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("sparc-unknown-unknown").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("sparc-unknown-rtems").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEquad,
             Triple("sparc-unknown-linux-gnu").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEquad,
             Triple("sparcel-unknown-linux-gnu").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("sparc-unknown-solaris").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
             Triple("sparcv9-unknown-linux-gnu").getDefaultLongDoubleFormat());
+
+  // Targets that use IEEE quad, independent of the environment.
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("s390x-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("s390x-unknown-linux").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEquad,
             Triple("riscv32-unknown-linux-gnu").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEquad,
@@ -3278,6 +3287,30 @@ TEST(TripleTest, FileFormat) {
   EXPECT_EQ(Triple::SPIRV, Triple("spirv32-apple-macosx").getObjectFormat());
   EXPECT_EQ(Triple::SPIRV, Triple("spirv64-apple-macosx").getObjectFormat());
   EXPECT_EQ(Triple::DXContainer, Triple("dxil-apple-macosx").getObjectFormat());
+}
+
+TEST(TripleTest, SupportsDebugEntryValues) {
+  EXPECT_TRUE(Triple("i686-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("x86_64-apple-macosx").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("arm64-apple-macosx").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("arm64e-apple-ios").supportsDebugEntryValues());
+  EXPECT_TRUE(
+      Triple("armv7-unknown-linux-gnueabihf").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("armeb-unknown-linux-gnueabi").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("mips-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("mipsel-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("mips64-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("mips64el-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("riscv32-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("riscv64-unknown-linux-gnu").supportsDebugEntryValues());
+
+  EXPECT_FALSE(Triple("arm64_32-apple-watchos").supportsDebugEntryValues());
+  EXPECT_FALSE(Triple("thumbv7-apple-ios").supportsDebugEntryValues());
+  EXPECT_FALSE(Triple("wasm32-unknown-wasip1").supportsDebugEntryValues());
+  EXPECT_FALSE(
+      Triple("powerpc64le-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_FALSE(Triple("s390x-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_FALSE(Triple("").supportsDebugEntryValues());
 }
 
 TEST(TripleTest, DefaultExceptionHandling) {
