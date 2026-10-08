@@ -5681,10 +5681,9 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
     Address VecMem = CreateMemTemp(E->getBase()->getType());
     // need to zero extend an hlsl boolean vector to store it back to memory
     QualType Ty = E->getBase()->getType();
-    if (getLangOpts().HLSL && Ty->isExtVectorBoolType()) {
-      llvm::Type *LTy = convertTypeForLoadStore(Ty, Vec->getType());
+    llvm::Type *LTy = convertTypeForLoadStore(Ty, Vec->getType());
+    if (LTy->getScalarSizeInBits() > Vec->getType()->getScalarSizeInBits())
       Vec = Builder.CreateZExt(Vec, LTy);
-    }
     Builder.CreateStore(Vec, VecMem);
     Base = MakeAddrLValue(VecMem, Ty, AlignmentSource::Decl);
   }
