@@ -1560,6 +1560,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                          Custom);
       setOperationAction(ISD::VECTOR_FIND_LAST_ACTIVE, VT, Legal);
       setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Legal);
+      setOperationAction(ISD::MASK_BEFOREFIRST, VT, Legal);
     }
 
     if (Subtarget->hasSVE2() && Subtarget->isSVEAvailable()) {
@@ -2292,6 +2293,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     if (isOperationExpand(Op, MVT::bf16))
       setOperationAction(Op, MVT::bf16, Promote);
   }
+
+  // These are always legal regardless of SVE streaming-mode.
+  setOperationAction(ISD::SCALAR_TO_VECTOR, MVT::v1f64, Legal);
+  setOperationPromotedToType(ISD::STORE, MVT::v1f64, MVT::f64);
 }
 
 const AArch64TargetMachine &AArch64TargetLowering::getTM() const {
@@ -30323,6 +30328,16 @@ static SDValue performDUPCombine(SDNode *N,
     }
 
     return performPostLD1Combine(N, DCI, false);
+  } else { // AArch64ISD::DUPLANE8/16/32/64
+    SDValue SrcOp = N->getOperand(0);
+    APInt InDemandedElts =
+        APInt::getOneBitSet(SrcOp.getValueType().getVectorNumElements(),
+                            N->getConstantOperandVal(1));
+    KnownBits Known = DCI.DAG.computeKnownBits(SrcOp, InDemandedElts);
+    if (Known.isZero())
+      return DCI.DAG.getBitcast(
+          VT, DCI.DAG.getConstant(Known.getConstant(), DL,
+                                  VT.changeVectorElementTypeToInteger()));
   }
 
   return SDValue();
@@ -33037,8 +33052,10 @@ TargetLoweringBase::LegalizeTypeAction
 AArch64TargetLowering::getPreferredVectorAction(MVT VT) const {
   // During type legalization, we prefer to widen v1i8, v1i16, v1i32  to v8i8,
   // v4i16, v2i32 instead of to promote.
-  if (VT == MVT::v1i8 || VT == MVT::v1i16 || VT == MVT::v1i32 ||
-      VT == MVT::v1f32)
+  if (VT == MVT::v1i8 || VT == MVT::v1i16 || VT == MVT::v1i32)
+    return TypeWidenVector;
+  // Widen v1f32 when NEON is available, otherwise scalarization is better.
+  if (VT == MVT::v1f32 && Subtarget->isNeonAvailable())
     return TypeWidenVector;
 
   return TargetLoweringBase::getPreferredVectorAction(VT);

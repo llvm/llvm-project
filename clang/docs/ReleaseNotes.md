@@ -300,14 +300,6 @@ features cannot lower the translation-unit ABI level;
   matching on the presumed source location (accounting for macro expansions
   and `#line` directives). (#GH194210)
 
-- Added the AArch64 option `-mharden-pac-ret=load-return-address` to harden
-  return address signing against PACMAN attacks. The option requires return
-  address signing to be enabled and emits a load from the return address before
-  returning, reducing the cache side channel used to guess pointer
-  authentication codes. See
-  {doc}`Return Address Authentication Hardening <ReturnAddressAuthenticationHardening>`
-  for more information.
-
 ### Deprecated Compiler Flags
 
 ### Modified Compiler Flags
@@ -992,6 +984,12 @@ features cannot lower the translation-unit ABI level;
 
 #### Arm and AArch64 Support
 
+- Added support for the following Arm processors (command-line identifiers in
+  parentheses):
+
+  - C2-Pro (`c2-pro`).
+  - C2-Ultra (`c2-ultra`).
+
 - Added support for pointer authentication discrimination of C++ virtual table
   pointers stored in VTTs via the `-fptrauth-vtt-vtable-pointer-discrimination`
   option.
@@ -1017,6 +1015,9 @@ features cannot lower the translation-unit ABI level;
   not Arm64EC or x64) reuses the tail padding of the over-aligned base for the
   subsequent base; Clang now does the same.
   ([#210174](https://github.com/llvm/llvm-project/issues/210174))
+
+- Fixed ``/hotpatch`` with LTO, where objects were not marked as hotpatchable,
+  so ``/FUNCTIONPADMIN`` didn't pad their functions.
 
 #### LoongArch Support
 

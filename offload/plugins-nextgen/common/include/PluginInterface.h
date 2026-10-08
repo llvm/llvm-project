@@ -1597,9 +1597,6 @@ public:
   /// Returns non-zero if the \p Image is compatible with the device.
   int32_t isDeviceCompatible(int32_t DeviceId, StringRef Image);
 
-  /// Return the number of devices this plugin can support.
-  int32_t number_of_devices();
-
   /// Returns non-zero if the data can be exchanged between the two devices.
   int32_t is_data_exchangable(int32_t SrcDeviceId, int32_t DstDeviceId);
 
@@ -1644,10 +1641,6 @@ public:
   int32_t data_submit_async(int32_t DeviceId, void *TgtPtr, void *HstPtr,
                             int64_t Size, __tgt_async_info *AsyncInfoPtr);
 
-  /// Copy data from the given device.
-  int32_t data_retrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr,
-                        int64_t Size);
-
   /// Copy data from the given device asynchronously.
   int32_t data_retrieve_async(int32_t DeviceId, void *HstPtr, void *TgtPtr,
                               int64_t Size, __tgt_async_info *AsyncInfoPtr);
@@ -1691,15 +1684,8 @@ public:
   /// Synchronize execution until an event is done.
   int32_t sync_event(int32_t DeviceId, void *EventPtr);
 
-  /// Get the elapsed time in milliseconds between two events.
-  int32_t get_event_elapsed_time(int32_t DeviceId, void *StartEventPtr,
-                                 void *EndEventPtr, float *ElapsedTime);
-
   /// Remove the event from the plugin.
   int32_t destroy_event(int32_t DeviceId, void *EventPtr);
-
-  /// Remove the event from the plugin.
-  void set_info_flag(uint32_t NewInfoLevel);
 
   /// Returns if the plugin can support automatic copy.
   int32_t use_auto_zero_copy(int32_t DeviceId);
@@ -1741,13 +1727,6 @@ public:
   /// Queue an asynchronous barrier in the queue associated with the interop
   /// object and return immediately.
   int32_t async_barrier(omp_interop_val_t *Interop);
-
-  /// Returns a Range over all the devices in the plugin that can be
-  /// used in a for loop:
-  /// for (&Device : GenericPluginRef.getDevicesRange()) {
-  auto getDevicesRange() {
-    return llvm::make_range(Devices.begin(), Devices.end());
-  }
 
 private:
   /// Indicates if the platform runtime has been fully initialized.

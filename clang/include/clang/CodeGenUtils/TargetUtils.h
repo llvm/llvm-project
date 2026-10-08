@@ -19,6 +19,7 @@
 #include <cstdint>
 
 namespace clang {
+class Decl;
 class FunctionDecl;
 } // namespace clang
 
@@ -46,6 +47,21 @@ enum class ArmSMEInlinability : uint8_t {
 /// \p Caller. Returns the issue (if any) in the ArmSMEInlinability bit enum.
 ArmSMEInlinability getArmSMEInlinability(const FunctionDecl *Caller,
                                          const FunctionDecl *Callee);
+
+/// Returns whether the Neon builtin \p BuiltinID takes a trailing argument
+/// that discriminates the operand type.  This should be kept consistent with
+/// the logic in Sema.
+/// TODO: Make this return false for SISD builtins.
+bool hasExtraNeonArgument(unsigned BuiltinID);
+
+//===----------------------------------------------------------------------===//
+// AMDGPU
+//===----------------------------------------------------------------------===//
+
+/// Returns whether \p D must be given protected visibility on AMDGPU.
+/// \p HasHiddenVisibility is whether the emitted global currently has hidden
+/// visibility.
+bool requiresAMDGPUProtectedVisibility(const Decl *D, bool HasHiddenVisibility);
 
 } // namespace clang::CodeGenUtils
 
