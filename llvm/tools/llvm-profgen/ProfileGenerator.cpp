@@ -12,7 +12,12 @@
 #include "PerfReader.h"
 #include "ProfiledBinary.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
+#include "llvm/ProfileData/DataAccessProf.h"
+#include "llvm/ProfileData/InstrProfWriter.h"
+#include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/ProfileCommon.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Timer.h"
 #include <algorithm>
 #include <float.h>
@@ -172,6 +177,49 @@ void ProfileGeneratorBase::write(std::unique_ptr<SampleProfileWriter> Writer,
 
   if (std::error_code EC = Writer->write(ProfileMap))
     exitWithError(std::move(EC));
+
+  // Write the unified instrumented profile (containing both code and data)
+  // for LLD.
+  if (!DataAccessProfileData ||
+      memprof::MaximumSupportedVersion < memprof::Version4)
+    return;
+
+  StringRef Ext = sys::path::extension(OutputFilename);
+  SmallString<128> DataOutputFilename = StringRef(OutputFilename);
+  sys::path::replace_extension(DataOutputFilename, "");
+  DataOutputFilename += "-data";
+  DataOutputFilename += Ext;
+
+  std::error_code EC;
+  raw_fd_ostream OS(DataOutputFilename, EC, sys::fs::OF_None);
+  if (EC)
+    exitWithError("Could not open data profile output file: " + EC.message());
+
+  // The data access profiles are supported in MemProf Version 4 and above.
+  // Use the maximum supported version and enable the memory profile kind.
+  InstrProfWriter DataWriter(
+      /*Sparse=*/false, /*TemporalProfTraceReservoirSize=*/0,
+      /*MaxTemporalProfTraceLength=*/0, /*WritePrevVersion=*/false,
+      static_cast<memprof::IndexedVersion>(memprof::MaximumSupportedVersion));
+  cantFail(DataWriter.mergeProfileKind(InstrProfKind::MemProf));
+
+  // Add function execution counts from the SampleProfileMap.
+  for (const auto &Entry : ProfileMap) {
+    const SampleContext &Context = Entry.second.getContext();
+    std::string FuncName = Context.toString();
+    uint64_t FuncHash = IndexedInstrProf::ComputeHash(FuncName);
+    uint64_t TotalSamples = Entry.second.getTotalSamples();
+
+    NamedInstrProfRecord Record(FuncName, FuncHash, {TotalSamples});
+    DataWriter.addRecord(std::move(Record),
+                         [](Error E) { consumeError(std::move(E)); });
+  }
+
+  // Add DataAccessProfData from ETM reader.
+  DataWriter.addDataAccessProfData(std::move(DataAccessProfileData));
+
+  if (Error E = DataWriter.write(OS))
+    exitWithError(toString(std::move(E)));
 }
 
 void ProfileGeneratorBase::write() {
