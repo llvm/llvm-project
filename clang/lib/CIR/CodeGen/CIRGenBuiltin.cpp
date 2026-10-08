@@ -2513,11 +2513,28 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     }
     return RValue::get(dest.getPointer());
   }
+  case Builtin::BI__builtin_trivially_relocate: {
+    mlir::Location loc = getLoc(e->getSourceRange());
+    Address dest = emitPointerWithAlignment(e->getArg(0));
+    Address src = emitPointerWithAlignment(e->getArg(1));
+    mlir::Value count = emitScalarExpr(e->getArg(2));
+    CharUnits elementSize = getContext().getTypeSizeInChars(
+        e->getArg(0)->getType()->getPointeeType());
+    mlir::Value scale =
+        builder.getConstInt(loc, count.getType(), elementSize.getQuantity());
+    mlir::Value size = builder.createMul(loc, count, scale);
+    Address destCast = dest.withElementType(builder, cgm.voidTy);
+    Address srcCast = src.withElementType(builder, cgm.voidTy);
+    assert(!cir::MissingFeatures::sanitizers());
+    builder.createMemMove(loc, destCast.getPointer(), srcCast.getPointer(),
+                          size);
+    assert(!cir::MissingFeatures::generateDebugInfo());
+    return RValue::get(dest.getPointer());
+  }
   case Builtin::BI__builtin_memcpy_inline:
   case Builtin::BI__builtin___memcpy_chk:
   case Builtin::BI__builtin_objc_memmove_collectable:
   case Builtin::BI__builtin___memmove_chk:
-  case Builtin::BI__builtin_trivially_relocate:
   case Builtin::BImemmove:
   case Builtin::BI__builtin_memmove:
   case Builtin::BImemset:
