@@ -571,10 +571,6 @@ CandidateHeuristics::getHWUIFromFlavor(InstructionFlavor Flavor) {
 
 unsigned CandidateHeuristics::getMaxBlockingCycles(const MCSchedClassDesc *SC,
                                                    const MachineInstr *MI) {
-  // Loads and stores are not pipelined.
-  if (MI->mayLoadOrStore())
-    return SchedModel->computeInstrLatency(MI, false);
-
   unsigned ReleaseAtCycle = 0;
   for (TargetSchedModel::ProcResIter PI = SchedModel->getWriteProcResBegin(SC),
                                      PE = SchedModel->getWriteProcResEnd(SC);
@@ -586,25 +582,19 @@ unsigned CandidateHeuristics::getMaxBlockingCycles(const MCSchedClassDesc *SC,
   return ReleaseAtCycle;
 }
 
-unsigned CandidateHeuristics::getHWUICyclesForSU(SUnit *SU) {
-  assert(SchedModel && SchedModel->hasInstrSchedModel());
-
-  MachineInstr *MI = SU->getInstr();
-  if (MI->mayLoadOrStore())
-    return SchedModel->computeInstrLatency(MI);
-  return getMaxBlockingCycles(DAG->getSchedClass(SU), MI);
-}
-
 unsigned CandidateHeuristics::getHWUICyclesForMI(MachineInstr *MI) {
   assert(SchedModel && SchedModel->hasInstrSchedModel());
+  if (MI->mayLoadOrStore())
+    return SchedModel->computeInstrLatency(MI, false);
   return getMaxBlockingCycles(SchedModel->resolveSchedClass(MI), MI);
 }
 
 void CandidateHeuristics::updateForScheduling(SUnit *SU) {
+  MachineInstr *MI = SU->getInstr(); 
   HardwareUnitInfo *HWUI =
-      getHWUIFromFlavor(classifyFlavor(*SU->getInstr(), *SII));
+      getHWUIFromFlavor(classifyFlavor(*MI, *SII));
   assert(HWUI);
-  HWUI->markScheduled(SU, getHWUICyclesForSU(SU));
+  HWUI->markScheduled(SU, getHWUICyclesForMI(MI));
 }
 
 void CandidateHeuristics::initialize(ScheduleDAGMI *SchedDAG,
@@ -723,7 +713,7 @@ void CandidateHeuristics::collectRegionSummary() {
   for (auto &SU : DAG->SUnits) {
     MachineInstr *MI = SU.getInstr();
     const InstructionFlavor Flavor = classifyFlavor(*MI, *SII);
-    HWUInfo[static_cast<int>(Flavor)].insert(&SU, getHWUICyclesForSU(&SU));
+    HWUInfo[static_cast<int>(Flavor)].insert(&SU, getHWUICyclesForMI(MI));
     unsigned CarriedLatency = getCarriedLatency(&SU);
     if (CarriedLatency)
       CarriedLatencies[MI] = CarriedLatency;
@@ -853,7 +843,7 @@ CandidateHeuristics::getStallCosts(SUnit *SU, SchedBoundary &Zone) {
       return 0;
 
     unsigned FenceStallFinish =
-        LastProducerCycle + getHWUICyclesForSU(LastProducer);
+        LastProducerCycle + getHWUICyclesForMI(LastProducer->getInstr());
     return FenceStallFinish <= CurrCycle ? 0 : FenceStallFinish - CurrCycle;
   };
 
