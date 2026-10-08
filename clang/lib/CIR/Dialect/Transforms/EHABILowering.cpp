@@ -22,7 +22,9 @@
 //   - cir.resume                 → cir.resume.flat
 //   - !cir.eh_token values       → (!cir.ptr<!void>, !u32i) value pairs
 //   - cir.construct_catch_param  → __cxa_get_exception_ptr + inlined
-//                                  catch-copy thunk body
+//                                  catch-copy thunk body, or a store of the
+//                                  exception object address for
+//                                  reference_to_pointer
 //   - personality function set on functions requiring EH
 //
 //===----------------------------------------------------------------------===//
@@ -31,6 +33,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
@@ -828,7 +831,7 @@ ItaniumEHLowering::lowerConstructCatchParam(cir::ConstructCatchParamOp op,
   cir::PointerType paramAddrType =
       mlir::cast<cir::PointerType>(paramAddr.getType());
 
-  if (op.getKind() == cir::InitCatchKind::Reference) {
+  if (op.getKind() == cir::InitCatchKind::ReferenceToPointer) {
     assert(!MissingFeatures::sizeOfUnwindException());
     constexpr unsigned headerSize = 32;
 
@@ -848,8 +851,8 @@ ItaniumEHLowering::lowerConstructCatchParam(cir::ConstructCatchParamOp op,
   }
 
   if (op.getKind() != cir::InitCatchKind::NonTrivialCopy)
-    return op.emitError(
-        "ConstructCatchParam: only non_trivial_copy is supported");
+    return op.emitOpError("only reference_to_pointer and non_trivial_copy "
+                          "kinds are supported");
 
   ensureRuntimeDecls(loc);
   ensureClangCallTerminate(loc);
@@ -976,9 +979,14 @@ mlir::LogicalResult ItaniumEHLowering::lowerTryThrow(cir::TryThrowOp op) {
 /// pointer returned by __cxa_begin_catch. The shape of the lowering
 /// depends on the init catch kind:
 ///
-///   - Reference: the begin_catch result is
-///     the pointer value itself, so just bitcast and store it into the alloca
-///     except if it reference of pointer of record.
+///   - Reference: the begin_catch result is the adjusted exception object
+///     pointer, so just bitcast and store it into the alloca.
+///   - ReferenceToPointer: the companion `cir.construct_catch_param`
+///     already bound the reference to the exception object, so this lowering
+///     is a no-op.
+///   - ReferenceToRecordPointer: the begin_catch result is the adjusted
+///     pointer value itself, so store it into a temporary and bind the
+///     reference to the temporary.
 ///   - Pointer: the begin_catch result is
 ///     the pointer value itself, so just bitcast and store it into the
 ///     alloca.
@@ -1002,22 +1010,39 @@ void ItaniumEHLowering::lowerInitCatchParam(cir::InitCatchParamOp op) {
 
   switch (kind) {
   case InitCatchKind::Reference: {
-    // We have no way to tell the personality function that we're
-    // catching by reference, so if we're catching a pointer,
-    // __cxa_begin_catch will actually return that pointer by value.
-    if (const auto ref = mlir::dyn_cast<cir::PointerType>(elementType)) {
-      // When catching by reference, generally we should just ignore
-      // this by-value pointer and use the exception object instead.
-      if (auto ptr = mlir::dyn_cast<cir::PointerType>(ref.getPointee()))
-        if (!mlir::isa<cir::RecordType>(ptr.getPointee()))
-          // Extracting and storing the actual exception object was performed by
-          // cir.construct_catch_param before cir.begin_catch.
-          break;
-    }
-
     mlir::Value casted = cir::CastOp::create(builder, loc, elementType,
                                              cir::CastKind::bitcast, exnPtr);
     cir::StoreOp::create(builder, loc, casted, paramAddr, {}, {}, {}, {}, {});
+    break;
+  }
+  case InitCatchKind::ReferenceToPointer:
+    // The reference was bound to the exception object by the matching
+    // cir.construct_catch_param before cir.begin_catch.
+    break;
+  case InitCatchKind::ReferenceToRecordPointer: {
+    // __cxa_begin_catch returns the caught pointer by value, and the
+    // personality function may have adjusted it.  Store the adjusted pointer
+    // into a temporary and bind the reference to it.  Assigning to the catch
+    // parameter then changes the temporary, not the exception object, which
+    // departs from the language semantics.
+    auto caughtType = mlir::cast<cir::PointerType>(
+        mlir::cast<cir::PointerType>(elementType).getPointee());
+    cir::AllocaOp byRefTmp;
+    {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPointToStart(
+          &op->getParentOfType<cir::FuncOp>().getBody().front());
+      cir::CIRDataLayout dataLayout(mod);
+      uint64_t alignment =
+          dataLayout.getAlignment(caughtType, /*useABIAlign=*/true).value();
+      byRefTmp =
+          cir::AllocaOp::create(builder, loc, elementType, "exn.byref.tmp",
+                                builder.getI64IntegerAttr(alignment));
+    }
+    mlir::Value casted = cir::CastOp::create(builder, loc, caughtType,
+                                             cir::CastKind::bitcast, exnPtr);
+    cir::StoreOp::create(builder, loc, casted, byRefTmp, {}, {}, {}, {}, {});
+    cir::StoreOp::create(builder, loc, byRefTmp, paramAddr, {}, {}, {}, {}, {});
     break;
   }
   case InitCatchKind::TrivialCopy: {

@@ -770,12 +770,18 @@ public:
   ///     will handle / summarize the failures in a custom way and
   ///     don't use these messages.
   ///
+  /// \param[in] invoke_symbol_locators
+  ///     Whether to search beyond the Target's modules, the shared module list
+  ///     and the locate module callback, i.e. with the platform and the symbol
+  ///     locators. A caller that has already searched passes false.
+  ///
   /// \return
   ///     An empty ModuleSP will be returned if no matching file
   ///     was found.  If error_ptr was non-nullptr, an error message
   ///     will likely be provided.
   lldb::ModuleSP GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
-                                   Status *error_ptr = nullptr);
+                                   Status *error_ptr = nullptr,
+                                   bool invoke_symbol_locators = true);
 
   // Settings accessors
 

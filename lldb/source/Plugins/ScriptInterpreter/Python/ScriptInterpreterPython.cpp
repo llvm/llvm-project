@@ -29,6 +29,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/Pipe.h"
+#include "lldb/Host/ScriptInterpreterRuntimeLoader.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -686,6 +687,17 @@ llvm::StringRef ScriptInterpreterPython::GetPluginDescriptionStatic() {
 }
 
 void ScriptInterpreterPython::Initialize() {
+  llvm::Expected<ScriptInterpreterRuntimeLoader &> loader =
+      ScriptInterpreterRuntimeLoader::Get(lldb::eScriptLanguagePython);
+  if (!loader) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Script), loader.takeError(), "{0}");
+    return;
+  }
+  if (llvm::Error error = loader->Load()) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Script), std::move(error), "{0}");
+    return;
+  }
+
 #if LLDB_ENABLE_MTE
   // Python's allocator (pymalloc) is not aware of Memory Tagging Extension
   // (MTE) and crashes.

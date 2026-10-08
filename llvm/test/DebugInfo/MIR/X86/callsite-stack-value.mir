@@ -1,4 +1,4 @@
-# RUN: llc -start-after=livedebugvalues -mtriple=x86_64-apple-darwin -o - %s -filetype=obj \
+# RUN: llc -start-after=live-debug-values -mtriple=x86_64-apple-darwin -o - %s -filetype=obj \
 # RUN:   -emit-call-site-info | llvm-dwarfdump - | FileCheck %s -implicit-check-not=call_site_parameter
 
 # CHECK: DW_TAG_subprogram

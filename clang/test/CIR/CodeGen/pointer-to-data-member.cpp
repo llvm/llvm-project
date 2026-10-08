@@ -30,7 +30,7 @@ auto test1() -> int Point::* {
 
 int Point::*pt_member_nested_region = test1();
 
-// CIR-BEFORE: cir.global external @pt_member_nested_region = ctor : !cir.data_member<!s32i in !rec_Point> {
+// CIR-BEFORE: cir.global external @pt_member_nested_region = #cir.data_member<null> : !cir.data_member<!s32i in !rec_Point> ctor {
 // CIR-BEFORE:   %[[MEMBER_PTR_ADDR:.*]] = cir.get_global @pt_member_nested_region : !cir.ptr<!cir.data_member<!s32i in !rec_Point>>
 // CIR-BEFORE:   %[[MEMBER_PTR:.*]] = cir.call @_Z5test1v() : () -> !cir.data_member<!s32i in !rec_Point>
 // CIR-BEFORE:   cir.store{{.*}} %[[MEMBER_PTR]], %[[MEMBER_PTR_ADDR]] : !cir.data_member<!s32i in !rec_Point>, !cir.ptr<!cir.data_member<!s32i in !rec_Point>>

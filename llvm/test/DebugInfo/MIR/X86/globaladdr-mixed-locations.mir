@@ -1,4 +1,4 @@
-# RUN: llc %s -run-pass=livedebugvalues -o - \
+# RUN: llc %s -run-pass=live-debug-values -o - \
 # RUN:   -experimental-debug-variable-locations=false | FileCheck %s
 
 ## VarLoc-based LiveDebugValues keys its location map on a tagged union, so a

@@ -2784,6 +2784,13 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
             *sym);
         return std::nullopt;
       }
+      const bool isGeneric{sym->has<semantics::GenericDetails>()};
+      auto withGenericName{[&](ProcedureDesignator proc) {
+        if (isGeneric) {
+          proc.set_genericName(sc.Component().source);
+        }
+        return proc;
+      }};
       if (auto *dtExpr{UnwrapExpr<Expr<SomeDerived>>(*base)}) {
         if (sym->has<semantics::GenericDetails>()) {
           const Symbol &generic{*sym};
@@ -2869,7 +2876,8 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
                 GetBindingResolution(dtExpr->GetType(), *sym)}) {
           AddPassArg(arguments, std::move(*dtExpr), *sym, false);
           return CalleeAndArguments{
-              ProcedureDesignator{*resolution}, std::move(arguments)};
+              withGenericName(ProcedureDesignator{*resolution}),
+              std::move(arguments)};
         } else if (dataRef.has_value()) {
           if (ExtractCoarrayRef(*dataRef)) {
             if (IsProcedurePointer(*sym)) {
@@ -2886,7 +2894,7 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
               if (auto component{CreateComponent(std::move(*dataRef), *sym,
                       *dtSpec->scope(), /*C919bAlreadyEnforced=*/true)}) {
                 return CalleeAndArguments{
-                    ProcedureDesignator{std::move(*component)},
+                    withGenericName(ProcedureDesignator{std::move(*component)}),
                     std::move(arguments)};
               }
             }
@@ -2898,7 +2906,8 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
                 Expr<SomeDerived>{Designator<SomeDerived>{std::move(*dataRef)}},
                 *sym);
             return CalleeAndArguments{
-                ProcedureDesignator{*sym}, std::move(arguments)};
+                withGenericName(ProcedureDesignator{*sym}),
+                std::move(arguments)};
           }
         }
       }
@@ -3652,8 +3661,11 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
           semantics::SymbolRef{*resolution}, std::move(arguments)};
     }
   } else if (IsProcedure(*resolution)) {
-    return CalleeAndArguments{
-        ProcedureDesignator{*resolution}, std::move(arguments)};
+    ProcedureDesignator proc{*resolution};
+    if (isGenericInterface) {
+      proc.set_genericName(name.source);
+    }
+    return CalleeAndArguments{std::move(proc), std::move(arguments)};
   }
   if (!context_.HasError(*resolution)) {
     AttachDeclaration(

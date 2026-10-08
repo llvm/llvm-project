@@ -27855,9 +27855,10 @@ static SDValue performSTORECombine(SDNode *N,
     MVT PtrVT = TLI.getPointerTy(DAG.getDataLayout());
     if (PtrVT != Ptr.getSimpleValueType()) {
       SDValue Cast = DAG.getAddrSpaceCast(DL, PtrVT, Ptr, AddrSpace, 0);
-      return DAG.getStore(Chain, DL, Value, Cast, ST->getPointerInfo(),
-                          ST->getBaseAlign(), ST->getMemOperand()->getFlags(),
-                          ST->getAAInfo());
+      if (ST->isTruncatingStore())
+        return DAG.getTruncStore(Chain, DL, Value, Cast, MemVT,
+                                 ST->getMemOperand());
+      return DAG.getStore(Chain, DL, Value, Cast, ST->getMemOperand());
     }
   }
 

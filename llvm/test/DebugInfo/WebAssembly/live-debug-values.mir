@@ -1,4 +1,4 @@
-# RUN: llc -run-pass livedebugvalues %s -o - | FileCheck %s
+# RUN: llc -run-pass live-debug-values %s -o - | FileCheck %s
 
 # Test if LiveDebugValue analysis works on Wasm.
 

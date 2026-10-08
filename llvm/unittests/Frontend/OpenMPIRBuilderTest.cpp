@@ -8355,11 +8355,11 @@ TEST_F(OpenMPIRBuilderTest, splitBB) {
 
   Builder.SetCurrentDebugLocation(DL);
   AllocaInst *alloc = Builder.CreateAlloca(Builder.getInt32Ty());
-  EXPECT_TRUE(DL == alloc->getStableDebugLoc());
+  EXPECT_TRUE(DL == alloc->getDebugLoc());
   BasicBlock *AllocaBB = Builder.GetInsertBlock();
   splitBB(Builder, /*CreateBranch=*/true, "test");
   if (AllocaBB->getTerminator())
-    EXPECT_TRUE(DL == AllocaBB->getTerminator()->getStableDebugLoc());
+    EXPECT_TRUE(DL == AllocaBB->getTerminator()->getDebugLoc());
 }
 
 TEST_F(OpenMPIRBuilderTest, spliceBBWithEmptyBB) {

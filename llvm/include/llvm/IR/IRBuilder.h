@@ -207,7 +207,7 @@ public:
     BB = I->getParent();
     InsertPt = I->getIterator();
     assert(InsertPt != BB->end() && "Can't read debug loc from end()");
-    SetCurrentDebugLocation(I->getStableDebugLoc());
+    SetCurrentDebugLocation(I->getDebugLoc());
   }
 
   /// This specifies that created instructions should be inserted at the
@@ -223,7 +223,7 @@ public:
     BB = IP.getNodeParent();
     InsertPt = IP;
     if (IP != BB->end())
-      SetCurrentDebugLocation(IP->getStableDebugLoc());
+      SetCurrentDebugLocation(IP->getDebugLoc());
   }
 
   /// This specifies that created instructions should inserted at the beginning

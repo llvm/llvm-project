@@ -1,4 +1,4 @@
-# RUN: llc -march hexagon -run-pass liveintervals -run-pass twoaddressinstruction  -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -march hexagon -run-pass liveintervals -run-pass two-address-instruction  -verify-machineinstrs -o - %s | FileCheck %s
 # RUN: llc -march hexagon --passes='require<live-intervals>,two-address-instruction' -verify-each -o - %s | FileCheck %s
 
 

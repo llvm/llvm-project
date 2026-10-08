@@ -3381,7 +3381,14 @@ Value *LibCallSimplifier::optimizeFFS(CallInst *CI, IRBuilderBase &B) {
   V = B.CreateIntCast(V, RetType, false);
 
   Value *Cond = B.CreateICmpNE(Op, Constant::getNullValue(ArgType));
-  return B.CreateSelect(Cond, V, ConstantInt::get(RetType, 0));
+  Value *S = B.CreateSelect(Cond, V, ConstantInt::get(RetType, 0));
+  if (ProfcheckDisableMetadataFixes)
+    return S;
+  if (auto *SI = dyn_cast<SelectInst>(S))
+    setBranchWeights(
+        *SI, {MDBuilder::kLikelyBranchWeight, MDBuilder::kUnlikelyBranchWeight},
+        /*IsExpected=*/false);
+  return S;
 }
 
 Value *LibCallSimplifier::optimizeFls(CallInst *CI, IRBuilderBase &B) {

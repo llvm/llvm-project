@@ -1440,7 +1440,7 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
     case Intrinsic::amdgcn_workitem_id_z: {
       const Function *F = Intrinsic->getFunction();
       bool HasUniformYZ =
-          ST->hasWavefrontsEvenlySplittingXDim(*F, /*RequitezUniformYZ=*/true);
+          ST->hasWavefrontsEvenlySplittingXDim(*F, /*RequiresUniformYZ=*/true);
       std::optional<unsigned> ThisDimSize = ST->getReqdWorkGroupSize(
           *F, IID == Intrinsic::amdgcn_workitem_id_y ? 1 : 2);
       return !HasUniformYZ && (!ThisDimSize || *ThisDimSize != 1);
@@ -1503,16 +1503,19 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
   }
   using namespace llvm::PatternMatch;
   uint64_t C;
-  if (match(V, m_LShr(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
-                      m_ConstantInt(C))) ||
-      match(V, m_AShr(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
-                      m_ConstantInt(C)))) {
+  auto MatchTidXCall = m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>();
+  auto MaybeMaskedTidX =
+      m_CombineOr(m_c_And(MatchTidXCall, m_Constant()), MatchTidXCall);
+  auto MaybeCastTidX = m_CastOrSelf(MaybeMaskedTidX);
+  auto MaybeMaskedCastTidX =
+      m_CombineOr(m_c_And(MaybeCastTidX, m_Constant()), MaybeCastTidX);
+  if (match(V, m_LShr(MaybeMaskedCastTidX, m_ConstantInt(C))))
     return C >= ST->getWavefrontSizeLog2() && XDimDoesntResetWithinWaves;
-  }
 
-  Value *Mask;
-  if (match(V, m_c_And(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
-                       m_Value(Mask)))) {
+  Constant *Mask;
+  if (match(V, m_c_And(
+                   m_CastOrSelf(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>()),
+                   m_Constant(Mask)))) {
     return computeKnownBits(Mask, DL).countMinTrailingZeros() >=
                ST->getWavefrontSizeLog2() &&
            XDimDoesntResetWithinWaves;

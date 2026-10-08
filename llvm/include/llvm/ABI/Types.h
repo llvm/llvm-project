@@ -17,7 +17,6 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
-#include "llvm/ADT/bit.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
@@ -79,6 +78,19 @@ public:
   uint64_t getFixedSizeInBitsOrZero() const {
     return SizeInBits.isFixed() ? SizeInBits.getFixedValue() : 0;
   }
+
+  /// Returns the size in bits that the source language gives this type,
+  /// including any padding.
+  ///
+  /// An integer is rounded up to whole bytes.  A _BitInt or a floating-point
+  /// type is rounded up further, to its alignment.  That alignment must be the
+  /// one its size is padded to, not one an aligned attribute raised or lowered.
+  /// A complex type is twice the ABI size of its element type.  A fixed-length
+  /// vector counts an integer element other than a _BitInt at its bit width and
+  /// every other element at its own ABI size, so a bool element takes one bit.
+  /// The total is rounded up to a power of two of at least 8 bits.  Any other
+  /// type returns the size it was created with, and a scalable type returns 0.
+  LLVM_ABI uint64_t getABISizeInBits() const;
 
   Align getAlignment() const { return ABIAlignment; }
 
@@ -303,30 +315,6 @@ public:
 
   bool isScalable() const { return NumElements.isScalable(); }
   bool isFixedLength() const { return !NumElements.isScalable(); }
-
-  /// Returns the size of this vector as Clang's ASTContext reports it: zero
-  /// for a scalable vector, and otherwise at least one byte and rounded up to
-  /// a power of two. For example, a 3 x float vector has 96 bits of payload
-  /// but an ABI size of 128 bits. getSizeInBits() returns the payload width,
-  /// so classification rules that compare against a Clang type size must use
-  /// this instead.
-  uint64_t getABISizeInBits() const {
-    if (isScalable())
-      return 0;
-
-    // A _BitInt occupies a whole number of bytes, so a sub-byte element is
-    // padded out to 8 bits. Clang only permits power-of-2 _BitInt vector
-    // elements, and a wider one always fills its storage exactly, so this is
-    // the only padding that can occur. A one-bit element is a bool rather
-    // than a _BitInt, and those really are packed one to a bit.
-    uint64_t EltWidth = ElementType->getSizeInBits().getFixedValue();
-    if (const auto *IT = dyn_cast<IntegerType>(ElementType))
-      if (IT->isBitInt() && EltWidth < 8)
-        EltWidth = 8;
-
-    uint64_t Width = EltWidth * NumElements.getKnownMinValue();
-    return bit_ceil(Width < 8 ? uint64_t(8) : Width);
-  }
 
   bool isSVEData() const { return VecKind == VectorKind::SVEData; }
   bool isSVEPredicate() const { return VecKind == VectorKind::SVEPredicate; }

@@ -312,6 +312,56 @@ TEST_F(TargetInfoTest, SingleElementStructNestedSingleElementReduces) {
   EXPECT_EQ(singleElement(Outer), F32);
 }
 
+// A vector's padding is part of the vector, so a struct holding only a
+// three-float vector or a one-element x87 vector reduces to the vector. Padding
+// past the vector still keeps the struct from reducing.
+TEST_F(TargetInfoTest, SingleElementStructPaddedVectorReduces) {
+  const ABIType *V3F32 =
+      TB.getVectorType(F32, llvm::ElementCount::getFixed(3), llvm::Align(16));
+  EXPECT_EQ(
+      singleElement(recordOf({FieldInfo(V3F32, 0)}, 128, llvm::Align(16))),
+      V3F32);
+  EXPECT_EQ(
+      singleElement(recordOf({FieldInfo(V3F32, 0)}, 256, llvm::Align(32))),
+      nullptr);
+
+  const ABIType *F80 =
+      TB.getFloatType(llvm::APFloat::x87DoubleExtended(), llvm::Align(16));
+  const ABIType *V1F80 =
+      TB.getVectorType(F80, llvm::ElementCount::getFixed(1), llvm::Align(16));
+  EXPECT_EQ(
+      singleElement(recordOf({FieldInfo(V1F80, 0)}, 128, llvm::Align(16))),
+      V1F80);
+}
+
+// A scalar's padding is part of the scalar, so a struct holding only an x87
+// long double, a bool or a _BitInt(17) reduces to it.  Padding past the scalar
+// still keeps the struct from reducing.
+TEST_F(TargetInfoTest, SingleElementStructPaddedScalarReduces) {
+  const ABIType *F80 =
+      TB.getFloatType(llvm::APFloat::x87DoubleExtended(), llvm::Align(16));
+  EXPECT_EQ(singleElement(recordOf({FieldInfo(F80, 0)}, 128, llvm::Align(16))),
+            F80);
+  EXPECT_EQ(singleElement(recordOf({FieldInfo(F80, 0)}, 256, llvm::Align(32))),
+            nullptr);
+
+  const ABIType *Bool = TB.getIntegerType(1, llvm::Align(1), /*Signed=*/false);
+  EXPECT_EQ(singleElement(recordOf({FieldInfo(Bool, 0)}, 8, llvm::Align(1))),
+            Bool);
+  EXPECT_EQ(singleElement(recordOf({FieldInfo(Bool, 0)}, 16, llvm::Align(2))),
+            nullptr);
+
+  const ABIType *BitInt17 = TB.getIntegerType(17, llvm::Align(4),
+                                              /*Signed=*/true,
+                                              /*IsBitInt=*/true);
+  EXPECT_EQ(
+      singleElement(recordOf({FieldInfo(BitInt17, 0)}, 32, llvm::Align(4))),
+      BitInt17);
+  EXPECT_EQ(
+      singleElement(recordOf({FieldInfo(BitInt17, 0)}, 64, llvm::Align(8))),
+      nullptr);
+}
+
 // A non-record type is never a single-element struct.
 TEST_F(TargetInfoTest, SingleElementStructNonRecordReturnsNull) {
   EXPECT_EQ(singleElement(I32), nullptr);

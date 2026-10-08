@@ -15,11 +15,35 @@
 #include "CodeGenFunction.h"
 #include "clang/AST/HLSLResource.h"
 #include "clang/AST/MatrixUtils.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/MatrixBuilder.h"
+#include "llvm/Support/DXILABI.h"
 
 using namespace clang;
 using namespace CodeGen;
 using namespace llvm;
+
+static uint64_t
+getEffectiveBarrierMemoryFlags(uint64_t MemoryFlags,
+                               llvm::Triple::EnvironmentType Stage) {
+  constexpr uint64_t AllMemory =
+      llvm::to_underlying(llvm::dxil::BarrierMemoryTypeFlag::ValidMask);
+  if (MemoryFlags != AllMemory || Stage == llvm::Triple::Library ||
+      Stage == llvm::Triple::UnknownEnvironment)
+    return MemoryFlags;
+
+  constexpr uint64_t GroupSharedMemory =
+      llvm::to_underlying(llvm::dxil::BarrierMemoryTypeFlag::GroupSharedMemory);
+  constexpr uint64_t NodeMemory =
+      llvm::to_underlying(llvm::dxil::BarrierMemoryTypeFlag::NodeMemory);
+  const bool HasVisibleGroup = Stage == llvm::Triple::Compute ||
+                               Stage == llvm::Triple::Mesh ||
+                               Stage == llvm::Triple::Amplification;
+  if (!HasVisibleGroup)
+    MemoryFlags &= ~GroupSharedMemory;
+  // Clang has no node shader stage yet, so no known stage exposes node memory.
+  return MemoryFlags & ~NodeMemory;
+}
 
 static Value *handleAsDoubleBuiltin(CodeGenFunction &CGF, const CallExpr *E) {
   assert((E->getArg(0)->getType()->hasUnsignedIntegerRepresentation() &&
@@ -347,6 +371,14 @@ static Address getHLSLAtomicDestAddr(CodeGenFunction &CGF,
   return CGF.Builder.CreateGEP(CGF, VecAddr.withElementType(ElemTy), Idx);
 }
 
+static LValue getHLSLAtomicOriginalValueLValue(CodeGenFunction &CGF,
+                                               const Expr *E,
+                                               CallArgList &Args) {
+  if (const auto *OutArg = dyn_cast<HLSLOutArgExpr>(E))
+    return CGF.EmitHLSLOutArgExpr(OutArg, Args, OutArg->getType());
+  return CGF.EmitLValue(E);
+}
+
 static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
                                   llvm::AtomicRMWInst::BinOp Op) {
   // Emit `atomicrmw <op>` directly — no intermediate intrinsic needed on
@@ -370,8 +402,10 @@ static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
   // The 3-arg overload writes the old value (the RMW's return value) into
   // the `original_value` reference parameter.
   if (E->getNumArgs() == 3) {
-    LValue OrigLV = CGF.EmitLValue(E->getArg(2));
+    CallArgList Args;
+    LValue OrigLV = getHLSLAtomicOriginalValueLValue(CGF, E->getArg(2), Args);
     CGF.EmitStoreThroughLValue(RValue::get(Call), OrigLV);
+    CGF.EmitWritebacks(Args);
   }
   return Call;
 }
@@ -411,8 +445,10 @@ static Value *handleInterlockedCompareOp(CodeGenFunction &CGF,
   Value *Original = CGF.Builder.CreateExtractValue(Pair, 0);
   if (FloatTy)
     Original = CGF.Builder.CreateBitCast(Original, FloatTy);
-  LValue OrigLV = CGF.EmitLValue(E->getArg(3));
+  CallArgList Args;
+  LValue OrigLV = getHLSLAtomicOriginalValueLValue(CGF, E->getArg(3), Args);
   CGF.EmitStoreThroughLValue(RValue::get(Original), OrigLV);
+  CGF.EmitWritebacks(Args);
   return Original;
 }
 
@@ -579,6 +615,18 @@ getHandleAttributedType(QualType HandleQT) {
 static const HLSLAttributedResourceType *
 getRequiredHandleType(const CallExpr *E, unsigned ArgNo) {
   return getHandleAttributedType(E->getArg(ArgNo)->getType());
+}
+
+static const FieldDecl *getResourceHandleField(QualType ResourceTy) {
+  const CXXRecordDecl *ResourceDecl = ResourceTy->getAsCXXRecordDecl();
+  assert(ResourceDecl && "resource must be a record type");
+
+  IdentifierInfo &II = ResourceDecl->getASTContext().Idents.get("__handle");
+  for (const Decl *D : ResourceDecl->lookup(&II))
+    if (const auto *Field = dyn_cast<FieldDecl>(D))
+      return Field;
+
+  llvm_unreachable("resource handle field not found");
 }
 
 static llvm::Type *getOffsetType(CodeGenModule &CGM,
@@ -1766,6 +1814,53 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Intrinsic::ID ID =
         CGM.getHLSLRuntime().getGroupMemoryBarrierWithGroupSyncIntrinsic();
     return EmitIntrinsicCall(ID);
+  }
+  case Builtin::BI__builtin_hlsl_barrier: {
+    std::optional<llvm::APSInt> SemanticFlagsConstant =
+        E->getArg(1)->getIntegerConstantExpr(getContext());
+    assert(SemanticFlagsConstant && "expected constant semantic flags");
+    constexpr uint64_t GroupScope =
+        llvm::to_underlying(llvm::dxil::BarrierSemanticFlag::GroupScope);
+    constexpr uint64_t DeviceScope =
+        llvm::to_underlying(llvm::dxil::BarrierSemanticFlag::DeviceScope);
+    constexpr uint64_t ScopeMask = GroupScope | DeviceScope;
+    uint64_t SemanticFlagsValue = SemanticFlagsConstant->getZExtValue();
+    // DEVICE_SCOPE includes GROUP_SCOPE. Remove GROUP_SCOPE when both are
+    // set.
+    if ((SemanticFlagsValue & ScopeMask) == ScopeMask)
+      SemanticFlagsValue &= ~GroupScope;
+    Value *SemanticFlags = llvm::ConstantInt::get(
+        ConvertType(E->getArg(1)->getType()), SemanticFlagsValue);
+
+    if (E->getArg(0)->getType()->isUnsignedIntegerType()) {
+      std::optional<llvm::APSInt> MemoryFlagsConstant =
+          E->getArg(0)->getIntegerConstantExpr(getContext());
+      assert(MemoryFlagsConstant && "expected constant memory flags");
+      uint64_t MemoryFlagsValue = MemoryFlagsConstant->getZExtValue();
+      llvm::Triple::EnvironmentType Stage =
+          getTarget().getTriple().getEnvironment();
+      if (Stage == llvm::Triple::Library)
+        if (const auto *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl))
+          if (const auto *ShaderAttr = FD->getAttr<HLSLShaderAttr>())
+            Stage = ShaderAttr->getType();
+      MemoryFlagsValue =
+          getEffectiveBarrierMemoryFlags(MemoryFlagsValue, Stage);
+      Value *MemoryFlags = llvm::ConstantInt::get(
+          ConvertType(E->getArg(0)->getType()), MemoryFlagsValue);
+      Intrinsic::ID ID = CGM.getHLSLRuntime().getBarrierByMemoryTypeIntrinsic();
+      return EmitIntrinsicCall(ID, {},
+                               ArrayRef<Value *>{MemoryFlags, SemanticFlags});
+    }
+
+    const FieldDecl *HandleField =
+        getResourceHandleField(E->getArg(0)->getType());
+    LValue Resource = EmitLValue(E->getArg(0));
+    LValue Handle = EmitLValueForField(Resource, HandleField);
+    Value *HandleValue =
+        EmitLoadOfLValue(Handle, E->getArg(0)->getExprLoc()).getScalarVal();
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getBarrierByMemoryHandleIntrinsic();
+    return EmitIntrinsicCall(ID, ArrayRef<llvm::Type *>{HandleValue->getType()},
+                             ArrayRef<Value *>{HandleValue, SemanticFlags});
   }
   case Builtin::BI__builtin_hlsl_elementwise_ddx_coarse: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));

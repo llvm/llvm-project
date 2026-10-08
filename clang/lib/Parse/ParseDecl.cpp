@@ -1092,11 +1092,6 @@ void Parser::ParseOpenCLQualifiers(ParsedAttributes &Attrs) {
                Tok.getKind());
 }
 
-bool Parser::isHLSLQualifier(const Token &Tok) const {
-  return Tok.is(tok::kw_groupshared) || Tok.is(tok::kw_row_major) ||
-         Tok.is(tok::kw_column_major);
-}
-
 void Parser::ParseHLSLQualifiers(ParsedAttributes &Attrs) {
   IdentifierInfo *AttrName = Tok.getIdentifierInfo();
   auto Kind = Tok.getKind();
@@ -4680,6 +4675,12 @@ void Parser::ParseDeclarationSpecifiers(
       break;
     case tok::kw_row_major:
     case tok::kw_column_major:
+    case tok::kw_nointerpolation:
+    case tok::kw_linear:
+    case tok::kw_centroid:
+    case tok::kw_noperspective:
+    case tok::kw_sample:
+    case tok::kw_center:
     case tok::kw_groupshared:
     case tok::kw_in:
     case tok::kw_inout:
@@ -5845,6 +5846,12 @@ bool Parser::isTypeSpecifierQualifier(const Token &Tok) {
     return true;
 
   // HLSL type qualifiers
+  case tok::kw_nointerpolation:
+  case tok::kw_linear:
+  case tok::kw_centroid:
+  case tok::kw_noperspective:
+  case tok::kw_sample:
+  case tok::kw_center:
   case tok::kw_groupshared:
   case tok::kw_in:
   case tok::kw_inout:
@@ -6131,6 +6138,12 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw_groupshared:
     return true;
 
+  case tok::kw_nointerpolation:
+  case tok::kw_linear:
+  case tok::kw_centroid:
+  case tok::kw_noperspective:
+  case tok::kw_sample:
+  case tok::kw_center:
   case tok::kw_row_major:
   case tok::kw_column_major:
     return getLangOpts().HLSL;
@@ -6377,6 +6390,12 @@ void Parser::ParseTypeQualifierListOpt(
     case tok::kw_in:
     case tok::kw_inout:
     case tok::kw_out:
+    case tok::kw_nointerpolation:
+    case tok::kw_linear:
+    case tok::kw_centroid:
+    case tok::kw_noperspective:
+    case tok::kw_sample:
+    case tok::kw_center:
       // NOTE: ParseHLSLQualifiers will consume the qualifier token.
       ParseHLSLQualifiers(DS.getAttributes());
       continue;

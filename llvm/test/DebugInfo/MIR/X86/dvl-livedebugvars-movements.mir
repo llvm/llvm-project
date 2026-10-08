@@ -1,4 +1,4 @@
-# RUN: llc -start-after=phi-node-elimination -stop-after=virtregrewriter %s -mtriple=x86_64-unknown-unknown -o - | FileCheck %s
+# RUN: llc -start-after=phi-node-elimination -stop-after=virt-reg-rewriter %s -mtriple=x86_64-unknown-unknown -o - | FileCheck %s
 #
 # Test that when a livedebugvars interval is split, DBG_VALUE_LISTs are created
 # with the correct operands and exprs. Force values to be moved around between

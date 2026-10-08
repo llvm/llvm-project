@@ -556,6 +556,7 @@ public:
 
   /// Fetch the debug location for this node, unless this is a debug intrinsic,
   /// in which case fetch the debug location of the next non-debug node.
+  LLVM_DEPRECATED_WITH_FIXIT("Use getDebugLoc() instead", "getDebugLoc")
   LLVM_ABI const DebugLoc &getStableDebugLoc() const;
 
   /// Set or clear the nuw flag on this instruction, which must be an operator

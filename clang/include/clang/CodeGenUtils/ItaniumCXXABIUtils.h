@@ -62,6 +62,11 @@ enum BaseClassTypeInfoFlags {
   BCTI_Public = 0x2
 };
 
+/// Return whether the given record decl has a "single, public, non-virtual
+/// base at offset zero (i.e. the derived class is dynamic iff the base is)",
+/// according to Itanium C++ ABI, 2.95p6b.
+bool canUseSingleInheritance(const CXXRecordDecl *RD);
+
 /// Compute the src2dst_offset hint as described in the Itanium C++ ABI [2.9.7].
 CharUnits computeOffsetHint(ASTContext &Ctx, const CXXRecordDecl *Src,
                             const CXXRecordDecl *Dst);

@@ -329,9 +329,9 @@ Error assembleToStream(const ExegesisTarget &ET,
   ET.addTargetSpecificPasses(PM);
   TPC->printAndVerify("After ExegesisTarget::addTargetSpecificPasses");
   // Adding the following passes:
-  // - postrapseudos: expands pseudo return instructions used on some targets.
+  // - post-ra-pseudos: expands pseudo return instructions used on some targets.
   // - prologepilog: saves and restore callee saved registers.
-  for (const char *PassName : {"postrapseudos", "prolog-epilog"})
+  for (const char *PassName : {"post-ra-pseudos", "prolog-epilog"})
     if (addPass(PM, PassName, *TPC))
       return make_error<Failure>("Unable to add a mandatory pass");
   TPC->setInitialized();

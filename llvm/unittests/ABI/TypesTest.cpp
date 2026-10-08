@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ABI/Types.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
@@ -158,6 +159,103 @@ TEST_F(ABITypesTest, GenericVector) {
   EXPECT_FALSE(V4I32->isTuple());
   EXPECT_EQ(V4I32->getSizeInBits(), TypeSize::getFixed(128));
   EXPECT_EQ(V4I32->getFixedSizeInBitsOrZero(), 128u);
+}
+
+// An x87 element holds 80 bits but counts at its 16-byte allocation size
+// before the vector is rounded up to a power of two. With 4-byte alignment an
+// element counts as 96 bits.
+TEST_F(ABITypesTest, X87VectorABISize) {
+  const llvm::abi::Type *F80 =
+      TB.getFloatType(llvm::APFloat::x87DoubleExtended(), Align(16));
+  auto MakeVector = [&](const llvm::abi::Type *Elt, unsigned N) {
+    return TB.getVectorType(Elt, ElementCount::getFixed(N), Align(16));
+  };
+
+  EXPECT_EQ(MakeVector(F80, 1)->getSizeInBits(), TypeSize::getFixed(80));
+  EXPECT_EQ(MakeVector(F80, 1)->getABISizeInBits(), 128u);
+  EXPECT_EQ(MakeVector(F80, 2)->getABISizeInBits(), 256u);
+  EXPECT_EQ(MakeVector(F80, 3)->getABISizeInBits(), 512u);
+  EXPECT_EQ(MakeVector(F80, 4)->getABISizeInBits(), 512u);
+
+  const llvm::abi::Type *F80Align4 =
+      TB.getFloatType(llvm::APFloat::x87DoubleExtended(), Align(4));
+  EXPECT_EQ(MakeVector(F80Align4, 5)->getABISizeInBits(), 512u);
+  EXPECT_EQ(MakeVector(F80Align4, 6)->getABISizeInBits(), 1024u);
+}
+
+// An integer takes whole bytes, a _BitInt and a floating-point type are padded
+// out to their alignment, and a complex type is twice its element.
+TEST_F(ABITypesTest, ScalarABISize) {
+  EXPECT_EQ(
+      TB.getIntegerType(1, Align(1), /*Signed=*/false)->getABISizeInBits(), 8u);
+  EXPECT_EQ(
+      TB.getIntegerType(24, Align(4), /*Signed=*/false)->getABISizeInBits(),
+      24u);
+  auto MakeBitInt = [&](unsigned Bits, unsigned AlignBytes) {
+    return TB.getIntegerType(Bits, Align(AlignBytes), /*Signed=*/true,
+                             /*IsBitInt=*/true);
+  };
+  EXPECT_EQ(MakeBitInt(3, 1)->getABISizeInBits(), 8u);
+  EXPECT_EQ(MakeBitInt(17, 4)->getABISizeInBits(), 32u);
+  EXPECT_EQ(MakeBitInt(33, 8)->getABISizeInBits(), 64u);
+  EXPECT_EQ(MakeBitInt(65, 8)->getABISizeInBits(), 128u);
+  EXPECT_EQ(MakeBitInt(129, 8)->getABISizeInBits(), 192u);
+
+  const llvm::abi::Type *F80 =
+      TB.getFloatType(llvm::APFloat::x87DoubleExtended(), Align(16));
+  EXPECT_EQ(F80->getSizeInBits(), TypeSize::getFixed(80));
+  EXPECT_EQ(F80->getABISizeInBits(), 128u);
+  EXPECT_EQ(TB.getFloatType(llvm::APFloat::x87DoubleExtended(), Align(4))
+                ->getABISizeInBits(),
+            96u);
+  EXPECT_EQ(TB.getComplexType(F80, Align(16))->getABISizeInBits(), 256u);
+  const llvm::abi::Type *F32 =
+      TB.getFloatType(llvm::APFloat::IEEEsingle(), Align(4));
+  EXPECT_EQ(TB.getComplexType(F32, Align(4))->getABISizeInBits(), 64u);
+}
+
+// A bool element takes one bit and a one-bit _BitInt element a whole byte.  The
+// total is rounded up to a power of two of at least 8 bits.
+TEST_F(ABITypesTest, VectorABISize) {
+  auto MakeVector = [&](const llvm::abi::Type *Elt, unsigned N,
+                        unsigned AlignBytes) {
+    return TB.getVectorType(Elt, ElementCount::getFixed(N), Align(AlignBytes));
+  };
+  const llvm::abi::Type *Bool =
+      TB.getIntegerType(1, Align(1), /*Signed=*/false);
+  const llvm::abi::Type *UBitInt1 =
+      TB.getIntegerType(1, Align(1), /*Signed=*/false, /*IsBitInt=*/true);
+  const llvm::abi::Type *F32 =
+      TB.getFloatType(llvm::APFloat::IEEEsingle(), Align(4));
+  EXPECT_EQ(MakeVector(Bool, 4, 1)->getABISizeInBits(), 8u);
+  EXPECT_EQ(MakeVector(Bool, 8, 1)->getABISizeInBits(), 8u);
+  EXPECT_EQ(MakeVector(Bool, 12, 2)->getABISizeInBits(), 16u);
+  EXPECT_EQ(MakeVector(UBitInt1, 4, 4)->getABISizeInBits(), 32u);
+  EXPECT_EQ(MakeVector(UBitInt1, 8, 8)->getABISizeInBits(), 64u);
+  EXPECT_EQ(MakeVector(F32, 3, 16)->getABISizeInBits(), 128u);
+}
+
+// A record, an array, a pointer, a member pointer, an atomic or a void type
+// takes the size it was created with, and a scalable vector or tuple has no
+// fixed size.
+TEST_F(ABITypesTest, OtherKindsABISize) {
+  const llvm::abi::Type *I8 = TB.getIntegerType(8, Align(1), /*Signed=*/true);
+  const RecordType *R = makeRecord({FieldInfo(I8, 0)}, 32, RecordFlags::None,
+                                   /*Bases=*/{}, /*VBases=*/{}, Align(4));
+  EXPECT_EQ(R->getABISizeInBits(), 32u);
+  EXPECT_EQ(TB.getArrayType(I8, /*NumElements=*/3, /*SizeInBits=*/24)
+                ->getABISizeInBits(),
+            24u);
+  EXPECT_EQ(TB.getPointerType(64, Align(8))->getABISizeInBits(), 64u);
+  EXPECT_EQ(TB.getMemberPointerType(/*IsFunctionPointer=*/true, 128, Align(8))
+                ->getABISizeInBits(),
+            128u);
+  EXPECT_EQ(TB.getAtomicType(R, 32, Align(4))->getABISizeInBits(), 32u);
+  EXPECT_EQ(TB.getVoidType()->getABISizeInBits(), 0u);
+  const VectorType *SV =
+      TB.getVectorType(I8, ElementCount::getScalable(16), Align(16));
+  EXPECT_EQ(SV->getABISizeInBits(), 0u);
+  EXPECT_EQ(TB.getTupleType(SV, /*NumVectors=*/2)->getABISizeInBits(), 0u);
 }
 
 // svint32_t is <vscale x 4 x i32>.

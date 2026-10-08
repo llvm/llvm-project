@@ -16,10 +16,6 @@
 // FIXME: CIR doesn't propagate the 'contract' fast-math flag to LLVM IR yet.
 // The LLVM checks match the flag-free form and fail once it lands.
 
-// FIXME: CIR lowers the Default address space to 0 rather than generic on
-// SPIR-V, so the LLVM output lacks the addrspacecast that classic codegen
-// emits. The LLVM checks fail once it lands.
-
 #define __device__ __attribute__((device))
 
 __device__ int test_readfirstlane(int x) {
@@ -30,7 +26,7 @@ __device__ int test_readfirstlane(int x) {
 // CIR: cir.call_llvm_intrinsic "amdgcn.readfirstlane" {{.*}} : (!s32i) -> !s32i
 
 // LLVM-LABEL: define spir_func noundef i32 @_Z18test_readfirstlanei
-// LLVM-NOT: addrspacecast
+// LLVM: addrspacecast ptr %{{.*}} to ptr addrspace(4)
 // LLVM: call{{.*}} @llvm.amdgcn.readfirstlane.i32
 
 // OGCG-LABEL: define spir_func noundef i32 @_Z18test_readfirstlanei

@@ -179,7 +179,7 @@ static void restoreIPandDebugLoc(llvm::IRBuilderBase &Builder,
   // insertion function's subprogram. Prefer the block's own last instruction;
   // otherwise synthesize a location from the function's subprogram.
   if (!BB->empty())
-    Builder.SetCurrentDebugLocation(BB->back().getStableDebugLoc());
+    Builder.SetCurrentDebugLocation(BB->back().getDebugLoc());
   else if (llvm::DISubprogram *FSP =
                BB->getParent() ? BB->getParent()->getSubprogram() : nullptr) {
     unsigned Line = FSP->getScopeLine() ? FSP->getScopeLine() : FSP->getLine();
