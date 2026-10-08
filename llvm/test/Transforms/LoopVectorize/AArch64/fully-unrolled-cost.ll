@@ -103,7 +103,7 @@ for.body:
 
 define i1 @test_extra_cmp_user(ptr nocapture noundef %dst, ptr nocapture noundef readonly %src) {
 ; CHECK-LABEL: LV: Checking a loop in 'test_extra_cmp_user'
-; CHECK: Cost of 4 for VF 8: ir<%indvars.iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<{{.*}}>
+; CHECK: Cost of 4 for VF 8: ir<%indvars.iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<{{.*}}>
 ; CHECK: Cost of 4 for VF 8: WIDEN ir<%exitcond.not> = icmp eq ir<%indvars.iv.next>, ir<16>
 ; CHECK: Cost of 1 for VF 8: EMIT vp<%cmp.n> = icmp eq ir<16>, vp<%2>
 ; CHECK-NEXT: Cost of 0 for VF 8: EMIT branch-on-cond vp<%cmp.n>

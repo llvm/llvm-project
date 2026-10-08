@@ -450,9 +450,9 @@ define void @test_stride_noninvar3_4i32(ptr readonly %data, ptr noalias nocaptur
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i32 3, [[TMP0]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw nsw <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[DOTSPLAT]]
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add nuw nsw <4 x i32> splat (i32 3), [[TMP3]]
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i32 [[X]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[DOTSPLAT]]
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add nuw <4 x i32> splat (i32 3), [[TMP3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i32 [[X]], 2
 ; CHECK-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <4 x i32> poison, i32 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT3:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT2]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -469,7 +469,7 @@ define void @test_stride_noninvar3_4i32(ptr readonly %data, ptr noalias nocaptur
 ; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 4)
-; CHECK-NEXT:    [[VEC_IND_NEXT5]] = add nuw nsw <4 x i32> [[VEC_IND4]], [[DOTSPLAT3]]
+; CHECK-NEXT:    [[VEC_IND_NEXT5]] = add nuw <4 x i32> [[VEC_IND4]], [[DOTSPLAT3]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       middle.block:

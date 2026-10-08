@@ -422,7 +422,7 @@ struct VPlanTransforms {
   static void convertToVariableLengthStep(VPlan &Plan);
 
   /// Lower abstract recipes to concrete ones, that can be codegen'd.
-  static void convertToConcreteRecipes(VPlan &Plan);
+  static void convertToConcreteRecipes(VPlan &Plan, ElementCount VFxUF);
 
   /// This function converts initial recipes to the abstract recipes and clamps
   /// \p Range based on cost model for following optimizations and cost
