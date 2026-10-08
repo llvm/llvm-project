@@ -49006,9 +49006,9 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       }
     } else if (VT == MVT::i16 && LHS.getOpcode() == ISD::BITCAST &&
                RHS.getOpcode() == ISD::BITCAST) {
-      MVT SVT = LHS.getOperand(0).getSimpleValueType();
+      EVT SVT = LHS.getOperand(0).getValueType();
       if ((SVT == MVT::f16 || SVT == MVT::bf16) &&
-          SVT == RHS.getOperand(0).getSimpleValueType()) {
+          SVT == RHS.getOperand(0).getValueType()) {
         F16LHS = DAG.getBitcast(MVT::f16, LHS.getOperand(0));
         F16RHS = DAG.getBitcast(MVT::f16, RHS.getOperand(0));
       }
