@@ -2113,6 +2113,9 @@ bool Sema::checkArrayTooLarge(QualType ElementType,
 QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
                               Expr *ArraySize, unsigned Quals,
                               SourceRange Brackets, DeclarationName Entity) {
+  // ArrayType stores only the CVR qualifiers; __unaligned and _Atomic are
+  // dropped.
+  unsigned IndexTypeQuals = Quals & Qualifiers::CVRMask;
 
   SourceLocation Loc = Brackets.getBegin();
   if (getLangOpts().CPlusPlus) {
@@ -2275,12 +2278,12 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
       if (VLAIsError)
         return QualType();
 
-      T = Context.getVariableArrayType(T, nullptr, ASM, Quals);
+      T = Context.getVariableArrayType(T, nullptr, ASM, IndexTypeQuals);
     } else {
-      T = Context.getIncompleteArrayType(T, ASM, Quals);
+      T = Context.getIncompleteArrayType(T, ASM, IndexTypeQuals);
     }
   } else if (ArraySize->isTypeDependent() || ArraySize->isValueDependent()) {
-    T = Context.getDependentSizedArrayType(T, ArraySize, ASM, Quals);
+    T = Context.getDependentSizedArrayType(T, ArraySize, ASM, IndexTypeQuals);
   } else {
     ExprResult R =
         checkArraySize(*this, ArraySize, ConstVal, VLADiag, VLAIsError);
@@ -2291,7 +2294,7 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
       // C99: an array with a non-ICE size is a VLA. We accept any expression
       // that we can fold to a non-zero positive value as a non-VLA as an
       // extension.
-      T = Context.getVariableArrayType(T, ArraySize, ASM, Quals);
+      T = Context.getVariableArrayType(T, ArraySize, ASM, IndexTypeQuals);
     } else if (!T->isDependentType() && !T->isIncompleteType() &&
                !T->isConstantSizeType()) {
       // C99: an array with an element type that has a non-constant-size is a
@@ -2300,7 +2303,7 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
       Diag(Loc, VLADiag);
       if (VLAIsError)
         return QualType();
-      T = Context.getVariableArrayType(T, ArraySize, ASM, Quals);
+      T = Context.getVariableArrayType(T, ArraySize, ASM, IndexTypeQuals);
     } else {
       // C99 6.7.5.2p1: If the expression is a constant expression, it shall
       // have a value greater than zero.
@@ -2337,7 +2340,8 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
                              ArraySize->getSourceRange()))
         return QualType();
 
-      T = Context.getConstantArrayType(T, ConstVal, ArraySize, ASM, Quals);
+      T = Context.getConstantArrayType(T, ConstVal, ArraySize, ASM,
+                                       IndexTypeQuals);
     }
   }
 
@@ -2479,7 +2483,7 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *SizeExpr,
   bool IsNoBoolVecLang = getLangOpts().OpenCL || getLangOpts().OpenCLCPlusPlus;
   if ((!T->isDependentType() && !T->isIntegerType() &&
        !T->isRealFloatingType()) ||
-      (IsNoBoolVecLang && T->isBooleanType())) {
+      T->isEnumeralType() || (IsNoBoolVecLang && T->isBooleanType())) {
     Diag(AttrLoc, diag::err_attribute_invalid_vector_type) << T;
     return QualType();
   }

@@ -543,3 +543,27 @@ func.func @hoist_alloca(
 //      CHECK: %[[ALLOCA0:.*]] = memref.alloca({{.*}})
 // CHECK-NEXT: %[[ALLOCA1:.*]] = memref.alloca({{.*}})
 // CHECK-NEXT: {{.*}} = scf.for
+
+// -----
+
+// A nested entry block can be reachable even when its enclosing block is not.
+// CHECK-LABEL: func @loop_unreachable_parent(
+// CHECK: return
+// CHECK: ^bb1:
+// CHECK: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: scf.while
+// CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
+func.func @loop_unreachable_parent() {
+  return
+^dead:
+  %c0 = arith.constant 0 : index
+  %false = arith.constant false
+  scf.while : () -> () {
+    %buffer = memref.alloc() : memref<1xindex>
+    memref.store %c0, %buffer[%c0] : memref<1xindex>
+    scf.condition(%false)
+  } do {
+    scf.yield
+  }
+  return
+}

@@ -22,12 +22,13 @@ void LibraryOptionsParser::forEachOption(
   const OptTable &T = Table();
   for (unsigned ID = 1, E = T.getNumOptions(); ID <= E; ++ID) {
     unsigned Kind = T.getOptionKind(ID);
-    if (Kind != Option::FlagClass && Kind != Option::JoinedClass &&
-        Kind != Option::SeparateClass)
+    if (Kind != Option::FlagOrEqClass && Kind != Option::SeparateOrEqClass)
       continue;
-    StringRef MetaVar = T.getOptionMetaVar(ID);
-    if (MetaVar.empty() && Kind == Option::JoinedClass)
-      MetaVar = "<value>";
+    std::string MetaVar;
+    if (Kind == Option::SeparateOrEqClass) {
+      StringRef V = T.getOptionMetaVar(ID);
+      MetaVar = ("=" + (V.empty() ? StringRef("<value>") : V)).str();
+    }
     Fn(T.getOptionName(ID), MetaVar, T.getOptionHelpText(ID));
   }
 }

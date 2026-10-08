@@ -1126,6 +1126,34 @@ public:
 
   void ActOnComment(SourceRange Comment);
 
+  /// Returns true if any of the documentation warnings is enabled at \p Loc.
+  bool areDocumentationDiagsEnabled(SourceLocation Loc);
+
+  /// Discard the areDocumentationDiagsEnabled() cache, for when a
+  /// `#pragma clang diagnostic` has changed diagnostic severities.
+  void clearDocumentationDiagsCache();
+
+private:
+  /// The uncached answer for both documentation groups at \p Loc.
+  bool computeDocumentationDiagsAt(SourceLocation Loc) const;
+
+  /// Caches results for areDocumentationDiagsEnabled().
+  /// Flushed whenever a diagnostic pragma changes severities.
+  /// Level one is keyed on the diagnostic state alone.
+  const void *DocDiagsStateKey = nullptr;
+  bool DocDiagsEnabledIgnoringSystem = false;
+
+  /// Level two, for when the location does matter. Bit i of each mask is a
+  /// DiagStateSystemClass value; bit 0 is unused.
+  uint8_t DocDiagsExactComputed = 0;
+  uint8_t DocDiagsExactEnabled = 0;
+
+public:
+  /// Returns true if a comment at \p Loc should be retained in the AST
+  /// (some consumer such as -Wdocumentation, -fparse-all-comments, code
+  /// completion, or AST-file serialization may read it back).
+  bool shouldRetainCommentsInAST(SourceLocation Loc);
+
   /// Retrieve the parser's current scope.
   ///
   /// This routine must only be used when it is certain that semantic analysis
