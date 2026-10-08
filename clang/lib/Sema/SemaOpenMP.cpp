@@ -11220,26 +11220,13 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
       }
 
       // Build final: IS.CounterVar = IS.Start + IS.NumIters * IS.Step
-      // For class-type iterator loops (non-arithmetic, non-pointer counters)
-      // in loop transformation directives, skip finalization — arithmetic on
-      // such iterators is not expressible via buildCounterUpdate.
-      ExprResult Final;
-      bool IsClassIteratorLoop =
-          !IS.CounterVar->getType()->isArithmeticType() &&
-          !IS.CounterVar->getType()->isPointerType();
-      if (IsClassIteratorLoop && isOpenMPLoopTransformationDirective(DKind)) {
-        // FIXME: finalize class-type iterators too (random-access arithmetic
-        // is available per the canonical loop form).
-        Final = nullptr;
-      } else {
-        Final =
-            buildCounterUpdate(SemaRef, CurScope, UpdLoc, CounterVar,
-                               IS.CounterInit, IS.NumIterations, IS.CounterStep,
-                               IS.Subtract, IS.IsNonRectangularLB, &Captures);
-        if (!Final.isUsable()) {
-          HasErrors = true;
-          break;
-        }
+      ExprResult Final =
+          buildCounterUpdate(SemaRef, CurScope, UpdLoc, CounterVar,
+                             IS.CounterInit, IS.NumIterations, IS.CounterStep,
+                             IS.Subtract, IS.IsNonRectangularLB, &Captures);
+      if (!Final.isUsable()) {
+        HasErrors = true;
+        break;
       }
 
       if (!Update.isUsable()) {
@@ -11251,7 +11238,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
       Built.PrivateCounters[Cnt] = IS.PrivateCounterVar;
       Built.Inits[Cnt] = Init.get();
       Built.Updates[Cnt] = Update.get();
-      Built.Finals[Cnt] = Final.isUsable() ? Final.get() : nullptr;
+      Built.Finals[Cnt] = Final.get();
       Built.DependentCounters[Cnt] = nullptr;
       Built.DependentInits[Cnt] = nullptr;
       // Transfer the body-guard condition: the loop condition for
@@ -15736,12 +15723,19 @@ static Stmt *buildLoopFinalization(
   SmallVector<Stmt *, 8> FinalizationStmts;
 
   for (size_t I : llvm::seq<size_t>(LoopHelpers.size())) {
-    for (auto *Final : LoopHelpers[I].Finals)
-      if (Final)
-        FinalizationStmts.push_back(IfStmt::Create(
-            Context, SourceLocation(), IfStatementKind::Ordinary, nullptr,
-            nullptr, LoopHelpers[I].PreCond, SourceLocation(), SourceLocation(),
-            Final, SourceLocation(), nullptr));
+    for (auto [Counter, Final] :
+         llvm::zip_equal(LoopHelpers[I].Counters, LoopHelpers[I].Finals)) {
+      // FIXME: finalize class-type iterators too (random-access arithmetic
+      // is available per the canonical loop form).
+      QualType CounterTy = Counter->getType();
+      if (!Final ||
+          (!CounterTy->isArithmeticType() && !CounterTy->isPointerType()))
+        continue;
+      FinalizationStmts.push_back(IfStmt::Create(
+          Context, SourceLocation(), IfStatementKind::Ordinary, nullptr,
+          nullptr, LoopHelpers[I].PreCond, SourceLocation(), SourceLocation(),
+          Final, SourceLocation(), nullptr));
+    }
   }
 
   return FinalizationStmts.empty()
