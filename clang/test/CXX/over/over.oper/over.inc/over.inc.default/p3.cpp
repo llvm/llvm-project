@@ -1,4 +1,16 @@
 // RUN: %clang_cc1 -std=c++2d -verify %s
+// RUN: %clang_cc1 -std=c++2d -funknown-anytype -DUNKNOWN_ANYTYPE -verify=anytype %s
+
+#ifdef UNKNOWN_ANYTYPE
+// The discarded-value prefix call must have a known type.
+struct UnknownPrefixResult {
+  __unknown_anytype operator++();
+  UnknownPrefixResult operator++(int) = default; // anytype-error {{'operator++' has unknown return type; cast the call to its declared return type}}
+};
+void unknown_prefix_result(UnknownPrefixResult u) {
+  u++; // anytype-note {{in defaulted postfix increment operator for 'UnknownPrefixResult' first required here}}
+}
+#else
 
 // C++2d [over.inc.default]p3:
 //   The implicit definition of a defaulted postfix increment or decrement
@@ -149,6 +161,66 @@ void deleted_move(DeletedMove d) {
   d++; // expected-note {{in defaulted postfix increment operator for 'DeletedMove' first required here}}
 }
 
+// [over.inc.default]p2 checks the copy from an lvalue of type C, but in the
+// implicit definition of a volatile member, c is an lvalue of type volatile C.
+struct VolatileAggregate {
+  volatile VolatileAggregate &operator++() volatile;
+  VolatileAggregate operator++(int) volatile = default; // expected-error {{excess elements in struct initializer}}
+};
+void volatile_aggregate(VolatileAggregate v) {
+  v++; // expected-note {{in defaulted postfix increment operator for 'VolatileAggregate' first required here}}
+}
+
+// Errors that overload resolution does not detect make the implicit definition
+// ill-formed rather than deleted.
+struct BadDefaultArgument {
+  BadDefaultArgument();
+  template <class T> BadDefaultArgument(T &, int = T::missing); // expected-error 2 {{no member named 'missing' in 'BadDefaultArgument'}}
+  BadDefaultArgument &operator++();
+  BadDefaultArgument operator++(int) = default; // expected-note 2 {{in instantiation of default function argument expression for 'BadDefaultArgument<BadDefaultArgument>' required here}}
+};
+void bad_default_argument(BadDefaultArgument b) {
+  b++; // expected-note 2 {{in defaulted postfix increment operator for 'BadDefaultArgument' first required here}}
+}
+
+struct Incomplete; // expected-note 2 {{forward declaration of 'Incomplete'}}
+struct IncompletePrefixResult {
+  Incomplete operator++(); // expected-note {{'operator++' declared here}}
+  IncompletePrefixResult operator++(int) = default; // expected-error {{calling 'operator++' with incomplete return type 'Incomplete'}}
+};
+void incomplete_prefix_result(IncompletePrefixResult i) {
+  i++; // expected-note {{in defaulted postfix increment operator for 'IncompletePrefixResult' first required here}}
+}
+
+struct DeletedDestructor {
+  ~DeletedDestructor() = delete; // expected-note {{'~DeletedDestructor' has been explicitly marked deleted here}}
+};
+struct DeletedDestructorPrefixResult {
+  DeletedDestructor operator--();
+  DeletedDestructorPrefixResult operator--(int) = default; // expected-error {{attempt to use a deleted function}}
+};
+void deleted_destructor_prefix_result(DeletedDestructorPrefixResult d) {
+  d--; // expected-note {{in defaulted postfix decrement operator for 'DeletedDestructorPrefixResult' first required here}}
+}
+
+// Uses of the first parameter in the implicit definition are checked as usual.
+struct UnavailableParam {
+  UnavailableParam &operator++();
+};
+UnavailableParam operator++(UnavailableParam &u __attribute__((unavailable)), int) = default; // expected-note 2 {{'u' has been explicitly marked unavailable here}}
+// expected-error@-1 2 {{'u' is unavailable}}
+// expected-note@-2 {{in defaulted postfix increment operator for 'UnavailableParam' first required here}}
+void unavailable_param(UnavailableParam u) { u++; }
+
+// The same errors are diagnosed when the body is only built to compute the
+// exception specification.
+struct IncompletePrefixResultNoexcept {
+  Incomplete operator++(); // expected-note {{'operator++' declared here}}
+  IncompletePrefixResultNoexcept operator++(int) = default; // expected-error {{calling 'operator++' with incomplete return type 'Incomplete'}}
+};
+extern IncompletePrefixResultNoexcept incomplete_prefix_result_noexcept;
+bool incomplete_noexcept = noexcept(incomplete_prefix_result_noexcept++); // expected-note {{in evaluation of exception specification for 'IncompletePrefixResultNoexcept::operator++' needed here}}
+
 // Attributes on the prefix operator are honored, as for any other call.
 struct Nodiscard {
   [[nodiscard]] Nodiscard &operator++();
@@ -261,3 +333,4 @@ struct NoexceptNonMember {
 NoexceptNonMember operator++(NoexceptNonMember &, int) = default;
 extern NoexceptNonMember noexcept_non_member;
 static_assert(noexcept(noexcept_non_member++));
+#endif
