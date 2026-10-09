@@ -243,6 +243,7 @@ public:
   FunctionPass *createTargetRegisterAllocator(bool) override;
 
   void addIRPasses() override;
+  void addPassesToHandleExceptions() override;
   void addISelPrepare() override;
   bool addInstSelector() override;
   void addOptimizedRegAlloc() override;
@@ -307,27 +308,9 @@ void WebAssemblyPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createWebAssemblyOptimizeReturnedLegacyPass());
 
-  // If exception handling is not enabled and setjmp/longjmp handling is
-  // enabled, we lower invokes into calls and delete unreachable landingpad
-  // blocks. Lowering invokes when there is no EH support is done in
-  // TargetPassConfig::addPassesToHandleExceptions, but that runs after these IR
-  // passes and Emscripten SjLj handling expects all invokes to be lowered
-  // before.
-  bool EnableEmEH = TM->Options.ExceptionModel == ExceptionHandling::Emscripten;
-  bool EnableWasmEH = TM->Options.ExceptionModel == ExceptionHandling::Wasm;
-  if (!EnableEmEH && !EnableWasmEH) {
-    addPass(createLowerInvokePass());
-    // The lower invoke pass may create unreachable code. Remove it in order not
-    // to process dead blocks in setjmp/longjmp handling.
-    addPass(createUnreachableBlockEliminationPass());
-  }
-
-  // Handle exceptions and setjmp/longjmp if enabled. Unlike Wasm EH preparation
-  // done in WasmEHPrepare pass, Wasm SjLj preparation shares libraries and
-  // transformation algorithms with Emscripten SjLj, so we run
-  // LowerEmscriptenEHSjLj pass also when Wasm SjLj is enabled.
-  if (EnableEmEH || WasmEnableEmSjLj || WasmEnableSjLj)
-    addPass(createWebAssemblyLowerEmscriptenEHSjLjLegacyPass(EnableEmEH));
+  // Wasm SjLj shares the runtime and the transformation with Emscripten SjLj,
+  // so it is handled here rather than in WasmEHPrepare.
+  addPass(createWebAssemblyLowerEmscriptenEHSjLjLegacyPass());
 
   // Expand indirectbr instructions to switches.
   addPass(createIndirectBrExpandPass(getOptLevel()));
@@ -339,10 +322,14 @@ void WebAssemblyPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
 }
 
-void WebAssemblyPassConfig::addISelPrepare() {
-  if (TM->Options.ExceptionModel == ExceptionHandling::Wasm)
-    addPass(createWasmEHPass());
+void WebAssemblyPassConfig::addPassesToHandleExceptions() {
+  // WebAssembly prepares its own exception handling. WinEHPrepare is still
+  // needed to demote the catchswitch PHIs SelectionDAG cannot lower.
+  addPass(createWinEHPass());
+  addPass(createWasmEHPass());
+}
 
+void WebAssemblyPassConfig::addISelPrepare() {
   // We need to move reference type allocas to WASM_ADDRESS_SPACE_VAR so that
   // loads and stores are promoted to local.gets/local.sets.
   addPass(createWebAssemblyRefTypeMem2LocalLegacyPass());
@@ -430,8 +417,7 @@ void WebAssemblyPassConfig::addPreEmitPass() {
 
   // Do various transformations for exception handling.
   // Every CFG-changing optimizations should come before this.
-  if (TM->Options.ExceptionModel == ExceptionHandling::Wasm)
-    addPass(createWebAssemblyLateEHPrepareLegacyPass());
+  addPass(createWebAssemblyLateEHPrepareLegacyPass());
 
   // Now that we have a prologue and epilogue and all frame indices are
   // rewritten, eliminate SP and FP. This allows them to be stackified,

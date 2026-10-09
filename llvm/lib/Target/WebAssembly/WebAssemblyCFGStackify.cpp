@@ -39,8 +39,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/IR/Analysis.h"
-#include "llvm/MC/MCAsmInfo.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/IR/Module.h"
 using namespace llvm;
 using WebAssembly::SortRegionInfo;
 
@@ -54,6 +53,8 @@ class WebAssemblyCFGStackifyImpl {
   MachineDominatorTree &MDT;
   MachineLoopInfo &MLI;
   WebAssemblyExceptionInfo &WEI;
+
+  bool UsesWasmEH = false;
 
   // For each block whose label represents the end of a scope, record the block
   // which holds the beginning of the scope. This will allow us to quickly skip
@@ -2494,12 +2495,10 @@ void WebAssemblyCFGStackifyImpl::placeMarkers(MachineFunction &MF) {
   for (auto &MBB : MF)
     placeLoopMarker(MBB);
 
-  const MCAsmInfo &MCAI = MF.getTarget().getMCAsmInfo();
   for (auto &MBB : MF) {
     if (MBB.isEHPad()) {
       // Place the TRY/TRY_TABLE for MBB if MBB is the EH pad of an exception.
-      if (MCAI.getExceptionHandlingType() == ExceptionHandling::Wasm &&
-          MF.getFunction().hasPersonalityFn()) {
+      if (UsesWasmEH) {
         if (WebAssembly::WasmUseLegacyEH)
           placeTryMarker(MBB);
         else
@@ -2511,8 +2510,7 @@ void WebAssemblyCFGStackifyImpl::placeMarkers(MachineFunction &MF) {
     }
   }
 
-  if (MCAI.getExceptionHandlingType() == ExceptionHandling::Wasm &&
-      MF.getFunction().hasPersonalityFn()) {
+  if (UsesWasmEH) {
     const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
     // Add an 'unreachable' after 'end_try_table's.
     addUnreachableAfterTryTables(MF, TII);
@@ -2673,7 +2671,10 @@ bool WebAssemblyCFGStackifyImpl::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** CFG Stackifying **********\n"
                        "********** Function: "
                     << MF.getName() << '\n');
-  const MCAsmInfo &MCAI = MF.getTarget().getMCAsmInfo();
+
+  UsesWasmEH = MF.getFunction().hasPersonalityFn() &&
+               MF.getFunction().getParent()->getExceptionModel() ==
+                   ExceptionHandling::Wasm;
 
   // Liveness is not tracked for VALUE_STACK physreg.
   MF.getRegInfo().invalidateLiveness();
@@ -2683,8 +2684,7 @@ bool WebAssemblyCFGStackifyImpl::runOnMachineFunction(MachineFunction &MF) {
   placeMarkers(MF);
 
   // Remove unnecessary instructions possibly introduced by try/end_trys.
-  if (MCAI.getExceptionHandlingType() == ExceptionHandling::Wasm &&
-      MF.getFunction().hasPersonalityFn() && WebAssembly::WasmUseLegacyEH)
+  if (UsesWasmEH && WebAssembly::WasmUseLegacyEH)
     removeUnnecessaryInstrs(MF);
 
   // Convert MBB operands in terminators to relative depth immediates.
