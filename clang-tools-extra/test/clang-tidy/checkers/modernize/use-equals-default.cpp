@@ -250,6 +250,18 @@ struct DCM : KW, N {
   // CHECK-FIXES: DCM() = default;
 };
 
+struct dummy {};
+
+// Delegating constructor with field initializer.
+struct DCF : KW {
+
+  DCF() : KW(), d() {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
+  // CHECK-FIXES: DCF() = default;
+
+  dummy d;
+};
+
 // Delegating constructor with noexcept.
 struct DCNE : KW {
   DCNE() noexcept : KW() {}
