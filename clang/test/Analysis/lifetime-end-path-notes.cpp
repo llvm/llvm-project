@@ -24,8 +24,8 @@ void testPathNotesWithBlockScopeEnd() {
   {
     int n = 0;
     while (n < 3) {
-    // expected-note@-1 3 {{Loop condition is true.  Entering loop body}}
-    // expected-note@-2   {{Loop condition is false. Execution continues on line 33}}
+      // expected-note@-1 3 {{Loop condition is true.  Entering loop body}}
+      // expected-note@-2   {{Loop condition is false. Execution continues on line 33}}
       p = &n; // expected-note {{Value assigned to 'p'}}
       ++n;    // expected-note {{The value 2 is assigned to 'n'}}
     }
@@ -39,8 +39,8 @@ void testPathNotesWithWarnIfReached() {
   {
     int i = 0;
     while (i < 3) {
-    // expected-note@-1 3 {{Loop condition is true.  Entering loop body}}
-    // expected-note@-2   {{Loop condition is false. Execution continues on line 47}} 
+      // expected-note@-1 3 {{Loop condition is true.  Entering loop body}}
+      // expected-note@-2   {{Loop condition is false. Execution continues on line 47}} 
       ++i;
     }
   }
