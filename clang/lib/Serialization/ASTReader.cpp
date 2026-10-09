@@ -4897,7 +4897,23 @@ bool ASTReader::isDirectoryDependencyOutOfDate(ModuleFile &F, bool Complain) {
            llvm::sys::toTimeT(Status->getLastModificationTime()) > F.ModTime;
   };
 
+  ModuleCache &ModCache = getModuleManager().getModuleCache();
+  const HeaderSearchOptions &HSOpts =
+      PP.getHeaderSearchInfo().getHeaderSearchOpts();
   for (StringRef Dir : F.DirectoryDependencies) {
+    if (std::optional<bool> Invalidated =
+            ModCache.isDirectoryInvalidated(Dir)) {
+      // The build system reports paths as changed before the build session
+      // started, so a module built during it is newer than them.
+      if (!*Invalidated ||
+          static_cast<uint64_t>(F.ModTime) >= HSOpts.BuildSessionTimestamp)
+        continue;
+      Diag(diag::remark_module_path_invalidated) << F.ModuleName << Dir;
+      if (Complain)
+        Diag(diag::err_module_path_invalidated) << F.ModuleName << Dir;
+      return true;
+    }
+
     std::optional<std::string> Changed;
     if (IsNewer(Dir)) {
       Changed = Dir.str();
