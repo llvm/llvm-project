@@ -18,8 +18,8 @@
 /// Non-temporal store instructions in LLVM IR (!nontemporal metadata) are
 /// documented as optimization hints. However, on X86, regular stores follow the
 /// TSO (Total Store Order) memory model, whereas non-temporal stores (MOVNT*)
-/// write to weakly-ordered write-combining (WC) memory buffers that bypass cache
-/// hierarchies.
+/// write to weakly-ordered write-combining (WC) memory buffers that bypass
+/// cache hierarchies.
 ///
 /// Without explicit memory fences, write-combining stores are not ordered with
 /// respect to other WC stores or normal WB stores. As a result, cross-thread
@@ -79,7 +79,8 @@ static bool isNonTemporalFence(const Instruction &I) {
 /// I.mayThrow() may return false, yet return true for their CatchSwitchInst
 /// unwind destination, which cannot have non-PHI instructions preceeding it.
 static bool isSyncOrReturnPoint(const Instruction &I) {
-  return isa<ReturnInst, InvokeInst, CleanupReturnInst>(&I) || I.maySynchronize() || I.mayThrow();
+  return isa<ReturnInst, InvokeInst, CleanupReturnInst>(&I) ||
+         I.maySynchronize() || I.mayThrow();
 }
 
 static bool containsNonTemporalStores(Function &F) {
