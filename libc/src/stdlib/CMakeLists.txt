@@ -859,6 +859,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${exit_compile_options}
   DEPENDS
+    libc.src.stdio.fflush
     ${exit_deps}
 )
 
