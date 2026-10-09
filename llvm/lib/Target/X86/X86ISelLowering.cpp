@@ -2443,6 +2443,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FP_TO_UINT,         MVT::v8i16, Custom);
     setOperationAction(ISD::STRICT_FP_TO_UINT,  MVT::v8i16, Custom);
 
+    // Without VLX, these are widened to 512-bit compares during isel.
+    setOperationAction(ISD::SETCC, MVT::v8f16, Custom);
+    setOperationAction(ISD::SETCC, MVT::v16f16, Custom);
+
     if (Subtarget.hasVLX()) {
       setGroup(MVT::v8f16);
       setGroup(MVT::v16f16);
