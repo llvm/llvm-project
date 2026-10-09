@@ -8181,6 +8181,12 @@ bool llvm::impliesPoison(const Value *ValAssumedPoison, const Value *V) {
 
 static bool programUndefinedIfUndefOrPoison(const Value *V, bool PoisonOnly);
 
+static bool isConstantPtrToFunction(const Constant *C) {
+  if (auto *P2I = dyn_cast<PtrToIntOperator>(C))
+    return isa<Function>(P2I->getOperand(0));
+  return false;
+}
+
 static bool isGuaranteedNotToBeUndefOrPoison(
     const Value *V, AssumptionCache *AC, const Instruction *CtxI,
     const DominatorTree *DT, unsigned Depth, UndefPoisonKind Kind) {
@@ -8219,7 +8225,9 @@ static bool isGuaranteedNotToBeUndefOrPoison(
           return false;
         if (includesPoison(Kind) && C->containsPoisonElement())
           return false;
-        return !C->containsConstantExpression();
+        return !C->containsMatchingElement([](const Constant *Elt) {
+          return IsaPred<ConstantExpr>(Elt) && !isConstantPtrToFunction(Elt);
+        });
       }
     }
   }
