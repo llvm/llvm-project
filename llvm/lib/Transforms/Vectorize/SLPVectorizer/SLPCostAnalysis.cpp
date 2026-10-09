@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -34,6 +35,17 @@ using namespace llvm;
 using namespace llvm::PatternMatch;
 
 namespace llvm::slpvectorizer {
+
+ConstantInt *getStrideBytesIfConstant(Value *Stride, Type *ScalarTy,
+                                      const DataLayout &DL, bool IsReverse) {
+  auto *CI = dyn_cast_or_null<ConstantInt>(Stride);
+  if (!CI)
+    return nullptr;
+
+  uint64_t ElementSize = DL.getTypeAllocSize(ScalarTy).getFixedValue();
+  APInt Bytes = CI->getValue() * ElementSize;
+  return ConstantInt::get(CI->getContext(), IsReverse ? -Bytes : Bytes);
+}
 
 InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
                                TTI::ShuffleKind Kind, VectorType *Tp,
@@ -59,6 +71,55 @@ InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
   }
   return TTI.getShuffleCost(Kind, DstTy, Tp, CostKind, Mask, Index, SubTp, Args,
                             /*CtxI=*/nullptr, VIC);
+}
+
+InstructionCost getStridedLoadCost(const TargetTransformInfo &TTI,
+                                   const DataLayout &DL, Value *StrideVal,
+                                   Type *StridedLoadTy, Type *VecTy, Value *Ptr,
+                                   Align CommonAlignment,
+                                   TargetTransformInfo::CastContextHint Ctx,
+                                   TargetTransformInfo::TargetCostKind CostKind,
+                                   bool IsReverse) {
+  Value *Stride = getStrideBytesIfConstant(StrideVal, VecTy->getScalarType(),
+                                           DL, IsReverse);
+  InstructionCost StridedCost = TTI.getMemIntrinsicInstrCost(
+      MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_load,
+                                 StridedLoadTy, Ptr,
+                                 /*VariableMask=*/false, CommonAlignment,
+                                 /*I=*/nullptr, Stride),
+      CostKind);
+  if (StridedLoadTy != VecTy)
+    StridedCost += TTI.getCastInstrCost(Instruction::BitCast, VecTy,
+                                        StridedLoadTy, Ctx, CostKind);
+  return StridedCost;
+}
+
+InstructionCost
+getCompressedLoadCost(const TargetTransformInfo &TTI, const LoadInst *LI0,
+                      const CompressedLoadInfo &Info,
+                      TargetTransformInfo::TargetCostKind CostKind) {
+  if (Info.InterleaveFactor)
+    return TTI.getInterleavedMemoryOpCost(
+        Instruction::Load, Info.LoadVecTy, Info.InterleaveFactor, {},
+        LI0->getAlign(), LI0->getPointerAddressSpace(), CostKind);
+
+  InstructionCost Cost;
+  if (Info.IsMasked) {
+    Cost = TTI.getMemIntrinsicInstrCost(
+        MemIntrinsicCostAttributes(Intrinsic::masked_load, Info.LoadVecTy,
+                                   LI0->getAlign(),
+                                   LI0->getPointerAddressSpace()),
+        CostKind);
+  } else {
+    Cost = TTI.getMemoryOpCost(
+        Instruction::Load, Info.LoadVecTy, LI0->getAlign(),
+        LI0->getPointerAddressSpace(), CostKind,
+        TargetTransformInfo::getOperandInfo(LI0->getPointerOperand()));
+  }
+  // TODO: include this cost into CommonCost.
+  Cost += getShuffleCost(TTI, TTI::SK_PermuteSingleSrc, Info.LoadVecTy,
+                         CostKind, Info.CompressMask);
+  return Cost;
 }
 
 std::pair<InstructionCost, InstructionCost>

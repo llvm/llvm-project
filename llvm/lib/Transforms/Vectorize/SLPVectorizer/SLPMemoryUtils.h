@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPMEMORYUTILS_H
 #define LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPMEMORYUTILS_H
 
+#include "SLPCostAnalysis.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -40,12 +41,6 @@ namespace llvm::slpvectorizer {
 bool arePointersCompatible(Value *Ptr1, Value *Ptr2,
                            const TargetLibraryInfo &TLI, unsigned MaxDepth,
                            bool CompareOpcodes = true);
-
-/// Returns \p Stride scaled by the allocation size of \p ScalarTy, negated if
-/// \p IsReverse is set, or nullptr if \p Stride is not a constant.
-ConstantInt *getStrideBytesIfConstant(Value *Stride, Type *ScalarTy,
-                                      const DataLayout &DL,
-                                      bool IsReverse = false);
 
 /// Calculates minimal alignment as a common alignment.
 template <typename T> Align computeCommonAlignment(ArrayRef<Value *> VL);
@@ -74,8 +69,7 @@ bool isMaskedLoadCompress(
     const DominatorTree &DT, const TargetLibraryInfo &TLI,
     const TargetTransformInfo::TargetCostKind CostKind,
     const function_ref<bool(Value *)> AreAllUsersVectorized, bool ReVec,
-    bool &IsMasked, unsigned &InterleaveFactor,
-    SmallVectorImpl<int> &CompressMask, VectorType *&LoadVecTy);
+    CompressedLoadInfo &CLI);
 
 /// Checks if the \p VL can be transformed to a (masked)load + compress or
 /// (masked) interleaved load.

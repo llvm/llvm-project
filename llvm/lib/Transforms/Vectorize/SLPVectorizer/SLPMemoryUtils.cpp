@@ -41,17 +41,6 @@ using namespace llvm;
 
 namespace llvm::slpvectorizer {
 
-ConstantInt *getStrideBytesIfConstant(Value *Stride, Type *ScalarTy,
-                                      const DataLayout &DL, bool IsReverse) {
-  auto *CI = dyn_cast_or_null<ConstantInt>(Stride);
-  if (!CI)
-    return nullptr;
-
-  uint64_t ElementSize = DL.getTypeAllocSize(ScalarTy).getFixedValue();
-  APInt Bytes = CI->getValue() * ElementSize;
-  return ConstantInt::get(CI->getContext(), IsReverse ? -Bytes : Bytes);
-}
-
 bool arePointersCompatible(Value *Ptr1, Value *Ptr2,
                            const TargetLibraryInfo &TLI, unsigned MaxDepth,
                            bool CompareOpcodes) {
@@ -224,9 +213,8 @@ bool isMaskedLoadCompress(
     const DominatorTree &DT, const TargetLibraryInfo &TLI,
     const TargetTransformInfo::TargetCostKind CostKind,
     const function_ref<bool(Value *)> AreAllUsersVectorized, bool ReVec,
-    bool &IsMasked, unsigned &InterleaveFactor,
-    SmallVectorImpl<int> &CompressMask, VectorType *&LoadVecTy) {
-  InterleaveFactor = 0;
+    CompressedLoadInfo &CLI) {
+  CLI.InterleaveFactor = 0;
   Type *ScalarTy = VL.front()->getType();
   const size_t Sz = VL.size();
   auto *VecTy = cast<VectorType>(getWidenedType(ScalarTy, Sz));
@@ -264,27 +252,28 @@ bool isMaskedLoadCompress(
   // Check for very large distances between elements.
   if (*Diff / Sz >= MaxRegSize / 8)
     return false;
-  LoadVecTy = cast<FixedVectorType>(getWidenedType(ScalarTy, *Diff + 1));
+  CLI.LoadVecTy = cast<FixedVectorType>(getWidenedType(ScalarTy, *Diff + 1));
   auto *LI = cast<LoadInst>(Order.empty() ? VL.front() : VL[Order.front()]);
   Align CommonAlignment = LI->getAlign();
   SimplifyQuery SQ(
       DL, &TLI, &DT, &AC,
       cast<LoadInst>(Order.empty() ? VL.back() : VL[Order.back()]));
-  IsMasked = !isSafeToLoadUnconditionally(Ptr0, LoadVecTy, CommonAlignment, SQ);
-  if (IsMasked && !TTI.isLegalMaskedLoad(LoadVecTy, CommonAlignment,
-                                         LI->getPointerAddressSpace()))
+  CLI.IsMasked =
+      !isSafeToLoadUnconditionally(Ptr0, CLI.LoadVecTy, CommonAlignment, SQ);
+  if (CLI.IsMasked && !TTI.isLegalMaskedLoad(CLI.LoadVecTy, CommonAlignment,
+                                             LI->getPointerAddressSpace()))
     return false;
   // TODO: perform the analysis of each scalar load for better
   // safe-load-unconditionally analysis.
   bool IsStrided =
-      buildCompressMask(PointerOps, Order, ScalarTy, DL, SE, CompressMask);
-  assert(CompressMask.size() >= 2 && "At least two elements are required");
+      buildCompressMask(PointerOps, Order, ScalarTy, DL, SE, CLI.CompressMask);
+  assert(CLI.CompressMask.size() >= 2 && "At least two elements are required");
   SmallVector<Value *> OrderedPointerOps(PointerOps);
   if (!Order.empty())
     reorderScalars(OrderedPointerOps, Mask);
   auto [ScalarGEPCost, VectorGEPCost] =
       getGEPCosts(TTI, OrderedPointerOps, OrderedPointerOps.front(),
-                  Instruction::Load, CostKind, ScalarTy, LoadVecTy);
+                  Instruction::Load, CostKind, ScalarTy, CLI.LoadVecTy);
   // The cost of scalar loads.
   InstructionCost ScalarLoadsCost =
       accumulate(VL, InstructionCost(),
@@ -300,19 +289,19 @@ bool isMaskedLoadCompress(
                                /*Extract=*/false, CostKind) +
       ScalarLoadsCost;
   InstructionCost LoadCost = 0;
-  if (IsMasked) {
+  if (CLI.IsMasked) {
     LoadCost = TTI.getMemIntrinsicInstrCost(
-        MemIntrinsicCostAttributes(Intrinsic::masked_load, LoadVecTy,
+        MemIntrinsicCostAttributes(Intrinsic::masked_load, CLI.LoadVecTy,
                                    CommonAlignment,
                                    LI->getPointerAddressSpace()),
         CostKind);
   } else {
     LoadCost =
-        TTI.getMemoryOpCost(Instruction::Load, LoadVecTy, CommonAlignment,
+        TTI.getMemoryOpCost(Instruction::Load, CLI.LoadVecTy, CommonAlignment,
                             LI->getPointerAddressSpace(), CostKind,
                             TTI::getOperandInfo(LI->getPointerOperand()));
   }
-  if (IsStrided && !IsMasked && Order.empty()) {
+  if (IsStrided && !CLI.IsMasked && Order.empty()) {
     // Check for potential segmented(interleaved) loads.
     VectorType *AlignedLoadVecTy = cast<VectorType>(getWidenedType(
         ScalarTy,
@@ -320,18 +309,19 @@ bool isMaskedLoadCompress(
     SimplifyQuery SQ(DL, &TLI, &DT, &AC, cast<LoadInst>(VL.back()));
     if (!isSafeToLoadUnconditionally(Ptr0, AlignedLoadVecTy, CommonAlignment,
                                      SQ))
-      AlignedLoadVecTy = LoadVecTy;
-    if (TTI.isLegalInterleavedAccessType(AlignedLoadVecTy, CompressMask[1],
+      AlignedLoadVecTy = CLI.LoadVecTy;
+    if (TTI.isLegalInterleavedAccessType(AlignedLoadVecTy, CLI.CompressMask[1],
                                          CommonAlignment,
                                          LI->getPointerAddressSpace())) {
       InstructionCost InterleavedCost =
           VectorGEPCost + TTI.getInterleavedMemoryOpCost(
                               Instruction::Load, AlignedLoadVecTy,
-                              CompressMask[1], {}, CommonAlignment,
-                              LI->getPointerAddressSpace(), CostKind, IsMasked);
+                              CLI.CompressMask[1], {}, CommonAlignment,
+                              LI->getPointerAddressSpace(), CostKind,
+                              CLI.IsMasked);
       if (InterleavedCost < GatherCost) {
-        InterleaveFactor = CompressMask[1];
-        LoadVecTy = AlignedLoadVecTy;
+        CLI.InterleaveFactor = CLI.CompressMask[1];
+        CLI.LoadVecTy = AlignedLoadVecTy;
         return true;
       }
     }
@@ -345,13 +335,13 @@ bool isMaskedLoadCompress(
   if (VectorGEPCost + LoadCost >= GatherCost)
     return false;
   InstructionCost CompressCost = getShuffleCost(
-      TTI, TTI::SK_PermuteSingleSrc, LoadVecTy, CostKind, CompressMask);
+      TTI, TTI::SK_PermuteSingleSrc, CLI.LoadVecTy, CostKind, CLI.CompressMask);
   if (!Order.empty()) {
     SmallVector<int> NewMask(Sz, PoisonMaskElem);
     for (unsigned I : seq<unsigned>(Sz)) {
-      NewMask[I] = CompressMask[Mask[I]];
+      NewMask[I] = CLI.CompressMask[Mask[I]];
     }
-    CompressMask.swap(NewMask);
+    CLI.CompressMask.swap(NewMask);
   }
   InstructionCost TotalVecCost = VectorGEPCost + LoadCost + CompressCost;
   return TotalVecCost < GatherCost;
@@ -366,13 +356,9 @@ bool isMaskedLoadCompress(
     const DominatorTree &DT, const TargetLibraryInfo &TLI,
     const TargetTransformInfo::TargetCostKind CostKind,
     const function_ref<bool(Value *)> AreAllUsersVectorized, bool ReVec) {
-  bool IsMasked;
-  unsigned InterleaveFactor;
-  SmallVector<int> CompressMask;
-  VectorType *LoadVecTy;
+  CompressedLoadInfo CLI;
   return isMaskedLoadCompress(VL, PointerOps, Order, TTI, DL, SE, AC, DT, TLI,
-                              CostKind, AreAllUsersVectorized, ReVec, IsMasked,
-                              InterleaveFactor, CompressMask, LoadVecTy);
+                              CostKind, AreAllUsersVectorized, ReVec, CLI);
 }
 
 /// Checks if the stores \p VL with pointers \p PointerOps can be lowered as a
