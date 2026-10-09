@@ -319,6 +319,107 @@ ConstantResultStorageKind ConstantExpr::getStorageKind(const APValue &Value) {
   }
 }
 
+// Check that V is a valid APValue result of E, i.e. the node type needs to
+// match the APValue kind.
+static void assertAPValueKind(const ConstantExpr *E, const APValue &V) {
+  // FIXME: We shouldn't be creating ConstantExpr nodes for missing APValues in
+  // the first place, but for the time being, accept this for any type.
+  if (V.isAbsent())
+    return;
+
+  if (E->isGLValue()) {
+    // NOTE: The restrictions for lvalue expressions are not 100% clear. We
+    // can't assert(V.isLValue()) because some ConstantExprs are lvalue and
+    // their result is a string literal, so an Array.
+    assert((V.isLValue() || V.isArray()) &&
+           "a lvalue ConstantExpr needs an lvalue APValue");
+    return;
+  }
+
+  QualType T = E->getType();
+  if (T->isIntegralOrEnumerationType()) {
+    // An expression containing a PointerToIntegral cast gets evaluated to an
+    // LValue, so we have to allow LValue APValues here.
+    assert((V.isInt() || V.isAddrLabelDiff() || V.isLValue()) &&
+           "a ConstantExpr of integer type needs an int APValue result");
+    return;
+  }
+
+  if (T->isRealFloatingType()) {
+    assert(V.isFloat() &&
+           "a ConstantExpr of floating type needs a float APValue result");
+    return;
+  }
+
+  if (T->isAnyComplexType()) {
+    QualType ElemTy = T->getAs<ComplexType>()->getElementType();
+    if (ElemTy->isIntegralOrEnumerationType())
+      assert(V.isComplexInt() &&
+             "a complex int ConstantExpr needs a complex int APValue");
+    else if (ElemTy->isFloatingType())
+      assert(V.isComplexFloat() &&
+             "a complex float ConstantExpr needs a complex float APValue");
+    else
+      llvm_unreachable("Complex element types must be either float or int");
+    return;
+  }
+
+  if (T->isVectorType()) {
+    assert(V.isVector() && "a vector ConstantExpr needs a vector APValue");
+    return;
+  }
+
+  if (T->isMatrixType()) {
+    assert(V.isMatrix() && "a matrix ConstantExpr needs a matrix APValue");
+    return;
+  }
+
+  if (T->isPointerType()) {
+    assert(V.isLValue() && "a pointer ConstantExpr needs an lvalue APValue");
+    return;
+  }
+
+  if (T->isNullPtrType()) {
+    assert(V.isLValue() &&
+           "a nullptr_t pointer ConstantExpr needs an lvalue APValue");
+    assert(V.isNullPointer() &&
+           "a nullptr_t ConstantExpr needs a nullptr APValue");
+    return;
+  }
+
+  if (T->isFixedPointType()) {
+    assert(V.isFixedPoint() &&
+           "a fixed point ConstantExpr needs a fixed point APValue");
+    return;
+  }
+
+  if (T->isMemberPointerType()) {
+    assert(V.isMemberPointer() &&
+           "a member pointer ConstantExpr needs a member pointer APValue");
+    return;
+  }
+
+  if (T->isRecordType()) {
+    // Yes, this happens.
+    if (V.isArray())
+      return;
+    const RecordDecl *RD = T->getAsRecordDecl();
+    if (RD->isUnion())
+      assert(V.isUnion() && "a union ConstantExpr needs a union APValue");
+    else
+      assert(V.isStruct() && "a record ConstantExpr needs a struct APValue");
+    return;
+  }
+
+  if (T->isMetaInfoType()) {
+    assert(V.isReflection() &&
+           "a std::meta_info ConstantExpr needs a Reflection APValue");
+    return;
+  }
+
+  llvm_unreachable("");
+}
+
 ConstantResultStorageKind
 ConstantExpr::getStorageKind(const Type *T, const ASTContext &Context) {
   if (T->isIntegralOrEnumerationType() && Context.getTypeInfo(T).Width <= 64)
@@ -384,6 +485,7 @@ ConstantExpr *ConstantExpr::CreateEmpty(const ASTContext &Context,
 void ConstantExpr::MoveIntoResult(APValue &Value, const ASTContext &Context) {
   assert((unsigned)getStorageKind(Value) <= ConstantExprBits.ResultKind &&
          "Invalid storage for this value kind");
+  assertAPValueKind(this, Value);
   ConstantExprBits.APValueKind = Value.getKind();
   switch (getResultStorageKind()) {
   case ConstantResultStorageKind::None:

@@ -1101,6 +1101,10 @@ enum class ConstantResultStorageKind { None, Int64, APValue };
 
 /// ConstantExpr - An expression that occurs in a constant context and
 /// optionally the result of evaluating the expression.
+///
+/// Note that the subexpression of a ConstantExpr and its APValue result are
+/// supposed to be interchaneable. That means, in particular, that the kind of
+/// the stored result and the type of the ConstantExpr need to match.
 class ConstantExpr final
     : public FullExpr,
       private llvm::TrailingObjects<ConstantExpr, APValue, uint64_t> {
