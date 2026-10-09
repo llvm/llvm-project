@@ -166,9 +166,9 @@ llvm.func @alias_scopes(%arg1 : !llvm.ptr) {
 llvm.func @disjoint_alias_scopes(%arg1 : !llvm.ptr, %arg2 : !llvm.ptr) {
   %0 = llvm.mlir.constant(0 : i32) : i32
   // CHECK:  store {{.*}}, !alias.scope ![[SCOPES1:[0-9]+]]{{$}}
-  llvm.store %0, %arg1 {alias_scopes = [#alias_scope1]} : i32, !llvm.ptr
+  llvm.store %0, %arg1 <alias_scopes = [#alias_scope1]> : i32, !llvm.ptr
   // CHECK:  store {{.*}}, !alias.scope ![[SCOPES2:[0-9]+]]{{$}}
-  llvm.store %0, %arg2 {alias_scopes = [#alias_scope2]} : i32, !llvm.ptr
+  llvm.store %0, %arg2 <alias_scopes = [#alias_scope2]> : i32, !llvm.ptr
   llvm.return
 }
 
