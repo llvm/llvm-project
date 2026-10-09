@@ -14,7 +14,7 @@ define i32 @val_compare_and_swap(ptr %p, i32 %cmp, i32 %new) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $w8 = LDAXRW renamable $x0, implicit-def $x8, pcsections !0 :: (volatile load (i32) from %ir.p)
   ; CHECK-NEXT:   $wzr = SUBSWrs renamable $w8, renamable $w1, 0, implicit-def $nzcv, pcsections !0
-  ; CHECK-NEXT:   Bcc 1, %bb.3, implicit killed $nzcv, pcsections !0
+  ; CHECK-NEXT:   Bcc 1, %bb.3, implicit $nzcv, pcsections !0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cmpxchg.trystore:
   ; CHECK-NEXT:   successors: %bb.4(0x7ffff800), %bb.1(0x00000800)
@@ -54,7 +54,7 @@ define i32 @val_compare_and_swap_from_load(ptr %p, i32 %cmp, ptr %pnew) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $w8 = LDAXRW renamable $x0, implicit-def $x8, pcsections !0 :: (volatile load (i32) from %ir.p)
   ; CHECK-NEXT:   $wzr = SUBSWrs renamable $w8, renamable $w1, 0, implicit-def $nzcv, pcsections !0
-  ; CHECK-NEXT:   Bcc 1, %bb.3, implicit killed $nzcv, pcsections !0
+  ; CHECK-NEXT:   Bcc 1, %bb.3, implicit $nzcv, pcsections !0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cmpxchg.trystore:
   ; CHECK-NEXT:   successors: %bb.4(0x7ffff800), %bb.1(0x00000800)
@@ -93,7 +93,7 @@ define i32 @val_compare_and_swap_rel(ptr %p, i32 %cmp, i32 %new) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $w8 = LDAXRW renamable $x0, implicit-def $x8, pcsections !0 :: (volatile load (i32) from %ir.p)
   ; CHECK-NEXT:   $wzr = SUBSWrs renamable $w8, renamable $w1, 0, implicit-def $nzcv, pcsections !0
-  ; CHECK-NEXT:   Bcc 1, %bb.3, implicit killed $nzcv, pcsections !0
+  ; CHECK-NEXT:   Bcc 1, %bb.3, implicit $nzcv, pcsections !0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cmpxchg.trystore:
   ; CHECK-NEXT:   successors: %bb.4(0x7ffff800), %bb.1(0x00000800)
@@ -131,7 +131,7 @@ define i64 @val_compare_and_swap_64(ptr %p, i64 %cmp, i64 %new) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $x8 = LDXRX renamable $x0, pcsections !0 :: (volatile load (i64) from %ir.p)
   ; CHECK-NEXT:   $xzr = SUBSXrs renamable $x8, renamable $x1, 0, implicit-def $nzcv, pcsections !0
-  ; CHECK-NEXT:   Bcc 1, %bb.3, implicit killed $nzcv, pcsections !0
+  ; CHECK-NEXT:   Bcc 1, %bb.3, implicit $nzcv, pcsections !0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cmpxchg.trystore:
   ; CHECK-NEXT:   successors: %bb.4(0x7ffff800), %bb.1(0x00000800)
@@ -169,7 +169,7 @@ define i64 @val_compare_and_swap_64_monotonic_seqcst(ptr %p, i64 %cmp, i64 %new)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $x8 = LDAXRX renamable $x0, pcsections !0 :: (volatile load (i64) from %ir.p)
   ; CHECK-NEXT:   $xzr = SUBSXrs renamable $x8, renamable $x1, 0, implicit-def $nzcv, pcsections !0
-  ; CHECK-NEXT:   Bcc 1, %bb.3, implicit killed $nzcv, pcsections !0
+  ; CHECK-NEXT:   Bcc 1, %bb.3, implicit $nzcv, pcsections !0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cmpxchg.trystore:
   ; CHECK-NEXT:   successors: %bb.4(0x7ffff800), %bb.1(0x00000800)
@@ -207,7 +207,7 @@ define i64 @val_compare_and_swap_64_release_acquire(ptr %p, i64 %cmp, i64 %new) 
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $x8 = LDAXRX renamable $x0, pcsections !0 :: (volatile load (i64) from %ir.p)
   ; CHECK-NEXT:   $xzr = SUBSXrs renamable $x8, renamable $x1, 0, implicit-def $nzcv, pcsections !0
-  ; CHECK-NEXT:   Bcc 1, %bb.3, implicit killed $nzcv, pcsections !0
+  ; CHECK-NEXT:   Bcc 1, %bb.3, implicit $nzcv, pcsections !0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cmpxchg.trystore:
   ; CHECK-NEXT:   successors: %bb.4(0x7ffff800), %bb.1(0x00000800)
@@ -874,7 +874,7 @@ define i8 @atomicrmw_min_i8(ptr %ptr, i8 %rhs) {
   ; CHECK-NEXT:   renamable $w8 = LDAXRB renamable $x0, implicit-def $x8, pcsections !0 :: (volatile load (i8) from %ir.ptr)
   ; CHECK-NEXT:   renamable $w9 = SBFMWri renamable $w8, 0, 7, pcsections !0
   ; CHECK-NEXT:   dead $wzr = SUBSWrx killed renamable $w9, renamable $w1, 32, implicit-def $nzcv, pcsections !0
-  ; CHECK-NEXT:   renamable $w9 = CSELWr renamable $w8, renamable $w1, 11, implicit killed $nzcv, pcsections !0
+  ; CHECK-NEXT:   renamable $w9 = CSELWr renamable $w8, renamable $w1, 11, implicit $nzcv, pcsections !0
   ; CHECK-NEXT:   early-clobber renamable $w10 = STXRB killed renamable $w9, renamable $x0, pcsections !0 :: (volatile store (i8) into %ir.ptr)
   ; CHECK-NEXT:   CBNZW killed renamable $w10, %bb.1, pcsections !0
   ; CHECK-NEXT: {{  $}}
@@ -900,7 +900,7 @@ define i8 @atomicrmw_max_i8(ptr %ptr, i8 %rhs) {
   ; CHECK-NEXT:   renamable $w8 = LDXRB renamable $x0, implicit-def $x8, pcsections !0 :: (volatile load (i8) from %ir.ptr)
   ; CHECK-NEXT:   renamable $w9 = SBFMWri renamable $w8, 0, 7, pcsections !0
   ; CHECK-NEXT:   dead $wzr = SUBSWrx killed renamable $w9, renamable $w1, 32, implicit-def $nzcv, pcsections !0
-  ; CHECK-NEXT:   renamable $w9 = CSELWr renamable $w8, renamable $w1, 12, implicit killed $nzcv, pcsections !0
+  ; CHECK-NEXT:   renamable $w9 = CSELWr renamable $w8, renamable $w1, 12, implicit $nzcv, pcsections !0
   ; CHECK-NEXT:   early-clobber renamable $w10 = STLXRB killed renamable $w9, renamable $x0, pcsections !0 :: (volatile store (i8) into %ir.ptr)
   ; CHECK-NEXT:   CBNZW killed renamable $w10, %bb.1, pcsections !0
   ; CHECK-NEXT: {{  $}}
@@ -928,7 +928,7 @@ define i8 @atomicrmw_umin_i8(ptr %ptr, i8 %rhs) {
   ; CHECK-NEXT:   renamable $w8 = LDAXRB renamable $x0, implicit-def $x8, pcsections !0 :: (volatile load (i8) from %ir.ptr)
   ; CHECK-NEXT:   renamable $w8 = ANDWri renamable $w8, 7, implicit killed $x8
   ; CHECK-NEXT:   $wzr = SUBSWrs renamable $w8, renamable $w9, 0, implicit-def $nzcv, pcsections !0
-  ; CHECK-NEXT:   renamable $w10 = CSELWr renamable $w8, renamable $w9, 3, implicit killed $nzcv, implicit-def $x10, pcsections !0
+  ; CHECK-NEXT:   renamable $w10 = CSELWr renamable $w8, renamable $w9, 3, implicit $nzcv, implicit-def $x10, pcsections !0
   ; CHECK-NEXT:   early-clobber renamable $w11 = STLXRB renamable $w10, renamable $x0, implicit killed $x10, pcsections !0 :: (volatile store (i8) into %ir.ptr)
   ; CHECK-NEXT:   CBNZW killed renamable $w11, %bb.1, pcsections !0
   ; CHECK-NEXT: {{  $}}
@@ -956,7 +956,7 @@ define i8 @atomicrmw_umax_i8(ptr %ptr, i8 %rhs) {
   ; CHECK-NEXT:   renamable $w8 = LDXRB renamable $x0, implicit-def $x8, pcsections !0 :: (volatile load (i8) from %ir.ptr)
   ; CHECK-NEXT:   renamable $w8 = ANDWri renamable $w8, 7, implicit killed $x8
   ; CHECK-NEXT:   $wzr = SUBSWrs renamable $w8, renamable $w9, 0, implicit-def $nzcv, pcsections !0
-  ; CHECK-NEXT:   renamable $w10 = CSELWr renamable $w8, renamable $w9, 8, implicit killed $nzcv, implicit-def $x10, pcsections !0
+  ; CHECK-NEXT:   renamable $w10 = CSELWr renamable $w8, renamable $w9, 8, implicit $nzcv, implicit-def $x10, pcsections !0
   ; CHECK-NEXT:   early-clobber renamable $w11 = STXRB renamable $w10, renamable $x0, implicit killed $x10, pcsections !0 :: (volatile store (i8) into %ir.ptr)
   ; CHECK-NEXT:   CBNZW killed renamable $w11, %bb.1, pcsections !0
   ; CHECK-NEXT: {{  $}}
@@ -1125,7 +1125,7 @@ define i16 @atomicrmw_min_i16(ptr %ptr, i16 %rhs) {
   ; CHECK-NEXT:   renamable $w8 = LDAXRH renamable $x0, implicit-def $x8, pcsections !0 :: (volatile load (i16) from %ir.ptr)
   ; CHECK-NEXT:   renamable $w9 = SBFMWri renamable $w8, 0, 15, pcsections !0
   ; CHECK-NEXT:   dead $wzr = SUBSWrx killed renamable $w9, renamable $w1, 40, implicit-def $nzcv, pcsections !0
-  ; CHECK-NEXT:   renamable $w9 = CSELWr renamable $w8, renamable $w1, 11, implicit killed $nzcv, pcsections !0
+  ; CHECK-NEXT:   renamable $w9 = CSELWr renamable $w8, renamable $w1, 11, implicit $nzcv, pcsections !0
   ; CHECK-NEXT:   early-clobber renamable $w10 = STXRH killed renamable $w9, renamable $x0, pcsections !0 :: (volatile store (i16) into %ir.ptr)
   ; CHECK-NEXT:   CBNZW killed renamable $w10, %bb.1, pcsections !0
   ; CHECK-NEXT: {{  $}}
@@ -1151,7 +1151,7 @@ define i16 @atomicrmw_max_i16(ptr %ptr, i16 %rhs) {
   ; CHECK-NEXT:   renamable $w8 = LDXRH renamable $x0, implicit-def $x8, pcsections !0 :: (volatile load (i16) from %ir.ptr)
   ; CHECK-NEXT:   renamable $w9 = SBFMWri renamable $w8, 0, 15, pcsections !0
   ; CHECK-NEXT:   dead $wzr = SUBSWrx killed renamable $w9, renamable $w1, 40, implicit-def $nzcv, pcsections !0
-  ; CHECK-NEXT:   renamable $w9 = CSELWr renamable $w8, renamable $w1, 12, implicit killed $nzcv, pcsections !0
+  ; CHECK-NEXT:   renamable $w9 = CSELWr renamable $w8, renamable $w1, 12, implicit $nzcv, pcsections !0
   ; CHECK-NEXT:   early-clobber renamable $w10 = STLXRH killed renamable $w9, renamable $x0, pcsections !0 :: (volatile store (i16) into %ir.ptr)
   ; CHECK-NEXT:   CBNZW killed renamable $w10, %bb.1, pcsections !0
   ; CHECK-NEXT: {{  $}}
@@ -1179,7 +1179,7 @@ define i16 @atomicrmw_umin_i16(ptr %ptr, i16 %rhs) {
   ; CHECK-NEXT:   renamable $w8 = LDAXRH renamable $x0, implicit-def $x8, pcsections !0 :: (volatile load (i16) from %ir.ptr)
   ; CHECK-NEXT:   renamable $w8 = ANDWri renamable $w8, 15, implicit killed $x8
   ; CHECK-NEXT:   $wzr = SUBSWrs renamable $w8, renamable $w9, 0, implicit-def $nzcv, pcsections !0
-  ; CHECK-NEXT:   renamable $w10 = CSELWr renamable $w8, renamable $w9, 3, implicit killed $nzcv, implicit-def $x10, pcsections !0
+  ; CHECK-NEXT:   renamable $w10 = CSELWr renamable $w8, renamable $w9, 3, implicit $nzcv, implicit-def $x10, pcsections !0
   ; CHECK-NEXT:   early-clobber renamable $w11 = STLXRH renamable $w10, renamable $x0, implicit killed $x10, pcsections !0 :: (volatile store (i16) into %ir.ptr)
   ; CHECK-NEXT:   CBNZW killed renamable $w11, %bb.1, pcsections !0
   ; CHECK-NEXT: {{  $}}
@@ -1207,7 +1207,7 @@ define i16 @atomicrmw_umax_i16(ptr %ptr, i16 %rhs) {
   ; CHECK-NEXT:   renamable $w8 = LDXRH renamable $x0, implicit-def $x8, pcsections !0 :: (volatile load (i16) from %ir.ptr)
   ; CHECK-NEXT:   renamable $w8 = ANDWri renamable $w8, 15, implicit killed $x8
   ; CHECK-NEXT:   $wzr = SUBSWrs renamable $w8, renamable $w9, 0, implicit-def $nzcv, pcsections !0
-  ; CHECK-NEXT:   renamable $w10 = CSELWr renamable $w8, renamable $w9, 8, implicit killed $nzcv, implicit-def $x10, pcsections !0
+  ; CHECK-NEXT:   renamable $w10 = CSELWr renamable $w8, renamable $w9, 8, implicit $nzcv, implicit-def $x10, pcsections !0
   ; CHECK-NEXT:   early-clobber renamable $w11 = STXRH renamable $w10, renamable $x0, implicit killed $x10, pcsections !0 :: (volatile store (i16) into %ir.ptr)
   ; CHECK-NEXT:   CBNZW killed renamable $w11, %bb.1, pcsections !0
   ; CHECK-NEXT: {{  $}}
@@ -1235,7 +1235,7 @@ define { i8, i1 } @cmpxchg_i8(ptr %ptr, i8 %desired, i8 %new) {
   ; CHECK-NEXT:   renamable $w0 = LDXRB renamable $x8, implicit-def $x0, pcsections !0 :: (volatile load (i8) from %ir.ptr)
   ; CHECK-NEXT:   renamable $w9 = ANDWri renamable $w0, 7, pcsections !0
   ; CHECK-NEXT:   dead $wzr = SUBSWrx killed renamable $w9, renamable $w1, 0, implicit-def $nzcv, pcsections !0
-  ; CHECK-NEXT:   Bcc 1, %bb.3, implicit killed $nzcv, pcsections !0
+  ; CHECK-NEXT:   Bcc 1, %bb.3, implicit $nzcv, pcsections !0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cmpxchg.trystore:
   ; CHECK-NEXT:   successors: %bb.4(0x7ffff800), %bb.1(0x00000800)
@@ -1278,7 +1278,7 @@ define { i16, i1 } @cmpxchg_i16(ptr %ptr, i16 %desired, i16 %new) {
   ; CHECK-NEXT:   renamable $w0 = LDXRH renamable $x8, implicit-def $x0, pcsections !0 :: (volatile load (i16) from %ir.ptr)
   ; CHECK-NEXT:   renamable $w9 = ANDWri renamable $w0, 15, pcsections !0
   ; CHECK-NEXT:   dead $wzr = SUBSWrx killed renamable $w9, renamable $w1, 8, implicit-def $nzcv, pcsections !0
-  ; CHECK-NEXT:   Bcc 1, %bb.3, implicit killed $nzcv, pcsections !0
+  ; CHECK-NEXT:   Bcc 1, %bb.3, implicit $nzcv, pcsections !0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cmpxchg.trystore:
   ; CHECK-NEXT:   successors: %bb.4(0x7ffff800), %bb.1(0x00000800)

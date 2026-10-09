@@ -65,9 +65,23 @@ _Static_assert(!__atomic_always_lock_free(4, (void*)2), "");
 _Static_assert(!__atomic_always_lock_free(4, (void*)-2), "");
 _Static_assert(__atomic_always_lock_free(4, (void*)4), "");
 _Static_assert(__atomic_always_lock_free(4, (void*)-4), "");
+_Static_assert(!__atomic_always_lock_free(2, (void*)1), "");
+_Static_assert(__atomic_always_lock_free(2, (void*)2), "");
+_Static_assert(!__atomic_always_lock_free(8, (void*)4), "");
+_Static_assert(__atomic_always_lock_free(8, (void*)8), "");
 
 _Static_assert(__atomic_always_lock_free(1, "string"), "");
 _Static_assert(!__atomic_always_lock_free(2, "string"), "");
 _Static_assert(__atomic_always_lock_free(2, (int[2]){}), "");
 void dummyfn();
 _Static_assert(__atomic_always_lock_free(2, dummyfn) || 1, "");
+
+// GH170139, GH120082
+_Static_assert(!__atomic_always_lock_free(0, 0), "");
+_Static_assert(!__atomic_always_lock_free(0, 1), ""); // both-error {{incompatible integer to pointer conversion}}
+_Static_assert(!__atomic_always_lock_free(0, (void*)4), "");
+_Static_assert(!__atomic_always_lock_free(0, &ai), "");
+_Static_assert(__atomic_is_lock_free(0, 0), ""); // both-error {{not an integral constant expression}}
+_Static_assert(__atomic_is_lock_free(0, (void*)4), ""); // both-error {{not an integral constant expression}}
+_Static_assert(__atomic_is_lock_free(0, &ai), ""); // both-error {{not an integral constant expression}}
+_Static_assert(__c11_atomic_is_lock_free(0), ""); // both-error {{not an integral constant expression}}

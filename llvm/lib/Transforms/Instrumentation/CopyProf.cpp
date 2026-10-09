@@ -174,7 +174,7 @@ private:
 
 CopyProf::CopyProf(Module &M) {
   LLVMContext &Ctx = M.getContext();
-  IRBuilder<> IRB(Ctx);
+  IRBuilder<> IRB(M);
   IntPtrTy = IRB.getIntPtrTy(M.getDataLayout());
   Type *PtrTy = IRB.getPtrTy();
   Type *VoidTy = IRB.getVoidTy();
@@ -254,7 +254,7 @@ void CopyProf::insertCallback(Function &F, size_t ObjSize, unsigned NumArgs,
 
 CopyProfStores::CopyProfStores(Module &M) {
   LLVMContext &Ctx = M.getContext();
-  IRBuilder<> IRB(Ctx);
+  IRBuilder<> IRB(M);
   IntPtrTy = IRB.getIntPtrTy(M.getDataLayout());
   Type *PtrTy = IRB.getPtrTy();
   Type *VoidTy = IRB.getVoidTy();

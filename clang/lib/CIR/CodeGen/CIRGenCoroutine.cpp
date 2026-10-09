@@ -155,8 +155,16 @@ static mlir::LogicalResult
 emitBodyAndFallthrough(CIRGenFunction &cgf, const CoroutineBodyStmt &s,
                        Stmt *body,
                        const CIRGenFunction::LexicalScope *currLexScope) {
-  if (cgf.emitStmt(body, /*useCurrentScope=*/true).failed())
-    return mlir::failure();
+  {
+    // Destroy the body's local variables, and the temporaries they extend, when
+    // the body ends, before the fall-through handler, the implicit
+    // `co_return;`, calls return_void(). The body stays in the current lexical
+    // scope so that a co_return at its top level is recorded in currLexScope.
+    CIRGenFunction::RunCleanupsScope bodyScope(cgf);
+    if (cgf.emitStmt(body, /*useCurrentScope=*/true).failed())
+      return mlir::failure();
+  }
+
   // Note that classic codegen checks CanFallthrough by looking into the
   // availability of the insert block which is kinda brittle and unintuitive,
   // seems to be related with how landing pads are handled.
@@ -248,7 +256,14 @@ cir::CoroFreeOp CIRGenFunction::emitCoroFreeBuiltin(const CallExpr *e) {
 
 cir::CoroSizeOp CIRGenFunction::emitCoroSizeBuiltinCall(const CallExpr *e) {
   mlir::Location loc = getLoc(e->getBeginLoc());
-  return cir::CoroSizeOp::create(cgm.getBuilder(), loc);
+  return cir::CoroSizeOp::create(cgm.getBuilder(), loc,
+                                 convertType(e->getType()));
+}
+
+cir::CoroAlignOp CIRGenFunction::emitCoroAlignBuiltinCall(const CallExpr *e) {
+  mlir::Location loc = getLoc(e->getBeginLoc());
+  return cir::CoroAlignOp::create(cgm.getBuilder(), loc,
+                                  convertType(e->getType()));
 }
 
 cir::CoroPromiseOp
@@ -285,6 +300,16 @@ CIRGenFunction::emitCoroDestroyBuiltinCall(const CallExpr *e) {
 cir::CoroNoopOp CIRGenFunction::emitCoroNoopBuiltinCall(const CallExpr *e) {
   mlir::Location loc = getLoc(e->getBeginLoc());
   return cir::CoroNoopOp::create(cgm.getBuilder(), loc);
+}
+
+cir::CoroSuspendOp
+CIRGenFunction::emitCoroSuspendBuiltinCall(const CallExpr *e) {
+  mlir::Location loc = getLoc(e->getBeginLoc());
+  llvm::SmallVector<mlir::Value, 2> args;
+  args.push_back(cir::TokenNoneOp::create(builder, loc));
+  args.push_back(emitScalarExpr(e->getArg(0)));
+
+  return cir::CoroSuspendOp::create(cgm.getBuilder(), loc, args);
 }
 
 static mlir::LogicalResult
@@ -654,6 +679,31 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
   CIRGenFunction::OpaqueValueMapping binder =
       CIRGenFunction::OpaqueValueMapping(cgf, s.getOpaqueValue());
   CIRGenBuilderTy &builder = cgf.getBuilder();
+
+  // Exception handling requires additional IR. We avoid generating it when
+  // the resume expression is a direct call to a 'noexcept' member function.
+  const bool resumeInTry = coro.exceptionHandler &&
+                           kind == cir::AwaitKind::Init &&
+                           memberCallExpressionCanThrow(s.getResumeExpr());
+
+  // If the await_resume() result needs a destructor, take over its
+  // destruction, unless the destination owns it. The try/catch path destroys
+  // the result itself.
+  const CXXBindTemporaryExpr *resultBind = nullptr;
+  if (!resumeInTry && !aggSlot.isExternallyDestructed())
+    resultBind = dyn_cast<CXXBindTemporaryExpr>(s.getResumeExpr());
+  if (resultBind) {
+    // Emit the result into a slot created outside of the cir.await, so that it
+    // is still available after it.
+    if (aggSlot.isIgnored())
+      aggSlot = cgf.createAggTemp(resultBind->getType(),
+                                  cgf.getLoc(resultBind->getSourceRange()),
+                                  "agg.tmp.ensured");
+    // Don't push the destructor from within the resume region, where its
+    // cir.cleanup.scope would capture the region's terminator.
+    aggSlot.setExternallyDestructed();
+  }
+
   [[maybe_unused]] cir::AwaitOp awaitOp = cir::AwaitOp::create(
       builder, cgf.getLoc(s.getSourceRange()), kind,
       /*readyBuilder=*/
@@ -680,11 +730,7 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
       },
       /*resumeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
-        // Exception handling requires additional IR. If the 'await_resume'
-        // function is marked as 'noexcept', we avoid generating this additional
-        // IR.
-        if (coro.exceptionHandler && kind == cir::AwaitKind::Init &&
-            memberCallExpressionCanThrow(s.getResumeExpr())) {
+        if (resumeInTry) {
           // we are basically just emitting:
           // resumeEh = false;
           // try {
@@ -763,6 +809,14 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
         // Returns control back to parent.
         cir::YieldOp::create(builder, loc);
       });
+
+  // Push the destructor right after the cir.await, where the result starts to
+  // exist, and not around it: destroying the coroutine at the suspend point
+  // would destroy the not yet constructed result. The cleanup runs at the end
+  // of the full-expression.
+  if (resultBind)
+    cgf.emitCXXTemporary(resultBind->getTemporary(), resultBind->getType(),
+                         aggSlot.getAddress());
 
   assert(awaitBuild.succeeded() && "Should know how to codegen");
   return awaitRes;

@@ -432,13 +432,10 @@ added in the future:
     on the hot path and definitely executed a lot. Furthermore `preserve_mostcc`
     doesn't prevent the inliner from inlining the function call.
 
-    This calling convention will be used by a future version of the Objective-C
-    runtime and should therefore still be considered experimental at this time.
-    Although this convention was created to optimize certain runtime calls to
-    the Objective-C runtime, it is not limited to this runtime and might be used
-    by other runtimes in the future too. The current implementation only
-    supports X86-64, but the intention is to support more architectures in the
-    future.
+    This convention was created to optimize certain runtime calls to the
+    Objective-C runtime, but it is not limited to that runtime; it is also used
+    by other runtimes and libraries, such as the Swift runtime and the Linux
+    kernel.
 
 "`preserve_allcc`" - The `PreserveAll` calling convention
 :   This calling convention attempts to make the code in the caller even less
@@ -2349,7 +2346,8 @@ define void @f() "no-sse" { ... }
       accessed by any other means. # is a number between 0 and 1 inclusive.
       Note: The following target_mem locations are implemented in AArch64.
       target_mem0 represents SME ZT0 state, target_mem1 represents SME ZA
-      state.
+      state. In X86, target_mem0 represents the AMX tile registers and tile
+      configuration.
 
     - The default access kind (specified without a location prefix) applies to
       all locations that haven't been specified explicitly, including those that
@@ -7230,6 +7228,57 @@ mandatory, and points at an {ref}`DILexicalBlockFile`, an
 !0 = !DILocation(line: 2900, column: 42, scope: !1, inlinedAt: !2)
 ```
 
+The optional `irlayers:` field points at a {ref}`DILayerLocList`, giving the
+instruction's position in one or more intermediate IRs it was lowered through, in
+addition to its primary source position. It is independent of `inlinedAt:`; a
+location may have either, both, or neither. A location with no intermediate
+position omits the field entirely. The field belongs to the location that
+carries it: locations in an `inlinedAt:` chain may each have their own, and LLVM
+defines no relationship between them.
+
+```text
+!0 = !DILocation(line: 2900, column: 42, scope: !1, irlayers: !3)
+```
+
+(DILayerLoc)=
+
+##### DILayerLoc
+
+`DILayerLoc` nodes represent a source position in one intermediate IR level that
+a program was lowered through — for example an MLIR module produced
+part-way through compilation. The `kind:` field names the level and the `file:`
+field points at a {ref}`DIFile` for it; both are mandatory. `line:` and
+`column:` are the position within that file.
+
+Unlike a {ref}`DILocation`, a `DILayerLoc` has no scope and no inlined-at
+context: it is a bare coordinate in a file, not a location in a scope tree.
+
+```text
+!0 = !DILayerLoc(line: 100, column: 1, file: !1, kind: "HighLevelIR")
+```
+
+(DILayerLocList)=
+
+##### DILayerLocList
+
+`DILayerLocList` nodes hold a non-empty list of {ref}`DILayerLoc` operands, and
+are referenced by a {ref}`DILocation`'s `irlayers:` field. A location with no
+intermediate position omits `irlayers:` rather than referencing an empty list.
+
+The operands are a sequence: order is part of the node's identity, so two lists
+with the same entries in a different order are different nodes. LLVM attaches no
+meaning to the order and does not require any particular arrangement.
+
+Both node types are normally uniqued, so instructions sharing a position at some
+level share the corresponding node. `distinct` forms are legal; nothing in LLVM
+requires a layer node to be shared.
+
+```text
+!0 = !DILayerLocList(!1, !2)
+!1 = !DILayerLoc(line: 100, column: 1, file: !3, kind: "HighLevelIR")
+!2 = !DILayerLoc(line: 7, column: 3, file: !4, kind: "LowLevelIR")
+```
+
 (DILocalVariable)=
 
 ##### DILocalVariable
@@ -7417,9 +7466,11 @@ The `name:` field is mandatory. The `configMacros:`, `includePath:`,
 dynamic length and location encoded as an expression.
 The `tag:` field is optional and defaults to `DW_TAG_string_type`. The `name:`,
 `stringLength:`, `stringLengthExpression`, `stringLocationExpression:`,
-`size:`, `align:`, and `encoding:` fields are optional.
+`size:`, `align:`, `encoding:`, and `charType:` fields are optional.
 
 If not present, the `size:` and `align:` fields default to the value zero.
+
+`charType:` specifies a non-default character type.
 
 The length in bits of the string is specified by the first of the following
 fields present:
@@ -9243,12 +9294,15 @@ allocation. This information is consumed by the `alloc-token` pass to
 instrument such calls with allocation token IDs.
 
 The metadata contains: string with the type of an allocation, and a boolean
-denoting if the type contains a pointer.
+denoting if the type contains a pointer. Optionally, it contains a string with
+the name of the function containing the allocation.
 
 ```
 call ptr @malloc(i64 64), !alloc_token !0
+call ptr @malloc(i64 64), !alloc_token !1
 
 !0 = !{!"<type-name>", i1 <contains-pointer>}
+!1 = !{!"<type-name>", i1 <contains-pointer>, !"<function-name>"}
 ```
 
 #### '`stack-protector`' Metadata
@@ -9458,6 +9512,23 @@ An example of module flags:
    The behavior is to emit an error if the `llvm.module.flags` does not
    contain a flag with the ID `!"foo"` that has the value '1' after linking is
    performed.
+
+### Microsoft Hotpatch Module Flag
+
+The `ms-hotpatch` module flag records whether the module was compiled with
+Microsoft hotpatch support. Its value is an `i32` integer, either 0 or 1. A value
+of 1 requests that the `HotPatch` bit be set in the CodeView `S_COMPILE3` record.
+The flag does not itself make function entries hotpatchable; that is controlled
+by the `"patchable-function"` function attribute.
+
+The flag uses the **Min** merge behavior, so linking modules preserves a value
+of 1 only if every module has the flag set to 1. If any module has a value of 0
+or lacks the flag, the merged value is 0.
+
+```llvm
+!llvm.module.flags = !{!0}
+!0 = !{i32 8, !"ms-hotpatch", i32 1}
+```
 
 ### Synthesized Functions Module Flags Metadata
 
@@ -21445,6 +21516,38 @@ call @llvm.masked.store.v4i32.p0(<4 x i32> %vecA, ptr align 4 %ptrA, <4 x i1> %l
 ; This also results in a mask with the first two lanes active. This is
 ; because if any more lanes were active the load would be dependent on the
 ; completion of the store.
+```
+
+#### '`llvm.mask.beforefirst.*`' Intrinsic
+
+##### Syntax:
+
+This is an overloaded intrinsic.
+
+```llvm
+declare <4 x i1> @llvm.mask.beforefirst.v4i1(<4 x i1> %mask)
+declare <vscale x 8 x i1> @llvm.mask.beforefirst.nxv8i1(<vscale x 8 x i1> %mask)
+```
+
+##### Overview:
+
+Given a vector mask, returns a new mask with all elements before the first active element in the input set to 1, and every element afterwards set to 0.
+
+##### Arguments:
+
+Takes one argument which must be an i1 vector, and returns a vector of the same type.
+
+##### Semantics:
+
+When the input is all zeroes, the result is all ones.
+
+##### Examples:
+
+```llvm
+@llvm.mask.beforefirst(<0,0,1,1>); ==> <1,1,0,0>
+@llvm.mask.beforefirst(<0,0,0,0>); ==> <1,1,1,1>
+@llvm.mask.beforefirst(<0,1,0,1>); ==> <1,0,0,0>
+@llvm.mask.beforefirst(<1,0,0,1>); ==> <0,0,0,0>
 ```
 
 ### Experimental Vector Intrinsics
