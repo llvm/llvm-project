@@ -2044,7 +2044,7 @@ def riscv_mhraccsu : RVSDNode<"MHRACCSU", SDT_RISCVSameTernary>;
 def SDT_RISCVMulHighAccumulateByHalves
     : SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
                            SDTCisSameAs<0, 2>,
-                           SDTCisSameSize<0, 3>]>;
+                           SDTCisSameSizeAs<0, 3>]>;
 def riscv_mhacc_half_0 : RVSDNode<"MHACC_HALF_0", SDT_RISCVMulHighAccumulateByHalves>;
 def riscv_mhacc_half_1 : RVSDNode<"MHACC_HALF_1", SDT_RISCVMulHighAccumulateByHalves>;
 def riscv_mhaccsu_half_0 : RVSDNode<"MHACCSU_HALF_0", SDT_RISCVMulHighAccumulateByHalves>;
