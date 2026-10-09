@@ -139,13 +139,16 @@ static Error parseSignature(Metadata *MD,
           "pixel targets require one row and an index within 0-7");
     if (Interpretation == SemanticInterpretation::SV &&
         E.SemanticKind == dxbc::PSV::SemanticKind::Position &&
-        (E.Rows != 1 || E.Cols != 4 || E.CompType != ElementType::F32))
+        (E.Rows != 1 || E.Cols != 4 ||
+         (E.CompType != ElementType::F16 && E.CompType != ElementType::F32)))
       return signatureError(
-          "SV_Position requires one row of four f32 components");
+          "SV_Position requires one row of four floating-point components");
     if (E.SemanticKind == dxbc::PSV::SemanticKind::VertexID &&
         (E.Rows != 1 || E.Cols != 1 ||
-         (E.CompType != ElementType::I32 && E.CompType != ElementType::U32)))
-      return signatureError("SV_VertexID requires a scalar 32-bit integer");
+         (E.CompType != ElementType::I16 && E.CompType != ElementType::U16 &&
+          E.CompType != ElementType::I32 && E.CompType != ElementType::U32)))
+      return signatureError(
+          "SV_VertexID requires a scalar 16- or 32-bit integer");
 
     if (Stage == Triple::Vertex && IO == IOType::In &&
         (E.StartRow != Extent || E.StartCol != 0))

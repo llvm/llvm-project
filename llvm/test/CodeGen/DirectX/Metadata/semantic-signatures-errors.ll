@@ -31,6 +31,8 @@
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/test.ll 2>&1 | FileCheck %s --check-prefix=ACCESS-TYPE
 ; RUN: cat %t/access-common.ll %t/access-output.ll > %t/test.ll
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/test.ll 2>&1 | FileCheck %s --check-prefix=ACCESS-OUTPUT
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/position-integer.ll 2>&1 | FileCheck %s --check-prefix=POSITION-INTEGER
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/vertex-id-float.ll 2>&1 | FileCheck %s --check-prefix=VERTEX-ID-FLOAT
 
 ;--- triple.ll
 ; TRIPLE: Invalid semantic signature: expected an entry/input/output signature triple
@@ -309,3 +311,27 @@ define void @main() #0 {
   call void @llvm.dx.store.output.f32(i32 1, i32 0, i8 123, float 0.0)
   ret void
 }
+
+;--- position-integer.ll
+; POSITION-INTEGER: entry 'main' output signature: SV_Position requires one row of four floating-point components
+; Invalid component type (operand 2): I16, rather than F16 or F32.
+target triple = "dxil-pc-shadermodel6.8-vertex"
+define void @main() #0 { ret void }
+attributes #0 = { "hlsl.shader"="vertex" }
+!dx.semantic.signatures = !{!0}
+!0 = !{ptr @main, null, !1}
+!1 = !{!2}
+!2 = !{i32 0, !"SV_Position", i32 2, i32 3, !3, i32 0, i32 1, i8 4, i32 0, i8 0, i8 0, i8 0, i32 0}
+!3 = !{i32 0}
+
+;--- vertex-id-float.ll
+; VERTEX-ID-FLOAT: entry 'main' input signature: SV_VertexID requires a scalar 16- or 32-bit integer
+; Invalid component type (operand 2): F16, rather than a 16- or 32-bit integer.
+target triple = "dxil-pc-shadermodel6.8-vertex"
+define void @main() #0 { ret void }
+attributes #0 = { "hlsl.shader"="vertex" }
+!dx.semantic.signatures = !{!0}
+!0 = !{ptr @main, !1, null}
+!1 = !{!2}
+!2 = !{i32 0, !"SV_VertexID", i32 8, i32 1, !3, i32 0, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
+!3 = !{i32 0}
