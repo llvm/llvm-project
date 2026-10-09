@@ -822,22 +822,13 @@ public:
         [this](const key_type& __key, _Args&&... __args2) {
           size_t __hash   = hash_function()(__key);
           size_type __bc  = bucket_count();
-          bool __inserted = false;
-          __next_pointer __nd;
           size_t __chash;
           if (__bc != 0) {
             __chash = std::__constrain_hash(__hash, __bc);
-            __nd    = __bucket_list_[__chash];
-            if (__nd != nullptr) {
-              for (__nd = __nd->__next_;
-                   __nd != nullptr &&
-                   (__nd->__hash() == __hash || std::__constrain_hash(__nd->__hash(), __bc) == __chash);
-                   __nd = __nd->__next_) {
-                if ((__nd->__hash() == __hash) && key_eq()(__nd->__upcast()->__get_value(), __key))
-                  goto __done;
-              }
-            }
+            if (auto __nd = __find_ptr(__key, __hash, __chash))
+              return pair<iterator, bool>(iterator(__nd), false);
           }
+          __next_pointer __nd;
           {
             __node_holder __h = __construct_node_hash(__hash, std::forward<_Args>(__args2)...);
             if (size() + 1 > __bc * max_load_factor()) {
@@ -863,10 +854,8 @@ public:
             __nd = static_cast<__next_pointer>(__h.release());
             // increment size
             ++size();
-            __inserted = true;
           }
-        __done:
-          return pair<iterator, bool>(iterator(__nd), __inserted);
+          return pair<iterator, bool>(iterator(__nd), true);
         },
         [this](_Args&&... __args2) {
           __node_holder __h        = __construct_node(std::forward<_Args>(__args2)...);
@@ -943,9 +932,36 @@ public:
   }
 
   template <class _Key>
-  _LIBCPP_HIDE_FROM_ABI iterator find(const _Key& __x);
+  __next_pointer __find_ptr(const _Key& __key, size_t __key_hash, size_t __chash) const {
+    if (auto __nd = __bucket_list_[__chash]) {
+      auto __bc = bucket_count();
+      for (__nd = __nd->__next_;
+           __nd && (__nd->__hash() == __key_hash || std::__constrain_hash(__nd->__hash(), __bc) == __chash);
+           __nd = __nd->__next_) {
+        if (__nd->__hash() == __key_hash && key_eq()(__nd->__upcast()->__get_value(), __key))
+          return __nd;
+      }
+    }
+    return nullptr;
+  }
+
   template <class _Key>
-  _LIBCPP_HIDE_FROM_ABI const_iterator find(const _Key& __x) const;
+  _LIBCPP_HIDE_FROM_ABI iterator find(const _Key& __key) {
+    if (size() == 0)
+      return end();
+
+    size_t __hash = hash_function()(__key);
+    return iterator(__find_ptr(__key, __hash, std::__constrain_hash(__hash, bucket_count())));
+  }
+
+  template <class _Key>
+  _LIBCPP_HIDE_FROM_ABI const_iterator find(const _Key& __key) const {
+    if (size() == 0)
+      return end();
+
+    size_t __hash = hash_function()(__key);
+    return const_iterator(__find_ptr(__key, __hash, std::__constrain_hash(__hash, bucket_count())));
+  }
 
   typedef __hash_node_destructor<__node_allocator> _Dp;
   typedef unique_ptr<__node, _Dp> __node_holder;
@@ -1465,18 +1481,10 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_unique_prepare(size_t __
   size_type __bc = bucket_count();
 
   if (__bc != 0) {
-    size_t __chash         = std::__constrain_hash(__hash, __bc);
-    __next_pointer __ndptr = __bucket_list_[__chash];
-    if (__ndptr != nullptr) {
-      for (__ndptr = __ndptr->__next_;
-           __ndptr != nullptr &&
-           (__ndptr->__hash() == __hash || std::__constrain_hash(__ndptr->__hash(), __bc) == __chash);
-           __ndptr = __ndptr->__next_) {
-        if ((__ndptr->__hash() == __hash) && key_eq()(__ndptr->__upcast()->__get_value(), __value))
-          return __ndptr;
-      }
-    }
+    if (auto __nd = __find_ptr(__value, __hash, std::__constrain_hash(__hash, __bc)))
+      return __nd;
   }
+
   if (size() + 1 > __bc * max_load_factor() || __bc == 0) {
     __rehash_unique(std::max<size_type>(
         2 * __bc + !std::__is_hash_power2(__bc), size_type(__math::ceil(float(size() + 1) / max_load_factor()))));
@@ -1811,48 +1819,6 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__do_rehash(size_type __bucket_co
       }
     }
   }
-}
-
-template <class _Tp, class _Hash, class _Equal, class _Alloc>
-template <class _Key>
-typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::find(const _Key& __k) {
-  size_type __bc = bucket_count();
-  if (__bc != 0 && size() != 0) {
-    size_t __hash       = hash_function()(__k);
-    size_t __chash      = std::__constrain_hash(__hash, __bc);
-    __next_pointer __nd = __bucket_list_[__chash];
-    if (__nd != nullptr) {
-      for (__nd = __nd->__next_;
-           __nd != nullptr && (__nd->__hash() == __hash || std::__constrain_hash(__nd->__hash(), __bc) == __chash);
-           __nd = __nd->__next_) {
-        if ((__nd->__hash() == __hash) && key_eq()(__nd->__upcast()->__get_value(), __k))
-          return iterator(__nd);
-      }
-    }
-  }
-  return end();
-}
-
-template <class _Tp, class _Hash, class _Equal, class _Alloc>
-template <class _Key>
-typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::const_iterator
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::find(const _Key& __k) const {
-  size_type __bc = bucket_count();
-  if (__bc != 0 && size() != 0) {
-    size_t __hash       = hash_function()(__k);
-    size_t __chash      = std::__constrain_hash(__hash, __bc);
-    __next_pointer __nd = __bucket_list_[__chash];
-    if (__nd != nullptr) {
-      for (__nd = __nd->__next_;
-           __nd != nullptr && (__hash == __nd->__hash() || std::__constrain_hash(__nd->__hash(), __bc) == __chash);
-           __nd = __nd->__next_) {
-        if ((__nd->__hash() == __hash) && key_eq()(__nd->__upcast()->__get_value(), __k))
-          return const_iterator(__nd);
-      }
-    }
-  }
-  return end();
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
