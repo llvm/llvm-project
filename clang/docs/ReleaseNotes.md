@@ -608,6 +608,10 @@ features cannot lower the translation-unit ABI level;
  
 - Clang now diagnoses arrays whose size is deduced from an initializer list when they exceed the maximum object size
 
+- Added `-Wunsafe-buffer-usage-main-argv` as a diagnostic group under
+  `-Wunsafe-buffer-usage` to control warnings on `main`'s `argv` parameter,
+  allowing users to suppress them with `-Wno-unsafe-buffer-usage-main-argv`.
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -655,6 +659,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed assertion failures caused by stale linkage information when an extern variable or function declaration is merged with a preceding static declaration. (#GH204759, #GH204754)
 - Fixed a crash due to typo correction mishandling custom keywords `_virtual_inheritance` and `_multiple_inheritance` in `-fms-compatibility` mode. (#GH228003)
 - Clang no longer treats a file-scope `thread_local` declaration without an initializer as a tentative definition in C23 mode. As specified by C23 6.9.3, such a declaration is a definition, so declaring the same variable more that once is now diagnosed as a redefinition. (#GH217636)
+- Fixed an assertion failure on use of an uninitialized token in dependency directives lexing in clang-scan-deps.
 
 #### Bug Fixes to Compiler Builtins
 
@@ -776,6 +781,10 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash on invalid code where a ``decltype`` not followed by ``(`` was
   parsed where a nested-name-specifier could appear (e.g. ``int decltype = 0;``).
   Clang now diagnoses the error instead of asserting. (#GH211207)
+
+- Fixed a spurious unused function warning when using `operator<=>` within an anonymous namespace. (#GH125233)
+
+- Fixed a regression where the rewritten comparison operator was not instantiated properly. (#GH104720)
 
 - Fixed an assertion failure when a parenthesized structured binding declarator
   was followed by a function declarator and body (e.g. ``([a, b])() {}``).
@@ -905,6 +914,10 @@ features cannot lower the translation-unit ABI level;
   the initializer of another specialization of the same variable template.
   (#GH134148)
 
+- Fixed an assertion failure in partial ordering of function templates whose
+  parameters use pack-indexed template template parameters (`TT...[N]<int>`)
+  with different template parameter lists. (#GH228870)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -990,6 +1003,9 @@ features cannot lower the translation-unit ABI level;
 
   - C2-Pro (`c2-pro`).
   - C2-Ultra (`c2-ultra`).
+
+- Assembler/disassembler support has been added for Armv9.8-A (2026)
+  architecture extensions.
 
 - Added support for pointer authentication discrimination of C++ virtual table
   pointers stored in VTTs via the `-fptrauth-vtt-vtable-pointer-discrimination`

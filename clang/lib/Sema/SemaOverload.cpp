@@ -15888,6 +15888,10 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         if (FnExpr.isInvalid())
           return ExprError();
 
+        if (auto *Pattern = FnDecl->getInstantiatedFromMemberFunction();
+            Pattern && Pattern->getOverloadedOperator() == OO_Spaceship)
+          Pattern->setIsUsed();
+
         // Determine the result type.
         QualType ResultTy = FnDecl->getReturnType();
         ExprValueKind VK = Expr::getValueKindForType(ResultTy);

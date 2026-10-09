@@ -89,14 +89,6 @@ void AMDGPUPALMetadata::readFromIR(Module &M) {
   }
 }
 
-// Set PAL metadata from legacy (array of key=value pairs) blob.
-bool AMDGPUPALMetadata::setFromLegacyBlob(StringRef Blob) {
-  const auto *Data = reinterpret_cast<const uint32_t *>(Blob.data());
-  for (unsigned I = 0; I != Blob.size() / sizeof(uint32_t) / 2; ++I)
-    setRegister(Data[I * 2], Data[I * 2 + 1]);
-  return true;
-}
-
 // Set PAL metadata from msgpack blob.
 bool AMDGPUPALMetadata::setFromMsgPackBlob(StringRef Blob) {
   return MsgPackDoc.readFromBlob(Blob, /*Multi=*/false);
