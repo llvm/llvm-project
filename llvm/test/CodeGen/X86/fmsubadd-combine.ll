@@ -667,3 +667,26 @@ entry:
   %subadd = shufflevector <2 x double> %Add, <2 x double> %Sub, <2 x i32> <i32 0, i32 3>
   ret <2 x double> %subadd
 }
+
+; A chain of two multiply-sub/adds: both levels could become FMSUBADD.
+define <4 x double> @mul_subadd_chain_pd256(<4 x double> %A, <4 x double> %B, <4 x double> %C, <4 x double> %D, <4 x double> %E) {
+; CHECK-LABEL: mul_subadd_chain_pd256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmulpd %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vsubpd %ymm4, %ymm0, %ymm1
+; CHECK-NEXT:    vaddpd %ymm4, %ymm0, %ymm0
+; CHECK-NEXT:    vmulpd %ymm3, %ymm2, %ymm2
+; CHECK-NEXT:    vsubpd %ymm1, %ymm2, %ymm1
+; CHECK-NEXT:    vaddpd %ymm0, %ymm2, %ymm0
+; CHECK-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3]
+; CHECK-NEXT:    retq
+  %AB = fmul contract <4 x double> %A, %B
+  %Sub0 = fsub contract <4 x double> %AB, %E
+  %Add0 = fadd contract <4 x double> %AB, %E
+  %Inner = shufflevector <4 x double> %Add0, <4 x double> %Sub0, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+  %CD = fmul contract <4 x double> %C, %D
+  %Sub1 = fsub contract <4 x double> %CD, %Inner
+  %Add1 = fadd contract <4 x double> %CD, %Inner
+  %Outer = shufflevector <4 x double> %Add1, <4 x double> %Sub1, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+  ret <4 x double> %Outer
+}
