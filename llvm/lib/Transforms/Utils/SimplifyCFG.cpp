@@ -7703,7 +7703,7 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
     return false;
 
   // Compute the table index value.
-  Value *TableIndex;
+  Value *TableIndex = nullptr;
   if (UseSwitchConditionAsTableIndex) {
     TableIndex = SI->getCondition();
     if (HasDefaultResults) {
