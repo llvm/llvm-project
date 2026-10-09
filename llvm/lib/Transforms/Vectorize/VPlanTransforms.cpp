@@ -404,8 +404,8 @@ static bool sinkScalarOperands(VPlan &Plan) {
       }
 
       Clone->insertBefore(SinkCandidate);
-      SinkCandidate->replaceUsesWithIf(Clone, [SinkTo](VPUser &U) {
-        return cast<VPRecipeBase>(&U)->getParent() != SinkTo;
+      SinkCandidate->replaceUsesWithIf(Clone, [SinkTo](VPUser *U) {
+        return cast<VPRecipeBase>(U)->getParent() != SinkTo;
       });
     }
     SinkCandidate->moveBefore(*SinkTo, SinkTo->getFirstNonPhi());
@@ -518,8 +518,8 @@ static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
       VPValue *PredInst1 =
           cast<VPPredInstPHIRecipe>(&Phi1ToMove)->getOperand(0);
       VPValue *Phi1ToMoveV = Phi1ToMove.getVPSingleValue();
-      Phi1ToMoveV->replaceUsesWithIf(PredInst1, [Then2](VPUser &U) {
-        return cast<VPRecipeBase>(&U)->getParent() == Then2;
+      Phi1ToMoveV->replaceUsesWithIf(PredInst1, [Then2](VPUser *U) {
+        return cast<VPRecipeBase>(U)->getParent() == Then2;
       });
 
       // Remove phi recipes that are unused after merging the regions.
@@ -860,10 +860,10 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       WideIV->replaceAllUsesWith(Steps);
     } else {
       bool HasScalableVF = Plan.hasScalableVF();
-      WideIV->replaceUsesWithIf(Steps, [WideIV, HasScalableVF](VPUser &U) {
+      WideIV->replaceUsesWithIf(Steps, [WideIV, HasScalableVF](VPUser *U) {
         if (HasScalableVF)
-          return U.usesFirstLaneOnly(WideIV);
-        return U.usesScalars(WideIV);
+          return U->usesFirstLaneOnly(WideIV);
+        return U->usesScalars(WideIV);
       });
     }
   }
@@ -1668,8 +1668,8 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def,
   // Replace uses of a BuildVector by users that only use its first lane with
   // its first operand directly.
   if (match(Def, m_BuildVector())) {
-    Def->replaceUsesWithIf(Def->getOperand(0), [Def](VPUser &U) {
-      return U.usesFirstLaneOnly(Def);
+    Def->replaceUsesWithIf(Def->getOperand(0), [Def](VPUser *U) {
+      return U->usesFirstLaneOnly(Def);
     });
     return Def;
   }
@@ -1686,7 +1686,7 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def,
 
   if (match(Def, m_Broadcast(m_VPValue(X)))) {
     Def->replaceUsesWithIf(
-        X, [Def](const VPUser &U) { return U.usesScalars(Def); });
+        X, [Def](const VPUser *U) { return U->usesScalars(Def); });
     return Def;
   }
 
@@ -1731,8 +1731,8 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def,
   VPValue *StartV;
   if (match(Def, m_VPInstruction<VPInstruction::ReductionStartVector>(
                      m_VPValue(StartV), m_VPValue(), m_VPValue()))) {
-    Def->replaceUsesWithIf(StartV, [](const VPUser &U) {
-      auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&U);
+    Def->replaceUsesWithIf(StartV, [](const VPUser *U) {
+      auto *PhiR = dyn_cast<VPReductionPHIRecipe>(U);
       return PhiR && PhiR->isInLoop();
     });
     return Def;
@@ -2770,8 +2770,8 @@ void VPlanTransforms::replaceSymbolicStrides(
   assert(!Plan.getVectorLoopRegion() &&
          "expected to run before loop regions are created");
   const auto &[Header, _] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
-  auto CanUseVersionedStride = [&VPDT, Header = Header, &Plan](VPUser &U) {
-    auto *R = cast<VPRecipeBase>(&U);
+  auto CanUseVersionedStride = [&VPDT, Header = Header, &Plan](VPUser *U) {
+    auto *R = cast<VPRecipeBase>(U);
     // Skip phis if the loop if loop is not yet guarded.
     if (isa<VPPhiAccessors>(R) &&
         Header == Plan.getEntry()->getSingleSuccessor())
@@ -5590,8 +5590,7 @@ static void updatePartialReductionPhiAndResult(VPlan &Plan,
   VPInstruction *NewResult = Builder.createNaryOp(
       SubOpc, {OldStartValue, RdxResult}, VPIRFlags::getDefaultFlags(SubOpc),
       Phi->getDebugLoc());
-  RdxResult->replaceUsesWithIf(
-      NewResult, [&NewResult](VPUser &U) { return &U != NewResult; });
+  RdxResult->replaceUsesWithIf(NewResult, not_equal_to(NewResult));
 }
 
 void VPlanTransforms::createPartialReductions(VPlan &Plan,

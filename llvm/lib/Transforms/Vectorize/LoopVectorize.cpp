@@ -7423,9 +7423,8 @@ static void preparePlanForEpilogueVectorLoop(
   // version, except for the Add itself and the canonical IV increment.
   auto *Increment = vputils::findCanonicalIVIncrement(Plan);
   assert(Increment && "Must have a canonical IV increment at this point");
-  IV->replaceUsesWithIf(Add, [Add, Increment](VPUser &U) {
-    return &U != Add && &U != Increment;
-  });
+  IV->replaceUsesWithIf(
+      Add, [Add, Increment](VPUser *U) { return U != Add && U != Increment; });
   VPInstruction *OffsetIVInc =
       VPBuilder::getToInsertAfter(Increment).createAdd(Increment, VPV);
   Increment->replaceAllUsesWith(OffsetIVInc);

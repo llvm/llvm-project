@@ -934,8 +934,7 @@ static bool tryToSinkOrHoistRecurrenceUsers(VPBasicBlock *HeaderVPBB,
     auto *RecurSplice =
         LoopBuilder.createNaryOp(VPInstruction::FirstOrderRecurrenceSplice,
                                  {FOR, FOR->getBackedgeValue()});
-    FOR->replaceUsesWithIf(
-        RecurSplice, [RecurSplice](VPUser &U) { return &U != RecurSplice; });
+    FOR->replaceUsesWithIf(RecurSplice, not_equal_to(RecurSplice));
   }
 
   return true;
@@ -2440,6 +2439,6 @@ void VPlanTransforms::attachAliasMaskToHeaderMask(VPlan &Plan) {
 
   // Update all existing users of the header mask to "HeaderMask & AliasMask".
   auto *ClampedHeaderMask = Builder.createAnd(HeaderMask, AliasMask);
-  HeaderMask->replaceUsesWithIf(
-      ClampedHeaderMask, [&](VPUser &U) { return &U != ClampedHeaderMask; });
+  HeaderMask->replaceUsesWithIf(ClampedHeaderMask,
+                                not_equal_to(ClampedHeaderMask));
 }
