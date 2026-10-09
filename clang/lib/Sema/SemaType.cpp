@@ -6638,23 +6638,6 @@ static void HandleBTFTypeTagAttribute(QualType &Type, const ParsedAttr &Attr,
                                       TypeProcessingState &State) {
   Sema &S = State.getSema();
 
-  // This attribute is only supported in C.
-  // FIXME: we should implement checkCommonAttributeFeatures() in SemaAttr.cpp
-  // such that it handles type attributes, and then call that from
-  // processTypeAttrs() instead of one-off checks like this.
-  if (!Attr.diagnoseLangOpts(S)) {
-    Attr.setInvalid();
-    return;
-  }
-
-  // Check the number of attribute arguments.
-  if (Attr.getNumArgs() != 1) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
-        << Attr << 1;
-    Attr.setInvalid();
-    return;
-  }
-
   // Ensure the argument is a string.
   auto *StrLiteral = dyn_cast<StringLiteral>(Attr.getArgAsExpr(0));
   if (!StrLiteral) {
@@ -8562,13 +8545,6 @@ static void HandleVectorSizeAttr(QualType &CurType, const ParsedAttr &Attr,
 /// a type.
 static void HandleExtVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
                                     Sema &S) {
-  // check the attribute arguments.
-  if (Attr.getNumArgs() != 1) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments) << Attr
-                                                                      << 1;
-    return;
-  }
-
   Expr *SizeExpr = Attr.getArgAsExpr(0);
   QualType T = S.BuildExtVectorType(CurType, SizeExpr, Attr.getLoc());
   if (!T.isNull())
@@ -8670,13 +8646,6 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
     return;
   }
 
-  // Check the attribute arguments.
-  if (Attr.getNumArgs() != 1) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
-        << Attr << 1;
-    Attr.setInvalid();
-    return;
-  }
   // The number of elements must be an ICE.
   llvm::APSInt numEltsInt(32);
   if (!verifyValidIntegerConstantExpr(S, Attr, numEltsInt))
@@ -8783,14 +8752,6 @@ static void HandleArmSveVectorBitsTypeAttr(QualType &CurType, ParsedAttr &Attr,
     return;
   }
 
-  // Check the attribute arguments.
-  if (Attr.getNumArgs() != 1) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
-        << Attr << 1;
-    Attr.setInvalid();
-    return;
-  }
-
   // The vector size must be an integer constant expression.
   llvm::APSInt SveVectorSizeInBits(32);
   if (!verifyValidIntegerConstantExpr(S, Attr, SveVectorSizeInBits))
@@ -8863,14 +8824,6 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
   if (!VScale || !VScale->first || VScale->first != VScale->second) {
     S.Diag(Attr.getLoc(), diag::err_attribute_riscv_rvv_bits_unsupported)
         << Attr;
-    Attr.setInvalid();
-    return;
-  }
-
-  // Check the attribute arguments.
-  if (Attr.getNumArgs() != 1) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
-        << Attr << 1;
     Attr.setInvalid();
     return;
   }
@@ -8993,12 +8946,6 @@ static void HandleMatrixTypeAttr(QualType &CurType, const ParsedAttr &Attr,
                                  Sema &S) {
   if (!S.getLangOpts().MatrixTypes) {
     S.Diag(Attr.getLoc(), diag::err_builtin_matrix_disabled);
-    return;
-  }
-
-  if (Attr.getNumArgs() != 2) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
-        << Attr << 2;
     return;
   }
 
@@ -9125,6 +9072,12 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
         //   that can be applied to the declaration name).
         continue;
       }
+    }
+
+    if (attr.isTypeAttr() &&
+        state.getSema().checkCommonAttributeFeatures(type, attr)) {
+      attr.setInvalid();
+      continue;
     }
 
     // If this is an attribute we can handle, do so now,
