@@ -131,6 +131,7 @@ private:
   bool SelectSETP_BF16X2(SDNode *N);
   bool tryUNPACK_VECTOR(SDNode *N);
   bool tryEXTRACT_VECTOR_ELEMENT(SDNode *N);
+  void PostprocessISelDAG() override;
   void SelectV2I64toI128(SDNode *N);
   void SelectI128toV2I64(SDNode *N);
   void SelectCpAsyncBulkTensorReduceCommon(SDNode *N, unsigned RedOp,
@@ -627,6 +628,62 @@ bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
 
   return true;
 }
+
+// Merge scalar truncations and individual vector extracts after selection, when
+// bitcasts no longer hide that they extract the same 16-bit halves.
+static void mergeI16Unpacks(SelectionDAG &DAG) {
+  struct HalfExtracts {
+    SmallVector<SDValue, 2> Low, High;
+  };
+  SmallMapVector<SDValue, HalfExtracts, 8> Extracts;
+  for (SDNode &N : DAG.allnodes()) {
+    if (!N.isMachineOpcode() || N.use_empty())
+      continue;
+    bool IsHigh = false;
+    switch (N.getMachineOpcode()) {
+    default:
+      continue;
+    case NVPTX::CVT_u16_u32:
+      if (N.getConstantOperandVal(1) != NVPTX::PTXCvtMode::NONE)
+        continue;
+      break;
+    case NVPTX::I32toI16L:
+    case NVPTX::I32toI16L_Sink:
+      break;
+    case NVPTX::I32toI16H:
+    case NVPTX::I32toI16H_Sink:
+      IsHigh = true;
+      break;
+    }
+    auto &Halves = Extracts[N.getOperand(0)];
+    (IsHigh ? Halves.High : Halves.Low).push_back(SDValue(&N, 0));
+  }
+
+  SmallVector<SDValue, 8> From, To;
+  for (auto &[Word, Halves] : Extracts) {
+    if (Halves.Low.empty() || Halves.High.empty())
+      continue;
+    SDNode *Scatter = DAG.getMachineNode(
+        NVPTX::I32toV2I16, SDLoc(Halves.Low.front()), MVT::i16, MVT::i16, Word);
+    // All these selected instructions use B16 registers, including extracts
+    // whose DAG result types are f16 or bf16.
+    for (SDValue V : Halves.Low) {
+      From.push_back(V);
+      To.push_back(SDValue(Scatter, 0));
+    }
+    for (SDValue V : Halves.High) {
+      From.push_back(V);
+      To.push_back(SDValue(Scatter, 1));
+    }
+  }
+  if (!From.empty()) {
+    // Replace together so that recursive CSE cannot invalidate pending nodes.
+    DAG.ReplaceAllUsesOfValuesWith(From.data(), To.data(), From.size());
+    DAG.RemoveDeadNodes();
+  }
+}
+
+void NVPTXDAGToDAGISel::PostprocessISelDAG() { mergeI16Unpacks(*CurDAG); }
 
 NVPTX::AddressSpace NVPTXDAGToDAGISel::getAddrSpace(const MemSDNode *N) {
   auto AS =
