@@ -10,10 +10,10 @@ define void @induction_trunc_free(ptr %dst) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 1, [[INDEX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP0]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP1]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[TMP1]]
 ; CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP4]], align 4
