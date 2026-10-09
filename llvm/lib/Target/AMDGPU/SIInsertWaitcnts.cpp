@@ -2723,7 +2723,7 @@ bool SIInsertWaitcnts::insertForcedWaitAfter(MachineInstr &Inst,
 
   ScoreBrackets.simplifyWaitcnt(Wait);
 
-  auto SuccessorIt = std::next(Inst.getIterator());
+  auto SuccessorIt = next_nodbg(Inst.getIterator(), Block.instr_end());
   bool Result = generateWaitcnt(Wait, SuccessorIt, Block, ScoreBrackets,
                                 /*OldWaitcntInstr=*/nullptr);
 
