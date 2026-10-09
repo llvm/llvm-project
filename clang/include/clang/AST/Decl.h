@@ -2026,6 +2026,17 @@ enum class CXXSpecialMemberKind {
   Invalid
 };
 
+/// Kinds of defaulted postfix increment and decrement operator functions
+/// (C++2d [over.inc.default]).
+enum class PostfixOperatorKind : unsigned char {
+  /// This is not a defaultable postfix increment or decrement operator.
+  None,
+  /// This is a postfix increment operator, 'operator++(int)'.
+  Increment,
+  /// This is a postfix decrement operator, 'operator--(int)'.
+  Decrement,
+};
+
 /// Kinds of defaulted comparison operator functions.
 enum class DefaultedComparisonKind : unsigned char {
   /// This is not a defaultable comparison operator.
@@ -2122,19 +2133,27 @@ public:
   /// For a defaulted function, the kind of defaulted function that it is.
   class DefaultedFunctionKind {
     LLVM_PREFERRED_TYPE(CXXSpecialMemberKind)
-    unsigned SpecialMember : 8;
-    unsigned Comparison : 8;
+    unsigned SpecialMember : 3;
+    LLVM_PREFERRED_TYPE(DefaultedComparisonKind)
+    unsigned Comparison : 3;
+    LLVM_PREFERRED_TYPE(PostfixOperatorKind)
+    unsigned PostfixOperator : 2;
 
   public:
     DefaultedFunctionKind()
         : SpecialMember(llvm::to_underlying(CXXSpecialMemberKind::Invalid)),
-          Comparison(llvm::to_underlying(DefaultedComparisonKind::None)) {}
-    DefaultedFunctionKind(CXXSpecialMemberKind CSM)
-        : SpecialMember(llvm::to_underlying(CSM)),
-          Comparison(llvm::to_underlying(DefaultedComparisonKind::None)) {}
+          Comparison(llvm::to_underlying(DefaultedComparisonKind::None)),
+          PostfixOperator(llvm::to_underlying(PostfixOperatorKind::None)) {}
+    DefaultedFunctionKind(CXXSpecialMemberKind CSM) : DefaultedFunctionKind() {
+      SpecialMember = llvm::to_underlying(CSM);
+    }
     DefaultedFunctionKind(DefaultedComparisonKind Comp)
-        : SpecialMember(llvm::to_underlying(CXXSpecialMemberKind::Invalid)),
-          Comparison(llvm::to_underlying(Comp)) {}
+        : DefaultedFunctionKind() {
+      Comparison = llvm::to_underlying(Comp);
+    }
+    DefaultedFunctionKind(PostfixOperatorKind PO) : DefaultedFunctionKind() {
+      PostfixOperator = llvm::to_underlying(PO);
+    }
 
     bool isSpecialMember() const {
       return static_cast<CXXSpecialMemberKind>(SpecialMember) !=
@@ -2144,9 +2163,13 @@ public:
       return static_cast<DefaultedComparisonKind>(Comparison) !=
              DefaultedComparisonKind::None;
     }
+    bool isPostfixOperator() const {
+      return static_cast<PostfixOperatorKind>(PostfixOperator) !=
+             PostfixOperatorKind::None;
+    }
 
     explicit operator bool() const {
-      return isSpecialMember() || isComparison();
+      return isSpecialMember() || isComparison() || isPostfixOperator();
     }
 
     CXXSpecialMemberKind asSpecialMember() const {
@@ -2154,6 +2177,9 @@ public:
     }
     DefaultedComparisonKind asComparison() const {
       return static_cast<DefaultedComparisonKind>(Comparison);
+    }
+    PostfixOperatorKind asPostfixOperator() const {
+      return static_cast<PostfixOperatorKind>(PostfixOperator);
     }
 
     /// Get the index of this function kind for use in diagnostics.
@@ -2163,7 +2189,9 @@ public:
                     "invalid should have highest index");
       static_assert((unsigned)DefaultedComparisonKind::None == 0,
                     "none should be equal to zero");
-      return SpecialMember + Comparison;
+      static_assert((unsigned)PostfixOperatorKind::None == 0,
+                    "none should be equal to zero");
+      return SpecialMember + Comparison + PostfixOperator;
     }
   };
 

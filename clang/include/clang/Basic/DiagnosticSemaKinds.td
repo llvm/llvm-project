@@ -106,6 +106,8 @@ defm placeholder_var_definition : CXX26Compat<"placeholder variables are">;
 
 // C++29 compatibility with C++26 and earlier.
 defm pack_indexing_template : CXX29Compat<"pack indexing for template names is">;
+defm defaulted_postfix_operator : CXX29Compat<
+  "defaulted postfix increment and decrement operators are">;
 
 // Compatibility warnings duplicated across multiple language versions.
 foreach std = [14, 20, 23] in {
@@ -10586,8 +10588,9 @@ def note_vbase_moved_here : Note<
 def select_defaulted_comparison_kind : TextSubstitution<
   "%select{<ERROR>|equality|three-way|equality|relational}0 comparison "
   "operator">;
-def err_defaulted_comparison_template : Error<
-  "comparison operator template cannot be defaulted">;
+def err_defaulted_operator_template : Error<
+  "%select{comparison operator|%sub{select_defaulted_postfix_operator_kind}1}0 "
+  "template cannot be defaulted">;
 def err_defaulted_comparison_num_args : Error<
   "%select{non-member|member}0 %sub{select_defaulted_comparison_kind}1"
   " must have %select{2|1}0 parameters">;
@@ -10685,6 +10688,75 @@ def err_volatile_comparison_operator : Error<
   "defaulted comparison function must not be volatile">;
 def err_ref_qualifier_comparison_operator : Error<
   "ref-qualifier '&&' is not allowed on a defaulted comparison operator">;
+
+// C++2d defaulted postfix increment and decrement operators
+// This corresponds to values of PostfixOperatorKind.
+def select_defaulted_postfix_operator_kind : TextSubstitution<
+  "postfix %select{<ERROR>|increment|decrement}0 operator">;
+def err_defaulted_prefix_operator : Error<
+  "only the postfix form of 'operator%select{++|--}0' can be defaulted">;
+def err_defaulted_postfix_operator_const : Error<
+  "defaulted member %sub{select_defaulted_postfix_operator_kind}0 cannot be "
+  "const-qualified">;
+def err_defaulted_postfix_operator_param : Error<
+  "invalid %select{explicit object|first}1 parameter type for defaulted "
+  "%sub{select_defaulted_postfix_operator_kind}0; found %2, expected %3 "
+  "or %4">;
+def err_defaulted_postfix_operator_param_unknown : Error<
+  "invalid first parameter type for defaulted non-member "
+  "%sub{select_defaulted_postfix_operator_kind}0; found %1, expected "
+  "reference to a non-const class or enumeration type">;
+def err_defaulted_postfix_operator_return_type : Error<
+  "return type for defaulted %sub{select_defaulted_postfix_operator_kind}0 "
+  "must be %1, not %2">;
+def err_defaulted_postfix_operator_deduced_return_type : Error<
+  "defaulted %sub{select_defaulted_postfix_operator_kind}0 cannot have a "
+  "deduced return type">;
+def err_defaulted_postfix_operator_incomplete : Error<
+  "cannot default %sub{select_defaulted_postfix_operator_kind}0 for "
+  "incomplete type %1">;
+def err_non_first_default_postfix_operator_deletes : Error<
+  "defaulting this %sub{select_defaulted_postfix_operator_kind}0 "
+  "would delete it after its first declaration">;
+def err_non_first_default_postfix_operator_in_class : Error<
+  "defaulting this %sub{select_defaulted_postfix_operator_kind}0 "
+  "is not allowed because it was already declared outside the class">;
+def warn_defaulted_postfix_operator_deleted : Warning<
+  "explicitly defaulted %sub{select_defaulted_postfix_operator_kind}0 is "
+  "implicitly deleted">, InGroup<DefaultedFunctionDeleted>;
+def note_defaulted_postfix_operator_no_viable : Note<
+  "defaulted %0 is implicitly deleted because there is no viable "
+  "%select{constructor to copy|prefix 'operator++' for|prefix 'operator--' "
+  "for}1 an lvalue of type %2">;
+def note_defaulted_postfix_operator_ambiguous : Note<
+  "defaulted %0 is implicitly deleted because %select{copy construction of|"
+  "prefix 'operator++' for|prefix 'operator--' for}1 an lvalue of type %2 "
+  "is ambiguous">;
+// The %select indices of the operations in the following notes are given by
+// diag::DefaultedPostfixOperatorStep.
+def note_defaulted_postfix_operator_calls_deleted : Note<
+  "defaulted %0 is implicitly deleted because it would invoke a deleted "
+  "%select{constructor|destructor|prefix 'operator++'|prefix 'operator--'}1">;
+def note_defaulted_postfix_operator_inaccessible : Note<
+  "defaulted %0 is implicitly deleted because it would invoke a "
+  "%select{private|protected}2 %select{constructor|destructor|"
+  "prefix 'operator++'|prefix 'operator--'}1 of %5">;
+def err_defaulted_postfix_operator_constexpr_mismatch : Error<
+  "defaulted definition of %sub{select_defaulted_postfix_operator_kind}0 "
+  "cannot be declared %select{constexpr|consteval}1 because it invokes a "
+  "non-constexpr function">;
+def note_defaulted_postfix_operator_not_constexpr_here : Note<
+  "non-constexpr %enum_select<DefaultedPostfixOperatorStep>{"
+  "%Constructor{constructor}|%Destructor{destructor}|"
+  "%PrefixIncrement{prefix 'operator++'}|%PrefixDecrement{prefix 'operator--'}|"
+  "%ConversionFunction{conversion function}}0 declared here">;
+def err_ovl_deleted_postfix_operator : Error<
+  "object of type %0 cannot be %select{<ERROR>|incremented|decremented}1 "
+  "because its defaulted %sub{select_defaulted_postfix_operator_kind}1 is "
+  "implicitly deleted">;
+def note_postfix_operator_synthesized_at : Note<
+  "in defaulted %sub{select_defaulted_postfix_operator_kind}0 for %1 "
+  "first required here">;
 
 def ext_implicit_exception_spec_mismatch : ExtWarn<
   "function previously declared with an %select{explicit|implicit}0 exception "

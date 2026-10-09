@@ -1784,6 +1784,7 @@ More information can be found [here](Modules.md).
 | Trivial Relocatability                        | \_\_cpp_trivial_relocatability     | C++26         | C++03         |
 |``auto()`` cast                                | \_\_cpp_auto_cast                  | C++26         | C++03         |
 | Pack Indexing for Template Names              | \_\_cpp_pack_indexing >= 202606L   | C++2d         | C++03         |
+| Defaulted postfix `++` and `--` operators     |                                    | C++2d         | C++03         |
 | Designated initializers (N494)                |                                    | C99           | C89           |
 | `_Complex` (N693)                             |                                    | C99           | C89, C++      |
 | `_Bool` (N815)                                |                                    | C99           | C89           |

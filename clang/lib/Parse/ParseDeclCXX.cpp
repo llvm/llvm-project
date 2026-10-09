@@ -3378,7 +3378,11 @@ ExprResult Parser::ParseCXXMemberInitializer(Decl *D, bool IsFunction,
             << 0 /* default */;
       else
         Diag(ConsumeToken(), diag::err_default_special_members)
-            << getLangOpts().CPlusPlus20;
+            << (getLangOpts().CPlusPlus29
+                    ? diag::DefaultableFunctionKinds::PostfixOperators
+                : getLangOpts().CPlusPlus20
+                    ? diag::DefaultableFunctionKinds::Comparisons
+                    : diag::DefaultableFunctionKinds::SpecialMembers);
       return ExprError();
     }
   }

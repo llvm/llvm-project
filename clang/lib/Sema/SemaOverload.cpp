@@ -15541,6 +15541,19 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
     return ExprError();
 
   case OR_Deleted: {
+    // A defaulted postfix increment or decrement operator that was implicitly
+    // defined as deleted. Explain why it was deleted.
+    if (FunctionDecl *DeletedFD = Best->Function;
+        DeletedFD->isDefaulted() &&
+        DeletedFD->getDefaultedFunctionKind().isPostfixOperator()) {
+      Diag(OpLoc, diag::err_ovl_deleted_postfix_operator)
+          << Input->getType()
+          << (int)DeletedFD->getDefaultedFunctionKind().asPostfixOperator()
+          << Input->getSourceRange();
+      NoteDeletedFunction(DeletedFD);
+      return ExprError();
+    }
+
     // CreateOverloadedUnaryOp fills the first element of ArgsArray with the
     // object whose method was called. Later in NoteCandidates size of ArgsArray
     // is passed further and it eventually ends up compared to number of
