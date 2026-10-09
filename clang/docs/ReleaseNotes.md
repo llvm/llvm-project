@@ -850,6 +850,13 @@ features cannot lower the translation-unit ABI level;
 
 #### Miscellaneous Clang Crashes Fixed
 
+- Fixed crashes when nested `_Pragma` or Microsoft `__pragma` expressions
+  introduce annotation tokens into pragma arguments. Invalid arguments are now
+  diagnosed without crashing.
+  Improved error recovery for nested pragmas, including those that start in a
+  macro expansion and end outside it, preventing premature termination of the
+  enclosing pragma and spurious errors in subsequent code.
+  Also fixed a separate crash in `__pragma(mark ...)`. (#GH225035)
 - Fixed a crash in CTAD for type alias templates when the aggregate deduction guide could not be resolved. (#GH206994)
 - Fixed a crash when instantiating an invalid dependent friend destructor declaration in a class template. (#GH210234)
 - Fixed an assertion failure in `-extract-api` when a documentation comment

@@ -35,6 +35,7 @@
 #include "clang/Lex/TokenLexer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
@@ -108,10 +109,11 @@ void PragmaNamespace::HandlePragma(Preprocessor &PP,
   PP.LexUnexpandedToken(Tok);
 
   // Get the handler for this token.  If there is no handler, ignore the pragma.
-  PragmaHandler *Handler
-    = FindHandler(Tok.getIdentifierInfo() ? Tok.getIdentifierInfo()->getName()
-                                          : StringRef(),
-                  /*IgnoreNull=*/false);
+  PragmaHandler *Handler = FindHandler(
+      Tok.is(tok::identifier) || tok::getKeywordSpelling(Tok.getKind())
+          ? Tok.getIdentifierInfo()->getName()
+          : StringRef(),
+      /*IgnoreNull=*/false);
   if (!Handler) {
     PP.Diag(Tok, diag::warn_pragma_ignored);
     return;
@@ -169,6 +171,21 @@ void Preprocessor::HandlePragmaDirective(PragmaIntroducer Introducer) {
     return;
 
   ++NumPragma;
+
+  // Record this pragma's lexer stack depth so Lex() can distinguish its eod
+  // from an eod left by a nested pragma. For example:
+  //
+  //   #pragma vtordisp(_Pragma("clang __debug dump x"))
+  //   int after;
+  //
+  // The inner __debug dump leaves its arguments and eod for the parser:
+  //
+  //   annot_pragma_dump x <inner eod> ) <outer eod>
+  //
+  // Lex() must skip the inner eod so the outer handler's error recovery also
+  // consumes the trailing ')' and leaves the following declaration intact.
+  PragmaLexerStackDepths.push_back(IncludeMacroStack.size());
+  llvm::scope_exit PragmaScope([this] { PragmaLexerStackDepths.pop_back(); });
 
   // Invoke the first level of pragma handlers which reads the namespace id.
   Token Tok;
@@ -353,6 +370,16 @@ void clang::prepare_PragmaString(SmallVectorImpl<char> &StrVal) {
 /// HandleMicrosoft__pragma - Like Handle_Pragma except the pragma text
 /// is not enclosed within a string literal.
 void Preprocessor::HandleMicrosoft__pragma(Token &Tok) {
+  // Expanding the captured arguments can execute nested pragmas before the
+  // outer handler runs. For example:
+  //
+  //   __pragma(optimize("", _Pragma("clang __debug dump x")))
+  //
+  // Keep a boundary active during capture too, so Lex() skips the inner
+  // __debug dump's leftover eod rather than including it in PragmaToks.
+  PragmaLexerStackDepths.push_back(IncludeMacroStack.size());
+  llvm::scope_exit PragmaScope([this] { PragmaLexerStackDepths.pop_back(); });
+
   // During macro pre-expansion, check the syntax now but put the tokens back
   // into the token stream for later consumption. Same as Handle_Pragma.
   TokenCollector Toks = {*this, InMacroArgPreExpansion, {}, Tok};
@@ -402,6 +429,7 @@ void Preprocessor::HandleMicrosoft__pragma(Token &Tok) {
   // Push the tokens onto the stack.
   EnterTokenStream(TokArray, PragmaToks.size(), true, true,
                    /*IsReinject*/ false);
+  CurTokenLexer->IsPragmaLexer = true;
 
   // With everything set up, lex this as a #pragma directive.
   HandlePragmaDirective({PIK___pragma, PragmaLoc});
@@ -427,7 +455,12 @@ void Preprocessor::HandlePragmaOnce(Token &OnceTok) {
 }
 
 void Preprocessor::HandlePragmaMark(Token &MarkTok) {
-  assert(CurPPLexer && "No current lexer?");
+  // __pragma uses a captured token stream, so there is no lexer from which to
+  // read the uninterpreted text. Ignore the mark and consume its arguments.
+  if (!CurLexer) {
+    DiscardUntilEndOfDirective();
+    return;
+  }
 
   SmallString<64> Buffer;
   CurLexer->ReadToEndOfLine(&Buffer);
@@ -553,7 +586,8 @@ void Preprocessor::HandlePragmaDependency(Token &DependencyTok) {
     std::string Message;
     Lex(DependencyTok);
     while (DependencyTok.isNot(tok::eod)) {
-      Message += getSpelling(DependencyTok) + " ";
+      if (!DependencyTok.isAnnotation())
+        Message += getSpelling(DependencyTok) + " ";
       Lex(DependencyTok);
     }
 
@@ -921,7 +955,7 @@ void Preprocessor::HandlePragmaSetPPState(PragmaIntroducer Introducer,
                                           Token &Tok) {
   // Lex the macro name we want to set.
   LexUnexpandedToken(Tok);
-  if (!Tok.getIdentifierInfo()) {
+  if (Tok.isNot(tok::identifier) && !tok::getKeywordSpelling(Tok.getKind())) {
     Diag(Tok.getLocation(), diag::err_pp_pragma_set_pp_state_expected_name);
     return;
   }
@@ -1153,7 +1187,10 @@ struct PragmaDebugHandler : public PragmaHandler {
     } else if (II->isStr("macro")) {
       Token MacroName;
       PP.LexUnexpandedToken(MacroName);
-      auto *MacroII = MacroName.getIdentifierInfo();
+      auto *MacroII = MacroName.is(tok::identifier) ||
+                              tok::getKeywordSpelling(MacroName.getKind())
+                          ? MacroName.getIdentifierInfo()
+                          : nullptr;
       if (MacroII)
         PP.dumpMacroInfo(MacroII);
       else
@@ -1178,7 +1215,10 @@ struct PragmaDebugHandler : public PragmaHandler {
     } else if (II->isStr("module_lookup")) {
       Token MName;
       PP.LexUnexpandedToken(MName);
-      auto *MNameII = MName.getIdentifierInfo();
+      auto *MNameII =
+          MName.is(tok::identifier) || tok::getKeywordSpelling(MName.getKind())
+              ? MName.getIdentifierInfo()
+              : nullptr;
       if (!MNameII) {
         PP.Diag(MName, diag::warn_pragma_debug_missing_argument)
             << II->getName();
@@ -1223,7 +1263,10 @@ struct PragmaDebugHandler : public PragmaHandler {
 
       Token Kind;
       PP.LexUnexpandedToken(Kind);
-      auto *DumpII = Kind.getIdentifierInfo();
+      auto *DumpII =
+          Kind.is(tok::identifier) || tok::getKeywordSpelling(Kind.getKind())
+              ? Kind.getIdentifierInfo()
+              : nullptr;
       if (!DumpII) {
         PP.Diag(Kind, diag::warn_pragma_debug_missing_argument)
             << II->getName();
@@ -1459,7 +1502,9 @@ struct PragmaWarningHandler : public PragmaHandler {
     }
 
     PP.Lex(Tok);
-    IdentifierInfo *II = Tok.getIdentifierInfo();
+    IdentifierInfo *II = Tok.isOneOf(tok::identifier, tok::kw_default)
+                             ? Tok.getIdentifierInfo()
+                             : nullptr;
 
     if (II && II->isStr("push")) {
       // #pragma warning( push[ ,n ] )
@@ -1490,9 +1535,13 @@ struct PragmaWarningHandler : public PragmaHandler {
       // #pragma warning( warning-specifier : warning-number-list
       //                  [; warning-specifier : warning-number-list...] )
       while (true) {
-        II = Tok.getIdentifierInfo();
+        II = Tok.isOneOf(tok::identifier, tok::kw_default)
+                 ? Tok.getIdentifierInfo()
+                 : nullptr;
         if (!II && !Tok.is(tok::numeric_constant)) {
           PP.Diag(Tok, diag::warn_pragma_warning_spec_invalid);
+          if (Tok.isAnnotation())
+            PP.DiscardUntilEndOfDirective();
           return;
         }
 
@@ -1607,7 +1656,8 @@ struct PragmaExecCharsetHandler : public PragmaHandler {
     }
 
     PP.Lex(Tok);
-    IdentifierInfo *II = Tok.getIdentifierInfo();
+    IdentifierInfo *II =
+        Tok.is(tok::identifier) ? Tok.getIdentifierInfo() : nullptr;
 
     if (II && II->isStr("push")) {
       // #pragma execution_character_set( push[ , string ] )
@@ -1636,6 +1686,8 @@ struct PragmaExecCharsetHandler : public PragmaHandler {
         Callbacks->PragmaExecCharsetPop(DiagLoc);
     } else {
       PP.Diag(Tok, diag::warn_pragma_exec_charset_spec_invalid);
+      if (Tok.isAnnotation())
+        PP.DiscardUntilEndOfDirective();
       return;
     }
 
@@ -1936,7 +1988,8 @@ struct PragmaARCCFCodeAuditedHandler : public PragmaHandler {
 
     // Lex the 'begin' or 'end'.
     PP.LexUnexpandedToken(Tok);
-    const IdentifierInfo *BeginEnd = Tok.getIdentifierInfo();
+    const IdentifierInfo *BeginEnd =
+        Tok.is(tok::identifier) ? Tok.getIdentifierInfo() : nullptr;
     if (BeginEnd && BeginEnd->isStr("begin")) {
       IsBegin = true;
     } else if (BeginEnd && BeginEnd->isStr("end")) {
@@ -1991,7 +2044,8 @@ struct PragmaAssumeNonNullHandler : public PragmaHandler {
 
     // Lex the 'begin' or 'end'.
     PP.LexUnexpandedToken(Tok);
-    const IdentifierInfo *BeginEnd = Tok.getIdentifierInfo();
+    const IdentifierInfo *BeginEnd =
+        Tok.is(tok::identifier) ? Tok.getIdentifierInfo() : nullptr;
     if (BeginEnd && BeginEnd->isStr("begin")) {
       IsBegin = true;
     } else if (BeginEnd && BeginEnd->isStr("end")) {
