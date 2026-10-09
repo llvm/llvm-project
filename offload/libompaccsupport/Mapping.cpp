@@ -562,7 +562,7 @@ static void printCopyInfoImpl(int DeviceId, bool H2D, void *SrcPtrBegin,
                               const char *Name) {
   SourceInfo Info(Loc);
   std::string LocStr;
-  if (Info.isAvailible())
+  if (Info.isAvailable())
     LocStr = ", at " + std::string(Info.getFilename()) + ":" +
              std::to_string(Info.getLine()) + ":" +
              std::to_string(Info.getColumn());

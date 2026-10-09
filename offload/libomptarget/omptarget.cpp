@@ -127,7 +127,7 @@ void handleTargetOutcome(bool Success, ident_t *Loc) {
       }
 
       SourceInfo Info(Loc);
-      if (Info.isAvailible())
+      if (Info.isAvailable())
         fprintf(stderr, "%s:%d:%d: ", Info.getFilename(), Info.getLine(),
                 Info.getColumn());
       else
