@@ -1676,6 +1676,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
           setOperationAction({ISD::CTTZ_ELTS, ISD::CTTZ_ELTS_ZERO_POISON}, VT,
                              Custom);
+
+          setOperationAction(ISD::MASK_BEFOREFIRST, VT, Custom);
           continue;
         }
 
@@ -8940,14 +8942,15 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     if (isPromotedOpNeedingSplit(Op, Subtarget, *this))
       return SplitVectorOp(Op, DAG);
     return lowerFTRUNC_FCEIL_FFLOOR_FROUND(Op, DAG, Subtarget);
-  case ISD::FCANONICALIZE: {
+  case ISD::FCANONICALIZE:
+  case ISD::MASK_BEFOREFIRST: {
     MVT VT = Op.getSimpleValueType();
     assert(VT.isFixedLengthVector() && "Unexpected type");
     SDLoc DL(Op);
     MVT ContainerVT = getContainerForFixedLengthVector(VT);
     SDValue Src =
         convertToScalableVector(ContainerVT, Op.getOperand(0), DAG, Subtarget);
-    SDValue Res = DAG.getNode(ISD::FCANONICALIZE, DL, ContainerVT, Src);
+    SDValue Res = DAG.getNode(Op.getOpcode(), DL, ContainerVT, Src);
     return convertFromScalableVector(VT, Res, DAG, Subtarget);
   }
   case ISD::LRINT:
