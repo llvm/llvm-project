@@ -17,12 +17,27 @@
 ;   return 0;
 ; }
 
-; FIXME: We need to do more than this. In particular, __sanitizer_cov callbacks
-; in funclets need token bundles.
+; The callbacks in the catch and cleanup funclets carry the funclet's token;
+; the ones in the function's body carry none.
 
 ; CHECK-LABEL: define i32 @"\01?f@@YAHXZ"()
+; CHECK: entry:
+; CHECK: call void @__sanitizer_cov_trace_pc() #{{[0-9]+}}{{$}}
 ; CHECK: catch.dispatch:
 ; CHECK-NEXT: catchswitch within none [label %catch3, label %catch] unwind label %ehcleanup
+; CHECK: catch3:
+; CHECK-NEXT: %[[CATCH3:[0-9]+]] = catchpad within
+; CHECK-NEXT: call void @__sanitizer_cov_trace_pc() #{{[0-9]+}} [ "funclet"(token %[[CATCH3]]) ]
+; CHECK: invoke.cont4:
+; CHECK-NEXT: call void @__sanitizer_cov_trace_pc() #{{[0-9]+}} [ "funclet"(token %[[CATCH3]]) ]
+; CHECK: catch:
+; CHECK-NEXT: %[[CATCH:[0-9]+]] = catchpad within
+; CHECK-NEXT: call void @__sanitizer_cov_trace_pc() #{{[0-9]+}} [ "funclet"(token %[[CATCH]]) ]
+; CHECK: invoke.cont2:
+; CHECK-NEXT: call void @__sanitizer_cov_trace_pc() #{{[0-9]+}} [ "funclet"(token %[[CATCH]]) ]
+; CHECK: ehcleanup:
+; CHECK-NEXT: %[[CLEANUP:[0-9]+]] = cleanuppad within none []
+; CHECK-NEXT: call void @__sanitizer_cov_trace_pc() #{{[0-9]+}} [ "funclet"(token %[[CLEANUP]]) ]
 
 ; ModuleID = 't.cpp'
 source_filename = "t.cpp"
