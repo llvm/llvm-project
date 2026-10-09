@@ -337,7 +337,7 @@ define i1 @or_disjoint_9(ptr %input, i8 noundef %x) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[INPUT]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.vector.reduce.or.v8i8(<8 x i8> [[TMP0]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = or disjoint i8 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = or i8 [[TMP1]], [[X]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i8 [[OP_RDX]] to i1
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
