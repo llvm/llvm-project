@@ -283,8 +283,8 @@ define void @test_base_align_lanes(ptr noalias %c, ptr noalias %A, ptr noalias %
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[C]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor <4 x i1> [[TMP2]], splat (i1 true)
-; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 8 [[A]], <4 x i1> [[TMP2]], <4 x i32> poison)
-; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 8 [[B]], <4 x i1> [[TMP3]], <4 x i32> poison)
+; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[A]], <4 x i1> [[TMP2]], <4 x i32> poison)
+; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[B]], <4 x i1> [[TMP3]], <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP4]], <4 x i32> [[TMP5]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
