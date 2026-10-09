@@ -74,9 +74,8 @@ AST_MATCHER(Expr, hasUnevaluatedContext) {
   return false;
 }
 
-// A matcher implementation that matches a list of type name regular expressions
-// against a NamedDecl. If a regular expression contains the substring "::"
-// matching will occur against the qualified name, otherwise only the typename.
+// A matcher implementation that matches a list of name regular expressions
+// against a NamedDecl.
 class MatchesAnyListedRegexNameMatcher
     : public ast_matchers::internal::MatcherInterface<NamedDecl> {
 public:
@@ -95,8 +94,8 @@ public:
       // Match against the qualified name because the regular expression
       // contains ":" suggesting name and namespace should be matched.
       MatchQualified,
-      // Match against the fully qualified name because the regular expression
-      // starts with ":".
+      // Match against the qualified name prefixed with "::" because the regular
+      // expression starts with ":" or "^:".
       MatchFullyQualified,
     };
     MatchMode Mode;
@@ -114,6 +113,8 @@ public:
       default:
         if (const IdentifierInfo *II = ND.getIdentifier())
           return Regex.match(II->getName());
+        if (ND.getDeclName())
+          return Regex.match(ND.getNameAsString());
         return false;
       }
     }
@@ -139,9 +140,11 @@ private:
   std::vector<NameMatcher> NameMatchers;
 };
 
-// Returns a matcher that matches NamedDecl's against a list of provided regular
-// expressions. If a regular expression contains starts ':' the NamedDecl's
-// qualified name will be used for matching, otherwise its name will be used.
+// Returns a matcher that matches NamedDecls against a list of provided regular
+// expressions. A regular expression starting with ":" or "^:" is matched
+// against the qualified name prefixed with "::". A regular expression
+// containing ":" is matched against the qualified name; otherwise, the
+// unqualified name is used.
 inline ::clang::ast_matchers::internal::Matcher<NamedDecl>
 matchesAnyListedRegexName(llvm::ArrayRef<StringRef> NameList) {
   return ::clang::ast_matchers::internal::Matcher(
