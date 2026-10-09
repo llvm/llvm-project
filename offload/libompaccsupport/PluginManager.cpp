@@ -661,9 +661,9 @@ int PluginManager::getNumActivePlugins() const {
             if (olGetPlatformInfo(Platform, OL_PLATFORM_INFO_ACTIVE,
                                   sizeof(Active), &Active) == OL_SUCCESS &&
                 Active)
-              ++(*reinterpret_cast<int *>(Data));
+              ++(*static_cast<int *>(Data));
           },
-          reinterpret_cast<void *>(&count))) {
+          static_cast<void *>(&count))) {
     consumeError(std::move(Err));
   }
   return count;
