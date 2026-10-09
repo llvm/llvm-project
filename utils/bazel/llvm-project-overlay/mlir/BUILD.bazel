@@ -4060,11 +4060,13 @@ cc_library(
     hdrs = ["include/mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.h"],
     includes = ["include"],
     deps = [
+        ":Analysis",
         ":DialectUtils",
         ":GPUDialect",
         ":IR",
         ":SCFDialect",
         ":SCFUtils",
+        ":SideEffectInterfaces",
         ":TransformDialect",
         ":TransformDialectInterfaces",
         ":XeGPUDialect",
