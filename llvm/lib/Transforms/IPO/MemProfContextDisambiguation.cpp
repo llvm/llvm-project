@@ -1629,7 +1629,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy,
   // its path (a node where it is only on the caller edges). Such a context
   // would also appear to terminate at the node just below the gap. Identify
   // these inconsistent contexts, so that we can avoid treating them as having
-  // been pruned at such a node during cloning.
+  // been trimmed at such a node during cloning.
   DenseMap<uint32_t, unsigned> NumTerminatingNodes;
   for (auto &Node : NodeOwner) {
     if (Node->IsAllocation || Node->isRemoved())
@@ -3735,9 +3735,9 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
 
   ContextNode *OldCallee = Edge->Callee;
 
-  // Identify any pruned contexts that terminate at OldCallee, i.e. that are on
+  // Identify any trimmed contexts that terminate at OldCallee, i.e. that are on
   // its callee edges but not on any of its caller edges. These are contexts
-  // whose recorded call stacks were pruned (trimmed) at OldCallee because the
+  // whose recorded call stacks were trimmed at OldCallee because the
   // allocation behavior was unambiguous from that frame on, regardless of the
   // caller. Since these contexts are caller-agnostic they apply equally to
   // every clone of OldCallee. When a new clone is created (for a different

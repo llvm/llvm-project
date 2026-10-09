@@ -1,4 +1,4 @@
-;; Test that contexts which were pruned (trimmed) to end at an interior
+;; Test that contexts which were trimmed to end at an interior
 ;; callsite node are preserved when that node is cloned for a different
 ;; allocation.
 ;;
@@ -14,19 +14,19 @@
 ;;
 ;; The allocation in leafA is cold whenever it is reached via mid (from both
 ;; top1 and top2) and not cold via other. Because the behavior is unambiguous
-;; from mid's frame on, the cold context is pruned (trimmed) to end at mid's
+;; from mid's frame on, the cold context is trimmed to end at mid's
 ;; call to helper: [leafA, helper, mid]. That context is therefore not attached
 ;; to any caller of mid in the callsite context graph.
 ;;
 ;; The allocation in leafC is cold via top1 and not cold via top2, requiring
-;; mid (and helper) to be cloned for top1. Without duplicating the pruned
+;; mid (and helper) to be cloned for top1. Without duplicating the trimmed
 ;; leafA context onto the new mid clone, the clone's path to leafA would carry
 ;; no context information and would be assigned the callee version from the
 ;; original helper (which is not cold for leafA via other), losing the cold hint
 ;; for the leafA allocation when called via top1.
 ;;
 ;; The expected result is identical to what we get when the leafA contexts are
-;; not pruned, i.e. both top1 and top2 reach a cold clone of leafA.
+;; not trimmed, i.e. both top1 and top2 reach a cold clone of leafA.
 
 ;; -stats requires asserts
 ; REQUIRES: asserts
@@ -91,7 +91,7 @@ attributes #0 = { builtin }
 ;; 6 = helper->leafC, 7 = mid->helper, 8 = other->helper, 12 = top1->mid,
 ;; 13 = top2->mid.
 !0 = !{!1, !3}
-;; Cold context pruned at mid's call to helper (no top1/top2 frame).
+;; Cold context trimmed at mid's call to helper (no top1/top2 frame).
 !1 = !{!2, !"cold"}
 !2 = !{i64 1, i64 2, i64 7}
 !3 = !{!4, !"notcold"}
@@ -110,7 +110,7 @@ attributes #0 = { builtin }
 !16 = !{i64 12}
 !17 = !{i64 13}
 
-;; The pruned cold context (id 1) terminates at the original mid->helper node
+;; The trimmed cold context (id 1) terminates at the original mid->helper node
 ;; (NodeId 3): it is on its callee edge to the helper->leafA node (NodeId 2) but
 ;; not on either of its caller edges from top1 (NodeId 7) or top2 (NodeId 8).
 ; DUMP: CCG before cloning:
@@ -133,7 +133,7 @@ attributes #0 = { builtin }
 ; DUMP-NEXT: 		Edge from Callee [[MID]] to Caller: {{0x[a-z0-9]+}} AllocTypes: NotCold ContextIds: 4 (Caller NodeId: 8)
 
 ;; After cloning, the clone of the mid->helper node created for top1 (context
-;; id 3) should also contain a duplicate (id 5) of the pruned cold context, and
+;; id 3) should also contain a duplicate (id 5) of the trimmed cold context, and
 ;; have an edge to the cold clone of the helper->leafA node, which reaches the
 ;; cold clone of the leafA allocation.
 ; DUMP: CCG after cloning:
