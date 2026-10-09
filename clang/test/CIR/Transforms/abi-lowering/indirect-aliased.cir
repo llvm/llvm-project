@@ -1,0 +1,196 @@
+// RUN: cir-opt %s -split-input-file \
+// RUN:     -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:   | FileCheck %s
+
+// IndirectAliased (byref) arguments with allocas in address space 5, as on
+// AMDGPU.  A kernel takes its byref arguments in address space 4.
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#byref_as4 = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect_aliased", indirect_align = 8,
+               indirect_addr_space = 4 } ]
+}
+
+#byref_as5 = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect_aliased", indirect_align = 8,
+               indirect_addr_space = 5 } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>,
+    #dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui64>>
+} {
+
+  // The callee must not write through a byref pointer, so the CIRGen slot is
+  // filled by a copy across address spaces.
+  cir.func @kernel_field(%arg0: !rec_Big) -> !s64i
+      attributes { test_classify = #byref_as4 } {
+    %0 = cir.alloca "arg0" align(8) init
+        : !cir.ptr<!rec_Big, target_address_space(5)>
+    cir.store %arg0, %0 : !rec_Big, !cir.ptr<!rec_Big, target_address_space(5)>
+    %1 = cir.get_member %0[0] {name = "a"}
+        : !cir.ptr<!rec_Big, target_address_space(5)>
+        -> !cir.ptr<!s64i, target_address_space(5)>
+    %2 = cir.load %1 : !cir.ptr<!s64i, target_address_space(5)>, !s64i
+    cir.return %2 : !s64i
+  }
+
+  // CHECK:      cir.func{{.*}} @kernel_field(%[[PTR:.*]]: !cir.ptr<!rec_Big, target_address_space(4)>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.byref = !rec_Big, llvm.noundef})
+  // CHECK:        %[[SLOT:.*]] = cir.alloca "arg0" align(8) init : !cir.ptr<!rec_Big, target_address_space(5)>
+  // CHECK-NOT:    cir.store
+  // CHECK:        cir.copy %[[PTR]] align(8) to %[[SLOT]] align(8)
+  // CHECK-SAME:     : !cir.ptr<!rec_Big, target_address_space(4)>, !cir.ptr<!rec_Big, target_address_space(5)>
+  // CHECK:        cir.get_member %[[SLOT]][0]
+
+  // A parameter the body never reads gets nothing at entry.
+  cir.func @kernel_unused(%arg0: !rec_Big) -> !s32i
+      attributes { test_classify = #byref_as4 } {
+    %r = cir.const #cir.int<0> : !s32i
+    cir.return %r : !s32i
+  }
+
+  // CHECK:      cir.func{{.*}} @kernel_unused(%{{.*}}: !cir.ptr<!rec_Big, target_address_space(4)>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.byref = !rec_Big, llvm.noundef})
+  // CHECK-NEXT:   %{{.*}} = cir.const #cir.int<0> : !s32i
+
+  // A body that reads the value with no spill loads it at entry.
+  cir.func @kernel_uses_arg(%arg0: !rec_Big) -> !rec_Big
+      attributes { test_classify = #byref_as4 } {
+    cir.return %arg0 : !rec_Big
+  }
+
+  // CHECK:      cir.func{{.*}} @kernel_uses_arg(%[[PTR:.*]]: !cir.ptr<!rec_Big, target_address_space(4)>
+  // CHECK:        %[[V:.*]] = cir.load %[[PTR]] : !cir.ptr<!rec_Big, target_address_space(4)>, !rec_Big
+  // CHECK-NEXT:   cir.return %[[V]] : !rec_Big
+
+  cir.func private @takes_big_as5(%arg0: !rec_Big)
+      attributes { test_classify = #byref_as5 }
+
+  // CHECK:      cir.func{{.*}} @takes_big_as5(!cir.ptr<!rec_Big, target_address_space(5)>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.byref = !rec_Big, llvm.noundef})
+
+  // Storage in the parameter's own address space is handed on.
+  cir.func @caller_forward(%s: !rec_Big)
+      attributes { test_classify = #passthrough } {
+    %tmp = cir.alloca "agg.tmp" align(8)
+        : !cir.ptr<!rec_Big, target_address_space(5)>
+    cir.store %s, %tmp : !rec_Big, !cir.ptr<!rec_Big, target_address_space(5)>
+    %v = cir.load %tmp : !cir.ptr<!rec_Big, target_address_space(5)>, !rec_Big
+    cir.call @takes_big_as5(%v) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @caller_forward
+  // CHECK:        %[[TMP:.*]] = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big, target_address_space(5)>
+  // CHECK-NOT:    cir.alloca "byref"
+  // CHECK-NOT:    cir.load
+  // CHECK:        cir.call @takes_big_as5(%[[TMP]]) : (!cir.ptr<!rec_Big, target_address_space(5)>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.byref = !rec_Big, llvm.noundef})
+
+  // An operand that names no storage is stored into a slot in the alloca
+  // address space.
+  cir.func @caller_no_storage(%s: !rec_Big)
+      attributes { test_classify = #passthrough } {
+    cir.call @takes_big_as5(%s) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @caller_no_storage(%[[S:.*]]: !rec_Big)
+  // CHECK:        %[[SLOT:.*]] = cir.alloca "byref" align(8) : !cir.ptr<!rec_Big, target_address_space(5)>
+  // CHECK-NEXT:   cir.store %[[S]], %[[SLOT]] : !rec_Big, !cir.ptr<!rec_Big, target_address_space(5)>
+  // CHECK-NEXT:   cir.call @takes_big_as5(%[[SLOT]])
+
+  // A store between the load and the call stops the storage from being handed
+  // on, so the copy is taken where the load was.
+  cir.func @caller_store_between(%s: !rec_Big, %t: !rec_Big)
+      attributes { test_classify = #passthrough } {
+    %tmp = cir.alloca "agg.tmp" align(8)
+        : !cir.ptr<!rec_Big, target_address_space(5)>
+    cir.store %s, %tmp : !rec_Big, !cir.ptr<!rec_Big, target_address_space(5)>
+    %v = cir.load %tmp : !cir.ptr<!rec_Big, target_address_space(5)>, !rec_Big
+    cir.store %t, %tmp : !rec_Big, !cir.ptr<!rec_Big, target_address_space(5)>
+    cir.call @takes_big_as5(%v) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @caller_store_between(%[[S:[^:]+]]: !rec_Big, %[[T:[^:]+]]: !rec_Big)
+  // CHECK:        %[[TMP:.*]] = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big, target_address_space(5)>
+  // CHECK-NEXT:   cir.store %[[S]], %[[TMP]]
+  // CHECK-NEXT:   %[[SLOT:.*]] = cir.alloca "byref" align(8) : !cir.ptr<!rec_Big, target_address_space(5)>
+  // CHECK-NEXT:   cir.copy %[[TMP]] align(8) to %[[SLOT]] align(8)
+  // CHECK-NEXT:   cir.store %[[T]], %[[TMP]]
+  // CHECK-NEXT:   cir.call @takes_big_as5(%[[SLOT]])
+
+}
+
+// -----
+
+// byref in the default address space with no alloca address space set.
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#byref_as0 = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect_aliased", indirect_align = 8 } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @takes_big(%arg0: !rec_Big)
+      attributes { test_classify = #byref_as0 }
+
+  // CHECK:      cir.func{{.*}} @takes_big(!cir.ptr<!rec_Big>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.byref = !rec_Big, llvm.noundef})
+
+  cir.func @caller_forward(%s: !rec_Big)
+      attributes { test_classify = #passthrough } {
+    %tmp = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
+    cir.store %s, %tmp : !rec_Big, !cir.ptr<!rec_Big>
+    %v = cir.load %tmp : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big(%v) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @caller_forward
+  // CHECK:        %[[TMP:.*]] = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NOT:    cir.load
+  // CHECK:        cir.call @takes_big(%[[TMP]]) : (!cir.ptr<!rec_Big>
+
+  // Storage aligned below what the callee expects gets a slot of its own.
+  cir.func @caller_underaligned(%s: !rec_Big)
+      attributes { test_classify = #passthrough } {
+    %tmp = cir.alloca "agg.tmp" align(1) : !cir.ptr<!rec_Big>
+    cir.store %s, %tmp : !rec_Big, !cir.ptr<!rec_Big>
+    %v = cir.load align(1) %tmp : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big(%v) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @caller_underaligned
+  // CHECK:        %[[TMP:.*]] = cir.alloca "agg.tmp" align(1) : !cir.ptr<!rec_Big>
+  // CHECK:        %[[SLOT:.*]] = cir.alloca "byref" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.copy %[[TMP]] align(1) to %[[SLOT]] align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   cir.call @takes_big(%[[SLOT]])
+
+}

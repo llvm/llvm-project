@@ -587,6 +587,9 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
 /// wide to fit (a `_BitInt` over 128 bits), is passed via a pointer (sret
 /// for returns, byval for arguments).
 ///
+/// IndirectAliased: an argument passed as a pointer to the caller's object
+/// with no copy implied (byref), in the address space the classifier names.
+///
 /// Ignore: a void return, or an empty record dropped from the signature.
 static std::optional<ArgClassification>
 convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
@@ -687,6 +690,9 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
     return ArgClassification::getIndirect(info.getIndirectAlign(),
                                           info.getIndirectByVal(),
                                           info.getIndirectAddrSpace());
+  if (info.isIndirectAliased())
+    return ArgClassification::getIndirectAliased(info.getIndirectAlign(),
+                                                 info.getIndirectAddrSpace());
   // AArch64 pure scalable aggregates use CoerceAndExpand. This bridge lowers
   // x86_64 classifications only.
   assert(!info.isCoerceAndExpand() &&
@@ -856,12 +862,13 @@ CIRABIClassifierCommon::classifyVariadicCall(
 }
 
 /// Whether \p fc gives the callee access to memory through a pointer the ABI
-/// introduced: an sret slot for an indirect return, or an indirect argument.
+/// introduced: an sret slot for an indirect return, or an indirect or byref
+/// argument.
 static bool hasIndirectSlot(const FunctionClassification &fc) {
   if (fc.returnInfo.kind == ArgKind::Indirect)
     return true;
   return llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
-    return ac.kind == ArgKind::Indirect;
+    return ac.kind == ArgKind::Indirect || ac.kind == ArgKind::IndirectAliased;
   });
 }
 
