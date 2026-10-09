@@ -148,6 +148,32 @@ f:
   ret i32 %xf
 }
 
+define i32 @f3_vector(i1 %c, <2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: define i32 @f3_vector(
+; CHECK-SAME: i1 [[C:%.*]], <2 x i32> [[A:%.*]], <2 x i32> [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], <2 x i32> [[A]], <2 x i32> [[B]]
+; CHECK-NEXT:    br i1 [[C]], label %[[T:.*]], label %[[F:.*]]
+; CHECK:       [[T]]:
+; CHECK-NEXT:    [[XT:%.*]] = extractelement <2 x i32> [[S]], i32 0
+; CHECK-NEXT:    ret i32 [[XT]]
+; CHECK:       [[F]]:
+; CHECK-NEXT:    [[XF:%.*]] = extractelement <2 x i32> [[S]], i32 1
+; CHECK-NEXT:    ret i32 [[XF]]
+;
+entry:
+  %s = select i1 %c, <2 x i32> %a, <2 x i32> %b
+  br i1 %c, label %t, label %f
+
+t:
+  %xt = extractelement <2 x i32> %s, i32 0
+  ret i32 %xt
+
+f:
+  %xf = extractelement <2 x i32> %s, i32 1
+  ret i32 %xf
+}
+
 define i1 @f3_one_use(i1 %c) {
 ; CHECK-LABEL: define i1 @f3_one_use(
 ; CHECK-SAME: i1 [[C:%.*]]) {
