@@ -325,6 +325,23 @@ void t2() {
 }
 }  // namespace imm_escalation_can_instantiate
 
+namespace constant_evaluator_reentry {
+template <typename T>
+constexpr void f(T &a);
+
+union U {};
+
+consteval void g() {
+  U t;
+  f<U>(t);
+}
+
+template <typename T>
+constexpr void f(T &a) { a = a; }
+
+void h() { g(); }
+}  // namespace constant_evaluator_reentry
+
 namespace GH115118 {
 
 struct foo {

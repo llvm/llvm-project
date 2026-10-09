@@ -40,8 +40,6 @@ Context::~Context() = default;
 
 bool Context::isPotentialConstantExpr(const EvalSettings &Settings,
                                       const FunctionDecl *FD) {
-  assert(Stk.empty());
-
   // Get a function handle.
   const Function *Func = getOrCreateFunction(FD);
   if (!Func)
@@ -62,7 +60,6 @@ bool Context::isPotentialConstantExpr(const EvalSettings &Settings,
 void Context::isPotentialConstantExprUnevaluated(const EvalSettings &Settings,
                                                  const Expr *E,
                                                  const FunctionDecl *FD) {
-  assert(Stk.empty());
   ++EvalID;
   size_t StackSizeBefore = Stk.size();
   Compiler<EvalEmitter> C(*this, *P, Settings, Stk, FrameAlloc);
@@ -167,18 +164,18 @@ bool Context::evaluateAsInitializer(const EvalSettings &Settings,
 
 bool Context::evaluateDestruction(const EvalSettings &Settings,
                                   const VarDecl *VD, APValue Value) {
-  assert(Stk.empty());
+  size_t StackSizeBefore = Stk.size();
   Compiler<EvalEmitter> C(*this, *P, Settings, Stk, FrameAlloc);
 
   auto Res = C.interpretDestructor(VD, Value);
 
   if (Res.isInvalid()) {
     C.cleanup();
-    Stk.clear();
+    Stk.clearTo(StackSizeBefore);
     return false;
   }
 
-  assert(Stk.empty());
+  assert(Stk.size() == StackSizeBefore);
 
   return true;
 }
@@ -194,7 +191,7 @@ template <typename ResultT>
 bool Context::evaluateStringRepr(const EvalSettings &Settings,
                                  const Expr *SizeExpr, const Expr *PtrExpr,
                                  ResultT &Result) {
-  assert(Stk.empty());
+  size_t StackSizeBefore = Stk.size();
   Compiler<EvalEmitter> C(*this, *P, Settings, Stk, FrameAlloc);
 
   // Evaluate size value.
@@ -268,7 +265,7 @@ bool Context::evaluateStringRepr(const EvalSettings &Settings,
 
   if (PtrRes.isInvalid()) {
     C.cleanup();
-    Stk.clear();
+    Stk.clearTo(StackSizeBefore);
     return false;
   }
 
@@ -295,7 +292,7 @@ bool Context::evaluateCharRange(const EvalSettings &Settings,
 
 bool Context::evaluateString(const EvalSettings &Settings, const Expr *E,
                              std::string &Result) {
-  assert(Stk.empty());
+  size_t StackSizeBefore = Stk.size();
   Compiler<EvalEmitter> C(*this, *P, Settings, Stk, FrameAlloc);
 
   auto PtrRes = C.interpretAsPointer(E, [&](InterpState &S, CodePtr OpPC,
@@ -352,7 +349,7 @@ bool Context::evaluateString(const EvalSettings &Settings, const Expr *E,
 
   if (PtrRes.isInvalid()) {
     C.cleanup();
-    Stk.clear();
+    Stk.clearTo(StackSizeBefore);
     return false;
   }
   return true;
@@ -360,7 +357,7 @@ bool Context::evaluateString(const EvalSettings &Settings, const Expr *E,
 
 std::optional<uint64_t> Context::evaluateStrlen(const EvalSettings &Settings,
                                                 const Expr *E) {
-  assert(Stk.empty());
+  size_t StackSizeBefore = Stk.size();
   Compiler<EvalEmitter> C(*this, *P, Settings, Stk, FrameAlloc);
 
   std::optional<uint64_t> Result;
@@ -419,7 +416,7 @@ std::optional<uint64_t> Context::evaluateStrlen(const EvalSettings &Settings,
 
   if (PtrRes.isInvalid()) {
     C.cleanup();
-    Stk.clear();
+    Stk.clearTo(StackSizeBefore);
     return std::nullopt;
   }
   return Result;
@@ -428,7 +425,7 @@ std::optional<uint64_t> Context::evaluateStrlen(const EvalSettings &Settings,
 std::optional<uint64_t>
 Context::tryEvaluateObjectSize(const EvalSettings &Settings, const Expr *E,
                                unsigned Kind, bool IsDynamic) {
-  assert(Stk.empty());
+  size_t StackSizeBefore = Stk.size();
   Compiler<EvalEmitter> C(*this, *P, Settings, Stk, FrameAlloc);
 
   std::optional<uint64_t> Result;
@@ -450,7 +447,7 @@ Context::tryEvaluateObjectSize(const EvalSettings &Settings, const Expr *E,
 
   if (PtrRes.isInvalid()) {
     C.cleanup();
-    Stk.clear();
+    Stk.clearTo(StackSizeBefore);
     return std::nullopt;
   }
   return Result;
@@ -616,12 +613,13 @@ bool Context::Run(const EvalSettings &Settings, const Function *Func) {
       State, Func, /*Caller=*/nullptr, CodePtr(), Func->getArgSize());
   State.Current = Frame;
 
+  size_t StackSizeBefore = Stk.size();
   if (Interpret(State)) {
-    assert(Stk.empty());
+    assert(Stk.size() == StackSizeBefore);
     return true;
   }
 
-  Stk.clear();
+  Stk.clearTo(StackSizeBefore);
   Frame->~InterpFrame();
   State.Current = &State.BottomFrame;
   return false;
