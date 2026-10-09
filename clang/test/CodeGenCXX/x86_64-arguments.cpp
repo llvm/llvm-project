@@ -1,21 +1,27 @@
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-unknown-unknown -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-unknown-unknown -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,OFFSET
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-unknown-unknown -fclang-abi-compat=23 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,OFFSET
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-unknown-linux-gnux32 -emit-llvm -o - %s | FileCheck %s --check-prefixes=X32,OFFSET
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-unknown-linux-gnux32 -fclang-abi-compat=23 -emit-llvm -o - %s | FileCheck %s --check-prefixes=X32,OFFSET
 
 // Basic base class test.
 struct f0_s0 { unsigned a; };
 struct f0_s1 : public f0_s0 { void *b; };
 // CHECK-LABEL: define{{.*}} void @_Z2f05f0_s1(i32 %a0.coerce0, ptr %a0.coerce1)
+// X32-LABEL: define{{.*}} void @_Z2f05f0_s1(i64 %a0.coerce)
 void f0(f0_s1 a0) { }
 
 // Check with two eight-bytes in base class.
 struct f1_s0 { unsigned a; unsigned b; float c; };
 struct f1_s1 : public f1_s0 { float d;};
 // CHECK-LABEL: define{{.*}} void @_Z2f15f1_s1(i64 %a0.coerce0, <2 x float> %a0.coerce1)
+// X32-LABEL: define{{.*}} void @_Z2f15f1_s1(i64 %a0.coerce0, <2 x float> %a0.coerce1)
 void f1(f1_s1 a0) { }
 
 // Check with two eight-bytes in base class and merge.
 struct f2_s0 { unsigned a; unsigned b; float c; };
 struct f2_s1 : public f2_s0 { char d;};
 // CHECK-LABEL: define{{.*}} void @_Z2f25f2_s1(i64 %a0.coerce0, i64 %a0.coerce1)
+// X32-LABEL: define{{.*}} void @_Z2f25f2_s1(i64 %a0.coerce0, i64 %a0.coerce1)
 void f2(f2_s1 a0) { }
 
 // PR5831
@@ -26,6 +32,8 @@ void f3(struct s3_1 x) {}
 
 // CHECK-LABEL: define{{.*}} i64 @_Z4f4_0M2s4i(i64 %a)
 // CHECK: define {{.*}} @_Z4f4_1M2s4FivE(i64 %a.coerce0, i64 %a.coerce1)
+// X32-LABEL: define{{.*}} i32 @_Z4f4_0M2s4i(i32 %a)
+// X32-LABEL: define{{.*}} i64 @_Z4f4_1M2s4FivE(i64 %a.coerce)
 struct s4 {};
 typedef int s4::* s4_mdp;
 typedef int (s4::*s4_mfp)();
@@ -35,16 +43,19 @@ s4_mfp f4_1(s4_mfp a) { return a; }
 // A struct with <= one eightbyte before a member data pointer should still
 // be allowed in registers.
 // CHECK-LABEL: define{{.*}} void @{{.*}}f_struct_with_mdp{{.*}}(ptr %a.coerce0, i64 %a.coerce1)
+// X32-LABEL: define{{.*}} void @_Z17f_struct_with_mdp15struct_with_mdp(i64 %a.coerce)
 struct struct_with_mdp { char *a; s4_mdp b; };
 void f_struct_with_mdp(struct_with_mdp a) { (void)a; }
 
 // A struct with anything before a member function will be too big and
 // goes in memory.
 // CHECK-LABEL: define{{.*}} void @{{.*}}f_struct_with_mfp_0{{.*}}(ptr byval(%struct{{.*}}) align 8 %a)
+// X32-LABEL: define{{.*}} void @_Z19f_struct_with_mfp_017struct_with_mfp_0(i64 %a.coerce0, i32 %a.coerce1)
 struct struct_with_mfp_0 { char a; s4_mfp b; };
 void f_struct_with_mfp_0(struct_with_mfp_0 a) { (void)a; }
 
 // CHECK-LABEL: define{{.*}} void @{{.*}}f_struct_with_mfp_1{{.*}}(ptr byval(%struct{{.*}}) align 8 %a)
+// X32-LABEL: define{{.*}} void @_Z19f_struct_with_mfp_117struct_with_mfp_1(i64 %a.coerce0, i32 %a.coerce1)
 struct struct_with_mfp_1 { void *a; s4_mfp b; };
 void f_struct_with_mfp_1(struct_with_mfp_1 a) { (void)a; }
 
@@ -218,3 +229,37 @@ union U {
 int f(union U u) { return u.f2[1]; }
 // CHECK-LABEL: define{{.*}} i32 @_ZN6test111fENS_1UE(i32
 }
+
+// A complex float starting at bit 32 has its real and imaginary components
+// in different eightbytes.
+struct ComplexAtBit32 {
+  float prefix;
+  _Complex float value;
+};
+// OFFSET-LABEL: define{{.*}} void @take_complex_at_bit32(<2 x float> %x.coerce0, float %x.coerce1)
+extern "C" void take_complex_at_bit32(ComplexAtBit32 x) {}
+// OFFSET-LABEL: define{{.*}} { <2 x float>, float } @return_complex_at_bit32(<2 x float> %x.coerce0, float %x.coerce1)
+extern "C" ComplexAtBit32 return_complex_at_bit32(ComplexAtBit32 x) {
+  return x;
+}
+
+// The third eightbyte makes this whole record pass and return in memory.
+struct ComplexAtBit96 {
+  unsigned char prefix[12];
+  _Complex float value;
+};
+// OFFSET-LABEL: define{{.*}} void @take_complex_at_bit96(ptr byval(%struct.ComplexAtBit96) align 8 %x)
+extern "C" void take_complex_at_bit96(ComplexAtBit96 x) {}
+// OFFSET-LABEL: define{{.*}} void @return_complex_at_bit96(ptr {{.*}}sret(%struct.ComplexAtBit96) align 4 %agg.result, ptr byval(%struct.ComplexAtBit96) align 8 %x)
+extern "C" ComplexAtBit96 return_complex_at_bit96(ComplexAtBit96 x) {
+  return x;
+}
+
+// The array elements begin at bits 32 and 64, so classification must merge
+// their classes into the appropriate eightbytes of the containing record.
+struct FloatArrayAtBit32 {
+  float prefix;
+  float values[2];
+};
+// OFFSET-LABEL: define{{.*}} void @take_float_array_at_bit32(<2 x float> %x.coerce0, float %x.coerce1)
+extern "C" void take_float_array_at_bit32(FloatArrayAtBit32 x) {}
