@@ -6048,6 +6048,15 @@ void OmpStructureChecker::CheckArraySection(
     for (const auto &subscript : arrayElement.Subscripts()) {
       if (const auto *triplet{
               std::get_if<parser::SubscriptTriplet>(&subscript.u)}) {
+        // OpenMP 5.2 3.2.5 allows a stride only in clauses that permit one.
+        // TODO: Also reject strides in DEPEND and REDUCTION, not just AFFINITY.
+        bool affinityStride{clause == llvm::omp::Clause::OMPC_affinity &&
+            !isSubstring && std::get<2>(triplet->t)};
+        if (affinityStride) {
+          context_.Say(GetContext().clauseSource,
+              "'%s' in %s clause must not specify a stride"_err_en_US,
+              name.ToString(), parser::omp::GetUpperName(clause, version));
+        }
         const auto &lower{std::get<0>(triplet->t)};
         const auto &upper{std::get<1>(triplet->t)};
         if (lower && upper) {
@@ -6057,7 +6066,7 @@ void OmpStructureChecker::CheckArraySection(
             // Restrictions: if a stride expression is specified it must be
             // positive. A stride of 0 doesn't make sense.
             strideVal = GetIntValue(strideExpr);
-            if (strideVal && *strideVal < 1) {
+            if (strideVal && *strideVal < 1 && !affinityStride) {
               context_.Say(GetContext().clauseSource,
                   "'%s' in %s clause must have a positive stride"_err_en_US,
                   name.ToString(), parser::omp::GetUpperName(clause, version));

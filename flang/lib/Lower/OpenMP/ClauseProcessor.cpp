@@ -1018,9 +1018,6 @@ static llvm::StringMap<bool> getTargetFeatures(mlir::ModuleOp module) {
   return featuresMap;
 }
 
-template <typename T>
-static bool isVectorSubscript(const evaluate::Expr<T> &expr);
-
 bool ClauseProcessor::processAffinity(
     mlir::omp::AffinityClauseOps &result) const {
   return findRepeatableClause<omp::clause::Affinity>(
@@ -1049,7 +1046,7 @@ bool ClauseProcessor::processAffinity(
 
         TodoLocators(clauseLocation, objects);
         for (const omp::Object &object : objects)
-          if (object.ref() && isVectorSubscript(*object.ref()))
+          if (object.ref() && evaluate::HasVectorSubscript(*object.ref()))
             TODO(clauseLocation, "vector subscript in AFFINITY clause");
 
         auto genEntry = [&](const omp::Object &object,
