@@ -469,6 +469,10 @@ ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
       decl.SetColumn(form_value.Unsigned());
       break;
 
+    case DW_AT_address_class:
+      address_class = form_value.Unsigned();
+      break;
+
     case DW_AT_declaration:
       is_forward_declaration = form_value.Boolean();
       break;
@@ -812,6 +816,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
   }
   case DW_TAG_pointer_type:
     encoding_data_type = Type::eEncodingIsPointerUID;
+    payload = TypePayloadClang(attrs.address_class);
     break;
   case DW_TAG_reference_type:
     encoding_data_type = Type::eEncodingIsLValueReferenceUID;

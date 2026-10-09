@@ -3750,6 +3750,16 @@ bool TypeSystemClang::HasPointerAuthQualifier(
   return GetCanonicalQualType(type).getPointerAuth().isPresent();
 }
 
+std::optional<uint32_t>
+TypeSystemClang::GetTargetAddressSpace(lldb::opaque_compiler_type_t type) {
+  if (!type)
+    return std::nullopt;
+  clang::LangAS as = GetCanonicalQualType(type).getAddressSpace();
+  if (!clang::isTargetAddressSpace(as))
+    return std::nullopt;
+  return clang::toTargetAddressSpace(as);
+}
+
 bool TypeSystemClang::CanPassInRegisters(const CompilerType &type) {
   if (auto *record_decl =
       TypeSystemClang::GetAsRecordDecl(type)) {
@@ -4682,6 +4692,19 @@ TypeSystemClang::AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
     clang::QualType result =
         clang_ast.getPointerAuthType(GetQualType(type), pauth);
     return GetType(result);
+  }
+  return CompilerType();
+}
+
+CompilerType
+TypeSystemClang::AddAddressSpaceModifier(lldb::opaque_compiler_type_t type,
+                                         uint32_t address_space) {
+  if (type) {
+    clang::QualType qual_type = GetQualType(type);
+    if (address_space == 0 || qual_type.hasAddressSpace())
+      return GetType(qual_type);
+    return GetType(getASTContext().getAddrSpaceQualType(
+        qual_type, clang::getLangASFromTargetAS(address_space)));
   }
   return CompilerType();
 }
