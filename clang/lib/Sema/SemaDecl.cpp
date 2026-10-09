@@ -4057,9 +4057,10 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
   }
 
   // Counts are part of the function's interface, so a redeclaration has to
-  // repeat those on its parameters' pointers. Functions declared in system
-  // headers are exempt: a program may redeclare them with counts.
-  if (!SourceMgr.isInSystemHeader(Old->getLocation()) &&
+  // repeat those on its return type's and parameters' pointers. Library
+  // functions, declared implicitly or in system headers, are exempt: a program
+  // may redeclare them with counts.
+  if (!Old->isImplicit() && !SourceMgr.isInSystemHeader(Old->getLocation()) &&
       !SourceMgr.isInSystemHeader(New->getLocation()) &&
       CheckCountAttributedRedeclaration(New, Old)) {
     Diag(OldLocation, PrevDiag) << Old << Old->getType();
@@ -15920,27 +15921,6 @@ static void CheckExplicitObjectParameter(Sema &S, ParmVarDecl *P,
     LSI->ExplicitObjectParameter = P;
 }
 
-/// The count written on \p T itself: a CountAttributedType under at most the
-/// parentheses, type attributes and macro qualifiers written with it, which
-/// Type::getAsAdjusted also looks through. Null if there is none.
-static const CountAttributedType *getWrittenCountAttributedType(QualType T) {
-  const Type *Ty = T.getTypePtr();
-  while (true) {
-    if (const auto *CATy = dyn_cast<CountAttributedType>(Ty))
-      return CATy;
-    if (const auto *A = dyn_cast<AttributedType>(Ty))
-      Ty = A->getModifiedType().getTypePtr();
-    else if (const auto *A = dyn_cast<BTFTagAttributedType>(Ty))
-      Ty = A->getWrappedType().getTypePtr();
-    else if (const auto *P = dyn_cast<ParenType>(Ty))
-      Ty = P->getInnerType().getTypePtr();
-    else if (const auto *M = dyn_cast<MacroQualifiedType>(Ty))
-      Ty = M->getUnderlyingType().getTypePtr();
-    else
-      return nullptr;
-  }
-}
-
 Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
                                  SourceLocation ExplicitThisLoc) {
   const DeclSpec &DS = D.getDeclSpec();
@@ -16065,11 +16045,30 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
 
   // A count written on an array parameter, also under other type attributes
   // written with it, moves to the pointer the parameter adjusts to; it was
-  // checked where it was applied. One that comes with the array's type through
-  // a typedef or `__typeof__` belongs to another declaration and stays behind.
+  // checked where it was applied. A late-parsed one is completed at the end of
+  // the parameter clause and moves then. One that comes with the array's type
+  // through a typedef or `__typeof__` belongs to another declaration and stays
+  // behind.
   if (const CountAttributedType *CATy =
-          getWrittenCountAttributedType(TInfo->getType()))
+          getWrittenCountAttributedType(TInfo->getType());
+      CATy && CATy->getCountExpr())
     AdjustCountedArrayParamType(New, CATy);
+
+  // A parameter of function type adjusts to a function pointer. As with an
+  // array parameter, a count written in its declarator is taken to describe
+  // that pointer, whose pointee has no size. The count is already part of the
+  // type, so the parameter is invalid. One that comes with the function type or
+  // its return type through a typedef or `__typeof__` belongs to another
+  // declaration and stays on the return type.
+  if (const auto *FT = TInfo->getType()->getAsAdjusted<FunctionType>())
+    if (const CountAttributedType *CATy =
+            getWrittenCountAttributedType(FT->getReturnType())) {
+      Expr *E = CATy->getCountExpr();
+      BoundsAttrFlags Flags{CATy->isCountInBytes(), CATy->isOrNull()};
+      if (!ValidateBoundsAttrTypeShape(New->getType(), E->getBeginLoc(),
+                                       E->getSourceRange(), Flags))
+        New->setInvalidDecl();
+    }
 
   if (D.getDeclSpec().isModulePrivateSpecified())
     Diag(New->getLocation(), diag::err_module_private_local)

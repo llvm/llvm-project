@@ -2511,6 +2511,20 @@ public:
     return nullptr;
   }
 
+  /// Return the function chunk whose return type is formed by the chunk at
+  /// \p Index (by the declaration specifiers if \p Index is the number of
+  /// chunks), looking through parens, or null if there is none.
+  const DeclaratorChunk *getFunctionChunkForReturnType(unsigned Index) const {
+    for (unsigned i = Index; i != 0; --i) {
+      const DeclaratorChunk &Chunk = DeclTypeInfo[i - 1];
+      if (Chunk.Kind == DeclaratorChunk::Function)
+        return &Chunk;
+      if (!Chunk.isParen())
+        return nullptr;
+    }
+    return nullptr;
+  }
+
   /// isArrayOfUnknownBound - This method returns true if the declarator
   /// is a declarator for an array of unknown bound (looking through
   /// parentheses).

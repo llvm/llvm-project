@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -Wno-deprecated-non-prototype -verify %s
-// RUN: %clang_cc1 -fexperimental-late-parse-attributes -fsyntax-only -Wno-deprecated-non-prototype -verify %s
+// RUN: %clang_cc1 -fexperimental-late-parse-attributes -DLATE_PARSING -fsyntax-only -Wno-deprecated-non-prototype -verify %s
 
 // Counts are part of a function's interface, so a redeclaration has to repeat
 // them, on a parameter's own pointer and on those it reaches through pointers
@@ -106,12 +106,29 @@ void typedef_in_body(int c) {
   void local_from_typedef(int n, int *__counted_by(n) p);
 }
 
-// Functions declared in system headers may be redeclared with counts.
+#ifdef LATE_PARSING
+// A late-parsed count that is rejected makes its declaration invalid, so
+// redeclarations are not compared with it.
+int global_count;
+// expected-error@+1{{count expression in function declaration may only reference function parameters}}
+void rejected_first(int *__counted_by(global_count) p, int n);
+void rejected_first(int *__counted_by(n) p, int n);
+void rejected_later(int *__counted_by(n) p, int n);
+// expected-error@+1{{count expression in function declaration may only reference function parameters}}
+void rejected_later(int *__counted_by(global_count) p, int n);
+#endif
+
+// Library functions, declared implicitly or in system headers, may be
+// redeclared with counts. A builtin's count names a later parameter.
+#ifdef LATE_PARSING
+void *memcpy(void *__sized_by(n) dst, const void *__sized_by(n) src,
+             __SIZE_TYPE__ n);
+#endif
 
 # 1 "system.h" 1 3
 void sys_add(int n, int *p);
 void sys_drop(int n, int *__counted_by(n) p);
-# 115 "attr-counted-by-function-params-redecl.c" 2
+# 132 "attr-counted-by-function-params-redecl.c" 2
 
 void sys_add(int n, int *__counted_by(n) p);
 void sys_drop(int n, int *p);

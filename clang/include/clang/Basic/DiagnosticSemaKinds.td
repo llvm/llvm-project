@@ -7205,6 +7205,8 @@ def err_count_attr_must_be_in_structure : Error<
   "field %0 in '%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}1' not inside structure">;
 def err_count_attr_refer_to_non_param : Error<
   "count expression in function declaration may only reference function parameters">;
+def err_count_attr_refer_to_different_scope : Error<
+  "argument of '%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' attribute cannot refer to declaration from a different scope">;
 def err_count_attr_on_sized_array_param : Error<
   "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' cannot be applied to an array parameter with an explicit size">;
 def err_count_attr_more_than_one : Error<

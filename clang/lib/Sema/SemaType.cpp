@@ -290,7 +290,7 @@ namespace {
 
     /// Get an attributed type for the given attribute, and remember the Attr
     /// object so that we can attach it to the AttributedTypeLoc.
-    QualType getAttributedType(Attr *A, QualType ModifiedType,
+    QualType getAttributedType(const Attr *A, QualType ModifiedType,
                                QualType EquivType) {
       QualType T =
           sema.Context.getAttributedType(A, ModifiedType, EquivType);
@@ -4402,7 +4402,12 @@ static bool isIndirectParamCount(const Declarator &D, unsigned ChunkIndex) {
       return false;
     }
   };
-  if (llvm::any_of(D.getAttributes(), IsCount))
+  // Late-parsed type attributes are all counts.
+  auto HasCount = [&](const ParsedAttributesView &Attrs,
+                      const LateParsedAttrList &LateAttrs) {
+    return !LateAttrs.empty() || llvm::any_of(Attrs, IsCount);
+  };
+  if (HasCount(D.getAttributes(), D.getLateAttributes()))
     return false;
 
   unsigned Levels = 0;
@@ -4412,10 +4417,47 @@ static bool isIndirectParamCount(const Declarator &D, unsigned ChunkIndex) {
       continue;
     if ((Chunk.Kind != DeclaratorChunk::Pointer &&
          Chunk.Kind != DeclaratorChunk::Array) ||
-        ++Levels > 1 || llvm::any_of(Chunk.getAttrs(), IsCount))
+        ++Levels > 1 || HasCount(Chunk.getAttrs(), Chunk.LateAttrList))
       return false;
   }
   return Levels == 1;
+}
+
+/// Remove the count \p CATy from \p T, which is \p CATy under the parentheses
+/// and type attributes the declarator wrote around it, as
+/// Sema::getWrittenCountAttributedType finds it. Those are rebuilt through
+/// \p State, so that the type still matches its declarator.
+static QualType removeCountAttributedType(TypeProcessingState &State,
+                                          QualType T,
+                                          const CountAttributedType *CATy) {
+  ASTContext &Ctx = State.getSema().Context;
+  auto Remove = [&](QualType Inner) {
+    return removeCountAttributedType(State, Inner, CATy);
+  };
+  const Type *Ty = T.getTypePtr();
+  QualType Result;
+  if (Ty == CATy) {
+    Result = CATy->desugar();
+  } else if (const auto *PT = dyn_cast<ParenType>(Ty)) {
+    Result = Ctx.getParenType(Remove(PT->getInnerType()));
+  } else if (const auto *AT = dyn_cast<AttributedType>(Ty)) {
+    QualType Modified = Remove(AT->getModifiedType());
+    QualType Equivalent = AT->getEquivalentType() == AT->getModifiedType()
+                              ? Modified
+                              : Remove(AT->getEquivalentType());
+    Result = State.getAttributedType(AT->getAttr(), Modified, Equivalent);
+  } else if (const auto *BT = dyn_cast<BTFTagAttributedType>(Ty)) {
+    Result = State.getBTFTagAttributedType(BT->getAttr(),
+                                           Remove(BT->getWrappedType()));
+  } else {
+    const auto *MQT = cast<MacroQualifiedType>(Ty);
+    Result = Ctx.getMacroQualifiedType(Remove(MQT->getUnderlyingType()),
+                                       MQT->getMacroIdentifier());
+    State.setExpansionLocForMacroQualifiedType(
+        cast<MacroQualifiedType>(Result.getTypePtr()),
+        State.getExpansionLocForMacroQualifiedType(MQT));
+  }
+  return Ctx.getQualifiedType(Result, T.getLocalQualifiers());
 }
 
 static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
@@ -4807,34 +4849,47 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     // declared type. `int *__counted_by(n) *p` would bury the
     // CountAttributedType under another pointer, where the bounds can't be
     // maintained, so diagnose as soon as a chunk is about to wrap one. The
-    // eager path diagnoses the nesting where it applies the attribute. The
-    // pointer that a parameter points to may have a count, as for an out
-    // parameter.
+    // eager path diagnoses the nesting where it applies the attribute, so only
+    // late-parsed counts are rejected here.
     //
-    // Only this declarator's own count is checked. A late-parsed count is
-    // applied after the other attributes in its position, so at most the
-    // parentheses of Paren chunks sit over it. One reached through other sugar,
-    // such as `__typeof__(p)` or a typedef of it, belongs to another
-    // declaration and was checked there.
+    // Only this declarator's own count is checked, under the parentheses and
+    // type attributes of the Paren chunks around it. One reached through a
+    // typedef or `__typeof__(p)` belongs to another declaration and was
+    // checked there.
+    //
+    // Two nested positions may have a count. The pointer that a parameter
+    // points to may, as for an out parameter. A function's return type may,
+    // which the parser has already parsed with the function's parameters; only
+    // one in declaration specifiers, which other declarators may share, is
+    // still late-parsed here.
+    const CountAttributedType *WrappedLateCount = nullptr;
     if (DeclType.Kind == DeclaratorChunk::Pointer ||
-        DeclType.Kind == DeclaratorChunk::Array) {
-      const auto *CATy =
-          dyn_cast<CountAttributedType>(T.IgnoreParens().getTypePtr());
-      if (CATy && !(CATy->desugar()->isPointerType() &&
-                    isIndirectParamCount(D, chunkIndex + 1))) {
+        DeclType.Kind == DeclaratorChunk::Array ||
+        DeclType.Kind == DeclaratorChunk::Function) {
+      const CountAttributedType *CATy = Sema::getWrittenCountAttributedType(T);
+      bool Allowed =
+          CATy && (DeclType.Kind == DeclaratorChunk::Function
+                       ? CATy->getCountExpr() != nullptr
+                       : CATy->desugar()->isPointerType() &&
+                             isIndirectParamCount(D, chunkIndex + 1));
+      if (CATy && !Allowed) {
         // A counted_by-family attribute buried under another pointer or array
-        // can't maintain its bounds. Diagnose it and drop it to its wrapped
-        // type -- matching the eager path, which drops the attribute rather
-        // than applying it. Because this fires just before the enclosing chunk
-        // wraps the node, replacing T here needs no enclosing-type rebuild.
+        // can't maintain its bounds. Diagnose it and drop it from the type,
+        // keeping what was written around it -- matching the eager path, which
+        // drops the attribute rather than applying it. Because this fires just
+        // before the enclosing chunk wraps the node, replacing T here needs no
+        // enclosing-type rebuild.
         //
         // Record the rejection so the completion pass skips this node without
         // parsing its argument, which would otherwise diagnose the argument of
-        // an attribute that has already been rejected.
+        // an attribute that has already been rejected. Declarators that share
+        // the node through declaration specifiers still complete it.
         S.Diag(DeclType.Loc, diag::err_counted_by_on_nested_pointer)
             << CATy->getKind();
         S.markLateParsedBoundsTypeRejected(CATy);
-        T = CATy->desugar();
+        T = removeCountAttributedType(state, T, CATy);
+      } else if (Allowed && !CATy->getCountExpr()) {
+        WrappedLateCount = CATy;
       }
     }
 
@@ -5599,6 +5654,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       D.setInvalidType(true);
       T = Context.IntTy;
       AreDeclaratorChunksValid = false;
+      // A late-parsed count that this chunk wrapped is dropped with it.
+      if (WrappedLateCount)
+        S.markLateParsedBoundsTypeRejected(WrappedLateCount);
     }
 
     // See if there are any attributes on this declarator chunk.
@@ -5606,9 +5664,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                      S.CUDA().IdentifyTarget(D.getAttributes()));
 
     // The pointer-nest-level check for late-parsed attributes is intentionally
-    // deferred: at this point the enclosing chunks have not all been applied,
-    // so it is done once the whole declarator is built, when a Pointer/Array
-    // chunk is seen wrapping a CountAttributedType (see the
+    // deferred: it is done as each enclosing Pointer, Array or Function chunk
+    // is about to wrap the CountAttributedType (see the
     // err_counted_by_on_nested_pointer diagnostic above). processLateTypeAttrs
     // therefore passes pointerNestLevel == 0 here.
     processLateTypeAttrs(state, T, DeclType.LateAttrList, chunkIndex);
@@ -9182,8 +9239,9 @@ static CountAttributedType::BoundsAttrKind getCountAttrKind(bool CountInBytes,
 }
 
 /// Calculate the pointer nesting level for counted_by attribute validation.
-/// Counts the number of pointer/array/function declarator chunks before the
-/// specified chunk index.
+/// Counts the number of pointer/array declarator chunks before the specified
+/// chunk index, from the nearest function chunk, whose return type the chunk
+/// forms.
 ///
 /// For example, given \c "int * __counted_by(n) *pp" the declarator chunks
 /// are (outermost first): [0]=Pointer(\c int **), [1]=Pointer(\c int *).
@@ -9192,18 +9250,22 @@ static CountAttributedType::BoundsAttrKind getCountAttrKind(bool CountInBytes,
 ///
 /// \param state The type processing state
 /// \param chunkIndex The index of the current declarator chunk
-/// \return The number of pointer/array/function chunks before chunkIndex
+/// \return The number of pointer/array chunks before chunkIndex, from the
+/// nearest function chunk
 static unsigned getPointerNestLevel(TypeProcessingState &state,
                                     unsigned chunkIndex) {
   unsigned pointerNestLevel = 0;
   const auto &stateDeclarator = state.getDeclarator();
   assert(chunkIndex <= stateDeclarator.getNumTypeObjects());
   // DeclChunks are ordered identifier out. Index 0 is the outer most type
-  // object. Find outer pointer, array or function.
+  // object. Find outer pointer or array, inside the nearest function's return
+  // type.
   for (unsigned i = 0; i < chunkIndex; ++i) {
-    auto TypeObject = stateDeclarator.getTypeObject(i);
+    const DeclaratorChunk &TypeObject = stateDeclarator.getTypeObject(i);
     switch (TypeObject.Kind) {
     case DeclaratorChunk::Function:
+      pointerNestLevel = 0;
+      break;
     case DeclaratorChunk::Array:
     case DeclaratorChunk::Pointer:
       pointerNestLevel++;
@@ -9283,18 +9345,13 @@ static void HandleCountedByAttrOnType(TypeProcessingState &State,
   if (D.getContext() == DeclaratorContext::KNRTypeList)
     return;
 
-  // This is a mechanism to prevent nested count pointer types in the contexts
-  // where late parsing isn't allowed: currently that is any context other than
-  // struct fields. In the context where late parsing is allowed, the level
-  // check will be done once the whole context is constructed.
+  // The eager path checks the nesting here, where the count is applied: it is
+  // nested under the pointer and array chunks before the current one, which
+  // for the declaration specifiers is all of them. A late-parsed count is
+  // checked instead as the enclosing chunks wrap it, in
+  // GetFullTypeForDeclarator.
   unsigned chunkIndex = State.getCurrentChunkIndex();
-  unsigned pointerNestLevel = 0;
-
-  // Only calculate pointer nest level if we're processing a declarator chunk.
-  // For DeclSpec attributes, the declarator hasn't been constructed yet.
-  if (chunkIndex > 0) {
-    pointerNestLevel = getPointerNestLevel(State, chunkIndex);
-  }
+  unsigned pointerNestLevel = getPointerNestLevel(State, chunkIndex);
 
   // A parameter may point to a counted pointer, as an out parameter does:
   // `int *__counted_by(*len) *buf`. That count is nested, but allowed.
@@ -9302,7 +9359,10 @@ static void HandleCountedByAttrOnType(TypeProcessingState &State,
       isIndirectParamCount(D, chunkIndex))
     pointerNestLevel = 0;
 
-  bool IsParameter = D.getContext() == DeclaratorContext::Prototype;
+  // A count in a function type's return type names that function type's
+  // parameters.
+  const DeclaratorChunk *FnChunk = D.getFunctionChunkForReturnType(chunkIndex);
+  bool IsParameter = !FnChunk && D.getContext() == DeclaratorContext::Prototype;
 
   Sema::BoundsAttrFlags Flags;
   if (!validateBoundsAttrTypeForTypePosition(
@@ -9312,11 +9372,17 @@ static void HandleCountedByAttrOnType(TypeProcessingState &State,
     return;
   }
 
-  // Unlike a field's count, a parameter's needs no declaration to be checked,
-  // so a rejected one is not applied.
-  if (IsParameter &&
-      S.CheckCountedByAttrOnParam(CurType, CountExpr, Flags.CountInBytes,
-                                  Flags.OrNull)) {
+  // Unlike a field's count, these need no declaration to be checked, so a
+  // rejected one is not applied.
+  bool Rejected = false;
+  if (FnChunk)
+    Rejected = S.CheckCountedByAttrOnReturn(
+        CountExpr, Flags.CountInBytes, Flags.OrNull,
+        ArrayRef(FnChunk->Fun.Params, FnChunk->Fun.NumParams));
+  else if (IsParameter)
+    Rejected = S.CheckCountedByAttrOnParam(CurType, CountExpr,
+                                           Flags.CountInBytes, Flags.OrNull);
+  if (Rejected) {
     Attr.setInvalid();
     return;
   }
@@ -9334,11 +9400,12 @@ bool Sema::ActOnLateParsedTypeAttr(ParsedAttr::Kind AttrKind,
                                    SourceLocation AttrNameLoc, QualType &type,
                                    unsigned pointerNestLevel,
                                    BoundsAttributedType **BATy) {
-  // Parameters are not late-parsed.
+  // A parameter's type is built while its prototype scope is current.
+  bool IsParameter = getCurScope() && getCurScope()->isFunctionPrototypeScope();
   BoundsAttrFlags Flags;
   if (!validateBoundsAttrTypeForTypePosition(
           *this, type, AttrKind, AttrNameLoc, SourceRange(AttrNameLoc),
-          pointerNestLevel, Flags, /*IsParameter=*/false))
+          pointerNestLevel, Flags, IsParameter))
     return false;
 
   // The argument hasn't been parsed yet, so build the type without it and hand
@@ -10380,6 +10447,33 @@ bool Sema::ActOnLateParsedTypeAttrArgument(BoundsAttributedType *BATy,
     Context.completeCountAttributedType(CATy, Arg, Decls);
 
   return true;
+}
+
+void Sema::ActOnLateParsedParamTypeAttrArgument(BoundsAttributedType *BATy,
+                                                ParmVarDecl *PVD, Expr *Arg,
+                                                SourceLocation AttrLoc) {
+  // Only the counted_by family exists so far.
+  auto *CATy = cast<CountAttributedType>(BATy);
+
+  // The node is already in the parameter's type, so an argument that failed to
+  // parse still has to fill it. CreateRecoveryExpr gives nothing under
+  // -fno-recovery-ast, so build the error expression directly.
+  if (!Arg)
+    Arg = RecoveryExpr::Create(Context, Context.IntTy, AttrLoc, AttrLoc, {});
+
+  // As for a field, the node is already part of the type, so a rejected count
+  // completes it without coupled declarations and invalidates the parameter.
+  if (CheckCountedByAttrOnParam(CATy->desugar(), Arg, CATy->isCountInBytes(),
+                                CATy->isOrNull())) {
+    Context.completeCountAttributedType(CATy, Arg, {});
+    PVD->setInvalidDecl();
+    return;
+  }
+
+  llvm::SmallVector<TypeCoupledDeclRefInfo, 1> Decls;
+  BuildTypeCoupledDecls(Arg, Decls);
+  Context.completeCountAttributedType(CATy, Arg, Decls);
+  AdjustCountedArrayParamType(PVD, CATy);
 }
 
 QualType Sema::BuildCountAttributedArrayOrPointerType(QualType WrappedTy,

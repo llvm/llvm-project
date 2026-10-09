@@ -64,6 +64,24 @@ DeclRefExpr *Sema::getCountDeclRef(Expr *E, bool &IsDeref) {
   return dyn_cast<DeclRefExpr>(E);
 }
 
+const CountAttributedType *Sema::getWrittenCountAttributedType(QualType T) {
+  const Type *Ty = T.getTypePtr();
+  while (true) {
+    if (const auto *CATy = dyn_cast<CountAttributedType>(Ty))
+      return CATy;
+    if (const auto *A = dyn_cast<AttributedType>(Ty))
+      Ty = A->getModifiedType().getTypePtr();
+    else if (const auto *A = dyn_cast<BTFTagAttributedType>(Ty))
+      Ty = A->getWrappedType().getTypePtr();
+    else if (const auto *P = dyn_cast<ParenType>(Ty))
+      Ty = P->getInnerType().getTypePtr();
+    else if (const auto *M = dyn_cast<MacroQualifiedType>(Ty))
+      Ty = M->getUnderlyingType().getTypePtr();
+    else
+      return nullptr;
+  }
+}
+
 static const RecordDecl *GetEnclosingNamedOrTopAnonRecord(const FieldDecl *FD) {
   const auto *RD = FD->getParent();
   // An unnamed struct is treated as anonymous struct at this point.
@@ -247,6 +265,28 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
   return false;
 }
 
+/// The checks shared by the counts in a function declaration: \p E must be an
+/// integer naming a declaration, or if \p AllowDeref, dereferencing one.
+/// Returns that declaration, or null on error.
+static ValueDecl *checkCountRefersToDecl(Sema &S, Expr *E, unsigned Kind,
+                                         bool AllowDeref) {
+  if (!E->getType()->isIntegerType() || E->getType()->isBooleanType()) {
+    S.Diag(E->getBeginLoc(), diag::err_count_attr_argument_not_integer)
+        << Kind << E->getSourceRange();
+    return nullptr;
+  }
+
+  bool IsDeref;
+  auto *DRE = Sema::getCountDeclRef(E, IsDeref);
+  if (!DRE || (IsDeref && !AllowDeref)) {
+    S.Diag(E->getBeginLoc(),
+           diag::err_count_attr_only_support_simple_decl_reference)
+        << Kind << E->getSourceRange();
+    return nullptr;
+  }
+  return DRE->getDecl();
+}
+
 bool Sema::CheckCountedByAttrOnParam(QualType ParamTy, Expr *E,
                                      bool CountInBytes, bool OrNull) {
   // An invalid count was already diagnosed.
@@ -268,25 +308,36 @@ bool Sema::CheckCountedByAttrOnParam(QualType ParamTy, Expr *E,
     return true;
   }
 
-  if (!E->getType()->isIntegerType() || E->getType()->isBooleanType()) {
-    Diag(E->getBeginLoc(), diag::err_count_attr_argument_not_integer)
-        << Kind << E->getSourceRange();
+  ValueDecl *VD = checkCountRefersToDecl(*this, E, Kind, /*AllowDeref=*/true);
+  if (!VD)
     return true;
-  }
-
-  bool IsDeref;
-  auto *DRE = getCountDeclRef(E, IsDeref);
-  if (!DRE) {
-    Diag(E->getBeginLoc(),
-         diag::err_count_attr_only_support_simple_decl_reference)
-        << Kind << E->getSourceRange();
-    return true;
-  }
 
   // The parameters of an enclosing function declarator are in scope too.
-  if (!isa<ParmVarDecl>(DRE->getDecl())) {
+  if (!isa<ParmVarDecl>(VD)) {
     Diag(E->getBeginLoc(), diag::err_count_attr_refer_to_non_param)
         << E->getSourceRange();
+    return true;
+  }
+  return false;
+}
+
+bool Sema::CheckCountedByAttrOnReturn(
+    Expr *E, bool CountInBytes, bool OrNull,
+    ArrayRef<DeclaratorChunk::ParamInfo> Params) {
+  // Already diagnosed where it failed to parse.
+  if (E->containsErrors())
+    return true;
+
+  unsigned Kind = getCountAttrKind(CountInBytes, OrNull);
+  ValueDecl *VD = checkCountRefersToDecl(*this, E, Kind, /*AllowDeref=*/false);
+  if (!VD)
+    return true;
+
+  if (llvm::none_of(Params, [&](const DeclaratorChunk::ParamInfo &PI) {
+        return PI.Param == VD;
+      })) {
+    Diag(E->getBeginLoc(), diag::err_count_attr_refer_to_different_scope)
+        << Kind << E->getSourceRange();
     return true;
   }
   return false;
@@ -343,11 +394,11 @@ static bool isSameCount(const ASTContext &Ctx, Expr *New, Expr *Old,
          NewDRE->getDecl() == OldDRE->getDecl();
 }
 
-/// Of \p New and \p Old, the types of one parameter in two declarations
-/// \p NewFD and \p OldFD of a function, the count at the outermost pointer
-/// level where they differ, or null if they agree. Only pointers are followed,
-/// so counts below an _Atomic pointer or in a callback's parameters are not
-/// compared.
+/// Of \p New and \p Old, the types of one parameter or return value in two
+/// declarations \p NewFD and \p OldFD of a function, the count at the
+/// outermost pointer level where they differ, or null if they agree. Only
+/// pointers are followed, so counts below an _Atomic pointer or in a
+/// callback's parameters are not compared.
 static const CountAttributedType *
 findConflictingCount(const ASTContext &Ctx, QualType New, QualType Old,
                      const FunctionDecl *NewFD, const FunctionDecl *OldFD) {
@@ -379,17 +430,26 @@ findConflictingCount(const ASTContext &Ctx, QualType New, QualType Old,
 
 bool Sema::CheckCountAttributedRedeclaration(const FunctionDecl *New,
                                              const FunctionDecl *Old) {
+  auto Diagnose = [&](const CountAttributedType *CATy, SourceLocation Loc) {
+    if (!CATy)
+      return false;
+    Diag(Loc, diag::err_count_attr_conflicting_redeclaration)
+        << CATy->getKind();
+    return true;
+  };
+
+  if (Diagnose(findConflictingCount(Context, New->getReturnType(),
+                                    Old->getReturnType(), New, Old),
+               New->getBeginLoc()))
+    return true;
   for (unsigned I = 0, E = std::min(New->getNumParams(), Old->getNumParams());
        I != E; ++I) {
     const ParmVarDecl *NewParam = New->getParamDecl(I);
-    if (const CountAttributedType *CATy =
-            findConflictingCount(Context, NewParam->getType(),
-                                 Old->getParamDecl(I)->getType(), New, Old)) {
-      Diag(NewParam->getBeginLoc(),
-           diag::err_count_attr_conflicting_redeclaration)
-          << CATy->getKind();
+    if (Diagnose(findConflictingCount(Context, NewParam->getType(),
+                                      Old->getParamDecl(I)->getType(), New,
+                                      Old),
+                 NewParam->getBeginLoc()))
       return true;
-    }
   }
   return false;
 }

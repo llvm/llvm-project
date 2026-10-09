@@ -20,16 +20,12 @@ struct nested_record_declspec_attr {
   int y;
 };
 
-// A 'counted_by' type attribute on a free-function parameter has no enclosing
-// record to complete it. Late-parsing it left a CountAttributedType with a
-// null count expression in the AST, which crashed on serialization / PCH
-// round-trip. Parameters now fall back to eager handling, so the attribute is
-// resolved (or rejected) immediately instead of escaping unfinished.
-
-// Forward reference: eager handling can't see 'n' yet, so it is diagnosed
-// rather than silently building a null-count type.
-void fwd_ref_param(int *__counted_by(n) p, // expected-error {{use of undeclared identifier 'n'}}
-                   int n);
+// A 'counted_by' type attribute on a free-function parameter once had nothing
+// to complete it. Late-parsing it left a CountAttributedType with a null count
+// expression in the AST, which crashed on serialization / PCH round-trip. The
+// parameter clause now completes it at its closing parenthesis, in either
+// order of the count and the pointer.
+void fwd_ref_param(int *__counted_by(n) p, int n);
 void bwd_ref_param(int n, int *__counted_by(n) p);
 
 // A declaration-specifier-position attribute is shared by every declarator in
@@ -97,3 +93,39 @@ struct nested_with_unresolvable_count {
   // expected-error@+1 {{'counted_by' attribute on nested pointer type is not allowed}}
   int *__counted_by(does_not_exist) *pp;
 };
+
+// Dropping a nested counted_by used to drop the parentheses around it too, so
+// the type no longer matched its declarator and building its TypeLoc asserted.
+struct nested_in_parens {
+  int n;
+  // expected-error@+1 {{'counted_by' attribute on nested pointer type is not allowed}}
+  int *__counted_by(n) (*p);
+};
+
+// Type attributes in those parentheses sit over the count too. It is still
+// found and diagnosed, and dropping it keeps them, also when a macro wrote them
+// or their equivalent type differs.
+#define __noderef __attribute__((noderef))
+struct nested_under_type_attrs {
+  int n;
+  // expected-error@+1 {{'counted_by' attribute on nested pointer type is not allowed}}
+  int *__counted_by(n) (__attribute__((btf_type_tag("t"))) *a);
+  // expected-error@+1 {{'counted_by' attribute on nested pointer type is not allowed}}
+  int *__counted_by(n) (__noderef *b);
+  // expected-error@+1 {{'counted_by' attribute on nested pointer type is not allowed}}
+  int *__counted_by(n) (__attribute__((address_space(1))) *c);
+};
+
+// A count that comes with a field's type, through '__typeof__' or a typedef, was
+// checked where the field declared it. Taking it for a nested count of the new
+// declarator used to assert while removing it from under that sugar.
+struct typeof_source {
+  int n;
+  int *__counted_by(n) p;
+};
+typedef __typeof__(((struct typeof_source *)0)->p) counted_field;
+counted_field *typedef_ptr;
+void typeof_local(struct typeof_source *s) {
+  __typeof__(s->p) *x;
+  (void)x;
+}

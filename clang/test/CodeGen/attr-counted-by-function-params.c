@@ -1,8 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsanitize=array-bounds -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsanitize=array-bounds -fexperimental-late-parse-attributes -DLATE_PARSING -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,LATE
 
 // Test that counted_by on a function parameter is consumed entirely by Sema:
 // unlike a field's count, it bounds neither -fsanitize=array-bounds nor
-// __builtin_dynamic_object_size.
+// __builtin_dynamic_object_size, also when it is late-parsed.
 
 #define __counted_by(f)  __attribute__((counted_by(f)))
 
@@ -23,3 +24,14 @@ int subscript(int count, int *__counted_by(count) buf, int i) {
 unsigned long bdos(int count, int *__counted_by(count) buf) {
   return __builtin_dynamic_object_size(buf, 0);
 }
+
+#ifdef LATE_PARSING
+// LATE-LABEL: define dso_local i32 @fwd_ref(
+// LATE-NOT:     __ubsan_handle_out_of_bounds
+// LATE:         ret i32
+//
+// Verify: a count naming a later parameter does not bound the subscript either
+int fwd_ref(int *__counted_by(count) buf, int count, int i) {
+  return buf[i];
+}
+#endif

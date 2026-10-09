@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -verify %s -ast-dump | FileCheck %s
-// RUN: %clang_cc1 -fexperimental-late-parse-attributes -verify %s -ast-dump | FileCheck %s
+// RUN: %clang_cc1 -verify %s -ast-dump | FileCheck %s --check-prefixes=CHECK,EAGER
+// RUN: %clang_cc1 -fexperimental-late-parse-attributes -verify %s -ast-dump | FileCheck %s --check-prefixes=CHECK,LATE
 
 #define __counted_by(f)  __attribute__((counted_by(f)))
 #define __sized_by_or_null(f)  __attribute__((sized_by_or_null(f)))
@@ -50,8 +50,10 @@ void repeated_array(int n, int m, int arr[] __counted_by(n) __counted_by(m));
 // CHECK: FunctionDecl {{.*}} out 'void (int *, int * __counted_by(*len)*)'
 void out(int *len, int *__counted_by(*len) *buf);
 
-// A rejected count is not applied, and the function stays valid.
-// CHECK: FunctionDecl {{.*}} not_a_param 'void (int *)'
+// A rejected count is not applied, and the function stays valid. A late-parsed
+// count is already part of the type, so it stays and the declaration is invalid.
+// EAGER: FunctionDecl {{.*}} not_a_param 'void (int *)'
+// LATE: FunctionDecl {{.*}} invalid not_a_param 'void (int * __counted_by(global_count))'
 // expected-error@+1{{count expression in function declaration may only reference function parameters}}
 void not_a_param(int *__counted_by(global_count) buf);
 
