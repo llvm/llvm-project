@@ -264,8 +264,8 @@ void SDNodeInfo::verifyNode(const SelectionDAG &DAG, const SDNode *N) const {
         reportNodeError(DAG, N, SS.str());
       }
       if (VT.getVectorElementType() != VecVT.getVectorElementType()) {
-        SS << Val << " must have the same element type as " << VecVal
-           << " (" << VecVT.getVectorElementType() << "), but has element type "
+        SS << Val << " must have the same element type as " << VecVal << " ("
+           << VecVT.getVectorElementType() << "), but has element type "
            << VT.getVectorElementType();
         reportNodeError(DAG, N, SS.str());
       }
