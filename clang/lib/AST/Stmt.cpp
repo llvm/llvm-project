@@ -1532,11 +1532,10 @@ const Stmt *LabelStmt::getInnermostLabeledStmt() const {
   return S;
 }
 
-const std::optional<Stmt *> LoopControlStmt::getNamedLoopOrSwitch() const {
+const Stmt *LoopControlStmt::getNamedLoopOrSwitch() const {
   assert(isNamed());
   LabelStmt *Label = getLabelDecl()->getStmt();
-  return Label ? std::optional<Stmt *>(Label->getInnermostLabeledStmt())
-               : std::nullopt;
+  return Label ? Label->getInnermostLabeledStmt() : nullptr;
 }
 
 DeferStmt::DeferStmt(EmptyShell Empty) : Stmt(DeferStmtClass, Empty) {}

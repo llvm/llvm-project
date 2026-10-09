@@ -1527,16 +1527,16 @@ void TextNodeDumper::VisitLoopControlStmt(const LoopControlStmt *Node) {
 
   OS << " '" << Node->getLabelDecl()->getIdentifier()->getName() << "' (";
 
-  const std::optional<Stmt *> Target = Node->getNamedLoopOrSwitch();
+  auto *Target = Node->getNamedLoopOrSwitch();
   if (!Target) {
     ColorScope Color(OS, ShowColors, ASTDumpColor::Null);
     OS << "<<<NULL>>>";
   } else {
     {
       ColorScope Color(OS, ShowColors, ASTDumpColor::Stmt);
-      OS << Target.value()->getStmtClassName();
+      OS << Target->getStmtClassName();
     }
-    dumpPointer(Target.value());
+    dumpPointer(Target);
   }
   OS << ")";
 }

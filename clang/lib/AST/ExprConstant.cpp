@@ -6385,8 +6385,8 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
   case Stmt::ContinueStmtClass:
   case Stmt::BreakStmtClass: {
     auto *B = cast<LoopControlStmt>(S);
-    Info.BreakContinueStack.push_back(
-        B->isNamed() ? B->getNamedLoopOrSwitch().value_or(nullptr) : nullptr);
+    Info.BreakContinueStack.push_back(B->isNamed() ? B->getNamedLoopOrSwitch()
+                                                   : nullptr);
     return isa<ContinueStmt>(S) ? ESR_Continue : ESR_Break;
   }
 

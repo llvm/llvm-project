@@ -1702,10 +1702,10 @@ auto CodeGenFunction::GetDestForLoopControlStmt(const LoopControlStmt &S)
   if (!S.isNamed())
     return &BreakContinueStack.back();
 
-  const std::optional<Stmt *> LoopOrSwitch = S.getNamedLoopOrSwitch();
+  const Stmt *LoopOrSwitch = S.getNamedLoopOrSwitch();
   assert(LoopOrSwitch && "break/continue target label not available?");
   for (const BreakContinue &BC : llvm::reverse(BreakContinueStack))
-    if (BC.LoopOrSwitch == LoopOrSwitch.value())
+    if (BC.LoopOrSwitch == LoopOrSwitch)
       return &BC;
 
   llvm_unreachable("break/continue target not found");

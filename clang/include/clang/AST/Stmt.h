@@ -3113,7 +3113,7 @@ public:
   /// but its LabelStmt has not yet been created. Otherwise, Stmt * will
   /// be a non-null pointer to the loop or switch statement under the label.
   /// \pre `isNamed()`
-  const std::optional<Stmt *> getNamedLoopOrSwitch() const;
+  const Stmt *getNamedLoopOrSwitch() const;
 
   // Iterators
   child_range children() {
