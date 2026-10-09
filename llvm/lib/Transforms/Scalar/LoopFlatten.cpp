@@ -823,7 +823,7 @@ static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
 
   // Tell LoopInfo, SCEV and the pass manager that the inner loop has been
   // deleted, and invalidate any outer loop information.
-  SE->forgetLoop(FI.OuterLoop);
+  SE->forgetLoop(FI.OuterLoop, /*MayIncreaseBackedgeTakenCount=*/true);
   SE->forgetBlockAndLoopDispositions();
   if (U)
     U->markLoopAsDeleted(*FI.InnerLoop, FI.InnerLoop->getName());
