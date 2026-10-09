@@ -3519,18 +3519,14 @@ static llvm::ConvergenceControlInst *getConvergenceToken(llvm::BasicBlock *BB) {
   return nullptr;
 }
 
-llvm::CallBase *
-CodeGenFunction::addConvergenceControlToken(llvm::CallBase *Input) {
+void CodeGenFunction::addConvergenceControlBundle(
+    SmallVectorImpl<llvm::OperandBundleDef> &Bundles) {
+  if (!CGM.shouldEmitConvergenceTokens())
+    return;
+
   llvm::ConvergenceControlInst *ParentToken = ConvergenceTokenStack.back();
   assert(ParentToken);
-
-  llvm::Value *bundleArgs[] = {ParentToken};
-  llvm::OperandBundleDef OB("convergencectrl", bundleArgs);
-  auto *Output = llvm::CallBase::addOperandBundle(
-      Input, llvm::LLVMContext::OB_convergencectrl, OB, Input->getIterator());
-  Input->replaceAllUsesWith(Output);
-  Input->eraseFromParent();
-  return Output;
+  Bundles.emplace_back("convergencectrl", ParentToken);
 }
 
 llvm::ConvergenceControlInst *
