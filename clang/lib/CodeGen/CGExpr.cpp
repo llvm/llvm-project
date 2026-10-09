@@ -1376,6 +1376,9 @@ llvm::MDNode *CodeGenFunction::buildAllocToken(QualType AllocType) {
       getLangOpts().AllocTokenMode.value_or(llvm::DefaultAllocTokenMode);
   if (Mode == llvm::AllocTokenMode::TypeFuncHash ||
       Mode == llvm::AllocTokenMode::TypeFuncHashPointerSplit) {
+    // Even if the type cannot be inferred, emit metadata for a function-based
+    // token. This allows distinguishing allocations that would otherwise all
+    // share the fallback token.
     if (!ATMD)
       ATMD = llvm::AllocTokenMetadata{{}, false};
     // Use the outermost non-closure function, i.e. allocations in lambdas,
