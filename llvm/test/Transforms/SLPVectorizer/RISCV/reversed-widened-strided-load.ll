@@ -2,13 +2,14 @@
 ; RUN: opt -S -passes=slp-vectorizer -mtriple=riscv64-unknown-linux-gnu -mattr=+m,+v,+unaligned-vector-mem < %s | FileCheck %s
 
 define void @test(ptr %pl, ptr %ps) {
-; CHECK-LABEL: define void @reversed_widened_strided_load(
+; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[PL:%.*]], ptr [[PS:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[GL0:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 303
+; CHECK-NEXT:    [[GL15:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 0
 ; CHECK-NEXT:    [[GS0:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.experimental.vp.strided.load.v4i32.p0.i64(ptr align 1 [[GL0]], i64 -100, <4 x i1> splat (i1 true), i32 4)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.experimental.vp.strided.load.v4i32.p0.i64(ptr align 1 [[GL15]], i64 100, <4 x i1> splat (i1 true), i32 4)
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP1]] to <16 x i8>
-; CHECK-NEXT:    store <16 x i8> [[TMP2]], ptr [[GS0]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <16 x i8> [[TMP2]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    store <16 x i8> [[TMP3]], ptr [[GS0]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %gl0 = getelementptr inbounds i8, ptr %pl, i64 303
