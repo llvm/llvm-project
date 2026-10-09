@@ -435,9 +435,31 @@ bool AMDGPURegBankCombinerImpl::matchSameValZeroRegBankAware(
   if (getSrcRegIgnoringCopies(LHS, MRI) != getSrcRegIgnoringCopies(RHS, MRI))
     return false;
 
-  // Dst already has a register bank, so build the 0 there instead of a new
-  // register.
-  MatchInfo = [Dst](MachineIRBuilder &B) { B.buildConstant(Dst, 0); };
+  LLT Ty = MRI.getType(Dst);
+  if (Ty.isScalar()) {
+    // Dst already has a bank, so build the 0 straight into it.
+    MatchInfo = [Dst](MachineIRBuilder &B) { B.buildConstant(Dst, 0); };
+    return true;
+  }
+
+  // Anything we create below needs a bank, so grab Dst's.
+  const RegisterBank *RB = MRI.getRegBankOrNull(Dst);
+  if (!Ty.isFixedVector() || !RB)
+    return false;
+
+  // A vector 0 is an all-zero scalar of the same width bitcast into shape.
+  LLT IntTy = LLT::integer(Ty.getSizeInBits());
+  if (!Helper.isLegal({TargetOpcode::G_CONSTANT, {IntTy}}) ||
+      !Helper.isLegal({TargetOpcode::G_BITCAST, {Ty, IntTy}}))
+    return false;
+
+  MatchInfo = [Dst, IntTy, RB](MachineIRBuilder &B) {
+    // Bank on creation: CSE hashes the bank, so this only ever reuses a
+    // constant that is already in the right one.
+    Register Zero = B.getMRI()->createVirtualRegister({RB, IntTy});
+    B.buildConstant(Zero, 0);
+    B.buildBitcast(Dst, Zero);
+  };
   return true;
 }
 
