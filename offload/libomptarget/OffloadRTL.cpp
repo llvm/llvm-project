@@ -58,7 +58,7 @@ void initRuntime() {
 
     PM->init();
     PM->registerDelayedLibraries();
-    // After all plugins are initialized, register atExit cleanup handlers
+    // After all plugins are initialized, register atExit cleanup handlers.
     std::atexit([]() {
       // Interop cleanup should be done before the plugins are deinitialized as
       // the backend libraries may be already unloaded.

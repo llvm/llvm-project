@@ -21,7 +21,7 @@
 namespace llvm::omp::target {
 class OmpPluginManager : public PluginManager {
 public:
-  /// Table of cached implicit interop objects
+  /// Table of cached implicit interop objects.
   InteropTblTy InteropTbl;
 };
 } // namespace llvm::omp::target
