@@ -4,6 +4,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 declare i32 @__gxx_personality_v0(...)
 declare void @fn()
+declare void @use(i32)
 
 
 define void @test1() personality ptr @__gxx_personality_v0 {
@@ -146,4 +147,302 @@ lpad2:
 shared_resume:
   call void @fn()
   ret void
+}
+
+; The phi only forwards each landing pad's own value, so the pads can be merged.
+define void @phi_lpad_values() personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: @phi_lpad_values(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    invoke void @fn()
+; CHECK-NEXT:            to label [[INVOKE2:%.*]] unwind label [[LPAD1:%.*]]
+; CHECK:       invoke2:
+; CHECK-NEXT:    invoke void @fn()
+; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD2:%.*]]
+; CHECK:       invoke.cont:
+; CHECK-NEXT:    ret void
+; CHECK:       lpad1:
+; CHECK-NEXT:    [[EXN:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    br label [[SHARED_RESUME:%.*]]
+; CHECK:       lpad2:
+; CHECK-NEXT:    [[EXN2:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    br label [[SHARED_RESUME]]
+; CHECK:       shared_resume:
+; CHECK-NEXT:    [[PHI:%.*]] = phi { ptr, i32 } [ [[EXN]], [[LPAD1]] ], [ [[EXN2]], [[LPAD2]] ]
+; CHECK-NEXT:    call void @fn()
+; CHECK-NEXT:    resume { ptr, i32 } [[PHI]]
+;
+entry:
+  invoke void @fn()
+  to label %invoke2 unwind label %lpad1
+
+invoke2:
+  invoke void @fn()
+  to label %invoke.cont unwind label %lpad2
+
+invoke.cont:
+  ret void
+
+lpad1:
+  %exn = landingpad {ptr, i32}
+  cleanup
+  br label %shared_resume
+
+lpad2:
+  %exn2 = landingpad {ptr, i32}
+  cleanup
+  br label %shared_resume
+
+shared_resume:
+  %phi = phi {ptr, i32} [ %exn, %lpad1 ], [ %exn2, %lpad2 ]
+  call void @fn()
+  resume {ptr, i32} %phi
+}
+
+; The phi receives the same value from both landing pads.
+define i32 @phi_same_value(i32 %x) personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: @phi_same_value(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    invoke void @fn()
+; CHECK-NEXT:            to label [[INVOKE2:%.*]] unwind label [[LPAD1:%.*]]
+; CHECK:       invoke2:
+; CHECK-NEXT:    invoke void @fn()
+; CHECK-NEXT:            to label [[COMMON_RET:%.*]] unwind label [[LPAD2:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 0, [[INVOKE2]] ], [ [[X:%.*]], [[LPAD1]] ], [ [[X]], [[LPAD2]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
+; CHECK:       lpad1:
+; CHECK-NEXT:    [[EXN:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    br label [[COMMON_RET]]
+; CHECK:       lpad2:
+; CHECK-NEXT:    [[EXN2:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+entry:
+  invoke void @fn()
+  to label %invoke2 unwind label %lpad1
+
+invoke2:
+  invoke void @fn()
+  to label %invoke.cont unwind label %lpad2
+
+invoke.cont:
+  ret i32 0
+
+lpad1:
+  %exn = landingpad {ptr, i32}
+  cleanup
+  br label %shared_resume
+
+lpad2:
+  %exn2 = landingpad {ptr, i32}
+  cleanup
+  br label %shared_resume
+
+shared_resume:
+  %phi = phi i32 [ %x, %lpad1 ], [ %x, %lpad2 ]
+  ret i32 %phi
+}
+
+; Merging would require a new phi.
+define i32 @neg_phi_different_values(i32 %x, i32 %y) personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: @neg_phi_different_values(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    invoke void @fn()
+; CHECK-NEXT:            to label [[INVOKE2:%.*]] unwind label [[LPAD1:%.*]]
+; CHECK:       invoke2:
+; CHECK-NEXT:    invoke void @fn()
+; CHECK-NEXT:            to label [[COMMON_RET:%.*]] unwind label [[LPAD2:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 0, [[INVOKE2]] ], [ [[X:%.*]], [[LPAD1]] ], [ [[Y:%.*]], [[LPAD2]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
+; CHECK:       lpad1:
+; CHECK-NEXT:    [[EXN:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    br label [[COMMON_RET]]
+; CHECK:       lpad2:
+; CHECK-NEXT:    [[EXN2:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+entry:
+  invoke void @fn()
+  to label %invoke2 unwind label %lpad1
+
+invoke2:
+  invoke void @fn()
+  to label %invoke.cont unwind label %lpad2
+
+invoke.cont:
+  ret i32 0
+
+lpad1:
+  %exn = landingpad {ptr, i32}
+  cleanup
+  br label %shared_resume
+
+lpad2:
+  %exn2 = landingpad {ptr, i32}
+  cleanup
+  br label %shared_resume
+
+shared_resume:
+  %phi = phi i32 [ %x, %lpad1 ], [ %y, %lpad2 ]
+  ret i32 %phi
+}
+
+; The landing pad values are mixed with another value in a second phi.
+define void @neg_phi_lpad_and_other(i32 %x, i32 %y) personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: @neg_phi_lpad_and_other(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    invoke void @fn()
+; CHECK-NEXT:            to label [[INVOKE2:%.*]] unwind label [[LPAD1:%.*]]
+; CHECK:       invoke2:
+; CHECK-NEXT:    invoke void @fn()
+; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD2:%.*]]
+; CHECK:       invoke.cont:
+; CHECK-NEXT:    ret void
+; CHECK:       lpad1:
+; CHECK-NEXT:    [[EXN:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    br label [[SHARED_RESUME:%.*]]
+; CHECK:       lpad2:
+; CHECK-NEXT:    [[EXN2:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    br label [[SHARED_RESUME]]
+; CHECK:       shared_resume:
+; CHECK-NEXT:    [[PHI:%.*]] = phi { ptr, i32 } [ [[EXN]], [[LPAD1]] ], [ [[EXN2]], [[LPAD2]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i32 [ [[X:%.*]], [[LPAD1]] ], [ [[Y:%.*]], [[LPAD2]] ]
+; CHECK-NEXT:    call void @use(i32 [[PHI2]])
+; CHECK-NEXT:    resume { ptr, i32 } [[PHI]]
+;
+entry:
+  invoke void @fn()
+  to label %invoke2 unwind label %lpad1
+
+invoke2:
+  invoke void @fn()
+  to label %invoke.cont unwind label %lpad2
+
+invoke.cont:
+  ret void
+
+lpad1:
+  %exn = landingpad {ptr, i32}
+  cleanup
+  br label %shared_resume
+
+lpad2:
+  %exn2 = landingpad {ptr, i32}
+  cleanup
+  br label %shared_resume
+
+shared_resume:
+  %phi = phi {ptr, i32} [ %exn, %lpad1 ], [ %exn2, %lpad2 ]
+  %phi2 = phi i32 [ %x, %lpad1 ], [ %y, %lpad2 ]
+  call void @use(i32 %phi2)
+  resume {ptr, i32} %phi
+}
+
+; lpad1 dominates lpad2 through a loop, so %exn is still live after lpad2 is
+; entered and must not be clobbered by merging.
+define void @neg_loop_lpad1_dominates() personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: @neg_loop_lpad1_dominates(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    invoke void @fn()
+; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD1:%.*]]
+; CHECK:       invoke.cont:
+; CHECK-NEXT:    ret void
+; CHECK:       lpad1:
+; CHECK-NEXT:    [[EXN:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    br label [[SHARED_RESUME:%.*]]
+; CHECK:       lpad2:
+; CHECK-NEXT:    [[EXN2:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    br label [[SHARED_RESUME]]
+; CHECK:       shared_resume:
+; CHECK-NEXT:    [[PHI:%.*]] = phi { ptr, i32 } [ [[EXN]], [[LPAD1]] ], [ [[EXN]], [[LPAD2:%.*]] ]
+; CHECK-NEXT:    invoke void @fn()
+; CHECK-NEXT:            to label [[RESUME:%.*]] unwind label [[LPAD2]]
+; CHECK:       resume:
+; CHECK-NEXT:    resume { ptr, i32 } [[PHI]]
+;
+entry:
+  invoke void @fn()
+  to label %invoke.cont unwind label %lpad1
+
+invoke.cont:
+  ret void
+
+lpad1:
+  %exn = landingpad {ptr, i32}
+  cleanup
+  br label %shared_resume
+
+lpad2:
+  %exn2 = landingpad {ptr, i32}
+  cleanup
+  br label %shared_resume
+
+shared_resume:
+  %phi = phi {ptr, i32} [ %exn, %lpad1 ], [ %exn, %lpad2 ]
+  invoke void @fn()
+  to label %resume unwind label %lpad2
+
+resume:
+  resume {ptr, i32} %phi
+}
+
+; lpad2 dominates lpad1 through a loop, so %exn2 is still live after lpad1 is
+; entered and must not be clobbered by merging.
+define void @neg_loop_lpad2_dominates() personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: @neg_loop_lpad2_dominates(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    invoke void @fn()
+; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD2:%.*]]
+; CHECK:       invoke.cont:
+; CHECK-NEXT:    ret void
+; CHECK:       lpad1:
+; CHECK-NEXT:    [[EXN:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    br label [[SHARED_RESUME:%.*]]
+; CHECK:       lpad2:
+; CHECK-NEXT:    [[EXN2:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    br label [[SHARED_RESUME]]
+; CHECK:       shared_resume:
+; CHECK-NEXT:    [[PHI:%.*]] = phi { ptr, i32 } [ [[EXN2]], [[LPAD1:%.*]] ], [ [[EXN2]], [[LPAD2]] ]
+; CHECK-NEXT:    invoke void @fn()
+; CHECK-NEXT:            to label [[RESUME:%.*]] unwind label [[LPAD1]]
+; CHECK:       resume:
+; CHECK-NEXT:    resume { ptr, i32 } [[PHI]]
+;
+entry:
+  invoke void @fn()
+  to label %invoke.cont unwind label %lpad2
+
+invoke.cont:
+  ret void
+
+lpad1:
+  %exn = landingpad {ptr, i32}
+  cleanup
+  br label %shared_resume
+
+lpad2:
+  %exn2 = landingpad {ptr, i32}
+  cleanup
+  br label %shared_resume
+
+shared_resume:
+  %phi = phi {ptr, i32} [ %exn2, %lpad1 ], [ %exn2, %lpad2 ]
+  invoke void @fn()
+  to label %resume unwind label %lpad1
+
+resume:
+  resume {ptr, i32} %phi
 }
