@@ -930,6 +930,11 @@ public:
                      Align Alignment, const int64_t Diff,
                      const size_t Sz) const;
 
+  /// Returns true for widened strided loads, where each lane of the strided
+  /// load covers a group of consecutive scalars. Reversed widened strided
+  /// loads must be emitted with a positive stride and a reorder shuffle.
+  bool isWidenedStridedLoad(const TreeEntry *E) const;
+
   /// Return true if an array of scalar loads can be replaced with a strided
   ///  load (with constant stride).
   ///
@@ -4386,6 +4391,7 @@ private:
       FirstLoadStoreInRegion = nullptr;
       LastLoadStoreInRegion = nullptr;
       RegionHasStackSave = false;
+      RegionHasMayThrow = false;
 
       // Reduce the maximum schedule region size by the size of the
       // previous scheduling run.
@@ -5467,6 +5473,24 @@ private:
     /// common case where there isn't.
     bool RegionHasStackSave = false;
 
+    /// Used to skip the dependencies calculation for writes that are visible
+    /// after unwinding.
+    bool RegionHasMayThrow = false;
+
+    /// Returns true if \p I writes memory that the caller can still see
+    /// after an unwind.
+    bool isWriteVisibleOnUnwind(Instruction *I) const {
+      if (!RegionHasMayThrow || !I->mayWriteToMemory())
+        return false;
+      MemoryLocation Loc = getLocation(I);
+      if (!Loc.Ptr)
+        return true;
+      bool RequiresNoCaptureBeforeUnwind = false;
+      return !isNotVisibleOnUnwind(getUnderlyingObject(Loc.Ptr),
+                                   RequiresNoCaptureBeforeUnwind) ||
+             RequiresNoCaptureBeforeUnwind;
+    }
+
     /// The current size of the scheduling region.
     int ScheduleRegionSize = 0;
 
@@ -5965,6 +5989,14 @@ bool BoUpSLP::isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
     return true;
   }
   return false;
+}
+
+bool BoUpSLP::isWidenedStridedLoad(const TreeEntry *E) const {
+  if (E->State != TreeEntry::StridedVectorize ||
+      E->getOpcode() != Instruction::Load)
+    return false;
+  const StridedPtrInfo &SPtrInfo = TreeEntryToStridedPtrInfoMap.at(E);
+  return SPtrInfo.Ty->getNumElements() != E->Scalars.size();
 }
 
 bool BoUpSLP::analyzeConstantStrideCandidate(
@@ -14021,7 +14053,7 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
   const TreeEntry *RhsTE = getOperandEntry(&TE, /*Idx=*/1);
   // Lhs should be zext i<stride> to I<sz>.
   if (!(LhsTE->State == TreeEntry::Vectorize &&
-        LhsTE->getOpcode() == Instruction::ZExt &&
+        LhsTE->getOpcode() == Instruction::ZExt && !LhsTE->isAltShuffle() &&
         LhsTE->ReorderIndices.empty() && LhsTE->ReuseShuffleIndices.empty() &&
         !MinBWs.contains(LhsTE) &&
         all_of(LhsTE->Scalars, [](Value *V) { return V->hasOneUse(); })))
@@ -16622,7 +16654,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   InstructionCost CommonCost = 0;
   SmallVector<int> Mask;
   if (!E->ReorderIndices.empty() && E->State != TreeEntry::CompressVectorize &&
-      (E->State != TreeEntry::StridedVectorize || !E->isReverse())) {
+      (E->State != TreeEntry::StridedVectorize || !E->isReverse() ||
+       isWidenedStridedLoad(E))) {
     SmallVector<int> NewMask;
     if (E->getOpcode() == Instruction::Store) {
       // For stores the order is actually a mask.
@@ -17129,6 +17162,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                !SrcIt->second.second) {
       VecOpcode = Instruction::UIToFP;
     }
+    const bool IsSExtBack = VecOpcode == Instruction::UIToFP &&
+                            SrcIt != MinBWs.end() && SrcIt->second.second;
     auto GetScalarCost = [&](unsigned Idx) -> InstructionCost {
       assert(Idx == 0 && "Expected 0 index only");
       return TTI->getCastInstrCost(Opcode, VL0->getType(),
@@ -17156,6 +17191,12 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       if (IsArithmeticExtendedReduction &&
           (VecOpcode == Instruction::ZExt || VecOpcode == Instruction::SExt))
         return CommonCost;
+      if (IsSExtBack) {
+        auto *DemotedVecTy = getWidenedType(
+            IntegerType::get(F->getContext(), SrcIt->second.first), VL.size());
+        CommonCost += TTI->getCastInstrCost(Instruction::SExt, SrcVecTy,
+                                            DemotedVecTy, CCH, CostKind);
+      }
       return CommonCost +
              TTI->getCastInstrCost(VecOpcode, VecTy, SrcVecTy, CCH, CostKind,
                                    VecOpcode == Opcode ? VI : nullptr);
@@ -17643,7 +17684,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         assert(StridedLoadTy && "Missing StridedPointerInfo for tree entry.");
         Align CommonAlignment =
             computeCommonAlignment<LoadInst>(UniqueValues.getArrayRef());
-        bool IsReverse = E->isReverse();
+        bool IsReverse = E->isReverse() && !isWidenedStridedLoad(E);
         Value *Stride = getStrideBytesIfConstant(SPtrInfo.StrideVal, ScalarTy,
                                                  *DL, IsReverse);
         VecLdCost = TTI->getMemIntrinsicInstrCost(
@@ -19914,7 +19955,8 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
     SmallVector<int> Mask;
     if (!TE->ReorderIndices.empty() &&
         TE->State != TreeEntry::CompressVectorize &&
-        (TE->State != TreeEntry::StridedVectorize || !TE->isReverse())) {
+        (TE->State != TreeEntry::StridedVectorize || !TE->isReverse() ||
+         isWidenedStridedLoad(TE))) {
       SmallVector<int> NewMask;
       if (TE->getOpcode() == Instruction::Store) {
         // For stores the order is actually a mask.
@@ -23909,7 +23951,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     return Vec;
   }
 
-  bool IsReverseOrder = E->isReverse();
+  bool IsReverseOrder = E->isReverse() && !isWidenedStridedLoad(E);
   auto FinalShuffle = [&](Value *V, const TreeEntry *E) {
     if (isa<StructType>(ScalarTy)) {
       // TODO: Reordering of struct types is not supported.
@@ -23993,6 +24035,41 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     auto *I = dyn_cast<Instruction>(V);
     if (!I)
       return V;
+    // A lane may be emitted in negated form (sub C, x as add x, -C, or an
+    // add/sub lane with swapped operands) when all its uses are
+    // sign-insensitive (icmp eq/ne 0 or abs). The value stays correct for
+    // such uses, but nsw/nuw of the original instruction do not cover the
+    // negated overflow conditions.
+    if (E->State == TreeEntry::Vectorize && E->getNumOperands() == 2 &&
+        I->getType()->isIntOrIntVectorTy() &&
+        (Opcode == Instruction::Add || Opcode == Instruction::Sub)) {
+      auto IsNegatedLane = [&](Instruction *LaneI, unsigned Lane) {
+        unsigned LaneOpcode = LaneI->getOpcode();
+        if (LaneOpcode != Instruction::Add && LaneOpcode != Instruction::Sub)
+          return false;
+        Value *L = E->getOperand(0)[Lane];
+        Value *R = E->getOperand(1)[Lane];
+        if (LaneOpcode == Opcode)
+          // Only a sub lane emitted with swapped operands is negated.
+          return Opcode == Instruction::Sub && L == LaneI->getOperand(1) &&
+                 R == LaneI->getOperand(0) && L != R;
+        if (Opcode == Instruction::Add)
+          // sub C, x emitted as x + -C.
+          return isa<Constant>(LaneI->getOperand(0)) &&
+                 !isa<Constant>(LaneI->getOperand(1));
+        // add x, C emitted as -C - x.
+        return isa<Constant>(L) && !isa<Constant>(R);
+      };
+      if (any_of(enumerate(E->Scalars), [&](const auto &P) {
+            auto *LaneI = dyn_cast<Instruction>(P.value());
+            return LaneI &&
+                   (!E->hasCopyableElements() ||
+                    !E->isCopyableElement(LaneI)) &&
+                   (VL.empty() || is_contained(VL, LaneI)) &&
+                   IsNegatedLane(LaneI, P.index());
+          }))
+        I->dropPoisonGeneratingFlags();
+    }
     I = ::propagateMetadata(I, UniqueInsts.getArrayRef());
     // For copyable elements the lane is synthesized using a binop identity
     // value, so the operand at that lane is the copyable scalar's value.
@@ -24481,6 +24558,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             getWidenedType(OrigSrcScalarTy, E->Scalars.size());
         InVec =
             Builder.CreateIntCast(InVec, OrigSrcVectorTy, SrcIt->second.second);
+      } else if (VecOpcode == Instruction::UIToFP && SrcIt != MinBWs.end() &&
+                 SrcIt->second.second) {
+        auto *OrigSrcVectorTy =
+            getWidenedType(CI->getSrcTy(), E->Scalars.size());
+        InVec = Builder.CreateSExt(InVec, OrigSrcVectorTy);
       }
       Value *V = (VecOpcode != ShuffleOrOp && VecOpcode == Instruction::BitCast)
                      ? InVec
@@ -27420,7 +27502,8 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
             BundleMember->clearDirectDependencies();
             if (RegionHasStackSave ||
                 !isGuaranteedToTransferExecutionToSuccessor(
-                    BundleMember->getInst()))
+                    BundleMember->getInst()) ||
+                isWriteVisibleOnUnwind(BundleMember->getInst()))
               ControlDependentMembers.push_back(BundleMember);
           }
           continue;
@@ -27448,7 +27531,9 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
                 OpSD && OpSD->hasValidDependencies()) {
               OpSD->clearDirectDependencies();
               if (RegionHasStackSave ||
-                  !isGuaranteedToTransferExecutionToSuccessor(OpSD->getInst()))
+                  !isGuaranteedToTransferExecutionToSuccessor(
+                      OpSD->getInst()) ||
+                  isWriteVisibleOnUnwind(OpSD->getInst()))
                 ControlDependentMembers.push_back(OpSD);
               // areAllOperandsReplacedByCopyableData() returned true, so every
               // tree entry that currently contains this instruction models Op
@@ -27785,6 +27870,8 @@ void BoUpSLP::BlockScheduling::initScheduleData(Instruction *FromI,
     if (match(I, m_Intrinsic<Intrinsic::stacksave>()) ||
         match(I, m_Intrinsic<Intrinsic::stackrestore>()))
       RegionHasStackSave = true;
+    if (I->mayThrow())
+      RegionHasMayThrow = true;
   }
   if (NextLoadStore) {
     if (CurrentLoadStore)
@@ -27948,6 +28035,20 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
         if (!isGuaranteedToTransferExecutionToSuccessor(I))
           // Everything past here must be control dependent on I.
           break;
+      }
+    }
+
+    // A write visible after unwinding must precede the next instruction that
+    // may throw.
+    if (isWriteVisibleOnUnwind(BundleMember->getInst())) {
+      for (Instruction *I = BundleMember->getInst()->getNextNode();
+           I != ScheduleEnd; I = I->getNextNode()) {
+        if (!I->mayThrow())
+          continue;
+
+        // Add the dependency
+        MakeControlDependent(I);
+        break;
       }
     }
 
@@ -28772,13 +28873,15 @@ bool BoUpSLP::collectValuesToDemote(
     // If we are truncating the result of this SHL, and if it's a shift of an
     // inrange amount, we can always perform a SHL in a smaller type.
     auto ShlChecker = [&](unsigned BitWidth, unsigned) {
-      return all_of(
-          make_isa_range<Instruction>(E.Scalars), [&](Instruction *I) {
-            if (E.isCopyableElement(I))
-              return true;
-            KnownBits AmtKnownBits = computeKnownBits(I->getOperand(1), *DL);
-            return AmtKnownBits.getMaxValue().ult(BitWidth);
-          });
+      // Check the node operands rather than the scalar instructions: lanes
+      // converted from another opcode (e.g. mul by a power of 2) are emitted
+      // with the converted shift amounts.
+      return all_of(E.getOperand(1), [&](Value *V) {
+        if (isa<PoisonValue>(V))
+          return true;
+        KnownBits AmtKnownBits = computeKnownBits(V, *DL);
+        return AmtKnownBits.getMaxValue().ult(BitWidth);
+      });
     };
     return TryProcessInstruction(
         BitWidth, {getOperandEntry(&E, 0), getOperandEntry(&E, 1)}, ShlChecker);

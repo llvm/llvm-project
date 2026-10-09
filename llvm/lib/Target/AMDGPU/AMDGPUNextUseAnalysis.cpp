@@ -988,11 +988,6 @@ private:
     return false;
   }
 
-  unsigned getRelativeLoopDepth(const MachineBasicBlock *From,
-                                const MachineBasicBlock *To) const {
-    return pathInfoFor(From, To).RelativeLoopDepth;
-  }
-
   NextUseDistance getShortestPath(const MachineBasicBlock *From,
                                   const MachineBasicBlock *To) const {
     std::optional<NextUseDistance> MaybeD =

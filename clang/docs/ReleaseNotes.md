@@ -264,6 +264,15 @@ features cannot lower the translation-unit ABI level;
 
 - Updates Unicode Names data to Unicode 18.0 (from Unicode 18.0 Beta).
 
+- `clang-scan-deps` now reports the directories whose listing a module depends
+  on, such as umbrella directories, via `directory-deps` in its
+  `experimental-full` output. When the listing of one of these directories or
+  their subdirectories changes, for example because a header was added, build
+  systems can pass the reported directory to `-invalidated-path=` in the next
+  incremental scan so that the modules depending on it are rebuilt. Changes can
+  be detected by watching the directories or by comparing their modification
+  times.
+
 ### New Compiler Flags
 
 - New option `-fmodules-validate-directory-dependencies` makes an implicitly
@@ -608,6 +617,10 @@ features cannot lower the translation-unit ABI level;
  
 - Clang now diagnoses arrays whose size is deduced from an initializer list when they exceed the maximum object size
 
+- Added `-Wunsafe-buffer-usage-main-argv` as a diagnostic group under
+  `-Wunsafe-buffer-usage` to control warnings on `main`'s `argv` parameter,
+  allowing users to suppress them with `-Wno-unsafe-buffer-usage-main-argv`.
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -910,6 +923,10 @@ features cannot lower the translation-unit ABI level;
   the initializer of another specialization of the same variable template.
   (#GH134148)
 
+- Fixed an assertion failure in partial ordering of function templates whose
+  parameters use pack-indexed template template parameters (`TT...[N]<int>`)
+  with different template parameter lists. (#GH228870)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -995,6 +1012,9 @@ features cannot lower the translation-unit ABI level;
 
   - C2-Pro (`c2-pro`).
   - C2-Ultra (`c2-ultra`).
+
+- Assembler/disassembler support has been added for Armv9.8-A (2026)
+  architecture extensions.
 
 - Added support for pointer authentication discrimination of C++ virtual table
   pointers stored in VTTs via the `-fptrauth-vtt-vtable-pointer-discrimination`

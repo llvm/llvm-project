@@ -68,11 +68,11 @@ namespace direct {
 //===----------------------------------------------------------------------===//
 
 namespace {
-/// If the given type is a vector type, return the vector's element type.
+/// If the given type is a vector or matrix type, return its element type.
 /// Otherwise return the given type unchanged.
-mlir::Type elementTypeIfVector(mlir::Type type) {
+mlir::Type elementTypeIfVectorOrMatrix(mlir::Type type) {
   return llvm::TypeSwitch<mlir::Type, mlir::Type>(type)
-      .Case<cir::VectorType, mlir::VectorType>(
+      .Case<cir::VectorType, cir::MatrixType, mlir::VectorType>(
           [](auto p) { return p.getElementType(); })
       .Default([](mlir::Type p) { return p; });
 }
@@ -220,10 +220,10 @@ static mlir::Value emitToMemory(mlir::ConversionPatternRewriter &rewriter,
         resultTy = mlir::VectorType::get(
             vecTy.getSize(), vecTy.getElementType(), vecTy.getIsScalable());
       else {
-        uint64_t bytePadded = std::max<uint64_t>(vecTy.getSize(), 8);
-        resultTy = mlir::IntegerType::get(origType.getContext(), bytePadded);
-        value = emitBoolVecConversion(
-            rewriter, value, dyn_cast<mlir::IntegerType>(resultTy).getWidth());
+        resultTy = mlir::IntegerType::get(origType.getContext(),
+                                          vecTy.getBoolStorageWidth());
+        value =
+            emitBoolVecConversion(rewriter, value, vecTy.getBoolStorageWidth());
       }
       return mlir::LLVM::BitcastOp::create(rewriter, value.getLoc(), resultTy,
                                            value);
@@ -1734,9 +1734,9 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
     mlir::Value llvmSrcVal = adaptor.getSrc();
     mlir::Type llvmDstType = getTypeConverter()->convertType(dstType);
     cir::IntType srcIntType =
-        mlir::cast<cir::IntType>(elementTypeIfVector(srcType));
+        mlir::cast<cir::IntType>(elementTypeIfVectorOrMatrix(srcType));
     cir::IntType dstIntType =
-        mlir::cast<cir::IntType>(elementTypeIfVector(dstType));
+        mlir::cast<cir::IntType>(elementTypeIfVectorOrMatrix(dstType));
     rewriter.replaceOp(castOp, getLLVMIntCast(rewriter, llvmSrcVal, llvmDstType,
                                               srcIntType.isUnsigned(),
                                               srcIntType.getWidth(),
@@ -1747,8 +1747,8 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
     mlir::Value llvmSrcVal = adaptor.getSrc();
     mlir::Type llvmDstTy = getTypeConverter()->convertType(castOp.getType());
 
-    mlir::Type srcTy = elementTypeIfVector(castOp.getSrc().getType());
-    mlir::Type dstTy = elementTypeIfVector(castOp.getType());
+    mlir::Type srcTy = elementTypeIfVectorOrMatrix(castOp.getSrc().getType());
+    mlir::Type dstTy = elementTypeIfVectorOrMatrix(castOp.getType());
 
     if (!mlir::isa<cir::FPTypeInterface>(dstTy) ||
         !mlir::isa<cir::FPTypeInterface>(srcTy))
@@ -1813,8 +1813,9 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
     mlir::Type llvmDstTy = getTypeConverter()->convertType(dstTy);
     // Compare element widths so this also handles vector bool -> int casts.
     auto srcElemTy = mlir::cast<mlir::IntegerType>(
-        elementTypeIfVector(llvmSrcVal.getType()));
-    auto dstElemTy = mlir::cast<cir::IntType>(elementTypeIfVector(dstTy));
+        elementTypeIfVectorOrMatrix(llvmSrcVal.getType()));
+    auto dstElemTy =
+        mlir::cast<cir::IntType>(elementTypeIfVectorOrMatrix(dstTy));
 
     if (srcElemTy.getWidth() == dstElemTy.getWidth())
       rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(castOp, llvmDstTy,
@@ -1836,9 +1837,9 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
     mlir::Type dstTy = castOp.getType();
     mlir::Value llvmSrcVal = adaptor.getSrc();
     mlir::Type llvmDstTy = getTypeConverter()->convertType(dstTy);
-    bool isSigned =
-        mlir::cast<cir::IntType>(elementTypeIfVector(castOp.getSrc().getType()))
-            .isSigned();
+    bool isSigned = mlir::cast<cir::IntType>(
+                        elementTypeIfVectorOrMatrix(castOp.getSrc().getType()))
+                        .isSigned();
     if (cir::FenvAttr fenv = castOp.getFenvAttr()) {
       return lowerToConstrainedFPIntrinsic(
           castOp, llvmSrcVal, fenv, llvmDstTy, rewriter,
@@ -1857,7 +1858,7 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
     mlir::Value llvmSrcVal = adaptor.getSrc();
     mlir::Type llvmDstTy = getTypeConverter()->convertType(dstTy);
     bool isSigned =
-        mlir::cast<cir::IntType>(elementTypeIfVector(castOp.getType()))
+        mlir::cast<cir::IntType>(elementTypeIfVectorOrMatrix(castOp.getType()))
             .isSigned();
     if (cir::FenvAttr fenv = castOp.getFenvAttr()) {
       return lowerToConstrainedFPIntrinsic(
@@ -3404,7 +3405,7 @@ mlir::LogicalResult CIRToLLVMMinusOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMNotOpLowering::matchAndRewrite(
     cir::NotOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Type elementType = elementTypeIfVector(op.getType());
+  mlir::Type elementType = elementTypeIfVectorOrMatrix(op.getType());
   bool isVector = mlir::isa<cir::VectorType>(op.getType());
   mlir::Type llvmType = adaptor.getInput().getType();
   mlir::Location loc = op.getLoc();
@@ -3476,7 +3477,7 @@ template <typename UIntSatOp, typename SIntSatOp, typename IntOp,
 static mlir::LogicalResult
 lowerSaturatableArithOp(CIROp op, mlir::Value lhs, mlir::Value rhs,
                         mlir::ConversionPatternRewriter &rewriter) {
-  const mlir::Type eltType = elementTypeIfVector(op.getRhs().getType());
+  const mlir::Type eltType = elementTypeIfVectorOrMatrix(op.getRhs().getType());
   assert(cir::isIntOrBoolType(eltType) &&
          "saturatable arith op expects integer operand types");
   if (op.getSaturated()) {
@@ -3509,7 +3510,8 @@ mlir::LogicalResult CIRToLLVMSubOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMMulOpLowering::matchAndRewrite(
     cir::MulOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  assert(cir::isIntOrBoolType(elementTypeIfVector(op.getRhs().getType())) &&
+  assert(cir::isIntOrBoolType(
+             elementTypeIfVectorOrMatrix(op.getRhs().getType())) &&
          "cir.mul expects integer operand types");
   rewriter.replaceOpWithNewOp<mlir::LLVM::MulOp>(
       op, adaptor.getLhs(), adaptor.getRhs(), intOverflowFlag(op));
@@ -3521,7 +3523,7 @@ template <typename UIntOp, typename SIntOp, typename CIROp>
 static mlir::LogicalResult
 lowerIntBinaryOp(CIROp op, mlir::Value lhs, mlir::Value rhs,
                  mlir::ConversionPatternRewriter &rewriter) {
-  const mlir::Type eltType = elementTypeIfVector(op.getRhs().getType());
+  const mlir::Type eltType = elementTypeIfVectorOrMatrix(op.getRhs().getType());
   assert(cir::isIntOrBoolType(eltType) &&
          "integer binary op expects integer operand types");
   if (isIntTypeUnsigned(eltType))
@@ -3551,7 +3553,7 @@ lowerMinMaxOp(CIROp op, typename CIROp::Adaptor adaptor,
               mlir::ConversionPatternRewriter &rewriter) {
   const mlir::Value lhs = adaptor.getLhs();
   const mlir::Value rhs = adaptor.getRhs();
-  if (isIntTypeUnsigned(elementTypeIfVector(op.getRhs().getType())))
+  if (isIntTypeUnsigned(elementTypeIfVectorOrMatrix(op.getRhs().getType())))
     rewriter.replaceOpWithNewOp<UIntOp>(op, lhs, rhs);
   else
     rewriter.replaceOpWithNewOp<SIntOp>(op, lhs, rhs);
@@ -5211,8 +5213,7 @@ mlir::LogicalResult CIRToLLVMVecSplatOpLowering::matchAndRewrite(
   // element in the vector. Start with an undef vector. Insert the value into
   // the first element. Then use a `shufflevector` with a mask of all 0 to
   // fill out the entire vector with that value.
-  cir::VectorType vecTy = op.getType();
-  mlir::Type llvmTy = typeConverter->convertType(vecTy);
+  mlir::Type llvmTy = typeConverter->convertType(op.getType());
   mlir::Location loc = op.getLoc();
   mlir::Value poison = mlir::LLVM::PoisonOp::create(rewriter, loc, llvmTy);
 
@@ -5246,7 +5247,8 @@ mlir::LogicalResult CIRToLLVMVecSplatOpLowering::matchAndRewrite(
       mlir::LLVM::ConstantOp::create(rewriter, loc, rewriter.getI64Type(), 0);
   mlir::Value oneElement = mlir::LLVM::InsertElementOp::create(
       rewriter, loc, poison, elementValue, indexValue);
-  SmallVector<int32_t> zeroValues(vecTy.getSize(), 0);
+  SmallVector<int32_t> zeroValues(
+      mlir::cast<mlir::VectorType>(llvmTy).getNumElements(), 0);
   rewriter.replaceOpWithNewOp<mlir::LLVM::ShuffleVectorOp>(op, oneElement,
                                                            poison, zeroValues);
   return mlir::success();
@@ -5339,6 +5341,30 @@ mlir::LogicalResult CIRToLLVMVecTernaryOpLowering::matchAndRewrite(
 
   rewriter.replaceOpWithNewOp<mlir::LLVM::SelectOp>(
       op, bitVec, adaptor.getLhs(), adaptor.getRhs());
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMMatrixExtractOpLowering::matchAndRewrite(
+    cir::MatrixExtractOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  cir::MatrixType matrixTy = op.getMatrix().getType();
+  mlir::Value rowIdx = createIntCast(rewriter, adaptor.getRowIdx(),
+                                     rewriter.getI64Type(), false);
+  mlir::Value columnIdx = createIntCast(rewriter, adaptor.getColumnIdx(),
+                                        rewriter.getI64Type(), false);
+  mlir::Type indexTy = rowIdx.getType();
+  mlir::Value numRows = mlir::LLVM::ConstantOp::create(
+      rewriter, op.getLoc(), indexTy,
+      rewriter.getIntegerAttr(indexTy, matrixTy.getRowNum()));
+
+  // Column major index = (columnIdx * numRows) + rowIdx
+  mlir::Value flatIndex = mlir::LLVM::MulOp::create(
+      rewriter, op->getLoc(), {columnIdx, numRows}, /*properties=*/{},
+      /*discardableAttributes=*/{});
+  flatIndex = mlir::LLVM::AddOp::create(rewriter, op->getLoc(), flatIndex,
+                                        rowIdx, /*overflowFlags=*/{});
+  rewriter.replaceOpWithNewOp<mlir::LLVM::ExtractElementOp>(
+      op, adaptor.getMatrix(), flatIndex);
   return mlir::success();
 }
 
