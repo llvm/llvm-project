@@ -27,18 +27,21 @@
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/BasicBlock.h"
@@ -110,6 +113,15 @@ static cl::opt<unsigned> PragmaDistributeSCEVCheckThreshold(
 static cl::opt<bool> EnableLoopDistribute(
     "enable-loop-distribute", cl::Hidden,
     cl::desc("Enable the new, experimental LoopDistribution Pass"),
+    cl::init(false));
+
+// Experimental: seed partitions from each store's data-flow closure
+// instead of from intervals delimited by unsafe LAA dependences.  The
+// interval scheme over-merges when two stores share a backward sink
+// but have independent feeders, defeating distribution.
+static cl::opt<bool> StatementSeededPartitioning(
+    "loop-distribute-statement-seeded", cl::Hidden,
+    cl::desc("Form partitions from data-flow closures of stores"),
     cl::init(false));
 
 static const char *DistributedMetaData = "llvm.loop.isdistributed";
@@ -298,6 +310,16 @@ public:
   //  possible, then later we may merge them back together.
   void addToNewNonCyclicPartition(Instruction *Inst) {
     PartitionContainer.emplace_back(Inst, L);
+  }
+
+  /// Add a fresh partition pre-seeded with \p Insts.  Unlike
+  /// addToCyclicPartition, this never extends the current trailing
+  /// partition; the caller decides which seeds belong together.
+  void addNewPartition(ArrayRef<Instruction *> Insts, bool DepCycle) {
+    assert(!Insts.empty() && "empty partition");
+    PartitionContainer.emplace_back(Insts.front(), L, DepCycle);
+    for (Instruction *I : llvm::drop_begin(Insts))
+      PartitionContainer.back().add(I);
   }
 
   /// Merges adjacent non-cyclic partitions.
@@ -716,19 +738,71 @@ public:
     MemoryInstructionDependences MID(DepChecker.getMemoryInstructions(),
                                      *Dependences);
 
-    int NumUnsafeDependencesActive = 0;
-    for (const auto &InstDep : MID) {
-      Instruction *I = InstDep.Inst;
-      // We update NumUnsafeDependencesActive post-instruction, catch the
-      // start of a dependence directly via NumUnsafeDependencesStartOrEnd.
-      if (NumUnsafeDependencesActive ||
-          InstDep.NumUnsafeDependencesStartOrEnd > 0)
-        Partitions.addToCyclicPartition(I);
-      else
-        Partitions.addToNewNonCyclicPartition(I);
-      NumUnsafeDependencesActive += InstDep.NumUnsafeDependencesStartOrEnd;
-      assert(NumUnsafeDependencesActive >= 0 &&
-             "Negative number of dependences active");
+    bool SeededByStatement = false;
+    if (StatementSeededPartitioning) {
+      // Every dependence constrains statement order, not just unsafe ones.
+      // An unknown direction gets both orders, so splitting it is refused.
+      SmallVector<OrderedMemPair, 4> OrderedPairs;
+      for (const auto &Dep : *Dependences) {
+        Instruction *Src = Dep.getSource(DepChecker);
+        Instruction *Dst = Dep.getDestination(DepChecker);
+        if (Dep.isForward()) {
+          OrderedPairs.push_back({Src, Dst, /*Carried=*/false});
+          continue;
+        }
+        OrderedPairs.push_back({Dst, Src, /*Carried=*/true});
+        if (!Dep.isBackward())
+          OrderedPairs.push_back({Src, Dst, /*Carried=*/true});
+      }
+      // LAA does not compare accesses through a pointer that is alone in
+      // its alias set.  If the pointer moves past both accesses every
+      // iteration they only overlap within an iteration.
+      ArrayRef<Instruction *> MemInsts = DepChecker.getMemoryInstructions();
+      const DataLayout &DL = L->getHeader()->getDataLayout();
+      auto OverlapsOnlyInIteration = [&](Instruction *A, Instruction *B) {
+        TypeSize SizeA = DL.getTypeStoreSize(getLoadStoreType(A));
+        TypeSize SizeB = DL.getTypeStoreSize(getLoadStoreType(B));
+        auto *AR = dyn_cast<SCEVAddRecExpr>(
+            SE->getSCEV(getLoadStorePointerOperand(A)));
+        if (SizeA.isScalable() || SizeB.isScalable() || !AR ||
+            AR->getLoop() != L || AR->getNoWrapFlags() == SCEV::FlagNone)
+          return false;
+        auto *Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(*SE));
+        return Step && Step->getAPInt().abs().uge(std::max(
+                           SizeA.getFixedValue(), SizeB.getFixedValue()));
+      };
+      for (auto [Idx, A] : enumerate(MemInsts)) {
+        for (Instruction *B : drop_begin(MemInsts, Idx + 1)) {
+          if (getLoadStorePointerOperand(A) != getLoadStorePointerOperand(B) ||
+              (isa<LoadInst>(A) && isa<LoadInst>(B)))
+            continue;
+          if (OverlapsOnlyInIteration(A, B)) {
+            OrderedPairs.push_back({A, B, /*Carried=*/false});
+            continue;
+          }
+          OrderedPairs.push_back({A, B, /*Carried=*/true});
+          OrderedPairs.push_back({B, A, /*Carried=*/true});
+        }
+      }
+      SeededByStatement =
+          seedPartitionsFromPairs(Partitions, OrderedPairs, MemInsts);
+    }
+
+    if (!SeededByStatement) {
+      int NumUnsafeDependencesActive = 0;
+      for (const auto &InstDep : MID) {
+        Instruction *I = InstDep.Inst;
+        // We update NumUnsafeDependencesActive post-instruction, catch the
+        // start of a dependence directly via NumUnsafeDependencesStartOrEnd.
+        if (NumUnsafeDependencesActive ||
+            InstDep.NumUnsafeDependencesStartOrEnd > 0)
+          Partitions.addToCyclicPartition(I);
+        else
+          Partitions.addToNewNonCyclicPartition(I);
+        NumUnsafeDependencesActive += InstDep.NumUnsafeDependencesStartOrEnd;
+        assert(NumUnsafeDependencesActive >= 0 &&
+               "Negative number of dependences active");
+      }
     }
 
     // Add partitions for values used outside.  These partitions can be out of
@@ -745,13 +819,18 @@ public:
       return fail("CantIsolateUnsafeDeps",
                   "cannot isolate unsafe dependencies");
 
-    // Run the merge heuristics: Merge non-cyclic adjacent partitions since we
-    // should be able to vectorize these together.
-    Partitions.mergeBeforePopulating();
-    LLVM_DEBUG(dbgs() << "LDist: Merged partitions:\n" << Partitions);
-    if (Partitions.getSize() < 2)
-      return fail("CantIsolateUnsafeDeps",
-                  "cannot isolate unsafe dependencies");
+    // The statement-seeded path has already produced the partitions it
+    // wants, including ordering edges between non-cyclic partitions, so
+    // skip the merge heuristics that would coalesce them.
+    if (!SeededByStatement) {
+      // Run the merge heuristics: Merge non-cyclic adjacent partitions
+      // since we should be able to vectorize these together.
+      Partitions.mergeBeforePopulating();
+      LLVM_DEBUG(dbgs() << "LDist: Merged partitions:\n" << Partitions);
+      if (Partitions.getSize() < 2)
+        return fail("CantIsolateUnsafeDeps",
+                    "cannot isolate unsafe dependencies");
+    }
 
     // Now, populate the partitions with non-memory operations.
     Partitions.populateUsedSet();
@@ -759,12 +838,17 @@ public:
 
     // In order to preserve original lexical order for loads, keep them in the
     // partition that we set up in the MemoryInstructionDependences loop.
-    if (Partitions.mergeToAvoidDuplicatedLoads()) {
-      LLVM_DEBUG(dbgs() << "LDist: Partitions merged to ensure unique loads:\n"
-                        << Partitions);
-      if (Partitions.getSize() < 2)
-        return fail("CantIsolateUnsafeDeps",
-                    "cannot isolate unsafe dependencies");
+    // The statement-seeded path deliberately duplicates read-only shared
+    // loads, so skip this merge in that mode.
+    if (!SeededByStatement) {
+      if (Partitions.mergeToAvoidDuplicatedLoads()) {
+        LLVM_DEBUG(dbgs() << "LDist: Partitions merged to ensure unique "
+                             "loads:\n"
+                          << Partitions);
+        if (Partitions.getSize() < 2)
+          return fail("CantIsolateUnsafeDeps",
+                      "cannot isolate unsafe dependencies");
+      }
     }
 
     // Don't distribute the loop if we need too many SCEV run-time checks, or
@@ -859,6 +943,172 @@ public:
     return true;
   }
 
+  /// Try to distribute a non-innermost loop using DependenceAnalysis.
+  /// Gated by StatementSeededPartitioning.  Only accepts a perfectly-
+  /// shaped nest (one inner loop + simple trailing block of memory
+  /// ops); silently returns false otherwise so the upstream behaviour
+  /// of LoopDistribute is unchanged on every other nest shape.
+  bool processOuterLoop(DependenceInfo *DI) {
+    assert(!L->isInnermost() && "Only call on non-innermost loops.");
+    assert(DI && "DependenceInfo required for outer-loop distribution.");
+
+    LLVM_DEBUG(dbgs() << "LDist: Outer-loop candidate '"
+                      << L->getHeader()->getName() << "'\n");
+
+    auto Subloops = L->getSubLoops();
+    if (Subloops.size() != 1)
+      return false;
+    Loop *Inner = Subloops.front();
+    if (!Inner->isInnermost())
+      return false;
+    if (!L->isLoopSimplifyForm() || !Inner->isLoopSimplifyForm())
+      return false;
+    if (!L->getExitBlock() || !Inner->getExitBlock())
+      return false;
+
+    // Accept reducible nests of the form
+    //   header -> inner-preheader -> inner-loop... -> trailing -> latch
+    // where Trailing is the inner-loop exit block (or coincides with the
+    // latch).  After loop-rotate this is the doubly-nested shape with a
+    // single statement after the inner loop.
+    BasicBlock *Trailing = Inner->getExitBlock();
+    if (!Trailing || !Trailing->getSinglePredecessor())
+      return false;
+    BasicBlock *Latch = L->getLoopLatch();
+    if (!Latch)
+      return false;
+    if (Trailing != Latch && Trailing->getSingleSuccessor() != Latch)
+      return false;
+
+    // Refuse memory operations other than simple loads and stores in the
+    // trailing block.
+    SmallVector<StoreInst *, 4> TrailingStores;
+    for (Instruction &I : *Trailing) {
+      if (I.isTerminator())
+        continue;
+      if (auto *LI = dyn_cast<LoadInst>(&I)) {
+        if (!LI->isSimple())
+          return false;
+        continue;
+      }
+      if (auto *SI = dyn_cast<StoreInst>(&I)) {
+        if (!SI->isSimple())
+          return false;
+        TrailingStores.push_back(SI);
+        continue;
+      }
+      if (I.mayReadOrWriteMemory() && !isa<DbgInfoIntrinsic>(I))
+        return false;
+    }
+    if (TrailingStores.empty())
+      return false;
+
+    // Refuse anything other than simple memory ops in the inner-loop body
+    // as well.
+    SmallVector<StoreInst *, 4> InnerStores;
+    for (BasicBlock *BB : Inner->blocks()) {
+      for (Instruction &I : *BB) {
+        if (auto *LI = dyn_cast<LoadInst>(&I)) {
+          if (!LI->isSimple())
+            return false;
+          continue;
+        }
+        if (auto *SI = dyn_cast<StoreInst>(&I)) {
+          if (!SI->isSimple())
+            return false;
+          InnerStores.push_back(SI);
+          continue;
+        }
+        if (I.mayReadOrWriteMemory() && !isa<DbgInfoIntrinsic>(I))
+          return false;
+      }
+    }
+    if (InnerStores.empty())
+      return false;
+
+    // Memory instructions in program order: the inner loop, then the
+    // trailing block.
+    SmallVector<BasicBlock *, 8> Blocks(Inner->blocks());
+    Blocks.push_back(Trailing);
+    SmallVector<Instruction *, 16> MemInsts;
+    for (BasicBlock *BB : Blocks)
+      for (Instruction &I : *BB)
+        if (isa<LoadInst>(I) || isa<StoreInst>(I))
+          MemInsts.push_back(&I);
+
+    // Order every DA dependence by the access that executes first, reading
+    // the direction vector from the outer loop inwards.  When either access
+    // may run first, both orders are recorded so that splitting them across
+    // partitions is refused.
+    SmallVector<OrderedMemPair, 4> Pairs;
+    unsigned OuterDepth = L->getLoopDepth();
+    for (auto [Idx, Src] : enumerate(MemInsts)) {
+      for (Instruction *Dst : drop_begin(MemInsts, Idx + 1)) {
+        std::unique_ptr<Dependence> Dep =
+            DI->depends(Src, Dst, /*UnderRuntimeAssumptions=*/false);
+        if (!Dep || !Dep->isOrdered())
+          continue;
+        bool SrcFirst = false;
+        bool DstFirst = false;
+        bool Tied = !Dep->isConfused() && Dep->getLevels() >= OuterDepth;
+        if (Tied) {
+          for (unsigned Level = OuterDepth; Tied && Level <= Dep->getLevels();
+               ++Level) {
+            unsigned Dir = Dep->getDirection(Level);
+            SrcFirst |= (Dir & Dependence::DVEntry::LT) != 0;
+            DstFirst |= (Dir & Dependence::DVEntry::GT) != 0;
+            Tied = (Dir & Dependence::DVEntry::EQ) != 0;
+          }
+          // Same iteration of every loop: program order decides.
+          if (Tied && DT->dominates(Src, Dst))
+            SrcFirst = true;
+          else if (Tied)
+            SrcFirst = DstFirst = true;
+        } else {
+          SrcFirst = DstFirst = true;
+        }
+        if (SrcFirst)
+          Pairs.push_back({Src, Dst, /*Carried=*/false});
+        if (DstFirst)
+          Pairs.push_back({Dst, Src, /*Carried=*/false});
+      }
+    }
+
+    // Reuse the seeded core to form partitions.
+    InstPartitionContainer Partitions(L, LI, DT);
+    bool Seeded = seedPartitionsFromPairs(Partitions, Pairs, MemInsts);
+    if (!Seeded || Partitions.getSize() < 2)
+      return false;
+
+    // Skip merge heuristics, mirroring the innermost seeded path.
+    Partitions.populateUsedSet();
+    LLVM_DEBUG(dbgs() << "LDist: Outer populated partitions:\n" << Partitions);
+
+    Partitions.setupPartitionIdOnInstructions();
+
+    // Empty preheader requirement before cloning.
+    BasicBlock *PH = L->getLoopPreheader();
+    if (!PH || !PH->getSinglePredecessor() ||
+        &*PH->begin() != PH->getTerminator())
+      SplitBlock(PH, PH->getTerminator(), DT, LI);
+
+    Partitions.cloneLoops();
+    Partitions.removeUnusedInsts();
+
+    if (LDistVerify) {
+      LI->verify();
+      assert(DT->verify(DominatorTree::VerificationLevel::Fast));
+    }
+
+    ++NumLoopsDistributed;
+    ORE->emit([&]() {
+      return OptimizationRemark(LDIST_NAME, "Distribute", L->getStartLoc(),
+                                L->getHeader())
+             << "distributed loop (outer)";
+    });
+    return true;
+  }
+
   /// Provide diagnostics then \return with false.
   bool fail(StringRef RemarkName, StringRef Message) {
     LLVMContext &Ctx = F->getContext();
@@ -900,6 +1150,196 @@ public:
   const std::optional<bool> &isForced() const { return IsForced; }
 
 private:
+  /// A memory dependence whose First access executes before its Second
+  /// access.  Statements containing First must run before statements
+  /// containing Second; a Carried dependence inside one statement makes
+  /// that statement cyclic.
+  struct OrderedMemPair {
+    Instruction *First;
+    Instruction *Second;
+    bool Carried;
+  };
+
+  /// Seed partitions from each store's data-flow closure (the in-loop
+  /// transitive operand set of the store).  Each store becomes its own
+  /// partition; self-loop pairs mark a partition cyclic; cross-
+  /// statement pairs become topological ordering edges.  Returns true
+  /// (and at least two partitions) when seeding succeeds; false means
+  /// the caller falls back to interval-based seeding.
+  bool seedPartitionsFromPairs(InstPartitionContainer &Partitions,
+                               ArrayRef<OrderedMemPair> Pairs,
+                               ArrayRef<Instruction *> MemInsts) {
+    // Bail on anything that may invalidate naive closure: volatile or atomic
+    // memory ops, multi-block bodies.
+    SmallVector<StoreInst *, 8> Stores;
+    for (BasicBlock *BB : L->blocks()) {
+      for (Instruction &I : *BB) {
+        if (auto *LI = dyn_cast<LoadInst>(&I)) {
+          if (!LI->isSimple())
+            return false;
+          continue;
+        }
+        if (auto *SI = dyn_cast<StoreInst>(&I)) {
+          if (!SI->isSimple())
+            return false;
+          Stores.push_back(SI);
+          continue;
+        }
+        if (I.mayReadOrWriteMemory() && !isa<DbgInfoIntrinsic>(I))
+          return false;
+      }
+    }
+    if (Stores.size() < 2)
+      return false;
+
+    // Build per-statement closures.  Each statement is keyed by its store's
+    // index in `Stores`.  Walk store operands transitively, restricted to
+    // the loop body.  A load shared by multiple statements is assigned to
+    // each consuming statement (it will be replicated by cloning); only
+    // stores must belong to a single statement.
+    SmallVector<SmallSetVector<Instruction *, 8>, 4> Statements(Stores.size());
+    DenseMap<Instruction *, int> StoreToStmt;
+    DenseMap<Instruction *, SmallSet<int, 2>> InstToStmts;
+    auto RecordInLoop = [&](Instruction *I, int StmtId) {
+      if (!L->contains(I))
+        return false;
+      if (auto *SI = dyn_cast<StoreInst>(I)) {
+        auto It = StoreToStmt.try_emplace(SI, StmtId);
+        if (!It.second)
+          return false;
+      }
+      auto &Set = InstToStmts[I];
+      if (!Set.insert(StmtId).second)
+        return false;
+      Statements[StmtId].insert(I);
+      return true;
+    };
+    for (auto [Idx, S] : llvm::enumerate(Stores)) {
+      int StmtId = static_cast<int>(Idx);
+      SmallVector<Instruction *, 16> Worklist;
+      if (RecordInLoop(S, StmtId))
+        Worklist.push_back(S);
+      while (!Worklist.empty()) {
+        Instruction *Cur = Worklist.pop_back_val();
+        for (Value *Op : Cur->operands())
+          if (auto *OpI = dyn_cast<Instruction>(Op))
+            if (RecordInLoop(OpI, StmtId))
+              Worklist.push_back(OpI);
+      }
+    }
+
+    // Classify each dependence:
+    //   - Self-loop (same statement on both sides): a carried one marks
+    //     that statement's partition cyclic.
+    //   - Inter-statement: emit a producer-before-consumer ordering
+    //     edge; statements stay in separate partitions.
+    SmallSet<int, 4> CyclicStmts;
+    SmallVector<std::pair<int, int>, 4> OrderEdges;
+    auto StmtsFor = [&](Instruction *I) -> SmallVector<int, 2> {
+      if (auto *SI = dyn_cast<StoreInst>(I)) {
+        auto It = StoreToStmt.find(SI);
+        return It == StoreToStmt.end() ? SmallVector<int, 2>{}
+                                       : SmallVector<int, 2>{It->second};
+      }
+      auto It = InstToStmts.find(I);
+      if (It == InstToStmts.end())
+        return {};
+      return SmallVector<int, 2>(It->second.begin(), It->second.end());
+    };
+    for (const auto &[First, Second, Carried] : Pairs) {
+      auto FirstStmts = StmtsFor(First);
+      auto SecondStmts = StmtsFor(Second);
+      if (FirstStmts.empty() || SecondStmts.empty())
+        return false;
+      // A load shared by several statements is cloned into each of them,
+      // so every copy has to respect the dependence.
+      for (int Before : FirstStmts)
+        for (int After : SecondStmts) {
+          if (Before != After)
+            OrderEdges.emplace_back(Before, After);
+          else if (Carried)
+            CyclicStmts.insert(Before);
+        }
+    }
+
+    // One statement = one partition.  Cyclic-ness is carried separately
+    // by PartIsCyclic[] below; ordering between partitions comes from
+    // OrderEdges and the topological pass that follows.
+    int NumPartitions = static_cast<int>(Stores.size());
+    if (NumPartitions < 2)
+      return false;
+    SmallVector<int, 4> StmtToPartId(NumPartitions);
+    for (int Idx = 0; Idx < NumPartitions; ++Idx)
+      StmtToPartId[Idx] = Idx;
+
+    // Topologically order partitions to honour producer-before-consumer
+    // edges.  If a true cycle exists in the partition graph, we cannot
+    // safely split.
+    SmallVector<SmallSet<int, 2>, 4> PartEdges(NumPartitions);
+    SmallVector<unsigned, 4> InDegree(NumPartitions, 0);
+    for (auto [Producer, Consumer] : OrderEdges) {
+      int PProd = StmtToPartId[Producer];
+      int PCons = StmtToPartId[Consumer];
+      if (PProd == PCons)
+        continue;
+      if (PartEdges[PProd].insert(PCons).second)
+        ++InDegree[PCons];
+    }
+    SmallVector<int, 4> NewOrder;
+    SmallVector<int, 4> Ready;
+    for (int P = 0; P < NumPartitions; ++P)
+      if (InDegree[P] == 0)
+        Ready.push_back(P);
+    while (!Ready.empty()) {
+      int P = Ready.pop_back_val();
+      NewOrder.push_back(P);
+      for (int Succ : PartEdges[P])
+        if (--InDegree[Succ] == 0)
+          Ready.push_back(Succ);
+    }
+    if (static_cast<int>(NewOrder.size()) != NumPartitions)
+      return false;
+    SmallVector<int, 4> Renumber(NumPartitions);
+    for (int Pos = 0; Pos < NumPartitions; ++Pos)
+      Renumber[NewOrder[Pos]] = Pos;
+    for (int &Id : StmtToPartId)
+      Id = Renumber[Id];
+
+    // Bucket memory instructions by partition id, preserving program order
+    // within each bucket via the supplied memory instruction list.  An
+    // instruction that maps to multiple statements (shared load) is added
+    // to each partition that consumes it; the partitions only have read
+    // access to the duplicated value, which is safe.
+    SmallVector<SmallVector<Instruction *, 8>, 4> Buckets(NumPartitions);
+    SmallVector<bool, 4> PartIsCyclic(NumPartitions, false);
+    for (Instruction *I : MemInsts) {
+      auto Stmts = StmtsFor(I);
+      if (Stmts.empty())
+        return false;
+      SmallSet<int, 2> Targeted;
+      for (int Stmt : Stmts) {
+        int PartId = StmtToPartId[Stmt];
+        if (!Targeted.insert(PartId).second)
+          continue;
+        Buckets[PartId].push_back(I);
+        if (CyclicStmts.contains(Stmt))
+          PartIsCyclic[PartId] = true;
+      }
+    }
+
+    // Emit partitions in topological order; each carries its full seed
+    // bucket and its cyclic flag.
+    for (int PartId = 0; PartId < NumPartitions; ++PartId) {
+      if (Buckets[PartId].empty())
+        continue;
+      Partitions.addNewPartition(Buckets[PartId], PartIsCyclic[PartId]);
+    }
+
+    LLVM_DEBUG(dbgs() << "LDist: Statement-seeded into " << NumPartitions
+                      << " partitions\n");
+    return true;
+  }
+
   /// Filter out checks between pointers from the same partition.
   ///
   /// \p PtrToPartition contains the partition number for pointers.  Partition
@@ -971,21 +1411,26 @@ private:
 
 static bool runImpl(Function &F, LoopInfo *LI, DominatorTree *DT,
                     ScalarEvolution *SE, OptimizationRemarkEmitter *ORE,
-                    LoopAccessInfoManager &LAIs) {
+                    LoopAccessInfoManager &LAIs, DependenceInfo *DI) {
   // Build up a worklist of inner-loops to distribute. This is necessary as the
   // act of distributing a loop creates new loops and can invalidate iterators
   // across the loops.
-  SmallVector<Loop *, 8> Worklist;
+  SmallVector<Loop *, 8> InnerWorklist;
+  // When the statement-seeded strategy is on, we additionally consider
+  // non-innermost loops via DependenceAnalysis.  Enumerated separately so
+  // that the existing innermost path runs first.
+  SmallVector<Loop *, 4> OuterWorklist;
 
   for (Loop *TopLevelLoop : *LI)
-    for (Loop *L : depth_first(TopLevelLoop))
-      // We only handle inner-most loops.
+    for (Loop *L : depth_first(TopLevelLoop)) {
       if (L->isInnermost())
-        Worklist.push_back(L);
+        InnerWorklist.push_back(L);
+      else if (StatementSeededPartitioning)
+        OuterWorklist.push_back(L);
+    }
 
-  // Now walk the identified inner loops.
   bool Changed = false;
-  for (Loop *L : Worklist) {
+  for (Loop *L : InnerWorklist) {
     LoopDistributeForLoop LDL(L, &F, LI, DT, SE, LAIs, ORE);
 
     // Do not reprocess loops we already distributed
@@ -1000,6 +1445,13 @@ static bool runImpl(Function &F, LoopInfo *LI, DominatorTree *DT,
     if (LDL.isForced().value_or(EnableLoopDistribute))
       Changed |= LDL.processLoop();
   }
+  for (Loop *L : OuterWorklist) {
+    if (getOptionalBoolLoopAttribute(L, DistributedMetaData).value_or(false))
+      continue;
+    LoopDistributeForLoop LDL(L, &F, LI, DT, SE, LAIs, ORE);
+    if (LDL.isForced().value_or(EnableLoopDistribute))
+      Changed |= LDL.processOuterLoop(DI);
+  }
 
   // Process each loop nest in the function.
   return Changed;
@@ -1013,7 +1465,13 @@ PreservedAnalyses LoopDistributePass::run(Function &F,
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
   LoopAccessInfoManager &LAIs = AM.getResult<LoopAccessAnalysis>(F);
-  bool Changed = runImpl(F, &LI, &DT, &SE, &ORE, LAIs);
+  // DependenceAnalysis is only consumed by the statement-seeded
+  // outer-loop path, which is off by default.  Request it only when
+  // that path is enabled so the default pipeline is unaffected.
+  DependenceInfo *DI = StatementSeededPartitioning
+                           ? &AM.getResult<DependenceAnalysis>(F)
+                           : nullptr;
+  bool Changed = runImpl(F, &LI, &DT, &SE, &ORE, LAIs, DI);
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
