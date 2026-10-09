@@ -383,6 +383,14 @@ int omp_get_dynamic(void) { return 0; }
 
 void omp_set_num_threads(int V) { icv::NThreads = V; }
 
+void kmp_set_num_threads_8(int64_t V) {
+  if (V > INT32_MAX)
+    V = INT32_MAX;
+  else if (V < INT32_MIN)
+    V = INT32_MIN;
+  omp_set_num_threads((int)V);
+}
+
 int omp_get_max_threads(void) {
   int NT = icv::NThreads;
   return NT > 0 ? NT : mapping::getMaxTeamThreads();

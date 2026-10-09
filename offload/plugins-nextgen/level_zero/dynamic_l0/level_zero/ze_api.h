@@ -334,10 +334,23 @@ typedef struct _ze_uuid_t {
   uint8_t id[16];
 } ze_uuid_t;
 
+/* Driver UUID size */
+#ifndef ZE_MAX_DRIVER_UUID_SIZE
+#define ZE_MAX_DRIVER_UUID_SIZE 16
+#endif
+
 /* Driver UUID */
 typedef struct _ze_driver_uuid_t {
-  ze_uuid_t id;
+  uint8_t id[ZE_MAX_DRIVER_UUID_SIZE];
 } ze_driver_uuid_t;
+
+/* Driver properties */
+typedef struct _ze_driver_properties_t {
+  ze_structure_type_t stype;
+  void *pNext;
+  ze_driver_uuid_t uuid;
+  uint32_t driverVersion;
+} ze_driver_properties_t;
 
 /* Device UUID */
 typedef struct _ze_device_uuid_t {
@@ -666,6 +679,8 @@ ZE_APIEXPORT ze_result_t ZE_APICALL zeDriverGet(uint32_t *pCount,
                                                 ze_driver_handle_t *phDrivers);
 ZE_APIEXPORT ze_result_t ZE_APICALL
 zeDriverGetApiVersion(ze_driver_handle_t hDriver, ze_api_version_t *version);
+ZE_APIEXPORT ze_result_t ZE_APICALL zeDriverGetProperties(
+    ze_driver_handle_t hDriver, ze_driver_properties_t *pDriverProperties);
 ZE_APIEXPORT ze_result_t ZE_APICALL zeDriverGetExtensionFunctionAddress(
     ze_driver_handle_t hDriver, const char *name, void **ppFunctionAddress);
 ZE_APIEXPORT ze_result_t ZE_APICALL zeDriverGetExtensionProperties(

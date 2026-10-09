@@ -87,7 +87,10 @@ def SDT_X86CallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>,
 def SDT_X86CallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i32>,
                                         SDTCisVT<1, i32>]>;
 
-def SDT_X86Call   : SDTypeProfile<0, -1, [SDTCisVT<0, iPTR>]>;
+// The call target is an integer, not necessarily a pointer: on the
+// x32 ABI it is a 64-bit zero-extension of a 32-bit pointer, since calls
+// still execute in 64-bit mode even though pointers are 32-bit.
+def SDT_X86Call   : SDTypeProfile<0, -1, [SDTCisInt<0>]>;
 
 def SDT_X86NtBrind : SDTypeProfile<0, -1, [SDTCisVT<0, iPTR>]>;
 
@@ -120,7 +123,10 @@ def SDT_X86PROBED_ALLOCA : SDTypeProfile<1, 1, [SDTCisVT<0, iPTR>, SDTCisVT<1, i
 
 def SDT_X86EHRET : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
 
-def SDT_X86TCRET : SDTypeProfile<0, 2, [SDTCisPtrTy<0>, SDTCisVT<1, i32>]>;
+// The tail-call target is an integer, not necessarily a pointer: on the
+// x32 ABI it is a 64-bit zero-extension of a 32-bit pointer, since calls
+// still execute in 64-bit mode even though pointers are 32-bit.
+def SDT_X86TCRET : SDTypeProfile<0, 2, [SDTCisInt<0>, SDTCisVT<1, i32>]>;
 
 def SDT_X86ENQCMD : SDTypeProfile<1, 2, [SDTCisVT<0, i32>,
                                          SDTCisPtrTy<1>, SDTCisSameAs<1, 2>]>;
@@ -563,6 +569,11 @@ def i64immSExt8  : ImmLeaf<i64, [{ return isInt<8>(Imm); }]>;
 def i64immSExt32 : ImmLeaf<i64, [{ return isInt<32>(Imm); }]>;
 def i64timmSExt32 : TImmLeaf<i64, [{ return isInt<32>(Imm); }]>;
 
+def GetLo32XForm : SDNodeXForm<imm, [{
+  // Transformation function: get the low 32 bits.
+  return getI32Imm((uint32_t)N->getZExtValue(), SDLoc(N));
+}]>;
+
 def i16relocImmSExt8 : PatLeaf<(i16 relocImm), [{
   return isSExtAbsoluteSymbolRef(8, N);
 }]>;
@@ -666,7 +677,7 @@ def loadi16 : PatFrag<(ops node:$ptr), (i16 (unindexedload node:$ptr)), [{
   ISD::LoadExtType ExtType = LD->getExtensionType();
   if (ExtType == ISD::NON_EXTLOAD)
     return true;
-  if (ExtType == ISD::EXTLOAD && EnablePromoteAnyextLoad)
+  if (ExtType == ISD::EXTLOAD && Subtarget->getCLOpts().promote_anyext_load)
     return LD->getAlign() >= 2 && LD->isSimple();
   return false;
 }]> {
@@ -685,7 +696,7 @@ def loadi32 : PatFrag<(ops node:$ptr), (i32 (unindexedload node:$ptr)), [{
   ISD::LoadExtType ExtType = LD->getExtensionType();
   if (ExtType == ISD::NON_EXTLOAD)
     return true;
-  if (ExtType == ISD::EXTLOAD && EnablePromoteAnyextLoad)
+  if (ExtType == ISD::EXTLOAD && Subtarget->getCLOpts().promote_anyext_load)
     return LD->getAlign() >= 4 && LD->isSimple();
   return false;
 }]> {
@@ -837,22 +848,9 @@ def anyext_sdiv : PatFrag<(ops node:$lhs), (anyext node:$lhs),[{
 }]>;
 
 // Any instruction that defines a 32-bit result leaves the high half of the
-// register. Truncate can be lowered to EXTRACT_SUBREG. CopyFromReg may
-// be copying from a truncate. AssertSext/AssertZext/AssertAlign aren't saying
-// anything about the upper 32 bits, they're probably just qualifying a
-// CopyFromReg. FREEZE may be coming from a a truncate. BitScan fall through
-// values may not zero the upper bits correctly.
-// Any other 32-bit operation will zero-extend up to 64 bits.
+// register zeroed, so a zero-extension to 64 bits is free.
 def def32 : PatLeaf<(i32 GR32:$src), [{
-  return N->getOpcode() != ISD::TRUNCATE &&
-         N->getOpcode() != TargetOpcode::EXTRACT_SUBREG &&
-         N->getOpcode() != ISD::CopyFromReg &&
-         N->getOpcode() != ISD::AssertSext &&
-         N->getOpcode() != ISD::AssertZext &&
-         N->getOpcode() != ISD::AssertAlign &&
-         N->getOpcode() != ISD::FREEZE &&
-         !((N->getOpcode() == X86ISD::BSF || N->getOpcode() == X86ISD::BSR) &&
-           (!N->getOperand(0).isUndef() && !isa<ConstantSDNode>(N->getOperand(0))));
+  return isDef32(N);
 }]>;
 
 def shiftMask8 : PatFrag<(ops node:$lhs), (and node:$lhs, imm), [{

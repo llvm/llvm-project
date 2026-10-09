@@ -51,7 +51,7 @@ void UnreachableCodeChecker::checkEndAnalysis(ExplodedGraph &G,
                                               ExprEngine &Eng) const {
   CFGBlocksSet reachable, visited;
 
-  if (Eng.hasExploredAllPaths())
+  if (!Eng.hasExploredAllPaths())
     return;
 
   const Decl *D = nullptr;

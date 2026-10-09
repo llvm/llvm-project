@@ -27,20 +27,12 @@
 
 namespace clang::CIRGen {
 
-/// isEmptyFieldForLayout - Return true if the field is "empty", that is,
-/// either a zero-width bit-field or an isEmptyRecordForLayout.
-bool isEmptyFieldForLayout(const ASTContext &context, const FieldDecl *fd);
-
-/// isEmptyRecordForLayout - Return true if a structure contains only empty
-/// base classes (per  isEmptyRecordForLayout) and fields (per
-/// isEmptyFieldForLayout). Note, C++ record fields are considered empty
-/// if the [[no_unique_address]] attribute would have made them empty.
-bool isEmptyRecordForLayout(const ASTContext &context, QualType t);
-
-/// isEmptyFieldForABI - Return true if the field is "empty", that is, it is an
-/// unnamed bit-field or an (array of) empty record(s).  C++ record fields are
-/// never empty unless marked [[no_unique_address]], and that exception applies
-/// only to records, not arrays of records.
+/// isEmptyFieldForABI - Return true if the field is "empty", that is, it is a
+/// zero-width bit-field or an (array of) empty record(s).  An unnamed
+/// bit-field wider than zero bits is not empty: it is storage the classifier
+/// reads like a named bit-field's.  C++ record fields are never empty unless
+/// marked [[no_unique_address]], and that exception applies only to records,
+/// not arrays of records.
 bool isEmptyFieldForABI(const ASTContext &context, const FieldDecl *fd);
 
 /// isEmptyRecordForABI - Return true if a structure contains only empty base
@@ -77,6 +69,11 @@ public:
     return cir::LangAddressSpaceAttr::get(&info->cgt.getMLIRContext(),
                                           cir::LangAddressSpace::Default);
   }
+
+  /// Get the CIR value of a null pointer of type \p ptrTy, where \p qt is the
+  /// source pointer type.
+  virtual mlir::Value getNullPointer(CIRGenModule &cgm, cir::PointerType ptrTy,
+                                     QualType qt, mlir::Location loc) const;
 
   virtual mlir::Type getCUDADeviceBuiltinSurfaceDeviceType() const {
     return nullptr;
@@ -157,16 +154,16 @@ public:
                                    mlir::Operation *global,
                                    CIRGenModule &module) const {}
 
-  /// Get the CIR calling convention to use for a device kernel entry point
-  /// (e.g. an OpenCL/SYCL or CUDA/HIP kernel) on this target.
-  virtual cir::CallingConv getDeviceKernelCallingConv() const {
-    return cir::CallingConv::C;
-  }
-
   virtual bool isScalarizableAsmOperand(CIRGenFunction &cgf,
                                         mlir::Type ty) const {
     return false;
   }
+
+  /// Returns the calling convention used for device kernels on this target.
+  virtual cir::CallingConv getDeviceKernelCallingConv() const;
+
+  virtual void
+  setCUDAKernelCallingConvention(const clang::FunctionType *&ft) const {}
 
   /// Corrects the MLIR type for a given constraint and "usual"
   /// type.
@@ -183,10 +180,6 @@ public:
 std::unique_ptr<TargetCIRGenInfo>
 createAMDGPUTargetCIRGenInfo(CIRGenTypes &cgt);
 
-/// Check if AMDGPU protected visibility is required.
-bool requiresAMDGPUProtectedVisibility(const clang::Decl *d,
-                                       cir::VisibilityKind visibility);
-
 /// Set AMDGPU-specific function attributes for HIP kernels.
 void setAMDGPUTargetFunctionAttributes(const clang::Decl *decl,
                                        cir::FuncOp func, CIRGenModule &cgm);
@@ -198,7 +191,8 @@ createAArch64TargetCIRGenInfo(CIRGenTypes &cgt);
 
 std::unique_ptr<TargetCIRGenInfo> createNVPTXTargetCIRGenInfo(CIRGenTypes &cgt);
 
-std::unique_ptr<TargetCIRGenInfo> createSPIRVTargetCIRGenInfo(CIRGenTypes &cgt);
+std::unique_ptr<TargetCIRGenInfo>
+createCommonSPIRTargetCIRGenInfo(CIRGenTypes &cgt);
 
 } // namespace clang::CIRGen
 

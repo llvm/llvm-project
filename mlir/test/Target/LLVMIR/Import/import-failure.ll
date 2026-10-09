@@ -175,7 +175,7 @@ end:
 ; // -----
 
 ; CHECK:      <unknown>
-; CHECK-SAME: warning: expected metadata node llvm.loop.vectorize.followup_all to hold an MDNode
+; CHECK-SAME: warning: expected all loop properties to be either debug locations or metadata nodes
 ; CHECK:      <unknown>
 ; CHECK-SAME: warning: unhandled metadata: ![[FOLLOWUP_LOOP:[0-9]+]] = distinct !{![[FOLLOWUP_LOOP]], ![[FOLLOWUP_PROP:[0-9]+]]}
 define void @unsupported_loop_annotation(i64 %n, ptr %A) {
@@ -187,6 +187,42 @@ end:
 
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.vectorize.followup_all", i32 42}
+
+; // -----
+
+; A whole LoopID is not a named property in a followup's direct attribute list.
+; CHECK:      <unknown>
+; CHECK-SAME: warning: cannot import loop property without a name
+; CHECK:      <unknown>
+; CHECK-SAME: warning: unhandled metadata: ![[WRAPPED_LOOP:[0-9]+]] = distinct !{![[WRAPPED_LOOP]], ![[WRAPPED_PROP:[0-9]+]]}
+define void @followup_with_loop_id() {
+entry:
+  br label %end, !llvm.loop !0
+end:
+  ret void
+}
+
+!0 = distinct !{!0, !1}
+!1 = !{!"llvm.loop.unroll.followup_unrolled", !2}
+!2 = distinct !{!2, !3}
+!3 = !{!"llvm.loop.mustprogress"}
+
+; // -----
+
+; Reject recursive followup metadata instead of recursing indefinitely.
+; CHECK:      <unknown>
+; CHECK-SAME: warning: cannot import cyclic loop annotation
+; CHECK:      <unknown>
+; CHECK-SAME: warning: unhandled metadata: ![[CYCLIC_LOOP:[0-9]+]] = distinct !{![[CYCLIC_LOOP]], ![[CYCLIC_PROP:[0-9]+]]}
+define void @cyclic_followup() {
+entry:
+  br label %end, !llvm.loop !0
+end:
+  ret void
+}
+
+!0 = distinct !{!0, !1}
+!1 = distinct !{!"llvm.loop.unroll.followup_unrolled", !1}
 
 ; // -----
 
@@ -251,7 +287,7 @@ declare void @llvm.experimental.noalias.scope.decl(metadata)
 
 !0 = !{!1}
 !1 = !{!1, !2}
-!2 = distinct !{!2, !"The domain"}
+!2 = distinct !{!2, i1 false, !"The domain"}
 
 ; // -----
 
@@ -533,3 +569,78 @@ define i32 @metadata_ref_global_dtors() {
 }
 
 !0 = !{ptr @llvm.global_dtors}
+
+; // -----
+
+; CHECK: warning: expected string metadata value for key 'ProfileFormat'
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"ProfileSummary", !1}
+!1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
+!2 = !{!"ProfileFormat", i64 0}
+!3 = !{!"TotalCount", i64 1}
+!4 = !{!"MaxCount", i64 1}
+!5 = !{!"MaxInternalCount", i64 1}
+!6 = !{!"MaxFunctionCount", i64 1}
+!7 = !{!"NumCounts", i64 1}
+!8 = !{!"NumFunctions", i64 1}
+!9 = !{!"DetailedSummary", !10}
+!10 = !{!11}
+!11 = !{i32 10000, i64 1, i32 1}
+
+; // -----
+
+; CHECK: warning: expected string metadata value for key 'ProfileFormat': null
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"ProfileSummary", !1}
+!1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
+!2 = !{!"ProfileFormat", null}
+!3 = !{!"TotalCount", i64 1}
+!4 = !{!"MaxCount", i64 1}
+!5 = !{!"MaxInternalCount", i64 1}
+!6 = !{!"MaxFunctionCount", i64 1}
+!7 = !{!"NumCounts", i64 1}
+!8 = !{!"NumFunctions", i64 1}
+!9 = !{!"DetailedSummary", !10}
+!10 = !{!11}
+!11 = !{i32 10000, i64 1, i32 1}
+
+; CHECK: error: unknown value 'invalid' for 'disable-tail-calls' attribute
+define void @disable_tail_calls_invalid() #0 {
+  ret void
+}
+
+attributes #0 = { "disable-tail-calls"="invalid" }
+
+; // -----
+
+; A diagnostic rendering past the bound is truncated, not embedded whole.
+; CHECK: error: unsupported TBAA node format: !{{[0-9]+}} = !{!{{[0-9]+}}, i64 1, !"aaa
+; CHECK-SAME: {{a+[.][.][.]}} <truncated>{{$}}
+define dso_local void @tbaa_truncated(ptr %0) {
+  store i32 1, ptr %0, align 4, !tbaa !2
+  ret void
+}
+
+!2 = !{!3, !3, i64 0, i64 4}
+!3 = !{!4, i64 4, !"int"}
+!4 = !{!5, i64 1, !"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+!5 = !{!"Simple C++ TBAA"}
+
+; // -----
+
+; Two functions warn in one import; each diagnostic numbers its own
+; function's locals, so sharing the slot tracker must not leak numbering
+; across functions.
+; CHECK: warning: unhandled metadata: ![[ID0:[0-9]+]] = distinct !{![[ID0]], i32 42} on {{.*}}%1 = load i32, ptr %p
+; CHECK: warning: unhandled metadata: ![[ID1:[0-9]+]] = distinct !{![[ID1]], i32 43} on {{.*}}%1 = load i64, ptr %q
+define void @reuse_a(ptr %p) {
+  %1 = load i32, ptr %p, !llvm.loop !0
+  ret void
+}
+define void @reuse_b(ptr %q) {
+  %1 = load i64, ptr %q, !llvm.loop !1
+  ret void
+}
+
+!0 = distinct !{!0, i32 42}
+!1 = distinct !{!1, i32 43}

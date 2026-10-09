@@ -52,7 +52,9 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/MC/MCContext.h"
@@ -692,6 +694,9 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setOperationAction(ISD::BR_CC, VT, Expand);
   }
 
+  setOperationAction(ISD::SDIVREM, {MVT::i32, MVT::i64}, Expand);
+  setOperationAction(ISD::UDIVREM, {MVT::i32, MVT::i64}, Expand);
+
   // We don't want ops like FMINIMUM or UMAX to be lowered to SETCC+VSELECT.
   setOperationAction(ISD::VSELECT, {MVT::v2f32, MVT::v2i32}, Expand);
 
@@ -711,6 +716,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::SRA_PARTS, MVT::i64  , Custom);
   setOperationAction(ISD::SRL_PARTS, MVT::i64  , Custom);
 
+  if (STI.hasCLMAD())
+    setOperationAction({ISD::CLMUL, ISD::CLMULH}, MVT::i64, Legal);
   setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
   setOperationAction(ISD::BITREVERSE, MVT::i64, Legal);
 
@@ -991,6 +998,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     }
   }
 
+  // Expand nearest-even rounding and diagnose unsupported conversions.
+  setOperationAction(ISD::FPTRUNC_ROUND, {MVT::f16, MVT::bf16, MVT::f32},
+                     Custom);
+
   // Expand v2f32 = fp_extend
   setOperationAction(ISD::FP_EXTEND, MVT::v2f32, Expand);
   // Expand v2[b]f16 = fp_round v2f32
@@ -1031,19 +1042,20 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // These map to corresponding instructions for f32/f64. f16 must be
   // promoted to f32. v2f16 is expanded to f16, which is then promoted
   // to f32.
-  for (const auto &Op :
-       {ISD::FDIV, ISD::FREM, ISD::FSQRT, ISD::FSIN, ISD::FCOS}) {
+  for (const auto &Op : {ISD::FDIV, ISD::FSQRT, ISD::FSIN, ISD::FCOS}) {
     setOperationAction(Op, MVT::f16, Promote);
     setOperationAction(Op, MVT::f32, Legal);
-    // only div/rem/sqrt are legal for f64
-    if (Op == ISD::FDIV || Op == ISD::FREM || Op == ISD::FSQRT) {
+    // Only div/sqrt are legal for f64.
+    if (Op == ISD::FDIV || Op == ISD::FSQRT) {
       setOperationAction(Op, MVT::f64, Legal);
     }
     setOperationAction(Op, {MVT::v2f16, MVT::v2bf16, MVT::v2f32}, Expand);
     setOperationAction(Op, MVT::bf16, Promote);
     AddPromotedToType(Op, MVT::bf16, MVT::f32);
   }
-  setOperationAction(ISD::FREM, {MVT::f32, MVT::f64}, Custom);
+  // Expand remainders at the IR level using ExpandIRInsts.
+  setOperationAction(ISD::FREM, {MVT::f16, MVT::bf16, MVT::f32, MVT::f64},
+                     Expand);
 
   // FTANH support:
   // - f32 (sm_75+, PTX 7.0+)
@@ -1127,8 +1139,6 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   }
 
   setOperationAction(ISD::ADDRSPACECAST, {MVT::i32, MVT::i64}, Custom);
-
-  setOperationAction(ISD::ATOMIC_LOAD_SUB, {MVT::i32, MVT::i64}, Expand);
 
   // atom.b128 is legal in PTX but since we don't represent i128 as a legal
   // type, we need to custom lower it.
@@ -1600,10 +1610,13 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Where the label is to be used as the last arg of the call instruction.
   // We record the call site here and emit all prototypes at the
   // start of the function in the AsmPrinter.
-  if (IsIndirectCall)
-    DAG.getMachineFunction()
-        .getInfo<NVPTXMachineFunctionInfo>()
-        ->addCallPrototype(UniqueCallSite, CB);
+  SDValue Proto = GetI32(0);
+  if (IsIndirectCall) {
+    auto *ProtoSymbol = DAG.getMachineFunction()
+                            .getInfo<NVPTXMachineFunctionInfo>()
+                            ->addCallPrototype(CB, DAG.getMachineFunction());
+    Proto = DAG.getMCSymbol(ProtoSymbol, MVT::i32);
+  }
 
   const bool IsUnknownIntrinsic =
       CalleeF && CalleeF->isIntrinsic() &&
@@ -1616,7 +1629,6 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         dl.getDebugLoc()));
   }
 
-  const unsigned Proto = IsIndirectCall ? UniqueCallSite : 0;
   const unsigned NumArgs =
       std::min<unsigned>(CLI.NumFixedArgs + 1, Args.size());
   /// CALL(Chain, IsConvergent, IsIndirectCall/IsUniform, NumReturns,
@@ -1625,7 +1637,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   const SDValue Call = DAG.getNode(
       NVPTXISD::CALL, dl, MVT::Other,
       {CallToken, GetI32(CLI.IsConvergent), GetI32(IsIndirectCall),
-       GetI32(Ins.empty() ? 0 : 1), GetI32(NumArgs), Callee, GetI32(Proto)});
+       GetI32(Ins.empty() ? 0 : 1), GetI32(NumArgs), Callee, Proto});
 
   SmallVector<SDValue, 16> LoadChains{Call};
   SmallVector<SDValue, 16> ProxyRegOps;
@@ -2089,7 +2101,8 @@ SDValue NVPTXTargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
 
   SDValue BFI =
       DAG.getNode(NVPTXISD::BFI, DL, MVT::i32,
-                  {DAG.getZExtOrTrunc(Value, DL, MVT::i32), Vector,
+                  {DAG.getZExtOrTrunc(Value, DL, MVT::i32),
+                   DAG.getBitcast(MVT::i32, Vector),
                    DAG.getNode(ISD::MUL, DL, MVT::i32,
                                DAG.getZExtOrTrunc(Index, DL, MVT::i32),
                                DAG.getConstant(8, DL, MVT::i32)),
@@ -2428,6 +2441,40 @@ SDValue NVPTXTargetLowering::LowerFP_ROUND(SDValue Op,
 
   // Everything else is considered legal.
   return Op;
+}
+
+static SDValue lowerFPTRUNC_ROUND(SDValue Op, SelectionDAG &DAG,
+                                  const NVPTXSubtarget &STI) {
+  EVT SrcVT = Op.getOperand(0).getValueType();
+  EVT DstVT = Op.getValueType();
+  auto RM = static_cast<RoundingMode>(Op.getConstantOperandVal(1));
+  if (RM == RoundingMode::NearestTiesToEven) {
+    // Reuse the native selection and fallback expansion for ordinary fptrunc.
+    SDLoc DL(Op);
+    return DAG.getNode(ISD::FP_ROUND, DL, DstVT, Op.getOperand(0),
+                       DAG.getIntPtrConstant(0, DL, /*isTarget=*/true),
+                       Op.getNode()->getFlags());
+  }
+
+  bool RoundToInfinity =
+      RM == RoundingMode::TowardNegative || RM == RoundingMode::TowardPositive;
+
+  bool Supported = RM == RoundingMode::TowardZero || RoundToInfinity;
+  if (DstVT == MVT::bf16) {
+    if (SrcVT == MVT::f64 || RoundToInfinity)
+      Supported &= STI.hasFeature(NVPTX::SM90);
+    else
+      Supported &= STI.hasFeature(NVPTX::SM80);
+  }
+
+  if (Supported)
+    return Op;
+
+  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+      DAG.getMachineFunction().getFunction(),
+      "unsupported conversion or rounding mode for llvm.fptrunc.round",
+      SDLoc(Op).getDebugLoc()));
+  return DAG.getPOISON(DstVT);
 }
 
 SDValue NVPTXTargetLowering::LowerFP_EXTEND(SDValue Op,
@@ -3196,6 +3243,171 @@ static SDValue lowerIntrinsicWChain(SDValue Op, SelectionDAG &DAG) {
   }
 }
 
+static unsigned getSPNumRegs(EVT VT) {
+  return divideCeil(VT.getSizeInBits(), 32);
+}
+
+static EVT getSPRegType(EVT VT) {
+  assert(VT.isVector() && "Expected a vector type");
+  EVT EltVT = VT.getVectorElementType();
+  if (EltVT == MVT::i8)
+    return MVT::v4i8;
+  if (EltVT == MVT::i16)
+    return MVT::v2i16;
+  return EltVT;
+}
+
+static void appendSplitSPOperands(ArrayRef<SDUse> Input,
+                                  SmallVectorImpl<SDValue> &Output,
+                                  SelectionDAG &DAG) {
+  for (SDValue Operand : Input) {
+    EVT VT = Operand.getValueType();
+    SDLoc DL(Operand);
+    if (!VT.isVector()) {
+      Output.push_back(Operand);
+      continue;
+    }
+
+    // Pack partial .b32 operands at their natural width before extending them
+    // to avoid redundant cvt/prmt sequences.
+    if (VT.getSizeInBits() < 32) {
+      EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
+      Output.push_back(
+          DAG.getAnyExtOrTrunc(DAG.getBitcast(IntVT, Operand), DL, MVT::i32));
+      continue;
+    }
+
+    EVT RegVT = getSPRegType(VT);
+    if (!RegVT.isVector()) {
+      DAG.ExtractVectorElements(Operand, Output);
+      continue;
+    }
+
+    unsigned RegElts = RegVT.getVectorNumElements();
+    for (unsigned I : llvm::seq(getSPNumRegs(VT)))
+      Output.push_back(DAG.getBitcast(
+          MVT::i32, DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, RegVT, Operand,
+                                DAG.getVectorIdxConstant(I * RegElts, DL))));
+  }
+}
+
+static SDValue joinSPRegs(EVT VT, ArrayRef<SDValue> Regs, const SDLoc &DL,
+                          SelectionDAG &DAG) {
+  assert(Regs.size() == getSPNumRegs(VT) && VT.getSizeInBits() % 32 == 0 &&
+         "Incorrect number of SP vector registers");
+  if (!VT.isVector())
+    return Regs.front();
+
+  EVT RegVT = getSPRegType(VT);
+  SmallVector<SDValue> Parts;
+  for (SDValue Reg : Regs)
+    Parts.push_back(DAG.getBitcast(RegVT, Reg));
+
+  if (!RegVT.isVector())
+    return DAG.getBuildVector(VT, DL, Parts);
+  if (Parts.size() == 1)
+    return Parts.front();
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Parts);
+}
+
+static unsigned getSPCompressNodeOpcode(unsigned NumResults) {
+#define SPCOMPRESS_NODE_CASE(NumResults)                                       \
+  case NumResults:                                                             \
+    return NVPTXISD::SPCOMPRESS_R##NumResults
+
+  switch (NumResults) {
+    SPCOMPRESS_NODE_CASE(2);
+    SPCOMPRESS_NODE_CASE(3);
+    SPCOMPRESS_NODE_CASE(5);
+    SPCOMPRESS_NODE_CASE(6);
+    SPCOMPRESS_NODE_CASE(9);
+    SPCOMPRESS_NODE_CASE(10);
+    SPCOMPRESS_NODE_CASE(12);
+    SPCOMPRESS_NODE_CASE(18);
+    SPCOMPRESS_NODE_CASE(20);
+    SPCOMPRESS_NODE_CASE(24);
+    SPCOMPRESS_NODE_CASE(36);
+    SPCOMPRESS_NODE_CASE(40);
+    SPCOMPRESS_NODE_CASE(48);
+    SPCOMPRESS_NODE_CASE(72);
+    SPCOMPRESS_NODE_CASE(80);
+    SPCOMPRESS_NODE_CASE(96);
+  default:
+    llvm_unreachable("Invalid spcompress result count");
+  }
+
+#undef SPCOMPRESS_NODE_CASE
+}
+
+static unsigned getSPDecompressNodeOpcode(unsigned NumResults) {
+#define SPDECOMPRESS_NODE_CASE(NumResults)                                     \
+  case NumResults:                                                             \
+    return NVPTXISD::SPDECOMPRESS_R##NumResults
+
+  switch (NumResults) {
+    SPDECOMPRESS_NODE_CASE(1);
+    SPDECOMPRESS_NODE_CASE(2);
+    SPDECOMPRESS_NODE_CASE(4);
+    SPDECOMPRESS_NODE_CASE(8);
+    SPDECOMPRESS_NODE_CASE(16);
+    SPDECOMPRESS_NODE_CASE(32);
+    SPDECOMPRESS_NODE_CASE(64);
+    SPDECOMPRESS_NODE_CASE(128);
+  default:
+    llvm_unreachable("Invalid spdecompress result count");
+  }
+
+#undef SPDECOMPRESS_NODE_CASE
+}
+
+static SDValue lowerSPIntrinsic(SDValue Op, SelectionDAG &DAG) {
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+
+  auto IID = static_cast<Intrinsic::ID>(N->getConstantOperandVal(0));
+  bool IsCompress = IID == Intrinsic::nvvm_spcompress;
+  assert((IsCompress || IID == Intrinsic::nvvm_spdecompress) &&
+         "Unexpected SP intrinsic");
+
+  EVT DataVT =
+      IsCompress ? N->getOperand(1).getValueType() : N->getValueType(0);
+  EVT CDataVT =
+      IsCompress ? N->getValueType(1) : N->getOperand(2).getValueType();
+
+  unsigned ElemSize = DataVT.getScalarSizeInBits();
+  unsigned IdxSize = N->getConstantOperandVal(3);
+  unsigned NumTgt = N->getConstantOperandVal(4);
+  unsigned NumSrc =
+      NumTgt * CDataVT.getVectorNumElements() / DataVT.getVectorNumElements();
+  unsigned RepeatFactor = IsCompress ? getSPNumRegs(DataVT) / 2
+                                     : DataVT.getVectorNumElements() / NumTgt;
+
+  SmallVector<SDValue, 16> Ops;
+  for (unsigned Qualifier : {ElemSize, IdxSize, RepeatFactor, NumSrc, NumTgt})
+    Ops.push_back(DAG.getTargetConstant(Qualifier, DL, MVT::i32));
+  appendSplitSPOperands(N->ops().slice(1, 2), Ops, DAG);
+
+  SmallVector<EVT, 16> ResultVTs;
+  for (const EVT VT : N->values())
+    ResultVTs.append(getSPNumRegs(VT), MVT::i32);
+
+  unsigned Opcode = IsCompress ? getSPCompressNodeOpcode(ResultVTs.size())
+                               : getSPDecompressNodeOpcode(ResultVTs.size());
+  SDValue Lowered = DAG.getNode(Opcode, DL, ResultVTs, Ops);
+
+  SmallVector<SDValue, 2> Retvals;
+  unsigned Reg = 0;
+  for (const EVT VT : N->values()) {
+    SmallVector<SDValue> Regs;
+    for (unsigned R : llvm::seq(getSPNumRegs(VT)))
+      Regs.push_back(Lowered.getValue(Reg + R));
+    Reg += Regs.size();
+    Retvals.push_back(joinSPRegs(VT, Regs, DL, DAG));
+  }
+
+  return DAG.getMergeValues(Retvals, DL);
+}
+
 static SDValue lowerIntrinsicWOChain(SDValue Op, SelectionDAG &DAG) {
   switch (Op->getConstantOperandVal(0)) {
   default:
@@ -3224,6 +3436,10 @@ static SDValue lowerIntrinsicWOChain(SDValue Op, SelectionDAG &DAG) {
   case Intrinsic::nvvm_f32x4_to_e2m1x4_rs_satfinite:
   case Intrinsic::nvvm_f32x4_to_e2m1x4_rs_relu_satfinite:
     return lowerCvtRSIntrinsics(Op, DAG);
+
+  case Intrinsic::nvvm_spcompress:
+  case Intrinsic::nvvm_spdecompress:
+    return lowerSPIntrinsic(Op, DAG);
   }
 }
 
@@ -3293,34 +3509,6 @@ static SDValue lowerROT(SDValue Op, SelectionDAG &DAG) {
   unsigned Opcode = Op->getOpcode() == ISD::ROTL ? ISD::FSHL : ISD::FSHR;
   return expandFSH64(Op->getOperand(0), Op->getOperand(0), Op->getOperand(1),
                      SDLoc(Op), Opcode, DAG);
-}
-
-static SDValue lowerFREM(SDValue Op, SelectionDAG &DAG) {
-  // Lower (frem x, y) into (sub x, (mul (ftrunc (div x, y)) y)),
-  // i.e. "poor man's fmod()". When y is infinite, x is returned. This matches
-  // the semantics of LLVM's frem.
-  SDLoc DL(Op);
-  SDValue X = Op->getOperand(0);
-  SDValue Y = Op->getOperand(1);
-  EVT Ty = Op.getValueType();
-  SDNodeFlags Flags = Op->getFlags();
-
-  SDValue Div = DAG.getNode(ISD::FDIV, DL, Ty, X, Y, Flags);
-  SDValue Trunc = DAG.getNode(ISD::FTRUNC, DL, Ty, Div, Flags);
-  SDValue Mul = DAG.getNode(ISD::FMUL, DL, Ty, Trunc, Y,
-                            Flags | SDNodeFlags::AllowContract);
-  SDValue Sub = DAG.getNode(ISD::FSUB, DL, Ty, X, Mul,
-                            Flags | SDNodeFlags::AllowContract);
-
-  if (Flags.hasNoInfs())
-    return Sub;
-
-  // If Y is infinite, return X
-  SDValue AbsY = DAG.getNode(ISD::FABS, DL, Ty, Y);
-  SDValue Inf =
-      DAG.getConstantFP(APFloat::getInf(Ty.getFltSemantics()), DL, Ty);
-  SDValue IsInf = DAG.getSetCC(DL, MVT::i1, AbsY, Inf, ISD::SETEQ);
-  return DAG.getSelect(DL, Ty, IsInf, X, Sub);
 }
 
 static SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) {
@@ -3513,6 +3701,8 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerFP_TO_INT(Op, DAG);
   case ISD::FP_ROUND:
     return LowerFP_ROUND(Op, DAG);
+  case ISD::FPTRUNC_ROUND:
+    return lowerFPTRUNC_ROUND(Op, DAG, STI);
   case ISD::FP_EXTEND:
     return LowerFP_EXTEND(Op, DAG);
   case ISD::VAARG:
@@ -3554,8 +3744,6 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::CTPOP:
   case ISD::CTLZ:
     return lowerCTLZCTPOP(Op, DAG);
-  case ISD::FREM:
-    return lowerFREM(Op, DAG);
   case ISD::BSWAP:
     return lowerBSWAP(Op, DAG);
   default:
@@ -4418,7 +4606,8 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x2_trans_b8x16_b4x16_p64:
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x2_trans_b8x16_b6x16_p32:
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x4_b8x16_b4x16_p64:
-  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x4_b8x16_b6x16_p32: {
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x4_b8x16_b6x16_p32:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x4_s8_s4: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v4i32;
     Info.ptrVal = I.getArgOperand(0);
@@ -4461,7 +4650,8 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x1_b16:
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x1_trans_b16:
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x1_b8x16_b4x16_p64:
-  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x1_b8x16_b6x16_p32: {
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x1_b8x16_b6x16_p32:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x1_s8_s4: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::i32;
     Info.ptrVal = I.getArgOperand(0);
@@ -4566,7 +4756,8 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x1_trans_b8x16_b4x16_p64:
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x1_trans_b8x16_b6x16_p32:
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x2_b8x16_b4x16_p64:
-  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x2_b8x16_b6x16_p32: {
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x2_b8x16_b6x16_p32:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x2_s8_s4: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v2i32;
     Info.ptrVal = I.getArgOperand(0);
@@ -4741,6 +4932,20 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
     return;
   }
 
+  case Intrinsic::nvvm_st_bulk: {
+    Value *Dst = I.getArgOperand(0);
+    Value *Val = I.getArgOperand(2);
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::getVT(Val->getType());
+    Info.ptrVal = Dst;
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    Info.size = MemoryLocation::UnknownSize;
+    Infos.push_back(Info);
+    return;
+  }
+
   case Intrinsic::nvvm_prefetch_tensormap: {
     auto &DL = I.getDataLayout();
     Info.opc = ISD::INTRINSIC_VOID;
@@ -4750,6 +4955,39 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.flags =
         MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable;
     Info.align.reset();
+    Infos.push_back(Info);
+    return;
+  }
+
+  case Intrinsic::nvvm_prefetch_L1_32B_valid_addr: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::i8;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align = Align(1);
+    Infos.push_back(Info);
+    return;
+  }
+
+  case Intrinsic::nvvm_mbarrier_init: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::i64;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align = Align(8);
+    Infos.push_back(Info);
+    return;
+  }
+
+  case Intrinsic::nvvm_mbarrier_check_layout: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::i64;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align = Align(8);
     Infos.push_back(Info);
     return;
   }
@@ -5713,10 +5951,6 @@ bool NVPTXTargetLowering::allowFMA(MachineFunction &MF,
   if (OptLevel == CodeGenOptLevel::None)
     return false;
 
-  // Honor TargetOptions flags that explicitly say fusion is okay.
-  if (MF.getTarget().Options.AllowFPOpFusion == FPOpFusion::Fast)
-    return true;
-
   return false;
 }
 
@@ -6328,37 +6562,6 @@ static SDValue PerformFMinMaxCombine(SDNode *N,
   return SDValue();
 }
 
-static SDValue PerformREMCombine(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI,
-                                 CodeGenOptLevel OptLevel) {
-  assert(N->getOpcode() == ISD::SREM || N->getOpcode() == ISD::UREM);
-
-  // Don't do anything at less than -O2.
-  if (OptLevel < CodeGenOptLevel::Default)
-    return SDValue();
-
-  SelectionDAG &DAG = DCI.DAG;
-  SDLoc DL(N);
-  EVT VT = N->getValueType(0);
-  bool IsSigned = N->getOpcode() == ISD::SREM;
-  unsigned DivOpc = IsSigned ? ISD::SDIV : ISD::UDIV;
-
-  const SDValue &Num = N->getOperand(0);
-  const SDValue &Den = N->getOperand(1);
-
-  for (const SDNode *U : Num->users()) {
-    if (U->getOpcode() == DivOpc && U->getOperand(0) == Num &&
-        U->getOperand(1) == Den) {
-      // Num % Den -> Num - (Num / Den) * Den
-      return DAG.getNode(ISD::SUB, DL, VT, Num,
-                         DAG.getNode(ISD::MUL, DL, VT,
-                                     DAG.getNode(DivOpc, DL, VT, Num, Den),
-                                     Den));
-    }
-  }
-  return SDValue();
-}
-
 // sext (mul.iN nsw x, y)     => mul.wide.sN x, y
 // zext (mul.iN nuw x, y)     => mul.wide.uN x, y
 // sext (shl.iN nsw x, const) => mul.wide.sN x, (1 << const)
@@ -6897,24 +7100,22 @@ static SDValue PerformSELECTShiftCombine(SDNode *N,
 
   // Match logical shifts where the shift amount in the guard matches the shift
   // amount in the operation.
-  auto LogicalShift =
-      m_AllOf(m_Value(ShiftOp),
-              m_AnyOf(m_Srl(m_Value(), m_TruncOrSelf(m_Deferred(ShiftAmt))),
-                      m_Shl(m_Value(), m_TruncOrSelf(m_Deferred(ShiftAmt)))));
+  auto LogicalShift = m_Value(
+      ShiftOp, m_AnyOf(m_Srl(m_Value(), m_TruncOrSelf(m_Deferred(ShiftAmt))),
+                       m_Shl(m_Value(), m_TruncOrSelf(m_Deferred(ShiftAmt)))));
 
   // shift_amt > BitWidth-1 ? 0 : shift_op
-  bool MatchedUGT =
-      sd_match(N, m_Select(m_SetCC(m_Value(ShiftAmt),
-                                   m_SpecificInt(APInt(BitWidth, BitWidth - 1)),
-                                   m_SpecificCondCode(ISD::SETUGT)),
-                           m_Zero(), LogicalShift));
+  bool MatchedUGT = sd_match(
+      N, m_Select(m_SpecificSetCC(ISD::SETUGT, m_Value(ShiftAmt),
+                                  m_SpecificInt(APInt(BitWidth, BitWidth - 1))),
+                  m_Zero(), LogicalShift));
   // shift_amt < BitWidth ? shift_op : 0
   bool MatchedULT =
       !MatchedUGT &&
-      sd_match(N, m_Select(m_SetCC(m_Value(ShiftAmt),
-                                   m_SpecificInt(APInt(BitWidth, BitWidth)),
-                                   m_SpecificCondCode(ISD::SETULT)),
-                           LogicalShift, m_Zero()));
+      sd_match(
+          N, m_Select(m_SpecificSetCC(ISD::SETULT, m_Value(ShiftAmt),
+                                      m_SpecificInt(APInt(BitWidth, BitWidth))),
+                      LogicalShift, m_Zero()));
 
   if (!MatchedUGT && !MatchedULT)
     return SDValue();
@@ -7183,22 +7384,43 @@ static SDValue sinkProxyReg(SDValue R, SDValue Chain,
   }
 }
 
-static unsigned getF16SubOpc(Intrinsic::ID AddIntrinsicID) {
-  switch (AddIntrinsicID) {
-  default:
-    break;
-  case Intrinsic::nvvm_add_rn_sat_f16:
-  case Intrinsic::nvvm_add_rn_sat_v2f16:
-    return NVPTXISD::SUB_RN_SAT;
-  case Intrinsic::nvvm_add_rn_ftz_sat_f16:
-  case Intrinsic::nvvm_add_rn_ftz_sat_v2f16:
-    return NVPTXISD::SUB_RN_FTZ_SAT;
+static unsigned getFAddWithNegOpcode(EVT VT, Intrinsic::ID IID,
+                                     APFloat::roundingMode RoundingMode) {
+  const bool IsFTZ = nvvm::FPArithShouldFTZ(IID);
+  const bool IsSat = nvvm::FPArithIsSaturating(IID);
+  switch (VT.getScalarType().getSimpleVT().SimpleTy) {
+  case MVT::f16: {
+    static constexpr unsigned SubRNOpcodes[2][2] = {
+        {NVPTXISD::SUB_RN, NVPTXISD::SUB_RN_SAT},
+        {NVPTXISD::SUB_RN_FTZ, NVPTXISD::SUB_RN_FTZ_SAT}};
+    return SubRNOpcodes[IsFTZ][IsSat];
   }
-  llvm_unreachable("Invalid F16 add intrinsic");
+  case MVT::bf16:
+    return NVPTXISD::SUB_RN;
+  case MVT::f32: {
+    // for f32x2 inputs
+    if (!VT.isVector() || IsSat)
+      return 0;
+    static constexpr unsigned SubF32x2Opcodes[4][2] = {
+        {NVPTXISD::SUB_RZ, NVPTXISD::SUB_RZ_FTZ},  // RZ
+        {NVPTXISD::SUB_RN, NVPTXISD::SUB_RN_FTZ},  // RN
+        {NVPTXISD::SUB_RP, NVPTXISD::SUB_RP_FTZ},  // RP
+        {NVPTXISD::SUB_RM, NVPTXISD::SUB_RM_FTZ}}; // RM
+    return SubF32x2Opcodes[static_cast<unsigned>(RoundingMode)][IsFTZ];
+  }
+  default:
+    return 0;
+  }
 }
 
-static SDValue combineF16AddWithNeg(SDNode *N, SelectionDAG &DAG,
-                                    Intrinsic::ID AddIntrinsicID) {
+static SDValue combineFAddWithNeg(SDNode *N, SelectionDAG &DAG,
+                                  Intrinsic::ID AddIntrinsicID,
+                                  APFloat::roundingMode RoundingMode) {
+  const EVT VT = N->getValueType(0);
+  const unsigned Opc = getFAddWithNegOpcode(VT, AddIntrinsicID, RoundingMode);
+  if (!Opc)
+    return SDValue();
+
   SDValue Op1 = N->getOperand(1);
   SDValue Op2 = N->getOperand(2);
 
@@ -7214,24 +7436,81 @@ static SDValue combineF16AddWithNeg(SDNode *N, SelectionDAG &DAG,
     return SDValue();
   }
 
-  SDLoc DL(N);
-  return DAG.getNode(getF16SubOpc(AddIntrinsicID), DL, N->getValueType(0),
-                     SubOp1, SubOp2);
+  return DAG.getNode(Opc, SDLoc(N), VT, SubOp1, SubOp2);
+}
+
+// TODO: Remove the type-legality checks here once
+// https://github.com/llvm/llvm-project/pull/172442 lands, adding support for
+// explicit type constraints for overloaded intrinsics in tablegen.
+static bool isSupportedFPArith(SDNode *N, const NVPTXSubtarget &STI,
+                               unsigned ISDOpcode, Intrinsic::ID IID,
+                               APFloat::roundingMode RoundingMode) {
+  const EVT VT = N->getValueType(0);
+  if (VT.isVector() && VT.getVectorElementCount() != ElementCount::getFixed(2))
+    return false;
+
+  const bool IsRN = RoundingMode == APFloat::rmNearestTiesToEven;
+  const bool IsFTZ = nvvm::FPArithShouldFTZ(IID);
+  const bool IsSat = nvvm::FPArithIsSaturating(IID);
+  switch (VT.getScalarType().getSimpleVT().SimpleTy) {
+  case MVT::f16:
+    return IsRN;
+  case MVT::bf16:
+    return IsRN && !IsSat && !IsFTZ && STI.hasNativeBF16Support(ISDOpcode);
+  case MVT::f32:
+    return !VT.isVector() || (!IsSat && STI.hasF32x2Instructions());
+  case MVT::f64:
+    return !VT.isVector() && !IsSat && !IsFTZ;
+  default:
+    return false;
+  }
+}
+
+static SDValue diagnoseUnsupportedFPArith(SDNode *N, SelectionDAG &DAG,
+                                          Intrinsic::ID IID,
+                                          APFloat::roundingMode RoundingMode) {
+  const EVT VT = N->getValueType(0);
+  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+      DAG.getMachineFunction().getFunction(),
+      Twine(Intrinsic::getBaseName(IID)) + " with rounding mode " +
+          nvvm::GetRoundingModeName(RoundingMode) + " and operand type " +
+          VT.getEVTString() + " is not supported on this target",
+      SDLoc(N).getDebugLoc()));
+  return DAG.getPOISON(VT);
 }
 
 static SDValue combineIntrinsicWOChain(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const NVPTXSubtarget &STI) {
-  unsigned IID = N->getConstantOperandVal(0);
+  const Intrinsic::ID IID =
+      static_cast<Intrinsic::ID>(N->getConstantOperandVal(0));
 
   switch (IID) {
   default:
     break;
-  case Intrinsic::nvvm_add_rn_sat_f16:
-  case Intrinsic::nvvm_add_rn_ftz_sat_f16:
-  case Intrinsic::nvvm_add_rn_sat_v2f16:
-  case Intrinsic::nvvm_add_rn_ftz_sat_v2f16:
-    return combineF16AddWithNeg(N, DCI.DAG, IID);
+  case Intrinsic::nvvm_fadd:
+  case Intrinsic::nvvm_fadd_ftz:
+  case Intrinsic::nvvm_fadd_sat:
+  case Intrinsic::nvvm_fadd_ftz_sat: {
+    const auto RoundingMode = static_cast<APFloat::roundingMode>(
+        N->getConstantOperandAPInt(3).getSExtValue());
+    if (!isSupportedFPArith(N, STI, ISD::FADD, IID, RoundingMode))
+      return diagnoseUnsupportedFPArith(N, DCI.DAG, IID, RoundingMode);
+    return combineFAddWithNeg(N, DCI.DAG, IID, RoundingMode);
+  }
+  case Intrinsic::nvvm_spcompress:
+  case Intrinsic::nvvm_spdecompress:
+    return lowerSPIntrinsic(SDValue(N, 0), DCI.DAG);
+  case Intrinsic::nvvm_fmul:
+  case Intrinsic::nvvm_fmul_ftz:
+  case Intrinsic::nvvm_fmul_sat:
+  case Intrinsic::nvvm_fmul_ftz_sat: {
+    const auto RoundingMode = static_cast<APFloat::roundingMode>(
+        N->getConstantOperandAPInt(3).getSExtValue());
+    if (!isSupportedFPArith(N, STI, ISD::FMUL, IID, RoundingMode))
+      return diagnoseUnsupportedFPArith(N, DCI.DAG, IID, RoundingMode);
+    break;
+  }
   }
   return SDValue();
 }
@@ -7296,9 +7575,6 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     return PerformSETCCCombine(N, DCI, STI);
   case ISD::SHL:
     return PerformSHLCombine(N, DCI, OptLevel);
-  case ISD::SREM:
-  case ISD::UREM:
-    return PerformREMCombine(N, DCI, OptLevel);
   case ISD::STORE:
   case NVPTXISD::StoreV2:
   case NVPTXISD::StoreV4:
@@ -7636,8 +7912,9 @@ NVPTXTargetLowering::AtomicExpansionKind
 NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   Type *Ty = AI->getValOperand()->getType();
 
-  // Try to lower LLVM atomicrmw fadd to PTX atomic.add.  This is complicated
-  // by the weird FTZ behavior PTX atom.add has:
+  // Try to lower LLVM atomicrmw fadd/fsub to PTX atomic.add. Fsub is first
+  // expanded to an fadd with a negated operand. This is complicated by the
+  // weird FTZ behavior PTX atom.add has:
   //   - atom.add.f32 on global memory flushes denormals
   //   - atom.add.f32 on shared memory does not flush denormals
   //   - atom.add.f16 and atomic.add.bf16 never flush denormals
@@ -7647,14 +7924,26 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   // atomic.add.bf16; even though it never flushes denormals, we never flush
   // bf16 denormals when doing regular arithmetic, even when FTZ is enabled.
   if (AI->isFloatingPointOperation() &&
-      AI->getOperation() == AtomicRMWInst::BinOp::FAdd) {
+      (AI->getOperation() == AtomicRMWInst::BinOp::FAdd ||
+       AI->getOperation() == AtomicRMWInst::BinOp::FSub)) {
     const Function *F = AI->getFunction();
+    AtomicExpansionKind ExpansionKind =
+        AI->getOperation() == AtomicRMWInst::BinOp::FSub
+            ? AtomicExpansionKind::Expand
+            : AtomicExpansionKind::None;
 
-    // AllowFTZAtomics forces atom.add regardless of the FTZ mismatch.
+    // Both the -nvptx-allow-ftz-atomics option and per-instruction
+    // !atomic.ignore.denormal.mode say that denormal handling is insignificant
+    // here, so atom.add may be used even when its FTZ behavior disagrees with
+    // the function's.
+    const bool IgnoreFTZMismatch =
+        AllowFTZAtomics ||
+        AI->hasMetadata(LLVMContext::MD_atomic_ignore_denormal_mode);
+
     if (Ty->isFloatTy()) {
       const bool FTZ = F->getDenormalMode(APFloat::IEEEsingle()).Output ==
                        DenormalMode::PreserveSign;
-      bool UseNative = AllowFTZAtomics;
+      bool UseNative = IgnoreFTZMismatch;
       switch (AI->getPointerAddressSpace()) {
       case llvm::ADDRESS_SPACE_GLOBAL:
         UseNative |= FTZ;
@@ -7665,7 +7954,7 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
         break;
       }
       if (UseNative)
-        return AtomicExpansionKind::None;
+        return ExpansionKind;
     }
 
     if (Ty->isHalfTy()) {
@@ -7673,16 +7962,16 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
       // function that is not in FTZ mode for f16.
       const bool FTZ = F->getDenormalMode(APFloat::IEEEhalf()).Output ==
                        DenormalMode::PreserveSign;
-      if ((!FTZ || AllowFTZAtomics) && STI.hasFeature(NVPTX::SM70) &&
+      if ((!FTZ || IgnoreFTZMismatch) && STI.hasFeature(NVPTX::SM70) &&
           STI.hasFeature(NVPTX::PTX63))
-        return AtomicExpansionKind::None;
+        return ExpansionKind;
     }
 
     if (Ty->isBFloatTy() && STI.hasFeature(NVPTX::SM90))
-      return AtomicExpansionKind::None;
+      return ExpansionKind;
 
     if (Ty->isDoubleTy() && STI.hasAtomAddF64())
-      return AtomicExpansionKind::None;
+      return ExpansionKind;
   }
 
   // PTX's only atomic fp op is `add`; all other ops expand to a CAS loop.
@@ -7702,26 +7991,28 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
     if (BitWidth == 128)
       return AtomicExpansionKind::None;
     [[fallthrough]];
-  case AtomicRMWInst::BinOp::And:
-  case AtomicRMWInst::BinOp::Or:
-  case AtomicRMWInst::BinOp::Xor:
+  case AtomicRMWInst::BinOp::Add:
+  case AtomicRMWInst::BinOp::Sub: {
+    AtomicExpansionKind ExpansionKind =
+        AI->getOperation() == AtomicRMWInst::BinOp::Sub
+            ? AtomicExpansionKind::Expand
+            : AtomicExpansionKind::None;
     switch (BitWidth) {
     case 8:
     case 16:
       return AtomicExpansionKind::CmpXChg;
     case 32:
-      return AtomicExpansionKind::None;
     case 64:
-      if (STI.hasAtomBitwise64())
-        return AtomicExpansionKind::None;
-      return AtomicExpansionKind::CmpXChg;
+      return ExpansionKind;
     case 128:
       return AtomicExpansionKind::CmpXChg;
     default:
       llvm_unreachable("unsupported width encountered");
     }
-  case AtomicRMWInst::BinOp::Add:
-  case AtomicRMWInst::BinOp::Sub:
+  }
+  case AtomicRMWInst::BinOp::And:
+  case AtomicRMWInst::BinOp::Or:
+  case AtomicRMWInst::BinOp::Xor:
   case AtomicRMWInst::BinOp::Max:
   case AtomicRMWInst::BinOp::Min:
   case AtomicRMWInst::BinOp::UMax:
@@ -7733,7 +8024,7 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
     case 32:
       return AtomicExpansionKind::None;
     case 64:
-      if (STI.hasAtomMinMax64())
+      if (STI.hasAtomMinMaxAndOrXor())
         return AtomicExpansionKind::None;
       return AtomicExpansionKind::CmpXChg;
     case 128:
@@ -7762,8 +8053,9 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
 bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
     const Instruction *I) const {
   // This function returns true iff the operation is emulated using a CAS-loop,
-  // or if it has the memory order seq_cst (which is not natively supported in
-  // the PTX `atom` instruction).
+  // the target does not support memory-order qualifiers, or the operation has
+  // the memory order seq_cst (which is not natively supported in the PTX
+  // `atom` instruction).
   //
   // atomicrmw and cmpxchg instructions not efficiently supported by PTX
   // are lowered to CAS emulation loops that preserve their memory order,
@@ -7771,26 +8063,29 @@ bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
   // atom.cas.relaxed.sco instructions within the loop, and fences before and
   // after the loop to restore order.
   //
-  // Atomic instructions efficiently supported by PTX are lowered to
-  // `atom.<op>.<sem>.<scope` instruction with their corresponding memory order
-  // and scope. Since PTX does not support seq_cst, we emulate it by lowering to
-  // a fence.sc followed by an atom according to the PTX atomics ABI
+  // On targets with memory-order qualifiers, atomic instructions efficiently
+  // supported by PTX are lowered to `atom.<op>.<sem>.<scope>` instructions with
+  // their corresponding memory order and scope. Since PTX does not support
+  // seq_cst, we emulate it by lowering to a fence.sc followed by an atom
+  // according to the PTX atomics ABI.
   // https://docs.nvidia.com/cuda/ptx-writers-guide-to-interoperability/atomic-abi.html
   if (auto *CI = dyn_cast<AtomicCmpXchgInst>(I))
     return (cast<IntegerType>(CI->getCompareOperand()->getType())
                 ->getBitWidth() < STI.getMinCmpXchgSizeInBits()) ||
+           !STI.hasMemoryOrdering() ||
            CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent;
   if (auto *RI = dyn_cast<AtomicRMWInst>(I))
     return shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg ||
+           !STI.hasMemoryOrdering() ||
            RI->getOrdering() == AtomicOrdering::SequentiallyConsistent;
   return false;
 }
 
 AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
     const Instruction *I) const {
-  // If the operation is emulated by a CAS-loop, we lower the instruction to
-  // atom.<op>.relaxed, since AtomicExpandPass will insert fences for enforcing
-  // the correct memory ordering around the CAS loop.
+  // If the operation is emulated by a CAS-loop, or the target does not support
+  // memory-order qualifiers, we set its IR ordering to monotonic.
+  // AtomicExpandPass inserts fences to enforce the original memory ordering.
   //
   // When the operation is not emulated, but the memory order is seq_cst,
   // we must lower to "fence.sc.<scope>; atom.<op>.acquire.<scope>;" to conform
@@ -7806,15 +8101,21 @@ AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
   // will NOT be called.
   // prerequisite: shouldInsertFencesForAtomic() should have returned `true` for
   // I before its memory order was modified.
+  if (!STI.hasMemoryOrdering())
+    return AtomicOrdering::Monotonic;
+
   if (auto *CI = dyn_cast<AtomicCmpXchgInst>(I);
       CI && CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent &&
       cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() >=
           STI.getMinCmpXchgSizeInBits())
     return AtomicOrdering::Acquire;
   else if (auto *RI = dyn_cast<AtomicRMWInst>(I);
-           RI && RI->getOrdering() == AtomicOrdering::SequentiallyConsistent &&
-           shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::None)
-    return AtomicOrdering::Acquire;
+           RI && RI->getOrdering() == AtomicOrdering::SequentiallyConsistent) {
+    AtomicExpansionKind ExpansionKind = shouldExpandAtomicRMWInIR(RI);
+    if (ExpansionKind == AtomicExpansionKind::None ||
+        ExpansionKind == AtomicExpansionKind::Expand)
+      return AtomicOrdering::Acquire;
+  }
 
   return AtomicOrdering::Monotonic;
 }
@@ -7859,9 +8160,10 @@ Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
   assert(SSID.has_value() && "Expected an atomic operation");
 
   bool IsEmulated =
-      CI ? cast<IntegerType>(CI->getCompareOperand()->getType())
-                   ->getBitWidth() < STI.getMinCmpXchgSizeInBits()
-         : shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg;
+      !STI.hasMemoryOrdering() ||
+      (CI ? cast<IntegerType>(CI->getCompareOperand()->getType())
+                    ->getBitWidth() < STI.getMinCmpXchgSizeInBits()
+          : shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg);
 
   if (isAcquireOrStronger(Ord) && IsEmulated)
     return Builder.CreateFence(AtomicOrdering::Acquire, SSID.value());

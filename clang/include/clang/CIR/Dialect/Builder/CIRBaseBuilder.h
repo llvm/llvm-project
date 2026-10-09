@@ -116,6 +116,11 @@ public:
   }
 
   mlir::TypedAttr getZeroInitAttr(mlir::Type ty) {
+    if (auto bitFieldTy = mlir::dyn_cast<cir::BitFieldType>(ty)) {
+      assert(bitFieldTy.ownsBytes() &&
+             "a zero-width bit-field takes no initializer");
+      return getZeroInitAttr(bitFieldTy.getStorageType());
+    }
     if (mlir::isa<cir::IntType>(ty))
       return cir::IntAttr::get(ty, 0);
     if (cir::isAnyFloatingPointType(ty))
@@ -126,6 +131,8 @@ public:
       return cir::ZeroAttr::get(arrTy);
     if (auto vecTy = mlir::dyn_cast<cir::VectorType>(ty))
       return cir::ZeroAttr::get(vecTy);
+    if (auto matrixTy = mlir::dyn_cast<cir::MatrixType>(ty))
+      return cir::ZeroAttr::get(matrixTy);
     if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(ty))
       return getConstNullPtrAttr(ptrTy);
     if (auto recordTy = mlir::dyn_cast<cir::RecordType>(ty))
@@ -321,6 +328,40 @@ public:
     return cir::ComplexImagOp::create(*this, loc, resultType, operand);
   }
 
+  mlir::Value createComplexAdd(mlir::Location loc, mlir::Value lhs,
+                               mlir::Value rhs) {
+    auto complexTy = mlir::cast<cir::ComplexType>(lhs.getType());
+    if (cir::isAnyFloatingPointType(complexTy.getElementType()))
+      return cir::ComplexFAddOp::create(*this, loc, lhs, rhs);
+    return cir::ComplexAddOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createComplexSub(mlir::Location loc, mlir::Value lhs,
+                               mlir::Value rhs) {
+    auto complexTy = mlir::cast<cir::ComplexType>(lhs.getType());
+    if (cir::isAnyFloatingPointType(complexTy.getElementType()))
+      return cir::ComplexFSubOp::create(*this, loc, lhs, rhs);
+    return cir::ComplexSubOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createComplexMul(mlir::Location loc, mlir::Value lhs,
+                               mlir::Value rhs,
+                               cir::ComplexRangeKind rangeKind) {
+    auto complexTy = mlir::cast<cir::ComplexType>(lhs.getType());
+    if (cir::isAnyFloatingPointType(complexTy.getElementType()))
+      return cir::ComplexFMulOp::create(*this, loc, lhs, rhs, rangeKind);
+    return cir::ComplexMulOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createComplexDiv(mlir::Location loc, mlir::Value lhs,
+                               mlir::Value rhs,
+                               cir::ComplexRangeKind rangeKind) {
+    auto complexTy = mlir::cast<cir::ComplexType>(lhs.getType());
+    if (cir::isAnyFloatingPointType(complexTy.getElementType()))
+      return cir::ComplexFDivOp::create(*this, loc, lhs, rhs, rangeKind);
+    return cir::ComplexDivOp::create(*this, loc, lhs, rhs);
+  }
+
   mlir::Value createComplexConj(mlir::Location loc, mlir::Value operand) {
     return cir::ComplexConjOp::create(*this, loc, operand.getType(), operand);
   }
@@ -465,29 +506,31 @@ public:
   /// Get constant address of a global variable as an MLIR attribute.
   cir::GlobalViewAttr getGlobalViewAttr(cir::PointerType type,
                                         cir::GlobalOp globalOp,
-                                        mlir::ArrayAttr indices = {}) {
+                                        mlir::ArrayAttr indices = {},
+                                        bool addressPoint = false) {
     auto symbol = mlir::FlatSymbolRefAttr::get(globalOp.getSymNameAttr());
-    return cir::GlobalViewAttr::get(type, symbol, indices);
+    return cir::GlobalViewAttr::get(type, symbol, indices, addressPoint);
   }
 
   /// Get constant address of a global variable as an MLIR attribute.
   /// This overload converts raw int64_t indices to an ArrayAttr.
   cir::GlobalViewAttr getGlobalViewAttr(cir::PointerType type,
                                         cir::GlobalOp globalOp,
-                                        llvm::ArrayRef<int64_t> indices) {
+                                        llvm::ArrayRef<int64_t> indices,
+                                        bool addressPoint = false) {
     llvm::SmallVector<mlir::Attribute> attrs;
     for (int64_t ind : indices)
       attrs.push_back(getI64IntegerAttr(ind));
     mlir::ArrayAttr arAttr = mlir::ArrayAttr::get(getContext(), attrs);
-    return getGlobalViewAttr(type, globalOp, arAttr);
+    return getGlobalViewAttr(type, globalOp, arAttr, addressPoint);
   }
 
   cir::GetGlobalOp createGetGlobal(mlir::Location loc, cir::GlobalOp global,
                                    bool threadLocal = false) {
-    assert(!cir::MissingFeatures::addressSpace());
-    return cir::GetGlobalOp::create(*this, loc,
-                                    getPointerTo(global.getSymType()),
-                                    global.getSymNameAttr(), threadLocal);
+    return cir::GetGlobalOp::create(
+        *this, loc,
+        getPointerTo(global.getSymType(), global.getAddrSpaceAttr()),
+        global.getSymNameAttr(), threadLocal);
   }
 
   cir::GetGlobalOp createGetGlobal(cir::GlobalOp global,
@@ -570,9 +613,12 @@ public:
                            mlir::Type returnType, mlir::ValueRange operands,
                            llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
                            llvm::ArrayRef<mlir::NamedAttrList> argAttrs = {},
-                           llvm::ArrayRef<mlir::NamedAttribute> resAttrs = {}) {
+                           llvm::ArrayRef<mlir::NamedAttribute> resAttrs = {},
+                           cir::CallingConv callingConv = cir::CallingConv::C) {
     auto op = cir::CallOp::create(*this, loc, callee, returnType, operands);
     op->setAttrs(attrs);
+    if (callingConv != cir::CallingConv::C)
+      op.setCallingConv(callingConv);
 
     if (!argAttrs.empty()) {
       llvm::SmallVector<mlir::Attribute> argDictAttrs;
@@ -598,10 +644,11 @@ public:
                            mlir::ValueRange operands,
                            llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
                            llvm::ArrayRef<mlir::NamedAttrList> argAttrs = {},
-                           llvm::ArrayRef<mlir::NamedAttribute> resAttrs = {}) {
+                           llvm::ArrayRef<mlir::NamedAttribute> resAttrs = {},
+                           cir::CallingConv callingConv = cir::CallingConv::C) {
     return createCallOp(loc, mlir::SymbolRefAttr::get(callee),
                         callee.getFunctionType().getReturnType(), operands,
-                        attrs, argAttrs, resAttrs);
+                        attrs, argAttrs, resAttrs, callingConv);
   }
 
   cir::CallOp
@@ -609,12 +656,13 @@ public:
                        cir::FuncType funcType, mlir::ValueRange operands,
                        llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
                        llvm::ArrayRef<mlir::NamedAttrList> argAttrs = {},
-                       llvm::ArrayRef<mlir::NamedAttribute> resAttrs = {}) {
+                       llvm::ArrayRef<mlir::NamedAttribute> resAttrs = {},
+                       cir::CallingConv callingConv = cir::CallingConv::C) {
     llvm::SmallVector<mlir::Value> resOperands{indirectTarget};
     resOperands.append(operands.begin(), operands.end());
 
     return createCallOp(loc, mlir::SymbolRefAttr(), funcType.getReturnType(),
-                        resOperands, attrs, argAttrs, resAttrs);
+                        resOperands, attrs, argAttrs, resAttrs, callingConv);
   }
 
   cir::CallOp createCallOp(mlir::Location loc, mlir::SymbolRefAttr callee,
@@ -885,6 +933,10 @@ public:
 
   mlir::Value createMax(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     return cir::MaxOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createMin(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    return cir::MinOp::create(*this, loc, lhs, rhs);
   }
 
   cir::CmpOp createCompare(mlir::Location loc, cir::CmpOpKind kind,

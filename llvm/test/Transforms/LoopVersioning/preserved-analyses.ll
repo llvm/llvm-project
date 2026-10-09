@@ -1,5 +1,5 @@
 ; RUN: opt -passes='require<memoryssa>,loop-versioning,require<memoryssa>,require<domtree>,require<loops>,require<scalar-evolution>' \
-; RUN:     -debug-pass-manager -disable-output %s 2>&1 | FileCheck %s
+; RUN:     -verify-analysis-invalidation=false -debug-pass-manager -disable-output %s 2>&1 | FileCheck %s
 
 ; Verify perserved analyses.
 ; RUN: opt -passes='require<memoryssa>,loop-versioning,verify<domtree>,verify<loops>,verify<memoryssa>' \

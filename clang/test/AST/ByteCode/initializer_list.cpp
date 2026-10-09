@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -fms-extensions -std=c++20 -verify=expected,both %s
-// RUN: %clang_cc1 -std=c++20 -fms-extensions -verify=ref,both %s
+// RUN: %clang_cc1                                         -fms-extensions -std=c++20 -verify=ref,both      %s
 
 namespace std {
   typedef decltype(sizeof(int)) size_t;
@@ -68,4 +68,43 @@ namespace rdar13395022 {
   }
 }
 
+namespace CopiedForRangeIterator {
+  struct holder {
+    int *p = nullptr;
+    constexpr holder() {
+      p = new int;
+    }
+    constexpr holder(holder&&) {
+      delete p;
+      p = new int;
+    }
+    constexpr holder(const holder&) {
+      delete p;
+      p = new int;
+    }
+    constexpr ~holder() {
+      delete p;
+    }
+  };
 
+  constexpr int copies() {
+    for (holder h : {holder(), holder()}) {
+    }
+    return 0;
+  }
+  static_assert(copies() == 0);
+}
+
+namespace Primitive {
+  constexpr auto A = std::initializer_list<int>{42};
+  static_assert(A.size() == 1);
+  static_assert(*A.begin() == 42);
+}
+
+namespace Ignored {
+  constexpr int foo() {
+    std::initializer_list<int>{42}; // both-warning {{expression result unused}}
+    return 1;
+  }
+  static_assert(foo() == 1);
+}

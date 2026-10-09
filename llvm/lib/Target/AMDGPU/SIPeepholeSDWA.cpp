@@ -223,10 +223,6 @@ char SIPeepholeSDWALegacy::ID = 0;
 
 char &llvm::SIPeepholeSDWALegacyID = SIPeepholeSDWALegacy::ID;
 
-FunctionPass *llvm::createSIPeepholeSDWALegacyPass() {
-  return new SIPeepholeSDWALegacy();
-}
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 static raw_ostream& operator<<(raw_ostream &OS, SdwaSel Sel) {
   switch(Sel) {
@@ -1054,6 +1050,8 @@ void SIPeepholeSDWA::pseudoOpConvertToVOP2(MachineInstr &MI,
     return;
   // Make sure VCC or its subregs are dead before MI.
   MachineBasicBlock &MBB = *MI.getParent();
+  if (MISucc.getParent() != &MBB)
+    return; // Loop depends on MI and MISucc in same MBB.
   MachineBasicBlock::LivenessQueryResult Liveness =
       MBB.computeRegisterLiveness(TRI, AMDGPU::VCC, MI, 25);
   if (Liveness != MachineBasicBlock::LQR_Dead)

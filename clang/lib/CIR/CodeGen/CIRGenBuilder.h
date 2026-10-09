@@ -195,9 +195,12 @@ public:
     return op;
   }
 
-  cir::MemCpyOp createMemCpy(mlir::Location loc, mlir::Value dst,
-                             mlir::Value src, mlir::Value len) {
-    return cir::MemCpyOp::create(*this, loc, dst, src, len);
+  cir::MemCpyOp createMemCpy(mlir::Location loc, Address dst, Address src,
+                             mlir::Value len) {
+    return cir::MemCpyOp::create(
+        *this, loc, dst.getPointer(), src.getPointer(), len,
+        getI64IntegerAttr(dst.getAlignment().getQuantity()),
+        getI64IntegerAttr(src.getAlignment().getQuantity()));
   }
 
   cir::MemMoveOp createMemMove(mlir::Location loc, mlir::Value dst,
@@ -309,6 +312,8 @@ public:
 
   cir::VoidType getVoidTy() { return typeCache.voidTy; }
 
+  cir::IntType getBoolMemoryTy() { return getUInt8Ty(); }
+
   cir::IntType getSInt8Ty() { return typeCache.sInt8Ty; }
   cir::IntType getSInt16Ty() { return typeCache.sInt16Ty; }
   cir::IntType getSInt32Ty() { return typeCache.sInt32Ty; }
@@ -320,7 +325,7 @@ public:
   cir::IntType getUInt64Ty() { return typeCache.uInt64Ty; }
 
   cir::FP16Type getFp16Ty() { return typeCache.fP16Ty; }
-  cir::BF16Type getBfloat6Ty() { return typeCache.bFloat16Ty; }
+  cir::BF16Type getBfloat16Ty() { return typeCache.bFloat16Ty; }
   cir::SingleType getSingleTy() { return typeCache.floatTy; }
   cir::DoubleType getDoubleTy() { return typeCache.doubleTy; }
 
@@ -534,7 +539,8 @@ public:
     if (destType == addr.getElementType())
       return addr;
 
-    auto ptrTy = getPointerTo(destType);
+    auto srcPtrTy = mlir::cast<cir::PointerType>(addr.getPointer().getType());
+    auto ptrTy = getPointerTo(destType, srcPtrTy.getAddrSpace());
     return Address(createBitcast(loc, addr.getPointer(), ptrTy), destType,
                    addr.getAlignment());
   }
@@ -618,7 +624,7 @@ public:
     assert(index < recordTy.getMembers().size() &&
            "member index out of bounds");
     mlir::Type memberTy = recordTy.getMembers()[index];
-    mlir::Type memberPtrTy = getPointerTo(memberTy);
+    mlir::Type memberPtrTy = getPointerTo(memberTy, base.getAddressSpace());
 
     auto moduleOp =
         getInsertionBlock()->getParentOp()->getParentOfType<mlir::ModuleOp>();
@@ -663,7 +669,13 @@ public:
   // GlobalViewAttr. Ideally we shouldn't deal with low-level offsets at all
   // but currently some parts of Clang AST, which we don't want to touch just
   // yet, return them.
-  void computeGlobalViewIndicesFromFlatOffset(
+  //
+  // Returns false if the offset doesn't designate a subelement of \p ty, which
+  // happens when it lands outside of the object or in the middle of a scalar
+  // member. In that case \p indices is left in an unspecified state and the
+  // caller must describe the address with a byte offset, using a
+  // GlobalOffsetAttr, instead.
+  [[nodiscard]] bool computeGlobalViewIndicesFromFlatOffset(
       int64_t offset, mlir::Type ty, cir::CIRDataLayout layout,
       llvm::SmallVectorImpl<int64_t> &indices);
 
@@ -814,12 +826,70 @@ public:
     return createVecShuffle(loc, vec1, poison, mask);
   }
 
+  cir::MatrixExtractOp createMatrixExtract(mlir::Location loc,
+                                           mlir::Value matrix,
+                                           mlir::Value rowIdx,
+                                           mlir::Value columnIdx) {
+    return cir::MatrixExtractOp::create(*this, loc, matrix, rowIdx, columnIdx);
+  }
+
+  cir::MatrixColumnMajorLoadOp createMatrixColumnMajorLoad(mlir::Location loc,
+                                                           mlir::Type resultTy,
+                                                           mlir::Value value,
+                                                           mlir::Value stride,
+                                                           bool isVolatile) {
+    return cir::MatrixColumnMajorLoadOp::create(*this, loc, resultTy, value,
+                                                stride, isVolatile);
+  }
+
+  cir::MatrixTransposeOp createMatrixTranspose(mlir::Location loc,
+                                               mlir::Value matrix) {
+    auto inputTy = mlir::cast<cir::MatrixType>(matrix.getType());
+    auto resultTy = cir::MatrixType::get(
+        inputTy.getElementType(), inputTy.getColumnNum(), inputTy.getRowNum());
+    return cir::MatrixTransposeOp::create(*this, loc, resultTy, matrix);
+  }
+
+  cir::MatrixColumnMajorStoreOp createMatrixColumnMajorStore(mlir::Location loc,
+                                                             mlir::Value matrix,
+                                                             mlir::Value data,
+                                                             mlir::Value stride,
+                                                             bool isVolatile) {
+    return cir::MatrixColumnMajorStoreOp::create(*this, loc, matrix, data,
+                                                 stride, isVolatile);
+  }
+
+  std::pair<mlir::Value, mlir::Value>
+  splatMatrixOpOperandsIfNecessary(mlir::Location loc, mlir::Value lhs,
+                                   mlir::Value rhs) {
+    assert(mlir::isa<cir::MatrixType>(lhs.getType()) ||
+           mlir::isa<cir::MatrixType>(rhs.getType()));
+
+    if (!mlir::isa<cir::MatrixType>(lhs.getType()))
+      lhs = cir::VecSplatOp::create(*this, loc, rhs.getType(), lhs);
+    else if (!mlir::isa<cir::MatrixType>(rhs.getType()))
+      rhs = cir::VecSplatOp::create(*this, loc, lhs.getType(), rhs);
+
+    return {lhs, rhs};
+  }
+
   template <typename... Operands>
   mlir::Value emitIntrinsicCallOp(mlir::Location loc, const llvm::StringRef str,
                                   const mlir::Type &resTy, Operands &&...op) {
     return cir::LLVMIntrinsicCallOp::create(*this, loc,
                                             this->getStringAttr(str), resTy,
                                             std::forward<Operands>(op)...)
+        .getResult();
+  }
+
+  template <typename... Operands>
+  mlir::Value emitIntrinsicCallOp(mlir::Location loc, const llvm::StringRef str,
+                                  const mlir::Type &resTy,
+                                  cir::FastMathFlagsAttr fastmath,
+                                  Operands &&...op) {
+    return cir::LLVMIntrinsicCallOp::create(
+               *this, loc, this->getStringAttr(str), resTy,
+               std::forward<Operands>(op)..., fastmath)
         .getResult();
   }
 };

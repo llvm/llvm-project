@@ -25,7 +25,7 @@ body:             |
     ; MIPS32: $a0 = COPY [[COPY]](s32)
     ; MIPS32: $a1 = COPY [[COPY1]](s32)
     ; MIPS32: $gp = COPY [[ADDu]]
-    ; MIPS32: JALRPseudo [[GV]](p0), csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $gp, implicit-def $v0
+    ; MIPS32: JALRPseudo [[GV]](p0), csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $gp, implicit-def $v0
     ; MIPS32: [[COPY2:%[0-9]+]]:gprb(s32) = COPY $v0
     ; MIPS32: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
     ; MIPS32: $v0 = COPY [[COPY2]](s32)
@@ -38,7 +38,7 @@ body:             |
     $a0 = COPY %0(s32)
     $a1 = COPY %1(s32)
     $gp = COPY %4
-    JALRPseudo %3(p0), csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $gp, implicit-def $v0
+    JALRPseudo %3(p0), csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $gp, implicit-def $v0
     %2:_(s32) = COPY $v0
     ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
     $v0 = COPY %2(s32)

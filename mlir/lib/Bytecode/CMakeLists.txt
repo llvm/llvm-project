@@ -7,6 +7,10 @@ add_mlir_library(MLIRBytecodeOpInterface
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Bytecode
 
+  DEPENDS
+  MLIRBytecodeOpInterfaceIncGen
+  MLIRBytecodeDialectInterfaceIncGen
+
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRSupport

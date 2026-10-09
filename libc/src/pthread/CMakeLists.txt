@@ -1,3 +1,16 @@
+add_header_library(
+  pthread_attr
+  HDRS
+    pthread_attr.h
+  DEPENDS
+    libc.hdr.pthread_macros
+    libc.hdr.sched_macros
+    libc.hdr.types.pthread_attr_t
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.threads.thread
+)
+
 add_entrypoint_object(
   pthread_attr_init
   SRCS
@@ -5,7 +18,10 @@ add_entrypoint_object(
   HDRS
     pthread_attr_init.h
   DEPENDS
-    libc.include.pthread
+    .pthread_attr
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -61,13 +77,72 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  pthread_attr_getinheritsched
+  SRCS
+    pthread_attr_getinheritsched.cpp
+  HDRS
+    pthread_attr_getinheritsched.h
+  DEPENDS
+    libc.hdr.types.pthread_attr_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+)
+
+add_entrypoint_object(
   pthread_attr_getschedparam
   SRCS
     pthread_attr_getschedparam.cpp
   HDRS
     pthread_attr_getschedparam.h
   DEPENDS
-    libc.include.pthread
+    libc.hdr.types.pthread_attr_t
+    libc.hdr.types.struct_sched_param
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+)
+
+add_entrypoint_object(
+  pthread_attr_getschedpolicy
+  SRCS
+    pthread_attr_getschedpolicy.cpp
+  HDRS
+    pthread_attr_getschedpolicy.h
+  DEPENDS
+    libc.hdr.types.pthread_attr_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+)
+
+add_entrypoint_object(
+  pthread_attr_getscope
+  SRCS
+    pthread_attr_getscope.cpp
+  HDRS
+    pthread_attr_getscope.h
+  DEPENDS
+    libc.hdr.pthread_macros
+    libc.hdr.types.pthread_attr_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+)
+
+add_entrypoint_object(
+  pthread_attr_setinheritsched
+  SRCS
+    pthread_attr_setinheritsched.cpp
+  HDRS
+    pthread_attr_setinheritsched.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.pthread_macros
+    libc.hdr.types.pthread_attr_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -77,7 +152,39 @@ add_entrypoint_object(
   HDRS
     pthread_attr_setschedparam.h
   DEPENDS
-    libc.include.pthread
+    libc.hdr.types.pthread_attr_t
+    libc.hdr.types.struct_sched_param
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+)
+
+add_entrypoint_object(
+  pthread_attr_setschedpolicy
+  SRCS
+    pthread_attr_setschedpolicy.cpp
+  HDRS
+    pthread_attr_setschedpolicy.h
+  DEPENDS
+    libc.hdr.types.pthread_attr_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+)
+
+add_entrypoint_object(
+  pthread_attr_setscope
+  SRCS
+    pthread_attr_setscope.cpp
+  HDRS
+    pthread_attr_setscope.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.pthread_macros
+    libc.hdr.types.pthread_attr_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -502,17 +609,15 @@ add_entrypoint_object(
   HDRS
     pthread_create.h
   DEPENDS
+    .pthread_attr
+    libc.hdr.errno_macros
+    libc.hdr.pthread_macros
+    libc.hdr.types.pthread_attr_t
+    libc.hdr.types.pthread_t
     libc.include.pthread
+    libc.src.__support.common
+    libc.src.__support.macros.config
     libc.src.__support.threads.thread
-    libc.src.pthread.pthread_attr_destroy
-    libc.src.pthread.pthread_attr_init
-    libc.src.pthread.pthread_attr_getdetachstate
-    libc.src.pthread.pthread_attr_getguardsize
-    libc.src.pthread.pthread_attr_getstack
-    libc.src.errno.errno
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
-    -fno-omit-frame-pointer
 )
 
 add_entrypoint_object(
@@ -545,6 +650,34 @@ add_entrypoint_object(
     pthread_equal.h
   DEPENDS
     libc.include.pthread
+    libc.src.__support.threads.thread
+)
+
+add_entrypoint_object(
+  __pthread_cleanup_pop
+  SRCS
+    __pthread_cleanup_pop.cpp
+  HDRS
+    __pthread_cleanup_pop.h
+  DEPENDS
+    libc.hdr.types.struct___pthread_cleanup_frame
+    libc.src.__support.common
+    libc.src.__support.libc_assert
+    libc.src.__support.macros.config
+    libc.src.__support.threads.thread
+)
+
+add_entrypoint_object(
+  __pthread_cleanup_push
+  SRCS
+    __pthread_cleanup_push.cpp
+  HDRS
+    __pthread_cleanup_push.h
+  DEPENDS
+    libc.hdr.types.struct___pthread_cleanup_frame
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
     libc.src.__support.threads.thread
 )
 
@@ -966,6 +1099,24 @@ add_entrypoint_object(
     libc.hdr.types.struct_sched_param
     libc.src.__support.macros.null_check
     libc.src.__support.threads.thread
+)
+
+add_entrypoint_object(
+  pthread_getattr_np
+  SRCS
+    pthread_getattr_np.cpp
+  HDRS
+    pthread_getattr_np.h
+  DEPENDS
+    libc.hdr.pthread_macros
+    libc.hdr.types.pthread_attr_t
+    libc.hdr.types.pthread_t
+    libc.src.__support.CPP.atomic
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.__support.threads.thread
+    libc.src.__support.threads.thread_attributes
 )
 
 add_entrypoint_object(

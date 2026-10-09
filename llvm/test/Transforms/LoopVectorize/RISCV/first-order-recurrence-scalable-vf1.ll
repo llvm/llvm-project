@@ -60,7 +60,7 @@ exit:
   ret i64 %res
 }
 
-attributes #0 = { "target-features"="+64bit,+v,+zvl128b,+zvl256b" }
+attributes #0 = { "target-features"="+64bit,+v,+zvl256b" vscale_range(4, 1024) }
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
