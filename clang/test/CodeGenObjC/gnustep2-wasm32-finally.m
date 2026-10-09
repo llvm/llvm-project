@@ -1,5 +1,5 @@
 // REQUIRES: webassembly-registered-target
-// RUN: %clang_cc1 -target-feature +exception-handling -triple wasm32-unknown-emscripten -fobjc-runtime=gnustep-2.2 -fexceptions -fobjc-exceptions -exception-model=wasm -mllvm -wasm-enable-eh -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang -target wasm32-unknown-emscripten -fobjc-runtime=gnustep-2.2 -fexceptions -fobjc-exceptions -fwasm-exceptions -emit-llvm -S -o - %s | FileCheck %s
 
 __attribute__((objc_root_class)) @interface Object @end
 extern void mayThrowObjC();
