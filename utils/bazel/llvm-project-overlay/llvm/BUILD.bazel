@@ -2657,6 +2657,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/AArch64/AArch64GenExegesis.inc",
             ),
         ],
+        "tbl_deps": [
+            ":AArch64MCOptionsTableGen",
+            ":AArch64OptionsTableGen",
+        ],
     },
     {
         "name": "ARM",
@@ -3538,6 +3542,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/SystemZ/SystemZGenDisassemblerTables.inc",
             ),
             (
+                ["-gen-insn-directive-match-table"],
+                "lib/Target/SystemZ/SystemZGenInsnMatchTable.inc",
+            ),
+            (
                 ["-gen-emitter"],
                 "lib/Target/SystemZ/SystemZGenMCCodeEmitter.inc",
             ),
@@ -3778,6 +3786,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/X86/X86GenMnemonicTables.inc",
             ),
         ],
+        "tbl_deps": [
+            ":X86MCOptionsTableGen",
+            ":X86OptionsTableGen",
+        ],
     },
     {
         "name": "XCore",
@@ -3992,11 +4004,47 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "AArch64MCOptionsTableGen",
+    strip_include_prefix = "lib/Target/AArch64",
+    tbl_outs = {"lib/Target/AArch64/AArch64MCOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/AArch64/MCTargetDesc/AArch64MCOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "AArch64OptionsTableGen",
+    strip_include_prefix = "lib/Target/AArch64",
+    tbl_outs = {"lib/Target/AArch64/AArch64Options.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/AArch64/AArch64Options.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
     name = "SparcOptionsTableGen",
     strip_include_prefix = "lib/Target/Sparc",
     tbl_outs = {"lib/Target/Sparc/SparcOptions.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/Sparc/SparcOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "X86MCOptionsTableGen",
+    strip_include_prefix = "lib/Target/X86",
+    tbl_outs = {"lib/Target/X86/X86MCOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/X86/MCTargetDesc/X86MCOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "X86OptionsTableGen",
+    strip_include_prefix = "lib/Target/X86",
+    tbl_outs = {"lib/Target/X86/X86Options.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/X86/X86Options.td",
     deps = [":OptParserTdFiles"],
 )
 
@@ -4343,10 +4391,20 @@ cc_library(
     textual_hdrs = ["lib/Passes/PassRegistry.def"],
 )
 
+gentbl_cc_library(
+    name = "PassesOptionsTableGen",
+    strip_include_prefix = "lib/Passes",
+    tbl_outs = {"lib/Passes/PassesOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Passes/PassesOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "Passes",
     srcs = glob([
         "lib/Passes/*.cpp",
+        "lib/Passes/*.h",
     ]),
     hdrs = glob([
         "include/llvm/Passes/*.h",
@@ -4368,6 +4426,8 @@ cc_library(
         ":Instrumentation",
         ":MC",
         ":ObjCARC",
+        ":Option",
+        ":PassesOptionsTableGen",
         ":Plugins",
         ":Scalar",
         ":Support",

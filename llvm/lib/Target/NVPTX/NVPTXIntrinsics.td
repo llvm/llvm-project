@@ -87,55 +87,41 @@ class RegSeq<int n, string prefix> {
 //-----------------------------------
 // Synchronization and shuffle functions
 //-----------------------------------
-let isConvergent = true in {
 
-def INT_BAR_WARP_SYNC_I : BasicNVPTXInst<(outs), (ins i32imm:$i), "bar.warp.sync",
-                             [(int_nvvm_bar_warp_sync imm:$i)]>,
-        Requires<[PTX60, SM30]>;
-def INT_BAR_WARP_SYNC_R : BasicNVPTXInst<(outs), (ins B32:$i), "bar.warp.sync",
-                             [(int_nvvm_bar_warp_sync i32:$i)]>,
-        Requires<[PTX60, SM30]>;
+let isConvergent = true in
+def BAR_WARP_SYNC : BasicNVPTXInst<(outs), (ins B32Op:$i), "bar.warp.sync">;
+def : Pat<(int_nvvm_bar_warp_sync i32:$i),
+          (BAR_WARP_SYNC reg_or_imm:$i)>, Requires<[PTX60, SM30]>;
 
 multiclass BARRIER_ALL<string asmstr, Intrinsic intrinsic, list<Predicate> requires = []> {
-  let Predicates = requires in {
-    def _i : BasicNVPTXInst<(outs), (ins i32imm:$i), asmstr, [(intrinsic imm:$i)]>;
-    def _r : BasicNVPTXInst<(outs), (ins B32:$i), asmstr, [(intrinsic i32:$i)]>;
-  }
+  let isConvergent = true in
+  def NAME : BasicNVPTXInst<(outs), (ins B32Op:$i), asmstr>;
+  def : Pat<(intrinsic i32:$i),
+            (!cast<Instruction>(NAME) reg_or_imm:$i)>, Requires<requires>;
 }
 
 multiclass BARRIER_COUNT<string asmstr, Intrinsic intrinsic, list<Predicate> requires = []> {
-  let Predicates = requires in {
-    def _rr : BasicNVPTXInst<(outs), (ins B32:$i, B32:$j), asmstr,
-                             [(intrinsic i32:$i, i32:$j)]>;
-    def _ri : BasicNVPTXInst<(outs), (ins B32:$i, i32imm:$j), asmstr,
-                             [(intrinsic i32:$i, imm:$j)]>;
-    def _ir : BasicNVPTXInst<(outs), (ins i32imm:$i, B32:$j), asmstr,
-                             [(intrinsic imm:$i, i32:$j)]>;
-    def _ii : BasicNVPTXInst<(outs), (ins i32imm:$i, i32imm:$j), asmstr,
-                             [(intrinsic imm:$i, imm:$j)]>;
-  }
+  let isConvergent = true in
+  def NAME : BasicNVPTXInst<(outs), (ins B32Op:$i, B32Op:$j), asmstr>;
+  def : Pat<(intrinsic i32:$i, i32:$j),
+            (!cast<Instruction>(NAME) reg_or_imm:$i, reg_or_imm:$j)>, Requires<requires>;
 }
 
-multiclass BARRIER_RED_ALL<string asmstr, Intrinsic intrinsic, RegTyInfo dst_rt, list<Predicate> requires = []> {
-  let Predicates = requires in {
-    def _ip : BasicNVPTXInst<(outs dst_rt.RC:$dest), (ins i32imm:$i, B1:$pred), asmstr,
-                             [(set dst_rt.Ty:$dest, (intrinsic imm:$i, i1:$pred))]>;
-    def _rp : BasicNVPTXInst<(outs dst_rt.RC:$dest), (ins B32:$i, B1:$pred), asmstr,
-                             [(set dst_rt.Ty:$dest, (intrinsic i32:$i, i1:$pred))]>;
-  }
+multiclass BARRIER_RED_ALL<string asmstr, Intrinsic intrinsic, RegTyInfo dst_rt,
+                           list<Predicate> requires = []> {
+  let isConvergent = true in
+  def NAME : BasicNVPTXInst<(outs dst_rt.RC:$dest), (ins B32Op:$i, B1Op:$pred), asmstr>;
+  def : Pat<(dst_rt.Ty (intrinsic i32:$i, i1:$pred)),
+            (!cast<Instruction>(NAME) reg_or_imm:$i, reg_or_imm:$pred)>, Requires<requires>;
 }
 
-multiclass BARRIER_RED_COUNT<string asmstr, Intrinsic intrinsic, RegTyInfo dst_rt, list<Predicate> requires = []> {
-  let Predicates = requires in {
-    def _rrp : BasicNVPTXInst<(outs dst_rt.RC:$dest), (ins B32:$i, B32:$j, B1:$pred), asmstr,
-                              [(set dst_rt.Ty:$dest, (intrinsic i32:$i, i32:$j, i1:$pred))]>;
-    def _rip : BasicNVPTXInst<(outs dst_rt.RC:$dest), (ins B32:$i, i32imm:$j, B1:$pred), asmstr,
-                              [(set dst_rt.Ty:$dest, (intrinsic i32:$i, imm:$j, i1:$pred))]>;
-    def _irp : BasicNVPTXInst<(outs dst_rt.RC:$dest), (ins i32imm:$i, B32:$j, B1:$pred), asmstr,
-                              [(set dst_rt.Ty:$dest, (intrinsic imm:$i, i32:$j, i1:$pred))]>;
-    def _iip : BasicNVPTXInst<(outs dst_rt.RC:$dest), (ins i32imm:$i, i32imm:$j, B1:$pred), asmstr,
-                              [(set dst_rt.Ty:$dest, (intrinsic imm:$i, imm:$j, i1:$pred))]>;
-  }
+multiclass BARRIER_RED_COUNT<string asmstr, Intrinsic intrinsic, RegTyInfo dst_rt,
+                             list<Predicate> requires = []> {
+  let isConvergent = true in
+  def NAME : BasicNVPTXInst<(outs dst_rt.RC:$dest), (ins B32Op:$i, B32Op:$j, B1Op:$pred), asmstr>;
+  def : Pat<(dst_rt.Ty (intrinsic i32:$i, i32:$j, i1:$pred)),
+            (!cast<Instruction>(NAME) reg_or_imm:$i, reg_or_imm:$j, reg_or_imm:$pred)>,
+      Requires<requires>;
 }
 
 
@@ -169,6 +155,7 @@ class INT_BARRIER_CLUSTER<string variant, Intrinsic Intr,
         BasicNVPTXInst<(outs), (ins), "barrier.cluster."# variant, [(Intr)]>,
         Requires<Preds>;
 
+let isConvergent = true in {
 def barrier_cluster_arrive:
         INT_BARRIER_CLUSTER<"arrive", int_nvvm_barrier_cluster_arrive>;
 def barrier_cluster_arrive_relaxed:
@@ -231,96 +218,78 @@ foreach sync = [false, true] in {
   }
 }
 
+} // isConvergent = true
+
 // vote.{all,any,uni,ballot}
-let Predicates = [PTX60, SM30] in {
-  multiclass VOTE<string mode, RegTyInfo t, Intrinsic op> {
-    def : BasicNVPTXInst<(outs t.RC:$dest), (ins B1:$pred),
-                "vote." # mode # "." # t.PtxType,
-                [(set t.Ty:$dest, (op i1:$pred))]>;
-  }
-
-  defm VOTE_ALL : VOTE<"all", I1RT, int_nvvm_vote_all>;
-  defm VOTE_ANY : VOTE<"any", I1RT, int_nvvm_vote_any>;
-  defm VOTE_UNI : VOTE<"uni", I1RT, int_nvvm_vote_uni>;
-  defm VOTE_BALLOT : VOTE<"ballot", I32RT, int_nvvm_vote_ballot>;
-
-  // vote.sync.{all,any,uni,ballot}
-  multiclass VOTE_SYNC<string mode, RegTyInfo t, Intrinsic op> {
-    def i : BasicNVPTXInst<(outs t.RC:$dest), (ins B1:$pred, i32imm:$mask),
-                "vote.sync." # mode # "." # t.PtxType,
-                [(set t.Ty:$dest, (op imm:$mask, i1:$pred))]>;
-    def r : BasicNVPTXInst<(outs t.RC:$dest), (ins B1:$pred, B32:$mask),
-                "vote.sync." # mode # "." # t.PtxType,
-                [(set t.Ty:$dest, (op i32:$mask, i1:$pred))]>;
-  }
-
-  defm VOTE_SYNC_ALL : VOTE_SYNC<"all", I1RT, int_nvvm_vote_all_sync>;
-  defm VOTE_SYNC_ANY : VOTE_SYNC<"any", I1RT, int_nvvm_vote_any_sync>;
-  defm VOTE_SYNC_UNI : VOTE_SYNC<"uni", I1RT, int_nvvm_vote_uni_sync>;
-  defm VOTE_SYNC_BALLOT : VOTE_SYNC<"ballot", I32RT, int_nvvm_vote_ballot_sync>;
+multiclass VOTE<string mode, RegTyInfo t, Intrinsic op> {
+  let isConvergent = true in
+  def NAME : BasicNVPTXInst<(outs t.RC:$dest), (ins B1Op:$pred),
+              "vote." # mode # "." # t.PtxType>;
+  def : Pat<(t.Ty (op i1:$pred)),
+            (!cast<Instruction>(NAME) reg_or_imm:$pred)>, Requires<[PTX60, SM30]>;
 }
+
+defm VOTE_ALL : VOTE<"all", I1RT, int_nvvm_vote_all>;
+defm VOTE_ANY : VOTE<"any", I1RT, int_nvvm_vote_any>;
+defm VOTE_UNI : VOTE<"uni", I1RT, int_nvvm_vote_uni>;
+defm VOTE_BALLOT : VOTE<"ballot", I32RT, int_nvvm_vote_ballot>;
+
+// vote.sync.{all,any,uni,ballot}
+multiclass VOTE_SYNC<string mode, RegTyInfo t, Intrinsic op> {
+  let isConvergent = true in
+  def NAME : BasicNVPTXInst<(outs t.RC:$dest), (ins B1Op:$pred, B32Op:$mask),
+              "vote.sync." # mode # "." # t.PtxType>;
+  def : Pat<(t.Ty (op i32:$mask, i1:$pred)),
+            (!cast<Instruction>(NAME) reg_or_imm:$pred, reg_or_imm:$mask)>, Requires<[PTX60, SM30]>;
+}
+
+defm VOTE_SYNC_ALL : VOTE_SYNC<"all", I1RT, int_nvvm_vote_all_sync>;
+defm VOTE_SYNC_ANY : VOTE_SYNC<"any", I1RT, int_nvvm_vote_any_sync>;
+defm VOTE_SYNC_UNI : VOTE_SYNC<"uni", I1RT, int_nvvm_vote_uni_sync>;
+defm VOTE_SYNC_BALLOT : VOTE_SYNC<"ballot", I32RT, int_nvvm_vote_ballot_sync>;
+
 // elect.sync
-let Predicates = [PTX80, SM90] in {
-def INT_ELECT_SYNC_I : BasicNVPTXInst<(outs B32:$dest, B1:$pred), (ins i32imm:$mask),
-            "elect.sync",
-            [(set i32:$dest, i1:$pred, (int_nvvm_elect_sync imm:$mask))]>;
-def INT_ELECT_SYNC_R : BasicNVPTXInst<(outs B32:$dest, B1:$pred), (ins B32:$mask),
-            "elect.sync",
-            [(set i32:$dest, i1:$pred, (int_nvvm_elect_sync i32:$mask))]>;
+let isConvergent = true in
+def ELECT_SYNC : BasicNVPTXInst<(outs B32:$dest, B1:$pred), (ins B32Op:$mask),
+            "elect.sync">;
+def : Pat<(int_nvvm_elect_sync i32:$mask),
+          (ELECT_SYNC reg_or_imm:$mask)>, Requires<[PTX80, SM90]>;
+
+multiclass MATCH_ANY_SYNC<Intrinsic op, RegTyInfo t> {
+  let isConvergent = true in
+  def NAME : BasicNVPTXInst<(outs B32:$dest), (ins t.RegOrImm:$value, B32Op:$mask),
+              "match.any.sync." # t.PtxType>;
+  def : Pat<(i32 (op i32:$mask, t.Ty:$value)),
+            (!cast<Instruction>(NAME) t.ImmNode:$value, reg_or_imm:$mask)>, Requires<[SM70]>;
 }
 
-let Predicates = [SM70] in {
-  multiclass MATCH_ANY_SYNC<Intrinsic op, RegTyInfo t> {
-    def ii : BasicNVPTXInst<(outs B32:$dest), (ins t.Imm:$value, i32imm:$mask),
-                "match.any.sync." # t.PtxType,
-                [(set i32:$dest, (op imm:$mask, imm:$value))]>;
-    def ir : BasicNVPTXInst<(outs B32:$dest), (ins t.Imm:$value, B32:$mask),
-                "match.any.sync." # t.PtxType,
-                [(set i32:$dest, (op i32:$mask, imm:$value))]>;
-    def ri : BasicNVPTXInst<(outs B32:$dest), (ins t.RC:$value, i32imm:$mask),
-                "match.any.sync." # t.PtxType,
-                [(set i32:$dest, (op imm:$mask, t.Ty:$value))]>;
-    def rr : BasicNVPTXInst<(outs B32:$dest), (ins t.RC:$value, B32:$mask),
-                "match.any.sync." # t.PtxType,
-                [(set i32:$dest, (op i32:$mask, t.Ty:$value))]>;
-  }
+defm MATCH_ANY_SYNC_32 : MATCH_ANY_SYNC<int_nvvm_match_any_sync_i32, I32RT>;
+defm MATCH_ANY_SYNC_64 : MATCH_ANY_SYNC<int_nvvm_match_any_sync_i64, I64RT>;
 
-  defm MATCH_ANY_SYNC_32 : MATCH_ANY_SYNC<int_nvvm_match_any_sync_i32, I32RT>;
-  defm MATCH_ANY_SYNC_64 : MATCH_ANY_SYNC<int_nvvm_match_any_sync_i64, I64RT>;
-
-  multiclass MATCH_ALLP_SYNC<RegTyInfo t, Intrinsic op> {
-    def ii : BasicNVPTXInst<(outs B32:$dest, B1:$pred),
-                      (ins t.Imm:$value, i32imm:$mask),
-                "match.all.sync." # t.PtxType,
-                [(set i32:$dest, i1:$pred, (op imm:$mask, imm:$value))]>;
-    def ir : BasicNVPTXInst<(outs B32:$dest, B1:$pred),
-                      (ins t.Imm:$value, B32:$mask),
-                "match.all.sync." # t.PtxType,
-                [(set i32:$dest, i1:$pred, (op i32:$mask, imm:$value))]>;
-    def ri : BasicNVPTXInst<(outs B32:$dest, B1:$pred),
-                      (ins t.RC:$value, i32imm:$mask),
-                "match.all.sync." # t.PtxType,
-                [(set i32:$dest, i1:$pred, (op imm:$mask, t.Ty:$value))]>;
-    def rr : BasicNVPTXInst<(outs B32:$dest, B1:$pred),
-                      (ins t.RC:$value, B32:$mask),
-                "match.all.sync." # t.PtxType,
-                [(set i32:$dest, i1:$pred, (op i32:$mask, t.Ty:$value))]>;
-  }
-  defm MATCH_ALLP_SYNC_32 : MATCH_ALLP_SYNC<I32RT, int_nvvm_match_all_sync_i32p>;
-  defm MATCH_ALLP_SYNC_64 : MATCH_ALLP_SYNC<I64RT, int_nvvm_match_all_sync_i64p>;
+multiclass MATCH_ALLP_SYNC<RegTyInfo t, Intrinsic op> {
+  let isConvergent = true in
+  def NAME : BasicNVPTXInst<(outs B32:$dest, B1:$pred),
+                    (ins t.RegOrImm:$value, B32Op:$mask),
+              "match.all.sync." # t.PtxType>;
+  def : Pat<(op i32:$mask, t.Ty:$value),
+            (!cast<Instruction>(NAME) t.ImmNode:$value, reg_or_imm:$mask)>, Requires<[SM70]>;
 }
+defm MATCH_ALLP_SYNC_32 : MATCH_ALLP_SYNC<I32RT, int_nvvm_match_all_sync_i32p>;
+defm MATCH_ALLP_SYNC_64 : MATCH_ALLP_SYNC<I64RT, int_nvvm_match_all_sync_i64p>;
 
 // activemask.b32
+let isConvergent = true in
 def ACTIVEMASK : BasicNVPTXInst<(outs B32:$dest), (ins),
                     "activemask.b32",
                     [(set i32:$dest, (int_nvvm_activemask))]>,
                  Requires<[PTX62, SM30]>;
 
 multiclass REDUX_SYNC<string BinOp, string PTXType, Intrinsic Intrin> {
-  def : BasicNVPTXInst<(outs B32:$dst), (ins B32:$src, B32:$mask),
-          "redux.sync." # BinOp # "." # PTXType,
-          [(set i32:$dst, (Intrin i32:$src, B32:$mask))]>,
-        Requires<[SM80]>;
+  let isConvergent = true in
+  def NAME : BasicNVPTXInst<(outs B32:$dst), (ins B32Op:$src, B32Op:$mask),
+                            "redux.sync." # BinOp # "." # PTXType>;
+  def : Pat<(i32 (Intrin i32:$src, i32:$mask)),
+            (!cast<Instruction>(NAME) reg_or_imm:$src, reg_or_imm:$mask)>, Requires<[SM80]>;
 }
 
 defm REDUX_SYNC_UMIN : REDUX_SYNC<"min", "u32", int_nvvm_redux_sync_umin>;
@@ -332,6 +301,7 @@ defm REDUX_SYNC_AND : REDUX_SYNC<"and", "b32", int_nvvm_redux_sync_and>;
 defm REDUX_SYNC_XOR : REDUX_SYNC<"xor", "b32", int_nvvm_redux_sync_xor>;
 defm REDUX_SYNC_OR : REDUX_SYNC<"or", "b32", int_nvvm_redux_sync_or>;
 
+let isConvergent = true in {
 multiclass REDUX_SYNC_F<string BinOp, string abs, string NaN> {
   defvar intr_name = "int_nvvm_redux_sync_f" # BinOp # !subst(".", "_", abs) # !subst(".", "_", NaN);
 
@@ -464,18 +434,14 @@ defm CP_ASYNC_MBARRIER_ARRIVE_NOINC_SHARED :
 multiclass CP_ASYNC_SHARED_GLOBAL_I<string cc, string cpsize, Intrinsic Intrin, Intrinsic IntrinS> {
   def "" : NVPTXInst<(outs), (ins ADDR:$dst, ADDR:$src),
             "cp.async." # cc # ".shared.global" # " [$dst], [$src], " # cpsize # ";",
-            [(Intrin addr:$dst, addr:$src)]>,
-    Requires<[SM80]>;
+            [(Intrin addr:$dst, addr:$src)]>, Requires<[SM80]>;
 
   // Variant with src_size parameter
-  def _s : NVPTXInst<(outs), (ins ADDR:$dst, ADDR:$src, B32:$src_size),
-             "cp.async." # cc # ".shared.global" # " [$dst], [$src], " # cpsize # ", $src_size;",
-             [(IntrinS addr:$dst, addr:$src, i32:$src_size)]>,
-    Requires<[SM80]>;
-  def _si: NVPTXInst<(outs), (ins ADDR:$dst, ADDR:$src, i32imm:$src_size),
-             "cp.async." # cc # ".shared.global" # " [$dst], [$src], " # cpsize # ", $src_size;",
-             [(IntrinS addr:$dst, addr:$src, imm:$src_size)]>,
-    Requires<[SM80]>;
+  def _s : NVPTXInst<(outs), (ins ADDR:$dst, ADDR:$src, B32Op:$src_size),
+             "cp.async." # cc # ".shared.global" # " [$dst], [$src], " # cpsize # ", $src_size;">;
+  def : Pat<(IntrinS addr:$dst, addr:$src, i32:$src_size),
+            (!cast<Instruction>(NAME # "_s") ADDR:$dst, ADDR:$src, reg_or_imm:$src_size)>,
+      Requires<[SM80]>;
 }
 
 defm CP_ASYNC_CA_SHARED_GLOBAL_4 :
@@ -1642,6 +1608,16 @@ def PREFETCH_GLOBAL_L2_EVICT_NORMAL : PREFETCH_INTRS<"prefetch.global.L2::evict_
 def PREFETCH_GLOBAL_L2_EVICT_LAST : PREFETCH_INTRS<"prefetch.global.L2::evict_last",
                                     int_nvvm_prefetch_global_L2_evict_last>;
 
+class PREFETCH_SIZE_INTR<NVPTXAddressSpace as>
+  : BasicNVPTXInst<(outs),
+                   (ins ADDR:$addr),
+                   "prefetch" # as.Suffix # ".L1::32B.valid_addr",
+                   [(IntrinsicInAS<int_nvvm_prefetch_L1_32B_valid_addr, as> addr:$addr)]>,
+    Requires<[PTX94, SM90]>;
+
+def PREFETCH_GLOBAL_L1_32B : PREFETCH_SIZE_INTR<AddrSpaceGlobal>;
+def PREFETCH_GENERIC_L1_32B : PREFETCH_SIZE_INTR<AddrSpaceGeneric>;
+
 //Applypriority intrinsics
 class APPLYPRIORITY_L2_INTRS<string addrspace> :
           BasicNVPTXInst<(outs), (ins ADDR:$addr, B64:$size),
@@ -2015,12 +1991,9 @@ class F_MATH_3<string OpcStr, NVPTXRegClass t_regclass,
 // MISC
 //
 
-def INT_NVVM_NANOSLEEP_I : BasicNVPTXInst<(outs), (ins i32imm:$i), "nanosleep.u32",
-                             [(int_nvvm_nanosleep imm:$i)]>,
-        Requires<[PTX63, SM70]>;
-def INT_NVVM_NANOSLEEP_R : BasicNVPTXInst<(outs), (ins B32:$i), "nanosleep.u32",
-                             [(int_nvvm_nanosleep i32:$i)]>,
-        Requires<[PTX63, SM70]>;
+def NANOSLEEP_U32 : BasicNVPTXInst<(outs), (ins B32Op:$i), "nanosleep.u32">;
+def : Pat<(int_nvvm_nanosleep i32:$i),
+          (NANOSLEEP_U32 reg_or_imm:$i)>, Requires<[PTX63, SM70]>;
 
 def Hexu16imm : Operand<i16> {
   let PrintMethod = "printHexUImm<16>";
@@ -2188,8 +2161,8 @@ def INT_NVVM_MUL_RZ_D : F_MATH_2<"mul.rz.f64", B64, B64, B64, int_nvvm_mul_rz_d>
 def INT_NVVM_MUL_RM_D : F_MATH_2<"mul.rm.f64", B64, B64, B64, int_nvvm_mul_rm_d>;
 def INT_NVVM_MUL_RP_D : F_MATH_2<"mul.rp.f64", B64, B64, B64, int_nvvm_mul_rp_d>;
 
-def INT_NVVM_MUL24_I : F_MATH_2<"mul24.lo.s32", B32, B32, B32, int_nvvm_mul24_i>;
-def INT_NVVM_MUL24_UI : F_MATH_2<"mul24.lo.u32", B32, B32, B32, int_nvvm_mul24_ui>;
+defm MUL24_LO_S32 : I3Inst<"mul24.lo.s32", int_nvvm_mul24_i, I32RT>;
+defm MUL24_LO_U32 : I3Inst<"mul24.lo.u32", int_nvvm_mul24_ui, I32RT>;
 
 def INT_NVVM_MUL_RN_SAT_F16 : F_MATH_2<"mul.rn.sat.f16", B16, B16, B16, int_nvvm_mul_rn_sat_f16>;
 def INT_NVVM_MUL_RN_FTZ_SAT_F16 : F_MATH_2<"mul.rn.ftz.sat.f16", B16, B16, B16, int_nvvm_mul_rn_ftz_sat_f16>;
@@ -2894,7 +2867,7 @@ foreach sign = ["s", "u"] in {
     defvar intrin = !cast<Intrinsic>("int_nvvm_" # ext # "_" # mode);
     defm SZEXT_ # sign # _ # mode
       : I3Inst<"szext." # mode # "." # sign # "32",
-               intrin, I32RT, commutative = false,
+               intrin, I32RT,
                requires = [SM70, PTX76]>;
   }
 }
@@ -2907,7 +2880,7 @@ foreach mode = ["wrap", "clamp"] in {
   defvar intrin = !cast<Intrinsic>("int_nvvm_bmsk_" # mode);
   defm BMSK_ # mode
     : I3Inst<"bmsk." # mode # ".b32",
-             intrin, I32RT, commutative = false,
+             intrin, I32RT,
              requires = [SM70, PTX76]>;
 }
 
@@ -2974,11 +2947,11 @@ def : Pat<(int_nvvm_ui2f_rp i32:$a), (CVT_f32_u32 $a, CvtRP)>;
 
 // Utility to look up base and satfinite variants of a conversion intrinsic.
 // Missing variants are left unset so this can be used when only one exists.
-class ToCvtIntrinsics<string suffix> {
-  Intrinsic base = !if(!exists<Intrinsic>("int_nvvm_" # suffix),
-                       !cast<Intrinsic>("int_nvvm_" # suffix), ?);
-  Intrinsic sf = !if(!exists<Intrinsic>("int_nvvm_" # suffix # "_satfinite"),
-                     !cast<Intrinsic>("int_nvvm_" # suffix # "_satfinite"), ?);
+class ToCvtIntrinsics<string suffix, string scale_suffix = ""> {
+  Intrinsic base = !if(!exists<Intrinsic>("int_nvvm_" # suffix # scale_suffix),
+                       !cast<Intrinsic>("int_nvvm_" # suffix # scale_suffix), ?);
+  Intrinsic sf = !if(!exists<Intrinsic>("int_nvvm_" # suffix # "_satfinite" # scale_suffix),
+                     !cast<Intrinsic>("int_nvvm_" # suffix # "_satfinite" # scale_suffix), ?);
 }
 
 foreach rnd = ["rn", "rz"] in {
@@ -3105,6 +3078,9 @@ foreach dst = ["e4m3x2", "e5m2x2"] in {
       defvar F32X2    = ToCvtIntrinsics<"ff_to_" # Suffix>;
       defvar F16X2    = ToCvtIntrinsics<"f16x2_to_" # Suffix>;
       defvar BF16X2   = ToCvtIntrinsics<"bf16x2_to_" # Suffix>;
+      defvar F32Scale = ToCvtIntrinsics<"ff_to_" # Suffix, "_scale_n1_ue8m0">;
+      defvar F16Scale = ToCvtIntrinsics<"f16x2_to_" # Suffix, "_scale_n1_ue8m0">;
+      defvar BF16Scale = ToCvtIntrinsics<"bf16x2_to_" # Suffix, "_scale_n1_ue8m0">;
 
       foreach pzo = [0, 1] in {
         defvar PZO = !if(pzo, -1, 0);
@@ -3121,6 +3097,16 @@ foreach dst = ["e4m3x2", "e5m2x2"] in {
               Requires<F32X2Preds>;
         def : Pat<(BF16X2.sf v2bf16:$a, PZO), (!cast<NVPTXInst>("CVT_" # dst # "_bf16x2") $a, Mode)>,
               Requires<BF16X2Preds>;
+
+        def : Pat<(F32Scale.base f32:$a, f32:$b, i16:$s, PZO),
+                  (!cast<NVPTXInst>("CVT_" # dst # "_f32_scale_n1") $a, $b, $s, Mode)>,
+              Requires<[hasRubinFamilySupport]>;
+        def : Pat<(F16Scale.base v2f16:$a, i16:$s, PZO),
+                  (!cast<NVPTXInst>("CVT_" # dst # "_f16x2_scale_n1") $a, $s, Mode)>,
+              Requires<[hasRubinFamilySupport]>;
+        def : Pat<(BF16Scale.sf v2bf16:$a, i16:$s, PZO),
+                  (!cast<NVPTXInst>("CVT_" # dst # "_bf16x2_scale_n1") $a, $s, Mode)>,
+              Requires<[hasRubinFamilySupport]>;
       }
     }
   }
@@ -3182,6 +3168,9 @@ foreach dst = ["e2m3x2", "e3m2x2"] in {
       defvar F32X2    = ToCvtIntrinsics<"ff_to_" # Suffix>;
       defvar F16X2    = ToCvtIntrinsics<"f16x2_to_" # Suffix>;
       defvar BF16X2   = ToCvtIntrinsics<"bf16x2_to_" # Suffix>;
+      defvar F32Scale = ToCvtIntrinsics<"ff_to_" # Suffix, "_scale_n1_ue8m0">;
+      defvar F16Scale = ToCvtIntrinsics<"f16x2_to_" # Suffix, "_scale_n1_ue8m0">;
+      defvar BF16Scale = ToCvtIntrinsics<"bf16x2_to_" # Suffix, "_scale_n1_ue8m0">;
 
       foreach pzo = [0, 1] in {
         defvar PZO = !if(pzo, -1, 0);
@@ -3198,6 +3187,16 @@ foreach dst = ["e2m3x2", "e3m2x2"] in {
               Requires<FPX2Preds>;
         def : Pat<(BF16X2.sf v2bf16:$a, PZO), (!cast<NVPTXInst>("CVT_" # dst # "_bf16x2_sf") $a, Mode)>,
               Requires<FPX2Preds>;
+
+        def : Pat<(F32Scale.sf f32:$a, f32:$b, i16:$s, PZO),
+                  (!cast<NVPTXInst>("CVT_" # dst # "_f32_sf_scale_n1") $a, $b, $s, Mode)>,
+              Requires<[hasRubinFamilySupport]>;
+        def : Pat<(F16Scale.sf v2f16:$a, i16:$s, PZO),
+                  (!cast<NVPTXInst>("CVT_" # dst # "_f16x2_sf_scale_n1") $a, $s, Mode)>,
+              Requires<[hasRubinFamilySupport]>;
+        def : Pat<(BF16Scale.sf v2bf16:$a, i16:$s, PZO),
+                  (!cast<NVPTXInst>("CVT_" # dst # "_bf16x2_sf_scale_n1") $a, $s, Mode)>,
+              Requires<[hasRubinFamilySupport]>;
       }
     }
   }
@@ -3235,6 +3234,9 @@ foreach relu = ["", "relu"] in {
     defvar F32X2    = ToCvtIntrinsics<"ff_to_" # Suffix>;
     defvar F16X2    = ToCvtIntrinsics<"f16x2_to_" # Suffix>;
     defvar BF16X2   = ToCvtIntrinsics<"bf16x2_to_" # Suffix>;
+    defvar F32Scale = ToCvtIntrinsics<"ff_to_" # Suffix, "_scale_n1_ue8m0">;
+    defvar F16Scale = ToCvtIntrinsics<"f16x2_to_" # Suffix, "_scale_n1_ue8m0">;
+    defvar BF16Scale = ToCvtIntrinsics<"bf16x2_to_" # Suffix, "_scale_n1_ue8m0">;
 
     foreach pzo = [0, 1] in {
       defvar PZO = !if(pzo, -1, 0);
@@ -3251,6 +3253,13 @@ foreach relu = ["", "relu"] in {
             Requires<FPX2Preds>;
       def : Pat<(BF16X2.sf v2bf16:$a, PZO), (CVT_e2m1x2_bf16x2_sf $a, Mode)>,
             Requires<FPX2Preds>;
+
+      def : Pat<(F32Scale.sf f32:$a, f32:$b, i16:$s, PZO), (CVT_e2m1x2_f32_sf_scale_n1 $a, $b, $s, Mode)>,
+            Requires<[hasRubinFamilySupport]>;
+      def : Pat<(F16Scale.sf v2f16:$a, i16:$s, PZO), (CVT_e2m1x2_f16x2_sf_scale_n1 $a, $s, Mode)>,
+            Requires<[hasRubinFamilySupport]>;
+      def : Pat<(BF16Scale.sf v2bf16:$a, i16:$s, PZO), (CVT_e2m1x2_bf16x2_sf_scale_n1 $a, $s, Mode)>,
+            Requires<[hasRubinFamilySupport]>;
     }
   }
 }
@@ -3398,28 +3407,15 @@ def : Pat<(i16 (CVT_F32X4_TO_FPX4_RS_SF_NODE<"E2M1",
 // FNS
 //
 
-class INT_FNS_MBO<dag ins, dag Operands>
-  : BasicNVPTXInst<(outs B32:$dst), ins,
-               "fns.b32",
-               [(set i32:$dst, Operands)]>,
+def INT_FNS
+  : BasicNVPTXInst<(outs B32:$dst),
+                  (ins B32Op:$mask, B32Op:$base, B32Op:$offset),
+                  "fns.b32">,
     Requires<[PTX60, SM30]>;
 
-def INT_FNS_rrr : INT_FNS_MBO<(ins B32:$mask, B32:$base, B32:$offset),
-                     (int_nvvm_fns i32:$mask, i32:$base, i32:$offset)>;
-def INT_FNS_rri : INT_FNS_MBO<(ins B32:$mask, B32:$base,    i32imm:$offset),
-                     (int_nvvm_fns i32:$mask, i32:$base,       imm:$offset)>;
-def INT_FNS_rir : INT_FNS_MBO<(ins B32:$mask,    i32imm:$base, B32:$offset),
-                     (int_nvvm_fns i32:$mask,       imm:$base, i32:$offset)>;
-def INT_FNS_rii : INT_FNS_MBO<(ins B32:$mask,    i32imm:$base,    i32imm:$offset),
-                     (int_nvvm_fns i32:$mask,       imm:$base,       imm:$offset)>;
-def INT_FNS_irr : INT_FNS_MBO<(ins    i32imm:$mask, B32:$base, B32:$offset),
-                     (int_nvvm_fns       imm:$mask, i32:$base, i32:$offset)>;
-def INT_FNS_iri : INT_FNS_MBO<(ins    i32imm:$mask, B32:$base,    i32imm:$offset),
-                     (int_nvvm_fns       imm:$mask, i32:$base,       imm:$offset)>;
-def INT_FNS_iir : INT_FNS_MBO<(ins    i32imm:$mask,    i32imm:$base, B32:$offset),
-                     (int_nvvm_fns       imm:$mask,       imm:$base, i32:$offset)>;
-def INT_FNS_iii : INT_FNS_MBO<(ins    i32imm:$mask,    i32imm:$base,    i32imm:$offset),
-                     (int_nvvm_fns       imm:$mask,       imm:$base,       imm:$offset)>;
+let Predicates = [PTX60, SM30] in
+  def : Pat<(int_nvvm_fns i32:$mask, i32:$base, i32:$offset),
+            (INT_FNS reg_or_imm:$mask, reg_or_imm:$base, reg_or_imm:$offset)>;
 
 //-----------------------------------
 // Atomic Functions
@@ -3502,43 +3498,18 @@ multiclass F_ATOMIC_2<RegTyInfo t, SDPatternOperator op, string op_str,
 }
 
 multiclass F_ATOMIC_3<RegTyInfo t, string op_str, SDPatternOperator op, SDNode atomic> {
-  defvar asm_str = "atom${sem:sem}${scope:scope}${addsp:addsp}" # "." # op_str;
-
-  let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
-    def _rr : BasicFlagsNVPTXInst<(outs t.RC:$dst),
-      (ins ADDR:$addr, t.RC:$b, t.RC:$c),
-      (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
-      asm_str>;
-
-    def _ir : BasicFlagsNVPTXInst<(outs t.RC:$dst),
-      (ins ADDR:$addr, t.Imm:$b, t.RC:$c),
-      (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
-      asm_str>;
-
-    def _ri : BasicFlagsNVPTXInst<(outs t.RC:$dst),
-      (ins ADDR:$addr, t.RC:$b, t.Imm:$c),
-      (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
-      asm_str>;
-
-    def _ii : BasicFlagsNVPTXInst<(outs t.RC:$dst),
-      (ins ADDR:$addr, t.Imm:$b, t.Imm:$c),
-      (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
-      asm_str>;
-  }
+  let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in
+    def NAME : BasicFlagsNVPTXInst<(outs t.RC:$dst),
+        (ins ADDR:$addr, t.RegOrImm:$b, t.RegOrImm:$c),
+        (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
+        "atom${sem:sem}${scope:scope}${addsp:addsp}." # op_str>;
 
   defvar XForm = AtomicSDNodeXForm<atomic>;
-
   def : Pat<(op:$this addr:$addr, t.Ty:$b, t.Ty:$c),
-        (!cast<Instruction>(NAME # _rr) ADDR:$addr, t.Ty:$b, t.Ty:$c, (XForm.GetSem $this), (XForm.GetScope $this), (XForm.GetAddSp $this))>;
-
-  def : Pat<(op:$this addr:$addr, (t.Ty t.ImmNode:$b), t.Ty:$c),
-        (!cast<Instruction>(NAME # _ir) ADDR:$addr, (t.Ty t.ImmNode:$b), t.Ty:$c, (XForm.GetSem $this), (XForm.GetScope $this), (XForm.GetAddSp $this))>;
-
-  def : Pat<(op:$this addr:$addr, t.Ty:$b, (t.Ty t.ImmNode:$c)),
-        (!cast<Instruction>(NAME # _ri) ADDR:$addr, t.Ty:$b, (t.Ty t.ImmNode:$c), (XForm.GetSem $this), (XForm.GetScope $this), (XForm.GetAddSp $this))>;
-
-  def : Pat<(op:$this addr:$addr, (t.Ty t.ImmNode:$b), (t.Ty t.ImmNode:$c)),
-        (!cast<Instruction>(NAME # _ii) ADDR:$addr, (t.Ty t.ImmNode:$b), (t.Ty t.ImmNode:$c), (XForm.GetSem $this), (XForm.GetScope $this), (XForm.GetAddSp $this))>;
+            (!cast<Instruction>(NAME) ADDR:$addr,
+              t.ImmNode:$b, t.ImmNode:$c,
+              (XForm.GetSem $this), (XForm.GetScope $this),
+              (XForm.GetAddSp $this))>;
 }
 
 defm atomic_load_fadd  : binary_atomic_op_fp<atomic_load_fadd>;
@@ -3761,7 +3732,7 @@ multiclass CvtaFromInsts<NVPTXAddressSpace as, list<Predicate> preds,
                 [(set i64:$result, (asc_pat i64:$src))]>;
 
     def : Pat<(i64 (asc_pat i32:$src)),
-              (!cast<Instruction>(NAME # "_64") (CVT_u64_u32 $src, CvtNONE))>;
+              (!cast<Instruction>(NAME # "_64") (CVT_u64_u32 reg_or_imm:$src, CvtNONE))>;
   }
 }
 
@@ -6555,19 +6526,15 @@ foreach mma = !listconcat(MMAs, MMA_BLOCK_SCALEs, WMMAs, MMA_LDSTs, LDMATRIXs,
   def : MMA_PAT<mma>;
 
 multiclass MAPA<string suffix, Intrinsic Intr> {
+  def _32 : BasicNVPTXInst<(outs B32:$d), (ins B32Op:$a, B32Op:$b),
+              "mapa" # suffix # ".u32">;
+  def _64 : BasicNVPTXInst<(outs B64:$d), (ins B64Op:$a, B32Op:$b),
+              "mapa" # suffix # ".u64">;
   let Predicates = [SM90] in {
-    def _32: BasicNVPTXInst<(outs B32:$d), (ins B32:$a, B32:$b),
-                "mapa" # suffix # ".u32",
-                [(set i32:$d, (Intr i32:$a, i32:$b))]>;
-    def _32i: BasicNVPTXInst<(outs B32:$d), (ins B32:$a, i32imm:$b),
-                "mapa" # suffix # ".u32",
-                [(set i32:$d, (Intr i32:$a, imm:$b))]>;
-    def _64: BasicNVPTXInst<(outs B64:$d), (ins B64:$a, B32:$b),
-                "mapa" # suffix # ".u64",
-                [(set i64:$d, (Intr i64:$a, i32:$b))]>;
-    def _64i: BasicNVPTXInst<(outs B64:$d), (ins B64:$a, i32imm:$b),
-                "mapa" # suffix # ".u64",
-                [(set i64:$d, (Intr i64:$a, imm:$b))]>;
+    def : Pat<(i32 (Intr i32:$a, i32:$b)),
+              (!cast<Instruction>(NAME # "_32") reg_or_imm:$a, reg_or_imm:$b)>;
+    def : Pat<(i64 (Intr i64:$a, i32:$b)),
+              (!cast<Instruction>(NAME # "_64") reg_or_imm:$a, reg_or_imm:$b)>;
   }
 }
 
@@ -7705,6 +7672,146 @@ foreach space = ["tensor", "shared"] in {
     } // collector_usage_a
   } // cta_group
 } // space
+
+class SPRegList<int NumRegs, string Prefix, int Offset = 0> {
+  list<string> Names =
+      !foreach(RegIdx, !range(NumRegs), Prefix # !add(Offset, RegIdx));
+  dag Outs = !dag(outs, !listsplat(B32, NumRegs), Names);
+  dag Ins = !dag(ins, !listsplat(B32, NumRegs), Names);
+  dag Set = !dag(set, !listsplat(B32, NumRegs), Names);
+  string Asm = "{{$" # !interleave(Names, ", $") # "}}";
+}
+
+class SPLayout<int NumMetadataRegs, int NumCompressedDataRegs,
+               int NumDataRegs, bit Compress> {
+  int MetadataSize = NumMetadataRegs;
+  int CompressedDataSize = NumCompressedDataRegs;
+  int DataSize = NumDataRegs;
+  int NumResultRegs = !if(Compress, !add(NumMetadataRegs, NumCompressedDataRegs),
+                                    NumDataRegs);
+  int NumInputRegs = !if(Compress, !add(NumDataRegs, 1),
+                                   !add(NumMetadataRegs, NumCompressedDataRegs));
+  bit IsCompress = Compress;
+}
+
+class SPCeilDiv<int Numerator, int Denominator> {
+  int Value = !div(!add(Numerator, !sub(Denominator, 1)), Denominator);
+}
+
+defvar SPQualifierNames =
+    ["elem_size", "idx_size", "repeat_factor", "num_src", "num_tgt"];
+
+class SPTypeProfile<SPLayout Layout>
+    : SDTypeProfile<
+          Layout.NumResultRegs, -1,
+          !foreach(OpIdx,
+                   !range(!add(Layout.NumResultRegs, !size(SPQualifierNames),
+                               Layout.NumInputRegs)),
+                   SDTCisVT<OpIdx, i32>)>;
+
+// Nodes with the same result count may have different input counts.
+class SPExactMatch<dag Operands, dag Fragment, int NumOperands>
+    : PatFrag<Operands, Fragment,
+              [{ return N->getNumOperands() == }]
+                  # !cast<string>(NumOperands) # [{; }]>;
+
+class SPInst<string Op, SPLayout Layout>
+    : NVPTXInst<(outs), (ins), "?", []> {
+  defvar Results = SPRegList<Layout.NumResultRegs, "r">;
+  defvar Inputs = SPRegList<Layout.NumInputRegs, "i">;
+  defvar NumQualifiers = !size(SPQualifierNames);
+  defvar OperandNames = !listconcat(SPQualifierNames, Inputs.Names);
+  defvar NumOperands = !size(OperandNames);
+  defvar Opcode = SDNode<"NVPTXISD::" # !toupper(Op) # "_R"
+                             # Layout.NumResultRegs,
+                         SPTypeProfile<Layout>>;
+  defvar Match = SPExactMatch<
+      !dag(ops, !listsplat(node, NumOperands), OperandNames),
+      !dag(Opcode, !listsplat(node, NumOperands), OperandNames), NumOperands>;
+  defvar Ins =
+      !con(!dag(ins, !listsplat(i32imm, NumQualifiers), SPQualifierNames),
+           Inputs.Ins);
+  defvar Args = !if(Layout.IsCompress,
+                    [SPRegList<Layout.MetadataSize, "r">.Asm,
+                     SPRegList<Layout.CompressedDataSize, "r",
+                               Layout.MetadataSize>.Asm,
+                     SPRegList<Layout.DataSize, "i">.Asm,
+                     "$i" # Layout.DataSize],
+                    [SPRegList<Layout.DataSize, "r">.Asm,
+                     SPRegList<Layout.MetadataSize, "i">.Asm,
+                     SPRegList<Layout.CompressedDataSize, "i",
+                               Layout.MetadataSize>.Asm]);
+
+  dag IntrinsicPattern = BuildPattern<Match, Ins>.ret;
+
+  let OutOperandList = Results.Outs;
+  let InOperandList = Ins;
+  let AsmString = Op
+                  # ".b$elem_size.b$idx_size.sp::$num_src:$num_tgt"
+                    ".x$repeat_factor "
+                  # !interleave(Args, ", ") # ";";
+  let Pattern = [!con(Results.Set, (set IntrinsicPattern))];
+  let Predicates = [hasSPCompress];
+}
+
+defvar SPElemSizes = [8, 16];
+defvar SPIdxSizes = [2, 4];
+defvar SPRepeatFactors = [1, 2, 4, 8, 16, 32, 64];
+
+// Different qualifier combinations may share a register layout, and thus an
+// instruction, so define each layout only once.
+// mdata = ceil(repeat_factor * idx_size / elem_size);
+// cdata = repeat_factor; data = 2 * repeat_factor.
+foreach ElemSize = SPElemSizes in {
+  foreach IdxSize = SPIdxSizes in {
+    foreach RepeatFactor = SPRepeatFactors in {
+      defvar MetadataSize =
+          SPCeilDiv<!mul(RepeatFactor, IdxSize), ElemSize>.Value;
+      defvar DataSize = !mul(2, RepeatFactor);
+      defvar Name = "SPCOMPRESS_M" # MetadataSize # "_C" # RepeatFactor
+                    # "_D" # DataSize;
+      if !not(!exists<NVPTXInst>(Name)) then
+        def Name : SPInst<"spcompress",
+                          SPLayout<MetadataSize, RepeatFactor, DataSize,
+                                   true>>;
+    } // RepeatFactor
+  } // IdxSize
+} // ElemSize
+
+defvar SPNumSrcs = [1, 2, 4];
+defvar SPNumTgts = [2, 4, 8, 16];
+
+// data = ceil(num_tgt * elem_size * repeat_factor / 32);
+// mdata = ceil(num_src * idx_size * repeat_factor / 32);
+// cdata = ceil(num_src * elem_size * repeat_factor / 32).
+foreach NumSrc = SPNumSrcs in {
+  foreach NumTgt = SPNumTgts in {
+    foreach ElemSize = SPElemSizes in {
+      foreach IdxSize = SPIdxSizes in {
+        foreach RepeatFactor = SPRepeatFactors in {
+          defvar DataBits = !mul(NumTgt, ElemSize, RepeatFactor);
+          defvar IsExpanding = !lt(NumSrc, NumTgt);
+          defvar IdxCoversTgt = !le(NumTgt, !shl(1, IdxSize));
+          defvar SrcFitsReg = !le(!mul(NumSrc, ElemSize), 32);
+          defvar DataFitsRegs = !and(!ge(DataBits, 32), !le(DataBits, 4096));
+          if !and(IsExpanding, IdxCoversTgt, SrcFitsReg, DataFitsRegs) then {
+            defvar MetadataSize =
+                SPCeilDiv<!mul(NumSrc, IdxSize, RepeatFactor), 32>.Value;
+            defvar CompressedDataSize =
+                SPCeilDiv<!mul(NumSrc, ElemSize, RepeatFactor), 32>.Value;
+            defvar DataSize = SPCeilDiv<DataBits, 32>.Value;
+            defvar Name = "SPDECOMPRESS_M" # MetadataSize # "_C"
+                          # CompressedDataSize # "_D" # DataSize;
+            if !not(!exists<NVPTXInst>(Name)) then
+              def Name : SPInst<"spdecompress",
+                                SPLayout<MetadataSize, CompressedDataSize,
+                                         DataSize, false>>;
+          }
+        } // RepeatFactor
+      } // IdxSize
+    } // ElemSize
+  } // NumTgt
+} // NumSrc
 
 //
 // tensormap.replace Instructions

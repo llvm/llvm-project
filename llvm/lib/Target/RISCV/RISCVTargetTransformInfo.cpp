@@ -47,7 +47,7 @@ static cl::opt<unsigned>
                              "vectorization while tail-folding."),
                     cl::init(5), cl::Hidden);
 
-static cl::opt<bool> EnableOrLikeSelectOpt("enable-riscv-or-like-select",
+static cl::opt<bool> EnableOrLikeSelectOpt("riscv-or-like-select",
                                            cl::init(true), cl::Hidden);
 
 InstructionCost
@@ -499,9 +499,15 @@ RISCVTTIImpl::getConstantPoolLoadCost(Type *Ty,
   // Add a cost of address generation + the cost of the load. The address
   // is expected to be a PC relative offset to a constant pool entry
   // using auipc/addi.
-  return getStaticDataAddrGenerationCost(CostKind) +
+  InstructionCost Cost = 0;
+  Cost = getStaticDataAddrGenerationCost(CostKind) +
          getMemoryOpCost(Instruction::Load, Ty, DL.getABITypeAlign(Ty),
                          /*AddressSpace=*/0, CostKind);
+  // Estimate the amount of 4 byte instructions that could fit
+  // instead of the constant pool, ignoring any extra padding.
+  if (CostKind == TTI::TCK_CodeSize)
+    Cost += ((InstructionCost)DL.getTypeAllocSize(Ty)) / 4;
+  return Cost;
 }
 
 static bool isRepeatedConcatMask(ArrayRef<int> Mask, int &SubVectorSize) {
