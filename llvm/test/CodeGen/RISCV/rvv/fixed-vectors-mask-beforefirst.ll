@@ -5,28 +5,16 @@
 define <1 x i1> @v1i1(<1 x i1> %m) {
 ; RV32-LABEL: v1i1:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; RV32-NEXT:    vfirst.m a0, v0
-; RV32-NEXT:    bgez a0, .LBB0_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    li a0, 1
-; RV32-NEXT:  .LBB0_2:
-; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; RV32-NEXT:    vmv.s.x v8, a0
-; RV32-NEXT:    vmsgtu.vi v0, v8, 0
+; RV32-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
+; RV32-NEXT:    vmsbf.m v8, v0
+; RV32-NEXT:    vmv1r.v v0, v8
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: v1i1:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; RV64-NEXT:    vfirst.m a0, v0
-; RV64-NEXT:    bgez a0, .LBB0_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    li a0, 1
-; RV64-NEXT:  .LBB0_2:
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; RV64-NEXT:    vmv.s.x v8, a0
-; RV64-NEXT:    vmsgtu.vi v0, v8, 0
+; RV64-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
+; RV64-NEXT:    vmsbf.m v8, v0
+; RV64-NEXT:    vmv1r.v v0, v8
 ; RV64-NEXT:    ret
   %x = call <1 x i1> @llvm.mask.beforefirst(<1 x i1> %m)
   ret <1 x i1> %x
@@ -35,28 +23,16 @@ define <1 x i1> @v1i1(<1 x i1> %m) {
 define <2 x i1> @v2i1(<2 x i1> %m) {
 ; RV32-LABEL: v2i1:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; RV32-NEXT:    vfirst.m a0, v0
-; RV32-NEXT:    bgez a0, .LBB1_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    li a0, 2
-; RV32-NEXT:  .LBB1_2:
-; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; RV32-NEXT:    vid.v v8
-; RV32-NEXT:    vmsltu.vx v0, v8, a0
+; RV32-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
+; RV32-NEXT:    vmsbf.m v8, v0
+; RV32-NEXT:    vmv1r.v v0, v8
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: v2i1:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; RV64-NEXT:    vfirst.m a0, v0
-; RV64-NEXT:    bgez a0, .LBB1_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    li a0, 2
-; RV64-NEXT:  .LBB1_2:
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; RV64-NEXT:    vid.v v8
-; RV64-NEXT:    vmsltu.vx v0, v8, a0
+; RV64-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
+; RV64-NEXT:    vmsbf.m v8, v0
+; RV64-NEXT:    vmv1r.v v0, v8
 ; RV64-NEXT:    ret
   %x = call <2 x i1> @llvm.mask.beforefirst(<2 x i1> %m)
   ret <2 x i1> %x
@@ -65,28 +41,16 @@ define <2 x i1> @v2i1(<2 x i1> %m) {
 define <4 x i1> @v4i1(<4 x i1> %m) {
 ; RV32-LABEL: v4i1:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; RV32-NEXT:    vfirst.m a0, v0
-; RV32-NEXT:    bgez a0, .LBB2_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    li a0, 4
-; RV32-NEXT:  .LBB2_2:
-; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV32-NEXT:    vid.v v8
-; RV32-NEXT:    vmsltu.vx v0, v8, a0
+; RV32-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
+; RV32-NEXT:    vmsbf.m v8, v0
+; RV32-NEXT:    vmv1r.v v0, v8
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: v4i1:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; RV64-NEXT:    vfirst.m a0, v0
-; RV64-NEXT:    bgez a0, .LBB2_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    li a0, 4
-; RV64-NEXT:  .LBB2_2:
-; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; RV64-NEXT:    vid.v v8
-; RV64-NEXT:    vmsltu.vx v0, v8, a0
+; RV64-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
+; RV64-NEXT:    vmsbf.m v8, v0
+; RV64-NEXT:    vmv1r.v v0, v8
 ; RV64-NEXT:    ret
   %x = call <4 x i1> @llvm.mask.beforefirst(<4 x i1> %m)
   ret <4 x i1> %x
@@ -95,28 +59,16 @@ define <4 x i1> @v4i1(<4 x i1> %m) {
 define <8 x i1> @v8i1(<8 x i1> %m) {
 ; RV32-LABEL: v8i1:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; RV32-NEXT:    vfirst.m a0, v0
-; RV32-NEXT:    bgez a0, .LBB3_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    li a0, 8
-; RV32-NEXT:  .LBB3_2:
-; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV32-NEXT:    vid.v v8
-; RV32-NEXT:    vmsltu.vx v0, v8, a0
+; RV32-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
+; RV32-NEXT:    vmsbf.m v8, v0
+; RV32-NEXT:    vmv1r.v v0, v8
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: v8i1:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; RV64-NEXT:    vfirst.m a0, v0
-; RV64-NEXT:    bgez a0, .LBB3_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    li a0, 8
-; RV64-NEXT:  .LBB3_2:
-; RV64-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
-; RV64-NEXT:    vid.v v8
-; RV64-NEXT:    vmsltu.vx v0, v8, a0
+; RV64-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
+; RV64-NEXT:    vmsbf.m v8, v0
+; RV64-NEXT:    vmv1r.v v0, v8
 ; RV64-NEXT:    ret
   %x = call <8 x i1> @llvm.mask.beforefirst(<8 x i1> %m)
   ret <8 x i1> %x
@@ -125,46 +77,105 @@ define <8 x i1> @v8i1(<8 x i1> %m) {
 define <16 x i1> @v16i1(<16 x i1> %m) {
 ; RV32-LABEL: v16i1:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; RV32-NEXT:    vfirst.m a0, v0
-; RV32-NEXT:    bgez a0, .LBB4_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    li a0, 16
-; RV32-NEXT:  .LBB4_2:
-; RV32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; RV32-NEXT:    vid.v v8
-; RV32-NEXT:    vmsltu.vx v0, v8, a0
+; RV32-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
+; RV32-NEXT:    vmsbf.m v8, v0
+; RV32-NEXT:    vmv.v.v v0, v8
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: v16i1:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; RV64-NEXT:    vfirst.m a0, v0
-; RV64-NEXT:    bgez a0, .LBB4_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    li a0, 16
-; RV64-NEXT:  .LBB4_2:
-; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; RV64-NEXT:    vid.v v8
-; RV64-NEXT:    vmsltu.vx v0, v8, a0
+; RV64-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
+; RV64-NEXT:    vmsbf.m v8, v0
+; RV64-NEXT:    vmv.v.v v0, v8
 ; RV64-NEXT:    ret
   %x = call <16 x i1> @llvm.mask.beforefirst(<16 x i1> %m)
   ret <16 x i1> %x
 }
 
-; FIXME: The following tests currently crash because the step vector get_active_lane_mask tries to generate isn't legal (v32i64 -> LMUL16), so it bails.
+define <32 x i1> @v32i1(<32 x i1> %m) {
+; RV32-LABEL: v32i1:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
+; RV32-NEXT:    vmsbf.m v8, v0
+; RV32-NEXT:    vmv1r.v v0, v8
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: v32i1:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
+; RV64-NEXT:    vmsbf.m v8, v0
+; RV64-NEXT:    vmv1r.v v0, v8
+; RV64-NEXT:    ret
+  %x = call <32 x i1> @llvm.mask.beforefirst(<32 x i1> %m)
+  ret <32 x i1> %x
+}
 
-; define <32 x i1> @v32i1(<32 x i1> %m) {
-;   %x = call <32 x i1> @llvm.mask.beforefirst(<32 x i1> %m)
-;   ret <32 x i1> %x
-; }
+define <64 x i1> @v64i1(<64 x i1> %m) {
+; RV32-LABEL: v64i1:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
+; RV32-NEXT:    vmsbf.m v8, v0
+; RV32-NEXT:    vmv1r.v v0, v8
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: v64i1:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
+; RV64-NEXT:    vmsbf.m v8, v0
+; RV64-NEXT:    vmv1r.v v0, v8
+; RV64-NEXT:    ret
+  %x = call <64 x i1> @llvm.mask.beforefirst(<64 x i1> %m)
+  ret <64 x i1> %x
+}
 
-; define <64 x i1> @v64i1(<64 x i1> %m) {
-;   %x = call <64 x i1> @llvm.mask.beforefirst(<64 x i1> %m)
-;   ret <64 x i1> %x
-; }
+define <128 x i1> @v128i1(<128 x i1> %m) {
+; RV32-LABEL: v128i1:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; RV32-NEXT:    vmsbf.m v8, v0
+; RV32-NEXT:    vmv1r.v v0, v8
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: v128i1:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; RV64-NEXT:    vmsbf.m v8, v0
+; RV64-NEXT:    vmv1r.v v0, v8
+; RV64-NEXT:    ret
+  %x = call <128 x i1> @llvm.mask.beforefirst(<128 x i1> %m)
+  ret <128 x i1> %x
+}
 
-; define <128 x i1> @v128i1(<128 x i1> %m) {
-;   %x = call <128 x i1> @llvm.mask.beforefirst(<128 x i1> %m)
-;   ret <128 x i1> %x
-; }
+define <256 x i1> @v256i1(<256 x i1> %m) {
+; RV32-LABEL: v256i1:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a0, 128
+; RV32-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; RV32-NEXT:    vcpop.m a0, v0
+; RV32-NEXT:    snez a0, a0
+; RV32-NEXT:    vmv.v.x v16, a0
+; RV32-NEXT:    vmseq.vi v9, v16, 0
+; RV32-NEXT:    vmsbf.m v10, v8
+; RV32-NEXT:    vmand.mm v8, v10, v9
+; RV32-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; RV32-NEXT:    vmsbf.m v9, v0
+; RV32-NEXT:    vmv1r.v v0, v9
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: v256i1:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a0, 128
+; RV64-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; RV64-NEXT:    vcpop.m a0, v0
+; RV64-NEXT:    snez a0, a0
+; RV64-NEXT:    vmv.v.x v16, a0
+; RV64-NEXT:    vmseq.vi v9, v16, 0
+; RV64-NEXT:    vmsbf.m v10, v8
+; RV64-NEXT:    vmand.mm v8, v10, v9
+; RV64-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; RV64-NEXT:    vmsbf.m v9, v0
+; RV64-NEXT:    vmv1r.v v0, v9
+; RV64-NEXT:    ret
+  %x = call <256 x i1> @llvm.mask.beforefirst(<256 x i1> %m)
+  ret <256 x i1> %x
+}
