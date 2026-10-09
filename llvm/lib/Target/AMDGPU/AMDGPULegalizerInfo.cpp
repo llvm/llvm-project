@@ -992,6 +992,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
     TrigActions.customFor({F16});
     FDIVActions.customFor({F16});
+    FDIVActions.customFor(ST.hasBF16TransInsts(), {BF16});
   }
 
   if (ST.hasBF16PackedInsts()) {
@@ -5275,7 +5276,7 @@ bool AMDGPULegalizerInfo::legalizeFDIV(MachineInstr &MI,
   Register Dst = MI.getOperand(0).getReg();
   LLT DstTy = MRI.getType(Dst);
 
-  if (DstTy == F16)
+  if (DstTy == F16 || DstTy == BF16)
     return legalizeFDIV16(MI, MRI, B);
   if (DstTy == F32)
     return legalizeFDIV32(MI, MRI, B);
@@ -5605,7 +5606,7 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
   bool AllowInaccurateRcp = MI.getFlag(MachineInstr::FmAfn);
 
   if (const auto *CLHS = getConstantFPVRegVal(LHS, MRI)) {
-    if (!AllowInaccurateRcp && ResTy != F16)
+    if (!AllowInaccurateRcp && ResTy != F16 && ResTy != BF16)
       return false;
 
     // v_rcp_f32 and v_rsq_f32 do not support denormals, and according to
@@ -5637,10 +5638,10 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
     }
   }
 
-  // For f16 require afn or arcp.
+  // For f16 and bf16 require afn or arcp.
   // For f32 require afn.
   if (!AllowInaccurateRcp &&
-      (ResTy != F16 || !MI.getFlag(MachineInstr::FmArcp)))
+      ((ResTy != F16 && ResTy != BF16) || !MI.getFlag(MachineInstr::FmArcp)))
     return false;
 
   // x / y -> x * (1.0 / y)
@@ -5715,6 +5716,15 @@ bool AMDGPULegalizerInfo::legalizeFDIV16(MachineInstr &MI,
   Register RHS = MI.getOperand(2).getReg();
 
   uint16_t Flags = MI.getFlags();
+
+  if (MRI.getType(Res) == BF16) {
+    auto LHSExt = B.buildFPExt(F32, LHS, Flags);
+    auto RHSExt = B.buildFPExt(F32, RHS, Flags);
+    auto ExtDiv = B.buildFDiv(F32, LHSExt, RHSExt, Flags);
+    B.buildFPTrunc(Res, ExtDiv, Flags);
+    MI.eraseFromParent();
+    return true;
+  }
 
   LLT I32 = LLT::integer(32);
 
