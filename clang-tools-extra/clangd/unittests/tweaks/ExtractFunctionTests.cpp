@@ -985,6 +985,16 @@ TEST_F(ExtractFunctionTest, ConstParametersFunctionPointer) {
               HasSubstr("extracted(void (*F)(int))"));
 }
 
+TEST_F(ExtractFunctionTest, ConstParametersFunctionReference) {
+  Context = File;
+  // A (non-pointer) function type can't be cv-qualified at all, unlike
+  // every other non-scalar, non-array type this conservative-const
+  // logic otherwise applies to: adding const here would produce
+  // unparseable output (`void (const &F)(int)`).
+  EXPECT_THAT(apply("void f(void (&F)(int)) { [[F(0);]] }"),
+              HasSubstr("extracted(void (&F)(int))"));
+}
+
 TEST_F(ExtractFunctionTest, ConstParametersScalarsByValue) {
   Context = File;
   // An unmutated pointer is a scalar too: passed by value.
@@ -1217,6 +1227,24 @@ TEST_F(ExtractFunctionTest, CFileRejectArrayTypeof) {
       void foo() {
          int arr[5];
          [[__typeof__(arr) copy;]]
+    })cpp"),
+            "fail: Too complex to extract.");
+}
+
+TEST_F(ExtractFunctionTest, CFileRejectVariableLengthArray) {
+  // A VLA's bound is an arbitrary expression -- typically another
+  // variable's name -- that isn't necessarily (and here isn't at all)
+  // itself a parameter of the extracted function, and even printing it
+  // via the usual array-decay path would reference a name meaningless
+  // in the new scope. Here the VLA bound isn't even at the top level
+  // (it's the inner dimension of a 2D array), exercising that
+  // `isVariablyModifiedType()` catches it regardless of nesting depth.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_EQ(apply(R"cpp(
+      void foo(int N) {
+         int A[2][N];
+         [[A[0][0] = 1;]]
     })cpp"),
             "fail: Too complex to extract.");
 }

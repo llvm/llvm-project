@@ -1185,12 +1185,15 @@ bool createParameters(NewFunction &ExtractedFunc,
           !FullTypeInfo->isReferenceType() &&
           Context.getTypeSizeInChars(TypeInfo) <= 2 * WordSize) {
         Kind = ParamPassKind::Value;
-      } else if (!TypeInfo->isArrayType()) {
+      } else if (!TypeInfo->isArrayType() && !TypeInfo->isFunctionType()) {
         // Still passed by reference to avoid a copy, but the reference
         // doesn't need to be mutable. Array types are never made const:
         // mutating array elements through a non-const-ref loop variable
         // or a decayed pointer argument is common and easy to miss
-        // conservatively, so we don't try.
+        // conservatively, so we don't try. A (non-pointer) function type
+        // can't be cv-qualified at all -- doing so anyway produces
+        // unparseable output, e.g. `void (const &F)(int)` for a
+        // captured function reference.
         TypeInfo.addConst();
       }
     }
@@ -1211,6 +1214,17 @@ bool createParameters(NewFunction &ExtractedFunc,
         // alignment, or type: bail out rather than silently break a
         // sizeof/alignof/typeof (or similar) on it.
         if (DeclInfo.HasUnsafeTypeQueryUseInZone)
+          return false;
+        // A variable-length array's bound (at any nesting depth, e.g.
+        // the inner dimension of `int A[2][N]`) is an arbitrary
+        // expression that's typically just some other variable's name
+        // -- but that variable isn't necessarily (and often isn't) also
+        // a parameter of the extracted function, and even if it is, a
+        // mutated one would itself have been turned into a pointer,
+        // which the bound expression can't account for either way.
+        // Bail out rather than risk printing a parameter type that
+        // references a name meaningless (or absent) in the new scope.
+        if (TypeInfo->isVariablyModifiedType())
           return false;
         TypeInfo = Context.getArrayDecayedType(TypeInfo);
         Kind = ParamPassKind::Value;
