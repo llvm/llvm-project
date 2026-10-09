@@ -40,3 +40,45 @@ entry:
   %call3 = tail call i32 (ptr, ...) null(ptr null, i32 %3)
   ret i32 0
 }
+
+define void @nneg_on_narrowed_cast_operand(ptr %p, ptr %q) {
+; CHECK-LABEL: define void @nneg_on_narrowed_cast_operand(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[P]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i16> [[TMP1]] to <4 x i12>
+; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg <4 x i12> [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    store <4 x i16> [[TMP3]], ptr [[Q]], align 2
+; CHECK-NEXT:    ret void
+;
+  %p1 = getelementptr i16, ptr %p, i64 1
+  %p2 = getelementptr i16, ptr %p, i64 2
+  %p3 = getelementptr i16, ptr %p, i64 3
+  %a0 = load i16, ptr %p
+  %a1 = load i16, ptr %p1
+  %a2 = load i16, ptr %p2
+  %a3 = load i16, ptr %p3
+  %b0 = trunc i16 %a0 to i12
+  %b1 = trunc i16 %a1 to i12
+  %b2 = trunc i16 %a2 to i12
+  %b3 = trunc i16 %a3 to i12
+  %z0 = zext i12 %b0 to i16
+  %z1 = zext i12 %b1 to i16
+  %z2 = zext i12 %b2 to i16
+  %z3 = zext i12 %b3 to i16
+  %e0 = zext nneg i16 %z0 to i32
+  %e1 = sext i16 %z1 to i32
+  %e2 = zext nneg i16 %z2 to i32
+  %e3 = sext i16 %z3 to i32
+  %t0 = trunc i32 %e0 to i16
+  %t1 = trunc i32 %e1 to i16
+  %t2 = trunc i32 %e2 to i16
+  %t3 = trunc i32 %e3 to i16
+  %q1 = getelementptr i16, ptr %q, i64 1
+  %q2 = getelementptr i16, ptr %q, i64 2
+  %q3 = getelementptr i16, ptr %q, i64 3
+  store i16 %t0, ptr %q
+  store i16 %t1, ptr %q1
+  store i16 %t2, ptr %q2
+  store i16 %t3, ptr %q3
+  ret void
+}
