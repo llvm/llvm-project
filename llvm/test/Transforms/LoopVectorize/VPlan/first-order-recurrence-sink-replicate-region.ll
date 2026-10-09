@@ -268,7 +268,7 @@ define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
 ; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = select vp<[[VP7]]>, ir<%and.red.next>, ir<%and.red>
-; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = compute-reduction-result (and) vp<[[VP11]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP12:%[0-9]+]]> = compute-reduction-result (and) vp<[[VP11]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:

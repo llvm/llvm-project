@@ -41,7 +41,7 @@ define float @print_reduction(i64 %n, ptr noalias %y) vscale_range(2, 1024) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = compute-reduction-result (fadd, in-loop) fast ir<%red.next>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP11:%[0-9]+]]> = compute-reduction-result (fadd, in-loop) fast ir<%red.next>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ;
 entry:
@@ -99,7 +99,7 @@ define void @print_reduction_with_invariant_store(i64 %n, ptr noalias %y, ptr no
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = compute-reduction-result (fadd, in-loop) fast ir<%red.next>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP11:%[0-9]+]]> = compute-reduction-result (fadd, in-loop) fast ir<%red.next>
 ; CHECK-NEXT:    CLONE store vp<[[VP11]]>, ir<%dst>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ;
@@ -163,7 +163,7 @@ define float @print_fmuladd_strict(ptr %a, ptr %b, i64 %n) vscale_range(2, 1024)
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = compute-reduction-result (fmuladd, in-loop) reassoc nnan ninf nsz ir<%muladd>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP13:%[0-9]+]]> = compute-reduction-result (fmuladd, in-loop) reassoc nnan ninf nsz ir<%muladd>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ;
 entry:
@@ -224,7 +224,7 @@ define i64 @find_last_iv(ptr %a, i64 %n, i64 %start) vscale_range(2, 1024) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = compute-reduction-result (smax) vp<[[VP8]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP11:%[0-9]+]]> = compute-reduction-result (smax) vp<[[VP8]]>
 ; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = icmp ne vp<[[VP11]]>, ir<-9223372036854775808>
 ; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = select vp<[[VP12]]>, vp<[[VP11]]>, ir<%start>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
@@ -283,7 +283,7 @@ define i64 @print_extended_reduction(ptr nocapture readonly %x, ptr nocapture re
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP8]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP10:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP8]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ;
 entry:
@@ -345,7 +345,7 @@ define i64 @print_mulacc(ptr nocapture readonly %x, ptr nocapture readonly %y, i
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = compute-reduction-result (add, in-loop) ir<%rdx.next>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP10:%[0-9]+]]> = compute-reduction-result (add, in-loop) ir<%rdx.next>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ;
 entry:
@@ -411,7 +411,7 @@ define i64 @print_mulacc_extended(ptr nocapture readonly %x, ptr nocapture reado
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP9]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP11:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP9]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ;
 entry:
@@ -483,7 +483,7 @@ define i32 @print_mulacc_negated(ptr %a, ptr %b) vscale_range(2, 1024) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = compute-reduction-result (add, in-loop) ir<%add>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP12:%[0-9]+]]> = compute-reduction-result (add, in-loop) ir<%add>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ;
 entry:
@@ -550,7 +550,7 @@ define i32 @print_mulacc_extended_const(ptr %start, ptr %end) vscale_range(2, 10
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = compute-reduction-result (add, in-loop) ir<%red.next>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP12:%[0-9]+]]> = compute-reduction-result (add, in-loop) ir<%red.next>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ;
 entry:
@@ -612,7 +612,7 @@ define i32 @print_mulacc_extended_const_lhs(ptr %start, ptr %end) vscale_range(2
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = compute-reduction-result (add, in-loop) ir<%red.next>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP12:%[0-9]+]]> = compute-reduction-result (add, in-loop) ir<%red.next>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ;
 entry:
@@ -675,7 +675,7 @@ define i32 @print_mulacc_not_extended_const(ptr %start, ptr %end) vscale_range(2
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = compute-reduction-result (add, in-loop) ir<%red.next>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP13:%[0-9]+]]> = compute-reduction-result (add, in-loop) ir<%red.next>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ;
 entry:
@@ -738,7 +738,7 @@ define i64 @print_ext_mulacc_extended_const(ptr %start, ptr %end) vscale_range(2
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP10]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP13:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP10]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ;
 entry:
@@ -802,7 +802,7 @@ define i64 @print_ext_mulacc_not_extended_const(ptr %start, ptr %end) vscale_ran
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP11]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP14:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP11]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ;
 entry:
@@ -865,7 +865,7 @@ define i64 @print_ext_mul_two_uses(i64 %n, ptr %a, i16 %b, i32 %c) vscale_range(
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP7]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP10:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP7]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ;
 entry:
@@ -929,7 +929,7 @@ define i32 @print_umax_reduction(ptr %y) vscale_range(2, 1024) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = compute-reduction-result (umax) vp<[[VP8]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP11:%[0-9]+]]> = compute-reduction-result (umax) vp<[[VP8]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ;
 entry:

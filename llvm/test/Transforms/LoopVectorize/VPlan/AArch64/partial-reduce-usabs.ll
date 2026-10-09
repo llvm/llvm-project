@@ -44,7 +44,7 @@ define i32 @unsigned_absolute_difference(ptr noalias %x, ptr noalias %y) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = compute-reduction-result (add) vp<[[VP13]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP15:%[0-9]+]]> = compute-reduction-result (add) vp<[[VP13]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<8000>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -118,7 +118,7 @@ define i32 @signed_absolute_difference(ptr noalias %x, ptr noalias %y) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = compute-reduction-result (add) vp<[[VP13]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP15:%[0-9]+]]> = compute-reduction-result (add) vp<[[VP13]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<8000>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph

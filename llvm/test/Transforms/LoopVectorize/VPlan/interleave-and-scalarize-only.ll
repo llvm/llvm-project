@@ -269,7 +269,7 @@ define i16 @reduction_with_casts() {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = compute-reduction-result (add) ir<%add>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP6:%[0-9]+]]> = compute-reduction-result (add) ir<%add>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<9999>, vp<[[VP1]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph

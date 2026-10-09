@@ -42,8 +42,8 @@ define void @predicated_block(ptr noalias %a, ptr noalias %idx) {
 ; PREDICATE-EMPTY:
 ; PREDICATE-NEXT:    if.then:
 ; PREDICATE-NEXT:      EMIT ir<%add> = add ir<%i>, ir<1>, ir<%cmp> (!vplan.execution.frequency 4611686018427387903 (25%))
-; PREDICATE-NEXT:      EMIT-SCALAR ir<%t> = trunc ir<%add> to i16
-; PREDICATE-NEXT:      EMIT-SCALAR ir<%ext> = sext ir<%t> to i64
+; PREDICATE-NEXT:      EMIT ir<%t> = trunc ir<%add> to i16
+; PREDICATE-NEXT:      EMIT ir<%ext> = sext ir<%t> to i64
 ; PREDICATE-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%ext>
 ; PREDICATE-NEXT:      EMIT store ir<%add>, ir<%gep.a>, ir<%cmp> (!vplan.execution.frequency 4611686018427387903 (25%))
 ; PREDICATE-NEXT:    Successor(s): latch
@@ -85,8 +85,8 @@ define void @predicated_block(ptr noalias %a, ptr noalias %idx) {
 ; CONSTRUCT-EMPTY:
 ; CONSTRUCT-NEXT:    if.then:
 ; CONSTRUCT-NEXT:      EMIT ir<%add> = add ir<%i>, ir<1>, ir<%cmp> (!vplan.execution.frequency 4611686018427387903 (25%))
-; CONSTRUCT-NEXT:      EMIT-SCALAR ir<%t> = trunc ir<%add> to i16
-; CONSTRUCT-NEXT:      EMIT-SCALAR ir<%ext> = sext ir<%t> to i64
+; CONSTRUCT-NEXT:      EMIT ir<%t> = trunc ir<%add> to i16
+; CONSTRUCT-NEXT:      EMIT ir<%ext> = sext ir<%t> to i64
 ; CONSTRUCT-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%ext>
 ; CONSTRUCT-NEXT:      REPLICATE store ir<%add>, ir<%gep.a>, ir<%cmp> (!vplan.execution.frequency 4611686018427387903 (25%))
 ; CONSTRUCT-NEXT:    Successor(s): latch
@@ -172,26 +172,26 @@ define void @predicated_block(ptr noalias %a, ptr noalias %idx) {
 ; DISSOLVE-NEXT:    WIDEN ir<%add> = add ir<%i>, ir<1> (!vplan.execution.frequency 4611686018427387903 (25%))
 ; DISSOLVE-NEXT:    WIDEN-CAST ir<%t> = trunc ir<%add> to i16
 ; DISSOLVE-NEXT:    WIDEN-CAST ir<%ext> = sext ir<%t> to i64
-; DISSOLVE-NEXT:    EMIT vp<[[VP1:%[0-9]+]]> = extractelement ir<%cmp>, ir<0>
+; DISSOLVE-NEXT:    EMIT-SCALAR vp<[[VP1:%[0-9]+]]> = extractelement ir<%cmp>, ir<0>
 ; DISSOLVE-NEXT:    EMIT branch-on-cond vp<[[VP1]]> (!prof {1, 3})
 ; DISSOLVE-NEXT:  Successor(s): pred.store.if, pred.store.continue
 ; DISSOLVE-EMPTY:
 ; DISSOLVE-NEXT:  pred.store.if:
-; DISSOLVE-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = extractelement ir<%ext>, ir<0>
+; DISSOLVE-NEXT:    EMIT-SCALAR vp<[[VP3:%[0-9]+]]> = extractelement ir<%ext>, ir<0>
 ; DISSOLVE-NEXT:    CLONE ir<%gep.a> = getelementptr inbounds ir<%a>, vp<[[VP3]]>
-; DISSOLVE-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = extractelement ir<%add>, ir<0>
+; DISSOLVE-NEXT:    EMIT-SCALAR vp<[[VP4:%[0-9]+]]> = extractelement ir<%add>, ir<0>
 ; DISSOLVE-NEXT:    CLONE store vp<[[VP4]]>, ir<%gep.a>
 ; DISSOLVE-NEXT:  Successor(s): pred.store.continue
 ; DISSOLVE-EMPTY:
 ; DISSOLVE-NEXT:  pred.store.continue:
-; DISSOLVE-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = extractelement ir<%cmp>, ir<1>
+; DISSOLVE-NEXT:    EMIT-SCALAR vp<[[VP5:%[0-9]+]]> = extractelement ir<%cmp>, ir<1>
 ; DISSOLVE-NEXT:    EMIT branch-on-cond vp<[[VP5]]> (!prof {1, 3})
 ; DISSOLVE-NEXT:  Successor(s): pred.store.if, pred.store.continue
 ; DISSOLVE-EMPTY:
 ; DISSOLVE-NEXT:  pred.store.if:
-; DISSOLVE-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = extractelement ir<%ext>, ir<1>
+; DISSOLVE-NEXT:    EMIT-SCALAR vp<[[VP7:%[0-9]+]]> = extractelement ir<%ext>, ir<1>
 ; DISSOLVE-NEXT:    CLONE ir<%gep.a>.1 = getelementptr inbounds ir<%a>, vp<[[VP7]]>
-; DISSOLVE-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = extractelement ir<%add>, ir<1>
+; DISSOLVE-NEXT:    EMIT-SCALAR vp<[[VP8:%[0-9]+]]> = extractelement ir<%add>, ir<1>
 ; DISSOLVE-NEXT:    CLONE store vp<[[VP8]]>, ir<%gep.a>.1
 ; DISSOLVE-NEXT:  Successor(s): pred.store.continue
 ; DISSOLVE-EMPTY:
