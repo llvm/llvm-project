@@ -262,6 +262,10 @@ TypeSystemFortran::GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type) {
   }
 }
 
+// TODO: When a program is compiled with flags like -fdefault-integer-8 or
+// -fdefault-real-8, default KIND-less types have an 8-byte width instead of 4.
+// Consider whether the producer flags of the program should be queried to
+// determine the bitsize for eBasicTypeInt and eBasicTypeFloat.
 CompilerType TypeSystemFortran::GetBasicTypeFromAST(BasicType basic_type) {
   switch (basic_type) {
   case eBasicTypeInt:
