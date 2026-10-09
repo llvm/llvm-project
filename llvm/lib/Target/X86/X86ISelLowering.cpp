@@ -52776,10 +52776,12 @@ static unsigned convertIntLogicToFPLogicOpcode(unsigned Opcode) {
 
 /// Return true if \p V is a tree of single-use vector logic ops over vector
 /// compares of scalar FP values, like the ones convertIntLogicToFPLogic
-/// creates. \p V becomes an operand of new vector logic, from whose extract of
-/// element 0 SimplifyDemandedVectorElts should still reach every compare within
-/// the recursion limit: otherwise the X86ISD::CMPM mask compares are not
-/// scalarized and are widened to 512 bits without AVX512VL.
+/// creates. Only element 0 is used: SimplifyDemandedVectorElts scalarizes the
+/// compares from the final extract, but only within its recursion limit, so
+/// bound the depth of the tree. Mask compares (X86ISD::CMPM) that it does not
+/// reach would be widened to 512 bits without AVX512VL. Before AVX512, the
+/// extra bitcasts make it stop earlier, leaving the deepest compares as packed
+/// CMPPS/CMPPD, which only costs an occasional unfolded load.
 static bool isConvertedFPLogic(SDValue V, unsigned Depth) {
   if (Depth >= SelectionDAG::MaxRecursionDepth)
     return false;
