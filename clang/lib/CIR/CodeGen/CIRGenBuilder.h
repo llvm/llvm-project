@@ -834,8 +834,7 @@ public:
   }
 
   cir::MatrixInsertOp createMatrixInsert(mlir::Location loc, mlir::Value value,
-                                         mlir::Value matrix,
-                                         mlir::Value rowIdx,
+                                         mlir::Value matrix, mlir::Value rowIdx,
                                          mlir::Value columnIdx) {
     return cir::MatrixInsertOp::create(*this, loc, value, matrix, rowIdx,
                                        columnIdx);

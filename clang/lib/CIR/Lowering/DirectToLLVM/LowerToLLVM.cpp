@@ -5365,9 +5365,9 @@ computeMatrixFlatIndex(mlir::ConversionPatternRewriter &rewriter,
 mlir::LogicalResult CIRToLLVMMatrixExtractOpLowering::matchAndRewrite(
     cir::MatrixExtractOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Value flatIndex = computeMatrixFlatIndex(
-      rewriter, op.getLoc(), op.getMatrix().getType(), adaptor.getRowIdx(),
-      adaptor.getColumnIdx());
+  mlir::Value flatIndex =
+      computeMatrixFlatIndex(rewriter, op.getLoc(), op.getMatrix().getType(),
+                             adaptor.getRowIdx(), adaptor.getColumnIdx());
   rewriter.replaceOpWithNewOp<mlir::LLVM::ExtractElementOp>(
       op, adaptor.getMatrix(), flatIndex);
   return mlir::success();
@@ -5376,9 +5376,9 @@ mlir::LogicalResult CIRToLLVMMatrixExtractOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMMatrixInsertOpLowering::matchAndRewrite(
     cir::MatrixInsertOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Value flatIndex = computeMatrixFlatIndex(
-      rewriter, op.getLoc(), op.getMatrix().getType(), adaptor.getRowIdx(),
-      adaptor.getColumnIdx());
+  mlir::Value flatIndex =
+      computeMatrixFlatIndex(rewriter, op.getLoc(), op.getMatrix().getType(),
+                             adaptor.getRowIdx(), adaptor.getColumnIdx());
   rewriter.replaceOpWithNewOp<mlir::LLVM::InsertElementOp>(
       op, adaptor.getMatrix(), adaptor.getValue(), flatIndex);
   return mlir::success();
