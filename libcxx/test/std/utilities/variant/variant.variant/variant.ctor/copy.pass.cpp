@@ -80,11 +80,6 @@ struct TCopyNTMove {
 
 static_assert(std::is_trivially_copy_constructible<TCopyNTMove>::value, "");
 
-static_assert(std::is_nothrow_copy_constructible_v<std::variant<int, long>>);
-static_assert(std::is_nothrow_copy_constructible_v<std::variant<int, TCopy>>);
-static_assert(!std::is_nothrow_copy_constructible_v<std::variant<int, NTCopy>>);
-static_assert(std::is_nothrow_copy_constructible_v<std::variant<int, NoThrowNTCopy>>);
-
 #ifndef TEST_HAS_NO_EXCEPTIONS
 struct MakeEmptyT {
   static int alive;
@@ -113,6 +108,11 @@ void makeEmpty(Variant& v) {
   }
 }
 #endif // TEST_HAS_NO_EXCEPTIONS
+
+static_assert(std::is_nothrow_copy_constructible_v<std::variant<int, long>>);
+static_assert(std::is_nothrow_copy_constructible_v<std::variant<int, TCopy>>);
+static_assert(!std::is_nothrow_copy_constructible_v<std::variant<int, NTCopy>>);
+static_assert(std::is_nothrow_copy_constructible_v<std::variant<int, NoThrowNTCopy>>);
 
 constexpr void test_copy_ctor_sfinae() {
   {
