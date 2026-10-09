@@ -72,6 +72,40 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.conta
 
 // -----
 
+// Type descriptors of derived types are needed in device code when an array
+// descriptor is created (fir.embox of an array section) or rebuilt
+// (fir.rebox).
+
+module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module} {
+  func.func @_QMmPembox_array(%arg0: !fir.ref<!fir.array<?x!fir.type<_QMmTt{value:i32}>>>) attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
+    %c1 = arith.constant 1 : index
+    %0 = fir.shape %c1 : (index) -> !fir.shape<1>
+    %1 = fir.slice %c1, %c1, %c1 : (index, index, index) -> !fir.slice<1>
+    %2 = fir.embox %arg0(%0) [%1] : (!fir.ref<!fir.array<?x!fir.type<_QMmTt{value:i32}>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<1x!fir.type<_QMmTt{value:i32}>>>
+    return
+  }
+  func.func @_QMmPrebox_array(%arg0: !fir.box<!fir.array<?x!fir.type<_QMmTu{value:i32}>>>) attributes {cuf.proc_attr = #cuf.cuda_proc<device>} {
+    %c1 = arith.constant 1 : index
+    %0 = fir.slice %c1, %c1, %c1 : (index, index, index) -> !fir.slice<1>
+    %1 = fir.rebox %arg0 [%0] : (!fir.box<!fir.array<?x!fir.type<_QMmTu{value:i32}>>>, !fir.slice<1>) -> !fir.box<!fir.array<1x!fir.type<_QMmTu{value:i32}>>>
+    return
+  }
+  fir.global linkonce_odr @_QMmE.dt.t constant : i32 {
+    %c0 = arith.constant 0 : i32
+    fir.has_value %c0 : i32
+  }
+  fir.global linkonce_odr @_QMmE.dt.u constant : i32 {
+    %c0 = arith.constant 0 : i32
+    fir.has_value %c0 : i32
+  }
+}
+
+// CHECK-LABEL: gpu.module @cuda_device_mod
+// CHECK-DAG: fir.global linkonce_odr @_QMmE.dt.t
+// CHECK-DAG: fir.global linkonce_odr @_QMmE.dt.u
+
+// -----
+
 // Test that when a global already exists in the gpu.module, the pass
 // continues cloning the remaining candidates instead of stopping.
 

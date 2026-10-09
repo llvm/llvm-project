@@ -1042,19 +1042,20 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // These map to corresponding instructions for f32/f64. f16 must be
   // promoted to f32. v2f16 is expanded to f16, which is then promoted
   // to f32.
-  for (const auto &Op :
-       {ISD::FDIV, ISD::FREM, ISD::FSQRT, ISD::FSIN, ISD::FCOS}) {
+  for (const auto &Op : {ISD::FDIV, ISD::FSQRT, ISD::FSIN, ISD::FCOS}) {
     setOperationAction(Op, MVT::f16, Promote);
     setOperationAction(Op, MVT::f32, Legal);
-    // only div/rem/sqrt are legal for f64
-    if (Op == ISD::FDIV || Op == ISD::FREM || Op == ISD::FSQRT) {
+    // Only div/sqrt are legal for f64.
+    if (Op == ISD::FDIV || Op == ISD::FSQRT) {
       setOperationAction(Op, MVT::f64, Legal);
     }
     setOperationAction(Op, {MVT::v2f16, MVT::v2bf16, MVT::v2f32}, Expand);
     setOperationAction(Op, MVT::bf16, Promote);
     AddPromotedToType(Op, MVT::bf16, MVT::f32);
   }
-  setOperationAction(ISD::FREM, {MVT::f32, MVT::f64}, Custom);
+  // Expand remainders at the IR level using ExpandIRInsts.
+  setOperationAction(ISD::FREM, {MVT::f16, MVT::bf16, MVT::f32, MVT::f64},
+                     Expand);
 
   // FTANH support:
   // - f32 (sm_75+, PTX 7.0+)
@@ -2100,7 +2101,8 @@ SDValue NVPTXTargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
 
   SDValue BFI =
       DAG.getNode(NVPTXISD::BFI, DL, MVT::i32,
-                  {DAG.getZExtOrTrunc(Value, DL, MVT::i32), Vector,
+                  {DAG.getZExtOrTrunc(Value, DL, MVT::i32),
+                   DAG.getBitcast(MVT::i32, Vector),
                    DAG.getNode(ISD::MUL, DL, MVT::i32,
                                DAG.getZExtOrTrunc(Index, DL, MVT::i32),
                                DAG.getConstant(8, DL, MVT::i32)),
@@ -3509,34 +3511,6 @@ static SDValue lowerROT(SDValue Op, SelectionDAG &DAG) {
                      SDLoc(Op), Opcode, DAG);
 }
 
-static SDValue lowerFREM(SDValue Op, SelectionDAG &DAG) {
-  // Lower (frem x, y) into (sub x, (mul (ftrunc (div x, y)) y)),
-  // i.e. "poor man's fmod()". When y is infinite, x is returned. This matches
-  // the semantics of LLVM's frem.
-  SDLoc DL(Op);
-  SDValue X = Op->getOperand(0);
-  SDValue Y = Op->getOperand(1);
-  EVT Ty = Op.getValueType();
-  SDNodeFlags Flags = Op->getFlags();
-
-  SDValue Div = DAG.getNode(ISD::FDIV, DL, Ty, X, Y, Flags);
-  SDValue Trunc = DAG.getNode(ISD::FTRUNC, DL, Ty, Div, Flags);
-  SDValue Mul = DAG.getNode(ISD::FMUL, DL, Ty, Trunc, Y,
-                            Flags | SDNodeFlags::AllowContract);
-  SDValue Sub = DAG.getNode(ISD::FSUB, DL, Ty, X, Mul,
-                            Flags | SDNodeFlags::AllowContract);
-
-  if (Flags.hasNoInfs())
-    return Sub;
-
-  // If Y is infinite, return X
-  SDValue AbsY = DAG.getNode(ISD::FABS, DL, Ty, Y);
-  SDValue Inf =
-      DAG.getConstantFP(APFloat::getInf(Ty.getFltSemantics()), DL, Ty);
-  SDValue IsInf = DAG.getSetCC(DL, MVT::i1, AbsY, Inf, ISD::SETEQ);
-  return DAG.getSelect(DL, Ty, IsInf, X, Sub);
-}
-
 static SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) {
   assert(Op.getValueType() == MVT::i1 && "Custom lowering enabled only for i1");
 
@@ -3770,8 +3744,6 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::CTPOP:
   case ISD::CTLZ:
     return lowerCTLZCTPOP(Op, DAG);
-  case ISD::FREM:
-    return lowerFREM(Op, DAG);
   case ISD::BSWAP:
     return lowerBSWAP(Op, DAG);
   default:
@@ -7414,10 +7386,8 @@ static SDValue sinkProxyReg(SDValue R, SDValue Chain,
 
 static unsigned getFAddWithNegOpcode(EVT VT, Intrinsic::ID IID,
                                      APFloat::roundingMode RoundingMode) {
-  const bool IsFTZ =
-      IID == Intrinsic::nvvm_fadd_ftz || IID == Intrinsic::nvvm_fadd_ftz_sat;
-  const bool IsSat =
-      IID == Intrinsic::nvvm_fadd_sat || IID == Intrinsic::nvvm_fadd_ftz_sat;
+  const bool IsFTZ = nvvm::FPArithShouldFTZ(IID);
+  const bool IsSat = nvvm::FPArithIsSaturating(IID);
   switch (VT.getScalarType().getSimpleVT().SimpleTy) {
   case MVT::f16: {
     static constexpr unsigned SubRNOpcodes[2][2] = {
@@ -7472,22 +7442,21 @@ static SDValue combineFAddWithNeg(SDNode *N, SelectionDAG &DAG,
 // TODO: Remove the type-legality checks here once
 // https://github.com/llvm/llvm-project/pull/172442 lands, adding support for
 // explicit type constraints for overloaded intrinsics in tablegen.
-static bool isSupportedFAdd(EVT VT, const NVPTXSubtarget &STI,
-                            Intrinsic::ID IID,
-                            APFloat::roundingMode RoundingMode) {
+static bool isSupportedFPArith(SDNode *N, const NVPTXSubtarget &STI,
+                               unsigned ISDOpcode, Intrinsic::ID IID,
+                               APFloat::roundingMode RoundingMode) {
+  const EVT VT = N->getValueType(0);
   if (VT.isVector() && VT.getVectorElementCount() != ElementCount::getFixed(2))
     return false;
 
   const bool IsRN = RoundingMode == APFloat::rmNearestTiesToEven;
-  const bool IsFTZ =
-      IID == Intrinsic::nvvm_fadd_ftz || IID == Intrinsic::nvvm_fadd_ftz_sat;
-  const bool IsSat =
-      IID == Intrinsic::nvvm_fadd_sat || IID == Intrinsic::nvvm_fadd_ftz_sat;
+  const bool IsFTZ = nvvm::FPArithShouldFTZ(IID);
+  const bool IsSat = nvvm::FPArithIsSaturating(IID);
   switch (VT.getScalarType().getSimpleVT().SimpleTy) {
   case MVT::f16:
     return IsRN;
   case MVT::bf16:
-    return IsRN && !IsSat && !IsFTZ && STI.hasNativeBF16Support(ISD::FADD);
+    return IsRN && !IsSat && !IsFTZ && STI.hasNativeBF16Support(ISDOpcode);
   case MVT::f32:
     return !VT.isVector() || (!IsSat && STI.hasF32x2Instructions());
   case MVT::f64:
@@ -7497,9 +7466,9 @@ static bool isSupportedFAdd(EVT VT, const NVPTXSubtarget &STI,
   }
 }
 
-static SDValue diagnoseUnsupportedFAdd(SDNode *N, SelectionDAG &DAG,
-                                       Intrinsic::ID IID,
-                                       APFloat::roundingMode RoundingMode) {
+static SDValue diagnoseUnsupportedFPArith(SDNode *N, SelectionDAG &DAG,
+                                          Intrinsic::ID IID,
+                                          APFloat::roundingMode RoundingMode) {
   const EVT VT = N->getValueType(0);
   DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
       DAG.getMachineFunction().getFunction(),
@@ -7525,13 +7494,23 @@ static SDValue combineIntrinsicWOChain(SDNode *N,
   case Intrinsic::nvvm_fadd_ftz_sat: {
     const auto RoundingMode = static_cast<APFloat::roundingMode>(
         N->getConstantOperandAPInt(3).getSExtValue());
-    if (!isSupportedFAdd(N->getValueType(0), STI, IID, RoundingMode))
-      return diagnoseUnsupportedFAdd(N, DCI.DAG, IID, RoundingMode);
+    if (!isSupportedFPArith(N, STI, ISD::FADD, IID, RoundingMode))
+      return diagnoseUnsupportedFPArith(N, DCI.DAG, IID, RoundingMode);
     return combineFAddWithNeg(N, DCI.DAG, IID, RoundingMode);
   }
   case Intrinsic::nvvm_spcompress:
   case Intrinsic::nvvm_spdecompress:
     return lowerSPIntrinsic(SDValue(N, 0), DCI.DAG);
+  case Intrinsic::nvvm_fmul:
+  case Intrinsic::nvvm_fmul_ftz:
+  case Intrinsic::nvvm_fmul_sat:
+  case Intrinsic::nvvm_fmul_ftz_sat: {
+    const auto RoundingMode = static_cast<APFloat::roundingMode>(
+        N->getConstantOperandAPInt(3).getSExtValue());
+    if (!isSupportedFPArith(N, STI, ISD::FMUL, IID, RoundingMode))
+      return diagnoseUnsupportedFPArith(N, DCI.DAG, IID, RoundingMode);
+    break;
+  }
   }
   return SDValue();
 }

@@ -1274,7 +1274,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                     .legalFor({{I32, F32}, {I32, F64}})
                     .customFor({{I64, F32}, {I64, F64}})
                     .widenScalarFor({{I32, F16}}, changeElementSizeTo(1, F32))
-                    .narrowScalarFor({{I64, F16}}, changeElementSizeTo(0, I32));
+                    .narrowScalarFor({{I64, F16}}, changeElementSizeTo(0, I32))
+                    .widenScalarFor({{I16, BF16}, {I32, BF16}, {I64, BF16}},
+                                    changeElementTo(1, F32));
   if (ST.has16BitInsts())
     FPToI.legalFor({{I16, F16}});
   else
@@ -1382,7 +1384,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   if (ST.hasSALUFloatInsts())
     FCmpBuilder.legalForCartesianProduct({I32}, {F16, F32});
 
-  FCmpBuilder.widenScalarToNextPow2(1).minScalar(1, F32).scalarize(0);
+  FCmpBuilder.widenScalarFor({{I1, BF16}}, changeElementTo(1, F32))
+      .widenScalarToNextPow2(1)
+      .minScalar(1, F32)
+      .scalarize(0);
 
   getActionDefinitionsBuilder(G_FPOW)
       .customFor({F32})
@@ -6545,17 +6550,6 @@ bool AMDGPULegalizerInfo::legalizeImplicitArgPtr(MachineInstr &MI,
 
   MI.eraseFromParent();
   return true;
-}
-
-bool AMDGPULegalizerInfo::getLDSKernelId(Register DstReg,
-                                         MachineRegisterInfo &MRI,
-                                         MachineIRBuilder &B) const {
-  Function &F = B.getMF().getFunction();
-  std::optional<uint32_t> KnownSize =
-      AMDGPUMachineFunctionInfo::getLDSKernelIdMetadata(F);
-  if (KnownSize.has_value())
-    B.buildConstant(DstReg, *KnownSize);
-  return false;
 }
 
 bool AMDGPULegalizerInfo::legalizeIsAddrSpace(MachineInstr &MI,
