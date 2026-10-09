@@ -927,9 +927,9 @@ constexpr T g(int& x) noexcept { return T(x); }
 
 // CWG 3043:
 //
-// Lifetime extension only applies to destructuring expansion statements
-// (enumerating statements don't have a range variable, and the range variable
-// of iterating statements is constexpr).
+// Temporaries in the expansion-initializer of a destructuring expansion
+// statement persist for the lifetime of the reference initialized by it (the
+// range variable of iterating statements is constexpr).
 constexpr int lifetime_extension() {
   int x = 5;
   int sum  = 0;
@@ -976,6 +976,62 @@ static_assert(lifetime_extension() == 47);
 static_assert(lifetime_extension_instantiate_expansions<int>() == 47);
 static_assert(lifetime_extension_dependent_expansion_stmt<int>() == 47);
 static_assert(foo<int>().lifetime_extension_multiple_instantiations<int>() == 47);
+
+// Temporaries in an element of an expansion-init-list persist for the lifetime
+// of the expansion variable initialized from it.
+constexpr int lifetime_extension_enumerating() {
+  int x = 5;
+  int sum = 0;
+  template for (auto e : {f(g(x))}) {
+    sum += x;
+  }
+  return sum + x;
+}
+
+constexpr int lifetime_extension_enumerating_ref() {
+  int x = 5;
+  int sum = 0;
+  template for (auto&& e : {f(g(x))}) {
+    sum += e.x;
+  }
+  return sum + x;
+}
+
+template <typename U>
+constexpr int lifetime_extension_enumerating_instantiate_expansions() {
+  int x = 5;
+  int sum = 0;
+  template for (U e : {f(g(x))}) {
+    sum += e.x;
+  }
+  return sum + x;
+}
+
+template <typename U>
+constexpr int lifetime_extension_enumerating_dependent_element() {
+  int x = 5;
+  int sum = 0;
+  template for (auto&& e : {f(g((U&)x))}) {
+    sum += e.x;
+  }
+  return sum + x;
+}
+
+template <typename... Ts>
+constexpr int lifetime_extension_enumerating_pack(Ts... ts) {
+  int x = 5;
+  int sum = 0;
+  template for (auto&& e : {f(g(x)), f(g(ts))...}) {
+    sum += e.x;
+  }
+  return sum + x;
+}
+
+static_assert(lifetime_extension_enumerating() == 47);
+static_assert(lifetime_extension_enumerating_ref() == 47);
+static_assert(lifetime_extension_enumerating_instantiate_expansions<const T&>() == 47);
+static_assert(lifetime_extension_enumerating_dependent_element<int>() == 47);
+static_assert(lifetime_extension_enumerating_pack(1, 2) == 50);
 }
 
 template <typename... Ts>
