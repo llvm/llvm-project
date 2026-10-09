@@ -135,13 +135,13 @@ public:
   MachineInstr *EmitDbgLabel(SDDbgLabel *SD);
 
   /// EmitNode - Generate machine code for a node and needed dependencies.
-  ///
-  void EmitNode(SDNode *Node, bool IsClone, bool IsCloned,
-                VRBaseMapType &VRBaseMap) {
+  /// Return the call instruction built for the node, if any.
+  MachineInstr *EmitNode(SDNode *Node, bool IsClone, bool IsCloned,
+                         VRBaseMapType &VRBaseMap) {
     if (Node->isMachineOpcode())
-      EmitMachineNode(Node, IsClone, IsCloned, VRBaseMap);
-    else
-      EmitSpecialNode(Node, IsClone, IsCloned, VRBaseMap);
+      return EmitMachineNode(Node, IsClone, IsCloned, VRBaseMap);
+    EmitSpecialNode(Node, IsClone, IsCloned, VRBaseMap);
+    return nullptr;
   }
 
   /// getBlock - Return the current basic block.
@@ -156,8 +156,8 @@ public:
                MachineBasicBlock::iterator insertpos);
 
 private:
-  void EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
-                       VRBaseMapType &VRBaseMap);
+  MachineInstr *EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
+                                VRBaseMapType &VRBaseMap);
   void EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
                        VRBaseMapType &VRBaseMap);
 };
