@@ -104,7 +104,7 @@ lldb::TypeSP DWARFASTParserFortran::ParseTypeFromDWARF(
   DWARFFormValue form_value;
   Declaration decl;
   // We use 0xFF as a sentinel value, it doesn't map to any DW_ATE attribute
-  llvm::dwarf::TypeKind encoding = static_cast<llvm::dwarf::TypeKind>(0xff);
+  llvm::dwarf::TypeKind encoding = static_cast<llvm::dwarf::TypeKind>(0x00);
 
   switch (const dw_tag_t tag = die.Tag()) {
   case DW_TAG_base_type: {
@@ -117,12 +117,12 @@ lldb::TypeSP DWARFASTParserFortran::ParseTypeFromDWARF(
         switch (attributes.AttributeAtIndex(idx)) {
         case DW_AT_name:
           type_name_cstr = form_value.AsCString();
-          if (type_name_cstr &&
-              type_name_cstr[0]) { // Check for null AND empty string
+
+          if (type_name_cstr && type_name_cstr[0] != '\0')
             type_name.SetString(llvm::StringRef(type_name_cstr).upper());
-          } else {
+
+          else
             type_name.SetCString("UNKNOWN_FORTRAN_TYPE");
-          }
 
           break;
         case DW_AT_encoding:
