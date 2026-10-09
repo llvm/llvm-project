@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -fcuda-is-device -fsyntax-only -verify=dev,com %s \
 // RUN:   -std=c++11 -fgpu-defer-diag
-// RUN: %clang_cc1 -fsyntax-only -verify=host,com %s \
+// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify=host,com %s \
 // RUN:   -std=c++11 -fgpu-defer-diag
-// RUN: %clang_cc1 -fopenmp -fsyntax-only -verify=host,com %s \
+// RUN: %clang_cc1 -fcxx-exceptions -fopenmp -fsyntax-only -verify=host,com %s \
 // RUN:   -std=c++11 -fgpu-defer-diag
 
 // With -fgpu-defer-diag, clang defers overloading resolution induced

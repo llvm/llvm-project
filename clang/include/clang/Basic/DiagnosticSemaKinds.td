@@ -8802,7 +8802,7 @@ def warn_exception_caught_by_earlier_handler : Warning<
   InGroup<Exceptions>;
 def note_previous_exception_handler : Note<"for type %0">;
 def err_exceptions_disabled : Error<
-  "cannot use '%0' with exceptions disabled">;
+  "cannot use '%select{throw|try}0' with exceptions disabled">;
 def err_objc_exceptions_disabled : Error<
   "cannot use '%0' with Objective-C exceptions disabled">;
 def warn_throw_in_noexcept_func : Warning<
@@ -9817,7 +9817,7 @@ def err_cuda_unattributed_constexpr_cannot_overload_device : Error<
 def note_cuda_conflicting_device_function_declared_here : Note<
   "conflicting __device__ function declared here">;
 def err_cuda_device_exceptions : Error<
-  "cannot use '%0' in "
+  "cannot use '%select{throw|try}0' in "
   "%select{__device__|__global__|__host__|__host__ __device__}1 function">;
 def err_dynamic_var_init : Error<
     "dynamic initialization is not supported for "
@@ -12324,8 +12324,8 @@ def err_omp_collapse_stacked_tile : Error<
   "cannot %select{collapse|apply a loop transformation to}0 the intra-tile loop "
   "of a '#pragma omp tile' that is nested inside another loop-transforming "
   "directive; OpenMP permits this construct, but it is not yet supported">;
-def err_omp_simd_region_cannot_use_stmt : Error<
-  "'%0' statement cannot be used in OpenMP simd region">;
+def err_omp_simd_region_cannot_use_exceptions : Error<
+  "'%select{throw|try}0' cannot be used in OpenMP simd region">;
 def warn_omp_loop_64_bit_var : Warning<
   "OpenMP loop iteration variable cannot have more than 64 bits size and will be narrowed">,
   InGroup<OpenMPLoopForm>;

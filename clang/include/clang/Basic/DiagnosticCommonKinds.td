@@ -473,12 +473,8 @@ def err_opencl_extension_and_feature_differs : Error<
 def err_opencl_feature_requires : Error<
   "feature %0 requires support of %1 feature">;
 
-def warn_throw_not_valid_on_target : Warning<
+def warn_exceptions_not_valid_on_target : Warning<
   "target '%0' does not support exception handling;"
-  " 'throw' is assumed to be never reached">,
-  InGroup<OpenMPTargetException>;
-def warn_try_not_valid_on_target : Warning<
-  "target '%0' does not support exception handling;"
-  " 'catch' block is ignored">,
+  " %select{'throw' is assumed to be never reached|'catch' block is ignored}1">,
   InGroup<OpenMPTargetException>;
 }
