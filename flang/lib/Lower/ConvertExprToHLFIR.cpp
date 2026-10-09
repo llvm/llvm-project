@@ -1879,7 +1879,7 @@ private:
     mlir::Location loc = getLoc();
     fir::FirOpBuilder &builder = getBuilder();
     mlir::Type eleTy = hlfir::getFortranElementType(resType);
-    if (Fortran::evaluate::IsVariable(enumExpr) &&
+    if (Fortran::evaluate::ExtractDataRef(enumExpr) &&
         Fortran::evaluate::HasVectorSubscript(enumExpr))
       return genEnumerationIntVectorSubscripted(enumExpr, eleTy);
     hlfir::Entity base = hlfir::derefPointersAndAllocatables(

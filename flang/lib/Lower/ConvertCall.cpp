@@ -3064,7 +3064,7 @@ static std::optional<hlfir::EntityWithAttributes> genEnumerationNextOrPrevious(
   fir::FirOpBuilder &builder = callContext.getBuilder();
   const auto &args = callContext.procRef.arguments();
   if (args.size() > 1 && args[1]) {
-    // FORALL scheduling ignores the STAT= write (see issue for #193571).
+    // FORALL scheduling ignores the STAT= write (see issue for #229873).
     mlir::Operation *parent = builder.getInsertionBlock()->getParentOp();
     if (mlir::isa<hlfir::ForallOp>(parent) ||
         parent->getParentOfType<hlfir::ForallOp>())
@@ -3074,7 +3074,7 @@ static std::optional<hlfir::EntityWithAttributes> genEnumerationNextOrPrevious(
       !args.empty() && args[0] ? args[0]->UnwrapExpr() : nullptr;
   assert(argExpr && "NEXT/PREVIOUS requires argument A");
   Fortran::lower::PreparedActualArguments loweredActuals;
-  if (Fortran::evaluate::IsVariable(*argExpr) &&
+  if (Fortran::evaluate::ExtractDataRef(*argExpr) &&
       Fortran::evaluate::HasVectorSubscript(*argExpr)) {
     // Address each element: a gathered record value cannot be associated once
     // WHERE inlines it.

@@ -405,6 +405,23 @@ subroutine test_next_vector_subscript_where(arr, idx, mask)
   where (mask) narr = next(arr(idx))
 end subroutine
 
+! CHECK-LABEL: func.func @_QPtest_next_vector_subscript_param_where(
+subroutine test_next_vector_subscript_param_where(idx, mask)
+  use enum_np_mod
+  integer, intent(in) :: idx(3)
+  logical, intent(in) :: mask(3)
+  type(color), parameter :: pal(3) = [red, green, blue]
+  type(color) :: narr(3)
+  ! CHECK: %[[P:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFtest_next_vector_subscript_param_whereECpal")
+  ! CHECK: hlfir.region_assign {
+  ! CHECK-NOT: hlfir.associate
+  ! CHECK: hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<3x!fir.type<_QMenum_np_modTcolor{__ordinal:i32}>> {
+  ! CHECK: %[[E:.*]] = hlfir.designate %[[P]]#0 (%{{.*}}) {{.*}} -> !fir.ref<!fir.type<_QMenum_np_modTcolor{__ordinal:i32}>>
+  ! CHECK: hlfir.designate %[[E]]{"__ordinal"}
+  ! CHECK: hlfir.yield_element
+  where (mask) narr = next(pal(idx))
+end subroutine
+
 ! -----------------------------------------------------------------------------
 !            Test NEXT() with a scalar A and an array STAT
 ! -----------------------------------------------------------------------------
