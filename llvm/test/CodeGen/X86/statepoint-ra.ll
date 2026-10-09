@@ -88,7 +88,7 @@ declare token @llvm.experimental.gc.statepoint.p0(i64 , i32 , ptr, i32 , i32 , .
 ;CHECK:     MOVSDmr %stack.2, 1, $noreg, 0, $noreg, %52 :: (store (s64) into %stack.2)
 ;CHECK:     MOVSDmr %stack.5, 1, $noreg, 0, $noreg, %64 :: (store (s64) into %stack.5)
 ;CHECK:     MOVSDmr %stack.6, 1, $noreg, 0, $noreg, %68 :: (store (s64) into %stack.6)
-;CHECK:     JCC_1 %bb.2, 4, implicit killed $eflags
+;CHECK:     JCC_1 %bb.2, 4, implicit $eflags
 ;CHECK:   bb.1:
 ;CHECK:     successors: %bb.3(0x80000000)
 ;CHECK:     %60:fr64 = MOVSDrm_alt $rip, 1, $noreg, %const.0, $noreg :: (load (s64) from constant-pool)
@@ -100,7 +100,7 @@ declare token @llvm.experimental.gc.statepoint.p0(i64 , i32 , ptr, i32 , i32 , .
 ;CHECK:     successors: %bb.3(0x80000000)
 ;CHECK:     ADJCALLSTACKDOWN64 8, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
 ;CHECK:     MOVSDmr $rsp, 1, $noreg, 0, $noreg, %14 :: (store (s64) into stack)
-;CHECK:     dead $edi = MOV32r0 implicit-def dead $eflags, implicit-def $rdi
+;CHECK:     $edi = MOV32r0 implicit-def dead $eflags, implicit-def $rdi
 ;CHECK:     $xmm0 = COPY %68
 ;CHECK:     $xmm1 = COPY %64
 ;CHECK:     $xmm2 = COPY %6
@@ -118,7 +118,7 @@ declare token @llvm.experimental.gc.statepoint.p0(i64 , i32 , ptr, i32 , i32 , .
 ;CHECK:     successors: %bb.7(0x7ffff800), %bb.4(0x00000800)
 ;CHECK:     %24:gr32 = MOV32r0 implicit-def dead $eflags
 ;CHECK:     TEST8rr %24.sub_8bit, %24.sub_8bit, implicit-def $eflags
-;CHECK:     JCC_1 %bb.7, 5, implicit killed $eflags
+;CHECK:     JCC_1 %bb.7, 5, implicit $eflags
 ;CHECK:     JMP_1 %bb.4
 ;CHECK:   bb.4.bb19:
 ;CHECK:     successors: %bb.5(0x00000000), %bb.6(0x80000000)
@@ -145,7 +145,7 @@ declare token @llvm.experimental.gc.statepoint.p0(i64 , i32 , ptr, i32 , i32 , .
 ;CHECK:     $esi = MOV32ri 51
 ;CHECK:     %75:fr64 = MOVSDrm_alt %fixed-stack.2, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.2)
 ;CHECK:     $xmm7 = COPY %75
-;CHECK:     STATEPOINT 2, 5, 10, undef %36:gr64, undef $rdi, $xmm0, $xmm1, $xmm2, $xmm3, $xmm4, $xmm5, $xmm6, $xmm7, killed $esi, 2, 0, 2, 0, 2, 105, 2, 0, 2, 2, 2, 0, 2, 97, 2, 0, 2, 26, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 2, 2, 2, 2, 46, 2, 0, 2, 20, 2, 0, 2, 0, 2, 4278124286, 2, 4, 1, 8, %stack.6, 0, 2, 7, 2, 0, 2, 4, 1, 8, %stack.5, 0, 2, 7, 2, 0, 2, 4, 1, 8, %stack.4, 0, 2, 7, 2, 0, 2, 4, 1, 8, %stack.2, 0, 2, 7, 2, 0, 2, 4, 1, 8, %stack.1, 0, 2, 7, 2, 0, 2, 4, 1, 8, %stack.3, 0, 2, 7, 2, 0, 2, 4, 1, 8, %fixed-stack.3, 0, 2, 7, 2, 0, 2, 4, 1, 8, %fixed-stack.2, 0, 2, 7, 2, 0, 2, 4, 1, 8, %stack.7, 0, 2, 7, 2, 0, 2, 3, 2, 51, 2, 1, 2, 4278124286, 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp :: (load (s64) from %stack.1), (load (s64) from %stack.2), (load (s64) from %stack.3), (load (s64) from %stack.4), (load (s64) from %stack.5), (load (s64) from %stack.6), (load (s64) from %fixed-stack.2), (load (s64) from %fixed-stack.3, align 16), (load (s64) from %stack.7)
+;CHECK:     STATEPOINT 2, 5, 10, undef %36:gr64, undef $rdi, $xmm0, $xmm1, $xmm2, $xmm3, $xmm4, $xmm5, $xmm6, $xmm7, $esi, 2, 0, 2, 0, 2, 105, 2, 0, 2, 2, 2, 0, 2, 97, 2, 0, 2, 26, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 2, 2, 2, 2, 46, 2, 0, 2, 20, 2, 0, 2, 0, 2, 4278124286, 2, 4, 1, 8, %stack.6, 0, 2, 7, 2, 0, 2, 4, 1, 8, %stack.5, 0, 2, 7, 2, 0, 2, 4, 1, 8, %stack.4, 0, 2, 7, 2, 0, 2, 4, 1, 8, %stack.2, 0, 2, 7, 2, 0, 2, 4, 1, 8, %stack.1, 0, 2, 7, 2, 0, 2, 4, 1, 8, %stack.3, 0, 2, 7, 2, 0, 2, 4, 1, 8, %fixed-stack.3, 0, 2, 7, 2, 0, 2, 4, 1, 8, %fixed-stack.2, 0, 2, 7, 2, 0, 2, 4, 1, 8, %stack.7, 0, 2, 7, 2, 0, 2, 3, 2, 51, 2, 1, 2, 4278124286, 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp :: (load (s64) from %stack.1), (load (s64) from %stack.2), (load (s64) from %stack.3), (load (s64) from %stack.4), (load (s64) from %stack.5), (load (s64) from %stack.6), (load (s64) from %fixed-stack.2), (load (s64) from %fixed-stack.3, align 16), (load (s64) from %stack.7)
 ;CHECK:     ADJCALLSTACKUP64 8, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
 ;CHECK:   bb.6.bb23 (landing-pad):
 ;CHECK:     liveins: $rax, $rdx

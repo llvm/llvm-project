@@ -28,6 +28,25 @@ unittest("CASTests") {
       "ProgramTest.cpp",
       "UnifiedOnDiskCacheTest.cpp",
     ]
-    data_deps = [ "//llvm/tools/libCASPluginTest:CASPluginTest" ]
+    data_deps = [ "CASPluginTest" ]
+
+    if (current_os == "mac") {
+      shlib_ext = ".dylib"
+    } else if (current_os == "win") {
+      shlib_ext = ".dll"
+    } else {
+      shlib_ext = ".so"
+    }
+    # FIXME: Make this not an absolute path.
+    plugin_path = rebase_path("$root_build_dir/lib") + "/CASPluginTest"
+    defines = [ "CAS_PLUGIN_PATH=\"$plugin_path$shlib_ext\"" ]
+
+    # Support plugins.
+    # FIXME: Disable dead stripping once other binaries are dead-stripped.
+    if (host_os != "mac" && host_os != "win") {
+      # Corresponds to export_executable_symbols() in cmake.
+      ldflags = [ "-rdynamic" ]
+    }
+    configs -= [ "//llvm/utils/gn/build:no_exported_symbols" ]
   }
 }

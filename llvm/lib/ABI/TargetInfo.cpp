@@ -20,7 +20,8 @@ bool TargetInfo::isAggregateTypeForABI(const Type *Ty) const {
     return isAggregateTypeForABI(AT->getValueType());
 
   // Check for fundamental scalar types.
-  if (Ty->isInteger() || Ty->isFloat() || Ty->isPointer() || Ty->isVector())
+  if (Ty->isInteger() || Ty->isFloat() || Ty->isPointer() || Ty->isVector() ||
+      Ty->isTuple())
     return false;
 
   // A matrix type is modeled as an array but lowers to a single flattened
@@ -123,7 +124,7 @@ const Type *TargetInfo::isSingleElementStruct(const Type *Ty) const {
 
   // We don't consider a struct a single-element struct if it has padding
   // beyond the element type.
-  if (Found->getSizeInBits() != Ty->getSizeInBits())
+  if (Found->getABISizeInBits() != Ty->getABISizeInBits())
     return nullptr;
 
   return Found;

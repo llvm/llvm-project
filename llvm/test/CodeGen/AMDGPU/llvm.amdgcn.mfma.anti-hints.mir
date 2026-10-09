@@ -2,6 +2,7 @@
 # RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -passes=greedy,virt-reg-rewriter,post-RA-hazard-rec %s -o - | FileCheck %s --check-prefixes=AH,GFX942
 # RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -passes=greedy,virt-reg-rewriter,post-RA-hazard-rec %s -o - | FileCheck %s --check-prefixes=AH,GFX90A
 
+
 --- |
   define amdgpu_kernel void @anti_hints_present() #0 { ret void }
   define amdgpu_kernel void @anti_hints_absent() #0 { ret void }

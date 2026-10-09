@@ -15,11 +15,35 @@
 #include "CodeGenFunction.h"
 #include "clang/AST/HLSLResource.h"
 #include "clang/AST/MatrixUtils.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/MatrixBuilder.h"
+#include "llvm/Support/DXILABI.h"
 
 using namespace clang;
 using namespace CodeGen;
 using namespace llvm;
+
+static uint64_t
+getEffectiveBarrierMemoryFlags(uint64_t MemoryFlags,
+                               llvm::Triple::EnvironmentType Stage) {
+  constexpr uint64_t AllMemory =
+      llvm::to_underlying(llvm::dxil::BarrierMemoryTypeFlag::ValidMask);
+  if (MemoryFlags != AllMemory || Stage == llvm::Triple::Library ||
+      Stage == llvm::Triple::UnknownEnvironment)
+    return MemoryFlags;
+
+  constexpr uint64_t GroupSharedMemory =
+      llvm::to_underlying(llvm::dxil::BarrierMemoryTypeFlag::GroupSharedMemory);
+  constexpr uint64_t NodeMemory =
+      llvm::to_underlying(llvm::dxil::BarrierMemoryTypeFlag::NodeMemory);
+  const bool HasVisibleGroup = Stage == llvm::Triple::Compute ||
+                               Stage == llvm::Triple::Mesh ||
+                               Stage == llvm::Triple::Amplification;
+  if (!HasVisibleGroup)
+    MemoryFlags &= ~GroupSharedMemory;
+  // Clang has no node shader stage yet, so no known stage exposes node memory.
+  return MemoryFlags & ~NodeMemory;
+}
 
 static Value *handleAsDoubleBuiltin(CodeGenFunction &CGF, const CallExpr *E) {
   assert((E->getArg(0)->getType()->hasUnsignedIntegerRepresentation() &&
@@ -310,12 +334,57 @@ static Value *handleElementwiseF32ToF16(CodeGenFunction &CGF,
   llvm_unreachable("Intrinsic F32ToF16 not supported by target architecture");
 }
 
+// Scopeless atomics will default to CrossDevice, which is illegal in Vulkan.
+// Set the memory scope: Workgroup for groupshared, otherwise Device.
+static llvm::SyncScope::ID getHLSLAtomicScope(CodeGenFunction &CGF,
+                                              const LValue &DestLV) {
+  StringRef ScopeName = DestLV.getAddressSpace() == LangAS::hlsl_groupshared
+                            ? "workgroup"
+                            : "device";
+  return CGF.getLLVMContext().getOrInsertSyncScopeID(ScopeName);
+}
+
+// The destination can name one element of a vector, as in `buf[0].z` or
+// `gs[i]`. `LValue::getAddress` gives the address of the whole vector for such
+// an lvalue, so index into the vector to get the address of the element. Sema
+// rejects a multi-element swizzle, so the access is always a single element.
+static Address getHLSLAtomicDestAddr(CodeGenFunction &CGF,
+                                     const LValue &DestLV) {
+  if (!DestLV.isVectorElt() && !DestLV.isExtVectorElt())
+    return DestLV.getAddress();
+
+  Address VecAddr = DestLV.isVectorElt() ? DestLV.getVectorAddress()
+                                         : DestLV.getExtVectorAddress();
+  Value *Idx = DestLV.isVectorElt()
+                   ? DestLV.getVectorIdx()
+                   : llvm::ConstantInt::get(CGF.SizeTy,
+                                            CodeGenFunction::getAccessedFieldNo(
+                                                0, DestLV.getExtVectorElts()));
+
+  // A vector-element lvalue reports the type of the whole vector, so take the
+  // element type from the address. HLSL also treats a scalar as a one-element
+  // vector, in which case the address already has the element type.
+  llvm::Type *VecTy = VecAddr.getElementType();
+  llvm::Type *ElemTy = VecTy->isVectorTy()
+                           ? cast<llvm::VectorType>(VecTy)->getElementType()
+                           : VecTy;
+  return CGF.Builder.CreateGEP(CGF, VecAddr.withElementType(ElemTy), Idx);
+}
+
+static LValue getHLSLAtomicOriginalValueLValue(CodeGenFunction &CGF,
+                                               const Expr *E,
+                                               CallArgList &Args) {
+  if (const auto *OutArg = dyn_cast<HLSLOutArgExpr>(E))
+    return CGF.EmitHLSLOutArgExpr(OutArg, Args, OutArg->getType());
+  return CGF.EmitLValue(E);
+}
+
 static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
                                   llvm::AtomicRMWInst::BinOp Op) {
   // Emit `atomicrmw <op>` directly — no intermediate intrinsic needed on
   // either DXIL or SPIR-V.
   LValue DestLV = CGF.EmitLValue(E->getArg(0));
-  Address DestAddr = DestLV.getAddress();
+  Address DestAddr = getHLSLAtomicDestAddr(CGF, DestLV);
   Value *Val = CGF.EmitScalarExpr(E->getArg(1));
   [[maybe_unused]] QualType ValTy = E->getArg(1)->getType();
   if (Op == llvm::AtomicRMWInst::Xchg)
@@ -325,13 +394,7 @@ static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
     assert(ValTy->isIntegerType() &&
            "Intrinsic InterlockedOp value operand must be an integer");
 
-  // Scopeless atomics will default to CrossDevice, which is illegal in Vulkan.
-  // Set the memory scope: Workgroup for groupshared, otherwise Device.
-  StringRef ScopeName = DestLV.getAddressSpace() == LangAS::hlsl_groupshared
-                            ? "workgroup"
-                            : "device";
-  llvm::SyncScope::ID SSID =
-      CGF.getLLVMContext().getOrInsertSyncScopeID(ScopeName);
+  llvm::SyncScope::ID SSID = getHLSLAtomicScope(CGF, DestLV);
 
   llvm::AtomicRMWInst *Call = CGF.Builder.CreateAtomicRMW(
       Op, DestAddr, Val, llvm::AtomicOrdering::Monotonic, SSID);
@@ -339,10 +402,54 @@ static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
   // The 3-arg overload writes the old value (the RMW's return value) into
   // the `original_value` reference parameter.
   if (E->getNumArgs() == 3) {
-    LValue OrigLV = CGF.EmitLValue(E->getArg(2));
+    CallArgList Args;
+    LValue OrigLV = getHLSLAtomicOriginalValueLValue(CGF, E->getArg(2), Args);
     CGF.EmitStoreThroughLValue(RValue::get(Call), OrigLV);
+    CGF.EmitWritebacks(Args);
   }
   return Call;
+}
+
+// Emit `cmpxchg` for InterlockedCompareStore and InterlockedCompareExchange.
+// Compare-exchange also reports the previous value.
+static Value *handleInterlockedCompareOp(CodeGenFunction &CGF,
+                                         const CallExpr *E) {
+  LValue DestLV = CGF.EmitLValue(E->getArg(0));
+  Address DestAddr = getHLSLAtomicDestAddr(CGF, DestLV);
+  Value *Compare = CGF.EmitScalarExpr(E->getArg(1));
+  Value *Val = CGF.EmitScalarExpr(E->getArg(2));
+
+  // `cmpxchg` takes an integer or a pointer, so the float-bitwise operations
+  // work on the bit pattern of the float. This is what those operations mean,
+  // and DXIL and SPIR-V both need the integer form.
+  llvm::Type *FloatTy = nullptr;
+  if (Compare->getType()->isFloatingPointTy()) {
+    FloatTy = Compare->getType();
+    llvm::Type *IntTy =
+        CGF.Builder.getIntNTy(FloatTy->getPrimitiveSizeInBits());
+    Compare = CGF.Builder.CreateBitCast(Compare, IntTy);
+    Val = CGF.Builder.CreateBitCast(Val, IntTy);
+    DestAddr = DestAddr.withElementType(IntTy);
+  }
+
+  Value *Pair = CGF.Builder.CreateAtomicCmpXchg(
+      DestAddr, Compare, Val, llvm::AtomicOrdering::Monotonic,
+      llvm::AtomicOrdering::Monotonic, getHLSLAtomicScope(CGF, DestLV));
+
+  // Compare-store reports nothing, so it leaves the `cmpxchg` result unused.
+  if (E->getNumArgs() < 4)
+    return Pair;
+
+  // `cmpxchg` yields a { previous value, success } pair. HLSL reports only the
+  // previous value, through the `original_value` reference parameter.
+  Value *Original = CGF.Builder.CreateExtractValue(Pair, 0);
+  if (FloatTy)
+    Original = CGF.Builder.CreateBitCast(Original, FloatTy);
+  CallArgList Args;
+  LValue OrigLV = getHLSLAtomicOriginalValueLValue(CGF, E->getArg(3), Args);
+  CGF.EmitStoreThroughLValue(RValue::get(Original), OrigLV);
+  CGF.EmitWritebacks(Args);
+  return Original;
 }
 
 static Value *emitBufferStride(CodeGenFunction *CGF, const Expr *HandleExpr,
@@ -508,6 +615,18 @@ getHandleAttributedType(QualType HandleQT) {
 static const HLSLAttributedResourceType *
 getRequiredHandleType(const CallExpr *E, unsigned ArgNo) {
   return getHandleAttributedType(E->getArg(ArgNo)->getType());
+}
+
+static const FieldDecl *getResourceHandleField(QualType ResourceTy) {
+  const CXXRecordDecl *ResourceDecl = ResourceTy->getAsCXXRecordDecl();
+  assert(ResourceDecl && "resource must be a record type");
+
+  IdentifierInfo &II = ResourceDecl->getASTContext().Idents.get("__handle");
+  for (const Decl *D : ResourceDecl->lookup(&II))
+    if (const auto *Field = dyn_cast<FieldDecl>(D))
+      return Field;
+
+  llvm_unreachable("resource handle field not found");
 }
 
 static llvm::Type *getOffsetType(CodeGenModule &CGM,
@@ -1315,6 +1434,18 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     auto *MatTy = E->getArg(0)->getType()->castAs<ConstantMatrixType>();
     unsigned Rows = MatTy->getNumRows();
     unsigned Cols = MatTy->getNumColumns();
+    if (auto *Transpose = dyn_cast<CallInst>(Op0);
+        Transpose &&
+        Transpose->getIntrinsicID() == Intrinsic::matrix_transpose &&
+        Transpose->use_empty() &&
+        cast<ConstantInt>(Transpose->getArgOperand(1))->getZExtValue() ==
+            Cols &&
+        cast<ConstantInt>(Transpose->getArgOperand(2))->getZExtValue() ==
+            Rows) {
+      Value *Result = Transpose->getArgOperand(0);
+      Transpose->eraseFromParent();
+      return Result;
+    }
     llvm::MatrixBuilder MB(Builder);
     return MB.CreateMatrixTranspose(Op0, Rows, Cols);
   }
@@ -1371,13 +1502,17 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         RValFalse.isScalar()
             ? RValFalse.getScalarVal()
             : Builder.CreateLoad(RValFalse.getAggregateAddress(), "false_val");
-    if (auto *VTy = E->getType()->getAs<VectorType>()) {
+
+    unsigned NumElements = 0;
+    if (auto *VTy = E->getType()->getAs<VectorType>())
+      NumElements = VTy->getNumElements();
+    else if (auto *MTy = E->getType()->getAs<ConstantMatrixType>())
+      NumElements = MTy->getNumElementsFlattened();
+    if (NumElements) {
       if (!OpTrue->getType()->isVectorTy())
-        OpTrue =
-            Builder.CreateVectorSplat(VTy->getNumElements(), OpTrue, "splat");
+        OpTrue = Builder.CreateVectorSplat(NumElements, OpTrue, "splat");
       if (!OpFalse->getType()->isVectorTy())
-        OpFalse =
-            Builder.CreateVectorSplat(VTy->getNumElements(), OpFalse, "splat");
+        OpFalse = Builder.CreateVectorSplat(NumElements, OpFalse, "splat");
     }
 
     Value *SelectVal =
@@ -1449,6 +1584,12 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   }
   case Builtin::BI__builtin_hlsl_interlocked_and: {
     return handleInterlockedOp(*this, E, llvm::AtomicRMWInst::And);
+  }
+  case Builtin::BI__builtin_hlsl_interlocked_compare_exchange:
+  case Builtin::BI__builtin_hlsl_interlocked_compare_exchange_float_bitwise:
+  case Builtin::BI__builtin_hlsl_interlocked_compare_store:
+  case Builtin::BI__builtin_hlsl_interlocked_compare_store_float_bitwise: {
+    return handleInterlockedCompareOp(*this, E);
   }
   case Builtin::BI__builtin_hlsl_interlocked_exchange: {
     return handleInterlockedOp(*this, E, llvm::AtomicRMWInst::Xchg);
@@ -1673,6 +1814,53 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Intrinsic::ID ID =
         CGM.getHLSLRuntime().getGroupMemoryBarrierWithGroupSyncIntrinsic();
     return EmitIntrinsicCall(ID);
+  }
+  case Builtin::BI__builtin_hlsl_barrier: {
+    std::optional<llvm::APSInt> SemanticFlagsConstant =
+        E->getArg(1)->getIntegerConstantExpr(getContext());
+    assert(SemanticFlagsConstant && "expected constant semantic flags");
+    constexpr uint64_t GroupScope =
+        llvm::to_underlying(llvm::dxil::BarrierSemanticFlag::GroupScope);
+    constexpr uint64_t DeviceScope =
+        llvm::to_underlying(llvm::dxil::BarrierSemanticFlag::DeviceScope);
+    constexpr uint64_t ScopeMask = GroupScope | DeviceScope;
+    uint64_t SemanticFlagsValue = SemanticFlagsConstant->getZExtValue();
+    // DEVICE_SCOPE includes GROUP_SCOPE. Remove GROUP_SCOPE when both are
+    // set.
+    if ((SemanticFlagsValue & ScopeMask) == ScopeMask)
+      SemanticFlagsValue &= ~GroupScope;
+    Value *SemanticFlags = llvm::ConstantInt::get(
+        ConvertType(E->getArg(1)->getType()), SemanticFlagsValue);
+
+    if (E->getArg(0)->getType()->isUnsignedIntegerType()) {
+      std::optional<llvm::APSInt> MemoryFlagsConstant =
+          E->getArg(0)->getIntegerConstantExpr(getContext());
+      assert(MemoryFlagsConstant && "expected constant memory flags");
+      uint64_t MemoryFlagsValue = MemoryFlagsConstant->getZExtValue();
+      llvm::Triple::EnvironmentType Stage =
+          getTarget().getTriple().getEnvironment();
+      if (Stage == llvm::Triple::Library)
+        if (const auto *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl))
+          if (const auto *ShaderAttr = FD->getAttr<HLSLShaderAttr>())
+            Stage = ShaderAttr->getType();
+      MemoryFlagsValue =
+          getEffectiveBarrierMemoryFlags(MemoryFlagsValue, Stage);
+      Value *MemoryFlags = llvm::ConstantInt::get(
+          ConvertType(E->getArg(0)->getType()), MemoryFlagsValue);
+      Intrinsic::ID ID = CGM.getHLSLRuntime().getBarrierByMemoryTypeIntrinsic();
+      return EmitIntrinsicCall(ID, {},
+                               ArrayRef<Value *>{MemoryFlags, SemanticFlags});
+    }
+
+    const FieldDecl *HandleField =
+        getResourceHandleField(E->getArg(0)->getType());
+    LValue Resource = EmitLValue(E->getArg(0));
+    LValue Handle = EmitLValueForField(Resource, HandleField);
+    Value *HandleValue =
+        EmitLoadOfLValue(Handle, E->getArg(0)->getExprLoc()).getScalarVal();
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getBarrierByMemoryHandleIntrinsic();
+    return EmitIntrinsicCall(ID, ArrayRef<llvm::Type *>{HandleValue->getType()},
+                             ArrayRef<Value *>{HandleValue, SemanticFlags});
   }
   case Builtin::BI__builtin_hlsl_elementwise_ddx_coarse: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));

@@ -825,11 +825,6 @@ public:
     });
   }
 
-  bool isUImm7EqXLen() const {
-    return isUImmPred(
-        [this](int64_t Imm) { return isRV64Expr() ? Imm == 64 : Imm == 32; });
-  }
-
   bool isUImm8GE32() const {
     return isUImmPred([](int64_t Imm) { return isUInt<8>(Imm) && Imm >= 32; });
   }
@@ -1709,10 +1704,6 @@ std::string RISCVAsmParser::getCustomOperandDiag(unsigned MatchError) {
     return "immediate must be an integer in the range "
            "[1, 255], a multiple of 8 in the range [256, 504], "
            "or a multiple of 16 in the range [512, 4096]";
-  case Match_InvalidUImm7EqXLen:
-    return ("immediate must be an integer equal to XLEN (" +
-            Twine(isRV64() ? "64" : "32") + ")")
-        .str();
   }
 }
 
@@ -3777,7 +3768,8 @@ void RISCVAsmParser::emitLoadLocalAddress(MCInst &Inst, SMLoc IDLoc,
   MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
   if (STI->hasFeature(RISCV::Feature32Bit) &&
-      STI->hasFeature(RISCV::FeatureVendorXqcili))
+      STI->hasFeature(RISCV::FeatureVendorXqcili) &&
+      !ParserOptions.IsPicEnabled)
     emitToStreamer(
         Out, MCInstBuilder(RISCV::QC_E_LI).addReg(DestReg).addExpr(Symbol));
   else

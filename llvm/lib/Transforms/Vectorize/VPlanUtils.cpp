@@ -511,8 +511,9 @@ bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
       .Case([](const VPReplicateRecipe *R) {
         // Be conservative about side-effects, except for the
         // known-side-effecting assumes and stores, which we know will be
-        // uniform.
-        return R->isSingleScalar() &&
+        // uniform. Each alloca creates a distinct allocation, so allocas are
+        // never uniform.
+        return R->isSingleScalar() && R->getOpcode() != Instruction::Alloca &&
                (!R->mayHaveSideEffects() ||
                 isa<AssumeInst, StoreInst>(R->getUnderlyingInstr())) &&
                all_of(R->operands(), isUniformAcrossVFsAndUFs);
@@ -1102,9 +1103,22 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
       Ops.push_back(OpV);
     }
     VPValue *Result = Ops.front();
-    for (VPValue *Op : drop_begin(Ops))
-      Result = Builder.createScalarIntrinsic(IntrinsicID, {Result, Op},
-                                             ResultTy, DL);
+    for (VPValue *Op : drop_begin(Ops)) {
+      if (!ResultTy->isPointerTy()) {
+        Result = Builder.createScalarIntrinsic(IntrinsicID, {Result, Op},
+                                               ResultTy, DL);
+        continue;
+      }
+      // The min/max intrinsics don't support pointer operands, so expand
+      // pointer-typed min/max as cmp + select, matching SCEVExpander.
+      VPValue *Cmp = Builder.createICmp(
+          MinMaxIntrinsic::getPredicate(IntrinsicID), Result, Op, DL);
+      Result = Builder.createSelect(Cmp, Result, Op, DL);
+      Function &F = *Builder.getPlan().getIRFunction();
+      if (MDNode *MD =
+              getExplicitlyUnknownBranchWeightsIfProfiled(F, "scev-expander"))
+        cast<VPInstruction>(Result)->setMetadata(LLVMContext::MD_prof, MD);
+    }
     return Result;
   }
   case scAddRecExpr: {
@@ -1342,19 +1356,49 @@ VPIRValue *vputils::tryToFoldLiveIns(VPSingleDefRecipe &R,
     case Instruction::GetElementPtr: {
       auto &RFlags = cast<VPRecipeWithIRFlags>(R);
       auto *GEP = cast<GetElementPtrInst>(RFlags.getUnderlyingInstr());
-      return Folder.FoldGEP(GEP->getSourceElementType(), Ops[0],
+      return Folder.FoldGEP(DL, GEP->getSourceElementType(), Ops[0],
                             drop_begin(Ops), RFlags.getGEPNoWrapFlags());
     }
     case VPInstruction::PtrAdd:
     case VPInstruction::WidePtrAdd:
-      return Folder.FoldGEP(IntegerType::getInt8Ty(Plan.getContext()), Ops[0],
-                            Ops[1],
+      return Folder.FoldGEP(DL, IntegerType::getInt8Ty(Plan.getContext()),
+                            Ops[0], Ops[1],
                             cast<VPRecipeWithIRFlags>(R).getGEPNoWrapFlags());
     // An extract of a live-in is an extract of a broadcast, so return the
     // broadcasted element.
     case Instruction::ExtractElement:
       assert(!Ops[0]->getType()->isVectorTy() && "Live-ins should be scalar");
       return Ops[0];
+    case VPInstruction::ActiveLaneMask:
+    case VPInstruction::WideActiveLaneMask: {
+      uint64_t Multiplier = 1;
+      if (Opcode == VPInstruction::WideActiveLaneMask) {
+        // Optimizing WideALM can only happen after the Plan is unrolled.
+        if (!Plan.isUnrolled())
+          return nullptr;
+        Multiplier = cast<ConstantInt>(Ops[2])->getZExtValue();
+        Ops.pop_back();
+      }
+
+      // We rely on the fact that different VPlans are created for the
+      // fixed-vector and scalable-vector cases.
+      ElementCount MaxVF =
+          *max_element(Plan.vectorFactors(), ElementCount::isKnownLT) *
+          Multiplier;
+
+      Type *I1Ty = IntegerType::getInt1Ty(Plan.getContext());
+      if (auto *C = dyn_cast_if_present<Constant>(Folder.FoldIntrinsic(
+              Intrinsic::get_active_lane_mask, Ops,
+              VectorType::get(I1Ty, MaxVF), {}, Plan.getIRFunction()))) {
+        // We cannot handle vector constants that are not all-true or all-false,
+        // because they would not be collapsable to a scalar constant, that
+        // would be necessary for live-in simplification.
+        if (C->isOneValue())
+          return ConstantInt::getTrue(I1Ty);
+        if (C->isNullValue())
+          return ConstantInt::getFalse(I1Ty);
+      }
+    }
     }
     return nullptr;
   };
@@ -1391,8 +1435,7 @@ void vputils::detail::pullOutPermutationsImpl(
 
       VPSingleDefRecipe *Res = BuildPerm(&Def);
       Res->insertAfter(&Def);
-      Def.replaceUsesWithIf(
-          Res, [&Res](VPUser &U, unsigned _) { return &U != Res; });
+      Def.replaceUsesWithIf(Res, [&Res](VPUser &U) { return &U != Res; });
     }
   }
 }

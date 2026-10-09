@@ -615,25 +615,25 @@ public:
   /// based on the function's attributes. If the operation is not overridden by
   /// the function's attributes, "Unspecified" is returned and target defaults
   /// are expected to be used for instruction selection.
-  int getRecipEstimateSqrtEnabled(EVT VT, MachineFunction &MF) const;
+  int getRecipEstimateSqrtEnabled(EVT VT, const Function &F) const;
 
   /// Return a ReciprocalEstimate enum value for a division of the given type
   /// based on the function's attributes. If the operation is not overridden by
   /// the function's attributes, "Unspecified" is returned and target defaults
   /// are expected to be used for instruction selection.
-  int getRecipEstimateDivEnabled(EVT VT, MachineFunction &MF) const;
+  int getRecipEstimateDivEnabled(EVT VT, const Function &MF) const;
 
   /// Return the refinement step count for a square root of the given type based
   /// on the function's attributes. If the operation is not overridden by
   /// the function's attributes, "Unspecified" is returned and target defaults
   /// are expected to be used for instruction selection.
-  int getSqrtRefinementSteps(EVT VT, MachineFunction &MF) const;
+  int getSqrtRefinementSteps(EVT VT, const Function &MF) const;
 
   /// Return the refinement step count for a division of the given type based
   /// on the function's attributes. If the operation is not overridden by
   /// the function's attributes, "Unspecified" is returned and target defaults
   /// are expected to be used for instruction selection.
-  int getDivRefinementSteps(EVT VT, MachineFunction &MF) const;
+  int getDivRefinementSteps(EVT VT, const Function &MF) const;
 
   /// Returns true if target has indicated at least one type should be bypassed.
   bool isSlowDivBypassed() const { return !BypassSlowDivWidths.empty(); }
@@ -2175,8 +2175,14 @@ public:
   /// Return the preferred function alignment.
   Align getPrefFunctionAlignment() const { return PrefFunctionAlignment; }
 
-  /// Return the preferred loop alignment.
-  virtual Align getPrefLoopAlignment(MachineLoop *ML = nullptr) const;
+  /// Return the preferred loop alignment. \p BlockToAlign, when non-null, is
+  /// the block that will actually be aligned; after loop rotation this need not
+  /// be the LoopInfo header. Targets whose alignment depends on the block
+  /// contents should use it. Callers that are not aligning a particular block,
+  /// such as llvm-exegesis and ARM constant islands, leave it null.
+  virtual Align
+  getPrefLoopAlignment(MachineLoop *ML = nullptr,
+                       const MachineBasicBlock *BlockToAlign = nullptr) const;
 
   /// Return the maximum amount of bytes allowed to be emitted when padding for
   /// alignment
@@ -3779,12 +3785,6 @@ public:
 
   RTLIB::LibcallImpl getMemcpyImpl() const { return Libcalls.getMemcpyImpl(); }
 
-  /// Check if this is valid libcall for the current module, otherwise
-  /// RTLIB::Unsupported.
-  RTLIB::LibcallImpl getSupportedLibcallImpl(StringRef FuncName) const {
-    return RuntimeLibcallInfo.getSupportedLibcallImpl(FuncName);
-  }
-
   /// Get the CallingConv that should be used for the specified libcall
   /// implementation.
   CallingConv::ID getLibcallImplCallingConv(RTLIB::LibcallImpl Call) const {
@@ -4780,6 +4780,13 @@ public:
     return true;
   }
 
+  /// fold (A + vscale(C1)) + vscale(C2) -> A + vscale(C1+C2)
+  /// If (A + vscale(C1)) is used multiple times, the fold results in a
+  /// redundant addition instruction on the RISC-V architecture, whereas it
+  /// does not have this effect on other architectures (e.g. AArch64).
+  /// By default, it returns true.
+  virtual bool isProfitableToFoldVScaleAdd(SDValue N) const { return true; }
+
   /// GlobalISel - return true if it is profitable to move this shift by a
   /// constant amount through its operand, adjusting any immediate operands as
   /// necessary to preserve semantics. This transformation may not be desirable
@@ -4837,6 +4844,11 @@ public:
   virtual bool isTypeDesirableForOp(unsigned /*Opc*/, EVT VT) const {
     // By default, assume all legal types are desirable.
     return isTypeLegal(VT);
+  }
+
+  /// Overload that takes the specific node being optimized.
+  virtual bool isTypeDesirableForOp(SDNode *N, EVT VT) const {
+    return isTypeDesirableForOp(N->getOpcode(), VT);
   }
 
   /// Return true if it is profitable for dag combiner to transform a floating
