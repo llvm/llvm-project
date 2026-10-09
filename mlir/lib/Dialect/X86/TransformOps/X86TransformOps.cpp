@@ -59,7 +59,15 @@ void mlir::transform::ApplyMoveAccumulatorForContractLoopPatternsOp::
 
 void mlir::transform::ApplyVectorContractMultiLevelUnrollPatternsOp::
     populatePatterns(RewritePatternSet &patterns) {
-  x86::populateVectorContractMultiLevelUnrollPatterns(patterns, getTarget());
+  x86::populateVectorContractMultiLevelUnrollPatterns(
+      patterns, *x86::symbolizeMLUTarget(getTarget()));
+}
+
+LogicalResult
+mlir::transform::ApplyVectorContractMultiLevelUnrollPatternsOp::verify() {
+  if (!x86::symbolizeMLUTarget(getTarget()))
+    return emitError("unsupported target '") << getTarget() << "'";
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

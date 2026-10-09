@@ -104,6 +104,7 @@ def ApplyVectorContractMultiLevelUnrollPatternsOp : Op<Transform_Dialect,
   let arguments = (ins StrAttr:$target);
 
   let assemblyFormat = "`target` `=` $target attr-dict";
+  let hasVerifier = 1;
 }
 
 #endif // X86_TRANSFORM_OPS
