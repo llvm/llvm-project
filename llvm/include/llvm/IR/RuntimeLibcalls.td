@@ -2097,7 +2097,8 @@ defvar SecurityCheckCookieIfWinMSVC =
 
 defvar LibmHasSinCosF32 = LibcallImpls<(add sincosf), hasSinCos>;
 defvar LibmHasSinCosF64 =  LibcallImpls<(add sincos), hasSinCos>;
-defvar LibmHasSinCosF128 = LibcallImpls<(add sincosl_f128), hasSinCos>;
+defvar LibmHasSincoslF128 =
+    LibcallImpls<(add sincosl_f128), isLongDoubleF128AndHasSinCos>;
 defvar LibmHasSinCosPPCF128 = LibcallImpls<(add sincosl_ppcf128), hasSinCos>;
 
 defvar LibmHasExp10F32 = LibcallImpls<(add exp10f), hasExp10>;
@@ -2267,7 +2268,7 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
        LibcallImpls<(add bzero), isOSDarwin>,
        DarwinExp10, DarwinSinCosStret, DarwinMemsetPattern,
        MacOSUnlockedIO,
-       LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
+       LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSincoslF128,
        LibmHasExp10F32, LibmHasExp10F64,
        // exp10l is fp128 only when long double is.
        LibcallImpls<(add exp10l_f128), isLongDoubleF128NotDarwin>,
@@ -2919,7 +2920,7 @@ def isHexagon : RuntimeLibcallAvailability<(all_of IsHexagon)>;
 def HexagonSystemLibrary
     : SystemRuntimeLibrary<isHexagon,
     (add DefaultLibcallImpls32, HexagonLibcalls,
-    LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
+    LibmHasSinCosF32, LibmHasSinCosF64,
     exp10f, exp10, exp10l_f128, __stack_chk_fail, __stack_chk_guard,
     DefaultSafeStackGlobals)>;
 
@@ -3307,7 +3308,7 @@ def PPCSystemLibrary
            DefaultRuntimeLibcallImpls_ppcf128,
            exp10f, exp10, exp10l_ppcf128,
            LibmF128Libcalls, AIX32Calls, AIX64Calls,
-           LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
+           LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSincoslF128,
            LibmHasSinCosPPCF128,
            AvailableIf<memcpy, isNotAIX>,
            LibcallImpls<(add Int128RTLibcalls), isPPC64>,
@@ -3332,7 +3333,7 @@ def RISCVSystemLibrary
     : SystemRuntimeLibrary<isRISCV,
       (add DefaultRuntimeLibcallImpls,
            exp10f, exp10, exp10l_f128,
-           LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
+           LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSincoslF128,
            __riscv_flush_icache,
            LibcallImpls<(add Int128RTLibcalls), isRISCV64>,
            DefaultStackProtector,
@@ -3403,7 +3404,7 @@ def SPARCSystemLibrary
             sparc_umul, sparc_div, sparc_udiv, sparc_rem, sparc_urem,
        LibcallImpls<(add _Q_qtoll, _Q_qtoull, _Q_lltoq, _Q_ulltoq), isSPARC32>,
        LibcallImpls<(add SPARC64_MulDivCalls, Int128RTLibcalls), isSPARC64>,
-       LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
+       LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSincoslF128,
        has__stack_chk_fail,
        has__stack_smash_handler,
        has___guard_local,
