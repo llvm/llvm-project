@@ -1413,8 +1413,10 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   case Builtin::BI__builtin___vsprintf_chk: {
     bool IsChk = BuiltinID == Builtin::BI__builtin___sprintf_chk ||
                  BuiltinID == Builtin::BI__builtin___vsprintf_chk;
-    size_t FormatIndex = IsChk ? 3 : 1;
-    auto *FormatExpr = TheCall->getArg(FormatIndex)->IgnoreParenImpCasts();
+    std::optional<unsigned> FormatIndex = Checker.TranslateIndex(IsChk ? 3 : 1);
+    if (!FormatIndex)
+      return;
+    auto *FormatExpr = TheCall->getArg(*FormatIndex)->IgnoreParenImpCasts();
 
     StringRef FormatStrRef;
     size_t StrLen;
