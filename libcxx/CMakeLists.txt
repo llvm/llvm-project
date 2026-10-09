@@ -321,7 +321,7 @@ option(LIBCXX_HAS_EXTERNAL_THREAD_API
 option(LIBCXX_HAS_C11_THREAD_API "Ignore auto-detection and force use of C11 thread API" OFF)
 
 if (APPLE)
-  set(LIBCXX_PSTL_BACKEND_DEFAULT_VALUE "libdispatch")
+  set(LIBCXX_PSTL_BACKEND_DEFAULT_VALUE "statpart")
 elseif(LIBCXX_ENABLE_THREADS)
   set(LIBCXX_PSTL_BACKEND_DEFAULT_VALUE "std_thread")
 else()
