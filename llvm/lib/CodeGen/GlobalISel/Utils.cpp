@@ -1446,6 +1446,13 @@ bool llvm::isBuildVectorAllOnes(const MachineInstr &MI,
 std::optional<RegOrConstant>
 llvm::getVectorSplat(const MachineInstr &MI, const MachineRegisterInfo &MRI) {
   unsigned Opc = MI.getOpcode();
+  if (Opc == TargetOpcode::G_SPLAT_VECTOR) {
+    Register Reg = MI.getOperand(1).getReg();
+    if (auto C = getIConstantVRegSExtVal(Reg, MRI))
+      return RegOrConstant(*C);
+    return RegOrConstant(Reg);
+  }
+
   if (!isBuildVectorOp(Opc))
     return std::nullopt;
   if (auto Splat = getIConstantSplatSExtVal(MI, MRI))
