@@ -319,6 +319,19 @@ static std::optional<unsigned> getNumWalkableElements(Type *Ty) {
   return std::nullopt;
 }
 
+static bool
+containsUndefinedElement(const Constant *C,
+                         function_ref<bool(const Constant *)> HasFn) {
+  Type *Ty = C->getType();
+  if (!Ty->isVectorTy() && !Ty->isAggregateType())
+    return false;
+
+  if (HasFn(C))
+    return true;
+
+  return C->containsMatchingElement(HasFn);
+}
+
 bool Constant::containsMatchingElement(
     function_ref<bool(const Constant *)> PredFn) const {
   // Simple pruning for large size array. UndefValue is fine as it is filtered
@@ -338,30 +351,18 @@ bool Constant::containsMatchingElement(
   return false;
 }
 
-bool Constant::containsUndefinedElement(
-    function_ref<bool(const Constant *)> HasFn) const {
-  Type *Ty = getType();
-  if (!Ty->isVectorTy() && !Ty->isAggregateType())
-    return false;
-
-  if (HasFn(this))
-    return true;
-
-  return containsMatchingElement(HasFn);
-}
-
 bool Constant::containsUndefOrPoisonElement() const {
   return containsUndefinedElement(
-      [&](const auto *C) { return isa<UndefValue>(C); });
+      this, [&](const auto *C) { return isa<UndefValue>(C); });
 }
 
 bool Constant::containsPoisonElement() const {
   return containsUndefinedElement(
-      [&](const auto *C) { return isa<PoisonValue>(C); });
+      this, [&](const auto *C) { return isa<PoisonValue>(C); });
 }
 
 bool Constant::containsUndefElement() const {
-  return containsUndefinedElement([&](const auto *C) {
+  return containsUndefinedElement(this, [&](const auto *C) {
     return isa<UndefValue>(C) && !isa<PoisonValue>(C);
   });
 }
