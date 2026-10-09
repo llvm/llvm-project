@@ -321,6 +321,7 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   if (Opts.enable_ipra != BoolOrDefault::Default)
     Opt.EnableIPRA = Opts.enable_ipra == BoolOrDefault::True;
   Opt.EnableFastISelOption = toBoolOrDefault(Opts.fast_isel);
+  Opt.EnableRegAllocFastTied = toBoolOrDefault(Opts.regalloc_fast_tied);
   Opt.EnableGlobalISelOption = toBoolOrDefault(Opts.global_isel);
   Opt.VerifyMachineCode = toBoolOrDefault(Opts.verify_machineinstrs);
   Opt.DisableAtExitBasedGlobalDtorLowering =
@@ -346,7 +347,6 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
       toBoolOrDefault(Opts.debugify_check_and_strip_all_safe);
   Opt.DisableRAFSProfileLoader = Opts.disable_ra_fsprofile_loader;
   Opt.DisableCFIFixup = Opts.disable_cfi_fixup;
-  Opt.EnableMachineFunctionSplitter = Opts.enable_split_machine_functions;
   return Opt;
 }
 
@@ -442,8 +442,15 @@ TargetPassConfig::TargetPassConfig(TargetMachine &TM, PassManagerBase &PM)
   if (TM.Options.EnableIPRA)
     setRequiresCodeGenSCCOrder();
 
+  if (Opts.regalloc_fast_tied != BoolOrDefault::Default)
+    TM.setEnableTiedFastRegAlloc(Opts.regalloc_fast_tied ==
+                                 BoolOrDefault::True);
+
   if (Opts.global_isel_abort)
     TM.Options.GlobalISelAbort = *Opts.global_isel_abort;
+
+  if (Opts.function_splitting)
+    TM.Options.FunctionSplitting = *Opts.function_splitting;
 
   setStartStopPasses();
 }
@@ -1085,8 +1092,10 @@ void TargetPassConfig::addMachinePasses() {
     addPass(createMIRAddFSDiscriminatorsPass(
         sampleprof::FSDiscriminatorPass::PassLast));
 
-  if (TM->Options.EnableMachineFunctionSplitter ||
-      Opts.enable_split_machine_functions || Opts.split_static_data ||
+  const bool SplitFunctions =
+      TM->Options.FunctionSplitting == FunctionSplittingMode::All;
+
+  if (SplitFunctions || Opts.split_static_data ||
       TM->Options.EnableStaticDataPartitioning) {
     const std::string ProfileFile = getFSProfileFile(TM);
     if (!ProfileFile.empty()) {
@@ -1109,8 +1118,7 @@ void TargetPassConfig::addMachinePasses() {
   // feature takes precedence. This means functions eligible for
   // basic-block-sections optimizations (`=all`, or `=list=` with function
   // included in the list profile) will get that optimization instead.
-  if (TM->Options.EnableMachineFunctionSplitter ||
-      Opts.enable_split_machine_functions)
+  if (SplitFunctions)
     addPass(createMachineFunctionSplitterPass());
 
   if (Opts.split_static_data || TM->Options.EnableStaticDataPartitioning) {
@@ -1301,7 +1309,8 @@ bool TargetPassConfig::usingDefaultRegAlloc() const {
 /// register allocation. No coalescing or scheduling.
 void TargetPassConfig::addFastRegAlloc() {
   addPass(&PHIEliminationID);
-  addPass(&TwoAddressInstructionPassID);
+  if (!TM->enableTiedFastRegAlloc())
+    addPass(&TwoAddressInstructionPassID);
 
   addRegAssignAndRewriteFast();
 }
@@ -1329,15 +1338,20 @@ void TargetPassConfig::addOptimizedRegAlloc() {
   addPass(&UnreachableMachineBlockElimID);
   addPass(&LiveVariablesID);
 
-  // Edge splitting is smarter with machine loop info.
-  addPass(&MachineLoopInfoID);
-  addPass(&PHIEliminationID);
+  // Run SSA machine scheduler runs just before PHI elimination.
+  if (EnableSSAMachineScheduler) {
+    addPass(&LiveIntervalsID);
+    addPass(&SSAMachineSchedulerID);
+  }
 
   // LiveIntervals is computed unconditionally before TwoAddressInstruction so
   // that pass can rely on it instead of LiveVariables. This is a step toward
   // removing LiveVariables entirely.
-  // FIXME: Eventually, we want to run LiveIntervals before PHI elimination.
   addPass(&LiveIntervalsID);
+
+  // Edge splitting is smarter with machine loop info.
+  addPass(&MachineLoopInfoID);
+  addPass(&PHIEliminationID);
 
   addPass(&TwoAddressInstructionPassID);
   addPass(&RegisterCoalescerID);

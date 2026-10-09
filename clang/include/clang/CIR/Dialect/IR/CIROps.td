@@ -1162,8 +1162,8 @@ def CIR_ConditionOp : CIR_Op<"condition", [
 
 defvar CIR_YieldableScopes = [
   "ArrayCtor", "ArrayDtor", "AwaitOp", "CaseOp", "CleanupScopeOp", "CoroutineOp",
-  "DoWhileOp", "ForOp", "GlobalOp", "IfOp", "LocalInitOp", "ScopeOp", "SwitchOp",
-  "TernaryOp", "TryOp", "WhileOp"
+  "DoWhileOp", "ForOp", "GlobalOp", "IfOp", "LocalInitOp", "RegisterExitDtorOp",
+  "ScopeOp", "SwitchOp", "TernaryOp", "TryOp", "WhileOp"
 ];
 
 def CIR_YieldOp : CIR_Op<"yield", [
@@ -1824,6 +1824,7 @@ def CIR_IsConstantOp : CIR_Op<"is_constant", [Pure]> {
 //===----------------------------------------------------------------------===//
 
 def CIR_SwitchFlatOp : CIR_Op<"switch.flat", [
+  DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
   AttrSizedOperandSegments, Terminator
 ]> {
   let summary = "A flattened version of cir.switch";
@@ -2799,12 +2800,12 @@ class CIR_BinaryOpWithOverflowFlags<string mnemonic, Type type,
 //===----------------------------------------------------------------------===//
 
 def CIR_AddOp
-    : CIR_BinaryOpWithOverflowFlags<"add", CIR_AnyIntOrVecOfIntType> {
+    : CIR_BinaryOpWithOverflowFlags<"add", CIR_AnyIntOrVecOrMatrixOfIntType> {
   let summary = "Integer addition";
   let description = [{
     The `cir.add` operation performs addition on integer operands. Both
-    operands and the result must have the same integer or vector-of-integer
-    type.
+    operands and the result must have the same integer, vector-of-integer or
+    matrix-of-integer type.
 
     The optional `nsw` (no signed wrap) and `nuw` (no unsigned wrap) unit
     attributes indicate that the result is poison if signed or unsigned
@@ -2820,6 +2821,7 @@ def CIR_AddOp
     %2 = cir.add nuw %a, %b : !u32i
     %3 = cir.add sat %a, %b : !s32i
     %4 = cir.add %va, %vb : !cir.vector<4 x !s32i>
+    %5 = cir.add %ma, %mb : !cir.matrix<3 x 3 x !s32i>
     ```
   }];
 }
@@ -2942,8 +2944,9 @@ def CIR_RemOp : CIR_BinaryOp<"rem", CIR_AnyIntOrVecOfIntType> {
 //
 // The optional `fenv` attribute describes constraints on the floating-point
 // handling of the operation.
-class CIR_FPBinaryOp<string mnemonic, list<Trait> traits = []>
-    : CIR_BinaryOp<mnemonic, CIR_AnyFloatOrVecOfFloatType,
+class CIR_FPBinaryOp<string mnemonic, list<Trait> traits = [],
+                     Type type = CIR_AnyFloatOrVecOfFloatType>
+    : CIR_BinaryOp<mnemonic, type,
                    !listconcat(CIR_FenvOpTraits, traits),
                    CIR_DynamicMemoryEffects> {
   let arguments = !con(commonArgs, (ins OptionalAttr<CIR_FenvAttr>:$fenv));
@@ -2964,12 +2967,13 @@ class CIR_FPBinaryOp<string mnemonic, list<Trait> traits = []>
 // FAddOp
 //===----------------------------------------------------------------------===//
 
-def CIR_FAddOp : CIR_FPBinaryOp<"fadd"> {
+def CIR_FAddOp
+    : CIR_FPBinaryOp<"fadd", [], CIR_AnyFloatOrVecOrMatrixOfFloatType> {
   let summary = "Floating-point addition";
   let description = [{
     The `cir.fadd` operation performs floating-point addition on its operands.
-    Both operands and the result must have the same floating-point scalar or
-    vector-of-float type.
+    Both operands and the result must have the same floating-point scalar,
+    vector-of-float or matrix-of-float type.
 
     Example:
 
@@ -2977,6 +2981,7 @@ def CIR_FAddOp : CIR_FPBinaryOp<"fadd"> {
     %0 = cir.fadd %a, %b : !cir.float
     %1 = cir.fadd %a, %b : !cir.double
     %2 = cir.fadd %va, %vb : !cir.vector<4 x !cir.float>
+    %3 = cir.fadd %ma, %mb : !cir.matrix<3 x 3 x !cir.float>
     ```
   }];
 
@@ -3410,10 +3415,11 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
     Symbol visibility in `sym_visibility` is defined in terms of MLIR's visibility
     and verified to be in accordance to `linkage`.
 
-    The `static_local_guard` attribute indicates that this global represents a
-    function-local static variable that requires guarded initialization
-    (e.g., C++ static local variables with non-constant initializers).
-    It contains the mangled name of the guard variable.
+    The `dynamic_init_guard` attribute indicates that this global requires
+    guarded dynamic initialization via the Itanium `__cxa_guard_*` protocol
+    (e.g., C++ static local variables with non-constant initializers, or
+    namespace-scope variables with vague linkage such as weak/linkonce_odr
+    inline variables). It contains the mangled name of the guard variable.
 
     The `strictfp` attribute indicates that the dynamic initialization emitted
     into the `ctorRegion`/`dtorRegion` runs under a constrained floating-point
@@ -3445,10 +3451,10 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
                        OptionalAttr<StrAttr>:$comdat,
                        UnitProp:$constant,
                        UnitProp:$dso_local,
-                       OptionalAttr<CIR_StaticLocalGuardAttr>:$static_local_guard,
+                       OptionalAttr<CIR_DynamicInitGuardAttr>:$dynamic_init_guard,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<ASTVarDeclInterface>:$ast,
-                       OptionalAttr<CIR_StaticLocalInfoAttr>:$static_local_info,
+                       OptionalAttr<CIR_DynamicInitInfoAttr>:$dynamic_init_info,
                        OptionalAttr<StrAttr>:$section,
                        OptionalAttr<CIR_AnnotationArrayAttr>:$annotations,
                        OptionalAttr<FlatSymbolRefAttr>:$aliasee,
@@ -3456,8 +3462,8 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
                        OptionalAttr<I32Attr>:$init_priority
                        );
 
-  let regions = (region AnyRegion:$ctorRegion,
-                        AnyRegion:$dtorRegion);
+  let regions = (region MaxSizedRegion<1>:$ctorRegion,
+                        MaxSizedRegion<1>:$dtorRegion);
 
   let assemblyFormat = [{
     ($sym_visibility^)?
@@ -3468,7 +3474,7 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
     (`tls_model` `=` enum($tls_model)^)?
     (`tls_refs` `=` $tls_refs^)?
     (`dso_local` $dso_local^)?
-    (`static_local_guard` `` $static_local_guard^)?
+    (`dynamic_init_guard` `` $dynamic_init_guard^)?
     (` ` custom<GlobalMemorySpace>($addr_space)^ )?
     $sym_name
     (`alias` `(` $aliasee^ `)`)?
@@ -3477,7 +3483,7 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
     ($annotations^)?
     (`align` `(` $alignment^ `)`)?
     (`ast` `(` $ast^ `)`)?
-    (`static_local_info` `` $static_local_info^)?
+    (`dynamic_init_info` `` $dynamic_init_info^)?
     (`section` `(` $section^ `)`)?
     (`strictfp` $strictfp^)?
     (`init_priority` `(` $init_priority^ `)`)?
@@ -4512,6 +4518,51 @@ def CIR_LocalInitOp : CIR_Op<"local_init", [
 }
 
 //===----------------------------------------------------------------------===//
+// RegisterExitDtorOp
+//===----------------------------------------------------------------------===//
+
+def CIR_RegisterExitDtorOp : CIR_Op<"register_exit_dtor", [
+  DeclareOpInterfaceMethods<SymbolUserOpInterface>, IsolatedFromAbove,
+  NoRegionArguments, SingleBlockImplicitTerminator<"cir::YieldOp">
+]> {
+  let summary =
+      "Register the destruction of a global at program or thread exit";
+  let description = [{
+    The `cir.register_exit_dtor` operation registers its body to run when the
+    storage duration of the global `object` ends: at program exit, or at
+    thread exit when `object` is thread local.  The registration happens when
+    the operation executes, so objects registered later are destroyed earlier.
+
+    It must be nested in the ctor region of a `cir.global` or
+    `cir.local_init`, but not inside another `cir.register_exit_dtor`,
+    typically right after the construction of a temporary whose lifetime that
+    variable extends.  `object` must have no ctor or dtor region of its own.
+    The body destroys `object`, which it reaches through `cir.get_global`.
+
+    Example:
+
+    ```
+    cir.global external @r = #cir.zero : !rec_Refs ctor {
+      %0 = cir.get_global @_ZGR1r_ : !cir.ptr<!rec_Tmp>
+      cir.call @_ZN3TmpC1Ei(%0, %1) : (!cir.ptr<!rec_Tmp>, !s32i) -> ()
+      cir.register_exit_dtor @_ZGR1r_ {
+        %2 = cir.get_global @_ZGR1r_ : !cir.ptr<!rec_Tmp>
+        cir.call @_ZN3TmpD1Ev(%2) : (!cir.ptr<!rec_Tmp>) -> ()
+      }
+      ...
+    }
+    ```
+  }];
+
+  let arguments = (ins FlatSymbolRefAttr:$object);
+  let regions = (region SizedRegion<1>:$body);
+  let assemblyFormat = "$object $body attr-dict";
+
+  let hasVerifier = 1;
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
 // LLVMIntrinsicCallOp
 //===----------------------------------------------------------------------===//
 
@@ -4681,7 +4732,9 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
       UnitAttr:$musttail,
       OptionalAttr<CIR_MemoryEffectsAttr>:$memory_effects,
       OptionalAttr<DictArrayAttr>:$arg_attrs,
-      OptionalAttr<DictArrayAttr>:$res_attrs
+      OptionalAttr<DictArrayAttr>:$res_attrs,
+      DefaultValuedAttr<CIR_CallingConvAttr, "cir::CallingConv::C">
+        :$calling_conv
       );
 }
 
@@ -4700,10 +4753,16 @@ def CIR_CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
     empty. The first operand of this operation must be a pointer to the callee
     function. The rest operands are arguments to the callee function.
 
+    The `calling_conv` attribute specifies the calling convention used at the
+    call site. It defaults to `CallingConv::C`, which is omitted when printed.
+    Other calling conventions are printed as `cc(<mnemonic>)`, e.g.
+    `cc(spir_function)`.
+
     Example:
 
     ```
     %0 = cir.call @foo()
+    cir.call @bar() cc(spir_function) : () -> ()
     ```
   }];
 
@@ -5128,13 +5187,54 @@ def CIR_CoroFreeOp : CIR_CoroIntrinsicOp<"free",
 // Coroutine intrinsic SizeOp
 //===----------------------------------------------------------------------===//
 
-def CIR_CoroSizeOp : CIR_CoroIntrinsicOp<"size", (ins),
-    (outs CIR_UInt64:$result)> {
+def CIR_CoroSizeOp
+    : CIR_CoroIntrinsicOp<"size", (ins),
+                          (outs CIR_AnyFundamentalUIntType:$result)> {
   let summary = "Represents llvm.coro.size";
   let description = [{
     Returns the size, in bytes, of the coroutine frame.
   }];
   let llvmOp = "CoroSizeOp";
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic AlignOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroAlignOp
+    : CIR_CoroIntrinsicOp<"align", (ins),
+                          (outs CIR_AnyFundamentalUIntType:$result)> {
+  let summary = "Represents llvm.coro.align";
+  let description = [{
+    Returns the alignment requirement, in bytes, of the coroutine frame.
+  }];
+  let llvmOp = "CoroAlignOp";
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic SuspendOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroSuspendOp : CIR_CoroIntrinsicOp<"suspend",
+    (ins Token:$save, CIR_AnyBoolType: $final),
+    (outs CIR_SInt8:$result), [TokenConsumerTrait]> {
+  let summary = "Represents llvm.coro.suspend";
+  let description = [{
+    `cir.coro.intrinsic.suspend` represents the `llvm.coro.suspend` intrinsic.
+
+    It marks the point where execution of a switched-resume coroutine is
+    suspended and control returns to the caller. The result value indicates
+    how the coroutine should proceed: -1 if suspended, 0 if resumed, or 1
+    if destroyed.
+
+    The `id` operand is the token produced by a `cir.coro.save` that marks
+    the point when the coroutine state is prepared for suspension.
+
+    The `final` operand indicates whether this is a final suspend point.
+    If more than one suspend point is marked final, the resume and destroy
+    branches must lead to the same basic blocks.
+  }];
+  let llvmOp = "CoroSuspendOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -6170,6 +6270,114 @@ def CIR_VecExtractOp : CIR_Op<"vec.extract", [
 }
 
 //===----------------------------------------------------------------------===//
+// Vector reduction operations
+//===----------------------------------------------------------------------===//
+
+class CIR_VecReduceOp<string mnemonic, Type inputType, string llvmOpName>
+    : CIR_Op<"vec.reduce." # mnemonic, [
+  Pure,
+  TypesMatchWith<"type of 'result' matches element type of 'input'",
+    "input", "result",
+    "mlir::cast<cir::VectorType>($_self).getElementType()">
+]> {
+  let summary = "Reduce a vector using " # mnemonic;
+  let description = [{
+    Reduces the elements of a vector to a scalar of the vector element type.
+  }];
+
+  let arguments = (ins inputType:$input);
+  let results = (outs CIR_VectorElementType:$result);
+
+  let assemblyFormat = [{
+    `(` $input `)` `:` functional-type(operands, results) attr-dict
+  }];
+
+  let llvmOp = llvmOpName;
+}
+
+def CIR_VecReduceAddOp
+    : CIR_VecReduceOp<"add", CIR_VectorOfIntOrBoolType,
+                      "vector_reduce_add">;
+def CIR_VecReduceAndOp
+    : CIR_VecReduceOp<"and", CIR_VectorOfIntOrBoolType,
+                      "vector_reduce_and">;
+def CIR_VecReduceMulOp
+    : CIR_VecReduceOp<"mul", CIR_VectorOfIntOrBoolType,
+                      "vector_reduce_mul">;
+def CIR_VecReduceOrOp
+    : CIR_VecReduceOp<"or", CIR_VectorOfIntOrBoolType,
+                      "vector_reduce_or">;
+def CIR_VecReduceSMaxOp
+    : CIR_VecReduceOp<"smax", CIR_VectorOfSIntType,
+                      "vector_reduce_smax">;
+def CIR_VecReduceSMinOp
+    : CIR_VecReduceOp<"smin", CIR_VectorOfSIntType,
+                      "vector_reduce_smin">;
+def CIR_VecReduceUMaxOp
+    : CIR_VecReduceOp<"umax",
+                      CIR_VectorTypeOf<[CIR_AnyUIntType, CIR_AnyBoolType]>,
+                      "vector_reduce_umax">;
+def CIR_VecReduceUMinOp
+    : CIR_VecReduceOp<"umin",
+                      CIR_VectorTypeOf<[CIR_AnyUIntType, CIR_AnyBoolType]>,
+                      "vector_reduce_umin">;
+def CIR_VecReduceXorOp
+    : CIR_VecReduceOp<"xor", CIR_VectorOfIntOrBoolType,
+                      "vector_reduce_xor">;
+
+// Floating-point reductions use custom lowering to translate CIR fast-math
+// flags to the corresponding LLVM dialect attribute.
+class CIR_VecReduceFPOp<string mnemonic>
+    : CIR_Op<"vec.reduce." # mnemonic, [
+  Pure,
+  TypesMatchWith<"type of 'result' matches element type of 'input'",
+    "input", "result",
+    "mlir::cast<cir::VectorType>($_self).getElementType()">
+]> {
+  let summary = "Reduce a floating-point vector using " # mnemonic;
+  let arguments = (ins
+    CIR_VectorOfFloatType:$input,
+    OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath_flags
+  );
+  let results = (outs CIR_AnyFloatType:$result);
+
+  let assemblyFormat = [{
+    `(` $input `)` `:` functional-type(operands, results)
+    prop-dict attr-dict
+  }];
+}
+
+def CIR_VecReduceFMaxOp : CIR_VecReduceFPOp<"fmax">;
+def CIR_VecReduceFMinOp : CIR_VecReduceFPOp<"fmin">;
+
+class CIR_VecReduceAccFPOp<string mnemonic>
+    : CIR_Op<"vec.reduce." # mnemonic, [
+  Pure,
+  TypesMatchWith<"type of 'accumulator' matches element type of 'input'",
+    "input", "accumulator",
+    "mlir::cast<cir::VectorType>($_self).getElementType()">,
+  TypesMatchWith<"type of 'result' matches element type of 'input'",
+    "input", "result",
+    "mlir::cast<cir::VectorType>($_self).getElementType()">
+]> {
+  let summary = "Reduce a floating-point vector using " # mnemonic;
+  let arguments = (ins
+    CIR_AnyFloatType:$accumulator,
+    CIR_VectorOfFloatType:$input,
+    OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath_flags
+  );
+  let results = (outs CIR_AnyFloatType:$result);
+
+  let assemblyFormat = [{
+    `(` $accumulator `,` $input `)` `:` functional-type(operands, results)
+    prop-dict attr-dict
+  }];
+}
+
+def CIR_VecReduceFAddOp : CIR_VecReduceAccFPOp<"fadd">;
+def CIR_VecReduceFMulOp : CIR_VecReduceAccFPOp<"fmul">;
+
+//===----------------------------------------------------------------------===//
 // VecCmpOp
 //===----------------------------------------------------------------------===//
 
@@ -6349,12 +6557,16 @@ def CIR_VecTernaryOp : CIR_Op<"vec.ternary", [
 def CIR_VecSplatOp : CIR_Op<"vec.splat", [
   Pure,
   TypesMatchWith<"type of 'value' matches element type of 'result'",
-    "result", "value", "mlir::cast<cir::VectorType>($_self).getElementType()">
+    "result", "value",
+    "mlir::isa<cir::VectorType>($_self) "
+    "? mlir::cast<cir::VectorType>($_self).getElementType() "
+    ": mlir::cast<cir::MatrixType>($_self).getElementType()">
 ]> {
-  let summary = "Convert a scalar into a vector";
+  let summary = "Convert a scalar into a vector or matrix";
   let description = [{
-    The `cir.vec.splat` operation creates a vector value from a scalar value.
-    All elements of the vector have the same value, that of the given scalar.
+    The `cir.vec.splat` operation creates a vector or matrix value from a
+    scalar value. All elements of the result have the same value, that of the
+    given scalar.
 
     It's a separate operation from `cir.vec.create` because more
     efficient LLVM IR can be generated for it, and because some optimization and
@@ -6364,11 +6576,13 @@ def CIR_VecSplatOp : CIR_Op<"vec.splat", [
     ```
     %value = cir.const #cir.int<3> : !s32i
     %value_vec = cir.vec.splat %value : !s32i, !cir.vector<4 x !s32i>
+    %value_mat = cir.vec.splat %value : !s32i, !cir.matrix<2 x 2 x !s32i>
     ```
   }];
 
   let arguments = (ins CIR_VectorElementType:$value);
-  let results = (outs CIR_VectorType:$result);
+  let results = (outs AnyTypeOf<[CIR_VectorType, CIR_MatrixType],
+                                "vector or matrix type">:$result);
 
   let assemblyFormat = [{
     $value `:` type($value) `,` qualified(type($result)) attr-dict
@@ -6384,27 +6598,27 @@ def CIR_MatrixColumnMajorLoadOp : CIR_Op<"matrix.column_major_load", [
 ]> {
   let summary = "Matrix column major load";
   let description = [{
-  The `cir.matrix.column_major_load` operation provides a representation for
-  the `__builtin_matrix_column_major_load` builtin and corresponds to the
-  `llvm.matrix.column.major.load` intrinsic in LLVM IR.
+    The `cir.matrix.column_major_load` operation provides a representation for
+    the `__builtin_matrix_column_major_load` builtin and corresponds to the
+    `llvm.matrix.column.major.load` intrinsic in LLVM IR.
 
-  This operation performs a load of any matrix type with a stride to compute
-  the start address of the different columns.
+    This operation performs a load of any matrix type with a stride to compute
+    the start address of the different columns.
 
-  The `stride` argument is the column stride which much be greater than or equal 
-  to `row`, giving the following 2x3 matrix `[[1, 2, 3], [4, 5, 6]]` with a 
-  stride of 2, the result matrix will be `[[1, 3, 5], [2, 4, 6]]`.
+    The `stride` argument is the column stride which much be greater than or equal 
+    to `row`, giving the following 2x3 matrix `[[1, 2, 3], [4, 5, 6]]` with a 
+    stride of 2, the result matrix will be `[[1, 3, 5], [2, 4, 6]]`.
 
-  ```
-  %result = cir.matrix.column_major_load %ptr : <!cir.float>, %stride : !u64i, 
-     !cir.matrix<2 x 3 x !cir.float>
+    ```
+    %result = cir.matrix.column_major_load %ptr : <!cir.float>, %stride : !u64i, 
+      !cir.matrix<2 x 3 x !cir.float>
 
-  %result = cir.matrix.column_major_load %ptr : <!cir.double>, %stride : !u64i,
-     !cir.matrix<5 x 5 x !cir.double>
+    %result = cir.matrix.column_major_load %ptr : <!cir.double>, %stride : !u64i,
+      !cir.matrix<5 x 5 x !cir.double>
 
-  %result = cir.matrix.column_major_load %ptr : <!cir.double>, %stride : !u64i
-     volatile, !cir.matrix<5 x 5 x !cir.double>
-  ```
+    %result = cir.matrix.column_major_load %ptr : <!cir.double>, %stride : !u64i
+      volatile, !cir.matrix<5 x 5 x !cir.double>
+    ```
   }];
 
   let arguments = (ins
@@ -6420,6 +6634,48 @@ def CIR_MatrixColumnMajorLoadOp : CIR_Op<"matrix.column_major_load", [
     $stride `:` type($stride)
     (`volatile` $is_volatile^)?
     `,` qualified(type($result)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MatrixColumnMajorStoreOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MatrixColumnMajorStoreOp : CIR_Op<"matrix.column_major_store", [
+  DeclareOpInterfaceMethods<PromotableMemOpInterface>,
+]> {
+  let summary = "Matrix column major store";
+  let description = [{
+    The `cir.matrix.column_major_store` operation provides a representation for
+    the `__builtin_matrix_column_major_store` builtin and corresponds to the
+    `llvm.matrix.column.major.store` intrinsic in LLVM IR.
+
+    This operation performs a store of data from matrix type with a stride to
+    compute the start address of the different columns.
+
+    The `stride` argument is the column stride which much be greater than or equal 
+    to `row`, giving the following 2x3 matrix `[[1, 2, 3], [4, 5, 6]]` with a 
+    stride of 2, the stored data will be `[1, 3, 5, 2, 4, 6]`.
+
+    ```
+    cir.matrix.column_major_store %matrix : <3 x 3 x !cir.float>, 
+      %data : <!cir.float>, %stribe : !u64i
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_MatrixType:$matrix,
+    Arg<CIR_PointerType, "the address to store the value", [MemWrite]>:$value,
+    CIR_IntType:$stride,
+    UnitAttr:$is_volatile
+  );
+
+  let assemblyFormat = [{
+    $matrix `:` type($matrix) `,`
+    $value `:` type($value) `,`
+    $stride `:` type($stride)
+    (`volatile` $is_volatile^)?
+    attr-dict
   }];
 }
 
@@ -6795,13 +7051,13 @@ def CIR_ComplexImagPtrOp : CIR_ComplexPartPtrOp<"complex.imag_ptr"> {
 }
 
 //===----------------------------------------------------------------------===//
-// ComplexAddOp and ComplexSubOp
+// Complex binary operations
 //===----------------------------------------------------------------------===//
 
 class CIR_ComplexBinOp<string mnemonic>
     : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
-  let arguments = (ins CIR_ComplexType:$lhs, CIR_ComplexType:$rhs);
-  let results = (outs CIR_ComplexType:$result);
+  let arguments = (ins CIR_ComplexOfIntType:$lhs, CIR_ComplexOfIntType:$rhs);
+  let results = (outs CIR_ComplexOfIntType:$result);
 
   let assemblyFormat = [{
     $lhs `,` $rhs `:` qualified(type($result)) attr-dict
@@ -6817,7 +7073,7 @@ def CIR_ComplexAddOp : CIR_ComplexBinOp<"complex.add"> {
     Example:
 
     ```
-    %2 = cir.complex.add %0, %1 : !cir.complex<!cir.float>
+    %2 = cir.complex.add %0, %1 : !cir.complex<s32i>
     ```
   }];
 }
@@ -6831,13 +7087,83 @@ def CIR_ComplexSubOp : CIR_ComplexBinOp<"complex.sub"> {
     Example:
 
     ```
-    %2 = cir.complex.sub %0, %1 : !cir.complex<!cir.float>
+    %2 = cir.complex.sub %0, %1 : !cir.complex<s32i>
+    ```
+  }];
+}
+
+def CIR_ComplexMulOp : CIR_ComplexBinOp<"complex.mul"> {
+  let summary = "Complex multiplication";
+  let description = [{
+    The `cir.complex.mul` operation takes two complex numbers and returns
+    their product.
+
+    Example:
+
+    ```
+    %2 = cir.complex.mul %0, %1 : !cir.complex<s32i>
+    ```
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+def CIR_ComplexDivOp : CIR_ComplexBinOp<"complex.div"> {
+  let summary = "Complex division";
+  let description = [{
+    The `cir.complex.div` operation takes two complex numbers and returns
+    their quotient.
+
+    Example:
+
+    ```
+    %2 = cir.complex.div %0, %1 : !cir.complex<s32i>
+    ```
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+class CIR_ComplexFPBinOp<string mnemonic>
+    : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
+  let arguments = (ins CIR_ComplexOfFloatType:$lhs, CIR_ComplexOfFloatType:$rhs);
+  let results = (outs CIR_ComplexOfFloatType:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs `:` qualified(type($result)) attr-dict
+  }];
+}
+
+def CIR_ComplexFAddOp : CIR_ComplexFPBinOp<"complex.fadd"> {
+  let summary = "Complex addition";
+  let description = [{
+    The `cir.complex.fadd` operation takes two complex numbers and returns
+    their sum.
+
+    Example:
+
+    ```
+    %2 = cir.complex.fadd %0, %1 : !cir.complex<!cir.float>
+    ```
+  }];
+}
+
+def CIR_ComplexFSubOp : CIR_ComplexFPBinOp<"complex.fsub"> {
+  let summary = "Complex subtraction";
+  let description = [{
+    The `cir.complex.fsub` operation takes two complex numbers and returns
+    their difference.
+
+    Example:
+
+    ```
+    %2 = cir.complex.fsub %0, %1 : !cir.complex<!cir.float>
     ```
   }];
 }
 
 //===----------------------------------------------------------------------===//
-// ComplexMulOp and ComplexDivOp
+// Complex binary operations with range
 //===----------------------------------------------------------------------===//
 
 def CIR_ComplexRangeKind : CIR_I32Enum<
@@ -6854,12 +7180,12 @@ def CIR_ComplexRangeKindAttr
 class CIR_ComplexRangeBinOp<string mnemonic>
     : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
   let arguments = (ins
-    CIR_ComplexType:$lhs,
-    CIR_ComplexType:$rhs,
+    CIR_ComplexOfFloatType:$lhs,
+    CIR_ComplexOfFloatType:$rhs,
     CIR_ComplexRangeKindAttr:$range
   );
 
-  let results = (outs CIR_ComplexType:$result);
+  let results = (outs CIR_ComplexOfFloatType:$result);
 
   let assemblyFormat = [{
     $lhs `,` $rhs `range` `(` enum($range) `)` `:` qualified(type($result))
@@ -6869,16 +7195,15 @@ class CIR_ComplexRangeBinOp<string mnemonic>
   let hasLLVMLowering = false;
 }
 
-def CIR_ComplexMulOp : CIR_ComplexRangeBinOp<"complex.mul"> {
+def CIR_ComplexFMulOp : CIR_ComplexRangeBinOp<"complex.fmul"> {
   let summary = "Complex multiplication";
   let description = [{
     The `cir.complex.mul` operation takes two complex numbers and returns
     their product.
 
-    For complex types with floating-point components, the `range` attribute
-    specifies the algorithm to be used when the operation is lowered to
-    the LLVM dialect. For multiplication, 'improved', 'promoted', and 'basic'
-    are all handled equivalently, producing the algebraic formula with no
+    The `range` attribute specifies the algorithm to be used when the operation 
+    is lowered to the LLVM dialect. For multiplication, 'improved', 'promoted',
+    and 'basic' are all handled equivalently, producing the algebraic formula with no
     special handling for NaN value. If 'full' is used, a runtime-library
     function is called if one of the intermediate calculations produced
     a NaN value.
@@ -6886,22 +7211,21 @@ def CIR_ComplexMulOp : CIR_ComplexRangeBinOp<"complex.mul"> {
     Example:
 
     ```
-    %2 = cir.complex.mul %0, %1 range(basic) : !cir.complex<!cir.float>
-    %2 = cir.complex.mul %0, %1 range(full) : !cir.complex<!cir.float>
+    %2 = cir.complex.fmul %0, %1 range(basic) : !cir.complex<!cir.float>
+    %2 = cir.complex.fmul %0, %1 range(full) : !cir.complex<!cir.float>
     ```
   }];
 }
 
-def CIR_ComplexDivOp : CIR_ComplexRangeBinOp<"complex.div"> {
+def CIR_ComplexFDivOp : CIR_ComplexRangeBinOp<"complex.fdiv"> {
   let summary = "Complex division";
   let description = [{
     The `cir.complex.div` operation takes two complex numbers and returns
     their quotient.
 
-    For complex types with floating-point components, the `range` attribute
-    specifies the algorithm to be used when the operation is lowered to
-    the LLVM dialect. For division, 'improved' produces Smith's algorithms for
-    Complex division with no additional handling for NaN values. If 'promoted'
+    The `range` attribute specifies the algorithm to be used when the operation 
+    is lowered to the LLVM dialect. For division, 'improved' produces Smith's algorithms
+    for Complex division with no additional handling for NaN values. If 'promoted'
     is used, the values are promoted to a higher precision type, if possible,
     and the calculation is performed using the algebraic formula, with
     no additional handling for NaN values. We fall back on Smith's algorithm
@@ -6914,8 +7238,8 @@ def CIR_ComplexDivOp : CIR_ComplexRangeBinOp<"complex.div"> {
     Example:
 
     ```
-    %2 = cir.complex.div %0, %1 range(basic) : !cir.complex<!cir.float>
-    %2 = cir.complex.div %0, %1 range(full) : !cir.complex<!cir.float>
+    %2 = cir.complex.fdiv %0, %1 range(basic) : !cir.complex<!cir.float>
+    %2 = cir.complex.fdiv %0, %1 range(full) : !cir.complex<!cir.float>
     ```
   }];
 }
@@ -8023,9 +8347,8 @@ class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   }];
 
   let builders = [
-    OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$lhs,
-                   "mlir::Value":$rhs), [{
-      build($_builder, $_state, result, lhs, rhs, cir::FenvAttr{});
+    OpBuilder<(ins "mlir::Value":$lhs, "mlir::Value":$rhs), [{
+      build($_builder, $_state, lhs, rhs, cir::FenvAttr{});
     }]>
   ];
 
@@ -8657,7 +8980,7 @@ def CIR_TryOp : CIR_RegionBranchOpBase<"try", [
     }]>
   ];
 
-  let hasVerifier = 1;
+  let hasRegionVerifier = 1;
   let hasLLVMLowering = false;
 }
 
@@ -9244,6 +9567,8 @@ def CIR_InitCatchKind : CIR_I32Enum<
     I32EnumCase<"Objc", 3, "objc">,
     I32EnumCase<"TrivialCopy", 4, "trivial_copy">,
     I32EnumCase<"NonTrivialCopy", 5, "non_trivial_copy">,
+    I32EnumCase<"ReferenceToPointer", 6, "reference_to_pointer">,
+    I32EnumCase<"ReferenceToRecordPointer", 7, "reference_to_record_pointer">,
 ]>;
 
 def CIR_InitCatchKindAttr : CIR_EnumAttr<CIR_InitCatchKind, "init_catch">;
@@ -9261,6 +9586,16 @@ def CIR_InitCatchParamOp : CIR_Op<"init_catch_param"> {
     the Itanium C++ ABI may emit a load and store for scalar/pointer catch
     types, an aggregate copy for record types, or a call to a copy
     constructor when one is required).
+
+    A catch parameter that is a reference to a pointer uses the
+    `reference_to_record_pointer` kind when the pointer's source-level pointee
+    type is a record (class, struct, or union), and `reference_to_pointer`
+    otherwise. A reference to any other type uses `reference`.
+
+    A `reference_to_pointer` or `non_trivial_copy` operation requires its catch
+    handler to start with a `cir.construct_catch_param` of the same kind on the
+    same parameter. When the handler starts with a `cir.construct_catch_param`
+    on the parameter of the operation, the two must have the same kind.
 
     Example:
 
@@ -9284,6 +9619,7 @@ def CIR_InitCatchParamOp : CIR_Op<"init_catch_param"> {
       qualified(type($exn_ptr)) `,` qualified(type($param_addr)) attr-dict
   }];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
@@ -9307,9 +9643,11 @@ def CIR_ConstructCatchParamOp : CIR_Op<"construct_catch_param", [
     copy of the object before `__cxa_begin_catch` is invoked.
 
     This operation takes a `!cir.eh_token` that represents the in-flight
-    exception and the alloca value that is used for the local copy of the
-    exception object. The `copy_fn` attribute is a flat symbol reference to a
-    `cir.func` thunk that copies the exception object to a local alloca value.
+    exception and the alloca value for the catch parameter. The optional
+    `copy_fn` attribute, present for `non_trivial_copy`, is a flat symbol
+    reference to a `cir.func` thunk that copies the exception object to a
+    local alloca value. For `reference_to_pointer`, the operation binds the
+    reference to the exception object itself.
 
     This operation is replaced with a target-specific representation during
     the EHABI lowering pass. For some targets, such as the Microsoft ABI,
@@ -9335,6 +9673,7 @@ def CIR_ConstructCatchParamOp : CIR_Op<"construct_catch_param", [
       qualified(type($param_addr)) attr-dict
   }];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 

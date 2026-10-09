@@ -615,25 +615,25 @@ public:
   /// based on the function's attributes. If the operation is not overridden by
   /// the function's attributes, "Unspecified" is returned and target defaults
   /// are expected to be used for instruction selection.
-  int getRecipEstimateSqrtEnabled(EVT VT, MachineFunction &MF) const;
+  int getRecipEstimateSqrtEnabled(EVT VT, const Function &F) const;
 
   /// Return a ReciprocalEstimate enum value for a division of the given type
   /// based on the function's attributes. If the operation is not overridden by
   /// the function's attributes, "Unspecified" is returned and target defaults
   /// are expected to be used for instruction selection.
-  int getRecipEstimateDivEnabled(EVT VT, MachineFunction &MF) const;
+  int getRecipEstimateDivEnabled(EVT VT, const Function &MF) const;
 
   /// Return the refinement step count for a square root of the given type based
   /// on the function's attributes. If the operation is not overridden by
   /// the function's attributes, "Unspecified" is returned and target defaults
   /// are expected to be used for instruction selection.
-  int getSqrtRefinementSteps(EVT VT, MachineFunction &MF) const;
+  int getSqrtRefinementSteps(EVT VT, const Function &MF) const;
 
   /// Return the refinement step count for a division of the given type based
   /// on the function's attributes. If the operation is not overridden by
   /// the function's attributes, "Unspecified" is returned and target defaults
   /// are expected to be used for instruction selection.
-  int getDivRefinementSteps(EVT VT, MachineFunction &MF) const;
+  int getDivRefinementSteps(EVT VT, const Function &MF) const;
 
   /// Returns true if target has indicated at least one type should be bypassed.
   bool isSlowDivBypassed() const { return !BypassSlowDivWidths.empty(); }
@@ -4779,6 +4779,13 @@ public:
       return false;
     return true;
   }
+
+  /// fold (A + vscale(C1)) + vscale(C2) -> A + vscale(C1+C2)
+  /// If (A + vscale(C1)) is used multiple times, the fold results in a
+  /// redundant addition instruction on the RISC-V architecture, whereas it
+  /// does not have this effect on other architectures (e.g. AArch64).
+  /// By default, it returns true.
+  virtual bool isProfitableToFoldVScaleAdd(SDValue N) const { return true; }
 
   /// GlobalISel - return true if it is profitable to move this shift by a
   /// constant amount through its operand, adjusting any immediate operands as

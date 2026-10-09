@@ -49,16 +49,6 @@ static llvm::omp::ModifierSets GetSets(
   return desc.getModifierSets(version);
 }
 
-template <typename DescriptorTy>
-static auto GetAllowedElements(
-    const DescriptorTy &desc, llvm::omp::Version version) {
-  auto allowed{GetElements(desc, version)};
-  for (auto s : GetSets(desc, version)) {
-    allowed |= GetElements(GetDescriptor(s), version);
-  }
-  return allowed;
-}
-
 template < //
     typename ElemTy, typename SetsSetTy, typename OwnerTy,
     typename ResultTy = llvm::DenseMap<ElemTy,

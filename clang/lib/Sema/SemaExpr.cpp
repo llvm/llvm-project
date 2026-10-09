@@ -8101,6 +8101,14 @@ bool Sema::areVectorTypesSameSize(QualType SrcTy, QualType DestTy) {
   if (!breakDownVectorType(DestTy, DestLen, DestEltTy))
     return false;
 
+  // x87 long double has padding bits, so it cannot be bitcast to another type.
+  auto IsX87LongDouble = [&](QualType T) {
+    return T->isRealFloatingType() && &Context.getFloatTypeSemantics(T) ==
+                                          &llvm::APFloat::x87DoubleExtended();
+  };
+  if (IsX87LongDouble(SrcEltTy) != IsX87LongDouble(DestEltTy))
+    return false;
+
   // ASTContext::getTypeSize will return the size rounded up to a
   // power of 2, so instead of using that, we need to use the raw
   // element size multiplied by the element count.
@@ -10452,9 +10460,10 @@ AssignConvertType Sema::CheckSingleAssignmentConstraints(QualType LHSType,
       // a macro expansion because the use of a macro may indicate different
       // code between C and C++. Consider: char *s = NULL; where NULL is
       // defined as (void *)0 in C (which would be invalid in C++), but 0 in
-      // C++, which is valid in C++.
+      // C++, which is valid in C++. Ignore parentheses around the macro when
+      // checking where the expression originates.
       if (Kind != CK_NoOp && !getLangOpts().CPlusPlus &&
-          !RHS.get()->getBeginLoc().isMacroID()) {
+          !RHS.get()->IgnoreParens()->getBeginLoc().isMacroID()) {
         QualType CanRHS =
             RHS.get()->getType().getCanonicalType().getUnqualifiedType();
         QualType CanLHS = LHSType.getCanonicalType().getUnqualifiedType();

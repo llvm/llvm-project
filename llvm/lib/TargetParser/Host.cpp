@@ -207,6 +207,7 @@ getHostCPUNameForARMFromComponents(StringRef Implementer, StringRef Hardware,
         .Case("0xd90", "c1-premium")
         .Case("0xd8b", "c1-pro")
         .Case("0xd8c", "c1-ultra")
+        .Case("0xd96", "c2-ultra")
         .Case("0xc05", "cortex-a5")
         .Case("0xc07", "cortex-a7")
         .Case("0xc08", "cortex-a8")

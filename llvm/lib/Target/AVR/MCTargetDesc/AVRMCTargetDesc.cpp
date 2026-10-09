@@ -88,6 +88,10 @@ static MCTargetStreamer *createMCAsmTargetStreamer(MCStreamer &S,
   return new AVRTargetAsmStreamer(S);
 }
 
+static MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) {
+  return new AVRTargetStreamer(S);
+}
+
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRTargetMC() {
   // Register the MC asm info.
   RegisterMCAsmInfo<AVRMCAsmInfo> X(getTheAVRTarget());
@@ -120,6 +124,9 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRTargetMC() {
   // Register the asm target streamer.
   TargetRegistry::RegisterAsmTargetStreamer(getTheAVRTarget(),
                                             createMCAsmTargetStreamer);
+
+  TargetRegistry::RegisterNullTargetStreamer(getTheAVRTarget(),
+                                             createNullTargetStreamer);
 
   // Register the asm backend (as little endian).
   TargetRegistry::RegisterMCAsmBackend(getTheAVRTarget(), createAVRAsmBackend);
