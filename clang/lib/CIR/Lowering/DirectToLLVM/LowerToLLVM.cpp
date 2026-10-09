@@ -5344,27 +5344,44 @@ mlir::LogicalResult CIRToLLVMVecTernaryOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+/// Computes the column-major flat index (columnIdx * numRows) + rowIdx.
+static mlir::Value computeMatrixFlatIndex(mlir::ConversionPatternRewriter &rewriter,
+                                          mlir::Location loc,
+                                          cir::MatrixType matrixTy,
+                                          mlir::Value rowIdx,
+                                          mlir::Value columnIdx) {
+  rowIdx = createIntCast(rewriter, rowIdx, rewriter.getI64Type(), false);
+  columnIdx = createIntCast(rewriter, columnIdx, rewriter.getI64Type(), false);
+  mlir::Type indexTy = rowIdx.getType();
+  mlir::Value numRows = mlir::LLVM::ConstantOp::create(
+      rewriter, loc, indexTy,
+      rewriter.getIntegerAttr(indexTy, matrixTy.getRowNum()));
+  mlir::Value flatIndex = mlir::LLVM::MulOp::create(
+      rewriter, loc, {columnIdx, numRows}, /*properties=*/{},
+      /*discardableAttributes=*/{});
+  return mlir::LLVM::AddOp::create(rewriter, loc, flatIndex, rowIdx,
+                                   /*overflowFlags=*/{});
+}
+
 mlir::LogicalResult CIRToLLVMMatrixExtractOpLowering::matchAndRewrite(
     cir::MatrixExtractOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  cir::MatrixType matrixTy = op.getMatrix().getType();
-  mlir::Value rowIdx = createIntCast(rewriter, adaptor.getRowIdx(),
-                                     rewriter.getI64Type(), false);
-  mlir::Value columnIdx = createIntCast(rewriter, adaptor.getColumnIdx(),
-                                        rewriter.getI64Type(), false);
-  mlir::Type indexTy = rowIdx.getType();
-  mlir::Value numRows = mlir::LLVM::ConstantOp::create(
-      rewriter, op.getLoc(), indexTy,
-      rewriter.getIntegerAttr(indexTy, matrixTy.getRowNum()));
-
-  // Column major index = (columnIdx * numRows) + rowIdx
-  mlir::Value flatIndex = mlir::LLVM::MulOp::create(
-      rewriter, op->getLoc(), {columnIdx, numRows}, /*properties=*/{},
-      /*discardableAttributes=*/{});
-  flatIndex = mlir::LLVM::AddOp::create(rewriter, op->getLoc(), flatIndex,
-                                        rowIdx, /*overflowFlags=*/{});
+  mlir::Value flatIndex = computeMatrixFlatIndex(
+      rewriter, op.getLoc(), op.getMatrix().getType(), adaptor.getRowIdx(),
+      adaptor.getColumnIdx());
   rewriter.replaceOpWithNewOp<mlir::LLVM::ExtractElementOp>(
       op, adaptor.getMatrix(), flatIndex);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMMatrixInsertOpLowering::matchAndRewrite(
+    cir::MatrixInsertOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Value flatIndex = computeMatrixFlatIndex(
+      rewriter, op.getLoc(), op.getMatrix().getType(), adaptor.getRowIdx(),
+      adaptor.getColumnIdx());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::InsertElementOp>(
+      op, adaptor.getMatrix(), adaptor.getValue(), flatIndex);
   return mlir::success();
 }
 
