@@ -2,7 +2,7 @@
 ; RUN: FileCheck %s --check-prefix=TEXT
 
 ; RUN: opt -p 'no-op-module,function(no-op-function)' %s --filetype=null \
-; RUN: -S --print-pipeline-passes --print-pipeline-passes-format=tree | \
+; RUN: -S --print-pipeline-passes=tree | \
 ; RUN: FileCheck %s --strict-whitespace --match-full-lines --check-prefix=TREE
 
 ; TEXT: no-op-module,verify,print

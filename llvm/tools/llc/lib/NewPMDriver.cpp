@@ -183,7 +183,7 @@ int llvm::compileModuleWithNewPM(
 
   // If user only wants to print the pipeline, print it before parsing the MIR.
   if (std::optional<PrintPipelinePassesFormat> Format =
-          getPrintPipelinePasses()) {
+          PB.getPrintPipelinePasses()) {
     std::string PipelineStr;
     raw_string_ostream OS(PipelineStr);
     MPM.printPipeline(OS, [&PIC](StringRef ClassName) {

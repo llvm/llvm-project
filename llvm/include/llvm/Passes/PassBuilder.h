@@ -106,6 +106,11 @@ public:
   bool DevirtualizeSpeculatively;
 };
 
+enum class PrintPipelinePassesFormat {
+  Text,
+  Tree,
+};
+
 /// This class provides access to building LLVM's passes.
 ///
 /// Its members provide the baseline state available to passes during their
@@ -416,6 +421,11 @@ public:
 
   /// Print pass names.
   LLVM_ABI void printPassNames(raw_ostream &OS);
+
+  /// The format -print-pipeline-passes requests, or std::nullopt if it is not
+  /// given.
+  LLVM_ABI std::optional<PrintPipelinePassesFormat>
+  getPrintPipelinePasses() const;
 
   /// Register a callback for a default optimizer pipeline extension
   /// point
@@ -1029,15 +1039,6 @@ public:
     return Result();
   }
 };
-
-enum class PrintPipelinePassesFormat {
-  Text,
-  Tree,
-};
-
-/// The format -print-pipeline-passes requests, or std::nullopt if it is not
-/// given.
-LLVM_ABI std::optional<PrintPipelinePassesFormat> getPrintPipelinePasses();
 
 LLVM_ABI void printFormattedPipelinePasses(
     raw_ostream &OS, StringRef Pipeline,

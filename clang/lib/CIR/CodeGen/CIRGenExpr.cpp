@@ -30,9 +30,9 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "clang/CodeGenUtils/ExprUtils.h"
 #include "clang/CodeGenUtils/RecordLayoutUtils.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include <optional>
 
 using namespace clang;
@@ -1989,45 +1989,32 @@ static void pushTemporaryCleanup(CIRGenFunction &cgf,
     if (!referenceTemporaryDtor)
       return;
 
-    // Classic codegen calls registerGlobalDtor here, passing either the
-    // destructor or a generated array-destroy helper. CIR instead emits the
-    // destruction into the dtor region of whatever destroys the variable that
-    // extended the temporary: the cir.global's own region at namespace scope,
-    // and the enclosing cir.local_init's for a function-local static, which the
-    // verifier requires to be destroyed in-function under its guard.
     CIRGenModule &cgm = cgf.cgm;
     auto globalOp =
         mlir::cast<cir::GlobalOp>(cgm.getAddrOfGlobalTemporary(m, e));
 
-    mlir::Region *dtorRegion = cgf.curStaticVarDtorRegion;
-    assert(dtorRegion && "temporary extended outside a static initializer");
-
     CIRGenBuilderTy &builder = cgm.getBuilder();
-    mlir::OpBuilder::InsertionGuard guard(builder);
     mlir::Location loc = cgm.getLoc(m->getSourceRange());
-
-    // Temporaries are destroyed in reverse order of construction, so each one
-    // goes in front of those registered before it.
-    if (dtorRegion->empty()) {
-      builder.setInsertionPointToStart(builder.createBlock(dtorRegion));
-      cir::YieldOp::create(builder, loc);
-    }
-    builder.setInsertionPointToStart(&dtorRegion->front());
+    auto registerOp = cir::RegisterExitDtorOp::create(
+        builder, loc, globalOp.getSymNameAttr().getValue());
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToStart(
+        builder.createBlock(&registerOp.getBody()));
 
     mlir::Value tempAddr = builder.createGetGlobal(globalOp);
-
     if (e->getType()->isArrayType()) {
-      // emitDestroy will produce a cir.array.dtor here. LoweringPrepare's
-      // getOrCreateDtorFunc recognizes the non-trivial dtor region and
-      // hoists it into a __cxx_global_array_dtor helper.
       Address addr{tempAddr, cgf.convertTypeForMem(e->getType()),
                    referenceTemporary.getAlignment()};
       cgf.emitDestroy(addr, e->getType(), CIRGenFunction::destroyCXXObject);
     } else {
       GlobalDecl gd(referenceTemporaryDtor, Dtor_Complete);
       cir::FuncOp dtorFn = cgm.getAddrAndTypeOfCXXStructor(gd).second;
-      builder.createCallOp(loc, dtorFn, mlir::ValueRange{tempAddr});
+      // Make sure the call and the callee agree on calling convention.
+      builder.createCallOp(loc, dtorFn, mlir::ValueRange{tempAddr},
+                           /*attrs=*/{}, /*argAttrs=*/{}, /*resAttrs=*/{},
+                           dtorFn.getCallingConv());
     }
+    cir::YieldOp::create(builder, loc);
     break;
   }
 

@@ -572,7 +572,7 @@ bool llvm::runPassPipeline(
   // Print a textual, '-passes=' compatible, representation of pipeline if
   // requested.
   if (std::optional<PrintPipelinePassesFormat> Format =
-          getPrintPipelinePasses()) {
+          PB.getPrintPipelinePasses()) {
     std::string Pipeline;
     raw_string_ostream SOS(Pipeline);
     MPM.printPipeline(SOS, [&PIC](StringRef ClassName) {

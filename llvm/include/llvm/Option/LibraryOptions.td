@@ -29,10 +29,19 @@ class Field<string name, string type, code default> {
   code FieldDefault = default;
 }
 
+// The value a FlagOrEq row assigns when given without one.
+class BareValue<code value> { code BareValue = value; }
+
+// The comma-separated <values> of an enum row, which map in order to the C++
+// <enumerators>.
+class EnumValues<string values, list<code> enumerators>
+    : Values<values>, NormalizedValues<enumerators>,
+      MetaVarName<"<"#!subst(",", "|", values)#">">;
+
 // A bool member set by -<name> or -<name>=<true|false|1|0>.
 multiclass BoolField<string name, code default, string help> {
   def NAME : FlagOrEq<["-", "--"], name>, Field<NAME, "bool", default>,
-    HelpText<help>;
+    BareValue<"true">, HelpText<help>;
 }
 
 // A BoolOrDefault member, Default unless -<name> or -<name>=<true|false|1|0>
@@ -40,7 +49,7 @@ multiclass BoolField<string name, code default, string help> {
 multiclass OptionalBoolField<string name, string help> {
   def NAME : FlagOrEq<["-", "--"], name>,
     Field<NAME, "llvm::BoolOrDefault", "llvm::BoolOrDefault::Default">,
-    HelpText<help>;
+    BareValue<"llvm::BoolOrDefault::True">, HelpText<help>;
 }
 
 // A member of the enumeration <type> set by -<name>=<value> or -<name> <value>,
@@ -49,8 +58,16 @@ multiclass OptionalBoolField<string name, string help> {
 multiclass EnumField<string name, string type, code default, string values,
                      list<code> enumerators, string help> {
   def NAME : SeparateOrEq<["-", "--"], name>, Field<NAME, type, default>,
-    Values<values>, NormalizedValues<enumerators>,
-    MetaVarName<"<"#!subst(",", "|", values)#">">, HelpText<help>;
+    EnumValues<values, enumerators>, HelpText<help>;
+}
+
+// An EnumField also set to <bare> by -<name> without a value. It never consumes
+// the next argument.
+multiclass FlagOrEnumField<string name, string type, code default,
+                           string values, list<code> enumerators, code bare,
+                           string help> {
+  def NAME : FlagOrEq<["-", "--"], name>, Field<NAME, type, default>,
+    EnumValues<values, enumerators>, BareValue<bare>, HelpText<help>;
 }
 
 // A BoolOrDefault member, Default unless -<name>=Enable or -<name>=Disable is

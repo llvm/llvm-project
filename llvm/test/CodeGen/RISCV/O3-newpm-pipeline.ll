@@ -1,7 +1,7 @@
-; RUN: llc -enable-new-pm -mtriple=riscv32 -O3 -print-pipeline-passes -print-pipeline-passes-format=tree < %s 2>&1 \
+; RUN: llc -enable-new-pm -mtriple=riscv32 -O3 -print-pipeline-passes=tree < %s 2>&1 \
 ; RUN:   | grep -v verify \
 ; RUN:   | FileCheck %s
-; RUN: llc -enable-new-pm -mtriple=riscv64 -O3 -print-pipeline-passes -print-pipeline-passes-format=tree < %s 2>&1 \
+; RUN: llc -enable-new-pm -mtriple=riscv64 -O3 -print-pipeline-passes=tree < %s 2>&1 \
 ; RUN:   | grep -v verify \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,RV64
 

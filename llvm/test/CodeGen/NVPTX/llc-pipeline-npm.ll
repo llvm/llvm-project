@@ -1,7 +1,7 @@
 ; RUN: llc -enable-new-pm -mtriple=nvptx64-nvidia-cuda -mcpu=sm_90 -O0 \
-; RUN:     -print-pipeline-passes -print-pipeline-passes-format=tree < %s 2>&1 | FileCheck %s --check-prefix=O0
+; RUN:     -print-pipeline-passes=tree < %s 2>&1 | FileCheck %s --check-prefix=O0
 ; RUN: llc -enable-new-pm -mtriple=nvptx64-nvidia-cuda -mcpu=sm_90 -O2 \
-; RUN:     -print-pipeline-passes -print-pipeline-passes-format=tree < %s 2>&1 | FileCheck %s --check-prefix=O2
+; RUN:     -print-pipeline-passes=tree < %s 2>&1 | FileCheck %s --check-prefix=O2
 
 ; O0: require<MachineModuleAnalysis>
 ; O0-NEXT: require<profile-summary>

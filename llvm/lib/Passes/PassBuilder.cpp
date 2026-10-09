@@ -424,11 +424,9 @@
 
 using namespace llvm;
 
-std::optional<PrintPipelinePassesFormat> llvm::getPrintPipelinePasses() {
-  const PassesOptions &Opts = PassesOptions::Global;
-  if (!Opts.print_pipeline_passes)
-    return std::nullopt;
-  return Opts.print_pipeline_passes_format;
+std::optional<PrintPipelinePassesFormat>
+PassBuilder::getPrintPipelinePasses() const {
+  return Opts.print_pipeline_passes;
 }
 
 void llvm::printFormattedPipelinePasses(raw_ostream &OS, StringRef Pipeline,

@@ -39,9 +39,9 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "clang/CodeGenUtils/ExprUtils.h"
 #include "clang/CodeGenUtils/RecordLayoutUtils.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
@@ -6193,9 +6193,7 @@ LValue CodeGenFunction::EmitCompoundLiteralLValue(const CompoundLiteralExpr *E){
   // scope in C.
   if (!getLangOpts().CPlusPlus)
     if (QualType::DestructionKind DtorKind = E->getType().isDestructedType())
-      pushLifetimeExtendedDestroy(getCleanupKind(DtorKind), DeclPtr,
-                                  E->getType(), getDestroyer(DtorKind),
-                                  DtorKind & EHCleanup);
+      pushLifetimeExtendedDestroy(DtorKind, DeclPtr, E->getType());
 
   return Result;
 }

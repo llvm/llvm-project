@@ -1,4 +1,4 @@
-; RUN: llc -enable-new-pm -mtriple=lanai -print-pipeline-passes -print-pipeline-passes-format=tree < %s 2>&1 \
+; RUN: llc -enable-new-pm -mtriple=lanai -print-pipeline-passes=tree < %s 2>&1 \
 ; RUN:   | FileCheck %s
 
 ; CHECK: require<MachineModuleAnalysis>
