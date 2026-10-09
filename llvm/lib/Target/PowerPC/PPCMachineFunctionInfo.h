@@ -19,6 +19,8 @@
 
 namespace llvm {
 
+class PPCSubtarget;
+
 /// PPCFunctionInfo - This class is derived from MachineFunction private
 /// PowerPC target-specific information for each MachineFunction.
 class PPCFunctionInfo : public MachineFunctionInfo {
@@ -156,7 +158,7 @@ private:
   bool AIXFuncTLSModelOptInitDone = false;
 
 public:
-  explicit PPCFunctionInfo(const Function &F, const TargetSubtargetInfo *STI);
+  explicit PPCFunctionInfo(const Function &F, const PPCSubtarget *STI);
 
   MachineFunctionInfo *
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,

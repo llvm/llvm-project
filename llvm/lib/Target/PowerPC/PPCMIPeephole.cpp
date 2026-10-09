@@ -72,30 +72,6 @@ STATISTIC(NumEXTSWAndSLDICombined,
 STATISTIC(NumLoadImmZeroFoldedAndRemoved,
           "Number of LI(8) reg, 0 that are folded to r0 and removed");
 
-static cl::opt<bool>
-FixedPointRegToImm("ppc-reg-to-imm-fixed-point", cl::Hidden, cl::init(true),
-                   cl::desc("Iterate to a fixed point when attempting to "
-                            "convert reg-reg instructions to reg-imm"));
-
-static cl::opt<bool>
-ConvertRegReg("ppc-convert-rr-to-ri", cl::Hidden, cl::init(true),
-              cl::desc("Convert eligible reg+reg instructions to reg+imm"));
-
-static cl::opt<bool>
-    EnableSExtElimination("ppc-eliminate-signext",
-                          cl::desc("enable elimination of sign-extensions"),
-                          cl::init(true), cl::Hidden);
-
-static cl::opt<bool>
-    EnableZExtElimination("ppc-eliminate-zeroext",
-                          cl::desc("enable elimination of zero-extensions"),
-                          cl::init(true), cl::Hidden);
-
-static cl::opt<bool>
-    EnableTrapOptimization("ppc-opt-conditional-trap",
-                           cl::desc("enable optimization of conditional traps"),
-                           cl::init(false), cl::Hidden);
-
 DEBUG_COUNTER(
     PeepholeXToICounter, "ppc-xtoi-peephole",
     "Controls whether PPC reg+reg to reg+imm peephole is performed on a MI");
@@ -448,13 +424,14 @@ void PPCMIPeephole::convertUnprimedAccPHIs(
 
 // Perform peephole optimizations.
 bool PPCMIPeephole::simplifyCode() {
+  const PPCOptions &CLOpts = MF->getSubtarget<PPCSubtarget>().getCLOpts();
   bool Simplified = false;
   bool TrapOpt = false;
   MachineInstr* ToErase = nullptr;
   std::map<MachineInstr *, bool> TOCSaves;
   const TargetRegisterInfo *TRI = &TII->getRegisterInfo();
   NumFunctionsEnteredInMIPeephole++;
-  if (ConvertRegReg) {
+  if (CLOpts.convert_rr_to_ri) {
     // Fixed-point conversion of reg/reg instructions fed by load-immediate
     // into reg/imm instructions. FIXME: This is expensive, control it with
     // an option.
@@ -489,7 +466,7 @@ bool PPCMIPeephole::simplifyCode() {
           Simplified = true;
         }
       }
-    } while (SomethingChanged && FixedPointRegToImm);
+    } while (SomethingChanged && CLOpts.reg_to_imm_fixed_point);
   }
 
   // Since we are deleting this instruction, clear the kill flags on any of its
@@ -530,7 +507,7 @@ bool PPCMIPeephole::simplifyCode() {
       // If a conditional trap instruction got optimized to an
       // unconditional trap, eliminate all the instructions after
       // the trap.
-      if (EnableTrapOptimization && TrapOpt) {
+      if (CLOpts.opt_conditional_trap && TrapOpt) {
         ToErase = &MI;
         continue;
       }
@@ -955,7 +932,8 @@ bool PPCMIPeephole::simplifyCode() {
       case PPC::EXTSH:
       case PPC::EXTSH8:
       case PPC::EXTSH8_32_64: {
-        if (!EnableSExtElimination) break;
+        if (!CLOpts.eliminate_signext)
+          break;
         Register NarrowReg = MI.getOperand(1).getReg();
         if (!NarrowReg.isVirtual())
           break;
@@ -1006,7 +984,8 @@ bool PPCMIPeephole::simplifyCode() {
       case PPC::EXTSW:
       case PPC::EXTSW_32:
       case PPC::EXTSW_32_64: {
-        if (!EnableSExtElimination) break;
+        if (!CLOpts.eliminate_signext)
+          break;
         Register NarrowReg = MI.getOperand(1).getReg();
         if (!NarrowReg.isVirtual())
           break;
@@ -1131,7 +1110,8 @@ bool PPCMIPeephole::simplifyCode() {
         //   %6 = COPY %5:sub_32; (optional)
         //   %8 = IMPLICIT_DEF;
         //   %7<def,tied1> = INSERT_SUBREG %8<tied0>, %6, sub_32;
-        if (!EnableZExtElimination) break;
+        if (!CLOpts.eliminate_zeroext)
+          break;
 
         if (MI.getOperand(2).getImm() != 0)
           break;
@@ -1359,7 +1339,8 @@ bool PPCMIPeephole::simplifyCode() {
       case PPC::TWI:
       case PPC::TD:
       case PPC::TW: {
-        if (!EnableTrapOptimization) break;
+        if (!CLOpts.opt_conditional_trap)
+          break;
         MachineInstr *LiMI1 = getVRegDefOrNull(&MI.getOperand(1), MRI);
         MachineInstr *LiMI2 = getVRegDefOrNull(&MI.getOperand(2), MRI);
         bool IsOperand2Immediate = MI.getOperand(2).isImm();
@@ -1409,7 +1390,7 @@ bool PPCMIPeephole::simplifyCode() {
       ToErase = nullptr;
     }
     // Reset TrapOpt to false at the end of the basic block.
-    if (EnableTrapOptimization)
+    if (CLOpts.opt_conditional_trap)
       TrapOpt = false;
   }
 

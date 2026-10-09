@@ -21,7 +21,6 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -38,18 +37,6 @@ STATISTIC(NumFrameOffFoldInPreEmit,
           "Number of folding frame offset by using r+r in pre-emit peephole");
 STATISTIC(NumCmpsInPreEmit,
           "Number of compares eliminated in pre-emit peephole");
-
-static cl::opt<bool>
-EnablePCRelLinkerOpt("ppc-pcrel-linker-opt", cl::Hidden, cl::init(true),
-                     cl::desc("enable PC Relative linker optimization"));
-
-static cl::opt<bool>
-RunPreEmitPeephole("ppc-late-peephole", cl::Hidden, cl::init(true),
-                   cl::desc("Run pre-emit peephole optimizations."));
-
-static cl::opt<uint64_t>
-DSCRValue("ppc-set-dscr", cl::Hidden,
-          cl::desc("Set the Data Stream Control Register."));
 
 namespace {
 
@@ -241,7 +228,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
     bool addLinkerOpt(MachineBasicBlock &MBB, const TargetRegisterInfo *TRI) {
       MachineFunction *MF = MBB.getParent();
       // If the linker opt is disabled then just return.
-      if (!EnablePCRelLinkerOpt)
+      if (!MF->getSubtarget<PPCSubtarget>().getCLOpts().pcrel_linker_opt)
         return false;
 
       // Add this linker opt only if we are using PC Relative memops.
@@ -409,11 +396,12 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
     }
 
     bool runOnMachineFunction(MachineFunction &MF) override {
+      const PPCOptions &CLOpts = MF.getSubtarget<PPCSubtarget>().getCLOpts();
       // If the user wants to set the DSCR using command-line options,
       // load in the specified value at the start of main.
-      if (DSCRValue.getNumOccurrences() > 0 && MF.getName() == "main" &&
+      if (CLOpts.set_dscr && MF.getName() == "main" &&
           MF.getFunction().hasExternalLinkage()) {
-        DSCRValue = (uint32_t)(DSCRValue & 0x01FFFFFF); // 25-bit DSCR mask
+        uint32_t DSCRValue = *CLOpts.set_dscr & 0x01FFFFFF; // 25-bit DSCR mask
         RegScavenger RS;
         MachineBasicBlock &MBB = MF.front();
         // Find an unused GPR according to register liveness
@@ -441,7 +429,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
                     "requested";
       }
 
-      if (skipFunction(MF.getFunction()) || !RunPreEmitPeephole) {
+      if (skipFunction(MF.getFunction()) || !CLOpts.late_peephole) {
         // Remove UNENCODED_NOP even when this pass is disabled.
         // This needs to be done unconditionally so we don't emit zeros
         // in the instruction stream.

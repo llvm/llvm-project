@@ -8,18 +8,9 @@
 
 #include "PPCMachineScheduler.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
+#include "PPCSubtarget.h"
 
 using namespace llvm;
-
-static cl::opt<bool> EnableAddiLoadHeuristic(
-    "ppc-sched-addi-load",
-    cl::desc("Enable scheduling addi instruction before load for ppc"),
-    cl::init(true), cl::Hidden);
-static cl::opt<bool>
-    EnableAddiHeuristic("ppc-postra-bias-addi",
-                        cl::desc("Enable scheduling addi instruction as early"
-                                 "as possible post ra"),
-                        cl::Hidden, cl::init(true));
 
 static bool isADDIInstr(const GenericScheduler::SchedCandidate &Cand) {
   return Cand.SU->getInstr()->getOpcode() == PPC::ADDI ||
@@ -29,7 +20,7 @@ static bool isADDIInstr(const GenericScheduler::SchedCandidate &Cand) {
 bool PPCPreRASchedStrategy::biasAddiLoadCandidate(SchedCandidate &Cand,
                                                   SchedCandidate &TryCand,
                                                   SchedBoundary &Zone) const {
-  if (!EnableAddiLoadHeuristic)
+  if (!DAG->MF.getSubtarget<PPCSubtarget>().getCLOpts().sched_addi_load)
     return false;
 
   SchedCandidate &FirstCand = Zone.isTop() ? TryCand : Cand;
@@ -167,7 +158,7 @@ bool PPCPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
 
 bool PPCPostRASchedStrategy::biasAddiCandidate(SchedCandidate &Cand,
                                                SchedCandidate &TryCand) const {
-  if (!EnableAddiHeuristic)
+  if (!DAG->MF.getSubtarget<PPCSubtarget>().getCLOpts().postra_bias_addi)
     return false;
 
   if (isADDIInstr(TryCand) && !isADDIInstr(Cand)) {

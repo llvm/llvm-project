@@ -28,6 +28,7 @@ public:
   enum Endian { NOT_DETECTED, LITTLE, BIG };
 
 private:
+  const PPCOptions &CLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   Endian Endianness = Endian::NOT_DETECTED;
   mutable bool HasGlibcHWCAPAccess = false;
@@ -43,6 +44,7 @@ public:
 
   ~PPCTargetMachine() override;
 
+  const PPCOptions &getCLOpts() const { return CLOpts; }
   const PPCSubtarget *getSubtargetImpl(const Function &F) const override;
   // DO NOT IMPLEMENT: There is no such thing as a valid default subtarget,
   // subtargets are per-function entities based on the target-specific
