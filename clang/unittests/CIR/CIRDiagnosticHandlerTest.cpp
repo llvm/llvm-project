@@ -177,13 +177,15 @@ TEST_F(CIRDiagnosticHandlerTest, ZeroLineColumnFallsBackToInvalidLoc) {
   EXPECT_EQ(Consumer->Diags[0].Message, "module-level");
 }
 
-TEST_F(CIRDiagnosticHandlerTest, FileNotInManagerFallsBack) {
+TEST_F(CIRDiagnosticHandlerTest, FileNotInManagerKeepsLocationAsText) {
+  // A file the SourceManager does not know cannot be attached to the
+  // diagnostic, so the handler prefixes the message with file:line:col.
   cir::CIRDiagnosticHandler Handler(&MLIRCtx, Diags, SrcMgr, FileMgr);
   mlir::emitError(fileLoc(1, 1, "/not/registered.c")) << "stray";
 
   ASSERT_EQ(Consumer->Diags.size(), 1u);
   EXPECT_FALSE(Consumer->Diags[0].HasLoc);
-  EXPECT_EQ(Consumer->Diags[0].Message, "stray");
+  EXPECT_EQ(Consumer->Diags[0].Message, "/not/registered.c:1:1: stray");
 }
 
 TEST_F(CIRDiagnosticHandlerTest, FusedLocResolvesToFirstTranslatableChild) {

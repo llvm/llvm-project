@@ -114,6 +114,16 @@ else()
   endif()
 endif()
 
+# --- Target system ---
+# ORC_RT_TARGET_POSIX is ON if the target gets the shared POSIX system
+# implementation (the sys/posix/ directories). Test it, rather than repeating
+# the list of POSIX systems, wherever that implementation is selected.
+if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  set(ORC_RT_TARGET_POSIX ON)
+else()
+  set(ORC_RT_TARGET_POSIX OFF)
+endif()
+
 # --- Windows compatibility ---
 if(WIN32)
   add_compile_definitions(
