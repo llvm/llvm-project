@@ -93,15 +93,29 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
       return false;
     }
 
-    // In region form, VPCurrentIterationPHIRecipe must be the first header phi
-    // recipe. In a plain CFG VPlan, it must either be the first or second.
-    if (isa<VPCurrentIterationPHIRecipe>(RecipeI) &&
-        (VPBB->getPlan()->getVectorLoopRegion()
-             ? RecipeI->getIterator() != VPBB->begin()
-             : RecipeI->getIterator() != VPBB->begin() &&
-                   RecipeI->getIterator() != std::next(VPBB->begin()))) {
-      errs() << "CurrentIteration PHI is not the first/second recipe\n";
-      return false;
+    if (isa<VPCurrentIterationPHIRecipe>(RecipeI)) {
+      // In region form, VPCurrentIterationPHIRecipe must be the first header
+      // phi recipe. In a plain CFG VPlan, it must either be the first or
+      // second.
+      if (VPBB->getPlan()->getVectorLoopRegion()
+              ? RecipeI->getIterator() != VPBB->begin()
+              : RecipeI->getIterator() != VPBB->begin() &&
+                    RecipeI->getIterator() != std::next(VPBB->begin())) {
+        errs() << "CurrentIteration PHI is not the first/second recipe\n";
+        return false;
+      }
+      if (const VPRegionBlock *Region = VPBB->getEnclosingLoopRegion()) {
+        if (const VPValue *CanIV = Region->getCanonicalIV()) {
+          if (!all_of(
+                  CanIV->users(),
+                  match_fn(m_Add(m_Specific(CanIV),
+                                 m_Specific(&VPBB->getPlan()->getVFxUF()))))) {
+            errs() << "There should be no users of the canonical IV other than "
+                      "the increment after a VPCurrentIterationPHI is added\n";
+            return false;
+          }
+        }
+      }
     }
 
     // Check if the recipe operands match the number of predecessors.
