@@ -537,12 +537,13 @@ func.func @contract_result_transpose(%lhs : vector<2x4x4xf32>, %rhs: vector<4x8x
 
 // CHECK-LABEL: contract_broadcast_one_sided_unit_dim_reduction
 //  CHECK-SAME: (%[[ARG0:.+]]: vector<2xbf16>, %[[ARG1:.+]]: bf16)
+//  CHECK: %[[CST:.+]] = arith.constant 0.0{{.*}}: bf16
 //  CHECK: %[[LHS:.+]] = vector.shape_cast %[[ARG0]] : vector<2xbf16> to vector<1x1x2xbf16>
 //  CHECK: %[[RHS:.+]] = vector.broadcast %[[ARG1]] : bf16 to vector<1x1x2xbf16>
 //  CHECK: vector.contract
 //  CHECK-SAME: indexing_maps = [#[[$MAP0]], #[[$MAP0]], #[[$MAP1]]]
 //  CHECK-SAME: iterator_types = ["reduction", "reduction", "reduction"]
-//  CHECK-SAME: %[[LHS]], %[[RHS]] : vector<1x1x2xbf16>, vector<1x1x2xbf16> into bf16
+//  CHECK-SAME: %[[LHS]], %[[RHS]], %[[CST]] : vector<1x1x2xbf16>, vector<1x1x2xbf16> into bf16
 func.func @contract_broadcast_one_sided_unit_dim_reduction(%arg0 : vector<2xbf16>, %arg1 : bf16) -> bf16 {
   %zero = arith.constant 0.0 : bf16
   %lhs = vector.shape_cast %arg0 : vector<2xbf16> to vector<1x1x2xbf16>
