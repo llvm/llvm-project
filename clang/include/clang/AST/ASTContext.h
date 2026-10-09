@@ -3664,6 +3664,13 @@ public:
   /// it is not used.
   bool DeclMustBeEmitted(const Decl *D);
 
+  /// Determines if the global variable or function \p D is emitted on the side
+  /// of the CUDA/HIP compilation, i.e. host or device, that is being compiled,
+  /// based on its host/device related attributes.
+  ///
+  /// \returns false if CodeGen never emits \p D in this compilation.
+  bool shouldEmitCUDADecl(const ValueDecl *D) const;
+
   /// Visits all versions of a multiversioned function with the passed
   /// predicate.
   void forEachMultiversionedFunctionVersion(

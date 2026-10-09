@@ -522,28 +522,6 @@ void CIRGenModule::emitDeferred() {
   }
 }
 
-template <typename AttrT> static bool hasImplicitAttr(const ValueDecl *decl) {
-  if (!decl)
-    return false;
-  if (auto *attr = decl->getAttr<AttrT>())
-    return attr->isImplicit();
-  return decl->isImplicit();
-}
-
-// TODO(cir): This should be shared with OG Codegen.
-bool CIRGenModule::shouldEmitCUDAGlobalVar(const VarDecl *global) const {
-  assert(langOpts.CUDA && "Should not be called by non-CUDA languages");
-  // We need to emit host-side 'shadows' for all global
-  // device-side variables because the CUDA runtime needs their
-  // size and host-side address in order to provide access to
-  // their device-side incarnations.
-  return !langOpts.CUDAIsDevice || global->hasAttr<CUDADeviceAttr>() ||
-         global->hasAttr<CUDAConstantAttr>() ||
-         global->hasAttr<CUDASharedAttr>() ||
-         global->getType()->isCUDADeviceBuiltinSurfaceType() ||
-         global->getType()->isCUDADeviceBuiltinTextureType();
-}
-
 void CIRGenModule::printPostfixForExternalizedDecl(llvm::raw_ostream &os,
                                                    const Decl *d) {
   // ptxas does not allow '.' in symbol names. On the other hand, HIP prefers
@@ -587,34 +565,8 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
   }
 
   // If this is CUDA, be selective about which declarations we emit.
-  // Non-constexpr non-lambda implicit host device functions are not emitted
-  // unless they are used on device side.
-  if (langOpts.CUDA) {
-    assert((isa<FunctionDecl>(global) || isa<VarDecl>(global)) &&
-           "Expected Variable or Function");
-    if (const auto *varDecl = dyn_cast<VarDecl>(global)) {
-      if (!shouldEmitCUDAGlobalVar(varDecl))
-        return;
-      // TODO(cir): This should be shared with OG Codegen.
-    } else if (langOpts.CUDAIsDevice) {
-      const auto *functionDecl = dyn_cast<FunctionDecl>(global);
-      if ((!global->hasAttr<CUDADeviceAttr>() ||
-           (langOpts.OffloadImplicitHostDeviceTemplates &&
-            hasImplicitAttr<CUDAHostAttr>(functionDecl) &&
-            hasImplicitAttr<CUDADeviceAttr>(functionDecl) &&
-            !functionDecl->isConstexpr() &&
-            !isLambdaCallOperator(functionDecl) &&
-            !getASTContext().CUDAImplicitHostDeviceFunUsedByDevice.count(
-                functionDecl))) &&
-          !global->hasAttr<CUDAGlobalAttr>() &&
-          !(langOpts.HIPStdPar && isa<FunctionDecl>(global) &&
-            !global->hasAttr<CUDAHostAttr>()))
-        return;
-      // Device-only functions are the only things we skip.
-    } else if (!global->hasAttr<CUDAHostAttr>() &&
-               global->hasAttr<CUDADeviceAttr>())
-      return;
-  }
+  if (langOpts.CUDA && !getASTContext().shouldEmitCUDADecl(global))
+    return;
 
   if (langOpts.OpenMP) {
     // If this is OpenMP, check if it is legal to emit this global normally.
@@ -781,7 +733,7 @@ void CIRGenModule::addGlobalDtor(cir::FuncOp dtor,
 void CIRGenModule::handleCXXStaticMemberVarInstantiation(VarDecl *vd) {
   VarDecl::DefinitionKind dk = vd->isThisDeclarationADefinition();
   if ((dk == VarDecl::Definition && vd->hasAttr<DLLImportAttr>()) ||
-      (langOpts.CUDA && !shouldEmitCUDAGlobalVar(vd)))
+      (langOpts.CUDA && !getASTContext().shouldEmitCUDADecl(vd)))
     return;
 
   TemplateSpecializationKind tsk = vd->getTemplateSpecializationKind();
