@@ -4537,10 +4537,11 @@ LogicalResult cir::MatrixTransposeOp::verify() {
   cir::MatrixType resultTy = getResult().getType();
 
   if ((valueTy.getElementType() != resultTy.getElementType()) ||
-      (valueTy.getRowNum() != resultTy.getColumnNum()) ||
-      (valueTy.getColumnNum() != resultTy.getRowNum())) {
-    auto expectedTy = cir::MatrixType::get(
-        valueTy.getElementType(), valueTy.getColumnNum(), valueTy.getRowNum());
+      (valueTy.getNumRows() != resultTy.getNumColumns()) ||
+      (valueTy.getNumColumns() != resultTy.getNumRows())) {
+    auto expectedTy =
+        cir::MatrixType::get(valueTy.getElementType(), valueTy.getNumColumns(),
+                             valueTy.getNumRows());
     emitOpError() << "operand type " << valueTy << " expects result type of "
                   << expectedTy << " but got " << resultTy;
     return failure();
