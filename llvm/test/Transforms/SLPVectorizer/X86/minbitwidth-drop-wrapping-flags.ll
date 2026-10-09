@@ -46,7 +46,7 @@ define void @nneg_on_narrowed_cast_operand(ptr %p, ptr %q) {
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[P]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i16> [[TMP1]] to <4 x i12>
-; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg <4 x i12> [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i12> [[TMP2]] to <4 x i16>
 ; CHECK-NEXT:    store <4 x i16> [[TMP3]], ptr [[Q]], align 2
 ; CHECK-NEXT:    ret void
 ;
