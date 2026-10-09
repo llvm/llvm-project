@@ -967,8 +967,6 @@ bool ArchSpec::SetArchitecture(ArchitectureType arch_type, uint32_t cpu,
           m_triple.setArch(core_def->machine);
           break;
         case llvm::Triple::amdgpu: {
-          // Known models must have an AMDGPU triple subarchitecture. This
-          // rejects legacy R600 models while leaving unknown values generic.
           llvm::StringRef gpu = GetAMDGPUVariantName(sub);
           if (!gpu.empty()) {
             llvm::Triple::SubArchType sub_arch =

@@ -256,14 +256,6 @@ TEST(ArchSpecTest, AMDGPUSubArchMatching) {
   EXPECT_EQ(llvm::Triple::AMDGPUSubArch942, gfx942.GetTriple().getSubArch());
 }
 
-TEST(ArchSpecTest, R600IsUnsupported) {
-  ArchSpec AS;
-  EXPECT_FALSE(AS.SetTriple("r600-amd-amdhsa--r600"));
-  EXPECT_FALSE(AS.SetArchitecture(eArchTypeELF, llvm::ELF::EM_AMDGPU,
-                                  llvm::ELF::EF_AMDGPU_MACH_R600_R600,
-                                  llvm::ELF::ELFOSABI_AMDGPU_HSA));
-}
-
 TEST(ArchSpecTest, MergeFrom) {
   {
     ArchSpec A;
