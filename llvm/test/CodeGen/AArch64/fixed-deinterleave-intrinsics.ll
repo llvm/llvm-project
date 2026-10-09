@@ -14,9 +14,10 @@ define void @deinterleave_i8_factor2(ptr %ptr) {
 ;
 ; SVE-FIXED-LABEL: deinterleave_i8_factor2:
 ; SVE-FIXED:       // %bb.0:
-; SVE-FIXED-NEXT:    ld2 { v0.16b, v1.16b }, [x0]
+; SVE-FIXED-NEXT:    ptrue p0.b, vl16
+; SVE-FIXED-NEXT:    ld2b { z0.b, z1.b }, p0/z, [x0]
 ; SVE-FIXED-NEXT:    // fake_use: $q0
-; SVE-FIXED-NEXT:    // fake_use: $q1 $q0_q1
+; SVE-FIXED-NEXT:    // fake_use: $q1 $z0_z1
 ; SVE-FIXED-NEXT:    ret
   %load = load <32 x i8>, ptr %ptr, align 1
   %deinterleave = tail call { <16 x i8>, <16 x i8> } @llvm.vector.deinterleave2.v32i8(<32 x i8> %load)
@@ -37,9 +38,10 @@ define void @deinterleave_i16_factor2(ptr %ptr) {
 ;
 ; SVE-FIXED-LABEL: deinterleave_i16_factor2:
 ; SVE-FIXED:       // %bb.0:
-; SVE-FIXED-NEXT:    ld2 { v0.8h, v1.8h }, [x0]
+; SVE-FIXED-NEXT:    ptrue p0.h, vl8
+; SVE-FIXED-NEXT:    ld2h { z0.h, z1.h }, p0/z, [x0]
 ; SVE-FIXED-NEXT:    // fake_use: $q0
-; SVE-FIXED-NEXT:    // fake_use: $q1 $q0_q1
+; SVE-FIXED-NEXT:    // fake_use: $q1 $z0_z1
 ; SVE-FIXED-NEXT:    ret
   %load = load <16 x i16>, ptr %ptr, align 2
   %deinterleave = tail call { <8 x i16>, <8 x i16> } @llvm.vector.deinterleave2.v16i16(<16 x i16> %load)
@@ -60,9 +62,10 @@ define void @deinterleave_8xi32_factor2(ptr %ptr) {
 ;
 ; SVE-FIXED-LABEL: deinterleave_8xi32_factor2:
 ; SVE-FIXED:       // %bb.0:
-; SVE-FIXED-NEXT:    ld2 { v0.4s, v1.4s }, [x0]
+; SVE-FIXED-NEXT:    ptrue p0.s, vl4
+; SVE-FIXED-NEXT:    ld2w { z0.s, z1.s }, p0/z, [x0]
 ; SVE-FIXED-NEXT:    // fake_use: $q0
-; SVE-FIXED-NEXT:    // fake_use: $q1 $q0_q1
+; SVE-FIXED-NEXT:    // fake_use: $q1 $z0_z1
 ; SVE-FIXED-NEXT:    ret
   %load = load <8 x i32>, ptr %ptr, align 4
   %deinterleave = tail call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> %load)
@@ -83,9 +86,10 @@ define void @deinterleave_i64_factor2(ptr %ptr) {
 ;
 ; SVE-FIXED-LABEL: deinterleave_i64_factor2:
 ; SVE-FIXED:       // %bb.0:
-; SVE-FIXED-NEXT:    ld2 { v0.2d, v1.2d }, [x0]
+; SVE-FIXED-NEXT:    ptrue p0.d, vl2
+; SVE-FIXED-NEXT:    ld2d { z0.d, z1.d }, p0/z, [x0]
 ; SVE-FIXED-NEXT:    // fake_use: $q0
-; SVE-FIXED-NEXT:    // fake_use: $q1 $q0_q1
+; SVE-FIXED-NEXT:    // fake_use: $q1 $z0_z1
 ; SVE-FIXED-NEXT:    ret
   %load = load <4 x i64>, ptr %ptr, align 8
   %deinterleave = tail call { <2 x i64>, <2 x i64> } @llvm.vector.deinterleave2.v4i64(<4 x i64> %load)
@@ -106,9 +110,10 @@ define void @deinterleave_float_factor2(ptr %ptr) {
 ;
 ; SVE-FIXED-LABEL: deinterleave_float_factor2:
 ; SVE-FIXED:       // %bb.0:
-; SVE-FIXED-NEXT:    ld2 { v0.4s, v1.4s }, [x0]
+; SVE-FIXED-NEXT:    ptrue p0.s, vl4
+; SVE-FIXED-NEXT:    ld2w { z0.s, z1.s }, p0/z, [x0]
 ; SVE-FIXED-NEXT:    // fake_use: $q0
-; SVE-FIXED-NEXT:    // fake_use: $q1 $q0_q1
+; SVE-FIXED-NEXT:    // fake_use: $q1 $z0_z1
 ; SVE-FIXED-NEXT:    ret
   %load = load <8 x float>, ptr %ptr, align 4
   %deinterleave = tail call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> %load)
@@ -129,9 +134,10 @@ define void @deinterleave_double_factor2(ptr %ptr) {
 ;
 ; SVE-FIXED-LABEL: deinterleave_double_factor2:
 ; SVE-FIXED:       // %bb.0:
-; SVE-FIXED-NEXT:    ld2 { v0.2d, v1.2d }, [x0]
+; SVE-FIXED-NEXT:    ptrue p0.d, vl2
+; SVE-FIXED-NEXT:    ld2d { z0.d, z1.d }, p0/z, [x0]
 ; SVE-FIXED-NEXT:    // fake_use: $q0
-; SVE-FIXED-NEXT:    // fake_use: $q1 $q0_q1
+; SVE-FIXED-NEXT:    // fake_use: $q1 $z0_z1
 ; SVE-FIXED-NEXT:    ret
   %load = load <4 x double>, ptr %ptr, align 8
   %deinterleave = tail call { <2 x double>, <2 x double> } @llvm.vector.deinterleave2.v4f64(<4 x double> %load)
@@ -152,9 +158,10 @@ define void @deinterleave_ptr_factor2(ptr %ptr) {
 ;
 ; SVE-FIXED-LABEL: deinterleave_ptr_factor2:
 ; SVE-FIXED:       // %bb.0:
-; SVE-FIXED-NEXT:    ld2 { v0.2d, v1.2d }, [x0]
+; SVE-FIXED-NEXT:    ptrue p0.d, vl2
+; SVE-FIXED-NEXT:    ld2d { z0.d, z1.d }, p0/z, [x0]
 ; SVE-FIXED-NEXT:    // fake_use: $q0
-; SVE-FIXED-NEXT:    // fake_use: $q1 $q0_q1
+; SVE-FIXED-NEXT:    // fake_use: $q1 $z0_z1
 ; SVE-FIXED-NEXT:    ret
   %load = load <4 x ptr>, ptr %ptr, align 8
   %deinterleave = tail call { <2 x ptr>, <2 x ptr> } @llvm.vector.deinterleave2.v4p0(<4 x ptr> %load)
@@ -318,72 +325,14 @@ define void @deinterleave_wide_i16_factor2(ptr %ptr) #0 {
 ;
 ; SVE-FIXED-LABEL: deinterleave_wide_i16_factor2:
 ; SVE-FIXED:       // %bb.0:
-; SVE-FIXED-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
-; SVE-FIXED-NEXT:    .cfi_def_cfa_offset 16
-; SVE-FIXED-NEXT:    .cfi_offset b8, -16
-; SVE-FIXED-NEXT:    ldp q0, q1, [x0, #32]
-; SVE-FIXED-NEXT:    ldp q2, q3, [x0]
-; SVE-FIXED-NEXT:    mov z4.h, z1.h[7]
-; SVE-FIXED-NEXT:    mov z5.h, z1.h[5]
-; SVE-FIXED-NEXT:    mov z6.h, z1.h[3]
-; SVE-FIXED-NEXT:    mov z7.h, z1.h[1]
-; SVE-FIXED-NEXT:    mov z16.h, z0.h[7]
-; SVE-FIXED-NEXT:    mov z17.h, z0.h[5]
-; SVE-FIXED-NEXT:    mov z18.h, z0.h[3]
-; SVE-FIXED-NEXT:    mov z19.h, z0.h[1]
-; SVE-FIXED-NEXT:    mov z20.h, z3.h[7]
-; SVE-FIXED-NEXT:    mov z21.h, z3.h[5]
-; SVE-FIXED-NEXT:    mov z22.h, z3.h[3]
-; SVE-FIXED-NEXT:    mov z23.h, z3.h[1]
-; SVE-FIXED-NEXT:    mov z24.h, z2.h[7]
-; SVE-FIXED-NEXT:    mov z25.h, z2.h[5]
-; SVE-FIXED-NEXT:    zip1 z4.h, z5.h, z4.h
-; SVE-FIXED-NEXT:    zip1 z5.h, z7.h, z6.h
-; SVE-FIXED-NEXT:    zip1 z6.h, z17.h, z16.h
-; SVE-FIXED-NEXT:    zip1 z7.h, z19.h, z18.h
-; SVE-FIXED-NEXT:    zip1 z16.h, z21.h, z20.h
-; SVE-FIXED-NEXT:    zip1 z17.h, z23.h, z22.h
-; SVE-FIXED-NEXT:    mov z19.h, z2.h[3]
-; SVE-FIXED-NEXT:    zip1 z18.h, z25.h, z24.h
-; SVE-FIXED-NEXT:    mov z20.h, z2.h[1]
-; SVE-FIXED-NEXT:    mov z21.h, z1.h[6]
-; SVE-FIXED-NEXT:    mov z22.h, z1.h[4]
-; SVE-FIXED-NEXT:    mov z24.h, z3.h[6]
-; SVE-FIXED-NEXT:    mov z25.h, z3.h[4]
-; SVE-FIXED-NEXT:    mov z26.h, z3.h[2]
-; SVE-FIXED-NEXT:    mov z27.h, z2.h[6]
-; SVE-FIXED-NEXT:    mov z28.h, z2.h[4]
-; SVE-FIXED-NEXT:    mov z29.h, z2.h[2]
-; SVE-FIXED-NEXT:    mov z23.h, z1.h[2]
-; SVE-FIXED-NEXT:    mov z30.h, z0.h[6]
-; SVE-FIXED-NEXT:    mov z31.h, z0.h[4]
-; SVE-FIXED-NEXT:    mov z8.h, z0.h[2]
-; SVE-FIXED-NEXT:    zip1 z19.h, z20.h, z19.h
-; SVE-FIXED-NEXT:    zip1 z20.h, z22.h, z21.h
-; SVE-FIXED-NEXT:    zip1 z21.h, z25.h, z24.h
-; SVE-FIXED-NEXT:    zip1 z3.h, z3.h, z26.h
-; SVE-FIXED-NEXT:    zip1 z22.h, z28.h, z27.h
-; SVE-FIXED-NEXT:    zip1 z2.h, z2.h, z29.h
-; SVE-FIXED-NEXT:    zip1 z1.h, z1.h, z23.h
-; SVE-FIXED-NEXT:    zip1 z23.h, z31.h, z30.h
-; SVE-FIXED-NEXT:    zip1 z0.h, z0.h, z8.h
-; SVE-FIXED-NEXT:    zip1 z4.s, z5.s, z4.s
-; SVE-FIXED-NEXT:    zip1 z3.s, z3.s, z21.s
-; SVE-FIXED-NEXT:    zip1 z5.s, z7.s, z6.s
-; SVE-FIXED-NEXT:    zip1 z6.s, z17.s, z16.s
-; SVE-FIXED-NEXT:    zip1 z2.s, z2.s, z22.s
-; SVE-FIXED-NEXT:    zip1 z7.s, z19.s, z18.s
-; SVE-FIXED-NEXT:    zip1 z1.s, z1.s, z20.s
-; SVE-FIXED-NEXT:    zip1 z0.s, z0.s, z23.s
-; SVE-FIXED-NEXT:    zip1 z2.d, z2.d, z3.d
-; SVE-FIXED-NEXT:    zip1 z3.d, z5.d, z4.d
-; SVE-FIXED-NEXT:    zip1 z4.d, z7.d, z6.d
-; SVE-FIXED-NEXT:    zip1 z0.d, z0.d, z1.d
-; SVE-FIXED-NEXT:    // fake_use: $q2 $z2
-; SVE-FIXED-NEXT:    // fake_use: $q0 $z0
-; SVE-FIXED-NEXT:    // fake_use: $q4 $z4
-; SVE-FIXED-NEXT:    // fake_use: $q3 $z3
-; SVE-FIXED-NEXT:    ldr d8, [sp], #16 // 8-byte Folded Reload
+; SVE-FIXED-NEXT:    ptrue p0.h, vl8
+; SVE-FIXED-NEXT:    mov x8, #16 // =0x10
+; SVE-FIXED-NEXT:    ld2h { z0.h, z1.h }, p0/z, [x0, x8, lsl #1]
+; SVE-FIXED-NEXT:    ld2h { z2.h, z3.h }, p0/z, [x0]
+; SVE-FIXED-NEXT:    // fake_use: $q2
+; SVE-FIXED-NEXT:    // fake_use: $q0
+; SVE-FIXED-NEXT:    // fake_use: $q3 $z2_z3
+; SVE-FIXED-NEXT:    // fake_use: $q1 $z0_z1
 ; SVE-FIXED-NEXT:    ret
   %load = load <32 x i16>, ptr %ptr, align 2
   %deinterleave = tail call { <16 x i16>, <16 x i16> } @llvm.vector.deinterleave2.v32i16(<32 x i16> %load)
@@ -433,26 +382,22 @@ define void @interleave_wide_ptr_factor2(ptr %ptr, <8 x ptr> %l, <8 x ptr> %r) {
 ;
 ; SVE-FIXED-LABEL: interleave_wide_ptr_factor2:
 ; SVE-FIXED:       // %bb.0:
-; SVE-FIXED-NEXT:    // kill: def $q3 killed $q3 def $z3
-; SVE-FIXED-NEXT:    // kill: def $q7 killed $q7 def $z7
-; SVE-FIXED-NEXT:    trn2 z16.d, z3.d, z7.d
-; SVE-FIXED-NEXT:    // kill: def $q6 killed $q6 def $z6
-; SVE-FIXED-NEXT:    // kill: def $q2 killed $q2 def $z2
-; SVE-FIXED-NEXT:    // kill: def $q1 killed $q1 def $z1
-; SVE-FIXED-NEXT:    // kill: def $q0 killed $q0 def $z0
-; SVE-FIXED-NEXT:    // kill: def $q5 killed $q5 def $z5
-; SVE-FIXED-NEXT:    // kill: def $q4 killed $q4 def $z4
-; SVE-FIXED-NEXT:    zip1 z3.d, z3.d, z7.d
-; SVE-FIXED-NEXT:    trn2 z7.d, z2.d, z6.d
-; SVE-FIXED-NEXT:    zip1 z2.d, z2.d, z6.d
-; SVE-FIXED-NEXT:    trn2 z6.d, z1.d, z5.d
-; SVE-FIXED-NEXT:    zip1 z1.d, z1.d, z5.d
-; SVE-FIXED-NEXT:    stp q2, q7, [x0, #64]
-; SVE-FIXED-NEXT:    stp q1, q6, [x0, #32]
-; SVE-FIXED-NEXT:    stp q3, q16, [x0, #96]
-; SVE-FIXED-NEXT:    trn2 z3.d, z0.d, z4.d
-; SVE-FIXED-NEXT:    zip1 z0.d, z0.d, z4.d
-; SVE-FIXED-NEXT:    stp q0, q3, [x0]
+; SVE-FIXED-NEXT:    // kill: def $q7 killed $q7 killed $z6_z7 def $z6_z7
+; SVE-FIXED-NEXT:    mov z17.d, z6.d
+; SVE-FIXED-NEXT:    // kill: def $q5 killed $q5 killed $z4_z5 def $z4_z5
+; SVE-FIXED-NEXT:    mov z19.d, z4.d
+; SVE-FIXED-NEXT:    mov x8, #12 // =0xc
+; SVE-FIXED-NEXT:    mov z6.d, z3.d
+; SVE-FIXED-NEXT:    mov z16.d, z2.d
+; SVE-FIXED-NEXT:    ptrue p0.d, vl2
+; SVE-FIXED-NEXT:    mov z4.d, z1.d
+; SVE-FIXED-NEXT:    mov z18.d, z0.d
+; SVE-FIXED-NEXT:    st2d { z6.d, z7.d }, p0, [x0, x8, lsl #3]
+; SVE-FIXED-NEXT:    mov x8, #8 // =0x8
+; SVE-FIXED-NEXT:    st2d { z16.d, z17.d }, p0, [x0, x8, lsl #3]
+; SVE-FIXED-NEXT:    mov x8, #4 // =0x4
+; SVE-FIXED-NEXT:    st2d { z4.d, z5.d }, p0, [x0, x8, lsl #3]
+; SVE-FIXED-NEXT:    st2d { z18.d, z19.d }, p0, [x0]
 ; SVE-FIXED-NEXT:    ret
   %interleave = tail call <16 x ptr> @llvm.vector.interleave2.v16p0(<8 x ptr> %l, <8 x ptr> %r)
   store <16 x ptr> %interleave, ptr %ptr, align 4
@@ -638,26 +583,22 @@ define void @interleave_wide_ptr_factor2_intrinsic(ptr %ptr, <8 x ptr> %l, <8 x 
 ;
 ; SVE-FIXED-LABEL: interleave_wide_ptr_factor2_intrinsic:
 ; SVE-FIXED:       // %bb.0:
-; SVE-FIXED-NEXT:    // kill: def $q3 killed $q3 def $z3
-; SVE-FIXED-NEXT:    // kill: def $q7 killed $q7 def $z7
-; SVE-FIXED-NEXT:    trn2 z16.d, z3.d, z7.d
-; SVE-FIXED-NEXT:    // kill: def $q6 killed $q6 def $z6
-; SVE-FIXED-NEXT:    // kill: def $q2 killed $q2 def $z2
-; SVE-FIXED-NEXT:    // kill: def $q1 killed $q1 def $z1
-; SVE-FIXED-NEXT:    // kill: def $q0 killed $q0 def $z0
-; SVE-FIXED-NEXT:    // kill: def $q5 killed $q5 def $z5
-; SVE-FIXED-NEXT:    // kill: def $q4 killed $q4 def $z4
-; SVE-FIXED-NEXT:    zip1 z3.d, z3.d, z7.d
-; SVE-FIXED-NEXT:    trn2 z7.d, z2.d, z6.d
-; SVE-FIXED-NEXT:    zip1 z2.d, z2.d, z6.d
-; SVE-FIXED-NEXT:    trn2 z6.d, z1.d, z5.d
-; SVE-FIXED-NEXT:    zip1 z1.d, z1.d, z5.d
-; SVE-FIXED-NEXT:    stp q2, q7, [x0, #64]
-; SVE-FIXED-NEXT:    stp q1, q6, [x0, #32]
-; SVE-FIXED-NEXT:    stp q3, q16, [x0, #96]
-; SVE-FIXED-NEXT:    trn2 z3.d, z0.d, z4.d
-; SVE-FIXED-NEXT:    zip1 z0.d, z0.d, z4.d
-; SVE-FIXED-NEXT:    stp q0, q3, [x0]
+; SVE-FIXED-NEXT:    // kill: def $q7 killed $q7 killed $z6_z7 def $z6_z7
+; SVE-FIXED-NEXT:    mov z17.d, z6.d
+; SVE-FIXED-NEXT:    // kill: def $q5 killed $q5 killed $z4_z5 def $z4_z5
+; SVE-FIXED-NEXT:    mov z19.d, z4.d
+; SVE-FIXED-NEXT:    mov x8, #12 // =0xc
+; SVE-FIXED-NEXT:    mov z6.d, z3.d
+; SVE-FIXED-NEXT:    mov z16.d, z2.d
+; SVE-FIXED-NEXT:    ptrue p0.d, vl2
+; SVE-FIXED-NEXT:    mov z4.d, z1.d
+; SVE-FIXED-NEXT:    mov z18.d, z0.d
+; SVE-FIXED-NEXT:    st2d { z6.d, z7.d }, p0, [x0, x8, lsl #3]
+; SVE-FIXED-NEXT:    mov x8, #8 // =0x8
+; SVE-FIXED-NEXT:    st2d { z16.d, z17.d }, p0, [x0, x8, lsl #3]
+; SVE-FIXED-NEXT:    mov x8, #4 // =0x4
+; SVE-FIXED-NEXT:    st2d { z4.d, z5.d }, p0, [x0, x8, lsl #3]
+; SVE-FIXED-NEXT:    st2d { z18.d, z19.d }, p0, [x0]
 ; SVE-FIXED-NEXT:    ret
   %interleave = tail call <16 x ptr> @llvm.vector.interleave2.v16p0(<8 x ptr> %l, <8 x ptr> %r)
   store <16 x ptr> %interleave, ptr %ptr, align 4
