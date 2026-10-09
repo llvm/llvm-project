@@ -98,18 +98,26 @@ static bool isReadSrcMemref(Value operand) {
   return srcBuff && isa<MemRefType>(srcBuff.getType());
 }
 
-// Check if the memref read by a vector.contract operand has the VNNI factor as
-// its static innermost dim, so that the collapsed tile rows are contiguous.
-static bool hasVnniInnerDim(Value operand, int64_t vnni) {
+// Check if a vector.contract operand reads whole VNNI groups: the memref's
+// static innermost dim is the VNNI factor and the read starts at its origin.
+static bool isVnniOperandRead(Value operand, int64_t vnni) {
+  Operation *defOp = operand.getDefiningOp();
+  if (!defOp)
+    return false;
+
   Value srcBuff;
-  llvm::TypeSwitch<Operation *>(operand.getDefiningOp())
-      .Case<TransferReadOp, LoadOp>(
-          [&](auto readOp) { srcBuff = readOp.getOperand(0); });
+  OpFoldResult vnniIndex;
+  llvm::TypeSwitch<Operation *>(defOp).Case<TransferReadOp, LoadOp>(
+      [&](auto readOp) {
+        srcBuff = readOp.getBase();
+        vnniIndex = readOp.getIndices().back();
+      });
 
   if (!srcBuff)
     return false;
   auto srcType = dyn_cast<MemRefType>(srcBuff.getType());
-  return srcType && srcType.getRank() > 0 && srcType.getShape().back() == vnni;
+  return srcType && srcType.getRank() > 0 &&
+         srcType.getShape().back() == vnni && isZeroInteger(vnniIndex);
 }
 
 // Replaces the indices of the two innermost dims of a VNNI operand by the
@@ -881,11 +889,10 @@ struct VectorContractToAMXDotProduct
       return rewriter.notifyMatchFailure(
           contractOp, "The LHS or RHS src is not a MemRef type.");
 
-    if (isVnni && !(hasVnniInnerDim(contractOp.getLhs(), blockingFactor) &&
-                    hasVnniInnerDim(contractOp.getRhs(), blockingFactor)))
+    if (isVnni && !(isVnniOperandRead(contractOp.getLhs(), blockingFactor) &&
+                    isVnniOperandRead(contractOp.getRhs(), blockingFactor)))
       return rewriter.notifyMatchFailure(
-          contractOp, "The innermost dim of the LHS or RHS src is not the "
-                      "static VNNI factor.");
+          contractOp, "The LHS or RHS src does not read whole VNNI groups.");
 
     unsigned int dimValue = blockingFactor;
     if (!isVnni)
@@ -1157,6 +1164,12 @@ struct VectorContractToAMXDotProduct
     for (Operation &op : loopLists[0].getBody()->getOperations()) {
 
       if (auto contract = dyn_cast<vector::ContractionOp>(op)) {
+        if (isVnni && !(isVnniOperandRead(contract.getLhs(), blockingFactor) &&
+                        isVnniOperandRead(contract.getRhs(), blockingFactor)))
+          return rewriter.notifyMatchFailure(
+              contractOp, "The LHS or RHS src of an associated contract "
+                          "operation does not read whole VNNI groups.");
+
         LogicalResult validate = validateContractOps(
             rewriter, contract, dimValue, srcBuffLhs, srcBuffRhs, true);
 
