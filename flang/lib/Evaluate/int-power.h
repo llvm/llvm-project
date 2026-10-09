@@ -11,17 +11,14 @@
 
 // Computes an integer power of a real or complex value.
 
+#include "flang/Evaluate/real.h"
 #include "flang/Evaluate/target.h"
 
 namespace Fortran::evaluate {
 
-namespace value {
-template <typename W, int P> class Real;
-}
-
 template <typename REAL, typename INT>
 ValueWithRealFlags<REAL> TimesIntPowerOf(const REAL &factor, const REAL &base,
-    const INT &power,
+    const INT &power, bool forceMultiply = false,
     Rounding rounding = TargetCharacteristics::defaultRounding) {
   ValueWithRealFlags<REAL> result{factor};
   if (base.IsNotANumber()) {
@@ -32,7 +29,7 @@ ValueWithRealFlags<REAL> TimesIntPowerOf(const REAL &factor, const REAL &base,
       result.flags.set(RealFlag::InvalidArgument);
     }
   } else {
-    bool negativePower{power.IsNegative()};
+    bool negativePower{!forceMultiply && power.IsNegative()};
     INT absPower{power.ABS().value};
     REAL squares{base};
     int nbits{INT::bits - absPower.LEADZ()};
@@ -61,22 +58,25 @@ ValueWithRealFlags<value::Real<W, P>> IntPower(const value::Real<W, P> &base,
     Rounding rounding = TargetCharacteristics::defaultRounding) {
   using REAL = value::Real<W, P>;
   REAL one{REAL::FromInteger(INT{1}).value};
-  if (power.IsNegative() && !base.IsZero() &&
-      base.ABS().Compare(one) == Relation::Greater) {
-    ValueWithRealFlags<REAL> result;
-    REAL recip{one.Divide(base, rounding).AccumulateFlags(result.flags)};
-    result.value = TimesIntPowerOf(one, recip, power.ABS().value, rounding)
-                       .AccumulateFlags(result.flags);
-    return result;
+  ValueWithRealFlags<REAL> result{
+      TimesIntPowerOf(one, base, power, /*forceMultiply=*/false, rounding)};
+  if (result.flags.test(RealFlag::Overflow) && power.IsNegative() &&
+      !base.IsZero() && base.ABS().Compare(one) == Relation::Greater) {
+    ValueWithRealFlags<REAL> retry;
+    REAL recip{one.Divide(base, rounding).AccumulateFlags(retry.flags)};
+    retry.value =
+        TimesIntPowerOf(one, recip, power, /*forceMultiply=*/true, rounding)
+            .AccumulateFlags(retry.flags);
+    return retry;
   }
-  return TimesIntPowerOf(one, base, power, rounding);
+  return result;
 }
 
 template <typename REAL, typename INT>
 ValueWithRealFlags<REAL> IntPower(const REAL &base, const INT &power,
     Rounding rounding = TargetCharacteristics::defaultRounding) {
   REAL one{REAL::FromInteger(INT{1}).value};
-  return TimesIntPowerOf(one, base, power, rounding);
+  return TimesIntPowerOf(one, base, power, /*forceMultiply=*/false, rounding);
 }
 } // namespace Fortran::evaluate
 #endif // FORTRAN_EVALUATE_INT_POWER_H_
