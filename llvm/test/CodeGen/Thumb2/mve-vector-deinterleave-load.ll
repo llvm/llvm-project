@@ -127,9 +127,16 @@ define void @factor2_v2i32(ptr %src) {
 ; CHECK-LABEL: factor2_v2i32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    @ implicit-def: $d0
-; CHECK-NEXT:    @ implicit-def: $d1
-; CHECK-NEXT:    @ fake_use: $q0
+; CHECK-NEXT:    vmov.f32 s4, s2
+; CHECK-NEXT:    vmov.f32 s2, s3
+; CHECK-NEXT:    vmov.f32 s6, s1
+; CHECK-NEXT:    vmov.f32 s10, s2
+; CHECK-NEXT:    vmov.f32 s8, s6
+; CHECK-NEXT:    vmov.f32 s2, s4
+; CHECK-NEXT:    vmov.f32 s11, s3
+; CHECK-NEXT:    vmov.f32 s9, s7
+; CHECK-NEXT:    @ fake_use: $q2
+; CHECK-NEXT:    vmov.f32 s3, s5
 ; CHECK-NEXT:    @ fake_use: $q0
 ; CHECK-NEXT:    bx lr
   %load = load <4 x i32>, ptr %src
