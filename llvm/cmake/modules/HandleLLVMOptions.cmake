@@ -1517,6 +1517,11 @@ if(LLVM_CCACHE_BUILD)
       if (LLVM_CCACHE_DIR)
         list(APPEND LLVM_CCACHE_PARAMS "cache_dir=${LLVM_CCACHE_DIR}")
       endif()
+      if (NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
+        # prepend depend mode so that it can be disabled by the user with depend_mode=false
+        # see above for reasoning
+        list(PREPEND LLVM_CCACHE_PARAMS "depend_mode=true")
+      endif()
 
       # Since ccache 4.8 it is possible to pass options as arguments
       set(CCACHE_PROGRAM ${CCACHE_PROGRAM} ${LLVM_CCACHE_PARAMS})
