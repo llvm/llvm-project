@@ -10,6 +10,7 @@
 # OCAMLFIND
 # OCAML_VERSION
 # OCAML_STDLIB_PATH
+# OCAML_EXT_DLL
 # HAVE_OCAMLOPT
 #
 # Also provides find_ocamlfind_package() macro.
@@ -42,6 +43,15 @@ if( OCAMLFIND )
     OUTPUT_VARIABLE OCAML_STDLIB_PATH
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 
+  # ocamlmklib names shared stub libraries with OCaml's ext_dll, which can
+  # differ from CMAKE_SHARED_LIBRARY_SUFFIX (e.g. .so rather than .dylib on
+  # macOS).
+  execute_process(
+    COMMAND ${OCAMLFIND} ocamlc -config
+    OUTPUT_VARIABLE ocaml_config)
+  string(REGEX MATCH "ext_dll: ([^\n]*)" ocaml_ext_dll_match "${ocaml_config}")
+  set(OCAML_EXT_DLL "${CMAKE_MATCH_1}")
+
   execute_process(
     COMMAND ${OCAMLFIND} ocamlc -version
     OUTPUT_QUIET
@@ -56,7 +66,8 @@ endif()
 find_package_handle_standard_args( OCaml DEFAULT_MSG
   OCAMLFIND
   OCAML_VERSION
-  OCAML_STDLIB_PATH)
+  OCAML_STDLIB_PATH
+  OCAML_EXT_DLL)
 
 mark_as_advanced(
   OCAMLFIND)
