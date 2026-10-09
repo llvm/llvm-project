@@ -21561,6 +21561,42 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
 
     if (IsEmittedForExternalSymbol())
       return FunctionEmissionStatus::Emitted;
+
+    // CodeGen also emits a function regardless of its uses if it is forced to,
+    // so its deferred diagnostics must not wait for a use.
+    auto IsForcedToBeEmitted = [this, FD, Final]() {
+      const FunctionDecl *Def = FD->getDefinition();
+      if (!Def || Def->hasSkippedBody() ||
+          !(LangOpts.EmitAllDecls || getASTContext().DeclMustBeEmitted(Def)))
+        return false;
+      // Immediate functions are never emitted. Whether an immediate-escalating
+      // function is immediate is only known once its body is complete, so
+      // leave that to the check at the end of the translation unit.
+      if (Def->isImmediateFunction() ||
+          (!Final && LangOpts.CPlusPlus20 && Def->isImmediateEscalating()))
+        return false;
+      // Lambdas, implicit functions and functions defaulted on their first
+      // declaration are not handed to CodeGen, so they are only emitted when
+      // used.
+      if (isLambdaMethod(Def) || Def->isImplicit() ||
+          Def->getCanonicalDecl()->isDefaulted())
+        return false;
+      // An available externally definition is only emitted to be inlined into
+      // its callers.
+      if (getASTContext().GetGVALinkageForFunction(Def) ==
+          GVA_AvailableExternally)
+        return false;
+      // Implicit host device templates are only emitted for the device if they
+      // are used on the device.
+      if (LangOpts.CUDAIsDevice &&
+          LangOpts.OffloadImplicitHostDeviceTemplates &&
+          SemaCUDA::isImplicitHostDeviceFunction(Def) && !Def->isConstexpr())
+        return false;
+      return true;
+    };
+
+    if (IsForcedToBeEmitted())
+      return FunctionEmissionStatus::Emitted;
   }
 
   // Otherwise, the function is known-emitted if it's in our set of
