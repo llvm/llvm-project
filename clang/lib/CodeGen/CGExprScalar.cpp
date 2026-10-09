@@ -5056,9 +5056,6 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
     divisor = CGF.CGM.getSize(elementSize);
   }
 
-  if (CGF.getLangOpts().StablePointerSubtraction)
-    return Builder.CreateSDiv(diffInChars, divisor, "sub.ptr.div");
-
   // If the unaligned-pointer-subtraction sanitizer is on, verify at runtime
   // that the byte distance is an exact multiple of the element size.
   if (CGF.SanOpts.has(SanitizerKind::UnalignedPointerSubtraction)) {
@@ -5077,6 +5074,9 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
     CGF.EmitCheck({{IsExact, checkOrdinal}}, CheckHandler, StaticArgs,
                   DynamicArgs);
   }
+
+  if (CGF.getLangOpts().StablePointerSubtraction)
+    return Builder.CreateSDiv(diffInChars, divisor, "sub.ptr.div");
 
   // Otherwise, do a full sdiv. This uses the "exact" form of sdiv, since
   // pointer difference in C is only defined in the case where both operands
