@@ -304,8 +304,17 @@ void SDNodeInfo::verifyNode(const SelectionDAG &DAG, const SDNode *N) const {
     }
     case SDTCisSameNumEltsAs:
       break;
-    case SDTCisSameSizeAs:
+    case SDTCisSameSizeAs: {
+      SDNodeValue OtherVal = GetConstraintValue(C.ConstrainingValIdx);
+      EVT OtherVT = OtherVal.getValueType();
+
+      if (VT.getSizeInBits() != OtherVT.getSizeInBits()) {
+        SS << Val << " must have the same size as " << OtherVal << " ("
+           << OtherVT << "), but has type " << VT;
+        reportNodeError(DAG, N, SS.str());
+      }
       break;
+    }
     }
   }
 }
