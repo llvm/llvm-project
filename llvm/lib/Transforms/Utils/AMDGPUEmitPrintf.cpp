@@ -187,7 +187,7 @@ static void locateCStrings(SparseBitVector<8> &BV, StringRef Str) {
   unsigned ArgIdx = 1;
 
   while ((SpecPos = Str.find_first_of('%', SpecPos)) != StringRef::npos) {
-    if (Str[SpecPos + 1] == '%') {
+    if (SpecPos + 1 < Str.size() && Str[SpecPos + 1] == '%') {
       SpecPos += 2;
       continue;
     }
