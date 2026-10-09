@@ -118,5 +118,23 @@ void case6(S s) {
   useP(s);
 }
 
+struct G {
+  void f() {}
+};
+
+groupshared G g;
+  
+// CHECK: FunctionDecl {{.*}} case7 'void ()'
+// CHECK-NEXT: CompoundStmt {{.*}}
+// CHECK-NEXT: ExprWithCleanups {{.*}} 'void'
+// CHECK-NEXT: CXXMemberCallExpr {{.*}} 'void'
+// CHECK-NEXT: MemberExpr {{.*}} '<bound member function type>' .f {{.*}}
+// CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'G' lvalue
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'G' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'groupshared G' lvalue Var {{.*}} 'g' 'groupshared G'
+void case7() {
+  g.f();
+}
+
 // CHECK-NOT: CXXConstructExpr
 // CHECK-NOT: CXXOperatorCallExpr
