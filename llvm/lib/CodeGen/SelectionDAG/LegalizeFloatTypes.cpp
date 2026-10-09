@@ -2827,6 +2827,19 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FP_ROUND(SDNode *N) {
   SDValue Op = N->getOperand(IsStrict ? 1 : 0);
   EVT SVT = Op.getValueType();
 
+  // When an f32 value is known to already be an exact bf16 (Trunc == 1), simply
+  // keep its upper 16 bits.
+  if (RVT == MVT::bf16 && SVT == MVT::f32 &&
+      N->getConstantOperandVal(IsStrict ? 2 : 1) == 1) {
+    SDLoc DL(N);
+    if (IsStrict)
+      ReplaceValueWith(SDValue(N, 1), N->getOperand(0));
+    SDValue IntVal = DAG.getNode(ISD::BITCAST, DL, MVT::i32, Op);
+    SDValue Shifted = DAG.getNode(ISD::SRL, DL, MVT::i32, IntVal,
+                                  DAG.getShiftAmountConstant(16, MVT::i32, DL));
+    return DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Shifted);
+  }
+
   // If the input type needs to be softened, do that now so that call lowering
   // will see the f16 type.
   if (getTypeAction(SVT) == TargetLowering::TypeSoftenFloat) {

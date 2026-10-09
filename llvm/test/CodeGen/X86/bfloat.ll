@@ -798,206 +798,122 @@ define <32 x bfloat> @pr63017_2() nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    testb %al, %al
 ; SSE2-NEXT:    jne .LBB16_1
-; SSE2-NEXT:  # %bb.2: # %cond.load
+; SSE2-NEXT:  # %bb.3: # %cond.load
 ; SSE2-NEXT:    movzwl (%rax), %eax
-; SSE2-NEXT:    movd %eax, %xmm0
-; SSE2-NEXT:    pslld $16, %xmm0
-; SSE2-NEXT:    jmp .LBB16_3
+; SSE2-NEXT:    movd %eax, %xmm4
+; SSE2-NEXT:    pslld $16, %xmm4
+; SSE2-NEXT:    jmp .LBB16_2
 ; SSE2-NEXT:  .LBB16_1:
-; SSE2-NEXT:    movd {{.*#+}} xmm0 = [-1.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; SSE2-NEXT:  .LBB16_3:
-; SSE2-NEXT:    pushq %r14
-; SSE2-NEXT:    pushq %rbx
-; SSE2-NEXT:    subq $88, %rsp
-; SSE2-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %ebx
-; SSE2-NEXT:    shll $16, %ebx
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    movzwl %ax, %r14d
-; SSE2-NEXT:    orl %ebx, %r14d
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %ebx
-; SSE2-NEXT:    shll $16, %ebx
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    movzwl %ax, %eax
-; SSE2-NEXT:    orl %ebx, %eax
-; SSE2-NEXT:    shlq $32, %rax
-; SSE2-NEXT:    orq %r14, %rax
-; SSE2-NEXT:    movq %rax, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %ebx
-; SSE2-NEXT:    shll $16, %ebx
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    movzwl %ax, %r14d
-; SSE2-NEXT:    orl %ebx, %r14d
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %ebx
-; SSE2-NEXT:    shll $16, %ebx
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    movzwl %ax, %eax
-; SSE2-NEXT:    orl %ebx, %eax
-; SSE2-NEXT:    shlq $32, %rax
-; SSE2-NEXT:    orq %r14, %rax
-; SSE2-NEXT:    movq %rax, %xmm0
-; SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE2-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %ebx
-; SSE2-NEXT:    shll $16, %ebx
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    movzwl %ax, %r14d
-; SSE2-NEXT:    orl %ebx, %r14d
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %ebx
-; SSE2-NEXT:    shll $16, %ebx
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    movzwl %ax, %eax
-; SSE2-NEXT:    orl %ebx, %eax
-; SSE2-NEXT:    shlq $32, %rax
-; SSE2-NEXT:    orq %r14, %rax
-; SSE2-NEXT:    movq %rax, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %ebx
-; SSE2-NEXT:    shll $16, %ebx
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    movzwl %ax, %r14d
-; SSE2-NEXT:    orl %ebx, %r14d
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %ebx
-; SSE2-NEXT:    shll $16, %ebx
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    movzwl %ax, %eax
-; SSE2-NEXT:    orl %ebx, %eax
-; SSE2-NEXT:    shlq $32, %rax
-; SSE2-NEXT:    orq %r14, %rax
-; SSE2-NEXT:    movq %rax, %xmm0
-; SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE2-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %ebx
-; SSE2-NEXT:    shll $16, %ebx
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    movzwl %ax, %r14d
-; SSE2-NEXT:    orl %ebx, %r14d
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %ebx
-; SSE2-NEXT:    shll $16, %ebx
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    movzwl %ax, %eax
-; SSE2-NEXT:    orl %ebx, %eax
-; SSE2-NEXT:    shlq $32, %rax
-; SSE2-NEXT:    orq %r14, %rax
-; SSE2-NEXT:    movq %rax, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %ebx
-; SSE2-NEXT:    shll $16, %ebx
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    movzwl %ax, %r14d
-; SSE2-NEXT:    orl %ebx, %r14d
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %ebx
-; SSE2-NEXT:    shll $16, %ebx
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    movzwl %ax, %eax
-; SSE2-NEXT:    orl %ebx, %eax
-; SSE2-NEXT:    shlq $32, %rax
-; SSE2-NEXT:    orq %r14, %rax
-; SSE2-NEXT:    movq %rax, %xmm0
-; SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE2-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %ebx
-; SSE2-NEXT:    shll $16, %ebx
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    movzwl %ax, %r14d
-; SSE2-NEXT:    orl %ebx, %r14d
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %ebx
-; SSE2-NEXT:    shll $16, %ebx
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    movzwl %ax, %eax
-; SSE2-NEXT:    orl %ebx, %eax
-; SSE2-NEXT:    shlq $32, %rax
-; SSE2-NEXT:    orq %r14, %rax
-; SSE2-NEXT:    movq %rax, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %ebx
-; SSE2-NEXT:    shll $16, %ebx
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    movzwl %ax, %r14d
-; SSE2-NEXT:    orl %ebx, %r14d
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %ebx
-; SSE2-NEXT:    shll $16, %ebx
-; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    movzwl %ax, %eax
-; SSE2-NEXT:    orl %ebx, %eax
-; SSE2-NEXT:    shlq $32, %rax
-; SSE2-NEXT:    orq %r14, %rax
-; SSE2-NEXT:    movq %rax, %xmm0
-; SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm0[0]
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
-; SSE2-NEXT:    addq $88, %rsp
-; SSE2-NEXT:    popq %rbx
-; SSE2-NEXT:    popq %r14
+; SSE2-NEXT:    movd {{.*#+}} xmm4 = [-1.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; SSE2-NEXT:  .LBB16_2:
+; SSE2-NEXT:    movd %xmm4, %eax
+; SSE2-NEXT:    shrl $16, %eax
+; SSE2-NEXT:    movd %xmm4, %ecx
+; SSE2-NEXT:    andl $-65536, %ecx # imm = 0xFFFF0000
+; SSE2-NEXT:    orl %eax, %ecx
+; SSE2-NEXT:    movd %xmm4, %eax
+; SSE2-NEXT:    shrl $16, %eax
+; SSE2-NEXT:    movd %xmm4, %edx
+; SSE2-NEXT:    andl $-65536, %edx # imm = 0xFFFF0000
+; SSE2-NEXT:    orl %eax, %edx
+; SSE2-NEXT:    shlq $32, %rdx
+; SSE2-NEXT:    orq %rcx, %rdx
+; SSE2-NEXT:    movq %rdx, %xmm0
+; SSE2-NEXT:    movd %xmm4, %eax
+; SSE2-NEXT:    shrl $16, %eax
+; SSE2-NEXT:    movd %xmm4, %ecx
+; SSE2-NEXT:    andl $-65536, %ecx # imm = 0xFFFF0000
+; SSE2-NEXT:    orl %eax, %ecx
+; SSE2-NEXT:    movd %xmm4, %eax
+; SSE2-NEXT:    shrl $16, %eax
+; SSE2-NEXT:    movd %xmm4, %edx
+; SSE2-NEXT:    andl $-65536, %edx # imm = 0xFFFF0000
+; SSE2-NEXT:    orl %eax, %edx
+; SSE2-NEXT:    shlq $32, %rdx
+; SSE2-NEXT:    orq %rcx, %rdx
+; SSE2-NEXT:    movq %rdx, %xmm1
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-NEXT:    movd %xmm4, %eax
+; SSE2-NEXT:    shrl $16, %eax
+; SSE2-NEXT:    movd %xmm4, %ecx
+; SSE2-NEXT:    andl $-65536, %ecx # imm = 0xFFFF0000
+; SSE2-NEXT:    orl %eax, %ecx
+; SSE2-NEXT:    movd %xmm4, %eax
+; SSE2-NEXT:    shrl $16, %eax
+; SSE2-NEXT:    movd %xmm4, %edx
+; SSE2-NEXT:    andl $-65536, %edx # imm = 0xFFFF0000
+; SSE2-NEXT:    orl %eax, %edx
+; SSE2-NEXT:    shlq $32, %rdx
+; SSE2-NEXT:    orq %rcx, %rdx
+; SSE2-NEXT:    movq %rdx, %xmm1
+; SSE2-NEXT:    movd %xmm4, %eax
+; SSE2-NEXT:    shrl $16, %eax
+; SSE2-NEXT:    movd %xmm4, %ecx
+; SSE2-NEXT:    andl $-65536, %ecx # imm = 0xFFFF0000
+; SSE2-NEXT:    orl %eax, %ecx
+; SSE2-NEXT:    movd %xmm4, %eax
+; SSE2-NEXT:    shrl $16, %eax
+; SSE2-NEXT:    movd %xmm4, %edx
+; SSE2-NEXT:    andl $-65536, %edx # imm = 0xFFFF0000
+; SSE2-NEXT:    orl %eax, %edx
+; SSE2-NEXT:    shlq $32, %rdx
+; SSE2-NEXT:    orq %rcx, %rdx
+; SSE2-NEXT:    movq %rdx, %xmm2
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; SSE2-NEXT:    movd %xmm4, %eax
+; SSE2-NEXT:    shrl $16, %eax
+; SSE2-NEXT:    movd %xmm4, %ecx
+; SSE2-NEXT:    andl $-65536, %ecx # imm = 0xFFFF0000
+; SSE2-NEXT:    orl %eax, %ecx
+; SSE2-NEXT:    movd %xmm4, %eax
+; SSE2-NEXT:    shrl $16, %eax
+; SSE2-NEXT:    movd %xmm4, %edx
+; SSE2-NEXT:    andl $-65536, %edx # imm = 0xFFFF0000
+; SSE2-NEXT:    orl %eax, %edx
+; SSE2-NEXT:    shlq $32, %rdx
+; SSE2-NEXT:    orq %rcx, %rdx
+; SSE2-NEXT:    movq %rdx, %xmm2
+; SSE2-NEXT:    movd %xmm4, %eax
+; SSE2-NEXT:    shrl $16, %eax
+; SSE2-NEXT:    movd %xmm4, %ecx
+; SSE2-NEXT:    andl $-65536, %ecx # imm = 0xFFFF0000
+; SSE2-NEXT:    orl %eax, %ecx
+; SSE2-NEXT:    movd %xmm4, %eax
+; SSE2-NEXT:    shrl $16, %eax
+; SSE2-NEXT:    movd %xmm4, %edx
+; SSE2-NEXT:    andl $-65536, %edx # imm = 0xFFFF0000
+; SSE2-NEXT:    orl %eax, %edx
+; SSE2-NEXT:    shlq $32, %rdx
+; SSE2-NEXT:    orq %rcx, %rdx
+; SSE2-NEXT:    movq %rdx, %xmm3
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; SSE2-NEXT:    movd %xmm4, %eax
+; SSE2-NEXT:    shrl $16, %eax
+; SSE2-NEXT:    movd %xmm4, %ecx
+; SSE2-NEXT:    andl $-65536, %ecx # imm = 0xFFFF0000
+; SSE2-NEXT:    orl %eax, %ecx
+; SSE2-NEXT:    movd %xmm4, %eax
+; SSE2-NEXT:    shrl $16, %eax
+; SSE2-NEXT:    movd %xmm4, %edx
+; SSE2-NEXT:    andl $-65536, %edx # imm = 0xFFFF0000
+; SSE2-NEXT:    orl %eax, %edx
+; SSE2-NEXT:    shlq $32, %rdx
+; SSE2-NEXT:    orq %rcx, %rdx
+; SSE2-NEXT:    movq %rdx, %xmm3
+; SSE2-NEXT:    movd %xmm4, %eax
+; SSE2-NEXT:    shrl $16, %eax
+; SSE2-NEXT:    movd %xmm4, %ecx
+; SSE2-NEXT:    andl $-65536, %ecx # imm = 0xFFFF0000
+; SSE2-NEXT:    orl %eax, %ecx
+; SSE2-NEXT:    movd %xmm4, %eax
+; SSE2-NEXT:    shrl $16, %eax
+; SSE2-NEXT:    movd %xmm4, %edx
+; SSE2-NEXT:    andl $-65536, %edx # imm = 0xFFFF0000
+; SSE2-NEXT:    orl %eax, %edx
+; SSE2-NEXT:    shlq $32, %rdx
+; SSE2-NEXT:    orq %rcx, %rdx
+; SSE2-NEXT:    movq %rdx, %xmm4
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm4[0]
 ; SSE2-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: pr63017_2:
