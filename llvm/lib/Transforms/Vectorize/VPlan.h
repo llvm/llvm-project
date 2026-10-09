@@ -2981,7 +2981,7 @@ public:
   VPConditionalInductionPHIRecipe(PHINode &Phi, VPValue &Start,
                                   VPValue &BackedgeValue, VPValue &Step)
       : VPHeaderPHIRecipe(VPRecipeBase::VPConditionalInductionPHISC, &Phi,
-                          &Start) {
+                          &Start, Start.getScalarType()) {
     addOperand(&BackedgeValue);
     addOperand(&Step);
   }
