@@ -6608,7 +6608,7 @@ def CIR_MatrixExtractOp : CIR_Op<"matrix.extract", [
     ```
     %rowIdx = cir.const #cir.int<1> : !u64i
     %columnIdx = cir.const #cir.int<2> : !u64i
-    %element = cir.matrix.extract %matrix[%rowIdx : !u64i, %columnIdx : !u64i] 
+    %element = cir.matrix.extract %matrix[%rowIdx : !u64i] [%columnIdx : !u64i] 
       : !cir.matrix<3 x 3 x !cir.float>
     ```
   }];

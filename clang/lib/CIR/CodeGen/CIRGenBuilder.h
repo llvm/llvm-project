@@ -845,8 +845,9 @@ public:
   cir::MatrixTransposeOp createMatrixTranspose(mlir::Location loc,
                                                mlir::Value matrix) {
     auto inputTy = mlir::cast<cir::MatrixType>(matrix.getType());
-    auto resultTy = cir::MatrixType::get(
-        inputTy.getElementType(), inputTy.getColumnNum(), inputTy.getRowNum());
+    auto resultTy =
+        cir::MatrixType::get(inputTy.getElementType(), inputTy.getNumColumns(),
+                             inputTy.getNumRows());
     return cir::MatrixTransposeOp::create(*this, loc, resultTy, matrix);
   }
 
