@@ -1987,11 +1987,11 @@ Register VETargetLowering::prepareMBB(MachineBasicBlock &MBB,
         .addImm(0)
         .addMBB(TargetBB, VE::S_GOTOFF_LO32);
     BuildMI(MBB, I, DL, TII->get(VE::ANDrm), Tmp2)
-        .addReg(Tmp1, getKillRegState(true))
+        .addReg(Tmp1)
         .addImm(M0(32));
     BuildMI(MBB, I, DL, TII->get(VE::LEASLrri), Result)
         .addReg(VE::SX15)
-        .addReg(Tmp2, getKillRegState(true))
+        .addReg(Tmp2)
         .addMBB(TargetBB, VE::S_GOTOFF_HI32);
   } else {
     // Create following instructions for non-PIC code.
@@ -2003,10 +2003,10 @@ Register VETargetLowering::prepareMBB(MachineBasicBlock &MBB,
         .addImm(0)
         .addMBB(TargetBB, VE::S_LO32);
     BuildMI(MBB, I, DL, TII->get(VE::ANDrm), Tmp2)
-        .addReg(Tmp1, getKillRegState(true))
+        .addReg(Tmp1)
         .addImm(M0(32));
     BuildMI(MBB, I, DL, TII->get(VE::LEASLrii), Result)
-        .addReg(Tmp2, getKillRegState(true))
+        .addReg(Tmp2)
         .addImm(0)
         .addMBB(TargetBB, VE::S_HI32);
   }
@@ -2048,11 +2048,11 @@ Register VETargetLowering::prepareSymbol(MachineBasicBlock &MBB,
           .addImm(0)
           .addExternalSymbol(Symbol.data(), VE::S_GOTOFF_LO32);
       BuildMI(MBB, I, DL, TII->get(VE::ANDrm), Tmp2)
-          .addReg(Tmp1, getKillRegState(true))
+          .addReg(Tmp1)
           .addImm(M0(32));
       BuildMI(MBB, I, DL, TII->get(VE::LEASLrri), Result)
           .addReg(VE::SX15)
-          .addReg(Tmp2, getKillRegState(true))
+          .addReg(Tmp2)
           .addExternalSymbol(Symbol.data(), VE::S_GOTOFF_HI32);
     } else {
       Register Tmp1 = MRI.createVirtualRegister(RC);
@@ -2068,14 +2068,14 @@ Register VETargetLowering::prepareSymbol(MachineBasicBlock &MBB,
           .addImm(0)
           .addExternalSymbol(Symbol.data(), VE::S_GOT_LO32);
       BuildMI(MBB, I, DL, TII->get(VE::ANDrm), Tmp2)
-          .addReg(Tmp1, getKillRegState(true))
+          .addReg(Tmp1)
           .addImm(M0(32));
       BuildMI(MBB, I, DL, TII->get(VE::LEASLrri), Tmp3)
           .addReg(VE::SX15)
-          .addReg(Tmp2, getKillRegState(true))
+          .addReg(Tmp2)
           .addExternalSymbol(Symbol.data(), VE::S_GOT_HI32);
       BuildMI(MBB, I, DL, TII->get(VE::LDrii), Result)
-          .addReg(Tmp3, getKillRegState(true))
+          .addReg(Tmp3)
           .addImm(0)
           .addImm(0);
     }
@@ -2091,10 +2091,10 @@ Register VETargetLowering::prepareSymbol(MachineBasicBlock &MBB,
         .addImm(0)
         .addExternalSymbol(Symbol.data(), VE::S_LO32);
     BuildMI(MBB, I, DL, TII->get(VE::ANDrm), Tmp2)
-        .addReg(Tmp1, getKillRegState(true))
+        .addReg(Tmp1)
         .addImm(M0(32));
     BuildMI(MBB, I, DL, TII->get(VE::LEASLrii), Result)
-        .addReg(Tmp2, getKillRegState(true))
+        .addReg(Tmp2)
         .addImm(0)
         .addExternalSymbol(Symbol.data(), VE::S_HI32);
   }
@@ -2115,7 +2115,7 @@ void VETargetLowering::setupEntryBlockForSjLj(MachineInstr &MI,
   // referenced by longjmp (throw) later.
   MachineInstrBuilder MIB = BuildMI(*MBB, MI, DL, TII->get(VE::STrii));
   addFrameReference(MIB, FI, Offset); // jmpbuf[1]
-  MIB.addReg(LabelReg, getKillRegState(true));
+  MIB.addReg(LabelReg);
 }
 
 MachineBasicBlock *
@@ -2202,7 +2202,7 @@ VETargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   MIB.add(MI.getOperand(1)); // we can preserve the kill flags here.
   MIB.addImm(0);
   MIB.addImm(8);
-  MIB.addReg(LabelReg, getKillRegState(true));
+  MIB.addReg(LabelReg);
   MIB.setMemRefs(MMOs);
 
   // SP/FP are already stored in jmpbuf before `llvm.eh.sjlj.setjmp`.
@@ -2316,7 +2316,7 @@ VETargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
 
   // Jump.
   BuildMI(*ThisMBB, MI, DL, TII->get(VE::BCFLari_t))
-      .addReg(Tmp, getKillRegState(true))
+      .addReg(Tmp)
       .addImm(0);
 
   MI.eraseFromParent();
@@ -2422,7 +2422,7 @@ VETargetLowering::emitSjLjDispatchBlock(MachineInstr &MI,
   Register Abort = prepareSymbol(*TrapBB, TrapBB->end(), "abort", DL,
                                  /* Local */ false, /* Call */ true);
   BuildMI(TrapBB, DL, TII->get(VE::BSICrii), VE::SX10)
-      .addReg(Abort, getKillRegState(true))
+      .addReg(Abort)
       .addImm(0)
       .addImm(0);
 
@@ -2467,7 +2467,7 @@ VETargetLowering::emitSjLjDispatchBlock(MachineInstr &MI,
         .addImm(LPadList.size());
     BuildMI(DispatchBB, DL, TII->get(VE::BRCFLrr_t))
         .addImm(VECC::CC_ILE)
-        .addReg(TmpReg, getKillRegState(true))
+        .addReg(TmpReg)
         .addReg(IReg)
         .addMBB(TrapBB);
   }
@@ -2486,11 +2486,11 @@ VETargetLowering::emitSjLjDispatchBlock(MachineInstr &MI,
         .addImm(0)
         .addJumpTableIndex(MJTI, VE::S_GOTOFF_LO32);
     BuildMI(DispContBB, DL, TII->get(VE::ANDrm), Tmp2)
-        .addReg(Tmp1, getKillRegState(true))
+        .addReg(Tmp1)
         .addImm(M0(32));
     BuildMI(DispContBB, DL, TII->get(VE::LEASLrri), BReg)
         .addReg(VE::SX15)
-        .addReg(Tmp2, getKillRegState(true))
+        .addReg(Tmp2)
         .addJumpTableIndex(MJTI, VE::S_GOTOFF_HI32);
   } else {
     // Create following instructions for non-PIC code.
@@ -2502,10 +2502,10 @@ VETargetLowering::emitSjLjDispatchBlock(MachineInstr &MI,
         .addImm(0)
         .addJumpTableIndex(MJTI, VE::S_LO32);
     BuildMI(DispContBB, DL, TII->get(VE::ANDrm), Tmp2)
-        .addReg(Tmp1, getKillRegState(true))
+        .addReg(Tmp1)
         .addImm(M0(32));
     BuildMI(DispContBB, DL, TII->get(VE::LEASLrii), BReg)
-        .addReg(Tmp2, getKillRegState(true))
+        .addReg(Tmp2)
         .addImm(0)
         .addJumpTableIndex(MJTI, VE::S_HI32);
   }
@@ -2521,14 +2521,14 @@ VETargetLowering::emitSjLjDispatchBlock(MachineInstr &MI,
     Register Tmp1 = MRI.createVirtualRegister(RC);
 
     BuildMI(DispContBB, DL, TII->get(VE::SLLri), Tmp1)
-        .addReg(IReg, getKillRegState(true))
+        .addReg(IReg)
         .addImm(3);
     BuildMI(DispContBB, DL, TII->get(VE::LDrri), TReg)
-        .addReg(BReg, getKillRegState(true))
-        .addReg(Tmp1, getKillRegState(true))
+        .addReg(BReg)
+        .addReg(Tmp1)
         .addImm(0);
     BuildMI(DispContBB, DL, TII->get(VE::BCFLari_t))
-        .addReg(TReg, getKillRegState(true))
+        .addReg(TReg)
         .addImm(0);
     break;
   }
@@ -2547,20 +2547,20 @@ VETargetLowering::emitSjLjDispatchBlock(MachineInstr &MI,
     Register Tmp1 = MRI.createVirtualRegister(RC);
 
     BuildMI(DispContBB, DL, TII->get(VE::SLLri), Tmp1)
-        .addReg(IReg, getKillRegState(true))
+        .addReg(IReg)
         .addImm(2);
     BuildMI(DispContBB, DL, TII->get(VE::LDLZXrri), OReg)
-        .addReg(BReg, getKillRegState(true))
-        .addReg(Tmp1, getKillRegState(true))
+        .addReg(BReg)
+        .addReg(Tmp1)
         .addImm(0);
     Register BReg2 =
         prepareSymbol(*DispContBB, DispContBB->end(),
                       DispContBB->getParent()->getName(), DL, /* Local */ true);
     BuildMI(DispContBB, DL, TII->get(VE::ADDSLrr), TReg)
-        .addReg(OReg, getKillRegState(true))
-        .addReg(BReg2, getKillRegState(true));
+        .addReg(OReg)
+        .addReg(BReg2);
     BuildMI(DispContBB, DL, TII->get(VE::BCFLari_t))
-        .addReg(TReg, getKillRegState(true))
+        .addReg(TReg)
         .addImm(0);
     break;
   }
