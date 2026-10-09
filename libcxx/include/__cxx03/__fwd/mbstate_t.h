@@ -27,11 +27,11 @@
 #  define __CORRECT_ISO_CPP_WCHAR_H_PROTO
 #endif
 
-#if _LIBCPP_HAS_MUSL_LIBC
+#if defined(_LIBCPP_HAS_MUSL_LIBC)
 #  define __NEED_mbstate_t
 #  include <bits/alltypes.h>
 #  undef __NEED_mbstate_t
-#elif _LIBCPP_LIBC_LLVM_LIBC
+#elif defined(_LIBCPP_LIBC_LLVM_LIBC)
 #  include <llvm-libc-types/mbstate_t.h>
 #elif __has_include(<bits/types/mbstate_t.h>)
 #  include <bits/types/mbstate_t.h> // works on most Unixes
