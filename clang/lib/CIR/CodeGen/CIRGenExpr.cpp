@@ -30,8 +30,9 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "clang/CodeGenUtils/ExprUtils.h"
+#include "clang/CodeGenUtils/RecordLayoutUtils.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include <optional>
 
 using namespace clang;
@@ -77,7 +78,7 @@ Address CIRGenFunction::emitAddrOfFieldStorage(Address base,
   bool addressedByFieldIndex =
       field->isPotentiallyOverlapping()
           ? layout.hasCIRField(field)
-          : !isEmptyFieldForLayout(getContext(), field);
+          : !CodeGenUtils::isEmptyFieldForLayout(getContext(), field);
   if (!addressedByFieldIndex)
     return emitAddrOfZeroSizeField(*this, base, field);
 
@@ -173,7 +174,9 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
             convertTypeForMem(expr->getType()->getPointeeType());
         addr = getBuilder().createElementBitCast(getLoc(expr->getSourceRange()),
                                                  addr, eltTy);
-        assert(!cir::MissingFeatures::addressSpace());
+        if (ce->getCastKind() == CK_AddressSpaceConversion)
+          addr = addr.withPointer(performAddrSpaceCast(
+              addr.getPointer(), convertType(expr->getType())));
 
         return addr;
       }
@@ -983,8 +986,26 @@ static LValue emitFunctionDeclLValue(CIRGenFunction &cgf, const Expr *e,
 
   mlir::Type fnTy = funcOp.getFunctionType();
   mlir::Type ptrTy = cir::PointerType::get(fnTy);
-  mlir::Value addr = cir::GetGlobalOp::create(cgf.getBuilder(), loc, ptrTy,
-                                              funcOp.getSymName());
+  mlir::Value addr;
+
+  // On the HIP host, a reference to a __global__ kernel must resolve to the
+  // address of the kernel handle registered with the offload runtime, not
+  // the device stub's own address. CUDA uses the device stub itself as the
+  // kernel handle.
+  if (cgf.cgm.getLangOpts().HIP && !cgf.cgm.getLangOpts().CUDAIsDevice &&
+      fd->hasAttr<CUDAGlobalAttr>()) {
+    auto handle = mlir::cast<cir::GlobalOp>(
+        cgf.cgm.getCUDARuntime().getKernelHandle(funcOp, gd));
+    cir::PointerType handlePtrTy = cir::PointerType::get(handle.getSymType());
+    mlir::Value handleAddr = cir::GetGlobalOp::create(
+        cgf.getBuilder(), loc, handlePtrTy, handle.getSymName());
+    addr = cir::CastOp::create(cgf.getBuilder(), loc, ptrTy,
+                               cir::CastKind::bitcast, handleAddr);
+  }
+
+  if (!addr)
+    addr = cir::GetGlobalOp::create(cgf.getBuilder(), loc, ptrTy,
+                                    funcOp.getSymName());
 
   if (funcOp.getFunctionType() != cgf.convertType(fd->getType())) {
     fnTy = cgf.convertType(fd->getType());
@@ -1144,7 +1165,7 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
           cgm.getOrCreateStaticVarDecl(*vd, cgm.getCIRLinkageVarDefinition(vd));
       mlir::Value getGlobVal = builder.createGetGlobal(var);
       auto getGlob = getGlobVal.getDefiningOp<cir::GetGlobalOp>();
-      getGlob.setStaticLocal(var.getStaticLocalGuard().has_value());
+      getGlob.setStaticLocal(var.getDynamicInitGuard().has_value());
       getGlob.setTls(vd->getTLSKind() != VarDecl::TLS_None);
       addr = Address(cgm.castGlobalToDeclAddrSpace(getGlob, *vd),
                      convertTypeForMem(vd->getType()),
@@ -1968,45 +1989,32 @@ static void pushTemporaryCleanup(CIRGenFunction &cgf,
     if (!referenceTemporaryDtor)
       return;
 
-    // Classic codegen calls registerGlobalDtor here, passing either the
-    // destructor or a generated array-destroy helper. CIR instead emits the
-    // destruction into the dtor region of whatever destroys the variable that
-    // extended the temporary: the cir.global's own region at namespace scope,
-    // and the enclosing cir.local_init's for a function-local static, which the
-    // verifier requires to be destroyed in-function under its guard.
     CIRGenModule &cgm = cgf.cgm;
     auto globalOp =
         mlir::cast<cir::GlobalOp>(cgm.getAddrOfGlobalTemporary(m, e));
 
-    mlir::Region *dtorRegion = cgf.curStaticVarDtorRegion;
-    assert(dtorRegion && "temporary extended outside a static initializer");
-
     CIRGenBuilderTy &builder = cgm.getBuilder();
-    mlir::OpBuilder::InsertionGuard guard(builder);
     mlir::Location loc = cgm.getLoc(m->getSourceRange());
-
-    // Temporaries are destroyed in reverse order of construction, so each one
-    // goes in front of those registered before it.
-    if (dtorRegion->empty()) {
-      builder.setInsertionPointToStart(builder.createBlock(dtorRegion));
-      cir::YieldOp::create(builder, loc);
-    }
-    builder.setInsertionPointToStart(&dtorRegion->front());
+    auto registerOp = cir::RegisterExitDtorOp::create(
+        builder, loc, globalOp.getSymNameAttr().getValue());
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToStart(
+        builder.createBlock(&registerOp.getBody()));
 
     mlir::Value tempAddr = builder.createGetGlobal(globalOp);
-
     if (e->getType()->isArrayType()) {
-      // emitDestroy will produce a cir.array.dtor here. LoweringPrepare's
-      // getOrCreateDtorFunc recognizes the non-trivial dtor region and
-      // hoists it into a __cxx_global_array_dtor helper.
       Address addr{tempAddr, cgf.convertTypeForMem(e->getType()),
                    referenceTemporary.getAlignment()};
       cgf.emitDestroy(addr, e->getType(), CIRGenFunction::destroyCXXObject);
     } else {
       GlobalDecl gd(referenceTemporaryDtor, Dtor_Complete);
       cir::FuncOp dtorFn = cgm.getAddrAndTypeOfCXXStructor(gd).second;
-      builder.createCallOp(loc, dtorFn, mlir::ValueRange{tempAddr});
+      // Make sure the call and the callee agree on calling convention.
+      builder.createCallOp(loc, dtorFn, mlir::ValueRange{tempAddr},
+                           /*attrs=*/{}, /*argAttrs=*/{}, /*resAttrs=*/{},
+                           dtorFn.getCallingConv());
     }
+    cir::YieldOp::create(builder, loc);
     break;
   }
 
@@ -2446,7 +2454,24 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
   }
 
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
-  assert(!cir::MissingFeatures::hip());
+
+  // HIP function pointer contains kernel handle when it is used in triple
+  // chevron. The kernel stub needs to be loaded from kernel handle and used
+  // as callee.
+  const clang::Decl *targetDecl =
+      origCallee.getAbstractInfo().getCalleeDecl().getDecl();
+  if (getLangOpts().HIP && !getLangOpts().CUDAIsDevice &&
+      isa<CUDAKernelCallExpr>(e) &&
+      (!targetDecl || !isa<FunctionDecl>(targetDecl))) {
+    mlir::Value handleAddr = callee.getFunctionPointer()->getResult(0);
+    mlir::Location loc = getLoc(e->getSourceRange());
+    auto handlePtrTy = mlir::cast<cir::PointerType>(handleAddr.getType());
+    mlir::Value handleAddrAddr =
+        builder.createBitcast(handleAddr, cir::PointerType::get(handlePtrTy));
+    cir::LoadOp stub = builder.createLoad(
+        loc, Address(handleAddrAddr, handlePtrTy, getPointerAlign()));
+    callee.setFunctionPointer(stub.getOperation());
+  }
 
   cir::CIRCallOpInterface callOp;
   RValue callResult = emitCall(funcInfo, callee, returnValue, args, &callOp,
@@ -2913,6 +2938,15 @@ Address CIRGenFunction::maybeCastStackAddressSpace(
   if (!destAddrSpace)
     destAddrSpace = cir::toCIRAddressSpaceAttr(
         getMLIRContext(), cgm.getLangTempAllocaAddressSpace());
+
+  // Resolve the default address space through getTargetAddressSpace, as
+  // classic CodeGen does and as CIRGenTypes::getPointerAddressSpace does for
+  // default pointer types. This is only non-zero for targets where the default
+  // address space is not 0 (e.g. generic for SYCL device code).
+  if (!cir::normalizeDefaultAddressSpace(destAddrSpace))
+    if (unsigned targetAS = getContext().getTargetAddressSpace(LangAS::Default))
+      destAddrSpace =
+          cir::TargetAddressSpaceAttr::get(&getMLIRContext(), targetAS);
 
   mlir::ptr::MemorySpaceAttrInterface srcAddrSpace = getCIRAllocaAddressSpace();
   // Alloca always returns a pointer in alloca address space, which may

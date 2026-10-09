@@ -52,7 +52,7 @@ private:
 Session::ControllerAccess::~ControllerAccess() = default;
 
 Session::Session(ExecutorProcessInfo EPI, DispatchFn Dispatch,
-                 ErrorReporterFn ReportError)
+                 ErrorReporterFn ReportError) noexcept
     : EPI(std::move(EPI)), Dispatch(std::move(Dispatch)),
       ReportError(std::move(ReportError)),
       Notifiers(createService<NotificationService>()) {
