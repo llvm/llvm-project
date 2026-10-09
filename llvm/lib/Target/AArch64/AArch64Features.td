@@ -618,6 +618,10 @@ def FeatureF16F32MM : ExtensionWithMArch<"f16f32mm", "F16F32MM", "FEAT_F16F32MM"
   "Enable Armv9.7-A Advanced SIMD half-precision matrix multiply-accumulate to single-precision", [FeatureNEON, FeatureFullFP16]>;
 
 //===----------------------------------------------------------------------===//
+//  Armv9.8 Architecture Extensions
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
 //  Future Architecture Technologies
 //===----------------------------------------------------------------------===//
 
@@ -1121,6 +1125,9 @@ def HasV9_7aOps : Architecture64<9, 7, "a", "v9.7a",
   [HasV9_6aOps, FeatureSVE2p3, FeatureFPRCVT, FeatureF16F32DOT],
   !listconcat(HasV9_6aOps.DefaultExts, [FeatureSVE2p3, FeatureFPRCVT,
     FeatureF16F32DOT])>;
+def HasV9_8aOps : Architecture64<9, 8, "a", "v9.8a",
+  [HasV9_7aOps],
+  HasV9_7aOps.DefaultExts>;
 def HasV8_0rOps : Architecture64<8, 0, "r", "v8r",
   [ //v8.1
     FeatureCRC, FeaturePAN, FeatureLSE, FeatureCONTEXTIDREL2,
