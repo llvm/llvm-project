@@ -1554,16 +1554,12 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
   attachVPCheckBlock(Plan, CondVPV, CheckBlockVPBB, AddBranchWeights);
 }
 
-void VPlanTransforms::attachMemoryChecks(VPlan &Plan,
-                                         ArrayRef<RuntimePointerCheck> Checks,
-                                         ScalarEvolution &SE, DebugLoc DL,
-                                         bool AddBranchWeights) {
-  assert(!Checks.empty() && "No checks to generate");
-
-  auto *MemCheckVPBB = Plan.createVPBasicBlock("vector.memcheck");
-  VPBuilder Builder(MemCheckVPBB);
-  VPSCEVExpander Expander(Builder, SE, DL);
-
+/// Generate recipes for the memory runtime checks \p Checks using \p Builder
+/// and return the condition that is true if any check fails.
+static VPValue *createRuntimeChecks(VPlan &Plan, VPBuilder &Builder,
+                                    VPSCEVExpander &Expander,
+                                    ArrayRef<RuntimePointerCheck> Checks,
+                                    DebugLoc DL) {
   // Expand each group's bounds once so all checks reuse the same frozen values.
   SmallDenseMap<const RuntimeCheckingPtrGroup *,
                 std::pair<VPValue *, VPValue *>>
@@ -1593,6 +1589,65 @@ void VPlanTransforms::attachMemoryChecks(VPlan &Plan,
         Builder.createAnd(Bound0, Bound1, DL, "found.conflict");
     Cond = Builder.createOr(Cond, IsConflict, DL, "conflict.rdx");
   }
+  return Cond;
+}
+
+/// Generate recipes for the memory runtime difference checks \p Checks using
+/// \p Builder and return the condition that is true if any check fails. Each
+/// difference is compared against a threshold derived from \p VF and \p UF.
+static VPValue *createDiffRuntimeChecks(VPlan &Plan, VPBuilder &Builder,
+                                        VPSCEVExpander &Expander,
+                                        ArrayRef<PointerDiffInfo> Checks,
+                                        ScalarEvolution &SE, ElementCount VF,
+                                        unsigned UF, DebugLoc DL) {
+  // Set of operand pairs of already created compares, to allow detecting and
+  // re-using redundant compares.
+  SmallDenseSet<std::pair<const SCEV *, const SCEV *>> SeenCompares;
+  VPValue *Cond = Plan.getFalse();
+  for (const auto &[SrcStart, SinkStart, AccessSize, NeedsFreeze] : Checks) {
+    assert(UF * AccessSize > 0 &&
+           "Threshold must be non-zero to use diff-check");
+    Type *Ty = SinkStart->getType();
+    const SCEV *TotalAccessSize = SE.getElementCount(Ty, VF * UF * AccessSize);
+    const SCEV *ThresholdMinusOneSCEV =
+        SE.getMinusSCEV(TotalAccessSize, SE.getConstant(Ty, 1));
+    const SCEV *DiffSCEV = SE.getMinusSCEV(SinkStart, SrcStart);
+
+    // If the same compare has already been created earlier, there is no need to
+    // check it again.
+    if (!SeenCompares.insert({DiffSCEV, ThresholdMinusOneSCEV}).second)
+      continue;
+
+    VPValue *ThresholdMinusOne = Expander.expand(ThresholdMinusOneSCEV);
+    VPValue *Diff = Expander.expand(DiffSCEV);
+    // Use (Diff - 1) <u (Threshold - 1), equivalent to 0 <u Diff <u Threshold,
+    // to exclude Diff == 0 (equal pointers are safe).
+    VPValue *DiffMinusOne =
+        Builder.createSub(Diff, Plan.getConstantInt(Ty, 1), DL);
+    VPValue *IsConflict = Builder.createICmp(
+        CmpInst::ICMP_ULT, DiffMinusOne, ThresholdMinusOne, DL, "diff.check");
+    if (NeedsFreeze)
+      IsConflict = Builder.createFreeze(IsConflict, DL, "diff.check.fr");
+    Cond = Builder.createOr(Cond, IsConflict, DL, "conflict.rdx");
+  }
+  return Cond;
+}
+
+void VPlanTransforms::attachMemoryChecks(
+    VPlan &Plan, const RuntimePointerChecking &RtPtrChecking,
+    ScalarEvolution &SE, ElementCount VF, unsigned UF, DebugLoc DL,
+    bool AddBranchWeights) {
+  assert(!RtPtrChecking.getChecks().empty() && "No checks to generate");
+
+  auto *MemCheckVPBB = Plan.createVPBasicBlock("vector.memcheck");
+  VPBuilder Builder(MemCheckVPBB);
+  VPSCEVExpander Expander(Builder, SE, DL);
+  auto DiffChecks = RtPtrChecking.getDiffChecks();
+  VPValue *Cond = DiffChecks
+                      ? createDiffRuntimeChecks(Plan, Builder, Expander,
+                                                *DiffChecks, SE, VF, UF, DL)
+                      : createRuntimeChecks(Plan, Builder, Expander,
+                                            RtPtrChecking.getChecks(), DL);
   attachVPCheckBlock(Plan, Cond, MemCheckVPBB, AddBranchWeights);
 }
 

@@ -445,8 +445,6 @@ define i32 @predicated_iv_liveout_with_lai_preds(ptr %dst, ptr %src, i64 %stride
 ; CHECK-LABEL: define i32 @predicated_iv_liveout_with_lai_preds(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[STRIDE:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
-; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-NEXT:    [[SMAX3:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX3]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
@@ -462,6 +460,8 @@ define i32 @predicated_iv_liveout_with_lai_preds(ptr %dst, ptr %src, i64 %stride
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[IDENT_CHECK]], [[TMP3]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
+; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[DST1]], [[SRC2]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP5]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP11]], 15
@@ -576,8 +576,6 @@ define i32 @predicated_iv_inc_liveout_with_lai_preds(ptr %dst, ptr %src, i64 %st
 ; CHECK-LABEL: define i32 @predicated_iv_inc_liveout_with_lai_preds(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[STRIDE:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
-; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-NEXT:    [[SMAX3:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX3]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
@@ -593,6 +591,8 @@ define i32 @predicated_iv_inc_liveout_with_lai_preds(ptr %dst, ptr %src, i64 %st
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[IDENT_CHECK]], [[TMP3]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
+; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[DST1]], [[SRC2]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = sub i64 [[TMP5]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP13]], 15
@@ -709,8 +709,6 @@ define void @total_complexity_exceeds_threshold(ptr %dst, ptr %src, i64 %stride,
 ; CHECK-LABEL: define void @total_complexity_exceeds_threshold(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[STRIDE:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
-; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-NEXT:    [[SMAX3:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX3]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
@@ -726,6 +724,8 @@ define void @total_complexity_exceeds_threshold(ptr %dst, ptr %src, i64 %stride,
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[IDENT_CHECK]], [[TMP3]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
+; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[DST1]], [[SRC2]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP5]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP10]], 15
@@ -834,8 +834,6 @@ define void @combined_lai_iv_complexity(ptr %dst, ptr %src, i64 %stride, i64 %n)
 ; CHECK-LABEL: define void @combined_lai_iv_complexity(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[STRIDE:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[SCALAR_PH1:.*]]:
-; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
-; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-NEXT:    [[SMAX3:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX3]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
@@ -851,6 +849,8 @@ define void @combined_lai_iv_complexity(ptr %dst, ptr %src, i64 %stride, i64 %n)
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[IDENT_CHECK]], [[TMP3]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
+; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[DST1]], [[SRC2]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP5]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP10]], 15
@@ -959,8 +959,6 @@ define void @two_used_predicated_ivs(ptr %dst1, ptr %dst2, i64 %n) {
 ; CHECK-LABEL: define void @two_used_predicated_ivs(
 ; CHECK-SAME: ptr [[DST1:%.*]], ptr [[DST2:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[DST15:%.*]] = ptrtoaddr ptr [[DST1]] to i64
-; CHECK-NEXT:    [[DST24:%.*]] = ptrtoaddr ptr [[DST2]] to i64
 ; CHECK-NEXT:    [[SMAX6:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX6]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
@@ -980,6 +978,8 @@ define void @two_used_predicated_ivs(ptr %dst1, ptr %dst2, i64 %n) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP3]], [[TMP6]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[DST24:%.*]] = ptrtoaddr ptr [[DST2]] to i64
+; CHECK-NEXT:    [[DST15:%.*]] = ptrtoaddr ptr [[DST1]] to i64
 ; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[DST24]], [[DST15]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP8]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP10]], 15

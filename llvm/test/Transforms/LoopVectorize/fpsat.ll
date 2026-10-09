@@ -4,8 +4,6 @@
 define void @signed(ptr %x, ptr %y, i32 %n) {
 ; CHECK-LABEL: @signed(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X2:%.*]] = ptrtoaddr ptr [[X:%.*]] to i64
-; CHECK-NEXT:    [[Y1:%.*]] = ptrtoaddr ptr [[Y:%.*]] to i64
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP6]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
@@ -13,6 +11,8 @@ define void @signed(ptr %x, ptr %y, i32 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
+; CHECK-NEXT:    [[Y1:%.*]] = ptrtoaddr ptr [[Y:%.*]] to i64
+; CHECK-NEXT:    [[X2:%.*]] = ptrtoaddr ptr [[X:%.*]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[Y1]], [[X2]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 15
@@ -78,8 +78,6 @@ for.body:
 define void @unsigned(ptr %x, ptr %y, i32 %n) {
 ; CHECK-LABEL: @unsigned(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X2:%.*]] = ptrtoaddr ptr [[X:%.*]] to i64
-; CHECK-NEXT:    [[Y1:%.*]] = ptrtoaddr ptr [[Y:%.*]] to i64
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP6]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
@@ -87,6 +85,8 @@ define void @unsigned(ptr %x, ptr %y, i32 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
+; CHECK-NEXT:    [[Y1:%.*]] = ptrtoaddr ptr [[Y:%.*]] to i64
+; CHECK-NEXT:    [[X2:%.*]] = ptrtoaddr ptr [[X:%.*]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[Y1]], [[X2]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 15

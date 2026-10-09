@@ -7,14 +7,14 @@ define void @add_ints(ptr nocapture %A, ptr nocapture %B, ptr nocapture %C) {
 ; CHECK-LABEL: define void @add_ints(
 ; CHECK-SAME: ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]], ptr captures(none) [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[C3:%.*]] = ptrtoaddr ptr [[C]] to i64
-; CHECK-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B]] to i64
-; CHECK-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
+; CHECK-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[A1]], [[B2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP2]], 15
+; CHECK-NEXT:    [[C3:%.*]] = ptrtoaddr ptr [[C]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[A1]], [[C3]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP3]], 15

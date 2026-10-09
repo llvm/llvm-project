@@ -8,13 +8,13 @@ define i32 @first_order_recurrence(ptr nocapture readonly %a, ptr nocapture %b, 
 ; CHECK-LABEL: define i32 @first_order_recurrence(
 ; CHECK-SAME: ptr readonly captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]], i32 [[INIT_VAL:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
-; CHECK-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
+; CHECK-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[B1]], -4
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], [[A2]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = sub i64 [[TMP4]], 1

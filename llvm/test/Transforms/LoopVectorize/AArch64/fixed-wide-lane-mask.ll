@@ -88,10 +88,10 @@ define void @fixed_wide_active_lane_mask_i32_tc(ptr %src, ptr %dst, i32 %n) #0 {
 ; CHECK-UF1-LABEL: define void @fixed_wide_active_lane_mask_i32_tc(
 ; CHECK-UF1-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-UF1-NEXT:  entry:
-; CHECK-UF1-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
-; CHECK-UF1-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-UF1-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK-UF1:       vector.memcheck:
+; CHECK-UF1-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
+; CHECK-UF1-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
 ; CHECK-UF1-NEXT:    [[TMP0:%.*]] = sub i64 [[DST1]], [[SRC2]]
 ; CHECK-UF1-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], 1
 ; CHECK-UF1-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 31
@@ -117,10 +117,10 @@ define void @fixed_wide_active_lane_mask_i32_tc(ptr %src, ptr %dst, i32 %n) #0 {
 ; CHECK-UF4-LABEL: define void @fixed_wide_active_lane_mask_i32_tc(
 ; CHECK-UF4-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-UF4-NEXT:  entry:
-; CHECK-UF4-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
-; CHECK-UF4-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-UF4-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK-UF4:       vector.memcheck:
+; CHECK-UF4-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
+; CHECK-UF4-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
 ; CHECK-UF4-NEXT:    [[TMP0:%.*]] = sub i64 [[DST1]], [[SRC2]]
 ; CHECK-UF4-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], 1
 ; CHECK-UF4-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 127

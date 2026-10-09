@@ -698,8 +698,6 @@ define void @strided_ptr_iv_runtime_stride(ptr %pIn, ptr %pOut, i32 %nCols, i32 
 ;
 ; STRIDED-LABEL: @strided_ptr_iv_runtime_stride(
 ; STRIDED-NEXT:  entry:
-; STRIDED-NEXT:    [[PIN2:%.*]] = ptrtoaddr ptr [[PIN:%.*]] to i64
-; STRIDED-NEXT:    [[POUT1:%.*]] = ptrtoaddr ptr [[POUT:%.*]] to i64
 ; STRIDED-NEXT:    [[TMP2:%.*]] = zext i32 [[NCOLS:%.*]] to i64
 ; STRIDED-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP2]], i64 1)
 ; STRIDED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
@@ -708,6 +706,8 @@ define void @strided_ptr_iv_runtime_stride(ptr %pIn, ptr %pOut, i32 %nCols, i32 
 ; STRIDED-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[STRIDE:%.*]], 1
 ; STRIDED-NEXT:    br i1 [[IDENT_CHECK]], label [[SCALAR_PH]], label [[VECTOR_MEMCHECK:%.*]]
 ; STRIDED:       vector.memcheck:
+; STRIDED-NEXT:    [[POUT1:%.*]] = ptrtoaddr ptr [[POUT:%.*]] to i64
+; STRIDED-NEXT:    [[PIN2:%.*]] = ptrtoaddr ptr [[PIN:%.*]] to i64
 ; STRIDED-NEXT:    [[TMP4:%.*]] = sub i64 [[POUT1]], [[PIN2]]
 ; STRIDED-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP4]], 1
 ; STRIDED-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP5]], 15

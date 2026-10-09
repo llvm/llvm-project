@@ -58,11 +58,11 @@ define void @dont_hoist_variant_address(ptr %dst, ptr %src, i32 %n) {
 ; CHECK-LABEL: define void @dont_hoist_variant_address(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
-; CHECK-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[DST]] to i64
+; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[A1]], [[SRC2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP4]], 15
@@ -137,36 +137,36 @@ define void @dont_hoist_predicated_load(ptr %dst, ptr %invariant_ptr, ptr %cond_
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP1]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP23:%.*]] = load i32, ptr [[INVARIANT_PTR]], align 4, !alias.scope [[META14:![0-9]+]]
+; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[INVARIANT_PTR]], align 4, !alias.scope [[META14:![0-9]+]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[INDEX]]
-; CHECK-NEXT:    store i32 [[TMP23]], ptr [[TMP9]], align 4, !alias.scope [[META16:![0-9]+]], !noalias [[META18:![0-9]+]]
+; CHECK-NEXT:    store i32 [[TMP11]], ptr [[TMP9]], align 4, !alias.scope [[META16:![0-9]+]], !noalias [[META18:![0-9]+]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP1]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[PRED_STORE_IF6:.*]], label %[[PRED_STORE_CONTINUE7:.*]]
 ; CHECK:       [[PRED_STORE_IF6]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[INVARIANT_PTR]], align 4, !alias.scope [[META14]]
+; CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[INVARIANT_PTR]], align 4, !alias.scope [[META14]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP8]]
-; CHECK-NEXT:    store i32 [[TMP11]], ptr [[TMP13]], align 4, !alias.scope [[META16]], !noalias [[META18]]
+; CHECK-NEXT:    store i32 [[TMP15]], ptr [[TMP13]], align 4, !alias.scope [[META16]], !noalias [[META18]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE7]]
 ; CHECK:       [[PRED_STORE_CONTINUE7]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP1]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[PRED_STORE_IF8:.*]], label %[[PRED_STORE_CONTINUE9:.*]]
 ; CHECK:       [[PRED_STORE_IF8]]:
-; CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[INVARIANT_PTR]], align 4, !alias.scope [[META14]]
+; CHECK-NEXT:    [[TMP19:%.*]] = load i32, ptr [[INVARIANT_PTR]], align 4, !alias.scope [[META14]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP12]]
-; CHECK-NEXT:    store i32 [[TMP15]], ptr [[TMP17]], align 4, !alias.scope [[META16]], !noalias [[META18]]
+; CHECK-NEXT:    store i32 [[TMP19]], ptr [[TMP17]], align 4, !alias.scope [[META16]], !noalias [[META18]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE9]]
 ; CHECK:       [[PRED_STORE_CONTINUE9]]:
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i1> [[TMP1]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[PRED_STORE_IF10:.*]], label %[[PRED_STORE_CONTINUE11]]
 ; CHECK:       [[PRED_STORE_IF10]]:
-; CHECK-NEXT:    [[TMP19:%.*]] = load i32, ptr [[INVARIANT_PTR]], align 4, !alias.scope [[META14]]
+; CHECK-NEXT:    [[TMP23:%.*]] = load i32, ptr [[INVARIANT_PTR]], align 4, !alias.scope [[META14]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = add i32 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP16]]
-; CHECK-NEXT:    store i32 [[TMP19]], ptr [[TMP21]], align 4, !alias.scope [[META16]], !noalias [[META18]]
+; CHECK-NEXT:    store i32 [[TMP23]], ptr [[TMP21]], align 4, !alias.scope [[META16]], !noalias [[META18]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE11]]
 ; CHECK:       [[PRED_STORE_CONTINUE11]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4

@@ -33,6 +33,7 @@ class OptimizationRemarkEmitter;
 class PHINode;
 class ScalarEvolution;
 class PredicatedScalarEvolution;
+class RuntimePointerChecking;
 class TargetLibraryInfo;
 class TargetTransformInfo;
 class VPRecipeBuilder;
@@ -233,10 +234,13 @@ struct VPlanTransforms {
   static void attachCheckBlock(VPlan &Plan, Value *Cond, BasicBlock *CheckBlock,
                                bool AddBranchWeights);
 
-  /// Generate \p Checks as recipes and attach the check block to \p Plan.
+  /// Generate the memory runtime checks of \p RtPtrChecking as recipes and
+  /// attach the check block to \p Plan. \p VF and \p UF are used to compute
+  /// the thresholds of difference checks.
   static void attachMemoryChecks(VPlan &Plan,
-                                 ArrayRef<RuntimePointerCheck> Checks,
-                                 ScalarEvolution &SE, DebugLoc DL,
+                                 const RuntimePointerChecking &RtPtrChecking,
+                                 ScalarEvolution &SE, ElementCount VF,
+                                 unsigned UF, DebugLoc DL,
                                  bool AddBranchWeights);
 
   /// Model the blocks the executed \p MainPlan generated for the main vector

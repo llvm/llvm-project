@@ -21,14 +21,14 @@ define void @foo1(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX1-LABEL: define void @foo1(
 ; AVX1-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0:[0-9]+]] {
 ; AVX1-NEXT:  [[ENTRY:.*:]]
-; AVX1-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
-; AVX1-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr [[TRIGGER]] to i64
-; AVX1-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; AVX1-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; AVX1:       [[VECTOR_MEMCHECK]]:
+; AVX1-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
+; AVX1-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr [[TRIGGER]] to i64
 ; AVX1-NEXT:    [[TMP0:%.*]] = sub i64 [[A1]], [[TRIGGER2]]
 ; AVX1-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], 1
 ; AVX1-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 31
+; AVX1-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; AVX1-NEXT:    [[TMP2:%.*]] = sub i64 [[A1]], [[B3]]
 ; AVX1-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 1
 ; AVX1-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP3]], 31
@@ -56,14 +56,14 @@ define void @foo1(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX2-LABEL: define void @foo1(
 ; AVX2-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0:[0-9]+]] {
 ; AVX2-NEXT:  [[ITER_CHECK:.*:]]
-; AVX2-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
-; AVX2-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr [[TRIGGER]] to i64
-; AVX2-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; AVX2-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; AVX2:       [[VECTOR_MEMCHECK]]:
+; AVX2-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
+; AVX2-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr [[TRIGGER]] to i64
 ; AVX2-NEXT:    [[TMP0:%.*]] = sub i64 [[A1]], [[TRIGGER2]]
 ; AVX2-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], 1
 ; AVX2-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 127
+; AVX2-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; AVX2-NEXT:    [[TMP2:%.*]] = sub i64 [[A1]], [[B3]]
 ; AVX2-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 1
 ; AVX2-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP3]], 127
@@ -137,14 +137,14 @@ define void @foo1(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX512-LABEL: define void @foo1(
 ; AVX512-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0:[0-9]+]] {
 ; AVX512-NEXT:  [[ITER_CHECK:.*:]]
-; AVX512-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
-; AVX512-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr [[TRIGGER]] to i64
-; AVX512-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; AVX512-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; AVX512:       [[VECTOR_MEMCHECK]]:
+; AVX512-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
+; AVX512-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr [[TRIGGER]] to i64
 ; AVX512-NEXT:    [[TMP0:%.*]] = sub i64 [[A1]], [[TRIGGER2]]
 ; AVX512-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], 1
 ; AVX512-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 255
+; AVX512-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; AVX512-NEXT:    [[TMP2:%.*]] = sub i64 [[A1]], [[B3]]
 ; AVX512-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 1
 ; AVX512-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP3]], 255
@@ -248,14 +248,14 @@ define void @foo1_addrspace1(ptr addrspace(1) nocapture %A, ptr addrspace(1) noc
 ; AVX1-LABEL: define void @foo1_addrspace1(
 ; AVX1-SAME: ptr addrspace(1) captures(none) [[A:%.*]], ptr addrspace(1) readonly captures(none) [[B:%.*]], ptr addrspace(1) readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX1-NEXT:  [[ENTRY:.*:]]
-; AVX1-NEXT:    [[B3:%.*]] = ptrtoaddr ptr addrspace(1) [[B]] to i64
-; AVX1-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr addrspace(1) [[TRIGGER]] to i64
-; AVX1-NEXT:    [[A1:%.*]] = ptrtoaddr ptr addrspace(1) [[A]] to i64
 ; AVX1-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; AVX1:       [[VECTOR_MEMCHECK]]:
+; AVX1-NEXT:    [[A1:%.*]] = ptrtoaddr ptr addrspace(1) [[A]] to i64
+; AVX1-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr addrspace(1) [[TRIGGER]] to i64
 ; AVX1-NEXT:    [[TMP0:%.*]] = sub i64 [[A1]], [[TRIGGER2]]
 ; AVX1-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], 1
 ; AVX1-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 31
+; AVX1-NEXT:    [[B3:%.*]] = ptrtoaddr ptr addrspace(1) [[B]] to i64
 ; AVX1-NEXT:    [[TMP2:%.*]] = sub i64 [[A1]], [[B3]]
 ; AVX1-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 1
 ; AVX1-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP3]], 31
@@ -283,14 +283,14 @@ define void @foo1_addrspace1(ptr addrspace(1) nocapture %A, ptr addrspace(1) noc
 ; AVX2-LABEL: define void @foo1_addrspace1(
 ; AVX2-SAME: ptr addrspace(1) captures(none) [[A:%.*]], ptr addrspace(1) readonly captures(none) [[B:%.*]], ptr addrspace(1) readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX2-NEXT:  [[ITER_CHECK:.*:]]
-; AVX2-NEXT:    [[B3:%.*]] = ptrtoaddr ptr addrspace(1) [[B]] to i64
-; AVX2-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr addrspace(1) [[TRIGGER]] to i64
-; AVX2-NEXT:    [[A1:%.*]] = ptrtoaddr ptr addrspace(1) [[A]] to i64
 ; AVX2-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; AVX2:       [[VECTOR_MEMCHECK]]:
+; AVX2-NEXT:    [[A1:%.*]] = ptrtoaddr ptr addrspace(1) [[A]] to i64
+; AVX2-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr addrspace(1) [[TRIGGER]] to i64
 ; AVX2-NEXT:    [[TMP0:%.*]] = sub i64 [[A1]], [[TRIGGER2]]
 ; AVX2-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], 1
 ; AVX2-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 127
+; AVX2-NEXT:    [[B3:%.*]] = ptrtoaddr ptr addrspace(1) [[B]] to i64
 ; AVX2-NEXT:    [[TMP2:%.*]] = sub i64 [[A1]], [[B3]]
 ; AVX2-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 1
 ; AVX2-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP3]], 127
@@ -364,14 +364,14 @@ define void @foo1_addrspace1(ptr addrspace(1) nocapture %A, ptr addrspace(1) noc
 ; AVX512-LABEL: define void @foo1_addrspace1(
 ; AVX512-SAME: ptr addrspace(1) captures(none) [[A:%.*]], ptr addrspace(1) readonly captures(none) [[B:%.*]], ptr addrspace(1) readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX512-NEXT:  [[ITER_CHECK:.*:]]
-; AVX512-NEXT:    [[B3:%.*]] = ptrtoaddr ptr addrspace(1) [[B]] to i64
-; AVX512-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr addrspace(1) [[TRIGGER]] to i64
-; AVX512-NEXT:    [[A1:%.*]] = ptrtoaddr ptr addrspace(1) [[A]] to i64
 ; AVX512-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; AVX512:       [[VECTOR_MEMCHECK]]:
+; AVX512-NEXT:    [[A1:%.*]] = ptrtoaddr ptr addrspace(1) [[A]] to i64
+; AVX512-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr addrspace(1) [[TRIGGER]] to i64
 ; AVX512-NEXT:    [[TMP0:%.*]] = sub i64 [[A1]], [[TRIGGER2]]
 ; AVX512-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], 1
 ; AVX512-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 255
+; AVX512-NEXT:    [[B3:%.*]] = ptrtoaddr ptr addrspace(1) [[B]] to i64
 ; AVX512-NEXT:    [[TMP2:%.*]] = sub i64 [[A1]], [[B3]]
 ; AVX512-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 1
 ; AVX512-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP3]], 255
@@ -484,14 +484,14 @@ define void @foo2(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX1-LABEL: define void @foo2(
 ; AVX1-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX1-NEXT:  [[ENTRY:.*:]]
-; AVX1-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
-; AVX1-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr [[TRIGGER]] to i64
-; AVX1-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; AVX1-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; AVX1:       [[VECTOR_MEMCHECK]]:
+; AVX1-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
+; AVX1-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr [[TRIGGER]] to i64
 ; AVX1-NEXT:    [[TMP0:%.*]] = sub i64 [[A1]], [[TRIGGER2]]
 ; AVX1-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], 1
 ; AVX1-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 31
+; AVX1-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; AVX1-NEXT:    [[TMP2:%.*]] = sub i64 [[A1]], [[B3]]
 ; AVX1-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 1
 ; AVX1-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP3]], 31
@@ -520,14 +520,14 @@ define void @foo2(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX2-LABEL: define void @foo2(
 ; AVX2-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX2-NEXT:  [[ITER_CHECK:.*:]]
-; AVX2-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
-; AVX2-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr [[TRIGGER]] to i64
-; AVX2-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; AVX2-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; AVX2:       [[VECTOR_MEMCHECK]]:
+; AVX2-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
+; AVX2-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr [[TRIGGER]] to i64
 ; AVX2-NEXT:    [[TMP0:%.*]] = sub i64 [[A1]], [[TRIGGER2]]
 ; AVX2-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], 1
 ; AVX2-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 127
+; AVX2-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; AVX2-NEXT:    [[TMP2:%.*]] = sub i64 [[A1]], [[B3]]
 ; AVX2-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 1
 ; AVX2-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP3]], 127
@@ -606,14 +606,14 @@ define void @foo2(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX512-LABEL: define void @foo2(
 ; AVX512-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) #[[ATTR0]] {
 ; AVX512-NEXT:  [[ITER_CHECK:.*:]]
-; AVX512-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
-; AVX512-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr [[TRIGGER]] to i64
-; AVX512-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; AVX512-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; AVX512:       [[VECTOR_MEMCHECK]]:
+; AVX512-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
+; AVX512-NEXT:    [[TRIGGER2:%.*]] = ptrtoaddr ptr [[TRIGGER]] to i64
 ; AVX512-NEXT:    [[TMP0:%.*]] = sub i64 [[A1]], [[TRIGGER2]]
 ; AVX512-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], 1
 ; AVX512-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 255
+; AVX512-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; AVX512-NEXT:    [[TMP2:%.*]] = sub i64 [[A1]], [[B3]]
 ; AVX512-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 1
 ; AVX512-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP3]], 255

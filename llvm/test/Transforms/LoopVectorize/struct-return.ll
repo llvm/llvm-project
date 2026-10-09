@@ -109,14 +109,14 @@ define void @struct_return_f32_widen_rt_checks(ptr %in, ptr writeonly %out_a, pt
 ; CHECK-LABEL: define void @struct_return_f32_widen_rt_checks(
 ; CHECK-SAME: ptr [[IN:%.*]], ptr writeonly [[OUT_A:%.*]], ptr writeonly [[OUT_B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[IN3:%.*]] = ptrtoaddr ptr [[IN]] to i32
-; CHECK-NEXT:    [[OUT_A2:%.*]] = ptrtoaddr ptr [[OUT_A]] to i32
-; CHECK-NEXT:    [[OUT_B1:%.*]] = ptrtoaddr ptr [[OUT_B]] to i32
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[OUT_B1:%.*]] = ptrtoaddr ptr [[OUT_B]] to i32
+; CHECK-NEXT:    [[OUT_A2:%.*]] = ptrtoaddr ptr [[OUT_A]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[OUT_B1]], [[OUT_A2]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i32 [[TMP10]], 7
+; CHECK-NEXT:    [[IN3:%.*]] = ptrtoaddr ptr [[IN]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[OUT_A2]], [[IN3]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = sub i32 [[TMP1]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i32 [[TMP11]], 7

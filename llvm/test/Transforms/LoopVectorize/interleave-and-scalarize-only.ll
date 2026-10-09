@@ -63,10 +63,10 @@ define void @test_scalarize_with_branch_cond(ptr %src, ptr %dst) {
 ; CHECK-LABEL: define void @test_scalarize_with_branch_cond(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
-; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
+; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[DST1]], [[SRC2]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP5]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP8]], 7

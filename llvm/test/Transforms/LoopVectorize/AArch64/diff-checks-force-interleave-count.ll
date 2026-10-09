@@ -9,16 +9,15 @@ define void @diff_check_d(ptr %src, ptr %dst, i64 %n) {
 ; CHECK-LABEL: define void @diff_check_d(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
-; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 4
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], -1
+; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
+; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[DST1]], [[SRC2]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], [[TMP4]]

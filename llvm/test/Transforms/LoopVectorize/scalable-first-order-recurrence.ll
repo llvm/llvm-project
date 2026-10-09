@@ -11,8 +11,6 @@ define i32 @recurrence_1(ptr nocapture readonly %a, ptr nocapture %b, i32 %n) {
 ; CHECK-VF4UF1-LABEL: define i32 @recurrence_1(
 ; CHECK-VF4UF1-SAME: ptr readonly captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]], i32 [[N:%.*]]) {
 ; CHECK-VF4UF1-NEXT:  [[ENTRY:.*:]]
-; CHECK-VF4UF1-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
-; CHECK-VF4UF1-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; CHECK-VF4UF1-NEXT:    br label %[[FOR_PREHEADER:.*]]
 ; CHECK-VF4UF1:       [[FOR_PREHEADER]]:
 ; CHECK-VF4UF1-NEXT:    [[PRE_LOAD:%.*]] = load i32, ptr [[A]], align 4
@@ -24,9 +22,10 @@ define i32 @recurrence_1(ptr nocapture readonly %a, ptr nocapture %b, i32 %n) {
 ; CHECK-VF4UF1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], [[TMP4]]
 ; CHECK-VF4UF1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK-VF4UF1:       [[VECTOR_MEMCHECK]]:
-; CHECK-VF4UF1-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-VF4UF1-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP5]], 4
+; CHECK-VF4UF1-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP3]], 4
 ; CHECK-VF4UF1-NEXT:    [[TMP13:%.*]] = add i64 [[TMP6]], -1
+; CHECK-VF4UF1-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
+; CHECK-VF4UF1-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; CHECK-VF4UF1-NEXT:    [[TMP8:%.*]] = add i64 [[B1]], -4
 ; CHECK-VF4UF1-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], [[A2]]
 ; CHECK-VF4UF1-NEXT:    [[TMP12:%.*]] = sub i64 [[TMP9]], 1
@@ -73,8 +72,6 @@ define i32 @recurrence_1(ptr nocapture readonly %a, ptr nocapture %b, i32 %n) {
 ; CHECK-VF4UF2-LABEL: define i32 @recurrence_1(
 ; CHECK-VF4UF2-SAME: ptr readonly captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]], i32 [[N:%.*]]) {
 ; CHECK-VF4UF2-NEXT:  [[ENTRY:.*:]]
-; CHECK-VF4UF2-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
-; CHECK-VF4UF2-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; CHECK-VF4UF2-NEXT:    br label %[[FOR_PREHEADER:.*]]
 ; CHECK-VF4UF2:       [[FOR_PREHEADER]]:
 ; CHECK-VF4UF2-NEXT:    [[PRE_LOAD:%.*]] = load i32, ptr [[A]], align 4
@@ -86,9 +83,10 @@ define i32 @recurrence_1(ptr nocapture readonly %a, ptr nocapture %b, i32 %n) {
 ; CHECK-VF4UF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], [[TMP4]]
 ; CHECK-VF4UF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK-VF4UF2:       [[VECTOR_MEMCHECK]]:
-; CHECK-VF4UF2-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-VF4UF2-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP5]], 5
+; CHECK-VF4UF2-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP3]], 5
 ; CHECK-VF4UF2-NEXT:    [[TMP19:%.*]] = add i64 [[TMP6]], -1
+; CHECK-VF4UF2-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
+; CHECK-VF4UF2-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; CHECK-VF4UF2-NEXT:    [[TMP8:%.*]] = add i64 [[B1]], -4
 ; CHECK-VF4UF2-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], [[A2]]
 ; CHECK-VF4UF2-NEXT:    [[TMP13:%.*]] = sub i64 [[TMP9]], 1

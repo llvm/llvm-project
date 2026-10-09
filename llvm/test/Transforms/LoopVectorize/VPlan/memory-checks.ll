@@ -122,28 +122,28 @@ define void @diff_check(ptr %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    IR   %b3 = ptrtoaddr ptr %b to i64
-; CHECK-NEXT:    IR   %a2 = ptrtoaddr ptr %a to i64
-; CHECK-NEXT:    IR   %c1 = ptrtoaddr ptr %c to i64
 ; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = call i64 @llvm.umax(ir<%n>, ir<1>)
 ; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP2]]>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
-; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.memcheck>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.memcheck
 ; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<vector.memcheck>:
-; CHECK-NEXT:    IR   %0 = sub i64 %c1, %a2
-; CHECK-NEXT:    IR   %1 = sub i64 %0, 1
-; CHECK-NEXT:    IR   %diff.check = icmp ult i64 %1, 15
-; CHECK-NEXT:    IR   %2 = sub i64 %c1, %b3
-; CHECK-NEXT:    IR   %3 = sub i64 %2, 1
-; CHECK-NEXT:    IR   %diff.check4 = icmp ult i64 %3, 15
-; CHECK-NEXT:    IR   %conflict.rdx = or i1 %diff.check, %diff.check4
-; CHECK-NEXT:    EMIT branch-on-cond ir<%conflict.rdx>
+; CHECK-NEXT:  vector.memcheck:
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP4:%[0-9]+]]> = ptrtoaddr ir<%c> to i64
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP5:%[0-9]+]]> = ptrtoaddr ir<%a> to i64
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = sub vp<[[VP4]]>, vp<[[VP5]]>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = sub vp<[[VP6]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%diff.check> = icmp ult vp<[[VP7]]>, ir<15>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP8:%[0-9]+]]> = ptrtoaddr ir<%b> to i64
+; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = sub vp<[[VP4]]>, vp<[[VP8]]>
+; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = sub vp<[[VP9]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%diff.check>.1 = icmp ult vp<[[VP10]]>, ir<15>
+; CHECK-NEXT:    EMIT vp<%conflict.rdx> = or vp<%diff.check>, vp<%diff.check>.1
+; CHECK-NEXT:    EMIT branch-on-cond vp<%conflict.rdx>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = and vp<[[VP2]]>, ir<3>
-; CHECK-NEXT:    EMIT vp<%n.vec> = sub vp<[[VP2]]>, vp<[[VP5]]>
+; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = and vp<[[VP2]]>, ir<3>
+; CHECK-NEXT:    EMIT vp<%n.vec> = sub vp<[[VP2]]>, vp<[[VP12]]>
 ; CHECK-NEXT:  Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:
@@ -257,6 +257,118 @@ latch:
   %iv.2.next = add nuw nsw i64 %iv.2, 1
   %ec.2 = icmp eq i64 %iv.2.next, %n
   br i1 %ec.2, label %exit, label %loop.2
+
+exit:
+  ret void
+}
+
+; The differences of the second and third pair of pointers are the same, so
+; only a single compare is needed for both.
+define void @diff_check_dedup(ptr %dst, i64 %off, i64 %n) {
+; CHECK-LABEL: VPlan for loop in 'diff_check_dedup'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-NEXT:  Live-in ir<%n> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:    IR   %off.mul.2 = shl i64 %off, 1
+; CHECK-NEXT:    IR   %off.mul.3 = mul i64 %off, 3
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%n>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.memcheck
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.memcheck:
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = shl ir<%off>, ir<3>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = sub vp<[[VP3]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%diff.check> = icmp ult vp<[[VP4]]>, ir<31>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = shl ir<%off>, ir<4>
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = sub vp<[[VP5]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%diff.check>.1 = icmp ult vp<[[VP6]]>, ir<31>
+; CHECK-NEXT:    EMIT vp<%conflict.rdx> = or vp<%diff.check>, vp<%diff.check>.1
+; CHECK-NEXT:    EMIT branch-on-cond vp<%conflict.rdx>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = and ir<%n>, ir<3>
+; CHECK-NEXT:    EMIT vp<%n.vec> = sub ir<%n>, vp<[[VP8]]>
+; CHECK-NEXT:  Successor(s): vector.body
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.body:
+;
+entry:
+  %off.mul.2 = shl i64 %off, 1
+  %off.mul.3 = mul i64 %off, 3
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %idx.1 = add i64 %iv, %off
+  %gep.1 = getelementptr i64, ptr %dst, i64 %idx.1
+  store double 0.000000e+00, ptr %gep.1, align 8
+  %idx.2 = add i64 %iv, %off.mul.2
+  %gep.2 = getelementptr i64, ptr %dst, i64 %idx.2
+  store double 0.000000e+00, ptr %gep.2, align 8
+  %idx.3 = add i64 %iv, %off.mul.3
+  %gep.3 = getelementptr i64, ptr %dst, i64 %idx.3
+  store double 0.000000e+00, ptr %gep.3, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; The load is via a select of 2 pointers, which may be poison, so the diff
+; checks need to be frozen.
+define void @diff_check_needs_freeze(ptr %src.1, ptr %src.2, ptr %dst, i1 %c, i64 %n) {
+; CHECK-LABEL: VPlan for loop in 'diff_check_needs_freeze'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-NEXT:  Live-in ir<%n> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%n>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.memcheck
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.memcheck:
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP3:%[0-9]+]]> = ptrtoaddr ir<%dst> to i64
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP4:%[0-9]+]]> = ptrtoaddr ir<%src.1> to i64
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = sub vp<[[VP3]]>, vp<[[VP4]]>
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = sub vp<[[VP5]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%diff.check> = icmp ult vp<[[VP6]]>, ir<15>
+; CHECK-NEXT:    EMIT vp<%diff.check.fr> = freeze vp<%diff.check>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP7:%[0-9]+]]> = ptrtoaddr ir<%src.2> to i64
+; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = sub vp<[[VP3]]>, vp<[[VP7]]>
+; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = sub vp<[[VP8]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%diff.check>.1 = icmp ult vp<[[VP9]]>, ir<15>
+; CHECK-NEXT:    EMIT vp<%diff.check.fr>.1 = freeze vp<%diff.check>.1
+; CHECK-NEXT:    EMIT vp<%conflict.rdx> = or vp<%diff.check.fr>, vp<%diff.check.fr>.1
+; CHECK-NEXT:    EMIT branch-on-cond vp<%conflict.rdx>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = and ir<%n>, ir<3>
+; CHECK-NEXT:    EMIT vp<%n.vec> = sub ir<%n>, vp<[[VP11]]>
+; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = step-vector i64
+; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = broadcast ir<4>
+; CHECK-NEXT:  Successor(s): vector.body
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.body:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.src.1 = getelementptr i32, ptr %src.1, i64 %iv
+  %gep.src.2 = getelementptr i32, ptr %src.2, i64 %iv
+  %ptr.sel = select i1 %c, ptr %gep.src.1, ptr %gep.src.2
+  %l = load i32, ptr %ptr.sel, align 4
+  %gep.dst = getelementptr i32, ptr %dst, i64 %iv
+  store i32 %l, ptr %gep.dst, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void

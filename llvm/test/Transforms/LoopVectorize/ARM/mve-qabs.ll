@@ -8,14 +8,14 @@ define void @arm_abs_q7(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 %
 ; CHECK-LABEL: define void @arm_abs_q7(
 ; CHECK-SAME: ptr readonly captures(none) [[PSRC:%.*]], ptr captures(none) [[PDST:%.*]], i32 [[BLOCKSIZE:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[PSRC2:%.*]] = ptrtoaddr ptr [[PSRC]] to i32
-; CHECK-NEXT:    [[PDST1:%.*]] = ptrtoaddr ptr [[PDST]] to i32
 ; CHECK-NEXT:    [[CMP_NOT19:%.*]] = icmp eq i32 [[BLOCKSIZE]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT19]], label %[[WHILE_END:.*]], label %[[WHILE_BODY_PREHEADER:.*]]
 ; CHECK:       [[WHILE_BODY_PREHEADER]]:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[BLOCKSIZE]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[PDST1:%.*]] = ptrtoaddr ptr [[PDST]] to i32
+; CHECK-NEXT:    [[PSRC2:%.*]] = ptrtoaddr ptr [[PSRC]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[PDST1]], [[PSRC2]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = sub i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i32 [[TMP11]], 15
@@ -105,14 +105,14 @@ define void @arm_abs_q15(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 
 ; CHECK-LABEL: define void @arm_abs_q15(
 ; CHECK-SAME: ptr readonly captures(none) [[PSRC:%.*]], ptr captures(none) [[PDST:%.*]], i32 [[BLOCKSIZE:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[PSRC2:%.*]] = ptrtoaddr ptr [[PSRC]] to i32
-; CHECK-NEXT:    [[PDST1:%.*]] = ptrtoaddr ptr [[PDST]] to i32
 ; CHECK-NEXT:    [[CMP_NOT20:%.*]] = icmp eq i32 [[BLOCKSIZE]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT20]], label %[[WHILE_END:.*]], label %[[WHILE_BODY_PREHEADER:.*]]
 ; CHECK:       [[WHILE_BODY_PREHEADER]]:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[BLOCKSIZE]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[PDST1:%.*]] = ptrtoaddr ptr [[PDST]] to i32
+; CHECK-NEXT:    [[PSRC2:%.*]] = ptrtoaddr ptr [[PSRC]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[PDST1]], [[PSRC2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i32 [[TMP5]], 15
@@ -204,14 +204,14 @@ define void @arm_abs_q31(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 
 ; CHECK-LABEL: define void @arm_abs_q31(
 ; CHECK-SAME: ptr readonly captures(none) [[PSRC:%.*]], ptr captures(none) [[PDST:%.*]], i32 [[BLOCKSIZE:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[PSRC2:%.*]] = ptrtoaddr ptr [[PSRC]] to i32
-; CHECK-NEXT:    [[PDST1:%.*]] = ptrtoaddr ptr [[PDST]] to i32
 ; CHECK-NEXT:    [[CMP_NOT14:%.*]] = icmp eq i32 [[BLOCKSIZE]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT14]], label %[[WHILE_END:.*]], label %[[WHILE_BODY_PREHEADER:.*]]
 ; CHECK:       [[WHILE_BODY_PREHEADER]]:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[BLOCKSIZE]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[PDST1:%.*]] = ptrtoaddr ptr [[PDST]] to i32
+; CHECK-NEXT:    [[PSRC2:%.*]] = ptrtoaddr ptr [[PSRC]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[PDST1]], [[PSRC2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i32 [[TMP5]], 15

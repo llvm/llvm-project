@@ -7,16 +7,16 @@ define void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-LABEL: define void @alias_mask(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B]] to i64
-; CHECK-NEXT:    [[C1:%.*]] = ptrtoaddr ptr [[C]] to i64
 ; CHECK-NEXT:    [[CMP11:%.*]] = icmp sgt i64 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP11]], label %[[FOR_BODY_PREHEADER:.*]], [[EXIT:label %.*]]
 ; CHECK:       [[FOR_BODY_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP1]], -1
+; CHECK-NEXT:    [[C1:%.*]] = ptrtoaddr ptr [[C]] to i64
+; CHECK-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[C1]], [[B2]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP11]], [[TMP6]]
