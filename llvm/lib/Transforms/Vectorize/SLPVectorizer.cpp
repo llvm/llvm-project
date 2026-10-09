@@ -14034,7 +14034,7 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
   const TreeEntry *RhsTE = getOperandEntry(&TE, /*Idx=*/1);
   // Lhs should be zext i<stride> to I<sz>.
   if (!(LhsTE->State == TreeEntry::Vectorize &&
-        LhsTE->getOpcode() == Instruction::ZExt &&
+        LhsTE->getOpcode() == Instruction::ZExt && !LhsTE->isAltShuffle() &&
         LhsTE->ReorderIndices.empty() && LhsTE->ReuseShuffleIndices.empty() &&
         !MinBWs.contains(LhsTE) &&
         all_of(LhsTE->Scalars, [](Value *V) { return V->hasOneUse(); })))
