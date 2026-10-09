@@ -588,6 +588,10 @@ public:
 
   AddrAndType GetPointerValue();
 
+  /// Maps a pointer value of this (pointer or reference typed) object to the
+  /// process address of its pointee, honoring the pointee's address space.
+  AddrAndType MapPointerToLoadAddress(AddrAndType pointer);
+
   lldb::ValueObjectSP GetSyntheticChild(ConstString key) const;
 
   lldb::ValueObjectSP GetSyntheticArrayMember(size_t index, bool can_create);
