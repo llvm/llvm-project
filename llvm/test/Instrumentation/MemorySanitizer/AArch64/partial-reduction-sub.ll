@@ -29,8 +29,11 @@ define <vscale x 8 x i16> @umlslbt_i8_i16(<vscale x 8 x i16> %acc, <vscale x 16 
 ; CHECK-NEXT:    [[B_ZEXT:%.*]] = zext <vscale x 16 x i8> [[B]] to <vscale x 16 x i16>
 ; CHECK-NEXT:    [[MUL:%.*]] = mul <vscale x 16 x i16> [[A_ZEXT]], [[B_ZEXT]]
 ; CHECK-NEXT:    [[MUL_NEG:%.*]] = sub <vscale x 16 x i16> zeroinitializer, [[MUL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i16> @llvm.vector.partial.reduce.add.nxv8i16.nxv16i16(<vscale x 8 x i16> zeroinitializer, <vscale x 16 x i16> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 8 x i16> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 8 x i1> [[TMP2]] to <vscale x 8 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.vector.partial.reduce.add.nxv8i16.nxv16i16(<vscale x 8 x i16> [[ACC]], <vscale x 16 x i16> [[MUL_NEG]])
-; CHECK-NEXT:    store <vscale x 8 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 8 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 8 x i16> [[RES]]
 ;
   %a.zext = zext <vscale x 16 x i8> %a to <vscale x 16 x i16>
@@ -49,8 +52,11 @@ define <vscale x 8 x i16> @smlslbt_i8_i16(<vscale x 8 x i16> %acc, <vscale x 16 
 ; CHECK-NEXT:    [[B_SEXT:%.*]] = sext <vscale x 16 x i8> [[B]] to <vscale x 16 x i16>
 ; CHECK-NEXT:    [[MUL:%.*]] = mul <vscale x 16 x i16> [[A_SEXT]], [[B_SEXT]]
 ; CHECK-NEXT:    [[MUL_NEG:%.*]] = sub <vscale x 16 x i16> zeroinitializer, [[MUL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i16> @llvm.vector.partial.reduce.add.nxv8i16.nxv16i16(<vscale x 8 x i16> zeroinitializer, <vscale x 16 x i16> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 8 x i16> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 8 x i1> [[TMP2]] to <vscale x 8 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.vector.partial.reduce.add.nxv8i16.nxv16i16(<vscale x 8 x i16> [[ACC]], <vscale x 16 x i16> [[MUL_NEG]])
-; CHECK-NEXT:    store <vscale x 8 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 8 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 8 x i16> [[RES]]
 ;
   %a.sext = sext <vscale x 16 x i8> %a to <vscale x 16 x i16>
@@ -69,8 +75,11 @@ define <vscale x 4 x i32> @umlslbt_i16_i32(<vscale x 4 x i32> %acc, <vscale x 8 
 ; CHECK-NEXT:    [[B_ZEXT:%.*]] = zext <vscale x 8 x i16> [[B]] to <vscale x 8 x i32>
 ; CHECK-NEXT:    [[MUL:%.*]] = mul <vscale x 8 x i32> [[A_ZEXT]], [[B_ZEXT]]
 ; CHECK-NEXT:    [[MUL_NEG:%.*]] = sub <vscale x 8 x i32> zeroinitializer, [[MUL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i16> @llvm.vector.partial.reduce.add.nxv4i16.nxv8i16(<vscale x 4 x i16> zeroinitializer, <vscale x 8 x i16> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 4 x i16> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 4 x i1> [[TMP2]] to <vscale x 4 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv8i32(<vscale x 4 x i32> [[ACC]], <vscale x 8 x i32> [[MUL_NEG]])
-; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 4 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[RES]]
 ;
   %a.zext = zext <vscale x 8 x i16> %a to <vscale x 8 x i32>
@@ -89,8 +98,11 @@ define <vscale x 4 x i32> @smlslbt_i16_i32(<vscale x 4 x i32> %acc, <vscale x 8 
 ; CHECK-NEXT:    [[B_SEXT:%.*]] = sext <vscale x 8 x i16> [[B]] to <vscale x 8 x i32>
 ; CHECK-NEXT:    [[MUL:%.*]] = mul <vscale x 8 x i32> [[A_SEXT]], [[B_SEXT]]
 ; CHECK-NEXT:    [[MUL_NEG:%.*]] = sub <vscale x 8 x i32> zeroinitializer, [[MUL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i16> @llvm.vector.partial.reduce.add.nxv4i16.nxv8i16(<vscale x 4 x i16> zeroinitializer, <vscale x 8 x i16> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 4 x i16> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 4 x i1> [[TMP2]] to <vscale x 4 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv8i32(<vscale x 4 x i32> [[ACC]], <vscale x 8 x i32> [[MUL_NEG]])
-; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 4 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[RES]]
 ;
   %a.sext = sext <vscale x 8 x i16> %a to <vscale x 8 x i32>
@@ -109,8 +121,11 @@ define <vscale x 2 x i64> @umlslbt_i32_i64(<vscale x 2 x i64> %acc, <vscale x 4 
 ; CHECK-NEXT:    [[B_ZEXT:%.*]] = zext <vscale x 4 x i32> [[B]] to <vscale x 4 x i64>
 ; CHECK-NEXT:    [[MUL:%.*]] = mul <vscale x 4 x i64> [[A_ZEXT]], [[B_ZEXT]]
 ; CHECK-NEXT:    [[MUL_NEG:%.*]] = sub <vscale x 4 x i64> zeroinitializer, [[MUL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i16> @llvm.vector.partial.reduce.add.nxv2i16.nxv4i16(<vscale x 2 x i16> zeroinitializer, <vscale x 4 x i16> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 2 x i16> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 2 x i1> [[TMP2]] to <vscale x 2 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.vector.partial.reduce.add.nxv2i64.nxv4i64(<vscale x 2 x i64> [[ACC]], <vscale x 4 x i64> [[MUL_NEG]])
-; CHECK-NEXT:    store <vscale x 2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 2 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 2 x i64> [[RES]]
 ;
   %a.zext = zext <vscale x 4 x i32> %a to <vscale x 4 x i64>
@@ -129,8 +144,11 @@ define <vscale x 2 x i64> @smlslbt_i32_i64(<vscale x 2 x i64> %acc, <vscale x 4 
 ; CHECK-NEXT:    [[B_SEXT:%.*]] = sext <vscale x 4 x i32> [[B]] to <vscale x 4 x i64>
 ; CHECK-NEXT:    [[MUL:%.*]] = mul <vscale x 4 x i64> [[A_SEXT]], [[B_SEXT]]
 ; CHECK-NEXT:    [[MUL_NEG:%.*]] = sub <vscale x 4 x i64> zeroinitializer, [[MUL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i16> @llvm.vector.partial.reduce.add.nxv2i16.nxv4i16(<vscale x 2 x i16> zeroinitializer, <vscale x 4 x i16> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 2 x i16> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 2 x i1> [[TMP2]] to <vscale x 2 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.vector.partial.reduce.add.nxv2i64.nxv4i64(<vscale x 2 x i64> [[ACC]], <vscale x 4 x i64> [[MUL_NEG]])
-; CHECK-NEXT:    store <vscale x 2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 2 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 2 x i64> [[RES]]
 ;
   %a.sext = sext <vscale x 4 x i32> %a to <vscale x 4 x i64>
@@ -157,18 +175,15 @@ define <8 x i16> @fixed_umlslbt_i8_i16(<8 x i16> %acc, <16 x i8> %a, <16 x i8> %
 ; CHECK-NEXT:    [[MUL:%.*]] = mul <16 x i16> [[A_ZEXT]], [[B_ZEXT]]
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <16 x i16> zeroinitializer, [[_MSPROP2]]
 ; CHECK-NEXT:    [[MUL_NEG:%.*]] = sub <16 x i16> zeroinitializer, [[MUL]]
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i16> [[TMP3]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <16 x i16> [[_MSPROP3]] to i256
-; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i256 [[TMP5]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP4]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1:![0-9]+]]
-; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR10:[0-9]+]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB7]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <8 x i16> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <16 x i16> [[_MSPROP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <8 x i1> [[TMP4]] to <8 x i16>
+; CHECK-NEXT:    [[TMP7:%.*]] = zext <16 x i1> [[TMP5]] to <16 x i16>
+; CHECK-NEXT:    [[TMP8:%.*]] = call <8 x i16> @llvm.vector.partial.reduce.add.v8i16.v16i16(<8 x i16> [[TMP6]], <16 x i16> [[TMP7]])
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne <8 x i16> [[TMP8]], zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = sext <8 x i1> [[TMP9]] to <8 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x i16> @llvm.vector.partial.reduce.add.v8i16.v16i16(<8 x i16> [[ACC]], <16 x i16> [[MUL_NEG]])
-; CHECK-NEXT:    store <8 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <8 x i16> [[TMP10]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i16> [[RES]]
 ;
   %a.zext = zext <16 x i8> %a to <16 x i16>
@@ -194,18 +209,15 @@ define <8 x i16> @fixed_smlslbt_i8_i16(<8 x i16> %acc, <16 x i8> %a, <16 x i8> %
 ; CHECK-NEXT:    [[MUL:%.*]] = mul <16 x i16> [[A_SEXT]], [[B_SEXT]]
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <16 x i16> zeroinitializer, [[_MSPROP2]]
 ; CHECK-NEXT:    [[MUL_NEG:%.*]] = sub <16 x i16> zeroinitializer, [[MUL]]
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i16> [[TMP3]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <16 x i16> [[_MSPROP3]] to i256
-; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i256 [[TMP5]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP4]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
-; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR10]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB7]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <8 x i16> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <16 x i16> [[_MSPROP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <8 x i1> [[TMP4]] to <8 x i16>
+; CHECK-NEXT:    [[TMP7:%.*]] = zext <16 x i1> [[TMP5]] to <16 x i16>
+; CHECK-NEXT:    [[TMP8:%.*]] = call <8 x i16> @llvm.vector.partial.reduce.add.v8i16.v16i16(<8 x i16> [[TMP6]], <16 x i16> [[TMP7]])
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne <8 x i16> [[TMP8]], zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = sext <8 x i1> [[TMP9]] to <8 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x i16> @llvm.vector.partial.reduce.add.v8i16.v16i16(<8 x i16> [[ACC]], <16 x i16> [[MUL_NEG]])
-; CHECK-NEXT:    store <8 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <8 x i16> [[TMP10]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i16> [[RES]]
 ;
   %a.sext = sext <16 x i8> %a to <16 x i16>
@@ -231,18 +243,15 @@ define <4 x i32> @fixed_umlslbt_i16_i32(<4 x i32> %acc, <8 x i16> %a, <8 x i16> 
 ; CHECK-NEXT:    [[MUL:%.*]] = mul <8 x i32> [[A_ZEXT]], [[B_ZEXT]]
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <8 x i32> zeroinitializer, [[_MSPROP2]]
 ; CHECK-NEXT:    [[MUL_NEG:%.*]] = sub <8 x i32> zeroinitializer, [[MUL]]
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <8 x i32> [[_MSPROP3]] to i256
-; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i256 [[TMP5]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP4]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
-; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR10]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB7]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i32> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <8 x i32> [[_MSPROP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i1> [[TMP4]] to <4 x i16>
+; CHECK-NEXT:    [[TMP7:%.*]] = zext <8 x i1> [[TMP5]] to <8 x i16>
+; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x i16> @llvm.vector.partial.reduce.add.v4i16.v8i16(<4 x i16> [[TMP6]], <8 x i16> [[TMP7]])
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne <4 x i16> [[TMP8]], zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = sext <4 x i1> [[TMP9]] to <4 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v8i32(<4 x i32> [[ACC]], <8 x i32> [[MUL_NEG]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i16> [[TMP10]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
   %a.zext = zext <8 x i16> %a to <8 x i32>
@@ -268,18 +277,15 @@ define <4 x i32> @fixed_smlslbt_i16_i32(<4 x i32> %acc, <8 x i16> %a, <8 x i16> 
 ; CHECK-NEXT:    [[MUL:%.*]] = mul <8 x i32> [[A_SEXT]], [[B_SEXT]]
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <8 x i32> zeroinitializer, [[_MSPROP2]]
 ; CHECK-NEXT:    [[MUL_NEG:%.*]] = sub <8 x i32> zeroinitializer, [[MUL]]
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <8 x i32> [[_MSPROP3]] to i256
-; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i256 [[TMP5]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP4]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
-; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR10]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB7]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i32> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <8 x i32> [[_MSPROP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i1> [[TMP4]] to <4 x i16>
+; CHECK-NEXT:    [[TMP7:%.*]] = zext <8 x i1> [[TMP5]] to <8 x i16>
+; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x i16> @llvm.vector.partial.reduce.add.v4i16.v8i16(<4 x i16> [[TMP6]], <8 x i16> [[TMP7]])
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne <4 x i16> [[TMP8]], zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = sext <4 x i1> [[TMP9]] to <4 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v8i32(<4 x i32> [[ACC]], <8 x i32> [[MUL_NEG]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i16> [[TMP10]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
   %a.sext = sext <8 x i16> %a to <8 x i32>
@@ -305,18 +311,15 @@ define <2 x i64> @fixed_umlslbt_i32_i64(<2 x i64> %acc, <4 x i32> %a, <4 x i32> 
 ; CHECK-NEXT:    [[MUL:%.*]] = mul <4 x i64> [[A_ZEXT]], [[B_ZEXT]]
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <4 x i64> zeroinitializer, [[_MSPROP2]]
 ; CHECK-NEXT:    [[MUL_NEG:%.*]] = sub <4 x i64> zeroinitializer, [[MUL]]
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i64> [[TMP3]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i64> [[_MSPROP3]] to i256
-; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i256 [[TMP5]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP4]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
-; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR10]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB7]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <2 x i64> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i64> [[_MSPROP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <2 x i1> [[TMP4]] to <2 x i16>
+; CHECK-NEXT:    [[TMP7:%.*]] = zext <4 x i1> [[TMP5]] to <4 x i16>
+; CHECK-NEXT:    [[TMP8:%.*]] = call <2 x i16> @llvm.vector.partial.reduce.add.v2i16.v4i16(<2 x i16> [[TMP6]], <4 x i16> [[TMP7]])
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne <2 x i16> [[TMP8]], zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = sext <2 x i1> [[TMP9]] to <2 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x i64> @llvm.vector.partial.reduce.add.v2i64.v4i64(<2 x i64> [[ACC]], <4 x i64> [[MUL_NEG]])
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i16> [[TMP10]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
   %a.zext = zext <4 x i32> %a to <4 x i64>
@@ -342,18 +345,15 @@ define <2 x i64> @fixed_smlslbt_i32_i64(<2 x i64> %acc, <4 x i32> %a, <4 x i32> 
 ; CHECK-NEXT:    [[MUL:%.*]] = mul <4 x i64> [[A_SEXT]], [[B_SEXT]]
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <4 x i64> zeroinitializer, [[_MSPROP2]]
 ; CHECK-NEXT:    [[MUL_NEG:%.*]] = sub <4 x i64> zeroinitializer, [[MUL]]
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i64> [[TMP3]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i64> [[_MSPROP3]] to i256
-; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i256 [[TMP5]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP4]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
-; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR10]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB7]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <2 x i64> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i64> [[_MSPROP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <2 x i1> [[TMP4]] to <2 x i16>
+; CHECK-NEXT:    [[TMP7:%.*]] = zext <4 x i1> [[TMP5]] to <4 x i16>
+; CHECK-NEXT:    [[TMP8:%.*]] = call <2 x i16> @llvm.vector.partial.reduce.add.v2i16.v4i16(<2 x i16> [[TMP6]], <4 x i16> [[TMP7]])
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne <2 x i16> [[TMP8]], zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = sext <2 x i1> [[TMP9]] to <2 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x i64> @llvm.vector.partial.reduce.add.v2i64.v4i64(<2 x i64> [[ACC]], <4 x i64> [[MUL_NEG]])
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i16> [[TMP10]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
   %a.sext = sext <4 x i32> %a to <4 x i64>
@@ -372,8 +372,11 @@ define <vscale x 8 x i16> @legalization_split_i8_i16(<vscale x 8 x i16> %acc, <v
 ; CHECK-NEXT:    [[B_ZEXT:%.*]] = zext <vscale x 32 x i8> [[B]] to <vscale x 32 x i16>
 ; CHECK-NEXT:    [[MUL:%.*]] = mul <vscale x 32 x i16> [[A_ZEXT]], [[B_ZEXT]]
 ; CHECK-NEXT:    [[MUL_NEG:%.*]] = sub <vscale x 32 x i16> zeroinitializer, [[MUL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i16> @llvm.vector.partial.reduce.add.nxv8i16.nxv32i16(<vscale x 8 x i16> zeroinitializer, <vscale x 32 x i16> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 8 x i16> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 8 x i1> [[TMP2]] to <vscale x 8 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.vector.partial.reduce.add.nxv8i16.nxv32i16(<vscale x 8 x i16> [[ACC]], <vscale x 32 x i16> [[MUL_NEG]])
-; CHECK-NEXT:    store <vscale x 8 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 8 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 8 x i16> [[RES]]
 ;
   %a.zext = zext <vscale x 32 x i8> %a to <vscale x 32 x i16>
@@ -392,8 +395,11 @@ define <vscale x 4 x i16> @legalization_promote_acc_i8_i16(<vscale x 4 x i16> %a
 ; CHECK-NEXT:    [[B_ZEXT:%.*]] = zext <vscale x 16 x i8> [[B]] to <vscale x 16 x i16>
 ; CHECK-NEXT:    [[MUL:%.*]] = mul <vscale x 16 x i16> [[A_ZEXT]], [[B_ZEXT]]
 ; CHECK-NEXT:    [[MUL_NEG:%.*]] = sub <vscale x 16 x i16> zeroinitializer, [[MUL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i16> @llvm.vector.partial.reduce.add.nxv4i16.nxv16i16(<vscale x 4 x i16> zeroinitializer, <vscale x 16 x i16> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 4 x i16> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 4 x i1> [[TMP2]] to <vscale x 4 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 4 x i16> @llvm.vector.partial.reduce.add.nxv4i16.nxv16i16(<vscale x 4 x i16> [[ACC]], <vscale x 16 x i16> [[MUL_NEG]])
-; CHECK-NEXT:    store <vscale x 4 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 4 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 4 x i16> [[RES]]
 ;
   %a.zext = zext <vscale x 16 x i8> %a to <vscale x 16 x i16>
@@ -410,8 +416,11 @@ define <vscale x 2 x i64> @extended_sub_i32_i64(<vscale x 2 x i64> %acc, <vscale
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[A_SEXT:%.*]] = sext <vscale x 4 x i32> [[A]] to <vscale x 4 x i64>
 ; CHECK-NEXT:    [[A_SEXT_NEG:%.*]] = sub <vscale x 4 x i64> zeroinitializer, [[A_SEXT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i16> @llvm.vector.partial.reduce.add.nxv2i16.nxv4i16(<vscale x 2 x i16> zeroinitializer, <vscale x 4 x i16> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 2 x i16> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 2 x i1> [[TMP2]] to <vscale x 2 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.vector.partial.reduce.add.nxv2i64.nxv4i64(<vscale x 2 x i64> [[ACC]], <vscale x 4 x i64> [[A_SEXT_NEG]])
-; CHECK-NEXT:    store <vscale x 2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 2 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 2 x i64> [[RES]]
 ;
   %a.sext = sext <vscale x 4 x i32> %a to <vscale x 4 x i64>
@@ -434,15 +443,13 @@ define <vscale x 2 x i64> @predicated_smlslbt_i32_i64(<vscale x 4 x i1> %pred, <
 ; CHECK-NEXT:    [[TMP4:%.*]] = or <vscale x 4 x i64> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    [[_MSPROP_SELECT:%.*]] = select <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i64> [[TMP4]], <vscale x 4 x i64> [[TMP1]]
 ; CHECK-NEXT:    [[MUL_NEG_SEL:%.*]] = select <vscale x 4 x i1> [[PRED]], <vscale x 4 x i64> [[MUL_NEG]], <vscale x 4 x i64> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vector.reduce.or.nxv4i64(<vscale x 4 x i64> [[_MSPROP_SELECT]])
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
-; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR10]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB7]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <vscale x 4 x i64> [[_MSPROP_SELECT]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <vscale x 4 x i1> [[TMP5]] to <vscale x 4 x i16>
+; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i16> @llvm.vector.partial.reduce.add.nxv2i16.nxv4i16(<vscale x 2 x i16> zeroinitializer, <vscale x 4 x i16> [[TMP6]])
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <vscale x 2 x i16> [[TMP7]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <vscale x 2 x i1> [[TMP8]] to <vscale x 2 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.vector.partial.reduce.add.nxv2i64.nxv4i64(<vscale x 2 x i64> [[ACC]], <vscale x 4 x i64> [[MUL_NEG_SEL]])
-; CHECK-NEXT:    store <vscale x 2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 2 x i16> [[TMP9]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 2 x i64> [[RES]]
 ;
   %a.sext = sext <vscale x 4 x i32> %a to <vscale x 4 x i64>
@@ -462,8 +469,11 @@ define <vscale x 4 x i32> @negative_test_no_sub_dot_inst(<vscale x 4 x i32> %acc
 ; CHECK-NEXT:    [[B_ZEXT:%.*]] = zext <vscale x 16 x i8> [[B]] to <vscale x 16 x i32>
 ; CHECK-NEXT:    [[MUL:%.*]] = mul <vscale x 16 x i32> [[A_ZEXT]], [[B_ZEXT]]
 ; CHECK-NEXT:    [[MUL_NEG:%.*]] = sub <vscale x 16 x i32> zeroinitializer, [[MUL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i16> @llvm.vector.partial.reduce.add.nxv4i16.nxv16i16(<vscale x 4 x i16> zeroinitializer, <vscale x 16 x i16> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 4 x i16> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 4 x i1> [[TMP2]] to <vscale x 4 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[ACC]], <vscale x 16 x i32> [[MUL_NEG]])
-; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 4 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[RES]]
 ;
   %a.zext = zext <vscale x 16 x i8> %a to <vscale x 16 x i32>
@@ -482,8 +492,11 @@ define <vscale x 4 x i32> @usdot_sub_i8_i32(<vscale x 4 x i32> %acc, <vscale x 1
 ; CHECK-NEXT:    [[B_ZEXT:%.*]] = zext <vscale x 16 x i8> [[B]] to <vscale x 16 x i32>
 ; CHECK-NEXT:    [[MUL:%.*]] = mul <vscale x 16 x i32> [[A_SEXT]], [[B_ZEXT]]
 ; CHECK-NEXT:    [[MUL_NEG:%.*]] = sub <vscale x 16 x i32> zeroinitializer, [[MUL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i16> @llvm.vector.partial.reduce.add.nxv4i16.nxv16i16(<vscale x 4 x i16> zeroinitializer, <vscale x 16 x i16> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 4 x i16> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 4 x i1> [[TMP2]] to <vscale x 4 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[ACC]], <vscale x 16 x i32> [[MUL_NEG]])
-; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 4 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[RES]]
 ;
   %a.sext = sext <vscale x 16 x i8> %a to <vscale x 16 x i32>
@@ -502,8 +515,11 @@ define <vscale x 4 x i32> @sudot_sub_i8_i32(<vscale x 4 x i32> %acc, <vscale x 1
 ; CHECK-NEXT:    [[B_SEXT:%.*]] = sext <vscale x 16 x i8> [[B]] to <vscale x 16 x i32>
 ; CHECK-NEXT:    [[MUL:%.*]] = mul <vscale x 16 x i32> [[A_ZEXT]], [[B_SEXT]]
 ; CHECK-NEXT:    [[MUL_NEG:%.*]] = sub <vscale x 16 x i32> zeroinitializer, [[MUL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i16> @llvm.vector.partial.reduce.add.nxv4i16.nxv16i16(<vscale x 4 x i16> zeroinitializer, <vscale x 16 x i16> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 4 x i16> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 4 x i1> [[TMP2]] to <vscale x 4 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[ACC]], <vscale x 16 x i32> [[MUL_NEG]])
-; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 4 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[RES]]
 ;
   %a.zext = zext <vscale x 16 x i8> %a to <vscale x 16 x i32>
@@ -529,18 +545,15 @@ define <4 x i32> @neon_usdot_sub_i8_i32(<4 x i32> %acc, <16 x i8> %a, <16 x i8> 
 ; CHECK-NEXT:    [[MUL:%.*]] = mul <16 x i32> [[A_SEXT]], [[B_ZEXT]]
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <16 x i32> zeroinitializer, [[_MSPROP2]]
 ; CHECK-NEXT:    [[MUL_NEG:%.*]] = sub <16 x i32> zeroinitializer, [[MUL]]
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <16 x i32> [[_MSPROP3]] to i512
-; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i512 [[TMP5]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP4]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
-; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR10]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB7]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i32> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <16 x i32> [[_MSPROP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i1> [[TMP4]] to <4 x i16>
+; CHECK-NEXT:    [[TMP7:%.*]] = zext <16 x i1> [[TMP5]] to <16 x i16>
+; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x i16> @llvm.vector.partial.reduce.add.v4i16.v16i16(<4 x i16> [[TMP6]], <16 x i16> [[TMP7]])
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne <4 x i16> [[TMP8]], zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = sext <4 x i1> [[TMP9]] to <4 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[ACC]], <16 x i32> [[MUL_NEG]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i16> [[TMP10]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
   %a.sext = sext <16 x i8> %a to <16 x i32>
@@ -566,18 +579,15 @@ define <4 x i32> @neon_usdot_sub_i8_i32_no_i8mm(<4 x i32> %acc, <16 x i8> %a, <1
 ; CHECK-NEXT:    [[MUL:%.*]] = mul <16 x i32> [[A_SEXT]], [[B_ZEXT]]
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <16 x i32> zeroinitializer, [[_MSPROP2]]
 ; CHECK-NEXT:    [[MUL_NEG:%.*]] = sub <16 x i32> zeroinitializer, [[MUL]]
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <16 x i32> [[_MSPROP3]] to i512
-; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i512 [[TMP5]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP4]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
-; CHECK:       [[BB6]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR10]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB7]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i32> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <16 x i32> [[_MSPROP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i1> [[TMP4]] to <4 x i16>
+; CHECK-NEXT:    [[TMP7:%.*]] = zext <16 x i1> [[TMP5]] to <16 x i16>
+; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x i16> @llvm.vector.partial.reduce.add.v4i16.v16i16(<4 x i16> [[TMP6]], <16 x i16> [[TMP7]])
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne <4 x i16> [[TMP8]], zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = sext <4 x i1> [[TMP9]] to <4 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[ACC]], <16 x i32> [[MUL_NEG]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i16> [[TMP10]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
   %a.sext = sext <16 x i8> %a to <16 x i32>
@@ -597,9 +607,9 @@ define void @wide_fixed_umlslbt_i8_i16(ptr %acc.ptr, ptr %a.ptr, ptr %b.ptr, ptr
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 24), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       [[BB5]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR10]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB6]]:
 ; CHECK-NEXT:    [[A:%.*]] = load <32 x i8>, ptr [[A_PTR]], align 32
@@ -610,7 +620,7 @@ define void @wide_fixed_umlslbt_i8_i16(ptr %acc.ptr, ptr %a.ptr, ptr %b.ptr, ptr
 ; CHECK-NEXT:    [[_MSCMP6:%.*]] = icmp ne i64 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP6]], label %[[BB10:.*]], label %[[BB11:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB10]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR10]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB11]]:
 ; CHECK-NEXT:    [[B:%.*]] = load <32 x i8>, ptr [[B_PTR]], align 32
@@ -621,7 +631,7 @@ define void @wide_fixed_umlslbt_i8_i16(ptr %acc.ptr, ptr %a.ptr, ptr %b.ptr, ptr
 ; CHECK-NEXT:    [[_MSCMP7:%.*]] = icmp ne i64 [[TMP3]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP7]], label %[[BB15:.*]], label %[[BB16:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB15]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR10]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB16]]:
 ; CHECK-NEXT:    [[ACC:%.*]] = load <16 x i16>, ptr [[ACC_PTR]], align 32
@@ -637,27 +647,24 @@ define void @wide_fixed_umlslbt_i8_i16(ptr %acc.ptr, ptr %a.ptr, ptr %b.ptr, ptr
 ; CHECK-NEXT:    [[MUL:%.*]] = mul <32 x i16> [[A_ZEXT]], [[B_ZEXT]]
 ; CHECK-NEXT:    [[_MSPROP5:%.*]] = or <32 x i16> zeroinitializer, [[_MSPROP4]]
 ; CHECK-NEXT:    [[MUL_NEG:%.*]] = sub <32 x i16> zeroinitializer, [[MUL]]
-; CHECK-NEXT:    [[TMP20:%.*]] = bitcast <16 x i16> [[_MSLD2]] to i256
-; CHECK-NEXT:    [[_MSCMP8:%.*]] = icmp ne i256 [[TMP20]], 0
-; CHECK-NEXT:    [[TMP21:%.*]] = bitcast <32 x i16> [[_MSPROP5]] to i512
-; CHECK-NEXT:    [[_MSCMP9:%.*]] = icmp ne i512 [[TMP21]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP8]], [[_MSCMP9]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB22:.*]], label %[[BB23:.*]], !prof [[PROF1]]
-; CHECK:       [[BB22]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR10]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB23]]:
+; CHECK-NEXT:    [[TMP20:%.*]] = icmp ne <16 x i16> [[_MSLD2]], zeroinitializer
+; CHECK-NEXT:    [[TMP21:%.*]] = icmp ne <32 x i16> [[_MSPROP5]], zeroinitializer
+; CHECK-NEXT:    [[TMP22:%.*]] = zext <16 x i1> [[TMP20]] to <16 x i16>
+; CHECK-NEXT:    [[TMP23:%.*]] = zext <32 x i1> [[TMP21]] to <32 x i16>
+; CHECK-NEXT:    [[TMP24:%.*]] = call <16 x i16> @llvm.vector.partial.reduce.add.v16i16.v32i16(<16 x i16> [[TMP22]], <32 x i16> [[TMP23]])
+; CHECK-NEXT:    [[TMP25:%.*]] = icmp ne <16 x i16> [[TMP24]], zeroinitializer
+; CHECK-NEXT:    [[TMP29:%.*]] = sext <16 x i1> [[TMP25]] to <16 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = call <16 x i16> @llvm.vector.partial.reduce.add.v16i16.v32i16(<16 x i16> [[ACC]], <32 x i16> [[MUL_NEG]])
 ; CHECK-NEXT:    [[_MSCMP10:%.*]] = icmp ne i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP10]], label %[[BB24:.*]], label %[[BB25:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB24]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR10]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR9]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB25]]:
 ; CHECK-NEXT:    [[TMP26:%.*]] = ptrtoint ptr [[DEST_PTR]] to i64
 ; CHECK-NEXT:    [[TMP27:%.*]] = xor i64 [[TMP26]], 193514046488576
 ; CHECK-NEXT:    [[TMP28:%.*]] = inttoptr i64 [[TMP27]] to ptr
-; CHECK-NEXT:    store <16 x i16> zeroinitializer, ptr [[TMP28]], align 32
+; CHECK-NEXT:    store <16 x i16> [[TMP29]], ptr [[TMP28]], align 32
 ; CHECK-NEXT:    store <16 x i16> [[RES]], ptr [[DEST_PTR]], align 32
 ; CHECK-NEXT:    ret void
 ;

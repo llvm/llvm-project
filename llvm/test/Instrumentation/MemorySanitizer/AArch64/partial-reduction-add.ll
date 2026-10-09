@@ -23,9 +23,15 @@ define <4 x i32> @partial_reduce_add_fixed(<4 x i32> %accumulator, <4 x i32> %0)
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i32> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i1> [[TMP3]] to <4 x i16>
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i1> [[TMP4]] to <4 x i16>
+; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i16> @llvm.vector.partial.reduce.add.v4i16.v4i16(<4 x i16> [[TMP5]], <4 x i16> [[TMP6]])
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <4 x i16> [[TMP7]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i1> [[TMP8]] to <4 x i16>
 ; CHECK-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(<4 x i32> [[ACCUMULATOR]], <4 x i32> [[TMP0]])
-; CHECK-NEXT:    store <4 x i32> [[_MSPROP]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i16> [[TMP9]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[PARTIAL_REDUCE]]
 ;
 entry:
@@ -40,18 +46,15 @@ define <4 x i32> @partial_reduce_add_fixed_half(<4 x i32> %accumulator, <8 x i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i32> [[TMP2]] to i256
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i256 [[TMP4]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1:![0-9]+]]
-; CHECK:       [[BB5]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5:[0-9]+]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB6]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <8 x i32> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i1> [[TMP3]] to <4 x i16>
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <8 x i1> [[TMP4]] to <8 x i16>
+; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i16> @llvm.vector.partial.reduce.add.v4i16.v8i16(<4 x i16> [[TMP5]], <8 x i16> [[TMP6]])
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <4 x i16> [[TMP7]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i1> [[TMP8]] to <4 x i16>
 ; CHECK-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v8i32(<4 x i32> [[ACCUMULATOR]], <8 x i32> [[TMP0]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i16> [[TMP9]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[PARTIAL_REDUCE]]
 ;
 entry:
@@ -64,8 +67,11 @@ define <vscale x 4 x i32> @partial_reduce_add(<vscale x 4 x i32> %accumulator, <
 ; CHECK-SAME: <vscale x 4 x i32> [[ACCUMULATOR:%.*]], <vscale x 4 x i32> [[TMP0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i16> @llvm.vector.partial.reduce.add.nxv4i16.nxv4i16(<vscale x 4 x i16> zeroinitializer, <vscale x 4 x i16> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 4 x i16> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 4 x i1> [[TMP2]] to <vscale x 4 x i16>
 ; CHECK-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv4i32(<vscale x 4 x i32> [[ACCUMULATOR]], <vscale x 4 x i32> [[TMP0]])
-; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 4 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[PARTIAL_REDUCE]]
 ;
 entry:
@@ -78,8 +84,11 @@ define <vscale x 4 x i32> @partial_reduce_add_half(<vscale x 4 x i32> %accumulat
 ; CHECK-SAME: <vscale x 4 x i32> [[ACCUMULATOR:%.*]], <vscale x 8 x i32> [[TMP0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i16> @llvm.vector.partial.reduce.add.nxv4i16.nxv8i16(<vscale x 4 x i16> zeroinitializer, <vscale x 8 x i16> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 4 x i16> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 4 x i1> [[TMP2]] to <vscale x 4 x i16>
 ; CHECK-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv8i32(<vscale x 4 x i32> [[ACCUMULATOR]], <vscale x 8 x i32> [[TMP0]])
-; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 4 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[PARTIAL_REDUCE]]
 ;
 entry:
@@ -92,8 +101,11 @@ define <vscale x 4 x i32> @partial_reduce_add_quart(<vscale x 4 x i32> %accumula
 ; CHECK-SAME: <vscale x 4 x i32> [[ACCUMULATOR:%.*]], <vscale x 16 x i32> [[TMP0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i16> @llvm.vector.partial.reduce.add.nxv4i16.nxv16i16(<vscale x 4 x i16> zeroinitializer, <vscale x 16 x i16> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 4 x i16> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 4 x i1> [[TMP2]] to <vscale x 4 x i16>
 ; CHECK-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[ACCUMULATOR]], <vscale x 16 x i32> [[TMP0]])
-; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 4 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[PARTIAL_REDUCE]]
 ;
 entry:
@@ -106,8 +118,11 @@ define <vscale x 8 x i32> @partial_reduce_add_half_8(<vscale x 8 x i32> %accumul
 ; CHECK-SAME: <vscale x 8 x i32> [[ACCUMULATOR:%.*]], <vscale x 16 x i32> [[TMP0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i16> @llvm.vector.partial.reduce.add.nxv8i16.nxv16i16(<vscale x 8 x i16> zeroinitializer, <vscale x 16 x i16> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 8 x i16> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <vscale x 8 x i1> [[TMP2]] to <vscale x 8 x i16>
 ; CHECK-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <vscale x 8 x i32> @llvm.vector.partial.reduce.add.nxv8i32.nxv16i32(<vscale x 8 x i32> [[ACCUMULATOR]], <vscale x 16 x i32> [[TMP0]])
-; CHECK-NEXT:    store <vscale x 8 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <vscale x 8 x i16> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 8 x i32> [[PARTIAL_REDUCE]]
 ;
 entry:
@@ -124,6 +139,3 @@ declare i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32>)
 declare i32 @llvm.vector.reduce.add.nxv8i32(<vscale x 8 x i32>)
 
 attributes #0 = { "target-features"="+sve2" }
-;.
-; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
-;.
