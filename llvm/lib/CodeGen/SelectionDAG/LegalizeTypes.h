@@ -827,7 +827,6 @@ private:
   void ScalarizeVectorResult(SDNode *N, unsigned ResNo);
   SDValue ScalarizeVecRes_MERGE_VALUES(SDNode *N, unsigned ResNo);
   SDValue ScalarizeVecRes_LOOP_DEPENDENCE_MASK(SDNode *N);
-  SDValue ScalarizeVecRes_MASK_BEFOREFIRST(SDNode *N);
   SDValue ScalarizeVecRes_BinOp(SDNode *N);
   SDValue ScalarizeVecRes_MaskedBinOp(SDNode *N);
   SDValue ScalarizeVecRes_CMP(SDNode *N);

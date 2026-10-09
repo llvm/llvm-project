@@ -61,9 +61,6 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::LOOP_DEPENDENCE_RAW_MASK:
     R = ScalarizeVecRes_LOOP_DEPENDENCE_MASK(N);
     break;
-  case ISD::MASK_BEFOREFIRST:
-    R = ScalarizeVecRes_MASK_BEFOREFIRST(N);
-    break;
   case ISD::MERGE_VALUES:      R = ScalarizeVecRes_MERGE_VALUES(N, ResNo);break;
   case ISD::BITCAST:           R = ScalarizeVecRes_BITCAST(N); break;
   case ISD::SPLAT_VECTOR:
@@ -473,12 +470,6 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_LOOP_DEPENDENCE_MASK(SDNode *N) {
   return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(N),
                      N->getValueType(0).getScalarType(), Mask,
                      DAG.getVectorIdxConstant(0, DL));
-}
-
-SDValue DAGTypeLegalizer::ScalarizeVecRes_MASK_BEFOREFIRST(SDNode *N) {
-  // The output lane is true only if the input lane is false.
-  return DAG.getNOT(SDLoc(N), GetScalarizedVector(N->getOperand(0)),
-                    N->getValueType(0).getScalarType());
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_BITCAST(SDNode *N) {
