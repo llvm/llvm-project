@@ -4279,21 +4279,18 @@ static bool isResultTypeMatchAtomicRMWKind(Type resultType,
   case arith::AtomicRMWKind::minimumf:
   case arith::AtomicRMWKind::minnumf:
     return isa<FloatType>(resultType);
-  case arith::AtomicRMWKind::maxs: {
-    auto intType = dyn_cast<IntegerType>(resultType);
-    return intType && intType.isSigned();
-  }
+  // The kind carries the signedness of the comparison; the integer is
+  // signless (what arith's maxsi/minsi/maxui/minui, which the reduction
+  // lowers to, operate on) or of that signedness.
+  case arith::AtomicRMWKind::maxs:
   case arith::AtomicRMWKind::mins: {
     auto intType = dyn_cast<IntegerType>(resultType);
-    return intType && intType.isSigned();
+    return intType && !intType.isUnsigned();
   }
-  case arith::AtomicRMWKind::maxu: {
-    auto intType = dyn_cast<IntegerType>(resultType);
-    return intType && intType.isUnsigned();
-  }
+  case arith::AtomicRMWKind::maxu:
   case arith::AtomicRMWKind::minu: {
     auto intType = dyn_cast<IntegerType>(resultType);
-    return intType && intType.isUnsigned();
+    return intType && !intType.isSigned();
   }
   case arith::AtomicRMWKind::ori:
   case arith::AtomicRMWKind::andi:
