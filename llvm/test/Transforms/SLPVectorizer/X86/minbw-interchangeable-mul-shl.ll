@@ -7,8 +7,10 @@ define void @test(ptr %p, ptr %in) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[IN:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[IN]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i8> [[TMP1]], splat (i8 7)
-; CHECK-NEXT:    [[TMP5:%.*]] = shl <4 x i8> [[TMP2]], <i8 3, i8 20, i8 3, i8 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i32> [[TMP2]], splat (i32 7)
+; CHECK-NEXT:    [[TMP4:%.*]] = shl <4 x i32> [[TMP3]], <i32 3, i32 20, i32 3, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc <4 x i32> [[TMP4]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i8> [[TMP5]], i64 0
 ; CHECK-NEXT:    store i8 [[TMP6]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 1
