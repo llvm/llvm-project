@@ -152,10 +152,14 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   HasFloat16 = true;
   HasStrictFP = true;
 
-  if (Triple.isArch64Bit())
+  const bool IsGNUILP32 = Triple.getEnvironment() == llvm::Triple::GNUILP32;
+  if (Triple.isArch64Bit() && !IsGNUILP32)
     LongWidth = LongAlign = PointerWidth = PointerAlign = 64;
   else
     LongWidth = LongAlign = PointerWidth = PointerAlign = 32;
+
+  if (IsGNUILP32)
+    Int64Type = IntMaxType = SignedLongLong;
 
   BitIntMaxAlign = 128;
   MaxVectorAlign = 128;
