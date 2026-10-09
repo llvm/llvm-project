@@ -328,6 +328,12 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Added assembler and code generation support for the `AVX10_V2_AUX`
   instruction set.
+* The AMX intrinsics that name tile registers (`llvm.x86.tileloadd64`,
+  `llvm.x86.tdpbssd` and the others outside the `_internal` forms) now declare
+  their memory effects: they read or write the tile state as `target_mem0`,
+  and the memory operations access only memory through their pointer
+  argument. Before, each one could read and write any memory, so loads of
+  loop-invariant values weren't hoisted out of loops of tile operations.
 
 ### Changes to the OCaml bindings
 

@@ -2346,7 +2346,8 @@ define void @f() "no-sse" { ... }
       accessed by any other means. # is a number between 0 and 1 inclusive.
       Note: The following target_mem locations are implemented in AArch64.
       target_mem0 represents SME ZT0 state, target_mem1 represents SME ZA
-      state.
+      state. In X86, target_mem0 represents the AMX tile registers and tile
+      configuration.
 
     - The default access kind (specified without a location prefix) applies to
       all locations that haven't been specified explicitly, including those that
