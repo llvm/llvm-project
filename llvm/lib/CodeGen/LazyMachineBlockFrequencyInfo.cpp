@@ -34,6 +34,9 @@ char LazyMachineBlockFrequencyInfoPass::ID = 0;
 LazyMachineBlockFrequencyInfoPass::LazyMachineBlockFrequencyInfoPass()
     : MachineFunctionPass(ID) {}
 
+LazyMachineBlockFrequencyInfoPass::~LazyMachineBlockFrequencyInfoPass() =
+    default;
+
 void LazyMachineBlockFrequencyInfoPass::getAnalysisUsage(
     AnalysisUsage &AU) const {
   AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
