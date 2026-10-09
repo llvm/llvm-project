@@ -8411,16 +8411,19 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
     };
 
     auto PrintFunc = [&](uint64_t FuncPC) {
+      // In a relocatable object file, FuncPC is the offset of the address
+      // field, which is used to look up the relocation that applies to it.
+      if (this->Obj.getHeader().e_type == ELF::ET_REL) {
+        PrintRelocatableFuncSymbol(FuncPC);
+        return;
+      }
       uint64_t FuncEntryPC = FuncPC;
       // In ARM thumb mode the LSB of the function pointer is set to 1. Since
       // this detail is unnecessary in call graph reconstruction, we are
       // clearing this bit to facilitate tooling.
       if (this->Obj.getHeader().e_machine == ELF::EM_ARM)
         FuncEntryPC = FuncPC & ~1;
-      if (this->Obj.getHeader().e_type == ELF::ET_REL)
-        PrintRelocatableFuncSymbol(FuncEntryPC);
-      else
-        PrintNonRelocatableFuncSymbol(FuncEntryPC);
+      PrintNonRelocatableFuncSymbol(FuncEntryPC);
     };
     if (!CGI)
       CGI = std::make_unique<ListScope>(W, "CallGraph");
