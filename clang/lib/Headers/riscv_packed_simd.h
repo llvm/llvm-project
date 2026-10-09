@@ -168,14 +168,14 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
   }
 
 #define __packed_slx(name, ty)                                                 \
-  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(                      \
-      ty __rd, ty __rs1, unsigned __shamt) {                                   \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rd, ty __rs1,    \
+                                                         unsigned __shamt) {   \
     return __builtin_elementwise_fshl(__rd, __rs1, (ty)__shamt);               \
   }
 
 #define __packed_srx(name, ty)                                                 \
-  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(                      \
-      ty __rd, ty __rs1, unsigned __shamt) {                                   \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rd, ty __rs1,    \
+                                                         unsigned __shamt) {   \
     return __builtin_elementwise_fshr(__rs1, __rd, (ty)__shamt);               \
   }
 
