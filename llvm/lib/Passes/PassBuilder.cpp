@@ -1271,6 +1271,8 @@ Expected<InstCombineOptions> parseInstCombineOptions(StringRef Params) {
     bool Enable = !ParamName.consume_front("no-");
     if (ParamName == "verify-fixpoint") {
       Result.setVerifyFixpoint(Enable);
+    } else if (ParamName == "post-loop-vectorizer") {
+      Result.setPostLoopVectorizer(Enable);
     } else if (Enable && ParamName.consume_front("max-iterations=")) {
       APInt MaxIterations;
       if (ParamName.getAsInteger(0, MaxIterations))
