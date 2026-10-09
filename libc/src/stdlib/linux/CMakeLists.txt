@@ -200,4 +200,3 @@ add_entrypoint_object(
     libc.src.__support.macros.config
     libc.src.__support.macros.null_check
 )
-
