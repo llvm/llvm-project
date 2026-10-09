@@ -840,11 +840,9 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
       // Common paste case: identifier+identifier = identifier.  Avoid creating
       // a lexer and other overhead.
       PP.IncrementPasteCounter(true);
-      Result.startToken();
-      Result.setKind(tok::raw_identifier);
+      Result =
+          Token::create(tok::raw_identifier, ResultTokLoc, LHSLen + RHSLen);
       Result.setRawIdentifierData(ResultTokStrPtr);
-      Result.setLocation(ResultTokLoc);
-      Result.setLength(LHSLen+RHSLen);
     } else {
       PP.IncrementPasteCounter(false);
 

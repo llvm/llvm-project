@@ -510,6 +510,10 @@ defm GFX940Insts : AMDGPUSubtargetFeature<"gfx940-insts",
   /*GenPredicate=*/0
 >;
 
+defm BufferInvInst : AMDGPUSubtargetFeature<"buffer-inv-inst",
+  "Has buffer_inv instruction"
+>;
+
 defm Permlane16Insts : AMDGPUSubtargetFeature<"permlane16-insts",
   "Has v_permlane16_b32/v_permlanex16_b32 instructions"
 >;
@@ -1003,6 +1007,10 @@ defm WMMAF4Insts : AMDGPUSubtargetFeature<"wmma-f4-insts",
   "Has WMMA_*_F4 instructions"
 >;
 
+defm WMMA16x16x128FP8Insts : AMDGPUSubtargetFeature<"wmma-16x16x128fp8-insts",
+  "Has 16x16x128 FP8/BF8 WMMA instructions"
+>;
+
 defm SWMMACGfx1200Insts : AMDGPUSubtargetFeature<"swmmac-gfx1200-insts",
   "Has GFX1200 SWMMAC instructions"
 >;
@@ -1064,12 +1072,21 @@ defm AtomicDsPkAdd16Insts : AMDGPUSubtargetFeature<"atomic-ds-pk-add-16-insts",
   "ds_pk_add_rtn_f16 instructions"
 >;
 
+defm AtomicDsCondSubClampInsts : AMDGPUSubtargetFeature<"atomic-ds-cond-sub-clamp-insts",
+  "Has ds_cond_sub_u32, ds_cond_sub_rtn_u32, ds_sub_clamp_u32 and "
+  "ds_sub_clamp_rtn_u32 instructions"
+>;
+
 defm LdsAtomicAddF64 : AMDGPUSubtargetFeature<"lds-atomic-add-f64",
   "Has ds_add_f64 and ds_add_rtn_f64 instructions"
 >;
 
 defm AtomicFlatPkAdd16Insts : AMDGPUSubtargetFeature<"atomic-flat-pk-add-16-insts",
   "Has flat_atomic_pk_add_f16 and flat_atomic_pk_add_bf16 instructions"
+>;
+
+defm AtomicCondSubClampFlatInsts : AMDGPUSubtargetFeature<"atomic-cond-sub-clamp-flat-insts",
+  "Has flat_atomic_cond_sub_u32 and flat_atomic_sub_clamp_u32 instructions"
 >;
 
 defm AtomicFaddRtnInsts : AMDGPUSubtargetFeature<"atomic-fadd-rtn-insts",
@@ -1875,6 +1892,7 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureUnalignedDSAccess, FeatureTrue16BitInsts,
    FeatureDefaultComponentBroadcast, FeatureMaxHardClauseLength32,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
+   FeatureAtomicDsCondSubClampInsts, FeatureAtomicCondSubClampFlatInsts,
    FeatureIEEEMinimumMaximumInsts, FeatureSALUMinimumMaximumInsts,
    FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
    FeatureAgentScopeFineGrainedRemoteMemoryAtomics, FeatureFlatOffsetBits24,
@@ -1905,6 +1923,7 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureUnalignedDSAccess, FeatureTrue16BitInsts,
    FeatureDefaultComponentBroadcast, FeatureMaxHardClauseLength32,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
+   FeatureAtomicDsCondSubClampInsts, FeatureAtomicCondSubClampFlatInsts,
    FeatureIEEEMinimumMaximumInsts, FeatureSALUMinimumMaximumInsts,
    FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
    FeatureAgentScopeFineGrainedRemoteMemoryAtomics, FeatureFlatOffsetBits24,
@@ -2101,6 +2120,7 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureAGPRAlloc,
    FeatureTgSplitSupport,
    FeatureGFX940Insts,
+   FeatureBufferInvInst,
    FeatureRequiresAlignedVGPRs,
    FeatureFmaMixInsts,
    FeatureDLInsts,
@@ -2598,6 +2618,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureLDSBankCount64,
    FeatureWMMAN16Insts,
    FeatureWMMAF4Insts,
+   FeatureWMMA16x16x128FP8Insts,
    FeatureVOP3PX2IncrementsVaVdstTwice,
    FeatureSetregVGPRMSBFixup,
    FeatureCubeInsts,
@@ -2634,6 +2655,7 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureLDSBankCount64,
    FeatureWMMAN16Insts,
    FeatureWMMAF4Insts,
+   FeatureWMMA16x16x128FP8Insts,
    FeatureFullRate64Ops,
    FeatureVOP3PX2IncrementsVaVdstTwice,
    FeatureDPALU_DPP,
@@ -3121,10 +3143,6 @@ def isGFX13Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13">,
   AssemblerPredicate<(all_of FeatureGFX13Insts)>;
 
-def HasAtomicCondSubClampFlatInsts :
-  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12">,
-  AssemblerPredicate<(all_of FeatureGFX12Insts)>;
-
 def HasD16LoadStore : Predicate<"Subtarget->hasD16LoadStore()">,
   AssemblerPredicate<(all_of FeatureGFX9Insts)>;
 
@@ -3148,6 +3166,7 @@ def D16PreservesUnusedBits :
 
 def LDSRequiresM0Init : Predicate<"Subtarget->ldsRequiresM0Init()">;
 def NotLDSRequiresM0Init : Predicate<"!Subtarget->ldsRequiresM0Init()">;
+def HasUsableDSOffset : Predicate<"Subtarget->hasUsableDSOffset()">;
 
 def HasExportInsts : Predicate<"Subtarget->hasExportInsts()">,
   AssemblerPredicate<(any_of FeatureGFX13Insts, (all_of (not FeatureGFX90AInsts), (not FeatureGFX1250Insts)))>;
@@ -3265,10 +3284,6 @@ def HasCvtFP8ByteSelNotE5M3 : Predicate<"Subtarget->hasCvtFP8ByteSel() && !Subta
 def HasFmacLegacy32 : Predicate<"Subtarget->hasFmaLegacy32Insts() && Subtarget->getGeneration() < AMDGPUSubtarget::GFX12">,
   AssemblerPredicate<(all_of FeatureFmaLegacy32Insts, (not FeatureGFX12Insts))>;
 
-def HasAtomicDsCondSubClampInsts :
-  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12">,
-  AssemblerPredicate<(all_of FeatureGFX12Insts)>;
-
 def HasAtomicBufferGlobalPkAddF16NoRtnInsts
   : Predicate<"Subtarget->hasAtomicBufferGlobalPkAddF16NoRtnInsts() || Subtarget->hasAtomicBufferGlobalPkAddF16Insts()">,
   AssemblerPredicate<(any_of FeatureAtomicBufferGlobalPkAddF16NoRtnInsts, FeatureAtomicBufferGlobalPkAddF16Insts)>;
@@ -3357,7 +3372,8 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureAtomicFaddRtnInsts, FeatureAtomicFlatPkAdd16Insts, FeatureAtomicGlobalPkAddBF16Inst,
   FeatureBF16ConversionInsts,
   FeatureBF16PackedInsts, FeatureBF16TransInsts, FeatureBF8ConversionScaleInsts,
-  FeatureBVHRayTracingInsts, FeatureBitOp3Insts, FeatureCIInsts,
+  FeatureBVHRayTracingInsts, FeatureBitOp3Insts, FeatureBufferInvInst,
+  FeatureCIInsts,
   FeatureClusters, FeatureCubeInsts, FeatureCvtPkNormVOP2Insts,
   FeatureCvtSrPkBF16F32Inst, FeatureDLInsts, FeatureDPP,
   FeatureDot10Insts, FeatureDot11Insts, FeatureDot12Insts,
@@ -3385,7 +3401,7 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureTDMInsts, FeatureTanhInsts, FeatureTensorCvtLutInsts,
   FeatureTransposeLoadF4F6Insts, FeatureVMemToLDSLoad, FeatureVmemPrefInsts,
   FeatureWaveMatchInsts, FeatureWMMA128bInsts, FeatureWMMA256bInsts,
-  FeatureWMMAN16Insts, FeatureWMMAF4Insts, FeatureXF32Insts,
+  FeatureWMMAN16Insts, FeatureWMMAF4Insts, FeatureWMMA16x16x128FP8Insts, FeatureXF32Insts,
   FeatureWavefrontSize32, FeatureWavefrontSize64, FeatureSupportsWGP,
   FeatureSupportsWave32, FeatureFastFMAF32, FeatureFastDenormalF32,
   FeatureSupportsXNACK, FeatureSupportsSRAMECC, FeatureXNACKOnOffModes,

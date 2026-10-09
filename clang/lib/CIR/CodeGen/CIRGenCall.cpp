@@ -606,10 +606,19 @@ static bool determineNoUndef(QualType clangTy, CIRGenTypes &types,
     // bits from the perspective of LLVM IR.
     return false;
 
+  // Classic CodeGen stores a packed bool vector as an integer with one bit per
+  // element, at least a byte wide, so the check above drops noundef when that
+  // integer is not a whole number of bytes.  The CIR vector type is sized to a
+  // power of two of at least a byte, which always passes that check, so test
+  // the storage integer's width directly.
+  if (clangTy->isPackedVectorBoolType(types.getASTContext()) &&
+      mlir::cast<cir::VectorType>(ty).getBoolStorageWidth() % 8)
+    return false;
+
   assert(!cir::MissingFeatures::opCallCallConv());
-  // TODO(cir): The calling convention code needs to figure if the
-  // coerced-to-type is larger than the actual type, and remove the noundef
-  // attribute. Classic compiler did it here.
+  // The coerced type is not known until CallConvLowering, which drops noundef
+  // when it is wider than the value's memory type, the check classic
+  // DetermineNoUndef makes at this point.
   if (clangTy->isBitIntType())
     return true;
   if (clangTy->isReferenceType())
@@ -1165,14 +1174,13 @@ void CIRGenFunction::emitNonNullArgCheck(RValue rv, QualType argType,
   cgm.errorNYI("non-null arg check is NYI");
 }
 
-static cir::CIRCallOpInterface
-emitCallLikeOp(CIRGenFunction &cgf, mlir::Location callLoc,
-               cir::FuncType indirectFuncTy, mlir::Value indirectFuncVal,
-               cir::FuncOp directFuncOp,
-               const SmallVectorImpl<mlir::Value> &cirCallArgs, bool isInvoke,
-               const mlir::NamedAttrList &attrs,
-               llvm::ArrayRef<mlir::NamedAttrList> argAttrs,
-               const mlir::NamedAttrList &retAttrs) {
+static cir::CIRCallOpInterface emitCallLikeOp(
+    CIRGenFunction &cgf, mlir::Location callLoc, cir::FuncType indirectFuncTy,
+    mlir::Value indirectFuncVal, cir::FuncOp directFuncOp,
+    const SmallVectorImpl<mlir::Value> &cirCallArgs, bool isInvoke,
+    const mlir::NamedAttrList &attrs,
+    llvm::ArrayRef<mlir::NamedAttrList> argAttrs,
+    const mlir::NamedAttrList &retAttrs, cir::CallingConv callingConv) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
 
   assert(!cir::MissingFeatures::opCallSurroundingTry());
@@ -1181,13 +1189,12 @@ emitCallLikeOp(CIRGenFunction &cgf, mlir::Location callLoc,
 
   cir::CallOp op;
   if (indirectFuncTy) {
-    // TODO(cir): Set calling convention for indirect calls.
-    assert(!cir::MissingFeatures::opCallCallConv());
     op = builder.createIndirectCallOp(callLoc, indirectFuncVal, indirectFuncTy,
-                                      cirCallArgs, attrs, argAttrs, retAttrs);
+                                      cirCallArgs, attrs, argAttrs, retAttrs,
+                                      callingConv);
   } else {
     op = builder.createCallOp(callLoc, directFuncOp, cirCallArgs, attrs,
-                              argAttrs, retAttrs);
+                              argAttrs, retAttrs, callingConv);
   }
 
   return op;
@@ -1341,12 +1348,19 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   if (auto calleeFuncOp = dyn_cast<cir::FuncOp>(calleePtr))
     funcName = calleeFuncOp.getName();
 
-  assert(!cir::MissingFeatures::opCallCallConv());
   assert(!cir::MissingFeatures::opCallAttrs());
   cir::CallingConv callingConv;
   cgm.constructAttributeList(funcName, funcInfo, callee.getAbstractInfo(),
                              attrs, argAttrs, retAttrs, callingConv,
                              /*attrOnCallSite=*/true, /*isThunk=*/false);
+
+  // TODO(cir): Classic CodeGen redirects calls to OpenCL kernels to a
+  // non-kernel stub (__clang_ocl_kern_imp_*), since kernel calling conventions
+  // do not permit calls.
+  if (callingConv == cir::CallingConv::SpirKernel ||
+      callingConv == cir::CallingConv::AMDGPUKernel ||
+      callingConv == cir::CallingConv::PTXKernel)
+    cgm.errorNYI(loc, "emitCall: call to kernel function");
 
   auto resolvedFuncOpFromGlobal = [&](mlir::Operation *op) -> cir::FuncOp {
     if (auto fnOp = dyn_cast<cir::FuncOp>(op))
@@ -1405,9 +1419,9 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   bool isInvoke = !cannotThrow && isCatchOrCleanupRequired();
 
   mlir::Location callLoc = loc;
-  cir::CIRCallOpInterface theCall =
-      emitCallLikeOp(*this, loc, indirectFuncTy, indirectFuncVal, directFuncOp,
-                     cirCallArgs, isInvoke, attrs, argAttrs, retAttrs);
+  cir::CIRCallOpInterface theCall = emitCallLikeOp(
+      *this, loc, indirectFuncTy, indirectFuncVal, directFuncOp, cirCallArgs,
+      isInvoke, attrs, argAttrs, retAttrs, callingConv);
 
   if (callOp)
     *callOp = theCall;

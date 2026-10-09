@@ -17,6 +17,7 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -632,8 +633,8 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
       auto *Idx = dyn_cast<ConstantInt>(EI->getIndexOperand());
       if (!Idx)
         return std::nullopt;
-      // Undefined behavior if Idx is negative or >= Size.
-      if (Idx->getValue().uge(Size))
+      // Undefined behavior if Idx is negative or out of bounds.
+      if (Idx->getValue().uge(getNumElements(Vec->getType())))
         continue;
       unsigned IntIdx = Idx->getValue().getZExtValue();
       Mask[I] = IntIdx;
@@ -660,6 +661,9 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
     }
     CommonShuffleMode = Select;
   }
+  if (Vec2 && Size != std::max(getNumElements(Vec1->getType()),
+                               getNumElements(Vec2->getType())))
+    return std::nullopt;
   // If we're not crossing lanes in different vectors, consider it as blending.
   if (CommonShuffleMode == Select && Vec2)
     return TargetTransformInfo::SK_Select;
@@ -858,6 +862,19 @@ bool isSelectedBaseLoad(Type *ScalarTy, ArrayRef<Value *> PointerOps,
   return TrueBase != nullptr;
 }
 
+Align computeBlendedLoadBaseAlignment(ArrayRef<Value *> VL,
+                                      const DataLayout &DL) {
+  assert(all_of(VL, IsaPred<LoadInst>) &&
+         "Expected only load lanes in a blended load.");
+  const uint64_t ScalarSize = DL.getTypeStoreSize(VL.front()->getType());
+  Align BaseAlignment = cast<LoadInst>(VL.front())->getAlign();
+  for (auto [Idx, V] : enumerate(VL))
+    BaseAlignment =
+        std::min(BaseAlignment, commonAlignment(cast<LoadInst>(V)->getAlign(),
+                                                Idx * ScalarSize));
+  return BaseAlignment;
+}
+
 Type *getCommonGEPIndexType(ArrayRef<Value *> VL, Instruction *VL0,
                             function_ref<bool(Value *)> IsGEPLane,
                             const DataLayout &DL) {
@@ -1035,25 +1052,14 @@ Intrinsic::ID getMaskedDivRemIntrinsic(unsigned Opcode) {
 }
 
 /// Returns true if \p I is a part of a single-use chain, computing an address,
-/// which does not pay off the vectorization: a constant table is accessed by a
-/// gather, while the indices, unrelated between the lanes, require a full
-/// buildvector, unlike the ones, shifted by a constant from a common base.
+/// which does not pay off the vectorization: all the lanes are extracted for
+/// the scalar addresses, the extracts delay the memory accesses.
 static bool isNonProfitableIndex(const Instruction *I) {
   constexpr unsigned MaxIndexChainLength = 3;
-  // A constant shift of a common base is a cheap buildvector, while the loads
-  // are vectorized together with the indices, computed from them.
-  auto IsProfitableOperand = [](const Value *V) {
-    if (isa<Constant>(V))
-      return true;
-    if (const auto *Cast = dyn_cast<CastInst>(V); Cast && Cast->hasOneUse())
-      V = Cast->getOperand(0);
-    return isa<LoadInst>(V);
-  };
   const User *U = I->user_back();
   for ([[maybe_unused]] unsigned _ : seq<unsigned>(MaxIndexChainLength)) {
-    if (const auto *GEP = dyn_cast<GetElementPtrInst>(U))
-      return isa<Constant>(GEP->getPointerOperand()) ||
-             none_of(I->operand_values(), IsProfitableOperand);
+    if (isa<GetElementPtrInst>(U))
+      return true;
     if (!isa<Instruction>(U) || !U->hasOneUse())
       return false;
     U = U->user_back();
@@ -1504,6 +1510,41 @@ Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
       Mask);
   NumInsts += 3;
   return Builder.CreateBitCast(Packed, IntTy);
+}
+
+void redirectDbgValues(Instruction &From, Value &To) {
+  SmallVector<DbgVariableRecord *, 2> DVRs;
+  findDbgValues(&From, DVRs);
+  auto *ExI = dyn_cast<Instruction>(&To);
+  for (DbgVariableRecord *DVR : DVRs) {
+    if (!DVR->isDbgValue())
+      continue;
+    Instruction *MarkedI = DVR->getInstruction();
+    if (ExI && MarkedI->getParent() != ExI->getParent())
+      continue;
+    if (!ExI || ExI->comesBefore(MarkedI)) {
+      DVR->replaceVariableLocationOp(&From, &To);
+      continue;
+    }
+    DebugVariableAggregate Var(DVR);
+    auto HasSameVar = [&](auto Records) {
+      return any_of(filterDbgVars(Records),
+                    [&](const DbgVariableRecord &Other) {
+                      return DebugVariableAggregate(&Other) == Var;
+                    });
+    };
+    if (HasSameVar(make_range(std::next(DVR->getIterator()),
+                              MarkedI->getDbgRecordRange().end())) ||
+        any_of(make_range(std::next(MarkedI->getIterator()),
+                          std::next(ExI->getIterator())),
+               [&](const Instruction &I) {
+                 return HasSameVar(I.getDbgRecordRange());
+               }))
+      continue;
+    DbgVariableRecord *NewDVR = DVR->clone();
+    NewDVR->replaceVariableLocationOp(&From, &To);
+    ExI->getParent()->insertDbgRecordAfter(NewDVR, ExI);
+  }
 }
 
 } // namespace llvm::slpvectorizer
