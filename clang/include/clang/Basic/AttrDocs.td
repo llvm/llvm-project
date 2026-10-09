@@ -3975,6 +3975,32 @@ argument to this attribute must be a quoted string. E.g.:
   }];
 }
 
+def AnalyzeAsClassDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+Use `__attribute__((analyze_as_class(...)))` to indicate how to model checks for
+bugprone-unchecked-optional-access for this class after an existing std class.
+It will treat all methods with the same name as if they were methods of the model class.
+The argument must be "std::optional" as a quoted string.
+This functionality will be extended to support further classes. E.g.:
+
+`__attribute__((analyze_as_class("std::optional")))`
+  }];
+}
+
+def AnalyzeAsMethodDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+Use `__attribute__((analyze_as_method(...)))` to indicate how to model checks for
+bugprone-unchecked-optional-access for this method.  This ONLY works to model member methods
+that exist on the model class defined by analyze_as_class(...)
+
+The argument to this attribute must be a quoted string with a method name matching the class. E.g.:
+
+`__attribute__((analyze_as_method("value")))`
+  }];
+}
+
 def TestTypestateDocs : Documentation {
   let Category = DocCatConsumed;
   let Content = [{
