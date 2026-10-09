@@ -34448,10 +34448,10 @@ static SDValue LowerMSTORE(SDValue Op, const X86Subtarget &Subtarget,
   SDLoc dl(Op);
 
   assert((!N->isCompressingStore() || Subtarget.hasAVX512()) &&
-         "Expanding masked load is supported on AVX-512 target only!");
+         "Compressing masked store is supported on AVX-512 target only!");
 
   assert((!N->isCompressingStore() || ScalarVT.getSizeInBits() >= 32) &&
-         "Expanding masked load is supported for 32 and 64-bit types only!");
+         "Compressing masked store is supported for 32 and 64-bit types only!");
 
   assert(Subtarget.hasAVX512() && !Subtarget.hasVLX() && !VT.is512BitVector() &&
          "Cannot lower masked store op.");
