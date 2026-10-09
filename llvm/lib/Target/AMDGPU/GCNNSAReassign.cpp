@@ -112,7 +112,7 @@ char &llvm::GCNNSAReassignID = GCNNSAReassignLegacy::ID;
 
 bool GCNNSAReassignImpl::tryAssignRegisters(
     SmallVectorImpl<LiveInterval *> &Intervals, unsigned StartReg) const {
-  unsigned NumRegs = static_cast<unsigned>(Intervals.size());
+  size_t NumRegs = Intervals.size();
 
   for (unsigned N = 0; N < NumRegs; ++N)
     if (VRM->hasPhys(Intervals[N]->reg()))

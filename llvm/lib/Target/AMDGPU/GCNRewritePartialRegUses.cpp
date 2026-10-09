@@ -437,8 +437,8 @@ bool GCNRewritePartialRegUsesImpl::run(MachineFunction &MF) {
   TRI = static_cast<const SIRegisterInfo *>(MRI->getTargetRegisterInfo());
   TII = MF.getSubtarget().getInstrInfo();
   bool Changed = false;
-  for (size_t I = 0, E = MRI->getNumVirtRegs(); I < E; ++I) {
-    Changed |= rewriteReg(Register::index2VirtReg(static_cast<unsigned>(I)));
+  for (unsigned I = 0, E = MRI->getNumVirtRegs(); I < E; ++I) {
+    Changed |= rewriteReg(Register::index2VirtReg(I));
   }
   return Changed;
 }

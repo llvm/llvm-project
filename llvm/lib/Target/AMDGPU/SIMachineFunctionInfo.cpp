@@ -347,7 +347,7 @@ void SIMachineFunctionInfo::shiftWwmVGPRsToLowestRange(
     BitVector &SavedVGPRs) {
   const SIRegisterInfo *TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  for (unsigned I = 0, E = static_cast<unsigned>(WWMVGPRs.size()); I < E; ++I) {
+  for (size_t I = 0, E = WWMVGPRs.size(); I < E; ++I) {
     Register Reg = WWMVGPRs[I];
     Register NewReg =
         TRI->findUnusedRegister(MRI, &AMDGPU::VGPR_32RegClass, MF);
@@ -366,9 +366,7 @@ void SIMachineFunctionInfo::shiftWwmVGPRsToLowestRange(
     // lanes while spilling special SGPRs like FP, BP, etc. during PEI.
     auto *RegItr = llvm::find(SpillPhysVGPRs, Reg);
     if (RegItr != SpillPhysVGPRs.end()) {
-      unsigned Idx =
-          static_cast<unsigned>(std::distance(SpillPhysVGPRs.begin(), RegItr));
-      SpillPhysVGPRs[Idx] = NewReg;
+      *RegItr = NewReg;
 
       // For replacing registers used in the CFI instructions.
       MF.replaceFrameInstRegister(Reg, NewReg);
