@@ -154,24 +154,17 @@ define void @phi_lpad_values() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @phi_lpad_values(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @fn()
-; CHECK-NEXT:            to label [[INVOKE2:%.*]] unwind label [[LPAD1:%.*]]
+; CHECK-NEXT:            to label [[INVOKE2:%.*]] unwind label [[LPAD2:%.*]]
 ; CHECK:       invoke2:
 ; CHECK-NEXT:    invoke void @fn()
-; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD2:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD2]]
 ; CHECK:       invoke.cont:
 ; CHECK-NEXT:    ret void
-; CHECK:       lpad1:
-; CHECK-NEXT:    [[EXN:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:            cleanup
-; CHECK-NEXT:    br label [[SHARED_RESUME:%.*]]
 ; CHECK:       lpad2:
 ; CHECK-NEXT:    [[EXN2:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:            cleanup
-; CHECK-NEXT:    br label [[SHARED_RESUME]]
-; CHECK:       shared_resume:
-; CHECK-NEXT:    [[PHI:%.*]] = phi { ptr, i32 } [ [[EXN]], [[LPAD1]] ], [ [[EXN2]], [[LPAD2]] ]
 ; CHECK-NEXT:    call void @fn()
-; CHECK-NEXT:    resume { ptr, i32 } [[PHI]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EXN2]]
 ;
 entry:
   invoke void @fn()
@@ -205,17 +198,13 @@ define i32 @phi_same_value(i32 %x) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @phi_same_value(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @fn()
-; CHECK-NEXT:            to label [[INVOKE2:%.*]] unwind label [[LPAD1:%.*]]
+; CHECK-NEXT:            to label [[INVOKE2:%.*]] unwind label [[LPAD2:%.*]]
 ; CHECK:       invoke2:
 ; CHECK-NEXT:    invoke void @fn()
-; CHECK-NEXT:            to label [[COMMON_RET:%.*]] unwind label [[LPAD2:%.*]]
+; CHECK-NEXT:            to label [[COMMON_RET:%.*]] unwind label [[LPAD2]]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 0, [[INVOKE2]] ], [ [[X:%.*]], [[LPAD1]] ], [ [[X]], [[LPAD2]] ]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[X:%.*]], [[LPAD2]] ], [ 0, [[INVOKE2]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
-; CHECK:       lpad1:
-; CHECK-NEXT:    [[EXN:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:            cleanup
-; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       lpad2:
 ; CHECK-NEXT:    [[EXN2:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:            cleanup
