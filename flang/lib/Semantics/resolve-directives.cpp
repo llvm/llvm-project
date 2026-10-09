@@ -452,10 +452,10 @@ public:
 
   // Recognize symbols that are not created as a part of the OpenMP data-
   // sharing processing, and that are declared inside of the construct.
-  // These symbols are predetermined private, but they shouldn't be marked
-  // in any special way, because there is nothing to be done for them.
-  // They are not symbols for which private copies need to be created,
-  // they are already themselves private.
+  // Such symbols are predetermined private if they have automatic storage
+  // duration, or shared if they have static storage duration. They need
+  // no special marking, because there is nothing to be done for them.
+  // They are already themselves private or shared.
   static bool IsLocalInsideScope(const Symbol &symbol, const Scope &scope) {
     // A symbol that is marked with a DSA will be cloned in the construct
     // scope and marked as host-associated. This applies to privatized symbols
@@ -3041,8 +3041,9 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
     // in the source code was declared outside of the construct. This was
     // always the case before Fortran 2008. F2008 introduced the BLOCK
     // construct, and allowed local variable declarations.
-    // In OpenMP local (non-static) variables are always private in a given
-    // construct, if they are declared inside the construct. In those cases
+    // In OpenMP, local variables in a given construct are private if they
+    // have automatic storage duration or shared if they have static storage
+    // duration, if they are declared inside the construct. In those cases
     // we don't need to do anything here (i.e. no flags are needed or
     // anything else).
     if (!IsLocalInsideScope(*symbol, currScope())) {
