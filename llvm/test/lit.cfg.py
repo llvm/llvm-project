@@ -121,11 +121,7 @@ llvm_config.with_environment("OCAMLRUNPARAM", "b")
 
 
 def get_asan_rtlib():
-    if (
-        not "Address" in config.llvm_use_sanitizer
-        or not "Darwin" in config.target_os
-        or not "x86" in config.host_triple
-    ):
+    if not "Address" in config.llvm_use_sanitizer or not "Darwin" in config.target_os:
         return ""
     try:
         import glob
@@ -591,12 +587,6 @@ if config.have_tf_aot:
 
 if getattr(config, "have_mlir_lowering", False):
     config.available_features.add("have_mlir_lowering")
-
-if getattr(config, "have_mlir_lowering_inliner", False):
-    config.available_features.add("have_mlir_lowering_inliner")
-
-if getattr(config, "have_mlir_lowering_regalloc", False):
-    config.available_features.add("have_mlir_lowering_regalloc")
 
 if getattr(config, "have_opencsd", False):
     config.available_features.add("opencsd")

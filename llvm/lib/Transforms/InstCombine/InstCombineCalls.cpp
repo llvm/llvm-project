@@ -1394,7 +1394,10 @@ static Instruction *foldClampRangeOfTwo(IntrinsicInst *II,
   // max (min X, 42), 41 --> X > 41 ? 42 : 41
   // min (max X, 42), 43 --> X < 43 ? 42 : 43
   Value *Cmp = Builder.CreateICmp(Pred, X, I1);
-  return SelectInst::Create(Cmp, ConstantInt::get(II->getType(), *C0), I1);
+  auto *SI = SelectInst::Create(Cmp, ConstantInt::get(II->getType(), *C0), I1);
+  setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE,
+                                              II->getFunction());
+  return SI;
 }
 
 /// If this min/max has a constant operand and an operand that is a matching
@@ -1950,7 +1953,7 @@ static Value *foldSinAndCosToSinCos(IntrinsicInst *II, IRBuilderBase &B,
     B.SetInsertPoint(*InsertPt);
   } else {
     BasicBlock &EntryBB = II->getFunction()->getEntryBlock();
-    B.SetInsertPoint(&EntryBB, EntryBB.begin());
+    B.SetInsertPoint(EntryBB.begin());
   }
 
   Function *SinCosFunc = Intrinsic::getOrInsertDeclaration(
@@ -2895,7 +2898,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     unsigned BitWidth = II->getType()->getScalarSizeInBits();
 
     // Multiply by one.
-    if (match(Arg1, m_One()))
+    if (BitWidth > 1 && match(Arg1, m_One()))
       return replaceInstUsesWith(CI, Builder.CreateAShr(Arg0, BitWidth - 1));
     break;
   }
@@ -3367,7 +3370,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
                            : (isa<Constant>(TVal) && isa<Constant>(FVal))) {
         CallInst *AbsT = Builder.CreateCall(II->getCalledFunction(), {TVal});
         CallInst *AbsF = Builder.CreateCall(II->getCalledFunction(), {FVal});
-        SelectInst *SI = SelectInst::Create(Cond, AbsT, AbsF);
+        // Given the condition is the same, we pull metadata (particularly
+        // profile metadata) from the original select instruction.
+        SelectInst *SI = SelectInst::Create(
+            Cond, AbsT, AbsF, "", nullptr,
+            ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(Arg));
         SI->setFastMathFlags(II->getFastMathFlags() |
                              cast<SelectInst>(Arg)->getFastMathFlags());
         // Can't copy nsz to select, as even with the nsz flag the fabs result
@@ -3500,19 +3507,22 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     // ldexp(x, zext(i1 y)) -> fmul x, (select y, 2.0, 1.0)
     // ldexp(x, sext(i1 y)) -> fmul x, (select y, 0.5, 1.0)
+    // For both of the cases below, we have no information on the distribution
+    // of x in the general case, so we mark the created selects as having
+    // unknown branch weights.
     Value *ExtSrc;
     if (match(Exp, m_ZExt(m_Value(ExtSrc))) &&
         ExtSrc->getType()->getScalarSizeInBits() == 1) {
-      Value *Select =
-          Builder.CreateSelect(ExtSrc, ConstantFP::get(II->getType(), 2.0),
-                               ConstantFP::get(II->getType(), 1.0));
+      Value *Select = Builder.CreateSelectWithUnknownProfile(
+          ExtSrc, ConstantFP::get(II->getType(), 2.0),
+          ConstantFP::get(II->getType(), 1.0), DEBUG_TYPE);
       return BinaryOperator::CreateFMulFMF(Src, Select, II);
     }
     if (match(Exp, m_SExt(m_Value(ExtSrc))) &&
         ExtSrc->getType()->getScalarSizeInBits() == 1) {
-      Value *Select =
-          Builder.CreateSelect(ExtSrc, ConstantFP::get(II->getType(), 0.5),
-                               ConstantFP::get(II->getType(), 1.0));
+      Value *Select = Builder.CreateSelectWithUnknownProfile(
+          ExtSrc, ConstantFP::get(II->getType(), 0.5),
+          ConstantFP::get(II->getType(), 1.0), DEBUG_TYPE);
       return BinaryOperator::CreateFMulFMF(Src, Select, II);
     }
 
@@ -3521,17 +3531,23 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     ///
     // TODO: If we cared, should insert a canonicalize for x
     Value *SelectCond, *SelectLHS, *SelectRHS;
+    Instruction *SelectInst = nullptr;
     if (match(II->getArgOperand(1),
-              m_OneUse(m_Select(m_Value(SelectCond), m_Value(SelectLHS),
-                                m_Value(SelectRHS))))) {
+              m_OneUse(m_Instruction(
+                  SelectInst, m_Select(m_Value(SelectCond), m_Value(SelectLHS),
+                                       m_Value(SelectRHS)))))) {
       Value *NewLdexp = nullptr;
       Value *Select = nullptr;
       if (match(SelectRHS, m_ZeroInt())) {
         NewLdexp = Builder.CreateLdexp(Src, SelectLHS, II);
-        Select = Builder.CreateSelect(SelectCond, NewLdexp, Src);
+        Select = Builder.CreateSelect(
+            SelectCond, NewLdexp, Src, "",
+            ProfcheckDisableMetadataFixes ? nullptr : SelectInst);
       } else if (match(SelectLHS, m_ZeroInt())) {
         NewLdexp = Builder.CreateLdexp(Src, SelectRHS, II);
-        Select = Builder.CreateSelect(SelectCond, Src, NewLdexp);
+        Select = Builder.CreateSelect(
+            SelectCond, Src, NewLdexp, "",
+            ProfcheckDisableMetadataFixes ? nullptr : SelectInst);
       }
 
       if (NewLdexp) {

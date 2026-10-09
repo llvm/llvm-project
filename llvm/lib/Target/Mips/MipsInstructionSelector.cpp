@@ -407,11 +407,6 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
     I.eraseFromParent();
     return true;
   }
-  case G_BRINDIRECT: {
-    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::PseudoIndirectBranch))
-             .add(I.getOperand(0));
-    break;
-  }
   case G_PHI: {
     const Register DestReg = I.getOperand(0).getReg();
 

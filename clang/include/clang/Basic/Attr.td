@@ -3340,9 +3340,34 @@ def SwiftPrivate : InheritableAttr {
 def SwiftVersionedAddition : Attr {
   // This attribute has no spellings as it is only ever created implicitly
   // from API notes.
+  //
+  // A "slice" is one element of an APINotesReader::VersionedInfo: the
+  // annotations that one version of a sidecar '.apinotes' file supplies for one
+  // declaration, paired with that version. An unversioned section supplies a
+  // slice whose version is empty.
+  //
+  // A "group" is all the slices one lookup returned, which is one whole
+  // VersionedInfo. Clang selects at most one slice per group and applies it, so
+  // a slice can only suppress other slices in its own group.
+  //
+  // SliceGroup says which group this slice came from.
+  //
+  // This is needed because capture mode (version-independent apinotes) attaches
+  // every slice from every lookup to the same declaration, which erases the
+  // VersionedInfo boundaries. SliceGroup restores them, so a consumer redoes
+  // the selection once per group instead of pooling unrelated slices.
+  // One group is one lookup: a second API notes reader is a different lookup,
+  // and so is an exact parameter-selector query beside a broad one.
+  //
+  // Group numbers also carry precedence. Clang applies each group's winner in
+  // ascending group order, and when two winners set the same key the last one
+  // applied owns it. So a consumer partitions by group, selects within each
+  // group, then resolves any remaining collision in ascending group order.
+  //
   let Spellings = [];
   let Args = [VersionArgument<"Version">, WrappedAttr<"AdditionalAttr">,
-              BoolArgument<"IsReplacedByActive">];
+              BoolArgument<"IsReplacedByActive">,
+              UnsignedArgument<"SliceGroup">];
   let SemaHandler = 0;
   let Documentation = [InternalOnly];
 }
@@ -3350,9 +3375,13 @@ def SwiftVersionedAddition : Attr {
 def SwiftVersionedRemoval : Attr {
   // This attribute has no spellings as it is only ever created implicitly
   // from API notes.
+  //
+  // SliceGroup says which lookup this slice belongs to. See the
+  // SwiftVersionedAddition comment above.
   let Spellings = [];
   let Args = [VersionArgument<"Version">, UnsignedArgument<"RawKind">,
-              BoolArgument<"IsReplacedByActive">];
+              BoolArgument<"IsReplacedByActive">,
+              UnsignedArgument<"SliceGroup">];
   let SemaHandler = 0;
   let Documentation = [InternalOnly];
   let AdditionalMembers = [{
@@ -3360,6 +3389,24 @@ def SwiftVersionedRemoval : Attr {
       return static_cast<attr::Kind>(getRawKind());
     }
   }];
+}
+
+def SwiftVersionedSlice : Attr {
+  // This attribute has no spellings as it is only ever created implicitly
+  // from API notes, and only under -fswift-version-independent-apinotes.
+  //
+  // One of these records each Swift version slice an API notes lookup supplied
+  // for the declaration, whether or not that slice set any keyed values.
+  // A slice that sets no key still takes part in version selection, selecting it
+  // suppresses the annotations of every other slice in its group, so a
+  // consumer that recomputes the selection has to know the slice exists.
+  //
+  // SliceGroup says which group this slice came from. See the
+  // SwiftVersionedAddition comment above.
+  let Spellings = [];
+  let Args = [VersionArgument<"Version">, UnsignedArgument<"SliceGroup">];
+  let SemaHandler = 0;
+  let Documentation = [InternalOnly];
 }
 
 def NoDeref : TypeAttr {
@@ -3995,6 +4042,8 @@ def Weak : InheritableAttr {
   let SimpleHandler = 1;
 }
 
+def : MutualExclusions<[IFunc, Weak]>;
+
 def WeakImport : InheritableAttr {
   let Spellings = [Clang<"weak_import">];
   let Documentation = [Undocumented];
@@ -4623,7 +4672,16 @@ def MSInheritance : InheritableAttr {
   let Spellings = [CustomKeyword<"__single_inheritance">,
                    CustomKeyword<"__multiple_inheritance">,
                    CustomKeyword<"__virtual_inheritance">,
-                   CustomKeyword<"__unspecified_inheritance">];
+                   CustomKeyword<"__unspecified_inheritance">,
+                   // The single underscore spellings are aliases defined in
+                   // TokenKinds.def; they must come *after* all of the other
+                   // spellings because otherwise the MSInheritanceModel
+                   // enumeration will break (we're relying on token
+                   // normalization converting the alias to the normal form).
+                   CustomKeyword<"_single_inheritance">,
+                   CustomKeyword<"_multiple_inheritance">,
+                   CustomKeyword<"_virtual_inheritance">
+                   ];
   let AdditionalMembers = [{
   MSInheritanceModel getInheritanceModel() const {
     // The spelling enum should agree with MSInheritanceModel.
@@ -5044,7 +5102,9 @@ def ReleaseHandle : InheritableParamAttr {
 }
 
 def UnsafeBufferUsage : InheritableAttr {
-  let Spellings = [Clang<"unsafe_buffer_usage">];
+  let Spellings = [Clang<"unsafe_buffer_usage">,
+                   Clang<"unsafe_buffer_usage_in_container">];
+  let Args = [StringArgument<"Category", 1>];
   let Subjects = SubjectList<[Function, Field]>;
   let Documentation = [UnsafeBufferUsageDocs];
 }
@@ -5319,6 +5379,20 @@ def HLSLGroupSharedAddressSpace : TypeAttr {
   let Spellings = [CustomKeyword<"groupshared">];
   let Subjects = SubjectList<[Var]>;
   let Documentation = [HLSLGroupSharedAddressSpaceDocs];
+}
+
+def HLSLInterpolationModifiersArgument : UnsignedArgument<"Modifiers"> {
+  let Fake = 1;
+}
+
+def HLSLInterpolationModifier : InheritableAttr {
+  let Spellings = [CustomKeyword<"nointerpolation">, CustomKeyword<"linear">,
+                   CustomKeyword<"centroid">, CustomKeyword<"noperspective">,
+                   CustomKeyword<"sample">, CustomKeyword<"center">];
+  let Args = [HLSLInterpolationModifiersArgument];
+  let Subjects = SubjectList<[ParmVar, Field, Function], ErrorDiag>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLInterpolationModifierDocs];
 }
 
 def HLSLParamModifier : ParameterABIAttr {

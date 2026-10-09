@@ -30,7 +30,7 @@ namespace {
 // Return true if the operation is a constant dense element
 // attribute.
 static bool isZeroVectorConstant(Operation *op) {
-  auto constantOp = dyn_cast<arith::ConstantOp>(op);
+  auto constantOp = dyn_cast_if_present<arith::ConstantOp>(op);
   if (!constantOp)
     return false;
 
@@ -63,7 +63,7 @@ static Value contractionUsersAfterYield(Value v) {
   return contractionUsersAfterYield(parent->getResult(idx));
 }
 
-// Function to collapse the last two dimension (vnni and k) to help the
+// Function to collapse the last two dimension (k or n, and vnni) to help the
 // amx.tile_load to correctly load the packed element type.
 static Value collapseInnerDims(OpBuilder &builder, Location loc, Value input) {
   ShapedType inputType = cast<ShapedType>(input.getType());
@@ -98,6 +98,38 @@ static bool isReadSrcMemref(Value operand) {
   return srcBuff && isa<MemRefType>(srcBuff.getType());
 }
 
+// Check if a vector.contract operand reads whole VNNI groups: the memref's
+// static innermost dim is the VNNI factor and the read starts at its origin.
+static bool isVnniOperandRead(Value operand, int64_t vnni) {
+  Operation *defOp = operand.getDefiningOp();
+  if (!defOp)
+    return false;
+
+  Value srcBuff;
+  OpFoldResult vnniIndex;
+  llvm::TypeSwitch<Operation *>(defOp).Case<TransferReadOp, LoadOp>(
+      [&](auto readOp) {
+        srcBuff = readOp.getBase();
+        vnniIndex = readOp.getIndices().back();
+      });
+
+  if (!srcBuff)
+    return false;
+  auto srcType = dyn_cast<MemRefType>(srcBuff.getType());
+  return srcType && srcType.getRank() > 0 &&
+         srcType.getShape().back() == vnni && isZeroInteger(vnniIndex);
+}
+
+// Replaces the indices of the two innermost dims of a VNNI operand by the
+// index of the dim they collapse into.
+static void collapseVnniIndices(OpBuilder &rewriter, Location loc,
+                                SmallVectorImpl<Value> &indices, int64_t vnni) {
+  Value inner = indices.pop_back_val();
+  Value cVnni = arith::ConstantIndexOp::create(rewriter, loc, vnni);
+  Value scaled = arith::MulIOp::create(rewriter, loc, indices.back(), cVnni);
+  indices.back() = arith::AddIOp::create(rewriter, loc, scaled, inner);
+}
+
 // Get the MemRef source and offset index for the operands of
 // vector.contract.
 static FailureOr<std::pair<Value, SmallVector<Value>>>
@@ -119,9 +151,6 @@ getSrcIndxValue(OpBuilder &rewriter, Location loc, Value operand,
   if (!srcBuff || !isa<MemRefType>(srcBuff.getType()))
     return failure();
 
-  if (isNotAcc)
-    indexVals.pop_back();
-
   SmallVector<Value> indices;
   indices.reserve(indexVals.size());
 
@@ -131,6 +160,8 @@ getSrcIndxValue(OpBuilder &rewriter, Location loc, Value operand,
   }
 
   if (isNotAcc) {
+    collapseVnniIndices(rewriter, loc, indices,
+                        cast<MemRefType>(srcBuff.getType()).getShape().back());
     srcBuff = collapseInnerDims(rewriter, loc, srcBuff);
   }
 
@@ -255,20 +286,13 @@ static unsigned getIndexPosition(Value operand, scf::ForOp loop) {
 // Creates amx.tile_loads.
 static amx::TileLoadOp createTileLoads(OpBuilder &rewriter, Location loc,
                                        Value operand, Value mat, Type ipType,
-                                       bool rhs, unsigned int offset,
-                                       bool isVnni) {
+                                       unsigned int offset, bool isVnni) {
 
   auto srcIndx = getSrcIndxValue(rewriter, loc, operand, false);
   auto [srcBuff, indices] = *srcIndx;
-  if (isVnni) {
-    indices.pop_back();
-  }
-
-  if (rhs && isVnni) {
-    auto cOffset = arith::ConstantIndexOp::create(rewriter, loc, offset);
-    indices[indices.size() - 1] = arith::MulIOp::create(
-        rewriter, loc, indices[indices.size() - 1], cOffset);
-  }
+  if (isVnni)
+    collapseVnniIndices(rewriter, loc, indices,
+                        cast<MemRefType>(srcBuff.getType()).getShape().back());
 
   amx::TileType tileType = amx::TileType::get({16, (16 * offset)}, ipType);
   return amx::TileLoadOp::create(rewriter, loc, tileType, mat, indices);
@@ -462,7 +486,7 @@ createTiledDp(OpBuilder &rewriter, Location loc,
       tilesLhs = itLhs->second;
     } else {
       tilesLhs = createTileLoads(rewriter, loc, ops[i].getLhs(), matA, ipType,
-                                 false, offset, isVnni);
+                                 offset, isVnni);
       readsToTileLoads.try_emplace(readOpLhs, tilesLhs);
     }
 
@@ -473,7 +497,7 @@ createTiledDp(OpBuilder &rewriter, Location loc,
       tilesRhs = itRhs->second;
     } else {
       tilesRhs = createTileLoads(rewriter, loc, ops[i].getRhs(), matB, ipType,
-                                 true, offset, isVnni);
+                                 offset, isVnni);
       readsToTileLoads.try_emplace(readOpRhs, tilesRhs);
     }
 
@@ -818,8 +842,6 @@ struct VectorContractToAMXDotProduct
     Operation *accReadOp =
         traceToVectorReadLikeParentOperation(contractOp.getAcc());
 
-    bool isAccZeroVectorConstant = isZeroVectorConstant(accReadOp);
-
     Operation *accWrite =
         traceToVectorWriteLikeUserOperation(contractOp.getResult());
 
@@ -833,6 +855,8 @@ struct VectorContractToAMXDotProduct
           contractOp, "The ACC operand of the vector.contract should be a "
                       "transfer_read or a load. And, the result should have a "
                       "single-use chain to its consumer.");
+
+    bool isAccZeroVectorConstant = isZeroVectorConstant(accReadOp);
 
     Block *resultBlock = resultChainEnd.user_begin()->getBlock();
 
@@ -864,6 +888,11 @@ struct VectorContractToAMXDotProduct
           isReadSrcMemref(contractOp.getRhs())))
       return rewriter.notifyMatchFailure(
           contractOp, "The LHS or RHS src is not a MemRef type.");
+
+    if (isVnni && !(isVnniOperandRead(contractOp.getLhs(), blockingFactor) &&
+                    isVnniOperandRead(contractOp.getRhs(), blockingFactor)))
+      return rewriter.notifyMatchFailure(
+          contractOp, "The LHS or RHS src does not read whole VNNI groups.");
 
     unsigned int dimValue = blockingFactor;
     if (!isVnni)
@@ -1135,6 +1164,12 @@ struct VectorContractToAMXDotProduct
     for (Operation &op : loopLists[0].getBody()->getOperations()) {
 
       if (auto contract = dyn_cast<vector::ContractionOp>(op)) {
+        if (isVnni && !(isVnniOperandRead(contract.getLhs(), blockingFactor) &&
+                        isVnniOperandRead(contract.getRhs(), blockingFactor)))
+          return rewriter.notifyMatchFailure(
+              contractOp, "The LHS or RHS src of an associated contract "
+                          "operation does not read whole VNNI groups.");
+
         LogicalResult validate = validateContractOps(
             rewriter, contract, dimValue, srcBuffLhs, srcBuffRhs, true);
 

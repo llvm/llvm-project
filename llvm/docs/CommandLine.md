@@ -1585,13 +1585,19 @@ A member is named after its option, `enable_foo` for `-enable-foo`; a named `def
 `OptionsStruct<prefix = "foo-">` drops that prefix from member names, so `-foo-path` sets `path`.
 
 The `BoolField` is set by `-enable-foo` or `-enable-foo=true|false|1|0`.
-A `ValueField`, of an integer type, `double`, or `StringRef`, is set by `-foo-threshold=8` or `-foo-threshold 8`.
+A `ValueField`, of an integer type, `float`, `double`, or `StringRef`, is set by `-foo-threshold=8` or `-foo-threshold 8`.
+An `OptionalBoolField` is a `BoolOrDefault` that stays `Default` unless the option is given, replacing `cl::boolOrDefault`; read it with `valueOr(X, Default)`.
+An `EnumField` maps each of its comma-separated values to an enumerator, replacing `cl::values`: `defm : EnumField<"foo-mode", "FooMode", "FooMode::Fast", "fast,safe", ["FooMode::Fast", "FooMode::Safe"], "The mode">;` accepts `-foo-mode=fast` and `-foo-mode=safe`.
+A `FlagOrEnumField` takes one more argument, the enumerator the bare option selects, replacing `cl::ValueOptional`: with `"FooMode::Fast"`, `-foo-mode` sets `FooMode::Fast`, and `-foo-mode safe` does not consume `safe`.
+A `DefaultOnOffField` is a `BoolOrDefault` set by `=Default`, `=Enable`, or `=Disable`.
 Both accept `--` for `-`.
 Only `-help-hidden` lists the options, like `cl::Hidden`.
 
 A default is the member's C++ initializer, so `"\"-\""` initializes `foo_path` to `"-"`.
+A `std::optional` member defaulting to `std::nullopt` tells whether the option was given, which a `cl::opt` asks with `getNumOccurrences()`.
 The header declares the struct after including what the member defaults need, and one source file defines it and registers it with `cl::`.
 
 The library then lists `FooOptionsTableGen` under `DEPENDS` and `Option` under `LINK_COMPONENTS`.
+A library that otherwise needs only `llvm-min-tblgen` sets `LLVM_TABLEGEN_PROJECT` to `LLVM_HEADERS` before its `tablegen()` call, so that its sources need not wait for `llvm-tblgen`.
 Code reads `FooOptions::Global.enable_foo`, the instance the command line sets.
 Keep the header in `lib/`, as private as the `static cl::opt` it replaces; another library that needs a value calls a function or takes a parameter.

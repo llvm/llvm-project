@@ -585,6 +585,9 @@ static Value createLinalgBodyCalculationForElementwiseOp(
     bool bitExtend =
         srcTy.getIntOrFloatBitWidth() < dstTy.getIntOrFloatBitWidth();
 
+    // With `input_unsigned`, the integer input is read as unsigned.
+    bool inputUnsigned = cast<tosa::CastOp>(op).getInputUnsigned();
+
     if (srcTy == dstTy)
       return args.front();
 
@@ -616,6 +619,11 @@ static Value createLinalgBodyCalculationForElementwiseOp(
       return arith::UIToFPOp::create(rewriter, loc, resultTypes[0],
                                      unrealizedCast);
     }
+
+    // Unsigned inputs are converted with UIToFP.
+    if (inputUnsigned && arith::UIToFPOp::areCastCompatible(srcTy, dstTy))
+      return createWithDefaultProperties<arith::UIToFPOp>(rewriter, loc,
+                                                          resultTypes, args);
 
     // All other si-to-fp conversions should be handled by SIToFP.
     if (arith::SIToFPOp::areCastCompatible(srcTy, dstTy))
@@ -732,6 +740,12 @@ static Value createLinalgBodyCalculationForElementwiseOp(
       return arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::ne,
                                    args.front(), zero);
     }
+
+    // Unsigned inputs are zero-extended.
+    if (inputUnsigned && isa<IntegerType>(srcTy) && isa<IntegerType>(dstTy) &&
+        bitExtend)
+      return createWithDefaultProperties<arith::ExtUIOp>(rewriter, loc,
+                                                         resultTypes, args);
 
     if (isa<IntegerType>(srcTy) && isa<IntegerType>(dstTy) && bitExtend)
       return arith::ExtSIOp::create(rewriter, loc, resultTypes, args,
@@ -1085,21 +1099,6 @@ elementwiseMatchAndRewriteHelper(Operation *operation, ValueRange operands,
                                  targetShape, masterOperands);
   return emitElementwiseComputation(rewriter, loc, operation, broadcastOperands,
                                     targetShape, converter);
-}
-
-// Returns the identity value to seed a float min/max reduction with. TOSA seeds
-// REDUCE_MIN with maximum_s<in_out_t>() and REDUCE_MAX/ARGMAX with
-// minimum_s<in_out_t>(), and for floating-point types those bounds are
-// +/-infinity rather than the largest finite value. Only use them when the
-// caller opted in *and* the format can represent them: APFloat::getInf() is
-// unreachable for FiniteOnly semantics and silently returns a NaN for NanOnly
-// semantics such as f8E4M3FN, which would poison the whole reduction through
-// NaN-propagating arith.minimumf/arith.maximumf.
-static APFloat getFloatMinMaxIdentity(const llvm::fltSemantics &semantics,
-                                      bool negative, bool allowNonFinites) {
-  if (allowNonFinites && APFloat::semanticsHasInf(semantics))
-    return APFloat::getInf(semantics, negative);
-  return APFloat::getLargest(semantics, negative);
 }
 
 // Returns the constant initial value for a given reduction operation. The
@@ -2657,6 +2656,75 @@ public:
   }
 };
 
+class RowGatherConverter : public OpConversionPattern<tosa::RowGatherOp> {
+public:
+  using OpConversionPattern<tosa::RowGatherOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(tosa::RowGatherOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const final {
+    auto valuesTy = dyn_cast<RankedTensorType>(adaptor.getValues().getType());
+    auto indicesTy = dyn_cast<RankedTensorType>(adaptor.getIndices().getType());
+    auto rowCountTy =
+        dyn_cast<RankedTensorType>(adaptor.getRowCount().getType());
+    auto resultTy = dyn_cast<RankedTensorType>(op.getType());
+    if (!valuesTy || !indicesTy || !rowCountTy || !resultTy)
+      return rewriter.notifyMatchFailure(op, "unranked tensors not supported");
+
+    Location loc = op.getLoc();
+    Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
+    Value rowCount = tensor::ExtractOp::create(
+        rewriter, loc, adaptor.getRowCount(), ValueRange{zero});
+    Value rowCountIndex = arith::IndexCastOp::create(
+        rewriter, loc, rewriter.getIndexType(), rowCount);
+
+    SmallVector<Value> dynamicDims;
+    if (resultTy.isDynamicDim(0))
+      dynamicDims.push_back(
+          tensor::DimOp::create(rewriter, loc, adaptor.getValues(), 0));
+    if (resultTy.isDynamicDim(1)) {
+      Value indicesWidth =
+          tensor::DimOp::create(rewriter, loc, adaptor.getIndices(), 1);
+      dynamicDims.push_back(
+          arith::MulIOp::create(rewriter, loc, indicesWidth, rowCountIndex));
+    }
+    if (resultTy.isDynamicDim(2))
+      dynamicDims.push_back(
+          tensor::DimOp::create(rewriter, loc, adaptor.getValues(), 2));
+
+    Value emptyTensor =
+        tensor::EmptyOp::create(rewriter, loc, resultTy.getShape(),
+                                resultTy.getElementType(), dynamicDims);
+    SmallVector<AffineMap> affineMaps = {
+        rewriter.getMultiDimIdentityMap(resultTy.getRank())};
+
+    auto genericOp = linalg::GenericOp::create(
+        rewriter, loc, ArrayRef<Type>{resultTy}, ValueRange{},
+        ValueRange{emptyTensor}, affineMaps,
+        getNParallelLoopsAttrs(resultTy.getRank()),
+        [&](OpBuilder &builder, Location nestedLoc, ValueRange) {
+          Value batch = linalg::IndexOp::create(builder, nestedLoc, 0);
+          Value outputRow = linalg::IndexOp::create(builder, nestedLoc, 1);
+          Value channel = linalg::IndexOp::create(builder, nestedLoc, 2);
+          Value indexSlot = arith::DivUIOp::create(builder, nestedLoc,
+                                                   outputRow, rowCountIndex);
+          Value rowOffset = arith::RemUIOp::create(builder, nestedLoc,
+                                                   outputRow, rowCountIndex);
+          Value index = tensor::ExtractOp::create(builder, nestedLoc,
+                                                  adaptor.getIndices(),
+                                                  ValueRange{batch, indexSlot});
+          Value row = arith::IndexCastOp::create(builder, nestedLoc,
+                                                 builder.getIndexType(), index);
+          row = arith::AddIOp::create(builder, nestedLoc, row, rowOffset);
+          Value result =
+              tensor::ExtractOp::create(builder, nestedLoc, adaptor.getValues(),
+                                        ValueRange{batch, row, channel});
+          linalg::YieldOp::create(builder, nestedLoc, result);
+        });
+    rewriter.replaceOp(op, genericOp.getResult(0));
+    return success();
+  }
+};
+
 // Lowerings the TableOp to a series of gathers and numerica operations. This
 // includes interpolation between the high/low values. For the I8 varient, this
 // simplifies to a single gather operation.
@@ -3185,6 +3253,7 @@ void mlir::tosa::populateTosaToLinalgConversionPatterns(
   patterns->add<
       IdentityNConverter<tosa::IdentityOp>,
       GatherConverter,
+      RowGatherConverter,
       RescaleConverter,
       ReverseConverter,
       RFFT2dConverter,
