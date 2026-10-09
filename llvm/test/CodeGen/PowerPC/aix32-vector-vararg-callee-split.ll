@@ -17,7 +17,7 @@ define <4 x i32> @split_spill(double %d1, double %d2, double %d3, ...) {
   ; CHECK:   STW [[COPY]], 4, %fixed-stack.0 :: (store (s32) into %fixed-stack.0 + 4)
   ; CHECK:   LIFETIME_START %stack.0.arg_list
   ; CHECK:   [[ADDI:%[0-9]+]]:gprc = ADDI %fixed-stack.0, 0
-  ; CHECK:   [[LXVW4X:%[0-9]+]]:vsrc = LXVW4X $zero, killed [[ADDI]] :: (load (s128) from %ir.argp.cur.aligned)
+  ; CHECK:   [[LXVW4X:%[0-9]+]]:vsrc = LXVW4X $zero, [[ADDI]] :: (load (s128) from %ir.argp.cur.aligned)
   ; CHECK:   LIFETIME_END %stack.0.arg_list
   ; CHECK:   $v2 = COPY [[LXVW4X]]
   ; CHECK:   BLR implicit $lr, implicit $rm, implicit $v2

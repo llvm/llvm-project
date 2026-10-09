@@ -23,6 +23,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/StringPool.h"
 #include "lldb/ValueObject/ValueObjectList.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
 
@@ -189,7 +190,7 @@ const char *SBModule::GetUUIDString() const {
   // then we don't need to worry about the lifetime of the string as it will
   // never go away once it has been put into the ConstString string pool
   const char *uuid_cstr =
-      ConstString(module_sp->GetUUID().GetAsString()).GetCString();
+      StringPool::GetSystemPool().Intern(module_sp->GetUUID().GetAsString());
   // Note: SBModule::GetUUIDString's expected behavior is to return nullptr if
   // the string we get is empty, so we must perform this check before returning.
   if (uuid_cstr && uuid_cstr[0])

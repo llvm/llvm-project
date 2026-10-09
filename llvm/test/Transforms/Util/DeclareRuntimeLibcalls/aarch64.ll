@@ -2163,7 +2163,6 @@
 ; MINGW-NEXT: declare double @sin(double)
 ; MINGW-NEXT: declare void @sincos(double, ptr, ptr)
 ; MINGW-NEXT: declare void @sincosf(float, ptr, ptr)
-; MINGW-NEXT: declare void @sincosl(double, ptr, ptr)
 ; MINGW-NEXT: declare float @sinf(float)
 ; MINGW-NEXT: declare double @sinh(double)
 ; MINGW-NEXT: declare float @sinhf(float)
