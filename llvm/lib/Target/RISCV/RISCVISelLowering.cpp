@@ -12456,6 +12456,21 @@ static unsigned getRVPMulHighOpcode(unsigned IntNo) {
   }
 }
 
+static unsigned getRVScalarAveragingOpcode(unsigned IntNo) {
+  switch (IntNo) {
+  default:
+    llvm_unreachable("Unexpected RISC-V scalar averaging intrinsic");
+  case Intrinsic::riscv_aadd_i32:
+    return ISD::AVGFLOORS;
+  case Intrinsic::riscv_aaddu_u32:
+    return ISD::AVGFLOORU;
+  case Intrinsic::riscv_asub_i32:
+    return RISCVISD::ASUB;
+  case Intrinsic::riscv_asubu_u32:
+    return RISCVISD::ASUBU;
+  }
+}
+
 static unsigned getRVScalarMulHighOpcode(unsigned IntNo) {
   switch (IntNo) {
   default:
@@ -13409,6 +13424,15 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
 
     return DAG.getNode(Opc, DL, VT, Op.getOperand(1), Op.getOperand(2));
+  }
+  case Intrinsic::riscv_aadd_i32:
+  case Intrinsic::riscv_aaddu_u32:
+  case Intrinsic::riscv_asub_i32:
+  case Intrinsic::riscv_asubu_u32: {
+    // RV32 selects the scalar P instructions directly. RV64 goes via
+    // ReplaceNodeResults.
+    unsigned Opc = getRVScalarAveragingOpcode(IntNo);
+    return DAG.getNode(Opc, DL, MVT::i32, Op.getOperand(1), Op.getOperand(2));
   }
   case Intrinsic::riscv_mulhr_i32:
   case Intrinsic::riscv_mulhru_u32:
@@ -18040,6 +18064,24 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       else
         Res = DAG.getNode(Opc, DL, WideVT, ArrayRef(Ops).slice(1));
       Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
+      return;
+    }
+    case Intrinsic::riscv_aadd_i32:
+    case Intrinsic::riscv_aaddu_u32:
+    case Intrinsic::riscv_asub_i32:
+    case Intrinsic::riscv_asubu_u32: {
+      // RV64 has no scalar averaging instructions; reuse the packed .w
+      // family on the low words, whose element 0 is the scalar result.
+      MVT VT = N->getSimpleValueType(0);
+      if (!Subtarget.is64Bit() || VT != MVT::i32)
+        return;
+      unsigned Opc = getRVScalarAveragingOpcode(IntNo);
+      SDValue Rs1 =
+          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(1));
+      SDValue Rs2 =
+          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(2));
+      SDValue Res = DAG.getNode(Opc, DL, MVT::v2i32, Rs1, Rs2);
+      Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Res, 0));
       return;
     }
     case Intrinsic::riscv_mulhr_i32:

@@ -929,6 +929,42 @@ define i32 @asubu_i32(i32 %a, i32 %b) {
   ret i32 %res
 }
 
+define i32 @test_aadd_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: test_aadd_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    aadd a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.aadd.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_aaddu_u32(i32 %a, i32 %b) {
+; CHECK-LABEL: test_aaddu_u32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    aaddu a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.aaddu.u32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_asub_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: test_asub_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    asub a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.asub.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_asubu_u32(i32 %a, i32 %b) {
+; CHECK-LABEL: test_asubu_u32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    asubu a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.asubu.u32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
 define i32 @mulhr_i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: mulhr_i32:
 ; CHECK:       # %bb.0:
