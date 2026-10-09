@@ -19021,6 +19021,39 @@ static SDValue combineBinOpOfExt(SDNode *N, SelectionDAG &DAG) {
       DAG.getNode(N->getOpcode(), SDLoc(N), NarrowVT, Src0, Src1));
 }
 
+// add (add X, (ext Y)), (ext Z) -> add (add (ext Y), (ext Z)), X
+// This helps combineBinOpOfExt form more often.
+static SDValue combineAddOfExts(SDNode *N, SelectionDAG &DAG,
+                                const RISCVSubtarget &Subtarget) {
+  using namespace SDPatternMatch;
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+  if (!Subtarget.hasVInstructions() || !VT.isVector())
+    return SDValue();
+
+  SDValue Inner, ExtZ, Z;
+  if (!sd_match(N, m_Add(m_OneUse(m_Value(Inner)),
+                         m_OneUse(m_Value(ExtZ, m_ZExtOrSExt(m_Value(Z)))))))
+    return SDValue();
+  auto SameExt =
+      m_OneUse(m_UnaryOp(ExtZ.getOpcode(), m_SpecificVT(Z.getValueType())));
+  SDValue X, ExtY;
+  if (!sd_match(Inner, m_Add(m_Value(X), m_Value(ExtY, SameExt))))
+    return SDValue();
+
+  // Don't break (add X, (zext mask)) -> masked vadd.vi patterns.
+  if (Z.getValueType().getScalarType() == MVT::i1)
+    return SDValue();
+
+  // Don't reassociate in a loop:
+  // add (add (ext X), (ext Y)), (ext Z) -> add (add (ext Z), (ext Y)), (ext X)
+  if (sd_match(X, SameExt))
+    return SDValue();
+
+  return DAG.getNode(ISD::ADD, DL, VT,
+                     DAG.getNode(ISD::ADD, DL, VT, ExtY, ExtZ), X);
+}
+
 // Try to turn (add (xor bool, 1) -1) into (neg bool).
 static SDValue combineAddOfBooleanXor(SDNode *N, SelectionDAG &DAG) {
   SDValue N0 = N->getOperand(0);
@@ -19364,6 +19397,8 @@ static SDValue performADDCombine(SDNode *N,
   if (SDValue V = combinePExtWideningAddSub(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineBinOpOfExt(N, DAG))
+    return V;
+  if (SDValue V = combineAddOfExts(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineAddMulParts(N, DAG, Subtarget))
     return V;
