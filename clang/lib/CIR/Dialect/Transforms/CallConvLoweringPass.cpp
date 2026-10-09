@@ -626,7 +626,8 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
   }
   if (info.isIndirect())
     return ArgClassification::getIndirect(info.getIndirectAlign(),
-                                          info.getIndirectByVal());
+                                          info.getIndirectByVal(),
+                                          info.getIndirectAddrSpace());
   assert(info.isIgnore() && "Unexpected classification");
   return ArgClassification::getIgnore();
 }
