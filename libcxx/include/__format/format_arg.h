@@ -256,7 +256,7 @@ public:
   // 
   // P3391R2: make_format_args and the basic_format_arg constructors constexpr for every argument type.
   // An argument is stored even when the format string never uses it, e.g. std::format("{}", 42, 3.0).
-  // Only formatting floating-point and pointer values remains non-constant as per the paper's definition.
+  // Only formatting floating-point and pointer values remains non-constant as the paper defines it.
 
   _LIBCPP_HIDE_FROM_ABI constexpr __basic_format_arg_value() noexcept : __monostate_() {}
   _LIBCPP_HIDE_FROM_ABI constexpr __basic_format_arg_value(bool __value) noexcept : __boolean_(__value) {}
