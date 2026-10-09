@@ -213,6 +213,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     # stdio.h entrypoints
     libc.src.stdio.tmpfile
 
+    # sys/inotify.h entrypoints
+    libc.src.sys.inotify.inotify_add_watch
+    libc.src.sys.inotify.inotify_init
+    libc.src.sys.inotify.inotify_init1
+    libc.src.sys.inotify.inotify_rm_watch
+
     # sys/ioctl.h entrypoints
     libc.src.sys.ioctl.ioctl
 
@@ -255,6 +261,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.faccessat
     libc.src.unistd.fchdir
     libc.src.unistd.fchown
+    libc.src.unistd.fchownat
     libc.src.unistd.fdatasync
     libc.src.unistd.fsync
     libc.src.unistd.ftruncate
@@ -328,6 +335,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.setjmp.sigsetjmp
 
     # dirent.h entrypoints
+    libc.src.dirent.alphasort
     libc.src.dirent.closedir
     libc.src.dirent.dirfd
     libc.src.dirent.opendir

@@ -47,6 +47,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TargetParser/Triple.h"
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <iterator>
@@ -54,6 +55,7 @@
 
 using namespace clang;
 using namespace clang::hlsl;
+using llvm::hlsl::InterpolationModifier;
 using llvm::hlsl::IOType;
 using llvm::hlsl::SemanticStageInfo;
 using SemanticKind = llvm::dxbc::PSV::SemanticKind;
@@ -61,6 +63,14 @@ using RegisterType = HLSLResourceBindingAttr::RegisterType;
 
 static CXXRecordDecl *createHostLayoutStruct(Sema &S,
                                              CXXRecordDecl *StructDecl);
+
+static QualType getScalarComponentType(QualType T) {
+  if (const auto *VT = T->getAs<VectorType>())
+    return VT->getElementType();
+  if (const auto *MT = T->getAs<MatrixType>())
+    return MT->getElementType();
+  return T;
+}
 
 static RegisterType getRegisterType(ResourceClass RC) {
   switch (RC) {
@@ -817,6 +827,113 @@ SemaHLSL::mergeParamModifierAttr(Decl *D, const AttributeCommonInfo &AL,
   return HLSLParamModifierAttr::Create(getASTContext(), AL);
 }
 
+void SemaHLSL::handleInterpolationModifierAttr(Decl *D, const ParsedAttr &AL) {
+  InterpolationModifier Modifier;
+  switch (static_cast<HLSLInterpolationModifierAttr::Spelling>(
+      AL.getSemanticSpelling())) {
+  case HLSLInterpolationModifierAttr::Keyword_nointerpolation:
+    Modifier = InterpolationModifier::NoInterpolation;
+    break;
+  case HLSLInterpolationModifierAttr::Keyword_linear:
+    Modifier = InterpolationModifier::Linear;
+    break;
+  case HLSLInterpolationModifierAttr::Keyword_centroid:
+    Modifier = InterpolationModifier::Centroid;
+    break;
+  case HLSLInterpolationModifierAttr::Keyword_noperspective:
+    Modifier = InterpolationModifier::NoPerspective;
+    break;
+  case HLSLInterpolationModifierAttr::Keyword_sample:
+    Modifier = InterpolationModifier::Sample;
+    break;
+  case HLSLInterpolationModifierAttr::Keyword_center:
+    Modifier = InterpolationModifier::Center;
+    break;
+  case HLSLInterpolationModifierAttr::SpellingNotCalculated:
+    llvm_unreachable("interpolation modifier spelling was not calculated");
+  }
+
+  InterpolationModifier Modifiers = Modifier;
+  if (auto *Previous = D->getAttr<HLSLInterpolationModifierAttr>()) {
+    auto Old = static_cast<InterpolationModifier>(Previous->getModifiers());
+    Modifiers |= Old;
+    if (any(Old & Modifier)) {
+      Diag(AL.getLoc(), diag::warn_hlsl_duplicate_interpolation) << AL;
+    } else if (llvm::hlsl::getInterpolationMode(Modifiers) ==
+                   llvm::dxbc::PSV::InterpolationMode::Invalid &&
+               llvm::hlsl::getInterpolationMode(Old) !=
+                   llvm::dxbc::PSV::InterpolationMode::Invalid) {
+      Diag(AL.getLoc(), diag::err_hlsl_interpolation_conflict);
+      Diag(Previous->getLocation(), diag::note_conflicting_attribute);
+      D->setInvalidDecl();
+    } else {
+      InterpolationModifier OldLocation =
+          llvm::hlsl::getInterpolationSamplingLocation(Old);
+      InterpolationModifier NewLocation =
+          llvm::hlsl::getInterpolationSamplingLocation(Modifier);
+      if (any(OldLocation) && any(NewLocation)) {
+        Diag(AL.getLoc(), diag::warn_hlsl_interpolation_override)
+            << (std::max(OldLocation, NewLocation) ==
+                InterpolationModifier::Sample)
+            << (std::min(OldLocation, NewLocation) ==
+                InterpolationModifier::Centroid);
+      }
+    }
+    D->dropAttr<HLSLInterpolationModifierAttr>();
+  }
+  D->addAttr(HLSLInterpolationModifierAttr::Create(
+      getASTContext(), static_cast<unsigned>(Modifiers), AL));
+}
+
+bool SemaHLSL::checkInterpolationModifiers(
+    const DeclaratorDecl *D, const HLSLInterpolationModifierAttr *Inherited,
+    const HLSLParsedSemanticAttr *Semantic) {
+  if (D->isInvalidDecl())
+    return false;
+  const auto *A = D->getAttr<HLSLInterpolationModifierAttr>();
+  if (!A)
+    A = Inherited;
+  if (!Semantic)
+    Semantic = D->getAttr<HLSLParsedSemanticAttr>();
+
+  const auto *FD = dyn_cast<FunctionDecl>(D);
+  QualType T = FD ? FD->getReturnType() : D->getType();
+  T = getASTContext().getBaseElementType(T.getNonReferenceType());
+  if (T->isDependentType())
+    return true;
+  if (const auto *RT = T->getAs<RecordType>()) {
+    const RecordDecl *RD = RT->getDecl()->getDefinition();
+    if (!RD)
+      return true;
+    bool Valid = true;
+    for (const FieldDecl *Field : RD->fields())
+      Valid &= checkInterpolationModifiers(Field, A, Semantic);
+    return Valid;
+  }
+  if (!A)
+    return true;
+
+  auto Modifiers = static_cast<InterpolationModifier>(A->getModifiers());
+  if (Modifiers == InterpolationModifier::NoInterpolation) {
+    bool IsPosition =
+        Semantic && llvm::hlsl::getSemanticKind(Semantic->getSemanticName()) ==
+                        SemanticKind::Position;
+    if (!IsPosition)
+      return true;
+    Diag(A->getLocation(), diag::err_hlsl_interpolation_position);
+    Diag(Semantic->getLocation(), diag::note_conflicting_attribute);
+    return false;
+  }
+
+  T = getScalarComponentType(T);
+  if (T->isIntegerType() ||
+      (T->isRealFloatingType() && getASTContext().getTypeSize(T) > 32)) {
+    Diag(A->getLocation(), diag::err_hlsl_interpolation_type) << T;
+    return false;
+  }
+  return true;
+}
+
 void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
   auto &TargetInfo = getASTContext().getTargetInfo();
 
@@ -1067,6 +1184,13 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
     const auto *MA = Param->getAttr<HLSLParamModifierAttr>();
     SemanticContext &SC = MA && MA->isAnyOut() ? OutputSC : InputSC;
 
+    // Interpolation applies to pixel inputs and vertex outputs, including the
+    // corresponding side of inout parameters.
+    if (((ST == llvm::Triple::Pixel && (!MA || MA->isAnyIn())) ||
+         (ST == llvm::Triple::Vertex && MA && MA->isAnyOut())) &&
+        !checkInterpolationModifiers(Param, nullptr, nullptr))
+      FD->setInvalidDecl();
+
     if (!determineActiveSemantic(FD, Param, Param, ActiveSemantic, SC)) {
       Diag(Param->getLocation(), diag::note_previous_decl) << Param;
       FD->setInvalidDecl();
@@ -1077,8 +1201,12 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
   ActiveSemantic.Semantic = FD->getAttr<HLSLParsedSemanticAttr>();
   if (ActiveSemantic.Semantic)
     ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
-  if (!FD->getReturnType()->isVoidType())
+  if (!FD->getReturnType()->isVoidType()) {
+    if (ST == llvm::Triple::Vertex &&
+        !checkInterpolationModifiers(FD, nullptr, nullptr))
+      FD->setInvalidDecl();
     determineActiveSemantic(FD, FD, FD, ActiveSemantic, OutputSC);
+  }
 }
 
 void SemaHLSL::checkSemanticAnnotation(
@@ -2678,10 +2806,8 @@ void SemaHLSL::handleParamModifierAttr(Decl *D, const ParsedAttr &AL) {
     D->addAttr(NewAttr);
 }
 
-static bool isMatrixOrArrayOfMatrix(const ASTContext &Ctx, QualType QT) {
+static bool isMatrixType(QualType QT) {
   const Type *Ty = QT->getUnqualifiedDesugaredType();
-  while (isa<ArrayType>(Ty))
-    Ty = Ty->getArrayElementTypeNoTypeQual();
   return Ty->isDependentType() || Ty->isConstantMatrixType();
 }
 
@@ -2711,9 +2837,8 @@ Attr *SemaHLSL::buildMatrixLayoutTypeAttr(QualType T, const ParsedAttr &AL) {
                          ? attr::HLSLRowMajor
                          : attr::HLSLColumnMajor;
 
-  // For non-dependent types, the operand must be a matrix (or array of
-  // matrices).
-  if (!T->isDependentType() && !isMatrixOrArrayOfMatrix(Ctx, T)) {
+  // For non-dependent types, the operand must be a matrix.
+  if (!T->isDependentType() && !isMatrixType(T)) {
     Diag(AL.getLoc(), diag::err_hlsl_matrix_layout_non_matrix)
         << AL.getAttrName();
     AL.setInvalid();
@@ -2755,7 +2880,7 @@ bool SemaHLSL::diagnoseMatrixLayoutInstantiation(attr::Kind K, QualType T,
     return false;
   if (T.isNull() || T->isDependentType())
     return false;
-  if (isMatrixOrArrayOfMatrix(getASTContext(), T))
+  if (isMatrixType(T))
     return false;
   IdentifierInfo *II = &getASTContext().Idents.get(
       K == attr::HLSLRowMajor ? "row_major" : "column_major");
@@ -2767,13 +2892,17 @@ bool SemaHLSL::diagnoseMatrixLayoutInstantiation(attr::Kind K, QualType T,
 // Elementwise builtins reuse the operand layout instead.
 namespace {
 
-/// This class implements HLSL availability diagnostics for default
-/// and relaxed mode
+using llvm::dxil::BarrierMemoryTypeFlag;
+using llvm::dxil::BarrierSemanticFlag;
+
+template <typename T> constexpr uint64_t barrierFlagValue(T Flag) {
+  return llvm::to_underlying(Flag);
+}
+
+/// This class implements reachable HLSL diagnostics.
 ///
-/// The goal of this diagnostic is to emit an error or warning when an
-/// unavailable API is found in code that is reachable from the shader
-/// entry function or from an exported function (when compiling a shader
-/// library).
+/// It diagnoses unavailable APIs in default and relaxed availability modes.
+/// It also validates Barrier calls in all availability modes.
 ///
 /// This is done by traversing the AST of all shader entry point functions
 /// and of all exported functions, and any functions that are referenced
@@ -2781,6 +2910,7 @@ namespace {
 /// the entry points.
 class DiagnoseHLSLAvailability : public DynamicRecursiveASTVisitor {
   Sema &SemaRef;
+  bool DiagnoseAvailability;
 
   // Stack of functions to be scaned
   llvm::SmallVector<const FunctionDecl *, 8> DeclsToScan;
@@ -2815,8 +2945,8 @@ class DiagnoseHLSLAvailability : public DynamicRecursiveASTVisitor {
   unsigned CurrentShaderStageBit;
 
   // True if scanning a function that was already scanned in a different
-  // shader stage context, and therefore we should not report issues that
-  // depend only on shader model version because they would be duplicate.
+  // shader stage context. Suppress stage-independent diagnostics because
+  // they were reported during the first scan.
   bool ReportOnlyShaderStageIssues;
 
   // Helper methods for dealing with current stage context / environment
@@ -2871,10 +3001,19 @@ class DiagnoseHLSLAvailability : public DynamicRecursiveASTVisitor {
                              SourceRange Range);
   const AvailabilityAttr *FindAvailabilityAttr(const Decl *D);
   bool HasMatchingEnvironmentOrNone(const AvailabilityAttr *AA);
+  void DiagnoseBarrierCall(CallExpr *CE);
+  uint64_t DiagnoseBarrierGroupMemory(Expr *MemoryArg, uint64_t MemoryFlags,
+                                      bool HasVisibleGroup, bool IsAllMemory);
+  uint64_t DiagnoseBarrierNodeMemory(Expr *MemoryArg, uint64_t MemoryFlags,
+                                     bool HasKnownStage, bool IsAllMemory);
+  void DiagnoseBarrierGroupSemantic(Expr *SemanticArg, uint64_t SemanticFlags,
+                                    bool HasVisibleGroup);
+  void DiagnoseBarrierScope(Expr *SemanticArg, uint64_t MemoryFlags,
+                            uint64_t SemanticFlags);
 
 public:
-  DiagnoseHLSLAvailability(Sema &SemaRef)
-      : SemaRef(SemaRef),
+  DiagnoseHLSLAvailability(Sema &SemaRef, bool DiagnoseAvailability)
+      : SemaRef(SemaRef), DiagnoseAvailability(DiagnoseAvailability),
         CurrentShaderEnvironment(llvm::Triple::UnknownEnvironment),
         CurrentShaderStageBit(0), ReportOnlyShaderStageIssues(false) {}
 
@@ -2895,16 +3034,139 @@ public:
       HandleFunctionOrMethodRef(FD, ME);
     return true;
   }
+
+  bool VisitCallExpr(CallExpr *CE) override {
+    DiagnoseBarrierCall(CE);
+    return true;
+  }
 };
+
+uint64_t DiagnoseHLSLAvailability::DiagnoseBarrierGroupMemory(
+    Expr *MemoryArg, uint64_t MemoryFlags, bool HasVisibleGroup,
+    bool IsAllMemory) {
+  const uint64_t GroupSharedMemory =
+      barrierFlagValue(BarrierMemoryTypeFlag::GroupSharedMemory);
+  if (HasVisibleGroup || (MemoryFlags & GroupSharedMemory) == 0)
+    return MemoryFlags;
+
+  if (!IsAllMemory) {
+    SemaRef.Diag(MemoryArg->getExprLoc(),
+                 diag::err_hlsl_barrier_flag_requires_group)
+        << 0;
+    return MemoryFlags;
+  }
+
+  return MemoryFlags & ~GroupSharedMemory;
+}
+
+uint64_t DiagnoseHLSLAvailability::DiagnoseBarrierNodeMemory(
+    Expr *MemoryArg, uint64_t MemoryFlags, bool HasKnownStage,
+    bool IsAllMemory) {
+  const uint64_t NodeMemory =
+      barrierFlagValue(BarrierMemoryTypeFlag::NodeMemory);
+  if (!HasKnownStage || (MemoryFlags & NodeMemory) == 0)
+    return MemoryFlags;
+
+  if (!IsAllMemory) {
+    SemaRef.Diag(MemoryArg->getExprLoc(),
+                 diag::err_hlsl_barrier_node_memory_requires_node);
+    return MemoryFlags;
+  }
+
+  return MemoryFlags & ~NodeMemory;
+}
+
+void DiagnoseHLSLAvailability::DiagnoseBarrierGroupSemantic(
+    Expr *SemanticArg, uint64_t SemanticFlags, bool HasVisibleGroup) {
+  if (HasVisibleGroup ||
+      (SemanticFlags & barrierFlagValue(BarrierSemanticFlag::GroupFlags)) == 0)
+    return;
+
+  SemaRef.Diag(SemanticArg->getExprLoc(),
+               diag::err_hlsl_barrier_flag_requires_group)
+      << ((SemanticFlags & barrierFlagValue(BarrierSemanticFlag::GroupSync)) !=
+                  0
+              ? 1
+              : 2);
+}
+
+void DiagnoseHLSLAvailability::DiagnoseBarrierScope(Expr *SemanticArg,
+                                                    uint64_t MemoryFlags,
+                                                    uint64_t SemanticFlags) {
+  if (ReportOnlyShaderStageIssues)
+    return;
+
+  const uint64_t DeviceScopeMemory =
+      barrierFlagValue(BarrierMemoryTypeFlag::UAVMemory) |
+      barrierFlagValue(BarrierMemoryTypeFlag::NodeInputMemory);
+  if ((SemanticFlags & barrierFlagValue(BarrierSemanticFlag::DeviceScope)) !=
+          0 &&
+      (MemoryFlags & DeviceScopeMemory) == 0)
+    SemaRef.Diag(SemanticArg->getExprLoc(),
+                 diag::err_hlsl_barrier_scope_requires_memory)
+        << 1;
+  if ((SemanticFlags & barrierFlagValue(BarrierSemanticFlag::GroupScope)) !=
+          0 &&
+      MemoryFlags == 0)
+    SemaRef.Diag(SemanticArg->getExprLoc(),
+                 diag::err_hlsl_barrier_scope_requires_memory)
+        << 0;
+}
+
+void DiagnoseHLSLAvailability::DiagnoseBarrierCall(CallExpr *CE) {
+  const FunctionDecl *FD = CE->getDirectCallee();
+  if (!FD || FD->getBuiltinID() != Builtin::BI__builtin_hlsl_barrier)
+    return;
+
+  const llvm::Triple::EnvironmentType Stage = GetCurrentShaderEnvironment();
+  const bool HasKnownStage = !InUnknownShaderStageContext();
+  const bool HasVisibleGroup =
+      !HasKnownStage || Stage == llvm::Triple::Compute ||
+      Stage == llvm::Triple::Mesh || Stage == llvm::Triple::Amplification;
+
+  uint64_t MemoryFlags = barrierFlagValue(BarrierMemoryTypeFlag::ValidMask);
+  Expr *MemoryArg = CE->getArg(0);
+  if (MemoryArg->getType()->isUnsignedIntegerType()) {
+    std::optional<llvm::APSInt> Value =
+        MemoryArg->getIntegerConstantExpr(SemaRef.Context);
+    if (!Value)
+      return;
+    MemoryFlags = Value->getZExtValue();
+    const bool IsAllMemory =
+        MemoryFlags == barrierFlagValue(BarrierMemoryTypeFlag::ValidMask);
+
+    MemoryFlags = DiagnoseBarrierGroupMemory(MemoryArg, MemoryFlags,
+                                             HasVisibleGroup, IsAllMemory);
+    MemoryFlags = DiagnoseBarrierNodeMemory(MemoryArg, MemoryFlags,
+                                            HasKnownStage, IsAllMemory);
+  } else if (!HasVisibleGroup) {
+    SemaRef.Diag(MemoryArg->getExprLoc(),
+                 diag::err_hlsl_barrier_resource_requires_group);
+    return;
+  }
+
+  Expr *SemanticArg = CE->getArg(1);
+  std::optional<llvm::APSInt> Value =
+      SemanticArg->getIntegerConstantExpr(SemaRef.Context);
+  if (!Value)
+    return;
+  const uint64_t SemanticFlags = Value->getZExtValue();
+
+  DiagnoseBarrierGroupSemantic(SemanticArg, SemanticFlags, HasVisibleGroup);
+
+  if (MemoryArg->getType()->isUnsignedIntegerType())
+    DiagnoseBarrierScope(SemanticArg, MemoryFlags, SemanticFlags);
+}
 
 void DiagnoseHLSLAvailability::HandleFunctionOrMethodRef(FunctionDecl *FD,
                                                          Expr *RefExpr) {
   assert((isa<DeclRefExpr>(RefExpr) || isa<MemberExpr>(RefExpr)) &&
          "expected DeclRefExpr or MemberExpr");
 
-  if (const AvailabilityAttr *AA = FindAvailabilityAttr(FD))
-    CheckDeclAvailability(
-        FD, AA, SourceRange(RefExpr->getBeginLoc(), RefExpr->getEndLoc()));
+  if (DiagnoseAvailability)
+    if (const AvailabilityAttr *AA = FindAvailabilityAttr(FD))
+      CheckDeclAvailability(
+          FD, AA, SourceRange(RefExpr->getBeginLoc(), RefExpr->getEndLoc()));
 
   // has a definition -> add to stack to be scanned
   const FunctionDecl *FDWithBody = nullptr;
@@ -3246,16 +3508,15 @@ SemaHLSL::tryPerformConstantBufferConversion(Expr *BaseExpr) {
 }
 
 void SemaHLSL::diagnoseAvailabilityViolations(TranslationUnitDecl *TU) {
-  // Skip running the diagnostics scan if the diagnostic mode is
-  // strict (-fhlsl-strict-availability) and the target shader stage is known
-  // because all relevant diagnostics were already emitted in the
-  // DiagnoseUnguardedAvailability scan (SemaAvailability.cpp).
+  // Strict mode diagnoses availability during the
+  // DiagnoseUnguardedAvailability scan in SemaAvailability.cpp. The reachable
+  // function scan must still run to validate Barrier calls.
   const TargetInfo &TI = SemaRef.getASTContext().getTargetInfo();
-  if (SemaRef.getLangOpts().HLSLStrictAvailability &&
-      TI.getTriple().getEnvironment() != llvm::Triple::EnvironmentType::Library)
-    return;
-
-  DiagnoseHLSLAvailability(SemaRef).RunOnTranslationUnit(TU);
+  const bool DiagnoseAvailability =
+      !SemaRef.getLangOpts().HLSLStrictAvailability ||
+      TI.getTriple().getEnvironment() == llvm::Triple::EnvironmentType::Library;
+  DiagnoseHLSLAvailability(SemaRef, DiagnoseAvailability)
+      .RunOnTranslationUnit(TU);
 }
 
 static bool CheckAllArgsHaveSameType(Sema *S, CallExpr *TheCall) {
@@ -3315,11 +3576,7 @@ static bool CheckFloatRepresentation(Sema *S, SourceLocation Loc,
 static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
                                            int ArgOrdinal,
                                            clang::QualType PassedType) {
-  clang::QualType BaseType = PassedType;
-  if (const auto *VT = PassedType->getAs<clang::VectorType>())
-    BaseType = VT->getElementType();
-  else if (const auto *MT = PassedType->getAs<clang::MatrixType>())
-    BaseType = MT->getElementType();
+  QualType BaseType = getScalarComponentType(PassedType);
 
   if (!BaseType->isHalfType() && !BaseType->isFloat32Type())
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
@@ -3331,12 +3588,7 @@ static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
 static bool CheckAnyDoubleRepresentation(Sema *S, SourceLocation Loc,
                                          int ArgOrdinal,
                                          clang::QualType PassedType) {
-  clang::QualType BaseType =
-      PassedType->isVectorType()
-          ? PassedType->castAs<clang::VectorType>()->getElementType()
-      : PassedType->isMatrixType()
-          ? PassedType->castAs<clang::MatrixType>()->getElementType()
-          : PassedType;
+  QualType BaseType = getScalarComponentType(PassedType);
   if (!BaseType->isDoubleType()) {
     // FIXME: adopt standard `err_builtin_invalid_arg_type` instead of using
     // this custom error.
@@ -3633,6 +3885,47 @@ static bool CheckVectorSelect(Sema *S, CallExpr *TheCall) {
 
   TheCall->setType(
       S->getASTContext().getExtVectorType(Arg1ScalarTy, Arg0Length));
+  return false;
+}
+
+static bool CheckMatrixSelect(Sema *S, CallExpr *TheCall) {
+  assert(TheCall->getNumArgs() == 3);
+  Expr *Arg1 = TheCall->getArg(1);
+  QualType Arg1Ty = Arg1->getType();
+  Expr *Arg2 = TheCall->getArg(2);
+  QualType Arg2Ty = Arg2->getType();
+
+  QualType Arg1ScalarTy = Arg1Ty;
+  if (auto MTy = Arg1ScalarTy->getAs<ConstantMatrixType>())
+    Arg1ScalarTy = MTy->getElementType();
+
+  QualType Arg2ScalarTy = Arg2Ty;
+  if (auto MTy = Arg2ScalarTy->getAs<ConstantMatrixType>())
+    Arg2ScalarTy = MTy->getElementType();
+
+  if (!S->Context.hasSameUnqualifiedType(Arg1ScalarTy, Arg2ScalarTy))
+    S->Diag(Arg1->getBeginLoc(), diag::err_hlsl_builtin_scalar_vector_mismatch)
+        << /* second and third */ 1 << TheCall->getCallee() << Arg1Ty << Arg2Ty;
+
+  QualType Arg0Ty = TheCall->getArg(0)->getType();
+  auto *Arg0MatTy = Arg0Ty->getAs<ConstantMatrixType>();
+  unsigned Arg0Rows = Arg0MatTy->getNumRows();
+  unsigned Arg0Cols = Arg0MatTy->getNumColumns();
+
+  for (Expr *Arg : {Arg1, Arg2}) {
+    auto *MTy = Arg->getType()->getAs<ConstantMatrixType>();
+    if (MTy &&
+        (MTy->getNumRows() != Arg0Rows || MTy->getNumColumns() != Arg0Cols)) {
+      S->Diag(TheCall->getBeginLoc(),
+              diag::err_typecheck_vector_lengths_not_equal)
+          << Arg0Ty << Arg->getType() << TheCall->getArg(0)->getSourceRange()
+          << Arg->getSourceRange();
+      return true;
+    }
+  }
+
+  TheCall->setType(
+      S->Context.getConstantMatrixType(Arg1ScalarTy, Arg0Rows, Arg0Cols));
   return false;
 }
 
@@ -4199,6 +4492,70 @@ static bool CheckInterlockedBuiltin(Sema &S, CallExpr *TheCall,
 // returning an ExprError
 bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_barrier: {
+    if (SemaRef.checkArgCount(TheCall, 2))
+      return true;
+
+    if (SemaRef.Context.getTargetInfo().getTriple().getArch() !=
+        llvm::Triple::dxil) {
+      SemaRef.Diag(TheCall->getExprLoc(), diag::err_hlsl_dxil_only)
+          << "Barrier";
+      return true;
+    }
+
+    Expr *MemoryArg = TheCall->getArg(0);
+    if (MemoryArg->getType()->isUnsignedIntegerType()) {
+      std::optional<llvm::APSInt> MemoryFlags =
+          MemoryArg->getIntegerConstantExpr(SemaRef.Context);
+      if (!MemoryFlags) {
+        SemaRef.Diag(MemoryArg->getExprLoc(),
+                     diag::err_constant_integer_arg_type)
+            << "Barrier";
+        return true;
+      }
+      if ((MemoryFlags->getZExtValue() &
+           ~barrierFlagValue(BarrierMemoryTypeFlag::ValidMask)) != 0) {
+        SemaRef.Diag(MemoryArg->getExprLoc(),
+                     diag::err_hlsl_invalid_barrier_memory_flags);
+        return true;
+      }
+    } else {
+      const HLSLAttributedResourceType *ResTy =
+          HLSLAttributedResourceType::findHandleTypeOnResource(
+              MemoryArg->getType().getTypePtr());
+      if (!ResTy) {
+        SemaRef.Diag(MemoryArg->getExprLoc(),
+                     diag::err_typecheck_expect_hlsl_resource)
+            << MemoryArg->getType();
+        return true;
+      }
+      if (ResTy->getAttrs().ResourceClass != ResourceClass::UAV) {
+        SemaRef.Diag(MemoryArg->getExprLoc(),
+                     diag::err_invalid_hlsl_resource_type)
+            << MemoryArg->getType();
+        return true;
+      }
+    }
+
+    Expr *SemanticArg = TheCall->getArg(1);
+    std::optional<llvm::APSInt> SemanticFlags =
+        SemanticArg->getIntegerConstantExpr(SemaRef.Context);
+    if (!SemanticFlags) {
+      SemaRef.Diag(SemanticArg->getExprLoc(),
+                   diag::err_constant_integer_arg_type)
+          << "Barrier";
+      return true;
+    }
+    if ((SemanticFlags->getZExtValue() &
+         ~barrierFlagValue(BarrierSemanticFlag::ValidMask)) != 0) {
+      SemaRef.Diag(SemanticArg->getExprLoc(),
+                   diag::err_hlsl_invalid_barrier_semantic_flags);
+      return true;
+    }
+
+    TheCall->setType(SemaRef.Context.VoidTy);
+    break;
+  }
   case Builtin::BI__builtin_hlsl_adduint64: {
     if (SemaRef.checkArgCount(TheCall, 2))
       return true;
@@ -4491,7 +4848,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_hlsl_select: {
     if (SemaRef.checkArgCount(TheCall, 3))
       return true;
-    if (CheckScalarOrVector(&SemaRef, TheCall, getASTContext().BoolTy, 0))
+    if (CheckScalarOrVectorOrMatrix(&SemaRef, TheCall, getASTContext().BoolTy,
+                                    0))
       return true;
     QualType ArgTy = TheCall->getArg(0)->getType();
     if (ArgTy->isBooleanType() && CheckBoolSelect(&SemaRef, TheCall))
@@ -4499,6 +4857,10 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     auto *VTy = ArgTy->getAs<VectorType>();
     if (VTy && VTy->getElementType()->isBooleanType() &&
         CheckVectorSelect(&SemaRef, TheCall))
+      return true;
+    auto *MTy = ArgTy->getAs<ConstantMatrixType>();
+    if (MTy && MTy->getElementType()->isBooleanType() &&
+        CheckMatrixSelect(&SemaRef, TheCall))
       return true;
     break;
   }
@@ -5277,6 +5639,19 @@ bool SemaHLSL::CanPerformElementwiseCast(Expr *Src, QualType DestTy) {
       return false;
   }
   return true;
+}
+
+bool SemaHLSL::CanPerformPackedTypeCast(Expr *Src, QualType DestTy) {
+  ASTContext &Ctx = SemaRef.getASTContext();
+  QualType UIntTy = Ctx.UnsignedIntTy;
+  QualType SrcTy = Src->getType();
+
+  return (SrcTy->isHLSLBuiltinPackedType() &&
+          DestTy->isHLSLBuiltinPackedType()) ||
+         (SrcTy->isHLSLBuiltinPackedType() &&
+          Ctx.hasSameUnqualifiedType(DestTy, UIntTy)) ||
+         (DestTy->isHLSLBuiltinPackedType() &&
+          Ctx.hasSameUnqualifiedType(SrcTy, UIntTy));
 }
 
 ExprResult SemaHLSL::ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg) {

@@ -14,11 +14,16 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 using namespace llvm;
 using namespace PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
 
 bool canTryToConstantAddTwoShiftAmounts(Value *Sh0, Value *ShAmt0, Value *Sh1,
                                         Value *ShAmt1) {
@@ -994,7 +999,9 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
 
       Value *NewShift = Builder.CreateBinOp(I.getOpcode(), FalseVal, C1);
       Value *NewOp = Builder.CreateBinOp(TBO->getOpcode(), NewShift, NewRHS);
-      return SelectInst::Create(Cond, NewOp, NewShift);
+      return SelectInst::Create(
+          Cond, NewOp, NewShift, "", nullptr,
+          ProfcheckDisableMetadataFixes ? nullptr : cast<SelectInst>(Op0));
     }
   }
 
@@ -1011,7 +1018,9 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
 
       Value *NewShift = Builder.CreateBinOp(I.getOpcode(), TrueVal, C1);
       Value *NewOp = Builder.CreateBinOp(FBO->getOpcode(), NewShift, NewRHS);
-      return SelectInst::Create(Cond, NewShift, NewOp);
+      return SelectInst::Create(
+          Cond, NewShift, NewOp, "", nullptr,
+          ProfcheckDisableMetadataFixes ? nullptr : cast<SelectInst>(Op0));
     }
   }
 
@@ -1573,7 +1582,9 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
       if (SrcTyBitWidth == 1) {
         auto *NewC = ConstantInt::get(
             Ty, APInt::getLowBitsSet(BitWidth, BitWidth - ShAmtC));
-        return SelectInst::Create(X, NewC, ConstantInt::getNullValue(Ty));
+        auto *SI = SelectInst::Create(X, NewC, ConstantInt::getNullValue(Ty));
+        setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE, &F);
+        return SI;
       }
 
       if ((!Ty->isIntegerTy() || shouldChangeType(Ty, X->getType())) &&
