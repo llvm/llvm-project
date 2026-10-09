@@ -49,6 +49,7 @@ void bzero(void *dst, size_t n);
 size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
 size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
 char *fgets(char *s, int size, FILE *stream);
+char *realpath(const char *path, char *resolved_path);
 
 #ifdef __cplusplus
 }
@@ -172,6 +173,24 @@ void call_fread_fwrite_fgets(FILE *fp) {
   fgets(src, 4, fp);
   fgets(src, 0, fp);
 }
+
+void call_realpath(const char *path, char *unknown_buf) {
+  char ok_buf[1024];
+  char small_buf[1023];
+  realpath(path, (char *)0);
+  realpath(path, unknown_buf);
+  realpath(path, ok_buf);
+  realpath(path, small_buf); // expected-warning {{'realpath' may overflow; destination buffer has size 1023, but at least 1024 bytes are required}}
+}
+
+#define PATH_MAX (4096)
+void call_realpath_macro(const char *path) {
+  char ok_buf[4096];
+  char small_buf[4095];
+  realpath(path, ok_buf);
+  realpath(path, small_buf); // expected-warning {{'realpath' may overflow; destination buffer has size 4095, but at least 4096 bytes are required}}
+}
+#undef PATH_MAX
 
 void call_snprintf(double d, int n) {
   char buf[10];
