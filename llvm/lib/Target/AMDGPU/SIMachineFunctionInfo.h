@@ -632,6 +632,8 @@ private:
   // regions to the top of the real footprint instead of the top of the whole
   // VGPR file, so it does not inflate the VGPR count of small kernels.
   unsigned PeakVGPRPressure = 0;
+  mutable std::optional<unsigned> WMMABankSize;
+  mutable bool PadWMMABankHints = false;
 
 private:
   Register VGPRForAGPRCopy;
@@ -668,6 +670,13 @@ public:
 
   unsigned getPeakVGPRPressure() const { return PeakVGPRPressure; }
   void setPeakVGPRPressure(unsigned P) { PeakVGPRPressure = P; }
+
+  std::optional<unsigned> getWMMABankSize() const { return WMMABankSize; }
+  bool shouldPadWMMABankHints() const { return PadWMMABankHints; }
+  void setWMMABankLayout(unsigned BankSize, bool PadWidths) const {
+    WMMABankSize = BankSize;
+    PadWMMABankHints = PadWidths;
+  }
 
 public:
   SIMachineFunctionInfo(const SIMachineFunctionInfo &MFI) = default;

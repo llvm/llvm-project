@@ -374,7 +374,7 @@ public:
   /// Only augments \p Hints for \p VirtReg; the global allocation order is
   /// unchanged.
   void addWMMABankConflictHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
-                                SmallVectorImpl<MCPhysReg> &Hints,
+                                SmallSetVector<MCPhysReg, 16> &Hints,
                                 const MachineFunction &MF,
                                 const VirtRegMap *VRM) const;
 

@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "amdgpu-si-register-info"
@@ -4380,6 +4381,68 @@ static void recordWMMABankSiblings(Register VirtReg, const MachineInstr &MI,
   SaveSiblings({Src0, Src1});
 }
 
+static unsigned getWMMABankSize(const MachineFunction &MF,
+                                const GCNSubtarget &ST,
+                                const SIRegisterInfo &TRI) {
+  const auto *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+  if (std::optional<unsigned> BankSize = FuncInfo->getWMMABankSize())
+    return *BankSize;
+
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  unsigned MaxWidth = 0;
+  bool PadWidths = false;
+  for (const MachineBasicBlock &MBB : MF) {
+    for (const MachineInstr &MI : MBB) {
+      if (!SIInstrInfo::isWMMA(MI))
+        continue;
+      for (AMDGPU::OpName OpName :
+           {AMDGPU::OpName::src0, AMDGPU::OpName::src1, AMDGPU::OpName::src2,
+            AMDGPU::OpName::vdst}) {
+        const MachineOperand *Operand = TII->getNamedOperand(MI, OpName);
+        if (Operand && Operand->isReg() && TRI.isVGPR(MRI, Operand->getReg())) {
+          unsigned Width = TRI.getRegSizeInBits(Operand->getReg(), MRI) / 32;
+          if (!Width || Width == MaxWidth)
+            continue;
+          if (MaxWidth) {
+            if (!isPowerOf2_32(Width)) {
+              Width = PowerOf2Ceil(Width);
+              PadWidths = true;
+            }
+            if (!isPowerOf2_32(MaxWidth)) {
+              MaxWidth = PowerOf2Ceil(MaxWidth);
+              PadWidths = true;
+            }
+          }
+          MaxWidth = std::max(MaxWidth, Width);
+        }
+      }
+    }
+  }
+
+  unsigned MaxVGPR = 0;
+  if (MaxWidth >= 4) {
+    for (MCPhysReg PhysReg : AMDGPU::VGPR_32RegClass)
+      if (MRI.isAllocatable(PhysReg))
+        MaxVGPR = std::max(MaxVGPR, TRI.getHWRegIndex(PhysReg) + 1);
+
+    if (unsigned Peak = FuncInfo->getPeakVGPRPressure()) {
+      unsigned Gran = AMDGPU::IsaInfo::getVGPRAllocGranule(
+          ST, FuncInfo->getDynamicVGPRBlockSize());
+      unsigned Want = alignTo(Peak, std::max(Gran, 1u));
+      if (unsigned Budget = ST.getMaxNumVGPRs(MF))
+        Want = std::min(Want, Budget);
+      MaxVGPR = std::min(MaxVGPR, Want);
+    }
+  }
+
+  unsigned BankSize = 0;
+  if (MaxWidth >= 4 && MaxVGPR >= 4 * MaxWidth + 3)
+    BankSize = ((MaxVGPR - 3) / (4 * MaxWidth)) * MaxWidth;
+  FuncInfo->setWMMABankLayout(BankSize, PadWidths);
+  return BankSize;
+}
+
 // Avoid VGPR bank conflicts in v_wmma_* on gfx11/gfx12.
 //
 // For example: v_wmma_f32_16x16x16_f16 v[1:8], v[9:16], v[17:24], v[1:8]
@@ -4390,11 +4453,10 @@ static void recordWMMABankSiblings(Register VirtReg, const MachineInstr &MI,
 // VGPR bank conflicts.
 //
 // Bank conflicts may still occur due to pre-allocation and register pressure.
-void SIRegisterInfo::addWMMABankConflictHints(Register VirtReg,
-                                              ArrayRef<MCPhysReg> Order,
-                                              SmallVectorImpl<MCPhysReg> &Hints,
-                                              const MachineFunction &MF,
-                                              const VirtRegMap *VRM) const {
+void SIRegisterInfo::addWMMABankConflictHints(
+    Register VirtReg, ArrayRef<MCPhysReg> Order,
+    SmallSetVector<MCPhysReg, 16> &Hints, const MachineFunction &MF,
+    const VirtRegMap *VRM) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   const SIInstrInfo *TII = ST.getInstrInfo();
   if (!VRM || !isVGPR(MRI, VirtReg))
@@ -4402,7 +4464,6 @@ void SIRegisterInfo::addWMMABankConflictHints(Register VirtReg,
 
   // Collect the other registers in WMMA instructions that may have bank
   // conflicts with VirtReg.
-  const SIMachineFunctionInfo &FuncInfo = *MF.getInfo<SIMachineFunctionInfo>();
   SmallVector<Register, 3> Siblings;
   for (MachineInstr &MI : MRI.reg_nodbg_instructions(VirtReg)) {
     if (!SIInstrInfo::isWMMA(MI))
@@ -4429,16 +4490,20 @@ void SIRegisterInfo::addWMMABankConflictHints(Register VirtReg,
   if (W && (W % 4) != 0)
     return;
 
-  // Build a hardware-index -> physreg map and record the highest start index.
+  unsigned BankSize = getWMMABankSize(MF, ST, *this);
+  if (!BankSize)
+    return;
+  if (MF.getInfo<SIMachineFunctionInfo>()->shouldPadWMMABankHints())
+    W = PowerOf2Ceil(W);
+
+  // Build a hardware-index -> physreg map.
   // Order is not guaranteed to be sorted (non-kernel functions reorder their
   // callee-saved VGPRs), so we look candidates up by index instead of trusting
   // Order's sequence or its last element.
   DenseMap<unsigned, MCPhysReg> IdxToReg;
-  unsigned MaxIdx = 0;
   for (MCPhysReg PhysReg : Order) {
     unsigned Idx = getHWRegIndex(PhysReg);
     IdxToReg[Idx] = PhysReg;
-    MaxIdx = std::max(MaxIdx, Idx);
   }
 
   // Precompute once per function:
@@ -4452,20 +4517,6 @@ void SIRegisterInfo::addWMMABankConflictHints(Register VirtReg,
       return CalleeSavedUnits.test(static_cast<unsigned>(U));
     });
   };
-
-  // Calculate MaxVGPR.
-  unsigned MaxVGPR = MaxIdx + W;
-  if (unsigned Peak = FuncInfo.getPeakVGPRPressure()) {
-    unsigned Gran = AMDGPU::IsaInfo::getVGPRAllocGranule(
-        ST, FuncInfo.getDynamicVGPRBlockSize());
-    unsigned Want = alignTo(Peak, std::max(Gran, 1u));
-    if (unsigned Budget = ST.getMaxNumVGPRs(MF))
-      Want = std::min(Want, Budget);
-    if (Want && Want < MaxVGPR)
-      MaxVGPR = Want;
-  }
-  if (MaxVGPR < 4 * W + 3)
-    return;
 
   // Separate registers into blocks, each containing N allocatable register
   // tuples. Assume VirtReg spans 4 VGPRs and N = 2:
@@ -4488,8 +4539,7 @@ void SIRegisterInfo::addWMMABankConflictHints(Register VirtReg,
   // exhausting a single block first.
   // If the non-conflicting blocks are 2, 3, and 4, the hint order is:
   // {v[9:12], v[18:21], v[27:30], v[13:16], v[22:25], v[31:34]}.
-  unsigned N = (MaxVGPR - 3) / (4 * W);
-  unsigned BankSize = N * W;
+  unsigned N = BankSize / W;
   for (unsigned n = 0; n < N; n++) {
     for (unsigned Bank = 0; Bank < 4; Bank++) {
       unsigned Start = n * W + Bank * (BankSize + 1);
@@ -4497,7 +4547,7 @@ void SIRegisterInfo::addWMMABankConflictHints(Register VirtReg,
         continue;
       auto RIt = IdxToReg.find(Start);
       if (RIt != IdxToReg.end() && !isCalleeSaved(RIt->second))
-        Hints.push_back(RIt->second);
+        Hints.insert(RIt->second);
     }
   }
 }
