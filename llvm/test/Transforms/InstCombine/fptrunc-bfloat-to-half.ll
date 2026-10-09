@@ -6,7 +6,6 @@
 ; overflow to infinity.
 
 define half @fadd_bfloat_to_half(bfloat %a, bfloat %b) {
-;
 ; CHECK-LABEL: define half @fadd_bfloat_to_half(
 ; CHECK-SAME: bfloat [[A:%.*]], bfloat [[B:%.*]]) {
 ; CHECK-NEXT:    [[X:%.*]] = fpext bfloat [[A]] to double
@@ -23,7 +22,6 @@ define half @fadd_bfloat_to_half(bfloat %a, bfloat %b) {
 }
 
 define half @fsub_bfloat_to_half(bfloat %a, bfloat %b) {
-;
 ; CHECK-LABEL: define half @fsub_bfloat_to_half(
 ; CHECK-SAME: bfloat [[A:%.*]], bfloat [[B:%.*]]) {
 ; CHECK-NEXT:    [[X:%.*]] = fpext bfloat [[A]] to double
@@ -40,7 +38,6 @@ define half @fsub_bfloat_to_half(bfloat %a, bfloat %b) {
 }
 
 define half @fmul_bfloat_to_half(bfloat %a, bfloat %b) {
-;
 ; CHECK-LABEL: define half @fmul_bfloat_to_half(
 ; CHECK-SAME: bfloat [[A:%.*]], bfloat [[B:%.*]]) {
 ; CHECK-NEXT:    [[X:%.*]] = fpext bfloat [[A]] to double
@@ -57,7 +54,6 @@ define half @fmul_bfloat_to_half(bfloat %a, bfloat %b) {
 }
 
 define half @fdiv_bfloat_to_half(bfloat %a, bfloat %b) {
-;
 ; CHECK-LABEL: define half @fdiv_bfloat_to_half(
 ; CHECK-SAME: bfloat [[A:%.*]], bfloat [[B:%.*]]) {
 ; CHECK-NEXT:    [[X:%.*]] = fpext bfloat [[A]] to double
@@ -74,7 +70,6 @@ define half @fdiv_bfloat_to_half(bfloat %a, bfloat %b) {
 }
 
 define <2 x half> @fadd_bfloat_to_half_vec(<2 x bfloat> %a, <2 x bfloat> %b) {
-;
 ; CHECK-LABEL: define <2 x half> @fadd_bfloat_to_half_vec(
 ; CHECK-SAME: <2 x bfloat> [[A:%.*]], <2 x bfloat> [[B:%.*]]) {
 ; CHECK-NEXT:    [[X:%.*]] = fpext <2 x bfloat> [[A]] to <2 x double>
@@ -93,7 +88,6 @@ define <2 x half> @fadd_bfloat_to_half_vec(<2 x bfloat> %a, <2 x bfloat> %b) {
 ; Narrowing is still done when the destination type can hold the operands.
 
 define half @fadd_half_to_half(half %a, half %b) {
-;
 ; CHECK-LABEL: define half @fadd_half_to_half(
 ; CHECK-SAME: half [[A:%.*]], half [[B:%.*]]) {
 ; CHECK-NEXT:    [[R:%.*]] = fadd half [[A]], [[B]]
@@ -107,7 +101,6 @@ define half @fadd_half_to_half(half %a, half %b) {
 }
 
 define bfloat @fadd_bfloat_to_bfloat(bfloat %a, bfloat %b) {
-;
 ; CHECK-LABEL: define bfloat @fadd_bfloat_to_bfloat(
 ; CHECK-SAME: bfloat [[A:%.*]], bfloat [[B:%.*]]) {
 ; CHECK-NEXT:    [[R:%.*]] = fadd bfloat [[A]], [[B]]
@@ -121,7 +114,6 @@ define bfloat @fadd_bfloat_to_bfloat(bfloat %a, bfloat %b) {
 }
 
 define float @fadd_float_to_float(float %a, float %b) {
-;
 ; CHECK-LABEL: define float @fadd_float_to_float(
 ; CHECK-SAME: float [[A:%.*]], float [[B:%.*]]) {
 ; CHECK-NEXT:    [[R:%.*]] = fadd float [[A]], [[B]]
@@ -135,7 +127,6 @@ define float @fadd_float_to_float(float %a, float %b) {
 }
 
 define float @fadd_bfloat_to_float(bfloat %a, bfloat %b) {
-;
 ; CHECK-LABEL: define float @fadd_bfloat_to_float(
 ; CHECK-SAME: bfloat [[A:%.*]], bfloat [[B:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = fpext bfloat [[A]] to float
