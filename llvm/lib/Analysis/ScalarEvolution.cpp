@@ -13534,6 +13534,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       const SCEVPredicate *P =
           getComparePredicate(ICmpInst::ICMP_SGT, Stride, Zero);
       Predicates.push_back(P);
+      PositiveStride = true;
       // When the predicate holds (Stride > 0), umax(Stride, 1) == Stride,
       // so the result is unchanged. To prevent div by zero.
       Stride = getUMaxExpr(Stride, getOne(Stride->getType()));
