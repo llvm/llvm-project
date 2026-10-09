@@ -24,6 +24,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/MatrixUtils.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
@@ -1580,6 +1581,11 @@ LValue CIRGenFunction::emitMatrixSubscriptExpr(const MatrixSubscriptExpr *e) {
   LValue base = emitLValue(e->getBase());
   mlir::Value rowIdx = emitScalarExpr(e->getRowIdx());
   mlir::Value colIdx = emitScalarExpr(e->getColumnIdx());
+
+  if (isMatrixRowMajor(getLangOpts(), e->getBase()->getType()))
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitMatrixSubscriptExpr: row-major matrix");
+
   return LValue::makeMatrixElt(base.getAddress(), rowIdx, colIdx,
                                e->getBase()->getType(), base.getBaseInfo());
 }

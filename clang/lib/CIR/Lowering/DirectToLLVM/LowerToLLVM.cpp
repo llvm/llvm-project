@@ -5354,7 +5354,7 @@ computeMatrixFlatIndex(mlir::ConversionPatternRewriter &rewriter,
   mlir::Type indexTy = rowIdx.getType();
   mlir::Value numRows = mlir::LLVM::ConstantOp::create(
       rewriter, loc, indexTy,
-      rewriter.getIntegerAttr(indexTy, matrixTy.getRowNum()));
+      rewriter.getIntegerAttr(indexTy, matrixTy.getNumRows()));
   mlir::Value flatIndex = mlir::LLVM::MulOp::create(
       rewriter, loc, {columnIdx, numRows}, /*properties=*/{},
       /*discardableAttributes=*/{});
