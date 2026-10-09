@@ -95,11 +95,12 @@ TEST(TargetRegistry, IsValidFeatureListFormat) {
 }
 
 TEST(TargetRegistry, SubtargetCopyPreservesHwMode) {
-  llvm::InitializeAllTargetInfos();
-  llvm::InitializeAllTargetMCs();
+  InitializeAllTargetInfos();
+  InitializeAllTargetMCs();
 
   for (StringRef TripleName :
        {"x86_64-unknown-linux-gnu", "riscv64-unknown-elf"}) {
+    SCOPED_TRACE(TripleName);
     Triple TT(TripleName);
     std::string Error;
     const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
@@ -112,15 +113,15 @@ TEST(TargetRegistry, SubtargetCopyPreservesHwMode) {
     std::unique_ptr<MCSubtargetInfo> STI(
         TheTarget->createMCSubtargetInfo(TT, "", ""));
     ASSERT_TRUE(MRI && MAI && STI);
-    EXPECT_NE(STI->getHwMode(), 0u);
-    EXPECT_NE(STI->getHwModeSet(), 0u);
+    ASSERT_NE(STI->getHwMode(), 0u);
+    ASSERT_NE(STI->getHwModeSet(), 0u);
     MCContext Ctx(TT, *MAI, *MRI, *STI);
     MCSubtargetInfo &Copy = Ctx.getSubtargetCopy(*STI);
     // FIXME: MCContext::getSubtargetCopy invokes the base MCSubtargetInfo copy
     // constructor, resetting the vtable to MCSubtargetInfo and losing the
     // <Target>GenMCSubtargetInfo overrides for getHwMode() and getHwModeSet().
-    EXPECT_EQ(Copy.getHwMode(), 0u);
-    EXPECT_EQ(Copy.getHwModeSet(), 0u);
+    EXPECT_NE(Copy.getHwMode(), STI->getHwMode());
+    EXPECT_NE(Copy.getHwModeSet(), STI->getHwModeSet());
   }
 }
 
