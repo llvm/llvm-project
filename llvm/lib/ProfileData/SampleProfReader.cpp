@@ -1192,6 +1192,17 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
     }
   }
 
+  // This function may be called more than once on the same reader: once for
+  // the module's functions and then incrementally (e.g. by
+  // SampleProfileMatcher) for additional candidates. Names inserted into the
+  // remapper by earlier calls are still matched by later ones, so without this
+  // check a profile that is already in \p Profiles would be read again and
+  // merged into itself, doubling all of its head/body/callsite samples and
+  // producing "Duplicate vtable type" diagnostics.
+  auto IsLoaded = [&Profiles](const SampleContext &Ctx) {
+    return Profiles.find(Ctx) != Profiles.end();
+  };
+
   if (FuncOffsetTable && FuncOffsetTable->isEytzinger() &&
       useFuncOffsetList()) {
     ArrayRef<support::ulittle32_t> Offsets = FuncOffsetTable->getFuncOffsets();
@@ -1242,6 +1253,8 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
 
       if (CommonContext == &FContext ||
           (CommonContext && CommonContext->isPrefixOf(FContext))) {
+        if (IsLoaded(FContext))
+          continue;
         // Load profile for the current context which originated from
         // the common ancestor.
         const uint8_t *FuncProfileAddr = Start + NameOffset.second;
@@ -1253,6 +1266,8 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
     assert(!useFuncOffsetList());
     for (auto Name : FuncsToUse) {
       auto GUID = MD5Hash(Name);
+      if (IsLoaded(SampleContext(FunctionId(GUID))))
+        continue;
       if (auto Offset = FuncOffsetTable->lookup(GUID)) {
         const uint8_t *FuncProfileAddr = Start + *Offset;
         if (std::error_code EC = readFuncProfile(FuncProfileAddr, Profiles))
@@ -1267,6 +1282,8 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
       StringRef FuncNameStr = FuncName.stringRef();
       if (!FuncsToUse.count(FuncNameStr) && !Remapper->exist(FuncNameStr))
         continue;
+      if (IsLoaded(FContext))
+        continue;
       const uint8_t *FuncProfileAddr = Start + NameOffset.second;
       if (std::error_code EC = readFuncProfile(FuncProfileAddr, Profiles))
         return EC;
@@ -1274,6 +1291,8 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
   } else {
     assert(!useFuncOffsetList());
     for (auto Name : FuncsToUse) {
+      if (IsLoaded(SampleContext(Name)))
+        continue;
       if (auto Offset = FuncOffsetTable->lookup(MD5Hash(Name))) {
         const uint8_t *FuncProfileAddr = Start + *Offset;
         if (std::error_code EC = readFuncProfile(FuncProfileAddr, Profiles))
