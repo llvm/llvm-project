@@ -2431,6 +2431,9 @@ module std {
       module any_of {
         header "__pstl/cpu_algos/any_of.h"
       }
+      module copy_if {
+        header "__pstl/cpu_algos/copy_if.h"
+      }
       module cpu_traits {
         header "__pstl/cpu_algos/cpu_traits.h"
       }
@@ -2489,6 +2492,7 @@ module std {
         header "__pstl/cpu_algos/uninitialized_algorithms.h"
       }
     }
+    module decoupled_lookback { header "__pstl/decoupled_lookback.h" }
     module dispatch           { header "__pstl/dispatch.h" }
     module handle_exception   { header "__pstl/handle_exception.h" }
   }

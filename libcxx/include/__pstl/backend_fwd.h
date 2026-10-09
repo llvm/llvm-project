@@ -297,6 +297,14 @@ struct __copy;
 //                       _ForwardOutIterator __out_it) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
+struct __copy_if;
+// template <class _Policy, class _ForwardIterator, class _ForwardOutIterator, class _Predicate>
+// optional<_ForwardOutIterator>
+// operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last,
+//                       _ForwardOutIterator __out_it,
+//                       _Predicate __pred) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
 struct __copy_n;
 // template <class _Policy, class _ForwardIterator, class _Size, class _ForwardOutIterator>
 // optional<_ForwardOutIterator>

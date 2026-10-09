@@ -697,6 +697,7 @@ set(files
   __pstl/backends/serial.h
   __pstl/backends/std_thread.h
   __pstl/cpu_algos/any_of.h
+  __pstl/cpu_algos/copy_if.h
   __pstl/cpu_algos/cpu_traits.h
   __pstl/cpu_algos/fill.h
   __pstl/cpu_algos/find_end.h
@@ -715,6 +716,7 @@ set(files
   __pstl/cpu_algos/transform.h
   __pstl/cpu_algos/transform_reduce.h
   __pstl/cpu_algos/uninitialized_algorithms.h
+  __pstl/decoupled_lookback.h
   __pstl/dispatch.h
   __pstl/handle_exception.h
   __random/bernoulli_distribution.h
