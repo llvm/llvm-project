@@ -1043,6 +1043,56 @@ bool VPlanTransforms::finalizeSCEVPredicates(VPlan &Plan,
        make_isa_range<VPWidenInductionRecipe>(HeaderVPBB->phis())) {
     if (WideIV.getNoWrapPredicates().empty())
       continue;
+
+    // If the induction has redundant casts (trunc-sext pattern identified by
+    // createAddRecFromPHIWithCasts), the wrap predicates may be unnecessary.
+    // The wider-type induction may diverge from the scalar PHI after
+    // narrow-type overflow, but if all uses narrow the value back, truncation
+    // produces correct results regardless. We verify:
+    // 1. All non-PHI uses of the backedge value (BinOp) are TruncInsts.
+    // 2. All cast instructions in the chain have no external uses (since the
+    //    cast bypass replaces them with the wide IV, which would be wrong
+    //    after wrap if consumed directly).
+    // 3. The PHI itself has no uses outside the loop (no live-out of the wide
+    //    value, which would see the diverged value after wrap).
+    const InductionDescriptor &IndDesc = WideIV.getInductionDescriptor();
+    if (!IndDesc.getCastInsts().empty()) {
+      auto *BinOp = IndDesc.getInductionBinOp();
+      auto *PHI = WideIV.getPHINode();
+      bool AllUsesNarrow = BinOp && all_of(BinOp->users(), [&](User *U) {
+                             return U == PHI || isa<TruncInst>(U);
+                           });
+      // Verify the PHI has no uses outside the loop. A live-out of the wide
+      // PHI would expose the diverged wide value after narrow-type wrap.
+      if (AllUsesNarrow) {
+        for (User *U : PHI->users()) {
+          auto *UserInst = dyn_cast<Instruction>(U);
+          if (!UserInst || !TheLoop->contains(UserInst)) {
+            AllUsesNarrow = false;
+            break;
+          }
+        }
+      }
+      // Also verify cast instructions have no uses outside the cast chain.
+      // The cast bypass (removeRedundantInductionCasts) replaces the final
+      // cast with the wide IV; if that cast had external users, they would
+      // see the diverged wide value after narrow-type wrap.
+      if (AllUsesNarrow) {
+        for (Instruction *Cast : IndDesc.getCastInsts()) {
+          if (!Cast->hasOneUse()) {
+            AllUsesNarrow = false;
+            break;
+          }
+        }
+      }
+      if (AllUsesNarrow) {
+        LLVM_DEBUG(dbgs() << "LV: Dropping SCEV wrap predicate for induction "
+                             "with redundant casts (all uses truncate): "
+                          << WideIV << "\n");
+        continue;
+      }
+    }
+
     PredicatedIVs.insert(&WideIV);
     for (const auto *P : WideIV.getNoWrapPredicates())
       PSE.addPredicate(*P);
