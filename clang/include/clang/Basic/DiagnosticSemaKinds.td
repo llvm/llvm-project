@@ -6420,7 +6420,7 @@ def warn_deprecated_builtin : Warning<
   InGroup<DeprecatedBuiltins>;
 def warn_hip_deprecated_builtin : Warning<
   "builtin %0 is deprecated; use %1 instead">,
-  InGroup<HipDeprecatedBuiltins>, DefaultIgnore;
+  InGroup<HipDeprecatedBuiltins>;
 def warn_deprecated_builtin_no_suggestion : Warning<"builtin %0 is deprecated">,
   InGroup<DeprecatedBuiltins>;
 def err_unavailable : Error<"%0 is unavailable">;
