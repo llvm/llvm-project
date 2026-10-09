@@ -1272,6 +1272,7 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_MLOAD(MaskedLoadSDNode *N,
 /// Promote it to a target boolean instead.
 SDValue DAGTypeLegalizer::ScalarizeVecOp_MSTORE(MaskedStoreSDNode *N,
                                                 unsigned OpNo) {
+  assert(!N->isCompressingStore() && "CompressingStore not expected");
   if (OpNo != 4)
     reportFatalInternalError("Scalarization of MSTORE data is not supported");
   EVT DataVT = N->getValue().getValueType();
