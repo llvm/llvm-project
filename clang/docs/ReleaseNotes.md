@@ -254,6 +254,12 @@ features cannot lower the translation-unit ABI level;
   protection is enabled and the library is present in the toolchain library
   paths, matching what musl distributions configure GCC to do.
 
+- The driver no longer prefers the libc++ headers installed alongside Clang
+  for a target they have no `__config_site` for, such as a target that a
+  toolchain built with per-target runtime directories has no libc++ for. The
+  libc++ headers of the sysroot, or of the SDK on Darwin, are used instead if
+  there are any.
+
 - Clang now allows GNU computed `goto` extension in `constexpr` functions, matching the relaxed
   `constexpr` function body rules introduced in C++23.
 
