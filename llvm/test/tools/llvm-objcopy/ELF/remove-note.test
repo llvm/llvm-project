@@ -266,7 +266,3 @@ Sections:
       - Name:   CORE
         Type:   0x03
         Desc:   0301
-  - Name:         .strtab
-    Type:         SHT_STRTAB
-  - Name:         .shstrtab
-    Type:         SHT_STRTAB
