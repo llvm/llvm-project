@@ -131,6 +131,13 @@ static void CheckTeamStat(
               sym ? sym->name().ToString() : var.GetSource().ToString())
           .Attach(std::move(*whyNot));
     }
+    if (auto type{expr->GetType()}; type &&
+        type->category() == TypeCategory::Integer && type->kind() < 2 &&
+        context.ShouldWarn(
+            common::LanguageFeature::StatKind)) { // F2023 9.7.4 p1
+      context.Say(at,
+          "The stat-variable must have an integer kind of at least 16-bit"_warn_en_US);
+    }
   }
 }
 
@@ -157,6 +164,15 @@ static void CheckSyncStat(SemanticsContext &context,
               context.Say( // C1172
                   "The stat-variable in a sync-stat-list may not be repeated"_err_en_US);
             }
+            if (const auto *expr{GetExpr(context, stat)})
+              if (auto type{expr->GetType()}; type &&
+                  type->category() == TypeCategory::Integer &&
+                  type->kind() < 2 &&
+                  context.ShouldWarn(
+                      common::LanguageFeature::StatKind)) { // F2023 9.7.4 p1
+                context.Say(
+                    "The stat-variable must have an integer kind of at least 16-bit"_warn_en_US);
+              }
             gotStat = true;
           },
           [&](const parser::MsgVariable &var) {
@@ -270,6 +286,16 @@ static void CheckEventWaitSpecList(SemanticsContext &context,
                           context.Say( // C1178
                               "A stat-variable in a event-wait-spec-list may not be repeated"_err_en_US);
                         }
+                        if (const auto *expr{GetExpr(context, stat)})
+                          if (auto type{expr->GetType()}; type &&
+                              type->category() == TypeCategory::Integer &&
+                              type->kind() < 2 &&
+                              context.ShouldWarn(common::LanguageFeature::
+                                      StatKind)) { // F2023 9.7.4
+                                                   // p1
+                            context.Say(
+                                "The stat-variable must have an integer kind of at least 16-bit"_warn_en_US);
+                          }
                         gotStat = true;
                       },
                       [&](const parser::MsgVariable &var) {
