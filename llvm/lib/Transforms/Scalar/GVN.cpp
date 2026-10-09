@@ -3195,12 +3195,27 @@ bool GVNPassImpl::processLoad(LoadInst *L) {
 // Attempt to process masked loads which have loaded from
 // masked stores with the same mask
 bool GVNPassImpl::processMaskedLoad(IntrinsicInst *I) {
-  if (!MD)
-    return false;
-  MemDepResult Dep = MD->getDependency(I);
-  Instruction *DepInst = Dep.getInst();
-  if (!DepInst || !Dep.isLocal() || !Dep.isDef())
-    return false;
+  [[maybe_unused]] BatchAAResults BatchAA(*AA);
+  Instruction *DepInst = nullptr;
+  MemoryLocation LoadLoc = MemoryLocation::getForArgument(I, 0, TLI);
+
+  if (!isMemorySSAEnabled()) {
+    if (!MD)
+      return false;
+    MemDepResult Dep = MD->getDependency(I);
+    DepInst = Dep.getInst();
+    if (!DepInst || !Dep.isLocal() || !Dep.isDef())
+      return false;
+  } else {
+    auto *MSSA = MSSAU->getMemorySSA();
+    MemoryAccess *ClobberAccess = MSSA->getWalker()->getClobberingMemoryAccess(
+        MSSA->getMemoryAccess(I)->getDefiningAccess(), LoadLoc, BatchAA);
+    auto *Def = dyn_cast<MemoryDef>(ClobberAccess);
+    if (!Def || MSSA->isLiveOnEntryDef(Def) ||
+        Def->getBlock() != I->getParent())
+      return false;
+    DepInst = Def->getMemoryInst();
+  }
 
   Value *Mask = I->getOperand(1);
   Value *Passthrough = I->getOperand(2);
@@ -3209,6 +3224,14 @@ bool GVNPassImpl::processMaskedLoad(IntrinsicInst *I) {
              m_MaskedStore(m_Value(StoreVal), m_Value(), m_Specific(Mask))) ||
       StoreVal->getType() != I->getType())
     return false;
+
+  if (isMemorySSAEnabled()) {
+    // Ensure the masked store and load access the same exact memory location.
+    MemoryLocation StoreLoc =
+        MemoryLocation::getForArgument(cast<IntrinsicInst>(DepInst), 1, TLI);
+    if (BatchAA.alias(StoreLoc, LoadLoc) != AliasResult::MustAlias)
+      return false;
+  }
 
   // Remove the load but generate a select for the passthrough
   Value *OpToForward = llvm::SelectInst::Create(Mask, StoreVal, Passthrough, "",
