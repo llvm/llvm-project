@@ -98,8 +98,8 @@ define float @_Z4testmm(i64 %size, i64 %offset) {
 ; CHECK-NEXT:    [[WIDE_LOAD12:%.*]] = load <4 x float>, ptr [[TMP61]], align 4
 ; CHECK-NEXT:    [[TMP62:%.*]] = fmul fast <4 x float> [[TMP58]], [[WIDE_LOAD11]]
 ; CHECK-NEXT:    [[TMP63:%.*]] = fmul fast <4 x float> [[TMP59]], [[WIDE_LOAD12]]
-; CHECK-NEXT:    [[TMP64]] = fadd fast <4 x float> [[VEC_PHI]], [[TMP62]]
-; CHECK-NEXT:    [[TMP65]] = fadd fast <4 x float> [[VEC_PHI1]], [[TMP63]]
+; CHECK-NEXT:    [[TMP64]] = call fast <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v4f32(<4 x float> [[VEC_PHI]], <4 x float> [[TMP62]])
+; CHECK-NEXT:    [[TMP65]] = call fast <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v4f32(<4 x float> [[VEC_PHI1]], <4 x float> [[TMP63]])
 ; CHECK-NEXT:    [[TMP66:%.*]] = add i64 [[TMP16]], 1
 ; CHECK-NEXT:    [[TMP67:%.*]] = add i64 [[TMP17]], 1
 ; CHECK-NEXT:    [[TMP68:%.*]] = add i64 [[TMP18]], 1
@@ -140,8 +140,8 @@ define float @_Z4testmm(i64 %size, i64 %offset) {
 ; CHECK-NEXT:    [[TMP103:%.*]] = fmul fast <4 x float> [[WIDE_LOAD10]], [[TMP101]]
 ; CHECK-NEXT:    [[TMP104:%.*]] = fmul fast <4 x float> [[WIDE_LOAD11]], [[TMP102]]
 ; CHECK-NEXT:    [[TMP105:%.*]] = fmul fast <4 x float> [[WIDE_LOAD12]], [[TMP103]]
-; CHECK-NEXT:    [[TMP106]] = fadd fast <4 x float> [[VEC_PHI2]], [[TMP104]]
-; CHECK-NEXT:    [[TMP107]] = fadd fast <4 x float> [[VEC_PHI3]], [[TMP105]]
+; CHECK-NEXT:    [[TMP106]] = call fast <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v4f32(<4 x float> [[VEC_PHI2]], <4 x float> [[TMP104]])
+; CHECK-NEXT:    [[TMP107]] = call fast <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v4f32(<4 x float> [[VEC_PHI3]], <4 x float> [[TMP105]])
 ; CHECK-NEXT:    [[TMP108:%.*]] = add i64 [[TMP16]], 2
 ; CHECK-NEXT:    [[TMP109:%.*]] = add i64 [[TMP17]], 2
 ; CHECK-NEXT:    [[TMP110:%.*]] = add i64 [[TMP18]], 2
@@ -182,8 +182,8 @@ define float @_Z4testmm(i64 %size, i64 %offset) {
 ; CHECK-NEXT:    [[TMP145:%.*]] = fmul fast <4 x float> [[WIDE_LOAD10]], [[TMP143]]
 ; CHECK-NEXT:    [[TMP146:%.*]] = fmul fast <4 x float> [[WIDE_LOAD11]], [[TMP144]]
 ; CHECK-NEXT:    [[TMP147:%.*]] = fmul fast <4 x float> [[WIDE_LOAD12]], [[TMP145]]
-; CHECK-NEXT:    [[TMP148]] = fadd fast <4 x float> [[VEC_PHI4]], [[TMP146]]
-; CHECK-NEXT:    [[TMP149]] = fadd fast <4 x float> [[VEC_PHI5]], [[TMP147]]
+; CHECK-NEXT:    [[TMP148]] = call fast <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v4f32(<4 x float> [[VEC_PHI4]], <4 x float> [[TMP146]])
+; CHECK-NEXT:    [[TMP149]] = call fast <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v4f32(<4 x float> [[VEC_PHI5]], <4 x float> [[TMP147]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP150:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP150]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
