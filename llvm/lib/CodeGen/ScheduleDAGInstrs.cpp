@@ -1000,6 +1000,10 @@ void ScheduleDAGDependencyBuilder::buildDeps() {
       if (DAG.TrackLaneMasks) {
         SlotIndex SlotIdx = LIS->getInstructionIndex(MI);
         RegOpers.adjustLaneLiveness(*LIS, DAG.MRI, SlotIdx);
+      } else if (LIS) {
+        // Detect dead defs from LiveIntervals instead of trusting operand dead
+        // flags.
+        RegOpers.detectDeadDefs(MI, *LIS, DAG.MRI);
       }
       if (PDiffs != nullptr)
         PDiffs->addInstruction(SU->NodeNum, RegOpers, DAG.MRI);
