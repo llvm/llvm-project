@@ -77,6 +77,16 @@ TEST(ABIRewriteContextTest, ArgClassificationIndirectAddrSpace) {
   EXPECT_FALSE(c == ArgClassification::getIndirect(llvm::Align(8), true));
 }
 
+TEST(ABIRewriteContextTest, ArgClassificationIndirectAliased) {
+  auto c = ArgClassification::getIndirectAliased(llvm::Align(8), 4);
+  EXPECT_EQ(c.kind, ArgKind::IndirectAliased);
+  EXPECT_EQ(c.indirectAlign, llvm::Align(8));
+  EXPECT_EQ(c.indirectAddrSpace, 4u);
+  EXPECT_FALSE(c.byVal);
+  EXPECT_FALSE(c.isPassThrough());
+  EXPECT_FALSE(c == ArgClassification::getIndirect(llvm::Align(8), false, 4));
+}
+
 TEST(ABIRewriteContextTest, ArgClassificationExtend) {
   MLIRContext mlirCtx;
   auto i8 = IntegerType::get(&mlirCtx, 8);

@@ -23,6 +23,12 @@
   args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
 }
 
+#byref_as4_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect_aliased", indirect_align = 8,
+               indirect_addr_space = 4 } ]
+}
+
 #passthrough = {
   return = { kind = "direct" },
   args   = [ ]
@@ -63,6 +69,15 @@ module attributes {
 
   // CHECK: cir.func{{.*}} @takes_non_byval(%{{.*}}: !cir.ptr<!rec_Big> {{{.*}}llvm.dereferenceable = 24 : i64, llvm.nofreeobj, llvm.noundef{{.*}}})
   // LLVM: define void @takes_non_byval(ptr nofreeobj noundef align 8 dereferenceable(24) %{{.+}})
+
+  // The byref argument attribute is converted like byval, on a pointer in its
+  // own address space.
+  cir.func @takes_big_byref(%arg0: !rec_Big) attributes { test_classify = #byref_as4_arg } {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @takes_big_byref(%{{.*}}: !cir.ptr<!rec_Big, target_address_space(4)> {{{.*}}llvm.byref = !rec_Big{{.*}}})
+  // LLVM: define void @takes_big_byref(ptr addrspace(4) noundef byref(%struct.Big) align 8 %{{.+}})
 
   // The call site's byval operand attribute is converted too.
   cir.func @caller(%s: !rec_Big) attributes { test_classify = #passthrough } {
