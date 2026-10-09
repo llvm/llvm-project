@@ -266,6 +266,44 @@ subroutine runtime_block(flag)
   !$omp metadirective when(construct={target}: taskyield)
 end subroutine
 
+! An ignored compiler directive does not separate the BLOCK from its
+! replacement.
+! CHECK-LABEL: func.func @_QPstandalone_block_ignored_directive(
+! CHECK: omp.target
+! CHECK: omp.taskyield
+! CHECK: omp.terminator
+! CHECK-NOT: omp.taskwait
+! CHECK: return
+subroutine standalone_block_ignored_directive(a)
+  integer :: a(10)
+  !$omp metadirective when(implementation={vendor(llvm)}: target)
+  !dir$ ignored_comment
+  !dir$ ignored(1)
+  !dir$ loop count(10)
+  !dir$ assume_aligned a:64
+  block
+    !$omp metadirective when(construct={target}: taskyield) otherwise(taskwait)
+  end block
+end subroutine
+
+! A compiler directive with an effect still ends the search for the BLOCK.
+! CHECK-LABEL: func.func @_QPstandalone_block_prefetch(
+! CHECK: omp.target
+! CHECK-NOT: fir.prefetch
+! CHECK: omp.terminator
+! CHECK: fir.prefetch
+! CHECK-NOT: omp.taskyield
+! CHECK: omp.taskwait
+! CHECK: return
+subroutine standalone_block_prefetch(a)
+  integer :: a(10)
+  !$omp metadirective when(implementation={vendor(llvm)}: target)
+  !dir$ prefetch a
+  block
+    !$omp metadirective when(construct={target}: taskyield) otherwise(taskwait)
+  end block
+end subroutine
+
 ! An empty delimited replacement must not capture the following BLOCK.
 ! CHECK-LABEL: func.func @_QPempty_delimited_block()
 ! CHECK-NOT: omp.parallel

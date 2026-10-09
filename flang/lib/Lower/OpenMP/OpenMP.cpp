@@ -7249,8 +7249,26 @@ static lower::pft::Evaluation *spliceAssociatedEval(
 
   auto firstAssociatedIt = std::next(metaIt);
   auto associatedIt = firstAssociatedIt;
-  while (isLoop && associatedIt != parentList->end() &&
-         isIgnorableMetadirectiveLoopAssociationEval(*associatedIt))
+  // Directives that semantics reports as ignored.
+  auto isIgnoredDirective = [](lower::pft::Evaluation &e) {
+    const auto *directive = e.getIf<parser::CompilerDirective>();
+    if (!directive)
+      return false;
+    using IgnoredDirectives =
+        std::tuple<parser::CompilerDirective::Unrecognized,
+                   std::list<parser::CompilerDirective::NameValue>,
+                   parser::CompilerDirective::LoopCount,
+                   std::list<parser::CompilerDirective::AssumeAligned>>;
+    return common::visit(
+        [](const auto &value) {
+          return common::HasMember<std::decay_t<decltype(value)>,
+                                   IgnoredDirectives>;
+        },
+        directive->u);
+  };
+  while (associatedIt != parentList->end() &&
+         (isLoop ? isIgnorableMetadirectiveLoopAssociationEval(*associatedIt)
+                 : isIgnoredDirective(*associatedIt)))
     ++associatedIt;
 
   if (associatedIt == parentList->end())
@@ -7277,8 +7295,8 @@ static lower::pft::Evaluation *spliceAssociatedEval(
     }
   }
 
-  // Compiler directives between the metadirective and its associated loop
-  // must be processed before the loop is lowered. Move them with the loop so
+  // Compiler directives between the metadirective and its associated construct
+  // must be processed before the construct is lowered. Move them with it so
   // they are not visited later as siblings of the metadirective.
   for (auto it = firstAssociatedIt; it != associatedIt;) {
     auto current = it++;
