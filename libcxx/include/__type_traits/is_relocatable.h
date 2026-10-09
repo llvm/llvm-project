@@ -11,6 +11,8 @@
 
 #include <__config>
 #include <__type_traits/enable_if.h>
+#include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/is_nothrow_destructible.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_copyable.h>
 
@@ -42,6 +44,11 @@ inline const bool
     __is_trivially_relocatable_v<_Tp, __enable_if_t<is_same<_Tp, typename _Tp::__trivially_relocatable>::value> > =
         true;
 #endif
+
+template <class _Tp>
+inline const bool __is_nothrow_relocatable_v =
+    __is_trivially_relocatable_v<_Tp> ||
+    (is_nothrow_move_constructible<_Tp>::value && is_nothrow_destructible<_Tp>::value);
 
 _LIBCPP_END_NAMESPACE_STD
 
