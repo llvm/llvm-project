@@ -11439,9 +11439,8 @@ SDValue TargetLowering::expandGetActiveLaneMask(SDNode *N,
   auto [Mask, StepVector] = getLegalMaskAndStepVector(
       DAG.getPOISON(VT), /*ZeroIsPoison=*/false, DL, DAG);
 
-  // TODO: Handle the step vector needing to be split + widened.
+  // TODO: Handle the step vector needing to be split.
   assert(StepVector && "Step vector needs splitting");
-  assert(Mask.getValueType() == VT && "Step vector was widened");
 
   // Rebase and saturate the termination value.
   SDValue Max = DAG.getConstant(maxUIntN(StepVector.getScalarValueSizeInBits()),
@@ -11455,7 +11454,11 @@ SDValue TargetLowering::expandGetActiveLaneMask(SDNode *N,
   EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
                                 StepVector.getValueType());
   SDValue Cmp = DAG.getSetCC(DL, CCVT, StepVector, EndV, ISD::SETULT);
-  return DAG.getBoolExtOrTrunc(Cmp, DL, VT, StepVector.getValueType());
+  SDValue Res = DAG.getBoolExtOrTrunc(Cmp, DL, Mask.getValueType(),
+                                      StepVector.getValueType());
+  if (Mask.getValueType() != VT)
+    Res = DAG.getExtractSubvector(DL, VT, Res, 0);
+  return Res;
 }
 
 SDValue TargetLowering::expandLoopDependenceMask(SDNode *N,

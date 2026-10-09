@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64    | FileCheck %s --check-prefixes=SSE2
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v2 | FileCheck %s --check-prefixes=SSE42
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v3 | FileCheck %s --check-prefixes=AVX2
-; TODO: Fix crash on AVX512
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v4 | FileCheck %s --check-prefixes=AVX512
 
 define <16 x i1> @v16i1(<16 x i1> %m) {
 ; SSE2-LABEL: v16i1:
@@ -80,6 +80,22 @@ define <16 x i1> @v16i1(<16 x i1> %m) {
 ; AVX2-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: v16i1:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsllw $7, %xmm0, %xmm0
+; AVX512-NEXT:    vpmovb2m %xmm0, %k1
+; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovdqu8 {{.*#+}} xmm0 {%k1} = [239,240,241,242,243,244,245,246,247,248,249,250,251,252,253,254]
+; AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
+; AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
+; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    addb $17, %al
+; AVX512-NEXT:    vpbroadcastb %eax, %xmm0
+; AVX512-NEXT:    vpcmpnleub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; AVX512-NEXT:    vpmovm2b %k0, %xmm0
+; AVX512-NEXT:    retq
   %x = call <16 x i1> @llvm.mask.beforefirst(<16 x i1> %m)
   ret <16 x i1> %x
 }
@@ -145,6 +161,22 @@ define <8 x i1> @v8i1(<8 x i1> %m) {
 ; AVX2-NEXT:    vpcmpeqw %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: v8i1:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsllw $15, %xmm0, %xmm0
+; AVX512-NEXT:    vpmovw2m %xmm0, %k1
+; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovdqu8 {{.*#+}} xmm0 {%k1} = [247,248,249,250,251,252,253,254,u,u,u,u,u,u,u,u]
+; AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
+; AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
+; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    addb $9, %al
+; AVX512-NEXT:    vpbroadcastb %eax, %xmm0
+; AVX512-NEXT:    vpcmpnleub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; AVX512-NEXT:    vpmovm2w %k0, %xmm0
+; AVX512-NEXT:    retq
   %x = call <8 x i1> @llvm.mask.beforefirst(<8 x i1> %m)
   ret <8 x i1> %x
 }
@@ -217,6 +249,22 @@ define <4 x i1> @v4i1(<4 x i1> %m) {
 ; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: v4i1:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX512-NEXT:    vpmovd2m %xmm0, %k1
+; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovdqu8 {{.*#+}} xmm0 {%k1} = [251,252,253,254,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
+; AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
+; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    addb $5, %al
+; AVX512-NEXT:    vpbroadcastb %eax, %xmm0
+; AVX512-NEXT:    vpcmpnleub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; AVX512-NEXT:    vpmovm2d %k0, %xmm0
+; AVX512-NEXT:    retq
   %x = call <4 x i1> @llvm.mask.beforefirst(<4 x i1> %m)
   ret <4 x i1> %x
 }
@@ -283,6 +331,22 @@ define <2 x i1> @v2i1(<2 x i1> %m) {
 ; AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: v2i1:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsllq $63, %xmm0, %xmm0
+; AVX512-NEXT:    vpmovq2m %xmm0, %k1
+; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovdqu8 {{.*#+}} xmm0 {%k1} = [253,254,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
+; AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
+; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    addb $3, %al
+; AVX512-NEXT:    vpbroadcastb %eax, %xmm0
+; AVX512-NEXT:    vpcmpnleub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k0
+; AVX512-NEXT:    vpmovm2q %k0, %xmm0
+; AVX512-NEXT:    retq
   %x = call <2 x i1> @llvm.mask.beforefirst(<2 x i1> %m)
   ret <2 x i1> %x
 }
