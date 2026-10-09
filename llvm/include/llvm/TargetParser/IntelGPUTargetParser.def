@@ -21,7 +21,9 @@
 //     IGCA_FEATURE_SETS - Token naming the IGCA feature sets the device
 //                         implements: Core (none), Compute ("c"),
 //                         Render ("r"), ComputeExact ("ca") or
-//                         RenderExact ("ra").
+//                         RenderExact ("ra"). It is a token rather than the
+//                         suffix itself so that a typo is a build error;
+//                         getIGCAName maps it onto the spelling.
 //
 //   INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_FEATURE_SETS)
 //     A compatibility name that covers several minor versions, e.g. "xe-dg2",
@@ -30,12 +32,28 @@
 //     offload-arch utility never prints one, but they are legal --offload-arch
 //     values. The columns mean the same as above.
 //
+//   INTEL_GPU_ALIAS(NAME, KIND)
+//     A further name for a device that already has a row: "bmg_g21", which
+//     --offload-arch accepted before the list existed, or another product
+//     built on the same GPU IP version, e.g. "xe-arl-u" for "xe-mtl-u". Code
+//     for one GPU IP version is the same whichever product runs it, so these
+//     are one architecture. An alias declares no kind of its own and is never
+//     printed, so a device keeps one canonical name; it only widens what
+//     --offload-arch accepts.
+//
 // A device is keyed by its major and minor version alone. The revision
 // component of the GPU IP version is deliberately left out of the key, so that
 // every revision of a device shares one name and one IGCA target.
 //
-// Several devices can share a major and a minor version. The rows are ordered
-// so that the name to print for such a group comes first.
+// Products that share a major and a minor version form one INTEL_GPU row, named
+// after the product the offload-arch utility prints; the other products are
+// aliases. The exception is "xe-pvc-sdv": it has the same major and minor
+// version as "xe-pvc", but the AOT compiler generates different code for it, so
+// it gets its own row.
+//
+// Devices without a published name are left out on purpose; offload-arch names
+// them by GPU IP version, as "xe_*.*.*". A device gets a row only once it has
+// an official name.
 //
 //===----------------------------------------------------------------------===//
 
@@ -46,10 +64,7 @@
 INTEL_GPU("xe-cri",      XE_CRI,      35, 11,  60, Compute)
 INTEL_GPU("xe-nvl-p",    XE_NVL_P,    35, 10,  60, Render)
 INTEL_GPU("xe-nvl-u",    XE_NVL_U,    30, 5,   60, Render)
-INTEL_GPU("xe-nvl-h",    XE_NVL_H,    30, 5,   60, Render)
 INTEL_GPU("xe-nvl-s",    XE_NVL_S,    30, 4,   60, Render)
-INTEL_GPU("xe-nvl-hx",   XE_NVL_HX,   30, 4,   60, Render)
-INTEL_GPU("xe-nvl-ul",   XE_NVL_UL,   30, 4,   60, Render)
 INTEL_GPU("xe-wcl",      XE_WCL,      30, 3,   50, Render)
 INTEL_GPU("xe-ptl-u",    XE_PTL_U,    30, 1,   50, Render)
 INTEL_GPU("xe-ptl-h",    XE_PTL_H,    30, 0,   50, Render)
@@ -59,28 +74,18 @@ INTEL_GPU("xe-bmg-g21",  XE_BMG_G21,  20, 1,   40, Render)
 INTEL_GPU("xe-arl-h",    XE_ARL_H,    12, 74,  35, Render)
 INTEL_GPU("xe-mtl-h",    XE_MTL_H,    12, 71,  30, Render)
 INTEL_GPU("xe-mtl-u",    XE_MTL_U,    12, 70,  30, Render)
-INTEL_GPU("xe-arl-u",    XE_ARL_U,    12, 70,  30, Render)
-INTEL_GPU("xe-arl-s",    XE_ARL_S,    12, 70,  30, Render)
 INTEL_GPU("xe-pvc-vg",   XE_PVC_VG,   12, 61,  20, ComputeExact)
 INTEL_GPU("xe-pvc",      XE_PVC,      12, 60,  20, ComputeExact)
 INTEL_GPU("xe-pvc-sdv",  XE_PVC_SDV,  12, 60,  20, ComputeExact)
 INTEL_GPU("xe-acm-g12",  XE_ACM_G12,  12, 57,  15, RenderExact)
-INTEL_GPU("xe-dg2-g12",  XE_DG2_G12,  12, 57,  15, RenderExact)
 INTEL_GPU("xe-acm-g11",  XE_ACM_G11,  12, 56,  15, RenderExact)
-INTEL_GPU("xe-dg2-g11",  XE_DG2_G11,  12, 56,  15, RenderExact)
-INTEL_GPU("xe-ats-m75",  XE_ATS_M75,  12, 56,  15, RenderExact)
 INTEL_GPU("xe-acm-g10",  XE_ACM_G10,  12, 55,  15, RenderExact)
-INTEL_GPU("xe-dg2-g10",  XE_DG2_G10,  12, 55,  15, RenderExact)
-INTEL_GPU("xe-ats-m150", XE_ATS_M150, 12, 55,  15, RenderExact)
 INTEL_GPU("xe-dg1",      XE_DG1,      12, 10,  10, Render)
 INTEL_GPU("xe-adl-n",    XE_ADL_N,    12, 4,   10, Render)
 INTEL_GPU("xe-adl-p",    XE_ADL_P,    12, 3,   10, Render)
-INTEL_GPU("xe-rpl-p",    XE_RPL_P,    12, 3,   10, Render)
 INTEL_GPU("xe-adl-s",    XE_ADL_S,    12, 2,   10, Render)
-INTEL_GPU("xe-rpl-s",    XE_RPL_S,    12, 2,   10, Render)
 INTEL_GPU("xe-rkl",      XE_RKL,      12, 1,   10, Render)
 INTEL_GPU("xe-tgllp",    XE_TGLLP,    12, 0,   10, Render)
-INTEL_GPU("xe-tgl",      XE_TGL,      12, 0,   10, Render)
 
 // Compatibility names, which cover a group of platforms
 #ifndef INTEL_GPU_COMPAT
@@ -92,5 +97,27 @@ INTEL_GPU_COMPAT("xe-bmg", XE_BMG, 40, Render)
 INTEL_GPU_COMPAT("xe-mtl", XE_MTL, 30, Render)
 INTEL_GPU_COMPAT("xe-dg2", XE_DG2, 15, RenderExact)
 
+// Aliases, which are further names of a device named above
+#ifndef INTEL_GPU_ALIAS
+#define INTEL_GPU_ALIAS(NAME, KIND)
+#endif
+
+// Accepted before this list existed; to be removed in favor of "xe-bmg-g21".
+INTEL_GPU_ALIAS("bmg_g21",     XE_BMG_G21)
+INTEL_GPU_ALIAS("xe-nvl-h",    XE_NVL_U)
+INTEL_GPU_ALIAS("xe-nvl-hx",   XE_NVL_S)
+INTEL_GPU_ALIAS("xe-nvl-ul",   XE_NVL_S)
+INTEL_GPU_ALIAS("xe-arl-u",    XE_MTL_U)
+INTEL_GPU_ALIAS("xe-arl-s",    XE_MTL_U)
+INTEL_GPU_ALIAS("xe-dg2-g12",  XE_ACM_G12)
+INTEL_GPU_ALIAS("xe-dg2-g11",  XE_ACM_G11)
+INTEL_GPU_ALIAS("xe-ats-m75",  XE_ACM_G11)
+INTEL_GPU_ALIAS("xe-dg2-g10",  XE_ACM_G10)
+INTEL_GPU_ALIAS("xe-ats-m150", XE_ACM_G10)
+INTEL_GPU_ALIAS("xe-rpl-p",    XE_ADL_P)
+INTEL_GPU_ALIAS("xe-rpl-s",    XE_ADL_S)
+INTEL_GPU_ALIAS("xe-tgl",      XE_TGLLP)
+
 #undef INTEL_GPU
 #undef INTEL_GPU_COMPAT
+#undef INTEL_GPU_ALIAS
