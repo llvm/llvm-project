@@ -20,6 +20,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
@@ -920,11 +921,156 @@ public:
   }
 };
 
+/// Returns the shape of the largest piece of a matrix op payload that one LLVM
+/// access can move, as an access only moves consecutive elements. Memory runs
+/// along the dimension whose stride is 1, so on a row-major tile a [1, 4]
+/// payload is four neighbours and moves in one access, while [2, 1] is two
+/// elements a row apart and needs one access each.
+static SmallVector<int64_t>
+getContiguousPayloadShape(ArrayRef<int64_t> payloadShape, size_t numOffsets,
+                          xegpu::MemDescType mdescTy) {
+  SmallVector<int64_t> shape(payloadShape);
+  int64_t rank = shape.size();
+  if (rank != static_cast<int64_t>(numOffsets))
+    return shape;
+
+  int64_t fastestDim = 0;
+  for (auto [dim, strideAttr] :
+       llvm::enumerate(mdescTy.getStrideAttr().getValue())) {
+    if (cast<IntegerAttr>(strideAttr).getInt() == 1) {
+      fastestDim = dim;
+      break;
+    }
+  }
+
+  bool spansFastestDim =
+      llvm::all_of(llvm::seq<int64_t>(fastestDim + 1, rank),
+                   [&](int64_t d) { return payloadShape[d] == 1; });
+  for (int64_t d = 0; d < rank; ++d)
+    shape[d] = spansFastestDim && d == fastestDim ? payloadShape[d] : 1;
+
+  return shape;
+}
+
 template <typename OpType,
           typename = std::enable_if_t<llvm::is_one_of<
               OpType, xegpu::LoadMatrixOp, xegpu::StoreMatrixOp>::value>>
 class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
   using OpConversionPattern<OpType>::OpConversionPattern;
+
+  /// Lowers `op` to one LLVM access per `sliceShape`-sized piece of its
+  /// payload, each at its own address. `basePtrLLVM` already addresses the
+  /// first piece. A payload that is one contiguous piece, which is the common
+  /// case, gives a single access of the whole payload.
+  LogicalResult emitContiguousAccesses(
+      OpType op, typename OpType::Adaptor adaptor,
+      ConversionPatternRewriter &rewriter, xegpu::MemDescType mdescTy,
+      ArrayRef<OpFoldResult> offsets, ArrayRef<int64_t> payloadShape,
+      ArrayRef<int64_t> sliceShape, Value baseAddr32, Value basePtrLLVM,
+      LLVM::LLVMPointerType ptrTypeLLVM, int64_t elemByteSize) const {
+    Location loc = op.getLoc();
+    int64_t rank = payloadShape.size();
+    SmallVector<int64_t> sliceGrid(rank);
+    for (int64_t d = 0; d < rank; ++d)
+      sliceGrid[d] = payloadShape[d] / sliceShape[d];
+    int64_t numSlices = computeProduct(sliceGrid);
+    int64_t sliceLen = computeProduct(sliceShape);
+    SmallVector<int64_t> payloadStrides = computeStrides(payloadShape);
+    SmallVector<int64_t> gridStrides = computeStrides(sliceGrid);
+
+    // The payload type LLVM load/store accepts: f8E8M0FNU and friends become
+    // same-width integers, vector<1> becomes a scalar. Operands arrive
+    // converted in the adaptor, results do not.
+    Type payloadTy;
+    if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>)
+      payloadTy =
+          this->getTypeConverter()->convertType(op.getResult().getType());
+    else
+      payloadTy = adaptor.getData().getType();
+    auto payloadVecTy = dyn_cast<VectorType>(payloadTy);
+
+    Type sliceTy = payloadTy;
+    if (numSlices != 1) {
+      if (!payloadVecTy)
+        return rewriter.notifyMatchFailure(
+            op, "Expected a vector payload to slice.");
+      sliceTy = sliceLen == 1 ? payloadVecTy.getElementType()
+                              : VectorType::get({sliceLen},
+                                                payloadVecTy.getElementType());
+    }
+
+    // Addresses the slice `delta` elements into the payload.
+    auto slicePtr = [&](ArrayRef<int64_t> delta) -> Value {
+      if (llvm::all_of(delta, [](int64_t d) { return d == 0; }))
+        return basePtrLLVM;
+      SmallVector<OpFoldResult> sliceOffsets;
+      for (auto [base, d] : llvm::zip_equal(offsets, delta)) {
+        if (d == 0)
+          sliceOffsets.push_back(base);
+        else if (auto attr = dyn_cast<Attribute>(base))
+          sliceOffsets.push_back(
+              rewriter.getIndexAttr(cast<IntegerAttr>(attr).getInt() + d));
+        else
+          sliceOffsets.push_back(
+              OpFoldResult(arith::AddIOp::create(
+                               rewriter, loc, cast<Value>(base),
+                               arith::ConstantIndexOp::create(rewriter, loc, d))
+                               .getResult()));
+      }
+      Value sliceOffset = mdescTy.getLinearOffsets(rewriter, loc, sliceOffsets);
+      sliceOffset = arith::IndexCastUIOp::create(
+          rewriter, loc, rewriter.getI32Type(), sliceOffset);
+      Value slicePtrI32 = addOffsetToBaseAddr(rewriter, loc, baseAddr32,
+                                              sliceOffset, elemByteSize);
+      return LLVM::IntToPtrOp::create(rewriter, loc, ptrTypeLLVM, slicePtrI32);
+    };
+
+    Value result;
+    if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>)
+      if (numSlices != 1)
+        result = arith::ConstantOp::create(rewriter, loc, payloadVecTy,
+                                           rewriter.getZeroAttr(payloadVecTy));
+
+    for (int64_t slice = 0; slice < numSlices; ++slice) {
+      SmallVector<int64_t> gridCoords = delinearize(slice, gridStrides);
+      SmallVector<int64_t> delta(rank);
+      for (int64_t d = 0; d < rank; ++d)
+        delta[d] = gridCoords[d] * sliceShape[d];
+      int64_t payloadOffset = linearize(delta, payloadStrides);
+      Value ptr = slicePtr(delta);
+
+      if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>) {
+        Value loaded = LLVM::LoadOp::create(rewriter, loc, sliceTy, ptr);
+        if (numSlices == 1)
+          result = loaded;
+        else if (sliceLen == 1)
+          result = vector::InsertOp::create(rewriter, loc, loaded, result,
+                                            ArrayRef<int64_t>{payloadOffset});
+        else
+          result = vector::InsertStridedSliceOp::create(
+              rewriter, loc, loaded, result, ArrayRef<int64_t>{payloadOffset},
+              ArrayRef<int64_t>{1});
+      } else {
+        Value data = adaptor.getData();
+        if (numSlices != 1) {
+          if (sliceLen == 1)
+            data = vector::ExtractOp::create(rewriter, loc, data,
+                                             ArrayRef<int64_t>{payloadOffset});
+          else
+            data = vector::ExtractStridedSliceOp::create(
+                rewriter, loc, data, ArrayRef<int64_t>{payloadOffset},
+                ArrayRef<int64_t>{sliceLen}, ArrayRef<int64_t>{1});
+        }
+        LLVM::StoreOp::create(rewriter, loc, data, ptr);
+      }
+    }
+
+    if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>)
+      rewriter.replaceOp(op, result);
+    else
+      rewriter.eraseOp(op);
+    return success();
+  }
   LogicalResult
   matchAndRewrite(OpType op, typename OpType::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -943,13 +1089,9 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
       Type resType = op.getResult().getType();
       // Some transforms may leave unit dimension in the 2D vector, adaptors do
       // not catch it for results.
-      if (auto vecType = dyn_cast<VectorType>(resType)) {
-        assert(llvm::count_if(vecType.getShape(),
-                              [](int64_t d) { return d != 1; }) <= 1 &&
-               "Expected either 1D vector or nD with unit dimensions");
+      if (auto vecType = dyn_cast<VectorType>(resType))
         resType = VectorType::get({vecType.getNumElements()},
                                   vecType.getElementType());
-      }
       dataTy = resType;
     } else
       dataTy = adaptor.getData().getType();
@@ -1020,21 +1162,21 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
       }
     }
 
-    if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>) {
-      // The load result type is taken from the type converter. This maps
-      // element types that are not directly representable in LLVM (e.g.
-      // f8E8M0FNU) to an integer storage type of the same bit width, and
-      // collapses single-element vectors to a scalar, since LLVM load/store
-      // does not support vectors of size 1.
-      Type loadTy =
-          this->getTypeConverter()->convertType(op.getResult().getType());
-      auto loadOp = LLVM::LoadOp::create(rewriter, loc, loadTy, basePtrLLVM);
-      rewriter.replaceOp(op, loadOp);
-    } else {
-      LLVM::StoreOp::create(rewriter, loc, adaptor.getData(), basePtrLLVM);
-      rewriter.eraseOp(op);
-    }
-    return success();
+    // The payload shape says where in the matrix each element lives, which the
+    // adaptor has already linearized away.
+    ArrayRef<int64_t> payloadShape;
+    Type opPayloadTy;
+    if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>)
+      opPayloadTy = op.getResult().getType();
+    else
+      opPayloadTy = op.getData().getType();
+    if (auto opPayloadVecTy = dyn_cast<VectorType>(opPayloadTy))
+      payloadShape = opPayloadVecTy.getShape();
+
+    return emitContiguousAccesses(
+        op, adaptor, rewriter, mdescTy, offsets, payloadShape,
+        getContiguousPayloadShape(payloadShape, offsets.size(), mdescTy),
+        baseAddr32, basePtrLLVM, ptrTypeLLVM, elemByteSize);
   }
 };
 

@@ -332,4 +332,30 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
     gpu.return %1 : vector<8xf8E8M0FNU>
   }
 
+  // A vector<2x1xf32> payload of a row-major 16x2 tile is two elements one row
+  // apart, so it cannot be moved by one flat access of two consecutive
+  // elements. Each element gets its own address instead.
+  //CHECK-LABEL: load_matrix_strided_payload
+  gpu.func @load_matrix_strided_payload(%arg0: memref<128xi8, 3>) -> vector<2x1xf32> {
+    %c1 = arith.constant 1 : index
+    %c3 = arith.constant 3 : index
+    %0 = xegpu.create_mem_desc %arg0 : memref<128xi8, 3> -> !xegpu.mem_desc<16x2xf32>
+    //CHECK: %[[ZERO:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
+    //CHECK-COUNT-2: llvm.load %{{.*}} : !llvm.ptr<3> -> f32
+    //CHECK-NOT: llvm.load %{{.*}} : !llvm.ptr<3> -> vector<2xf32>
+    %1 = xegpu.load_matrix %0[%c3, %c1] : !xegpu.mem_desc<16x2xf32>, index, index -> vector<2x1xf32>
+    gpu.return %1 : vector<2x1xf32>
+  }
+
+  //CHECK-LABEL: store_matrix_strided_payload
+  gpu.func @store_matrix_strided_payload(%arg0: memref<128xi8, 3>, %arg1: vector<2x1xf32>) {
+    %c1 = arith.constant 1 : index
+    %c3 = arith.constant 3 : index
+    %0 = xegpu.create_mem_desc %arg0 : memref<128xi8, 3> -> !xegpu.mem_desc<16x2xf32>
+    //CHECK-COUNT-2: llvm.store %{{.*}}, %{{.*}} : f32, !llvm.ptr<3>
+    //CHECK-NOT: llvm.store %{{.*}}, %{{.*}} : vector<2xf32>, !llvm.ptr<3>
+    xegpu.store_matrix %arg1, %0[%c3, %c1] : vector<2x1xf32>, !xegpu.mem_desc<16x2xf32>, index, index
+    gpu.return
+  }
+
 }
