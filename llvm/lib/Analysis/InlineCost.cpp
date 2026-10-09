@@ -616,6 +616,9 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
   /// Bonus to be applied when the callee has only one reachable basic block.
   int SingleBBBonus = 0;
 
+  /// Caller MemorySSA
+  MemorySSA *CallerMSSA;
+
   /// Tunable parameters that control the analysis.
   const InlineParams &Params;
 
@@ -1103,6 +1106,23 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
       addCost(NumLoops * InlineConstants::LoopPenalty);
     }
 
+    // Apply discount for each load clobbered by the candidate call.
+    // These loads may be optimized out after inlining.
+    if (EnableLoadElimination && CallerMSSA) {
+      if (auto *MemOp = CallerMSSA->getMemoryAccess(&CandidateCall)) {
+        for (User *U : MemOp->users()) {
+          auto *MA = cast<MemoryAccess>(U);
+          if (auto *MU = dyn_cast<MemoryUse>(MA)) {
+            auto *LI = dyn_cast<LoadInst>(MU->getMemoryInst());
+            if (LI && LI->isUnordered()) {
+              addCost(-InstrCost);
+              onLoadEliminationOpportunity();
+            }
+          }
+        }
+      }
+    }
+
     // We applied the maximum possible vector bonus at the beginning. Now,
     // subtract the excess bonus, if any, from the Threshold before
     // comparing against Cost.
@@ -1215,14 +1235,15 @@ public:
       bool IgnoreThreshold = false,
       function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache =
           nullptr,
-      MemorySSA *CalleeMSSA = nullptr)
+      MemorySSA *CalleeMSSA = nullptr, MemorySSA *CallerMSSA = nullptr)
       : CallAnalyzer(Callee, Call, TTI, GetAssumptionCache, GetBFI, GetTLI, PSI,
                      ORE, GetEphValuesCache, CalleeMSSA),
         ComputeFullInlineCost(OptComputeFullInlineCost ||
                               Params.ComputeFullInlineCost || ORE ||
                               isCostBenefitAnalysisEnabled()),
-        Params(Params), Threshold(Params.DefaultThreshold),
-        BoostIndirectCalls(BoostIndirect), IgnoreThreshold(IgnoreThreshold),
+        CallerMSSA(CallerMSSA), Params(Params),
+        Threshold(Params.DefaultThreshold), BoostIndirectCalls(BoostIndirect),
+        IgnoreThreshold(IgnoreThreshold),
         CostBenefitAnalysisEnabled(isCostBenefitAnalysisEnabled()),
         Writer(this) {
     AllowRecursiveCall = *Params.AllowRecursiveCall;
@@ -1591,7 +1612,8 @@ bool CallAnalyzer::visitAlloca(AllocaInst &I) {
       // after this constant prop, and become a huge static alloca on an
       // unconditional CFG path. Avoid inlining if this is going to happen above
       // a threshold.
-      // FIXME: If the threshold is removed or lowered too much, we could end up
+      //  FIXME: If the threshold is removed or lowered too much, we
+      //  could end up
       // being too pessimistic and prevent inlining non-problematic code. This
       // could result in unintended perf regressions. A better overall strategy
       // is needed to track stack usage during inlining.
@@ -3149,10 +3171,10 @@ InlineCost llvm::getInlineCost(
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
     ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE,
     function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache,
-    MemorySSA *CalleeMSSA) {
+    MemorySSA *CalleeMSSA, MemorySSA *CallerMSSA) {
   return getInlineCost(Call, Call.getCalledFunction(), Params, CalleeTTI,
                        GetAssumptionCache, GetTLI, GetBFI, PSI, ORE,
-                       GetEphValuesCache, CalleeMSSA);
+                       GetEphValuesCache, CalleeMSSA, CallerMSSA);
 }
 
 std::optional<int> llvm::getInliningCostEstimate(
@@ -3278,7 +3300,7 @@ InlineCost llvm::getInlineCost(
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
     ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE,
     function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache,
-    MemorySSA *CalleeMSSA) {
+    MemorySSA *CalleeMSSA, MemorySSA *CallerMSSA) {
 
   auto UserDecision =
       llvm::getAttributeBasedInliningDecision(Call, Callee, CalleeTTI, GetTLI);
@@ -3300,7 +3322,7 @@ InlineCost llvm::getInlineCost(
   InlineCostCallAnalyzer CA(*Callee, Call, Params, CalleeTTI,
                             GetAssumptionCache, GetBFI, GetTLI, PSI, ORE,
                             /*BoostIndirect=*/true, /*IgnoreThreshold=*/false,
-                            GetEphValuesCache, CalleeMSSA);
+                            GetEphValuesCache, CalleeMSSA, CallerMSSA);
   InlineResult ShouldInline = CA.analyze();
 
   LLVM_DEBUG(CA.dump());
