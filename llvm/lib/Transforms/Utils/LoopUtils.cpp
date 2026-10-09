@@ -2300,7 +2300,7 @@ Value *llvm::addDiffRuntimeChecks(Instruction *Loc,
 
     const SCEV *VFSCEV = SE.getElementCount(Ty, VF);
     unsigned VFBits = SE.getUnsignedRangeMax(VFSCEV).getActiveBits();
-    unsigned VFxICBits = VFBits + APInt(64, IC).getActiveBits();
+    unsigned VFxICBits = VFBits + llvm::bit_width(IC);
     unsigned TyBits = Ty->getScalarSizeInBits();
     unsigned AvailableStrideBits = TyBits > VFxICBits ? TyBits - VFxICBits : 0;
 
@@ -2316,7 +2316,7 @@ Value *llvm::addDiffRuntimeChecks(Instruction *Loc,
     }
 
     const SCEV *VectorIterAccessSpan = SE.getMinusSCEV(
-        SE.getMulExpr(SE.getElementCount(Ty, VF), SE.getConstant(Ty, IC),
+        SE.getMulExpr(VFSCEV, SE.getConstant(Ty, IC),
                       SE.getConstant(Ty, AbsCommonStrideInBytes)),
         SE.getConstant(Ty, AbsCommonStrideInBytes - AccessSize));
     Value *ThresholdMinusOne = Expander.expandCodeFor(
