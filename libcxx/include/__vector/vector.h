@@ -766,6 +766,13 @@ private:
 #endif // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
   }
 
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool
+  __is_valid_insert_position(const_iterator __position) const _NOEXCEPT {
+    auto __pos = std::__to_address(__position);
+    auto __end = std::__to_address(__layout_.__end_ptr());
+    return std::__is_pointer_in_range(std::__to_address(__layout_.__begin_ptr()), __end, __pos) || __pos == __end;
+  }
+
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __move_range(pointer __from_s, pointer __from_e, pointer __to);
 
@@ -1110,6 +1117,8 @@ template <class _Tp, class _Allocator>
 template <class... _Args>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::emplace(const_iterator __position, _Args&&... __args) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__is_valid_insert_position(__position),
+                                      "vector::insert/emplace called with an iterator outside [begin(), end()]");
   pointer __p = this->__layout_.__begin_ptr() + (__position - begin());
   if (size() != capacity()) {
     pointer __end = __layout_.__end_ptr();
@@ -1131,6 +1140,8 @@ vector<_Tp, _Allocator>::emplace(const_iterator __position, _Args&&... __args) {
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::insert(const_iterator __position, size_type __n, const_reference __x) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__is_valid_insert_position(__position),
+                                      "vector::insert/emplace called with an iterator outside [begin(), end()]");
   pointer __p = this->__layout_.__begin_ptr() + (__position - begin());
   if (__n > 0) {
     if (__n <= __layout_.__remaining_capacity()) {
@@ -1162,6 +1173,8 @@ template <class _Tp, class _Allocator>
 template <class _InputIterator, class _Sentinel>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::__insert_with_sentinel(const_iterator __position, _InputIterator __first, _Sentinel __last) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__is_valid_insert_position(__position),
+                                      "vector::insert/emplace called with an iterator outside [begin(), end()]");
   difference_type __off = __position - begin();
   pointer __p           = this->__layout_.__begin_ptr() + __off;
   pointer __old_last    = __layout_.__end_ptr();
@@ -1203,6 +1216,8 @@ template <class _Tp, class _Allocator>
 template <class _AlgPolicy, class _Iterator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::__insert_with_size(const_iterator __position, _Iterator __first, difference_type __n) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__is_valid_insert_position(__position),
+                                      "vector::insert/emplace called with an iterator outside [begin(), end()]");
   pointer __p = this->__layout_.__begin_ptr() + (__position - begin());
   if (__n > 0) {
     if (__n <= static_cast<difference_type>(__layout_.__remaining_capacity())) {
