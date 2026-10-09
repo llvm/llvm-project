@@ -74,7 +74,7 @@ built without zstd support.
 :::
 
 :::{option} --compression-level=<level>
-Specify a compression level for the selected format.
+Specify a compression level. This requires {option}`--compression-format`,
 :::
 
 :::{option} --image=<<key>=<value>,...>
