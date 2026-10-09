@@ -1142,6 +1142,7 @@ private:
 
 template <class _Tp>
 inline const slice_array<_Tp>& slice_array<_Tp>::operator=(const slice_array& __sa) const {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__sa.__size_ == __size_, "slice_array::operator= size mismatch");
   value_type* __t       = __vp_;
   const value_type* __s = __sa.__vp_;
   for (size_t __n = __size_; __n; --__n, __t += __stride_, __s += __sa.__stride_)
@@ -1159,6 +1160,7 @@ inline void slice_array<_Tp>::operator=(const _Expr& __v) const {
 
 template <class _Tp>
 inline void slice_array<_Tp>::operator=(const valarray<value_type>& __va) const {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__va.size() == __size_, "slice_array::operator= size mismatch");
   value_type* __t = __vp_;
   for (size_t __i = 0; __i < __va.size(); ++__i, __t += __stride_)
     *__t = __va[__i];
@@ -1475,6 +1477,7 @@ inline void gslice_array<_Tp>::operator>>=(const _Expr& __v) const {
 
 template <class _Tp>
 inline const gslice_array<_Tp>& gslice_array<_Tp>::operator=(const gslice_array& __ga) const {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__ga.__1d_.size() == __1d_.size(), "gslice_array::operator= size mismatch");
   typedef const size_t* _Ip;
   const value_type* __s = __ga.__vp_;
   for (_Ip __i = __1d_.__begin_, __e = __1d_.__end_, __j = __ga.__1d_.__begin_; __i != __e; ++__i, ++__j)
@@ -1860,6 +1863,7 @@ inline void indirect_array<_Tp>::operator>>=(const _Expr& __v) const {
 
 template <class _Tp>
 inline const indirect_array<_Tp>& indirect_array<_Tp>::operator=(const indirect_array& __ia) const {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__ia.__1d_.size() == __1d_.size(), "indirect_array::operator= size mismatch");
   typedef const size_t* _Ip;
   const value_type* __s = __ia.__vp_;
   for (_Ip __i = __1d_.__begin_, __e = __1d_.__end_, __j = __ia.__1d_.__begin_; __i != __e; ++__i, ++__j)
