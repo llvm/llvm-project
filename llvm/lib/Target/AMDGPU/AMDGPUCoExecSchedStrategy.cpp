@@ -396,8 +396,7 @@ InstructionFlavor llvm::AMDGPU::classifyFlavor(const MachineInstr &MI,
   unsigned Opc = MI.getOpcode();
 
   // Check for specific opcodes first.
-  if (Opc == AMDGPU::ATOMIC_FENCE || Opc == AMDGPU::S_WAIT_ASYNCCNT ||
-      Opc == AMDGPU::S_WAIT_TENSORCNT || Opc == AMDGPU::S_BARRIER_WAIT ||
+  if (Opc == AMDGPU::ATOMIC_FENCE || Opc == AMDGPU::S_BARRIER_WAIT ||
       Opc == AMDGPU::S_BARRIER_SIGNAL_IMM || SII.isWaitcnt(Opc))
     return InstructionFlavor::Fence;
 
