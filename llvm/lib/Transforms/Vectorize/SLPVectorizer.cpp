@@ -23993,6 +23993,41 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     auto *I = dyn_cast<Instruction>(V);
     if (!I)
       return V;
+    // A lane may be emitted in negated form (sub C, x as add x, -C, or an
+    // add/sub lane with swapped operands) when all its uses are
+    // sign-insensitive (icmp eq/ne 0 or abs). The value stays correct for
+    // such uses, but nsw/nuw of the original instruction do not cover the
+    // negated overflow conditions.
+    if (E->State == TreeEntry::Vectorize && E->getNumOperands() == 2 &&
+        I->getType()->isIntOrIntVectorTy() &&
+        (Opcode == Instruction::Add || Opcode == Instruction::Sub)) {
+      auto IsNegatedLane = [&](Instruction *LaneI, unsigned Lane) {
+        unsigned LaneOpcode = LaneI->getOpcode();
+        if (LaneOpcode != Instruction::Add && LaneOpcode != Instruction::Sub)
+          return false;
+        Value *L = E->getOperand(0)[Lane];
+        Value *R = E->getOperand(1)[Lane];
+        if (LaneOpcode == Opcode)
+          // Only a sub lane emitted with swapped operands is negated.
+          return Opcode == Instruction::Sub && L == LaneI->getOperand(1) &&
+                 R == LaneI->getOperand(0) && L != R;
+        if (Opcode == Instruction::Add)
+          // sub C, x emitted as x + -C.
+          return isa<Constant>(LaneI->getOperand(0)) &&
+                 !isa<Constant>(LaneI->getOperand(1));
+        // add x, C emitted as -C - x.
+        return isa<Constant>(L) && !isa<Constant>(R);
+      };
+      if (any_of(enumerate(E->Scalars), [&](const auto &P) {
+            auto *LaneI = dyn_cast<Instruction>(P.value());
+            return LaneI &&
+                   (!E->hasCopyableElements() ||
+                    !E->isCopyableElement(LaneI)) &&
+                   (VL.empty() || is_contained(VL, LaneI)) &&
+                   IsNegatedLane(LaneI, P.index());
+          }))
+        I->dropPoisonGeneratingFlags();
+    }
     I = ::propagateMetadata(I, UniqueInsts.getArrayRef());
     // For copyable elements the lane is synthesized using a binop identity
     // value, so the operand at that lane is the copyable scalar's value.
@@ -28772,13 +28807,15 @@ bool BoUpSLP::collectValuesToDemote(
     // If we are truncating the result of this SHL, and if it's a shift of an
     // inrange amount, we can always perform a SHL in a smaller type.
     auto ShlChecker = [&](unsigned BitWidth, unsigned) {
-      return all_of(
-          make_isa_range<Instruction>(E.Scalars), [&](Instruction *I) {
-            if (E.isCopyableElement(I))
-              return true;
-            KnownBits AmtKnownBits = computeKnownBits(I->getOperand(1), *DL);
-            return AmtKnownBits.getMaxValue().ult(BitWidth);
-          });
+      // Check the node operands rather than the scalar instructions: lanes
+      // converted from another opcode (e.g. mul by a power of 2) are emitted
+      // with the converted shift amounts.
+      return all_of(E.getOperand(1), [&](Value *V) {
+        if (isa<PoisonValue>(V))
+          return true;
+        KnownBits AmtKnownBits = computeKnownBits(V, *DL);
+        return AmtKnownBits.getMaxValue().ult(BitWidth);
+      });
     };
     return TryProcessInstruction(
         BitWidth, {getOperandEntry(&E, 0), getOperandEntry(&E, 1)}, ShlChecker);
