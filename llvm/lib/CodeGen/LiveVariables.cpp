@@ -247,8 +247,7 @@ void LiveVariables::HandleRegMask(const MachineOperand &MO, unsigned NumRegs) {
   }
 }
 
-void LiveVariables::HandlePhysRegDef(Register Reg, MachineInstr *MI,
-                                     SmallVectorImpl<Register> &Defs) {
+void LiveVariables::HandlePhysRegDef(Register Reg, MachineInstr *MI) {
   // What parts of the register are previously defined?
   SmallSet<unsigned, 32> Live;
   if (PhysRegDef[Reg.id()] || PhysRegUse[Reg.id()]) {
@@ -278,25 +277,19 @@ void LiveVariables::HandlePhysRegDef(Register Reg, MachineInstr *MI,
       continue;
     HandlePhysRegKill(SubReg, MI);
   }
-
-  if (MI)
-    Defs.push_back(Reg);  // Remember this def.
 }
 
 void LiveVariables::UpdatePhysRegDefs(MachineInstr &MI,
-                                      SmallVectorImpl<Register> &Defs) {
-  while (!Defs.empty()) {
-    Register Reg = Defs.pop_back_val();
+                                      ArrayRef<Register> Defs) {
+  for (Register Reg : Defs) {
     for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg)) {
       PhysRegDef[SubReg] = &MI;
-      PhysRegUse[SubReg]  = nullptr;
+      PhysRegUse[SubReg] = nullptr;
     }
   }
 }
 
-void LiveVariables::runOnInstr(MachineInstr &MI,
-                               SmallVectorImpl<Register> &Defs,
-                               unsigned NumRegs) {
+void LiveVariables::runOnInstr(MachineInstr &MI, unsigned NumRegs) {
   assert(!MI.isDebugOrPseudoInstr());
 
   // Clear dead markers. LV will recompute them.
@@ -334,19 +327,11 @@ void LiveVariables::runOnInstr(MachineInstr &MI,
 
   // Process all defs.
   for (Register MOReg : DefRegs)
-    HandlePhysRegDef(MOReg, &MI, Defs);
-  UpdatePhysRegDefs(MI, Defs);
+    HandlePhysRegDef(MOReg, &MI);
+  UpdatePhysRegDefs(MI, DefRegs);
 }
 
 void LiveVariables::runOnBlock(MachineBasicBlock *MBB, unsigned NumRegs) {
-  // Mark live-in registers as live-in.
-  SmallVector<Register, 4> Defs;
-  for (const auto &LI : MBB->liveins()) {
-    assert(LI.PhysReg.isPhysical() &&
-           "Cannot have a live-in virtual register!");
-    HandlePhysRegDef(LI.PhysReg, nullptr, Defs);
-  }
-
   // Loop over all of the instructions, processing them.
   DistanceMap.clear();
   unsigned Dist = 0;
@@ -355,7 +340,7 @@ void LiveVariables::runOnBlock(MachineBasicBlock *MBB, unsigned NumRegs) {
       continue;
     DistanceMap.insert(std::make_pair(&MI, Dist++));
 
-    runOnInstr(MI, Defs, NumRegs);
+    runOnInstr(MI, NumRegs);
   }
 
   // MachineCSE may CSE instructions which write to non-allocatable physical
@@ -375,7 +360,7 @@ void LiveVariables::runOnBlock(MachineBasicBlock *MBB, unsigned NumRegs) {
   // available at the end of the basic block.
   for (unsigned i = 0; i != NumRegs; ++i)
     if ((PhysRegDef[i] || PhysRegUse[i]) && !LiveOuts.count(i))
-      HandlePhysRegDef(i, nullptr, Defs);
+      HandlePhysRegDef(i, nullptr);
 }
 
 void LiveVariables::analyze(MachineFunction &mf) {
