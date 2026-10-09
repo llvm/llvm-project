@@ -171,7 +171,7 @@ static int start_thread(void *arg) {
                   cpp::nullopt, /*is_shared=*/false);
   if (clear_tid->load(cpp::MemoryOrder::ACQUIRE) ==
       static_cast<FutexWordType>(ClearTidState::ABORT)) {
-    LIBC_NAMESPACE::syscall_impl<long>(SYS_exit, 0);
+    syscall_impl<long>(SYS_exit, 0);
     __builtin_unreachable();
   }
 
