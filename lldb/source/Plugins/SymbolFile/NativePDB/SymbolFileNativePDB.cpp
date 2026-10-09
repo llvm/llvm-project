@@ -180,6 +180,25 @@ loadMatchingPDBFile(std::string exe_path, llvm::BumpPtrAllocator &allocator) {
   return pdb;
 }
 
+static std::string GetClangQualifiedName(llvm::StringRef name) {
+  std::string result;
+  while (!name.empty()) {
+    size_t pos = name.find('`');
+    result += name.take_front(pos);
+    if (pos == llvm::StringRef::npos)
+      break;
+    name = name.drop_front(pos);
+    if (name.consume_front("`anonymous namespace'") ||
+        name.consume_front("`anonymous-namespace'")) {
+      result += "(anonymous namespace)";
+    } else {
+      result += name.front();
+      name = name.drop_front();
+    }
+  }
+  return result;
+}
+
 static bool IsFunctionPrologue(const CompilandIndexItem &cci,
                                lldb::addr_t addr) {
   // FIXME: Implement this.
@@ -1139,9 +1158,10 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
   bool location_is_constant_data = false;
   bool static_member = false;
   VariableSP var_sp = std::make_shared<Variable>(
-      toOpaqueUid(var_id), name.str().c_str(), mangled_name.str().c_str(),
-      type_sp, scope, comp_unit.get(), ranges, &decl, location, is_external,
-      artificial, location_is_constant_data, static_member);
+      toOpaqueUid(var_id), GetClangQualifiedName(name).c_str(),
+      mangled_name.str().c_str(), type_sp, scope, comp_unit.get(), ranges,
+      &decl, location, is_external, artificial, location_is_constant_data,
+      static_member);
 
   return var_sp;
 }
@@ -1161,8 +1181,6 @@ SymbolFileNativePDB::CreateConstantSymbol(PdbGlobalSymId var_id,
                    "Failed to deserialize ConstantSym record: {0}");
     return nullptr;
   }
-  std::string global_name("::");
-  global_name += constant.Name;
   PdbTypeSymId tid(constant.Type, false);
   SymbolFileTypeSP type_sp =
       std::make_shared<SymbolFileType>(*this, toOpaqueUid(tid));
@@ -1185,9 +1203,10 @@ SymbolFileNativePDB::CreateConstantSymbol(PdbGlobalSymId var_id,
   bool location_is_constant_data = true;
   bool static_member = false;
   VariableSP var_sp = std::make_shared<Variable>(
-      toOpaqueUid(var_id), constant.Name.str().c_str(), global_name.c_str(),
-      type_sp, eValueTypeVariableGlobal, module.get(), ranges, &decl, location,
-      external, artificial, location_is_constant_data, static_member);
+      toOpaqueUid(var_id), GetClangQualifiedName(constant.Name).c_str(),
+      /*mangled=*/nullptr, type_sp, eValueTypeVariableGlobal, module.get(),
+      ranges, &decl, location, external, artificial, location_is_constant_data,
+      static_member);
   return var_sp;
 }
 
