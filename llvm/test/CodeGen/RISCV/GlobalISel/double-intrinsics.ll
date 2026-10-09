@@ -1145,38 +1145,38 @@ define i1 @iszero_q_fpclass(fp128 %x) {
 define i1 @isinf_q_fpclass(fp128 %x) {
 ; RV32IFD-LABEL: isinf_q_fpclass:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    lui a6, 1048560
+; RV32IFD-NEXT:    lui a5, 1048560
 ; RV32IFD-NEXT:    lw a1, 12(a0)
 ; RV32IFD-NEXT:    lw a2, 0(a0)
-; RV32IFD-NEXT:    lw a3, 4(a0)
-; RV32IFD-NEXT:    lw a4, 8(a0)
-; RV32IFD-NEXT:    slli a5, a1, 1
+; RV32IFD-NEXT:    lw a4, 4(a0)
+; RV32IFD-NEXT:    lw a3, 8(a0)
+; RV32IFD-NEXT:    slli a6, a1, 1
 ; RV32IFD-NEXT:    sltiu a0, a2, 0
-; RV32IFD-NEXT:    seqz a2, a3
-; RV32IFD-NEXT:    sltu a7, a3, a3
+; RV32IFD-NEXT:    seqz a2, a4
+; RV32IFD-NEXT:    sltu a7, a4, a4
 ; RV32IFD-NEXT:    and a2, a2, a0
 ; RV32IFD-NEXT:    or a7, a7, a2
-; RV32IFD-NEXT:    seqz t0, a4
-; RV32IFD-NEXT:    srli a5, a5, 1
-; RV32IFD-NEXT:    sub a3, a3, a0
-; RV32IFD-NEXT:    xor a2, a1, a5
+; RV32IFD-NEXT:    seqz t0, a3
+; RV32IFD-NEXT:    srli a6, a6, 1
+; RV32IFD-NEXT:    sub a4, a4, a0
+; RV32IFD-NEXT:    xor a2, a1, a6
 ; RV32IFD-NEXT:    and t0, t0, a7
-; RV32IFD-NEXT:    sub a1, a4, a7
-; RV32IFD-NEXT:    sltu a4, a4, a4
-; RV32IFD-NEXT:    or a4, a4, t0
-; RV32IFD-NEXT:    add a6, a5, a6
-; RV32IFD-NEXT:    beqz a3, .LBB28_2
+; RV32IFD-NEXT:    sub a1, a3, a7
+; RV32IFD-NEXT:    sltu a3, a3, a3
+; RV32IFD-NEXT:    or a3, a3, t0
+; RV32IFD-NEXT:    add a5, a6, a5
+; RV32IFD-NEXT:    beqz a4, .LBB28_2
 ; RV32IFD-NEXT:  # %bb.1:
-; RV32IFD-NEXT:    sltiu a0, a3, 0
+; RV32IFD-NEXT:    sltiu a0, a4, 0
 ; RV32IFD-NEXT:  .LBB28_2:
-; RV32IFD-NEXT:    mv a5, a2
-; RV32IFD-NEXT:    sub a2, a6, a4
+; RV32IFD-NEXT:    mv a4, a2
+; RV32IFD-NEXT:    sub a2, a5, a3
 ; RV32IFD-NEXT:    lui a3, 524256
 ; RV32IFD-NEXT:    beqz a1, .LBB28_4
 ; RV32IFD-NEXT:  # %bb.3:
 ; RV32IFD-NEXT:    sltiu a0, a1, 0
 ; RV32IFD-NEXT:  .LBB28_4:
-; RV32IFD-NEXT:    snez a1, a5
+; RV32IFD-NEXT:    snez a1, a4
 ; RV32IFD-NEXT:    beq a2, a3, .LBB28_6
 ; RV32IFD-NEXT:  # %bb.5:
 ; RV32IFD-NEXT:    sltu a0, a2, a3
@@ -1209,38 +1209,38 @@ define i1 @isinf_q_fpclass(fp128 %x) {
 ;
 ; RV32I-LABEL: isinf_q_fpclass:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a6, 1048560
+; RV32I-NEXT:    lui a5, 1048560
 ; RV32I-NEXT:    lw a1, 12(a0)
 ; RV32I-NEXT:    lw a2, 0(a0)
-; RV32I-NEXT:    lw a3, 4(a0)
-; RV32I-NEXT:    lw a4, 8(a0)
-; RV32I-NEXT:    slli a5, a1, 1
+; RV32I-NEXT:    lw a4, 4(a0)
+; RV32I-NEXT:    lw a3, 8(a0)
+; RV32I-NEXT:    slli a6, a1, 1
 ; RV32I-NEXT:    sltiu a0, a2, 0
-; RV32I-NEXT:    seqz a2, a3
-; RV32I-NEXT:    sltu a7, a3, a3
+; RV32I-NEXT:    seqz a2, a4
+; RV32I-NEXT:    sltu a7, a4, a4
 ; RV32I-NEXT:    and a2, a2, a0
 ; RV32I-NEXT:    or a7, a7, a2
-; RV32I-NEXT:    seqz t0, a4
-; RV32I-NEXT:    srli a5, a5, 1
-; RV32I-NEXT:    sub a3, a3, a0
-; RV32I-NEXT:    xor a2, a1, a5
+; RV32I-NEXT:    seqz t0, a3
+; RV32I-NEXT:    srli a6, a6, 1
+; RV32I-NEXT:    sub a4, a4, a0
+; RV32I-NEXT:    xor a2, a1, a6
 ; RV32I-NEXT:    and t0, t0, a7
-; RV32I-NEXT:    sub a1, a4, a7
-; RV32I-NEXT:    sltu a4, a4, a4
-; RV32I-NEXT:    or a4, a4, t0
-; RV32I-NEXT:    add a6, a5, a6
-; RV32I-NEXT:    beqz a3, .LBB28_2
+; RV32I-NEXT:    sub a1, a3, a7
+; RV32I-NEXT:    sltu a3, a3, a3
+; RV32I-NEXT:    or a3, a3, t0
+; RV32I-NEXT:    add a5, a6, a5
+; RV32I-NEXT:    beqz a4, .LBB28_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    sltiu a0, a3, 0
+; RV32I-NEXT:    sltiu a0, a4, 0
 ; RV32I-NEXT:  .LBB28_2:
-; RV32I-NEXT:    mv a5, a2
-; RV32I-NEXT:    sub a2, a6, a4
+; RV32I-NEXT:    mv a4, a2
+; RV32I-NEXT:    sub a2, a5, a3
 ; RV32I-NEXT:    lui a3, 524256
 ; RV32I-NEXT:    beqz a1, .LBB28_4
 ; RV32I-NEXT:  # %bb.3:
 ; RV32I-NEXT:    sltiu a0, a1, 0
 ; RV32I-NEXT:  .LBB28_4:
-; RV32I-NEXT:    snez a1, a5
+; RV32I-NEXT:    snez a1, a4
 ; RV32I-NEXT:    beq a2, a3, .LBB28_6
 ; RV32I-NEXT:  # %bb.5:
 ; RV32I-NEXT:    sltu a0, a2, a3
