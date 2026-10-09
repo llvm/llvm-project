@@ -2746,9 +2746,14 @@ static bool HandleFloatToIntCast(EvalInfo &Info, const Expr *E,
   unsigned DestWidth = Info.Ctx.getIntWidth(DestType);
   // Determine whether we are converting to unsigned or signed.
   bool DestSigned = DestType->isSignedIntegerOrEnumerationType();
-
+  // This handles converstion to bool.
+  if (DestType->isBooleanType()) {
+    Result = APSInt(APInt(1, !Value.isZero()), /*isUnsigned=*/true);
+    return true;
+  }
   Result = APSInt(DestWidth, !DestSigned);
   bool ignored;
+
   if (Value.convertToInteger(Result, llvm::APFloat::rmTowardZero, &ignored)
       & APFloat::opInvalidOp)
     return HandleOverflow(Info, E, Value, DestType);
