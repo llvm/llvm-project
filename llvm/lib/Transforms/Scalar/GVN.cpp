@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/GVN.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Hashing.h"
@@ -107,49 +108,6 @@ STATISTIC(IsValueFullyAvailableInBlockNumSpeculationsMax,
 STATISTIC(MaxBBSpeculationCutoffReachedTimes,
           "Number of times we we reached gvn-max-block-speculations cut-off "
           "preventing further exploration");
-
-static cl::opt<bool> GVNEnableScalarPRE("enable-scalar-pre", cl::init(true),
-                                        cl::Hidden);
-static cl::opt<bool> GVNEnableLoadPRE("enable-load-pre", cl::init(true));
-static cl::opt<bool> GVNEnableLoadInLoopPRE("enable-load-in-loop-pre",
-                                            cl::init(true));
-static cl::opt<bool>
-GVNEnableSplitBackedgeInLoadPRE("enable-split-backedge-in-load-pre",
-                                cl::init(false));
-static cl::opt<bool> GVNEnableMemDep("enable-gvn-memdep", cl::init(true));
-static cl::opt<bool> GVNEnableMemorySSA("enable-gvn-memoryssa",
-                                        cl::init(false));
-
-static cl::opt<unsigned> ScanUsersLimit(
-    "gvn-scan-users-limit", cl::Hidden, cl::init(100),
-    cl::desc("The number of memory accesses to scan in a block in reaching "
-             "memory values analysis (default = 100)"));
-
-static cl::opt<uint32_t> MaxNumDeps(
-    "gvn-max-num-deps", cl::Hidden, cl::init(100),
-    cl::desc("Max number of dependences to attempt Load PRE (default = 100)"));
-
-static cl::opt<uint32_t> MaxNumReachingBlocks(
-    "gvn-max-num-reaching-blocks", cl::Hidden, cl::init(200),
-    cl::desc("Max number of blocks scanned per load in the MemorySSA "
-             "reaching-value analysis (default = 200)"));
-
-// This is based on IsValueFullyAvailableInBlockNumSpeculationsMax stat.
-static cl::opt<uint32_t> MaxBBSpeculations(
-    "gvn-max-block-speculations", cl::Hidden, cl::init(600),
-    cl::desc("Max number of blocks we're willing to speculate on (and recurse "
-             "into) when deducing if a value is fully available or not in GVN "
-             "(default = 600)"));
-
-static cl::opt<uint32_t> MaxNumVisitedInsts(
-    "gvn-max-num-visited-insts", cl::Hidden, cl::init(100),
-    cl::desc("Max number of visited instructions when trying to find "
-             "dominating value of select dependency (default = 100)"));
-
-static cl::opt<uint32_t> MaxNumInsnsPerBlock(
-    "gvn-max-num-insns", cl::Hidden, cl::init(100),
-    cl::desc("Max number of instructions to scan in each basic block in GVN "
-             "(default = 100)"));
 
 struct llvm::GVNValueTable::Expression {
   uint32_t Opcode;
@@ -280,13 +238,15 @@ public:
 /// FIXME: We should have a good summary of the GVN algorithm implemented by
 /// this particular pass here.
 class GVNPassImpl {
+  const ScalarOptions &Opts;
   llvm::GVNOptions Options;
 
 public:
   struct AvailableValue;
   struct AvailableValueInBlock;
 
-  GVNPassImpl(llvm::GVNOptions Options = {}) : Options(Options) {}
+  GVNPassImpl(llvm::GVNOptions Options = {})
+      : Opts(ScalarOptions::Global), Options(Options) {}
 
   /// This removes the specified instruction from
   /// our various maps and marks it for deletion.
@@ -1165,20 +1125,20 @@ void GVNLeaderMap::erase(uint32_t N, Instruction *I, const BasicBlock *BB) {
 //===----------------------------------------------------------------------===//
 
 bool GVNPassImpl::isScalarPREEnabled() const {
-  return Options.AllowScalarPRE.value_or(GVNEnableScalarPRE);
+  return Options.AllowScalarPRE.value_or(Opts.enable_scalar_pre);
 }
 
 bool GVNPassImpl::isLoadPREEnabled() const {
-  return Options.AllowLoadPRE.value_or(GVNEnableLoadPRE);
+  return Options.AllowLoadPRE.value_or(Opts.enable_load_pre);
 }
 
 bool GVNPassImpl::isLoadInLoopPREEnabled() const {
-  return Options.AllowLoadInLoopPRE.value_or(GVNEnableLoadInLoopPRE);
+  return Options.AllowLoadInLoopPRE.value_or(Opts.enable_load_in_loop_pre);
 }
 
 bool GVNPassImpl::isLoadPRESplitBackedgeEnabled() const {
   return Options.AllowLoadPRESplitBackedge.value_or(
-      GVNEnableSplitBackedgeInLoadPRE);
+      Opts.enable_split_backedge_in_load_pre);
 }
 
 bool GVNPassImpl::isMemDepEnabled() const {
@@ -1187,11 +1147,11 @@ bool GVNPassImpl::isMemDepEnabled() const {
   // overrides default independently, so honor MemorySSA winning here too.
   if (isMemorySSAEnabled())
     return Options.AllowMemDep.value_or(false);
-  return Options.AllowMemDep.value_or(GVNEnableMemDep);
+  return Options.AllowMemDep.value_or(valueOr(Opts.enable_gvn_memdep, true));
 }
 
 bool GVNPassImpl::isMemorySSAEnabled() const {
-  return Options.AllowMemorySSA.value_or(GVNEnableMemorySSA);
+  return Options.AllowMemorySSA.value_or(Opts.enable_gvn_memoryssa);
 }
 
 PreservedAnalyses GVNPass::run(Function &F, FunctionAnalysisManager &AM) {
@@ -1276,7 +1236,7 @@ enum class AvailabilityState : char {
 ///   2) we do not know whether the block is fully available or not, but we are
 ///      currently speculating that it will be.
 static bool isValueFullyAvailableInBlock(
-    BasicBlock *BB,
+    const ScalarOptions &Opts, BasicBlock *BB,
     DenseMap<BasicBlock *, AvailabilityState> &FullyAvailableBlocks) {
   SmallVector<BasicBlock *, 32> Worklist;
   std::optional<BasicBlock *> UnavailableBB;
@@ -1315,7 +1275,8 @@ static bool isValueFullyAvailableInBlock(
 
     // No entry found for block.
     ++NumNewNewSpeculativelyAvailableBBs;
-    bool OutOfBudget = NumNewNewSpeculativelyAvailableBBs > MaxBBSpeculations;
+    bool OutOfBudget =
+        NumNewNewSpeculativelyAvailableBBs > Opts.gvn_max_block_speculations;
 
     // If we have exhausted our budget, mark this block as unavailable.
     // Also, if this block has no predecessors, the value isn't live-in here.
@@ -1617,7 +1578,8 @@ static void reportMayClobberedLoad(LoadInst *Load, Instruction *DepInst,
 // Find a dominating value for Loc memory location in the extended basic block
 // (chain of basic blocks with single predecessors) starting From instruction.
 // Returns the value from a matching load or a simple store to the same pointer.
-static Value *findDominatingValue(const MemoryLocation &Loc, Type *LoadTy,
+static Value *findDominatingValue(const ScalarOptions &Opts,
+                                  const MemoryLocation &Loc, Type *LoadTy,
                                   Instruction *From, AAResults *AA) {
   uint32_t NumVisitedInsts = 0;
   BasicBlock *FromBB = From->getParent();
@@ -1626,7 +1588,7 @@ static Value *findDominatingValue(const MemoryLocation &Loc, Type *LoadTy,
     for (auto *Inst = BB == FromBB ? From : BB->getTerminator();
          Inst != nullptr; Inst = Inst->getPrevNode()) {
       // Stop the search if limit is reached.
-      if (++NumVisitedInsts > MaxNumVisitedInsts)
+      if (++NumVisitedInsts > Opts.gvn_max_num_visited_insts)
         return nullptr;
       if (isModSet(BatchAA.getModRefInfo(Inst, Loc))) {
         // A simple store to the exact location can forward its value.
@@ -1655,12 +1617,12 @@ GVNPassImpl::analyzeSelectAvailability(LoadInst *Load, SelectInst *Sel,
   // loaded values only if both sides have a dominating, non-clobbered value of
   // the right type in the extended basic block ending at From.
   auto Loc = MemoryLocation::get(Load);
-  Value *V1 = findDominatingValue(Loc.getWithNewPtr(TrueAddr), Load->getType(),
-                                  From, getAliasAnalysis());
+  Value *V1 = findDominatingValue(Opts, Loc.getWithNewPtr(TrueAddr),
+                                  Load->getType(), From, getAliasAnalysis());
   if (!V1)
     return std::nullopt;
-  Value *V2 = findDominatingValue(Loc.getWithNewPtr(FalseAddr), Load->getType(),
-                                  From, getAliasAnalysis());
+  Value *V2 = findDominatingValue(Opts, Loc.getWithNewPtr(FalseAddr),
+                                  Load->getType(), From, getAliasAnalysis());
   if (!V2)
     return std::nullopt;
   return AvailableValue::getSelect(Sel, V1, V2);
@@ -1897,7 +1859,7 @@ LoadInst *GVNPassImpl::findLoadToHoistIntoPred(BasicBlock *Pred,
   if (!SuccBB->getSinglePredecessor())
     return nullptr;
 
-  unsigned int NumInsts = MaxNumInsnsPerBlock;
+  unsigned int NumInsts = Opts.gvn_max_num_insns;
   for (Instruction &Inst : *SuccBB) {
     if (Inst.isDebugOrPseudoInst())
       continue;
@@ -2108,7 +2070,7 @@ bool GVNPassImpl::performLoadPRE(LoadInst *Load,
       return false;
     }
 
-    if (isValueFullyAvailableInBlock(Pred, FullyAvailableBlocks)) {
+    if (isValueFullyAvailableInBlock(Opts, Pred, FullyAvailableBlocks)) {
       continue;
     }
 
@@ -2389,7 +2351,7 @@ bool GVNPassImpl::processNonLocalLoad(LoadInst *Load) {
   // dependencies, this load isn't worth worrying about.  Optimizing
   // it will be too expensive.
   unsigned NumDeps = Deps.size();
-  if (NumDeps > MaxNumDeps)
+  if (NumDeps > Opts.gvn_max_num_deps)
     return false;
 
   SmallVector<ReachingMemVal, 64> MemVals;
@@ -2681,7 +2643,7 @@ std::optional<GVNPassImpl::ReachingMemVal> GVNPassImpl::scanMemoryAccessesUsers(
   for (MemoryAccess *MA : ClobbersList) {
     unsigned Scanned = 0;
     for (User *U : MA->users()) {
-      if (++Scanned >= ScanUsersLimit)
+      if (++Scanned >= Opts.gvn_scan_users_limit)
         return ReachingMemVal::getUnknown(BB, Loc.Ptr);
 
       auto *UseOrDef = dyn_cast<MemoryUseOrDef>(U);
@@ -2773,7 +2735,7 @@ std::optional<GVNPassImpl::ReachingMemVal> GVNPassImpl::accessMayModifyLocation(
     // the latter unchanged.
     if (auto *SI = dyn_cast<StoreInst>(ClobberI))
       if (isStorePreservingMemoryLocation(SI, Loc, LoadAlign, AA,
-                                          MaxNumInsnsPerBlock))
+                                          Opts.gvn_max_num_insns))
         return std::nullopt;
 
     if (AR == AliasResult::MayAlias ||
@@ -3009,7 +2971,7 @@ bool GVNPassImpl::findReachingValuesForLoad(
   auto Worklist = InitialWorklist;
   while (!Worklist.empty()) {
     // Match MemDep's cutoff for expensive non-local queries.
-    if (Blocks.size() > MaxNumReachingBlocks)
+    if (Blocks.size() > Opts.gvn_max_num_reaching_blocks)
       return false;
     auto *BB = Worklist.pop_back_val();
     DependencyBlockInfo &Info = Blocks.find(BB)->second;
@@ -3838,8 +3800,8 @@ bool GVNPassImpl::run(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
   // lets MemorySSA win for the common single-flag case, but an explicit
   // request for both via -enable-gvn-{memdep,memoryssa} is a contradiction we
   // reject rather than resolve arbitrarily.
-  if (GVNEnableMemDep.getNumOccurrences() && GVNEnableMemDep &&
-      GVNEnableMemorySSA.getNumOccurrences() && GVNEnableMemorySSA)
+  if (Opts.enable_gvn_memdep == BoolOrDefault::True &&
+      Opts.enable_gvn_memoryssa)
     report_fatal_error("GVN: -enable-gvn-memdep and -enable-gvn-memoryssa are "
                        "mutually exclusive",
                        /*gen_crash_diag=*/false);
@@ -4383,9 +4345,11 @@ class GVNLegacyPass : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid.
 
-  explicit GVNLegacyPass(bool MemDepAnalysis = GVNEnableMemDep,
-                         bool MemSSAAnalysis = GVNEnableMemorySSA,
-                         bool ScalarPRE = true)
+  explicit GVNLegacyPass(
+      bool MemDepAnalysis = valueOr(ScalarOptions::Global.enable_gvn_memdep,
+                                    true),
+      bool MemSSAAnalysis = ScalarOptions::Global.enable_gvn_memoryssa,
+      bool ScalarPRE = true)
       : FunctionPass(ID), Impl(GVNOptions()
                                    .setMemDep(MemDepAnalysis)
                                    .setMemorySSA(MemSSAAnalysis)
@@ -4452,5 +4416,7 @@ INITIALIZE_PASS_END(GVNLegacyPass, "gvn", "Global Value Numbering", false, false
 // The public interface to this file...
 FunctionPass *llvm::createGVNPass() { return new GVNLegacyPass(); }
 FunctionPass *llvm::createGVNPass(bool ScalarPRE) {
-  return new GVNLegacyPass(GVNEnableMemDep, GVNEnableMemorySSA, ScalarPRE);
+  const ScalarOptions &Opts = ScalarOptions::Global;
+  return new GVNLegacyPass(valueOr(Opts.enable_gvn_memdep, true),
+                           Opts.enable_gvn_memoryssa, ScalarPRE);
 }

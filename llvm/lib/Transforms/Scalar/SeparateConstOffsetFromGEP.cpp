@@ -129,6 +129,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/SeparateConstOffsetFromGEP.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -159,7 +160,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -173,19 +173,6 @@
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
-
-static cl::opt<bool> DisableSeparateConstOffsetFromGEP(
-    "disable-separate-const-offset-from-gep", cl::init(false),
-    cl::desc("Do not separate the constant offset from a GEP instruction"),
-    cl::Hidden);
-
-// Setting this flag may emit false positives when the input module already
-// contains dead instructions. Therefore, we set it only in unit tests that are
-// free of dead code.
-static cl::opt<bool>
-    VerifyNoDeadCode("reassociate-geps-verify-no-dead-code", cl::init(false),
-                     cl::desc("Verify this pass produces no dead code"),
-                     cl::Hidden);
 
 namespace {
 
@@ -1387,7 +1374,8 @@ bool SeparateConstOffsetFromGEPLegacyPass::runOnFunction(Function &F) {
 }
 
 bool SeparateConstOffsetFromGEP::run(Function &F) {
-  if (DisableSeparateConstOffsetFromGEP)
+  const ScalarOptions &Opts = ScalarOptions::Global;
+  if (Opts.disable_separate_const_offset_from_gep)
     return false;
 
   DL = &F.getDataLayout();
@@ -1407,7 +1395,7 @@ bool SeparateConstOffsetFromGEP::run(Function &F) {
 
   Changed |= reuniteExts(F);
 
-  if (VerifyNoDeadCode)
+  if (Opts.reassociate_geps_verify_no_dead_code)
     verifyNoDeadCode(F);
 
   return Changed;
