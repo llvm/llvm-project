@@ -49,7 +49,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
  * This is needed since the constructor is private.
  */
 template <class _OutIt, class _CharT>
-_LIBCPP_HIDE_FROM_ABI basic_format_context<_OutIt, _CharT>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 basic_format_context<_OutIt, _CharT>
 __format_context_create(_OutIt __out_it,
                         basic_format_args<basic_format_context<_OutIt, _CharT>> __args,
                         optional<std::locale>&& __loc = nullopt) {
@@ -57,7 +57,7 @@ __format_context_create(_OutIt __out_it,
 }
 #  else
 template <class _OutIt, class _CharT>
-_LIBCPP_HIDE_FROM_ABI basic_format_context<_OutIt, _CharT>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 basic_format_context<_OutIt, _CharT>
 __format_context_create(_OutIt __out_it, basic_format_args<basic_format_context<_OutIt, _CharT>> __args) {
   return std::basic_format_context(std::move(__out_it), __args);
 }
@@ -79,7 +79,8 @@ public:
 
   static_assert(output_iterator<_OutIt, const _CharT&>, "[format.context]/p3 requires OutIt to be an output_iterator");
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI basic_format_arg<basic_format_context> arg(size_t __id) const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 basic_format_arg<basic_format_context>
+  arg(size_t __id) const noexcept {
     return __args_.get(__id);
   }
 #  if _LIBCPP_HAS_LOCALIZATION
@@ -89,7 +90,8 @@ public:
     return *__loc_;
   }
 #  endif
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI iterator out() { return std::move(__out_it_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator
+  out() { return std::move(__out_it_); }
   _LIBCPP_HIDE_FROM_ABI void advance_to(iterator __it) { __out_it_ = std::move(__it); }
 
 private:
