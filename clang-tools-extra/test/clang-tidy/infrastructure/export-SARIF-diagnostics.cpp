@@ -84,6 +84,11 @@ struct Foo {
 //CHECK-SARIF-NEXT:             },
 //CHECK-SARIF-NEXT:             {
 //CHECK-SARIF-NEXT:               "message": {
+//CHECK-SARIF-NEXT:                 "text": "expanded from here"
+//CHECK-SARIF-NEXT:               }
+//CHECK-SARIF-NEXT:             },
+//CHECK-SARIF-NEXT:             {
+//CHECK-SARIF-NEXT:               "message": {
 //CHECK-SARIF-NEXT:                 "text": "declare 'static' if the function is not intended to be used outside of this translation unit"
 //CHECK-SARIF-NEXT:               },
 //CHECK-SARIF-NEXT:               "physicalLocation": {

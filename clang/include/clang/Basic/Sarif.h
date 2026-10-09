@@ -336,6 +336,7 @@ class SarifResult {
       RelatedLocations;
   llvm::SmallVector<ThreadFlow, 8> ThreadFlows;
   std::optional<SarifResultLevel> LevelOverride;
+  llvm::StringMap<std::string> Properties;
 
   SarifResult() = delete;
   explicit SarifResult(uint32_t RuleIdx) : RuleIdx(RuleIdx) {}
@@ -398,6 +399,11 @@ public:
     return *this;
   }
 
+  SarifResult addProperty(llvm::StringRef Key, llvm::StringRef Value) {
+    Properties[Key.str()] = Value.str();
+    return *this;
+  }
+
   SarifResult addPartialFingerprint(llvm::StringRef key,
                                     llvm::StringRef value) {
     PartialFingerprints[key] = value;
@@ -456,8 +462,10 @@ private:
   createThreadFlows(const llvm::ArrayRef<ThreadFlow> ThreadFlows);
 
   /// Add the given \ref CharSourceRange to the SARIF document as a physical
-  /// location, with its corresponding artifact.
-  llvm::json::Object createPhysicalLocation(const CharSourceRange &R);
+  /// location, with its corresponding artifact. Returns std::nullopt if \p R
+  /// is invalid or does not map to a file.
+  std::optional<llvm::json::Object>
+  createPhysicalLocation(const CharSourceRange &R);
 
 public:
   SarifDocumentWriter() = delete;

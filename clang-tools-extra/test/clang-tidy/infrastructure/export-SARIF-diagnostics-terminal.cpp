@@ -71,6 +71,11 @@ struct Foo {
 //CHECK-NEXT:             },
 //CHECK-NEXT:             {
 //CHECK-NEXT:               "message": {
+//CHECK-NEXT:                 "text": "expanded from here"
+//CHECK-NEXT:               }
+//CHECK-NEXT:             },
+//CHECK-NEXT:             {
+//CHECK-NEXT:               "message": {
 //CHECK-NEXT:                 "text": "declare 'static' if the function is not intended to be used outside of this translation unit"
 //CHECK-NEXT:               },
 //CHECK-NEXT:               "physicalLocation": {

@@ -660,17 +660,6 @@ int clangTidyMain(int argc, const char **argv) {
 
   const SmallString<256> FilePath = makeAbsolute(FileName);
 
-  std::unique_ptr<llvm::raw_fd_ostream> SarifOS;
-  if (!SarifExport.empty()) {
-    std::error_code EC;
-    SarifOS = std::make_unique<llvm::raw_fd_ostream>(SarifExport, EC,
-                                                     llvm::sys::fs::OF_Text);
-    if (EC) {
-      llvm::errs() << "Error opening output file: " << EC.message() << '\n';
-      return 1;
-    }
-  }
-
   ClangTidyOptions EffectiveOptions = OptionsProvider->getOptions(FilePath);
 
   const std::vector<std::string> EnabledChecks =
@@ -773,8 +762,7 @@ int clangTidyMain(int argc, const char **argv) {
   unsigned WErrorCount = 0;
 
   handleErrors(Errors, Context, DisableFixes ? FB_NoFix : Behaviour,
-               WErrorCount, BaseFS, SarifOS.get(),
-               SarifOS && SarifExport == "-");
+               WErrorCount, BaseFS, SarifExport);
 
   if (!ExportFixes.empty() && !Errors.empty()) {
     std::error_code EC;

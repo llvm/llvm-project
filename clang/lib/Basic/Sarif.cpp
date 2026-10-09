@@ -162,11 +162,16 @@ static json::Object createTextRegion(const SourceManager &SM,
   return Region;
 }
 
-static json::Object createLocation(json::Object &&PhysicalLocation,
-                                   StringRef Message = "") {
-  json::Object Ret{{"physicalLocation", std::move(PhysicalLocation)}};
+/// \internal
+/// SARIF allows a location with only a message and no physicalLocation.
+static json::Object
+createLocation(std::optional<json::Object> &&PhysicalLocation,
+               StringRef Message = "") {
+  json::Object Ret;
+  if (PhysicalLocation)
+    Ret["physicalLocation"] = std::move(*PhysicalLocation);
   if (!Message.empty())
-    Ret.insert({"message", createMessage(Message)});
+    Ret["message"] = createMessage(Message);
   return Ret;
 }
 
@@ -205,15 +210,16 @@ createThreadFlowLocation(json::Object &&Location,
 }
 ///  @}
 
-json::Object
+std::optional<json::Object>
 SarifDocumentWriter::createPhysicalLocation(const CharSourceRange &R) {
-  assert(R.isValid() &&
-         "Cannot create a physicalLocation from invalid SourceRange!");
+  if (R.isInvalid())
+    return std::nullopt;
   assert(R.isCharRange() &&
          "Cannot create a physicalLocation from a token range!");
   FullSourceLoc Start{R.getBegin(), SourceMgr};
   OptionalFileEntryRef FE = Start.getExpansionLoc().getFileEntryRef();
-  assert(FE && "Diagnostic does not exist within a valid file!");
+  if (!FE)
+    return std::nullopt;
 
   const std::string &FileURI = fileNameToURI(getFileName(*FE));
   auto I = CurrentArtifacts.find(FileURI);
@@ -328,8 +334,8 @@ SarifDocumentWriter::createThreadFlows(ArrayRef<ThreadFlow> ThreadFlows) {
   json::Object Ret{{"locations", json::Array{}}};
   json::Array Locs;
   for (const auto &ThreadFlow : ThreadFlows) {
-    json::Object PLoc = createPhysicalLocation(ThreadFlow.Range);
-    json::Object Loc = createLocation(std::move(PLoc), ThreadFlow.Message);
+    json::Object Loc = createLocation(createPhysicalLocation(ThreadFlow.Range),
+                                      ThreadFlow.Message);
     Locs.emplace_back(
         createThreadFlowLocation(std::move(Loc), ThreadFlow.Importance));
   }
@@ -402,21 +408,28 @@ void SarifDocumentWriter::appendResult(const SarifResult &Result) {
     Ret["hostedViewerUri"] = Result.HostedViewerURI;
   }
 
-  if (!Result.Locations.empty()) {
-    json::Array Locs;
-    for (auto &Range : Result.Locations) {
-      Locs.emplace_back(createLocation(createPhysicalLocation(Range)));
-    }
-    Ret["locations"] = std::move(Locs);
+  if (!Result.Properties.empty()) {
+    json::Object Properties;
+    for (const auto &[Key, Value] : Result.Properties)
+      Properties[Key] = Value;
+    Ret["properties"] = std::move(Properties);
   }
 
-  if (!Result.RelatedLocations.empty()) {
-    json::Array ReLocs;
-    for (const auto &[Range, Message] : Result.RelatedLocations)
-      ReLocs.emplace_back(
-          createLocation(createPhysicalLocation(Range), Message));
-    Ret["relatedLocations"] = std::move(ReLocs);
+  json::Array Locs;
+  for (const auto &Range : Result.Locations)
+    if (std::optional<json::Object> PL = createPhysicalLocation(Range))
+      Locs.emplace_back(createLocation(std::move(PL)));
+  if (!Locs.empty())
+    Ret["locations"] = std::move(Locs);
+
+  json::Array ReLocs;
+  for (const auto &[Range, Message] : Result.RelatedLocations) {
+    json::Object Loc = createLocation(createPhysicalLocation(Range), Message);
+    if (!Loc.empty())
+      ReLocs.emplace_back(std::move(Loc));
   }
+  if (!ReLocs.empty())
+    Ret["relatedLocations"] = std::move(ReLocs);
 
   if (!Result.PartialFingerprints.empty()) {
     json::Object fingerprints = {};

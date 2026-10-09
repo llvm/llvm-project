@@ -38,8 +38,10 @@
 #include "clang/Tooling/DiagnosticsYaml.h" // IWYU pragma: keep
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <utility>
 
@@ -105,17 +107,16 @@ class ErrorReporter {
 public:
   ErrorReporter(ClangTidyContext &Context, FixBehaviour ApplyFixes,
                 llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-                llvm::raw_ostream *SarifOS = nullptr,
-                bool ExportSarifToStdout = false)
+                StringRef SarifExportPath)
       : Files(FileSystemOptions(), std::move(BaseFS)),
         DiagPrinter(
-            ExportSarifToStdout
+            SarifExportPath == "-"
                 ? static_cast<DiagnosticConsumer *>(new IgnoringDiagConsumer())
                 : new TextDiagnosticPrinter(llvm::outs(), DiagOpts)),
         Diags(DiagnosticIDs::create(), DiagOpts, DiagPrinter),
         SourceMgr(Diags, Files), Context(Context), ApplyFixes(ApplyFixes),
-        SarifOS(SarifOS) {
-    if (SarifOS) {
+        SarifExportPath(SarifExportPath) {
+    if (!SarifExportPath.empty()) {
       SarifWriter.emplace(SourceMgr);
       SarifWriter->createRun("clang-tidy", "clang-tidy", CLANG_VERSION_STRING,
                              "https://clang.llvm.org/extra/clang-tidy/");
@@ -267,15 +268,15 @@ public:
             .setDiagnosticLevel(getSarifResultLevel(EffectiveLevel))
             .addLocations(getResultRanges(Error, Loc));
 
-    if (StringRef(Error.DiagnosticName).starts_with("clang-analyzer-")) {
+    if (!Error.EnabledDiagnosticAliases.empty())
+      Result = Result.addProperty(
+          "enabledAliases", llvm::join(Error.EnabledDiagnosticAliases, ","));
+
+    if (StringRef(Error.DiagnosticName).starts_with("clang-analyzer-"))
       Result = Result.setThreadFlows(createThreadFlows(Error));
-    } else {
-      for (const tooling::DiagnosticMessage &Note : Error.Notes) {
-        const CharSourceRange Range = getNoteRange(Note);
-        if (Range.isValid())
-          Result = Result.addRelatedLocations(Range, Note.Message);
-      }
-    }
+    else
+      for (const tooling::DiagnosticMessage &Note : Error.Notes)
+        Result = Result.addRelatedLocations(getNoteRange(Note), Note.Message);
     if (SarifWriter)
       SarifWriter->appendResult(Result);
   }
@@ -382,9 +383,16 @@ private:
   }
 
   void finalizeSarif() {
-    if (SarifWriter && SarifOS) {
-      llvm::json::Value Document = SarifWriter->createDocument();
-      *SarifOS << llvm::formatv("{0:2}", Document);
+    if (SarifWriter && !SarifExportPath.empty()) {
+      std::error_code EC;
+      llvm::raw_fd_ostream SarifOS(SarifExportPath, EC, llvm::sys::fs::OF_Text);
+      if (EC) {
+        llvm::errs() << "Error opening SARIF export file: " << EC.message()
+                     << "\n";
+      } else {
+        llvm::json::Value Document = SarifWriter->createDocument();
+        SarifOS << llvm::formatv("{0:2}", Document);
+      }
     }
   }
 
@@ -445,7 +453,7 @@ private:
   unsigned TotalFixes = 0U;
   unsigned AppliedFixes = 0U;
   unsigned WarningsAsErrors = 0U;
-  llvm::raw_ostream *SarifOS = nullptr;
+  std::string SarifExportPath;
   // ExportSarifResult is called for each SARIF rule that gets created, while a
   // SarifWriter run is created once at ErrorReporter construction.
   std::optional<SarifDocumentWriter> SarifWriter;
@@ -794,9 +802,8 @@ void handleErrors(llvm::ArrayRef<ClangTidyError> Errors,
                   ClangTidyContext &Context, FixBehaviour Fix,
                   unsigned &WarningsAsErrorsCount,
                   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-                  llvm::raw_ostream *SarifOS, bool ExportSarifToStdout) {
-  ErrorReporter Reporter(Context, Fix, std::move(BaseFS), SarifOS,
-                         ExportSarifToStdout);
+                  StringRef SarifExportPath) {
+  ErrorReporter Reporter(Context, Fix, std::move(BaseFS), SarifExportPath);
   llvm::vfs::FileSystem &FileSystem =
       Reporter.getSourceManager().getFileManager().getVirtualFileSystem();
   auto InitialWorkingDir = FileSystem.getCurrentWorkingDirectory();
