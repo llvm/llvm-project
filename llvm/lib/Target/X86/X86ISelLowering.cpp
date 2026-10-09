@@ -3648,6 +3648,10 @@ X86TargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
   return ExtractSubvectorCost::Expensive;
 }
 
+bool X86TargetLowering::shouldUnrollVectorCMP(EVT OpVT) const {
+  return OpVT.getScalarType() == MVT::i64 && !Subtarget.hasSSE42();
+}
+
 bool X86TargetLowering::shouldScalarizeBinop(SDValue VecOp) const {
   unsigned Opc = VecOp.getOpcode();
 

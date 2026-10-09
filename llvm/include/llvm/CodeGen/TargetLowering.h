@@ -3692,6 +3692,12 @@ public:
     return isOperationLegalOrCustom(Op, VT);
   }
 
+  /// Should a vector SCMP/UCMP with operands of type OpVT be unrolled
+  /// rather than computed in the operand type, when its result type needs to
+  /// be widened to a different element count. Return true if vector
+  /// comparisons of OpVT are expensive enough that scalar code is faster.
+  virtual bool shouldUnrollVectorCMP(EVT OpVT) const { return false; }
+
   /// Should we prefer selects to doing arithmetic on boolean types
   virtual bool preferSelectsOverBooleanArithmetic(EVT VT) const {
     return false;
