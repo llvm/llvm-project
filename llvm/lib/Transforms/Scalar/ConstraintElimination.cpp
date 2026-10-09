@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/ConstraintElimination.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -38,7 +39,6 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/MathExtras.h"
@@ -57,14 +57,6 @@ using namespace SCEVPatternMatch;
 STATISTIC(NumCondsRemoved, "Number of instructions removed");
 DEBUG_COUNTER(EliminatedCounter, "conds-eliminated",
               "Controls which conditions are eliminated");
-
-static cl::opt<unsigned>
-    MaxRows("constraint-elimination-max-rows", cl::init(500), cl::Hidden,
-            cl::desc("Maximum number of rows to keep in constraint system"));
-
-static cl::opt<bool> DumpReproducers(
-    "constraint-elimination-dump-reproducers", cl::init(false), cl::Hidden,
-    cl::desc("Dump IR to reproduce successful transformations."));
 
 static int64_t MaxConstraintValue = std::numeric_limits<int64_t>::max();
 static int64_t MinSignedConstraintValue = std::numeric_limits<int64_t>::min();
@@ -1242,15 +1234,6 @@ void State::addInfoForInductions(BasicBlock &BB) {
       !SE->isSCEVable(PN->getType()))
     return;
 
-  // For latch conditions, we need to inject the condition that holds for the
-  // next iteration into the header. We limit to post-inc conditions, for which
-  // an original PN + Step != B condition results in a PN < B constraint in the
-  // header, which also holds for the next loop iteration. This would no longer
-  // be correct if the post-inc handling would inject a more precise PN + Step <
-  // B constraint instead.
-  if (&BB == Latch && !IncStep)
-    return;
-
   bool ContinueOnTrue =
       Pred == CmpInst::ICMP_NE || ICmpInst::isLT(Pred) || ICmpInst::isLE(Pred);
   CmpInst::Predicate ContinuePred =
@@ -1271,16 +1254,42 @@ void State::addInfoForInductions(BasicBlock &BB) {
 
   auto [StartValue, Backedge] = getStartAndBackedgeValue(*PN, LoopPred);
   DomTreeNode *DTN = DT.getNode(InLoopSucc);
+  DomTreeNode *HeaderDTN = DT.getNode(Header);
+
+  // BB is the header or the latch, so every iteration taking the backedge
+  // checked PN ContinuePred B, which guarantees PN != B for NE and LT
+  // predicates. For an increment by one, PN != B together with StartValue <= B
+  // (added precondition) imply PN <= B.
+  const APInt *Step;
+  bool HasHeaderBound =
+      !IncStep && match(Backedge, m_IncrementOf(m_Specific(PN), Step)) &&
+      Step->isOne() &&
+      (ContinuePred == CmpInst::ICMP_NE || ICmpInst::isLT(ContinuePred));
+  if (HasHeaderBound) {
+    for (CmpInst::Predicate BoundPred : {CmpInst::ICMP_ULE, CmpInst::ICMP_SLE})
+      WorkList.push_back(FactOrCheck::getConditionFact(
+          HeaderDTN, BoundPred, PN, B, ConditionTy(BoundPred, StartValue, B)));
+  }
+
+  // For latch conditions, we need to inject the condition that holds for the
+  // next iteration into the header. We limit to post-inc conditions, for which
+  // an original PN + Step != B condition results in a PN < B constraint in the
+  // header, which also holds for the next loop iteration. This would no longer
+  // be correct if the post-inc handling would inject a more precise PN + Step <
+  // B constraint instead.
+  if (&BB == Latch && !IncStep)
+    return;
 
   if (ICmpInst::isRelational(ContinuePred)) {
     if (A != Backedge)
       return;
 
-    // The latch condition ensures ContinuePred holds in the header on each
-    // iteration other than the first. Together with a precondition on the start
-    // value (StartValue ContinuePred B), we can add B as bound of PN.
+    // The condition ensures ContinuePred holds in the header on each iteration
+    // other than the first. Together with a precondition on the start value
+    // (StartValue ContinuePred B), we can add B as bound of PN.
     WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, ContinuePred, PN, B, ConditionTy(ContinuePred, StartValue, B)));
+        HeaderDTN, ContinuePred, PN, B,
+        ConditionTy(ContinuePred, StartValue, B)));
 
     // A signed bound can be translated to the unsigned system if PN is signed
     // non-decreasing (StartValue s<= PN s< B) and StartValue u< B holds.
@@ -1293,7 +1302,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
       if (Info.Signed && !Info.Decreasing) {
         CmpInst::Predicate UPred = ICmpInst::getUnsignedPredicate(ContinuePred);
         WorkList.push_back(FactOrCheck::getConditionFact(
-            DTN, UPred, PN, B, ConditionTy(UPred, StartValue, B)));
+            HeaderDTN, UPred, PN, B, ConditionTy(UPred, StartValue, B)));
       }
     }
 
@@ -1388,17 +1397,24 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (!Info.Signed)
     WorkList.push_back(FactOrCheck::getConditionFact(
         DTN, CmpInst::ICMP_SGE, PN, StartValue, StartBeforeBoundSigned));
-  // Add PN < B, as the loop exits once the compared value reaches B.
-  WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_SLT, PN,
-                                                   B, StartBeforeBoundSigned));
-  WorkList.push_back(FactOrCheck::getConditionFact(
-      DTN, CmpInst::ICMP_ULT, PN, B, StartBeforeBoundUnsigned));
+  // Add PN < B, as the loop exits once the compared value reaches B. With a
+  // header bound, the PN != B condition fact in InLoopSucc already tightens it
+  // to PN < B.
+  if (!HasHeaderBound || !canAddSuccessor(BB, InLoopSucc)) {
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, CmpInst::ICMP_SLT, PN, B, StartBeforeBoundSigned));
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, CmpInst::ICMP_ULT, PN, B, StartBeforeBoundUnsigned));
+  }
 
   // Try to add condition from the header or latch to the dedicated exit
   // blocks. When exiting either with EQ or NE, we know that the induction value
   // must be u<= B, as other exits may only exit earlier.
   assert(!StepOffset->isNegative() && "induction must be increasing");
   assert(ContinuePred == CmpInst::ICMP_NE && "unsupported predicate");
+  // The header bound already implies PN u<= B in the exits.
+  if (HasHeaderBound)
+    return;
   SmallVector<BasicBlock *> ExitBBs;
   L->getExitBlocks(ExitBBs);
   for (BasicBlock *EB : ExitBBs) {
@@ -2374,13 +2390,16 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
                                  ScalarEvolution *SE,
                                  OptimizationRemarkEmitter &ORE,
                                  TargetLibraryInfo &TLI) {
+  const ScalarOptions &Opts = ScalarOptions::Global;
   bool Changed = false;
   DT.updateDFSNumbers();
   SmallVector<Value *> FunctionArgs(llvm::make_pointer_range(F.args()));
   ConstraintInfo Info(F.getDataLayout(), FunctionArgs);
   State S(DT, LI, SE, TLI);
   std::unique_ptr<Module> ReproducerModule(
-      DumpReproducers ? new Module(F.getName(), F.getContext()) : nullptr);
+      Opts.constraint_elimination_dump_reproducers
+          ? new Module(F.getName(), F.getContext())
+          : nullptr);
 
   // First, collect conditions implied by branches and blocks with their
   // Dominator DFS in and out numbers.
@@ -2490,7 +2509,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
     auto AddFact = [&](CmpPredicate Pred, Value *A, Value *B) {
       LLVM_DEBUG(dbgs() << "Processing fact to add to the system: ";
                  dumpUnpackedICmp(dbgs(), Pred, A, B); dbgs() << "\n");
-      if (Info.getCS(CmpInst::isSigned(Pred)).size() > MaxRows) {
+      if (Info.getCS(CmpInst::isSigned(Pred)).size() >
+          Opts.constraint_elimination_max_rows) {
         LLVM_DEBUG(
             dbgs()
             << "Skip adding constraint because system has too many rows.\n");

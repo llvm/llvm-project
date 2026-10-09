@@ -858,7 +858,7 @@ MemorySanitizer::getOrInsertMsanMetadataFunction(Module &M, StringRef Name,
 
 /// Create KMSAN API callbacks.
 void MemorySanitizer::createKernelApi(Module &M, const TargetLibraryInfo &TLI) {
-  IRBuilder<> IRB(*C);
+  IRBuilder<> IRB(M);
 
   // These will be initialized in insertKmsanPrologue().
   RetvalTLS = nullptr;
@@ -921,7 +921,7 @@ static Constant *getOrInsertGlobal(Module &M, StringRef Name, Type *Ty) {
 /// Insert declarations for userspace-specific functions and globals.
 void MemorySanitizer::createUserspaceApi(Module &M,
                                          const TargetLibraryInfo &TLI) {
-  IRBuilder<> IRB(*C);
+  IRBuilder<> IRB(M);
 
   // Create the callback.
   // FIXME: this function should have "Cold" calling conv,
@@ -998,7 +998,7 @@ void MemorySanitizer::initializeCallbacks(Module &M,
   if (CallbacksInitialized)
     return;
 
-  IRBuilder<> IRB(*C);
+  IRBuilder<> IRB(M);
   // Initialize callbacks that are common for kernel and userspace
   // instrumentation.
   MsanChainOriginFn = M.getOrInsertFunction(
@@ -1127,7 +1127,7 @@ void MemorySanitizer::initializeModule(Module &M) {
   }
 
   C = &(M.getContext());
-  IRBuilder<> IRB(*C);
+  IRBuilder<> IRB(M);
   IntptrTy = IRB.getIntPtrTy(DL);
   OriginTy = IRB.getInt32Ty();
   PtrTy = IRB.getPtrTy();
@@ -2599,6 +2599,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         return;
     IRBuilder<> IRB(&I);
     setShadow(&I, IRB.CreateBitCast(getShadow(&I, 0), getShadowTy(&I)));
+    setOrigin(&I, getOrigin(&I, 0));
+  }
+
+  void visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
+    IRBuilder<> IRB(&I);
+    setShadow(&I, IRB.CreateIntCast(getShadow(&I, 0), getShadowTy(&I), false,
+                                    "_msprop_addrspacecast"));
     setOrigin(&I, getOrigin(&I, 0));
   }
 
@@ -6124,6 +6131,17 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::fptoui_sat:
       handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
       break;
+
+    // e.g.,
+    //     notail call void (...) @llvm.fake.use(i64 %x)
+    //     notail call void (...) @llvm.fake.use(i32 %y)
+    //     notail call void (...) @llvm.fake.use(ptr %z)
+    case Intrinsic::fake_use:
+      assert(I.getType()->isVoidTy());
+      // fake_uses aren't real, they can't hurt you. If the use isn't real, it
+      // can't be a real use-of-uninitialized memory. Silently skip over
+      // fake_use.
+      return true;
 
     default:
       return false;

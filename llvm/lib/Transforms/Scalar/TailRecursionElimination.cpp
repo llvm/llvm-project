@@ -50,6 +50,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/TailRecursionElimination.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -81,7 +82,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
@@ -98,21 +98,12 @@ STATISTIC(NumTREPreventedCold,
           "Number of tail calls/recursion eliminations prevented due to cold "
           "calling convention or attribute");
 
-static cl::opt<bool> DisableEntryCountRecompute(
-    "tre-disable-entrycount-recompute", cl::init(false), cl::Hidden,
-    cl::desc("Force disabling recomputing of function entry count, on "
-             "successful tail recursion elimination."));
-
-static cl::opt<bool> DisableTailCallElimForColdCalls(
-    "disable-tail-call-elim-for-cold-calls", cl::Hidden, cl::init(false),
-    cl::desc("Disable tail call elimination and optimization for cold calls or "
-             "in cold functions"));
-
-static bool shouldDisableTailCallsForCold(const CallBase *CB,
+static bool shouldDisableTailCallsForCold(const ScalarOptions &Opts,
+                                          const CallBase *CB,
                                           const Function *Caller,
                                           const ProfileSummaryInfo *PSI,
                                           BlockFrequencyInfo *BFI) {
-  if (!DisableTailCallElimForColdCalls)
+  if (!Opts.disable_tail_call_elim_for_cold_calls)
     return false;
 
   if (CB && CB->isMustTailCall())
@@ -271,8 +262,9 @@ static bool returnsCurrentFrameAddress(const IntrinsicInst *II) {
   }
 }
 
-static bool markTails(Function &F, OptimizationRemarkEmitter *ORE,
-                      ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI) {
+static bool markTails(const ScalarOptions &Opts, Function &F,
+                      OptimizationRemarkEmitter *ORE, ProfileSummaryInfo *PSI,
+                      BlockFrequencyInfo *BFI) {
   if (F.callsFunctionThatReturnsTwice())
     return false;
 
@@ -337,7 +329,8 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE,
 
       // Special-case operand bundles "clang.arc.attachedcall", "ptrauth",
       // "kcfi", and "atomicity".
-      bool DisableForCold = shouldDisableTailCallsForCold(CI, &F, PSI, BFI);
+      bool DisableForCold =
+          shouldDisableTailCallsForCold(Opts, CI, &F, PSI, BFI);
       bool IsNoTail =
           CI->isNoTailCall() || DisableForCold ||
           CI->hasOperandBundlesOtherThan(
@@ -482,6 +475,7 @@ static bool isUnaryAccumulatorRecurrence(Instruction *I) {
 
 namespace {
 class TailRecursionEliminator {
+  const ScalarOptions &Opts;
   Function &F;
   const TargetTransformInfo *TTI;
   AliasAnalysis *AA;
@@ -526,13 +520,13 @@ class TailRecursionEliminator {
 
   Constant *AccumulatorInitialValue = nullptr;
 
-  TailRecursionEliminator(Function &F, const TargetTransformInfo *TTI,
-                          AliasAnalysis *AA, OptimizationRemarkEmitter *ORE,
-                          DomTreeUpdater &DTU, BlockFrequencyInfo *BFI,
-                          ProfileSummaryInfo *PSI,
+  TailRecursionEliminator(const ScalarOptions &Opts, Function &F,
+                          const TargetTransformInfo *TTI, AliasAnalysis *AA,
+                          OptimizationRemarkEmitter *ORE, DomTreeUpdater &DTU,
+                          BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
                           bool UpdateFunctionEntryCount)
-      : F(F), TTI(TTI), AA(AA), ORE(ORE), DTU(DTU), BFI(BFI), PSI(PSI),
-        UpdateFunctionEntryCount(UpdateFunctionEntryCount),
+      : Opts(Opts), F(F), TTI(TTI), AA(AA), ORE(ORE), DTU(DTU), BFI(BFI),
+        PSI(PSI), UpdateFunctionEntryCount(UpdateFunctionEntryCount),
         OrigEntryBBFreq(
             BFI ? BFI->getBlockFreq(&F.getEntryBlock()).getFrequency() : 0U),
         OrigEntryCount(F.getEntryCount() ? *F.getEntryCount() : 0) {
@@ -701,7 +695,8 @@ CallInst *TailRecursionEliminator::findTRECandidate(BasicBlock *BB) {
 
   assert((!CI->isTailCall() || !CI->isNoTailCall()) &&
          "Incompatible call site attributes(Tail,NoTail)");
-  if (!CI->isTailCall() || shouldDisableTailCallsForCold(CI, &F, PSI, BFI))
+  if (!CI->isTailCall() ||
+      shouldDisableTailCallsForCold(Opts, CI, &F, PSI, BFI))
     return nullptr;
 
   // As a special case, detect code like this:
@@ -972,7 +967,7 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
   CI->eraseFromParent();   // Remove call.
   DTU.applyUpdates({{DominatorTree::Insert, BB, HeaderBB}});
   ++NumEliminated;
-  if (!DisableEntryCountRecompute && UpdateFunctionEntryCount &&
+  if (!Opts.tre_disable_entrycount_recompute && UpdateFunctionEntryCount &&
       OrigEntryBBFreq) {
     assert(F.getEntryCount().has_value());
     // This pass is not expected to remove BBs, only add an entry BB. For that
@@ -1154,8 +1149,9 @@ bool TailRecursionEliminator::eliminate(
   if (F.getFnAttribute("disable-tail-calls").getValueAsBool())
     return false;
 
+  const ScalarOptions &Opts = ScalarOptions::Global;
   bool MadeChange = false;
-  MadeChange |= markTails(F, ORE, PSI, BFI);
+  MadeChange |= markTails(Opts, F, ORE, PSI, BFI);
 
   // If this function is a varargs function, we won't be able to PHI the args
   // right, so don't even try to convert it...
@@ -1166,7 +1162,7 @@ bool TailRecursionEliminator::eliminate(
     return MadeChange;
 
   // Change any tail recursive calls to loops.
-  TailRecursionEliminator TRE(F, TTI, AA, ORE, DTU, BFI, PSI,
+  TailRecursionEliminator TRE(Opts, F, TTI, AA, ORE, DTU, BFI, PSI,
                               UpdateFunctionEntryCount);
 
   for (BasicBlock &BB : F)

@@ -461,9 +461,9 @@ class StoreFatPtrsAsIntsAndExpandMemcpyVisitor
 
 public:
   StoreFatPtrsAsIntsAndExpandMemcpyVisitor(BufferFatPtrToIntTypeMap *TypeMap,
-                                           const DataLayout &DL,
-                                           LLVMContext &Ctx)
-      : TypeMap(TypeMap), IRB(Ctx, InstSimplifyFolder(DL)), DL(DL) {}
+                                           Module &M)
+      : TypeMap(TypeMap), IRB(M, InstSimplifyFolder(M.getDataLayout())),
+        DL(M.getDataLayout()) {}
   bool processFunction(Function &F, const TargetTransformInfo *TTI,
                        ScalarEvolution *SE);
 
@@ -840,9 +840,9 @@ class LegalizeBufferContentTypesVisitor
   bool visitAddrSpaceCastInst(AddrSpaceCastInst &ASCI);
 
 public:
-  LegalizeBufferContentTypesVisitor(const DataLayout &DL, LLVMContext &Ctx,
-                                    const TargetMachine *TM)
-      : IRB(Ctx, InstSimplifyFolder(DL)), DL(DL), TM(TM) {}
+  LegalizeBufferContentTypesVisitor(Module &M, const TargetMachine *TM)
+      : IRB(M, InstSimplifyFolder(M.getDataLayout())), DL(M.getDataLayout()),
+        TM(TM) {}
   bool processFunction(Function &F, ScalarEvolution *SE);
 };
 } // namespace
@@ -1614,9 +1614,8 @@ class SplitPtrStructs : public InstVisitor<SplitPtrStructs, PtrParts> {
                           bool IsVolatile, SyncScope::ID SSID);
 
 public:
-  SplitPtrStructs(const DataLayout &DL, LLVMContext &Ctx,
-                  const TargetMachine *TM)
-      : TM(TM), IRB(Ctx, InstSimplifyFolder(DL)) {}
+  SplitPtrStructs(Module &M, const TargetMachine *TM)
+      : TM(TM), IRB(M, InstSimplifyFolder(M.getDataLayout())) {}
 
   void processFunction(Function &F);
 
@@ -2819,10 +2818,8 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM,
         /*RemoveDeadConstants=*/false, /*IncludeSelf=*/true);
   }
 
-  StoreFatPtrsAsIntsAndExpandMemcpyVisitor MemOpsRewrite(&IntTM, DL,
-                                                         M.getContext());
-  LegalizeBufferContentTypesVisitor BufferContentsTypeRewrite(
-      DL, M.getContext(), &TM);
+  StoreFatPtrsAsIntsAndExpandMemcpyVisitor MemOpsRewrite(&IntTM, M);
+  LegalizeBufferContentTypesVisitor BufferContentsTypeRewrite(M, &TM);
   for (Function &F : M.functions()) {
     bool InterfaceChange = hasFatPointerInterface(F, &StructTM);
     bool BodyChanges = containsBufferFatPointers(F, &StructTM);
@@ -2867,7 +2864,7 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM,
   IntTM.clear();
   CloneMap.clear();
 
-  SplitPtrStructs Splitter(DL, M.getContext(), &TM);
+  SplitPtrStructs Splitter(M, &TM);
   for (Function *F : NeedsPostProcess)
     Splitter.processFunction(*F);
   for (Function *F : Intrinsics) {

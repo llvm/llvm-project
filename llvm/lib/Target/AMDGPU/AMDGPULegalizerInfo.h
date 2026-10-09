@@ -198,12 +198,6 @@ public:
   bool legalizeImplicitArgPtr(MachineInstr &MI, MachineRegisterInfo &MRI,
                               MachineIRBuilder &B) const;
 
-  bool getLDSKernelId(Register DstReg, MachineRegisterInfo &MRI,
-                      MachineIRBuilder &B) const;
-
-  bool legalizeLDSKernelId(MachineInstr &MI, MachineRegisterInfo &MRI,
-                           MachineIRBuilder &B) const;
-
   bool legalizeIsAddrSpace(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &B, unsigned AddrSpace) const;
 

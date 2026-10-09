@@ -167,7 +167,7 @@ public:
   /// \param NumBytes is a number of bytes to be prefetched.
   /// \param DepEvents is a vector of dependencies for the operation.
   /// \return an event impl object that represents the status of the operation.
-  EventImplPtr prefetch(void *Ptr, std::size_t NumBytes,
+  EventImplPtr prefetch(const void *Ptr, std::size_t NumBytes,
                         const std::vector<EventImplPtr> &DepEvents);
 
 private:

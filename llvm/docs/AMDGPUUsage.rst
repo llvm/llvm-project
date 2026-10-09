@@ -2602,8 +2602,8 @@ cases. This will typically be used in conjunction with
 ------------------------------------------
 
 This is generic IR metadata for floating-point :ref:`atomicrmw
-<i_atomicrmw>` operations; see `'atomic.ignore.denormal.mode' Metadata
-<https://llvm.org/docs/LangRef.html#atomic-ignore-denormal-mode-metadata>`_
+<i_atomicrmw>` operations; see :ref:`'atomic.ignore.denormal.mode' Metadata
+<md_atomic.ignore.denormal.mode>`
 in the language reference for its definition. It is required to emit a
 native atomic instruction for AMDGPU global memory, which
 unconditionally flushes float denormals.
@@ -3328,14 +3328,14 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_FEATURE_XNACK_V4``               0x300 XNACK selection mask for
                                                         ``EF_AMDGPU_FEATURE_XNACK_*_V4``
                                                         values.
-     ``EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4``   0x000 XNACK unsupported.
+     ``EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4``   0x000 XNACK mode selection unsupported.
      ``EF_AMDGPU_FEATURE_XNACK_ANY_V4``           0x100 XNACK can have any value.
      ``EF_AMDGPU_FEATURE_XNACK_OFF_V4``           0x200 XNACK disabled.
      ``EF_AMDGPU_FEATURE_XNACK_ON_V4``            0x300 XNACK enabled.
      ``EF_AMDGPU_FEATURE_SRAMECC_V4``             0xc00 SRAMECC selection mask for
                                                         ``EF_AMDGPU_FEATURE_SRAMECC_*_V4``
                                                         values.
-     ``EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4`` 0x000 SRAMECC unsupported.
+     ``EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4`` 0x000 SRAMECC mode selection unsupported.
      ``EF_AMDGPU_FEATURE_SRAMECC_ANY_V4``         0x400 SRAMECC can have any value.
      ``EF_AMDGPU_FEATURE_SRAMECC_OFF_V4``         0x800 SRAMECC disabled,
      ``EF_AMDGPU_FEATURE_SRAMECC_ON_V4``          0xc00 SRAMECC enabled.
@@ -3355,14 +3355,14 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_FEATURE_XNACK_V4``               0x300      XNACK selection mask for
                                                              ``EF_AMDGPU_FEATURE_XNACK_*_V4``
                                                              values.
-     ``EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4``   0x000      XNACK unsupported.
+     ``EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4``   0x000      XNACK mode selection unsupported.
      ``EF_AMDGPU_FEATURE_XNACK_ANY_V4``           0x100      XNACK can have any value.
      ``EF_AMDGPU_FEATURE_XNACK_OFF_V4``           0x200      XNACK disabled.
      ``EF_AMDGPU_FEATURE_XNACK_ON_V4``            0x300      XNACK enabled.
      ``EF_AMDGPU_FEATURE_SRAMECC_V4``             0xc00      SRAMECC selection mask for
                                                              ``EF_AMDGPU_FEATURE_SRAMECC_*_V4``
                                                              values.
-     ``EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4`` 0x000      SRAMECC unsupported.
+     ``EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4`` 0x000      SRAMECC mode selection unsupported.
      ``EF_AMDGPU_FEATURE_SRAMECC_ANY_V4``         0x400      SRAMECC can have any value.
      ``EF_AMDGPU_FEATURE_SRAMECC_OFF_V4``         0x800      SRAMECC disabled,
      ``EF_AMDGPU_FEATURE_SRAMECC_ON_V4``          0xc00      SRAMECC enabled.
@@ -3372,6 +3372,18 @@ The AMDGPU backend uses the following ELF header:
                                                              of EFLAGS.
                                                              See :ref:`amdgpu-generic-processor-versioning`
      ============================================ ========== =========================================
+
+  For code object V4 and later, processors with hardwired-on XNACK, such as
+  ``gfx1250``, use ``EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4`` (zero) because
+  they do not support mode selection. Their XNACK behavior is implied by
+  ``EF_AMDGPU_MACH``; a zero XNACK field does not mean replay is disabled on
+  these processors.
+
+  For code object V4 and later, processors with hardwired-on SRAMECC use
+  ``EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4`` (zero) because they do not
+  support mode selection. Their SRAMECC behavior is implied by
+  ``EF_AMDGPU_MACH``; a zero SRAMECC field does not mean SRAMECC is disabled
+  on these processors.
 
   .. table:: AMDGPU ``EF_AMDGPU_MACH`` Values
      :name: amdgpu-ef-amdgpu-mach-table
@@ -6348,9 +6360,9 @@ The fields used by CP for code objects before V3 also match those specified in
      >454    1 bit   ENABLE_SGPR_PRIVATE_SEGMENT
                      _SIZE
      457:455 3 bits                                  Reserved, must be 0.
-     458     1 bit   ENABLE_WAVEFRONT_SIZE32         GFX6-GFX9, GFX125*
+     458     1 bit   ENABLE_WAVEFRONT_SIZE32         GFX6-GFX9
                                                        Reserved, must be 0.
-                                                     GFX10-GFX11, GFX120*, GFX13
+                                                     GFX10-GFX11
                                                        - If 0 execute in
                                                          wavefront size 64 mode.
                                                        - If 1 execute in
@@ -21890,9 +21902,9 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                   GFX942)
      ``.amdhsa_user_sgpr_private_segment_size``               0                   GFX6-GFX12   Controls ENABLE_SGPR_PRIVATE_SEGMENT_SIZE in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
-     ``.amdhsa_wavefront_size32``                             Target              GFX10-GFX13  Controls ENABLE_WAVEFRONT_SIZE32 in
-                                                              Feature             (except      :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
-                                                              Specific            GFX125*)
+     ``.amdhsa_wavefront_size32``                             Target              GFX10-GFX12  Controls ENABLE_WAVEFRONT_SIZE32 in
+                                                              Feature                          :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+                                                              Specific
                                                               (wavefrontsize64)
      ``.amdhsa_uses_dynamic_stack``                           0                   GFX6-GFX12   Controls USES_DYNAMIC_STACK in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.

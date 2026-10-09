@@ -12,6 +12,12 @@
 // RUN: %clang -### -c --target=aarch64 %s -mtune=neoverse-n1 2>&1 | FileCheck %s --check-prefixes=GENERIC-CPU,NEOVERSE-N1
 // NEOVERSE-N1: "-tune-cpu" "neoverse-n1"
 
+// RUN: %clang -### -c --target=aarch64 %s -mtune=c2-pro 2>&1 | FileCheck %s --check-prefixes=GENERIC-CPU,C2-PRO
+// C2-PRO: "-tune-cpu" "c2-pro"
+
+// RUN: %clang -### -c --target=aarch64 %s -mtune=c2-ultra 2>&1 | FileCheck %s --check-prefixes=GENERIC-CPU,C2-ULTRA
+// C2-ULTRA: "-tune-cpu" "c2-ultra"
+
 // RUN: %clang -### -c --target=aarch64 %s -mtune=thunderx2t99 2>&1 | FileCheck %s -check-prefixes=GENERIC-CPU,THUNDERX2T99
 // THUNDERX2T99: "-tune-cpu" "thunderx2t99"
 

@@ -37,6 +37,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include <cctype>
 #include <deque>
+#include <list>
 using namespace llvm;
 using namespace llvm::SDPatternMatch;
 
@@ -839,6 +840,12 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
   unsigned BitWidth = DemandedBits.getBitWidth();
   KnownBits LHSKnown, RHSKnown;
   switch (Op.getOpcode()) {
+  case ISD::Constant: {
+    const APInt &Value = Op->getAsAPIntVal();
+    if (!Value.isZero() && (Value & DemandedBits).isZero())
+      return DAG.getConstant(0, SDLoc(Op), VT);
+    break;
+  }
   case ISD::BITCAST: {
     if (VT.isScalableVector())
       return SDValue();

@@ -2,13 +2,11 @@ from clang.cindex import (
     AvailabilityKind,
     CompletionChunk,
     CompletionChunkKind,
-    CompletionString,
     TranslationUnit,
 )
 
 import unittest
 from pathlib import Path
-import warnings
 
 
 class TestCodeCompletion(unittest.TestCase):

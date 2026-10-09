@@ -545,7 +545,7 @@ bool NVPTXDAGToDAGISel::SelectSETP_F16X2(SDNode *N) {
   SDValue PTXCmpMode = getPTXCmpMode(*cast<CondCodeSDNode>(N->getOperand(2)));
   SDLoc DL(N);
   SDNode *SetP = CurDAG->getMachineNode(
-      NVPTX::SETP_f16x2rr, DL, MVT::i1, MVT::i1,
+      NVPTX::SETP_f16x2, DL, MVT::i1, MVT::i1,
       {N->getOperand(0), N->getOperand(1), PTXCmpMode,
        CurDAG->getTargetConstant(useF32FTZ() ? 1 : 0, DL, MVT::i1)});
   ReplaceNode(N, SetP);
@@ -556,7 +556,7 @@ bool NVPTXDAGToDAGISel::SelectSETP_BF16X2(SDNode *N) {
   SDValue PTXCmpMode = getPTXCmpMode(*cast<CondCodeSDNode>(N->getOperand(2)));
   SDLoc DL(N);
   SDNode *SetP =
-      CurDAG->getMachineNode(NVPTX::SETP_bf16x2rr, DL, MVT::i1, MVT::i1,
+      CurDAG->getMachineNode(NVPTX::SETP_bf16x2, DL, MVT::i1, MVT::i1,
                              {N->getOperand(0), N->getOperand(1), PTXCmpMode});
   ReplaceNode(N, SetP);
   return true;
@@ -1962,11 +1962,9 @@ bool NVPTXDAGToDAGISel::tryBFE(SDNode *N) {
   if (Val.getValueType() != MVT::i32)
     return false;
 
-  unsigned Opc = IsSigned ? NVPTX::BFE_S32rii : NVPTX::BFE_U32rii;
+  unsigned Opc = IsSigned ? NVPTX::BFE_S32 : NVPTX::BFE_U32;
 
-  SDValue Ops[] = {
-    Val, Start, Len
-  };
+  SDValue Ops[] = {selectPossiblyImm(Val), Start, Len};
 
   ReplaceNode(N, CurDAG->getMachineNode(Opc, DL, N->getVTList(), Ops));
   return true;
@@ -2023,7 +2021,7 @@ bool NVPTXDAGToDAGISel::tryBF16ArithToFMA(SDNode *N) {
     llvm_unreachable("Unexpected opcode");
   };
 
-  int Opcode = IsVec ? NVPTX::FMA_BF16x2rrr : NVPTX::FMA_BF16rrr;
+  int Opcode = IsVec ? NVPTX::FMA_BF16x2 : NVPTX::FMA_BF16;
   MachineSDNode *FMA = CurDAG->getMachineNode(Opcode, DL, VT, Operands);
   ReplaceNode(N, FMA);
   return true;
