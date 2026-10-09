@@ -45,8 +45,13 @@ struct EntrySignature {
 
 class ModuleSignatureInfo {
 public:
+  ModuleSignatureInfo() = default;
+  ModuleSignatureInfo(const ModuleSignatureInfo &) = delete;
+  ModuleSignatureInfo &operator=(const ModuleSignatureInfo &) = delete;
+  ModuleSignatureInfo(ModuleSignatureInfo &&) = default;
+  ModuleSignatureInfo &operator=(ModuleSignatureInfo &&) = default;
+
   DenseMap<const Function *, EntrySignature> Entries;
-  // The named source metadata is stripped before container emission.
   StringSet<> Names;
 
   const EntrySignature *get(const Function *F) const {
