@@ -5912,6 +5912,19 @@ void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {
           any_of(VPI.operands(), IsaPred<VPWidenIntOrFpInductionRecipe>))
         continue;
 
+      // Do not scalarize ExtractValue if its aggregate operand is not a single
+      // scalar and has any user that requires more than the first lane, as the
+      // aggregate cannot be scalarized and will be widened (e.g. wide struct call).
+      if (VPI.getOpcode() == Instruction::ExtractValue &&
+          !vputils::isSingleScalar(VPI.getOperand(0))) {
+        VPValue *Agg = VPI.getOperand(0);
+        if (!all_of(Agg->users(), [](const VPUser *U) {
+              auto *R = dyn_cast<VPSingleDefRecipe>(U);
+              return R && vputils::onlyFirstLaneUsed(R);
+            }))
+          continue;
+      }
+
       // Other lanes are needed - can't drop them.
       if (!vputils::onlyFirstLaneUsed(&VPI))
         continue;

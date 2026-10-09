@@ -42,3 +42,53 @@ loop.header:
 exit:
   ret void
 }
+
+; Regression test for https://github.com/llvm/llvm-project/issues/229609
+; The sadd.with.overflow is widened because the overflow flag uses all lanes,
+; but the result value only has lane 0 used. Ensure extractvalue is widened
+; instead of scalarized to avoid invalid extractvalue on vector struct.
+define void @extractvalue_from_widened_struct_call(ptr %p) {
+; CHECK-LABEL: define void @extractvalue_from_widened_struct_call(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = call { <2 x i32>, <2 x i1> } @llvm.sadd.with.overflow.v2i32(<2 x i32> zeroinitializer, <2 x i32> <i32 0, i32 1>)
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <2 x i32>, <2 x i1> } [[TMP0]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP1]], i64 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP1]], i64 1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP3]])
+; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <2 x i32>, <2 x i1> } [[TMP0]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP5]] to i64
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr [4 x i8], ptr [[P]], i64 [[TMP6]]
+; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr [[TMP7]], align 4
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+  %iv.next = add i64 %iv, 1
+  %t = trunc i64 %iv to i32
+  %s = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 0, i32 %t)
+  %ov = extractvalue { i32, i1 } %s, 1
+  call void @llvm.assume(i1 %ov)
+  %v = extractvalue { i32, i1 } %s, 0
+  %idx = sext i32 %v to i64
+  %gep = getelementptr [4 x i8], ptr %p, i64 %idx
+  store i32 0, ptr %gep, align 4
+  %done = icmp eq i64 %iv, 1
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret void
+}
