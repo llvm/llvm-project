@@ -520,7 +520,8 @@ public:
   // Returns an over-approximation of the conditional induction as a SCEVAddRec
   // assuming the condition is always true. The loop \p L is assumed to be the
   // loop containing the conditional induction.
-  const SCEV *getUnconditionalAddRec(ScalarEvolution &SE, const Loop &L) const;
+  LLVM_ABI const SCEV *getUnconditionalAddRec(ScalarEvolution &SE,
+                                              const Loop &L) const;
 
 private:
   ConditionalInductionDescriptor(PHINode *HeaderPHI, PHINode *BackedgePHI,
