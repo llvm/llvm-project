@@ -1406,6 +1406,8 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   bool RHSIsSelect = match(RHS, m_Select(m_Value(D), m_Value(E), m_Value(F)));
   if (!LHSIsSelect && !RHSIsSelect)
     return nullptr;
+  bool BothSelectsOneUse = LHSIsSelect && RHSIsSelect &&
+                               LHS->hasOneUse() && RHS->hasOneUse();
 
   SelectInst *SI = cast<SelectInst>(LHSIsSelect ? LHS : RHS);
 
@@ -1461,80 +1463,56 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
     True = simplifyBinOp(Opcode, B, E, FMF, Q);
     False = simplifyBinOp(Opcode, C, F, FMF, Q);
 
-    if (LHS->hasOneUse() && RHS->hasOneUse()) {
+    if (BothSelectsOneUse) {
       if (False && !True)
         True = Builder.CreateBinOp(Opcode, B, E);
       else if (True && !False)
         False = Builder.CreateBinOp(Opcode, C, F);
     }
-  } else if (LHSIsSelect && LHS->hasOneUse()) {
-    // (A ? B : C) op Y -> A ? (B op Y) : (C op Y)
-    Cond = A;
-    Value *TrueRHS = simplifySelectWithImpliedCond(RHS, Cond, true);
-    Value *FalseRHS = simplifySelectWithImpliedCond(RHS, Cond, false);
-    True = simplifyBinOp(Opcode, B, TrueRHS, FMF, Q);
-    False = simplifyBinOp(Opcode, C, FalseRHS, FMF, Q);
-    if (Value *NewSel = foldAddNegate(B, C, RHS))
-      return NewSel;
-  } else if (RHSIsSelect && RHS->hasOneUse()) {
-    // X op (D ? E : F) -> D ? (X op E) : (X op F)
-    Cond = D;
-    Value *TrueLHS = simplifySelectWithImpliedCond(LHS, Cond, true);
-    Value *FalseLHS = simplifySelectWithImpliedCond(LHS, Cond, false);
-    True = simplifyBinOp(Opcode, TrueLHS, E, FMF, Q);
-    False = simplifyBinOp(Opcode, FalseLHS, F, FMF, Q);
-    if (Value *NewSel = foldAddNegate(E, F, LHS))
-      return NewSel;
-  }
+  } else {
+    if (LHSIsSelect && LHS->hasOneUse()) {
+      // (A ? B : C) op Y -> A ? (B op Y) : (C op Y)
+      Cond = A;
+      Value *TrueRHS = simplifySelectWithImpliedCond(RHS, Cond, true);
+      Value *FalseRHS = simplifySelectWithImpliedCond(RHS, Cond, false);
+      True = simplifyBinOp(Opcode, B, TrueRHS, FMF, Q);
+      False = simplifyBinOp(Opcode, C, FalseRHS, FMF, Q);
+      if (Value *NewSel = foldAddNegate(B, C, RHS))
+        return NewSel;
 
-  if (!True || !False) {
-    // When the conditions differ, one arm of a select may determine the other
-    // select's value and simplify the binop. Keep the other arm as a binop.
-    if (LHSIsSelect && RHSIsSelect && A != D && LHS->hasOneUse() &&
-        RHS->hasOneUse()) {
-      auto foldImpliedSelectArm = [&](SelectInst *Outer, Value *Other,
-                                      bool OuterIsLHS) -> Value * {
-        Value *OuterCond = Outer->getCondition();
-        auto simplifyArm = [&](Value *Arm, bool CondIsTrue) -> Value * {
-          Value *OtherArm =
-              simplifySelectWithImpliedCond(Other, OuterCond, CondIsTrue);
-          if (OtherArm == Other)
-            return nullptr;
-          return OuterIsLHS ? simplifyBinOp(Opcode, Arm, OtherArm, FMF, Q)
-                            : simplifyBinOp(Opcode, OtherArm, Arm, FMF, Q);
-        };
-
-        Value *NewTrue = simplifyArm(Outer->getTrueValue(), true);
-        Value *NewFalse = simplifyArm(Outer->getFalseValue(), false);
-        if (!NewTrue && !NewFalse)
-          return nullptr;
-
-        auto createArm = [&](Value *Arm) {
-          return (OuterIsLHS || I.isCommutative())
-                     ? Builder.CreateBinOp(Opcode, Arm, Other)
-                     : Builder.CreateBinOp(Opcode, Other, Arm);
-        };
-        if (!NewTrue)
-          NewTrue = createArm(Outer->getTrueValue());
-        if (!NewFalse)
-          NewFalse = createArm(Outer->getFalseValue());
-
-        Value *NewV =
-            Builder.CreateSelect(OuterCond, NewTrue, NewFalse, I.getName());
-        if (auto *NewSI = dyn_cast<SelectInst>(NewV))
-          NewSI->copyMetadata(*Outer, {LLVMContext::MD_prof,
-                                       LLVMContext::MD_unpredictable,
-                                       LLVMContext::MD_dbg});
-        return NewV;
-      };
-
-      if (Value *V = foldImpliedSelectArm(cast<SelectInst>(RHS), LHS, false))
-        return V;
-      if (Value *V = foldImpliedSelectArm(cast<SelectInst>(LHS), RHS, true))
-        return V;
+      // Only create the remaining arm when its counterpart simplified after
+      // resolving the other select's condition.
+      if (BothSelectsOneUse) {
+        if (!True && False && FalseRHS != RHS)
+          True = Builder.CreateBinOp(Opcode, B, TrueRHS);
+        else if (True && !False && TrueRHS != RHS)
+          False = Builder.CreateBinOp(Opcode, C, FalseRHS);
+      }
     }
-    return nullptr;
+
+    // Try the other select as the outer select if the first direction did not
+    // fully simplify or create its missing arm.
+    if ((!True || !False) && RHSIsSelect && RHS->hasOneUse()) {
+      SI = cast<SelectInst>(RHS);
+      Cond = D;
+      Value *TrueLHS = simplifySelectWithImpliedCond(LHS, Cond, true);
+      Value *FalseLHS = simplifySelectWithImpliedCond(LHS, Cond, false);
+      True = simplifyBinOp(Opcode, TrueLHS, E, FMF, Q);
+      False = simplifyBinOp(Opcode, FalseLHS, F, FMF, Q);
+      if (Value *NewSel = foldAddNegate(E, F, LHS))
+        return NewSel;
+
+      if (BothSelectsOneUse) {
+        if (!True && False && FalseLHS != LHS)
+          True = Builder.CreateBinOp(Opcode, TrueLHS, E);
+        else if (True && !False && TrueLHS != LHS)
+          False = Builder.CreateBinOp(Opcode, FalseLHS, F);
+      }
+    }
   }
+
+  if (!True || !False)
+    return nullptr;
 
   Value *NewSI = Builder.CreateSelect(Cond, True, False, I.getName(), SI);
   NewSI->takeName(&I);
