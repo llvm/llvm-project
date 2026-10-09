@@ -117,7 +117,6 @@ class RuntimeLibcall<FuncArgType RetType = NoneType,
 class RuntimeLibcallImpl<RuntimeLibcall P, string Name = NAME> {
   RuntimeLibcall Provides = P;
   string LibCallFuncName = Name;
-  bit IsDefault = false;
 }
 
 /// A family of runtime libcalls implementing one floating-point operation, used
