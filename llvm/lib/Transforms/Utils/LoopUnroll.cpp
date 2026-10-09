@@ -34,6 +34,8 @@
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -414,6 +416,35 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
           Inst.setHasNoSignedWrap(Inst.hasNoSignedWrap() &&
                                   InnerOBO->hasNoSignedWrap() &&
                                   !SignedOverflow);
+          // Update SCEV add recurrence with existing no wrap flag information,
+          // requiring no recomputation to keep nuw/nsw information in the IR
+          if (SE) {
+            if (auto *PN = dyn_cast<PHINode>(X)) {
+              Loop *IVLoop = LI->getLoopFor(PN->getParent());
+              BasicBlock *Latch = IVLoop ? IVLoop->getLoopLatch() : nullptr;
+              if (Latch && PN->getParent() == IVLoop->getHeader() &&
+                  PN->getIncomingValueForBlock(Latch) == &Inst &&
+                  programUndefinedIfPoison(&Inst)) {
+                llvm::SCEVFlags Flags = SCEV::FlagNone;
+                if (Inst.hasNoUnsignedWrap())
+                  Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNUW);
+                if (Inst.hasNoSignedWrap())
+                  Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNSW);
+                if (Flags != SCEV::FlagNone) {
+                  auto SetFlags = [&](Value *V) {
+                    if (auto *AR = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(V))) {
+                      if (AR->getLoop() == IVLoop)
+                        SE->setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR),
+                                           Flags);
+                    }
+                  };
+                  SetFlags(PN);
+                  SE->forgetValue(&Inst);
+                  SetFlags(&Inst);
+                }
+              }
+            }
+          }
           if (InnerI && isInstructionTriviallyDead(InnerI))
             DeadInsts.emplace_back(InnerI);
         }
