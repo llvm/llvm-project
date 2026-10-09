@@ -22,15 +22,12 @@ define void @arm_var_q31(ptr noundef %pSrc, i32 noundef %blockSize, ptr noundef 
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[WHILE_BODY_PREHEADER67:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[SHR]], 1073741820
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[SHR]], 3
-; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[N_VEC]], 4
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[PSRC:%.*]], i32 [[TMP0]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[TMP25:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI53:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[TMP33:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[PSRC]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[PSRC:%.*]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i32> <i32 0, i32 16, i32 32, i32 48>
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, <4 x ptr> [[VECTOR_GEP]], i32 4
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = tail call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[VECTOR_GEP]], <4 x i1> splat (i1 true), <4 x i32> poison), !tbaa [[TBAA4:![0-9]+]]
@@ -72,12 +69,15 @@ define void @arm_var_q31(ptr noundef %pSrc, i32 noundef %blockSize, ptr noundef 
 ; CHECK-NEXT:    [[TMP34:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP34]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP50:%.*]] = and i32 [[SHR]], 3
+; CHECK-NEXT:    [[TMP49:%.*]] = shl i32 [[N_VEC]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[PSRC]], i32 [[TMP49]]
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[SHR]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END_LOOPEXIT:%.*]], label [[WHILE_BODY_PREHEADER67]]
 ; CHECK:       while.body.preheader65:
 ; CHECK-NEXT:    [[SUMOFSQUARES_043_PH:%.*]] = phi i64 [ 0, [[WHILE_BODY_PREHEADER]] ], [ [[TMP25]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[SUM_040_PH:%.*]] = phi i64 [ 0, [[WHILE_BODY_PREHEADER]] ], [ [[TMP33]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    [[BLKCNT_041_PH:%.*]] = phi i32 [ [[SHR]], [[WHILE_BODY_PREHEADER]] ], [ [[TMP2]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[BLKCNT_041_PH:%.*]] = phi i32 [ [[SHR]], [[WHILE_BODY_PREHEADER]] ], [ [[TMP50]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[PSRC_ADDR_040_PH:%.*]] = phi ptr [ [[PSRC]], [[WHILE_BODY_PREHEADER]] ], [ [[TMP1]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
