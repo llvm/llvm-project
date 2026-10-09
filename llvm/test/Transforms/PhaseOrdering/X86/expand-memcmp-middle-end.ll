@@ -78,9 +78,17 @@ define i1 @redundant_memcmp_loads(ptr nocapture readonly %x, ptr nocapture reado
 ; LTO-FULL-NEXT:    ret i1 [[RESULT]]
 ;
 ; LTO-MIX-LABEL: define i1 @redundant_memcmp_loads(
-; LTO-MIX-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]], ptr readonly captures(none) [[Z:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] !guid [[META0:![0-9]+]] {
-; LTO-MIX-NEXT:    [[CMP1:%.*]] = tail call i32 @memcmp(ptr noundef nonnull dereferenceable(4) [[X]], ptr noundef nonnull dereferenceable(4) [[Y]], i64 4)
-; LTO-MIX-NEXT:    [[CMP2:%.*]] = tail call i32 @memcmp(ptr noundef nonnull dereferenceable(4) [[X]], ptr noundef nonnull dereferenceable(4) [[Z]], i64 4)
+; LTO-MIX-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]], ptr readonly captures(none) [[Z:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] !guid [[META0:![0-9]+]] {
+; LTO-MIX-NEXT:    [[TMP5:%.*]] = load i32, ptr [[X]], align 1
+; LTO-MIX-NEXT:    [[TMP2:%.*]] = load i32, ptr [[Y]], align 1
+; LTO-MIX-NEXT:    [[TMP3:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP5]])
+; LTO-MIX-NEXT:    [[TMP4:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP2]])
+; LTO-MIX-NEXT:    [[CMP1:%.*]] = call i32 @llvm.ucmp.i32.i32(i32 [[TMP3]], i32 [[TMP4]])
+; LTO-MIX-NEXT:    [[TMP6:%.*]] = load i32, ptr [[X]], align 1
+; LTO-MIX-NEXT:    [[TMP7:%.*]] = load i32, ptr [[Z]], align 1
+; LTO-MIX-NEXT:    [[TMP8:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP6]])
+; LTO-MIX-NEXT:    [[TMP9:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP7]])
+; LTO-MIX-NEXT:    [[CMP2:%.*]] = call i32 @llvm.ucmp.i32.i32(i32 [[TMP8]], i32 [[TMP9]])
 ; LTO-MIX-NEXT:    [[TMP1:%.*]] = or i32 [[CMP2]], [[CMP1]]
 ; LTO-MIX-NEXT:    [[RESULT:%.*]] = icmp eq i32 [[TMP1]], 0
 ; LTO-MIX-NEXT:    ret i1 [[RESULT]]
