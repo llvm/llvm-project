@@ -15295,19 +15295,20 @@ TreeTransform<Derived>::TransformCXXDefaultInitExpr(CXXDefaultInitExpr *E) {
   if (!Field)
     return ExprError();
 
+  Expr *RewrittenInit = E->hasRewrittenInit() ? E->getRewrittenExpr() : nullptr;
   ExprResult InitRes;
-  if (E->hasRewrittenInit()) {
+  if (RewrittenInit) {
     // The initializer can refer to `this` and to other members, so it has to
     // be transformed in the scope of the field's class.
     Sema::CXXThisScopeRAII ThisScope(SemaRef, Field->getParent(), Qualifiers());
-    InitRes = getDerived().TransformExpr(E->getRewrittenExpr());
+    InitRes = getDerived().TransformExpr(RewrittenInit);
     if (InitRes.isInvalid())
       return ExprError();
   }
 
   if (!getDerived().AlwaysRebuild() && Field == E->getField() &&
       E->getUsedContext() == SemaRef.CurContext &&
-      InitRes.get() == E->getRewrittenExpr())
+      InitRes.get() == RewrittenInit)
     return E;
 
   return getDerived().RebuildCXXDefaultInitExpr(E->getExprLoc(), Field,
