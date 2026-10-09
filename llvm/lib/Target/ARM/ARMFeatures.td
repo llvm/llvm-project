@@ -769,6 +769,11 @@ def HasV9_7aOps   : SubtargetFeature<"v9.7a", "HasV9_7aOps", "true",
                                    "Support ARM v9.7a instructions",
                                    [HasV9_6aOps]>;
 
+// Armv9.8-A is a v9-only architecture.
+def HasV9_8aOps   : SubtargetFeature<"v9.8a", "HasV9_8aOps", "true",
+                                   "Support ARM v9.8a instructions",
+                                   [HasV9_7aOps]>;
+
 def HasV8_1MMainlineOps : SubtargetFeature<
                "v8.1m.main", "HasV8_1MMainlineOps", "true",
                "Support ARM v8-1M Mainline instructions",

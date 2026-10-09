@@ -930,6 +930,11 @@ public:
                      Align Alignment, const int64_t Diff,
                      const size_t Sz) const;
 
+  /// Returns true for widened strided loads, where each lane of the strided
+  /// load covers a group of consecutive scalars. Reversed widened strided
+  /// loads must be emitted with a positive stride and a reorder shuffle.
+  bool isWidenedStridedLoad(const TreeEntry *E) const;
+
   /// Return true if an array of scalar loads can be replaced with a strided
   ///  load (with constant stride).
   ///
@@ -4386,6 +4391,7 @@ private:
       FirstLoadStoreInRegion = nullptr;
       LastLoadStoreInRegion = nullptr;
       RegionHasStackSave = false;
+      RegionHasMayThrow = false;
 
       // Reduce the maximum schedule region size by the size of the
       // previous scheduling run.
@@ -5467,6 +5473,24 @@ private:
     /// common case where there isn't.
     bool RegionHasStackSave = false;
 
+    /// Used to skip the dependencies calculation for writes that are visible
+    /// after unwinding.
+    bool RegionHasMayThrow = false;
+
+    /// Returns true if \p I writes memory that the caller can still see
+    /// after an unwind.
+    bool isWriteVisibleOnUnwind(Instruction *I) const {
+      if (!RegionHasMayThrow || !I->mayWriteToMemory())
+        return false;
+      MemoryLocation Loc = getLocation(I);
+      if (!Loc.Ptr)
+        return true;
+      bool RequiresNoCaptureBeforeUnwind = false;
+      return !isNotVisibleOnUnwind(getUnderlyingObject(Loc.Ptr),
+                                   RequiresNoCaptureBeforeUnwind) ||
+             RequiresNoCaptureBeforeUnwind;
+    }
+
     /// The current size of the scheduling region.
     int ScheduleRegionSize = 0;
 
@@ -5965,6 +5989,14 @@ bool BoUpSLP::isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
     return true;
   }
   return false;
+}
+
+bool BoUpSLP::isWidenedStridedLoad(const TreeEntry *E) const {
+  if (E->State != TreeEntry::StridedVectorize ||
+      E->getOpcode() != Instruction::Load)
+    return false;
+  const StridedPtrInfo &SPtrInfo = TreeEntryToStridedPtrInfoMap.at(E);
+  return SPtrInfo.Ty->getNumElements() != E->Scalars.size();
 }
 
 bool BoUpSLP::analyzeConstantStrideCandidate(
@@ -14021,7 +14053,7 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
   const TreeEntry *RhsTE = getOperandEntry(&TE, /*Idx=*/1);
   // Lhs should be zext i<stride> to I<sz>.
   if (!(LhsTE->State == TreeEntry::Vectorize &&
-        LhsTE->getOpcode() == Instruction::ZExt &&
+        LhsTE->getOpcode() == Instruction::ZExt && !LhsTE->isAltShuffle() &&
         LhsTE->ReorderIndices.empty() && LhsTE->ReuseShuffleIndices.empty() &&
         !MinBWs.contains(LhsTE) &&
         all_of(LhsTE->Scalars, [](Value *V) { return V->hasOneUse(); })))
@@ -16622,7 +16654,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   InstructionCost CommonCost = 0;
   SmallVector<int> Mask;
   if (!E->ReorderIndices.empty() && E->State != TreeEntry::CompressVectorize &&
-      (E->State != TreeEntry::StridedVectorize || !E->isReverse())) {
+      (E->State != TreeEntry::StridedVectorize || !E->isReverse() ||
+       isWidenedStridedLoad(E))) {
     SmallVector<int> NewMask;
     if (E->getOpcode() == Instruction::Store) {
       // For stores the order is actually a mask.
@@ -17129,6 +17162,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                !SrcIt->second.second) {
       VecOpcode = Instruction::UIToFP;
     }
+    const bool IsSExtBack = VecOpcode == Instruction::UIToFP &&
+                            SrcIt != MinBWs.end() && SrcIt->second.second;
     auto GetScalarCost = [&](unsigned Idx) -> InstructionCost {
       assert(Idx == 0 && "Expected 0 index only");
       return TTI->getCastInstrCost(Opcode, VL0->getType(),
@@ -17156,6 +17191,12 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       if (IsArithmeticExtendedReduction &&
           (VecOpcode == Instruction::ZExt || VecOpcode == Instruction::SExt))
         return CommonCost;
+      if (IsSExtBack) {
+        auto *DemotedVecTy = getWidenedType(
+            IntegerType::get(F->getContext(), SrcIt->second.first), VL.size());
+        CommonCost += TTI->getCastInstrCost(Instruction::SExt, SrcVecTy,
+                                            DemotedVecTy, CCH, CostKind);
+      }
       return CommonCost +
              TTI->getCastInstrCost(VecOpcode, VecTy, SrcVecTy, CCH, CostKind,
                                    VecOpcode == Opcode ? VI : nullptr);
@@ -17643,7 +17684,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         assert(StridedLoadTy && "Missing StridedPointerInfo for tree entry.");
         Align CommonAlignment =
             computeCommonAlignment<LoadInst>(UniqueValues.getArrayRef());
-        bool IsReverse = E->isReverse();
+        bool IsReverse = E->isReverse() && !isWidenedStridedLoad(E);
         Value *Stride = getStrideBytesIfConstant(SPtrInfo.StrideVal, ScalarTy,
                                                  *DL, IsReverse);
         VecLdCost = TTI->getMemIntrinsicInstrCost(
@@ -19914,7 +19955,8 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
     SmallVector<int> Mask;
     if (!TE->ReorderIndices.empty() &&
         TE->State != TreeEntry::CompressVectorize &&
-        (TE->State != TreeEntry::StridedVectorize || !TE->isReverse())) {
+        (TE->State != TreeEntry::StridedVectorize || !TE->isReverse() ||
+         isWidenedStridedLoad(TE))) {
       SmallVector<int> NewMask;
       if (TE->getOpcode() == Instruction::Store) {
         // For stores the order is actually a mask.
@@ -21019,6 +21061,10 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
         case Instruction::SExt:
         case Instruction::ZExt:
         case Instruction::Trunc: {
+          // Split roots keep their operands in the combined sub-nodes, so there
+          // is no single operand to take the context hint from.
+          if (E.State == TreeEntry::SplitVectorize)
+            break;
           const TreeEntry *OpTE = getOperandEntry(&E, 0);
           CCH = getCastContextHint(*OpTE);
           break;
@@ -23909,7 +23955,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     return Vec;
   }
 
-  bool IsReverseOrder = E->isReverse();
+  bool IsReverseOrder = E->isReverse() && !isWidenedStridedLoad(E);
   auto FinalShuffle = [&](Value *V, const TreeEntry *E) {
     if (isa<StructType>(ScalarTy)) {
       // TODO: Reordering of struct types is not supported.
@@ -24516,6 +24562,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             getWidenedType(OrigSrcScalarTy, E->Scalars.size());
         InVec =
             Builder.CreateIntCast(InVec, OrigSrcVectorTy, SrcIt->second.second);
+      } else if (VecOpcode == Instruction::UIToFP && SrcIt != MinBWs.end() &&
+                 SrcIt->second.second) {
+        auto *OrigSrcVectorTy =
+            getWidenedType(CI->getSrcTy(), E->Scalars.size());
+        InVec = Builder.CreateSExt(InVec, OrigSrcVectorTy);
       }
       Value *V = (VecOpcode != ShuffleOrOp && VecOpcode == Instruction::BitCast)
                      ? InVec
@@ -27455,7 +27506,8 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
             BundleMember->clearDirectDependencies();
             if (RegionHasStackSave ||
                 !isGuaranteedToTransferExecutionToSuccessor(
-                    BundleMember->getInst()))
+                    BundleMember->getInst()) ||
+                isWriteVisibleOnUnwind(BundleMember->getInst()))
               ControlDependentMembers.push_back(BundleMember);
           }
           continue;
@@ -27483,7 +27535,9 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
                 OpSD && OpSD->hasValidDependencies()) {
               OpSD->clearDirectDependencies();
               if (RegionHasStackSave ||
-                  !isGuaranteedToTransferExecutionToSuccessor(OpSD->getInst()))
+                  !isGuaranteedToTransferExecutionToSuccessor(
+                      OpSD->getInst()) ||
+                  isWriteVisibleOnUnwind(OpSD->getInst()))
                 ControlDependentMembers.push_back(OpSD);
               // areAllOperandsReplacedByCopyableData() returned true, so every
               // tree entry that currently contains this instruction models Op
@@ -27820,6 +27874,8 @@ void BoUpSLP::BlockScheduling::initScheduleData(Instruction *FromI,
     if (match(I, m_Intrinsic<Intrinsic::stacksave>()) ||
         match(I, m_Intrinsic<Intrinsic::stackrestore>()))
       RegionHasStackSave = true;
+    if (I->mayThrow())
+      RegionHasMayThrow = true;
   }
   if (NextLoadStore) {
     if (CurrentLoadStore)
@@ -27983,6 +28039,20 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
         if (!isGuaranteedToTransferExecutionToSuccessor(I))
           // Everything past here must be control dependent on I.
           break;
+      }
+    }
+
+    // A write visible after unwinding must precede the next instruction that
+    // may throw.
+    if (isWriteVisibleOnUnwind(BundleMember->getInst())) {
+      for (Instruction *I = BundleMember->getInst()->getNextNode();
+           I != ScheduleEnd; I = I->getNextNode()) {
+        if (!I->mayThrow())
+          continue;
+
+        // Add the dependency
+        MakeControlDependent(I);
+        break;
       }
     }
 
@@ -31012,11 +31082,23 @@ class HorizontalReduction {
     }
   }
 
+  /// \returns true if the disjoint flag of the reduction ops is kept for the
+  /// emitted ops.
+  bool keepDisjoint() const {
+    if (getBoolReduxWideTy(RdxKind, ReductionRoot->getType(),
+                           ReducedVals.front().front()->getType()))
+      return false;
+    return all_of(make_second_range(NarrowedLeafShifts),
+                  [](const NarrowedLeafInfo &L) { return L.Disjoint; });
+  }
+
   /// Creates reduction operation with the current opcode with the IR flags
-  /// from \p ReductionOps, dropping nuw/nsw flags.
-  static Value *createOp(IRBuilderBase &Builder, RecurKind RdxKind, Value *LHS,
-                         Value *RHS, const Twine &Name,
-                         const ReductionOpsListType &ReductionOps) {
+  /// from \p ReductionOps, dropping nuw/nsw flags, and disjoint flag if \p
+  /// KeepDisjoint is false.
+  static Value *createOpWithFlags(IRBuilderBase &Builder, RecurKind RdxKind,
+                                  Value *LHS, Value *RHS, const Twine &Name,
+                                  const ReductionOpsListType &ReductionOps,
+                                  bool KeepDisjoint) {
     bool UseSelect = ReductionOps.size() == 2 ||
                      // Logical or/and.
                      (ReductionOps.size() == 1 &&
@@ -31035,7 +31117,18 @@ class HorizontalReduction {
       }
     }
     propagateIRFlags(Op, ReductionOps[0], nullptr, /*IncludeWrapFlags=*/false);
+    if (!KeepDisjoint && match(Op, m_DisjointOr(m_Value(), m_Value())))
+      cast<PossiblyDisjointInst>(Op)->setIsDisjoint(false);
     return Op;
+  }
+
+  /// Creates reduction operation with the current opcode with the IR flags
+  /// from \p ReductionOps, dropping nuw/nsw flags.
+  Value *createOp(IRBuilderBase &Builder, RecurKind Kind, Value *LHS,
+                  Value *RHS, const Twine &Name,
+                  const ReductionOpsListType &ReductionOps) const {
+    return createOpWithFlags(Builder, Kind, LHS, RHS, Name, ReductionOps,
+                             keepDisjoint());
   }
 
 public:
@@ -31734,11 +31827,15 @@ public:
               Ignorable.insert(I);
               NarrowedChainInsts.push_back(I);
             }
+          const bool AllDisjoint =
+              all_of(make_isa_range<PossiblyDisjointInst>(ChainInsts),
+                     [](PossiblyDisjointInst *I) { return I->isDisjoint(); });
           SmallVector<Value *> NewCandidates;
           for (const auto &[Cand, Leaves] :
                zip(ReducedValsCandidates, AllLeaves)) {
             SmallVector<Instruction *> RdxOps = ReducedValsToOps.lookup(Cand);
-            for (const NarrowedLeafInfo &L : Leaves) {
+            for (NarrowedLeafInfo &L : Leaves) {
+              L.Disjoint = AllDisjoint;
               NarrowedLeafShifts.try_emplace(L.V, L);
               NewCandidates.push_back(L.V);
               ReducedValsToOps[L.V].append(RdxOps);
@@ -32384,8 +32481,8 @@ public:
         VAcc->addIncoming(InitVec, B);
       }
       Builder.SetInsertPoint(Root);
-      Value *VAdd =
-          createOp(Builder, RdxKind, VAcc, Vec, "slprdx.acc", ReductionOps);
+      Value *VAdd = createOpWithFlags(Builder, RdxKind, VAcc, Vec, "slprdx.acc",
+                                      ReductionOps, /*KeepDisjoint=*/true);
       // The accumulation is on the loop-carried chain: do not let it be
       // contracted into an FMA with the reduced multiplication, which would
       // lengthen the chain.

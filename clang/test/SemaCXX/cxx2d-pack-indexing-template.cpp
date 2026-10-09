@@ -482,3 +482,16 @@ static_assert(!Lambda2<1>.operator()<int, Always, Never>());
 static_assert(Lambda2<0>.operator()<int, Always, Never>());
 static_assert(Lambda2<0, 0>.operator()<int, Always, Never>());
 static_assert(!Lambda2<1, 1>.operator()<int, Always, Never>());
+
+namespace GH228870 {
+template <class> struct S {};
+
+template <unsigned N, template <class...> class... TT> char f(TT...[N]<int>);
+template <unsigned N, template <class> class... TT> int f(TT...[N]<int>);
+template <unsigned N, template <class, class...> class... TT> char f(TT...[N]<int>);
+static_assert(__is_same(decltype(f<0, S>(S<int>{})), int));
+
+template <unsigned N, template <class...> class... TT> int g(TT...[N]<int>); // expected-note {{candidate function}}
+template <unsigned N, template <class, class...> class... TT> int g(TT...[N]<int>); // expected-note {{candidate function}}
+int x = g<0, S>(S<int>{}); // expected-error {{call to 'g' is ambiguous}}
+}

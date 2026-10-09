@@ -257,6 +257,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Added support for C2-Pro and C2-Ultra CPUs.
 
+* Assembler/disassembler support has been added for Armv9.8-A (2026)
+  architecture extensions.
+
 ### Changes to the AMDGPU Backend
 
 * Replaced `xnack` and `sramecc` target features with `amdgpu.xnack`
