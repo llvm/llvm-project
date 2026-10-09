@@ -46,6 +46,12 @@ void addTosaToLinalgPasses(
 /// Currently, this includes only the "tosa-to-linalg-pipeline".
 void registerTosaToLinalgPipelines();
 
+/// Broadcast a dynamically sized dimension of `operand` to `targetSize` when
+/// its runtime size is one. Otherwise, return `operand` unchanged.
+Value broadcastDynamicDimension(PatternRewriter &rewriter, Location loc,
+                                Value operand, int64_t dim,
+                                OpFoldResult targetSize);
+
 /// Populates conversion passes from TOSA dialect to Linalg dialect.
 void populateTosaToLinalgConversionPatterns(
     const TypeConverter &converter, RewritePatternSet *patterns,
