@@ -190,7 +190,6 @@ private:
   ContextTrieNode RootContext;
 };
 
-using AddressRange = std::pair<uint64_t, uint64_t>;
 
 // The parsed MMap event
 struct MMapEvent {
