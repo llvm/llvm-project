@@ -10033,7 +10033,7 @@ def fdx_semantic_signature_packing_mode_EQ :
   Values<"prefix-stable,optimized">,
   NormalizedValuesScope<"CodeGenOptions::HLSLSemanticSignaturePackingMode">,
   NormalizedValues<["PrefixStable", "Optimized"]>,
-  MarshallingInfoEnum<CodeGenOpts<"HLSLSemanticSignaturePacking">, "PrefixStable">;
+  MarshallingInfoEnum<CodeGenOpts<"HLSLSemanticSignaturePacking">, "Default">;
 def fdx_rootsignature_version :
   Joined<["-"], "fdx-rootsignature-version=">,
   Group<dxc_Group>,

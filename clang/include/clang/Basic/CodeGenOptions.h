@@ -143,6 +143,7 @@ public:
   };
 
   enum class HLSLSemanticSignaturePackingMode {
+    Default,
     PrefixStable,
     Optimized,
   };

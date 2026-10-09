@@ -526,8 +526,8 @@ CODEGENOPT(ResMayAlias, 1, 0, Benign)
 CODEGENOPT(AllResourcesBound, 1, 0, Benign)
 
 /// Packing mode for HLSL signatures connecting programmable shader stages.
-ENUM_CODEGENOPT(HLSLSemanticSignaturePacking, HLSLSemanticSignaturePackingMode, 1,
-               HLSLSemanticSignaturePackingMode::PrefixStable, Benign)
+ENUM_CODEGENOPT(HLSLSemanticSignaturePacking, HLSLSemanticSignaturePackingMode, 2,
+               HLSLSemanticSignaturePackingMode::Default, Benign)
 
 /// Do not embed dx.source.* metadata in HLSL modules.
 CODEGENOPT(DisableDXSourceMetadata, 1, 0, Benign)

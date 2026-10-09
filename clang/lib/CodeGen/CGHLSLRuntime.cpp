@@ -1887,18 +1887,29 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
     // Use the entry's shader stage, not the target environment, which may be
     // 'library' when compiling multiple entry points.
     auto Stage = FD->getAttr<HLSLShaderAttr>()->getType();
+    using PackingMode = CodeGenOptions::HLSLSemanticSignaturePackingMode;
     auto Mode = CGM.getCodeGenOpts().getHLSLSemanticSignaturePacking();
     for (auto IOTy : {llvm::hlsl::IOType::In, llvm::hlsl::IOType::Out}) {
       bool IsOutput = IOTy == llvm::hlsl::IOType::Out;
-      auto Packed = packSemanticSignature(
-          IsOutput ? OutputSignature : InputSignature, Stage, IOTy, Mode,
-          CGM.getLangOpts().NativeHalfType);
+      auto &Signature = IsOutput ? OutputSignature : InputSignature;
+      auto Packed = packSemanticSignature(Signature, Stage, IOTy, Mode,
+                                          CGM.getLangOpts().NativeHalfType);
       if (!Packed) {
         CGM.getDiags().Report(FD->getLocation(),
                               diag::err_hlsl_signature_packing)
             << IsOutput << llvm::toString(Packed.takeError());
         return;
       }
+      // Library entry points retain stage-specific packing without warnings.
+      if (Mode != PackingMode::Default &&
+          CGM.getTarget().getTriple().getEnvironment() !=
+              llvm::Triple::Library &&
+          ((Stage == llvm::Triple::Vertex && !IsOutput) ||
+           (Stage == llvm::Triple::Pixel && IsOutput)))
+        CGM.getDiags().Report(FD->getLocation(),
+                              diag::warn_hlsl_signature_packing_ignored)
+            << (Mode == PackingMode::Optimized ? "optimized" : "prefix-stable")
+            << IsOutput;
     }
   }
 
