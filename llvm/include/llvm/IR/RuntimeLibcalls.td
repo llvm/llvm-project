@@ -2029,38 +2029,6 @@ defvar ExceptionModelCalls = (add
 // module's exception model.
 def ExceptionRuntime : LibcallLibrary<"unwind", ExceptionModelCalls>;
 
-// FIXME: Should move to explicit opt-in to different sets of libcalls
-// instead of trying to remove from a default set. We have
-// unreasonable defaults like reporting f80 calls on most targets when
-// they are relevant to only one.
-
-defvar AllDefaultRuntimeLibcallImpls
-  = !listconcat(CompilerRtLibgccImpls, LibmCoreImpls, LibcCoreImpls);
-
-defvar DefaultRuntimeLibcallImpls_f80 =
-    !filter(entry, AllDefaultRuntimeLibcallImpls,
-            !match(!cast<string>(entry.Provides), "F80"));
-
-// The l-suffixed libm math functions, only correct when long double is x87.
-defvar DefaultRuntimeLibcallImpls_longdouble_f80 =
-    !filter(entry, AllDefaultRuntimeLibcallImpls,
-            !match(!cast<string>(entry), "l_f80"));
-
-// The compiler-rt helpers, keyed to the x86_fp80 IR type and available on all
-// x86 regardless of the long double format.
-defvar DefaultRuntimeLibcallImpls_f80_helpers =
-    !listremove(DefaultRuntimeLibcallImpls_f80,
-                DefaultRuntimeLibcallImpls_longdouble_f80);
-
-defvar DefaultRuntimeLibcallImpls_ppcf128 =
-    !filter(entry, AllDefaultRuntimeLibcallImpls,
-            !match(!cast<string>(entry.Provides), "PPCF128"));
-
-// The l-suffixed libm functions are fp128 only when long double is fp128.
-defvar DefaultRuntimeLibcallImpls_longdouble_f128 =
-    !filter(entry, AllDefaultRuntimeLibcallImpls,
-            !match(!cast<string>(entry), "l_f128"));
-
 // Width-specific slices of the compiler-rt/libgcc body. The core definition
 // contains the integer, f32, f64 and f128 helpers, while the f80 and ppcf128
 // slices are added separately.
@@ -2077,24 +2045,6 @@ defvar CompilerRtLibgccImpls_core =
       !listremove(CompilerRtLibgccImpls, CompilerRtLibgccImpls_f80),
                   CompilerRtLibgccImpls_ppcf128);
 
-// FIXME: Ideally we would just use dags everywhere, but for the
-// arm64ec case we need iterable lists so we can add the # prefix
-//
-// The fp128 long double libcalls are added on a per-target basis.
-defvar DefaultRuntimeLibcallImplsBaseList =
-!listremove(
-  !listremove(
-    !listremove(
-      !listremove(AllDefaultRuntimeLibcallImpls, Int128RTLibcalls),
-                  DefaultRuntimeLibcallImpls_f80),
-                  DefaultRuntimeLibcallImpls_ppcf128),
-                  DefaultRuntimeLibcallImpls_longdouble_f128);
-
-defvar DefaultRuntimeLibcallImpls =
-  (add DefaultRuntimeLibcallImplsBaseList,
-       LibcallImpls<(add DefaultRuntimeLibcallImpls_longdouble_f128),
-                    isLongDoubleF128>,
-       ExceptionModelCalls);
 
 // TODO: Guessing sincospi added at same time as sincos_stret
 defvar DarwinSinCosStret = LibcallImpls<(add __sincosf_stret, __sincos_stret,
@@ -2133,20 +2083,6 @@ defvar LibmHasExp10F64 = LibcallImpls<(add exp10), hasExp10>;
 
 defvar LibmHasFrexpF32 = LibcallImpls<(add frexpf), isNotOSWindowsOrIsCygwinMinGW>;
 defvar LibmHasLdexpF32 = LibcallImpls<(add ldexpf), isNotOSWindowsOrIsCygwinMinGW>;
-
-defvar WindowsMathRemovals = [
-  ldexpf, ldexpl_f80, ldexpl_f128, ldexpl_ppcf128,
-  frexpf, frexpl_f80, frexpl_f128, frexpl_ppcf128
-];
-
-defvar MostPowI = !listremove(PowiLibcallImpls, [__powitf2_f128, __powitf2_ppc128]);
-defvar WindowsExclusions = !listconcat(WindowsMathRemovals, MostPowI);
-
-// Targets which support windows start with this as a base and add in calls for
-// other OSes.
-defvar WinDefaultLibcallImplsBaseList =
-  !listremove(DefaultRuntimeLibcallImplsBaseList,
-              WindowsExclusions);
 
 defvar LibmHasFrexpF128 = LibcallImpls<(add frexpl_f128), isNotOSWindowsOrIsCygwinMinGW>;
 defvar LibmHasLdexpF128 = LibcallImpls<(add ldexpl_f128), isNotOSWindowsOrIsCygwinMinGW>;
@@ -2396,7 +2332,7 @@ def isWindowsArm64EC : RuntimeLibcallAvailability<(all_of IsWindowsArm64EC)>;
 
 // frexpl/ldexpl/exp10l are added separately based on the Target Triple.
 defvar AArch64LongDoubleF128Body =
-    !listremove(DefaultRuntimeLibcallImpls_longdouble_f128,
+    !listremove(LibmCoreImpls_f128,
                 [frexpl_f128, ldexpl_f128, exp10l_f128]);
 
 // AArch64 libm extras.
@@ -2422,9 +2358,16 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
        AArch64SMERuntime, SafeStackRuntime)
 >;
 
+// The Windows runtime lacks the f32 and f64 powi helpers, and frexpf/ldexpf.
+defvar Arm64ECCompilerRtImpls =
+    !listremove(CompilerRtLibgccImpls_core,
+                !listremove(PowiLibcallImpls, [__powitf2_f128, __powitf2_ppc128]));
+defvar Arm64ECLibmImpls = !listremove(LibmCoreImpls_core, LibmFrexpLdexpF32);
+
 // Prepend a # to every name
 defset list<RuntimeLibcallImpl> WinArm64ECDefaultRuntimeLibcallImpls = {
-  foreach libcall = WinDefaultLibcallImplsBaseList in {
+  foreach libcall = !listconcat(Arm64ECCompilerRtImpls, Arm64ECLibmImpls,
+                                LibcCoreImpls) in {
     def arm64ec_#libcall : DuplicateLibcallImplWithPrefix<libcall, "#">;
   }
 
