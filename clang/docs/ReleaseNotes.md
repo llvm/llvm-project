@@ -620,7 +620,7 @@ features cannot lower the translation-unit ABI level;
   parsed where a nested-name-specifier could appear (e.g. ``int decltype = 0;``).
   Clang now diagnoses the error instead of asserting. (#GH211207)
 
-- Fixed a bogus unused function warning when using `operator<=>` within an anonymous namespace. (#GH125233)
+- Fixed a spurious unused function warning when using `operator<=>` within an anonymous namespace. (#GH125233)
 
 - Fixed a regression where the rewritten comparison operator was not instantiated properly. (#GH104720)
 
