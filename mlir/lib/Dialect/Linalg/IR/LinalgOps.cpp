@@ -2044,9 +2044,11 @@ enum class BroadcastReduceKind {
   MaxUI,
   MinSI,
   MinUI,
+  AndI,
+  OrI,
 };
 
-/// Match a supported max/min reduction body and return its reduction kind.
+/// Match a supported reduction body and return its reduction kind.
 static std::optional<BroadcastReduceKind>
 matchBroadcastReduceBody(ReduceOp reduceOp) {
   if (reduceOp.getNumDpsInputs() != 1 || reduceOp.getNumDpsInits() != 1 ||
@@ -2087,6 +2089,9 @@ matchBroadcastReduceBody(ReduceOp reduceOp) {
           [](arith::MinSIOp) { return BroadcastReduceKind::MinSI; })
       .Case<arith::MinUIOp>(
           [](arith::MinUIOp) { return BroadcastReduceKind::MinUI; })
+      .Case<arith::AndIOp>(
+          [](arith::AndIOp) { return BroadcastReduceKind::AndI; })
+      .Case<arith::OrIOp>([](arith::OrIOp) { return BroadcastReduceKind::OrI; })
       .Default([](Operation *) -> std::optional<BroadcastReduceKind> {
         return std::nullopt;
       });
@@ -2111,7 +2116,10 @@ static bool hasBroadcastReduceIdentity(Value init, BroadcastReduceKind kind) {
   case BroadcastReduceKind::MinSI:
     return value.isMaxSignedValue();
   case BroadcastReduceKind::MinUI:
+  case BroadcastReduceKind::AndI:
     return value.isAllOnes();
+  case BroadcastReduceKind::OrI:
+    return value.isZero();
   }
   llvm_unreachable("unknown broadcast reduction kind");
 }
@@ -2120,8 +2128,10 @@ static bool hasBroadcastReduceIdentity(Value init, BroadcastReduceKind kind) {
 ///
 ///  maxsi(broadcast(x)) -> x
 ///  minsi(broadcast(y)) -> y
+///  andi(broadcast(z)) -> z
+///  ori(broadcast(w)) -> w
 ///
-// TODO: We can add other op. e.g., add, mul, and, or, xor.
+/// provided the reduction init is the identity value of the combiner.
 struct FoldReduceBroadcast : public OpRewritePattern<linalg::ReduceOp> {
   using OpRewritePattern<linalg::ReduceOp>::OpRewritePattern;
 
