@@ -251,8 +251,39 @@ void SDNodeInfo::verifyNode(const SelectionDAG &DAG, const SDNode *N) const {
       }
       break;
     }
-    case SDTCisSubVecOfVec:
+    case SDTCisSubVecOfVec: {
+      SDNodeValue VecVal = GetConstraintValue(C.ConstrainingValIdx);
+      EVT VecVT = VecVal.getValueType();
+
+      if (!VT.isVector()) {
+        SS << Val << " must have vector type, but has type " << VT;
+        reportNodeError(DAG, N, SS.str());
+      }
+      if (!VecVT.isVector()) {
+        SS << VecVal << " must have vector type, but has type " << VecVT;
+        reportNodeError(DAG, N, SS.str());
+      }
+      if (VT.getVectorElementType() != VecVT.getVectorElementType()) {
+        SS << Val << " must have the same element type as " << VecVal
+           << " (" << VecVT.getVectorElementType() << "), but has element type "
+           << VT.getVectorElementType();
+        reportNodeError(DAG, N, SS.str());
+      }
+      if (VT.isScalableVector() && !VecVT.isScalableVector()) {
+        SS << Val << " is a scalable vector, but " << VecVal
+           << " is not; a scalable vector cannot be a sub-vector of a fixed "
+              "length vector";
+        reportNodeError(DAG, N, SS.str());
+      }
+      // We can't compare elements when the subvector is fixed and the vector
+      // is scalable. We would need to take into account vscale.
+      if (VT.isScalableVector() == VecVT.isScalableVector() &&
+          VT.getVectorMinNumElements() >= VecVT.getVectorMinNumElements()) {
+        SS << Val << " must have fewer elements than " << VecVal;
+        reportNodeError(DAG, N, SS.str());
+      }
       break;
+    }
     case SDTCVecEltisVT: {
       EVT ExpectedVT = GetConstraintVT(C);
 
