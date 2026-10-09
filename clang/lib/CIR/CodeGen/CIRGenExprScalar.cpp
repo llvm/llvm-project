@@ -320,9 +320,13 @@ public:
   }
 
   mlir::Value VisitMatrixSubscriptExpr(MatrixSubscriptExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "ScalarExprEmitter: matrix subscript");
-    return {};
+    mlir::Value rowIdx = cgf.emitScalarExpr(e->getRowIdx());
+    mlir::Value columnIdx = cgf.emitScalarExpr(e->getColumnIdx());
+    mlir::Value matrix = Visit(e->getBase());
+    mlir::Location loc = cgf.getLoc(e->getSourceRange());
+    if (cgf.cgm.getCodeGenOpts().OptimizationLevel > 0)
+      assert(!cir::MissingFeatures::emitMatrixIndexAssumption());
+    return builder.createMatrixExtract(loc, matrix, rowIdx, columnIdx);
   }
 
   mlir::Value VisitMatrixSingleSubscriptExpr(MatrixSingleSubscriptExpr *e) {
@@ -2413,9 +2417,15 @@ mlir::Value ScalarExprEmitter::emitAdd(const BinOpInfo &ops) {
     }
   }
   if (ops.fullType->isConstantMatrixType()) {
-    assert(!cir::MissingFeatures::matrixType());
-    cgf.cgm.errorNYI("ScalarExprEmitter::emitAdd: matrix types");
-    return {};
+    // Like llvm::MatrixBuilder::CreateAdd, splat a scalar operand to the matrix
+    // type before adding.
+    auto [lhs, rhs] =
+        builder.splatMatrixOpOperandsIfNecessary(loc, ops.lhs, ops.rhs);
+
+    CIRGenFunction::CIRGenFPOptionsRAII fpOptsRAII(cgf, ops.fpFeatures);
+    if (cir::isFPOrVectorOrMatrixOfFPType(lhs.getType()))
+      return builder.createFAdd(loc, lhs, rhs);
+    return builder.createAdd(loc, lhs, rhs);
   }
 
   if (ops.compType->isUnsignedIntegerType() &&
