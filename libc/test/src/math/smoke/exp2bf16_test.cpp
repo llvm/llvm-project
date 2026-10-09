@@ -6,4 +6,57 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO: implement
+#include "hdr/errno_macros.h"
+#include "hdr/fenv_macros.h"
+#include "src/__support/FPUtil/bfloat16.h"
+#include "src/math/exp2bf16.h"
+#include "test/UnitTest/FEnvSafeTest.h"
+#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/Test.h"
+
+class LlvmLibcExp2bf16Test : public LIBC_NAMESPACE::testing::FEnvSafeTest {
+  DECLARE_SPECIAL_CONSTANTS(bfloat16)
+
+public:
+  void test_special_numbers() {
+    EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::exp2bf16(aNaN));
+    EXPECT_MATH_ERRNO(0);
+
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::exp2bf16(sNaN),
+                                FE_INVALID);
+    EXPECT_MATH_ERRNO(0);
+
+    EXPECT_FP_EQ_ALL_ROUNDING(inf, LIBC_NAMESPACE::exp2bf16(inf));
+    EXPECT_MATH_ERRNO(0);
+
+    EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::exp2bf16(neg_inf));
+    EXPECT_MATH_ERRNO(0);
+
+    EXPECT_FP_EQ_ALL_ROUNDING(bfloat16(1.0f), LIBC_NAMESPACE::exp2bf16(zero));
+    EXPECT_MATH_ERRNO(0);
+
+    EXPECT_FP_EQ_ALL_ROUNDING(bfloat16(1.0f),
+                              LIBC_NAMESPACE::exp2bf16(neg_zero));
+    EXPECT_MATH_ERRNO(0);
+
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        inf, LIBC_NAMESPACE::exp2bf16(max_normal), FE_OVERFLOW);
+    EXPECT_MATH_ERRNO(ERANGE);
+
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        inf, LIBC_NAMESPACE::exp2bf16(bfloat16(128.0f)), FE_OVERFLOW);
+    EXPECT_MATH_ERRNO(ERANGE);
+
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        zero, LIBC_NAMESPACE::exp2bf16(neg_max_normal),
+        FE_UNDERFLOW | FE_INEXACT);
+    EXPECT_MATH_ERRNO(ERANGE);
+
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        zero, LIBC_NAMESPACE::exp2bf16(bfloat16(-134.0f)),
+        FE_UNDERFLOW | FE_INEXACT);
+    EXPECT_MATH_ERRNO(ERANGE);
+  }
+};
+
+TEST_F(LlvmLibcExp2bf16Test, SpecialNumbers) { test_special_numbers(); }
