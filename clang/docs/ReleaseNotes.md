@@ -778,6 +778,9 @@ features cannot lower the translation-unit ABI level;
   parsed where a nested-name-specifier could appear (e.g. ``int decltype = 0;``).
   Clang now diagnoses the error instead of asserting. (#GH211207)
 
+- Fixed a crash when an invalid constructor delegated to its own class and the
+  class had no valid constructors. (#GH186650)
+
 - Fixed an assertion failure when a parenthesized structured binding declarator
   was followed by a function declarator and body (e.g. ``([a, b])() {}``).
   (#GH218144, #GH193687)
