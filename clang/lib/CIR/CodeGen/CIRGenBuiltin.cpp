@@ -26,7 +26,7 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
+#include "clang/CodeGenUtils/FunctionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -494,6 +494,8 @@ static RValue emitAtomicIsLockFree(CIRGenFunction &cgf, const CallExpr *e,
   cir::FuncOp func = cgf.cgm.createRuntimeFunction(
       cir::FuncType::get({sizeTy, builder.getVoidPtrTy()}, builder.getBoolTy()),
       "__atomic_is_lock_free");
+  // TODO(cir): set the runtime calling convention to this call.
+  assert(!cir::MissingFeatures::opFuncCallingConv());
   return RValue::get(
       builder.createCallOp(loc, func, mlir::ValueRange{size, ptr}).getResult());
 }
@@ -597,8 +599,7 @@ static RValue emitBinaryFPBuiltin(CIRGenFunction &cgf, const CallExpr &e) {
   mlir::Value arg1 = cgf.emitScalarExpr(e.getArg(1));
 
   mlir::Location loc = cgf.getLoc(e.getExprLoc());
-  mlir::Type ty = cgf.convertType(e.getType());
-  auto call = Op::create(cgf.getBuilder(), loc, ty, arg0, arg1);
+  auto call = Op::create(cgf.getBuilder(), loc, arg0, arg1);
 
   return RValue::get(call->getResult(0));
 }
@@ -643,9 +644,7 @@ static mlir::Value emitBinaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
   CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, &e);
 
   mlir::Location loc = cgf.getLoc(e.getExprLoc());
-  mlir::Type ty = cgf.convertType(e.getType());
-
-  auto call = Op::create(cgf.getBuilder(), loc, ty, arg0, arg1,
+  auto call = Op::create(cgf.getBuilder(), loc, arg0, arg1,
                          cgf.getBuilder().getConstrainedFPAttr());
   return call->getResult(0);
 }

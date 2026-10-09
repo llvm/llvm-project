@@ -27,7 +27,7 @@ elseif(LLVM_LIBC_FULL_BUILD)
   list(APPEND libc_archive_names c m mvec)
   list(APPEND libc_archive_targets libc libm libmvec)
   list(APPEND libc_archive_entrypoint_lists
-       TARGET_LIBC_ENTRYPOINTS TARGET_LIBM_ENTRYPOINTS TARGET_LIBMVEC_ENTRYPOINTS)
+    TARGET_LIBC_ENTRYPOINTS TARGET_LIBM_ENTRYPOINTS TARGET_LIBMVEC_ENTRYPOINTS)
 else()
   list(APPEND libc_archive_names llvmlibc)
   list(APPEND libc_archive_targets libc)
