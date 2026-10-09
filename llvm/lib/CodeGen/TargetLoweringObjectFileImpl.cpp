@@ -1109,8 +1109,9 @@ MCSection *TargetLoweringObjectFileELF::getSectionForConstantImpl(
     return Context.getELFSection(CstPrefix + ".cst32" + SectionSuffixStr,
                                  ELF::SHT_PROGBITS, MergeableCstFlags, 32);
   if (Kind.isReadOnly())
-    return Context.getELFSection(CstPrefix + SectionSuffixStr,
-                                 ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
+    return Context.getELFSection(
+        CstPrefix + SectionSuffixStr, ELF::SHT_PROGBITS,
+        ELF::SHF_ALLOC | (IsLarge ? ELF::SHF_X86_64_LARGE : 0));
 
   assert(Kind.isReadOnlyWithRel() && "Unknown section kind");
   return Context.getELFSection(".data.rel.ro" + SectionSuffixStr,
@@ -2928,7 +2929,10 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   auto *Symbol = TM.getSymbol(GO);
 
-  if (Kind.isBSS() || Kind.isData() || Kind.isReadOnlyWithRel()) {
+  // Read-only data stays in the code section only if it is local: references
+  // from other translation units are always parts in the WSA.
+  if (Kind.isBSS() || Kind.isData() || Kind.isReadOnlyWithRel() ||
+      (Kind.isReadOnly() && !GO->hasLocalLinkage())) {
     GOFF::ESDBindingScope PRBindingScope =
         GO->hasExternalLinkage()
             ? (GO->hasDefaultVisibility() ? GOFF::ESD_BSC_ImportExport

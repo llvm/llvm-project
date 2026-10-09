@@ -307,6 +307,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.stdin
     libc.src.stdio.stdout
     libc.src.stdio.tmpfile
+    libc.src.stdio.tmpnam
     libc.src.stdio.vsscanf
     libc.src.stdio.vfprintf
     libc.src.stdio.vprintf
@@ -435,6 +436,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/wait.h entrypoints
     libc.src.sys.wait.wait
     libc.src.sys.wait.wait4
+    libc.src.sys.wait.waitid
     libc.src.sys.wait.waitpid
 
     # sys/prctl.h entrypoints
@@ -446,6 +448,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/auxv.h entrypoints
     libc.src.sys.auxv.getauxval
 
+    # sys/inotify.h entrypoints
+    libc.src.sys.inotify.inotify_add_watch
+    libc.src.sys.inotify.inotify_init
+    libc.src.sys.inotify.inotify_init1
+    libc.src.sys.inotify.inotify_rm_watch
+
     # termios.h entrypoints
     libc.src.termios.cfgetispeed
     libc.src.termios.cfgetospeed
@@ -456,8 +464,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.termios.tcflush
     libc.src.termios.tcgetattr
     libc.src.termios.tcgetsid
+    libc.src.termios.tcgetwinsize
     libc.src.termios.tcsendbreak
     libc.src.termios.tcsetattr
+    libc.src.termios.tcsetwinsize
 
     # unistd.h entrypoints
     libc.src.unistd.alarm

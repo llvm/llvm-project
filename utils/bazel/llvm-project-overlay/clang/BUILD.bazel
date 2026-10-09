@@ -1133,6 +1133,7 @@ cc_library(
         # least bad approach. Using `includes` is *specifically* problematic for
         # this library because it contains files that collide easily with system
         # headers such as `CXXABI.h`.
+        "-I$(WORKSPACE_ROOT)/clang/lib/AST",
         "-I$(GENDIR)/$(WORKSPACE_ROOT)/clang/lib/AST",
         "-I$(GENDIR)/$(WORKSPACE_ROOT)/clang/lib/AST/ByteCode",
     ],
@@ -1247,6 +1248,7 @@ cc_library(
     name = "analysis",
     srcs = glob([
         "lib/Analysis/FlowSensitive/Models/*.cpp",
+        "lib/Analysis/FlowSensitive/Models/*.h",
         "lib/Analysis/FlowSensitive/*.cpp",
         "lib/Analysis/LifetimeSafety/*.cpp",
         "lib/Analysis/LifetimeSafety/*.h",
@@ -1260,6 +1262,7 @@ cc_library(
     includes = [
         "include",
         "lib/Analysis/FlowSensitive",
+        "lib/Analysis/FlowSensitive/Models",
     ],
     textual_hdrs = glob([
         "include/clang/Analysis/**/*.def",
@@ -2130,6 +2133,7 @@ cc_library(
         "//llvm:Core",
         "//llvm:Demangle",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -3409,6 +3413,7 @@ cc_library(
         "//llvm:IPO",
         "//llvm:Linker",
         "//llvm:Support",
+        "//mlir:BytecodeWriter",
         "//mlir:IR",
         "//mlir:Parser",
         "//mlir:Pass",

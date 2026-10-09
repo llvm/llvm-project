@@ -1109,6 +1109,22 @@ gpu.module @test_module_53 {
     // CHECK: llvm.call @__nv_powi(%{{.*}}, %{{.*}}) : (f64, i32) -> f64
     func.return %result32, %result64 : f32, f64
   }
+
+  // A narrower exponent is sign-extended, also in a vector.
+  // CHECK-LABEL: func @gpu_powi_narrow
+  func.func @gpu_powi_narrow(%arg_f64 : vector<2xf64>, %arg_i16 : vector<2xi16>) -> vector<2xf64> {
+    // CHECK-COUNT-2: llvm.call @__nv_powi(%{{.*}}, %{{.*}}) : (f64, i32) -> f64
+    %result = math.fpowi %arg_f64, %arg_i16 : vector<2xf64>, vector<2xi16>
+    func.return %result : vector<2xf64>
+  }
+
+  // A vector with an exponent wider than i32 is not scalarized.
+  // CHECK-LABEL: func @gpu_powi_wide
+  func.func @gpu_powi_wide(%arg_f32 : vector<2xf32>, %arg_i64 : vector<2xi64>) -> vector<2xf32> {
+    // CHECK: math.fpowi %{{.*}}, %{{.*}} : vector<2xf32>, vector<2xi64>
+    %result = math.fpowi %arg_f32, %arg_i64 : vector<2xf32>, vector<2xi64>
+    func.return %result : vector<2xf32>
+  }
 }
 
 gpu.module @test_module_54 {

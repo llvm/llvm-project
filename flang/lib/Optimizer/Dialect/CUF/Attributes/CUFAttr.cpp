@@ -26,7 +26,7 @@ namespace cuf {
 
 void CUFDialect::registerAttributes() {
   addAttributes<ClusterDimsAttr, DataAttributeAttr, DataTransferKindAttr,
-                LaunchBoundsAttr, ProcAttributeAttr>();
+                LaunchBoundsAttr, LaunchConfigAttr, ProcAttributeAttr>();
 }
 
 cuf::DataAttributeAttr getDataAttr(mlir::Operation *op) {
