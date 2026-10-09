@@ -31013,7 +31013,8 @@ class HorizontalReduction {
   }
 
   /// Creates reduction operation with the current opcode with the IR flags
-  /// from \p ReductionOps, dropping nuw/nsw flags.
+  /// from \p ReductionOps, dropping nuw/nsw flags. A booleanized reduction op
+  /// gets no flags.
   static Value *createOp(IRBuilderBase &Builder, RecurKind RdxKind, Value *LHS,
                          Value *RHS, const Twine &Name,
                          const ReductionOpsListType &ReductionOps) {
@@ -31034,6 +31035,11 @@ class HorizontalReduction {
         return Op;
       }
     }
+    // The flags of the i1 ops do not hold for a booleanized reduction op,
+    // which is performed in the wide type.
+    if (getBoolReduxWideTy(RdxKind, ReductionOps[0].front()->getType(),
+                           Op->getType()))
+      return Op;
     propagateIRFlags(Op, ReductionOps[0], nullptr, /*IncludeWrapFlags=*/false);
     return Op;
   }

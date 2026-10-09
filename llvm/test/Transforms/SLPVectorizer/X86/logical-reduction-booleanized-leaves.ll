@@ -336,7 +336,7 @@ define i1 @or_disjoint_leftover(ptr %input, i8 noundef %x) {
 ; CHECK-SAME: ptr [[INPUT:%.*]], i8 noundef [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[INPUT]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.vector.reduce.or.v8i8(<8 x i8> [[TMP1]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = or disjoint i8 [[TMP2]], [[X]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = or i8 [[TMP2]], [[X]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i8 [[OP_RDX]] to i1
 ; CHECK-NEXT:    ret i1 [[TMP3]]
 ;
