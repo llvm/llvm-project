@@ -639,9 +639,11 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__type_traits/is_nothrow_constructible.h>
 #  include <__type_traits/is_relocatable.h>
 #  include <__type_traits/is_same.h>
+#  include <__type_traits/is_signed.h>
 #  include <__type_traits/is_standard_layout.h>
 #  include <__type_traits/is_trivially_constructible.h>
 #  include <__type_traits/is_trivially_copyable.h>
+#  include <__type_traits/make_unsigned.h>
 #  include <__type_traits/remove_cv.h>
 #  include <__type_traits/remove_cvref.h>
 #  include <__utility/assume.h>
@@ -1250,7 +1252,15 @@ public:
     __annotate_delete();
     __set_size(__n);
     __annotate_new(__n);
-    __erase_to_end(std::move(__op)(data(), auto(__n)));
+    __result_type __r = std::move(__op)(data(), auto(__n));
+    if constexpr (__integer_like<__result_type>) { // Avoid extra errors after a failed static_assert
+      if constexpr (is_signed_v<__result_type>)
+        _LIBCPP_ASSERT_VALID_INPUT_RANGE(
+            __r >= 0, "string::resize_and_overwrite: the operation returned a negative size");
+      _LIBCPP_ASSERT_VALID_INPUT_RANGE(std::__to_unsigned_like(__r) <= __n,
+                                       "string::resize_and_overwrite: the operation returned a size larger than n");
+    }
+    __erase_to_end(__r);
   }
 #  endif
 
