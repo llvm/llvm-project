@@ -336,7 +336,8 @@ bool AMDGPUMIRFormatter::parseSWaitAluImmMnemonic(
     return false;
 
   // Initialize with all checks off.
-  Imm = AMDGPU::DepCtr::getDefaultDepCtrEncoding(STI);
+  unsigned ImmEnc = AMDGPU::DepCtr::getDefaultDepCtrEncoding(STI);
+  Imm = ImmEnc;
   // The input is in the form: .Name1_Num1_Name2_Num2
   // Drop the '.' prefix.
   bool ConsumePrefix = Src.consume_front(SWaitAluImmPrefix);
@@ -379,36 +380,37 @@ bool AMDGPUMIRFormatter::parseSWaitAluImmMnemonic(
     unsigned Max;
     if (Name == VaVdstName) {
       Max = AMDGPU::DepCtr::getVaVdstBitMask();
-      Imm = AMDGPU::DepCtr::encodeFieldVaVdst(static_cast<unsigned>(Imm),
-                                              static_cast<unsigned>(Num));
+      ImmEnc =
+          AMDGPU::DepCtr::encodeFieldVaVdst(ImmEnc, static_cast<unsigned>(Num));
     } else if (Name == VmVsrcName) {
       Max = AMDGPU::DepCtr::getVmVsrcBitMask();
-      Imm = AMDGPU::DepCtr::encodeFieldVmVsrc(static_cast<unsigned>(Imm),
-                                              static_cast<unsigned>(Num));
+      ImmEnc =
+          AMDGPU::DepCtr::encodeFieldVmVsrc(ImmEnc, static_cast<unsigned>(Num));
     } else if (Name == VaSdstName) {
       Max = AMDGPU::DepCtr::getVaSdstBitMask();
-      Imm = AMDGPU::DepCtr::encodeFieldVaSdst(static_cast<unsigned>(Imm),
-                                              static_cast<unsigned>(Num));
+      ImmEnc =
+          AMDGPU::DepCtr::encodeFieldVaSdst(ImmEnc, static_cast<unsigned>(Num));
     } else if (Name == VaSsrcName) {
       Max = AMDGPU::DepCtr::getVaSsrcBitMask();
-      Imm = AMDGPU::DepCtr::encodeFieldVaSsrc(static_cast<unsigned>(Imm),
-                                              static_cast<unsigned>(Num));
+      ImmEnc =
+          AMDGPU::DepCtr::encodeFieldVaSsrc(ImmEnc, static_cast<unsigned>(Num));
     } else if (Name == HoldCntName) {
       const AMDGPU::IsaVersion &Version = AMDGPU::getIsaVersion(STI.getCPU());
       Max = AMDGPU::DepCtr::getHoldCntBitMask(Version);
-      Imm = AMDGPU::DepCtr::encodeFieldHoldCnt(
-          static_cast<unsigned>(Imm), static_cast<unsigned>(Num), Version);
+      ImmEnc = AMDGPU::DepCtr::encodeFieldHoldCnt(
+          ImmEnc, static_cast<unsigned>(Num), Version);
     } else if (Name == VaVccName) {
       Max = AMDGPU::DepCtr::getVaVccBitMask();
-      Imm = AMDGPU::DepCtr::encodeFieldVaVcc(static_cast<unsigned>(Imm),
-                                             static_cast<unsigned>(Num));
+      ImmEnc =
+          AMDGPU::DepCtr::encodeFieldVaVcc(ImmEnc, static_cast<unsigned>(Num));
     } else if (Name == SaSdstName) {
       Max = AMDGPU::DepCtr::getSaSdstBitMask();
-      Imm = AMDGPU::DepCtr::encodeFieldSaSdst(static_cast<unsigned>(Imm),
-                                              static_cast<unsigned>(Num));
+      ImmEnc =
+          AMDGPU::DepCtr::encodeFieldSaSdst(ImmEnc, static_cast<unsigned>(Num));
     } else {
       return ErrorCallback(NamePos, "invalid counter name");
     }
+    Imm = ImmEnc;
     // Don't allow the values to reach their maximum value.
     if (Num >= Max)
       return ErrorCallback(NumPos, "counter value too large");
