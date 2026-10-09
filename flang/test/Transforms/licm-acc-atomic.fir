@@ -128,3 +128,126 @@ func.func @write_no_hoist_load_of_x(
   return
 }
 
+//--- acc.atomic.capture ------------------------------------------------------
+
+// acc.atomic.capture carries RecursiveMemoryEffects and declares no effects of
+// its own, so fir::AliasAnalysis::getModRef derives them by recursing into the
+// region. That is only precise once every member declares its own effects: an
+// operation without MemoryEffectOpInterface makes the recursion fall back to
+// ModRef, which is the whole region, and nothing in the loop can be hoisted.
+
+// Capture of the read+update form. The unrelated load leaves the loop; `v` and
+// `x` are both written, so loads of those stay.
+
+// CHECK-LABEL: func.func @capture_hoist_unrelated_load
+// CHECK:         fir.load
+// CHECK:         scf.for
+// CHECK-NOT:       fir.load
+// CHECK:           acc.atomic.capture
+func.func @capture_hoist_unrelated_load(
+    %x: !fir.ref<i32>, %v: !fir.ref<i32>, %y: !fir.ref<i32>, %n: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %one = arith.constant 1 : i32
+  scf.for %i = %c0 to %n step %c1 {
+    %0 = fir.load %y : !fir.ref<i32>
+    acc.atomic.capture {
+      acc.atomic.read %v = %x : !fir.ref<i32>, !fir.ref<i32>, i32
+      acc.atomic.update %x : !fir.ref<i32> {
+      ^bb0(%old: i32):
+        %r = arith.addi %old, %one : i32
+        acc.yield %r : i32
+      }
+    }
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @capture_no_hoist_load_of_v
+// CHECK:         scf.for
+// CHECK:           fir.load
+// CHECK:           acc.atomic.capture
+func.func @capture_no_hoist_load_of_v(
+    %x: !fir.ref<i32>, %v: !fir.ref<i32>, %n: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %one = arith.constant 1 : i32
+  scf.for %i = %c0 to %n step %c1 {
+    %0 = fir.load %v : !fir.ref<i32>
+    acc.atomic.capture {
+      acc.atomic.read %v = %x : !fir.ref<i32>, !fir.ref<i32>, i32
+      acc.atomic.update %x : !fir.ref<i32> {
+      ^bb0(%old: i32):
+        %r = arith.addi %old, %one : i32
+        acc.yield %r : i32
+      }
+    }
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @capture_no_hoist_load_of_x
+// CHECK:         scf.for
+// CHECK:           fir.load
+// CHECK:           acc.atomic.capture
+func.func @capture_no_hoist_load_of_x(
+    %x: !fir.ref<i32>, %v: !fir.ref<i32>, %n: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %one = arith.constant 1 : i32
+  scf.for %i = %c0 to %n step %c1 {
+    %0 = fir.load %x : !fir.ref<i32>
+    acc.atomic.capture {
+      acc.atomic.read %v = %x : !fir.ref<i32>, !fir.ref<i32>, i32
+      acc.atomic.update %x : !fir.ref<i32> {
+      ^bb0(%old: i32):
+        %r = arith.addi %old, %one : i32
+        acc.yield %r : i32
+      }
+    }
+  }
+  return
+}
+
+// Capture of the read+write form. This is the one the write effect above
+// unlocks: with the write opaque the whole capture read as ModRef and the
+// unrelated load stayed in the loop.
+
+// CHECK-LABEL: func.func @capture_write_hoist_unrelated_load
+// CHECK:         fir.load
+// CHECK:         scf.for
+// CHECK-NOT:       fir.load
+// CHECK:           acc.atomic.capture
+func.func @capture_write_hoist_unrelated_load(
+    %x: !fir.ref<i32>, %v: !fir.ref<i32>, %y: !fir.ref<i32>, %val: i32,
+    %n: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  scf.for %i = %c0 to %n step %c1 {
+    %0 = fir.load %y : !fir.ref<i32>
+    acc.atomic.capture {
+      acc.atomic.read %v = %x : !fir.ref<i32>, !fir.ref<i32>, i32
+      acc.atomic.write %x = %val : !fir.ref<i32>, i32
+    }
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @capture_write_no_hoist_load_of_x
+// CHECK:         scf.for
+// CHECK:           fir.load
+// CHECK:           acc.atomic.capture
+func.func @capture_write_no_hoist_load_of_x(
+    %x: !fir.ref<i32>, %v: !fir.ref<i32>, %val: i32, %n: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  scf.for %i = %c0 to %n step %c1 {
+    %0 = fir.load %x : !fir.ref<i32>
+    acc.atomic.capture {
+      acc.atomic.read %v = %x : !fir.ref<i32>, !fir.ref<i32>, i32
+      acc.atomic.write %x = %val : !fir.ref<i32>, i32
+    }
+  }
+  return
+}
+
