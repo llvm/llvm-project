@@ -15223,11 +15223,9 @@ static SDValue PerformBUILD_VECTORCombine(SDNode *N,
   return DAG.getNode(ISD::BITCAST, dl, VT, BV);
 }
 
-static SDValue performLegalizedVECTOR_DEINTERLEAVECombine(
+static SDValue PerformLegalizedVECTOR_DEINTERLEAVECombine(
     SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG,
     const ARMSubtarget *Subtarget) {
-  if (!Subtarget->hasNEON() && !Subtarget->hasMVEIntegerOps())
-    return SDValue();
   // Type legalization splits a wide load into consecutive legal loads. Combine
   // each group used by a legal VECTOR_DEINTERLEAVE into a structured load.
   if (DCI.getDAGCombineLevel() < AfterLegalizeTypes)
@@ -15297,10 +15295,10 @@ static SDValue performLegalizedVECTOR_DEINTERLEAVECombine(
   for (unsigned I = 0; I != NumParts; ++I)
     ResOps.push_back(NewLoad.getValue(I));
 
-  // Replace uses of the original chain result with the new chain result.
+  // Preserve the memory ordering of each original load with the new load.
   for (LoadSDNode *Load : Loads)
-    DAG.ReplaceAllUsesOfValueWith(SDValue(Load, 1), NewLoad.getValue(NumParts));
-
+    DAG.makeEquivalentMemoryOrdering(SDValue(Load, 1),
+                                     NewLoad.getValue(NumParts));
   return DCI.CombineTo(N, ResOps, false);
 }
 
@@ -15313,7 +15311,7 @@ PerformVECTOR_DEINTERLEAVECombine(SDNode *N,
   if (!Subtarget->hasNEON() && !Subtarget->hasMVEIntegerOps())
     return SDValue();
 
-  if (SDValue Res = performLegalizedVECTOR_DEINTERLEAVECombine(N, DCI, DCI.DAG,
+  if (SDValue Res = PerformLegalizedVECTOR_DEINTERLEAVECombine(N, DCI, DCI.DAG,
                                                                Subtarget))
     return Res;
 
@@ -15345,14 +15343,14 @@ PerformVECTOR_DEINTERLEAVECombine(SDNode *N,
   SDValue Op0 = N->getOperand(0);
   for (unsigned I = 0; I < NumParts; I++) {
     SDValue OpI = N->getOperand(I);
-    if (OpI->getOpcode() != ISD::EXTRACT_SUBVECTOR ||
-        OpI->getOperand(0) != Op0->getOperand(0))
+    if (!OpI.hasOneUse() || OpI.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
+        OpI.getOperand(0) != Op0.getOperand(0))
       return SDValue();
-    if (OpI->getConstantOperandVal(1) != (I * MinNumElements))
+    if (OpI.getConstantOperandVal(1) != (I * MinNumElements))
       return SDValue();
   }
 
-  SDValue WideVec = Op0->getOperand(0);
+  SDValue WideVec = Op0.getOperand(0);
   SDLoc DL(N);
 
   SmallVector<EVT, 5> ResVTs(NumParts, SubVecTy);
@@ -15384,11 +15382,10 @@ PerformVECTOR_DEINTERLEAVECombine(SDNode *N,
 
   SmallVector<SDValue, 4> ResOps(NumParts);
   for (unsigned Idx = 0; Idx < NumParts; Idx++)
-    ResOps[Idx] = SDValue(Res.getNode(), Idx);
+    ResOps[Idx] = Res.getValue(Idx);
 
-  // Replace uses of the original chain result with the new chain result.
-  DAG.ReplaceAllUsesOfValueWith(WideVec.getValue(1),
-                                SDValue(Res.getNode(), NumParts));
+  // Preserve the original load's memory ordering with the new load.
+  DAG.makeEquivalentMemoryOrdering(WideVec.getValue(1), Res.getValue(NumParts));
   return DCI.CombineTo(N, ResOps, false);
 }
 
