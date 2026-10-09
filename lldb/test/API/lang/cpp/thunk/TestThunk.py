@@ -5,8 +5,6 @@ from lldbsuite.test import lldbutil
 
 
 class ThunkTest(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test_step_through_thunk(self):
         self.build()
         lldbutil.run_to_name_breakpoint(self, "testit")

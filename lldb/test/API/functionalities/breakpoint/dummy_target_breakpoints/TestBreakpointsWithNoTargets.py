@@ -9,8 +9,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class BreakpointInDummyTarget(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test(self):
         """Test breakpoint set before we have a target."""
         self.build()

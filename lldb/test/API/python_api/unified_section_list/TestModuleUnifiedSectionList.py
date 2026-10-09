@@ -13,7 +13,6 @@ from lldbsuite.test.lldbutil import symbol_type_to_str
 
 
 class ModuleUnifiedSectionList(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
     SHARED_BUILD_TESTCASE = False
 
     @requirePlatform(["linux", "freebsd", "netbsd"])

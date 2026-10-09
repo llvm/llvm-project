@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestNestedClassWithParentInAnotherCU(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test_nested_class_with_parent_in_another_cu(self):
         self.main_source_file = lldb.SBFileSpec("main.cpp")
         self.build()

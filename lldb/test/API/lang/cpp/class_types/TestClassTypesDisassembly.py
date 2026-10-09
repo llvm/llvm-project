@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class IterateFrameAndDisassembleTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test_and_run_command(self):
         """Disassemble each call frame when stopped on C's constructor."""
         self.build()

@@ -8,8 +8,6 @@ from lldbsuite.test.lldbtest import *
 
 
 class PersistentVariablesTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test_persistent_variables(self):
         """Test that lldb persistent variables works correctly."""
         self.build()

@@ -8,7 +8,6 @@ from lldbsuite.test import lldbutil
 
 
 class ValueVarUpdateTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
     SHARED_BUILD_TESTCASE = False
 
     def test_with_process_launch_api(self):

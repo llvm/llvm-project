@@ -8,8 +8,6 @@ from lldbsuite.test.decorators import *
 
 
 class LongTypesExprTestCase(AbstractBase.GenericTester):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test_long_type(self):
         """Test that long-type variable expressions are evaluated correctly."""
         self.build_and_run_expr("long.cpp", ["long"])

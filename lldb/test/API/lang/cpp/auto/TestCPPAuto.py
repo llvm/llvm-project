@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 @requireExpressionEvaluation
 class CPPAutoTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test_with_run_command(self):
         """Test that auto types work in the expression parser"""
         self.build()

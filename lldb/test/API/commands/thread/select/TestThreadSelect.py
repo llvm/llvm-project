@@ -5,8 +5,6 @@ from lldbsuite.test.decorators import *
 
 
 class TestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test_invalid_arg(self):
         self.build()
 

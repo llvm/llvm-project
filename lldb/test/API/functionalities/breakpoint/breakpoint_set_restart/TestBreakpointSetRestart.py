@@ -8,7 +8,6 @@ from lldbsuite.test.lldbtest import *
 
 
 class BreakpointSetRestart(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
     BREAKPOINT_TEXT = "Set a breakpoint here"
 
     @skipIfNetBSD

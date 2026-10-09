@@ -10,8 +10,6 @@ from lldbsuite.test.lldbtest import *
 
 @requireNotWasm("wasm has no memory-protection faults/signals")
 class CrashingInferiorTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     @expectedFailureNetBSD
     def test_inferior_crashing(self):

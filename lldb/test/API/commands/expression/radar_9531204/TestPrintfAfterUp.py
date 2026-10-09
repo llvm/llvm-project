@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 @requireExpressionEvaluation
 class Radar9531204TestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     # rdar://problem/9531204
     def test_expr_commands(self):
         """The evaluating printf(...) after break stop and then up a stack frame."""

@@ -6,8 +6,6 @@ from lldbsuite.test import lldbutil
 
 @skipIfTargetDoesNotSupportSharedLibraries()
 class MissingDllTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     @requireWindows
     def test(self):
         """

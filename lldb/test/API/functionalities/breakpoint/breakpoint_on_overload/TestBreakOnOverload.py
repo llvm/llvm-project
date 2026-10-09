@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestBreakpointOnOverload(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def check_breakpoint(self, name):
         bkpt = self.target.BreakpointCreateByName(name)
         self.assertEqual(bkpt.num_locations, 1, "Got one location")

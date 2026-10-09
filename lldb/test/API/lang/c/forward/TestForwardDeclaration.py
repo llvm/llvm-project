@@ -8,7 +8,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class ForwardDeclarationTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
     SHARED_BUILD_TESTCASE = False
 
     def do_test(self, dictionary=None):

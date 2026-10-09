@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestBreakpointSameCU(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test_breakpoint_same_cu(self):
         self.build()
         target = self.createTestTarget()

@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestBitfieldEnum(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     # Prior to clang-19, clang's DWARF v2 is missing missing DW_AT_type which
     # causes unsigned_max to appear as -1 instead of the "max" enumerator, whose
     # value is 3. From 19 onward, DW_AT_type is added as long as strict DWARF

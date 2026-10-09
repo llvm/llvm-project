@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestCastIntToAnonymousEnum(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test_cast_int_to_anonymous_enum(self):
         self.build()
 

@@ -5,8 +5,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test(self):
         """
         Tests a forward declared template and a normal template in the same

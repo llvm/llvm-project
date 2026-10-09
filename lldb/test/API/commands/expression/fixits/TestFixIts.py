@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class ExprCommandWithFixits(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test_with_dummy_target(self):
         """Test calling expressions in the dummy target with errors that can be fixed by the FixIts."""
 

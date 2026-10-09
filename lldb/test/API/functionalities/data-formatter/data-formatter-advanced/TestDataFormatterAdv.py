@@ -10,8 +10,6 @@ import re
 
 
 class AdvDataFormatterTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)

@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class BreakpointByLineAndColumnTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def testBreakpointSpecWithLine(self):
         self.build()
         target = self.createTestTarget()

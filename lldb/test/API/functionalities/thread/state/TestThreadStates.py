@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class ThreadStateTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test_state_after_breakpoint(self):
         """Test thread state after breakpoint."""
         self.build()

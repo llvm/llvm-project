@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestReverseContinueCommandNotSupported(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test_reverse_continue_not_supported(self):
         target = self.connect()
 

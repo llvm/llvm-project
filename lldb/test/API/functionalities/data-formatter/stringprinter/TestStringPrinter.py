@@ -4,8 +4,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestStringPrinter(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test(self):
         self.build()
 

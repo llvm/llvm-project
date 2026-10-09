@@ -8,8 +8,6 @@ from lldbsuite.test.lldbtest import *
 
 
 class Radar8638051TestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test_expr_commands(self):
         """The following expression commands should not crash."""
         self.build()

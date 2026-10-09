@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestCppIncompleteTypeMembers(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     @skipIf(oslist=["darwin", "macos"], debug_info="gmodules")
     def test(self):
         self.build()

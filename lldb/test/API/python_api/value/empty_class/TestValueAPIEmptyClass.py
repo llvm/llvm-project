@@ -5,8 +5,6 @@ from lldbsuite.test import lldbutil
 
 
 class ValueAPIEmptyClassTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test(self):
         self.build()
         line = line_number("main.cpp", "// Break at this line")

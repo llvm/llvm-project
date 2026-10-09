@@ -6,8 +6,6 @@ from lldbsuite.test import lldbutil
 
 @requireExpressionEvaluation
 class TestCppChainedCalls(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test_with_run_command(self):
         self.build()
         lldbutil.run_to_source_breakpoint(

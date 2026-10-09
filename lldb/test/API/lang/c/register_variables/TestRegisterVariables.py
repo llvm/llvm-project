@@ -13,8 +13,6 @@ def re_expr_equals(val_type, val):
 
 
 class RegisterVariableTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     @expectedFailureAll(compiler="clang", compiler_version=["<", "3.5"])
     @expectedFailureAll(
         compiler="gcc", compiler_version=[">=", "4.8.2"], archs=["i386"]

@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class ExprCrashTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test_pr52257(self):
         self.build()
         self.createTestTarget()

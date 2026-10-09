@@ -6,8 +6,6 @@ from lldbsuite.test import lldbutil
 
 @requireExpressionEvaluation
 class TestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     @expectedFailureAll(bugnumber="llvm.org/pr50814", compiler="gcc")
     def test_constructors(self):
         self.build()

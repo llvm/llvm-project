@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestRerun(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

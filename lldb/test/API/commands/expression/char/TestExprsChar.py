@@ -5,7 +5,6 @@ from lldbsuite.test import lldbutil
 
 
 class ExprCharTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
     SHARED_BUILD_TESTCASE = False
 
     def do_test(self, dictionary=None):

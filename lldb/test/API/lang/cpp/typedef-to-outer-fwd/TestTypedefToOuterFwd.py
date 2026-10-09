@@ -16,8 +16,6 @@ class TestCaseTypedefToOuterFwd(TestBase):
     in main.o or lib.o.
     """
 
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def check_global_var(self, target, name: str):
         var = target.FindFirstGlobalVariable(name)
         self.assertSuccess(var.GetError(), f"Found {name}")

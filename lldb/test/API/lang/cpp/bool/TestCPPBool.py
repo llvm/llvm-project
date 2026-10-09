@@ -7,8 +7,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class CPPBoolTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test_with_run_command(self):
         """Test that bool types work in the expression parser"""
         self.build()

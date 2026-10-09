@@ -5,8 +5,6 @@ from lldbsuite.test import lldbutil
 
 
 class SyntheticOneLineSummariesTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test(self):
         """Test that the presence of a synthetic child provider doesn't prevent one-line-summaries."""
         self.build()

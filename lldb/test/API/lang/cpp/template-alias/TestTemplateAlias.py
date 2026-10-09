@@ -5,7 +5,6 @@ from lldbsuite.test.lldbtest import *
 
 
 class TestTemplateAlias(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
     SHARED_BUILD_TESTCASE = False
 
     def do_test(self, extra_flags):

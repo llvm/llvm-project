@@ -8,8 +8,6 @@ import os
 @skipIfWindowsAndNoLLDBServer
 @requireNotWasm("iwasm gdb stub lacks the needed packets")
 class TestDelayedBreakpoint(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test(self):
         self.build()
         self.runCmd("settings set target.process.use-delayed-breakpoints true")

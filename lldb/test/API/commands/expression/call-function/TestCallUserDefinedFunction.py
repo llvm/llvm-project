@@ -15,8 +15,6 @@ from lldbsuite.test import lldbutil
 
 @requireExpressionEvaluation
 class ExprCommandCallUserDefinedFunction(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test(self):
         """Test return values of user defined function calls."""
         self.build()

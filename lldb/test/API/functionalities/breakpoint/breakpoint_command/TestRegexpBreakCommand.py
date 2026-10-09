@@ -10,8 +10,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class RegexpBreakCommandTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test_set_version(self):
         """Test _regexp-break command."""
         self.build()

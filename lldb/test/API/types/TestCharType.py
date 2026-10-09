@@ -8,8 +8,6 @@ from lldbsuite.test.decorators import *
 
 
 class CharTypeTestCase(AbstractBase.GenericTester):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test_char_type(self):
         """Test that char-type variables are displayed correctly."""
         self.build_and_run("char.cpp", ["char"], qd=True)

@@ -9,8 +9,6 @@ from lldbsuite.test.lldbtest import *
 
 
 class TestImageLookupPCInC(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test_sample_rename_this(self):
         """There can be many tests in a test case - describe this test here."""
         self.build()

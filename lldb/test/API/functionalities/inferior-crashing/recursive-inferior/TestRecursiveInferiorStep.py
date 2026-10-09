@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 @requireNotWasm("wasm has no memory-protection faults/signals")
 class CrashingRecursiveInferiorStepTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test_recursive_inferior_crashing_step(self):
         """Test that stepping after a crash behaves correctly."""
         self.build()

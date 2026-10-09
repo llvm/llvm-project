@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 @requireExpressionEvaluation
 class CStringsTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test_with_run_command(self):
         """Tests that C strings work as expected in expressions"""
         self.build()

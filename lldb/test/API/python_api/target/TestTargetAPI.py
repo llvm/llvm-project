@@ -30,6 +30,7 @@ class TargetAPITestCase(TestBase):
     #
     # It does not segfaults now.  But for dwarf, the variable value is None if
     # the inferior process does not exist yet.  The radar has been updated.
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_find_global_variables(self):
         """Exercise SBTarget.FindGlobalVariables() API."""
         d = {"EXE": "b.out"}
@@ -57,7 +58,9 @@ class TargetAPITestCase(TestBase):
         self.build()
         self.get_description()
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
+    @expectedFailureAll(
+        oslist=["windows"], debug_info=no_match(["pdb"]), bugnumber="llvm.org/pr21765"
+    )
     def test_resolve_symbol_context_with_address(self):
         """Exercise SBTarget.ResolveSymbolContextForAddress() API."""
         self.build()

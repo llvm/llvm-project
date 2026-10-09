@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class HiddenFrameMarkerTest(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     @unicode_test
     @expectedFailureWindows(
         bugnumber="https://github.com/llvm/llvm-project/issues/191459"

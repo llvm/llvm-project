@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestPointerNumChilden(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test_pointer_num_children(self):
         self.build()
         lldbutil.run_to_source_breakpoint(

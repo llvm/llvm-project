@@ -5,8 +5,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class TestDataFormatterCaching(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test_with_run_command(self):
         """
         Test that hardcoded summary formatter matches aren't improperly cached.

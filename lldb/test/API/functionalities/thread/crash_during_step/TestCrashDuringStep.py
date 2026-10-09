@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class CrashDuringStepTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def setUp(self):
         TestBase.setUp(self)
         self.breakpoint = line_number("main.cpp", "// Set breakpoint here")

@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class FrameListAPITestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test_frame_list_api(self):
         """Test SBThread.GetFrames() returns a valid SBFrameList."""
         self.build()

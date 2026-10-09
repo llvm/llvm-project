@@ -8,7 +8,6 @@ import os
 
 
 class ReplaceDllTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
     SHARED_BUILD_TESTCASE = False
 
     @requireWindows

@@ -7,5 +7,4 @@ lldbinline.MakeInlineTest(
     [
         decorators.expectedFailureAll(bugnumber="llvm.org/pr50814", compiler="gcc"),
     ],
-    test_with_pdb_debug_info=True,
 )

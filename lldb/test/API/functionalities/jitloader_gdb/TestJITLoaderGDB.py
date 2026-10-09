@@ -10,8 +10,6 @@ from lldbsuite.test.lldbtest import *
 
 
 class JITLoaderGDBTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     @skipTestIfFn(
         lambda: "Skipped because the test crashes the test runner",
         bugnumber="llvm.org/pr24702",

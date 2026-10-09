@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 @requireExpressionEvaluation
 class CallCPPFunctionTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def setUp(self):
         TestBase.setUp(self)
         self.line = line_number("main.cpp", "// breakpoint")

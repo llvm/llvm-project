@@ -5,8 +5,6 @@ from lldbsuite.test import lldbutil
 
 
 class ValueObjectErrorsTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test(self):
         """Test that the error message for a missing type
         is visible when printing an object"""

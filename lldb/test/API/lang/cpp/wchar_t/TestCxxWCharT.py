@@ -10,8 +10,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class CxxWCharTTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test(self):
         """Test that C++ supports wchar_t correctly."""
         self.build()

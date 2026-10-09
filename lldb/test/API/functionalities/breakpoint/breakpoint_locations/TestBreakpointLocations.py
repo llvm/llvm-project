@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class BreakpointLocationsTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test_enable(self):
         """Test breakpoint enable/disable for a breakpoint ID with multiple locations."""
         self.build()

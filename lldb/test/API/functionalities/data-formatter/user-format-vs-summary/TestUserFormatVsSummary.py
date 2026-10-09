@@ -9,8 +9,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class UserFormatVSSummaryTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)

@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 @requireExpressionEvaluation
 class PersistenttypesTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test_persistent_types(self):
         """Test that lldb persistent types works correctly."""
         self.build()

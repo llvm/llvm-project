@@ -10,8 +10,6 @@ from lldbsuite.test.lldbtest import *
 
 @requireExpressionEvaluation
 class ContextObjectTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test_context_object(self):
         """Tests expression evaluation in context of an object."""
         self.build()

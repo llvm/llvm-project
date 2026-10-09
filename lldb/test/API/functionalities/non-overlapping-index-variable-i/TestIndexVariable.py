@@ -8,8 +8,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class NonOverlappingIndexVariableCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def setUp(self):
         TestBase.setUp(self)
         self.source = "main.cpp"

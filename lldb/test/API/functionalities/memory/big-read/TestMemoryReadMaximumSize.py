@@ -9,8 +9,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class TestMemoryReadMaximumSize(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def test_memory_read_max_setting(self):
         """Test the target.max-memory-read-size setting."""
         self.build()
