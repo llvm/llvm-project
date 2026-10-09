@@ -867,7 +867,88 @@ struct StencilDecomposition {
   int64_t Constant = 0;
   /// Map from loop-invariant stride SCEV to its integer coefficient.
   SmallMapVector<const SCEV *, int64_t, 4> Coefficients;
+  /// Upper limits for strides that come from sext(C1 + C2 * X), see
+  /// matchSExtStride.
+  SmallMapVector<const SCEV *, int64_t, 2> ExtendLimits;
 };
+
+namespace {
+/// A sign extend rewritten as Constant + Coefficient * Stride.
+struct SExtStrideTerm {
+  const SCEV *Stride;
+  int64_t Constant;
+  int64_t Coefficient;
+  /// Largest Stride for which the narrow sum does not overflow.
+  int64_t Max;
+};
+} // namespace
+
+/// Match sext(C1 + C2 * X), and also sext(C1 + X) and sext(C2 * X).
+/// Example, with int s:
+///   for (int i = 0; i < n; i++, src++)
+///     dst[i] = src[2 * s] + src[s] + src[-s + 2] + src[-s - 2];
+/// Each index is an int that is sign-extended for the address. SCEV gives:
+///   2 * s    sext(2 * %s)
+///   s        sext(%s)
+///   -s + 2   sext(2 + (-1 * %s))
+///   -s - 2   sext(-2 + (-1 * %s))
+/// If we do not look inside the sext, each one is a separate stride with its
+/// own check. The checks contradict each other: s >= 1 and -s - 2 >= 1
+/// never both hold, so the vector loop never runs.
+/// So we take the constants out of the sext:
+///   sext(C1 + C2 * X)  becomes  C1 + C2 * sext(X)
+/// Then all four offsets use the one stride sext(%s).
+/// This is correct only if C1 + C2 * X does not overflow in i32. The merge
+/// already checks sext(%s) >= 1, so only an upper limit is new:
+///   2 * s    needs s <= 1073741823
+///   -s - 2   needs s <= 2147483646
+///   -s + 2   never overflows. Its limit is 2147483650, above the i32
+///            maximum, so SCEV proves it and no check is added.
+/// Returns nullopt for a plain sext(X), which is a stride key as it is.
+/// Max is 0 when no X >= 1 fits.
+static std::optional<SExtStrideTerm> matchSExtStride(const SCEV *Term,
+                                                     ScalarEvolution &SE) {
+  const SCEV *X;
+  if (!match(Term, m_scev_SExt(m_SCEV(X))))
+    return std::nullopt;
+  // The caller only merges offsets of at most 64 bits, and a sign extend
+  // adds at least one bit. So X has at most 63 bits, and all the math below
+  // fits in int64_t.
+  unsigned NarrowBits = SE.getTypeSizeInBits(X->getType());
+  assert(NarrowBits < 64 && "offsets wider than 64 bits are not merged");
+  int64_t C1 = 0, C2 = 1;
+  const SCEVConstant *C;
+  const SCEV *Rest;
+  if (match(X, m_scev_Add(m_SCEVConstant(C), m_SCEV(Rest)))) {
+    C1 = C->getAPInt().getSExtValue();
+    X = Rest;
+  }
+  if (match(X, m_scev_Mul(m_SCEVConstant(C), m_SCEV(Rest)))) {
+    C2 = C->getAPInt().getSExtValue();
+    X = Rest;
+  }
+  if (C1 == 0 && C2 == 1)
+    return std::nullopt;
+
+  // C1 + C2 * X moves away from C1 as X grows. Which way it moves depends
+  // on the sign of C2, so the edge it can cross depends on it too.
+  assert(C2 != 0 && "SCEV folds 0 * X to 0");
+  int64_t Limit;
+  if (C2 > 0) {
+    // The sum grows with X. Example: 2 * %s. It overflows above SignedMax:
+    //   C1 + C2 * X <= SignedMax, so X <= (SignedMax - C1) / C2.
+    int64_t SignedMax = maxIntN(NarrowBits);
+    Limit = (SignedMax - C1) / C2;
+  } else {
+    // The sum shrinks as X grows. Example: -2 - %s. It overflows below
+    // SignedMin:
+    //   C1 + C2 * X >= SignedMin, so X <= (C1 - SignedMin) / -C2.
+    int64_t SignedMin = minIntN(NarrowBits);
+    Limit = (C1 - SignedMin) / -C2;
+  }
+  return SExtStrideTerm{SE.getSignExtendExpr(X, Term->getType()), C1, C2,
+                        Limit};
+}
 
 /// Recursion cap for addScaledStencilTerm. Depth counts how deep a term
 /// sits inside the offset expression. For example, the offset
@@ -909,14 +990,18 @@ constexpr unsigned MaxStencilDecomposeDepth = 3;
 ///   constant K       D.Constant += Mult * K
 ///   (K * X)          visit X with Mult * K
 ///   (a + b + ...)    visit a, b, ... each with this same Mult
+///   sext(C1 + C2 * X)  D.Constant += Mult * C1 and
+///                      D.Coefficients[sext(X)] += Mult * C2, see
+///                      matchSExtStride
 ///   anything else    a stride key: D.Coefficients[Term] += Mult
 /// The two recursive cases only fire while Depth is below
 /// MaxStencilDecomposeDepth. At the cap, (K * X) and (a + b + ...) are
 /// stride keys like anything else; that is not a bailout.
-/// Returns false when a constant does not fit in int64_t or an update
-/// overflows. The caller then drops the whole decomposition.
+/// Returns false when a constant does not fit in int64_t, an update
+/// overflows, or a sext term has no stride >= 1 that fits. The caller then
+/// drops the whole decomposition.
 static bool addScaledStencilTerm(const SCEV *Term, int64_t Mult, unsigned Depth,
-                                 StencilDecomposition &D) {
+                                 ScalarEvolution &SE, StencilDecomposition &D) {
   const SCEVConstant *C;
   // A constant folds into the running constant at any depth.
   if (match(Term, m_SCEVConstant(C))) {
@@ -926,17 +1011,36 @@ static bool addScaledStencilTerm(const SCEV *Term, int64_t Mult, unsigned Depth,
            !AddOverflow(D.Constant, Scaled, D.Constant);
   }
 
+  // The sext match does not recurse, so the depth cap does not apply to it.
+  if (std::optional<SExtStrideTerm> S = matchSExtStride(Term, SE)) {
+    // No X >= 1 fits.
+    if (S->Max == 0)
+      return false;
+    int64_t Scaled;
+    if (MulOverflow(Mult, S->Constant, Scaled) ||
+        AddOverflow(D.Constant, Scaled, D.Constant))
+      return false;
+    int64_t &Coeff = D.Coefficients[S->Stride];
+    if (MulOverflow(Mult, S->Coefficient, Scaled) ||
+        AddOverflow(Coeff, Scaled, Coeff))
+      return false;
+    int64_t &Limit =
+        D.ExtendLimits.try_emplace(S->Stride, S->Max).first->second;
+    Limit = std::min(Limit, S->Max);
+    return true;
+  }
+
   if (Depth < MaxStencilDecomposeDepth) {
     const SCEV *Inner;
     if (match(Term, m_scev_Mul(m_SCEVConstant(C), m_SCEV(Inner)))) {
       std::optional<int64_t> V = C->getAPInt().trySExtValue();
       int64_t NewMult;
       return V && !MulOverflow(Mult, *V, NewMult) &&
-             addScaledStencilTerm(Inner, NewMult, Depth + 1, D);
+             addScaledStencilTerm(Inner, NewMult, Depth + 1, SE, D);
     }
     if (auto *Add = dyn_cast<SCEVAddExpr>(Term))
       return all_of(Add->operands(), [&](const SCEV *Op) {
-        return addScaledStencilTerm(Op, Mult, Depth + 1, D);
+        return addScaledStencilTerm(Op, Mult, Depth + 1, SE, D);
       });
   }
 
@@ -968,7 +1072,7 @@ decomposeStencilOffset(const SCEV *Expr, ScalarEvolution &SE, const Loop &L) {
   assert(SE.isLoopInvariant(Expr, &L) && "expected a loop-invariant offset");
 
   StencilDecomposition D;
-  if (!addScaledStencilTerm(Expr, /*Mult=*/1, /*Depth=*/0, D))
+  if (!addScaledStencilTerm(Expr, /*Mult=*/1, /*Depth=*/0, SE, D))
     return std::nullopt;
   return D;
 }
@@ -1069,7 +1173,8 @@ public:
 
 /// Add to \p Limits the checks each stride s of \p D needs:
 ///   1 <= s     isNeverAbove assumes every stride is 1 or more.
-///   s <= Max   Max is from getStencilStrideUpperLimit.
+///   s <= Max   Max is the smaller of getStencilStrideUpperLimit and
+///              D.ExtendLimits[s].
 /// A check is skipped when SCEV already proves it.
 /// Returns false if getStencilStrideUpperLimit finds no Max, or if SCEV proves
 /// that a check always fails. Example: s = smin(x, -1) can never pass 1 <= s,
@@ -1081,15 +1186,19 @@ static bool collectStrideLimits(const StencilDecomposition &D,
   if (!UpperLimit)
     return false;
 
-  const SCEV *Max = SE.getConstant(*UpperLimit);
   for (const auto &[Stride, Coeff] : D.Coefficients) {
+    APInt StrideMax = *UpperLimit;
+    if (const auto *It = D.ExtendLimits.find(Stride);
+        It != D.ExtendLimits.end())
+      StrideMax = APIntOps::smin(StrideMax, APInt(BitWidth, It->second));
+    const SCEV *Max = SE.getConstant(StrideMax);
     if (SE.isKnownNonPositive(Stride) ||
         SE.isKnownPredicate(ICmpInst::ICMP_SGT, Stride, Max))
       return false;
     if (!SE.isKnownPositive(Stride))
       Limits.requireLowerLimit(Stride);
     if (!SE.isKnownPredicate(ICmpInst::ICMP_SLE, Stride, Max))
-      Limits.requireUpperLimit(Stride, *UpperLimit);
+      Limits.requireUpperLimit(Stride, StrideMax);
   }
   return true;
 }
