@@ -1420,7 +1420,7 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
   // Check CmdArgs because some toolchains bypass the driver args and add to
   // the frontend args directly.
   bool HasPtrauthReturns =
-      llvm::is_contained(CmdArgs, "-fptrauth-returns") ||
+      llvm::is_contained(CmdArgs, StringRef("-fptrauth-returns")) ||
       Args.hasFlagNoClaim(options::OPT_fptrauth_returns,
                           options::OPT_fno_ptrauth_returns, false);
 
