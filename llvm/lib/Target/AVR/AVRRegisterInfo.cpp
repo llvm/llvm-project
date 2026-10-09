@@ -260,12 +260,7 @@ bool AVRRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
 Register AVRRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
-  if (TFI->hasFP(MF)) {
-    // The Y pointer register
-    return AVR::R28;
-  }
-
-  return AVR::SP;
+  return TFI->hasFP(MF) ? AVR::R29R28 : AVR::SP;
 }
 
 void AVRRegisterInfo::splitReg(Register Reg, Register &LoReg,
