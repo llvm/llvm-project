@@ -1365,6 +1365,22 @@ add_header_library(
 )
 
 add_header_library(
+  waitid
+  HDRS
+    waitid.h
+  DEPENDS
+    libc.hdr.types.id_t
+    libc.hdr.types.idtype_t
+    libc.hdr.types.siginfo_t
+    libc.hdr.types.struct_rusage
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   execve
   HDRS
     execve.h
