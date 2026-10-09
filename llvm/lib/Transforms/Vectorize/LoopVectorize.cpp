@@ -6434,7 +6434,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
   // Create recipes for header phis. For outer loops, reductions, recurrences
   // and in-loop reductions are empty since legality doesn't detect them.
   if (!RUN_VPLAN_PASS(
-          VPlanTransforms::createHeaderPhiRecipes, *VPlan0, PSE, *OrigLoop,
+          VPlanTransforms::createHeaderPhiRecipes, *VPlan0, PSE, *OrigLoop, ORE,
           VPDT, Legal->getInductionVars(), Legal->getReductionVars(),
           Legal->getFixedOrderRecurrences(), Config.getInLoopReductions(),
           Config.getHints().allowReordering())) {
@@ -6644,8 +6644,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
 
   RUN_VPLAN_PASS(VPlanTransforms::makeScalarizationDecisions, *Plan, Range);
 
-  RUN_VPLAN_PASS(VPlanTransforms::makeCallWideningDecisions, *Plan, Range,
-                 RecipeBuilder, CostCtx);
+  // Widened calls may only use the first lane of some operands.
+  if (RUN_VPLAN_PASS(VPlanTransforms::makeCallWideningDecisions, *Plan, Range,
+                     RecipeBuilder, CostCtx))
+    RUN_VPLAN_PASS(VPlanTransforms::makeScalarizationDecisions, *Plan, Range);
 
   RUN_VPLAN_PASS(VPlanTransforms::narrowInductionTruncates, *Plan, Range, TTI,
                  PSE);
@@ -7923,10 +7925,18 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   std::pair<StringRef, std::string> VecDiagMsg, IntDiagMsg;
   bool VectorizeLoop = true, InterleaveLoop = true;
   if (VF.Width.isScalar()) {
-    LLVM_DEBUG(dbgs() << "LV: Vectorization is possible but not beneficial.\n");
-    VecDiagMsg = {
-        "VectorizationNotBeneficial",
-        "the cost-model indicates that vectorization is not beneficial"};
+    if (LVP.hasVectorPlan()) {
+      LLVM_DEBUG(
+          dbgs() << "LV: Vectorization is possible but not beneficial.\n");
+      VecDiagMsg = {
+          "VectorizationNotBeneficial",
+          "the cost-model indicates that vectorization is not beneficial"};
+    } else {
+      LLVM_DEBUG(dbgs() << "LV: Vectorization is not possible. Failed to "
+                           "create any vector VPlans.\n");
+      VecDiagMsg = {"VectorizationNotPossible",
+                    "vectorization is not possible"};
+    }
     VectorizeLoop = false;
   }
 
@@ -7948,16 +7958,22 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     InterleaveLoop = false;
   } else if (IC == 1 && UserIC <= 1) {
     // Tell the user interleaving is not beneficial.
-    LLVM_DEBUG(dbgs() << "LV: Interleaving is not beneficial.\n");
-    IntDiagMsg = {
-        "InterleavingNotBeneficial",
-        "the cost-model indicates that interleaving is not beneficial"};
-    InterleaveLoop = false;
-    if (UserIC == 1) {
-      IntDiagMsg.first = "InterleavingNotBeneficialAndDisabled";
-      IntDiagMsg.second +=
-          " and is explicitly disabled or interleave count is set to 1";
+    if (LVP.hasAPlan()) {
+      LLVM_DEBUG(dbgs() << "LV: Interleaving is not beneficial.\n");
+      IntDiagMsg = {
+          "InterleavingNotBeneficial",
+          "the cost-model indicates that interleaving is not beneficial"};
+      if (UserIC == 1) {
+        IntDiagMsg.first = "InterleavingNotBeneficialAndDisabled";
+        IntDiagMsg.second +=
+            " and is explicitly disabled or interleave count is set to 1";
+      }
+    } else {
+      LLVM_DEBUG(dbgs() << "LV: Interleaving is not possible. Failed to create"
+                        << " any vplans\n");
+      IntDiagMsg = {"InterleavingNotPossible", "interleaving is not possible"};
     }
+    InterleaveLoop = false;
   } else if (IC > 1 && UserIC == 1) {
     // Tell the user interleaving is beneficial, but it explicitly disabled.
     LLVM_DEBUG(dbgs() << "LV: Interleaving is beneficial but is explicitly "

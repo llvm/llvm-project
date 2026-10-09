@@ -76,4 +76,22 @@ bool hasExtraNeonArgument(unsigned BuiltinID) {
   return mask != 0;
 }
 
+//===----------------------------------------------------------------------===//
+// AMDGPU
+//===----------------------------------------------------------------------===//
+
+bool requiresAMDGPUProtectedVisibility(const Decl *D,
+                                       bool HasHiddenVisibility) {
+  if (!HasHiddenVisibility)
+    return false;
+
+  return !D->hasAttr<OMPDeclareTargetDeclAttr>() &&
+         (D->hasAttr<DeviceKernelAttr>() ||
+          (isa<FunctionDecl>(D) && D->hasAttr<CUDAGlobalAttr>()) ||
+          (isa<VarDecl>(D) &&
+           (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>() ||
+            cast<VarDecl>(D)->getType()->isCUDADeviceBuiltinSurfaceType() ||
+            cast<VarDecl>(D)->getType()->isCUDADeviceBuiltinTextureType())));
+}
+
 } // namespace clang::CodeGenUtils
