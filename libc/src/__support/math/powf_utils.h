@@ -598,6 +598,19 @@ check_exceptional_cases(float &x, float &y, int &ex, SignType &sign) {
   // Normalize denormal inputs.
   if (x_a < FloatBits::min_normal().uintval()) {
     int shift = cpp::countl_zero(x_a) - 8;
+#ifdef LIBC_TARGET_CPU_HAS_FPU_DOUBLE
+    if (!y_sign &&
+        static_cast<double>(y) * static_cast<double>(125 + shift) >= 150.0)
+      return set_underflow(sign == 0 ? Sign::POS : Sign::NEG);
+#else
+    uint32_t log2_bound = static_cast<uint32_t>(125 + shift);
+    if (!y_sign &&
+        (y_a >= 0x4000'0000U || (y_a >= FloatBits::one().uintval() &&
+                                 (y_a - 0x3f00'0000U) * log2_bound >=
+                                     (150U << FloatBits::FRACTION_LEN))))
+      return set_underflow(sign == 0 ? Sign::POS : Sign::NEG);
+#endif
+
     ex -= shift;
     x = cpp::bit_cast<float>(x_a << shift);
   }
