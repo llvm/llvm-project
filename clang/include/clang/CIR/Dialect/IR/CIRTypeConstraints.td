@@ -202,6 +202,19 @@ def CIR_AnyIntOrBoolOrFloatType
 
 def CIR_AnyComplexType : CIR_TypeBase<"::cir::ComplexType", "complex type">;
 
+class CIR_ComplexElementTypePred<Pred pred> : SubstLeaves<"$_self",
+    "::mlir::cast<::cir::ComplexType>($_self).getElementType()", pred>;
+
+class CIR_ComplexTypeOf<list<Type> types, string summary = "">
+    : CIR_ConfinedType<CIR_AnyComplexType,
+        [Or<!foreach(type, types, CIR_ComplexElementTypePred<type.predicate>)>],
+        !if(!empty(summary),
+            "complex of " # CIR_TypeSummaries<types>.value,
+            summary)>;
+
+def CIR_ComplexOfIntType : CIR_ComplexTypeOf<[CIR_AnyIntType]>;
+def CIR_ComplexOfFloatType : CIR_ComplexTypeOf<[CIR_AnyFloatType]>;
+
 def CIR_AnyComplexOrIntOrBoolOrFloatType
     : AnyTypeOf<[CIR_AnyComplexType, CIR_AnyIntOrBoolOrFloatType],
                 "complex, integer, boolean or floating point type"> {
@@ -342,6 +355,12 @@ def CIR_AnyIntOrVecOfIntType
     let cppFunctionName = "isIntOrVectorOfIntType";
 }
 
+def CIR_AnyIntOrVecOfIntOrBoolType
+    : AnyTypeOf<[CIR_AnyIntType, CIR_VectorOfIntOrBoolType],
+        "integer or vector of bool or integer type"> {
+    let cppFunctionName = "isIntOrVecOfIntOrBoolType";
+}
+
 def CIR_AnySIntOrVecOfSIntType
     : AnyTypeOf<[CIR_AnySIntType, CIR_VectorOfSIntType],
         "signed integer or vector of signed integer type"> {
@@ -365,6 +384,16 @@ def CIR_AnyFloatOrVecOfFloatType
 def CIR_AnyBitwiseType
     : AnyTypeOf<[CIR_AnyIntType, CIR_AnyBoolType, CIR_VectorOfIntOrBoolType],
                 "integer, boolean, or vector of bool or integer">;
+
+//===----------------------------------------------------------------------===//
+// Matrix Type predicates
+//===----------------------------------------------------------------------===//
+
+def CIR_MatrixElementType
+    : AnyTypeOf<[CIR_AnyBoolType, CIR_AnyIntOrFloatType],
+                "any cir boolean, integer, floating point"> {
+  let cppFunctionName = "isValidMatrixTypeElementType";
+}
 
 //===----------------------------------------------------------------------===//
 // Data member type predicates

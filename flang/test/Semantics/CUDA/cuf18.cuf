@@ -6,6 +6,8 @@ subroutine sub1()
 
 !ERROR: Unsupported CUDA data transfer
   a = a + 10 ! Illegal expression according to 3.4.2
+!ERROR: Unsupported CUDA data transfer
+  a = -a ! Illegal expression according to 3.4.2
 
   !$cuf kernel do
   do i = 1, 10

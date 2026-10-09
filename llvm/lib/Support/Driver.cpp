@@ -80,9 +80,12 @@ ErrorOr<CallableTool> ToolSession::findTool(StringRef Name) const {
   return make_error_code(std::errc::no_such_file_or_directory);
 }
 
-ToolContext ToolSession::makeContext(StringRef InvokedName,
+ToolContext ToolSession::makeContext(StringRef RegisteredName,
                                      const char *PrependArg) {
-  bool NeedsPrependArg = !matchesToolName(InvokedName, PImpl->ExecutablePath);
+  ErrorOr<CallableTool> ExecutableTool = findTool(PImpl->ExecutablePath);
+  bool NeedsPrependArg =
+      !ExecutableTool ||
+      !ExecutableTool->Name.equals_insensitive(RegisteredName);
   ToolContext Context(PImpl->ExecutablePath.c_str(), PrependArg,
                       NeedsPrependArg);
   Context.Session = this;
@@ -109,7 +112,7 @@ ErrorOr<int> ToolSession::callTool(ArrayRef<const char *> Args) {
     return Tool.getError();
 
   std::string PrependArg = sys::path::stem(InvokedName).str();
-  ToolContext Context = makeContext(InvokedName, PrependArg.c_str());
+  ToolContext Context = makeContext(Tool->Name, PrependArg.c_str());
   SmallVector<char *, 16> MutableArgs;
   MutableArgs.reserve(Args.size() + 1);
   for (const char *Arg : Args)

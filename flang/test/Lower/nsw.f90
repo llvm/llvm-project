@@ -11,11 +11,11 @@ end subroutine
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 3 : i32
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 2 : i32
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 1 : i32
-! CHECK:           %[[VAL_9:.*]] = fir.declare %{{.*}}a"} : (!fir.box<!fir.array<?x?x?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?x?x?xi32>>
+! CHECK:           %[[VAL_9:.*]] = fir.declare %{{.*}}uniq_name({{.*}}a") : (!fir.box<!fir.array<?x?x?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?x?x?xi32>>
 ! CHECK:           %[[VAL_10:.*]] = fir.rebox %[[VAL_9]] : (!fir.box<!fir.array<?x?x?xi32>>) -> !fir.box<!fir.array<?x?x?xi32>>
-! CHECK:           %[[VAL_11:.*]] = fir.declare %{{.*}}i"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
-! CHECK:           %[[VAL_12:.*]] = fir.declare %{{.*}}j"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
-! CHECK:           %[[VAL_13:.*]] = fir.declare %{{.*}}k"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+! CHECK:           %[[VAL_11:.*]] = fir.declare %{{.*}}uniq_name({{.*}}i") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+! CHECK:           %[[VAL_12:.*]] = fir.declare %{{.*}}uniq_name({{.*}}j") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+! CHECK:           %[[VAL_13:.*]] = fir.declare %{{.*}}uniq_name({{.*}}k") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 ! CHECK:           %[[VAL_14:.*]] = fir.load %[[VAL_11]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_15:.*]] = arith.addi %[[VAL_14]], %[[VAL_6]] overflow<nsw> : i32
 ! CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_15]] : (i32) -> i64
@@ -70,10 +70,10 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPloop_params(
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 2 : i32
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 1 : i32
-! CHECK:           %[[VAL_9:.*]] = fir.declare %{{.*}}lb"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
-! CHECK:           %[[VAL_10:.*]] = fir.declare %{{.*}}ub"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
-! CHECK:           %[[VAL_12:.*]] = fir.declare %{{.*}}i"} : (!fir.ref<i32>) -> !fir.ref<i32>
-! CHECK:           %[[VAL_13:.*]] = fir.declare %{{.*}}st"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+! CHECK:           %[[VAL_9:.*]] = fir.declare %{{.*}}uniq_name({{.*}}lb") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+! CHECK:           %[[VAL_10:.*]] = fir.declare %{{.*}}uniq_name({{.*}}ub") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+! CHECK:           %[[VAL_12:.*]] = fir.declare %{{.*}}uniq_name({{.*}}i") : (!fir.ref<i32>) -> !fir.ref<i32>
+! CHECK:           %[[VAL_13:.*]] = fir.declare %{{.*}}uniq_name({{.*}}st") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 ! CHECK:           %[[VAL_14:.*]] = fir.load %[[VAL_9]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_16:.*]] = fir.load %[[VAL_10]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_25:.*]] = arith.addi %[[VAL_14]], %[[VAL_5]] overflow<nsw> : i32
@@ -102,11 +102,11 @@ end subroutine
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_8:.*]] = fir.alloca index
 ! CHECK:           %[[VAL_9:.*]] = fir.alloca f32
-! CHECK:           %[[VAL_11:.*]] = fir.declare %{{.*}}lb"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
-! CHECK:           %[[VAL_12:.*]] = fir.declare %{{.*}}ub"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
-! CHECK:           %[[VAL_14:.*]] = fir.declare %{{.*}}i"} : (!fir.ref<i32>) -> !fir.ref<i32>
-! CHECK:           %[[VAL_16:.*]] = fir.declare %{{.*}}ii"} : (!fir.ref<f32>) -> !fir.ref<f32>
-! CHECK:           %[[VAL_17:.*]] = fir.declare %{{.*}}st"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+! CHECK:           %[[VAL_11:.*]] = fir.declare %{{.*}}uniq_name({{.*}}lb") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+! CHECK:           %[[VAL_12:.*]] = fir.declare %{{.*}}uniq_name({{.*}}ub") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+! CHECK:           %[[VAL_14:.*]] = fir.declare %{{.*}}uniq_name({{.*}}i") : (!fir.ref<i32>) -> !fir.ref<i32>
+! CHECK:           %[[VAL_16:.*]] = fir.declare %{{.*}}uniq_name({{.*}}ii") : (!fir.ref<f32>) -> !fir.ref<f32>
+! CHECK:           %[[VAL_17:.*]] = fir.declare %{{.*}}uniq_name({{.*}}st") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 ! CHECK:           scf.execute_region no_inline {
 ! CHECK:             %[[VAL_18:.*]] = fir.load %[[VAL_11]] : !fir.ref<i32>
 ! CHECK:             %[[VAL_29:.*]] = arith.addi %[[VAL_18]], %[[VAL_5]] overflow<nsw> : i32
@@ -141,10 +141,10 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPloop_params3(
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 2 : i32
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 1 : i32
-! CHECK:           %[[VAL_11:.*]] = fir.declare %{{.*}}lb"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
-! CHECK:           %[[VAL_12:.*]] = fir.declare %{{.*}}ub"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
-! CHECK:           %[[VAL_14:.*]] = fir.declare %{{.*}}i"} : (!fir.ref<i32>) -> !fir.ref<i32>
-! CHECK:           %[[VAL_15:.*]] = fir.declare %{{.*}}st"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+! CHECK:           %[[VAL_11:.*]] = fir.declare %{{.*}}uniq_name({{.*}}lb") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+! CHECK:           %[[VAL_12:.*]] = fir.declare %{{.*}}uniq_name({{.*}}ub") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+! CHECK:           %[[VAL_14:.*]] = fir.declare %{{.*}}uniq_name({{.*}}i") : (!fir.ref<i32>) -> !fir.ref<i32>
+! CHECK:           %[[VAL_15:.*]] = fir.declare %{{.*}}uniq_name({{.*}}st") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 ! CHECK:           %[[VAL_16:.*]] = fir.load %[[VAL_11]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_18:.*]] = fir.load %[[VAL_12]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_27:.*]] = arith.addi %[[VAL_16]], %[[VAL_5]] overflow<nsw> : i32
@@ -155,5 +155,5 @@ end subroutine
 ! CHECK:           %[[VAL_32:.*]] = arith.muli %[[VAL_31]], %[[VAL_4]] overflow<nsw> : i32
 ! CHECK:           %[[VAL_33:.*]] = fir.convert %[[VAL_32]] : (i32) -> index
 ! CHECK:           fir.do_concurrent {
-! CHECK:             %[[VAL_9:.*]] = fir.declare %{{.*}}i"} : (!fir.ref<i32>) -> !fir.ref<i32>
+! CHECK:             %[[VAL_9:.*]] = fir.declare %{{.*}}uniq_name({{.*}}i") : (!fir.ref<i32>) -> !fir.ref<i32>
 ! CHECK:             fir.do_concurrent.loop (%[[VAL_34:.*]]) = (%[[VAL_28]]) to (%[[VAL_30]]) step (%[[VAL_33]]) {

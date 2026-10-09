@@ -1007,6 +1007,10 @@ def warn_fortify_source_size_mismatch : Warning<
   "'%0' size argument is too large; destination buffer has size %1,"
   " but size argument is %2">, InGroup<FortifySource>;
 
+def warn_fortify_source_negative_size : Warning<
+  "'%0' size argument is negative">,
+  InGroup<FortifySource>;
+
 def warn_stringop_overread
     : Warning<"'%0' reading %1 byte%s1 from a region of size %2">,
       InGroup<DiagGroup<"stringop-overread">>;
@@ -1048,6 +1052,11 @@ def warn_format_truncation_non_kprintf: Warning<
 def warn_fortify_scanf_overflow : Warning<
   "'%0' may overflow; destination buffer in argument %1 has size "
   "%2, but the corresponding specifier may require size %3">,
+  InGroup<FortifySource>;
+
+def warn_fortify_source_overread : Warning<
+  "'%0' will always read past the end of the source buffer; source buffer has "
+  "size %1, but the size is %2">,
   InGroup<FortifySource>;
 
 def err_function_start_invalid_type: Error<
@@ -3880,9 +3889,6 @@ def warn_dllimport_dropped_from_inline_function : Warning<
 def warn_nothrow_attribute_ignored : Warning<"'nothrow' attribute conflicts with"
   " exception specification; attribute ignored">,
   InGroup<IgnoredAttributes>;
-def warn_dllattr_ignored_already_instantiated : Warning<
-  "%0 attribute ignored; class template is already instantiated">,
-  InGroup<IgnoredAttributes>;
 def warn_dllattr_ignored_exclusion_takes_precedence : Warning<
   "%0 attribute ignored; %1 takes precedence">,
   InGroup<IgnoredAttributes>;
@@ -4006,9 +4012,6 @@ def err_attribute_dllimport_static_field_definition : Error<
 def warn_attribute_dllimport_static_field_definition : Warning<
   "definition of dllimport static field">,
   InGroup<DiagGroup<"dllimport-static-field-def">>;
-def warn_attribute_dllimport_explicit_instantiation_def : Warning<
-  "'dllimport' attribute ignored on explicit instantiation definition">,
-  InGroup<IgnoredAttributes>;
 def warn_attribute_dllexport_explicit_instantiation_decl : Warning<
   "explicit instantiation declaration should not be 'dllexport'">,
   InGroup<DllexportExplicitInstantiationDecl>;
@@ -8907,7 +8910,9 @@ def warn_cdtor_function_try_handler_mem_expr : Warning<
   "%select{constructor|destructor}0 function try block">, InGroup<Exceptions>;
 def err_throw_object_throwing_dtor : Error<
   "cannot throw object of type %0 with a potentially-throwing destructor">;
-
+def err_throw_or_catch_address_space_qualified_ptr : Error<
+  "cannot %select{throw|catch}0 %select{pointer|reference}1 with non-default address space "
+  "(type %2)">;
 let CategoryName = "Lambda Issue" in {
   def err_capture_more_than_once : Error<
     "%0 can appear only once in a capture list">;
@@ -9526,6 +9531,8 @@ def err_typecheck_incomplete_type_not_modifiable_lvalue : Error<
   "incomplete type %0 is not assignable">;
 def err_typecheck_lvalue_casts_not_supported : Error<
   "assignment to cast is illegal, lvalue casts are not supported">;
+def err_typecheck_lvalue_imag_not_modifiable_lvalue : Error<
+  "'__imag' operator with non-complex operand type %0 is not assignable">;
 
 def err_typecheck_duplicate_vector_components_not_mlvalue : Error<
   "vector is not assignable (contains duplicate components)">;
@@ -9619,6 +9626,13 @@ def err_atomic_builtin_must_be_pointer : Error<
 def err_atomic_builtin_must_be_pointer_intptr : Error<
   "address argument to atomic builtin must be a pointer to integer or pointer"
   " (%0 invalid)">;
+
+def err_atomic_hint_builtin_must_be_pointer : Error<
+  "address argument to atomic hint builtin must be a pointer to a scalar "
+  "integral or floating-point type of 8, 16, 32, or 64 bits (%0 invalid)">;
+def err_atomic_hint_has_invalid_hint_type : Error<
+   "invalid hint type argument to atomic hint operation (%0)">;
+
 def err_atomic_builtin_cannot_be_const : Error<
   "address argument to atomic builtin cannot be const-qualified (%0 invalid)">;
 def err_atomic_builtin_must_be_pointer_intfltptr : Error<
@@ -9687,6 +9701,13 @@ def err_atomic_op_needs_atomic_int : Error<
 def err_atomic_op_needs_atomic_fp
     : Error<"address argument to atomic operation must be a pointer to "
             "%select{|atomic }0floating point type (%1 invalid)">;
+def err_atomic_op_hint_data_size : Error<
+  "address argument to atomic store with hint must be of size 8, 16, 32 or 64 bits">;
+def err_atomic_hint_has_invalid_memory_order : Error<
+   "invalid memory order argument to atomic hint operation (%0 invalid)">;
+def warn_atomic_hint_has_invalid_hint_type : Warning<
+   "unrecognised hint type argument to atomic hint operation (%0)">,
+  InGroup<DiagGroup<"atomic-hint-type">>;
 def warn_atomic_op_has_invalid_memory_order : Warning<
   "%select{|success |failure }0memory order argument to atomic operation is invalid">,
   InGroup<DiagGroup<"atomic-memory-ordering">>;
@@ -9960,8 +9981,9 @@ def err_typecheck_expect_scalar_or_vector : Error<
 def err_typecheck_expect_scalar_or_vector_or_matrix : Error<
   "invalid operand of type %0 where %1 or "
   "a vector or matrix of such type is required">;
-def err_typecheck_expect_any_scalar_or_vector : Error<
-  "invalid operand of type %0%select{| where a scalar or vector is required}1">;
+def err_typecheck_expect_any_scalar_or_vector_or_matrix : Error<
+  "invalid operand of type %0%select{| where a scalar or vector is required|"
+  " where a scalar, vector, or matrix is required}1">;
 def err_typecheck_expect_flt_or_vector : Error<
   "invalid operand of type %0 where floating, complex or "
   "a vector of such types is required">;
@@ -10308,8 +10330,8 @@ def err_reference_to_local_in_enclosing_context : Error<
   "%select{%3|block literal|lambda expression|context}2">;
 def err_local_nested_class_invalid_scope : Error<
   "nested local class %0 must be defined in the same block scope as %1">;
-def err_capture_binding_openmp : Error<
-  "capturing a structured binding is not yet supported in OpenMP">;
+def err_capture_tuple_binding_openmp : Error<
+  "capturing tuple-like structured binding %0 is not yet supported in OpenMP">;
 
 def err_static_data_member_not_allowed_in_local_class : Error<
   "static data member %0 not allowed in local %sub{select_tag_type_kind}2 %1">;
@@ -11346,6 +11368,11 @@ def warn_empty_defer_body : Warning<
 def note_empty_body_on_separate_line : Note<
   "put the semicolon on a separate line to silence this warning">;
 
+def warn_redundant_defer : Warning<
+  "redundant use of '%0'; the deferred statement is executed immediately">,
+  InGroup<DiagGroup<"redundant-defer">>;
+def note_redundant_defer_if : Note<"did you mean to use '%0 if'?">;
+
 def err_va_start_captured_stmt : Error<
   "'va_start' cannot be used in a captured statement">;
 def err_va_start_outside_function : Error<
@@ -11536,8 +11563,18 @@ def err_ppc_invalid_test_data_class_type : Error<
   "expected a 'float', 'double' or '__float128' for the first argument">;
 def err_ppc_invalid_arg_type : Error<
   "argument %0 must be of type %1">;
+def err_ppc_feature_no_runtime_detection : Error<
+  "feature '%0' cannot be used with 'target_clones' because it has no "
+  "runtime detection; use 'target' attribute instead">;
+def err_ppc_multiple_negative_disableable : Error<
+  "only one negative form of runtime-disableable features (vsx, htm) is allowed in 'target_clones'; "
+  "'%0' conflicts with '%1'">;
+
 def err_x86_builtin_invalid_rounding : Error<
   "invalid rounding argument">;
+def err_x86_builtin_reserved_vunpackb_imm : Error<
+  "argument value %0 is a reserved VUNPACKB encoding of size (bits [4:2]) and "
+  "start (bits [1:0])">;
 def err_x86_builtin_invalid_scale : Error<
   "scale argument must be 1, 2, 4, or 8">;
 def err_x86_builtin_tile_arg_duplicate : Error<
@@ -12171,6 +12208,15 @@ def err_omp_invalid_looprange
 def warn_omp_redundant_fusion : Warning<"looprange clause selects a single "
                                         "loop, resulting in redundant fusion">,
                                 InGroup<OpenMPClauses>;
+def warn_omp_flatten_omitted_depth : Warning<
+  "'flatten' without a 'depth' clause only combines 2 loops, but 3 or more "
+  "loops are perfectly nested">,
+  InGroup<OpenMPClauses>;
+def note_omp_flatten_insert_depth : Note<
+  "add 'depth(2)' to make it explicit that only the two outermost loops are "
+  "flattened and to silence this warning">;
+def err_omp_clause_not_supported_yet : Error<
+  "'%0' clause is not yet supported on '#pragma omp %1' directive">;
 def err_omp_not_for : Error<
   "%select{statement after '#pragma omp %1' must be a for loop|"
   "expected %2 for loops after '#pragma omp %1'%select{|, but found only %4}3}0">;
@@ -12420,6 +12466,12 @@ def err_omp_parent_cancel_region_ordered : Error<
   "parent region for 'omp %select{cancellation point|cancel}0' construct cannot be ordered">;
 def err_omp_reduction_wrong_type : Error<"reduction type cannot be %select{qualified with 'const', 'volatile' or 'restrict'|a function|a reference|an array}0 type">;
 def err_omp_wrong_var_in_declare_reduction : Error<"only %select{'omp_priv' or 'omp_orig'|'omp_in' or 'omp_out'}0 variables are allowed in %select{initializer|combiner}0 expression">;
+def err_omp_unsupported_on_binding : Error<
+  "%select{reductions|conditional lastprivate|linear clause with parallel constructs|capturing in a lambda or block}0 on structured bindings "
+  "%plural{0:are|:is}0 not yet supported">;
+def err_omp_loop_var_is_structured_binding : Error<
+  "structured binding %0 cannot be used as the loop control variable of an "
+  "OpenMP loop">;
 def err_omp_declare_reduction_redefinition : Error<"redefinition of user-defined reduction for type %0">;
 def err_omp_mapper_wrong_type : Error<
   "mapper type must be of struct, union or class type">;
@@ -12646,6 +12698,8 @@ def err_omp_invariant_or_linear_dependency : Error<
   "expected loop invariant expression or '<invariant1> * %0 + <invariant2>' kind of expression">;
 def err_omp_wrong_dependency_iterator_type : Error<
   "expected an integer or a pointer type of the outer loop counter '%0' for non-rectangular nests">;
+def err_omp_stmt_expr_in_non_rectangular_loop : Error<
+  "statement expression is not supported in the loop %select{initializer|condition}0 of a non-rectangular loop nest">;
 def err_target_unsupported_type
     : Error<"%0 requires %select{|%2 bit size}1 %3 %select{|return }4type support,"
             " but target '%5' does not support it">;
@@ -12710,6 +12764,18 @@ def note_omp_flush_order_clause_here : Note<
   "memory order clause '%0' is specified here">;
 def err_omp_non_lvalue_in_map_or_motion_clauses: Error<
   "expected addressable lvalue in '%0' clause">;
+def err_omp_unsupported_structured_binding_init : Error<
+  "mapping of %select{structured binding initialized from function call|"
+  "structured binding initialized from initializer list|"
+  "structured binding initialized from temporary object|"
+  "structured binding initialized from move expression|"
+  "tuple-like structured binding}0 is not yet supported">;
+def err_omp_decomposition_bindings_different_capture_kinds : Error<
+  "bindings from structured binding %0 require conflicting capture kinds "
+  "(by-reference vs. by-copy)">;
+def err_omp_original_var_mapped_bindings_only_used : Error<
+  "original variable %0 is explicitly mapped but only bindings from it are used "
+  "in target region; either use %0 directly or map the bindings explicitly">;
 def err_omp_var_expected : Error<
   "expected variable of the '%0' type%select{|, not %2}1">;
 def err_omp_non_pointer_type_array_shaping_base : Error<
@@ -13381,7 +13447,7 @@ def err_builtin_invalid_arg_type: Error<
   // An 'or' if non-empty second and third components are combined
   "%plural{0:|:%plural{0:|:or }2}3"
   // Third component: floating-point types
-  "%select{|floating-point|16 or 32 bit floating-point}3"
+  "%select{|floating-point|16 or 32 bit floating-point|32 bit floating-point}3"
   // A space after a non-empty third component
   "%plural{0:|: }3"
   "%plural{[0,3]:type|:types}1 (was %4)">;
@@ -13494,6 +13560,9 @@ def err_sycl_special_type_num_init_method : Error<
   "method defined">;
 def err_sycl_device_invalid_target : Error<
   "%0 is not a supported SYCL device target">;
+def err_sycl_address_space_qualified_object : Error<
+  "the top-level type of a variable declaration cannot be qualified with the "
+  "'%0' address space attribute">;
 
 // SYCL external attribute diagnostics
 def err_sycl_external_invalid_linkage : Error<
@@ -13675,6 +13744,19 @@ def err_hlsl_numthreads_invalid : Error<"total number of threads cannot exceed %
 def err_hlsl_missing_numthreads : Error<"missing numthreads attribute for %0 shader entry">;
 def err_hlsl_attribute_param_mismatch : Error<"%0 attribute parameters do not match the previous declaration">;
 def err_hlsl_duplicate_parameter_modifier : Error<"duplicate parameter modifier %0">;
+def err_hlsl_interpolation_conflict : Error<
+  "'nointerpolation' cannot be combined with other interpolation modifiers">;
+def err_hlsl_interpolation_position : Error<
+  "'nointerpolation' cannot be used on SV_Position">;
+def err_hlsl_interpolation_type : Error<
+  "interpolation modifiers other than 'nointerpolation' cannot be used with type %0">;
+def warn_hlsl_duplicate_interpolation : Warning<
+  "duplicate interpolation modifier %0">,
+  InGroup<DuplicateDeclSpecifier>;
+def warn_hlsl_interpolation_override : Warning<
+  "interpolation modifier '%select{centroid|sample}0' overrides "
+  "'%select{center|centroid}1'">,
+  InGroup<IgnoredAttributes>;
 def err_hlsl_missing_semantic_annotation : Error<
   "semantic annotations must be present for all parameters of an entry "
   "function or patch constant function">;
@@ -13736,6 +13818,8 @@ def err_hlsl_param_qualifier_mismatch :
 def err_hlsl_vector_compound_assignment_truncation : Error<
   "left hand operand of type %0 to compound assignment cannot be truncated "
   "when used with right hand operand of type %1">;
+def err_hlsl_long_vector_swizzle : Error<
+  "invalid swizzle %0 on vector of over 4 elements">;
 def err_hlsl_builtin_scalar_vector_mismatch
     : Error<
           "%select{all|second and third}0 arguments to %1 must be of scalar or "
@@ -13796,6 +13880,25 @@ def err_invalid_hlsl_resource_type: Error<
   "invalid __hlsl_resource_t type attributes">;
 
 def err_hlsl_spirv_only: Error<"%0 is only available for the SPIR-V target">;
+def err_hlsl_dxil_only: Error<"%0 is only available for the DirectX target">;
+def err_hlsl_invalid_barrier_memory_flags: Error<
+  "invalid MemoryTypeFlags for Barrier operation; expected 0, ALL_MEMORY, or "
+  "some combination of UAV_MEMORY, GROUP_SHARED_MEMORY, NODE_INPUT_MEMORY, "
+  "NODE_OUTPUT_MEMORY flags">;
+def err_hlsl_invalid_barrier_semantic_flags: Error<
+  "invalid SemanticFlags for Barrier operation; expected 0 or some "
+  "combination of GROUP_SYNC, GROUP_SCOPE, DEVICE_SCOPE flags">;
+def err_hlsl_barrier_flag_requires_group: Error<
+  "%select{GROUP_SHARED_MEMORY|GROUP_SYNC|GROUP_SCOPE}0 specified for Barrier "
+  "operation when context has no visible group">;
+def err_hlsl_barrier_resource_requires_group: Error<
+  "resource Barrier operation requires a shader stage with a visible group">;
+def err_hlsl_barrier_node_memory_requires_node: Error<
+  "NODE_INPUT_MEMORY or NODE_OUTPUT_MEMORY may only be specified for Barrier "
+  "operation in a node shader">;
+def err_hlsl_barrier_scope_requires_memory: Error<
+  "%select{GROUP_SCOPE requires a nonzero MemoryTypeFlags argument|"
+  "DEVICE_SCOPE requires UAV_MEMORY or NODE_INPUT_MEMORY in MemoryTypeFlags}0">;
 def err_hlsl_vk_literal_must_contain_constant: Error<"the argument to vk::Literal must be a vk::integral_constant">;
 
 def err_hlsl_invalid_rootsig_value : Error<"value must be in the range [%0, %1]">;

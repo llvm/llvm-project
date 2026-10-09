@@ -20,7 +20,8 @@ bool TargetInfo::isAggregateTypeForABI(const Type *Ty) const {
     return isAggregateTypeForABI(AT->getValueType());
 
   // Check for fundamental scalar types.
-  if (Ty->isInteger() || Ty->isFloat() || Ty->isPointer() || Ty->isVector())
+  if (Ty->isInteger() || Ty->isFloat() || Ty->isPointer() || Ty->isVector() ||
+      Ty->isTuple())
     return false;
 
   // A matrix type is modeled as an array but lowers to a single flattened
@@ -41,8 +42,9 @@ bool TargetInfo::isPromotableInteger(const IntegerType *IT) const {
   return BitWidth < 32;
 }
 
-ArgInfo TargetInfo::getNaturalAlignIndirect(const Type *Ty, bool ByVal) const {
-  return ArgInfo::getIndirect(Ty->getAlignment(), ByVal);
+ArgInfo TargetInfo::getNaturalAlignIndirect(const Type *Ty, unsigned AddrSpace,
+                                            bool ByVal) const {
+  return ArgInfo::getIndirect(Ty->getAlignment(), ByVal, AddrSpace);
 }
 
 RecordArgABI TargetInfo::getRecordArgABI(const RecordType *RT) const {
@@ -71,6 +73,63 @@ const Type *TargetInfo::useFirstFieldIfTransparentUnion(const Type *Ty) const {
   return Ty;
 }
 
+const Type *TargetInfo::isSingleElementStruct(const Type *Ty) const {
+  const auto *RT = dyn_cast<RecordType>(Ty);
+  if (!RT)
+    return nullptr;
+
+  if (RT->hasFlexibleArrayMember())
+    return nullptr;
+
+  const Type *Found = nullptr;
+
+  for (const auto &Base : RT->getBaseClasses()) {
+    const Type *BaseTy = Base.FieldType;
+    const auto *BaseRT = dyn_cast<RecordType>(BaseTy);
+
+    if (!BaseRT || BaseRT->isEmpty())
+      continue;
+
+    const Type *Elem = isSingleElementStruct(BaseTy);
+    if (!Elem || Found)
+      return nullptr;
+    Found = Elem;
+  }
+
+  for (const auto &FI : RT->getFields()) {
+    if (FI.isEmpty())
+      continue;
+
+    const Type *FTy = FI.FieldType;
+
+    // Treat single element arrays as the element.
+    while (const auto *AT = dyn_cast<ArrayType>(FTy)) {
+      if (AT->getNumElements() != 1)
+        break;
+      FTy = AT->getElementType();
+    }
+
+    const Type *Elem;
+    if (!isAggregateTypeForABI(FTy))
+      Elem = FTy;
+    else
+      Elem = isSingleElementStruct(FTy);
+    if (!Elem || Found)
+      return nullptr;
+    Found = Elem;
+  }
+
+  if (!Found)
+    return nullptr;
+
+  // We don't consider a struct a single-element struct if it has padding
+  // beyond the element type.
+  if (Found->getABISizeInBits() != Ty->getABISizeInBits())
+    return nullptr;
+
+  return Found;
+}
+
 bool TargetInfo::maybeCommonClassifyReturnType(FunctionInfo &FI) const {
   const abi::Type *Ty = FI.getReturnType();
 
@@ -91,19 +150,12 @@ bool TargetInfo::maybeCommonClassifyReturnType(FunctionInfo &FI) const {
   return false;
 }
 
-namespace {
-
-bool isEmptyRecordForHA(const Type *Ty) {
-  const auto *RT = dyn_cast<RecordType>(Ty);
-  return RT && RT->isEmpty();
-}
-
-} // namespace
-
 bool TargetInfo::isHomogeneousAggregate(const Type *Ty, const Type *&Base,
                                         uint64_t &Members) const {
-  // TODO: Add handling for Clang 23 compatibility with matrix types.
+  bool isMatrixHA = getABICompatInfo().IsMatrixHA;
   if (const auto *AT = dyn_cast<ArrayType>(Ty)) {
+    if (!isMatrixHA && AT->isMatrixType())
+      return false;
     uint64_t NElements = AT->getNumElements();
     if (NElements == 0)
       return false;
@@ -122,7 +174,7 @@ bool TargetInfo::isHomogeneousAggregate(const Type *Ty, const Type *&Base,
         return false;
 
       for (const FieldInfo &BaseField : RT->getBaseClasses()) {
-        if (isEmptyRecordForHA(BaseField.FieldType))
+        if (BaseField.FieldType->isEmptyRecord())
           continue;
 
         uint64_t FldMembers = 0;
@@ -145,7 +197,7 @@ bool TargetInfo::isHomogeneousAggregate(const Type *Ty, const Type *&Base,
           return false;
         FT = AT->getElementType();
       }
-      if (isEmptyRecordForHA(FT))
+      if (FT->isEmptyRecord())
         continue;
 
       if (isZeroLengthBitfieldPermittedInHomogeneousAggregate() &&

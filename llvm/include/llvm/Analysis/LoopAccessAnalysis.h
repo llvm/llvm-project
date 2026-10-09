@@ -47,6 +47,10 @@ struct VectorizerParams {
   /// make more than this number of comparisons.
   LLVM_ABI static unsigned RuntimeMemoryCheckThreshold;
 
+  /// The maximum allowed number of runtime memory checks. Above this many
+  /// checks the vectorizer gives up on the loop.
+  LLVM_ABI static unsigned VectorizeMemoryCheckThreshold;
+
   // When creating runtime checks for nested loops, where possible try to
   // write the checks in a form that allows them to be easily hoisted out of
   // the outermost loop. For example, we can do this by expanding the range of
@@ -327,6 +331,8 @@ public:
 
   const Loop *getInnermostLoop() const { return InnermostLoop; }
 
+  PredicatedScalarEvolution &getPSE() const { return PSE; }
+
   DenseMap<std::pair<const SCEV *, const SCEV *>,
            std::pair<const SCEV *, const SCEV *>> &
   getPointerBounds() {
@@ -564,13 +570,16 @@ public:
     const SCEV *Expr;
     /// True if the pointer expressions needs to be frozen after expansion.
     bool NeedsFreeze;
+    /// True if this entry represents one arm of a forked pointer.
+    bool IsForked;
 
     PointerInfo(Value *PointerValue, const SCEV *Start, const SCEV *End,
                 bool IsWritePtr, unsigned DependencySetId, unsigned AliasSetId,
-                const SCEV *Expr, bool NeedsFreeze)
+                const SCEV *Expr, bool NeedsFreeze, bool IsForked)
         : PointerValue(PointerValue), Start(Start), End(End),
           IsWritePtr(IsWritePtr), DependencySetId(DependencySetId),
-          AliasSetId(AliasSetId), Expr(Expr), NeedsFreeze(NeedsFreeze) {}
+          AliasSetId(AliasSetId), Expr(Expr), NeedsFreeze(NeedsFreeze),
+          IsForked(IsForked) {}
   };
 
   RuntimePointerChecking(MemoryDepChecker &DC, ScalarEvolution *SE,
@@ -596,10 +605,7 @@ public:
   LLVM_ABI bool insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
                        Type *AccessTy, bool WritePtr, unsigned DepSetId,
                        unsigned ASId, PredicatedScalarEvolution &PSE,
-                       bool NeedsFreeze);
-
-  /// No run-time memory checking is necessary.
-  bool empty() const { return Pointers.empty(); }
+                       bool NeedsFreeze, bool IsForked);
 
   /// Generate the checks and store it.  This also performs the grouping
   /// of pointers to reduce the number of memchecks necessary.
@@ -672,6 +678,11 @@ private:
   /// between two different groups. This will clear the CheckingGroups vector
   /// and re-compute it.
   void groupChecks(MemoryDepChecker::DepCandidates &DepCands);
+
+  /// Attempt to merge checking groups that share a base pointer and differ
+  /// by stencil functions of loop-invariant strides. This reduces runtime
+  /// checks for multi-dimensional stencil-like access patterns.
+  void mergeStencilGroups();
 
   /// Generate the checks and return them.
   SmallVector<RuntimePointerCheck, 4> generateChecks();
@@ -769,9 +780,6 @@ public:
 
   /// Returns true if value \p V is loop invariant.
   LLVM_ABI bool isInvariant(Value *V) const;
-
-  unsigned getNumStores() const { return NumStores; }
-  unsigned getNumLoads() const { return NumLoads;}
 
   /// The diagnostics report generated for the analysis.  E.g. why we
   /// couldn't analyze the loop.
@@ -874,9 +882,6 @@ private:
   /// memory accesses could be analyzed.
   bool AllowPartial;
 
-  unsigned NumLoads = 0;
-  unsigned NumStores = 0;
-
   /// Cache the result of analyzeLoop.
   bool CanVecMem = false;
   bool HasConvergentOp = false;
@@ -906,13 +911,16 @@ private:
 /// \p PSE is true.
 ///
 /// If necessary this method will version the stride of the pointer according
-/// to \p PtrToStride and therefore add further predicates to \p PSE.
+/// to \p PtrToStride and therefore add further predicates to \p PSE, except
+/// when \p Predicates is given, in which case, it adds predicates there instead
+/// of to \p PSE directly.
 ///
 /// \p PtrToStride provides the mapping between the pointer value and its
 /// stride as collected by LoopVectorizationLegality::collectStridedAccess.
-LLVM_ABI const SCEV *
-replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
-                          const SymbolicStrideMap &PtrToStride, Value *Ptr);
+LLVM_ABI const SCEV *replaceSymbolicStrideSCEV(
+    PredicatedScalarEvolution &PSE, const Loop *Lp,
+    const SymbolicStrideMap &PtrToStride, Value *Ptr,
+    SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
 
 /// If \p AR is an affine AddRec for \p Lp with a constant step, return the
 /// step in units of \p AccessTy's allocation size. Returns std::nullopt if the
@@ -943,15 +951,6 @@ getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
              const SymbolicStrideMap &StridesMap = SymbolicStrideMap(),
              bool ShouldCheckWrap = true,
              SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
-
-/// Overload of \ref getPtrStride that adds the no-wrap predicates directly to
-/// \p PSE. The \p Assume parameter indicates whether such additional run-time
-/// assumptions are allowed.
-LLVM_ABI std::optional<int64_t>
-getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
-             const Loop *Lp, const DominatorTree &DT,
-             const SymbolicStrideMap &StridesMap, bool Assume,
-             bool ShouldCheckWrap = true);
 
 /// Returns the distance between the pointers \p PtrA and \p PtrB iff they are
 /// compatible and it is possible to calculate the distance between them. This

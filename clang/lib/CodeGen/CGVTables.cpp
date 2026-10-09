@@ -819,16 +819,6 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
     }
 
     auto getSpecialVirtualFn = [&](StringRef name) -> llvm::Constant * {
-      // FIXME(PR43094): When merging comdat groups, lld can select a local
-      // symbol as the signature symbol even though it cannot be accessed
-      // outside that symbol's TU. The relative vtables ABI would make
-      // __cxa_pure_virtual and __cxa_deleted_virtual local symbols, and
-      // depending on link order, the comdat groups could resolve to the one
-      // with the local symbol. As a temporary solution, fill these components
-      // with zero. We shouldn't be calling these in the first place anyway.
-      if (RelativeCXXABIVTables)
-        return llvm::ConstantPointerNull::get(CGM.GlobalsInt8PtrTy);
-
       llvm::FunctionType *fnTy =
           llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
       auto *F = cast<llvm::Function>(

@@ -266,9 +266,9 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
       if (Arg.hasName())
         buildOpName(VRegs[i][0], Arg.getName(), MIRBuilder);
-      if (isPointerTyOrWrapper(Arg.getType())) {
+      if (isPointerTyOrWrapper(Arg.getType()) && !ST->isShader()) {
         auto DerefBytes = static_cast<unsigned>(Arg.getDereferenceableBytes());
-        if (DerefBytes != 0)
+        if (DerefBytes != 0 && ST->isAtLeastSPIRVVer(VersionTuple(1, 1)))
           buildOpDecorate(VRegs[i][0], MIRBuilder,
                           SPIRV::Decoration::MaxByteOffset, {DerefBytes});
       }
@@ -278,7 +278,7 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
         buildOpDecorate(VRegs[i][0], MIRBuilder, SPIRV::Decoration::Alignment,
                         {Alignment});
       }
-      if (!ST->isShader()) {
+      if (ST->isKernel()) {
         if (Arg.hasAttribute(Attribute::ReadOnly)) {
           auto Attr =
               static_cast<unsigned>(SPIRV::FunctionParameterAttribute::NoWrite);
@@ -306,6 +306,12 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
         if (Arg.hasAttribute(Attribute::NoAlias)) {
           auto Attr =
               static_cast<unsigned>(SPIRV::FunctionParameterAttribute::NoAlias);
+          buildOpDecorate(VRegs[i][0], MIRBuilder,
+                          SPIRV::Decoration::FuncParamAttr, {Attr});
+        }
+        if (Arg.hasNoCaptureAttr()) {
+          auto Attr = static_cast<unsigned>(
+              SPIRV::FunctionParameterAttribute::NoCapture);
           buildOpDecorate(VRegs[i][0], MIRBuilder,
                           SPIRV::Decoration::FuncParamAttr, {Attr});
         }
@@ -445,6 +451,9 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                       SPIRV::Decoration::ReferencedIndirectlyINTEL, {});
     }
   }
+
+  if (MDNode *FuncMD = F.getMetadata("spirv.Decorations"))
+    buildOpSpirvDecorations(FuncVReg, MIRBuilder, FuncMD, *ST);
 
   return true;
 }
