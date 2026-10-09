@@ -44,7 +44,7 @@ define <2 x i16> @load_local_lo_hi_v2i16_multi_use_lo(ptr addrspace(3) noalias %
 ; GFX803-NEXT:    ds_write_b16 v2, v1
 ; GFX803-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX803-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX803-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX803-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX803-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -178,7 +178,7 @@ define <2 x i16> @load_local_lo_hi_v2i16_multi_use_lohi(ptr addrspace(3) noalias
 ; GFX803-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX803-NEXT:    ds_write_b16 v2, v0
 ; GFX803-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX803-NEXT:    v_or_b32_sdwa v0, v3, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX803-NEXT:    v_or_b32_e32 v0, v3, v0
 ; GFX803-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 ;
