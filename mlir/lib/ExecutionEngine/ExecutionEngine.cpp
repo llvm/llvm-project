@@ -23,11 +23,15 @@
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
+#include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
@@ -256,6 +260,16 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
     if (!tmBuilderOrError)
       return tmBuilderOrError.takeError();
 
+    // Use PC-relative addressing for JIT code and GOT entries for symbols in
+    // the host process, which may be more than 2 GiB from the JIT allocation.
+    // Medium selects medany on RISC-V64. On LoongArch64 it preserves the
+    // backend default and allows longer-range calls than Small.
+    if (tmBuilderOrError->getTargetTriple().getArch() == Triple::riscv64 ||
+        tmBuilderOrError->getTargetTriple().getArch() == Triple::loongarch64) {
+      tmBuilderOrError->setRelocationModel(llvm::Reloc::PIC_);
+      tmBuilderOrError->setCodeModel(llvm::CodeModel::Medium);
+    }
+
     auto tmOrError = tmBuilderOrError->createTargetMachine();
     if (!tmOrError)
       return tmOrError.takeError();
@@ -268,6 +282,15 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
   // (set-up by callers of this method). It could also be passed to the
   // translation or dialect conversion instead of this.
   setupTargetTripleAndDataLayout(llvmModule.get(), tm.get());
+  if (options.sectionMemoryMapper &&
+      (llvmModule->getTargetTriple().getArch() == Triple::riscv64 ||
+       llvmModule->getTargetTriple().getArch() == Triple::loongarch64))
+    return makeStringError(
+        llvm::formatv("sectionMemoryMapper is not supported for target {0}: "
+                      "this target requires JITLink, but sectionMemoryMapper "
+                      "is a RuntimeDyld-only option",
+                      llvmModule->getTargetTriple().str())
+            .str());
   packFunctionArguments(llvmModule.get());
 
   auto dataLayout = llvmModule->getDataLayout();
@@ -311,56 +334,106 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
 
   // Callback to create the object layer with symbol resolution to current
   // process and dynamically linked libraries.
-  auto objectLinkingLayerCreator = [&](ExecutionSession &session,
-                                       llvm::jitlink::JITLinkMemoryManager
-                                           &IgnoredMemMgr) {
-    // Needed to respect AArch64 ABI requirements on the distance between
-    // TEXT and GOT sections.
-    bool reserveAlloc = llvmModule->getTargetTriple().isAArch64();
-    auto objectLayer = std::make_unique<RTDyldObjectLinkingLayer>(
-        session, [sectionMemoryMapper = options.sectionMemoryMapper,
-                  reserveAlloc](const MemoryBuffer &) {
-          return std::make_unique<SectionMemoryManager>(sectionMemoryMapper,
-                                                        reserveAlloc);
-        });
+  auto objectLinkingLayerCreator =
+      [&](ExecutionSession &session,
+          llvm::jitlink::JITLinkMemoryManager &memMgr) {
+        // Match the target/format selection in
+        // LLJITBuilderState::prepareForConstruction.
+        // Targets without JITLink support continue to use RuntimeDyld.
+        const llvm::Triple &targetTriple = llvmModule->getTargetTriple();
+        bool useJITLink = false;
+        switch (targetTriple.getArch()) {
+        case Triple::riscv64:
+        case Triple::loongarch64:
+          useJITLink = true;
+          break;
+        case Triple::aarch64:
+          useJITLink = !targetTriple.isOSBinFormatCOFF();
+          break;
+        case Triple::arm:
+        case Triple::armeb:
+        case Triple::thumb:
+        case Triple::thumbeb:
+          useJITLink = targetTriple.isOSBinFormatELF();
+          break;
+        case Triple::ppc64:
+          useJITLink = targetTriple.isPPC64ELFv2ABI();
+          break;
+        case Triple::ppc64le:
+          useJITLink = targetTriple.isOSBinFormatELF();
+          break;
+        case Triple::x86_64:
+          useJITLink = !targetTriple.isOSBinFormatCOFF();
+          break;
+        default:
+          break;
+        }
 
-    // Register JIT event listeners if they are enabled.
-    if (engine->gdbListener)
-      objectLayer->registerJITEventListener(*engine->gdbListener);
-    if (engine->perfListener)
-      objectLayer->registerJITEventListener(*engine->perfListener);
+        // SectionMemoryManager mappers require RuntimeDyld. Notification
+        // options do not affect linker selection.
+        if (options.sectionMemoryMapper)
+          useJITLink = false;
 
-    // COFF format binaries (Windows) need special handling to deal with
-    // exported symbol visibility.
-    // cf llvm/lib/ExecutionEngine/Orc/LLJIT.cpp LLJIT::createObjectLinkingLayer
-    const llvm::Triple &targetTriple = llvmModule->getTargetTriple();
-    if (targetTriple.isOSBinFormatCOFF()) {
-      objectLayer->setOverrideObjectFlagsWithResponsibilityFlags(true);
-      objectLayer->setAutoClaimResponsibilityForObjectSymbols(true);
-    }
+        std::unique_ptr<llvm::orc::ObjectLayer> objectLayer;
 
-    // Resolve symbols from shared libraries.
-    for (auto &libPath : jitDyLibPaths) {
-      auto mb = llvm::MemoryBuffer::getFile(libPath);
-      if (!mb) {
-        errs() << "Failed to create MemoryBuffer for: " << libPath
-               << "\nError: " << mb.getError().message() << "\n";
-        continue;
-      }
-      auto &jd = session.createBareJITDylib(std::string(libPath));
-      auto loaded = DynamicLibrarySearchGenerator::Load(
-          libPath.str().c_str(), dataLayout.getGlobalPrefix());
-      if (!loaded) {
-        errs() << "Could not load " << libPath << ":\n  " << loaded.takeError()
-               << "\n";
-        continue;
-      }
-      jd.addGenerator(std::move(*loaded));
-      cantFail(objectLayer->add(jd, std::move(mb.get())));
-    }
+        if (useJITLink) {
+          // GDB/perf notifications require RuntimeDyld. Do not register
+          // JITEventListeners or debugger plugins on the JITLink path.
+          LDBG() << "Using ObjectLinkingLayer (JITLink)";
+          objectLayer =
+              std::make_unique<llvm::orc::ObjectLinkingLayer>(session, memMgr);
+        } else {
+          auto rtDyldLayer =
+              std::make_unique<llvm::orc::RTDyldObjectLinkingLayer>(
+                  session, [sectionMemoryMapper = options.sectionMemoryMapper,
+                            reserveAlloc = targetTriple.isAArch64()](
+                               const llvm::MemoryBuffer &) {
+                    return std::make_unique<SectionMemoryManager>(
+                        sectionMemoryMapper, reserveAlloc);
+                  });
 
-    return objectLayer;
-  };
+          // Preserve the RuntimeDyld symbol visibility workarounds from LLJIT.
+          if (targetTriple.isOSBinFormatCOFF()) {
+            rtDyldLayer->setOverrideObjectFlagsWithResponsibilityFlags(true);
+            rtDyldLayer->setAutoClaimResponsibilityForObjectSymbols(true);
+          }
+          if (targetTriple.isOSBinFormatELF() && targetTriple.isPPC64())
+            rtDyldLayer->setAutoClaimResponsibilityForObjectSymbols(true);
+
+          // JITEventListener is specific to RuntimeDyld.
+          if (engine->gdbListener)
+            rtDyldLayer->registerJITEventListener(*engine->gdbListener);
+
+          if (engine->perfListener)
+            rtDyldLayer->registerJITEventListener(*engine->perfListener);
+
+          LDBG() << "mlir::ExecutionEngine initialized with "
+                    "RTDyldObjectLinkingLayer engine";
+          objectLayer = std::move(rtDyldLayer);
+        }
+
+        // Resolve symbols from shared libraries.
+        for (auto &libPath : jitDyLibPaths) {
+          auto mb = llvm::MemoryBuffer::getFile(libPath);
+          if (!mb) {
+            errs() << "Failed to create MemoryBuffer for: " << libPath
+                   << "\nError: " << mb.getError().message() << "\n";
+            continue;
+          }
+          auto &jd = session.createBareJITDylib(std::string(libPath));
+          auto loaded = DynamicLibrarySearchGenerator::Load(
+              libPath.str().c_str(), dataLayout.getGlobalPrefix());
+          if (!loaded) {
+            errs() << "Could not load " << libPath << ":\n  "
+                   << loaded.takeError() << "\n";
+            continue;
+          }
+          jd.addGenerator(std::move(*loaded));
+          cantFail(objectLayer->add(jd, std::move(mb.get())));
+        }
+
+        return objectLayer;
+      };
 
   // Callback to inspect the cache and recompile on demand. This follows Lang's
   // LLJITWithObjectCache example.

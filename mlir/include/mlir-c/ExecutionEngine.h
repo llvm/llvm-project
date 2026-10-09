@@ -44,6 +44,10 @@ DEFINE_C_API_STRUCT(MlirExecutionEngine, void);
 /// The `enablePIC` arguments controls the relocation model, when true the
 /// generated code is emitted as "position independent", making it possible to
 /// save it and reload it as a shared object in another process.
+/// RISC-V64 and LoongArch64 always use position-independent addressing for JIT
+/// execution.
+/// GDB/perf notifications require RuntimeDyld; JITLink does not register
+/// notification listeners.
 /// TODO: figure out other options.
 MLIR_CAPI_EXPORTED MlirExecutionEngine mlirExecutionEngineCreate(
     MlirModule op, int optLevel, int numPaths,

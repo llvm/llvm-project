@@ -14,7 +14,9 @@
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
+#include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/Mangling.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/TargetSelect.h"
 
 using namespace mlir;
@@ -41,8 +43,16 @@ mlirExecutionEngineCreate(MlirModule op, int optLevel, int numPaths,
     consumeError(tmBuilderOrError.takeError());
     return MlirExecutionEngine{nullptr};
   }
-  if (enablePIC)
+  const auto &targetTriple = tmBuilderOrError->getTargetTriple();
+  bool usePICForJIT = targetTriple.getArch() == llvm::Triple::riscv64 ||
+                      targetTriple.getArch() == llvm::Triple::loongarch64;
+  if (enablePIC || usePICForJIT)
     tmBuilderOrError->setRelocationModel(llvm::Reloc::PIC_);
+  // Medium selects medany on RISC-V64. On LoongArch64 it preserves the
+  // backend default and allows longer-range calls than Small. PIC uses GOT
+  // entries for host symbols.
+  if (usePICForJIT)
+    tmBuilderOrError->setCodeModel(llvm::CodeModel::Medium);
   auto tmOrError = tmBuilderOrError->createTargetMachine();
   if (!tmOrError) {
     consumeError(tmOrError.takeError());
@@ -62,6 +72,7 @@ mlirExecutionEngineCreate(MlirModule op, int optLevel, int numPaths,
   jitOptions.jitCodeGenOptLevel = static_cast<llvm::CodeGenOptLevel>(optLevel);
   jitOptions.sharedLibPaths = libPaths;
   jitOptions.enableObjectDump = enableObjectDump;
+  // Use the same TargetMachine configuration for optimization and JIT codegen.
   auto jitOrError = ExecutionEngine::create(unwrap(op), jitOptions,
                                             std::move(tmOrError.get()));
   if (!jitOrError) {

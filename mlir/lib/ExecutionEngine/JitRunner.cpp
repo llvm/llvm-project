@@ -93,6 +93,14 @@ struct Options {
       llvm::cl::MiscFlags::CommaSeparated, llvm::cl::cat(clOptionsCategory)};
 
   /// CLI variables for debugging.
+  llvm::cl::opt<bool> enableGDBListener{
+      "enable-gdb-listener",
+      llvm::cl::desc("Enable GDB notifications (requires RuntimeDyld)"),
+      llvm::cl::init(true), llvm::cl::cat(clOptionsCategory)};
+  llvm::cl::opt<bool> enablePerfListener{
+      "enable-perf-listener",
+      llvm::cl::desc("Enable perf/Intel notifications (requires RuntimeDyld)"),
+      llvm::cl::init(true), llvm::cl::cat(clOptionsCategory)};
   llvm::cl::opt<bool> dumpObjectFile{
       "dump-object-file",
       llvm::cl::desc("Dump JITted-compiled object to file specified with "
@@ -189,6 +197,8 @@ compileAndExecute(Options &options, Operation *module, StringRef entryPoint,
                                        options.clSharedLibs.end());
 
   mlir::ExecutionEngineOptions engineOptions;
+  engineOptions.enableGDBNotificationListener = options.enableGDBListener;
+  engineOptions.enablePerfNotificationListener = options.enablePerfListener;
   engineOptions.llvmModuleBuilder = config.llvmModuleBuilder;
   if (config.transformer)
     engineOptions.transformer = config.transformer;
@@ -359,6 +369,17 @@ int mlir::JitRunnerMain(int argc, char **argv, const DialectRegistry &registry,
 
   if (!options.mArch.empty()) {
     tmBuilderOrError->getTargetTriple().setArchName(options.mArch);
+  }
+
+  // Use PC-relative addressing for JIT code and GOT entries for symbols in
+  // the host process, which may be more than 2 GiB from the JIT allocation.
+  // Medium selects medany on RISC-V64. On LoongArch64 it preserves the
+  // backend default and allows longer-range calls than Small.
+  if (tmBuilderOrError->getTargetTriple().getArch() == llvm::Triple::riscv64 ||
+      tmBuilderOrError->getTargetTriple().getArch() ==
+          llvm::Triple::loongarch64) {
+    tmBuilderOrError->setRelocationModel(llvm::Reloc::PIC_);
+    tmBuilderOrError->setCodeModel(llvm::CodeModel::Medium);
   }
 
   // Build TargetMachine
