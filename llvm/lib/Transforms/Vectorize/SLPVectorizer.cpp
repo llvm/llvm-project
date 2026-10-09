@@ -11165,7 +11165,8 @@ class InstructionsCompatibilityAnalysis {
       if ((I == MainOp && (!S.isAltShuffle() || I == SMain)))
         continue;
       SmallVector<BoUpSLP::ValueList> VOps;
-      buildOriginalOperands(S, (S.isAltShuffle() && I == SMain) ? MainOp : I, VOps);
+      buildOriginalOperands(S, (S.isAltShuffle() && I == SMain) ? MainOp : I,
+                            VOps);
       SmallVector<Value *> CopyableOps =
           getOperands(CopyableS, I == MainOp ? SMain : I, /*SelfOp=*/false);
       if (CopyableOps.size() == VOps.size() &&
