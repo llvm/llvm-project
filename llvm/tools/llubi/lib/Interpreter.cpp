@@ -1990,8 +1990,8 @@ public:
       return AnyValue();
     }
 
-    if (auto LibCallRes =
-            Lib.executeLibcall(LF, CB.getName(), CB.getType(), CalleeArgs))
+    if (auto LibCallRes = Lib.executeLibcall(LF, CB.getName(),
+                                             CB.getFunctionType(), CalleeArgs))
       return *LibCallRes;
 
     if (ExitInfo)
