@@ -5730,8 +5730,8 @@ void ASTWriter::computeNonAffectingInputFiles() {
     // this input file.
     if (!hasChain())
       continue;
-    serialization::InputFileLoc Loaded = getChain()->getLoadedFileLoc(
-        Cache->OrigEntry->getName(), Cache->OrigEntry->getSize());
+    serialization::InputFileLoc Loaded =
+        getChain()->getLoadedFileLoc(*Cache->OrigEntry);
     if (!Loaded.isValid())
       continue;
 

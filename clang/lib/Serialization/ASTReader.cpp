@@ -1879,29 +1879,21 @@ void ASTReader::buildLoadedInputFiles() {
   }
 }
 
-InputFileLoc ASTReader::getLoadedFileLoc(StringRef Path, off_t Size) {
+InputFileLoc ASTReader::getLoadedFileLoc(FileEntryRef Wanted) {
   if (!LoadedInputFiles)
     buildLoadedInputFiles();
 
-  auto Known = LoadedInputFiles->find(Size);
+  auto Known = LoadedInputFiles->find(Wanted.getSize());
   if (Known == LoadedInputFiles->end())
     return InputFileLoc();
-
-  OptionalFileEntryRef Wanted;
-  bool TriedWanted = false;
 
   for (const LoadedModuleInputFile &In : Known->second) {
     InputFileInfo FI = getInputFileInfo(*In.F, In.InputID);
 
     StringRef Unresolved = FI.UnresolvedImportedFilename;
-    if (!llvm::sys::path::is_absolute(Unresolved) || Unresolved != Path) {
+    if (!llvm::sys::path::is_absolute(Unresolved) ||
+        Unresolved != Wanted.getName()) {
       // Determine whether the actual files are equivalent.
-      if (!TriedWanted) {
-        Wanted = FileMgr.getOptionalFileRef(Path);
-        TriedWanted = true;
-      }
-      if (!Wanted)
-        continue;
       auto Filename = ResolveImportedPath(PathBuf, Unresolved, *In.F);
       if (FileMgr.getOptionalFileRef(*Filename) != Wanted)
         continue;

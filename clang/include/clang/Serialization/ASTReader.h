@@ -1447,9 +1447,9 @@ private:
     const StringRef &operator*() && = delete;
   };
 
-  /// Returns where a loaded module keeps the input file with path \p Path and
-  /// size \p Size, or an invalid \c FID if no loaded module has a copy of it.
-  serialization::InputFileLoc getLoadedFileLoc(StringRef Path, off_t Size);
+  /// Returns where a loaded module keeps the input file \p Wanted, or an
+  /// invalid \c FID if no loaded module has a copy of it.
+  serialization::InputFileLoc getLoadedFileLoc(FileEntryRef Wanted);
 
   /// An input file recorded by a loaded module file. \c InputID is the file's
   /// ID within the module's input file table.
