@@ -104,7 +104,7 @@ public:
     for (const Entry &E : R)
       if (E.Coefficient != 0)
         NewRow.push_back(E);
-    normalize(NewRow);
+    normalizeByGCD(NewRow);
     return true;
   }
 
@@ -118,7 +118,7 @@ public:
 
   /// Divide the variable coefficients of \p R by their greatest common divisor
   /// G and round the constant down to a multiple of G.
-  LLVM_ABI static void normalize(MutableArrayRef<Entry> R);
+  LLVM_ABI static void normalizeByGCD(MutableArrayRef<Entry> R);
 
   static RowTy negate(RowTy R) {
     assert(hasConstantEntry(R) && "row must have a constant entry");

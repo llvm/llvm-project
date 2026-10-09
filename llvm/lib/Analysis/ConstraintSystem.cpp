@@ -144,7 +144,7 @@ bool ConstraintSystem::eliminateUsingFM() {
       }
       if (Overflow || NR.empty())
         continue;
-      normalize(NR);
+      normalizeByGCD(NR);
       Constraints.push_back(std::move(NR));
       // Give up if the new system gets too big.
       if (Constraints.size() > 500)
@@ -156,7 +156,7 @@ bool ConstraintSystem::eliminateUsingFM() {
   return true;
 }
 
-void ConstraintSystem::normalize(MutableArrayRef<Entry> R) {
+void ConstraintSystem::normalizeByGCD(MutableArrayRef<Entry> R) {
   // The sum of the variable terms is a multiple of G, so it is <= C iff it is
   // <= floor(C / G) * G.
   int64_t G = 0;
@@ -322,7 +322,7 @@ bool ConstraintSystem::isConditionImplied(RowTy R) const {
   if (isConstantOnly(R))
     return getConstant(R) >= 0;
 
-  normalize(R);
+  normalizeByGCD(R);
 
   // R is trivially implied if a single row of the system implies it.
   if (isImpliedBySingleRow(R))

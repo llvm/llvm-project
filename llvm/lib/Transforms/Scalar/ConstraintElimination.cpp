@@ -2297,7 +2297,7 @@ void ConstraintInfo::addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B,
   // system are removed in reverse order, so the existing row outlives R. Rows
   // in the system are normalized, so normalize R before comparing.
   if (!R.isEq() && NewVariables.empty()) {
-    ConstraintSystem::normalize(R.Coefficients);
+    ConstraintSystem::normalizeByGCD(R.Coefficients);
     if (CSToUse.isImpliedBySingleRow(R.Coefficients))
       return;
   }
