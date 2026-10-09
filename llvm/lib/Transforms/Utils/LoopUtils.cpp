@@ -31,6 +31,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
@@ -2495,58 +2496,52 @@ llvm::hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
 bool llvm::collectCompressedPtrs(
     DenseMap<Value *, const SCEV *> &CompressedPtrs, const Loop &L,
     const ConditionalInductionDescriptor &CondID, ScalarEvolution &SE) {
-  // Over-approximates the conditional induction as a SCEVAddRec assuming the
-  // condition is always true.
-  const SCEV *ApproximatePhiSCEV = SE.getAddRecExpr(
-      CondID.getStartSCEV(), CondID.getStepSCEV(), &L, SCEV::FlagNone);
-
-  // TODO: Take into account the non-wrap flags of the MD when rewriting the
-  // SCEV expressions for pointers. This should allow folding away zext/sext
-  // operations.
+  const SCEV *ApproximatePhiSCEV = CondID.getUnconditionalAddRec(SE, L);
   ValueToSCEVMapTy PhiMap{{CondID.getHeaderPHI(), ApproximatePhiSCEV}};
 
   auto GetCompressedPtrSCEV = [&](Value *Ptr, Type *AccessTy) -> const SCEV * {
+    using namespace SCEVPatternMatch;
+    // TODO: Take into account the non-wrap flags of the MD when rewriting the
+    // SCEV expressions for pointers. This should allow folding away zext/sext
+    // operations.
     const SCEV *PtrSCEV =
         SCEVParameterRewriter::rewrite(SE.getSCEV(Ptr), SE, PhiMap);
-    auto *AddRec = dyn_cast<SCEVAddRecExpr>(PtrSCEV);
-    if (!AddRec || !AddRec->isAffine())
+    if (!match(PtrSCEV,
+               m_scev_AffineAddRec(m_SCEV(), m_SCEV(), m_SpecificLoop(&L))))
       return nullptr;
 
     // Check if pointer step equals access size.
-    SCEVUse Step = AddRec->getStepRecurrence(SE);
+    SCEVUse Step = cast<SCEVAddRecExpr>(PtrSCEV)->getStepRecurrence(SE);
     if (Step != SE.getSizeOfExpr(Step->getType(), AccessTy))
       return nullptr;
 
     return PtrSCEV;
   };
 
-  SmallPtrSet<Use *, 16> Seen;
-  SmallVector<Use *> Worklist(
-      make_pointer_range(CondID.getHeaderPHI()->uses()));
-  while (!Worklist.empty()) {
-    Use *U = Worklist.pop_back_val();
-    if (!Seen.insert(U).second)
-      continue;
+  SmallSetVector<Use *, 16> Worklist;
+  Worklist.insert_range(make_pointer_range(CondID.getHeaderPHI()->uses()));
+  for (unsigned I = 0; I < Worklist.size(); ++I) {
+    Use *U = Worklist[I];
 
-    auto *I = cast<Instruction>(U->getUser());
+    auto *UserI = cast<Instruction>(U->getUser());
     // Disallow out of loop users. TODO: This could be relaxed if the loop
     // vectorizer could handle liveout users of the conditional induction.
-    if (!L.contains(I))
+    if (!L.contains(UserI))
       return false;
 
     // Always allow uses by the backedge update.
-    if (I == CondID.getBackedgePHI())
+    if (UserI == CondID.getBackedgePHI())
       continue;
 
     Value *CurrentVal = U->get();
-    if (isa<LoadInst, StoreInst>(I)) {
+    if (isa<LoadInst, StoreInst>(UserI)) {
       // Disallow any store that uses the monotonic value as the stored value.
-      auto *SI = dyn_cast<StoreInst>(I);
+      auto *SI = dyn_cast<StoreInst>(UserI);
       if (SI && SI->getValueOperand() == CurrentVal)
         return false;
 
-      Value *Ptr = getLoadStorePointerOperand(I);
-      const SCEV *PtrSCEV = GetCompressedPtrSCEV(Ptr, getLoadStoreType(I));
+      Value *Ptr = getLoadStorePointerOperand(UserI);
+      const SCEV *PtrSCEV = GetCompressedPtrSCEV(Ptr, getLoadStoreType(UserI));
       if (!PtrSCEV)
         return false;
       CompressedPtrs.insert({Ptr, PtrSCEV});
@@ -2562,10 +2557,11 @@ bool llvm::collectCompressedPtrs(
     // mixing in a second loop-varying term. GetCompressedPtrSCEV rewrites the
     // full leaf pointer SCEV and rejects it unless the entire address still
     // simplifies to the required affine AddRec.
-    if (I->use_empty() ||
-        find_singleton<Value>(I->operands(), LoopVariantOp) != CurrentVal)
+    if (UserI->use_empty() ||
+        find_singleton<Value>(UserI->operands(), LoopVariantOp) != CurrentVal)
       return false;
-    append_range(Worklist, make_pointer_range(I->uses()));
+
+    Worklist.insert_range(make_pointer_range(UserI->uses()));
   }
 
   return true;

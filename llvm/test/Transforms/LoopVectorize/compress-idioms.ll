@@ -83,7 +83,7 @@ exit:
   ret void
 }
 
-; CHECK-REMARL: LV: Found compressed pointer:   %src.ptr = getelementptr inbounds i32, ptr %src, i64 %idx
+; CHECK-REMARK: LV: Found compressed pointer:   %src.ptr = getelementptr inbounds i32, ptr %src, i64 %idx
 ; CHECK-REMARK: loop not vectorized: We can vectorize this loop with a compressstore or expandload, but vectorization support is not implemented yet.
 
 define void @test_expand_load_with_index(ptr noalias %dst, ptr readonly %src, i32 %c) {
