@@ -3647,6 +3647,45 @@ static std::optional<Instruction *> instCombineSVEAnd(InstCombiner &IC,
   return IC.replaceInstUsesWith(II, NewCmphs);
 }
 
+static bool canFoldShiftIntoUser(unsigned Opcode, Type *Ty,
+                                 const Instruction *CtxI) {
+
+  auto IsFoldableShift = [](const Instruction &I) {
+    unsigned Width = I.getType()->getIntegerBitWidth();
+    if (!I.isShift() || !is_contained({8u, 16u, 32u, 64u}, Width))
+      return false;
+
+    // These still require mask/sign-extension.
+    if (I.getOpcode() != Instruction::Shl && is_contained({8u, 16u}, Width))
+      return false;
+
+    auto *ShiftAmount = dyn_cast<ConstantInt>(I.getOperand(1));
+    return ShiftAmount && ShiftAmount->getValue().ult(Width);
+  };
+
+  if (!Ty->isIntegerTy() || !CtxI || CtxI->getOpcode() != Opcode ||
+      CtxI->getType() != Ty || !CtxI->hasOneUse() || !IsFoldableShift(*CtxI))
+    return false;
+
+  auto *UserI = dyn_cast<BinaryOperator>(*CtxI->user_begin());
+  if (!UserI || UserI->getParent() != CtxI->getParent() ||
+      !is_contained({Instruction::And, Instruction::Or, Instruction::Xor},
+                    UserI->getOpcode()))
+    return false;
+
+  Value *Other = UserI->getOperand(UserI->getOperand(0) == CtxI ? 1 : 0);
+  if (isa<Constant>(Other))
+    return false;
+  // A logical instruction has only one shifted-register operand. If both
+  // operands are shifts, consistently assign the fold to operand 1.
+  if (auto *OtherShift = dyn_cast<Instruction>(Other);
+      OtherShift && OtherShift->getParent() == UserI->getParent() &&
+      IsFoldableShift(*OtherShift) && OtherShift->hasOneUse())
+    return UserI->getOperand(1) == CtxI;
+
+  return true;
+}
+
 std::optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
@@ -5405,6 +5444,10 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
   case ISD::SRL:
   case ISD::SRA:
   case ISD::SHL: {
+
+    if (canFoldShiftIntoUser(Opcode, Ty, CtxI))
+      return TTI::TCC_Free;
+
     // Immediate vector shifts require uniform shift amounts. Non-uniform
     // constants therefore use variable shifts and require materializing the
     // shift vector. Account for a shift and materialization per legalized
