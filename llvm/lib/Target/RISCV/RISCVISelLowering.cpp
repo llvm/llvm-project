@@ -1676,6 +1676,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
           setOperationAction({ISD::CTTZ_ELTS, ISD::CTTZ_ELTS_ZERO_POISON}, VT,
                              Custom);
+
+          setOperationAction(ISD::MASK_BEFOREFIRST, VT, Custom);
           continue;
         }
 
@@ -8940,14 +8942,15 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     if (isPromotedOpNeedingSplit(Op, Subtarget, *this))
       return SplitVectorOp(Op, DAG);
     return lowerFTRUNC_FCEIL_FFLOOR_FROUND(Op, DAG, Subtarget);
-  case ISD::FCANONICALIZE: {
+  case ISD::FCANONICALIZE:
+  case ISD::MASK_BEFOREFIRST: {
     MVT VT = Op.getSimpleValueType();
     assert(VT.isFixedLengthVector() && "Unexpected type");
     SDLoc DL(Op);
     MVT ContainerVT = getContainerForFixedLengthVector(VT);
     SDValue Src =
         convertToScalableVector(ContainerVT, Op.getOperand(0), DAG, Subtarget);
-    SDValue Res = DAG.getNode(ISD::FCANONICALIZE, DL, ContainerVT, Src);
+    SDValue Res = DAG.getNode(Op.getOpcode(), DL, ContainerVT, Src);
     return convertFromScalableVector(VT, Res, DAG, Subtarget);
   }
   case ISD::LRINT:
@@ -18968,10 +18971,13 @@ static SDValue transformAddImmMulImm(SDNode *N, SelectionDAG &DAG,
 // srem (zext, zext) -> zext (srem (zext, zext))
 // urem (zext, zext) -> zext (urem (zext, zext))
 //
-// where the sum of the extend widths match, and the the range of the bin op
+// add/sub/mul/sdiv/srem (sext, ext) -> sext (binop (sext, ext))
+// add/sub/mul/sdiv/srem (ext, sext) -> sext (binop (ext, sext))
+//
+// where the sum of the extend widths match, and the range of the bin op
 // fits inside the width of the narrower bin op. (For profitability on rvv, we
 // use a power of two for both inner and outer extend.)
-static SDValue combineBinOpOfZExt(SDNode *N, SelectionDAG &DAG) {
+static SDValue combineBinOpOfExt(SDNode *N, SelectionDAG &DAG) {
 
   EVT VT = N->getValueType(0);
   if (!VT.isVector() || !DAG.getTargetLoweringInfo().isTypeLegal(VT))
@@ -18979,9 +18985,16 @@ static SDValue combineBinOpOfZExt(SDNode *N, SelectionDAG &DAG) {
 
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
-  if (N0.getOpcode() != ISD::ZERO_EXTEND || N1.getOpcode() != ISD::ZERO_EXTEND)
+  unsigned N0Opc = N0.getOpcode();
+  unsigned N1Opc = N1.getOpcode();
+  if ((N0Opc != ISD::ZERO_EXTEND && N0Opc != ISD::SIGN_EXTEND) ||
+      (N1Opc != ISD::ZERO_EXTEND && N1Opc != ISD::SIGN_EXTEND))
     return SDValue();
   if (!N0.hasOneUse() || !N1.hasOneUse())
+    return SDValue();
+
+  bool AnySExt = N0Opc == ISD::SIGN_EXTEND || N1Opc == ISD::SIGN_EXTEND;
+  if ((N->getOpcode() == ISD::UDIV || N->getOpcode() == ISD::UREM) && AnySExt)
     return SDValue();
 
   SDValue Src0 = N0.getOperand(0);
@@ -18996,16 +19009,15 @@ static SDValue combineBinOpOfZExt(SDNode *N, SelectionDAG &DAG) {
   EVT ElemVT = VT.getVectorElementType().getHalfSizedIntegerVT(C);
   EVT NarrowVT = EVT::getVectorVT(C, ElemVT, VT.getVectorElementCount());
 
-  Src0 = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(Src0), NarrowVT, Src0);
-  Src1 = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(Src1), NarrowVT, Src1);
+  Src0 = DAG.getNode(N0Opc, SDLoc(Src0), NarrowVT, Src0);
+  Src1 = DAG.getNode(N1Opc, SDLoc(Src1), NarrowVT, Src1);
 
-  // Src0 and Src1 are zero extended, so they're always positive if signed.
-  //
-  // sub can produce a negative from two positive operands, so it needs sign
-  // extended. Other nodes produce a positive from two positive operands, so
-  // zero extend instead.
-  unsigned OuterExtend =
-      N->getOpcode() == ISD::SUB ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+  // If both operands are zero extended they're always positive, and every node
+  // except sub produces a positive from two positive operands, so zero extend
+  // instead.
+  unsigned OuterExtend = AnySExt || N->getOpcode() == ISD::SUB
+                             ? ISD::SIGN_EXTEND
+                             : ISD::ZERO_EXTEND;
 
   return DAG.getNode(
       OuterExtend, SDLoc(N), VT,
@@ -19354,7 +19366,7 @@ static SDValue performADDCombine(SDNode *N,
     return V;
   if (SDValue V = combinePExtWideningAddSub(N, DAG, Subtarget))
     return V;
-  if (SDValue V = combineBinOpOfZExt(N, DAG))
+  if (SDValue V = combineBinOpOfExt(N, DAG))
     return V;
   if (SDValue V = combineAddMulParts(N, DAG, Subtarget))
     return V;
@@ -19512,7 +19524,7 @@ static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG,
     return V;
   if (SDValue V = combinePExtWideningAddSub(N, DAG, Subtarget))
     return V;
-  if (SDValue V = combineBinOpOfZExt(N, DAG))
+  if (SDValue V = combineBinOpOfExt(N, DAG))
     return V;
   if (SDValue V = combineSubShiftToOrcB(N, DAG, Subtarget))
     return V;
@@ -20566,7 +20578,7 @@ static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(AddSubOpc, DL, VT, N0, MulVal);
   }
 
-  if (SDValue V = combineBinOpOfZExt(N, DAG))
+  if (SDValue V = combineBinOpOfExt(N, DAG))
     return V;
 
   if (SDValue V = combinePExtWideningMul(N, DAG, Subtarget))
@@ -25139,7 +25151,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::UDIV:
   case ISD::SREM:
   case ISD::UREM:
-    if (SDValue V = combineBinOpOfZExt(N, DAG))
+    if (SDValue V = combineBinOpOfExt(N, DAG))
       return V;
     break;
   case ISD::FMUL: {

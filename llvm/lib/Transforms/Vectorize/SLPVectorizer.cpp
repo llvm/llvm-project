@@ -6390,7 +6390,7 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
     SmallVector<Value *> Conditions;
     if (isSelectedBaseLoad(ScalarTy, PointerOps, *DL, TrueBase, FalseBase,
                            Conditions) &&
-        TTI->isLegalMaskedLoad(VecTy, CommonAlignment,
+        TTI->isLegalMaskedLoad(VecTy, computeBlendedLoadBaseAlignment(VL, *DL),
                                cast<LoadInst>(VL0)->getPointerAddressSpace()))
       return LoadsState::BlendedLoadVectorize;
 
@@ -6633,7 +6633,9 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
           // Two masked loads (one per candidate base) plus a select; no address
           // vector is materialized, so VectorGEPCost is skipped.
           VecLdCost +=
-              getBlendedLoadCost(TTI, SubVecTy, CommonAlignment,
+              getBlendedLoadCost(TTI, SubVecTy,
+                                 computeBlendedLoadBaseAlignment(
+                                     VL.slice(SliceStart, SliceVF), *DL),
                                  LI0->getPointerAddressSpace(), CostKind);
           break;
         case LoadsState::Gather:
@@ -14038,8 +14040,9 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
          "Expected Shl node.");
   IsBSwap = false;
   ForLoads = false;
-  if (TE.State != TreeEntry::Vectorize || !TE.ReorderIndices.empty() ||
-      !TE.ReuseShuffleIndices.empty() || MinBWs.contains(&TE) ||
+  if (TE.State != TreeEntry::Vectorize || TE.isAltShuffle() ||
+      !TE.ReorderIndices.empty() || !TE.ReuseShuffleIndices.empty() ||
+      MinBWs.contains(&TE) ||
       any_of(TE.Scalars, [](Value *V) { return !V->hasOneUse(); }))
     return false;
   Type *ScalarTy = TE.getMainOp()->getType();
@@ -17695,8 +17698,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             CostKind);
         if (StridedLoadTy != VecTy)
           VecLdCost +=
-              TTI->getCastInstrCost(Instruction::BitCast, VecTy, StridedLoadTy,
-                                    getCastContextHint(*E), CostKind);
+              getWidenedStridedCastCost(*TTI, StridedLoadTy, VecTy, *DL,
+                                        getCastContextHint(*E), CostKind);
 
         break;
       }
@@ -17758,7 +17761,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       case TreeEntry::BlendedLoadVectorize: {
         // Two masked loads (one per candidate base) blended by a select.
         Align CommonAlignment =
-            computeCommonAlignment<LoadInst>(UniqueValues.getArrayRef());
+            computeBlendedLoadBaseAlignment(UniqueValues.getArrayRef(), *DL);
         VecLdCost = getBlendedLoadCost(*TTI, VecTy, CommonAlignment,
                                        LI0->getPointerAddressSpace(), CostKind);
         break;
@@ -17816,8 +17819,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             CostKind);
         if (StridedStoreTy != VecTy)
           VecStCost +=
-              TTI->getCastInstrCost(Instruction::BitCast, VecTy, StridedStoreTy,
-                                    getCastContextHint(*E), CostKind);
+              getWidenedStridedCastCost(*TTI, VecTy, StridedStoreTy, *DL,
+                                        getCastContextHint(*E), CostKind);
       } else if (E->State == TreeEntry::ExpandVectorize) {
         const StridedPtrInfo &SPtrInfo = TreeEntryToStridedPtrInfoMap.at(E);
         FixedVectorType *MaskedStoreTy = SPtrInfo.Ty;
@@ -21061,6 +21064,10 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
         case Instruction::SExt:
         case Instruction::ZExt:
         case Instruction::Trunc: {
+          // Split roots keep their operands in the combined sub-nodes, so there
+          // is no single operand to take the context hint from.
+          if (E.State == TreeEntry::SplitVectorize)
+            break;
           const TreeEntry *OpTE = getOperandEntry(&E, 0);
           CCH = getCastContextHint(*OpTE);
           break;
@@ -24035,6 +24042,12 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     auto *I = dyn_cast<Instruction>(V);
     if (!I)
       return V;
+    // Drop nneg propagated from the original cast.
+    Value *Op;
+    if (auto *CI = dyn_cast<CastInst>(VL0);
+        CI && match(I, m_NNegZExt(m_Value(Op))) &&
+        Op->getType()->getScalarType() != CI->getSrcTy())
+      cast<ZExtInst>(I)->setNonNeg(false);
     // A lane may be emitted in negated form (sub C, x as add x, -C, or an
     // add/sub lane with swapped operands) when all its uses are
     // sign-insensitive (icmp eq/ne 0 or abs). The value stays correct for
@@ -25113,7 +25126,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         if (auto *GEP = dyn_cast<GetElementPtrInst>(P0))
           P0 = GEP->getPointerOperand();
         auto *Sel = cast<SelectInst>(P0);
-        Align CommonAlignment = computeCommonAlignment<LoadInst>(E->Scalars);
+        Align CommonAlignment =
+            computeBlendedLoadBaseAlignment(E->Scalars, *DL);
         Value *BlendMask = vectorizeOperand(E, 0);
         // Place the loads at the bundle head, not at the mask, so they are not
         // hoisted above an aliasing store.
@@ -25158,7 +25172,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
                      : PropagateIRFlags(NewLI);
 
       if (StridedLoadTy != VecTy)
-        V = Builder.CreateBitOrPointerCast(V, VecTy);
+        V = createWidenedStridedCast(Builder, V, VecTy, *DL);
       V = FinalShuffle(V, E);
       E->VectorizedValue = V;
       ++NumVectorInstructions;
@@ -25224,7 +25238,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             ConstantInt::getSigned(
                 StrideTy, static_cast<int>(DL->getTypeAllocSize(ScalarTy))));
         if (StridedStoreTy != VecTy)
-          VecValue = Builder.CreateBitOrPointerCast(VecValue, StridedStoreTy);
+          VecValue =
+              createWidenedStridedCast(Builder, VecValue, StridedStoreTy, *DL);
         auto *Inst = Builder.CreateIntrinsicWithoutFolding(
             Intrinsic::experimental_vp_strided_store,
             {StridedStoreTy, Ptr->getType(), StrideTy},
@@ -31078,11 +31093,23 @@ class HorizontalReduction {
     }
   }
 
+  /// \returns true if the disjoint flag of the reduction ops is kept for the
+  /// emitted ops.
+  bool keepDisjoint() const {
+    if (getBoolReduxWideTy(RdxKind, ReductionRoot->getType(),
+                           ReducedVals.front().front()->getType()))
+      return false;
+    return all_of(make_second_range(NarrowedLeafShifts),
+                  [](const NarrowedLeafInfo &L) { return L.Disjoint; });
+  }
+
   /// Creates reduction operation with the current opcode with the IR flags
-  /// from \p ReductionOps, dropping nuw/nsw flags.
-  static Value *createOp(IRBuilderBase &Builder, RecurKind RdxKind, Value *LHS,
-                         Value *RHS, const Twine &Name,
-                         const ReductionOpsListType &ReductionOps) {
+  /// from \p ReductionOps, dropping nuw/nsw flags, and disjoint flag if \p
+  /// KeepDisjoint is false.
+  static Value *createOpWithFlags(IRBuilderBase &Builder, RecurKind RdxKind,
+                                  Value *LHS, Value *RHS, const Twine &Name,
+                                  const ReductionOpsListType &ReductionOps,
+                                  bool KeepDisjoint) {
     bool UseSelect = ReductionOps.size() == 2 ||
                      // Logical or/and.
                      (ReductionOps.size() == 1 &&
@@ -31101,7 +31128,18 @@ class HorizontalReduction {
       }
     }
     propagateIRFlags(Op, ReductionOps[0], nullptr, /*IncludeWrapFlags=*/false);
+    if (!KeepDisjoint && match(Op, m_DisjointOr(m_Value(), m_Value())))
+      cast<PossiblyDisjointInst>(Op)->setIsDisjoint(false);
     return Op;
+  }
+
+  /// Creates reduction operation with the current opcode with the IR flags
+  /// from \p ReductionOps, dropping nuw/nsw flags.
+  Value *createOp(IRBuilderBase &Builder, RecurKind Kind, Value *LHS,
+                  Value *RHS, const Twine &Name,
+                  const ReductionOpsListType &ReductionOps) const {
+    return createOpWithFlags(Builder, Kind, LHS, RHS, Name, ReductionOps,
+                             keepDisjoint());
   }
 
 public:
@@ -31800,11 +31838,15 @@ public:
               Ignorable.insert(I);
               NarrowedChainInsts.push_back(I);
             }
+          const bool AllDisjoint =
+              all_of(make_isa_range<PossiblyDisjointInst>(ChainInsts),
+                     [](PossiblyDisjointInst *I) { return I->isDisjoint(); });
           SmallVector<Value *> NewCandidates;
           for (const auto &[Cand, Leaves] :
                zip(ReducedValsCandidates, AllLeaves)) {
             SmallVector<Instruction *> RdxOps = ReducedValsToOps.lookup(Cand);
-            for (const NarrowedLeafInfo &L : Leaves) {
+            for (NarrowedLeafInfo &L : Leaves) {
+              L.Disjoint = AllDisjoint;
               NarrowedLeafShifts.try_emplace(L.V, L);
               NewCandidates.push_back(L.V);
               ReducedValsToOps[L.V].append(RdxOps);
@@ -32450,8 +32492,8 @@ public:
         VAcc->addIncoming(InitVec, B);
       }
       Builder.SetInsertPoint(Root);
-      Value *VAdd =
-          createOp(Builder, RdxKind, VAcc, Vec, "slprdx.acc", ReductionOps);
+      Value *VAdd = createOpWithFlags(Builder, RdxKind, VAcc, Vec, "slprdx.acc",
+                                      ReductionOps, /*KeepDisjoint=*/true);
       // The accumulation is on the loop-carried chain: do not let it be
       // contracted into an FMA with the reduced multiplication, which would
       // lengthen the chain.
