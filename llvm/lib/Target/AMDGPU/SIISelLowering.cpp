@@ -15121,14 +15121,18 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
     }
   }
 
-  if (VT == MVT::i32 && (RHS.getOpcode() == ISD::SIGN_EXTEND ||
-                         LHS.getOpcode() == ISD::SIGN_EXTEND)) {
-    // and x, (sext cc from i1) => select cc, x, 0
-    if (RHS.getOpcode() != ISD::SIGN_EXTEND)
+  auto IsBoolExt = [](SDValue V) {
+    return (V.getOpcode() == ISD::SIGN_EXTEND ||
+            V.getOpcode() == ISD::ANY_EXTEND) &&
+           isBoolSGPR(V.getOperand(0));
+  };
+  if (VT == MVT::i32 && (IsBoolExt(RHS) || IsBoolExt(LHS))) {
+    // and x, (sext/anyext cc from i1) => select cc, x, 0
+    // Any-extended bits can be chosen to match sign extension.
+    if (!IsBoolExt(RHS))
       std::swap(LHS, RHS);
-    if (isBoolSGPR(RHS.getOperand(0)))
-      return DAG.getSelect(SDLoc(N), MVT::i32, RHS.getOperand(0), LHS,
-                           DAG.getConstant(0, SDLoc(N), MVT::i32));
+    return DAG.getSelect(SDLoc(N), MVT::i32, RHS.getOperand(0), LHS,
+                         DAG.getConstant(0, SDLoc(N), MVT::i32));
   }
 
   // and (op x, c1), (op y, c2) -> perm x, y, permute_mask(c1, c2)
