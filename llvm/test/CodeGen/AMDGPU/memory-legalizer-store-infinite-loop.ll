@@ -38,7 +38,7 @@ bb3:                                             ; No predecessors!
 
 bb4:                                             ; preds = %bb3, %bb
   %tmp5 = phi ptr addrspace(5) [ %tmp1, %bb3 ], [ %tmp, %bb ]
-  store double %tmp2, ptr addrspace(5) %tmp5, align 8
+  store volatile double %tmp2, ptr addrspace(5) %tmp5, align 8
   br label %bb6
 
 bb6:                                             ; preds = %bb4, %bb
