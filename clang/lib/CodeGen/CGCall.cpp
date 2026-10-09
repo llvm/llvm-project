@@ -5060,7 +5060,8 @@ static bool isObjCMethodWithTypeParams(const ObjCMethodDecl *method) {
 void CodeGenFunction::EmitCallArgs(
     CallArgList &Args, PrototypeWrapper Prototype,
     llvm::iterator_range<CallExpr::const_arg_iterator> ArgRange,
-    AbstractCallee AC, unsigned ParamsToSkip, EvaluationOrder Order) {
+    AbstractCallee AC, unsigned ParamsToSkip, EvaluationOrder Order,
+    bool IsOperatorCall) {
   SmallVector<QualType, 16> ArgTypes;
 
   assert((ParamsToSkip == 0 || Prototype.P) &&
@@ -5133,6 +5134,9 @@ void CodeGenFunction::EmitCallArgs(
           ? Order == EvaluationOrder::ForceLeftToRight
           : Order != EvaluationOrder::ForceRightToLeft;
 
+  bool DisallowDeferredRead =
+      Order != EvaluationOrder::Default || IsOperatorCall;
+
   auto MaybeEmitImplicitObjectSize = [&](unsigned I, const Expr *Arg,
                                          RValue EmittedArg) {
     if (!AC.hasFunctionDecl() || I >= AC.getNumParams())
@@ -5175,7 +5179,7 @@ void CodeGenFunction::EmitCallArgs(
             (isa<ObjCMethodDecl>(AC.getDecl()) &&
              isObjCMethodWithTypeParams(cast<ObjCMethodDecl>(AC.getDecl())))) &&
            "Argument and parameter types don't match");
-    EmitCallArg(Args, *Arg, ArgTypes[Idx]);
+    EmitCallArg(Args, *Arg, ArgTypes[Idx], DisallowDeferredRead);
     // In particular, we depend on it being the last arg in Args, and the
     // objectsize bits depend on there only being one arg if !LeftToRight.
     assert(InitialArgSize + 1 == Args.size() &&
@@ -5259,8 +5263,31 @@ void CodeGenFunction::EmitWritebacks(const CallArgList &args) {
     emitWriteback(*this, I);
 }
 
+/// Can this source's address be formed without executing code or reading
+/// mutable state? Its value can then be read at the call boundary.
+static bool isPureForwardableLValue(const Expr *E) {
+  E = E->IgnoreParens();
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+    const auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
+    return VD && !VD->getType()->isReferenceType() &&
+           VD->getTLSKind() != VarDecl::TLS_Dynamic &&
+           !VD->hasAttr<OMPThreadPrivateDeclAttr>();
+  }
+  if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+    const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl());
+    return !ME->isArrow() && FD && !FD->getType()->isReferenceType() &&
+           isPureForwardableLValue(ME->getBase());
+  }
+  if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E))
+    if (ICE->getCastKind() == CK_DerivedToBase ||
+        ICE->getCastKind() == CK_UncheckedDerivedToBase ||
+        ICE->getCastKind() == CK_NoOp)
+      return isPureForwardableLValue(ICE->getSubExpr());
+  return false;
+}
+
 void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
-                                  QualType type) {
+                                  QualType type, bool DisallowDeferredRead) {
   std::optional<DisableDebugLocationUpdates> Dis;
   if (isa<CXXDefaultArgExpr>(E))
     Dis.emplace(*this);
@@ -5336,6 +5363,31 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
       assert(L.isSimple());
       args.addUncopiedAggregate(L, type);
       return;
+    }
+  }
+
+  // Only pure sources can defer their byte read past other arguments.
+  // CUDA surface and texture values need handle materialization instead.
+  if (HasAggregateEvalKind && MustTailCall && !DisallowDeferredRead &&
+      type->isRecordType() && type.isTriviallyCopyableType(getContext()) &&
+      !(getLangOpts().CUDAIsDevice &&
+        (type->isCUDADeviceBuiltinSurfaceType() ||
+         type->isCUDADeviceBuiltinTextureType()))) {
+    if (const auto *CCE = dyn_cast<CXXConstructExpr>(E)) {
+      const CXXConstructorDecl *Ctor = CCE->getConstructor();
+      if (Ctor->isCopyOrMoveConstructor() && Ctor->isTrivial() &&
+          CCE->getNumArgs() == 1) {
+        const Expr *Source = CCE->getArg(0);
+        if (Source->isGLValue() && isPureForwardableLValue(Source) &&
+            Source->getType().getAddressSpace() != LangAS::hlsl_constant &&
+            getContext().hasSameUnqualifiedType(Source->getType(), type)) {
+          LValue L = EmitLValue(Source);
+          if (L.isSimple()) {
+            args.addUncopiedAggregate(L, type);
+            return;
+          }
+        }
+      }
     }
   }
 
@@ -5665,6 +5717,14 @@ static unsigned getMaxVectorWidth(const llvm::Type *Ty) {
   return MaxVectorWidth;
 }
 
+/// Preserve local reloads when checking whether a source is an incoming
+/// parameter.
+static llvm::Value *peelAddrSpaceCast(llvm::Value *SrcPtr) {
+  if (auto *ASC = llvm::dyn_cast<llvm::AddrSpaceCastInst>(SrcPtr))
+    return ASC->getOperand(0);
+  return SrcPtr;
+}
+
 RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                                  const CGCallee &Callee,
                                  ReturnValueSlot ReturnValue,
@@ -5788,6 +5848,14 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // markers that need to be ended right after the call.
   SmallVector<CallLifetimeEnd, 2> CallLifetimeEndAfterCall;
 
+  // Capture every source before reusing incoming parameter storage.
+  struct MustTailIndirectCopy {
+    LValue Scratch;
+    LValue Dst;
+    QualType Ty;
+  };
+  llvm::SmallVector<MustTailIndirectCopy, 4> MustTailIndirectCopies;
+
   // Translate all of the arguments as necessary to match the IR lowering.
   assert(CallInfo.arg_size() == CallArgs.size() &&
          "Mismatch between function signature & arguments.");
@@ -5860,6 +5928,44 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     case ABIArgInfo::Indirect:
     case ABIArgInfo::IndirectAliased: {
       assert(NumIRArgs == 1);
+
+      // The matching incoming parameter survives the tail call.
+      const auto *ArgRD = I->Ty->getAsCXXRecordDecl();
+      bool ByteRelocatable = I->Ty.isTriviallyCopyableType(getContext()) ||
+                             (ArgRD && ArgRD->hasAttr<TrivialABIAttr>());
+      if (IsMustTail && (!ArgInfo.isIndirect() || !ByteRelocatable))
+        CGM.getDiags().Report(MustTailCall->getBeginLoc(),
+                              diag::err_musttail_unsupported_indirect_arg);
+      if (IsMustTail && ArgInfo.isIndirect() && ByteRelocatable) {
+        llvm::Value *Dst = CurFn->arg_begin() + FirstIRArg;
+        Address SrcAddr = Address::invalid();
+        if (I->hasLValue())
+          SrcAddr = I->getKnownLValue().getAddress();
+        else if (I->getKnownRValue().isAggregate())
+          SrcAddr = I->getKnownRValue().getAggregateAddress();
+        if (SrcAddr.isValid()) {
+          llvm::Value *Src = peelAddrSpaceCast(SrcAddr.emitRawPointer(*this));
+          bool VolatileSource = I->hasLValue()
+                                    ? I->getKnownLValue().isVolatileQualified()
+                                    : I->getKnownRValue().isVolatileQualified();
+          if (Src != Dst || VolatileSource) {
+            CharUnits Align = ArgInfo.getIndirectAlign();
+            QualType Ty = I->Ty;
+            llvm::Type *ElemTy = ConvertTypeForMem(Ty);
+            RawAddress Scratch =
+                CreateMemTempWithoutCast(Ty, Align, "musttail.copy");
+            LValue ScratchLV = MakeAddrLValue(Scratch, Ty);
+            I->copyInto(*this, Scratch);
+            LValue DstLV = MakeAddrLValue(Address(Dst, ElemTy, Align), Ty);
+            MustTailIndirectCopies.push_back({ScratchLV, DstLV, Ty});
+          }
+          IRCallArgs[FirstIRArg] = Dst;
+          break;
+        }
+        CGM.getDiags().Report(MustTailCall->getBeginLoc(),
+                              diag::err_musttail_unsupported_indirect_arg);
+      }
+
       if (I->isAggregate()) {
         // We want to avoid creating an unnecessary temporary+copy here;
         // however, we need one in three cases:
@@ -6185,6 +6291,10 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     }
     }
   }
+
+  for (const auto &Copy : MustTailIndirectCopies)
+    EmitAggregateCopy(Copy.Dst, Copy.Scratch, Copy.Ty,
+                      AggValueSlot::DoesNotOverlap);
 
   const CGCallee &ConcreteCallee = Callee.prepareConcreteCallee(*this);
   llvm::Value *CalleePtr = ConcreteCallee.getFunctionPointer();
