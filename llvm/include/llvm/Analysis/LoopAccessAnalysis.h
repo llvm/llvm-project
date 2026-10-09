@@ -297,7 +297,10 @@ public:
     return RecordDependences ? &Dependences : nullptr;
   }
 
-  void clearDependences() { Dependences.clear(); }
+  /// Remove the recorded dependences for which \p Pred returns true.
+  void removeDependencesIf(function_ref<bool(const Dependence &)> Pred) {
+    erase_if(Dependences, Pred);
+  }
 
   /// The vector of memory access instructions.  The indices are used as
   /// instruction identifiers in the Dependence class.
