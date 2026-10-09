@@ -12862,7 +12862,11 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
     assert(!RequiresICE && "Can't require vector ICE");
 
     // TODO: No way to make AltiVec vectors in builtins yet.
-    Type = Context.getVectorType(ElementType, NumElements, VectorKind::Generic);
+    VectorKind VecKind = VectorKind::Generic;
+    if (Context.getTargetInfo().getTriple().isPPC() &&
+        Context.getLangOpts().AltiVec)
+      VecKind = VectorKind::AltiVecVector;
+    Type = Context.getVectorType(ElementType, NumElements, VecKind);
     break;
   }
   case 'E': {
