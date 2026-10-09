@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: can-test-hardening-assertions-fast
+
 // <valarray>
 
 // Test that a proxy array assigned to a valarray must have the same size as the valarray.
-
-// REQUIRES: can-test-hardening-assertions-fast
 
 #include <cstddef>
 #include <valarray>

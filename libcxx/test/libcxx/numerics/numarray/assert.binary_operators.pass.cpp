@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: can-test-hardening-assertions-fast
+
 // <valarray>
 
 // Test that the operands of a binary operation on valarrays must have the same size.
-
-// REQUIRES: can-test-hardening-assertions-fast
 
 #include <valarray>
 
