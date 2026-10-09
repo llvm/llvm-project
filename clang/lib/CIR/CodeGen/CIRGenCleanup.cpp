@@ -33,6 +33,10 @@ class ConditionalEvaluationFinder
   bool foundConditional = false;
 
 public:
+  // Default arguments and default member initializers can contain conditional
+  // temporaries whose cleanups belong to the enclosing full-expression.
+  bool shouldVisitImplicitCode() const { return true; }
+
   bool found() const { return foundConditional; }
 
   bool VisitAbstractConditionalOperator(AbstractConditionalOperator *) {
@@ -59,10 +63,31 @@ public:
     return true;
   }
 
-  // Don't cross evaluation-context boundaries.
-  bool TraverseLambdaExpr(LambdaExpr *) { return true; }
+  // Don't cross evaluation-context boundaries. Only the initializers of a
+  // lambda's captures are part of the enclosing full-expression.
+  bool TraverseLambdaExpr(LambdaExpr *e) {
+    for (Expr *init : e->capture_inits())
+      if (init && !TraverseStmt(init))
+        return false;
+    return true;
+  }
   bool TraverseBlockExpr(BlockExpr *) { return true; }
   bool TraverseStmtExpr(StmtExpr *) { return true; }
+
+  // Skip over the implicit call to await_resume(). This requires cleanup
+  // scopes for await full-expressions which don't exist yet.
+  bool TraverseCoawaitExpr(CoawaitExpr *e) {
+    assert(!cir::MissingFeatures::coroAwaitFullExprCleanups());
+    return TraverseStmt(e->getOperand());
+  }
+  bool TraverseDependentCoawaitExpr(DependentCoawaitExpr *e) {
+    assert(!cir::MissingFeatures::coroAwaitFullExprCleanups());
+    return TraverseStmt(e->getOperand());
+  }
+  bool TraverseCoyieldExpr(CoyieldExpr *e) {
+    assert(!cir::MissingFeatures::coroAwaitFullExprCleanups());
+    return TraverseStmt(e->getOperand());
+  }
 };
 } // namespace
 
