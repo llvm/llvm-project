@@ -89,5 +89,5 @@
 	.arch armv9-a+lsc64b+nolsc64b
         lda64b x0, [x13]
 
-# CHECK: [[@LINE-2]]:9: error: instruction requires: lsc64b
+# CHECK: [[@LINE-2]]:9: error: instruction requires: ls64 lsc64b
 # CHECK-NEXT:   lda64b x0, [x13]

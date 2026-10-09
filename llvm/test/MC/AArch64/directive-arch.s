@@ -43,6 +43,6 @@
 	cfltz #1, w0
 # CHECK:        cflteq #1, w0, #0
 
-	.arch armv9-a+lsc64b
+	.arch armv9-a+ls64+lsc64b
 	lda64b x0, [x13]
 # CHECK:        lda64b x0, [x13]

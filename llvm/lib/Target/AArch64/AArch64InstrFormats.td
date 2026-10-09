@@ -12806,8 +12806,6 @@ class LoadStore64B_base<bits<2> ar, bits<3> opc, string asm_inst, string asm_ops
   let Inst{11-10} = 0b00;
   let Inst{9-5}   = Rn;
   let Inst{4-0}   = Rt;
-
-  let Predicates = [HasV8_7a];
 }
 
 class LoadStore64B<bits<2> ar, bits<3> opc, string asm_inst, dag iops, dag oops,

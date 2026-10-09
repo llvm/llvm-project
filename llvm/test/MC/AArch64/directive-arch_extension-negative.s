@@ -260,5 +260,5 @@ cfltz #1, w0
 .arch_extension lsc64b
 .arch_extension nolsc64b
 lda64b x0, [x13]
-// CHECK: [[@LINE-1]]:1: error: instruction requires: lsc64b
+// CHECK: [[@LINE-1]]:1: error: instruction requires: ls64 lsc64b
 // CHECK-NEXT: lda64b x0, [x13]

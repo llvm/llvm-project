@@ -12200,7 +12200,7 @@ let Predicates = [HasLS64] in {
   def : ST64BPattern<int_aarch64_st64bv0, ST64BV0>;
 }
 
-let Predicates = [HasLSC64B] in {
+let Predicates = [HasLS64, HasLSC64B] in {
   defm LDA64B:  LoadStore64B<0b10, 0b101, "lda64b", 1, 0, (ins GPR64sp:$Rn), (outs GPR64x8:$Rt)>;
   defm STL64B:  LoadStore64B<0b01, 0b001, "stl64b", 0, 1, (ins GPR64x8:$Rt, GPR64sp:$Rn), (outs)>;
   def STL64BV:  Store64BV<0b01, 0b011, "stl64bv">;

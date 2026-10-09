@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple=aarch64 -show-encoding -mattr=+lsc64b < %s 2>&1 \
+// RUN: not llvm-mc -triple=aarch64 -show-encoding -mattr=+ls64,+lsc64b < %s 2>&1 \
 // RUN:        | FileCheck %s
 
 lda64b w0, [x13]
