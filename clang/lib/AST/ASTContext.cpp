@@ -15972,13 +15972,15 @@ private:
 
     const uint64_t DeclaredSizeInBits = Field->getBitWidthValue();
 
-    // Handle over-sized bitfields:
-    //   unsigned char a : 12;
-    // In this case, DeclaredSizeInBits is 12, but the actually occupied bit
-    // size is 8, while the remaining 4 bits are padding.
+    // Oversized bit-fields (declared width larger than the field type) occupy
+    // only the type's width. The extra declared bits are padding and follow
+    // the occupied bits (Itanium C++ ABI §2.4, II.1(b)).
+    // In case where the bitfield can only have values with a range smaller than
+    // the one declared, e.g. bool a : 5 or _BitInt(5) b : 6, the remaining bits
+    // within the bitfield are for sign or zero extension. These are considered
+    // occupied as well.
     const uint64_t OccupiedSizeInBits =
-        std::min(DeclaredSizeInBits,
-                 static_cast<uint64_t>(Ctx.getIntWidth(Field->getType())));
+        std::min(DeclaredSizeInBits, Ctx.getTypeSize(Field->getType()));
 
     if (Ctx.getTargetInfo().isLittleEndian()) {
       OccuppiedIntervals.push_back(
@@ -15996,14 +15998,8 @@ private:
     // the partially occupied bytes in either end, if present, their bit
     // intervals need to be adjusted so that they count from the MSB instead.
     //
-    // FIXME: For over-sized bitfields in BE, Clang allocates padding bits
-    // before the occupied bits. This violates the ABI rules, which say that
-    // padding should be allocated after, regardless of endianness (Itanium C++
-    // ABI §2.4, II.1(b)). The current code accommodates for Clang's current
-    // behaviour though, and bumps Start forward to skip the leading padding
-    // bits.
-    const uint64_t Start =
-        StartBitOffset + DeclaredSizeInBits - OccupiedSizeInBits;
+    // Occupied bits are allocated first, and any padding follows them.
+    const uint64_t Start = StartBitOffset;
     const uint64_t End = Start + OccupiedSizeInBits;
     const uint64_t CharWidth = Ctx.getCharWidth();
 
