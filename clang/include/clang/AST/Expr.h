@@ -2399,6 +2399,8 @@ public:
   /// corresponds to, e.g. "sizeof" or "[pre]++"
   static StringRef getOpcodeStr(Opcode Op);
 
+  StringRef getOpcodeStr() const { return getOpcodeStr(getOpcode()); }
+
   /// Retrieve the unary opcode that corresponds to the given
   /// overloaded operator.
   static Opcode getOverloadedOpcode(OverloadedOperatorKind OO, bool Postfix);
