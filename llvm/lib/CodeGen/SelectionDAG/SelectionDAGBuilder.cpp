@@ -6424,6 +6424,7 @@ getUnderlyingArgRegs(SmallVectorImpl<std::pair<Register, TypeSize>> &Regs,
   case ISD::BITCAST:
   case ISD::AssertZext:
   case ISD::AssertSext:
+  case ISD::AssertZextBool:
   case ISD::TRUNCATE:
     getUnderlyingArgRegs(Regs, N.getOperand(0));
     return;

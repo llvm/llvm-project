@@ -2972,11 +2972,6 @@ void AArch64TargetLowering::computeKnownBitsForTargetNode(
     Known.Zero = APInt::getHighBitsSet(64, 32);
     break;
   }
-  case AArch64ISD::ASSERT_ZEXT_BOOL: {
-    Known = DAG.computeKnownBits(Op->getOperand(0), Depth + 1);
-    Known.Zero |= APInt(Known.getBitWidth(), 0xFE);
-    break;
-  }
   case ISD::INTRINSIC_W_CHAIN: {
     Intrinsic::ID IntID =
         static_cast<Intrinsic::ID>(Op->getConstantOperandVal(1));
@@ -9585,7 +9580,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
         Argument *OrigArg = F.getArg(Ins[i].getOrigArgIndex());
         if (OrigArg->getType()->isIntegerTy(1)) {
           if (!Ins[i].Flags.isZExt()) {
-            ArgValue = DAG.getNode(AArch64ISD::ASSERT_ZEXT_BOOL, DL,
+            ArgValue = DAG.getNode(ISD::AssertZextBool, DL,
                                    ArgValue.getValueType(), ArgValue);
           }
         }
@@ -10386,7 +10381,7 @@ static bool shouldLowerTailCallStackArg(const MachineFunction &MF,
     // Look through nodes that don't alter the bits of the incoming value.
     unsigned Op = Arg.getOpcode();
     if (Op == ISD::ZERO_EXTEND || Op == ISD::ANY_EXTEND || Op == ISD::BITCAST ||
-        Arg->isAssert() || Op == AArch64ISD::ASSERT_ZEXT_BOOL) {
+        Arg->isAssert()) {
       Arg = Arg.getOperand(0);
       continue;
     }

@@ -4147,6 +4147,13 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known.One  &= (~Known.Zero);
     break;
   }
+  case ISD::AssertZextBool: {
+    assert(BitWidth >= 8 && "AssertZextBool requires at least 8 bits");
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known.Zero.setBits(1, 8);
+    Known.One.clearBits(1, 8);
+    break;
+  }
   case ISD::AssertAlign: {
     unsigned LogOfAlign = Log2(cast<AssertAlignSDNode>(Op)->getAlign());
     assert(LogOfAlign != 0);
@@ -5981,6 +5988,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   switch (Opcode) {
   case ISD::AssertSext:
   case ISD::AssertZext:
+  case ISD::AssertZextBool:
   case ISD::AssertAlign:
   case ISD::AssertNoFPClass:
     // Assertion nodes can create poison if the assertion fails.

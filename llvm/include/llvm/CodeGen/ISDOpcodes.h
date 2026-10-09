@@ -64,6 +64,14 @@ enum NodeType {
   AssertSext,
   AssertZext,
 
+  /// AssertZextBool - This node records that the low 8 bits of a register
+  /// contain an i1 value zero extended to i8, e.g. a bool argument the caller
+  /// has zero extended to 8 bits only. The bits above the low 8 bits are not
+  /// known. This node takes one operand, the register value.
+  /// NOTE: In case of the source value (or any vector element value) is
+  /// poisoned the assertion will not be true for that value.
+  AssertZextBool,
+
   /// AssertAlign - These nodes record if a register contains a value that
   /// has a known alignment and the trailing bits are known to be zero.
   /// NOTE: In case of the source value (or any vector element value) is

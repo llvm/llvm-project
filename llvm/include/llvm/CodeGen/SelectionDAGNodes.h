@@ -751,6 +751,7 @@ public:
     case ISD::AssertNoFPClass:
     case ISD::AssertSext:
     case ISD::AssertZext:
+    case ISD::AssertZextBool:
       return true;
     }
   }

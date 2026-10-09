@@ -12273,12 +12273,6 @@ def StoreSwiftAsyncContext
       : Pseudo<(outs), (ins GPR64:$ctx, GPR64sp:$base, simm9:$offset),
                []>, Sched<[]>;
 
-// Asserts that a function argument (i32) is zero-extended to i8 by
-// the caller
-def AArch64AssertZExtBool : SDNode<"AArch64ISD::ASSERT_ZEXT_BOOL", SDT_assert>;
-def : Pat<(AArch64AssertZExtBool GPR32:$op),
-          (i32 GPR32:$op)>;
-
 //===----------------------------===//
 // 2022 Architecture Extensions:
 //===----------------------------===//
