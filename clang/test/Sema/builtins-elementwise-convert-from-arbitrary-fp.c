@@ -104,7 +104,28 @@ void test_source_formats(unsigned char b) {
 // Integer promotions do not apply to the source.
 void test_no_promotion(unsigned char b) {
   (void)__builtin_elementwise_convert_from_f8e5m2_f32((unsigned char)(b >> 1));
-  (void)__builtin_elementwise_convert_from_f8e5m2_f32(b >> 1); // expected-error {{argument type 'int' must be exactly 8 bits wide to hold an 'f8e5m2' encoding}}
+  (void)__builtin_elementwise_convert_from_f8e5m2_f32(b >> 1); // expected-error {{1st argument must be a scalar or vector of 8-bit integer types (was 'int')}}
+}
+
+// Integer constant expressions are accepted if the value fits in 8 bits.
+void test_constant(int i) {
+  (void)__builtin_elementwise_convert_from_f8e5m2_f32(0x38);
+  (void)__builtin_elementwise_convert_from_f8e5m2_f32(0xFF);
+  (void)__builtin_elementwise_convert_from_f8e5m2_f32('a');
+  (void)__builtin_elementwise_convert_from_f8e5m2_f32(0x100); // expected-error {{1st argument must be a scalar or vector of 8-bit integer types (was 'int')}}
+  (void)__builtin_elementwise_convert_from_f8e5m2_f32(-1); // expected-error {{1st argument must be a scalar or vector of 8-bit integer types (was 'int')}}
+  (void)__builtin_elementwise_convert_from_f8e5m2_f32(i); // expected-error {{1st argument must be a scalar or vector of 8-bit integer types (was 'int')}}
+}
+
+struct bit_fields {
+  unsigned u : 8;
+  unsigned char c : 8;
+};
+
+// Bit-field width is not part of the type.
+void test_bit_fields(struct bit_fields s) {
+  (void)__builtin_elementwise_convert_from_f8e5m2_f32(s.c);
+  (void)__builtin_elementwise_convert_from_f8e5m2_f32(s.u); // expected-error {{1st argument must be a scalar or vector of 8-bit integer types (was 'unsigned int')}}
 }
 
 void test_arity(unsigned char b) {
@@ -113,20 +134,20 @@ void test_arity(unsigned char b) {
 }
 
 void test_width(unsigned short b16, unsigned _BitInt(4) b4, v4u16 vb16) {
-  (void)__builtin_elementwise_convert_from_f8e5m2_f32(b16); // expected-error {{argument type 'unsigned short' must be exactly 8 bits wide to hold an 'f8e5m2' encoding}}
-  (void)__builtin_elementwise_convert_from_f8e5m2_f32(b4); // expected-error {{argument type 'unsigned _BitInt(4)' must be exactly 8 bits wide to hold an 'f8e5m2' encoding}}
-  (void)__builtin_elementwise_convert_from_f8e5m2_f32(vb16); // expected-error {{vector element type 'unsigned short' must be exactly 8 bits wide to hold an 'f8e5m2' encoding}}
+  (void)__builtin_elementwise_convert_from_f8e5m2_f32(b16); // expected-error {{1st argument must be a scalar or vector of 8-bit integer types (was 'unsigned short')}}
+  (void)__builtin_elementwise_convert_from_f8e5m2_f32(b4); // expected-error {{1st argument must be a scalar or vector of 8-bit integer types (was 'unsigned _BitInt(4)')}}
+  (void)__builtin_elementwise_convert_from_f8e5m2_f32(vb16); // expected-error {{1st argument must be a scalar or vector of 8-bit integer types (was 'v4u16' (vector of 4 'unsigned short' values))}}
 }
 
 void test_operand_types(float f, void *p) {
-  (void)__builtin_elementwise_convert_from_f8e5m2_f32(f); // expected-error {{argument of type 'float' cannot hold an 'f8e5m2' encoding; expected an integer of exactly 8 bits, a vector of such integers, or __mfp8}}
-  (void)__builtin_elementwise_convert_from_f8e5m2_f32(p); // expected-error {{argument of type 'void *' cannot hold an 'f8e5m2' encoding; expected an integer of exactly 8 bits, a vector of such integers, or __mfp8}}
+  (void)__builtin_elementwise_convert_from_f8e5m2_f32(f); // expected-error {{1st argument must be a scalar or vector of 8-bit integer types (was 'float')}}
+  (void)__builtin_elementwise_convert_from_f8e5m2_f32(p); // expected-error {{1st argument must be a scalar or vector of 8-bit integer types (was 'void *')}}
 }
 
 void test_disallowed_integer_types(_Bool b, enum byte_enum e, v4bool vb) {
-  (void)__builtin_elementwise_convert_from_f8e5m2_f32(b); // expected-error {{argument of type '_Bool' cannot hold an 'f8e5m2' encoding}}
-  (void)__builtin_elementwise_convert_from_f8e5m2_f32(e); // expected-error {{argument of type 'enum byte_enum' cannot hold an 'f8e5m2' encoding}}
-  (void)__builtin_elementwise_convert_from_f8e5m2_f32(vb); // expected-error {{cannot hold an 'f8e5m2' encoding}}
+  (void)__builtin_elementwise_convert_from_f8e5m2_f32(b); // expected-error {{1st argument must be a scalar or vector of 8-bit integer types (was '_Bool')}}
+  (void)__builtin_elementwise_convert_from_f8e5m2_f32(e); // expected-error {{1st argument must be a scalar or vector of 8-bit integer types (was 'enum byte_enum')}}
+  (void)__builtin_elementwise_convert_from_f8e5m2_f32(vb); // expected-error {{1st argument must be a scalar or vector of 8-bit integer types (was 'v4bool'}}
 }
 
 void test_volatile_source(volatile unsigned char *b) {

@@ -170,3 +170,12 @@ g4f32 from_g4f8e5m2(g4u8 b) {
   return __builtin_elementwise_convert_from_f8e5m2_f32(b);
 }
 
+// CHECK-LABEL: define dso_local float @from_constant_f8e5m2(
+// CHECK-SAME: ) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call float @llvm.convert.from.arbitrary.fp.f32.i8(i8 56, metadata !"Float8E5M2")
+// CHECK-NEXT:    ret float [[TMP0]]
+//
+float from_constant_f8e5m2(void) {
+  return __builtin_elementwise_convert_from_f8e5m2_f32(0x38);
+}
