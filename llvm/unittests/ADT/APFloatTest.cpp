@@ -2521,16 +2521,16 @@ TEST(APFloatTest, ConvertLosesUnrepresentableSignAndZero) {
                                            &APFloat::Float8E5M3FNU()};
 
   for (const fltSemantics *Sem : NoSignSemantics) {
-    // The magnitude converts exactly, so the sign is the whole of the loss.
+    // A negative value has no encoding, so it becomes NaN.
     APFloat test(-1.0);
     bool losesInfo = false;
     APFloat::opStatus status =
         test.convert(*Sem, APFloat::rmNearestTiesToEven, &losesInfo);
     EXPECT_TRUE(losesInfo);
-    EXPECT_EQ(status, APFloat::opInexact);
-    EXPECT_TRUE(test.isNegative());
-    EXPECT_EQ(-1.0, test.convertToDouble());
-    APInt negBits = test.bitcastToAPInt();
+    EXPECT_EQ(status, APFloat::opInvalidOp);
+    EXPECT_TRUE(test.isNaN());
+    EXPECT_FALSE(test.isNegative());
+    EXPECT_EQ(APFloat::getNaN(*Sem).bitcastToAPInt(), test.bitcastToAPInt());
 
     // The same magnitude without the sign has nothing to report.
     test = APFloat(1.0);
@@ -2540,9 +2540,6 @@ TEST(APFloatTest, ConvertLosesUnrepresentableSignAndZero) {
     EXPECT_EQ(status, APFloat::opOK);
     EXPECT_FALSE(test.isNegative());
     EXPECT_EQ(1.0, test.convertToDouble());
-
-    // No sign bit exists, so the bits must match the positive magnitude.
-    EXPECT_EQ(test.bitcastToAPInt(), negBits);
   }
 
   // Float8E8M0FNU has no zero either, and substitutes 2^-127 for one. That
@@ -2560,7 +2557,7 @@ TEST(APFloatTest, ConvertLosesUnrepresentableSignAndZero) {
   }
 
   // Float8E5M3FNU does have one, so a positive zero converts exactly, and a
-  // negative one keeps its value and loses only the sign.
+  // negative one loses only the sign.
   {
     APFloat test(0.0);
     bool losesInfo = true;
@@ -2578,8 +2575,59 @@ TEST(APFloatTest, ConvertLosesUnrepresentableSignAndZero) {
     EXPECT_TRUE(losesInfo);
     EXPECT_EQ(status, APFloat::opInexact);
     EXPECT_TRUE(test.isZero());
-    EXPECT_TRUE(test.isNegative());
+    EXPECT_FALSE(test.isNegative());
   }
+
+  // A negative infinity is invalid like any other negative value, and a
+  // negative NaN only loses its sign.
+  for (const fltSemantics *Sem : NoSignSemantics) {
+    APFloat test = APFloat::getInf(APFloat::IEEEdouble(), true);
+    bool losesInfo = false;
+    APFloat::opStatus status =
+        test.convert(*Sem, APFloat::rmNearestTiesToEven, &losesInfo);
+    EXPECT_TRUE(losesInfo);
+    EXPECT_EQ(status, APFloat::opInvalidOp);
+    EXPECT_TRUE(test.isNaN());
+    EXPECT_FALSE(test.isNegative());
+
+    test = APFloat::getNaN(APFloat::IEEEdouble(), true);
+    losesInfo = false;
+    status = test.convert(*Sem, APFloat::rmNearestTiesToEven, &losesInfo);
+    EXPECT_TRUE(losesInfo);
+    EXPECT_EQ(status, APFloat::opInexact);
+    EXPECT_TRUE(test.isNaN());
+    EXPECT_FALSE(test.isNegative());
+  }
+}
+
+TEST(APFloatTest, SubtractToNegativeInUnsignedFormat) {
+  // Neither format can represent a negative result, so it is NaN.
+  for (const fltSemantics *Sem :
+       {&APFloat::Float8E8M0FNU(), &APFloat::Float8E5M3FNU()}) {
+    APFloat x(*Sem, "4");
+    APFloat y(*Sem, "8");
+    EXPECT_EQ(APFloat::opInvalidOp,
+              x.subtract(y, APFloat::rmNearestTiesToEven));
+    EXPECT_TRUE(x.isNaN());
+    EXPECT_FALSE(x.isNegative());
+  }
+
+  // Same exponent, larger magnitude on the right.
+  APFloat x(APFloat::Float8E5M3FNU(), "1.0");
+  APFloat y(APFloat::Float8E5M3FNU(), "1.5");
+  EXPECT_EQ(APFloat::opInvalidOp, x.subtract(y, APFloat::rmNearestTiesToEven));
+  EXPECT_TRUE(x.isNaN());
+  EXPECT_FALSE(x.isNegative());
+
+  // 0 - x.
+  x = APFloat::getZero(APFloat::Float8E5M3FNU());
+  EXPECT_EQ(APFloat::opInvalidOp, x.subtract(y, APFloat::rmNearestTiesToEven));
+  EXPECT_TRUE(x.isNaN());
+
+  // An exact zero is positive even when rounding toward negative.
+  x = APFloat(APFloat::Float8E5M3FNU(), "1.5");
+  EXPECT_EQ(APFloat::opOK, x.subtract(y, APFloat::rmTowardNegative));
+  EXPECT_TRUE(x.isPosZero());
 }
 
 TEST(APFloatTest, getLargest) {
@@ -9975,10 +10023,6 @@ TEST(APFloatTest, Float8E8M0FNUGetSignedValues) {
                "This floating point format does not support signed values");
   EXPECT_DEATH(APFloat::getLargest(APFloat::Float8E8M0FNU(), true),
                "This floating point format does not support signed values");
-  APFloat x = APFloat(APFloat::Float8E8M0FNU(), "4");
-  APFloat y = APFloat(APFloat::Float8E8M0FNU(), "8");
-  EXPECT_DEATH(x.subtract(y, APFloat::rmNearestTiesToEven),
-               "This floating point format does not support signed values");
 #endif
 #endif
 }
@@ -10268,10 +10312,6 @@ TEST(APFloatTest, Float8E5M3FNUGetSignedValues) {
   EXPECT_DEATH(APFloat::getSmallestNormalized(APFloat::Float8E5M3FNU(), true),
                "This floating point format does not support signed values");
   EXPECT_DEATH(APFloat::getLargest(APFloat::Float8E5M3FNU(), true),
-               "This floating point format does not support signed values");
-  APFloat x = APFloat(APFloat::Float8E5M3FNU(), "4");
-  APFloat y = APFloat(APFloat::Float8E5M3FNU(), "8");
-  EXPECT_DEATH(x.subtract(y, APFloat::rmNearestTiesToEven),
                "This floating point format does not support signed values");
 #endif // NDEBUG
 #endif // GTEST_HAS_DEATH_TEST
