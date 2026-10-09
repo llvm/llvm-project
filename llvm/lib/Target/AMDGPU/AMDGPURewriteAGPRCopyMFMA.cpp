@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/InitializePasses.h"
@@ -610,8 +611,16 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
 
     ArrayRef<MCPhysReg> AllocOrder = RegClassInfo.getOrder(RC);
 
+    // The stack slot's LiveInterval may be discontiguous: a slot can be live
+    // in memory around a spill store and around a much later reload. Once
+    // we unspill the slot into a register, however, the value must reside in
+    // that register continuously from its first reference to its last (modulo
+    // the live range splitting that happens later below). Checking
+    // interference against the slot's discontiguous interval could let us pick
+    // a PhysReg that is busy inside a gap, corrupting it. Instead, check
+    // interference over the range the replacement register will occupy.
     for (MCPhysReg PhysReg : AllocOrder) {
-      if (LRM.checkInterference(*LI, PhysReg) != LiveRegMatrix::IK_Free)
+      if (LRM.checkInterference(LI->beginIndex(), LI->endIndex(), PhysReg))
         continue;
 
       LLVM_DEBUG(dbgs() << "Reassigning " << *LI << " to "
@@ -623,9 +632,9 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
       for (MachineInstr *SpillMI : SpillReferences->second)
         replaceSpillWithCopyToVReg(*SpillMI, Slot, NewVReg);
 
-      // TODO: We should be able to transfer the information from the stack
-      // slot's LiveInterval without recomputing from scratch with the
-      // replacement vreg uses.
+      // TODO: Transferring the stack slot's LiveInterval instead of recomputing
+      // would not be a straight copy: its segments would have to be widened to
+      // cover each store's reaching reloads.
       LiveInterval &NewLI = LIS.createAndComputeVirtRegInterval(NewVReg);
       VRM.grow();
 
@@ -692,7 +701,6 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
 class AMDGPURewriteAGPRCopyMFMALegacy : public MachineFunctionPass {
 public:
   static char ID;
-  RegisterClassInfo RegClassInfo;
 
   AMDGPURewriteAGPRCopyMFMALegacy() : MachineFunctionPass(ID) {}
 
@@ -707,12 +715,14 @@ public:
     AU.addRequired<VirtRegMapWrapperLegacy>();
     AU.addRequired<LiveRegMatrixWrapperLegacy>();
     AU.addRequired<LiveStacksWrapperLegacy>();
+    AU.addRequired<MachineRegisterClassInfoWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
 
     AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addPreserved<VirtRegMapWrapperLegacy>();
     AU.addPreserved<LiveRegMatrixWrapperLegacy>();
     AU.addPreserved<LiveStacksWrapperLegacy>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
 
     AU.setPreservesAll();
@@ -728,6 +738,7 @@ INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(LiveRegMatrixWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(LiveStacksWrapperLegacy)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(AMDGPURewriteAGPRCopyMFMALegacy, DEBUG_TYPE,
                     "AMDGPU Rewrite AGPR-Copy-MFMA", false, false)
@@ -742,14 +753,13 @@ bool AMDGPURewriteAGPRCopyMFMALegacy::runOnMachineFunction(
   if (skipFunction(MF.getFunction()))
     return false;
 
-  RegClassInfo.runOnMachineFunction(MF);
-
   auto &VRM = getAnalysis<VirtRegMapWrapperLegacy>().getVRM();
   auto &LRM = getAnalysis<LiveRegMatrixWrapperLegacy>().getLRM();
   auto &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   auto &LSS = getAnalysis<LiveStacksWrapperLegacy>().getLS();
+  auto &RCI = getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
   auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  AMDGPURewriteAGPRCopyMFMAImpl Impl(MF, VRM, LRM, LIS, LSS, RegClassInfo, MDT);
+  AMDGPURewriteAGPRCopyMFMAImpl Impl(MF, VRM, LRM, LIS, LSS, RCI, MDT);
   return Impl.run(MF);
 }
 
@@ -760,11 +770,10 @@ AMDGPURewriteAGPRCopyMFMAPass::run(MachineFunction &MF,
   LiveRegMatrix &LRM = MFAM.getResult<LiveRegMatrixAnalysis>(MF);
   LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
   LiveStacks &LSS = MFAM.getResult<LiveStacksAnalysis>(MF);
+  RegisterClassInfo &RCI = MFAM.getResult<MachineRegisterClassAnalysis>(MF);
   MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
-  RegisterClassInfo RegClassInfo;
-  RegClassInfo.runOnMachineFunction(MF);
 
-  AMDGPURewriteAGPRCopyMFMAImpl Impl(MF, VRM, LRM, LIS, LSS, RegClassInfo, MDT);
+  AMDGPURewriteAGPRCopyMFMAImpl Impl(MF, VRM, LRM, LIS, LSS, RCI, MDT);
   if (!Impl.run(MF))
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
@@ -773,6 +782,7 @@ AMDGPURewriteAGPRCopyMFMAPass::run(MachineFunction &MF,
       .preserve<VirtRegMapAnalysis>()
       .preserve<SlotIndexesAnalysis>()
       .preserve<LiveIntervalsAnalysis>()
-      .preserve<LiveRegMatrixAnalysis>();
+      .preserve<LiveRegMatrixAnalysis>()
+      .preserve<MachineRegisterClassAnalysis>();
   return PA;
 }

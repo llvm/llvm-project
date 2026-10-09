@@ -4,13 +4,13 @@
 module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>} {
   func.func @host(%dst: !fir.ref<i32>) {
     %c1_i32 = arith.constant 1 : i32
-    cuf.data_transfer %c1_i32 to %dst {transfer_kind = #cuf.cuda_transfer<host_device>} : i32, !fir.ref<i32>
+    cuf.data_transfer %c1_i32 to %dst transfer_kind(host_device) : i32, !fir.ref<i32>
     return
   }
 
   func.func @acc_routine(%dst: !fir.ref<i32>) attributes {acc.routine_info = #acc.routine_info<[@routine]>} {
     %c1_i32 = arith.constant 1 : i32
-    cuf.data_transfer %c1_i32 to %dst {transfer_kind = #cuf.cuda_transfer<host_device>} : i32, !fir.ref<i32>
+    cuf.data_transfer %c1_i32 to %dst transfer_kind(host_device) : i32, !fir.ref<i32>
     return
   }
 
@@ -18,7 +18,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i64, dense<64> : 
     acc.compute_region {
       %dst = fir.alloca i32
       %c1_i32 = arith.constant 1 : i32
-      cuf.data_transfer %c1_i32 to %dst {transfer_kind = #cuf.cuda_transfer<host_device>} : i32, !fir.ref<i32>
+      cuf.data_transfer %c1_i32 to %dst transfer_kind(host_device) : i32, !fir.ref<i32>
       acc.yield
     } <{origin = "acc.routine"}>
     return
@@ -28,7 +28,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i64, dense<64> : 
     acc.compute_region {
       %dst = fir.alloca !fir.logical<4>
       %true = arith.constant true
-      cuf.data_transfer %true to %dst {transfer_kind = #cuf.cuda_transfer<host_device>} : i1, !fir.ref<!fir.logical<4>>
+      cuf.data_transfer %true to %dst transfer_kind(host_device) : i1, !fir.ref<!fir.logical<4>>
       acc.yield
     } <{origin = "acc.routine"}>
     return
@@ -42,7 +42,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i64, dense<64> : 
     %shape = fir.shape %n : (index) -> !fir.shape<1>
     %src = fir.alloca !fir.array<?xf32>, %n
     %dst = fir.alloca !fir.array<?xf32>, %n
-    cuf.data_transfer %src to %dst, %shape : !fir.shape<1> {transfer_kind = #cuf.cuda_transfer<host_device>} : !fir.ref<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>
+    cuf.data_transfer %src to %dst, %shape : !fir.shape<1> transfer_kind(host_device) : !fir.ref<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>
     return
   }
 
@@ -52,7 +52,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i64, dense<64> : 
       %shape = fir.shape %n : (index) -> !fir.shape<1>
       %src = fir.alloca !fir.array<?xf32>, %n
       %dst = fir.alloca !fir.array<?xf32>, %n
-      cuf.data_transfer %src to %dst, %shape : !fir.shape<1> {transfer_kind = #cuf.cuda_transfer<host_device>} : !fir.ref<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>
+      cuf.data_transfer %src to %dst, %shape : !fir.shape<1> transfer_kind(host_device) : !fir.ref<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>
       acc.yield
     } <{origin = "acc.routine"}>
     return

@@ -1,5 +1,5 @@
 # RUN: llc %s -o - -mtriple=x86_64-unknown-unknown \
-# RUN:    -experimental-debug-variable-locations -run-pass=livedebugvalues \
+# RUN:    -experimental-debug-variable-locations -run-pass=live-debug-values \
 # RUN:    | FileCheck %s --check-prefix=CHECK
 #
 # Test that, in a scenario where tail duplication has duplicated DBG_PHI

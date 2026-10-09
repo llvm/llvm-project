@@ -281,6 +281,12 @@ func.func @ops(%arg0: i32, %arg1: f32,
 // CHECK: llvm.intr.clmul(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
   %clmul = llvm.intr.clmul(%arg0, %arg0) : (i32, i32) -> i32
 
+// CHECK: llvm.intr.smulh(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
+  %smulh = llvm.intr.smulh(%arg0, %arg0) : (i32, i32) -> i32
+
+// CHECK: llvm.intr.umulh(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
+  %umulh = llvm.intr.umulh(%arg0, %arg0) : (i32, i32) -> i32
+
 // CHECK: llvm.intr.ctpop(%{{.*}}) : (i32) -> i32
   %33 = llvm.intr.ctpop(%arg0) : (i32) -> i32
 
@@ -597,6 +603,13 @@ func.func @invariant_group_load(%ptr : !llvm.ptr) -> i32 {
   // CHECK: llvm.load %{{.+}} invariant_group <alignment = 4> : !llvm.ptr -> i32
   %0 = llvm.load %ptr invariant_group <alignment = 4> : !llvm.ptr -> i32
   func.return %0 : i32
+}
+
+// CHECK-LABEL: @load_flags_any_order
+func.func @load_flags_any_order(%ptr : !llvm.ptr) -> !llvm.ptr {
+  // CHECK: llvm.load %{{.+}} invariant invariant_group dereferenceable<bytes = 4> : !llvm.ptr -> !llvm.ptr
+  %0 = llvm.load %ptr dereferenceable<bytes = 4> invariant_group invariant : !llvm.ptr -> !llvm.ptr
+  func.return %0 : !llvm.ptr
 }
 
 // CHECK-LABEL: @invariant_group_store
@@ -1127,11 +1140,13 @@ llvm.func @test_call_arg_attrs_indirect(%arg0: i16, %arg1: !llvm.ptr) -> i16 {
   llvm.return %0 : i16
 }
 
+llvm.func @somefunc_i16(i16)
+
 // CHECK-LABEL:   llvm.func @test_invoke_arg_attrs(
 // CHECK-SAME:      %[[VAL_0:.*]]: i16) attributes {personality = @__gxx_personality_v0} {
 llvm.func @test_invoke_arg_attrs(%arg0: i16) attributes { personality = @__gxx_personality_v0 } {
-  // CHECK:  llvm.invoke @somefunc(%[[VAL_0]]) to ^bb2 unwind ^bb1 : (i16 {llvm.noundef, llvm.signext}) -> ()
-  llvm.invoke @somefunc(%arg0) to ^bb2 unwind ^bb1 : (i16 {llvm.noundef, llvm.signext}) -> ()
+  // CHECK:  llvm.invoke @somefunc_i16(%[[VAL_0]]) to ^bb2 unwind ^bb1 : (i16 {llvm.noundef, llvm.signext}) -> ()
+  llvm.invoke @somefunc_i16(%arg0) to ^bb2 unwind ^bb1 : (i16 {llvm.noundef, llvm.signext}) -> ()
 ^bb1:
   %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
   llvm.return

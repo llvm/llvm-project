@@ -156,19 +156,19 @@ define i32 @func_nonlocal_tls(i32 %arg0, i64 %arg1) nounwind {
 ; TLSDESC-NEXT:    pushq %rbx
 ; TLSDESC-NEXT:    leaq foo_nonlocal@tlsdesc(%rip), %rax
 ; TLSDESC-NEXT:    callq *foo_nonlocal@tlscall(%rax)
+; TLSDESC-NEXT:    movq %rax, %rcx
 ; TLSDESC-NEXT:    movl %fs:(%rax), %ebp
 ; TLSDESC-NEXT:    testl %edi, %edi
-; TLSDESC-NEXT:    movl %ebp, %ecx
+; TLSDESC-NEXT:    movl %ebp, %eax
 ; TLSDESC-NEXT:    jne .LBB1_2
 ; TLSDESC-NEXT:  # %bb.1: # %if.then
 ; TLSDESC-NEXT:    movq %rsi, %rbx
-; TLSDESC-NEXT:    addq %fs:0, %rax
-; TLSDESC-NEXT:    movq %rax, %r14
+; TLSDESC-NEXT:    addq %fs:0, %rcx
+; TLSDESC-NEXT:    movq %rcx, %r14
 ; TLSDESC-NEXT:    callq effect@PLT
-; TLSDESC-NEXT:    movl 168(%r14,%rbx,4), %ecx
+; TLSDESC-NEXT:    movl 168(%r14,%rbx,4), %eax
 ; TLSDESC-NEXT:  .LBB1_2: # %if.end
-; TLSDESC-NEXT:    addl %ebp, %ecx
-; TLSDESC-NEXT:    movl %ecx, %eax
+; TLSDESC-NEXT:    addl %ebp, %eax
 ; TLSDESC-NEXT:    popq %rbx
 ; TLSDESC-NEXT:    popq %r14
 ; TLSDESC-NEXT:    popq %rbp

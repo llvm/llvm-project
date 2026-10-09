@@ -47,8 +47,14 @@ public:
                              /*bInitialState=*/FALSE, nullptr)),
         m_handle(handle),
         m_ready(CreateEventW(nullptr, /*bManualReset=*/TRUE,
-                             /*bInitialState=*/FALSE, nullptr)) {
-    assert(m_event && m_ready);
+                             /*bInitialState=*/FALSE, nullptr)),
+        m_stop(CreateEventW(nullptr, /*bManualReset=*/TRUE,
+                            /*bInitialState=*/FALSE, nullptr)),
+        m_read_done(CreateEventW(nullptr, /*bManualReset=*/TRUE,
+                                 /*bInitialState=*/FALSE, nullptr)),
+        m_exited(CreateEventW(nullptr, /*bManualReset=*/TRUE,
+                              /*bInitialState=*/FALSE, nullptr)) {
+    assert(m_event && m_ready && m_stop && m_read_done && m_exited);
     m_monitor_thread = std::thread(&PipeEvent::Monitor, this);
   }
 
@@ -58,12 +64,18 @@ public:
         std::lock_guard<std::mutex> guard(m_mutex);
         m_stopped = true;
         SetEvent(m_ready);
-        CancelIoEx(m_handle, &m_ov);
+        SetEvent(m_stop);
       }
+      do {
+        CancelIoEx(m_handle, &m_ov);
+      } while (WaitForSingleObject(m_exited, 1) == WAIT_TIMEOUT);
       m_monitor_thread.join();
     }
     CloseHandle(m_event);
     CloseHandle(m_ready);
+    CloseHandle(m_stop);
+    CloseHandle(m_read_done);
+    CloseHandle(m_exited);
   }
 
   void WillPoll() override {
@@ -93,10 +105,11 @@ public:
     // Wait until the MainLoop tells us to start.
     WaitForSingleObject(m_ready, INFINITE);
 
-    do {
+    while (!m_stopped) {
       char buf[1];
       DWORD bytes_read = 0;
       ZeroMemory(&m_ov, sizeof(m_ov));
+      m_ov.hEvent = m_read_done;
       // Block on a 0-byte read; this will only resume when data is
       // available in the pipe. The pipe must be PIPE_WAIT or this thread
       // will spin.
@@ -105,8 +118,17 @@ public:
       DWORD bytes_available = 0;
       DWORD err = GetLastError();
       if (!success && err == ERROR_IO_PENDING) {
+        // m_stop stays signaled, so a stop requested before the read was
+        // issued is still seen here.
+        HANDLE handles[2] = {m_read_done, m_stop};
+        if (WaitForMultipleObjects(2, handles, /*bWaitAll=*/FALSE, INFINITE) !=
+            WAIT_OBJECT_0) {
+          CancelIoEx(m_handle, &m_ov);
+          GetOverlappedResult(m_handle, &m_ov, &bytes_read, /*bWait=*/TRUE);
+          break;
+        }
         success = GetOverlappedResult(m_handle, &m_ov, &bytes_read,
-                                      /*bWait=*/TRUE);
+                                      /*bWait=*/FALSE);
         err = GetLastError();
       }
       if (success) {
@@ -144,12 +166,16 @@ public:
 
       // Wait until the current read is consumed before doing the next read.
       WaitForSingleObject(m_ready, INFINITE);
-    } while (!m_stopped);
+    }
+    SetEvent(m_exited);
   }
 
 private:
   HANDLE m_handle;
   HANDLE m_ready;
+  HANDLE m_stop;
+  HANDLE m_read_done;
+  HANDLE m_exited;
   OVERLAPPED m_ov;
   std::thread m_monitor_thread;
   std::atomic<bool> m_stopped = false;

@@ -36,7 +36,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc(<4 x i32> inreg %a, <4 x i32> %b
   ; GISEL-GFX11-NEXT:   $vgpr7 = COPY [[COPY7]]
   ; GISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX11-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7
+  ; GISEL-GFX11-NEXT:   dead $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7
   ; GISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -65,7 +65,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc(<4 x i32> inreg %a, <4 x i32> %b
   ; GISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY8]]
   ; GISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX10-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GISEL-GFX10-NEXT:   dead $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $sgpr0_sgpr1_sgpr2_sgpr3
   ; GISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX10-NEXT:   S_ENDPGM 0
   ;
@@ -83,7 +83,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc(<4 x i32> inreg %a, <4 x i32> %b
   ; DAGISEL-GFX11-NEXT:   [[COPY7:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+  ; DAGISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; DAGISEL-GFX11-NEXT:   $vgpr0 = COPY [[COPY7]]
   ; DAGISEL-GFX11-NEXT:   $vgpr1 = COPY [[COPY6]]
   ; DAGISEL-GFX11-NEXT:   $vgpr2 = COPY [[COPY5]]
@@ -92,7 +92,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc(<4 x i32> inreg %a, <4 x i32> %b
   ; DAGISEL-GFX11-NEXT:   $vgpr5 = COPY [[COPY2]]
   ; DAGISEL-GFX11-NEXT:   $vgpr6 = COPY [[COPY1]]
   ; DAGISEL-GFX11-NEXT:   $vgpr7 = COPY [[COPY]]
-  ; DAGISEL-GFX11-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7
+  ; DAGISEL-GFX11-NEXT:   dead $sgpr30_sgpr31 = SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -110,7 +110,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc(<4 x i32> inreg %a, <4 x i32> %b
   ; DAGISEL-GFX10-NEXT:   [[COPY7:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
-  ; DAGISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+  ; DAGISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; DAGISEL-GFX10-NEXT:   [[COPY8:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
   ; DAGISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY8]]
   ; DAGISEL-GFX10-NEXT:   $vgpr0 = COPY [[COPY7]]
@@ -121,7 +121,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc(<4 x i32> inreg %a, <4 x i32> %b
   ; DAGISEL-GFX10-NEXT:   $vgpr5 = COPY [[COPY2]]
   ; DAGISEL-GFX10-NEXT:   $vgpr6 = COPY [[COPY1]]
   ; DAGISEL-GFX10-NEXT:   $vgpr7 = COPY [[COPY]]
-  ; DAGISEL-GFX10-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7
+  ; DAGISEL-GFX10-NEXT:   dead $sgpr30_sgpr31 = SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   S_ENDPGM 0
   call amdgpu_gfx void @use(<4 x i32> %a, <4 x i32> %b)
@@ -160,7 +160,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_ptr(ptr inreg %a, ptr %b, ptr ad
   ; GISEL-GFX11-NEXT:   $vgpr11 = COPY [[COPY11]]
   ; GISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX11-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11
+  ; GISEL-GFX11-NEXT:   dead $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11
   ; GISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -197,7 +197,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_ptr(ptr inreg %a, ptr %b, ptr ad
   ; GISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY12]]
   ; GISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX10-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GISEL-GFX10-NEXT:   dead $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $sgpr0_sgpr1_sgpr2_sgpr3
   ; GISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX10-NEXT:   S_ENDPGM 0
   ;
@@ -219,7 +219,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_ptr(ptr inreg %a, ptr %b, ptr ad
   ; DAGISEL-GFX11-NEXT:   [[COPY11:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+  ; DAGISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; DAGISEL-GFX11-NEXT:   $vgpr0 = COPY [[COPY11]]
   ; DAGISEL-GFX11-NEXT:   $vgpr1 = COPY [[COPY10]]
   ; DAGISEL-GFX11-NEXT:   $vgpr2 = COPY [[COPY9]]
@@ -232,7 +232,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_ptr(ptr inreg %a, ptr %b, ptr ad
   ; DAGISEL-GFX11-NEXT:   $vgpr9 = COPY [[COPY2]]
   ; DAGISEL-GFX11-NEXT:   $vgpr10 = COPY [[COPY1]]
   ; DAGISEL-GFX11-NEXT:   $vgpr11 = COPY [[COPY]]
-  ; DAGISEL-GFX11-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11
+  ; DAGISEL-GFX11-NEXT:   dead $sgpr30_sgpr31 = SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -254,7 +254,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_ptr(ptr inreg %a, ptr %b, ptr ad
   ; DAGISEL-GFX10-NEXT:   [[COPY11:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
-  ; DAGISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+  ; DAGISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; DAGISEL-GFX10-NEXT:   [[COPY12:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
   ; DAGISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY12]]
   ; DAGISEL-GFX10-NEXT:   $vgpr0 = COPY [[COPY11]]
@@ -269,7 +269,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_ptr(ptr inreg %a, ptr %b, ptr ad
   ; DAGISEL-GFX10-NEXT:   $vgpr9 = COPY [[COPY2]]
   ; DAGISEL-GFX10-NEXT:   $vgpr10 = COPY [[COPY1]]
   ; DAGISEL-GFX10-NEXT:   $vgpr11 = COPY [[COPY]]
-  ; DAGISEL-GFX10-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11
+  ; DAGISEL-GFX10-NEXT:   dead $sgpr30_sgpr31 = SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   S_ENDPGM 0
   call amdgpu_gfx void @use(ptr %a, ptr %b, ptr addrspace(1) %a1, ptr addrspace(1) %b1, ptr addrspace(3) %a3, ptr addrspace(3) %b3, ptr addrspace(5) %a5, ptr addrspace(5) %b5)
@@ -312,7 +312,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_struct( {ptr, i32, <4 x i32>} in
   ; GISEL-GFX11-NEXT:   $vgpr13 = COPY [[COPY13]]
   ; GISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX11-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13
+  ; GISEL-GFX11-NEXT:   dead $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13
   ; GISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -353,7 +353,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_struct( {ptr, i32, <4 x i32>} in
   ; GISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY14]]
   ; GISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX10-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GISEL-GFX10-NEXT:   dead $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $sgpr0_sgpr1_sgpr2_sgpr3
   ; GISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX10-NEXT:   S_ENDPGM 0
   ;
@@ -383,7 +383,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_struct( {ptr, i32, <4 x i32>} in
   ; DAGISEL-GFX11-NEXT:   [[COPY17:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+  ; DAGISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; DAGISEL-GFX11-NEXT:   $vgpr0 = COPY [[COPY16]]
   ; DAGISEL-GFX11-NEXT:   $vgpr1 = COPY [[COPY14]]
   ; DAGISEL-GFX11-NEXT:   $vgpr2 = COPY [[COPY11]]
@@ -398,7 +398,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_struct( {ptr, i32, <4 x i32>} in
   ; DAGISEL-GFX11-NEXT:   $vgpr11 = COPY [[COPY2]]
   ; DAGISEL-GFX11-NEXT:   $vgpr12 = COPY [[COPY1]]
   ; DAGISEL-GFX11-NEXT:   $vgpr13 = COPY [[COPY]]
-  ; DAGISEL-GFX11-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13
+  ; DAGISEL-GFX11-NEXT:   dead $sgpr30_sgpr31 = SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -428,7 +428,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_struct( {ptr, i32, <4 x i32>} in
   ; DAGISEL-GFX10-NEXT:   [[COPY17:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
-  ; DAGISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+  ; DAGISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; DAGISEL-GFX10-NEXT:   [[COPY18:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
   ; DAGISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY18]]
   ; DAGISEL-GFX10-NEXT:   $vgpr0 = COPY [[COPY16]]
@@ -445,7 +445,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_struct( {ptr, i32, <4 x i32>} in
   ; DAGISEL-GFX10-NEXT:   $vgpr11 = COPY [[COPY2]]
   ; DAGISEL-GFX10-NEXT:   $vgpr12 = COPY [[COPY1]]
   ; DAGISEL-GFX10-NEXT:   $vgpr13 = COPY [[COPY]]
-  ; DAGISEL-GFX10-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13
+  ; DAGISEL-GFX10-NEXT:   dead $sgpr30_sgpr31 = SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   S_ENDPGM 0
   call amdgpu_gfx void @use({ptr, i32, <4 x i32>} %a, {ptr, i32, <4 x i32>} %b)
@@ -464,7 +464,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_float(float inreg %a, float %b) 
   ; GISEL-GFX11-NEXT:   $vgpr1 = COPY [[COPY1]]
   ; GISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX11-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
+  ; GISEL-GFX11-NEXT:   dead $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
   ; GISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -481,7 +481,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_float(float inreg %a, float %b) 
   ; GISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY2]]
   ; GISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX10-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GISEL-GFX10-NEXT:   dead $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_sgpr1_sgpr2_sgpr3
   ; GISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX10-NEXT:   S_ENDPGM 0
   ;
@@ -493,10 +493,10 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_float(float inreg %a, float %b) 
   ; DAGISEL-GFX11-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+  ; DAGISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; DAGISEL-GFX11-NEXT:   $vgpr0 = COPY [[COPY1]]
   ; DAGISEL-GFX11-NEXT:   $vgpr1 = COPY [[COPY]]
-  ; DAGISEL-GFX11-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
+  ; DAGISEL-GFX11-NEXT:   dead $sgpr30_sgpr31 = SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -508,12 +508,12 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_float(float inreg %a, float %b) 
   ; DAGISEL-GFX10-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
-  ; DAGISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+  ; DAGISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; DAGISEL-GFX10-NEXT:   [[COPY2:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
   ; DAGISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY2]]
   ; DAGISEL-GFX10-NEXT:   $vgpr0 = COPY [[COPY1]]
   ; DAGISEL-GFX10-NEXT:   $vgpr1 = COPY [[COPY]]
-  ; DAGISEL-GFX10-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $vgpr0, implicit $vgpr1
+  ; DAGISEL-GFX10-NEXT:   dead $sgpr30_sgpr31 = SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $vgpr0, implicit $vgpr1
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   S_ENDPGM 0
   call amdgpu_gfx void @use(float %a, float %b)
@@ -534,7 +534,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_half(half inreg %a, half %b) {
   ; GISEL-GFX11-NEXT:   $vgpr1 = COPY [[COPY3]]
   ; GISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX11-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
+  ; GISEL-GFX11-NEXT:   dead $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
   ; GISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -551,7 +551,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_half(half inreg %a, half %b) {
   ; GISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY2]]
   ; GISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX10-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GISEL-GFX10-NEXT:   dead $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_sgpr1_sgpr2_sgpr3
   ; GISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX10-NEXT:   S_ENDPGM 0
   ;
@@ -563,10 +563,10 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_half(half inreg %a, half %b) {
   ; DAGISEL-GFX11-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+  ; DAGISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; DAGISEL-GFX11-NEXT:   $vgpr0 = COPY [[COPY1]]
   ; DAGISEL-GFX11-NEXT:   $vgpr1 = COPY [[COPY]]
-  ; DAGISEL-GFX11-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
+  ; DAGISEL-GFX11-NEXT:   dead $sgpr30_sgpr31 = SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -578,12 +578,12 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_half(half inreg %a, half %b) {
   ; DAGISEL-GFX10-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
-  ; DAGISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+  ; DAGISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; DAGISEL-GFX10-NEXT:   [[COPY2:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
   ; DAGISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY2]]
   ; DAGISEL-GFX10-NEXT:   $vgpr0 = COPY [[COPY1]]
   ; DAGISEL-GFX10-NEXT:   $vgpr1 = COPY [[COPY]]
-  ; DAGISEL-GFX10-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $vgpr0, implicit $vgpr1
+  ; DAGISEL-GFX10-NEXT:   dead $sgpr30_sgpr31 = SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $vgpr0, implicit $vgpr1
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   S_ENDPGM 0
   call amdgpu_gfx void @use(half %a, half %b)
@@ -604,7 +604,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_bfloat(bfloat inreg %a, bfloat %
   ; GISEL-GFX11-NEXT:   $vgpr1 = COPY [[COPY3]]
   ; GISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX11-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
+  ; GISEL-GFX11-NEXT:   dead $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
   ; GISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -621,7 +621,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_bfloat(bfloat inreg %a, bfloat %
   ; GISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY2]]
   ; GISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX10-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GISEL-GFX10-NEXT:   dead $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_sgpr1_sgpr2_sgpr3
   ; GISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX10-NEXT:   S_ENDPGM 0
   ;
@@ -633,10 +633,10 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_bfloat(bfloat inreg %a, bfloat %
   ; DAGISEL-GFX11-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+  ; DAGISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; DAGISEL-GFX11-NEXT:   $vgpr0 = COPY [[COPY1]]
   ; DAGISEL-GFX11-NEXT:   $vgpr1 = COPY [[COPY]]
-  ; DAGISEL-GFX11-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
+  ; DAGISEL-GFX11-NEXT:   dead $sgpr30_sgpr31 = SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -648,12 +648,12 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_bfloat(bfloat inreg %a, bfloat %
   ; DAGISEL-GFX10-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
-  ; DAGISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+  ; DAGISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; DAGISEL-GFX10-NEXT:   [[COPY2:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
   ; DAGISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY2]]
   ; DAGISEL-GFX10-NEXT:   $vgpr0 = COPY [[COPY1]]
   ; DAGISEL-GFX10-NEXT:   $vgpr1 = COPY [[COPY]]
-  ; DAGISEL-GFX10-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $vgpr0, implicit $vgpr1
+  ; DAGISEL-GFX10-NEXT:   dead $sgpr30_sgpr31 = SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $vgpr0, implicit $vgpr1
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   S_ENDPGM 0
   call amdgpu_gfx void @use(bfloat %a, bfloat %b)
@@ -672,7 +672,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_i16(i16 inreg %a, i16 %b) {
   ; GISEL-GFX11-NEXT:   $vgpr1 = COPY [[COPY1]]
   ; GISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX11-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
+  ; GISEL-GFX11-NEXT:   dead $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
   ; GISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -689,7 +689,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_i16(i16 inreg %a, i16 %b) {
   ; GISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY2]]
   ; GISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX10-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GISEL-GFX10-NEXT:   dead $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_sgpr1_sgpr2_sgpr3
   ; GISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX10-NEXT:   S_ENDPGM 0
   ;
@@ -701,10 +701,10 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_i16(i16 inreg %a, i16 %b) {
   ; DAGISEL-GFX11-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+  ; DAGISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; DAGISEL-GFX11-NEXT:   $vgpr0 = COPY [[COPY1]]
   ; DAGISEL-GFX11-NEXT:   $vgpr1 = COPY [[COPY]]
-  ; DAGISEL-GFX11-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
+  ; DAGISEL-GFX11-NEXT:   dead $sgpr30_sgpr31 = SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -716,12 +716,12 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_i16(i16 inreg %a, i16 %b) {
   ; DAGISEL-GFX10-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
-  ; DAGISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+  ; DAGISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; DAGISEL-GFX10-NEXT:   [[COPY2:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
   ; DAGISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY2]]
   ; DAGISEL-GFX10-NEXT:   $vgpr0 = COPY [[COPY1]]
   ; DAGISEL-GFX10-NEXT:   $vgpr1 = COPY [[COPY]]
-  ; DAGISEL-GFX10-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $vgpr0, implicit $vgpr1
+  ; DAGISEL-GFX10-NEXT:   dead $sgpr30_sgpr31 = SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $vgpr0, implicit $vgpr1
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   S_ENDPGM 0
   call amdgpu_gfx void @use(i16 %a, i16 %b)
@@ -768,7 +768,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_v16i16(<16 x i16> inreg %a, <16 
   ; GISEL-GFX11-NEXT:   $vgpr15 = COPY [[COPY15]]
   ; GISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX11-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15
+  ; GISEL-GFX11-NEXT:   dead $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15
   ; GISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -813,7 +813,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_v16i16(<16 x i16> inreg %a, <16 
   ; GISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY16]]
   ; GISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX10-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GISEL-GFX10-NEXT:   dead $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $sgpr0_sgpr1_sgpr2_sgpr3
   ; GISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX10-NEXT:   S_ENDPGM 0
   ;
@@ -839,7 +839,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_v16i16(<16 x i16> inreg %a, <16 
   ; DAGISEL-GFX11-NEXT:   [[COPY15:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+  ; DAGISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; DAGISEL-GFX11-NEXT:   $vgpr0 = COPY [[COPY15]]
   ; DAGISEL-GFX11-NEXT:   $vgpr1 = COPY [[COPY14]]
   ; DAGISEL-GFX11-NEXT:   $vgpr2 = COPY [[COPY13]]
@@ -856,7 +856,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_v16i16(<16 x i16> inreg %a, <16 
   ; DAGISEL-GFX11-NEXT:   $vgpr13 = COPY [[COPY2]]
   ; DAGISEL-GFX11-NEXT:   $vgpr14 = COPY [[COPY1]]
   ; DAGISEL-GFX11-NEXT:   $vgpr15 = COPY [[COPY]]
-  ; DAGISEL-GFX11-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15
+  ; DAGISEL-GFX11-NEXT:   dead $sgpr30_sgpr31 = SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -882,7 +882,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_v16i16(<16 x i16> inreg %a, <16 
   ; DAGISEL-GFX10-NEXT:   [[COPY15:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
-  ; DAGISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+  ; DAGISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; DAGISEL-GFX10-NEXT:   [[COPY16:%[0-9]+]]:sgpr_128 = COPY $sgpr48_sgpr49_sgpr50_sgpr51
   ; DAGISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY16]]
   ; DAGISEL-GFX10-NEXT:   $vgpr0 = COPY [[COPY15]]
@@ -901,7 +901,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_cc_v16i16(<16 x i16> inreg %a, <16 
   ; DAGISEL-GFX10-NEXT:   $vgpr13 = COPY [[COPY2]]
   ; DAGISEL-GFX10-NEXT:   $vgpr14 = COPY [[COPY1]]
   ; DAGISEL-GFX10-NEXT:   $vgpr15 = COPY [[COPY]]
-  ; DAGISEL-GFX10-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15
+  ; DAGISEL-GFX10-NEXT:   dead $sgpr30_sgpr31 = SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   S_ENDPGM 0
   call amdgpu_gfx void @use(<16 x i16> %a, <16 x i16> %b)
@@ -1513,7 +1513,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_many_regs(<36 x i32> inreg %a, <128
   ; GISEL-GFX11-NEXT:   $vgpr31 = COPY [[COPY31]]
   ; GISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX11-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $vgpr31
+  ; GISEL-GFX11-NEXT:   dead $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $vgpr31
   ; GISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 528, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -1858,7 +1858,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_many_regs(<36 x i32> inreg %a, <128
   ; GISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY168]]
   ; GISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def $scc
   ; GISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)
-  ; GISEL-GFX10-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $vgpr31, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GISEL-GFX10-NEXT:   dead $sgpr30_sgpr31 = noconvergent SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $vgpr31, implicit $sgpr0_sgpr1_sgpr2_sgpr3
   ; GISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 528, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-GFX10-NEXT:   S_ENDPGM 0
   ;
@@ -2035,403 +2035,403 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_many_regs(<36 x i32> inreg %a, <128
   ; DAGISEL-GFX11-NEXT:   [[COPY165:%[0-9]+]]:vgpr_32 = COPY [[COPY131]]
   ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY165]], [[COPY164]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 524
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY]], killed [[S_ADD_I32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 524, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY]], [[S_ADD_I32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 524, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 520
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_1:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_1]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY1]], killed [[S_ADD_I32_1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 520, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_1:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_1]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY1]], [[S_ADD_I32_1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 520, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 516
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_2:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_2]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY2]], killed [[S_ADD_I32_2]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 516, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_2:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_2]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY2]], [[S_ADD_I32_2]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 516, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 512
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_3:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_3]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY3]], killed [[S_ADD_I32_3]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 512, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_3:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_3]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY3]], [[S_ADD_I32_3]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 512, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 508
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_4:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_4]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY4]], killed [[S_ADD_I32_4]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 508, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_4:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_4]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY4]], [[S_ADD_I32_4]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 508, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_5:%[0-9]+]]:sreg_32 = S_MOV_B32 504
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_5:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_5]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY5]], killed [[S_ADD_I32_5]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 504, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_5:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_5]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY5]], [[S_ADD_I32_5]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 504, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_6:%[0-9]+]]:sreg_32 = S_MOV_B32 500
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_6:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_6]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY6]], killed [[S_ADD_I32_6]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 500, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_6:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_6]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY6]], [[S_ADD_I32_6]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 500, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_7:%[0-9]+]]:sreg_32 = S_MOV_B32 496
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_7:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_7]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY7]], killed [[S_ADD_I32_7]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 496, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_7:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_7]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY7]], [[S_ADD_I32_7]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 496, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_8:%[0-9]+]]:sreg_32 = S_MOV_B32 492
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_8:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_8]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY8]], killed [[S_ADD_I32_8]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 492, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_8:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_8]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY8]], [[S_ADD_I32_8]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 492, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_9:%[0-9]+]]:sreg_32 = S_MOV_B32 488
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_9:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_9]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY9]], killed [[S_ADD_I32_9]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 488, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_9:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_9]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY9]], [[S_ADD_I32_9]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 488, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_10:%[0-9]+]]:sreg_32 = S_MOV_B32 484
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_10:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_10]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY10]], killed [[S_ADD_I32_10]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 484, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_10:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_10]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY10]], [[S_ADD_I32_10]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 484, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_11:%[0-9]+]]:sreg_32 = S_MOV_B32 480
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_11:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_11]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY11]], killed [[S_ADD_I32_11]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 480, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_11:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_11]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY11]], [[S_ADD_I32_11]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 480, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_12:%[0-9]+]]:sreg_32 = S_MOV_B32 476
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_12:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_12]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY12]], killed [[S_ADD_I32_12]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 476, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_12:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_12]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY12]], [[S_ADD_I32_12]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 476, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_13:%[0-9]+]]:sreg_32 = S_MOV_B32 472
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_13:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_13]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY13]], killed [[S_ADD_I32_13]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 472, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_13:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_13]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY13]], [[S_ADD_I32_13]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 472, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_14:%[0-9]+]]:sreg_32 = S_MOV_B32 468
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_14:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_14]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY14]], killed [[S_ADD_I32_14]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 468, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_14:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_14]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY14]], [[S_ADD_I32_14]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 468, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_15:%[0-9]+]]:sreg_32 = S_MOV_B32 464
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_15:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_15]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY15]], killed [[S_ADD_I32_15]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 464, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_15:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_15]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY15]], [[S_ADD_I32_15]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 464, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_16:%[0-9]+]]:sreg_32 = S_MOV_B32 460
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_16:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_16]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY16]], killed [[S_ADD_I32_16]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 460, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_16:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_16]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY16]], [[S_ADD_I32_16]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 460, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_17:%[0-9]+]]:sreg_32 = S_MOV_B32 456
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_17:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_17]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY17]], killed [[S_ADD_I32_17]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 456, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_17:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_17]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY17]], [[S_ADD_I32_17]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 456, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_18:%[0-9]+]]:sreg_32 = S_MOV_B32 452
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_18:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_18]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY18]], killed [[S_ADD_I32_18]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 452, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_18:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_18]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY18]], [[S_ADD_I32_18]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 452, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_19:%[0-9]+]]:sreg_32 = S_MOV_B32 448
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_19:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_19]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY19]], killed [[S_ADD_I32_19]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 448, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_19:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_19]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY19]], [[S_ADD_I32_19]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 448, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_20:%[0-9]+]]:sreg_32 = S_MOV_B32 444
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_20:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_20]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY20]], killed [[S_ADD_I32_20]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 444, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_20:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_20]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY20]], [[S_ADD_I32_20]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 444, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_21:%[0-9]+]]:sreg_32 = S_MOV_B32 440
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_21:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_21]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY21]], killed [[S_ADD_I32_21]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 440, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_21:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_21]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY21]], [[S_ADD_I32_21]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 440, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_22:%[0-9]+]]:sreg_32 = S_MOV_B32 436
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_22:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_22]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY22]], killed [[S_ADD_I32_22]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 436, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_22:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_22]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY22]], [[S_ADD_I32_22]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 436, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_23:%[0-9]+]]:sreg_32 = S_MOV_B32 432
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_23:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_23]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY23]], killed [[S_ADD_I32_23]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 432, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_23:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_23]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY23]], [[S_ADD_I32_23]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 432, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_24:%[0-9]+]]:sreg_32 = S_MOV_B32 428
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_24:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_24]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY24]], killed [[S_ADD_I32_24]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 428, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_24:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_24]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY24]], [[S_ADD_I32_24]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 428, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_25:%[0-9]+]]:sreg_32 = S_MOV_B32 424
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_25:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_25]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY25]], killed [[S_ADD_I32_25]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 424, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_25:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_25]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY25]], [[S_ADD_I32_25]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 424, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_26:%[0-9]+]]:sreg_32 = S_MOV_B32 420
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_26:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_26]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY26]], killed [[S_ADD_I32_26]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 420, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_26:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_26]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY26]], [[S_ADD_I32_26]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 420, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_27:%[0-9]+]]:sreg_32 = S_MOV_B32 416
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_27:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_27]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY27]], killed [[S_ADD_I32_27]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 416, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_27:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_27]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY27]], [[S_ADD_I32_27]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 416, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_28:%[0-9]+]]:sreg_32 = S_MOV_B32 412
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_28:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_28]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY28]], killed [[S_ADD_I32_28]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 412, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_28:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_28]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY28]], [[S_ADD_I32_28]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 412, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_29:%[0-9]+]]:sreg_32 = S_MOV_B32 408
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_29:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_29]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY29]], killed [[S_ADD_I32_29]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 408, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_29:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_29]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY29]], [[S_ADD_I32_29]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 408, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_30:%[0-9]+]]:sreg_32 = S_MOV_B32 404
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_30:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_30]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY30]], killed [[S_ADD_I32_30]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 404, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_30:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_30]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY30]], [[S_ADD_I32_30]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 404, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_31:%[0-9]+]]:sreg_32 = S_MOV_B32 400
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_31:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_31]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY31]], killed [[S_ADD_I32_31]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 400, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_31:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_31]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY31]], [[S_ADD_I32_31]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 400, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_32:%[0-9]+]]:sreg_32 = S_MOV_B32 396
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_32:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_32]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY32]], killed [[S_ADD_I32_32]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 396, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_32:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_32]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY32]], [[S_ADD_I32_32]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 396, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_33:%[0-9]+]]:sreg_32 = S_MOV_B32 392
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_33:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_33]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY33]], killed [[S_ADD_I32_33]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 392, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_33:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_33]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY33]], [[S_ADD_I32_33]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 392, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_34:%[0-9]+]]:sreg_32 = S_MOV_B32 388
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_34:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_34]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY34]], killed [[S_ADD_I32_34]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 388, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_34:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_34]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY34]], [[S_ADD_I32_34]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 388, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_35:%[0-9]+]]:sreg_32 = S_MOV_B32 384
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_35:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_35]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY35]], killed [[S_ADD_I32_35]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 384, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_35:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_35]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY35]], [[S_ADD_I32_35]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 384, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_36:%[0-9]+]]:sreg_32 = S_MOV_B32 380
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_36:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_36]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY36]], killed [[S_ADD_I32_36]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 380, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_36:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_36]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY36]], [[S_ADD_I32_36]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 380, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_37:%[0-9]+]]:sreg_32 = S_MOV_B32 376
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_37:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_37]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY37]], killed [[S_ADD_I32_37]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 376, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_37:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_37]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY37]], [[S_ADD_I32_37]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 376, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_38:%[0-9]+]]:sreg_32 = S_MOV_B32 372
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_38:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_38]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY38]], killed [[S_ADD_I32_38]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 372, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_38:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_38]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY38]], [[S_ADD_I32_38]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 372, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_39:%[0-9]+]]:sreg_32 = S_MOV_B32 368
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_39:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_39]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY39]], killed [[S_ADD_I32_39]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 368, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_39:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_39]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY39]], [[S_ADD_I32_39]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 368, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_40:%[0-9]+]]:sreg_32 = S_MOV_B32 364
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_40:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_40]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY40]], killed [[S_ADD_I32_40]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 364, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_40:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_40]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY40]], [[S_ADD_I32_40]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 364, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_41:%[0-9]+]]:sreg_32 = S_MOV_B32 360
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_41:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_41]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY41]], killed [[S_ADD_I32_41]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 360, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_41:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_41]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY41]], [[S_ADD_I32_41]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 360, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_42:%[0-9]+]]:sreg_32 = S_MOV_B32 356
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_42:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_42]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY42]], killed [[S_ADD_I32_42]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 356, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_42:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_42]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY42]], [[S_ADD_I32_42]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 356, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_43:%[0-9]+]]:sreg_32 = S_MOV_B32 352
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_43:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_43]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY43]], killed [[S_ADD_I32_43]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 352, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_43:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_43]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY43]], [[S_ADD_I32_43]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 352, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_44:%[0-9]+]]:sreg_32 = S_MOV_B32 348
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_44:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_44]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY44]], killed [[S_ADD_I32_44]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 348, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_44:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_44]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY44]], [[S_ADD_I32_44]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 348, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_45:%[0-9]+]]:sreg_32 = S_MOV_B32 344
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_45:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_45]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY45]], killed [[S_ADD_I32_45]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 344, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_45:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_45]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY45]], [[S_ADD_I32_45]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 344, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_46:%[0-9]+]]:sreg_32 = S_MOV_B32 340
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_46:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_46]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY46]], killed [[S_ADD_I32_46]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 340, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_46:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_46]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY46]], [[S_ADD_I32_46]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 340, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_47:%[0-9]+]]:sreg_32 = S_MOV_B32 336
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_47:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_47]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY47]], killed [[S_ADD_I32_47]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 336, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_47:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_47]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY47]], [[S_ADD_I32_47]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 336, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_48:%[0-9]+]]:sreg_32 = S_MOV_B32 332
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_48:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_48]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY48]], killed [[S_ADD_I32_48]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 332, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_48:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_48]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY48]], [[S_ADD_I32_48]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 332, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_49:%[0-9]+]]:sreg_32 = S_MOV_B32 328
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_49:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_49]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY49]], killed [[S_ADD_I32_49]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 328, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_49:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_49]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY49]], [[S_ADD_I32_49]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 328, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_50:%[0-9]+]]:sreg_32 = S_MOV_B32 324
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_50:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_50]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY50]], killed [[S_ADD_I32_50]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 324, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_50:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_50]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY50]], [[S_ADD_I32_50]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 324, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_51:%[0-9]+]]:sreg_32 = S_MOV_B32 320
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_51:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_51]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY51]], killed [[S_ADD_I32_51]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 320, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_51:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_51]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY51]], [[S_ADD_I32_51]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 320, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_52:%[0-9]+]]:sreg_32 = S_MOV_B32 316
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_52:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_52]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY52]], killed [[S_ADD_I32_52]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 316, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_52:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_52]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY52]], [[S_ADD_I32_52]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 316, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_53:%[0-9]+]]:sreg_32 = S_MOV_B32 312
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_53:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_53]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY53]], killed [[S_ADD_I32_53]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 312, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_53:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_53]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY53]], [[S_ADD_I32_53]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 312, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_54:%[0-9]+]]:sreg_32 = S_MOV_B32 308
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_54:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_54]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY54]], killed [[S_ADD_I32_54]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 308, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_54:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_54]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY54]], [[S_ADD_I32_54]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 308, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_55:%[0-9]+]]:sreg_32 = S_MOV_B32 304
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_55:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_55]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY55]], killed [[S_ADD_I32_55]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 304, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_55:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_55]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY55]], [[S_ADD_I32_55]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 304, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_56:%[0-9]+]]:sreg_32 = S_MOV_B32 300
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_56:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_56]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY56]], killed [[S_ADD_I32_56]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 300, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_56:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_56]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY56]], [[S_ADD_I32_56]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 300, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_57:%[0-9]+]]:sreg_32 = S_MOV_B32 296
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_57:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_57]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY57]], killed [[S_ADD_I32_57]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 296, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_57:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_57]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY57]], [[S_ADD_I32_57]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 296, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_58:%[0-9]+]]:sreg_32 = S_MOV_B32 292
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_58:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_58]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY58]], killed [[S_ADD_I32_58]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 292, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_58:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_58]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY58]], [[S_ADD_I32_58]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 292, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_59:%[0-9]+]]:sreg_32 = S_MOV_B32 288
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_59:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_59]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY59]], killed [[S_ADD_I32_59]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 288, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_59:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_59]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY59]], [[S_ADD_I32_59]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 288, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_60:%[0-9]+]]:sreg_32 = S_MOV_B32 284
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_60:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_60]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY60]], killed [[S_ADD_I32_60]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 284, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_60:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_60]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY60]], [[S_ADD_I32_60]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 284, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_61:%[0-9]+]]:sreg_32 = S_MOV_B32 280
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_61:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_61]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY61]], killed [[S_ADD_I32_61]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 280, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_61:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_61]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY61]], [[S_ADD_I32_61]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 280, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_62:%[0-9]+]]:sreg_32 = S_MOV_B32 276
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_62:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_62]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY62]], killed [[S_ADD_I32_62]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 276, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_62:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_62]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY62]], [[S_ADD_I32_62]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 276, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_63:%[0-9]+]]:sreg_32 = S_MOV_B32 272
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_63:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_63]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY63]], killed [[S_ADD_I32_63]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 272, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_63:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_63]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY63]], [[S_ADD_I32_63]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 272, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_64:%[0-9]+]]:sreg_32 = S_MOV_B32 268
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_64:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_64]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY64]], killed [[S_ADD_I32_64]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 268, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_64:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_64]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY64]], [[S_ADD_I32_64]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 268, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_65:%[0-9]+]]:sreg_32 = S_MOV_B32 264
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_65:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_65]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY65]], killed [[S_ADD_I32_65]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 264, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_65:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_65]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY65]], [[S_ADD_I32_65]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 264, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_66:%[0-9]+]]:sreg_32 = S_MOV_B32 260
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_66:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_66]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY66]], killed [[S_ADD_I32_66]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 260, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_66:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_66]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY66]], [[S_ADD_I32_66]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 260, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_67:%[0-9]+]]:sreg_32 = S_MOV_B32 256
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_67:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_67]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY67]], killed [[S_ADD_I32_67]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 256, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_67:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_67]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY67]], [[S_ADD_I32_67]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 256, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_68:%[0-9]+]]:sreg_32 = S_MOV_B32 252
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_68:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_68]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY68]], killed [[S_ADD_I32_68]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 252, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_68:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_68]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY68]], [[S_ADD_I32_68]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 252, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_69:%[0-9]+]]:sreg_32 = S_MOV_B32 248
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_69:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_69]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY69]], killed [[S_ADD_I32_69]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 248, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_69:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_69]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY69]], [[S_ADD_I32_69]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 248, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_70:%[0-9]+]]:sreg_32 = S_MOV_B32 244
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_70:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_70]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY70]], killed [[S_ADD_I32_70]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 244, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_70:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_70]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY70]], [[S_ADD_I32_70]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 244, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_71:%[0-9]+]]:sreg_32 = S_MOV_B32 240
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_71:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_71]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY71]], killed [[S_ADD_I32_71]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 240, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_71:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_71]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY71]], [[S_ADD_I32_71]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 240, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_72:%[0-9]+]]:sreg_32 = S_MOV_B32 236
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_72:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_72]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY72]], killed [[S_ADD_I32_72]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 236, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_72:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_72]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY72]], [[S_ADD_I32_72]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 236, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_73:%[0-9]+]]:sreg_32 = S_MOV_B32 232
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_73:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_73]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY73]], killed [[S_ADD_I32_73]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 232, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_73:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_73]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY73]], [[S_ADD_I32_73]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 232, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_74:%[0-9]+]]:sreg_32 = S_MOV_B32 228
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_74:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_74]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY74]], killed [[S_ADD_I32_74]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 228, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_74:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_74]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY74]], [[S_ADD_I32_74]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 228, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_75:%[0-9]+]]:sreg_32 = S_MOV_B32 224
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_75:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_75]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY75]], killed [[S_ADD_I32_75]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 224, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_75:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_75]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY75]], [[S_ADD_I32_75]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 224, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_76:%[0-9]+]]:sreg_32 = S_MOV_B32 220
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_76:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_76]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY76]], killed [[S_ADD_I32_76]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 220, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_76:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_76]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY76]], [[S_ADD_I32_76]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 220, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_77:%[0-9]+]]:sreg_32 = S_MOV_B32 216
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_77:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_77]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY77]], killed [[S_ADD_I32_77]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 216, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_77:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_77]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY77]], [[S_ADD_I32_77]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 216, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_78:%[0-9]+]]:sreg_32 = S_MOV_B32 212
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_78:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_78]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY78]], killed [[S_ADD_I32_78]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 212, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_78:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_78]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY78]], [[S_ADD_I32_78]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 212, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_79:%[0-9]+]]:sreg_32 = S_MOV_B32 208
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_79:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_79]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY79]], killed [[S_ADD_I32_79]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 208, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_79:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_79]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY79]], [[S_ADD_I32_79]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 208, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_80:%[0-9]+]]:sreg_32 = S_MOV_B32 204
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_80:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_80]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY80]], killed [[S_ADD_I32_80]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 204, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_80:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_80]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY80]], [[S_ADD_I32_80]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 204, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_81:%[0-9]+]]:sreg_32 = S_MOV_B32 200
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_81:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_81]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY81]], killed [[S_ADD_I32_81]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 200, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_81:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_81]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY81]], [[S_ADD_I32_81]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 200, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_82:%[0-9]+]]:sreg_32 = S_MOV_B32 196
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_82:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_82]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY82]], killed [[S_ADD_I32_82]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 196, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_82:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_82]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY82]], [[S_ADD_I32_82]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 196, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_83:%[0-9]+]]:sreg_32 = S_MOV_B32 192
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_83:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_83]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY83]], killed [[S_ADD_I32_83]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 192, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_83:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_83]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY83]], [[S_ADD_I32_83]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 192, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_84:%[0-9]+]]:sreg_32 = S_MOV_B32 188
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_84:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_84]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY84]], killed [[S_ADD_I32_84]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 188, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_84:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_84]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY84]], [[S_ADD_I32_84]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 188, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_85:%[0-9]+]]:sreg_32 = S_MOV_B32 184
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_85:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_85]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY85]], killed [[S_ADD_I32_85]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 184, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_85:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_85]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY85]], [[S_ADD_I32_85]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 184, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_86:%[0-9]+]]:sreg_32 = S_MOV_B32 180
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_86:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_86]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY86]], killed [[S_ADD_I32_86]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 180, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_86:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_86]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY86]], [[S_ADD_I32_86]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 180, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_87:%[0-9]+]]:sreg_32 = S_MOV_B32 176
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_87:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_87]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY87]], killed [[S_ADD_I32_87]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 176, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_87:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_87]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY87]], [[S_ADD_I32_87]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 176, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_88:%[0-9]+]]:sreg_32 = S_MOV_B32 172
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_88:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_88]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY88]], killed [[S_ADD_I32_88]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 172, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_88:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_88]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY88]], [[S_ADD_I32_88]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 172, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_89:%[0-9]+]]:sreg_32 = S_MOV_B32 168
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_89:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_89]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY89]], killed [[S_ADD_I32_89]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 168, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_89:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_89]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY89]], [[S_ADD_I32_89]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 168, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_90:%[0-9]+]]:sreg_32 = S_MOV_B32 164
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_90:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_90]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY90]], killed [[S_ADD_I32_90]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 164, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_90:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_90]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY90]], [[S_ADD_I32_90]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 164, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_91:%[0-9]+]]:sreg_32 = S_MOV_B32 160
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_91:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_91]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY91]], killed [[S_ADD_I32_91]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 160, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_91:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_91]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY91]], [[S_ADD_I32_91]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 160, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_92:%[0-9]+]]:sreg_32 = S_MOV_B32 156
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_92:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_92]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY92]], killed [[S_ADD_I32_92]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 156, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_92:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_92]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY92]], [[S_ADD_I32_92]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 156, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_93:%[0-9]+]]:sreg_32 = S_MOV_B32 152
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_93:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_93]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY93]], killed [[S_ADD_I32_93]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 152, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_93:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_93]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY93]], [[S_ADD_I32_93]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 152, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_94:%[0-9]+]]:sreg_32 = S_MOV_B32 148
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_94:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_94]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY94]], killed [[S_ADD_I32_94]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 148, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_94:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_94]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY94]], [[S_ADD_I32_94]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 148, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_95:%[0-9]+]]:sreg_32 = S_MOV_B32 144
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_95:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_95]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY95]], killed [[S_ADD_I32_95]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 144, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_95:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_95]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY95]], [[S_ADD_I32_95]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 144, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_96:%[0-9]+]]:sreg_32 = S_MOV_B32 140
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_96:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_96]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY96]], killed [[S_ADD_I32_96]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 140, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_96:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_96]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY96]], [[S_ADD_I32_96]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 140, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_97:%[0-9]+]]:sreg_32 = S_MOV_B32 136
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_97:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_97]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY97]], killed [[S_ADD_I32_97]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 136, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_97:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_97]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY97]], [[S_ADD_I32_97]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 136, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_98:%[0-9]+]]:sreg_32 = S_MOV_B32 132
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_98:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_98]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY98]], killed [[S_ADD_I32_98]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 132, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_98:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_98]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY98]], [[S_ADD_I32_98]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 132, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_99:%[0-9]+]]:sreg_32 = S_MOV_B32 128
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_99:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_99]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY99]], killed [[S_ADD_I32_99]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 128, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_99:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_99]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY99]], [[S_ADD_I32_99]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 128, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_100:%[0-9]+]]:sreg_32 = S_MOV_B32 124
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_100:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_100]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY100]], killed [[S_ADD_I32_100]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 124, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_100:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_100]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY100]], [[S_ADD_I32_100]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 124, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_101:%[0-9]+]]:sreg_32 = S_MOV_B32 120
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_101:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_101]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY101]], killed [[S_ADD_I32_101]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 120, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_101:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_101]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY101]], [[S_ADD_I32_101]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 120, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_102:%[0-9]+]]:sreg_32 = S_MOV_B32 116
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_102:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_102]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY102]], killed [[S_ADD_I32_102]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 116, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_102:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_102]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY102]], [[S_ADD_I32_102]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 116, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_103:%[0-9]+]]:sreg_32 = S_MOV_B32 112
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_103:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_103]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY103]], killed [[S_ADD_I32_103]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 112, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_103:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_103]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY103]], [[S_ADD_I32_103]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 112, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_104:%[0-9]+]]:sreg_32 = S_MOV_B32 108
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_104:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_104]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY104]], killed [[S_ADD_I32_104]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 108, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_104:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_104]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY104]], [[S_ADD_I32_104]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 108, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_105:%[0-9]+]]:sreg_32 = S_MOV_B32 104
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_105:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_105]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY105]], killed [[S_ADD_I32_105]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 104, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_105:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_105]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY105]], [[S_ADD_I32_105]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 104, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_106:%[0-9]+]]:sreg_32 = S_MOV_B32 100
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_106:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_106]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY106]], killed [[S_ADD_I32_106]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 100, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_106:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_106]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY106]], [[S_ADD_I32_106]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 100, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_107:%[0-9]+]]:sreg_32 = S_MOV_B32 96
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_107:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_107]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY107]], killed [[S_ADD_I32_107]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 96, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_107:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_107]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY107]], [[S_ADD_I32_107]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 96, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_108:%[0-9]+]]:sreg_32 = S_MOV_B32 92
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_108:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_108]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY108]], killed [[S_ADD_I32_108]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 92, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_108:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_108]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY108]], [[S_ADD_I32_108]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 92, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_109:%[0-9]+]]:sreg_32 = S_MOV_B32 88
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_109:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_109]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY109]], killed [[S_ADD_I32_109]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 88, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_109:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_109]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY109]], [[S_ADD_I32_109]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 88, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_110:%[0-9]+]]:sreg_32 = S_MOV_B32 84
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_110:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_110]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY110]], killed [[S_ADD_I32_110]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 84, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_110:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_110]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY110]], [[S_ADD_I32_110]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 84, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_111:%[0-9]+]]:sreg_32 = S_MOV_B32 80
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_111:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_111]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY111]], killed [[S_ADD_I32_111]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 80, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_111:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_111]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY111]], [[S_ADD_I32_111]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 80, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_112:%[0-9]+]]:sreg_32 = S_MOV_B32 76
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_112:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_112]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY112]], killed [[S_ADD_I32_112]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 76, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_112:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_112]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY112]], [[S_ADD_I32_112]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 76, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_113:%[0-9]+]]:sreg_32 = S_MOV_B32 72
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_113:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_113]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY113]], killed [[S_ADD_I32_113]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 72, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_113:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_113]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY113]], [[S_ADD_I32_113]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 72, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_114:%[0-9]+]]:sreg_32 = S_MOV_B32 68
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_114:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_114]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY114]], killed [[S_ADD_I32_114]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 68, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_114:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_114]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY114]], [[S_ADD_I32_114]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 68, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_115:%[0-9]+]]:sreg_32 = S_MOV_B32 64
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_115:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_115]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY115]], killed [[S_ADD_I32_115]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 64, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_115:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_115]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY115]], [[S_ADD_I32_115]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 64, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_116:%[0-9]+]]:sreg_32 = S_MOV_B32 60
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_116:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_116]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY116]], killed [[S_ADD_I32_116]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 60, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_116:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_116]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY116]], [[S_ADD_I32_116]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 60, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_117:%[0-9]+]]:sreg_32 = S_MOV_B32 56
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_117:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_117]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY117]], killed [[S_ADD_I32_117]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 56, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_117:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_117]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY117]], [[S_ADD_I32_117]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 56, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_118:%[0-9]+]]:sreg_32 = S_MOV_B32 52
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_118:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_118]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY118]], killed [[S_ADD_I32_118]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 52, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_118:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_118]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY118]], [[S_ADD_I32_118]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 52, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_119:%[0-9]+]]:sreg_32 = S_MOV_B32 48
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_119:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_119]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY119]], killed [[S_ADD_I32_119]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 48, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_119:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_119]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY119]], [[S_ADD_I32_119]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 48, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_120:%[0-9]+]]:sreg_32 = S_MOV_B32 44
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_120:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_120]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY120]], killed [[S_ADD_I32_120]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 44, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_120:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_120]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY120]], [[S_ADD_I32_120]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 44, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_121:%[0-9]+]]:sreg_32 = S_MOV_B32 40
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_121:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_121]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY121]], killed [[S_ADD_I32_121]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 40, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_121:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_121]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY121]], [[S_ADD_I32_121]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 40, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_122:%[0-9]+]]:sreg_32 = S_MOV_B32 36
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_122:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_122]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY122]], killed [[S_ADD_I32_122]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 36, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_122:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_122]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY122]], [[S_ADD_I32_122]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 36, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_123:%[0-9]+]]:sreg_32 = S_MOV_B32 32
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_123:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_123]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY123]], killed [[S_ADD_I32_123]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 32, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_123:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_123]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY123]], [[S_ADD_I32_123]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 32, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_124:%[0-9]+]]:sreg_32 = S_MOV_B32 28
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_124:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_124]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY124]], killed [[S_ADD_I32_124]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 28, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_124:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_124]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY124]], [[S_ADD_I32_124]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 28, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_125:%[0-9]+]]:sreg_32 = S_MOV_B32 24
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_125:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_125]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY125]], killed [[S_ADD_I32_125]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 24, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_125:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_125]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY125]], [[S_ADD_I32_125]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 24, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_126:%[0-9]+]]:sreg_32 = S_MOV_B32 20
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_126:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_126]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY126]], killed [[S_ADD_I32_126]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 20, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_126:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_126]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY126]], [[S_ADD_I32_126]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 20, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_127:%[0-9]+]]:sreg_32 = S_MOV_B32 16
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_127:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_127]], implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY127]], killed [[S_ADD_I32_127]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 16, align 16, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_127:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_127]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY127]], [[S_ADD_I32_127]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 16, align 16, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_128:%[0-9]+]]:sreg_32 = S_MOV_B32 12
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_128:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_128]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_128:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_128]], implicit-def dead $scc
   ; DAGISEL-GFX11-NEXT:   [[COPY166:%[0-9]+]]:vgpr_32 = COPY [[COPY128]]
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY166]], killed [[S_ADD_I32_128]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 12, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY166]], [[S_ADD_I32_128]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 12, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_129:%[0-9]+]]:sreg_32 = S_MOV_B32 8
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_129:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_129]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_129:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_129]], implicit-def dead $scc
   ; DAGISEL-GFX11-NEXT:   [[COPY167:%[0-9]+]]:vgpr_32 = COPY [[COPY129]]
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY167]], killed [[S_ADD_I32_129]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 8, align 8, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY167]], [[S_ADD_I32_129]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 8, align 8, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[S_MOV_B32_130:%[0-9]+]]:sreg_32 = S_MOV_B32 4
-  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_130:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], killed [[S_MOV_B32_130]], implicit-def dead $scc
+  ; DAGISEL-GFX11-NEXT:   [[S_ADD_I32_130:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY164]], [[S_MOV_B32_130]], implicit-def dead $scc
   ; DAGISEL-GFX11-NEXT:   [[COPY168:%[0-9]+]]:vgpr_32 = COPY [[COPY130]]
-  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY168]], killed [[S_ADD_I32_130]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 4, addrspace 5)
+  ; DAGISEL-GFX11-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY168]], [[S_ADD_I32_130]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into stack + 4, addrspace 5)
   ; DAGISEL-GFX11-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
-  ; DAGISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+  ; DAGISEL-GFX11-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; DAGISEL-GFX11-NEXT:   $vgpr0 = COPY [[COPY163]]
   ; DAGISEL-GFX11-NEXT:   $vgpr1 = COPY [[COPY162]]
   ; DAGISEL-GFX11-NEXT:   $vgpr2 = COPY [[COPY161]]
@@ -2464,7 +2464,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_many_regs(<36 x i32> inreg %a, <128
   ; DAGISEL-GFX11-NEXT:   $vgpr29 = COPY [[COPY134]]
   ; DAGISEL-GFX11-NEXT:   $vgpr30 = COPY [[COPY133]]
   ; DAGISEL-GFX11-NEXT:   $vgpr31 = COPY [[COPY132]]
-  ; DAGISEL-GFX11-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $vgpr31
+  ; DAGISEL-GFX11-NEXT:   dead $sgpr30_sgpr31 = SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $vgpr31
   ; DAGISEL-GFX11-NEXT:   ADJCALLSTACKDOWN 0, 528, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -2776,7 +2776,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_many_regs(<36 x i32> inreg %a, <128
   ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY1]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 520, 0, 0, implicit $exec :: (store (s32) into stack + 520, align 8, addrspace 5)
   ; DAGISEL-GFX10-NEXT:   BUFFER_STORE_DWORD_OFFSET [[COPY]], $sgpr48_sgpr49_sgpr50_sgpr51, [[COPY165]], 524, 0, 0, implicit $exec :: (store (s32) into stack + 524, addrspace 5)
   ; DAGISEL-GFX10-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @use, target-flags(amdgpu-gotprel32-hi) @use, implicit-def dead $scc
-  ; DAGISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM killed [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+  ; DAGISEL-GFX10-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; DAGISEL-GFX10-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY164]]
   ; DAGISEL-GFX10-NEXT:   $vgpr0 = COPY [[COPY163]]
   ; DAGISEL-GFX10-NEXT:   $vgpr1 = COPY [[COPY162]]
@@ -2810,7 +2810,7 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_many_regs(<36 x i32> inreg %a, <128
   ; DAGISEL-GFX10-NEXT:   $vgpr29 = COPY [[COPY134]]
   ; DAGISEL-GFX10-NEXT:   $vgpr30 = COPY [[COPY133]]
   ; DAGISEL-GFX10-NEXT:   $vgpr31 = COPY [[COPY132]]
-  ; DAGISEL-GFX10-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $vgpr31
+  ; DAGISEL-GFX10-NEXT:   dead $sgpr30_sgpr31 = SI_CALL [[S_LOAD_DWORDX2_IMM]], @use, csr_amdgpu_si_gfx, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $vgpr31
   ; DAGISEL-GFX10-NEXT:   ADJCALLSTACKDOWN 0, 528, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; DAGISEL-GFX10-NEXT:   S_ENDPGM 0
   call amdgpu_gfx void @use(<36 x i32> %a, <128 x i32> %b)

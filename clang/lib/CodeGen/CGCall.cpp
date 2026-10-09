@@ -2454,8 +2454,10 @@ static void getTrivialDefaultFunctionAttributes(
     FuncAttrs.addAttribute(Var, Value);
   }
 
-  TargetInfo::BranchProtectionInfo BPI(LangOpts);
-  TargetCodeGenInfo::initBranchProtectionFnAttributes(BPI, FuncAttrs);
+  if (!AttrOnCallSite) {
+    TargetInfo::BranchProtectionInfo BPI(LangOpts);
+    TargetCodeGenInfo::initBranchProtectionFnAttributes(BPI, FuncAttrs);
+  }
 }
 
 /// Merges `target-features` from \TargetOpts and \F, and sets the result in
@@ -6322,7 +6324,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     // SEH cares about asynchronous exceptions, so everything can "throw."
     CannotThrow = false;
   } else if (isCleanupPadScope() &&
-             EHPersonality::get(*this).isMSVCXXPersonality()) {
+             getEHPersonality(*this).isMSVCXXPersonality()) {
     // The MSVC++ personality will implicitly terminate the program if an
     // exception is thrown during a cleanup outside of a try/catch.
     // We don't need to model anything in IR to get this behavior.

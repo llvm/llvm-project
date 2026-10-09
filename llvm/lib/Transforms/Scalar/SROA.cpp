@@ -514,7 +514,7 @@ public:
   void SetNamePrefix(const Twine &P) { Prefix = P.str(); }
 
   void InsertHelper(Instruction *I, const Twine &Name,
-                    BasicBlock::iterator InsertPt) const override {
+                    BasicBlock::iterator InsertPt) const {
     IRBuilderDefaultInserter::InsertHelper(I, getNameWithPrefix(Name),
                                            InsertPt);
   }
@@ -2897,7 +2897,7 @@ public:
         ElementSize(VecTy ? DL.getTypeSizeInBits(ElementTy).getFixedValue() / 8
                           : 0),
         PHIUsers(PHIUsers), SelectUsers(SelectUsers),
-        IRB(NewAI.getContext(), ConstantFolder()) {
+        IRB(*NewAI.getModule(), ConstantFolder()) {
     if (VecTy) {
       assert((DL.getTypeSizeInBits(ElementTy).getFixedValue() % 8) == 0 &&
              "Only multiple-of-8 sized vector elements are viable");
@@ -3578,7 +3578,7 @@ private:
       // after the load, so that variable values referring to the load are
       // dominated by it.
       LIIt.setHeadBit(true);
-      IRB.SetInsertPoint(LI.getParent(), LIIt);
+      IRB.SetInsertPoint(LIIt);
       // Create a placeholder value with the same type as LI to use as the
       // basis for the new value. This allows us to replace the uses of LI with
       // the computed value, and then replace the placeholder with LI, leaving
@@ -4215,8 +4215,7 @@ private:
     // dominate the PHI.
     IRBuilderBase::InsertPointGuard Guard(IRB);
     if (isa<PHINode>(OldPtr))
-      IRB.SetInsertPoint(OldPtr->getParent(),
-                         OldPtr->getParent()->getFirstInsertionPt());
+      IRB.SetInsertPoint(OldPtr->getParent()->getFirstInsertionPt());
     else
       IRB.SetInsertPoint(OldPtr);
     IRB.SetCurrentDebugLocation(OldPtr->getDebugLoc());
@@ -5147,28 +5146,6 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
         Offsets.Splits.push_back(P.endOffset() - S.beginOffset());
       }
     }
-
-    // Now scan the already split slices, and add a split for any of them which
-    // we're going to pre-split.
-    for (Slice *S : P.splitSliceTails()) {
-      auto SplitOffsetsMapI =
-          SplitOffsetsMap.find(cast<Instruction>(S->getUse()->getUser()));
-      if (SplitOffsetsMapI == SplitOffsetsMap.end())
-        continue;
-      auto &Offsets = SplitOffsetsMapI->second;
-
-      assert(Offsets.S == S && "Found a mismatched slice!");
-      assert(!Offsets.Splits.empty() &&
-             "Cannot have an empty set of splits on the second partition!");
-      assert(Offsets.Splits.back() ==
-                 P.beginOffset() - Offsets.S->beginOffset() &&
-             "Previous split does not end where this one begins!");
-
-      // Record each split. The last partition's end isn't needed as the size
-      // of the slice dictates that.
-      if (S->endOffset() > P.endOffset())
-        Offsets.Splits.push_back(P.endOffset() - Offsets.S->beginOffset());
-    }
   }
 
   // We may have split loads where some of their stores are split stores. For
@@ -6057,7 +6034,7 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
 
   unsigned NumPartitions = 0;
   bool Changed = false;
-  const DataLayout &DL = AI.getModule()->getDataLayout();
+  const DataLayout &DL = AI.getDataLayout();
 
   // First try to pre-split loads and stores.
   Changed |= presplitLoadsAndStores(AI, AS);

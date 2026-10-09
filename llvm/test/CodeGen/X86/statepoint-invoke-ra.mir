@@ -1,4 +1,4 @@
-# RUN: llc -x mir -o - %s -run-pass=twoaddressinstruction,register-coalescer,greedy -verify-regalloc 2>&1 | FileCheck %s
+# RUN: llc -x mir -o - %s -run-pass=two-address-instruction,register-coalescer,greedy -verify-regalloc 2>&1 | FileCheck %s
 
 # The test checks no verification errors happen in the case of
 # statepoint invoke instruction with tied-defs.
@@ -31,7 +31,7 @@
 # CHECK:     EH_LABEL <mcsymbol .Ltmp0>
 # CHECK:     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
 # CHECK:     $edi = MOV32r0 implicit-def dead $eflags
-# CHECK:     dead $esi = MOV32r0 implicit-def dead $eflags, implicit-def $rsi
+# CHECK:     $esi = MOV32r0 implicit-def dead $eflags, implicit-def $rsi
 # CHECK:     $ecx = COPY %7
 # CHECK:     $r8d = MOV32r0 implicit-def dead $eflags
 # CHECK:     %37:gr64 = lr-split COPY %38
