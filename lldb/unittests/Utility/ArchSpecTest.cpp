@@ -165,20 +165,31 @@ struct AMDGPUModel {
 };
 
 static std::vector<AMDGPUModel> GetAMDGPUModels() {
-  static constexpr AMDGPUModel all_models[] = {
+  return {
 #define AMDGPU_MODEL(NUM, ENUM, NAME) {NUM, #ENUM, NAME},
       AMDGPU_MACH_LIST(AMDGPU_MODEL)
 #undef AMDGPU_MODEL
   };
+}
 
+static std::vector<AMDGPUModel>
+GetAMDGPUModels(bool (*is_model)(llvm::StringRef)) {
   std::vector<AMDGPUModel> models;
-  for (const AMDGPUModel &model : all_models)
-    if (llvm::AMDGPU::parseArchAMDGCN(model.name) != llvm::AMDGPU::GK_NONE)
+  for (const AMDGPUModel &model : GetAMDGPUModels())
+    if (is_model(model.name))
       models.push_back(model);
   return models;
 }
 
 const std::vector<AMDGPUModel> kAMDGPUModels = GetAMDGPUModels();
+const std::vector<AMDGPUModel> kAMDGCNModels =
+    GetAMDGPUModels([](llvm::StringRef name) {
+      return llvm::AMDGPU::parseArchAMDGCN(name) != llvm::AMDGPU::GK_NONE;
+    });
+const std::vector<AMDGPUModel> kR600Models =
+    GetAMDGPUModels([](llvm::StringRef name) {
+      return llvm::AMDGPU::parseArchR600(name) != llvm::AMDGPU::GK_NONE;
+    });
 
 std::string AMDGPUModelName(const testing::TestParamInfo<AMDGPUModel> &info) {
   // Test names allow only [A-Za-z0-9_]; the generic models contain dashes.
@@ -190,10 +201,20 @@ std::string AMDGPUModelName(const testing::TestParamInfo<AMDGPUModel> &info) {
 }
 } // namespace
 
-class ArchSpecAMDGPUTest : public ::testing::TestWithParam<AMDGPUModel> {};
+TEST(ArchSpecTest, AMDGPUModelsAreInTargetParser) {
+  for (const AMDGPUModel &model : kAMDGPUModels) {
+    bool is_amdgcn =
+        llvm::AMDGPU::parseArchAMDGCN(model.name) != llvm::AMDGPU::GK_NONE;
+    bool is_r600 =
+        llvm::AMDGPU::parseArchR600(model.name) != llvm::AMDGPU::GK_NONE;
+    EXPECT_NE(is_amdgcn, is_r600) << model.name;
+  }
+}
+
+class ArchSpecAMDGCNTest : public ::testing::TestWithParam<AMDGPUModel> {};
 
 // SetTriple() must resolve every AMDGPU subarchitecture using TargetParser.
-TEST_P(ArchSpecAMDGPUTest, SetTriple) {
+TEST_P(ArchSpecAMDGCNTest, SetTriple) {
   const AMDGPUModel &model = GetParam();
   llvm::AMDGPU::GPUKind kind = llvm::AMDGPU::parseArchAMDGCN(model.name);
   ASSERT_NE(llvm::AMDGPU::GK_NONE, kind);
@@ -210,7 +231,7 @@ TEST_P(ArchSpecAMDGPUTest, SetTriple) {
 }
 
 // Offload target strings encode the GPU after their four-component triple.
-TEST_P(ArchSpecAMDGPUTest, SetTripleFromOffloadTarget) {
+TEST_P(ArchSpecAMDGCNTest, SetTripleFromOffloadTarget) {
   const AMDGPUModel &model = GetParam();
   llvm::AMDGPU::GPUKind kind = llvm::AMDGPU::parseArchAMDGCN(model.name);
   ASSERT_NE(llvm::AMDGPU::GK_NONE, kind);
@@ -228,15 +249,25 @@ TEST(ArchSpecTest, SetTripleFromAMDGPUOffloadTargetWithFeatures) {
   EXPECT_EQ(llvm::Triple::AMDGPUSubArch942, AS.GetTriple().getSubArch());
   EXPECT_EQ("gfx942", AS.GetClangTargetCPU());
 
+  ArchSpec Canonical("amdgcn-amd-amdhsa-unknown-gfx942:sramecc+:xnack-");
+  EXPECT_EQ(llvm::Triple::AMDGPUSubArch942, Canonical.GetTriple().getSubArch());
+  EXPECT_EQ("gfx942", Canonical.GetClangTargetCPU());
+
   ArchSpec WithEnvironment("amdgpu-amd-amdpal-unknown-gfx942");
   EXPECT_EQ(llvm::Triple::AMDGPUSubArch942,
             WithEnvironment.GetTriple().getSubArch());
   EXPECT_EQ("gfx942", WithEnvironment.GetClangTargetCPU());
+
+  // Invalid target-ID features must not be used to refine the generic
+  // architecture.
+  ArchSpec InvalidFeatures("amdgpu-amd-amdhsa--gfx942:unknown+");
+  EXPECT_EQ(llvm::Triple::NoSubArch, InvalidFeatures.GetTriple().getSubArch());
+  EXPECT_TRUE(InvalidFeatures.GetClangTargetCPU().empty());
 }
 
 // SetArchitecture() from an ELF header must resolve every AMDGPU model to the
 // right arch, vendor, OS, subarch and core.
-TEST_P(ArchSpecAMDGPUTest, SetArchitectureFromELF) {
+TEST_P(ArchSpecAMDGCNTest, SetArchitectureFromELF) {
   const AMDGPUModel &model = GetParam();
   llvm::AMDGPU::GPUKind kind = llvm::AMDGPU::parseArchAMDGCN(model.name);
   ASSERT_NE(llvm::AMDGPU::GK_NONE, kind);
@@ -252,8 +283,44 @@ TEST_P(ArchSpecAMDGPUTest, SetArchitectureFromELF) {
   EXPECT_EQ(llvm::AMDGPU::getArchNameAMDGCN(kind), AS.GetClangTargetCPU());
 }
 
-INSTANTIATE_TEST_SUITE_P(AMDGPU, ArchSpecAMDGPUTest,
-                         ::testing::ValuesIn(kAMDGPUModels), AMDGPUModelName);
+INSTANTIATE_TEST_SUITE_P(AMDGPU, ArchSpecAMDGCNTest,
+                         ::testing::ValuesIn(kAMDGCNModels), AMDGPUModelName);
+
+class ArchSpecR600Test : public ::testing::TestWithParam<AMDGPUModel> {};
+
+TEST_P(ArchSpecR600Test, SetTriple) {
+  const AMDGPUModel &model = GetParam();
+  llvm::AMDGPU::GPUKind kind = llvm::AMDGPU::parseArchR600(model.name);
+  ASSERT_NE(llvm::AMDGPU::GK_NONE, kind);
+
+  ArchSpec AS;
+  EXPECT_TRUE(AS.SetTriple("r600-unknown-unknown--" + std::string(model.name)));
+  EXPECT_EQ(llvm::Triple::r600, AS.GetTriple().getArch());
+  EXPECT_EQ(llvm::Triple::NoSubArch, AS.GetTriple().getSubArch());
+  EXPECT_EQ(ArchSpec::eCore_amd_gpu_r600, AS.GetCore());
+  EXPECT_EQ(4u, AS.GetAddressByteSize());
+  EXPECT_EQ(llvm::AMDGPU::getArchNameR600(kind), AS.GetClangTargetCPU());
+}
+
+TEST_P(ArchSpecR600Test, SetArchitectureFromELF) {
+  const AMDGPUModel &model = GetParam();
+  llvm::AMDGPU::GPUKind kind = llvm::AMDGPU::parseArchR600(model.name);
+  ASSERT_NE(llvm::AMDGPU::GK_NONE, kind);
+
+  ArchSpec AS;
+  EXPECT_TRUE(AS.SetArchitecture(eArchTypeELF, llvm::ELF::EM_AMDGPU, model.mach,
+                                 llvm::ELF::ELFOSABI_NONE));
+  EXPECT_EQ(llvm::Triple::r600, AS.GetTriple().getArch());
+  EXPECT_EQ(llvm::Triple::NoSubArch, AS.GetTriple().getSubArch());
+  EXPECT_EQ(llvm::Triple::UnknownVendor, AS.GetTriple().getVendor());
+  EXPECT_EQ(llvm::Triple::UnknownOS, AS.GetTriple().getOS());
+  EXPECT_EQ(ArchSpec::eCore_amd_gpu_r600, AS.GetCore());
+  EXPECT_EQ(4u, AS.GetAddressByteSize());
+  EXPECT_EQ(llvm::AMDGPU::getArchNameR600(kind), AS.GetClangTargetCPU());
+}
+
+INSTANTIATE_TEST_SUITE_P(R600, ArchSpecR600Test,
+                         ::testing::ValuesIn(kR600Models), AMDGPUModelName);
 
 TEST(ArchSpecTest, AMDGPUSubArchMatching) {
   ArchSpec gfx9_4("amdgpu9.4-amd-amdhsa");
@@ -281,12 +348,30 @@ TEST(ArchSpecTest, AMDGPUSubArchMatching) {
   EXPECT_EQ(llvm::Triple::AMDGPUSubArch942, gfx942.GetTriple().getSubArch());
 }
 
-TEST(ArchSpecTest, R600IsUnsupported) {
-  ArchSpec AS;
-  EXPECT_FALSE(AS.SetTriple("r600-amd-amdhsa--r600"));
-  EXPECT_FALSE(AS.SetArchitecture(eArchTypeELF, llvm::ELF::EM_AMDGPU,
-                                  llvm::ELF::EF_AMDGPU_MACH_R600_R600,
-                                  llvm::ELF::ELFOSABI_AMDGPU_HSA));
+TEST(ArchSpecTest, R600Matching) {
+  ArchSpec generic("r600-unknown-unknown");
+  ArchSpec cedar("r600-unknown-unknown--cedar");
+  ArchSpec another_cedar("r600-unknown-unknown--cedar");
+  ArchSpec cypress("r600-unknown-unknown--cypress");
+  ArchSpec rv630_alias("r600-unknown-unknown--rv630");
+
+  EXPECT_TRUE(generic.IsCompatibleMatch(cedar));
+  EXPECT_FALSE(generic.IsExactMatch(cedar));
+  EXPECT_TRUE(cedar.IsExactMatch(another_cedar));
+  EXPECT_FALSE(cedar.IsCompatibleMatch(cypress));
+  EXPECT_FALSE(cedar.IsExactMatch(cypress));
+  EXPECT_EQ(cedar, another_cedar);
+  EXPECT_NE(cedar, cypress);
+  EXPECT_EQ("r600", rv630_alias.GetClangTargetCPU());
+
+  generic.MergeFrom(cedar);
+  EXPECT_EQ("cedar", generic.GetClangTargetCPU());
+
+  ArchSpec musl_generic("r600-unknown-linux-musl");
+  ArchSpec gnu_cedar("r600-unknown-linux-gnu-cedar");
+  musl_generic.MergeFrom(gnu_cedar);
+  EXPECT_EQ("musl-cedar", musl_generic.GetTriple().getEnvironmentName());
+  EXPECT_EQ("cedar", musl_generic.GetClangTargetCPU());
 }
 
 TEST(ArchSpecTest, MergeFrom) {

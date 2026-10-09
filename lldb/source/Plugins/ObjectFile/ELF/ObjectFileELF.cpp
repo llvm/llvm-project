@@ -363,7 +363,14 @@ static uint32_t loongarchVariantFromElfFlags(const elf::ELFHeader &header) {
 }
 
 static uint32_t AMDGPUVariantFromElfFlags(const elf::ELFHeader &header) {
-  // Only HSA objects encode the exact GPU model, as an EF_AMDGPU_MACH value.
+  uint32_t mach = header.e_flags & EF_AMDGPU_MACH;
+
+  // The ELF class distinguishes R600 objects from AMDGCN objects.
+  if (header.e_ident[EI_CLASS] == ELFCLASS32 &&
+      mach >= EF_AMDGPU_MACH_R600_FIRST && mach <= EF_AMDGPU_MACH_R600_LAST)
+    return mach;
+
+  // AMDGCN HSA objects encode the exact GPU model in ABI V3 and later.
   if (header.e_ident[EI_OSABI] == ELFOSABI_AMDGPU_HSA) {
     switch (header.e_ident[EI_ABIVERSION]) {
     // HSA V2 does not encode a CPU model.
@@ -376,7 +383,7 @@ static uint32_t AMDGPUVariantFromElfFlags(const elf::ELFHeader &header) {
     case ELFABIVERSION_AMDGPU_HSA_V6:
       // The CPU model is the EF_AMDGPU_MACH value in the bottom byte of
       // e_flags.
-      return header.e_flags & EF_AMDGPU_MACH;
+      return mach;
     }
   }
   return LLDB_INVALID_CPUTYPE;

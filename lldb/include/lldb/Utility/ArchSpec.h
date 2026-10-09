@@ -242,8 +242,10 @@ public:
 
     eCore_wasm32,
 
-    // AMDGPU models are represented by the triple subarchitecture.
+    // AMD GPU models are represented by TargetParser. AMDGCN models use the
+    // triple subarchitecture, while R600 models use the target CPU.
     eCore_amd_gpu,
+    eCore_amd_gpu_r600,
 
     kNumCores,
 

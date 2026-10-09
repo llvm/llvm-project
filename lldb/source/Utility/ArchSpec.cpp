@@ -259,6 +259,8 @@ static constexpr const CoreDefinition g_core_definitions[] = {
      "wasm32"},
     {eByteOrderLittle, 8, 4, 16, llvm::Triple::amdgpu, ArchSpec::eCore_amd_gpu,
      "amdgpu"},
+    {eByteOrderLittle, 4, 4, 16, llvm::Triple::r600,
+     ArchSpec::eCore_amd_gpu_r600, "r600"},
 };
 
 // Ensure that we have an entry in the g_core_definitions for each core. If you
@@ -427,8 +429,8 @@ static const ArchDefinitionEntry g_elf_arch_entries[] = {
     {ArchSpec::eCore_riscv64,         llvm::ELF::EM_RISCV,      ArchSpec::eRISCVSubType_riscv64}, // riscv64
     {ArchSpec::eCore_loongarch32,     llvm::ELF::EM_LOONGARCH,  ArchSpec::eLoongArchSubType_loongarch32}, // loongarch32
     {ArchSpec::eCore_loongarch64,     llvm::ELF::EM_LOONGARCH,  ArchSpec::eLoongArchSubType_loongarch64}, // loongarch64
-    // Match every AMDGPU ELF subtype. SetArchitecture() converts recognized
-    // AMDGCN EF_AMDGPU_MACH values to triple subarchitectures.
+    // Match every AMDGPU ELF subtype. SetArchitecture() uses TargetParser to
+    // distinguish R600 from AMDGCN and preserve the GPU model.
     {ArchSpec::eCore_amd_gpu,         llvm::ELF::EM_AMDGPU,     0,  UINT32_MAX, 0},
 };
 // clang-format on
@@ -612,6 +614,23 @@ void ArchSpec::SetFlags(const std::string &elf_abi) {
   SetFlags(flag);
 }
 
+static llvm::StringRef GetR600TargetCPU(const llvm::Triple &triple) {
+  if (triple.getArch() != llvm::Triple::r600)
+    return {};
+
+  // Offload triples store the target CPU after the four triple components,
+  // making it a suffix of LLVM's environment name.
+  llvm::StringRef cpu = triple.getEnvironmentName().split('-').second;
+  return llvm::AMDGPU::getArchNameR600(llvm::AMDGPU::parseArchR600(cpu));
+}
+
+static void SetR600TargetCPU(llvm::Triple &triple, llvm::StringRef cpu) {
+  std::string environment = triple.getEnvironmentName().split('-').first.str();
+  environment += '-';
+  environment += cpu;
+  triple.setEnvironmentName(environment);
+}
+
 std::string ArchSpec::GetClangTargetCPU() const {
   std::string cpu;
   if (IsMIPS()) {
@@ -666,6 +685,8 @@ std::string ArchSpec::GetClangTargetCPU() const {
 
   if (GetTriple().getArch() == llvm::Triple::amdgpu)
     cpu = llvm::AMDGPU::getArchNameFromSubArch(GetTriple().getSubArch());
+  else if (GetTriple().getArch() == llvm::Triple::r600)
+    cpu = GetR600TargetCPU(GetTriple());
   return cpu;
 }
 
@@ -765,8 +786,43 @@ lldb::ByteOrder ArchSpec::GetByteOrder() const {
 //===----------------------------------------------------------------------===//
 // Mutators.
 
+static std::optional<llvm::AMDGPU::TargetID>
+ParseAMDGPUTargetID(llvm::StringRef triple) {
+  if (std::optional<llvm::AMDGPU::TargetID> target_id =
+          llvm::AMDGPU::TargetID::parseTargetIDString(triple))
+    return target_id;
+
+  // Clang offload bundle IDs use "amdgpu" while TargetID accepts the legacy
+  // subarchless "amdgcn" spelling. Preserve the bundle spelling externally
+  // and translate only the input passed to TargetID.
+  if (!triple.consume_front("amdgpu-"))
+    return std::nullopt;
+
+  std::string target_id = "amdgcn-";
+  target_id += triple;
+  return llvm::AMDGPU::TargetID::parseTargetIDString(target_id);
+}
+
+static void RefineAMDGPUTriple(llvm::Triple &triple,
+                               llvm::StringRef target_id) {
+  if (triple.getArch() != llvm::Triple::amdgpu ||
+      triple.getSubArch() != llvm::Triple::NoSubArch)
+    return;
+
+  std::optional<llvm::AMDGPU::TargetID> parsed_target_id =
+      ParseAMDGPUTargetID(target_id);
+  if (!parsed_target_id)
+    return;
+
+  llvm::Triple::SubArchType sub_arch =
+      llvm::AMDGPU::getSubArch(parsed_target_id->getGPUKind());
+  if (sub_arch != llvm::Triple::NoSubArch)
+    triple.setArch(llvm::Triple::amdgpu, sub_arch);
+}
+
 bool ArchSpec::SetTriple(const llvm::Triple &triple) {
   m_triple = triple;
+  RefineAMDGPUTriple(m_triple, m_triple.str());
   UpdateCore();
   return IsValid();
 }
@@ -816,8 +872,11 @@ bool ArchSpec::SetTriple(llvm::StringRef triple) {
   if (ParseMachCPUDashSubtypeTriple(triple, *this))
     return true;
 
-  SetTriple(llvm::Triple(llvm::Triple::normalize(triple)));
-  return IsValid();
+  llvm::Triple normalized(llvm::Triple::normalize(triple));
+  // Normalize splits on every '-', including a target feature's trailing
+  // sign, so parse the original target ID before normalization.
+  RefineAMDGPUTriple(normalized, triple);
+  return SetTriple(normalized);
 }
 
 bool ArchSpec::ContainsOnlyArch(const llvm::Triple &normalized_triple) {
@@ -863,6 +922,11 @@ void ArchSpec::MergeFrom(const ArchSpec &other) {
     llvm::Triple merged(other_arch.merge(GetTriple()));
     GetTriple().setArch(merged.getArch(), merged.getSubArch());
   }
+  if (GetTriple().getArch() == llvm::Triple::r600 &&
+      other.GetTriple().getArch() == llvm::Triple::r600 &&
+      GetR600TargetCPU(GetTriple()).empty() &&
+      !GetR600TargetCPU(other.GetTriple()).empty())
+    SetR600TargetCPU(GetTriple(), GetR600TargetCPU(other.GetTriple()));
   if (!TripleEnvironmentWasSpecified() &&
       other.TripleEnvironmentWasSpecified()) {
     GetTriple().setEnvironment(other.GetTriple().getEnvironment());
@@ -967,17 +1031,26 @@ bool ArchSpec::SetArchitecture(ArchitectureType arch_type, uint32_t cpu,
           m_triple.setArch(core_def->machine);
           break;
         case llvm::Triple::amdgpu: {
-          // Known models must have an AMDGPU triple subarchitecture. This
-          // rejects legacy R600 models while leaving unknown values generic.
           llvm::StringRef gpu = GetAMDGPUVariantName(sub);
           if (!gpu.empty()) {
-            llvm::Triple::SubArchType sub_arch =
-                llvm::AMDGPU::getSubArchFromGPUName(gpu);
-            if (sub_arch == llvm::Triple::NoSubArch) {
-              Clear();
-              return false;
+            llvm::AMDGPU::GPUKind gpu_kind = llvm::AMDGPU::parseArchAMDGCN(gpu);
+            if (gpu_kind != llvm::AMDGPU::GK_NONE) {
+              m_triple.setArch(llvm::Triple::amdgpu,
+                               llvm::AMDGPU::getSubArch(gpu_kind));
+              break;
             }
-            m_triple.setArch(llvm::Triple::amdgpu, sub_arch);
+
+            gpu_kind = llvm::AMDGPU::parseArchR600(gpu);
+            if (gpu_kind != llvm::AMDGPU::GK_NONE) {
+              m_core = eCore_amd_gpu_r600;
+              m_triple.setArch(llvm::Triple::r600);
+              SetR600TargetCPU(m_triple,
+                               llvm::AMDGPU::getArchNameR600(gpu_kind));
+              break;
+            }
+
+            Clear();
+            return false;
           }
           break;
         }
@@ -1064,6 +1137,16 @@ bool ArchSpec::IsMatch(const ArchSpec &rhs, MatchType match) const {
       return false;
   }
 
+  if (lhs_triple.getArch() == llvm::Triple::r600 &&
+      rhs_triple.getArch() == llvm::Triple::r600) {
+    llvm::StringRef lhs_cpu = GetR600TargetCPU(lhs_triple);
+    llvm::StringRef rhs_cpu = GetR600TargetCPU(rhs_triple);
+    if (match == ExactMatch
+            ? lhs_cpu != rhs_cpu
+            : (!lhs_cpu.empty() && !rhs_cpu.empty() && lhs_cpu != rhs_cpu))
+      return false;
+  }
+
   const llvm::Triple::VendorType lhs_triple_vendor = lhs_triple.getVendor();
   const llvm::Triple::VendorType rhs_triple_vendor = rhs_triple.getVendor();
 
@@ -1144,19 +1227,6 @@ void ArchSpec::UpdateCore() {
   // AMDGPU subarchitectures have distinct architecture names (for example,
   // "amdgpu9.42"), but all share the generic LLDB AMDGPU core definition.
   if (m_triple.getArch() == llvm::Triple::amdgpu) {
-    // Preserve support for offload target strings such as
-    // "amdgpu-amd-amdhsa--gfx942". LLVM's Triple treats the target ID as an
-    // unknown environment suffix, so recover its processor using TargetParser.
-    if (m_triple.getSubArch() == llvm::Triple::NoSubArch) {
-      llvm::StringRef target_id =
-          m_triple.getEnvironmentName().split('-').second;
-      if (!target_id.empty()) {
-        llvm::Triple::SubArchType sub_arch =
-            llvm::AMDGPU::getSubArchFromGPUName(target_id.split(':').first);
-        if (sub_arch != llvm::Triple::NoSubArch)
-          m_triple.setArch(llvm::Triple::amdgpu, sub_arch);
-      }
-    }
     core_def = FindCoreDefinition(eCore_amd_gpu);
   } else {
     core_def = FindCoreDefinition(m_triple.getArchName());
@@ -1527,14 +1597,21 @@ bool lldb_private::operator<(const ArchSpec &lhs, const ArchSpec &rhs) {
   const ArchSpec::Core rhs_core = rhs.GetCore();
   if (lhs_core == rhs_core && lhs_core == ArchSpec::eCore_amd_gpu)
     return lhs.GetTriple().getSubArch() < rhs.GetTriple().getSubArch();
+  if (lhs_core == rhs_core && lhs_core == ArchSpec::eCore_amd_gpu_r600)
+    return GetR600TargetCPU(lhs.GetTriple()) <
+           GetR600TargetCPU(rhs.GetTriple());
   return lhs_core < rhs_core;
 }
 
 bool lldb_private::operator==(const ArchSpec &lhs, const ArchSpec &rhs) {
   if (lhs.GetCore() != rhs.GetCore())
     return false;
-  return lhs.GetCore() != ArchSpec::eCore_amd_gpu ||
-         lhs.GetTriple().getSubArch() == rhs.GetTriple().getSubArch();
+  if (lhs.GetCore() == ArchSpec::eCore_amd_gpu)
+    return lhs.GetTriple().getSubArch() == rhs.GetTriple().getSubArch();
+  if (lhs.GetCore() == ArchSpec::eCore_amd_gpu_r600)
+    return GetR600TargetCPU(lhs.GetTriple()) ==
+           GetR600TargetCPU(rhs.GetTriple());
+  return true;
 }
 
 bool lldb_private::operator!=(const ArchSpec &lhs, const ArchSpec &rhs) {

@@ -199,7 +199,7 @@ TEST_F(ObjectFileELFTest, GetModuleSpecifications_OffsetSizeWithOffsetFile) {
 // Verify that an AMDGPU ELF header without a decodable model still resolves to
 // the generic AMDGPU architecture.
 TEST_F(ObjectFileELFTest, GPUArchitectureUnknownAMDGPUModel) {
-  // No model byte is parsed unless the OS ABI is AMDGPU HSA.
+  // A 64-bit non-HSA object does not encode an AMDGCN model.
   {
     auto ExpectedFile = TestFile::fromYaml(R"(
 --- !ELF
@@ -226,8 +226,9 @@ Sections:
     EXPECT_TRUE(arch.GetClangTargetCPU().empty());
   }
 
-  // HSA code-object v2 (ABIVersion 0) carries no model byte, so even a
-  // populated mach flag is ignored.
+  // HSA code-object v2 (ABIVersion 0) carries no model byte. Its feature bits
+  // overlap the R600 EF_AMDGPU_MACH values, but HSA objects are ELF64 and must
+  // not be decoded as R600.
   {
     auto ExpectedFile = TestFile::fromYaml(R"(
 --- !ELF
@@ -238,7 +239,7 @@ FileHeader:
   ABIVersion:      0x0
   Type:            ET_DYN
   Machine:         EM_AMDGPU
-  Flags:           [ EF_AMDGPU_MACH_AMDGCN_GFX942 ]
+  Flags:           [ EF_AMDGPU_MACH_R600_R600 ]
 Sections:
   - Name:            .text
     Type:            SHT_PROGBITS
@@ -265,17 +266,11 @@ struct AMDGPUModel {
 };
 
 static std::vector<AMDGPUModel> GetAMDGPUModels() {
-  static constexpr AMDGPUModel all_models[] = {
+  return {
 #define AMDGPU_MODEL(NUM, ENUM, NAME) {NUM, #ENUM, NAME},
       AMDGPU_MACH_LIST(AMDGPU_MODEL)
 #undef AMDGPU_MODEL
   };
-
-  std::vector<AMDGPUModel> models;
-  for (const AMDGPUModel &model : all_models)
-    if (llvm::AMDGPU::parseArchAMDGCN(model.name) != llvm::AMDGPU::GK_NONE)
-      models.push_back(model);
-  return models;
 }
 
 const std::vector<AMDGPUModel> kAMDGPUModels = GetAMDGPUModels();
@@ -294,22 +289,26 @@ class ObjectFileELFAMDGPUTest
     : public ObjectFileELFTest,
       public ::testing::WithParamInterface<AMDGPUModel> {};
 
-// Every AMDGPU model must decode from an ELF header (built from YAML) to the
-// right target-parser subarchitecture. The model is the EF_AMDGPU_MACH value
-// in e_flags.
+// Every AMD GPU model must decode from an ELF header (built from YAML) to the
+// right TargetParser architecture and CPU. The model is the EF_AMDGPU_MACH
+// value in e_flags.
 TEST_P(ObjectFileELFAMDGPUTest, DecodesAMDGPUModel) {
   const AMDGPUModel &model = GetParam();
-  llvm::AMDGPU::GPUKind kind = llvm::AMDGPU::parseArchAMDGCN(model.name);
-  ASSERT_NE(llvm::AMDGPU::GK_NONE, kind);
+  llvm::AMDGPU::GPUKind amdgcn_kind = llvm::AMDGPU::parseArchAMDGCN(model.name);
+  llvm::AMDGPU::GPUKind r600_kind = llvm::AMDGPU::parseArchR600(model.name);
+  ASSERT_NE(amdgcn_kind != llvm::AMDGPU::GK_NONE,
+            r600_kind != llvm::AMDGPU::GK_NONE);
+  bool is_r600 = r600_kind != llvm::AMDGPU::GK_NONE;
+
   const char *yaml_template = R"(--- !ELF
 FileHeader:
-  Class:           ELFCLASS64
+  Class:           {0}
   Data:            ELFDATA2LSB
-  OSABI:           ELFOSABI_AMDGPU_HSA
-  ABIVersion:      0x1
-  Type:            ET_DYN
+  OSABI:           {1}
+  ABIVersion:      {2}
+  Type:            {3}
   Machine:         EM_AMDGPU
-  Flags:           [ {0} ]
+  Flags:           [ {4} ]
 Sections:
   - Name:            .text
     Type:            SHT_PROGBITS
@@ -318,18 +317,37 @@ Sections:
     Size:            0x0000000000000040
 ...
 )";
-  std::string yaml = llvm::formatv(yaml_template, model.flag).str();
+  std::string yaml =
+      llvm::formatv(yaml_template, is_r600 ? "ELFCLASS32" : "ELFCLASS64",
+                    is_r600 ? "ELFOSABI_NONE" : "ELFOSABI_AMDGPU_HSA",
+                    is_r600 ? "0x0" : "0x1", is_r600 ? "ET_REL" : "ET_DYN",
+                    model.flag)
+          .str();
   auto ExpectedFile = TestFile::fromYaml(yaml);
   ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
   auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
   const ArchSpec &arch = module_sp->GetArchitecture();
   ASSERT_TRUE(arch.IsValid());
-  EXPECT_EQ(ArchSpec::eCore_amd_gpu, arch.GetCore());
-  EXPECT_EQ(llvm::AMDGPU::getArchNameAMDGCN(kind), arch.GetClangTargetCPU());
-  EXPECT_EQ(llvm::Triple::amdgpu, arch.GetTriple().getArch());
-  EXPECT_EQ(llvm::AMDGPU::getSubArch(kind), arch.GetTriple().getSubArch());
-  EXPECT_EQ(llvm::Triple::AMD, arch.GetTriple().getVendor());
-  EXPECT_EQ(llvm::Triple::AMDHSA, arch.GetTriple().getOS());
+  if (is_r600) {
+    EXPECT_EQ(ArchSpec::eCore_amd_gpu_r600, arch.GetCore());
+    EXPECT_EQ(llvm::AMDGPU::getArchNameR600(r600_kind),
+              arch.GetClangTargetCPU());
+    EXPECT_EQ(llvm::Triple::r600, arch.GetTriple().getArch());
+    EXPECT_EQ(llvm::Triple::NoSubArch, arch.GetTriple().getSubArch());
+    EXPECT_EQ(llvm::Triple::UnknownVendor, arch.GetTriple().getVendor());
+    EXPECT_EQ(llvm::Triple::UnknownOS, arch.GetTriple().getOS());
+    EXPECT_EQ(4u, arch.GetAddressByteSize());
+  } else {
+    EXPECT_EQ(ArchSpec::eCore_amd_gpu, arch.GetCore());
+    EXPECT_EQ(llvm::AMDGPU::getArchNameAMDGCN(amdgcn_kind),
+              arch.GetClangTargetCPU());
+    EXPECT_EQ(llvm::Triple::amdgpu, arch.GetTriple().getArch());
+    EXPECT_EQ(llvm::AMDGPU::getSubArch(amdgcn_kind),
+              arch.GetTriple().getSubArch());
+    EXPECT_EQ(llvm::Triple::AMD, arch.GetTriple().getVendor());
+    EXPECT_EQ(llvm::Triple::AMDHSA, arch.GetTriple().getOS());
+    EXPECT_EQ(8u, arch.GetAddressByteSize());
+  }
 }
 
 INSTANTIATE_TEST_SUITE_P(AMDGPUModels, ObjectFileELFAMDGPUTest,
