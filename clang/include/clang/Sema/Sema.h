@@ -2553,6 +2553,12 @@ public:
   static BoundsAttributedType::BoundsAttrKind
   getBoundsAttrKind(const BoundsAttrFlags &);
 
+  /// The reference that the count \p E of a counted_by-family attribute is
+  /// made of: \p E itself, or the operand of `*` in \p E, which sets \p IsDeref
+  /// (a parameter's count may be a dereferenced parameter, `*len`). Null if
+  /// \p E is neither.
+  static DeclRefExpr *getCountDeclRef(Expr *E, bool &IsDeref);
+
   /// Validates that a type is eligible for an "externally counted" bounds
   /// attribute (counted_by/sized_by and their _or_null variants).
   ///
@@ -2615,6 +2621,29 @@ public:
   /// if the attribute was rejected.
   bool ActOnLateParsedTypeAttrArgument(BoundsAttributedType *BATy,
                                        FieldDecl *FD, Expr *Arg);
+
+  /// Check the count \p E of a counted_by-family attribute on \p ParamTy, the
+  /// declared type of a parameter or the pointer it points to: it must be a
+  /// non-boolean integer naming a parameter or dereferencing one, \p ParamTy
+  /// may not already have a count, and an array parameter may not also have a
+  /// size.
+  ///
+  /// \returns false iff semantically valid.
+  bool CheckCountedByAttrOnParam(QualType ParamTy, Expr *E, bool CountInBytes,
+                                 bool OrNull);
+
+  /// A parameter declared as an array adjusts to a pointer to its element type.
+  /// Move the valid count \p CATy on the array to that pointer.
+  void AdjustCountedArrayParamType(ParmVarDecl *PVD,
+                                   const CountAttributedType *CATy);
+
+  /// Diagnose a redeclaration \p New of \p Old whose parameters differ from
+  /// \p Old's in a count, on a parameter's own pointer or on one it reaches
+  /// through pointers alone.
+  ///
+  /// \returns true iff a difference was diagnosed.
+  bool CheckCountAttributedRedeclaration(const FunctionDecl *New,
+                                         const FunctionDecl *Old);
 
   /// Perform Bounds Safety Semantic checks for assigning to a `__counted_by` or
   /// `__counted_by_or_null` pointer type \param LHSTy.
