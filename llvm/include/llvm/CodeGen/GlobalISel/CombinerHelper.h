@@ -1123,6 +1123,11 @@ public:
                                      KnownBits &Known,
                                      unsigned Depth = 0) const;
 
+  /// Map demanded shift-result bits to source bits, including ASHR sign fill.
+  LLVM_ABI static APInt
+  getDemandedSrcBitsForShiftConst(unsigned Opcode, const APInt &DemandedBits,
+                                  unsigned ShAmt);
+
   /// Match demanded-bits simplification of a root's register use.
   LLVM_ABI bool matchSimplifyDemandedBits(MachineInstr &MI,
                                           BuildFnTy &MatchInfo) const;

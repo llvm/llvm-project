@@ -2668,3 +2668,271 @@ TEST_F(AArch64GISelMITest, SimplifyMultipleUseDemandedBitsChain) {
   EXPECT_FALSE(MRI->use_nodbg_empty(AReg));
   EXPECT_FALSE(MRI->use_nodbg_empty(BReg));
 }
+
+TEST_F(AArch64GISelMITest, SimplifyDemandedBitsZeroShift) {
+  StringRef MIRString = R"(
+    %x:_(s32) = G_TRUNC %0
+    %mask:_(s32) = G_CONSTANT i32 -1
+    %and:_(s32) = G_AND %x, %mask
+    %zero:_(s32) = G_CONSTANT i32 0
+    %shift:_(s32) = G_SHL %and, %zero
+    %out:_(s32) = COPY %shift
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  MachineInstr *And = findOpcode(*MF, TargetOpcode::G_AND);
+  MachineInstr *Shift = findOpcode(*MF, TargetOpcode::G_SHL);
+  ASSERT_NE(And, nullptr);
+  ASSERT_NE(Shift, nullptr);
+  Register XReg = And->getOperand(1).getReg();
+
+  GISelValueTracking VT(*MF);
+  CombinerHelper Helper(VT, B, /*IsPreLegalize=*/false, &VT);
+  BuildFnTy Apply;
+  ASSERT_TRUE(Helper.matchSimplifyDemandedBits(*Shift, Apply));
+  Apply(B);
+  EXPECT_EQ(Shift->getOperand(1).getReg(), XReg);
+}
+
+TEST_F(AArch64GISelMITest, SimplifyDemandedBitsThroughShl) {
+  StringRef MIRString = R"(
+    %x:_(s32) = G_TRUNC %0
+    %mask:_(s32) = G_CONSTANT i32 255
+    %and:_(s32) = G_AND %x, %mask
+    %amt:_(s32) = G_CONSTANT i32 4
+    %shl:_(s32) = G_SHL %and, %amt
+    %lowmask:_(s32) = G_CONSTANT i32 4095
+    %use:_(s32) = G_AND %shl, %lowmask
+    %out:_(s32) = COPY %use
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  // SHL by 4 transfers demand [0,12) to source bits [0,8).
+  MachineInstr *Use = findOpcode(*MF, TargetOpcode::G_AND, /*Index=*/1);
+  MachineInstr *Inner = findOpcode(*MF, TargetOpcode::G_AND);
+  ASSERT_NE(Use, nullptr);
+  ASSERT_NE(Inner, nullptr);
+
+  Register InnerDst = Inner->getOperand(0).getReg();
+  simplifyDemandedBitsOperand(*MF, B, *Use, APInt(32, 0xFFF));
+  EXPECT_TRUE(MRI->use_nodbg_empty(InnerDst));
+}
+
+TEST_F(AArch64GISelMITest,
+       SimplifyDemandedBitsShiftDropsPoisonFlagsAfterProbe) {
+  StringRef MIRString = R"(
+    %x:_(i32) = G_TRUNC %0
+    %mask:_(i32) = G_CONSTANT i32 -8
+    %masked:_(i32) = G_AND %x, %mask
+    %one:_(i32) = G_CONSTANT i32 1
+    %four:_(i32) = G_CONSTANT i32 4
+    %shl:_(i32) = nuw nsw G_SHL %masked, %one
+    %lshr:_(i32) = exact G_LSHR %shl, %four
+    %out:_(i32) = COPY %lshr
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  MachineInstr *Shl = findOpcode(*MF, TargetOpcode::G_SHL);
+  MachineInstr *LShr = findOpcode(*MF, TargetOpcode::G_LSHR);
+  ASSERT_NE(Shl, nullptr);
+  ASSERT_NE(LShr, nullptr);
+  Register Masked = Shl->getOperand(1).getReg();
+  Register X = MRI->getVRegDef(Masked)->getOperand(1).getReg();
+  Register ShlReg = Shl->getOperand(0).getReg();
+
+  DIBuilder DIB(*MF->getFunction().getParent());
+  DIFile *File = DIB.createFile("test.c", "/");
+  DIB.createCompileUnit(DISourceLanguageName(dwarf::DW_LANG_C), File, "", false,
+                        "", 0);
+  auto *SP =
+      DIB.createFunction(File, "func", "", File, 1,
+                         DIB.createSubroutineType(DIB.getOrCreateTypeArray({})),
+                         1, DINode::FlagZero, DISubprogram::SPFlagDefinition);
+  MF->getFunction().setSubprogram(SP);
+  auto *Int = DIB.createBasicType("int", 32, dwarf::DW_ATE_signed);
+  B.setDebugLoc(DILocation::get(Context, 1, 0, SP));
+  auto BuildDbgValue = [&](Register Reg, StringRef Name) {
+    return B
+        .buildDirectDbgValue(Reg,
+                             DIB.createAutoVariable(SP, Name, File, 1, Int),
+                             DIB.createExpression())
+        .getInstr();
+  };
+  MachineInstr *MaskedDbg = BuildDbgValue(Masked, "masked");
+  MachineInstr *ShlDbg = BuildDbgValue(ShlReg, "shifted");
+  Register LShrReg = LShr->getOperand(0).getReg();
+  MachineInstr *LShrDbg = BuildDbgValue(LShrReg, "result");
+  DIB.finalize();
+
+  GISelValueTracking VT(*MF);
+  CombinerHelper Helper(VT, B, /*IsPreLegalize=*/false, &VT);
+  BuildFnTy Apply;
+  ASSERT_TRUE(Helper.matchSimplifyDemandedBits(*LShr, Apply));
+  EXPECT_EQ(Shl->getOperand(1).getReg(), Masked);
+  EXPECT_TRUE(Shl->getFlag(MachineInstr::NoUWrap));
+  EXPECT_TRUE(Shl->getFlag(MachineInstr::NoSWrap));
+  EXPECT_TRUE(LShr->getFlag(MachineInstr::IsExact));
+  EXPECT_EQ(MaskedDbg->getOperand(0).getReg(), Masked);
+  EXPECT_EQ(ShlDbg->getOperand(0).getReg(), ShlReg);
+  EXPECT_EQ(LShrDbg->getOperand(0).getReg(), LShrReg);
+
+  Apply(B);
+  EXPECT_EQ(Shl->getOperand(1).getReg(), X);
+  EXPECT_FALSE(Shl->getFlag(MachineInstr::NoUWrap));
+  EXPECT_FALSE(Shl->getFlag(MachineInstr::NoSWrap));
+  // The outer shift's operand register is unchanged, but its low bits changed.
+  EXPECT_EQ(LShr->getOperand(1).getReg(), ShlReg);
+  EXPECT_FALSE(LShr->getFlag(MachineInstr::IsExact));
+  EXPECT_TRUE(MaskedDbg->isUndefDebugValue());
+  EXPECT_TRUE(ShlDbg->isUndefDebugValue());
+  EXPECT_EQ(LShrDbg->getOperand(0).getReg(), LShrReg);
+}
+
+TEST_F(AArch64GISelMITest, SimplifyDemandedBitsAshrToLshr) {
+  StringRef MIRString = R"(
+    %x:_(s32) = G_TRUNC %0
+    %amt:_(s32) = G_CONSTANT i32 8
+    %ashr:_(s32) = G_ASHR %x, %amt
+    %lowmask:_(s32) = G_CONSTANT i32 65535
+    %use:_(s32) = G_AND %ashr, %lowmask
+    %out:_(s32) = COPY %use
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  // Demand [0,16) excludes the ASHR sign fill.
+  MachineInstr *Use = findOpcode(*MF, TargetOpcode::G_AND);
+  ASSERT_NE(Use, nullptr);
+
+  simplifyDemandedBitsOperand(*MF, B, *Use, APInt(32, 0xFFFF));
+  EXPECT_EQ(findOpcode(*MF, TargetOpcode::G_ASHR), nullptr);
+  EXPECT_NE(findOpcode(*MF, TargetOpcode::G_LSHR), nullptr);
+}
+
+TEST_F(AArch64GISelMITest, SimplifyDemandedBitsPreservesBuilderInsertPt) {
+  StringRef MIRString = R"(
+    %x:_(s32) = G_TRUNC %0
+    %amt:_(s32) = G_CONSTANT i32 8
+    %ashr:_(s32) = G_ASHR %x, %amt
+    %lowmask:_(s32) = G_CONSTANT i32 65535
+    %use:_(s32) = G_AND %ashr, %lowmask
+    %out:_(s32) = COPY %use
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  MachineInstr *Use = findOpcode(*MF, TargetOpcode::G_AND);
+  ASSERT_NE(Use, nullptr);
+
+  // Anchor the builder at an instruction that the rewrite does not touch.
+  MachineInstr *Anchor = MRI->getVRegDef(Copies[Copies.size() - 1]);
+  ASSERT_NE(Anchor, nullptr);
+  B.setInsertPt(*Anchor->getParent(), Anchor->getIterator());
+  MachineBasicBlock *SavedMBB = &B.getMBB();
+  MachineBasicBlock::iterator SavedPt = B.getInsertPt();
+
+  GISelValueTracking VT(*MF);
+  CombinerHelper Helper(VT, B, /*IsPreLegalize=*/false, &VT);
+  KnownBits Known(32);
+  EXPECT_TRUE(
+      Helper.simplifyDemandedBits(*Use, /*OpNo=*/1, APInt(32, 0xFFFF), Known));
+
+  // Check that the rewrite actually ran.
+  EXPECT_EQ(findOpcode(*MF, TargetOpcode::G_ASHR), nullptr);
+  EXPECT_NE(findOpcode(*MF, TargetOpcode::G_LSHR), nullptr);
+
+  EXPECT_EQ(&B.getMBB(), SavedMBB);
+  EXPECT_EQ(B.getInsertPt(), SavedPt);
+}
+
+TEST_F(AArch64GISelMITest, SimplifyDemandedBitsMultiUseDefNoDescend) {
+  StringRef MIRString = R"(
+   %z:_(s32) = G_TRUNC %0
+   %mask:_(s32) = G_CONSTANT i32 16776960
+   %y:_(s32) = G_AND %z, %mask
+   %amt:_(s32) = G_CONSTANT i32 8
+   %s:_(s32) = G_LSHR %y, %amt
+   %lowmask:_(s32) = G_CONSTANT i32 255
+   %root:_(s32) = G_AND %s, %lowmask
+   %side:_(s32) = COPY %s
+   %out:_(s32) = COPY %root
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  // The shared shift requires bits that the inner mask removes.
+  MachineInstr *Root = findOpcode(*MF, TargetOpcode::G_AND, /*Index=*/1);
+  MachineInstr *Inner = findOpcode(*MF, TargetOpcode::G_AND);
+  ASSERT_NE(Root, nullptr);
+  ASSERT_NE(Inner, nullptr);
+
+  Register InnerDst = Inner->getOperand(0).getReg();
+  GISelValueTracking VT(*MF);
+  CombinerHelper Helper(VT, B, /*IsPreLegalize=*/false, &VT);
+  KnownBits Known(32);
+  Helper.simplifyDemandedBits(*Root, /*OpNo=*/1, APInt(32, 0xFF), Known);
+  EXPECT_FALSE(MRI->use_nodbg_empty(InnerDst));
+}
+
+TEST_F(AArch64GISelMITest, SimplifyDemandedBitsRelaxThroughMultiUseShift) {
+  StringRef MIRString = R"(
+   %x:_(s32) = G_TRUNC %0
+   %mask:_(s32) = G_CONSTANT i32 268435455
+   %y:_(s32) = G_AND %x, %mask
+   %amt:_(s32) = G_CONSTANT i32 4
+   %s:_(s32) = G_SHL %y, %amt
+   %lowmask:_(s32) = G_CONSTANT i32 255
+   %root:_(s32) = G_AND %s, %lowmask
+   %side:_(s32) = COPY %s
+   %out:_(s32) = COPY %root
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  // Full demand through the shared SHL makes its input mask redundant.
+  MachineInstr *Inner = findOpcode(*MF, TargetOpcode::G_AND);
+  MachineInstr *Root = findOpcode(*MF, TargetOpcode::G_AND, /*Index=*/1);
+  MachineInstr *Shl = findOpcode(*MF, TargetOpcode::G_SHL);
+  ASSERT_NE(Inner, nullptr);
+  ASSERT_NE(Root, nullptr);
+  ASSERT_NE(Shl, nullptr);
+
+  Register InnerDst = Inner->getOperand(0).getReg();
+  Register XReg = Inner->getOperand(1).getReg();
+  simplifyDemandedBitsOperand(*MF, B, *Root, APInt(32, 0xFF));
+  EXPECT_TRUE(MRI->use_nodbg_empty(InnerDst));
+  EXPECT_EQ(Shl->getOperand(1).getReg(), XReg);
+}
+
+TEST(GISelShiftDemand, DemandedSrcBitsForShiftConst) {
+  // SHL by 4: result bits [4,8) come from src bits [0,4).
+  EXPECT_EQ(CombinerHelper::getDemandedSrcBitsForShiftConst(TargetOpcode::G_SHL,
+                                                            APInt(8, 0xF0), 4),
+            APInt(8, 0x0F));
+  // LSHR by 4: result bits [0,4) come from src bits [4,8).
+  EXPECT_EQ(CombinerHelper::getDemandedSrcBitsForShiftConst(
+                TargetOpcode::G_LSHR, APInt(8, 0x0F), 4),
+            APInt(8, 0xF0));
+  // ASHR by 4, only low result bits demanded: like LSHR, no sign-bit demand.
+  EXPECT_EQ(CombinerHelper::getDemandedSrcBitsForShiftConst(
+                TargetOpcode::G_ASHR, APInt(8, 0x0F), 4),
+            APInt(8, 0xF0));
+  // ASHR by 4, result bit 6 demanded (sign-fill territory): src sign bit only.
+  EXPECT_EQ(CombinerHelper::getDemandedSrcBitsForShiftConst(
+                TargetOpcode::G_ASHR, APInt(8, 0x40), 4),
+            APInt(8, 0x80));
+  // Shift by 0 is identity for all three.
+  EXPECT_EQ(CombinerHelper::getDemandedSrcBitsForShiftConst(
+                TargetOpcode::G_ASHR, APInt(8, 0xA5), 0),
+            APInt(8, 0xA5));
+}
