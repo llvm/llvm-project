@@ -179,11 +179,6 @@ static cl::opt<unsigned> AddOpsInlineThreshold(
     cl::desc("Threshold for inlining addition operands into a SCEV"),
     cl::init(500));
 
-static cl::opt<unsigned> MaxSCEVCompareDepth(
-    "scalar-evolution-max-scev-compare-depth", cl::Hidden,
-    cl::desc("Maximum depth of recursive SCEV complexity comparisons"),
-    cl::init(32));
-
 static cl::opt<unsigned> MaxSCEVOperationsImplicationDepth(
     "scalar-evolution-max-scev-operations-implication-depth", cl::Hidden,
     cl::desc("Maximum depth of recursive SCEV operations implication analysis"),
@@ -647,22 +642,29 @@ static int CompareValueComplexity(const LoopInfo *const LI, Value *LV,
 // Return negative, zero, or positive, if LHS is less than, equal to, or greater
 // than RHS, respectively. A three-way result allows recursive comparisons to be
 // more efficient.
-// If the max analysis depth was reached, return std::nullopt, assuming we do
-// not know if they are equivalent for sure.
-static std::optional<int>
-CompareSCEVComplexity(const LoopInfo *const LI, const SCEV *LHS,
-                      const SCEV *RHS, DominatorTree &DT, unsigned Depth = 0) {
+//
+// The result is a total order: it returns 0 iff LHS == RHS. Uses are ordered
+// by
+//  1. use flags, if the underlying SCEV is the same,
+//  2. canonical SCEVs if they are different and one of them is not canonical
+//  3. the SCEV type and operands.
+static int CompareSCEVComplexity(const LoopInfo *const LI, SCEVUse LHS,
+                                 SCEVUse RHS, DominatorTree &DT) {
   // Fast-path: SCEVs are uniqued so we can do a quick equality check.
   if (LHS == RHS)
     return 0;
+
+  if (LHS.getPointer() == RHS.getPointer())
+    return (int)LHS.getUseNoWrapFlags() - (int)RHS.getUseNoWrapFlags();
+
+  const SCEV *LCanon = LHS.getCanonical(), *RCanon = RHS.getCanonical();
+  if (LCanon != RCanon && (LHS != LCanon || RHS != RCanon))
+    return CompareSCEVComplexity(LI, LCanon, RCanon, DT);
 
   // Primarily, sort the SCEVs by their getSCEVType().
   SCEVTypes LType = LHS->getSCEVType(), RType = RHS->getSCEVType();
   if (LType != RType)
     return (int)LType - (int)RType;
-
-  if (Depth > MaxSCEVCompareDepth)
-    return std::nullopt;
 
   // Aside from the getSCEVType() ordering, the particular ordering
   // isn't very important except that it's beneficial to be consistent,
@@ -672,9 +674,10 @@ CompareSCEVComplexity(const LoopInfo *const LI, const SCEV *LHS,
     const SCEVUnknown *LU = cast<SCEVUnknown>(LHS);
     const SCEVUnknown *RU = cast<SCEVUnknown>(RHS);
 
-    int X =
-        CompareValueComplexity(LI, LU->getValue(), RU->getValue(), Depth + 1);
-    return X;
+    if (int X = CompareValueComplexity(LI, LU->getValue(), RU->getValue(),
+                                       /*Depth=*/0))
+      return X;
+    return LU->getOrderID() < RU->getOrderID() ? -1 : 1;
   }
 
   case scConstant: {
@@ -738,12 +741,16 @@ CompareSCEVComplexity(const LoopInfo *const LI, const SCEV *LHS,
       return (int)LNumOps - (int)RNumOps;
 
     for (unsigned i = 0; i != LNumOps; ++i) {
-      auto X = CompareSCEVComplexity(LI, LOps[i].getPointer(),
-                                     ROps[i].getPointer(), DT, Depth + 1);
+      auto X = CompareSCEVComplexity(LI, LOps[i], ROps[i], DT);
       if (X != 0)
         return X;
     }
-    return 0;
+
+    assert(isa<SCEVCastExpr>(LHS) && "distinct SCEVs compare equal");
+    unsigned LBitWidth = cast<IntegerType>(LHS->getType())->getBitWidth();
+    unsigned RBitWidth = cast<IntegerType>(RHS->getType())->getBitWidth();
+    assert(LBitWidth != RBitWidth && "distinct SCEVs compare equal");
+    return (int)LBitWidth - (int)RBitWidth;
   }
 
   case scCouldNotCompute:
@@ -767,8 +774,7 @@ static void GroupByComplexity(SmallVectorImpl<SCEVUse> &Ops, LoopInfo *LI,
 
   // Whether LHS has provably less complexity than RHS.
   auto IsLessComplex = [&](SCEVUse LHS, SCEVUse RHS) {
-    auto Complexity = CompareSCEVComplexity(LI, LHS, RHS, DT);
-    return Complexity && *Complexity < 0;
+    return CompareSCEVComplexity(LI, LHS, RHS, DT) < 0;
   };
   if (Ops.size() == 2) {
     // This is the common case, which also happens to be trivially simple.
@@ -779,29 +785,7 @@ static void GroupByComplexity(SmallVectorImpl<SCEVUse> &Ops, LoopInfo *LI,
     return;
   }
 
-  // Do the rough sort by complexity.
-  llvm::stable_sort(
-      Ops, [&](SCEVUse LHS, SCEVUse RHS) { return IsLessComplex(LHS, RHS); });
-
-  // Now that we are sorted by complexity, group elements of the same
-  // complexity.  Note that this is, at worst, N^2, but the vector is likely to
-  // be extremely short in practice.  Note that we take this approach because we
-  // do not want to depend on the addresses of the objects we are grouping.
-  for (unsigned i = 0, e = Ops.size(); i != e-2; ++i) {
-    const SCEV *S = Ops[i];
-    unsigned Complexity = S->getSCEVType();
-
-    // If there are any objects of the same complexity and same value as this
-    // one, group them.
-    for (unsigned j = i+1; j != e && Ops[j]->getSCEVType() == Complexity; ++j) {
-      if (Ops[j] == S) { // Found a duplicate.
-        // Move it to immediately after i'th element.
-        std::swap(Ops[i+1], Ops[j]);
-        ++i;   // no need to rescan it.
-        if (i == e-2) return;  // Done!
-      }
-    }
-  }
+  llvm::sort(Ops, IsLessComplex);
 }
 
 /// Returns true if \p Ops contains a huge SCEV (the subtree of S contains at
@@ -2222,12 +2206,11 @@ const SCEV *ScalarEvolution::getAnyExtendExpr(SCEVUse Op, Type *Ty) {
 /// may be exposed. This helps getAddRecExpr short-circuit extra work in
 /// the common case where no interesting opportunities are present, and
 /// is also used as a check to avoid infinite recursion.
-static bool CollectAddOperandsWithScales(SmallDenseMap<SCEVUse, APInt, 16> &M,
-                                         SmallVectorImpl<SCEVUse> &NewOps,
-                                         APInt &AccumulatedConstant,
-                                         ArrayRef<SCEVUse> Ops,
-                                         const APInt &Scale,
-                                         ScalarEvolution &SE) {
+static bool
+CollectAddOperandsWithScales(SmallDenseMap<const SCEV *, APInt, 16> &M,
+                             SmallVectorImpl<SCEVUse> &NewOps,
+                             APInt &AccumulatedConstant, ArrayRef<SCEVUse> Ops,
+                             const APInt &Scale, ScalarEvolution &SE) {
   bool Interesting = false;
 
   // Iterate over the add operands. They are sorted, with constants first.
@@ -2256,7 +2239,7 @@ static bool CollectAddOperandsWithScales(SmallDenseMap<SCEVUse, APInt, 16> &M,
         // A multiplication of a constant with some other value. Update
         // the map.
         SmallVector<SCEVUse, 4> MulOps(drop_begin(Mul->operands()));
-        const SCEV *Key = SE.getMulExpr(MulOps);
+        const SCEV *Key = SE.getMulExpr(MulOps)->getCanonical();
         auto Pair = M.insert({Key, NewScale});
         if (Pair.second) {
           NewOps.push_back(Pair.first->first);
@@ -2269,7 +2252,7 @@ static bool CollectAddOperandsWithScales(SmallDenseMap<SCEVUse, APInt, 16> &M,
       }
     } else {
       // An ordinary operand. Update the map.
-      auto Pair = M.insert({Ops[i], Scale});
+      auto Pair = M.insert({Ops[i]->getCanonical(), Scale});
       if (Pair.second) {
         NewOps.push_back(Pair.first->first);
       } else {
@@ -2558,14 +2541,19 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
   Type *Ty = Ops[0]->getType();
   bool FoundMatch = false;
   for (unsigned i = 0, e = Ops.size(); i != e-1; ++i)
-    if (Ops[i] == Ops[i+1]) {      //  X + Y + Y  -->  X + Y*2
+    if (SCEVUse Op = SCEVUse::getCommon(Ops[i], Ops[i + 1])) {
+      //  X + Y + Y  -->  X + Y*2
       // Scan ahead to count how many equal operands there are.
       unsigned Count = 2;
-      while (i+Count != e && Ops[i+Count] == Ops[i])
-        ++Count;
+      for (; i + Count != e; ++Count) {
+        SCEVUse Common = SCEVUse::getCommon(Op, Ops[i + Count]);
+        if (!Common)
+          break;
+        Op = Common;
+      }
       // Merge the values into a multiply.
       SCEVUse Scale = getConstant(Ty, Count);
-      const SCEV *Mul = getMulExpr(Scale, Ops[i], SCEV::FlagNone, Depth + 1);
+      SCEVUse Mul = getMulExpr(Scale, Op, SCEV::FlagNone, Depth + 1);
       if (Ops.size() == Count)
         return Mul;
       Ops[i] = Mul;
@@ -2741,7 +2729,7 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
   // operands multiplied by constant values.
   if (Idx < Ops.size() && isa<SCEVMulExpr>(Ops[Idx])) {
     uint64_t BitWidth = getTypeSizeInBits(Ty);
-    SmallDenseMap<SCEVUse, APInt, 16> M;
+    SmallDenseMap<const SCEV *, APInt, 16> M;
     SmallVector<SCEVUse, 8> NewOps;
     APInt AccumulatedConstant(BitWidth, 0);
     if (CollectAddOperandsWithScales(M, NewOps, AccumulatedConstant,
@@ -2799,7 +2787,7 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
       // Scan all terms to find every occurrence of common factor MulOpSCEV
       // and fold them in one shot:
       //   A1*X + A2*X + ... + An*X  -->  X * (A1 + A2 + ... + An)
-      const SCEV *MulOpSCEV = Mul->getOperand(MulOp);
+      SCEVUse MulOpSCEV = Mul->getOperand(MulOp);
       if (isa<SCEVConstant>(MulOpSCEV))
         continue;
 
@@ -2808,8 +2796,9 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
       SmallVector<SCEVUse, 4> Cofactors;
       SmallVector<unsigned, 4> DeadIndices;
       for (unsigned AddOp = 0, e = Ops.size(); AddOp != e; ++AddOp) {
-        if (MulOpSCEV == Ops[AddOp]) {
+        if (SCEVUse Common = SCEVUse::getCommon(MulOpSCEV, Ops[AddOp])) {
           // W + X + (X * Y * Z)  -->  W + (X * ((Y*Z)+1))
+          MulOpSCEV = Common;
           Cofactors.push_back(getOne(Ty));
           DeadIndices.push_back(AddOp);
           continue;
@@ -2821,8 +2810,10 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
         const SCEVMulExpr *OtherMul = cast<SCEVMulExpr>(Ops[AddOp]);
         for (unsigned OMulOp = 0, OE = OtherMul->getNumOperands(); OMulOp != OE;
              ++OMulOp) {
-          if (OtherMul->getOperand(OMulOp) == MulOpSCEV) {
+          if (SCEVUse Common =
+                  SCEVUse::getCommon(MulOpSCEV, OtherMul->getOperand(OMulOp))) {
             // (A*B*C) + (A*D*E)  -->  A * (B*C + D*E)
+            MulOpSCEV = Common;
             Cofactors.push_back(StripFactor(OtherMul, OMulOp));
             DeadIndices.push_back(AddOp);
             break;
@@ -3961,6 +3952,8 @@ const SCEV *ScalarEvolution::getMinMaxExpr(SCEVTypes Kind,
   llvm::CmpInst::Predicate FirstPred = IsMax ? GEPred : LEPred;
   llvm::CmpInst::Predicate SecondPred = IsMax ? LEPred : GEPred;
   for (unsigned i = 0, e = Ops.size() - 1; i != e; ++i) {
+    if (SCEVUse Common = SCEVUse::getCommon(Ops[i], Ops[i + 1]))
+      Ops[i] = Ops[i + 1] = Common;
     if (Ops[i] == Ops[i + 1] ||
         isKnownViaNonRecursiveReasoning(FirstPred, Ops[i], Ops[i + 1])) {
       //  X op Y op Y  -->  X op Y
@@ -4425,7 +4418,7 @@ const SCEV *ScalarEvolution::getUnknown(Value *V) {
     return S;
   }
   SCEV *S = new (SCEVAllocator) SCEVUnknown(ID.Intern(SCEVAllocator), V, this,
-                                            FirstUnknown);
+                                            FirstUnknown, NextUnknownOrderID++);
   FirstUnknown = cast<SCEVUnknown>(S);
   UniqueSCEVs.insert(S, Token);
   S->computeAndSetCanonical(*this);
@@ -4650,7 +4643,7 @@ const SCEV *ScalarEvolution::removePointerBase(const SCEV *P) {
 const SCEV *ScalarEvolution::getMinusSCEV(SCEVUse LHS, SCEVUse RHS,
                                           SCEVFlags Flags, unsigned Depth) {
   // Fast path: X - X --> 0.
-  if (LHS == RHS)
+  if (LHS->getCanonical() == RHS->getCanonical())
     return getZero(LHS->getType());
 
   // If we subtract two pointers with different pointer bases, bail.
@@ -14091,7 +14084,8 @@ ScalarEvolution::ScalarEvolution(ScalarEvolution &&Arg)
       ConstantSCEVs(std::move(Arg.ConstantSCEVs)),
       LoopUsers(std::move(Arg.LoopUsers)),
       PredicatedSCEVRewrites(std::move(Arg.PredicatedSCEVRewrites)),
-      FirstUnknown(Arg.FirstUnknown) {
+      FirstUnknown(Arg.FirstUnknown),
+      NextUnknownOrderID(Arg.NextUnknownOrderID) {
   Arg.FirstUnknown = nullptr;
 }
 
