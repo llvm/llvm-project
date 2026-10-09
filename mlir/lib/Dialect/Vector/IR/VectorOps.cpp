@@ -7164,22 +7164,6 @@ public:
   }
 };
 
-// vector.broadcast has two distinct semantic modes: duplication across leading
-// dimensions, and stretching across inner dimensions. This helper returns the
-// product of the inner-dimension stretching factors.
-int64_t getBroadcastStretchingFactor(ArrayRef<int64_t> srcShape,
-                                     ArrayRef<int64_t> dstShape) {
-  int stretchingFactor = 1;
-  int numLeadingDims = dstShape.size() - srcShape.size();
-  for (int i = 0, e = srcShape.size(); i < e; i++) {
-    int64_t dstDim = dstShape[numLeadingDims + i];
-    if (srcShape[i] == 1 && dstDim != 1) {
-      stretchingFactor *= dstDim;
-    }
-  }
-  return stretchingFactor;
-}
-
 /// Pattern to rewrite Y = ShapeCast(Broadcast(X)) as Y = Broadcast(X)
 class ShapeCastBroadcastFolder final : public OpRewritePattern<ShapeCastOp> {
 public:
@@ -7192,37 +7176,65 @@ public:
     if (!broadcastOp)
       return failure();
 
-    auto srcVectorType = dyn_cast<VectorType>(broadcastOp.getSourceType());
-    bool srcIsScalar = !srcVectorType;
-
     // Replace Y = ShapeCast(Broadcast(X)) with Y = Broadcast(X)
     // Example
     // %0 = vector.broadcast %in : vector<3xf32> to vector<2x4x3xf32>
     // %1 = vector.shape_cast %0 : vector<2x4x3xf32> to vector<8x3xf32>
     // to
     // %1 = vector.broadcast %in : vector<3xf32> to vector<8x3xf32>
+    auto srcVectorType = dyn_cast<VectorType>(broadcastOp.getSourceType());
+    bool srcIsScalar = !srcVectorType;
     VectorType dstVectorType = shapeCastOp.getResultVectorType();
-    ArrayRef<int64_t> dstShape = dstVectorType.getShape();
-    ArrayRef<int64_t> srcShape =
-        srcIsScalar ? ArrayRef<int64_t>{} : srcVectorType.getShape();
-    ArrayRef<int64_t> broadcastShape =
-        broadcastOp.getResultVectorType().getShape();
 
     if (!srcIsScalar) {
       if (isBroadcastableTo(srcVectorType, dstVectorType) !=
           BroadcastableToResult::Success) {
         return failure();
       }
-      // Avoid folding if this would result in switching between the two
-      // distinct semantic modes of vector.broadcast (duplication vs
-      // stretching). See https://github.com/llvm/llvm-project/issues/190614.
-      // This is detected by a change in the stretching factor. However if the
-      // source has a single element, there is no ambiguity.
-      if (srcVectorType.getNumElements() != 1) {
-        if (getBroadcastStretchingFactor(srcShape, dstShape) !=
-            getBroadcastStretchingFactor(srcShape, broadcastShape)) {
+      // `shape_cast` preserves the flattened 1-D (row-major) element order.
+      // Thus, `shape_cast(broadcast(src, broadcastShape), dstShape)` produces
+      // the exact same elements as `broadcast(src, dstShape)` if and only if
+      // every non-unit dimension of `src` has the same linear stride in both
+      // `broadcastShape` and `dstShape`.
+      //
+      // A scalable dimension of static size D has runtime size D * vscale.
+      // A linear stride through trailing dimensions is thus:
+      //   stride = staticStride * (vscale ^ numScalableDims)
+      // Since vscale is an unknown runtime quantity (vscale >= 1), both
+      // staticStride and numScalableDims must match to guarantee stride
+      // equivalence across all targets.
+      VectorType broadcastVectorType = broadcastOp.getResultVectorType();
+      SmallVector<int64_t> bcastStrides =
+          computeStrides(broadcastVectorType.getShape());
+      SmallVector<int64_t> dstStrides =
+          computeStrides(dstVectorType.getShape());
+      ArrayRef<bool> bcastScalable = broadcastVectorType.getScalableDims();
+      ArrayRef<bool> dstScalable = dstVectorType.getScalableDims();
+      ArrayRef<bool> srcScalable = srcVectorType.getScalableDims();
+
+      // Iterate from the innermost (trailing) dimension outward. `llvm::zip`
+      // stops once all `src` dimensions are visited, aligning each `src`
+      // dimension with the corresponding trailing dimension of `broadcast` and
+      // `dst`.
+      for (auto [idx, dims] : llvm::enumerate(llvm::zip(
+               llvm::reverse(srcVectorType.getShape()),
+               llvm::reverse(srcScalable), llvm::reverse(bcastStrides),
+               llvm::reverse(dstStrides)))) {
+        auto [srcDim, isSrcScalable, bcastStride, dstStride] = dims;
+        // Unit dimensions (fixed size 1; `[1]` has runtime size `vscale` and is
+        // not unit) only ever have index 0, so their stride does not contribute
+        // to the linear element offset.
+        bool isUnitDim = srcDim == 1 && !isSrcScalable;
+        if (isUnitDim)
+          continue;
+        // For the dimension at reverse index `idx`, its stride is the product
+        // of the `idx` more minor (trailing) dimensions. Verify that both the
+        // static stride factor and the `vscale` exponent (the number of
+        // scalable dimensions in the trailing `idx` dimensions) match.
+        if (bcastStride != dstStride ||
+            llvm::count(bcastScalable.take_back(idx), true) !=
+                llvm::count(dstScalable.take_back(idx), true))
           return failure();
-        }
       }
     }
 
