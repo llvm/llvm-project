@@ -66,9 +66,14 @@
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/HipStdPar/HipStdPar.h"
+#include "llvm/Transforms/IPO/DeadArgumentElimination.h"
 #include "llvm/Transforms/IPO/EmbedBitcodePass.h"
+#include "llvm/Transforms/IPO/ForceFunctionAttrs.h"
+#include "llvm/Transforms/IPO/FunctionAttrs.h"
+#include "llvm/Transforms/IPO/GlobalOpt.h"
 #include "llvm/Transforms/IPO/InferFunctionAttrs.h"
 #include "llvm/Transforms/IPO/LowerTypeTests.h"
+#include "llvm/Transforms/IPO/SCCP.h"
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
@@ -95,9 +100,13 @@
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/JumpThreading.h"
+#include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
+#include "llvm/Transforms/Scalar/SROA.h"
+#include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "llvm/Transforms/Utils/AssignGUID.h"
 #include "llvm/Transforms/Utils/Debugify.h"
 #include "llvm/Transforms/Utils/DynamicDebugging.h"
+#include "llvm/Transforms/Utils/Mem2Reg.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <limits>
 #include <memory>
@@ -800,6 +809,38 @@ void addLowerAllowCheckPass(const CodeGenOptions &CodeGenOpts,
   }
 }
 
+static void addAMDGCNSPIRVSizeOptimizationPasses(ModulePassManager &MPM) {
+  // For AMDGCN flavoured SPIR-V we want to preserve the pristine Clang input
+  // by default, to minimise the risk of SPIR-V target specific transforms
+  // being disruptive for the AMDGPU BE. However, this can yield very large
+  // binaries. Thus, for higher optimisation levels we turn on a minimal set
+  // of size reducing passes. The pass collection here is derived from that
+  // proposed in Jain et al. "An analysis of executable size reduction by LLVM
+  // passes" (https://doi.org/10.1007/s40012-019-00248-5), more specifically
+  // the GF and G0 groups.
+
+  // GF: -lower-expect -simplifycfg -sroa -early-cse
+  MPM.addPass(createModuleToFunctionPassAdaptor(LowerExpectIntrinsicPass()));
+  MPM.addPass(createModuleToFunctionPassAdaptor(SimplifyCFGPass()));
+  MPM.addPass(
+      createModuleToFunctionPassAdaptor(SROAPass(SROAOptions::PreserveCFG)));
+  MPM.addPass(createModuleToFunctionPassAdaptor(EarlyCSEPass()));
+
+  // G0: -forceattrs -inferattrs -ipsccp -globalopt -mem2reg -deadargelim
+  //     -instcombine -simplifycfg -prune-eh (PostOrderFunctionAttrs in NewPM)
+  //     -inline(disabled) -functionattrs (disabled)
+  MPM.addPass(ForceFunctionAttrsPass());
+  MPM.addPass(InferFunctionAttrsPass());
+  MPM.addPass(IPSCCPPass());
+  MPM.addPass(GlobalOptPass());
+  MPM.addPass(createModuleToFunctionPassAdaptor(PromotePass()));
+  MPM.addPass(DeadArgumentEliminationPass());
+  MPM.addPass(createModuleToFunctionPassAdaptor(InstCombinePass()));
+  MPM.addPass(createModuleToFunctionPassAdaptor(SimplifyCFGPass()));
+  MPM.addPass(
+      createModuleToPostOrderCGSCCPassAdaptor(PostOrderFunctionAttrsPass()));
+}
+
 void EmitAssemblyHelper::RunOptimizationPipeline(
     BackendAction Action, std::unique_ptr<raw_pwrite_stream> &OS,
     std::unique_ptr<llvm::ToolOutputFile> &ThinLinkOS, BackendConsumer *BC) {
@@ -1116,6 +1157,10 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     } else {
       MPM.addPass(PB.buildPerModuleDefaultPipeline(Level));
     }
+  } else if (TargetTriple.isSPIRV() &&
+             TargetTriple.getVendor() == llvm::Triple::VendorType::AMD &&
+             mapToLevel(CodeGenOpts) > OptimizationLevel::O1) {
+    addAMDGCNSPIRVSizeOptimizationPasses(MPM);
   }
 
   // Link against bitcodes supplied via the -mlink-builtin-bitcode option
