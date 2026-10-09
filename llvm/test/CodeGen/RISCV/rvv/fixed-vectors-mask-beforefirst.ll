@@ -6,27 +6,13 @@ define <1 x i1> @v1i1(<1 x i1> %m) {
 ; RV32-LABEL: v1i1:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; RV32-NEXT:    vfirst.m a0, v0
-; RV32-NEXT:    bgez a0, .LBB0_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    li a0, 1
-; RV32-NEXT:  .LBB0_2:
-; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; RV32-NEXT:    vmv.s.x v8, a0
-; RV32-NEXT:    vmsgtu.vi v0, v8, 0
+; RV32-NEXT:    vmnot.m v0, v0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: v1i1:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; RV64-NEXT:    vfirst.m a0, v0
-; RV64-NEXT:    bgez a0, .LBB0_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    li a0, 1
-; RV64-NEXT:  .LBB0_2:
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; RV64-NEXT:    vmv.s.x v8, a0
-; RV64-NEXT:    vmsgtu.vi v0, v8, 0
+; RV64-NEXT:    vmnot.m v0, v0
 ; RV64-NEXT:    ret
   %x = call <1 x i1> @llvm.mask.beforefirst(<1 x i1> %m)
   ret <1 x i1> %x
