@@ -672,6 +672,12 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
   // to benefit from cache locality. Deferring code generation is necessary to
   // avoid adding initializers to external declarations.
   if (mustBeEmitted(global) && mayBeEmittedEagerly(global)) {
+    // Make sure we don't double-emit this declaration.
+    if (auto existing = dyn_cast_if_present<cir::CIRGlobalValueInterface>(
+            getGlobalValue(getMangledName(gd)));
+        existing && !existing.isDeclaration())
+      return;
+
     // Emit the definition if it can't be deferred.
     emitGlobalDefinition(gd);
     return;
@@ -2156,6 +2162,7 @@ void CIRGenModule::replaceUsesOfNonProtoTypeWithRealFunction(
         realCallOp = builder.createIndirectCallOp(
             noProtoCallOp.getLoc(), casted, callFnType, callOperands);
       }
+      realCallOp.setCallingConv(noProtoCallOp.getCallingConv());
 
       // Replace old no proto call with fixed call.
       noProtoCallOp.replaceAllUsesWith(realCallOp);
@@ -3737,7 +3744,7 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
     // library entity.
     setFuncInfoAttr(func, funcDecl);
 
-    if (this->getLangOpts().OpenACC) {
+    if (funcDecl && this->getLangOpts().OpenACC) {
       // We only have to handle this attribute, since OpenACCAnnotAttrs are
       // handled via the end-of-TU work.
       for (const auto *attr :

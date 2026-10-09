@@ -101,6 +101,15 @@ template <typename... ArgsTy>
                                     ArgsTy... Args);
 } // namespace Plugin
 
+/// Decide whether an operation must be synchronized eagerly because the
+/// force-synchronization escape hatch (OFFLOAD_FORCE_SYNC_OPS) is enabled. Only
+/// external async info objects are affected; local ones are always synchronized
+/// on finalization. A pending error suppresses synchronization.
+inline bool shouldForceSync(bool ForceSyncOps, bool IsLocalAsyncInfo,
+                            bool HasQueue, bool HasError) {
+  return ForceSyncOps && !IsLocalAsyncInfo && HasQueue && !HasError;
+}
+
 /// Class that wraps the __tgt_async_info to simply its usage. In case the
 /// object is constructed without a valid __tgt_async_info, the object will use
 /// an internal one and will synchronize the current thread with the pending
@@ -1141,7 +1150,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   uint32_t getDefaultNumBlocks() const {
     return GridValues.GV_Default_Num_Teams;
   }
-  uint32_t getDebugKind() const { return OMPX_DebugKind; }
   virtual uint64_t getClockFrequency() const { return CLOCKS_PER_SEC; }
 
   /// Get a device-specific timestamp in nanoseconds, used by the profiler
@@ -1313,6 +1321,13 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   BoolEnvar OMPX_TrackAllocationTraces =
       BoolEnvar("OFFLOAD_TRACK_ALLOCATION_TRACES", false);
 
+  /// Environment flag that forces every device operation to be synchronized,
+  /// draining the queue after each operation. Debugging escape hatch.
+  BoolEnvar OF_ForceSyncOps = BoolEnvar("OFFLOAD_FORCE_BLOCKING", false);
+
+  /// Return whether all device operations should be forced synchronous.
+  bool forceSyncOps() const { return OF_ForceSyncOps; }
+
   /// Array of images loaded into the device. Images are automatically
   /// deallocated by the allocator.
   llvm::SmallVector<DeviceImageTy *> LoadedImages;
@@ -1334,13 +1349,7 @@ private:
     return false;
   }
 
-  /// Environment variables defined by the OpenMP standard.
-  Int32Envar OMP_TeamLimit;
-  Int32Envar OMP_NumTeams;
-  Int32Envar OMP_TeamsThreadLimit;
-
   /// Environment variables defined by the LLVM OpenMP implementation.
-  Int32Envar OMPX_DebugKind;
   UInt64Envar OMPX_TargetStackSize;
   UInt64Envar OMPX_TargetHeapSize;
 

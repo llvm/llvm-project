@@ -2300,8 +2300,6 @@ static mlir::LogicalResult rewriteCallOrInvoke(
   if (converter->convertTypes(cirResults, llvmResults).failed())
     return mlir::failure();
 
-  assert(!cir::MissingFeatures::opCallCallConv());
-
   mlir::LLVM::MemoryEffectsAttr memoryEffects;
   bool noUnwind = false;
   bool willReturn = false;
@@ -2365,17 +2363,19 @@ static mlir::LogicalResult rewriteCallOrInvoke(
         converter->convertType(calleeFuncTy));
   }
 
-  assert(!cir::MissingFeatures::opCallCallConv());
+  mlir::LLVM::CConv cconv = convertCallingConv(call.getCallingConv());
 
   if (landingPadBlock) {
     assert(!cir::MissingFeatures::opCallInvokeAttrs());
     auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::InvokeOp>(
         op, llvmFnTy, calleeAttr, callOperands, continueBlock,
         mlir::ValueRange{}, landingPadBlock, mlir::ValueRange{});
+    newOp.setCConv(cconv);
     setLoweredCallAttributes(newOp, attributes);
   } else {
     auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
         op, llvmFnTy, calleeAttr, callOperands);
+    newOp.setCConv(cconv);
     setLoweredCallAttributes(newOp, attributes);
     if (memoryEffects)
       newOp.setMemoryEffectsAttr(memoryEffects);
@@ -2406,7 +2406,6 @@ mlir::LogicalResult CIRToLLVMCallOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMTryCallOpLowering::matchAndRewrite(
     cir::TryCallOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  assert(!cir::MissingFeatures::opCallCallConv());
   return rewriteCallOrInvoke(op.getOperation(), adaptor.getOperands(), rewriter,
                              getTypeConverter(), dataLayout, symbolTables,
                              op.getCalleeAttr(), op.getNormalDest(),
@@ -4735,6 +4734,9 @@ mlir::LogicalResult CIRToLLVMThrowOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Location loc = op.getLoc();
   auto voidTy = mlir::LLVM::LLVMVoidType::get(getContext());
+
+  // TODO(cir): set the runtime calling convention on the runtime calls below.
+  assert(!cir::MissingFeatures::opFuncCallingConv());
 
   if (op.rethrows()) {
     auto funcTy = mlir::LLVM::LLVMFunctionType::get(voidTy, {});
