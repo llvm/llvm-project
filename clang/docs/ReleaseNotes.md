@@ -964,6 +964,14 @@ features cannot lower the translation-unit ABI level;
   ``cl_khr_subgroup_shuffle``, and ``cl_khr_subgroup_shuffle_relative`` are
   promoted to core features in OpenCL C 3.1. A target claiming OpenCL C 3.1
   conformance without supporting one of these features is now diagnosed.
+- ``-fsanitize=integer-divide-by-zero`` and the division check of
+  ``-fsanitize=signed-integer-overflow`` no longer instrument integer ``/`` and
+  ``%`` in OpenCL C and C++ for OpenCL. OpenCL C defines integer division by
+  zero and ``INT_MIN / -1`` to yield an unspecified value without raising an
+  exception (OpenCL C v3.0 s6.5.1). The specification names only division;
+  ``%`` is treated the same way, since C states the zero-divisor case for both
+  operators (C99 6.5.5p5) and makes ``INT_MIN % -1`` undefined only because
+  ``INT_MIN / -1`` is (C11 6.5.5p6).
 
 ### Target Specific Changes
 

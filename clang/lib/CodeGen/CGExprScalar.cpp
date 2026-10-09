@@ -4320,7 +4320,10 @@ Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
                                      SanitizerKind::SO_SignedIntegerOverflow,
                                      SanitizerKind::SO_FloatDivideByZero},
                                     SanitizerHandler::DivremOverflow);
-    if ((CGF.SanOpts.has(SanitizerKind::IntegerDivideByZero) ||
+    // OpenCL C v3.0 s6.5.1: integer division by zero and INT_MIN / -1 yield an
+    // unspecified value, not undefined behavior.
+    if (!CGF.getLangOpts().OpenCL &&
+        (CGF.SanOpts.has(SanitizerKind::IntegerDivideByZero) ||
          CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow)) &&
         Ops.Ty->isIntegerType() &&
         (Ops.mayHaveIntegerDivisionByZero() || Ops.mayHaveIntegerOverflow())) {
@@ -4369,7 +4372,9 @@ Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
 
 Value *ScalarExprEmitter::EmitRem(const BinOpInfo &Ops) {
   // Rem in C can't be a floating point type: C99 6.5.5p2.
-  if ((CGF.SanOpts.has(SanitizerKind::IntegerDivideByZero) ||
+  // OpenCL: treated like integer division, see EmitDiv.
+  if (!CGF.getLangOpts().OpenCL &&
+      (CGF.SanOpts.has(SanitizerKind::IntegerDivideByZero) ||
        CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow)) &&
       Ops.Ty->isIntegerType() &&
       (Ops.mayHaveIntegerDivisionByZero() || Ops.mayHaveIntegerOverflow())) {
