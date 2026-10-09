@@ -166,6 +166,7 @@ class VOP3P_Pseudo <string opName, VOPProfile P, list<dag> pattern = []> :
   VOP3_Pseudo<opName, P, pattern, 1> {
   let VOP3P = 1;
   let IsDOT = P.IsDOT;
+  let ZeroOutOpSelHi = P.ZeroOutOpSelHi;
 }
 
 class VOP_Real<VOP_Pseudo ps> {
@@ -202,6 +203,7 @@ class VOP3_Real <VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemoni
   let mayStore             = ps.mayStore;
   let TRANS                = ps.TRANS;
   let isConvergent         = ps.isConvergent;
+  let ZeroOutOpSelHi       = ps.ZeroOutOpSelHi;
 
   VOPProfile Pfl = ps.Pfl;
 
@@ -512,6 +514,7 @@ class VOP3Pe <VOPProfile P> : Enc64, VOP3Pe_Base {
 
   let Inst{14} = !cond(!and(P.HasSrc2, P.HasOpSel) : src2_modifiers{3},
                        P.IsDOT : 1,
+                       P.ZeroOutOpSelHi : 0,
                        P.HasMatrixReuse : matrix_b_reuse,
                        1: ?); // op_sel_hi(2)
 
@@ -522,11 +525,13 @@ class VOP3Pe <VOPProfile P> : Enc64, VOP3Pe_Base {
   let Inst{58-50} = !if(P.HasSrc2, src2, ?);
   let Inst{59}    = !cond(!and(P.HasSrc0, P.HasOpSel) : src0_modifiers{3},
                           P.IsDOT : 1,
+                          P.ZeroOutOpSelHi : 0,
                           P.HasMatrixScale : matrix_b_scale{0},
                           1: ?); // op_sel_hi(0)
   let Inst{60}    = !if(!and(P.HasSrc1, P.HasOpSel), src1_modifiers{3},
-                        !if(P.HasMatrixScale, 0,
-                            !if(P.IsDOT, 1, ?))); // op_sel_hi(1)
+                        !if(P.IsDOT, 1,
+                            !if(P.ZeroOutOpSelHi, 0,
+                                !if(P.HasMatrixScale, 0, ?)))); // op_sel_hi(1)
   let Inst{61}    = !if(P.HasSrc0Mods, src0_modifiers{0},
                                        !if(P.HasMatrixScale, matrix_a_scale_fmt{0}, 0)); // neg (lo)
   let Inst{62}    = !if(P.HasSrc1Mods, src1_modifiers{0},
@@ -2497,6 +2502,16 @@ def DPMACCInstructionTable : GenericTable {
 
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "isDPMACCInstructionHelper";
+}
+
+def VOP3PZeroOpSelHiTable : GenericTable {
+  let FilterClass = "VOP3P_Real";
+  let FilterClassField = "ZeroOutOpSelHi";
+  let CppTypeName = "VOP3PZeroOpSelHiInfo";
+  let Fields = ["Opcode"];
+
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "isVOP3PZeroOpSelHiOpcodeHelper";
 }
 
 // BlockingCycles indicates how many cycles until a new instruction can acquire

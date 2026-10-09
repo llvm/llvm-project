@@ -433,6 +433,10 @@ struct FP4FP8DstByteSelInfo {
   bool HasFP4DstByteSel;
 };
 
+struct VOP3PZeroOpSelHiInfo {
+  uint32_t Opcode;
+};
+
 #define GET_DPMACCInstructionTable_DECL
 #define GET_DPMACCInstructionTable_IMPL
 #define GET_MTBUFInfoTable_DECL
@@ -463,6 +467,8 @@ struct FP4FP8DstByteSelInfo {
 #define GET_VOPDXYTable_IMPL
 #define GET_VOPTrue16Table_DECL
 #define GET_VOPTrue16Table_IMPL
+#define GET_VOP3PZeroOpSelHiTable_DECL
+#define GET_VOP3PZeroOpSelHiTable_IMPL
 #define GET_True16D16Table_IMPL
 #define GET_WMMAOpcode2AddrMappingTable_DECL
 #define GET_WMMAOpcode2AddrMappingTable_IMPL
@@ -821,6 +827,10 @@ unsigned getTemporalHintType(const MCInstrDesc TID) {
 }
 
 bool isTrue16Inst(unsigned Opc) { return isTrue16Opcode(Opc) != nullptr; }
+
+bool zeroesOutOpSelHi(unsigned Opc) {
+  return isVOP3PZeroOpSelHiOpcodeHelper(Opc) != nullptr;
+}
 
 FPType getFPDstSelType(unsigned Opc) {
   const FP4FP8DstByteSelInfo *Info = getFP4FP8DstByteSelHelper(Opc);

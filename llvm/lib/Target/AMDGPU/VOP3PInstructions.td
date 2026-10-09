@@ -131,6 +131,7 @@ multiclass VOP3_VOP3PInst_t16<string OpName, VOP3P_Mix_Profile P> {
 
 def V_PK_VOP2_F64_Profile : VOP3P_Profile<VOP_V2F64_V2F64_V2F64, VOP3_PACKED> {
   let HasOpSel = 0;
+  let ZeroOutOpSelHi = 1;
   let HasOMod = 0;
   let Src0RC64 = VSrc_v2f64;
   let Src1RC64 = VSrc_v2f64;
@@ -138,6 +139,7 @@ def V_PK_VOP2_F64_Profile : VOP3P_Profile<VOP_V2F64_V2F64_V2F64, VOP3_PACKED> {
 
 def V_PK_VOP3_F64_Profile : VOP3P_Profile<VOP_V2F64_V2F64_V2F64_V2F64, VOP3_PACKED> {
   let HasOpSel = 0;
+  let ZeroOutOpSelHi = 1;
   let HasOMod = 0;
   let Src0RC64 = VSrc_v2f64;
   let Src1RC64 = VSrc_v2f64;
@@ -146,12 +148,14 @@ def V_PK_VOP3_F64_Profile : VOP3P_Profile<VOP_V2F64_V2F64_V2F64_V2F64, VOP3_PACK
 
 def V_PK_VOP2_I64_Profile : VOP3P_Profile<VOP_V2I64_V2I64_V2I64, VOP3_PACKED> {
   let HasOpSel = 0;
+  let ZeroOutOpSelHi = 1;
   let Src0RC64 = VSrc_v2b64;
   let Src1RC64 = VSrc_v2b64;
 }
 
 def V_PK_LSHL_ADD_U64_Profile : VOP3P_Profile<VOP_V2I64_V2I64_V2I32_V2I64, VOP3_PACKED> {
   let HasOpSel = 0;
+  let ZeroOutOpSelHi = 1;
   let HasClamp = 0;
   let HasNeg = 0;
   let Src0RC64 = VSrc_v2b64;

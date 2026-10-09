@@ -57,6 +57,8 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   field bit VOPD3 = 0;
 
+  field bit ZeroOutOpSelHi = 0;
+
   // High bits - other information.
   field bit VM_CNT = 0;
   field bit EXP_CNT = 0;
