@@ -47,7 +47,7 @@ void initRuntime() {
 
   RefCount++;
   if (RefCount == 1) {
-    assert(PM == nullptr);
+    assert(!PM && "Runtime already initialized");
     PM = new llvm::omp::target::OmpPluginManager();
 
     ODBG(ODT_Init) << "Init offload library!";
