@@ -234,7 +234,7 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   SmallVector<Type *, 4> ReturnTypes;
   Type *RetTy = F.getReturnType();
   if (!RetTy->isVoidTy()) {
-    ReturnNumRegs = DL->getTypeStoreSize(RetTy) / 4;
+    ReturnNumRegs = static_cast<unsigned>(DL->getTypeStoreSize(RetTy) / 4);
 
     if (ReturnNumRegs >= MaxNumRetRegs)
       return false;
@@ -297,7 +297,8 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
 
       // TODO: This is an approximation. When legalized this could be more. We
       // can ask TLI for exactly how many.
-      unsigned ArgNumRegs = DL->getTypeStoreSize(ArgTy) / 4;
+      unsigned ArgNumRegs =
+          static_cast<unsigned>(DL->getTypeStoreSize(ArgTy) / 4);
       if (ArgNumRegs + ReturnNumRegs > MaxNumRetRegs)
         continue;
 
@@ -338,7 +339,8 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
       }
 
       if (ThisReplaceable) {
-        OutArgIndexes.insert({OutArg->getArgNo(), ReturnTypes.size()});
+        OutArgIndexes.insert(
+            {OutArg->getArgNo(), static_cast<unsigned>(ReturnTypes.size())});
         ReturnTypes.push_back(ArgTy);
         ++NumOutArgumentsReplaced;
         Changing = true;

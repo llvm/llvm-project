@@ -176,7 +176,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
          ArgCount++) {
       Value *Arg = CI->getArgOperand(ArgCount);
       Type *ArgType = Arg->getType();
-      unsigned ArgSize = TD->getTypeAllocSize(ArgType);
+      unsigned ArgSize = static_cast<unsigned>(TD->getTypeAllocSize(ArgType));
       //
       // ArgSize by design should be a multiple of DWORD_ALIGN,
       // expand the arguments that do not follow this rule.
@@ -197,7 +197,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
         else
           Arg = Builder.CreateSExt(Arg, ResType);
         ArgType = Arg->getType();
-        ArgSize = TD->getTypeAllocSize(ArgType);
+        ArgSize = static_cast<unsigned>(TD->getTypeAllocSize(ArgType));
         CI->setOperand(ArgCount, Arg);
       }
       if (OpConvSpecifiers[ArgCount - 1] == 'f') {
@@ -215,7 +215,8 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
         // Match the store loop below: ceil(len / 4) dwords, or one dword
         // for the empty string. The trailing NUL is not stored.
         StringRef Str = getAsConstantStr(Arg);
-        ArgSize = Str.empty() ? 4 : alignTo(Str.size(), 4);
+        ArgSize =
+            static_cast<unsigned>(Str.empty() ? 4 : alignTo(Str.size(), 4));
       }
 
       LLVM_DEBUG(dbgs() << "Printf ArgSize (in buffer) = " << ArgSize
@@ -397,9 +398,11 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
       } else {
         WhatToStore.push_back(Arg);
       }
-      for (unsigned I = 0, E = WhatToStore.size(); I != E; ++I) {
+      for (unsigned I = 0, E = static_cast<unsigned>(WhatToStore.size());
+           I != E; ++I) {
         Value *TheBtCast = WhatToStore[I];
-        unsigned ArgSize = TD->getTypeAllocSize(TheBtCast->getType());
+        unsigned ArgSize =
+            static_cast<unsigned>(TD->getTypeAllocSize(TheBtCast->getType()));
         StoreInst *StBuff = new StoreInst(TheBtCast, BufferIdx, BrnchPoint);
         LLVM_DEBUG(dbgs() << "inserting store to printf buffer:\n"
                           << *StBuff << '\n');
