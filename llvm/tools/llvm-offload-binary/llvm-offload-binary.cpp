@@ -68,7 +68,8 @@ static cl::opt<compression::Format> CompressionFormat(
 
 static cl::opt<int>
     CompressionLevel("compression-level",
-                     cl::desc("Compression level used with --compress"),
+                     cl::desc("Compression level used with --compress. "
+                              "Requires --compression-format"),
                      cl::init(-1), cl::cat(OffloadBinaryCategory));
 
 /// Path of the current binary.
@@ -87,6 +88,31 @@ static DenseMap<StringRef, StringRef> getImageArguments(StringRef Image,
   }
 
   return Args;
+}
+
+// ZSTD_maxCLevel(). zstd::BestSizeCompression is the usual high end; the
+// library still accepts levels through this maximum.
+static constexpr int ZstdMaxCompressionLevel = 22;
+
+static Error checkCompressionLevel(compression::Format Format, int Level) {
+  int Lo, Hi;
+  const char *Name;
+  if (Format == compression::Format::Zlib) {
+    Lo = compression::zlib::NoCompression;
+    Hi = compression::zlib::BestSizeCompression;
+    Name = "zlib";
+  } else {
+    Lo = compression::zstd::NoCompression;
+    Hi = ZstdMaxCompressionLevel;
+    Name = "zstd";
+  }
+  if (Level < Lo || Level > Hi)
+    return createStringError(
+        inconvertibleErrorCode(),
+        "invalid %s compression level %d; expected a value "
+        "in [%d, %d]",
+        Name, Level, Lo, Hi);
+  return Error::success();
 }
 
 static Error writeFile(StringRef Filename, StringRef Data) {
@@ -150,8 +176,15 @@ static Error bundleImages() {
     if (const char *Reason = compression::getReasonIfUnsupported(Format))
       return createStringError(inconvertibleErrorCode(), Reason);
     compression::Params Params(Format);
-    if (CompressionLevel.getNumOccurrences())
+    if (CompressionLevel.getNumOccurrences()) {
+      if (!CompressionFormat.getNumOccurrences())
+        return createStringError(
+            inconvertibleErrorCode(),
+            "--compression-level requires --compression-format");
+      if (Error E = checkCompressionLevel(Format, CompressionLevel))
+        return E;
       Params.level = CompressionLevel;
+    }
     Expected<SmallString<0>> CompressedOrErr =
         OffloadBinary::write(AllImages, Params);
     if (!CompressedOrErr)

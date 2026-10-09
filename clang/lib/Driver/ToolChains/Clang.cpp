@@ -9706,7 +9706,10 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString("--image=" + llvm::join(Parts, ",")));
   }
 
-  addOffloadCompressArgs(Args, CmdArgs);
+  // FIXME: --offload-compress is HIP only until the OpenMP runtime accepts it.
+  if (JA.isDeviceOffloading(Action::OFK_HIP) &&
+      Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false))
+    addOffloadCompressArgs(Args, CmdArgs, /*EmitCompressionFormat=*/true);
 
   C.addCommand(std::make_unique<Command>(
       JA, *this, ResponseFileSupport::AtFileUTF8(),
