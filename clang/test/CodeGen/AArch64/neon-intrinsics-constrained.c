@@ -1418,46 +1418,6 @@ float64x1_t test_vmls_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
   return vmls_f64(a, b, c);
 }
 
-// UNCONSTRAINED-LABEL: define dso_local <1 x double> @test_vfma_f64(
-// UNCONSTRAINED-SAME: <1 x double> noundef [[A:%.*]], <1 x double> noundef [[B:%.*]], <1 x double> noundef [[C:%.*]]) #[[ATTR0]] {
-// UNCONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// UNCONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// UNCONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
-// UNCONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x double> [[B]] to i64
-// UNCONSTRAINED-NEXT:    [[__P1_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i64 0
-// UNCONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <1 x double> [[C]] to i64
-// UNCONSTRAINED-NEXT:    [[__P2_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP2]], i64 0
-// UNCONSTRAINED-NEXT:    [[TMP3:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
-// UNCONSTRAINED-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[__P1_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
-// UNCONSTRAINED-NEXT:    [[TMP5:%.*]] = bitcast <1 x i64> [[__P2_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
-// UNCONSTRAINED-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP3]] to <1 x double>
-// UNCONSTRAINED-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP4]] to <1 x double>
-// UNCONSTRAINED-NEXT:    [[TMP8:%.*]] = bitcast <8 x i8> [[TMP5]] to <1 x double>
-// UNCONSTRAINED-NEXT:    [[TMP9:%.*]] = call <1 x double> @llvm.fma.v1f64(<1 x double> [[TMP7]], <1 x double> [[TMP8]], <1 x double> [[TMP6]])
-// UNCONSTRAINED-NEXT:    ret <1 x double> [[TMP9]]
-//
-// CONSTRAINED-LABEL: define dso_local <1 x double> @test_vfma_f64(
-// CONSTRAINED-SAME: <1 x double> noundef [[A:%.*]], <1 x double> noundef [[B:%.*]], <1 x double> noundef [[C:%.*]]) #[[ATTR0]] {
-// CONSTRAINED-NEXT:  [[ENTRY:.*:]]
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
-// CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x double> [[B]] to i64
-// CONSTRAINED-NEXT:    [[__P1_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i64 0
-// CONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <1 x double> [[C]] to i64
-// CONSTRAINED-NEXT:    [[__P2_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP2]], i64 0
-// CONSTRAINED-NEXT:    [[TMP3:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
-// CONSTRAINED-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[__P1_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
-// CONSTRAINED-NEXT:    [[TMP5:%.*]] = bitcast <1 x i64> [[__P2_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
-// CONSTRAINED-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP3]] to <1 x double>
-// CONSTRAINED-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP4]] to <1 x double>
-// CONSTRAINED-NEXT:    [[TMP8:%.*]] = bitcast <8 x i8> [[TMP5]] to <1 x double>
-// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <1 x double> @llvm.experimental.constrained.fma.v1f64(<1 x double> [[TMP7]], <1 x double> [[TMP8]], <1 x double> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
-// CONSTRAINED-NEXT:    ret <1 x double> [[TMP9]]
-//
-float64x1_t test_vfma_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
-  return vfma_f64(a, b, c);
-}
-
 // UNCONSTRAINED-LABEL: define dso_local <1 x double> @test_vfms_f64(
 // UNCONSTRAINED-SAME: <1 x double> noundef [[A:%.*]], <1 x double> noundef [[B:%.*]], <1 x double> noundef [[C:%.*]]) #[[ATTR0]] {
 // UNCONSTRAINED-NEXT:  [[ENTRY:.*:]]

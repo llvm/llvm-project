@@ -59,7 +59,8 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPInstructionSC: {
     auto *VPI = cast<VPInstruction>(this);
     // Loads read from memory but don't write to memory.
-    if (VPI->getOpcode() == Instruction::Load)
+    if (VPI->getOpcode() == Instruction::Load ||
+        VPI->getOpcode() == VPInstruction::WideVectorLoad)
       return false;
     return VPI->opcodeMayReadOrWriteFromMemory();
   }
@@ -118,8 +119,13 @@ bool VPRecipeBase::mayReadFromMemory() const {
   switch (getVPRecipeID()) {
   case VPExpressionSC:
     return cast<VPExpressionRecipe>(this)->mayReadOrWriteMemory();
-  case VPInstructionSC:
-    return cast<VPInstruction>(this)->opcodeMayReadOrWriteFromMemory();
+  case VPInstructionSC: {
+    auto *VPI = cast<VPInstruction>(this);
+    // Stores write to memory but don't read from memory.
+    if (VPI->getOpcode() == VPInstruction::WideVectorStore)
+      return false;
+    return VPI->opcodeMayReadOrWriteFromMemory();
+  }
   case VPWidenLoadEVLSC:
   case VPWidenLoadSC:
     return true;
@@ -491,6 +497,7 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
     for (unsigned Idx = 1; Idx != Operands.size(); ++Idx)
       AssertOperandType(Idx, Op0Ty);
     return Type::getVoidTy(Ctx);
+  case VPInstruction::WideVectorStore:
   case Instruction::Store:
     return Type::getVoidTy(Ctx);
   case Instruction::ICmp:
@@ -564,6 +571,7 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
     return StructTy->getTypeAtIndex(
         cast<VPConstantInt>(Operands[1])->getZExtValue());
   }
+  case VPInstruction::WideVectorLoad:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::LastActiveLane:
   case VPInstruction::NumActiveLanes:
@@ -585,7 +593,8 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
       Instruction::isBinaryOp(Opcode) ||
       is_contained({VPInstruction::FirstOrderRecurrenceSplice,
                     VPInstruction::BuildVector,
-                    VPInstruction::BuildStructVector},
+                    VPInstruction::BuildStructVector,
+                    VPInstruction::ConcatVectors},
                    Opcode);
   if (AllOperandsSameType)
     for (unsigned Idx = 1; Idx != Operands.size(); ++Idx)
@@ -672,7 +681,10 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case Instruction::Select:
   case VPInstruction::WideActiveLaneMask:
   case VPInstruction::ReductionStartVector:
+  case VPInstruction::WideVectorLoad:
     return 3;
+  case VPInstruction::WideVectorStore:
+    return 4;
   case Instruction::Call:
     return getCalledFnOperandIndex(operands()) + 1;
   case Instruction::GetElementPtr:
@@ -691,6 +703,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::LastActiveLane:
   case VPInstruction::ExtractLane:
   case VPInstruction::ExtractLastActive:
+  case VPInstruction::ConcatVectors:
     // Cannot determine the number of operands from the opcode.
     return -1u;
   }
@@ -951,6 +964,15 @@ Value *VPInstruction::generate(VPTransformState &State,
                                         Builder.getInt64(Idx));
     return Res;
   }
+  case VPInstruction::ConcatVectors: {
+    Type *ScalarTy = getScalarType();
+    auto *WideTy = VectorType::get(ScalarTy, State.VF * getNumOperands());
+    Value *Res = PoisonValue::get(WideTy);
+    for (const auto &[Idx, Op] : enumerate(operands()))
+      Res = Builder.CreateInsertVector(WideTy, Res, State.get(Op),
+                                       Idx * State.VF.getKnownMinValue());
+    return Res;
+  }
   case VPInstruction::ReductionStartVector: {
     if (State.VF.isScalar())
       return State.get(getOperand(0), true);
@@ -1179,6 +1201,30 @@ Value *VPInstruction::generate(VPTransformState &State,
     return State.Builder.CreateIntrinsic(getScalarType(),
                                          vputils::getIntrinsicID(this), Args,
                                          /*FMFSource=*/nullptr, getName());
+  }
+  case VPInstruction::WideVectorLoad: {
+    unsigned Multiplier = cast<VPConstantInt>(getOperand(0))->getZExtValue();
+    auto *WideDataTy = VectorType::get(getScalarType(), State.VF * Multiplier);
+
+    Value *Addr = State.get(getOperand(1), /*IsScalar=*/true);
+    Align Alignment = Align(cast<VPConstantInt>(getOperand(2))->getZExtValue());
+    LoadInst *WideLI = Builder.CreateAlignedLoad(WideDataTy, Addr, Alignment);
+    applyMetadata(*WideLI);
+    return WideLI;
+  }
+  case VPInstruction::WideVectorStore: {
+    unsigned Multiplier = cast<VPConstantInt>(getOperand(0))->getZExtValue();
+    Value *WideData = State.get(getOperand(3));
+    assert(cast<VectorType>(WideData->getType())->getElementCount() ==
+               State.VF * Multiplier &&
+           "stored value does not match wide element count");
+    (void)Multiplier;
+
+    Value *Addr = State.get(getOperand(1), /*IsScalar=*/true);
+    Align Alignment = Align(cast<VPConstantInt>(getOperand(2))->getZExtValue());
+    StoreInst *WideSI = Builder.CreateAlignedStore(WideData, Addr, Alignment);
+    applyMetadata(*WideSI);
+    return WideSI;
   }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
@@ -1643,6 +1689,7 @@ void VPInstruction::addOperand(VPValue *Op) {
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::BuildVector:
   case VPInstruction::BuildStructVector:
+  case VPInstruction::ConcatVectors:
     assert(Ty == getOperand(0)->getScalarType() &&
            "appended operand must match operand 0's scalar type");
     break;
@@ -1720,6 +1767,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::Broadcast:
   case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
+  case VPInstruction::ConcatVectors:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::ExtractLane:
@@ -1797,6 +1845,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::Intrinsic:
   case VPInstruction::ReductionStartVector:
   case VPInstruction::ResumeForEpilogue:
+  case VPInstruction::WideVectorLoad:
     return true;
   case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
@@ -1809,6 +1858,8 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::WidePtrAdd:
     // WidePtrAdd supports scalar and vector base addresses.
     return false;
+  case VPInstruction::WideVectorStore:
+    return Op == getOperand(0) || Op == getOperand(1) || Op == getOperand(2);
   case VPInstruction::ExitingIVValue:
   case VPInstruction::ExtractLane:
     return Op == getOperand(0);
@@ -1861,6 +1912,15 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::WideActiveLaneMask:
     O << "wide active lane mask";
+    break;
+  case VPInstruction::WideVectorLoad:
+    O << "wide vector load";
+    break;
+  case VPInstruction::WideVectorStore:
+    O << "wide vector store";
+    break;
+  case VPInstruction::ConcatVectors:
+    O << "concat-vectors";
     break;
   case VPInstruction::IncomingAliasMask:
     O << "incoming-alias-mask";
@@ -2351,7 +2411,7 @@ CallInst *VPWidenIntrinsicRecipe::createVectorCall(VPTransformState &State) {
   }
 
   // Use vector version of the intrinsic.
-  Module *M = State.Builder.GetInsertBlock()->getModule();
+  Module *M = State.Builder.getModule();
   Function *VectorF =
       Intrinsic::getOrInsertDeclaration(M, VectorIntrinsicID, TysForDecl);
   assert(VectorF &&
@@ -3829,7 +3889,7 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << " = ";
   auto *Red = cast<VPReductionRecipe>(ExpressionRecipes.back());
   unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
-  VPValue *Mask = getOperand(getNumOperands() - 1);
+  VPValue *Mask = getLastOperand();
   VPValue *EVL =
       isa<VPReductionEVLRecipe>(Red)
           ? getOperand(getNumOperands() - (Red->isConditional() ? 2 : 1))
@@ -3851,7 +3911,7 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   case ExpressionTypes::NegatedExtendedReduction:
   case ExpressionTypes::ExtendedReduction: {
     bool Negated = ExpressionType == ExpressionTypes::NegatedExtendedReduction;
-    getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
+    getLastOperand()->printAsOperand(O, SlotTracker);
     O << " + " << (Red->isPartialReduction() ? "partial." : "") << "reduce.";
     O << Instruction::getOpcodeName(Opcode) << " (";
     if (Negated)
@@ -4047,8 +4107,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     // instruction cost.
     return 0;
   case Instruction::Call: {
-    auto *CalledFn =
-        cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
+    auto *CalledFn = cast<Function>(getLastOperand()->getLiveInIRValue());
     Type *ResultTy = this->getScalarType();
     return computeCallCost(CalledFn, ResultTy, drop_end(operands()),
                            isSingleScalar(), VF, Ctx);
