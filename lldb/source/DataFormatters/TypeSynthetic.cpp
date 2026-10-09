@@ -278,22 +278,41 @@ std::string ScriptedSyntheticChildren::GetDescription() {
 BytecodeSyntheticChildren::FrontEnd::FrontEnd(
     ValueObject &backend, SyntheticBytecodeImplementation &impl)
     : SyntheticChildrenFrontEnd(backend), m_impl(impl) {
-  FormatterBytecode::DataStack data = {backend.GetSP()};
+  FormatterBytecode::DataStack data;
+
+  FormatterBytecode::DictionarySP self_sp;
+  // Version 2: `self` is a Dictionary and passed to each method.
+  if (m_impl.version >= 2) {
+    self_sp = std::make_shared<FormatterBytecode::Dictionary>();
+    data.Push(self_sp);
+  }
+
+  // Pass the "valobj" argument.
+  data.Push(backend.GetSP());
+
   if (!m_impl.init) {
-    m_init_results = std::move(data);
+    if (m_impl.version >= 2) {
+      // Without @init, store the Object in `self` for the other methods.
+      (*self_sp)["valobj"] = backend.GetSP();
+      m_init_results.assign({self_sp});
+    } else {
+      m_init_results = std::move(data);
+    }
     return;
   }
 
   FormatterBytecode::ControlStack control = {m_impl.init->getBuffer()};
-  llvm::Error error =
-      FormatterBytecode::Interpret(control, data, FormatterBytecode::sig_init);
+  llvm::Error error = FormatterBytecode::Interpret(
+      control, data, FormatterBytecode::sig_init, m_impl.version);
   if (error) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), std::move(error),
                    "@init failed: {0}");
     return;
   }
 
-  if (data.size() > 0)
+  if (m_impl.version >= 2)
+    m_init_results.assign({self_sp});
+  else if (data.size() > 0)
     m_init_results = std::move(data);
 }
 
@@ -306,24 +325,42 @@ lldb::ChildCacheState BytecodeSyntheticChildren::FrontEnd::Update() {
   FormatterBytecode::ControlStack control = {m_impl.update->getBuffer()};
   FormatterBytecode::DataStack data = m_init_results;
   llvm::Error error = FormatterBytecode::Interpret(
-      control, data, FormatterBytecode::sig_update);
+      control, data, FormatterBytecode::sig_update, m_impl.version);
   if (error) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), std::move(error),
                    "@update failed: {0}");
     return ChildCacheState::eRefetch;
   }
 
+  // Version 2: @update mutates `self` in place, and returns an int representing
+  // the ChildCacheState return value.
+  if (m_impl.version >= 2) {
+    m_self = m_init_results;
+    auto *reply =
+        data.empty() ? nullptr : std::get_if<llvm::APSInt>(&data.back());
+    if (!reply || !(*reply == 0 || *reply == 1)) {
+      LLDB_LOG(GetLog(LLDBLog::DataFormatters),
+               "@update did not reply with an Integer of 0 or 1, as required "
+               "of version 2 formatters (type: `{0}`, name: `{1}`)",
+               m_backend.GetDisplayTypeName(), m_backend.GetName());
+      return ChildCacheState::eRefetch;
+    }
+    return static_cast<ChildCacheState>(reply->getExtValue());
+  }
+
   std::optional<ChildCacheState> can_reuse = std::nullopt;
-  const FormatterBytecode::DataStackElement &top = data.back();
-  if (auto *u = std::get_if<uint64_t>(&top))
-    if (*u == 0 || *u == 1)
-      can_reuse = static_cast<ChildCacheState>(*u);
-  if (auto *i = std::get_if<int64_t>(&top))
-    if (*i == 0 || *i == 1)
-      can_reuse = static_cast<ChildCacheState>(*i);
-  if (auto *ap = std::get_if<llvm::APSInt>(&top))
-    if (*ap == 0 || *ap == 1)
-      can_reuse = static_cast<ChildCacheState>(ap->getExtValue());
+  if (!data.empty()) {
+    const FormatterBytecode::DataStackElement &top = data.back();
+    if (auto *u = std::get_if<uint64_t>(&top))
+      if (*u == 0 || *u == 1)
+        can_reuse = static_cast<ChildCacheState>(*u);
+    if (auto *i = std::get_if<int64_t>(&top))
+      if (*i == 0 || *i == 1)
+        can_reuse = static_cast<ChildCacheState>(*i);
+    if (auto *ap = std::get_if<llvm::APSInt>(&top))
+      if (*ap == 0 || *ap == 1)
+        can_reuse = static_cast<ChildCacheState>(ap->getExtValue());
+  }
 
   if (can_reuse) {
     data.pop_back();
@@ -353,7 +390,7 @@ BytecodeSyntheticChildren::FrontEnd::CalculateNumChildren() {
   FormatterBytecode::ControlStack control = {m_impl.num_children->getBuffer()};
   FormatterBytecode::DataStack data = m_self;
   llvm::Error error = FormatterBytecode::Interpret(
-      control, data, FormatterBytecode::sig_get_num_children);
+      control, data, FormatterBytecode::sig_get_num_children, m_impl.version);
   if (error)
     return error;
 
@@ -368,14 +405,14 @@ BytecodeSyntheticChildren::FrontEnd::CalculateNumChildren() {
     if (*u <= UINT32_MAX)
       return *u;
   if (auto *i = std::get_if<int64_t>(&top)) {
-    if (*i > 0 && *i <= UINT32_MAX)
+    if (*i >= 0 && *i <= UINT32_MAX)
       return *i;
     return UINT32_MAX;
   }
   if (auto *ap = std::get_if<llvm::APSInt>(&top)) {
     if (ap->isRepresentableByInt64()) {
       int64_t v = ap->getExtValue();
-      if (v > 0 && v <= UINT32_MAX)
+      if (v >= 0 && v <= UINT32_MAX)
         return static_cast<uint32_t>(v);
     }
     return UINT32_MAX;
@@ -392,9 +429,12 @@ BytecodeSyntheticChildren::FrontEnd::GetChildAtIndex(uint32_t idx) {
   FormatterBytecode::ControlStack control = {
       m_impl.get_child_at_index->getBuffer()};
   FormatterBytecode::DataStack data = m_self;
-  data.emplace_back((uint64_t)idx);
+  if (m_impl.version >= 2)
+    data.Push(llvm::APSInt::get(idx));
+  else
+    data.emplace_back((uint64_t)idx);
   llvm::Error error = FormatterBytecode::Interpret(
-      control, data, FormatterBytecode::sig_get_child_at_index);
+      control, data, FormatterBytecode::sig_get_child_at_index, m_impl.version);
   if (error) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), std::move(error),
                    "@get_child_at_index failed: {0}");
@@ -416,15 +456,15 @@ BytecodeSyntheticChildren::FrontEnd::GetChildAtIndex(uint32_t idx) {
 
 llvm::Expected<size_t>
 BytecodeSyntheticChildren::FrontEnd::GetIndexOfChildWithName(ConstString name) {
-  if (m_impl.get_child_index)
-    return -1;
+  if (!m_impl.get_child_index)
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
 
   FormatterBytecode::ControlStack control = {
       m_impl.get_child_index->getBuffer()};
   FormatterBytecode::DataStack data = m_self;
   data.emplace_back(name.GetString());
   llvm::Error error = FormatterBytecode::Interpret(
-      control, data, FormatterBytecode::sig_get_child_index);
+      control, data, FormatterBytecode::sig_get_child_index, m_impl.version);
   if (error)
     return error;
 
@@ -439,14 +479,14 @@ BytecodeSyntheticChildren::FrontEnd::GetIndexOfChildWithName(ConstString name) {
     if (*u <= SIZE_MAX)
       return *u;
   if (auto *i = std::get_if<int64_t>(&top)) {
-    if (*i > 0 && static_cast<uint64_t>(*i) <= SIZE_MAX)
+    if (*i >= 0 && static_cast<uint64_t>(*i) <= SIZE_MAX)
       return *i;
     return SIZE_MAX;
   }
   if (auto *ap = std::get_if<llvm::APSInt>(&top)) {
     if (ap->isRepresentableByInt64()) {
       int64_t v = ap->getExtValue();
-      if (v > 0 && static_cast<uint64_t>(v) <= SIZE_MAX)
+      if (v >= 0 && static_cast<uint64_t>(v) <= SIZE_MAX)
         return static_cast<size_t>(v);
     }
     return SIZE_MAX;

@@ -102,10 +102,6 @@ char GCNPreRAOptimizationsLegacy::ID = 0;
 
 char &llvm::GCNPreRAOptimizationsID = GCNPreRAOptimizationsLegacy::ID;
 
-FunctionPass *llvm::createGCNPreRAOptimizationsLegacyPass() {
-  return new GCNPreRAOptimizationsLegacy();
-}
-
 bool GCNPreRAOptimizationsImpl::processReg(Register Reg) {
   MachineInstr *Def0 = nullptr;
   MachineInstr *Def1 = nullptr;

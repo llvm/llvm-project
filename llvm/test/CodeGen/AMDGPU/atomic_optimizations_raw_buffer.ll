@@ -687,12 +687,11 @@ define amdgpu_kernel void @add_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX6-NEXT:    s_ff1_i32_b64 s3, s[0:1]
 ; GFX6-NEXT:    s_lshl_b64 s[6:7], 1, s3
 ; GFX6-NEXT:    s_andn2_b64 s[0:1], s[0:1], s[6:7]
-; GFX6-NEXT:    v_cmp_ne_u64_e64 s[6:7], s[0:1], 0
 ; GFX6-NEXT:    s_mov_b32 m0, s3
 ; GFX6-NEXT:    v_readlane_b32 s8, v0, s3
+; GFX6-NEXT:    v_cmp_ne_u64_e64 vcc, s[0:1], 0
 ; GFX6-NEXT:    v_writelane_b32 v1, s2, m0
 ; GFX6-NEXT:    s_add_i32 s2, s2, s8
-; GFX6-NEXT:    s_and_b64 vcc, exec, s[6:7]
 ; GFX6-NEXT:    s_cbranch_vccnz .LBB2_1
 ; GFX6-NEXT:  ; %bb.2: ; %ComputeEnd
 ; GFX6-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
@@ -1962,12 +1961,11 @@ define amdgpu_kernel void @sub_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX6-NEXT:    s_ff1_i32_b64 s3, s[0:1]
 ; GFX6-NEXT:    s_lshl_b64 s[6:7], 1, s3
 ; GFX6-NEXT:    s_andn2_b64 s[0:1], s[0:1], s[6:7]
-; GFX6-NEXT:    v_cmp_ne_u64_e64 s[6:7], s[0:1], 0
 ; GFX6-NEXT:    s_mov_b32 m0, s3
 ; GFX6-NEXT:    v_readlane_b32 s8, v0, s3
+; GFX6-NEXT:    v_cmp_ne_u64_e64 vcc, s[0:1], 0
 ; GFX6-NEXT:    v_writelane_b32 v1, s2, m0
 ; GFX6-NEXT:    s_add_i32 s2, s2, s8
-; GFX6-NEXT:    s_and_b64 vcc, exec, s[6:7]
 ; GFX6-NEXT:    s_cbranch_vccnz .LBB6_1
 ; GFX6-NEXT:  ; %bb.2: ; %ComputeEnd
 ; GFX6-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
