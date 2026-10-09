@@ -2333,6 +2333,26 @@ void cir::SwitchFlatOp::build(OpBuilder &builder, OperationState &result,
         defaultDestination, caseDestinations);
 }
 
+SuccessorOperands cir::SwitchFlatOp::getSuccessorOperands(unsigned index) {
+  assert(index < getNumSuccessors() && "invalid successor index");
+  if (index == 0)
+    return SuccessorOperands(getDefaultOperandsMutable());
+  return SuccessorOperands(getCaseOperandsMutable()[index - 1]);
+}
+
+Block *
+cir::SwitchFlatOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
+  auto cond = dyn_cast_if_present<cir::IntAttr>(operands.front());
+  if (!cond)
+    return nullptr;
+  for (auto [value, dest] : llvm::zip(getCaseValues(), getCaseDestinations())) {
+    const APInt &caseValue = cast<cir::IntAttr>(value).getValue();
+    if (caseValue == cond.getValue())
+      return dest;
+  }
+  return getDefaultDestination();
+}
+
 /// <cases> ::= `[` (case (`,` case )* )? `]`
 /// <case>  ::= integer `:` bb-id (`(` ssa-use-and-type-list `)`)?
 static ParseResult parseSwitchFlatOpCases(
