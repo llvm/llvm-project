@@ -58,7 +58,7 @@ static MCRegister findUnusedRegister(MachineRegisterInfo &MRI,
   return MCRegister();
 }
 
-static void encodeDwarfRegisterLocation(int DwarfReg, raw_ostream &OS) {
+static void encodeDwarfRegisterLocation(int64_t DwarfReg, raw_ostream &OS) {
   assert(DwarfReg >= 0);
   if (DwarfReg < 32) {
     OS << uint8_t(dwarf::DW_OP_reg0 + DwarfReg);
@@ -83,7 +83,7 @@ static MCCFIInstruction createScaledCFAInPrivateWave(const GCNSubtarget &ST,
 
   SmallString<20> Block;
   raw_svector_ostream OSBlock(Block);
-  encodeDwarfRegisterLocation(static_cast<int>(DwarfStackPtrReg), OSBlock);
+  encodeDwarfRegisterLocation(DwarfStackPtrReg, OSBlock);
   OSBlock << uint8_t(dwarf::DW_OP_deref_size) << uint8_t(SGPRByteSize)
           << uint8_t(dwarf::DW_OP_lit0 + WavefrontSizeLog2)
           << uint8_t(dwarf::DW_OP_shl)
@@ -110,8 +110,7 @@ void SIFrameLowering::emitDefCFA(MachineBasicBlock &MBB,
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
-  int64_t DwarfStackPtrReg =
-      static_cast<unsigned>(TRI->getDwarfRegNum(StackPtrReg, false));
+  int64_t DwarfStackPtrReg = TRI->getDwarfRegNum(StackPtrReg, false);
   MCCFIInstruction CFIInst =
       ST.hasFlatScratchEnabled()
           ? createScaledCFAInPrivateWave(ST, DwarfStackPtrReg)
@@ -2552,10 +2551,8 @@ MachineInstr *SIFrameLowering::buildCFIForSGPRToVGPRSpill(
   const MachineFunction &MF = *MBB.getParent();
   const MCRegisterInfo &MCRI = *MF.getContext().getRegisterInfo();
 
-  int DwarfSGPR =
-      static_cast<int>(static_cast<unsigned>(MCRI.getDwarfRegNum(SGPR, false)));
-  int DwarfVGPR =
-      static_cast<int>(static_cast<unsigned>(MCRI.getDwarfRegNum(VGPR, false)));
+  int64_t DwarfSGPR = MCRI.getDwarfRegNum(SGPR, false);
+  int64_t DwarfVGPR = MCRI.getDwarfRegNum(VGPR, false);
   assert(DwarfSGPR != -1 && DwarfVGPR != -1);
   assert(Lane != -1 && "Expected a lane to be present");
 
@@ -2563,8 +2560,8 @@ MachineInstr *SIFrameLowering::buildCFIForSGPRToVGPRSpill(
   // a VGPR.
   MCCFIInstruction::VectorRegisterWithLane VR{unsigned(DwarfVGPR),
                                               unsigned(Lane), VGPRLaneBitSize};
-  auto CFIInst =
-      MCCFIInstruction::createLLVMVectorRegisters(nullptr, DwarfSGPR, {VR});
+  auto CFIInst = MCCFIInstruction::createLLVMVectorRegisters(
+      nullptr, static_cast<unsigned>(DwarfSGPR), {VR});
   return buildCFI(MBB, MBBI, DL, std::move(CFIInst));
 }
 
@@ -2578,8 +2575,7 @@ MachineInstr *SIFrameLowering::buildCFIForSGPRToVGPRSpill(
   const MachineFunction &MF = *MBB.getParent();
   const MCRegisterInfo &MCRI = *MF.getContext().getRegisterInfo();
 
-  int DwarfSGPR =
-      static_cast<int>(static_cast<unsigned>(MCRI.getDwarfRegNum(SGPR, false)));
+  int64_t DwarfSGPR = MCRI.getDwarfRegNum(SGPR, false);
   assert(DwarfSGPR != -1);
 
   // Build a CFI instruction that represents a SGPR spilled to multiple lanes of
@@ -2587,16 +2583,15 @@ MachineInstr *SIFrameLowering::buildCFIForSGPRToVGPRSpill(
 
   SmallVector<MCCFIInstruction::VectorRegisterWithLane> VGPRs;
   for (SIRegisterInfo::SpilledReg Spill : VGPRSpills) {
-    int DwarfVGPR = static_cast<int>(
-        static_cast<unsigned>(MCRI.getDwarfRegNum(Spill.VGPR, false)));
+    int64_t DwarfVGPR = MCRI.getDwarfRegNum(Spill.VGPR, false);
     assert(DwarfVGPR != -1);
     assert(Spill.hasLane() && "Expected a lane to be present");
     VGPRs.push_back(
         {unsigned(DwarfVGPR), unsigned(Spill.Lane), VGPRLaneBitSize});
   }
 
-  auto CFIInst = MCCFIInstruction::createLLVMVectorRegisters(nullptr, DwarfSGPR,
-                                                             std::move(VGPRs));
+  auto CFIInst = MCCFIInstruction::createLLVMVectorRegisters(
+      nullptr, static_cast<unsigned>(DwarfSGPR), std::move(VGPRs));
   return buildCFI(MBB, MBBI, DL, std::move(CFIInst));
 }
 
@@ -2619,8 +2614,7 @@ MachineInstr *SIFrameLowering::buildCFIForVGPRToVMEMSpill(
   const MCRegisterInfo &MCRI = *MF.getContext().getRegisterInfo();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
-  int DwarfVGPR =
-      static_cast<int>(static_cast<unsigned>(MCRI.getDwarfRegNum(VGPR, false)));
+  int DwarfVGPR = static_cast<int>(MCRI.getDwarfRegNum(VGPR, false));
   assert(DwarfVGPR != -1);
 
   unsigned MaskReg = static_cast<unsigned>(MCRI.getDwarfRegNum(
@@ -2711,8 +2705,7 @@ MachineInstr *SIFrameLowering::buildCFIForSameValue(
     const DebugLoc &DL, MCRegister Reg) const {
   const MachineFunction &MF = *MBB.getParent();
   const MCRegisterInfo &MCRI = *MF.getContext().getRegisterInfo();
-  int DwarfReg = static_cast<int>(
-      static_cast<unsigned>(MCRI.getDwarfRegNum(Reg, /*isEH=*/false)));
+  int DwarfReg = static_cast<int>(MCRI.getDwarfRegNum(Reg, /*isEH=*/false));
   auto CFIInst = MCCFIInstruction::createSameValue(nullptr, DwarfReg);
   return buildCFI(MBB, MBBI, DL, std::move(CFIInst));
 }
