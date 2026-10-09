@@ -205,11 +205,10 @@ void matrix_subscript_expr_non_const_indices() {
 // Difference here because CIR calculate the flat index in lowering pass after matrix is loaded
 
 // LLVM-CIR: %[[TMP_MATRIX:.*]] = load <9 x float>, ptr %[[MATRIX_ADDR]], align 4
-// LLVM-CIR: %[[MUL_COL_3:.*]] = mul i64 %[[COLUMN_IDX]], 3
-// LLVM-CIR: %[[FLAT_IDX:.*]] = add i64 %[[MUL_COL_3]], %[[ROW_IDX]]
 
-// LLVM-OGCG: %[[MUL_COL_3:.*]] = mul i64 %[[COLUMN_IDX]], 3
-// LLVM-OGCG: %[[FLAT_IDX:.*]] = add i64 %[[MUL_COL_3]], %[[ROW_IDX]]
+// LLVM: %[[MUL_COL_3:.*]] = mul i64 %[[COLUMN_IDX]], 3
+// LLVM: %[[FLAT_IDX:.*]] = add i64 %[[MUL_COL_3]], %[[ROW_IDX]]
+
 // LLVM-OGCG: %[[TMP_MATRIX:.*]] = load <9 x float>, ptr %[[MATRIX_ADDR]], align 4
 
 // LLVM: %[[ELEM:.*]] = extractelement <9 x float> %[[TMP_MATRIX]], i64 %[[FLAT_IDX]]

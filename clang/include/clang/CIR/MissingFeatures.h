@@ -235,6 +235,7 @@ struct MissingFeatures {
   static bool emitLValueAlignmentAssumption() { return false; }
   static bool emitNullCheckForDeleteCalls() { return false; }
   static bool emitNullabilityCheck() { return false; }
+  static bool emitIndexAssumption() { return false; }
   static bool emitTypeCheck() { return false; }
   static bool emitTypeMetadataCodeForVCall() { return false; }
   static bool fakeUseCleanup() { return false; }
