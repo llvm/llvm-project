@@ -1633,6 +1633,12 @@ TryCastResult TryLValueToRValueCast(Sema &Self, Expr *SrcExpr,
   if (!SrcExpr->isGLValue())
     return TC_NotApplicable;
 
+  // A bit-field lvalue cannot be directly bound to an rvalue reference; it
+  // has no address.  Fall through to TryStaticImplicitCast so the initializer
+  // sequence materializes a temporary and binds to that instead.
+  if (SrcExpr->refersToBitField())
+    return TC_NotApplicable;
+
   // Because we try the reference downcast before this function, from now on
   // this is the only cast possibility, so we issue an error if we fail now.
   QualType FromType = SrcExpr->getType();
