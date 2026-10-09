@@ -1552,6 +1552,9 @@ void TwoAddressInstructionImpl::processTiedPairs(MachineInstr *MI,
   bool AllUsesCopied = true;
   Register LastCopiedReg;
   SlotIndex LastCopyIdx;
+  // Remember which lanes each copy reads so that subrange is shrunk to its own
+  // copy rather than to the last copy.
+  SmallVector<std::pair<LaneBitmask, SlotIndex>, 4> CopiedLanes;
   Register RegB = 0;
   unsigned SubRegB = 0;
   for (auto &TP : TiedPairs) {
@@ -1615,6 +1618,9 @@ void TwoAddressInstructionImpl::processTiedPairs(MachineInstr *MI,
 
     if (LIS) {
       LastCopyIdx = LIS->InsertMachineInstrInMaps(*PrevMI).getRegSlot();
+      CopiedLanes.emplace_back(SubRegB ? TRI->getSubRegIndexLaneMask(SubRegB)
+                                       : LaneBitmask::getAll(),
+                               LastCopyIdx);
 
       SlotIndex endIdx =
           LIS->getInstructionIndex(*MI).getRegSlot(DstMO.isEarlyClobber());
@@ -1692,15 +1698,25 @@ void TwoAddressInstructionImpl::processTiedPairs(MachineInstr *MI,
     // Update LiveIntervals.
     if (LIS) {
       SlotIndex UseIdx = LIS->getInstructionIndex(*MI);
-      auto Shrink = [=](LiveRange &LR, LaneBitmask LaneMask) {
-        LiveRange::Segment *S = LR.getSegmentContaining(LastCopyIdx);
+      // Find the last copy for the LaneMask.
+      auto CopyIdxFor = [&](LaneBitmask LaneMask) {
+        SlotIndex Idx;
+        for (auto &[CopiedMask, CopyIdx] : CopiedLanes)
+          if ((CopiedMask & LaneMask).any() &&
+              (!Idx.isValid() || Idx < CopyIdx))
+            Idx = CopyIdx;
+        return Idx.isValid() ? Idx : LastCopyIdx;
+      };
+      auto Shrink = [&](LiveRange &LR, LaneBitmask LaneMask) {
+        SlotIndex CopyIdx = CopyIdxFor(LaneMask);
+        LiveRange::Segment *S = LR.getSegmentContaining(CopyIdx);
         if (!S)
           return true;
         if ((LaneMask & RemainingUses).any())
           return false;
         if (S->end.getBaseIndex() != UseIdx)
           return false;
-        S->end = LastCopyIdx;
+        S->end = CopyIdx;
         return true;
       };
 
