@@ -9,8 +9,8 @@ define void @notatomic_i8_generic(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [notatomic_i8_generic_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i8_generic_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [notatomic_i8_generic_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i8_generic_param_1];
 ; CHECK-NEXT:    st.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store i8 %val, ptr %addr
@@ -24,8 +24,8 @@ define void @notatomic_i8_generic_volatile(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [notatomic_i8_generic_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i8_generic_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [notatomic_i8_generic_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i8_generic_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store volatile i8 %val, ptr %addr
@@ -39,8 +39,8 @@ define void @notatomic_i16_generic(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_i16_generic_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i16_generic_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [notatomic_i16_generic_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i16_generic_param_1];
 ; CHECK-NEXT:    st.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store i16 %val, ptr %addr
@@ -54,8 +54,8 @@ define void @notatomic_i16_generic_volatile(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_i16_generic_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i16_generic_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [notatomic_i16_generic_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i16_generic_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store volatile i16 %val, ptr %addr
@@ -69,8 +69,8 @@ define void @notatomic_i32_generic(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [notatomic_i32_generic_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i32_generic_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [notatomic_i32_generic_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i32_generic_param_1];
 ; CHECK-NEXT:    st.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store i32 %val, ptr %addr
@@ -84,8 +84,8 @@ define void @notatomic_i32_generic_volatile(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [notatomic_i32_generic_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i32_generic_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [notatomic_i32_generic_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i32_generic_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store volatile i32 %val, ptr %addr
@@ -98,8 +98,8 @@ define void @notatomic_i64_generic(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i64_generic_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [notatomic_i64_generic_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i64_generic_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [notatomic_i64_generic_param_1];
 ; CHECK-NEXT:    st.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store i64 %val, ptr %addr
@@ -112,8 +112,8 @@ define void @notatomic_i64_generic_volatile(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i64_generic_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [notatomic_i64_generic_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i64_generic_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [notatomic_i64_generic_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store volatile i64 %val, ptr %addr
@@ -126,8 +126,8 @@ define void @notatomic_i128_generic(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [notatomic_i128_generic_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [notatomic_i128_generic_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [notatomic_i128_generic_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [notatomic_i128_generic_param_1];
 ; CHECK-NEXT:    st.v2.b64 [%rd3], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     store i128 %val, ptr %addr
@@ -140,8 +140,8 @@ define void @notatomic_i128_generic_volatile(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [notatomic_i128_generic_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [notatomic_i128_generic_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [notatomic_i128_generic_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [notatomic_i128_generic_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.v2.b64 [%rd3], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     store volatile i128 %val, ptr %addr
@@ -155,8 +155,8 @@ define void @notatomic_half_generic(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_half_generic_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_half_generic_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [notatomic_half_generic_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_half_generic_param_1];
 ; CHECK-NEXT:    st.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store half %val, ptr %addr
@@ -170,8 +170,8 @@ define void @notatomic_half_generic_volatile(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_half_generic_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_half_generic_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [notatomic_half_generic_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_half_generic_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store volatile half %val, ptr %addr
@@ -185,8 +185,8 @@ define void @notatomic_bfloat_generic(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_bfloat_generic_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_bfloat_generic_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [notatomic_bfloat_generic_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_bfloat_generic_param_1];
 ; CHECK-NEXT:    st.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store bfloat %val, ptr %addr
@@ -200,8 +200,8 @@ define void @notatomic_bfloat_generic_volatile(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_bfloat_generic_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_bfloat_generic_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [notatomic_bfloat_generic_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_bfloat_generic_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store volatile bfloat %val, ptr %addr
@@ -215,8 +215,8 @@ define void @notatomic_float_generic(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [notatomic_float_generic_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_float_generic_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [notatomic_float_generic_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_float_generic_param_1];
 ; CHECK-NEXT:    st.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store float %val, ptr %addr
@@ -230,8 +230,8 @@ define void @notatomic_float_generic_volatile(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [notatomic_float_generic_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_float_generic_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [notatomic_float_generic_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_float_generic_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store volatile float %val, ptr %addr
@@ -244,8 +244,8 @@ define void @notatomic_double_generic(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_double_generic_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [notatomic_double_generic_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_double_generic_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [notatomic_double_generic_param_1];
 ; CHECK-NEXT:    st.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store double %val, ptr %addr
@@ -258,8 +258,8 @@ define void @notatomic_double_generic_volatile(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_double_generic_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [notatomic_double_generic_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_double_generic_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [notatomic_double_generic_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store volatile double %val, ptr %addr
@@ -273,8 +273,8 @@ define void @notatomic_i8_global(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [notatomic_i8_global_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i8_global_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [notatomic_i8_global_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i8_global_param_1];
 ; CHECK-NEXT:    st.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store i8 %val, ptr addrspace(1) %addr
@@ -288,8 +288,8 @@ define void @notatomic_i8_global_volatile(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [notatomic_i8_global_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i8_global_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [notatomic_i8_global_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i8_global_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store volatile i8 %val, ptr addrspace(1) %addr
@@ -303,8 +303,8 @@ define void @notatomic_i16_global(i16 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_i16_global_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i16_global_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [notatomic_i16_global_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i16_global_param_1];
 ; CHECK-NEXT:    st.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store i16 %val, ptr addrspace(1) %addr
@@ -318,8 +318,8 @@ define void @notatomic_i16_global_volatile(i16 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_i16_global_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i16_global_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [notatomic_i16_global_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i16_global_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store volatile i16 %val, ptr addrspace(1) %addr
@@ -333,8 +333,8 @@ define void @notatomic_i32_global(i32 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [notatomic_i32_global_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i32_global_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [notatomic_i32_global_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i32_global_param_1];
 ; CHECK-NEXT:    st.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store i32 %val, ptr addrspace(1) %addr
@@ -348,8 +348,8 @@ define void @notatomic_i32_global_volatile(i32 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [notatomic_i32_global_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i32_global_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [notatomic_i32_global_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i32_global_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store volatile i32 %val, ptr addrspace(1) %addr
@@ -362,8 +362,8 @@ define void @notatomic_i64_global(i64 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i64_global_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [notatomic_i64_global_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i64_global_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [notatomic_i64_global_param_1];
 ; CHECK-NEXT:    st.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store i64 %val, ptr addrspace(1) %addr
@@ -376,8 +376,8 @@ define void @notatomic_i64_global_volatile(i64 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i64_global_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [notatomic_i64_global_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i64_global_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [notatomic_i64_global_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store volatile i64 %val, ptr addrspace(1) %addr
@@ -390,8 +390,8 @@ define void @notatomic_i128_global(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [notatomic_i128_global_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [notatomic_i128_global_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [notatomic_i128_global_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [notatomic_i128_global_param_1];
 ; CHECK-NEXT:    st.global.v2.b64 [%rd3], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     store i128 %val, ptr addrspace(1) %addr
@@ -404,8 +404,8 @@ define void @notatomic_i128_global_volatile(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [notatomic_i128_global_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [notatomic_i128_global_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [notatomic_i128_global_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [notatomic_i128_global_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.global.v2.b64 [%rd3], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     store volatile i128 %val, ptr addrspace(1) %addr
@@ -419,8 +419,8 @@ define void @notatomic_half_global(half %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_half_global_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_half_global_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [notatomic_half_global_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_half_global_param_1];
 ; CHECK-NEXT:    st.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store half %val, ptr addrspace(1) %addr
@@ -434,8 +434,8 @@ define void @notatomic_half_global_volatile(half %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_half_global_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_half_global_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [notatomic_half_global_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_half_global_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store volatile half %val, ptr addrspace(1) %addr
@@ -449,8 +449,8 @@ define void @notatomic_bfloat_global(bfloat %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_bfloat_global_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_bfloat_global_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [notatomic_bfloat_global_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_bfloat_global_param_1];
 ; CHECK-NEXT:    st.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store bfloat %val, ptr addrspace(1) %addr
@@ -464,8 +464,8 @@ define void @notatomic_bfloat_global_volatile(bfloat %val, ptr addrspace(1) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_bfloat_global_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_bfloat_global_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [notatomic_bfloat_global_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_bfloat_global_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store volatile bfloat %val, ptr addrspace(1) %addr
@@ -479,8 +479,8 @@ define void @notatomic_float_global(float %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [notatomic_float_global_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_float_global_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [notatomic_float_global_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_float_global_param_1];
 ; CHECK-NEXT:    st.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store float %val, ptr addrspace(1) %addr
@@ -494,8 +494,8 @@ define void @notatomic_float_global_volatile(float %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [notatomic_float_global_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_float_global_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [notatomic_float_global_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_float_global_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store volatile float %val, ptr addrspace(1) %addr
@@ -508,8 +508,8 @@ define void @notatomic_double_global(double %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_double_global_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [notatomic_double_global_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_double_global_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [notatomic_double_global_param_1];
 ; CHECK-NEXT:    st.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store double %val, ptr addrspace(1) %addr
@@ -522,8 +522,8 @@ define void @notatomic_double_global_volatile(double %val, ptr addrspace(1) %add
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_double_global_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [notatomic_double_global_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_double_global_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [notatomic_double_global_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store volatile double %val, ptr addrspace(1) %addr
@@ -537,8 +537,8 @@ define void @notatomic_i8_shared(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [notatomic_i8_shared_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i8_shared_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [notatomic_i8_shared_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i8_shared_param_1];
 ; CHECK-NEXT:    st.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store i8 %val, ptr addrspace(3) %addr
@@ -552,8 +552,8 @@ define void @notatomic_i8_shared_volatile(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [notatomic_i8_shared_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i8_shared_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [notatomic_i8_shared_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i8_shared_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store volatile i8 %val, ptr addrspace(3) %addr
@@ -567,8 +567,8 @@ define void @notatomic_i16_shared(i16 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_i16_shared_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i16_shared_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [notatomic_i16_shared_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i16_shared_param_1];
 ; CHECK-NEXT:    st.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store i16 %val, ptr addrspace(3) %addr
@@ -582,8 +582,8 @@ define void @notatomic_i16_shared_volatile(i16 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_i16_shared_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i16_shared_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [notatomic_i16_shared_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i16_shared_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store volatile i16 %val, ptr addrspace(3) %addr
@@ -597,8 +597,8 @@ define void @notatomic_i32_shared(i32 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [notatomic_i32_shared_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i32_shared_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [notatomic_i32_shared_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i32_shared_param_1];
 ; CHECK-NEXT:    st.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store i32 %val, ptr addrspace(3) %addr
@@ -612,8 +612,8 @@ define void @notatomic_i32_shared_volatile(i32 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [notatomic_i32_shared_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i32_shared_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [notatomic_i32_shared_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i32_shared_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store volatile i32 %val, ptr addrspace(3) %addr
@@ -626,8 +626,8 @@ define void @notatomic_i64_shared(i64 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i64_shared_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [notatomic_i64_shared_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i64_shared_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [notatomic_i64_shared_param_1];
 ; CHECK-NEXT:    st.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store i64 %val, ptr addrspace(3) %addr
@@ -640,8 +640,8 @@ define void @notatomic_i64_shared_volatile(i64 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i64_shared_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [notatomic_i64_shared_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i64_shared_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [notatomic_i64_shared_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store volatile i64 %val, ptr addrspace(3) %addr
@@ -654,8 +654,8 @@ define void @notatomic_i128_shared(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [notatomic_i128_shared_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [notatomic_i128_shared_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [notatomic_i128_shared_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [notatomic_i128_shared_param_1];
 ; CHECK-NEXT:    st.shared.v2.b64 [%rd3], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     store i128 %val, ptr addrspace(3) %addr
@@ -668,8 +668,8 @@ define void @notatomic_i128_shared_volatile(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [notatomic_i128_shared_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [notatomic_i128_shared_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [notatomic_i128_shared_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [notatomic_i128_shared_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.v2.b64 [%rd3], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     store volatile i128 %val, ptr addrspace(3) %addr
@@ -683,8 +683,8 @@ define void @notatomic_half_shared(half %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_half_shared_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_half_shared_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [notatomic_half_shared_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_half_shared_param_1];
 ; CHECK-NEXT:    st.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store half %val, ptr addrspace(3) %addr
@@ -698,8 +698,8 @@ define void @notatomic_half_shared_volatile(half %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_half_shared_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_half_shared_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [notatomic_half_shared_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_half_shared_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store volatile half %val, ptr addrspace(3) %addr
@@ -713,8 +713,8 @@ define void @notatomic_bfloat_shared(bfloat %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_bfloat_shared_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_bfloat_shared_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [notatomic_bfloat_shared_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_bfloat_shared_param_1];
 ; CHECK-NEXT:    st.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store bfloat %val, ptr addrspace(3) %addr
@@ -728,8 +728,8 @@ define void @notatomic_bfloat_shared_volatile(bfloat %val, ptr addrspace(3) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_bfloat_shared_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_bfloat_shared_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [notatomic_bfloat_shared_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_bfloat_shared_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store volatile bfloat %val, ptr addrspace(3) %addr
@@ -743,8 +743,8 @@ define void @notatomic_float_shared(float %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [notatomic_float_shared_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_float_shared_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [notatomic_float_shared_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_float_shared_param_1];
 ; CHECK-NEXT:    st.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store float %val, ptr addrspace(3) %addr
@@ -758,8 +758,8 @@ define void @notatomic_float_shared_volatile(float %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [notatomic_float_shared_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_float_shared_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [notatomic_float_shared_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_float_shared_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store volatile float %val, ptr addrspace(3) %addr
@@ -772,8 +772,8 @@ define void @notatomic_double_shared(double %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_double_shared_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [notatomic_double_shared_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_double_shared_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [notatomic_double_shared_param_1];
 ; CHECK-NEXT:    st.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store double %val, ptr addrspace(3) %addr
@@ -786,8 +786,8 @@ define void @notatomic_double_shared_volatile(double %val, ptr addrspace(3) %add
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_double_shared_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [notatomic_double_shared_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_double_shared_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [notatomic_double_shared_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store volatile double %val, ptr addrspace(3) %addr
@@ -806,13 +806,12 @@ define void @notatomic_i8_local(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot54;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [notatomic_i8_local_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [notatomic_i8_local_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -832,13 +831,12 @@ define void @notatomic_i8_local_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot55;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [notatomic_i8_local_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [notatomic_i8_local_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -858,13 +856,12 @@ define void @notatomic_i16_local(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot56;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_i16_local_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [notatomic_i16_local_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -884,13 +881,12 @@ define void @notatomic_i16_local_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot57;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_i16_local_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [notatomic_i16_local_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -909,13 +905,12 @@ define void @notatomic_i32_local(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot58;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [notatomic_i32_local_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [notatomic_i32_local_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -934,13 +929,12 @@ define void @notatomic_i32_local_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot59;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [notatomic_i32_local_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [notatomic_i32_local_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -959,13 +953,12 @@ define void @notatomic_i64_local(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot60;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i64_local_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i64_local_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -984,13 +977,12 @@ define void @notatomic_i64_local_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot61;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i64_local_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i64_local_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1009,13 +1001,12 @@ define void @notatomic_i128_local(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot62;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [notatomic_i128_local_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [notatomic_i128_local_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1034,13 +1025,12 @@ define void @notatomic_i128_local_volatile(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot63;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [notatomic_i128_local_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [notatomic_i128_local_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1060,13 +1050,12 @@ define void @notatomic_half_local(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot64;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_half_local_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [notatomic_half_local_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1086,13 +1075,12 @@ define void @notatomic_half_local_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot65;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_half_local_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [notatomic_half_local_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1112,13 +1100,12 @@ define void @notatomic_bfloat_local(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot66;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_bfloat_local_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [notatomic_bfloat_local_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1138,13 +1125,12 @@ define void @notatomic_bfloat_local_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot67;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_bfloat_local_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [notatomic_bfloat_local_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1163,13 +1149,12 @@ define void @notatomic_float_local(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot68;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [notatomic_float_local_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [notatomic_float_local_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1188,13 +1173,12 @@ define void @notatomic_float_local_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot69;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [notatomic_float_local_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [notatomic_float_local_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1213,13 +1197,12 @@ define void @notatomic_double_local(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot70;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_double_local_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_double_local_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1238,13 +1221,12 @@ define void @notatomic_double_local_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot71;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_double_local_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_double_local_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1259,8 +1241,8 @@ define void @unordered_i8_generic_sys(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_generic_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_generic_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr %addr syncscope("") unordered, align 1
@@ -1274,8 +1256,8 @@ define void @unordered_i8_generic_cta(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_generic_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_generic_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr %addr syncscope("block") unordered, align 1
@@ -1289,8 +1271,8 @@ define void @unordered_i8_generic_cluster(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_generic_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_generic_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr %addr syncscope("cluster") unordered, align 1
@@ -1304,8 +1286,8 @@ define void @unordered_i8_generic_gpu(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_generic_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_generic_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr %addr syncscope("device") unordered, align 1
@@ -1319,8 +1301,8 @@ define void @unordered_i8_generic_sys_volatile(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_generic_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr %addr syncscope("") unordered, align 1
@@ -1334,8 +1316,8 @@ define void @unordered_i8_generic_cta_volatile(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_generic_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr %addr syncscope("block") unordered, align 1
@@ -1349,8 +1331,8 @@ define void @unordered_i8_generic_cluster_volatile(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_generic_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr %addr syncscope("cluster") unordered, align 1
@@ -1364,8 +1346,8 @@ define void @unordered_i8_generic_gpu_volatile(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_generic_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr %addr syncscope("device") unordered, align 1
@@ -1379,8 +1361,8 @@ define void @unordered_i16_generic_sys(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_generic_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_generic_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr %addr syncscope("") unordered, align 2
@@ -1394,8 +1376,8 @@ define void @unordered_i16_generic_cta(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_generic_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_generic_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr %addr syncscope("block") unordered, align 2
@@ -1409,8 +1391,8 @@ define void @unordered_i16_generic_cluster(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_generic_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_generic_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr %addr syncscope("cluster") unordered, align 2
@@ -1424,8 +1406,8 @@ define void @unordered_i16_generic_gpu(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_generic_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_generic_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr %addr syncscope("device") unordered, align 2
@@ -1439,8 +1421,8 @@ define void @unordered_i16_generic_sys_volatile(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_generic_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr %addr syncscope("") unordered, align 2
@@ -1454,8 +1436,8 @@ define void @unordered_i16_generic_cta_volatile(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_generic_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr %addr syncscope("block") unordered, align 2
@@ -1469,8 +1451,8 @@ define void @unordered_i16_generic_cluster_volatile(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_generic_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr %addr syncscope("cluster") unordered, align 2
@@ -1484,8 +1466,8 @@ define void @unordered_i16_generic_gpu_volatile(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_generic_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr %addr syncscope("device") unordered, align 2
@@ -1499,8 +1481,8 @@ define void @unordered_i32_generic_sys(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_i32_generic_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_i32_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_generic_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr %addr syncscope("") unordered, align 4
@@ -1514,8 +1496,8 @@ define void @unordered_i32_generic_cta(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_i32_generic_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_i32_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_generic_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr %addr syncscope("block") unordered, align 4
@@ -1529,8 +1511,8 @@ define void @unordered_i32_generic_cluster(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_i32_generic_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_i32_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_generic_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr %addr syncscope("cluster") unordered, align 4
@@ -1544,8 +1526,8 @@ define void @unordered_i32_generic_gpu(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_i32_generic_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_i32_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_generic_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr %addr syncscope("device") unordered, align 4
@@ -1559,8 +1541,8 @@ define void @unordered_i32_generic_sys_volatile(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_i32_generic_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_i32_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr %addr syncscope("") unordered, align 4
@@ -1574,8 +1556,8 @@ define void @unordered_i32_generic_cta_volatile(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_i32_generic_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_i32_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr %addr syncscope("block") unordered, align 4
@@ -1589,8 +1571,8 @@ define void @unordered_i32_generic_cluster_volatile(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_i32_generic_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_i32_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr %addr syncscope("cluster") unordered, align 4
@@ -1604,8 +1586,8 @@ define void @unordered_i32_generic_gpu_volatile(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_i32_generic_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_i32_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr %addr syncscope("device") unordered, align 4
@@ -1618,8 +1600,8 @@ define void @unordered_i64_generic_sys(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_generic_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_i64_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_i64_generic_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr %addr syncscope("") unordered, align 8
@@ -1632,8 +1614,8 @@ define void @unordered_i64_generic_cta(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_generic_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_i64_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_i64_generic_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr %addr syncscope("block") unordered, align 8
@@ -1646,8 +1628,8 @@ define void @unordered_i64_generic_cluster(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_generic_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_i64_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_i64_generic_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr %addr syncscope("cluster") unordered, align 8
@@ -1660,8 +1642,8 @@ define void @unordered_i64_generic_gpu(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_generic_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_i64_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_i64_generic_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr %addr syncscope("device") unordered, align 8
@@ -1674,8 +1656,8 @@ define void @unordered_i64_generic_sys_volatile(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_generic_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_i64_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_i64_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr %addr syncscope("") unordered, align 8
@@ -1688,8 +1670,8 @@ define void @unordered_i64_generic_cta_volatile(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_generic_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_i64_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_i64_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr %addr syncscope("block") unordered, align 8
@@ -1702,8 +1684,8 @@ define void @unordered_i64_generic_cluster_volatile(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_generic_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_i64_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_i64_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr %addr syncscope("cluster") unordered, align 8
@@ -1716,8 +1698,8 @@ define void @unordered_i64_generic_gpu_volatile(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_generic_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_i64_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_i64_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr %addr syncscope("device") unordered, align 8
@@ -1730,8 +1712,8 @@ define void @unordered_i128_generic_sys(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_generic_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [unordered_i128_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_generic_sys_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -1749,8 +1731,8 @@ define void @unordered_i128_generic_cta(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_generic_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [unordered_i128_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_generic_cta_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -1768,8 +1750,8 @@ define void @unordered_i128_generic_cluster(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_generic_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [unordered_i128_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_generic_cluster_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -1787,8 +1769,8 @@ define void @unordered_i128_generic_gpu(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_generic_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [unordered_i128_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_generic_gpu_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -1806,8 +1788,8 @@ define void @unordered_i128_generic_sys_volatile(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_generic_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [unordered_i128_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -1825,8 +1807,8 @@ define void @unordered_i128_generic_cta_volatile(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_generic_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [unordered_i128_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -1844,8 +1826,8 @@ define void @unordered_i128_generic_cluster_volatile(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_generic_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [unordered_i128_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -1863,8 +1845,8 @@ define void @unordered_i128_generic_gpu_volatile(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_generic_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [unordered_i128_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -1883,8 +1865,8 @@ define void @unordered_half_generic_sys(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_generic_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_generic_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr %addr syncscope("") unordered, align 2
@@ -1898,8 +1880,8 @@ define void @unordered_half_generic_cta(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_generic_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_generic_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr %addr syncscope("block") unordered, align 2
@@ -1913,8 +1895,8 @@ define void @unordered_half_generic_cluster(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_generic_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_generic_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr %addr syncscope("cluster") unordered, align 2
@@ -1928,8 +1910,8 @@ define void @unordered_half_generic_gpu(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_generic_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_generic_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr %addr syncscope("device") unordered, align 2
@@ -1943,8 +1925,8 @@ define void @unordered_half_generic_sys_volatile(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_generic_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr %addr syncscope("") unordered, align 2
@@ -1958,8 +1940,8 @@ define void @unordered_half_generic_cta_volatile(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_generic_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr %addr syncscope("block") unordered, align 2
@@ -1973,8 +1955,8 @@ define void @unordered_half_generic_cluster_volatile(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_generic_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr %addr syncscope("cluster") unordered, align 2
@@ -1988,8 +1970,8 @@ define void @unordered_half_generic_gpu_volatile(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_generic_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr %addr syncscope("device") unordered, align 2
@@ -2003,8 +1985,8 @@ define void @unordered_bfloat_generic_sys(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_generic_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_generic_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr %addr syncscope("") unordered, align 2
@@ -2018,8 +2000,8 @@ define void @unordered_bfloat_generic_cta(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_generic_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_generic_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr %addr syncscope("block") unordered, align 2
@@ -2033,8 +2015,8 @@ define void @unordered_bfloat_generic_cluster(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_generic_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_generic_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr %addr syncscope("cluster") unordered, align 2
@@ -2048,8 +2030,8 @@ define void @unordered_bfloat_generic_gpu(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_generic_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_generic_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr %addr syncscope("device") unordered, align 2
@@ -2063,8 +2045,8 @@ define void @unordered_bfloat_generic_sys_volatile(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_generic_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr %addr syncscope("") unordered, align 2
@@ -2078,8 +2060,8 @@ define void @unordered_bfloat_generic_cta_volatile(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_generic_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr %addr syncscope("block") unordered, align 2
@@ -2093,8 +2075,8 @@ define void @unordered_bfloat_generic_cluster_volatile(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_generic_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr %addr syncscope("cluster") unordered, align 2
@@ -2108,8 +2090,8 @@ define void @unordered_bfloat_generic_gpu_volatile(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_generic_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr %addr syncscope("device") unordered, align 2
@@ -2123,8 +2105,8 @@ define void @unordered_float_generic_sys(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_float_generic_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_float_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_generic_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr %addr syncscope("") unordered, align 4
@@ -2138,8 +2120,8 @@ define void @unordered_float_generic_cta(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_float_generic_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_float_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_generic_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr %addr syncscope("block") unordered, align 4
@@ -2153,8 +2135,8 @@ define void @unordered_float_generic_cluster(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_float_generic_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_float_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_generic_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr %addr syncscope("cluster") unordered, align 4
@@ -2168,8 +2150,8 @@ define void @unordered_float_generic_gpu(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_float_generic_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_float_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_generic_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr %addr syncscope("device") unordered, align 4
@@ -2183,8 +2165,8 @@ define void @unordered_float_generic_sys_volatile(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_float_generic_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_float_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr %addr syncscope("") unordered, align 4
@@ -2198,8 +2180,8 @@ define void @unordered_float_generic_cta_volatile(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_float_generic_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_float_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr %addr syncscope("block") unordered, align 4
@@ -2213,8 +2195,8 @@ define void @unordered_float_generic_cluster_volatile(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_float_generic_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_float_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr %addr syncscope("cluster") unordered, align 4
@@ -2228,8 +2210,8 @@ define void @unordered_float_generic_gpu_volatile(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_float_generic_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_float_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr %addr syncscope("device") unordered, align 4
@@ -2242,8 +2224,8 @@ define void @unordered_double_generic_sys(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_generic_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_double_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_double_generic_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr %addr syncscope("") unordered, align 8
@@ -2256,8 +2238,8 @@ define void @unordered_double_generic_cta(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_generic_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_double_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_double_generic_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr %addr syncscope("block") unordered, align 8
@@ -2270,8 +2252,8 @@ define void @unordered_double_generic_cluster(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_generic_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_double_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_double_generic_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr %addr syncscope("cluster") unordered, align 8
@@ -2284,8 +2266,8 @@ define void @unordered_double_generic_gpu(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_generic_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_double_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_double_generic_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr %addr syncscope("device") unordered, align 8
@@ -2298,8 +2280,8 @@ define void @unordered_double_generic_sys_volatile(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_generic_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_double_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_double_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr %addr syncscope("") unordered, align 8
@@ -2312,8 +2294,8 @@ define void @unordered_double_generic_cta_volatile(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_generic_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_double_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_double_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr %addr syncscope("block") unordered, align 8
@@ -2326,8 +2308,8 @@ define void @unordered_double_generic_cluster_volatile(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_generic_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_double_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_double_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr %addr syncscope("cluster") unordered, align 8
@@ -2340,8 +2322,8 @@ define void @unordered_double_generic_gpu_volatile(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_generic_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_double_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_double_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr %addr syncscope("device") unordered, align 8
@@ -2355,8 +2337,8 @@ define void @unordered_i8_global_sys(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_global_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_global_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(1) %addr syncscope("") unordered, align 1
@@ -2370,8 +2352,8 @@ define void @unordered_i8_global_cta(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_global_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_global_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(1) %addr syncscope("block") unordered, align 1
@@ -2385,8 +2367,8 @@ define void @unordered_i8_global_cluster(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_global_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_global_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(1) %addr syncscope("cluster") unordered, align 1
@@ -2400,8 +2382,8 @@ define void @unordered_i8_global_gpu(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_global_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_global_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(1) %addr syncscope("device") unordered, align 1
@@ -2415,8 +2397,8 @@ define void @unordered_i8_global_sys_volatile(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_global_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(1) %addr syncscope("") unordered, align 1
@@ -2430,8 +2412,8 @@ define void @unordered_i8_global_cta_volatile(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_global_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(1) %addr syncscope("block") unordered, align 1
@@ -2445,8 +2427,8 @@ define void @unordered_i8_global_cluster_volatile(i8 %val, ptr addrspace(1) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_global_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(1) %addr syncscope("cluster") unordered, align 1
@@ -2460,8 +2442,8 @@ define void @unordered_i8_global_gpu_volatile(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_global_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(1) %addr syncscope("device") unordered, align 1
@@ -2475,8 +2457,8 @@ define void @unordered_i16_global_sys(i16 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_global_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_global_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(1) %addr syncscope("") unordered, align 2
@@ -2490,8 +2472,8 @@ define void @unordered_i16_global_cta(i16 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_global_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_global_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(1) %addr syncscope("block") unordered, align 2
@@ -2505,8 +2487,8 @@ define void @unordered_i16_global_cluster(i16 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_global_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_global_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(1) %addr syncscope("cluster") unordered, align 2
@@ -2520,8 +2502,8 @@ define void @unordered_i16_global_gpu(i16 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_global_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_global_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(1) %addr syncscope("device") unordered, align 2
@@ -2535,8 +2517,8 @@ define void @unordered_i16_global_sys_volatile(i16 %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_global_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(1) %addr syncscope("") unordered, align 2
@@ -2550,8 +2532,8 @@ define void @unordered_i16_global_cta_volatile(i16 %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_global_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(1) %addr syncscope("block") unordered, align 2
@@ -2565,8 +2547,8 @@ define void @unordered_i16_global_cluster_volatile(i16 %val, ptr addrspace(1) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_global_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(1) %addr syncscope("cluster") unordered, align 2
@@ -2580,8 +2562,8 @@ define void @unordered_i16_global_gpu_volatile(i16 %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_global_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(1) %addr syncscope("device") unordered, align 2
@@ -2595,8 +2577,8 @@ define void @unordered_i32_global_sys(i32 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_i32_global_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_i32_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_global_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(1) %addr syncscope("") unordered, align 4
@@ -2610,8 +2592,8 @@ define void @unordered_i32_global_cta(i32 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_i32_global_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_i32_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_global_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(1) %addr syncscope("block") unordered, align 4
@@ -2625,8 +2607,8 @@ define void @unordered_i32_global_cluster(i32 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_i32_global_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_i32_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_global_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(1) %addr syncscope("cluster") unordered, align 4
@@ -2640,8 +2622,8 @@ define void @unordered_i32_global_gpu(i32 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_i32_global_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_i32_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_global_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(1) %addr syncscope("device") unordered, align 4
@@ -2655,8 +2637,8 @@ define void @unordered_i32_global_sys_volatile(i32 %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_i32_global_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_i32_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(1) %addr syncscope("") unordered, align 4
@@ -2670,8 +2652,8 @@ define void @unordered_i32_global_cta_volatile(i32 %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_i32_global_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_i32_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(1) %addr syncscope("block") unordered, align 4
@@ -2685,8 +2667,8 @@ define void @unordered_i32_global_cluster_volatile(i32 %val, ptr addrspace(1) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_i32_global_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_i32_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(1) %addr syncscope("cluster") unordered, align 4
@@ -2700,8 +2682,8 @@ define void @unordered_i32_global_gpu_volatile(i32 %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_i32_global_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_i32_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(1) %addr syncscope("device") unordered, align 4
@@ -2714,8 +2696,8 @@ define void @unordered_i64_global_sys(i64 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_global_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_i64_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_i64_global_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(1) %addr syncscope("") unordered, align 8
@@ -2728,8 +2710,8 @@ define void @unordered_i64_global_cta(i64 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_global_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_i64_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_i64_global_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(1) %addr syncscope("block") unordered, align 8
@@ -2742,8 +2724,8 @@ define void @unordered_i64_global_cluster(i64 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_global_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_i64_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_i64_global_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(1) %addr syncscope("cluster") unordered, align 8
@@ -2756,8 +2738,8 @@ define void @unordered_i64_global_gpu(i64 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_global_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_i64_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_i64_global_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(1) %addr syncscope("device") unordered, align 8
@@ -2770,8 +2752,8 @@ define void @unordered_i64_global_sys_volatile(i64 %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_global_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_i64_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_i64_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(1) %addr syncscope("") unordered, align 8
@@ -2784,8 +2766,8 @@ define void @unordered_i64_global_cta_volatile(i64 %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_global_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_i64_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_i64_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(1) %addr syncscope("block") unordered, align 8
@@ -2798,8 +2780,8 @@ define void @unordered_i64_global_cluster_volatile(i64 %val, ptr addrspace(1) %a
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_global_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_i64_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_i64_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(1) %addr syncscope("cluster") unordered, align 8
@@ -2812,8 +2794,8 @@ define void @unordered_i64_global_gpu_volatile(i64 %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_global_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_i64_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_i64_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(1) %addr syncscope("device") unordered, align 8
@@ -2826,8 +2808,8 @@ define void @unordered_i128_global_sys(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_global_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [unordered_i128_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_global_sys_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -2845,8 +2827,8 @@ define void @unordered_i128_global_cta(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_global_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [unordered_i128_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_global_cta_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -2864,8 +2846,8 @@ define void @unordered_i128_global_cluster(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_global_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [unordered_i128_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_global_cluster_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -2883,8 +2865,8 @@ define void @unordered_i128_global_gpu(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_global_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [unordered_i128_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_global_gpu_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -2902,8 +2884,8 @@ define void @unordered_i128_global_sys_volatile(i128 %val, ptr addrspace(1) %add
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_global_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [unordered_i128_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_global_sys_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -2921,8 +2903,8 @@ define void @unordered_i128_global_cta_volatile(i128 %val, ptr addrspace(1) %add
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_global_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [unordered_i128_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_global_cta_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -2940,8 +2922,8 @@ define void @unordered_i128_global_cluster_volatile(i128 %val, ptr addrspace(1) 
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_global_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [unordered_i128_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -2959,8 +2941,8 @@ define void @unordered_i128_global_gpu_volatile(i128 %val, ptr addrspace(1) %add
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_global_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [unordered_i128_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -2979,8 +2961,8 @@ define void @unordered_half_global_sys(half %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_global_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_global_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(1) %addr syncscope("") unordered, align 2
@@ -2994,8 +2976,8 @@ define void @unordered_half_global_cta(half %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_global_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_global_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(1) %addr syncscope("block") unordered, align 2
@@ -3009,8 +2991,8 @@ define void @unordered_half_global_cluster(half %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_global_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_global_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(1) %addr syncscope("cluster") unordered, align 2
@@ -3024,8 +3006,8 @@ define void @unordered_half_global_gpu(half %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_global_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_global_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(1) %addr syncscope("device") unordered, align 2
@@ -3039,8 +3021,8 @@ define void @unordered_half_global_sys_volatile(half %val, ptr addrspace(1) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_global_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(1) %addr syncscope("") unordered, align 2
@@ -3054,8 +3036,8 @@ define void @unordered_half_global_cta_volatile(half %val, ptr addrspace(1) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_global_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(1) %addr syncscope("block") unordered, align 2
@@ -3069,8 +3051,8 @@ define void @unordered_half_global_cluster_volatile(half %val, ptr addrspace(1) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_global_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(1) %addr syncscope("cluster") unordered, align 2
@@ -3084,8 +3066,8 @@ define void @unordered_half_global_gpu_volatile(half %val, ptr addrspace(1) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_global_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(1) %addr syncscope("device") unordered, align 2
@@ -3099,8 +3081,8 @@ define void @unordered_bfloat_global_sys(bfloat %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_global_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_global_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(1) %addr syncscope("") unordered, align 2
@@ -3114,8 +3096,8 @@ define void @unordered_bfloat_global_cta(bfloat %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_global_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_global_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(1) %addr syncscope("block") unordered, align 2
@@ -3129,8 +3111,8 @@ define void @unordered_bfloat_global_cluster(bfloat %val, ptr addrspace(1) %addr
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_global_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_global_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(1) %addr syncscope("cluster") unordered, align 2
@@ -3144,8 +3126,8 @@ define void @unordered_bfloat_global_gpu(bfloat %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_global_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_global_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(1) %addr syncscope("device") unordered, align 2
@@ -3159,8 +3141,8 @@ define void @unordered_bfloat_global_sys_volatile(bfloat %val, ptr addrspace(1) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_global_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(1) %addr syncscope("") unordered, align 2
@@ -3174,8 +3156,8 @@ define void @unordered_bfloat_global_cta_volatile(bfloat %val, ptr addrspace(1) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_global_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(1) %addr syncscope("block") unordered, align 2
@@ -3189,8 +3171,8 @@ define void @unordered_bfloat_global_cluster_volatile(bfloat %val, ptr addrspace
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_global_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(1) %addr syncscope("cluster") unordered, align 2
@@ -3204,8 +3186,8 @@ define void @unordered_bfloat_global_gpu_volatile(bfloat %val, ptr addrspace(1) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_global_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(1) %addr syncscope("device") unordered, align 2
@@ -3219,8 +3201,8 @@ define void @unordered_float_global_sys(float %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_float_global_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_float_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_global_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(1) %addr syncscope("") unordered, align 4
@@ -3234,8 +3216,8 @@ define void @unordered_float_global_cta(float %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_float_global_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_float_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_global_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(1) %addr syncscope("block") unordered, align 4
@@ -3249,8 +3231,8 @@ define void @unordered_float_global_cluster(float %val, ptr addrspace(1) %addr) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_float_global_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_float_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_global_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(1) %addr syncscope("cluster") unordered, align 4
@@ -3264,8 +3246,8 @@ define void @unordered_float_global_gpu(float %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_float_global_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_float_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_global_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(1) %addr syncscope("device") unordered, align 4
@@ -3279,8 +3261,8 @@ define void @unordered_float_global_sys_volatile(float %val, ptr addrspace(1) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_float_global_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_float_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(1) %addr syncscope("") unordered, align 4
@@ -3294,8 +3276,8 @@ define void @unordered_float_global_cta_volatile(float %val, ptr addrspace(1) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_float_global_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_float_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(1) %addr syncscope("block") unordered, align 4
@@ -3309,8 +3291,8 @@ define void @unordered_float_global_cluster_volatile(float %val, ptr addrspace(1
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_float_global_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_float_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(1) %addr syncscope("cluster") unordered, align 4
@@ -3324,8 +3306,8 @@ define void @unordered_float_global_gpu_volatile(float %val, ptr addrspace(1) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_float_global_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_float_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(1) %addr syncscope("device") unordered, align 4
@@ -3338,8 +3320,8 @@ define void @unordered_double_global_sys(double %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_global_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_double_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_double_global_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(1) %addr syncscope("") unordered, align 8
@@ -3352,8 +3334,8 @@ define void @unordered_double_global_cta(double %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_global_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_double_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_double_global_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(1) %addr syncscope("block") unordered, align 8
@@ -3366,8 +3348,8 @@ define void @unordered_double_global_cluster(double %val, ptr addrspace(1) %addr
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_global_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_double_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_double_global_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(1) %addr syncscope("cluster") unordered, align 8
@@ -3380,8 +3362,8 @@ define void @unordered_double_global_gpu(double %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_global_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_double_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_double_global_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(1) %addr syncscope("device") unordered, align 8
@@ -3394,8 +3376,8 @@ define void @unordered_double_global_sys_volatile(double %val, ptr addrspace(1) 
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_global_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_double_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_double_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(1) %addr syncscope("") unordered, align 8
@@ -3408,8 +3390,8 @@ define void @unordered_double_global_cta_volatile(double %val, ptr addrspace(1) 
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_global_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_double_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_double_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(1) %addr syncscope("block") unordered, align 8
@@ -3422,8 +3404,8 @@ define void @unordered_double_global_cluster_volatile(double %val, ptr addrspace
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_global_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_double_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_double_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(1) %addr syncscope("cluster") unordered, align 8
@@ -3436,8 +3418,8 @@ define void @unordered_double_global_gpu_volatile(double %val, ptr addrspace(1) 
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_global_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_double_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_double_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(1) %addr syncscope("device") unordered, align 8
@@ -3451,8 +3433,8 @@ define void @unordered_i8_shared_sys(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_shared_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_shared_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(3) %addr syncscope("") unordered, align 1
@@ -3466,8 +3448,8 @@ define void @unordered_i8_shared_cta(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_shared_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_shared_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(3) %addr syncscope("block") unordered, align 1
@@ -3481,8 +3463,8 @@ define void @unordered_i8_shared_cluster(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_shared_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_shared_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(3) %addr syncscope("cluster") unordered, align 1
@@ -3496,8 +3478,8 @@ define void @unordered_i8_shared_gpu(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_shared_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_shared_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(3) %addr syncscope("device") unordered, align 1
@@ -3511,8 +3493,8 @@ define void @unordered_i8_shared_sys_volatile(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_shared_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(3) %addr syncscope("") unordered, align 1
@@ -3526,8 +3508,8 @@ define void @unordered_i8_shared_cta_volatile(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_shared_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(3) %addr syncscope("block") unordered, align 1
@@ -3541,8 +3523,8 @@ define void @unordered_i8_shared_cluster_volatile(i8 %val, ptr addrspace(3) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_shared_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(3) %addr syncscope("cluster") unordered, align 1
@@ -3556,8 +3538,8 @@ define void @unordered_i8_shared_gpu_volatile(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_shared_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(3) %addr syncscope("device") unordered, align 1
@@ -3571,8 +3553,8 @@ define void @unordered_i16_shared_sys(i16 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_shared_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_shared_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(3) %addr syncscope("") unordered, align 2
@@ -3586,8 +3568,8 @@ define void @unordered_i16_shared_cta(i16 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_shared_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_shared_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(3) %addr syncscope("block") unordered, align 2
@@ -3601,8 +3583,8 @@ define void @unordered_i16_shared_cluster(i16 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_shared_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_shared_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(3) %addr syncscope("cluster") unordered, align 2
@@ -3616,8 +3598,8 @@ define void @unordered_i16_shared_gpu(i16 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_shared_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_shared_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(3) %addr syncscope("device") unordered, align 2
@@ -3631,8 +3613,8 @@ define void @unordered_i16_shared_sys_volatile(i16 %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_shared_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(3) %addr syncscope("") unordered, align 2
@@ -3646,8 +3628,8 @@ define void @unordered_i16_shared_cta_volatile(i16 %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_shared_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(3) %addr syncscope("block") unordered, align 2
@@ -3661,8 +3643,8 @@ define void @unordered_i16_shared_cluster_volatile(i16 %val, ptr addrspace(3) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_shared_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(3) %addr syncscope("cluster") unordered, align 2
@@ -3676,8 +3658,8 @@ define void @unordered_i16_shared_gpu_volatile(i16 %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_shared_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(3) %addr syncscope("device") unordered, align 2
@@ -3691,8 +3673,8 @@ define void @unordered_i32_shared_sys(i32 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_i32_shared_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_i32_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_shared_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(3) %addr syncscope("") unordered, align 4
@@ -3706,8 +3688,8 @@ define void @unordered_i32_shared_cta(i32 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_i32_shared_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_i32_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_shared_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(3) %addr syncscope("block") unordered, align 4
@@ -3721,8 +3703,8 @@ define void @unordered_i32_shared_cluster(i32 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_i32_shared_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_i32_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_shared_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(3) %addr syncscope("cluster") unordered, align 4
@@ -3736,8 +3718,8 @@ define void @unordered_i32_shared_gpu(i32 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_i32_shared_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_i32_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_shared_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(3) %addr syncscope("device") unordered, align 4
@@ -3751,8 +3733,8 @@ define void @unordered_i32_shared_sys_volatile(i32 %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_i32_shared_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_i32_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(3) %addr syncscope("") unordered, align 4
@@ -3766,8 +3748,8 @@ define void @unordered_i32_shared_cta_volatile(i32 %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_i32_shared_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_i32_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(3) %addr syncscope("block") unordered, align 4
@@ -3781,8 +3763,8 @@ define void @unordered_i32_shared_cluster_volatile(i32 %val, ptr addrspace(3) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_i32_shared_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_i32_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(3) %addr syncscope("cluster") unordered, align 4
@@ -3796,8 +3778,8 @@ define void @unordered_i32_shared_gpu_volatile(i32 %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_i32_shared_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_i32_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(3) %addr syncscope("device") unordered, align 4
@@ -3810,8 +3792,8 @@ define void @unordered_i64_shared_sys(i64 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_shared_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_i64_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_i64_shared_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(3) %addr syncscope("") unordered, align 8
@@ -3824,8 +3806,8 @@ define void @unordered_i64_shared_cta(i64 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_shared_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_i64_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_i64_shared_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(3) %addr syncscope("block") unordered, align 8
@@ -3838,8 +3820,8 @@ define void @unordered_i64_shared_cluster(i64 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_shared_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_i64_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_i64_shared_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(3) %addr syncscope("cluster") unordered, align 8
@@ -3852,8 +3834,8 @@ define void @unordered_i64_shared_gpu(i64 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_shared_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_i64_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_i64_shared_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(3) %addr syncscope("device") unordered, align 8
@@ -3866,8 +3848,8 @@ define void @unordered_i64_shared_sys_volatile(i64 %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_shared_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_i64_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_i64_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(3) %addr syncscope("") unordered, align 8
@@ -3880,8 +3862,8 @@ define void @unordered_i64_shared_cta_volatile(i64 %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_shared_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_i64_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_i64_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(3) %addr syncscope("block") unordered, align 8
@@ -3894,8 +3876,8 @@ define void @unordered_i64_shared_cluster_volatile(i64 %val, ptr addrspace(3) %a
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_shared_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_i64_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_i64_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(3) %addr syncscope("cluster") unordered, align 8
@@ -3908,8 +3890,8 @@ define void @unordered_i64_shared_gpu_volatile(i64 %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_shared_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_i64_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_i64_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(3) %addr syncscope("device") unordered, align 8
@@ -3922,8 +3904,8 @@ define void @unordered_i128_shared_sys(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_shared_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [unordered_i128_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_shared_sys_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -3941,8 +3923,8 @@ define void @unordered_i128_shared_cta(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_shared_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [unordered_i128_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_shared_cta_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -3960,8 +3942,8 @@ define void @unordered_i128_shared_cluster(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_shared_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [unordered_i128_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_shared_cluster_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -3979,8 +3961,8 @@ define void @unordered_i128_shared_gpu(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_shared_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [unordered_i128_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_shared_gpu_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -3998,8 +3980,8 @@ define void @unordered_i128_shared_sys_volatile(i128 %val, ptr addrspace(3) %add
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_shared_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [unordered_i128_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -4017,8 +3999,8 @@ define void @unordered_i128_shared_cta_volatile(i128 %val, ptr addrspace(3) %add
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_shared_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [unordered_i128_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -4036,8 +4018,8 @@ define void @unordered_i128_shared_cluster_volatile(i128 %val, ptr addrspace(3) 
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_shared_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [unordered_i128_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -4055,8 +4037,8 @@ define void @unordered_i128_shared_gpu_volatile(i128 %val, ptr addrspace(3) %add
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_shared_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [unordered_i128_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -4075,8 +4057,8 @@ define void @unordered_half_shared_sys(half %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_shared_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_shared_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(3) %addr syncscope("") unordered, align 2
@@ -4090,8 +4072,8 @@ define void @unordered_half_shared_cta(half %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_shared_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_shared_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(3) %addr syncscope("block") unordered, align 2
@@ -4105,8 +4087,8 @@ define void @unordered_half_shared_cluster(half %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_shared_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_shared_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(3) %addr syncscope("cluster") unordered, align 2
@@ -4120,8 +4102,8 @@ define void @unordered_half_shared_gpu(half %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_shared_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_shared_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(3) %addr syncscope("device") unordered, align 2
@@ -4135,8 +4117,8 @@ define void @unordered_half_shared_sys_volatile(half %val, ptr addrspace(3) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_shared_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(3) %addr syncscope("") unordered, align 2
@@ -4150,8 +4132,8 @@ define void @unordered_half_shared_cta_volatile(half %val, ptr addrspace(3) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_shared_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(3) %addr syncscope("block") unordered, align 2
@@ -4165,8 +4147,8 @@ define void @unordered_half_shared_cluster_volatile(half %val, ptr addrspace(3) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_shared_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(3) %addr syncscope("cluster") unordered, align 2
@@ -4180,8 +4162,8 @@ define void @unordered_half_shared_gpu_volatile(half %val, ptr addrspace(3) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_shared_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(3) %addr syncscope("device") unordered, align 2
@@ -4195,8 +4177,8 @@ define void @unordered_bfloat_shared_sys(bfloat %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_shared_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_shared_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(3) %addr syncscope("") unordered, align 2
@@ -4210,8 +4192,8 @@ define void @unordered_bfloat_shared_cta(bfloat %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_shared_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_shared_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(3) %addr syncscope("block") unordered, align 2
@@ -4225,8 +4207,8 @@ define void @unordered_bfloat_shared_cluster(bfloat %val, ptr addrspace(3) %addr
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_shared_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_shared_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(3) %addr syncscope("cluster") unordered, align 2
@@ -4240,8 +4222,8 @@ define void @unordered_bfloat_shared_gpu(bfloat %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_shared_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_shared_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(3) %addr syncscope("device") unordered, align 2
@@ -4255,8 +4237,8 @@ define void @unordered_bfloat_shared_sys_volatile(bfloat %val, ptr addrspace(3) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_shared_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(3) %addr syncscope("") unordered, align 2
@@ -4270,8 +4252,8 @@ define void @unordered_bfloat_shared_cta_volatile(bfloat %val, ptr addrspace(3) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_shared_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(3) %addr syncscope("block") unordered, align 2
@@ -4285,8 +4267,8 @@ define void @unordered_bfloat_shared_cluster_volatile(bfloat %val, ptr addrspace
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_shared_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(3) %addr syncscope("cluster") unordered, align 2
@@ -4300,8 +4282,8 @@ define void @unordered_bfloat_shared_gpu_volatile(bfloat %val, ptr addrspace(3) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_shared_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(3) %addr syncscope("device") unordered, align 2
@@ -4315,8 +4297,8 @@ define void @unordered_float_shared_sys(float %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_float_shared_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_float_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_shared_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(3) %addr syncscope("") unordered, align 4
@@ -4330,8 +4312,8 @@ define void @unordered_float_shared_cta(float %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_float_shared_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_float_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_shared_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(3) %addr syncscope("block") unordered, align 4
@@ -4345,8 +4327,8 @@ define void @unordered_float_shared_cluster(float %val, ptr addrspace(3) %addr) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_float_shared_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_float_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_shared_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(3) %addr syncscope("cluster") unordered, align 4
@@ -4360,8 +4342,8 @@ define void @unordered_float_shared_gpu(float %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_float_shared_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_float_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_shared_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(3) %addr syncscope("device") unordered, align 4
@@ -4375,8 +4357,8 @@ define void @unordered_float_shared_sys_volatile(float %val, ptr addrspace(3) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_float_shared_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_float_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(3) %addr syncscope("") unordered, align 4
@@ -4390,8 +4372,8 @@ define void @unordered_float_shared_cta_volatile(float %val, ptr addrspace(3) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_float_shared_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_float_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(3) %addr syncscope("block") unordered, align 4
@@ -4405,8 +4387,8 @@ define void @unordered_float_shared_cluster_volatile(float %val, ptr addrspace(3
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_float_shared_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_float_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(3) %addr syncscope("cluster") unordered, align 4
@@ -4420,8 +4402,8 @@ define void @unordered_float_shared_gpu_volatile(float %val, ptr addrspace(3) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [unordered_float_shared_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [unordered_float_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(3) %addr syncscope("device") unordered, align 4
@@ -4434,8 +4416,8 @@ define void @unordered_double_shared_sys(double %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_shared_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_double_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_double_shared_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(3) %addr syncscope("") unordered, align 8
@@ -4448,8 +4430,8 @@ define void @unordered_double_shared_cta(double %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_shared_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_double_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_double_shared_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(3) %addr syncscope("block") unordered, align 8
@@ -4462,8 +4444,8 @@ define void @unordered_double_shared_cluster(double %val, ptr addrspace(3) %addr
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_shared_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_double_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_double_shared_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(3) %addr syncscope("cluster") unordered, align 8
@@ -4476,8 +4458,8 @@ define void @unordered_double_shared_gpu(double %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_shared_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_double_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_double_shared_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(3) %addr syncscope("device") unordered, align 8
@@ -4490,8 +4472,8 @@ define void @unordered_double_shared_sys_volatile(double %val, ptr addrspace(3) 
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_shared_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_double_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_double_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(3) %addr syncscope("") unordered, align 8
@@ -4504,8 +4486,8 @@ define void @unordered_double_shared_cta_volatile(double %val, ptr addrspace(3) 
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_shared_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_double_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_double_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(3) %addr syncscope("block") unordered, align 8
@@ -4518,8 +4500,8 @@ define void @unordered_double_shared_cluster_volatile(double %val, ptr addrspace
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_shared_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_double_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_double_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(3) %addr syncscope("cluster") unordered, align 8
@@ -4532,8 +4514,8 @@ define void @unordered_double_shared_gpu_volatile(double %val, ptr addrspace(3) 
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_shared_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [unordered_double_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [unordered_double_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(3) %addr syncscope("device") unordered, align 8
@@ -4552,13 +4534,12 @@ define void @unordered_i8_local_sys(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot288;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4578,13 +4559,12 @@ define void @unordered_i8_local_cta(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot289;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4604,13 +4584,12 @@ define void @unordered_i8_local_cluster(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot290;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4630,13 +4609,12 @@ define void @unordered_i8_local_gpu(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot291;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4656,13 +4634,12 @@ define void @unordered_i8_local_sys_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot292;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4682,13 +4659,12 @@ define void @unordered_i8_local_cta_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot293;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4708,13 +4684,12 @@ define void @unordered_i8_local_cluster_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot294;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4734,13 +4709,12 @@ define void @unordered_i8_local_gpu_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot295;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [unordered_i8_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4760,13 +4734,12 @@ define void @unordered_i16_local_sys(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot296;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4786,13 +4759,12 @@ define void @unordered_i16_local_cta(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot297;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4812,13 +4784,12 @@ define void @unordered_i16_local_cluster(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot298;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4838,13 +4809,12 @@ define void @unordered_i16_local_gpu(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot299;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4864,13 +4834,12 @@ define void @unordered_i16_local_sys_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot300;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4890,13 +4859,12 @@ define void @unordered_i16_local_cta_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot301;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4916,13 +4884,12 @@ define void @unordered_i16_local_cluster_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot302;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4942,13 +4909,12 @@ define void @unordered_i16_local_gpu_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot303;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_i16_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4967,13 +4933,12 @@ define void @unordered_i32_local_sys(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot304;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [unordered_i32_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [unordered_i32_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4992,13 +4957,12 @@ define void @unordered_i32_local_cta(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot305;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [unordered_i32_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [unordered_i32_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5017,13 +4981,12 @@ define void @unordered_i32_local_cluster(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot306;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [unordered_i32_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [unordered_i32_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5042,13 +5005,12 @@ define void @unordered_i32_local_gpu(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot307;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [unordered_i32_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [unordered_i32_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5067,13 +5029,12 @@ define void @unordered_i32_local_sys_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot308;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [unordered_i32_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [unordered_i32_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5092,13 +5053,12 @@ define void @unordered_i32_local_cta_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot309;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [unordered_i32_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [unordered_i32_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5117,13 +5077,12 @@ define void @unordered_i32_local_cluster_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot310;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [unordered_i32_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [unordered_i32_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5142,13 +5101,12 @@ define void @unordered_i32_local_gpu_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot311;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [unordered_i32_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [unordered_i32_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5167,13 +5125,12 @@ define void @unordered_i64_local_sys(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot312;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5192,13 +5149,12 @@ define void @unordered_i64_local_cta(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot313;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5217,13 +5173,12 @@ define void @unordered_i64_local_cluster(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot314;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5242,13 +5197,12 @@ define void @unordered_i64_local_gpu(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot315;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5267,13 +5221,12 @@ define void @unordered_i64_local_sys_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot316;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5292,13 +5245,12 @@ define void @unordered_i64_local_cta_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot317;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5317,13 +5269,12 @@ define void @unordered_i64_local_cluster_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot318;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5342,13 +5293,12 @@ define void @unordered_i64_local_gpu_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot319;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5367,13 +5317,12 @@ define void @unordered_i128_local_sys(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot320;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5392,13 +5341,12 @@ define void @unordered_i128_local_cta(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot321;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5417,13 +5365,12 @@ define void @unordered_i128_local_cluster(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot322;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5442,13 +5389,12 @@ define void @unordered_i128_local_gpu(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot323;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5467,13 +5413,12 @@ define void @unordered_i128_local_sys_volatile(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot324;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5492,13 +5437,12 @@ define void @unordered_i128_local_cta_volatile(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot325;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5517,13 +5461,12 @@ define void @unordered_i128_local_cluster_volatile(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot326;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5542,13 +5485,12 @@ define void @unordered_i128_local_gpu_volatile(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot327;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [unordered_i128_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5568,13 +5510,12 @@ define void @unordered_half_local_sys(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot328;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5594,13 +5535,12 @@ define void @unordered_half_local_cta(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot329;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5620,13 +5560,12 @@ define void @unordered_half_local_cluster(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot330;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5646,13 +5585,12 @@ define void @unordered_half_local_gpu(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot331;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5672,13 +5610,12 @@ define void @unordered_half_local_sys_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot332;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5698,13 +5635,12 @@ define void @unordered_half_local_cta_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot333;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5724,13 +5660,12 @@ define void @unordered_half_local_cluster_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot334;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5750,13 +5685,12 @@ define void @unordered_half_local_gpu_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot335;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_half_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5776,13 +5710,12 @@ define void @unordered_bfloat_local_sys(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot336;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5802,13 +5735,12 @@ define void @unordered_bfloat_local_cta(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot337;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5828,13 +5760,12 @@ define void @unordered_bfloat_local_cluster(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot338;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5854,13 +5785,12 @@ define void @unordered_bfloat_local_gpu(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot339;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5880,13 +5810,12 @@ define void @unordered_bfloat_local_sys_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot340;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5906,13 +5835,12 @@ define void @unordered_bfloat_local_cta_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot341;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5932,13 +5860,12 @@ define void @unordered_bfloat_local_cluster_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot342;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5958,13 +5885,12 @@ define void @unordered_bfloat_local_gpu_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot343;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [unordered_bfloat_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5983,13 +5909,12 @@ define void @unordered_float_local_sys(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot344;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [unordered_float_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [unordered_float_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6008,13 +5933,12 @@ define void @unordered_float_local_cta(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot345;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [unordered_float_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [unordered_float_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6033,13 +5957,12 @@ define void @unordered_float_local_cluster(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot346;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [unordered_float_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [unordered_float_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6058,13 +5981,12 @@ define void @unordered_float_local_gpu(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot347;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [unordered_float_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [unordered_float_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6083,13 +6005,12 @@ define void @unordered_float_local_sys_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot348;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [unordered_float_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [unordered_float_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6108,13 +6029,12 @@ define void @unordered_float_local_cta_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot349;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [unordered_float_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [unordered_float_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6133,13 +6053,12 @@ define void @unordered_float_local_cluster_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot350;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [unordered_float_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [unordered_float_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6158,13 +6077,12 @@ define void @unordered_float_local_gpu_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot351;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [unordered_float_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [unordered_float_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6183,13 +6101,12 @@ define void @unordered_double_local_sys(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot352;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6208,13 +6125,12 @@ define void @unordered_double_local_cta(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot353;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6233,13 +6149,12 @@ define void @unordered_double_local_cluster(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot354;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6258,13 +6173,12 @@ define void @unordered_double_local_gpu(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot355;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6283,13 +6197,12 @@ define void @unordered_double_local_sys_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot356;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6308,13 +6221,12 @@ define void @unordered_double_local_cta_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot357;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6333,13 +6245,12 @@ define void @unordered_double_local_cluster_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot358;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6358,13 +6269,12 @@ define void @unordered_double_local_gpu_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot359;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6379,8 +6289,8 @@ define void @monotonic_i8_generic_sys(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_generic_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_generic_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr %addr syncscope("") monotonic, align 1
@@ -6394,8 +6304,8 @@ define void @monotonic_i8_generic_cta(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_generic_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_generic_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr %addr syncscope("block") monotonic, align 1
@@ -6409,8 +6319,8 @@ define void @monotonic_i8_generic_cluster(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_generic_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_generic_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr %addr syncscope("cluster") monotonic, align 1
@@ -6424,8 +6334,8 @@ define void @monotonic_i8_generic_gpu(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_generic_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_generic_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr %addr syncscope("device") monotonic, align 1
@@ -6439,8 +6349,8 @@ define void @monotonic_i8_generic_sys_volatile(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_generic_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr %addr syncscope("") monotonic, align 1
@@ -6454,8 +6364,8 @@ define void @monotonic_i8_generic_cta_volatile(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_generic_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr %addr syncscope("block") monotonic, align 1
@@ -6469,8 +6379,8 @@ define void @monotonic_i8_generic_cluster_volatile(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_generic_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr %addr syncscope("cluster") monotonic, align 1
@@ -6484,8 +6394,8 @@ define void @monotonic_i8_generic_gpu_volatile(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_generic_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr %addr syncscope("device") monotonic, align 1
@@ -6499,8 +6409,8 @@ define void @monotonic_i16_generic_sys(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_generic_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_generic_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr %addr syncscope("") monotonic, align 2
@@ -6514,8 +6424,8 @@ define void @monotonic_i16_generic_cta(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_generic_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_generic_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr %addr syncscope("block") monotonic, align 2
@@ -6529,8 +6439,8 @@ define void @monotonic_i16_generic_cluster(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_generic_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_generic_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr %addr syncscope("cluster") monotonic, align 2
@@ -6544,8 +6454,8 @@ define void @monotonic_i16_generic_gpu(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_generic_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_generic_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr %addr syncscope("device") monotonic, align 2
@@ -6559,8 +6469,8 @@ define void @monotonic_i16_generic_sys_volatile(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_generic_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr %addr syncscope("") monotonic, align 2
@@ -6574,8 +6484,8 @@ define void @monotonic_i16_generic_cta_volatile(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_generic_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr %addr syncscope("block") monotonic, align 2
@@ -6589,8 +6499,8 @@ define void @monotonic_i16_generic_cluster_volatile(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_generic_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr %addr syncscope("cluster") monotonic, align 2
@@ -6604,8 +6514,8 @@ define void @monotonic_i16_generic_gpu_volatile(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_generic_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr %addr syncscope("device") monotonic, align 2
@@ -6619,8 +6529,8 @@ define void @monotonic_i32_generic_sys(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_i32_generic_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_i32_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_generic_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr %addr syncscope("") monotonic, align 4
@@ -6634,8 +6544,8 @@ define void @monotonic_i32_generic_cta(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_i32_generic_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_i32_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_generic_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr %addr syncscope("block") monotonic, align 4
@@ -6649,8 +6559,8 @@ define void @monotonic_i32_generic_cluster(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_i32_generic_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_i32_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_generic_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr %addr syncscope("cluster") monotonic, align 4
@@ -6664,8 +6574,8 @@ define void @monotonic_i32_generic_gpu(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_i32_generic_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_i32_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_generic_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr %addr syncscope("device") monotonic, align 4
@@ -6679,8 +6589,8 @@ define void @monotonic_i32_generic_sys_volatile(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_i32_generic_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_i32_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr %addr syncscope("") monotonic, align 4
@@ -6694,8 +6604,8 @@ define void @monotonic_i32_generic_cta_volatile(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_i32_generic_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_i32_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr %addr syncscope("block") monotonic, align 4
@@ -6709,8 +6619,8 @@ define void @monotonic_i32_generic_cluster_volatile(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_i32_generic_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_i32_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr %addr syncscope("cluster") monotonic, align 4
@@ -6724,8 +6634,8 @@ define void @monotonic_i32_generic_gpu_volatile(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_i32_generic_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_i32_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr %addr syncscope("device") monotonic, align 4
@@ -6738,8 +6648,8 @@ define void @monotonic_i64_generic_sys(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_generic_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_i64_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_i64_generic_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr %addr syncscope("") monotonic, align 8
@@ -6752,8 +6662,8 @@ define void @monotonic_i64_generic_cta(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_generic_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_i64_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_i64_generic_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr %addr syncscope("block") monotonic, align 8
@@ -6766,8 +6676,8 @@ define void @monotonic_i64_generic_cluster(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_generic_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_i64_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_i64_generic_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr %addr syncscope("cluster") monotonic, align 8
@@ -6780,8 +6690,8 @@ define void @monotonic_i64_generic_gpu(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_generic_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_i64_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_i64_generic_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr %addr syncscope("device") monotonic, align 8
@@ -6794,8 +6704,8 @@ define void @monotonic_i64_generic_sys_volatile(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_generic_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_i64_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_i64_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr %addr syncscope("") monotonic, align 8
@@ -6808,8 +6718,8 @@ define void @monotonic_i64_generic_cta_volatile(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_generic_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_i64_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_i64_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr %addr syncscope("block") monotonic, align 8
@@ -6822,8 +6732,8 @@ define void @monotonic_i64_generic_cluster_volatile(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_generic_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_i64_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_i64_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr %addr syncscope("cluster") monotonic, align 8
@@ -6836,8 +6746,8 @@ define void @monotonic_i64_generic_gpu_volatile(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_generic_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_i64_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_i64_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr %addr syncscope("device") monotonic, align 8
@@ -6850,8 +6760,8 @@ define void @monotonic_i128_generic_sys(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_generic_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [monotonic_i128_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_generic_sys_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -6869,8 +6779,8 @@ define void @monotonic_i128_generic_cta(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_generic_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [monotonic_i128_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_generic_cta_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -6888,8 +6798,8 @@ define void @monotonic_i128_generic_cluster(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_generic_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [monotonic_i128_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_generic_cluster_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -6907,8 +6817,8 @@ define void @monotonic_i128_generic_gpu(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_generic_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [monotonic_i128_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_generic_gpu_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -6926,8 +6836,8 @@ define void @monotonic_i128_generic_sys_volatile(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_generic_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [monotonic_i128_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -6945,8 +6855,8 @@ define void @monotonic_i128_generic_cta_volatile(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_generic_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [monotonic_i128_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -6964,8 +6874,8 @@ define void @monotonic_i128_generic_cluster_volatile(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_generic_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [monotonic_i128_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -6983,8 +6893,8 @@ define void @monotonic_i128_generic_gpu_volatile(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_generic_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [monotonic_i128_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -7003,8 +6913,8 @@ define void @monotonic_half_generic_sys(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_generic_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_generic_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr %addr syncscope("") monotonic, align 2
@@ -7018,8 +6928,8 @@ define void @monotonic_half_generic_cta(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_generic_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_generic_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr %addr syncscope("block") monotonic, align 2
@@ -7033,8 +6943,8 @@ define void @monotonic_half_generic_cluster(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_generic_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_generic_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr %addr syncscope("cluster") monotonic, align 2
@@ -7048,8 +6958,8 @@ define void @monotonic_half_generic_gpu(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_generic_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_generic_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr %addr syncscope("device") monotonic, align 2
@@ -7063,8 +6973,8 @@ define void @monotonic_half_generic_sys_volatile(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_generic_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr %addr syncscope("") monotonic, align 2
@@ -7078,8 +6988,8 @@ define void @monotonic_half_generic_cta_volatile(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_generic_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr %addr syncscope("block") monotonic, align 2
@@ -7093,8 +7003,8 @@ define void @monotonic_half_generic_cluster_volatile(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_generic_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr %addr syncscope("cluster") monotonic, align 2
@@ -7108,8 +7018,8 @@ define void @monotonic_half_generic_gpu_volatile(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_generic_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr %addr syncscope("device") monotonic, align 2
@@ -7123,8 +7033,8 @@ define void @monotonic_bfloat_generic_sys(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_generic_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_generic_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr %addr syncscope("") monotonic, align 2
@@ -7138,8 +7048,8 @@ define void @monotonic_bfloat_generic_cta(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_generic_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_generic_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr %addr syncscope("block") monotonic, align 2
@@ -7153,8 +7063,8 @@ define void @monotonic_bfloat_generic_cluster(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_generic_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_generic_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr %addr syncscope("cluster") monotonic, align 2
@@ -7168,8 +7078,8 @@ define void @monotonic_bfloat_generic_gpu(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_generic_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_generic_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr %addr syncscope("device") monotonic, align 2
@@ -7183,8 +7093,8 @@ define void @monotonic_bfloat_generic_sys_volatile(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_generic_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr %addr syncscope("") monotonic, align 2
@@ -7198,8 +7108,8 @@ define void @monotonic_bfloat_generic_cta_volatile(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_generic_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr %addr syncscope("block") monotonic, align 2
@@ -7213,8 +7123,8 @@ define void @monotonic_bfloat_generic_cluster_volatile(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_generic_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr %addr syncscope("cluster") monotonic, align 2
@@ -7228,8 +7138,8 @@ define void @monotonic_bfloat_generic_gpu_volatile(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_generic_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr %addr syncscope("device") monotonic, align 2
@@ -7243,8 +7153,8 @@ define void @monotonic_float_generic_sys(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_float_generic_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_float_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_generic_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr %addr syncscope("") monotonic, align 4
@@ -7258,8 +7168,8 @@ define void @monotonic_float_generic_cta(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_float_generic_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_float_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_generic_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr %addr syncscope("block") monotonic, align 4
@@ -7273,8 +7183,8 @@ define void @monotonic_float_generic_cluster(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_float_generic_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_float_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_generic_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr %addr syncscope("cluster") monotonic, align 4
@@ -7288,8 +7198,8 @@ define void @monotonic_float_generic_gpu(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_float_generic_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_float_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_generic_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr %addr syncscope("device") monotonic, align 4
@@ -7303,8 +7213,8 @@ define void @monotonic_float_generic_sys_volatile(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_float_generic_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_float_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr %addr syncscope("") monotonic, align 4
@@ -7318,8 +7228,8 @@ define void @monotonic_float_generic_cta_volatile(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_float_generic_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_float_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr %addr syncscope("block") monotonic, align 4
@@ -7333,8 +7243,8 @@ define void @monotonic_float_generic_cluster_volatile(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_float_generic_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_float_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr %addr syncscope("cluster") monotonic, align 4
@@ -7348,8 +7258,8 @@ define void @monotonic_float_generic_gpu_volatile(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_float_generic_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_float_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr %addr syncscope("device") monotonic, align 4
@@ -7362,8 +7272,8 @@ define void @monotonic_double_generic_sys(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_generic_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_double_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_double_generic_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr %addr syncscope("") monotonic, align 8
@@ -7376,8 +7286,8 @@ define void @monotonic_double_generic_cta(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_generic_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_double_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_double_generic_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr %addr syncscope("block") monotonic, align 8
@@ -7390,8 +7300,8 @@ define void @monotonic_double_generic_cluster(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_generic_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_double_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_double_generic_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr %addr syncscope("cluster") monotonic, align 8
@@ -7404,8 +7314,8 @@ define void @monotonic_double_generic_gpu(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_generic_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_double_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_double_generic_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr %addr syncscope("device") monotonic, align 8
@@ -7418,8 +7328,8 @@ define void @monotonic_double_generic_sys_volatile(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_generic_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_double_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_double_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr %addr syncscope("") monotonic, align 8
@@ -7432,8 +7342,8 @@ define void @monotonic_double_generic_cta_volatile(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_generic_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_double_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_double_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr %addr syncscope("block") monotonic, align 8
@@ -7446,8 +7356,8 @@ define void @monotonic_double_generic_cluster_volatile(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_generic_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_double_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_double_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr %addr syncscope("cluster") monotonic, align 8
@@ -7460,8 +7370,8 @@ define void @monotonic_double_generic_gpu_volatile(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_generic_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_double_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_double_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr %addr syncscope("device") monotonic, align 8
@@ -7475,8 +7385,8 @@ define void @monotonic_i8_global_sys(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_global_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_global_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(1) %addr syncscope("") monotonic, align 1
@@ -7490,8 +7400,8 @@ define void @monotonic_i8_global_cta(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_global_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_global_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(1) %addr syncscope("block") monotonic, align 1
@@ -7505,8 +7415,8 @@ define void @monotonic_i8_global_cluster(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_global_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_global_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 1
@@ -7520,8 +7430,8 @@ define void @monotonic_i8_global_gpu(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_global_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_global_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(1) %addr syncscope("device") monotonic, align 1
@@ -7535,8 +7445,8 @@ define void @monotonic_i8_global_sys_volatile(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_global_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(1) %addr syncscope("") monotonic, align 1
@@ -7550,8 +7460,8 @@ define void @monotonic_i8_global_cta_volatile(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_global_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(1) %addr syncscope("block") monotonic, align 1
@@ -7565,8 +7475,8 @@ define void @monotonic_i8_global_cluster_volatile(i8 %val, ptr addrspace(1) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_global_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 1
@@ -7580,8 +7490,8 @@ define void @monotonic_i8_global_gpu_volatile(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_global_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(1) %addr syncscope("device") monotonic, align 1
@@ -7595,8 +7505,8 @@ define void @monotonic_i16_global_sys(i16 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_global_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_global_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(1) %addr syncscope("") monotonic, align 2
@@ -7610,8 +7520,8 @@ define void @monotonic_i16_global_cta(i16 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_global_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_global_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(1) %addr syncscope("block") monotonic, align 2
@@ -7625,8 +7535,8 @@ define void @monotonic_i16_global_cluster(i16 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_global_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_global_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 2
@@ -7640,8 +7550,8 @@ define void @monotonic_i16_global_gpu(i16 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_global_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_global_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(1) %addr syncscope("device") monotonic, align 2
@@ -7655,8 +7565,8 @@ define void @monotonic_i16_global_sys_volatile(i16 %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_global_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(1) %addr syncscope("") monotonic, align 2
@@ -7670,8 +7580,8 @@ define void @monotonic_i16_global_cta_volatile(i16 %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_global_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(1) %addr syncscope("block") monotonic, align 2
@@ -7685,8 +7595,8 @@ define void @monotonic_i16_global_cluster_volatile(i16 %val, ptr addrspace(1) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_global_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 2
@@ -7700,8 +7610,8 @@ define void @monotonic_i16_global_gpu_volatile(i16 %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_global_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(1) %addr syncscope("device") monotonic, align 2
@@ -7715,8 +7625,8 @@ define void @monotonic_i32_global_sys(i32 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_i32_global_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_i32_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_global_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(1) %addr syncscope("") monotonic, align 4
@@ -7730,8 +7640,8 @@ define void @monotonic_i32_global_cta(i32 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_i32_global_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_i32_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_global_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(1) %addr syncscope("block") monotonic, align 4
@@ -7745,8 +7655,8 @@ define void @monotonic_i32_global_cluster(i32 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_i32_global_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_i32_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_global_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 4
@@ -7760,8 +7670,8 @@ define void @monotonic_i32_global_gpu(i32 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_i32_global_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_i32_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_global_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(1) %addr syncscope("device") monotonic, align 4
@@ -7775,8 +7685,8 @@ define void @monotonic_i32_global_sys_volatile(i32 %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_i32_global_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_i32_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(1) %addr syncscope("") monotonic, align 4
@@ -7790,8 +7700,8 @@ define void @monotonic_i32_global_cta_volatile(i32 %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_i32_global_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_i32_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(1) %addr syncscope("block") monotonic, align 4
@@ -7805,8 +7715,8 @@ define void @monotonic_i32_global_cluster_volatile(i32 %val, ptr addrspace(1) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_i32_global_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_i32_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 4
@@ -7820,8 +7730,8 @@ define void @monotonic_i32_global_gpu_volatile(i32 %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_i32_global_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_i32_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(1) %addr syncscope("device") monotonic, align 4
@@ -7834,8 +7744,8 @@ define void @monotonic_i64_global_sys(i64 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_global_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_i64_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_i64_global_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(1) %addr syncscope("") monotonic, align 8
@@ -7848,8 +7758,8 @@ define void @monotonic_i64_global_cta(i64 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_global_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_i64_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_i64_global_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(1) %addr syncscope("block") monotonic, align 8
@@ -7862,8 +7772,8 @@ define void @monotonic_i64_global_cluster(i64 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_global_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_i64_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_i64_global_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 8
@@ -7876,8 +7786,8 @@ define void @monotonic_i64_global_gpu(i64 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_global_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_i64_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_i64_global_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(1) %addr syncscope("device") monotonic, align 8
@@ -7890,8 +7800,8 @@ define void @monotonic_i64_global_sys_volatile(i64 %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_global_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_i64_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_i64_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(1) %addr syncscope("") monotonic, align 8
@@ -7904,8 +7814,8 @@ define void @monotonic_i64_global_cta_volatile(i64 %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_global_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_i64_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_i64_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(1) %addr syncscope("block") monotonic, align 8
@@ -7918,8 +7828,8 @@ define void @monotonic_i64_global_cluster_volatile(i64 %val, ptr addrspace(1) %a
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_global_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_i64_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_i64_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 8
@@ -7932,8 +7842,8 @@ define void @monotonic_i64_global_gpu_volatile(i64 %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_global_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_i64_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_i64_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(1) %addr syncscope("device") monotonic, align 8
@@ -7946,8 +7856,8 @@ define void @monotonic_i128_global_sys(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_global_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [monotonic_i128_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_global_sys_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -7965,8 +7875,8 @@ define void @monotonic_i128_global_cta(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_global_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [monotonic_i128_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_global_cta_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -7984,8 +7894,8 @@ define void @monotonic_i128_global_cluster(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_global_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [monotonic_i128_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_global_cluster_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -8003,8 +7913,8 @@ define void @monotonic_i128_global_gpu(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_global_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [monotonic_i128_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_global_gpu_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -8022,8 +7932,8 @@ define void @monotonic_i128_global_sys_volatile(i128 %val, ptr addrspace(1) %add
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_global_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [monotonic_i128_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_global_sys_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -8041,8 +7951,8 @@ define void @monotonic_i128_global_cta_volatile(i128 %val, ptr addrspace(1) %add
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_global_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [monotonic_i128_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_global_cta_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -8060,8 +7970,8 @@ define void @monotonic_i128_global_cluster_volatile(i128 %val, ptr addrspace(1) 
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_global_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [monotonic_i128_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -8079,8 +7989,8 @@ define void @monotonic_i128_global_gpu_volatile(i128 %val, ptr addrspace(1) %add
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_global_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [monotonic_i128_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -8099,8 +8009,8 @@ define void @monotonic_half_global_sys(half %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_global_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_global_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(1) %addr syncscope("") monotonic, align 2
@@ -8114,8 +8024,8 @@ define void @monotonic_half_global_cta(half %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_global_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_global_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(1) %addr syncscope("block") monotonic, align 2
@@ -8129,8 +8039,8 @@ define void @monotonic_half_global_cluster(half %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_global_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_global_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 2
@@ -8144,8 +8054,8 @@ define void @monotonic_half_global_gpu(half %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_global_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_global_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(1) %addr syncscope("device") monotonic, align 2
@@ -8159,8 +8069,8 @@ define void @monotonic_half_global_sys_volatile(half %val, ptr addrspace(1) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_global_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(1) %addr syncscope("") monotonic, align 2
@@ -8174,8 +8084,8 @@ define void @monotonic_half_global_cta_volatile(half %val, ptr addrspace(1) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_global_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(1) %addr syncscope("block") monotonic, align 2
@@ -8189,8 +8099,8 @@ define void @monotonic_half_global_cluster_volatile(half %val, ptr addrspace(1) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_global_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 2
@@ -8204,8 +8114,8 @@ define void @monotonic_half_global_gpu_volatile(half %val, ptr addrspace(1) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_global_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(1) %addr syncscope("device") monotonic, align 2
@@ -8219,8 +8129,8 @@ define void @monotonic_bfloat_global_sys(bfloat %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_global_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_global_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(1) %addr syncscope("") monotonic, align 2
@@ -8234,8 +8144,8 @@ define void @monotonic_bfloat_global_cta(bfloat %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_global_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_global_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(1) %addr syncscope("block") monotonic, align 2
@@ -8249,8 +8159,8 @@ define void @monotonic_bfloat_global_cluster(bfloat %val, ptr addrspace(1) %addr
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_global_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_global_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 2
@@ -8264,8 +8174,8 @@ define void @monotonic_bfloat_global_gpu(bfloat %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_global_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_global_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(1) %addr syncscope("device") monotonic, align 2
@@ -8279,8 +8189,8 @@ define void @monotonic_bfloat_global_sys_volatile(bfloat %val, ptr addrspace(1) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_global_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(1) %addr syncscope("") monotonic, align 2
@@ -8294,8 +8204,8 @@ define void @monotonic_bfloat_global_cta_volatile(bfloat %val, ptr addrspace(1) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_global_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(1) %addr syncscope("block") monotonic, align 2
@@ -8309,8 +8219,8 @@ define void @monotonic_bfloat_global_cluster_volatile(bfloat %val, ptr addrspace
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_global_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 2
@@ -8324,8 +8234,8 @@ define void @monotonic_bfloat_global_gpu_volatile(bfloat %val, ptr addrspace(1) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_global_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(1) %addr syncscope("device") monotonic, align 2
@@ -8339,8 +8249,8 @@ define void @monotonic_float_global_sys(float %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_float_global_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_float_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_global_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(1) %addr syncscope("") monotonic, align 4
@@ -8354,8 +8264,8 @@ define void @monotonic_float_global_cta(float %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_float_global_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_float_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_global_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(1) %addr syncscope("block") monotonic, align 4
@@ -8369,8 +8279,8 @@ define void @monotonic_float_global_cluster(float %val, ptr addrspace(1) %addr) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_float_global_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_float_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_global_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 4
@@ -8384,8 +8294,8 @@ define void @monotonic_float_global_gpu(float %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_float_global_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_float_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_global_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(1) %addr syncscope("device") monotonic, align 4
@@ -8399,8 +8309,8 @@ define void @monotonic_float_global_sys_volatile(float %val, ptr addrspace(1) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_float_global_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_float_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(1) %addr syncscope("") monotonic, align 4
@@ -8414,8 +8324,8 @@ define void @monotonic_float_global_cta_volatile(float %val, ptr addrspace(1) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_float_global_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_float_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(1) %addr syncscope("block") monotonic, align 4
@@ -8429,8 +8339,8 @@ define void @monotonic_float_global_cluster_volatile(float %val, ptr addrspace(1
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_float_global_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_float_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 4
@@ -8444,8 +8354,8 @@ define void @monotonic_float_global_gpu_volatile(float %val, ptr addrspace(1) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_float_global_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_float_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(1) %addr syncscope("device") monotonic, align 4
@@ -8458,8 +8368,8 @@ define void @monotonic_double_global_sys(double %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_global_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_double_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_double_global_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(1) %addr syncscope("") monotonic, align 8
@@ -8472,8 +8382,8 @@ define void @monotonic_double_global_cta(double %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_global_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_double_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_double_global_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(1) %addr syncscope("block") monotonic, align 8
@@ -8486,8 +8396,8 @@ define void @monotonic_double_global_cluster(double %val, ptr addrspace(1) %addr
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_global_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_double_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_double_global_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 8
@@ -8500,8 +8410,8 @@ define void @monotonic_double_global_gpu(double %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_global_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_double_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_double_global_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(1) %addr syncscope("device") monotonic, align 8
@@ -8514,8 +8424,8 @@ define void @monotonic_double_global_sys_volatile(double %val, ptr addrspace(1) 
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_global_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_double_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_double_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(1) %addr syncscope("") monotonic, align 8
@@ -8528,8 +8438,8 @@ define void @monotonic_double_global_cta_volatile(double %val, ptr addrspace(1) 
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_global_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_double_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_double_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(1) %addr syncscope("block") monotonic, align 8
@@ -8542,8 +8452,8 @@ define void @monotonic_double_global_cluster_volatile(double %val, ptr addrspace
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_global_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_double_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_double_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 8
@@ -8556,8 +8466,8 @@ define void @monotonic_double_global_gpu_volatile(double %val, ptr addrspace(1) 
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_global_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_double_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_double_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(1) %addr syncscope("device") monotonic, align 8
@@ -8571,8 +8481,8 @@ define void @monotonic_i8_shared_sys(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_shared_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_shared_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(3) %addr syncscope("") monotonic, align 1
@@ -8586,8 +8496,8 @@ define void @monotonic_i8_shared_cta(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_shared_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_shared_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(3) %addr syncscope("block") monotonic, align 1
@@ -8601,8 +8511,8 @@ define void @monotonic_i8_shared_cluster(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_shared_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_shared_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 1
@@ -8616,8 +8526,8 @@ define void @monotonic_i8_shared_gpu(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_shared_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_shared_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(3) %addr syncscope("device") monotonic, align 1
@@ -8631,8 +8541,8 @@ define void @monotonic_i8_shared_sys_volatile(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_shared_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(3) %addr syncscope("") monotonic, align 1
@@ -8646,8 +8556,8 @@ define void @monotonic_i8_shared_cta_volatile(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_shared_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(3) %addr syncscope("block") monotonic, align 1
@@ -8661,8 +8571,8 @@ define void @monotonic_i8_shared_cluster_volatile(i8 %val, ptr addrspace(3) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_shared_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 1
@@ -8676,8 +8586,8 @@ define void @monotonic_i8_shared_gpu_volatile(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_shared_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(3) %addr syncscope("device") monotonic, align 1
@@ -8691,8 +8601,8 @@ define void @monotonic_i16_shared_sys(i16 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_shared_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_shared_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(3) %addr syncscope("") monotonic, align 2
@@ -8706,8 +8616,8 @@ define void @monotonic_i16_shared_cta(i16 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_shared_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_shared_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(3) %addr syncscope("block") monotonic, align 2
@@ -8721,8 +8631,8 @@ define void @monotonic_i16_shared_cluster(i16 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_shared_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_shared_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 2
@@ -8736,8 +8646,8 @@ define void @monotonic_i16_shared_gpu(i16 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_shared_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_shared_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(3) %addr syncscope("device") monotonic, align 2
@@ -8751,8 +8661,8 @@ define void @monotonic_i16_shared_sys_volatile(i16 %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_shared_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(3) %addr syncscope("") monotonic, align 2
@@ -8766,8 +8676,8 @@ define void @monotonic_i16_shared_cta_volatile(i16 %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_shared_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(3) %addr syncscope("block") monotonic, align 2
@@ -8781,8 +8691,8 @@ define void @monotonic_i16_shared_cluster_volatile(i16 %val, ptr addrspace(3) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_shared_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 2
@@ -8796,8 +8706,8 @@ define void @monotonic_i16_shared_gpu_volatile(i16 %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_shared_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(3) %addr syncscope("device") monotonic, align 2
@@ -8811,8 +8721,8 @@ define void @monotonic_i32_shared_sys(i32 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_i32_shared_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_i32_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_shared_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(3) %addr syncscope("") monotonic, align 4
@@ -8826,8 +8736,8 @@ define void @monotonic_i32_shared_cta(i32 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_i32_shared_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_i32_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_shared_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(3) %addr syncscope("block") monotonic, align 4
@@ -8841,8 +8751,8 @@ define void @monotonic_i32_shared_cluster(i32 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_i32_shared_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_i32_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_shared_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 4
@@ -8856,8 +8766,8 @@ define void @monotonic_i32_shared_gpu(i32 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_i32_shared_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_i32_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_shared_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(3) %addr syncscope("device") monotonic, align 4
@@ -8871,8 +8781,8 @@ define void @monotonic_i32_shared_sys_volatile(i32 %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_i32_shared_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_i32_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(3) %addr syncscope("") monotonic, align 4
@@ -8886,8 +8796,8 @@ define void @monotonic_i32_shared_cta_volatile(i32 %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_i32_shared_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_i32_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(3) %addr syncscope("block") monotonic, align 4
@@ -8901,8 +8811,8 @@ define void @monotonic_i32_shared_cluster_volatile(i32 %val, ptr addrspace(3) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_i32_shared_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_i32_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 4
@@ -8916,8 +8826,8 @@ define void @monotonic_i32_shared_gpu_volatile(i32 %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_i32_shared_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_i32_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(3) %addr syncscope("device") monotonic, align 4
@@ -8930,8 +8840,8 @@ define void @monotonic_i64_shared_sys(i64 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_shared_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_i64_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_i64_shared_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(3) %addr syncscope("") monotonic, align 8
@@ -8944,8 +8854,8 @@ define void @monotonic_i64_shared_cta(i64 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_shared_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_i64_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_i64_shared_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(3) %addr syncscope("block") monotonic, align 8
@@ -8958,8 +8868,8 @@ define void @monotonic_i64_shared_cluster(i64 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_shared_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_i64_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_i64_shared_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 8
@@ -8972,8 +8882,8 @@ define void @monotonic_i64_shared_gpu(i64 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_shared_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_i64_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_i64_shared_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(3) %addr syncscope("device") monotonic, align 8
@@ -8986,8 +8896,8 @@ define void @monotonic_i64_shared_sys_volatile(i64 %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_shared_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_i64_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_i64_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(3) %addr syncscope("") monotonic, align 8
@@ -9000,8 +8910,8 @@ define void @monotonic_i64_shared_cta_volatile(i64 %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_shared_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_i64_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_i64_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(3) %addr syncscope("block") monotonic, align 8
@@ -9014,8 +8924,8 @@ define void @monotonic_i64_shared_cluster_volatile(i64 %val, ptr addrspace(3) %a
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_shared_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_i64_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_i64_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 8
@@ -9028,8 +8938,8 @@ define void @monotonic_i64_shared_gpu_volatile(i64 %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_shared_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_i64_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_i64_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(3) %addr syncscope("device") monotonic, align 8
@@ -9042,8 +8952,8 @@ define void @monotonic_i128_shared_sys(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_shared_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [monotonic_i128_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_shared_sys_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -9061,8 +8971,8 @@ define void @monotonic_i128_shared_cta(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_shared_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [monotonic_i128_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_shared_cta_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -9080,8 +8990,8 @@ define void @monotonic_i128_shared_cluster(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_shared_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [monotonic_i128_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_shared_cluster_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -9099,8 +9009,8 @@ define void @monotonic_i128_shared_gpu(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_shared_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [monotonic_i128_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_shared_gpu_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -9118,8 +9028,8 @@ define void @monotonic_i128_shared_sys_volatile(i128 %val, ptr addrspace(3) %add
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_shared_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [monotonic_i128_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -9137,8 +9047,8 @@ define void @monotonic_i128_shared_cta_volatile(i128 %val, ptr addrspace(3) %add
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_shared_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [monotonic_i128_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -9156,8 +9066,8 @@ define void @monotonic_i128_shared_cluster_volatile(i128 %val, ptr addrspace(3) 
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_shared_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [monotonic_i128_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -9175,8 +9085,8 @@ define void @monotonic_i128_shared_gpu_volatile(i128 %val, ptr addrspace(3) %add
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_shared_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [monotonic_i128_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -9195,8 +9105,8 @@ define void @monotonic_half_shared_sys(half %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_shared_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_shared_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(3) %addr syncscope("") monotonic, align 2
@@ -9210,8 +9120,8 @@ define void @monotonic_half_shared_cta(half %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_shared_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_shared_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(3) %addr syncscope("block") monotonic, align 2
@@ -9225,8 +9135,8 @@ define void @monotonic_half_shared_cluster(half %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_shared_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_shared_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 2
@@ -9240,8 +9150,8 @@ define void @monotonic_half_shared_gpu(half %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_shared_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_shared_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(3) %addr syncscope("device") monotonic, align 2
@@ -9255,8 +9165,8 @@ define void @monotonic_half_shared_sys_volatile(half %val, ptr addrspace(3) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_shared_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(3) %addr syncscope("") monotonic, align 2
@@ -9270,8 +9180,8 @@ define void @monotonic_half_shared_cta_volatile(half %val, ptr addrspace(3) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_shared_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(3) %addr syncscope("block") monotonic, align 2
@@ -9285,8 +9195,8 @@ define void @monotonic_half_shared_cluster_volatile(half %val, ptr addrspace(3) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_shared_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 2
@@ -9300,8 +9210,8 @@ define void @monotonic_half_shared_gpu_volatile(half %val, ptr addrspace(3) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_shared_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(3) %addr syncscope("device") monotonic, align 2
@@ -9315,8 +9225,8 @@ define void @monotonic_bfloat_shared_sys(bfloat %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_shared_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_shared_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(3) %addr syncscope("") monotonic, align 2
@@ -9330,8 +9240,8 @@ define void @monotonic_bfloat_shared_cta(bfloat %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_shared_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_shared_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(3) %addr syncscope("block") monotonic, align 2
@@ -9345,8 +9255,8 @@ define void @monotonic_bfloat_shared_cluster(bfloat %val, ptr addrspace(3) %addr
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_shared_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_shared_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 2
@@ -9360,8 +9270,8 @@ define void @monotonic_bfloat_shared_gpu(bfloat %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_shared_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_shared_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(3) %addr syncscope("device") monotonic, align 2
@@ -9375,8 +9285,8 @@ define void @monotonic_bfloat_shared_sys_volatile(bfloat %val, ptr addrspace(3) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_shared_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(3) %addr syncscope("") monotonic, align 2
@@ -9390,8 +9300,8 @@ define void @monotonic_bfloat_shared_cta_volatile(bfloat %val, ptr addrspace(3) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_shared_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(3) %addr syncscope("block") monotonic, align 2
@@ -9405,8 +9315,8 @@ define void @monotonic_bfloat_shared_cluster_volatile(bfloat %val, ptr addrspace
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_shared_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 2
@@ -9420,8 +9330,8 @@ define void @monotonic_bfloat_shared_gpu_volatile(bfloat %val, ptr addrspace(3) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_shared_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(3) %addr syncscope("device") monotonic, align 2
@@ -9435,8 +9345,8 @@ define void @monotonic_float_shared_sys(float %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_float_shared_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_float_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_shared_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(3) %addr syncscope("") monotonic, align 4
@@ -9450,8 +9360,8 @@ define void @monotonic_float_shared_cta(float %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_float_shared_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_float_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_shared_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(3) %addr syncscope("block") monotonic, align 4
@@ -9465,8 +9375,8 @@ define void @monotonic_float_shared_cluster(float %val, ptr addrspace(3) %addr) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_float_shared_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_float_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_shared_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 4
@@ -9480,8 +9390,8 @@ define void @monotonic_float_shared_gpu(float %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_float_shared_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_float_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_shared_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(3) %addr syncscope("device") monotonic, align 4
@@ -9495,8 +9405,8 @@ define void @monotonic_float_shared_sys_volatile(float %val, ptr addrspace(3) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_float_shared_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_float_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(3) %addr syncscope("") monotonic, align 4
@@ -9510,8 +9420,8 @@ define void @monotonic_float_shared_cta_volatile(float %val, ptr addrspace(3) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_float_shared_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_float_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(3) %addr syncscope("block") monotonic, align 4
@@ -9525,8 +9435,8 @@ define void @monotonic_float_shared_cluster_volatile(float %val, ptr addrspace(3
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_float_shared_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_float_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 4
@@ -9540,8 +9450,8 @@ define void @monotonic_float_shared_gpu_volatile(float %val, ptr addrspace(3) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [monotonic_float_shared_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [monotonic_float_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(3) %addr syncscope("device") monotonic, align 4
@@ -9554,8 +9464,8 @@ define void @monotonic_double_shared_sys(double %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_shared_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_double_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_double_shared_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(3) %addr syncscope("") monotonic, align 8
@@ -9568,8 +9478,8 @@ define void @monotonic_double_shared_cta(double %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_shared_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_double_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_double_shared_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(3) %addr syncscope("block") monotonic, align 8
@@ -9582,8 +9492,8 @@ define void @monotonic_double_shared_cluster(double %val, ptr addrspace(3) %addr
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_shared_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_double_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_double_shared_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 8
@@ -9596,8 +9506,8 @@ define void @monotonic_double_shared_gpu(double %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_shared_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_double_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_double_shared_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(3) %addr syncscope("device") monotonic, align 8
@@ -9610,8 +9520,8 @@ define void @monotonic_double_shared_sys_volatile(double %val, ptr addrspace(3) 
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_shared_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_double_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_double_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(3) %addr syncscope("") monotonic, align 8
@@ -9624,8 +9534,8 @@ define void @monotonic_double_shared_cta_volatile(double %val, ptr addrspace(3) 
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_shared_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_double_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_double_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(3) %addr syncscope("block") monotonic, align 8
@@ -9638,8 +9548,8 @@ define void @monotonic_double_shared_cluster_volatile(double %val, ptr addrspace
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_shared_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_double_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_double_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 8
@@ -9652,8 +9562,8 @@ define void @monotonic_double_shared_gpu_volatile(double %val, ptr addrspace(3) 
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_shared_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [monotonic_double_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [monotonic_double_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(3) %addr syncscope("device") monotonic, align 8
@@ -9672,13 +9582,12 @@ define void @monotonic_i8_local_sys(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot576;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9698,13 +9607,12 @@ define void @monotonic_i8_local_cta(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot577;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9724,13 +9632,12 @@ define void @monotonic_i8_local_cluster(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot578;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9750,13 +9657,12 @@ define void @monotonic_i8_local_gpu(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot579;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9776,13 +9682,12 @@ define void @monotonic_i8_local_sys_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot580;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9802,13 +9707,12 @@ define void @monotonic_i8_local_cta_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot581;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9828,13 +9732,12 @@ define void @monotonic_i8_local_cluster_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot582;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9854,13 +9757,12 @@ define void @monotonic_i8_local_gpu_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot583;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [monotonic_i8_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9880,13 +9782,12 @@ define void @monotonic_i16_local_sys(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot584;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9906,13 +9807,12 @@ define void @monotonic_i16_local_cta(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot585;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9932,13 +9832,12 @@ define void @monotonic_i16_local_cluster(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot586;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9958,13 +9857,12 @@ define void @monotonic_i16_local_gpu(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot587;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9984,13 +9882,12 @@ define void @monotonic_i16_local_sys_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot588;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10010,13 +9907,12 @@ define void @monotonic_i16_local_cta_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot589;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10036,13 +9932,12 @@ define void @monotonic_i16_local_cluster_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot590;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10062,13 +9957,12 @@ define void @monotonic_i16_local_gpu_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot591;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_i16_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10087,13 +9981,12 @@ define void @monotonic_i32_local_sys(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot592;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_i32_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [monotonic_i32_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10112,13 +10005,12 @@ define void @monotonic_i32_local_cta(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot593;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_i32_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [monotonic_i32_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10137,13 +10029,12 @@ define void @monotonic_i32_local_cluster(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot594;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_i32_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [monotonic_i32_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10162,13 +10053,12 @@ define void @monotonic_i32_local_gpu(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot595;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_i32_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [monotonic_i32_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10187,13 +10077,12 @@ define void @monotonic_i32_local_sys_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot596;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_i32_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [monotonic_i32_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10212,13 +10101,12 @@ define void @monotonic_i32_local_cta_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot597;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_i32_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [monotonic_i32_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10237,13 +10125,12 @@ define void @monotonic_i32_local_cluster_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot598;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_i32_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [monotonic_i32_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10262,13 +10149,12 @@ define void @monotonic_i32_local_gpu_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot599;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_i32_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [monotonic_i32_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10287,13 +10173,12 @@ define void @monotonic_i64_local_sys(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot600;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10312,13 +10197,12 @@ define void @monotonic_i64_local_cta(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot601;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10337,13 +10221,12 @@ define void @monotonic_i64_local_cluster(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot602;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10362,13 +10245,12 @@ define void @monotonic_i64_local_gpu(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot603;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10387,13 +10269,12 @@ define void @monotonic_i64_local_sys_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot604;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10412,13 +10293,12 @@ define void @monotonic_i64_local_cta_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot605;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10437,13 +10317,12 @@ define void @monotonic_i64_local_cluster_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot606;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10462,13 +10341,12 @@ define void @monotonic_i64_local_gpu_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot607;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10487,13 +10365,12 @@ define void @monotonic_i128_local_sys(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot608;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10512,13 +10389,12 @@ define void @monotonic_i128_local_cta(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot609;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10537,13 +10413,12 @@ define void @monotonic_i128_local_cluster(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot610;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10562,13 +10437,12 @@ define void @monotonic_i128_local_gpu(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot611;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10587,13 +10461,12 @@ define void @monotonic_i128_local_sys_volatile(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot612;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10612,13 +10485,12 @@ define void @monotonic_i128_local_cta_volatile(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot613;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10637,13 +10509,12 @@ define void @monotonic_i128_local_cluster_volatile(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot614;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10662,13 +10533,12 @@ define void @monotonic_i128_local_gpu_volatile(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot615;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [monotonic_i128_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10688,13 +10558,12 @@ define void @monotonic_half_local_sys(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot616;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10714,13 +10583,12 @@ define void @monotonic_half_local_cta(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot617;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10740,13 +10608,12 @@ define void @monotonic_half_local_cluster(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot618;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10766,13 +10633,12 @@ define void @monotonic_half_local_gpu(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot619;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10792,13 +10658,12 @@ define void @monotonic_half_local_sys_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot620;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10818,13 +10683,12 @@ define void @monotonic_half_local_cta_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot621;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10844,13 +10708,12 @@ define void @monotonic_half_local_cluster_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot622;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10870,13 +10733,12 @@ define void @monotonic_half_local_gpu_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot623;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_half_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10896,13 +10758,12 @@ define void @monotonic_bfloat_local_sys(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot624;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10922,13 +10783,12 @@ define void @monotonic_bfloat_local_cta(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot625;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10948,13 +10808,12 @@ define void @monotonic_bfloat_local_cluster(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot626;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10974,13 +10833,12 @@ define void @monotonic_bfloat_local_gpu(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot627;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11000,13 +10858,12 @@ define void @monotonic_bfloat_local_sys_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot628;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11026,13 +10883,12 @@ define void @monotonic_bfloat_local_cta_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot629;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11052,13 +10908,12 @@ define void @monotonic_bfloat_local_cluster_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot630;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11078,13 +10933,12 @@ define void @monotonic_bfloat_local_gpu_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot631;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [monotonic_bfloat_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11103,13 +10957,12 @@ define void @monotonic_float_local_sys(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot632;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_float_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [monotonic_float_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11128,13 +10981,12 @@ define void @monotonic_float_local_cta(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot633;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_float_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [monotonic_float_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11153,13 +11005,12 @@ define void @monotonic_float_local_cluster(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot634;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_float_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [monotonic_float_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11178,13 +11029,12 @@ define void @monotonic_float_local_gpu(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot635;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_float_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [monotonic_float_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11203,13 +11053,12 @@ define void @monotonic_float_local_sys_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot636;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_float_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [monotonic_float_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11228,13 +11077,12 @@ define void @monotonic_float_local_cta_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot637;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_float_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [monotonic_float_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11253,13 +11101,12 @@ define void @monotonic_float_local_cluster_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot638;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_float_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [monotonic_float_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11278,13 +11125,12 @@ define void @monotonic_float_local_gpu_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot639;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_float_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [monotonic_float_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11303,13 +11149,12 @@ define void @monotonic_double_local_sys(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot640;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11328,13 +11173,12 @@ define void @monotonic_double_local_cta(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot641;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11353,13 +11197,12 @@ define void @monotonic_double_local_cluster(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot642;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11378,13 +11221,12 @@ define void @monotonic_double_local_gpu(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot643;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11403,13 +11245,12 @@ define void @monotonic_double_local_sys_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot644;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11428,13 +11269,12 @@ define void @monotonic_double_local_cta_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot645;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11453,13 +11293,12 @@ define void @monotonic_double_local_cluster_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot646;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11478,13 +11317,12 @@ define void @monotonic_double_local_gpu_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot647;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11499,8 +11337,8 @@ define void @release_i8_generic_sys(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_generic_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i8_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i8_generic_sys_param_1];
 ; CHECK-NEXT:    st.release.sys.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr %addr syncscope("") release, align 1
@@ -11514,8 +11352,8 @@ define void @release_i8_generic_cta(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_generic_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i8_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i8_generic_cta_param_1];
 ; CHECK-NEXT:    st.release.cta.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr %addr syncscope("block") release, align 1
@@ -11529,8 +11367,8 @@ define void @release_i8_generic_cluster(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_generic_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i8_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i8_generic_cluster_param_1];
 ; CHECK-NEXT:    st.release.cluster.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr %addr syncscope("cluster") release, align 1
@@ -11544,8 +11382,8 @@ define void @release_i8_generic_gpu(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_generic_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i8_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i8_generic_gpu_param_1];
 ; CHECK-NEXT:    st.release.gpu.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr %addr syncscope("device") release, align 1
@@ -11559,8 +11397,8 @@ define void @release_i8_generic_sys_volatile(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_generic_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i8_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i8_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr %addr syncscope("") release, align 1
@@ -11574,8 +11412,8 @@ define void @release_i8_generic_cta_volatile(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_generic_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i8_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i8_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr %addr syncscope("block") release, align 1
@@ -11589,8 +11427,8 @@ define void @release_i8_generic_cluster_volatile(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_generic_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i8_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i8_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr %addr syncscope("cluster") release, align 1
@@ -11604,8 +11442,8 @@ define void @release_i8_generic_gpu_volatile(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_generic_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i8_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i8_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr %addr syncscope("device") release, align 1
@@ -11619,8 +11457,8 @@ define void @release_i16_generic_sys(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_generic_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i16_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i16_generic_sys_param_1];
 ; CHECK-NEXT:    st.release.sys.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr %addr syncscope("") release, align 2
@@ -11634,8 +11472,8 @@ define void @release_i16_generic_cta(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_generic_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i16_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i16_generic_cta_param_1];
 ; CHECK-NEXT:    st.release.cta.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr %addr syncscope("block") release, align 2
@@ -11649,8 +11487,8 @@ define void @release_i16_generic_cluster(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_generic_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i16_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i16_generic_cluster_param_1];
 ; CHECK-NEXT:    st.release.cluster.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr %addr syncscope("cluster") release, align 2
@@ -11664,8 +11502,8 @@ define void @release_i16_generic_gpu(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_generic_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i16_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i16_generic_gpu_param_1];
 ; CHECK-NEXT:    st.release.gpu.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr %addr syncscope("device") release, align 2
@@ -11679,8 +11517,8 @@ define void @release_i16_generic_sys_volatile(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_generic_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i16_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i16_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr %addr syncscope("") release, align 2
@@ -11694,8 +11532,8 @@ define void @release_i16_generic_cta_volatile(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_generic_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i16_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i16_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr %addr syncscope("block") release, align 2
@@ -11709,8 +11547,8 @@ define void @release_i16_generic_cluster_volatile(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_generic_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i16_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i16_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr %addr syncscope("cluster") release, align 2
@@ -11724,8 +11562,8 @@ define void @release_i16_generic_gpu_volatile(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_generic_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i16_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i16_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr %addr syncscope("device") release, align 2
@@ -11739,8 +11577,8 @@ define void @release_i32_generic_sys(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_i32_generic_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i32_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_i32_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i32_generic_sys_param_1];
 ; CHECK-NEXT:    st.release.sys.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr %addr syncscope("") release, align 4
@@ -11754,8 +11592,8 @@ define void @release_i32_generic_cta(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_i32_generic_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i32_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_i32_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i32_generic_cta_param_1];
 ; CHECK-NEXT:    st.release.cta.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr %addr syncscope("block") release, align 4
@@ -11769,8 +11607,8 @@ define void @release_i32_generic_cluster(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_i32_generic_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i32_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_i32_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i32_generic_cluster_param_1];
 ; CHECK-NEXT:    st.release.cluster.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr %addr syncscope("cluster") release, align 4
@@ -11784,8 +11622,8 @@ define void @release_i32_generic_gpu(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_i32_generic_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i32_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_i32_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i32_generic_gpu_param_1];
 ; CHECK-NEXT:    st.release.gpu.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr %addr syncscope("device") release, align 4
@@ -11799,8 +11637,8 @@ define void @release_i32_generic_sys_volatile(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_i32_generic_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i32_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_i32_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i32_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr %addr syncscope("") release, align 4
@@ -11814,8 +11652,8 @@ define void @release_i32_generic_cta_volatile(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_i32_generic_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i32_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_i32_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i32_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr %addr syncscope("block") release, align 4
@@ -11829,8 +11667,8 @@ define void @release_i32_generic_cluster_volatile(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_i32_generic_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i32_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_i32_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i32_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr %addr syncscope("cluster") release, align 4
@@ -11844,8 +11682,8 @@ define void @release_i32_generic_gpu_volatile(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_i32_generic_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i32_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_i32_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i32_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr %addr syncscope("device") release, align 4
@@ -11858,8 +11696,8 @@ define void @release_i64_generic_sys(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_generic_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_i64_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_i64_generic_sys_param_1];
 ; CHECK-NEXT:    st.release.sys.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr %addr syncscope("") release, align 8
@@ -11872,8 +11710,8 @@ define void @release_i64_generic_cta(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_generic_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_i64_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_i64_generic_cta_param_1];
 ; CHECK-NEXT:    st.release.cta.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr %addr syncscope("block") release, align 8
@@ -11886,8 +11724,8 @@ define void @release_i64_generic_cluster(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_generic_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_i64_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_i64_generic_cluster_param_1];
 ; CHECK-NEXT:    st.release.cluster.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr %addr syncscope("cluster") release, align 8
@@ -11900,8 +11738,8 @@ define void @release_i64_generic_gpu(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_generic_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_i64_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_i64_generic_gpu_param_1];
 ; CHECK-NEXT:    st.release.gpu.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr %addr syncscope("device") release, align 8
@@ -11914,8 +11752,8 @@ define void @release_i64_generic_sys_volatile(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_generic_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_i64_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_i64_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr %addr syncscope("") release, align 8
@@ -11928,8 +11766,8 @@ define void @release_i64_generic_cta_volatile(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_generic_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_i64_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_i64_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr %addr syncscope("block") release, align 8
@@ -11942,8 +11780,8 @@ define void @release_i64_generic_cluster_volatile(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_generic_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_i64_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_i64_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr %addr syncscope("cluster") release, align 8
@@ -11956,8 +11794,8 @@ define void @release_i64_generic_gpu_volatile(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_generic_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_i64_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_i64_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr %addr syncscope("device") release, align 8
@@ -11970,8 +11808,8 @@ define void @release_i128_generic_sys(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_generic_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [release_i128_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_generic_sys_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -11989,8 +11827,8 @@ define void @release_i128_generic_cta(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_generic_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [release_i128_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_generic_cta_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -12008,8 +11846,8 @@ define void @release_i128_generic_cluster(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_generic_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [release_i128_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_generic_cluster_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -12027,8 +11865,8 @@ define void @release_i128_generic_gpu(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_generic_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [release_i128_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_generic_gpu_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -12046,8 +11884,8 @@ define void @release_i128_generic_sys_volatile(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_generic_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [release_i128_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -12065,8 +11903,8 @@ define void @release_i128_generic_cta_volatile(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_generic_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [release_i128_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -12084,8 +11922,8 @@ define void @release_i128_generic_cluster_volatile(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_generic_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [release_i128_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -12103,8 +11941,8 @@ define void @release_i128_generic_gpu_volatile(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_generic_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [release_i128_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -12123,8 +11961,8 @@ define void @release_half_generic_sys(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_generic_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_half_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_half_generic_sys_param_1];
 ; CHECK-NEXT:    st.release.sys.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr %addr syncscope("") release, align 2
@@ -12138,8 +11976,8 @@ define void @release_half_generic_cta(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_generic_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_half_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_half_generic_cta_param_1];
 ; CHECK-NEXT:    st.release.cta.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr %addr syncscope("block") release, align 2
@@ -12153,8 +11991,8 @@ define void @release_half_generic_cluster(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_generic_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_half_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_half_generic_cluster_param_1];
 ; CHECK-NEXT:    st.release.cluster.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr %addr syncscope("cluster") release, align 2
@@ -12168,8 +12006,8 @@ define void @release_half_generic_gpu(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_generic_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_half_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_half_generic_gpu_param_1];
 ; CHECK-NEXT:    st.release.gpu.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr %addr syncscope("device") release, align 2
@@ -12183,8 +12021,8 @@ define void @release_half_generic_sys_volatile(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_generic_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_half_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_half_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr %addr syncscope("") release, align 2
@@ -12198,8 +12036,8 @@ define void @release_half_generic_cta_volatile(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_generic_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_half_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_half_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr %addr syncscope("block") release, align 2
@@ -12213,8 +12051,8 @@ define void @release_half_generic_cluster_volatile(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_generic_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_half_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_half_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr %addr syncscope("cluster") release, align 2
@@ -12228,8 +12066,8 @@ define void @release_half_generic_gpu_volatile(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_generic_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_half_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_half_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr %addr syncscope("device") release, align 2
@@ -12243,8 +12081,8 @@ define void @release_bfloat_generic_sys(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_generic_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_bfloat_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_bfloat_generic_sys_param_1];
 ; CHECK-NEXT:    st.release.sys.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr %addr syncscope("") release, align 2
@@ -12258,8 +12096,8 @@ define void @release_bfloat_generic_cta(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_generic_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_bfloat_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_bfloat_generic_cta_param_1];
 ; CHECK-NEXT:    st.release.cta.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr %addr syncscope("block") release, align 2
@@ -12273,8 +12111,8 @@ define void @release_bfloat_generic_cluster(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_generic_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_bfloat_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_bfloat_generic_cluster_param_1];
 ; CHECK-NEXT:    st.release.cluster.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr %addr syncscope("cluster") release, align 2
@@ -12288,8 +12126,8 @@ define void @release_bfloat_generic_gpu(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_generic_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_bfloat_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_bfloat_generic_gpu_param_1];
 ; CHECK-NEXT:    st.release.gpu.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr %addr syncscope("device") release, align 2
@@ -12303,8 +12141,8 @@ define void @release_bfloat_generic_sys_volatile(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_generic_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_bfloat_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_bfloat_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr %addr syncscope("") release, align 2
@@ -12318,8 +12156,8 @@ define void @release_bfloat_generic_cta_volatile(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_generic_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_bfloat_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_bfloat_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr %addr syncscope("block") release, align 2
@@ -12333,8 +12171,8 @@ define void @release_bfloat_generic_cluster_volatile(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_generic_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_bfloat_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_bfloat_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr %addr syncscope("cluster") release, align 2
@@ -12348,8 +12186,8 @@ define void @release_bfloat_generic_gpu_volatile(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_generic_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_bfloat_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_bfloat_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr %addr syncscope("device") release, align 2
@@ -12363,8 +12201,8 @@ define void @release_float_generic_sys(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_float_generic_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_float_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_float_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_float_generic_sys_param_1];
 ; CHECK-NEXT:    st.release.sys.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr %addr syncscope("") release, align 4
@@ -12378,8 +12216,8 @@ define void @release_float_generic_cta(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_float_generic_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_float_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_float_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_float_generic_cta_param_1];
 ; CHECK-NEXT:    st.release.cta.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr %addr syncscope("block") release, align 4
@@ -12393,8 +12231,8 @@ define void @release_float_generic_cluster(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_float_generic_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_float_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_float_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_float_generic_cluster_param_1];
 ; CHECK-NEXT:    st.release.cluster.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr %addr syncscope("cluster") release, align 4
@@ -12408,8 +12246,8 @@ define void @release_float_generic_gpu(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_float_generic_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_float_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_float_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_float_generic_gpu_param_1];
 ; CHECK-NEXT:    st.release.gpu.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr %addr syncscope("device") release, align 4
@@ -12423,8 +12261,8 @@ define void @release_float_generic_sys_volatile(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_float_generic_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_float_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_float_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_float_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr %addr syncscope("") release, align 4
@@ -12438,8 +12276,8 @@ define void @release_float_generic_cta_volatile(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_float_generic_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_float_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_float_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_float_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr %addr syncscope("block") release, align 4
@@ -12453,8 +12291,8 @@ define void @release_float_generic_cluster_volatile(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_float_generic_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_float_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_float_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_float_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr %addr syncscope("cluster") release, align 4
@@ -12468,8 +12306,8 @@ define void @release_float_generic_gpu_volatile(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_float_generic_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_float_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_float_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_float_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr %addr syncscope("device") release, align 4
@@ -12482,8 +12320,8 @@ define void @release_double_generic_sys(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_generic_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_double_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_double_generic_sys_param_1];
 ; CHECK-NEXT:    st.release.sys.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr %addr syncscope("") release, align 8
@@ -12496,8 +12334,8 @@ define void @release_double_generic_cta(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_generic_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_double_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_double_generic_cta_param_1];
 ; CHECK-NEXT:    st.release.cta.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr %addr syncscope("block") release, align 8
@@ -12510,8 +12348,8 @@ define void @release_double_generic_cluster(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_generic_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_double_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_double_generic_cluster_param_1];
 ; CHECK-NEXT:    st.release.cluster.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr %addr syncscope("cluster") release, align 8
@@ -12524,8 +12362,8 @@ define void @release_double_generic_gpu(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_generic_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_double_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_double_generic_gpu_param_1];
 ; CHECK-NEXT:    st.release.gpu.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr %addr syncscope("device") release, align 8
@@ -12538,8 +12376,8 @@ define void @release_double_generic_sys_volatile(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_generic_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_double_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_double_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr %addr syncscope("") release, align 8
@@ -12552,8 +12390,8 @@ define void @release_double_generic_cta_volatile(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_generic_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_double_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_double_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr %addr syncscope("block") release, align 8
@@ -12566,8 +12404,8 @@ define void @release_double_generic_cluster_volatile(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_generic_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_double_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_double_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr %addr syncscope("cluster") release, align 8
@@ -12580,8 +12418,8 @@ define void @release_double_generic_gpu_volatile(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_generic_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_double_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_double_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr %addr syncscope("device") release, align 8
@@ -12595,8 +12433,8 @@ define void @release_i8_global_sys(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_global_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i8_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i8_global_sys_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(1) %addr syncscope("") release, align 1
@@ -12610,8 +12448,8 @@ define void @release_i8_global_cta(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_global_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i8_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i8_global_cta_param_1];
 ; CHECK-NEXT:    st.release.cta.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(1) %addr syncscope("block") release, align 1
@@ -12625,8 +12463,8 @@ define void @release_i8_global_cluster(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_global_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i8_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i8_global_cluster_param_1];
 ; CHECK-NEXT:    st.release.cluster.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(1) %addr syncscope("cluster") release, align 1
@@ -12640,8 +12478,8 @@ define void @release_i8_global_gpu(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_global_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i8_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i8_global_gpu_param_1];
 ; CHECK-NEXT:    st.release.gpu.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(1) %addr syncscope("device") release, align 1
@@ -12655,8 +12493,8 @@ define void @release_i8_global_sys_volatile(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_global_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i8_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i8_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(1) %addr syncscope("") release, align 1
@@ -12670,8 +12508,8 @@ define void @release_i8_global_cta_volatile(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_global_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i8_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i8_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(1) %addr syncscope("block") release, align 1
@@ -12685,8 +12523,8 @@ define void @release_i8_global_cluster_volatile(i8 %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_global_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i8_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i8_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(1) %addr syncscope("cluster") release, align 1
@@ -12700,8 +12538,8 @@ define void @release_i8_global_gpu_volatile(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_global_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i8_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i8_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(1) %addr syncscope("device") release, align 1
@@ -12715,8 +12553,8 @@ define void @release_i16_global_sys(i16 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_global_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i16_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i16_global_sys_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(1) %addr syncscope("") release, align 2
@@ -12730,8 +12568,8 @@ define void @release_i16_global_cta(i16 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_global_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i16_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i16_global_cta_param_1];
 ; CHECK-NEXT:    st.release.cta.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(1) %addr syncscope("block") release, align 2
@@ -12745,8 +12583,8 @@ define void @release_i16_global_cluster(i16 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_global_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i16_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i16_global_cluster_param_1];
 ; CHECK-NEXT:    st.release.cluster.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(1) %addr syncscope("cluster") release, align 2
@@ -12760,8 +12598,8 @@ define void @release_i16_global_gpu(i16 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_global_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i16_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i16_global_gpu_param_1];
 ; CHECK-NEXT:    st.release.gpu.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(1) %addr syncscope("device") release, align 2
@@ -12775,8 +12613,8 @@ define void @release_i16_global_sys_volatile(i16 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_global_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i16_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i16_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(1) %addr syncscope("") release, align 2
@@ -12790,8 +12628,8 @@ define void @release_i16_global_cta_volatile(i16 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_global_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i16_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i16_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(1) %addr syncscope("block") release, align 2
@@ -12805,8 +12643,8 @@ define void @release_i16_global_cluster_volatile(i16 %val, ptr addrspace(1) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_global_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i16_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i16_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(1) %addr syncscope("cluster") release, align 2
@@ -12820,8 +12658,8 @@ define void @release_i16_global_gpu_volatile(i16 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_global_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i16_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i16_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(1) %addr syncscope("device") release, align 2
@@ -12835,8 +12673,8 @@ define void @release_i32_global_sys(i32 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_i32_global_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i32_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_i32_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i32_global_sys_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(1) %addr syncscope("") release, align 4
@@ -12850,8 +12688,8 @@ define void @release_i32_global_cta(i32 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_i32_global_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i32_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_i32_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i32_global_cta_param_1];
 ; CHECK-NEXT:    st.release.cta.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(1) %addr syncscope("block") release, align 4
@@ -12865,8 +12703,8 @@ define void @release_i32_global_cluster(i32 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_i32_global_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i32_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_i32_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i32_global_cluster_param_1];
 ; CHECK-NEXT:    st.release.cluster.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(1) %addr syncscope("cluster") release, align 4
@@ -12880,8 +12718,8 @@ define void @release_i32_global_gpu(i32 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_i32_global_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i32_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_i32_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i32_global_gpu_param_1];
 ; CHECK-NEXT:    st.release.gpu.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(1) %addr syncscope("device") release, align 4
@@ -12895,8 +12733,8 @@ define void @release_i32_global_sys_volatile(i32 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_i32_global_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i32_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_i32_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i32_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(1) %addr syncscope("") release, align 4
@@ -12910,8 +12748,8 @@ define void @release_i32_global_cta_volatile(i32 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_i32_global_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i32_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_i32_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i32_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(1) %addr syncscope("block") release, align 4
@@ -12925,8 +12763,8 @@ define void @release_i32_global_cluster_volatile(i32 %val, ptr addrspace(1) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_i32_global_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i32_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_i32_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i32_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(1) %addr syncscope("cluster") release, align 4
@@ -12940,8 +12778,8 @@ define void @release_i32_global_gpu_volatile(i32 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_i32_global_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i32_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_i32_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i32_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(1) %addr syncscope("device") release, align 4
@@ -12954,8 +12792,8 @@ define void @release_i64_global_sys(i64 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_global_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_i64_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_i64_global_sys_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(1) %addr syncscope("") release, align 8
@@ -12968,8 +12806,8 @@ define void @release_i64_global_cta(i64 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_global_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_i64_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_i64_global_cta_param_1];
 ; CHECK-NEXT:    st.release.cta.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(1) %addr syncscope("block") release, align 8
@@ -12982,8 +12820,8 @@ define void @release_i64_global_cluster(i64 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_global_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_i64_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_i64_global_cluster_param_1];
 ; CHECK-NEXT:    st.release.cluster.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(1) %addr syncscope("cluster") release, align 8
@@ -12996,8 +12834,8 @@ define void @release_i64_global_gpu(i64 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_global_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_i64_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_i64_global_gpu_param_1];
 ; CHECK-NEXT:    st.release.gpu.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(1) %addr syncscope("device") release, align 8
@@ -13010,8 +12848,8 @@ define void @release_i64_global_sys_volatile(i64 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_global_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_i64_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_i64_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(1) %addr syncscope("") release, align 8
@@ -13024,8 +12862,8 @@ define void @release_i64_global_cta_volatile(i64 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_global_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_i64_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_i64_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(1) %addr syncscope("block") release, align 8
@@ -13038,8 +12876,8 @@ define void @release_i64_global_cluster_volatile(i64 %val, ptr addrspace(1) %add
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_global_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_i64_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_i64_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(1) %addr syncscope("cluster") release, align 8
@@ -13052,8 +12890,8 @@ define void @release_i64_global_gpu_volatile(i64 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_global_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_i64_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_i64_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(1) %addr syncscope("device") release, align 8
@@ -13066,8 +12904,8 @@ define void @release_i128_global_sys(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_global_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [release_i128_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_global_sys_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -13085,8 +12923,8 @@ define void @release_i128_global_cta(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_global_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [release_i128_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_global_cta_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -13104,8 +12942,8 @@ define void @release_i128_global_cluster(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_global_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [release_i128_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_global_cluster_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -13123,8 +12961,8 @@ define void @release_i128_global_gpu(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_global_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [release_i128_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_global_gpu_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -13142,8 +12980,8 @@ define void @release_i128_global_sys_volatile(i128 %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_global_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [release_i128_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_global_sys_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -13161,8 +12999,8 @@ define void @release_i128_global_cta_volatile(i128 %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_global_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [release_i128_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_global_cta_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -13180,8 +13018,8 @@ define void @release_i128_global_cluster_volatile(i128 %val, ptr addrspace(1) %a
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_global_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [release_i128_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -13199,8 +13037,8 @@ define void @release_i128_global_gpu_volatile(i128 %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_global_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [release_i128_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -13219,8 +13057,8 @@ define void @release_half_global_sys(half %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_global_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_half_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_half_global_sys_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(1) %addr syncscope("") release, align 2
@@ -13234,8 +13072,8 @@ define void @release_half_global_cta(half %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_global_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_half_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_half_global_cta_param_1];
 ; CHECK-NEXT:    st.release.cta.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(1) %addr syncscope("block") release, align 2
@@ -13249,8 +13087,8 @@ define void @release_half_global_cluster(half %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_global_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_half_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_half_global_cluster_param_1];
 ; CHECK-NEXT:    st.release.cluster.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(1) %addr syncscope("cluster") release, align 2
@@ -13264,8 +13102,8 @@ define void @release_half_global_gpu(half %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_global_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_half_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_half_global_gpu_param_1];
 ; CHECK-NEXT:    st.release.gpu.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(1) %addr syncscope("device") release, align 2
@@ -13279,8 +13117,8 @@ define void @release_half_global_sys_volatile(half %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_global_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_half_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_half_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(1) %addr syncscope("") release, align 2
@@ -13294,8 +13132,8 @@ define void @release_half_global_cta_volatile(half %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_global_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_half_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_half_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(1) %addr syncscope("block") release, align 2
@@ -13309,8 +13147,8 @@ define void @release_half_global_cluster_volatile(half %val, ptr addrspace(1) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_global_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_half_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_half_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(1) %addr syncscope("cluster") release, align 2
@@ -13324,8 +13162,8 @@ define void @release_half_global_gpu_volatile(half %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_global_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_half_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_half_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(1) %addr syncscope("device") release, align 2
@@ -13339,8 +13177,8 @@ define void @release_bfloat_global_sys(bfloat %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_global_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_bfloat_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_bfloat_global_sys_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(1) %addr syncscope("") release, align 2
@@ -13354,8 +13192,8 @@ define void @release_bfloat_global_cta(bfloat %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_global_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_bfloat_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_bfloat_global_cta_param_1];
 ; CHECK-NEXT:    st.release.cta.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(1) %addr syncscope("block") release, align 2
@@ -13369,8 +13207,8 @@ define void @release_bfloat_global_cluster(bfloat %val, ptr addrspace(1) %addr) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_global_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_bfloat_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_bfloat_global_cluster_param_1];
 ; CHECK-NEXT:    st.release.cluster.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(1) %addr syncscope("cluster") release, align 2
@@ -13384,8 +13222,8 @@ define void @release_bfloat_global_gpu(bfloat %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_global_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_bfloat_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_bfloat_global_gpu_param_1];
 ; CHECK-NEXT:    st.release.gpu.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(1) %addr syncscope("device") release, align 2
@@ -13399,8 +13237,8 @@ define void @release_bfloat_global_sys_volatile(bfloat %val, ptr addrspace(1) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_global_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_bfloat_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_bfloat_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(1) %addr syncscope("") release, align 2
@@ -13414,8 +13252,8 @@ define void @release_bfloat_global_cta_volatile(bfloat %val, ptr addrspace(1) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_global_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_bfloat_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_bfloat_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(1) %addr syncscope("block") release, align 2
@@ -13429,8 +13267,8 @@ define void @release_bfloat_global_cluster_volatile(bfloat %val, ptr addrspace(1
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_global_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_bfloat_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_bfloat_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(1) %addr syncscope("cluster") release, align 2
@@ -13444,8 +13282,8 @@ define void @release_bfloat_global_gpu_volatile(bfloat %val, ptr addrspace(1) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_global_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_bfloat_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_bfloat_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(1) %addr syncscope("device") release, align 2
@@ -13459,8 +13297,8 @@ define void @release_float_global_sys(float %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_float_global_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_float_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_float_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_float_global_sys_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(1) %addr syncscope("") release, align 4
@@ -13474,8 +13312,8 @@ define void @release_float_global_cta(float %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_float_global_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_float_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_float_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_float_global_cta_param_1];
 ; CHECK-NEXT:    st.release.cta.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(1) %addr syncscope("block") release, align 4
@@ -13489,8 +13327,8 @@ define void @release_float_global_cluster(float %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_float_global_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_float_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_float_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_float_global_cluster_param_1];
 ; CHECK-NEXT:    st.release.cluster.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(1) %addr syncscope("cluster") release, align 4
@@ -13504,8 +13342,8 @@ define void @release_float_global_gpu(float %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_float_global_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_float_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_float_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_float_global_gpu_param_1];
 ; CHECK-NEXT:    st.release.gpu.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(1) %addr syncscope("device") release, align 4
@@ -13519,8 +13357,8 @@ define void @release_float_global_sys_volatile(float %val, ptr addrspace(1) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_float_global_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_float_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_float_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_float_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(1) %addr syncscope("") release, align 4
@@ -13534,8 +13372,8 @@ define void @release_float_global_cta_volatile(float %val, ptr addrspace(1) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_float_global_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_float_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_float_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_float_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(1) %addr syncscope("block") release, align 4
@@ -13549,8 +13387,8 @@ define void @release_float_global_cluster_volatile(float %val, ptr addrspace(1) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_float_global_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_float_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_float_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_float_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(1) %addr syncscope("cluster") release, align 4
@@ -13564,8 +13402,8 @@ define void @release_float_global_gpu_volatile(float %val, ptr addrspace(1) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_float_global_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_float_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_float_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_float_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(1) %addr syncscope("device") release, align 4
@@ -13578,8 +13416,8 @@ define void @release_double_global_sys(double %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_global_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_double_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_double_global_sys_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(1) %addr syncscope("") release, align 8
@@ -13592,8 +13430,8 @@ define void @release_double_global_cta(double %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_global_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_double_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_double_global_cta_param_1];
 ; CHECK-NEXT:    st.release.cta.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(1) %addr syncscope("block") release, align 8
@@ -13606,8 +13444,8 @@ define void @release_double_global_cluster(double %val, ptr addrspace(1) %addr) 
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_global_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_double_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_double_global_cluster_param_1];
 ; CHECK-NEXT:    st.release.cluster.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(1) %addr syncscope("cluster") release, align 8
@@ -13620,8 +13458,8 @@ define void @release_double_global_gpu(double %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_global_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_double_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_double_global_gpu_param_1];
 ; CHECK-NEXT:    st.release.gpu.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(1) %addr syncscope("device") release, align 8
@@ -13634,8 +13472,8 @@ define void @release_double_global_sys_volatile(double %val, ptr addrspace(1) %a
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_global_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_double_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_double_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(1) %addr syncscope("") release, align 8
@@ -13648,8 +13486,8 @@ define void @release_double_global_cta_volatile(double %val, ptr addrspace(1) %a
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_global_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_double_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_double_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(1) %addr syncscope("block") release, align 8
@@ -13662,8 +13500,8 @@ define void @release_double_global_cluster_volatile(double %val, ptr addrspace(1
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_global_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_double_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_double_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(1) %addr syncscope("cluster") release, align 8
@@ -13676,8 +13514,8 @@ define void @release_double_global_gpu_volatile(double %val, ptr addrspace(1) %a
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_global_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_double_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_double_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(1) %addr syncscope("device") release, align 8
@@ -13691,8 +13529,8 @@ define void @release_i8_shared_sys(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_shared_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i8_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i8_shared_sys_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(3) %addr syncscope("") release, align 1
@@ -13706,8 +13544,8 @@ define void @release_i8_shared_cta(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_shared_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i8_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i8_shared_cta_param_1];
 ; CHECK-NEXT:    st.release.cta.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(3) %addr syncscope("block") release, align 1
@@ -13721,8 +13559,8 @@ define void @release_i8_shared_cluster(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_shared_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i8_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i8_shared_cluster_param_1];
 ; CHECK-NEXT:    st.release.cluster.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(3) %addr syncscope("cluster") release, align 1
@@ -13736,8 +13574,8 @@ define void @release_i8_shared_gpu(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_shared_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i8_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i8_shared_gpu_param_1];
 ; CHECK-NEXT:    st.release.gpu.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(3) %addr syncscope("device") release, align 1
@@ -13751,8 +13589,8 @@ define void @release_i8_shared_sys_volatile(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_shared_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i8_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i8_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(3) %addr syncscope("") release, align 1
@@ -13766,8 +13604,8 @@ define void @release_i8_shared_cta_volatile(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_shared_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i8_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i8_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(3) %addr syncscope("block") release, align 1
@@ -13781,8 +13619,8 @@ define void @release_i8_shared_cluster_volatile(i8 %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_shared_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i8_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i8_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(3) %addr syncscope("cluster") release, align 1
@@ -13796,8 +13634,8 @@ define void @release_i8_shared_gpu_volatile(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_shared_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i8_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i8_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(3) %addr syncscope("device") release, align 1
@@ -13811,8 +13649,8 @@ define void @release_i16_shared_sys(i16 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_shared_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i16_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i16_shared_sys_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(3) %addr syncscope("") release, align 2
@@ -13826,8 +13664,8 @@ define void @release_i16_shared_cta(i16 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_shared_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i16_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i16_shared_cta_param_1];
 ; CHECK-NEXT:    st.release.cta.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(3) %addr syncscope("block") release, align 2
@@ -13841,8 +13679,8 @@ define void @release_i16_shared_cluster(i16 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_shared_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i16_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i16_shared_cluster_param_1];
 ; CHECK-NEXT:    st.release.cluster.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(3) %addr syncscope("cluster") release, align 2
@@ -13856,8 +13694,8 @@ define void @release_i16_shared_gpu(i16 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_shared_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i16_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i16_shared_gpu_param_1];
 ; CHECK-NEXT:    st.release.gpu.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(3) %addr syncscope("device") release, align 2
@@ -13871,8 +13709,8 @@ define void @release_i16_shared_sys_volatile(i16 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_shared_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i16_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i16_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(3) %addr syncscope("") release, align 2
@@ -13886,8 +13724,8 @@ define void @release_i16_shared_cta_volatile(i16 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_shared_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i16_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i16_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(3) %addr syncscope("block") release, align 2
@@ -13901,8 +13739,8 @@ define void @release_i16_shared_cluster_volatile(i16 %val, ptr addrspace(3) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_shared_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i16_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i16_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(3) %addr syncscope("cluster") release, align 2
@@ -13916,8 +13754,8 @@ define void @release_i16_shared_gpu_volatile(i16 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_shared_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i16_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i16_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(3) %addr syncscope("device") release, align 2
@@ -13931,8 +13769,8 @@ define void @release_i32_shared_sys(i32 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_i32_shared_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i32_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_i32_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i32_shared_sys_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(3) %addr syncscope("") release, align 4
@@ -13946,8 +13784,8 @@ define void @release_i32_shared_cta(i32 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_i32_shared_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i32_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_i32_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i32_shared_cta_param_1];
 ; CHECK-NEXT:    st.release.cta.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(3) %addr syncscope("block") release, align 4
@@ -13961,8 +13799,8 @@ define void @release_i32_shared_cluster(i32 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_i32_shared_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i32_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_i32_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i32_shared_cluster_param_1];
 ; CHECK-NEXT:    st.release.cluster.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(3) %addr syncscope("cluster") release, align 4
@@ -13976,8 +13814,8 @@ define void @release_i32_shared_gpu(i32 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_i32_shared_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i32_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_i32_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i32_shared_gpu_param_1];
 ; CHECK-NEXT:    st.release.gpu.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(3) %addr syncscope("device") release, align 4
@@ -13991,8 +13829,8 @@ define void @release_i32_shared_sys_volatile(i32 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_i32_shared_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i32_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_i32_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i32_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(3) %addr syncscope("") release, align 4
@@ -14006,8 +13844,8 @@ define void @release_i32_shared_cta_volatile(i32 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_i32_shared_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i32_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_i32_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i32_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(3) %addr syncscope("block") release, align 4
@@ -14021,8 +13859,8 @@ define void @release_i32_shared_cluster_volatile(i32 %val, ptr addrspace(3) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_i32_shared_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i32_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_i32_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i32_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(3) %addr syncscope("cluster") release, align 4
@@ -14036,8 +13874,8 @@ define void @release_i32_shared_gpu_volatile(i32 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_i32_shared_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i32_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_i32_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i32_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(3) %addr syncscope("device") release, align 4
@@ -14050,8 +13888,8 @@ define void @release_i64_shared_sys(i64 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_shared_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_i64_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_i64_shared_sys_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(3) %addr syncscope("") release, align 8
@@ -14064,8 +13902,8 @@ define void @release_i64_shared_cta(i64 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_shared_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_i64_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_i64_shared_cta_param_1];
 ; CHECK-NEXT:    st.release.cta.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(3) %addr syncscope("block") release, align 8
@@ -14078,8 +13916,8 @@ define void @release_i64_shared_cluster(i64 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_shared_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_i64_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_i64_shared_cluster_param_1];
 ; CHECK-NEXT:    st.release.cluster.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(3) %addr syncscope("cluster") release, align 8
@@ -14092,8 +13930,8 @@ define void @release_i64_shared_gpu(i64 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_shared_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_i64_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_i64_shared_gpu_param_1];
 ; CHECK-NEXT:    st.release.gpu.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(3) %addr syncscope("device") release, align 8
@@ -14106,8 +13944,8 @@ define void @release_i64_shared_sys_volatile(i64 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_shared_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_i64_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_i64_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(3) %addr syncscope("") release, align 8
@@ -14120,8 +13958,8 @@ define void @release_i64_shared_cta_volatile(i64 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_shared_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_i64_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_i64_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(3) %addr syncscope("block") release, align 8
@@ -14134,8 +13972,8 @@ define void @release_i64_shared_cluster_volatile(i64 %val, ptr addrspace(3) %add
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_shared_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_i64_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_i64_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(3) %addr syncscope("cluster") release, align 8
@@ -14148,8 +13986,8 @@ define void @release_i64_shared_gpu_volatile(i64 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_shared_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_i64_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_i64_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(3) %addr syncscope("device") release, align 8
@@ -14162,8 +14000,8 @@ define void @release_i128_shared_sys(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_shared_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [release_i128_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_shared_sys_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -14181,8 +14019,8 @@ define void @release_i128_shared_cta(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_shared_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [release_i128_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_shared_cta_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -14200,8 +14038,8 @@ define void @release_i128_shared_cluster(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_shared_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [release_i128_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_shared_cluster_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -14219,8 +14057,8 @@ define void @release_i128_shared_gpu(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_shared_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [release_i128_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_shared_gpu_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -14238,8 +14076,8 @@ define void @release_i128_shared_sys_volatile(i128 %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_shared_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [release_i128_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -14257,8 +14095,8 @@ define void @release_i128_shared_cta_volatile(i128 %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_shared_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [release_i128_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -14276,8 +14114,8 @@ define void @release_i128_shared_cluster_volatile(i128 %val, ptr addrspace(3) %a
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_shared_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [release_i128_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -14295,8 +14133,8 @@ define void @release_i128_shared_gpu_volatile(i128 %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_shared_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd3, [release_i128_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -14315,8 +14153,8 @@ define void @release_half_shared_sys(half %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_shared_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_half_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_half_shared_sys_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(3) %addr syncscope("") release, align 2
@@ -14330,8 +14168,8 @@ define void @release_half_shared_cta(half %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_shared_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_half_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_half_shared_cta_param_1];
 ; CHECK-NEXT:    st.release.cta.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(3) %addr syncscope("block") release, align 2
@@ -14345,8 +14183,8 @@ define void @release_half_shared_cluster(half %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_shared_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_half_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_half_shared_cluster_param_1];
 ; CHECK-NEXT:    st.release.cluster.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(3) %addr syncscope("cluster") release, align 2
@@ -14360,8 +14198,8 @@ define void @release_half_shared_gpu(half %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_shared_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_half_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_half_shared_gpu_param_1];
 ; CHECK-NEXT:    st.release.gpu.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(3) %addr syncscope("device") release, align 2
@@ -14375,8 +14213,8 @@ define void @release_half_shared_sys_volatile(half %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_shared_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_half_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_half_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(3) %addr syncscope("") release, align 2
@@ -14390,8 +14228,8 @@ define void @release_half_shared_cta_volatile(half %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_shared_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_half_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_half_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(3) %addr syncscope("block") release, align 2
@@ -14405,8 +14243,8 @@ define void @release_half_shared_cluster_volatile(half %val, ptr addrspace(3) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_shared_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_half_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_half_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(3) %addr syncscope("cluster") release, align 2
@@ -14420,8 +14258,8 @@ define void @release_half_shared_gpu_volatile(half %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_shared_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_half_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_half_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(3) %addr syncscope("device") release, align 2
@@ -14435,8 +14273,8 @@ define void @release_bfloat_shared_sys(bfloat %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_shared_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_bfloat_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_bfloat_shared_sys_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(3) %addr syncscope("") release, align 2
@@ -14450,8 +14288,8 @@ define void @release_bfloat_shared_cta(bfloat %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_shared_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_bfloat_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_bfloat_shared_cta_param_1];
 ; CHECK-NEXT:    st.release.cta.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(3) %addr syncscope("block") release, align 2
@@ -14465,8 +14303,8 @@ define void @release_bfloat_shared_cluster(bfloat %val, ptr addrspace(3) %addr) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_shared_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_bfloat_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_bfloat_shared_cluster_param_1];
 ; CHECK-NEXT:    st.release.cluster.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(3) %addr syncscope("cluster") release, align 2
@@ -14480,8 +14318,8 @@ define void @release_bfloat_shared_gpu(bfloat %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_shared_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_bfloat_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_bfloat_shared_gpu_param_1];
 ; CHECK-NEXT:    st.release.gpu.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(3) %addr syncscope("device") release, align 2
@@ -14495,8 +14333,8 @@ define void @release_bfloat_shared_sys_volatile(bfloat %val, ptr addrspace(3) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_shared_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_bfloat_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_bfloat_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(3) %addr syncscope("") release, align 2
@@ -14510,8 +14348,8 @@ define void @release_bfloat_shared_cta_volatile(bfloat %val, ptr addrspace(3) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_shared_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_bfloat_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_bfloat_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(3) %addr syncscope("block") release, align 2
@@ -14525,8 +14363,8 @@ define void @release_bfloat_shared_cluster_volatile(bfloat %val, ptr addrspace(3
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_shared_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_bfloat_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_bfloat_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(3) %addr syncscope("cluster") release, align 2
@@ -14540,8 +14378,8 @@ define void @release_bfloat_shared_gpu_volatile(bfloat %val, ptr addrspace(3) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_shared_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_bfloat_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_bfloat_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(3) %addr syncscope("device") release, align 2
@@ -14555,8 +14393,8 @@ define void @release_float_shared_sys(float %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_float_shared_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_float_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_float_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_float_shared_sys_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(3) %addr syncscope("") release, align 4
@@ -14570,8 +14408,8 @@ define void @release_float_shared_cta(float %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_float_shared_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_float_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_float_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_float_shared_cta_param_1];
 ; CHECK-NEXT:    st.release.cta.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(3) %addr syncscope("block") release, align 4
@@ -14585,8 +14423,8 @@ define void @release_float_shared_cluster(float %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_float_shared_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_float_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_float_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_float_shared_cluster_param_1];
 ; CHECK-NEXT:    st.release.cluster.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(3) %addr syncscope("cluster") release, align 4
@@ -14600,8 +14438,8 @@ define void @release_float_shared_gpu(float %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_float_shared_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_float_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_float_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_float_shared_gpu_param_1];
 ; CHECK-NEXT:    st.release.gpu.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(3) %addr syncscope("device") release, align 4
@@ -14615,8 +14453,8 @@ define void @release_float_shared_sys_volatile(float %val, ptr addrspace(3) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_float_shared_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_float_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_float_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_float_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(3) %addr syncscope("") release, align 4
@@ -14630,8 +14468,8 @@ define void @release_float_shared_cta_volatile(float %val, ptr addrspace(3) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_float_shared_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_float_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_float_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_float_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(3) %addr syncscope("block") release, align 4
@@ -14645,8 +14483,8 @@ define void @release_float_shared_cluster_volatile(float %val, ptr addrspace(3) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_float_shared_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_float_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_float_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_float_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(3) %addr syncscope("cluster") release, align 4
@@ -14660,8 +14498,8 @@ define void @release_float_shared_gpu_volatile(float %val, ptr addrspace(3) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [release_float_shared_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_float_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [release_float_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_float_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(3) %addr syncscope("device") release, align 4
@@ -14674,8 +14512,8 @@ define void @release_double_shared_sys(double %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_shared_sys_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_double_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_double_shared_sys_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(3) %addr syncscope("") release, align 8
@@ -14688,8 +14526,8 @@ define void @release_double_shared_cta(double %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_shared_cta_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_double_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_double_shared_cta_param_1];
 ; CHECK-NEXT:    st.release.cta.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(3) %addr syncscope("block") release, align 8
@@ -14702,8 +14540,8 @@ define void @release_double_shared_cluster(double %val, ptr addrspace(3) %addr) 
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_shared_cluster_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_double_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_double_shared_cluster_param_1];
 ; CHECK-NEXT:    st.release.cluster.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(3) %addr syncscope("cluster") release, align 8
@@ -14716,8 +14554,8 @@ define void @release_double_shared_gpu(double %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_shared_gpu_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_double_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_double_shared_gpu_param_1];
 ; CHECK-NEXT:    st.release.gpu.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(3) %addr syncscope("device") release, align 8
@@ -14730,8 +14568,8 @@ define void @release_double_shared_sys_volatile(double %val, ptr addrspace(3) %a
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_shared_sys_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_double_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_double_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(3) %addr syncscope("") release, align 8
@@ -14744,8 +14582,8 @@ define void @release_double_shared_cta_volatile(double %val, ptr addrspace(3) %a
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_shared_cta_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_double_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_double_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(3) %addr syncscope("block") release, align 8
@@ -14758,8 +14596,8 @@ define void @release_double_shared_cluster_volatile(double %val, ptr addrspace(3
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_shared_cluster_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_double_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_double_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(3) %addr syncscope("cluster") release, align 8
@@ -14772,8 +14610,8 @@ define void @release_double_shared_gpu_volatile(double %val, ptr addrspace(3) %a
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_shared_gpu_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [release_double_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [release_double_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.release.sys.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(3) %addr syncscope("device") release, align 8
@@ -14792,13 +14630,12 @@ define void @release_i8_local_sys(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot864;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14818,13 +14655,12 @@ define void @release_i8_local_cta(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot865;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14844,13 +14680,12 @@ define void @release_i8_local_cluster(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot866;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14870,13 +14705,12 @@ define void @release_i8_local_gpu(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot867;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14896,13 +14730,12 @@ define void @release_i8_local_sys_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot868;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14922,13 +14755,12 @@ define void @release_i8_local_cta_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot869;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14948,13 +14780,12 @@ define void @release_i8_local_cluster_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot870;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14974,13 +14805,12 @@ define void @release_i8_local_gpu_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot871;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [release_i8_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15000,13 +14830,12 @@ define void @release_i16_local_sys(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot872;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15026,13 +14855,12 @@ define void @release_i16_local_cta(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot873;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15052,13 +14880,12 @@ define void @release_i16_local_cluster(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot874;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15078,13 +14905,12 @@ define void @release_i16_local_gpu(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot875;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15104,13 +14930,12 @@ define void @release_i16_local_sys_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot876;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15130,13 +14955,12 @@ define void @release_i16_local_cta_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot877;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15156,13 +14980,12 @@ define void @release_i16_local_cluster_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot878;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15182,13 +15005,12 @@ define void @release_i16_local_gpu_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot879;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_i16_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15207,13 +15029,12 @@ define void @release_i32_local_sys(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot880;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [release_i32_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [release_i32_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15232,13 +15053,12 @@ define void @release_i32_local_cta(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot881;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [release_i32_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [release_i32_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15257,13 +15077,12 @@ define void @release_i32_local_cluster(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot882;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [release_i32_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [release_i32_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15282,13 +15101,12 @@ define void @release_i32_local_gpu(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot883;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [release_i32_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [release_i32_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15307,13 +15125,12 @@ define void @release_i32_local_sys_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot884;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [release_i32_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [release_i32_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15332,13 +15149,12 @@ define void @release_i32_local_cta_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot885;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [release_i32_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [release_i32_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15357,13 +15173,12 @@ define void @release_i32_local_cluster_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot886;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [release_i32_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [release_i32_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15382,13 +15197,12 @@ define void @release_i32_local_gpu_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot887;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [release_i32_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [release_i32_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15407,13 +15221,12 @@ define void @release_i64_local_sys(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot888;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15432,13 +15245,12 @@ define void @release_i64_local_cta(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot889;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15457,13 +15269,12 @@ define void @release_i64_local_cluster(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot890;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15482,13 +15293,12 @@ define void @release_i64_local_gpu(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot891;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15507,13 +15317,12 @@ define void @release_i64_local_sys_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot892;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15532,13 +15341,12 @@ define void @release_i64_local_cta_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot893;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15557,13 +15365,12 @@ define void @release_i64_local_cluster_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot894;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15582,13 +15389,12 @@ define void @release_i64_local_gpu_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot895;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_i64_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15607,13 +15413,12 @@ define void @release_i128_local_sys(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot896;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15632,13 +15437,12 @@ define void @release_i128_local_cta(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot897;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15657,13 +15461,12 @@ define void @release_i128_local_cluster(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot898;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15682,13 +15485,12 @@ define void @release_i128_local_gpu(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot899;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15707,13 +15509,12 @@ define void @release_i128_local_sys_volatile(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot900;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15732,13 +15533,12 @@ define void @release_i128_local_cta_volatile(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot901;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15757,13 +15557,12 @@ define void @release_i128_local_cluster_volatile(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot902;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15782,13 +15581,12 @@ define void @release_i128_local_gpu_volatile(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot903;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [release_i128_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15808,13 +15606,12 @@ define void @release_half_local_sys(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot904;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15834,13 +15631,12 @@ define void @release_half_local_cta(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot905;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15860,13 +15656,12 @@ define void @release_half_local_cluster(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot906;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15886,13 +15681,12 @@ define void @release_half_local_gpu(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot907;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15912,13 +15706,12 @@ define void @release_half_local_sys_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot908;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15938,13 +15731,12 @@ define void @release_half_local_cta_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot909;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15964,13 +15756,12 @@ define void @release_half_local_cluster_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot910;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15990,13 +15781,12 @@ define void @release_half_local_gpu_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot911;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_half_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16016,13 +15806,12 @@ define void @release_bfloat_local_sys(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot912;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16042,13 +15831,12 @@ define void @release_bfloat_local_cta(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot913;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16068,13 +15856,12 @@ define void @release_bfloat_local_cluster(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot914;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16094,13 +15881,12 @@ define void @release_bfloat_local_gpu(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot915;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16120,13 +15906,12 @@ define void @release_bfloat_local_sys_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot916;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16146,13 +15931,12 @@ define void @release_bfloat_local_cta_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot917;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16172,13 +15956,12 @@ define void @release_bfloat_local_cluster_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot918;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16198,13 +15981,12 @@ define void @release_bfloat_local_gpu_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot919;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [release_bfloat_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16223,13 +16005,12 @@ define void @release_float_local_sys(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot920;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [release_float_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [release_float_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16248,13 +16029,12 @@ define void @release_float_local_cta(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot921;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [release_float_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [release_float_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16273,13 +16053,12 @@ define void @release_float_local_cluster(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot922;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [release_float_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [release_float_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16298,13 +16077,12 @@ define void @release_float_local_gpu(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot923;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [release_float_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [release_float_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16323,13 +16101,12 @@ define void @release_float_local_sys_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot924;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [release_float_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [release_float_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16348,13 +16125,12 @@ define void @release_float_local_cta_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot925;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [release_float_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [release_float_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16373,13 +16149,12 @@ define void @release_float_local_cluster_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot926;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [release_float_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [release_float_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16398,13 +16173,12 @@ define void @release_float_local_gpu_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot927;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [release_float_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [release_float_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16423,13 +16197,12 @@ define void @release_double_local_sys(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot928;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16448,13 +16221,12 @@ define void @release_double_local_cta(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot929;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16473,13 +16245,12 @@ define void @release_double_local_cluster(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot930;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16498,13 +16269,12 @@ define void @release_double_local_gpu(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot931;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16523,13 +16293,12 @@ define void @release_double_local_sys_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot932;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16548,13 +16317,12 @@ define void @release_double_local_cta_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot933;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16573,13 +16341,12 @@ define void @release_double_local_cluster_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot934;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16598,13 +16365,12 @@ define void @release_double_local_gpu_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot935;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [release_double_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16619,9 +16385,9 @@ define void @seq_cst_i8_generic_sys(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_generic_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_generic_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr %addr syncscope("") seq_cst, align 1
@@ -16635,9 +16401,9 @@ define void @seq_cst_i8_generic_cta(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_generic_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_generic_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr %addr syncscope("block") seq_cst, align 1
@@ -16651,9 +16417,9 @@ define void @seq_cst_i8_generic_cluster(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_generic_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_generic_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr %addr syncscope("cluster") seq_cst, align 1
@@ -16667,9 +16433,9 @@ define void @seq_cst_i8_generic_gpu(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_generic_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_generic_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr %addr syncscope("device") seq_cst, align 1
@@ -16683,9 +16449,9 @@ define void @seq_cst_i8_generic_sys_volatile(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr %addr syncscope("") seq_cst, align 1
@@ -16699,9 +16465,9 @@ define void @seq_cst_i8_generic_cta_volatile(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr %addr syncscope("block") seq_cst, align 1
@@ -16715,9 +16481,9 @@ define void @seq_cst_i8_generic_cluster_volatile(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr %addr syncscope("cluster") seq_cst, align 1
@@ -16731,9 +16497,9 @@ define void @seq_cst_i8_generic_gpu_volatile(i8 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr %addr syncscope("device") seq_cst, align 1
@@ -16747,9 +16513,9 @@ define void @seq_cst_i16_generic_sys(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_generic_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_generic_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr %addr syncscope("") seq_cst, align 2
@@ -16763,9 +16529,9 @@ define void @seq_cst_i16_generic_cta(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_generic_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_generic_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr %addr syncscope("block") seq_cst, align 2
@@ -16779,9 +16545,9 @@ define void @seq_cst_i16_generic_cluster(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_generic_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_generic_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr %addr syncscope("cluster") seq_cst, align 2
@@ -16795,9 +16561,9 @@ define void @seq_cst_i16_generic_gpu(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_generic_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_generic_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr %addr syncscope("device") seq_cst, align 2
@@ -16811,9 +16577,9 @@ define void @seq_cst_i16_generic_sys_volatile(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr %addr syncscope("") seq_cst, align 2
@@ -16827,9 +16593,9 @@ define void @seq_cst_i16_generic_cta_volatile(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr %addr syncscope("block") seq_cst, align 2
@@ -16843,9 +16609,9 @@ define void @seq_cst_i16_generic_cluster_volatile(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr %addr syncscope("cluster") seq_cst, align 2
@@ -16859,9 +16625,9 @@ define void @seq_cst_i16_generic_gpu_volatile(i16 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr %addr syncscope("device") seq_cst, align 2
@@ -16875,9 +16641,9 @@ define void @seq_cst_i32_generic_sys(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_i32_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_i32_generic_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_generic_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr %addr syncscope("") seq_cst, align 4
@@ -16891,9 +16657,9 @@ define void @seq_cst_i32_generic_cta(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_i32_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_i32_generic_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_generic_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr %addr syncscope("block") seq_cst, align 4
@@ -16907,9 +16673,9 @@ define void @seq_cst_i32_generic_cluster(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_i32_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_i32_generic_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_generic_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr %addr syncscope("cluster") seq_cst, align 4
@@ -16923,9 +16689,9 @@ define void @seq_cst_i32_generic_gpu(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_i32_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_i32_generic_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_generic_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr %addr syncscope("device") seq_cst, align 4
@@ -16939,9 +16705,9 @@ define void @seq_cst_i32_generic_sys_volatile(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_i32_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_i32_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr %addr syncscope("") seq_cst, align 4
@@ -16955,9 +16721,9 @@ define void @seq_cst_i32_generic_cta_volatile(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_i32_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_i32_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr %addr syncscope("block") seq_cst, align 4
@@ -16971,9 +16737,9 @@ define void @seq_cst_i32_generic_cluster_volatile(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_i32_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_i32_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr %addr syncscope("cluster") seq_cst, align 4
@@ -16987,9 +16753,9 @@ define void @seq_cst_i32_generic_gpu_volatile(i32 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_i32_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_i32_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr %addr syncscope("device") seq_cst, align 4
@@ -17002,9 +16768,9 @@ define void @seq_cst_i64_generic_sys(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_generic_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_i64_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_i64_generic_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr %addr syncscope("") seq_cst, align 8
@@ -17017,9 +16783,9 @@ define void @seq_cst_i64_generic_cta(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_generic_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_i64_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_i64_generic_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr %addr syncscope("block") seq_cst, align 8
@@ -17032,9 +16798,9 @@ define void @seq_cst_i64_generic_cluster(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_generic_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_i64_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_i64_generic_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr %addr syncscope("cluster") seq_cst, align 8
@@ -17047,9 +16813,9 @@ define void @seq_cst_i64_generic_gpu(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_generic_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_i64_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_i64_generic_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr %addr syncscope("device") seq_cst, align 8
@@ -17062,9 +16828,9 @@ define void @seq_cst_i64_generic_sys_volatile(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_i64_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_i64_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr %addr syncscope("") seq_cst, align 8
@@ -17077,9 +16843,9 @@ define void @seq_cst_i64_generic_cta_volatile(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_i64_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_i64_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr %addr syncscope("block") seq_cst, align 8
@@ -17092,9 +16858,9 @@ define void @seq_cst_i64_generic_cluster_volatile(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_i64_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_i64_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr %addr syncscope("cluster") seq_cst, align 8
@@ -17107,9 +16873,9 @@ define void @seq_cst_i64_generic_gpu_volatile(i64 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_i64_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_i64_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr %addr syncscope("device") seq_cst, align 8
@@ -17122,9 +16888,9 @@ define void @seq_cst_i128_generic_sys(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_generic_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd3, [seq_cst_i128_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_generic_sys_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -17142,9 +16908,9 @@ define void @seq_cst_i128_generic_cta(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_generic_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
-; CHECK-NEXT:    ld.param.b64 %rd3, [seq_cst_i128_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_generic_cta_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -17162,9 +16928,9 @@ define void @seq_cst_i128_generic_cluster(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_generic_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
-; CHECK-NEXT:    ld.param.b64 %rd3, [seq_cst_i128_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_generic_cluster_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -17182,9 +16948,9 @@ define void @seq_cst_i128_generic_gpu(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_generic_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
-; CHECK-NEXT:    ld.param.b64 %rd3, [seq_cst_i128_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_generic_gpu_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -17202,9 +16968,9 @@ define void @seq_cst_i128_generic_sys_volatile(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd3, [seq_cst_i128_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -17222,9 +16988,9 @@ define void @seq_cst_i128_generic_cta_volatile(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd3, [seq_cst_i128_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -17242,9 +17008,9 @@ define void @seq_cst_i128_generic_cluster_volatile(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd3, [seq_cst_i128_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -17262,9 +17028,9 @@ define void @seq_cst_i128_generic_gpu_volatile(i128 %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd3, [seq_cst_i128_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -17283,9 +17049,9 @@ define void @seq_cst_half_generic_sys(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_generic_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_generic_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr %addr syncscope("") seq_cst, align 2
@@ -17299,9 +17065,9 @@ define void @seq_cst_half_generic_cta(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_generic_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_generic_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr %addr syncscope("block") seq_cst, align 2
@@ -17315,9 +17081,9 @@ define void @seq_cst_half_generic_cluster(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_generic_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_generic_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr %addr syncscope("cluster") seq_cst, align 2
@@ -17331,9 +17097,9 @@ define void @seq_cst_half_generic_gpu(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_generic_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_generic_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr %addr syncscope("device") seq_cst, align 2
@@ -17347,9 +17113,9 @@ define void @seq_cst_half_generic_sys_volatile(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr %addr syncscope("") seq_cst, align 2
@@ -17363,9 +17129,9 @@ define void @seq_cst_half_generic_cta_volatile(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr %addr syncscope("block") seq_cst, align 2
@@ -17379,9 +17145,9 @@ define void @seq_cst_half_generic_cluster_volatile(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr %addr syncscope("cluster") seq_cst, align 2
@@ -17395,9 +17161,9 @@ define void @seq_cst_half_generic_gpu_volatile(half %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr %addr syncscope("device") seq_cst, align 2
@@ -17411,9 +17177,9 @@ define void @seq_cst_bfloat_generic_sys(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_generic_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_generic_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr %addr syncscope("") seq_cst, align 2
@@ -17427,9 +17193,9 @@ define void @seq_cst_bfloat_generic_cta(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_generic_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_generic_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr %addr syncscope("block") seq_cst, align 2
@@ -17443,9 +17209,9 @@ define void @seq_cst_bfloat_generic_cluster(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_generic_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_generic_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr %addr syncscope("cluster") seq_cst, align 2
@@ -17459,9 +17225,9 @@ define void @seq_cst_bfloat_generic_gpu(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_generic_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_generic_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr %addr syncscope("device") seq_cst, align 2
@@ -17475,9 +17241,9 @@ define void @seq_cst_bfloat_generic_sys_volatile(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr %addr syncscope("") seq_cst, align 2
@@ -17491,9 +17257,9 @@ define void @seq_cst_bfloat_generic_cta_volatile(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr %addr syncscope("block") seq_cst, align 2
@@ -17507,9 +17273,9 @@ define void @seq_cst_bfloat_generic_cluster_volatile(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr %addr syncscope("cluster") seq_cst, align 2
@@ -17523,9 +17289,9 @@ define void @seq_cst_bfloat_generic_gpu_volatile(bfloat %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr %addr syncscope("device") seq_cst, align 2
@@ -17539,9 +17305,9 @@ define void @seq_cst_float_generic_sys(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_float_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_float_generic_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_generic_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr %addr syncscope("") seq_cst, align 4
@@ -17555,9 +17321,9 @@ define void @seq_cst_float_generic_cta(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_float_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_float_generic_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_generic_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr %addr syncscope("block") seq_cst, align 4
@@ -17571,9 +17337,9 @@ define void @seq_cst_float_generic_cluster(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_float_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_float_generic_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_generic_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr %addr syncscope("cluster") seq_cst, align 4
@@ -17587,9 +17353,9 @@ define void @seq_cst_float_generic_gpu(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_float_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_float_generic_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_generic_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr %addr syncscope("device") seq_cst, align 4
@@ -17603,9 +17369,9 @@ define void @seq_cst_float_generic_sys_volatile(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_float_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_float_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr %addr syncscope("") seq_cst, align 4
@@ -17619,9 +17385,9 @@ define void @seq_cst_float_generic_cta_volatile(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_float_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_float_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr %addr syncscope("block") seq_cst, align 4
@@ -17635,9 +17401,9 @@ define void @seq_cst_float_generic_cluster_volatile(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_float_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_float_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr %addr syncscope("cluster") seq_cst, align 4
@@ -17651,9 +17417,9 @@ define void @seq_cst_float_generic_gpu_volatile(float %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_float_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_float_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr %addr syncscope("device") seq_cst, align 4
@@ -17666,9 +17432,9 @@ define void @seq_cst_double_generic_sys(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_generic_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_double_generic_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_double_generic_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr %addr syncscope("") seq_cst, align 8
@@ -17681,9 +17447,9 @@ define void @seq_cst_double_generic_cta(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_generic_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_double_generic_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_double_generic_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr %addr syncscope("block") seq_cst, align 8
@@ -17696,9 +17462,9 @@ define void @seq_cst_double_generic_cluster(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_generic_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_double_generic_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_double_generic_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr %addr syncscope("cluster") seq_cst, align 8
@@ -17711,9 +17477,9 @@ define void @seq_cst_double_generic_gpu(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_generic_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_double_generic_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_double_generic_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr %addr syncscope("device") seq_cst, align 8
@@ -17726,9 +17492,9 @@ define void @seq_cst_double_generic_sys_volatile(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_double_generic_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_double_generic_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr %addr syncscope("") seq_cst, align 8
@@ -17741,9 +17507,9 @@ define void @seq_cst_double_generic_cta_volatile(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_double_generic_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_double_generic_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr %addr syncscope("block") seq_cst, align 8
@@ -17756,9 +17522,9 @@ define void @seq_cst_double_generic_cluster_volatile(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_double_generic_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_double_generic_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr %addr syncscope("cluster") seq_cst, align 8
@@ -17771,9 +17537,9 @@ define void @seq_cst_double_generic_gpu_volatile(double %val, ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_double_generic_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_double_generic_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr %addr syncscope("device") seq_cst, align 8
@@ -17787,9 +17553,9 @@ define void @seq_cst_i8_global_sys(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_global_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_global_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(1) %addr syncscope("") seq_cst, align 1
@@ -17803,9 +17569,9 @@ define void @seq_cst_i8_global_cta(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_global_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_global_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(1) %addr syncscope("block") seq_cst, align 1
@@ -17819,9 +17585,9 @@ define void @seq_cst_i8_global_cluster(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_global_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_global_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 1
@@ -17835,9 +17601,9 @@ define void @seq_cst_i8_global_gpu(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_global_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_global_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(1) %addr syncscope("device") seq_cst, align 1
@@ -17851,9 +17617,9 @@ define void @seq_cst_i8_global_sys_volatile(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_global_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(1) %addr syncscope("") seq_cst, align 1
@@ -17867,9 +17633,9 @@ define void @seq_cst_i8_global_cta_volatile(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_global_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(1) %addr syncscope("block") seq_cst, align 1
@@ -17883,9 +17649,9 @@ define void @seq_cst_i8_global_cluster_volatile(i8 %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 1
@@ -17899,9 +17665,9 @@ define void @seq_cst_i8_global_gpu_volatile(i8 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(1) %addr syncscope("device") seq_cst, align 1
@@ -17915,9 +17681,9 @@ define void @seq_cst_i16_global_sys(i16 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_global_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_global_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(1) %addr syncscope("") seq_cst, align 2
@@ -17931,9 +17697,9 @@ define void @seq_cst_i16_global_cta(i16 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_global_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_global_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(1) %addr syncscope("block") seq_cst, align 2
@@ -17947,9 +17713,9 @@ define void @seq_cst_i16_global_cluster(i16 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_global_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_global_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 2
@@ -17963,9 +17729,9 @@ define void @seq_cst_i16_global_gpu(i16 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_global_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_global_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(1) %addr syncscope("device") seq_cst, align 2
@@ -17979,9 +17745,9 @@ define void @seq_cst_i16_global_sys_volatile(i16 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_global_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(1) %addr syncscope("") seq_cst, align 2
@@ -17995,9 +17761,9 @@ define void @seq_cst_i16_global_cta_volatile(i16 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_global_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(1) %addr syncscope("block") seq_cst, align 2
@@ -18011,9 +17777,9 @@ define void @seq_cst_i16_global_cluster_volatile(i16 %val, ptr addrspace(1) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 2
@@ -18027,9 +17793,9 @@ define void @seq_cst_i16_global_gpu_volatile(i16 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(1) %addr syncscope("device") seq_cst, align 2
@@ -18043,9 +17809,9 @@ define void @seq_cst_i32_global_sys(i32 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_i32_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_i32_global_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_global_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(1) %addr syncscope("") seq_cst, align 4
@@ -18059,9 +17825,9 @@ define void @seq_cst_i32_global_cta(i32 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_i32_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_i32_global_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_global_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(1) %addr syncscope("block") seq_cst, align 4
@@ -18075,9 +17841,9 @@ define void @seq_cst_i32_global_cluster(i32 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_i32_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_i32_global_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_global_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 4
@@ -18091,9 +17857,9 @@ define void @seq_cst_i32_global_gpu(i32 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_i32_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_i32_global_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_global_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(1) %addr syncscope("device") seq_cst, align 4
@@ -18107,9 +17873,9 @@ define void @seq_cst_i32_global_sys_volatile(i32 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_i32_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_i32_global_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(1) %addr syncscope("") seq_cst, align 4
@@ -18123,9 +17889,9 @@ define void @seq_cst_i32_global_cta_volatile(i32 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_i32_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_i32_global_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(1) %addr syncscope("block") seq_cst, align 4
@@ -18139,9 +17905,9 @@ define void @seq_cst_i32_global_cluster_volatile(i32 %val, ptr addrspace(1) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_i32_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_i32_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 4
@@ -18155,9 +17921,9 @@ define void @seq_cst_i32_global_gpu_volatile(i32 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_i32_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_i32_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(1) %addr syncscope("device") seq_cst, align 4
@@ -18170,9 +17936,9 @@ define void @seq_cst_i64_global_sys(i64 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_global_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_i64_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_i64_global_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(1) %addr syncscope("") seq_cst, align 8
@@ -18185,9 +17951,9 @@ define void @seq_cst_i64_global_cta(i64 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_global_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_i64_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_i64_global_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(1) %addr syncscope("block") seq_cst, align 8
@@ -18200,9 +17966,9 @@ define void @seq_cst_i64_global_cluster(i64 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_global_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_i64_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_i64_global_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 8
@@ -18215,9 +17981,9 @@ define void @seq_cst_i64_global_gpu(i64 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_global_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_i64_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_i64_global_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(1) %addr syncscope("device") seq_cst, align 8
@@ -18230,9 +17996,9 @@ define void @seq_cst_i64_global_sys_volatile(i64 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_global_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_i64_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_i64_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(1) %addr syncscope("") seq_cst, align 8
@@ -18245,9 +18011,9 @@ define void @seq_cst_i64_global_cta_volatile(i64 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_global_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_i64_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_i64_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(1) %addr syncscope("block") seq_cst, align 8
@@ -18260,9 +18026,9 @@ define void @seq_cst_i64_global_cluster_volatile(i64 %val, ptr addrspace(1) %add
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_i64_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_i64_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 8
@@ -18275,9 +18041,9 @@ define void @seq_cst_i64_global_gpu_volatile(i64 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_i64_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_i64_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(1) %addr syncscope("device") seq_cst, align 8
@@ -18290,9 +18056,9 @@ define void @seq_cst_i128_global_sys(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_global_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd3, [seq_cst_i128_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_global_sys_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -18310,9 +18076,9 @@ define void @seq_cst_i128_global_cta(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_global_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
-; CHECK-NEXT:    ld.param.b64 %rd3, [seq_cst_i128_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_global_cta_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -18330,9 +18096,9 @@ define void @seq_cst_i128_global_cluster(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_global_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
-; CHECK-NEXT:    ld.param.b64 %rd3, [seq_cst_i128_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_global_cluster_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -18350,9 +18116,9 @@ define void @seq_cst_i128_global_gpu(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_global_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
-; CHECK-NEXT:    ld.param.b64 %rd3, [seq_cst_i128_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_global_gpu_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -18370,9 +18136,9 @@ define void @seq_cst_i128_global_sys_volatile(i128 %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_global_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd3, [seq_cst_i128_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_global_sys_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -18390,9 +18156,9 @@ define void @seq_cst_i128_global_cta_volatile(i128 %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_global_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd3, [seq_cst_i128_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_global_cta_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -18410,9 +18176,9 @@ define void @seq_cst_i128_global_cluster_volatile(i128 %val, ptr addrspace(1) %a
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd3, [seq_cst_i128_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -18430,9 +18196,9 @@ define void @seq_cst_i128_global_gpu_volatile(i128 %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd3, [seq_cst_i128_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -18451,9 +18217,9 @@ define void @seq_cst_half_global_sys(half %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_global_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_global_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(1) %addr syncscope("") seq_cst, align 2
@@ -18467,9 +18233,9 @@ define void @seq_cst_half_global_cta(half %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_global_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_global_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(1) %addr syncscope("block") seq_cst, align 2
@@ -18483,9 +18249,9 @@ define void @seq_cst_half_global_cluster(half %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_global_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_global_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 2
@@ -18499,9 +18265,9 @@ define void @seq_cst_half_global_gpu(half %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_global_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_global_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(1) %addr syncscope("device") seq_cst, align 2
@@ -18515,9 +18281,9 @@ define void @seq_cst_half_global_sys_volatile(half %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_global_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(1) %addr syncscope("") seq_cst, align 2
@@ -18531,9 +18297,9 @@ define void @seq_cst_half_global_cta_volatile(half %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_global_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(1) %addr syncscope("block") seq_cst, align 2
@@ -18547,9 +18313,9 @@ define void @seq_cst_half_global_cluster_volatile(half %val, ptr addrspace(1) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 2
@@ -18563,9 +18329,9 @@ define void @seq_cst_half_global_gpu_volatile(half %val, ptr addrspace(1) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(1) %addr syncscope("device") seq_cst, align 2
@@ -18579,9 +18345,9 @@ define void @seq_cst_bfloat_global_sys(bfloat %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_global_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_global_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(1) %addr syncscope("") seq_cst, align 2
@@ -18595,9 +18361,9 @@ define void @seq_cst_bfloat_global_cta(bfloat %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_global_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_global_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(1) %addr syncscope("block") seq_cst, align 2
@@ -18611,9 +18377,9 @@ define void @seq_cst_bfloat_global_cluster(bfloat %val, ptr addrspace(1) %addr) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_global_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_global_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 2
@@ -18627,9 +18393,9 @@ define void @seq_cst_bfloat_global_gpu(bfloat %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_global_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_global_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(1) %addr syncscope("device") seq_cst, align 2
@@ -18643,9 +18409,9 @@ define void @seq_cst_bfloat_global_sys_volatile(bfloat %val, ptr addrspace(1) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_global_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(1) %addr syncscope("") seq_cst, align 2
@@ -18659,9 +18425,9 @@ define void @seq_cst_bfloat_global_cta_volatile(bfloat %val, ptr addrspace(1) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_global_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(1) %addr syncscope("block") seq_cst, align 2
@@ -18675,9 +18441,9 @@ define void @seq_cst_bfloat_global_cluster_volatile(bfloat %val, ptr addrspace(1
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 2
@@ -18691,9 +18457,9 @@ define void @seq_cst_bfloat_global_gpu_volatile(bfloat %val, ptr addrspace(1) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(1) %addr syncscope("device") seq_cst, align 2
@@ -18707,9 +18473,9 @@ define void @seq_cst_float_global_sys(float %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_float_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_float_global_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_global_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(1) %addr syncscope("") seq_cst, align 4
@@ -18723,9 +18489,9 @@ define void @seq_cst_float_global_cta(float %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_float_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_float_global_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_global_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(1) %addr syncscope("block") seq_cst, align 4
@@ -18739,9 +18505,9 @@ define void @seq_cst_float_global_cluster(float %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_float_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_float_global_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_global_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 4
@@ -18755,9 +18521,9 @@ define void @seq_cst_float_global_gpu(float %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_float_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_float_global_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_global_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(1) %addr syncscope("device") seq_cst, align 4
@@ -18771,9 +18537,9 @@ define void @seq_cst_float_global_sys_volatile(float %val, ptr addrspace(1) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_float_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_float_global_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(1) %addr syncscope("") seq_cst, align 4
@@ -18787,9 +18553,9 @@ define void @seq_cst_float_global_cta_volatile(float %val, ptr addrspace(1) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_float_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_float_global_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(1) %addr syncscope("block") seq_cst, align 4
@@ -18803,9 +18569,9 @@ define void @seq_cst_float_global_cluster_volatile(float %val, ptr addrspace(1) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_float_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_float_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 4
@@ -18819,9 +18585,9 @@ define void @seq_cst_float_global_gpu_volatile(float %val, ptr addrspace(1) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_float_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_float_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(1) %addr syncscope("device") seq_cst, align 4
@@ -18834,9 +18600,9 @@ define void @seq_cst_double_global_sys(double %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_global_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_double_global_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_double_global_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(1) %addr syncscope("") seq_cst, align 8
@@ -18849,9 +18615,9 @@ define void @seq_cst_double_global_cta(double %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_global_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_double_global_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_double_global_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(1) %addr syncscope("block") seq_cst, align 8
@@ -18864,9 +18630,9 @@ define void @seq_cst_double_global_cluster(double %val, ptr addrspace(1) %addr) 
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_global_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_double_global_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_double_global_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 8
@@ -18879,9 +18645,9 @@ define void @seq_cst_double_global_gpu(double %val, ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_global_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_double_global_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_double_global_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(1) %addr syncscope("device") seq_cst, align 8
@@ -18894,9 +18660,9 @@ define void @seq_cst_double_global_sys_volatile(double %val, ptr addrspace(1) %a
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_global_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_double_global_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_double_global_sys_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(1) %addr syncscope("") seq_cst, align 8
@@ -18909,9 +18675,9 @@ define void @seq_cst_double_global_cta_volatile(double %val, ptr addrspace(1) %a
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_global_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_double_global_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_double_global_cta_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(1) %addr syncscope("block") seq_cst, align 8
@@ -18924,9 +18690,9 @@ define void @seq_cst_double_global_cluster_volatile(double %val, ptr addrspace(1
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_double_global_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_double_global_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 8
@@ -18939,9 +18705,9 @@ define void @seq_cst_double_global_gpu_volatile(double %val, ptr addrspace(1) %a
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_double_global_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_double_global_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.mmio.relaxed.sys.global.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(1) %addr syncscope("device") seq_cst, align 8
@@ -18955,9 +18721,9 @@ define void @seq_cst_i8_shared_sys(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_shared_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_shared_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(3) %addr syncscope("") seq_cst, align 1
@@ -18971,9 +18737,9 @@ define void @seq_cst_i8_shared_cta(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_shared_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_shared_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(3) %addr syncscope("block") seq_cst, align 1
@@ -18987,9 +18753,9 @@ define void @seq_cst_i8_shared_cluster(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_shared_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_shared_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 1
@@ -19003,9 +18769,9 @@ define void @seq_cst_i8_shared_gpu(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_shared_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_shared_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i8 %val, ptr addrspace(3) %addr syncscope("device") seq_cst, align 1
@@ -19019,9 +18785,9 @@ define void @seq_cst_i8_shared_sys_volatile(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(3) %addr syncscope("") seq_cst, align 1
@@ -19035,9 +18801,9 @@ define void @seq_cst_i8_shared_cta_volatile(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(3) %addr syncscope("block") seq_cst, align 1
@@ -19051,9 +18817,9 @@ define void @seq_cst_i8_shared_cluster_volatile(i8 %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 1
@@ -19067,9 +18833,9 @@ define void @seq_cst_i8_shared_gpu_volatile(i8 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b8 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i8 %val, ptr addrspace(3) %addr syncscope("device") seq_cst, align 1
@@ -19083,9 +18849,9 @@ define void @seq_cst_i16_shared_sys(i16 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_shared_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_shared_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(3) %addr syncscope("") seq_cst, align 2
@@ -19099,9 +18865,9 @@ define void @seq_cst_i16_shared_cta(i16 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_shared_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_shared_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(3) %addr syncscope("block") seq_cst, align 2
@@ -19115,9 +18881,9 @@ define void @seq_cst_i16_shared_cluster(i16 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_shared_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_shared_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 2
@@ -19131,9 +18897,9 @@ define void @seq_cst_i16_shared_gpu(i16 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_shared_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_shared_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic i16 %val, ptr addrspace(3) %addr syncscope("device") seq_cst, align 2
@@ -19147,9 +18913,9 @@ define void @seq_cst_i16_shared_sys_volatile(i16 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(3) %addr syncscope("") seq_cst, align 2
@@ -19163,9 +18929,9 @@ define void @seq_cst_i16_shared_cta_volatile(i16 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(3) %addr syncscope("block") seq_cst, align 2
@@ -19179,9 +18945,9 @@ define void @seq_cst_i16_shared_cluster_volatile(i16 %val, ptr addrspace(3) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 2
@@ -19195,9 +18961,9 @@ define void @seq_cst_i16_shared_gpu_volatile(i16 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i16 %val, ptr addrspace(3) %addr syncscope("device") seq_cst, align 2
@@ -19211,9 +18977,9 @@ define void @seq_cst_i32_shared_sys(i32 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_i32_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_i32_shared_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_shared_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(3) %addr syncscope("") seq_cst, align 4
@@ -19227,9 +18993,9 @@ define void @seq_cst_i32_shared_cta(i32 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_i32_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_i32_shared_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_shared_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(3) %addr syncscope("block") seq_cst, align 4
@@ -19243,9 +19009,9 @@ define void @seq_cst_i32_shared_cluster(i32 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_i32_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_i32_shared_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_shared_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 4
@@ -19259,9 +19025,9 @@ define void @seq_cst_i32_shared_gpu(i32 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_i32_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_i32_shared_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_shared_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic i32 %val, ptr addrspace(3) %addr syncscope("device") seq_cst, align 4
@@ -19275,9 +19041,9 @@ define void @seq_cst_i32_shared_sys_volatile(i32 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_i32_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_i32_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(3) %addr syncscope("") seq_cst, align 4
@@ -19291,9 +19057,9 @@ define void @seq_cst_i32_shared_cta_volatile(i32 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_i32_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_i32_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(3) %addr syncscope("block") seq_cst, align 4
@@ -19307,9 +19073,9 @@ define void @seq_cst_i32_shared_cluster_volatile(i32 %val, ptr addrspace(3) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_i32_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_i32_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 4
@@ -19323,9 +19089,9 @@ define void @seq_cst_i32_shared_gpu_volatile(i32 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_i32_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_i32_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i32 %val, ptr addrspace(3) %addr syncscope("device") seq_cst, align 4
@@ -19338,9 +19104,9 @@ define void @seq_cst_i64_shared_sys(i64 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_shared_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_i64_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_i64_shared_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(3) %addr syncscope("") seq_cst, align 8
@@ -19353,9 +19119,9 @@ define void @seq_cst_i64_shared_cta(i64 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_shared_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_i64_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_i64_shared_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(3) %addr syncscope("block") seq_cst, align 8
@@ -19368,9 +19134,9 @@ define void @seq_cst_i64_shared_cluster(i64 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_shared_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_i64_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_i64_shared_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 8
@@ -19383,9 +19149,9 @@ define void @seq_cst_i64_shared_gpu(i64 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_shared_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_i64_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_i64_shared_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic i64 %val, ptr addrspace(3) %addr syncscope("device") seq_cst, align 8
@@ -19398,9 +19164,9 @@ define void @seq_cst_i64_shared_sys_volatile(i64 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_i64_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_i64_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(3) %addr syncscope("") seq_cst, align 8
@@ -19413,9 +19179,9 @@ define void @seq_cst_i64_shared_cta_volatile(i64 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_i64_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_i64_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(3) %addr syncscope("block") seq_cst, align 8
@@ -19428,9 +19194,9 @@ define void @seq_cst_i64_shared_cluster_volatile(i64 %val, ptr addrspace(3) %add
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_i64_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_i64_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 8
@@ -19443,9 +19209,9 @@ define void @seq_cst_i64_shared_gpu_volatile(i64 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_i64_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_i64_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i64 %val, ptr addrspace(3) %addr syncscope("device") seq_cst, align 8
@@ -19458,9 +19224,9 @@ define void @seq_cst_i128_shared_sys(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_shared_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd3, [seq_cst_i128_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_shared_sys_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -19478,9 +19244,9 @@ define void @seq_cst_i128_shared_cta(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_shared_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
-; CHECK-NEXT:    ld.param.b64 %rd3, [seq_cst_i128_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_shared_cta_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -19498,9 +19264,9 @@ define void @seq_cst_i128_shared_cluster(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_shared_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
-; CHECK-NEXT:    ld.param.b64 %rd3, [seq_cst_i128_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_shared_cluster_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -19518,9 +19284,9 @@ define void @seq_cst_i128_shared_gpu(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_shared_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
-; CHECK-NEXT:    ld.param.b64 %rd3, [seq_cst_i128_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_shared_gpu_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -19538,9 +19304,9 @@ define void @seq_cst_i128_shared_sys_volatile(i128 %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd3, [seq_cst_i128_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -19558,9 +19324,9 @@ define void @seq_cst_i128_shared_cta_volatile(i128 %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd3, [seq_cst_i128_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -19578,9 +19344,9 @@ define void @seq_cst_i128_shared_cluster_volatile(i128 %val, ptr addrspace(3) %a
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd3, [seq_cst_i128_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -19598,9 +19364,9 @@ define void @seq_cst_i128_shared_gpu_volatile(i128 %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd3, [seq_cst_i128_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
@@ -19619,9 +19385,9 @@ define void @seq_cst_half_shared_sys(half %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_shared_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_shared_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(3) %addr syncscope("") seq_cst, align 2
@@ -19635,9 +19401,9 @@ define void @seq_cst_half_shared_cta(half %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_shared_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_shared_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(3) %addr syncscope("block") seq_cst, align 2
@@ -19651,9 +19417,9 @@ define void @seq_cst_half_shared_cluster(half %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_shared_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_shared_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 2
@@ -19667,9 +19433,9 @@ define void @seq_cst_half_shared_gpu(half %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_shared_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_shared_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic half %val, ptr addrspace(3) %addr syncscope("device") seq_cst, align 2
@@ -19683,9 +19449,9 @@ define void @seq_cst_half_shared_sys_volatile(half %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(3) %addr syncscope("") seq_cst, align 2
@@ -19699,9 +19465,9 @@ define void @seq_cst_half_shared_cta_volatile(half %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(3) %addr syncscope("block") seq_cst, align 2
@@ -19715,9 +19481,9 @@ define void @seq_cst_half_shared_cluster_volatile(half %val, ptr addrspace(3) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 2
@@ -19731,9 +19497,9 @@ define void @seq_cst_half_shared_gpu_volatile(half %val, ptr addrspace(3) %addr)
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile half %val, ptr addrspace(3) %addr syncscope("device") seq_cst, align 2
@@ -19747,9 +19513,9 @@ define void @seq_cst_bfloat_shared_sys(bfloat %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_shared_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_shared_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(3) %addr syncscope("") seq_cst, align 2
@@ -19763,9 +19529,9 @@ define void @seq_cst_bfloat_shared_cta(bfloat %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_shared_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_shared_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(3) %addr syncscope("block") seq_cst, align 2
@@ -19779,9 +19545,9 @@ define void @seq_cst_bfloat_shared_cluster(bfloat %val, ptr addrspace(3) %addr) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_shared_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_shared_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 2
@@ -19795,9 +19561,9 @@ define void @seq_cst_bfloat_shared_gpu(bfloat %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_shared_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_shared_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic bfloat %val, ptr addrspace(3) %addr syncscope("device") seq_cst, align 2
@@ -19811,9 +19577,9 @@ define void @seq_cst_bfloat_shared_sys_volatile(bfloat %val, ptr addrspace(3) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(3) %addr syncscope("") seq_cst, align 2
@@ -19827,9 +19593,9 @@ define void @seq_cst_bfloat_shared_cta_volatile(bfloat %val, ptr addrspace(3) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(3) %addr syncscope("block") seq_cst, align 2
@@ -19843,9 +19609,9 @@ define void @seq_cst_bfloat_shared_cluster_volatile(bfloat %val, ptr addrspace(3
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 2
@@ -19859,9 +19625,9 @@ define void @seq_cst_bfloat_shared_gpu_volatile(bfloat %val, ptr addrspace(3) %a
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
     store atomic volatile bfloat %val, ptr addrspace(3) %addr syncscope("device") seq_cst, align 2
@@ -19875,9 +19641,9 @@ define void @seq_cst_float_shared_sys(float %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_float_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_float_shared_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_shared_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(3) %addr syncscope("") seq_cst, align 4
@@ -19891,9 +19657,9 @@ define void @seq_cst_float_shared_cta(float %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_float_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_float_shared_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_shared_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(3) %addr syncscope("block") seq_cst, align 4
@@ -19907,9 +19673,9 @@ define void @seq_cst_float_shared_cluster(float %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_float_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_float_shared_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_shared_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 4
@@ -19923,9 +19689,9 @@ define void @seq_cst_float_shared_gpu(float %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_float_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_float_shared_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_shared_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic float %val, ptr addrspace(3) %addr syncscope("device") seq_cst, align 4
@@ -19939,9 +19705,9 @@ define void @seq_cst_float_shared_sys_volatile(float %val, ptr addrspace(3) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_float_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_float_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(3) %addr syncscope("") seq_cst, align 4
@@ -19955,9 +19721,9 @@ define void @seq_cst_float_shared_cta_volatile(float %val, ptr addrspace(3) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_float_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_float_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(3) %addr syncscope("block") seq_cst, align 4
@@ -19971,9 +19737,9 @@ define void @seq_cst_float_shared_cluster_volatile(float %val, ptr addrspace(3) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_float_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_float_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 4
@@ -19987,9 +19753,9 @@ define void @seq_cst_float_shared_gpu_volatile(float %val, ptr addrspace(3) %add
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [seq_cst_float_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [seq_cst_float_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
     store atomic volatile float %val, ptr addrspace(3) %addr syncscope("device") seq_cst, align 4
@@ -20002,9 +19768,9 @@ define void @seq_cst_double_shared_sys(double %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_shared_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_double_shared_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_double_shared_sys_param_1];
 ; CHECK-NEXT:    st.relaxed.sys.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(3) %addr syncscope("") seq_cst, align 8
@@ -20017,9 +19783,9 @@ define void @seq_cst_double_shared_cta(double %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_shared_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_double_shared_cta_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_double_shared_cta_param_1];
 ; CHECK-NEXT:    st.relaxed.cta.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(3) %addr syncscope("block") seq_cst, align 8
@@ -20032,9 +19798,9 @@ define void @seq_cst_double_shared_cluster(double %val, ptr addrspace(3) %addr) 
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_shared_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_double_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_double_shared_cluster_param_1];
 ; CHECK-NEXT:    st.relaxed.cluster.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 8
@@ -20047,9 +19813,9 @@ define void @seq_cst_double_shared_gpu(double %val, ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_shared_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_double_shared_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_double_shared_gpu_param_1];
 ; CHECK-NEXT:    st.relaxed.gpu.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic double %val, ptr addrspace(3) %addr syncscope("device") seq_cst, align 8
@@ -20062,9 +19828,9 @@ define void @seq_cst_double_shared_sys_volatile(double %val, ptr addrspace(3) %a
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_double_shared_sys_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_double_shared_sys_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(3) %addr syncscope("") seq_cst, align 8
@@ -20077,9 +19843,9 @@ define void @seq_cst_double_shared_cta_volatile(double %val, ptr addrspace(3) %a
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_double_shared_cta_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_double_shared_cta_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(3) %addr syncscope("block") seq_cst, align 8
@@ -20092,9 +19858,9 @@ define void @seq_cst_double_shared_cluster_volatile(double %val, ptr addrspace(3
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_double_shared_cluster_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_double_shared_cluster_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 8
@@ -20107,9 +19873,9 @@ define void @seq_cst_double_shared_gpu_volatile(double %val, ptr addrspace(3) %a
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.b64 %rd2, [seq_cst_double_shared_gpu_volatile_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [seq_cst_double_shared_gpu_volatile_param_1];
 ; CHECK-NEXT:    st.volatile.shared.b64 [%rd2], %rd1;
 ; CHECK-NEXT:    ret;
     store atomic volatile double %val, ptr addrspace(3) %addr syncscope("device") seq_cst, align 8
@@ -20128,13 +19894,12 @@ define void @seq_cst_i8_local_sys(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1152;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20154,13 +19919,12 @@ define void @seq_cst_i8_local_cta(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1153;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20180,13 +19944,12 @@ define void @seq_cst_i8_local_cluster(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1154;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20206,13 +19969,12 @@ define void @seq_cst_i8_local_gpu(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1155;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20232,13 +19994,12 @@ define void @seq_cst_i8_local_sys_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1156;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20258,13 +20019,12 @@ define void @seq_cst_i8_local_cta_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1157;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20284,13 +20044,12 @@ define void @seq_cst_i8_local_cluster_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1158;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20310,13 +20069,12 @@ define void @seq_cst_i8_local_gpu_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1159;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [seq_cst_i8_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20336,13 +20094,12 @@ define void @seq_cst_i16_local_sys(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1160;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20362,13 +20119,12 @@ define void @seq_cst_i16_local_cta(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1161;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20388,13 +20144,12 @@ define void @seq_cst_i16_local_cluster(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1162;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20414,13 +20169,12 @@ define void @seq_cst_i16_local_gpu(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1163;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20440,13 +20194,12 @@ define void @seq_cst_i16_local_sys_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1164;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20466,13 +20219,12 @@ define void @seq_cst_i16_local_cta_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1165;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20492,13 +20244,12 @@ define void @seq_cst_i16_local_cluster_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1166;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20518,13 +20269,12 @@ define void @seq_cst_i16_local_gpu_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1167;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_i16_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20543,13 +20293,12 @@ define void @seq_cst_i32_local_sys(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1168;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_i32_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [seq_cst_i32_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20568,13 +20317,12 @@ define void @seq_cst_i32_local_cta(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1169;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_i32_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [seq_cst_i32_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20593,13 +20341,12 @@ define void @seq_cst_i32_local_cluster(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1170;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_i32_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [seq_cst_i32_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20618,13 +20365,12 @@ define void @seq_cst_i32_local_gpu(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1171;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_i32_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [seq_cst_i32_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20643,13 +20389,12 @@ define void @seq_cst_i32_local_sys_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1172;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_i32_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [seq_cst_i32_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20668,13 +20413,12 @@ define void @seq_cst_i32_local_cta_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1173;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_i32_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [seq_cst_i32_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20693,13 +20437,12 @@ define void @seq_cst_i32_local_cluster_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1174;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_i32_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [seq_cst_i32_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20718,13 +20461,12 @@ define void @seq_cst_i32_local_gpu_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1175;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_i32_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [seq_cst_i32_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20743,13 +20485,12 @@ define void @seq_cst_i64_local_sys(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1176;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20768,13 +20509,12 @@ define void @seq_cst_i64_local_cta(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1177;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20793,13 +20533,12 @@ define void @seq_cst_i64_local_cluster(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1178;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20818,13 +20557,12 @@ define void @seq_cst_i64_local_gpu(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1179;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20843,13 +20581,12 @@ define void @seq_cst_i64_local_sys_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1180;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20868,13 +20605,12 @@ define void @seq_cst_i64_local_cta_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1181;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20893,13 +20629,12 @@ define void @seq_cst_i64_local_cluster_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1182;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20918,13 +20653,12 @@ define void @seq_cst_i64_local_gpu_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1183;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20943,13 +20677,12 @@ define void @seq_cst_i128_local_sys(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1184;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20968,13 +20701,12 @@ define void @seq_cst_i128_local_cta(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1185;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -20993,13 +20725,12 @@ define void @seq_cst_i128_local_cluster(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1186;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21018,13 +20749,12 @@ define void @seq_cst_i128_local_gpu(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1187;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21043,13 +20773,12 @@ define void @seq_cst_i128_local_sys_volatile(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1188;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21068,13 +20797,12 @@ define void @seq_cst_i128_local_cta_volatile(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1189;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21093,13 +20821,12 @@ define void @seq_cst_i128_local_cluster_volatile(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1190;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21118,13 +20845,12 @@ define void @seq_cst_i128_local_gpu_volatile(i128 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1191;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [seq_cst_i128_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd3, %SP, 0;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd3, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd3;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.v2.b64 [%SP], {%rd1, %rd2};
+; CHECK-NEXT:    st.local.v2.b64 [%SPL], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21144,13 +20870,12 @@ define void @seq_cst_half_local_sys(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1192;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21170,13 +20895,12 @@ define void @seq_cst_half_local_cta(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1193;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21196,13 +20920,12 @@ define void @seq_cst_half_local_cluster(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1194;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21222,13 +20945,12 @@ define void @seq_cst_half_local_gpu(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1195;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21248,13 +20970,12 @@ define void @seq_cst_half_local_sys_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1196;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21274,13 +20995,12 @@ define void @seq_cst_half_local_cta_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1197;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21300,13 +21020,12 @@ define void @seq_cst_half_local_cluster_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1198;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21326,13 +21045,12 @@ define void @seq_cst_half_local_gpu_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1199;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_half_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21352,13 +21070,12 @@ define void @seq_cst_bfloat_local_sys(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1200;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21378,13 +21095,12 @@ define void @seq_cst_bfloat_local_cta(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1201;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21404,13 +21120,12 @@ define void @seq_cst_bfloat_local_cluster(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1202;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21430,13 +21145,12 @@ define void @seq_cst_bfloat_local_gpu(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1203;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21456,13 +21170,12 @@ define void @seq_cst_bfloat_local_sys_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1204;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21482,13 +21195,12 @@ define void @seq_cst_bfloat_local_cta_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1205;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21508,13 +21220,12 @@ define void @seq_cst_bfloat_local_cluster_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1206;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21534,13 +21245,12 @@ define void @seq_cst_bfloat_local_gpu_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1207;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [seq_cst_bfloat_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21559,13 +21269,12 @@ define void @seq_cst_float_local_sys(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1208;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_float_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [seq_cst_float_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21584,13 +21293,12 @@ define void @seq_cst_float_local_cta(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1209;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_float_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [seq_cst_float_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21609,13 +21317,12 @@ define void @seq_cst_float_local_cluster(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1210;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_float_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [seq_cst_float_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21634,13 +21341,12 @@ define void @seq_cst_float_local_gpu(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1211;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_float_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [seq_cst_float_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21659,13 +21365,12 @@ define void @seq_cst_float_local_sys_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1212;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_float_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [seq_cst_float_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21684,13 +21389,12 @@ define void @seq_cst_float_local_cta_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1213;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_float_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [seq_cst_float_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21709,13 +21413,12 @@ define void @seq_cst_float_local_cluster_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1214;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_float_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [seq_cst_float_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21734,13 +21437,12 @@ define void @seq_cst_float_local_gpu_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1215;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_float_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r2, [seq_cst_float_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21759,13 +21461,12 @@ define void @seq_cst_double_local_sys(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1216;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_local_sys_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21784,13 +21485,12 @@ define void @seq_cst_double_local_cta(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1217;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_local_cta_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21809,13 +21509,12 @@ define void @seq_cst_double_local_cluster(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1218;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_local_cluster_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21834,13 +21533,12 @@ define void @seq_cst_double_local_gpu(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1219;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_local_gpu_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21859,13 +21557,12 @@ define void @seq_cst_double_local_sys_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1220;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_local_sys_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21884,13 +21581,12 @@ define void @seq_cst_double_local_cta_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1221;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_local_cta_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21909,13 +21605,12 @@ define void @seq_cst_double_local_cluster_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1222;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_local_cluster_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21934,13 +21629,12 @@ define void @seq_cst_double_local_gpu_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1223;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_local_gpu_volatile_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
