@@ -129,6 +129,9 @@ public:
   MemoryCache &GetMemoryCache() { return m_memory_cache; }
   void SetMaxReadSize(size_t size) { m_bytes_left = size; }
   void SetFiller(int filler) { m_filler = filler; }
+  void SetAddressSpaces(std::vector<AddressSpaceInfo> spaces) {
+    m_address_spaces = std::move(spaces);
+  }
 };
 
 // A MemoryCache subclass that exposes the otherwise-protected caches so a
@@ -1868,4 +1871,61 @@ LoadCommands:
                                   /*force_live_memory=*/true),
             12u);
   EXPECT_TRUE(short_error.Fail());
+}
+
+TEST_F(MemoryTest, TestPointerToLoadAddressApertures) {
+  ArchSpec arch("x86_64-apple-macosx-");
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
+
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+
+  TargetSP target_sp = CreateTarget(debugger_sp, arch);
+  ASSERT_TRUE(target_sp);
+
+  ProcessSP process_sp = CreateProcess(target_sp);
+  ASSERT_TRUE(process_sp);
+
+  auto *dummy_process = static_cast<DummyProcess *>(process_sp.get());
+  dummy_process->SetAddressSpaces({
+      // Byte-addressed bounded aperture for DWARF address class 3.
+      {"local", 1, /*is_thread_specific=*/false, /*dwarf_address_class=*/3U,
+       /*flat_base=*/0x100000ULL, /*flat_size=*/0x1000ULL,
+       /*pointer_unit=*/1ULL},
+      // 4-byte word-addressed bounded aperture for DWARF address class 5.
+      {"vmem", 2, /*is_thread_specific=*/false, /*dwarf_address_class=*/5U,
+       /*flat_base=*/0x200000ULL, /*flat_size=*/0x400ULL,
+       /*pointer_unit=*/4ULL},
+  });
+
+  // Invalid address is preserved.
+  EXPECT_EQ(process_sp->PointerToLoadAddress(LLDB_INVALID_ADDRESS, 3),
+            LLDB_INVALID_ADDRESS);
+  EXPECT_EQ(process_sp->LoadAddressToPointer(LLDB_INVALID_ADDRESS, 3),
+            LLDB_INVALID_ADDRESS);
+
+  // Default address class (0) or unconfigured class is the identity mapping.
+  EXPECT_EQ(process_sp->PointerToLoadAddress(0x1234, 0), 0x1234ULL);
+  EXPECT_EQ(process_sp->PointerToLoadAddress(0x1234, 99), 0x1234ULL);
+  EXPECT_EQ(process_sp->LoadAddressToPointer(0x100020, 0), 0x100020ULL);
+
+  // Byte-addressed aperture (class 3: base 0x100000, size 0x1000, unit 1):
+  // Pointer value 0 maps to flat_base.
+  EXPECT_EQ(process_sp->PointerToLoadAddress(0, 3), 0x100000ULL);
+  EXPECT_EQ(process_sp->PointerToLoadAddress(0xfff, 3), 0x100fffULL);
+  // Out-of-bounds pointer returns LLDB_INVALID_ADDRESS.
+  EXPECT_EQ(process_sp->PointerToLoadAddress(0x1000, 3), LLDB_INVALID_ADDRESS);
+  // Inverse mapping inside and outside the aperture.
+  EXPECT_EQ(process_sp->LoadAddressToPointer(0x100000, 3), 0ULL);
+  EXPECT_EQ(process_sp->LoadAddressToPointer(0x100040, 3), 0x40ULL);
+  EXPECT_EQ(process_sp->LoadAddressToPointer(0x0fffff, 3), 0x0fffffULL);
+  EXPECT_EQ(process_sp->LoadAddressToPointer(0x101000, 3), 0x101000ULL);
+
+  // Word-addressed aperture (class 5: base 0x200000, size 0x400, unit 4):
+  EXPECT_EQ(process_sp->PointerToLoadAddress(10, 5), 0x200028ULL);
+  EXPECT_EQ(process_sp->PointerToLoadAddress(0xff, 5), 0x2003fcULL);
+  EXPECT_EQ(process_sp->PointerToLoadAddress(0x100, 5), LLDB_INVALID_ADDRESS);
+  EXPECT_EQ(process_sp->PointerToLoadAddress(UINT64_MAX, 5),
+            LLDB_INVALID_ADDRESS);
+  EXPECT_EQ(process_sp->LoadAddressToPointer(0x200028, 5), 10ULL);
 }
