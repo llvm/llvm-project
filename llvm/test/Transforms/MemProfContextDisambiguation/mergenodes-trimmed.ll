@@ -1,4 +1,4 @@
-;; Test that a trimmed (pruned) context terminating at a node that is cloned
+;; Test that a trimmed context terminating at a node that is cloned
 ;; again while creating a merge node (during mergeClones) is duplicated onto
 ;; the merge node, and that the duplicated context ids are known to the
 ;; allocation node mapping used when deciding whether other callers can share
