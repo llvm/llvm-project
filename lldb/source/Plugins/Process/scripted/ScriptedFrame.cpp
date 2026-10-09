@@ -353,10 +353,33 @@ lldb::ValueObjectSP ScriptedFrame::GetValueForVariableExpressionPath(
   // can't do that!
   // FIXME: We should make it possible for the frame implementation to create
   //        Variable objects.
-  (void)var_sp;
   // Otherwise, delegate to the scripted frame interface pointer.
-  return m_scripted_frame_interface_sp->GetValueObjectForVariableExpression(
-      var_expr, options, error);
+  error.Clear();
+  ValueObjectSP value_sp =
+      m_scripted_frame_interface_sp->GetValueObjectForVariableExpression(
+          var_expr, options, error);
+  if (value_sp || !var_expr.starts_with("$"))
+    return value_sp;
+
+  VariableSP fallback_var_sp;
+  Status fallback_error;
+  ValueObjectSP fallback_value_sp =
+      StackFrame::GetValueForVariableExpressionPath(var_expr, use_dynamic,
+                                                    options, fallback_var_sp,
+                                                    fallback_error, mode);
+
+  // If the provider declined without an error, use the standard result. If it
+  // reported an error, only a real register from this frame takes precedence.
+  ValueObject *fallback_root =
+      fallback_value_sp ? fallback_value_sp->GetRoot() : nullptr;
+  if (error.Success() ||
+      (fallback_error.Success() && fallback_root &&
+       fallback_root->GetValueType() == eValueTypeRegister)) {
+    var_sp = std::move(fallback_var_sp);
+    error = std::move(fallback_error);
+    return fallback_value_sp;
+  }
+  return {};
 }
 
 llvm::Expected<lldb::ThreadPlanSP>
