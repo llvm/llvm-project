@@ -1942,17 +1942,13 @@ BasicBlock *InnerLoopVectorizer::createScalarPreheader(StringRef Prefix) {
 /// Knowing that loop \p L executes a single vector iteration, add instructions
 /// that will get simplified and thus should not have any cost to \p
 /// InstsToIgnore.
+template <typename RangeT>
 static void addFullyUnrolledInstructionsToIgnore(
-    Loop *L, const LoopVectorizationLegality::InductionList &IL,
-    SmallPtrSetImpl<Instruction *> &InstsToIgnore) {
+    Loop *L, RangeT &&IndPhis, SmallPtrSetImpl<Instruction *> &InstsToIgnore) {
   auto *Cmp = L->getLatchCmpInst();
   if (Cmp)
     InstsToIgnore.insert(Cmp);
-  for (const auto &KV : IL) {
-    // Extract the key by hand so that it can be used in the lambda below.  Note
-    // that captured structured bindings are a C++20 extension.
-    PHINode *IV = KV.first;
-
+  for (PHINode *IV : IndPhis) {
     // The induction is free: a widened induction generates a vector phi with
     // its start value and an increment that is dead without a backedge.
     InstsToIgnore.insert(IV);
@@ -2836,8 +2832,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
   // of the induction variable and induction variable update remain uniform.
   // The code below handles both pointer and non-pointer induction variables.
   BasicBlock *Latch = TheLoop->getLoopLatch();
-  for (const auto &Induction : Legal->getInductionVars()) {
-    auto *Ind = Induction.first;
+  for (PHINode *Ind : Legal->getInductionVars().keys()) {
     auto *IndUpdate = cast<Instruction>(Ind->getIncomingValueForBlock(Latch));
 
     // Determine if all users of the induction variable are uniform after
@@ -5335,17 +5330,14 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
 
   // Ignore type-promoting instructions we identified during reduction
   // detection.
-  for (const auto &Reduction : Legal->getReductionVars()) {
-    const RecurrenceDescriptor &RedDes = Reduction.second;
-    const SmallPtrSetImpl<Instruction *> &Casts = RedDes.getCastInsts();
-    VecValuesToIgnore.insert_range(Casts);
+  for (const RecurrenceDescriptor &RedDes :
+       Legal->getReductionVars().values()) {
+    VecValuesToIgnore.insert_range(RedDes.getCastInsts());
   }
   // Ignore type-casting instructions we identified during induction
   // detection.
-  for (const auto &Induction : Legal->getInductionVars()) {
-    const InductionDescriptor &IndDes = Induction.second;
+  for (const InductionDescriptor &IndDes : Legal->getInductionVars().values())
     VecValuesToIgnore.insert_range(IndDes.getCastInsts());
-  }
 }
 
 void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
@@ -5518,7 +5510,8 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   // adding code to simplify VPlans before calculating their costs.
   auto TC = getSmallConstantTripCount(PSE.getSE(), OrigLoop);
   if (TC == VF && !Plan.hasTailFolded())
-    addFullyUnrolledInstructionsToIgnore(OrigLoop, Legal->getInductionVars(),
+    addFullyUnrolledInstructionsToIgnore(OrigLoop,
+                                         Legal->getInductionVars().keys(),
                                          CostCtx.SkipCostComputation);
 
   // Pre-compute the costs for branches except for the backedge, as the number
