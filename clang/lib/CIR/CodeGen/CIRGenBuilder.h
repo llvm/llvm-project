@@ -843,6 +843,29 @@ public:
     return cir::MatrixTransposeOp::create(*this, loc, resultTy, matrix);
   }
 
+  cir::MatrixColumnMajorStoreOp createMatrixColumnMajorStore(mlir::Location loc,
+                                                             mlir::Value matrix,
+                                                             mlir::Value data,
+                                                             mlir::Value stride,
+                                                             bool isVolatile) {
+    return cir::MatrixColumnMajorStoreOp::create(*this, loc, matrix, data,
+                                                 stride, isVolatile);
+  }
+
+  std::pair<mlir::Value, mlir::Value>
+  splatMatrixOpOperandsIfNecessary(mlir::Location loc, mlir::Value lhs,
+                                   mlir::Value rhs) {
+    assert(mlir::isa<cir::MatrixType>(lhs.getType()) ||
+           mlir::isa<cir::MatrixType>(rhs.getType()));
+
+    if (!mlir::isa<cir::MatrixType>(lhs.getType()))
+      lhs = cir::VecSplatOp::create(*this, loc, rhs.getType(), lhs);
+    else if (!mlir::isa<cir::MatrixType>(rhs.getType()))
+      rhs = cir::VecSplatOp::create(*this, loc, lhs.getType(), rhs);
+
+    return {lhs, rhs};
+  }
+
   template <typename... Operands>
   mlir::Value emitIntrinsicCallOp(mlir::Location loc, const llvm::StringRef str,
                                   const mlir::Type &resTy, Operands &&...op) {

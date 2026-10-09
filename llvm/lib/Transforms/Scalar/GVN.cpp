@@ -59,6 +59,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
@@ -274,11 +275,13 @@ public:
   }
 };
 
+class GVNLegacyPass;
+
 /// The core GVN pass object.
 ///
 /// FIXME: We should have a good summary of the GVN algorithm implemented by
 /// this particular pass here.
-class GVNPassImpl {
+class llvm::GVNPassImpl {
   llvm::GVNOptions Options;
 
 public:
@@ -303,8 +306,8 @@ public:
   bool isMemorySSAEnabled() const;
 
 private:
-  friend class llvm::GVNPass;
-  friend class GVNLegacyPass;
+  friend class GVNPass;
+  friend class ::GVNLegacyPass;
 
   MemoryDependenceResults *MD = nullptr;
   DominatorTree *DT = nullptr;
@@ -357,9 +360,9 @@ private:
     const Value *Addr;
     Instruction *Inst;
     int32_t Offset;
-    // For DepKind::Select only: the condition and the two addresses referenced
-    // by the "true" and "false" side of the select-dependent load.
-    const Value *SelCond = nullptr;
+    // For DepKind::Select only: the select instruction and the two addresses
+    // referenced by the "true" and "false" side of the select-dependent load.
+    SelectInst *Sel = nullptr;
     const Value *SelTrueAddr = nullptr;
     const Value *SelFalseAddr = nullptr;
 
@@ -377,10 +380,10 @@ private:
       return {DepKind::Clobber, Inst->getParent(), Addr, Inst, Offset};
     }
 
-    static ReachingMemVal getSelect(BasicBlock *BB, const Value *Cond,
+    static ReachingMemVal getSelect(BasicBlock *BB, SelectInst *Sel,
                                     const Value *TrueAddr,
                                     const Value *FalseAddr) {
-      return {DepKind::Select, BB,       nullptr, nullptr, -1, Cond,
+      return {DepKind::Select, BB,       nullptr, nullptr, -1, Sel,
               TrueAddr,        FalseAddr};
     }
   };
@@ -436,11 +439,11 @@ private:
                           Value *Address);
 
   /// Given a select-dependency for the load (the load address is a select of
-  /// \p TrueAddr and \p FalseAddr guarded by \p Cond), determine whether a
+  /// \p TrueAddr and \p FalseAddr guarded by \p Sel), determine whether a
   /// value is available by finding dominating values for both addresses.  If
   /// so, the load can be rematerialized as a select of those two values.
   std::optional<AvailableValue>
-  analyzeSelectAvailability(LoadInst *Load, Value *Cond, Value *TrueAddr,
+  analyzeSelectAvailability(LoadInst *Load, SelectInst *Sel, Value *TrueAddr,
                             Value *FalseAddr, Instruction *From);
 
   /// Given a list of non-local dependencies, determine if a value is
@@ -475,6 +478,7 @@ private:
   // Other helper routines.
   bool processInstruction(Instruction *I);
   bool processBlock(BasicBlock *BB);
+  bool replaceWithEquivalentCmp(CmpInst *Cmp);
   bool iterateOnFunction(Function &F);
   bool performPRE(Function &F);
   bool performScalarPRE(Instruction *I);
@@ -552,9 +556,9 @@ struct GVNPassImpl::AvailableValue {
     return Res;
   }
 
-  static AvailableValue getSelect(Value *Cond, Value *V1, Value *V2) {
+  static AvailableValue getSelect(SelectInst *Sel, Value *V1, Value *V2) {
     AvailableValue Res;
-    Res.Val = Cond;
+    Res.Val = Sel;
     Res.Kind = ValType::SelectVal;
     Res.Offset = 0;
     Res.V1 = V1;
@@ -583,9 +587,9 @@ struct GVNPassImpl::AvailableValue {
     return cast<MemIntrinsic>(Val);
   }
 
-  Value *getSelectCondition() const {
+  SelectInst *getSelectInstr() const {
     assert(isSelectValue() && "Wrong accessor");
-    return Val;
+    return cast<SelectInst>(Val);
   }
 
   /// Emit code at the specified insertion point to adjust the value defined
@@ -1192,9 +1196,16 @@ bool GVNPassImpl::isMemorySSAEnabled() const {
   return Options.AllowMemorySSA.value_or(GVNEnableMemorySSA);
 }
 
-PreservedAnalyses GVNPass::run(Function &F, FunctionAnalysisManager &AM) {
-  GVNPassImpl Impl(Options);
+GVNPass::GVNPass(GVNOptions Options)
+    : Impl(std::make_unique<GVNPassImpl>(Options)) {}
 
+GVNPass::~GVNPass() = default;
+
+GVNPass::GVNPass(GVNPass &&) noexcept = default;
+
+GVNPass &GVNPass::operator=(GVNPass &&) noexcept = default;
+
+PreservedAnalyses GVNPass::run(Function &F, FunctionAnalysisManager &AM) {
   // FIXME: The order of evaluation of these 'getResult' calls is very
   // significant! Re-ordering these variables will cause GVN when run alone to
   // be less effective! We should fix memdep and basic-aa to not exhibit this
@@ -1203,19 +1214,19 @@ PreservedAnalyses GVNPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &AA = AM.getResult<AAManager>(F);
-  auto *MemDep = Impl.isMemDepEnabled()
+  auto *MemDep = Impl->isMemDepEnabled()
                      ? &AM.getResult<MemoryDependenceAnalysis>(F)
                      : nullptr;
   auto &LI = AM.getResult<LoopAnalysis>(F);
   auto *MSSA = AM.getCachedResult<MemorySSAAnalysis>(F);
-  if (Impl.isMemorySSAEnabled() && !MSSA) {
+  if (Impl->isMemorySSAEnabled() && !MSSA) {
     assert(!MemDep &&
            "On-demand computation of MemSSA implies that MemDep is disabled!");
     MSSA = &AM.getResult<MemorySSAAnalysis>(F);
   }
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  bool Changed = Impl.run(F, AC, DT, TLI, AA, MemDep, LI, &ORE,
-                          MSSA ? &MSSA->getMSSA() : nullptr);
+  bool Changed = Impl->run(F, AC, DT, TLI, AA, MemDep, LI, &ORE,
+                           MSSA ? &MSSA->getMSSA() : nullptr);
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
@@ -1238,6 +1249,7 @@ void GVNPass::printPipeline(
   static_cast<PassInfoMixin<GVNPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
 
+  const GVNOptions &Options = Impl->Options;
   OS << '<';
   if (Options.AllowScalarPRE != std::nullopt)
     OS << (*Options.AllowScalarPRE ? "" : "no-") << "scalar-pre;";
@@ -1506,9 +1518,11 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
                       << "\n\n\n");
   } else if (isSelectValue()) {
     // Introduce a new value select for a load from an eligible pointer select.
-    Value *Cond = getSelectCondition();
+    SelectInst *Sel = getSelectInstr();
     assert(V1 && V2 && "both value operands of the select must be present");
-    Res = SelectInst::Create(Cond, V1, V2, "", InsertPt->getIterator());
+    Res = SelectInst::Create(Sel->getCondition(), V1, V2, "",
+                             InsertPt->getIterator(),
+                             ProfcheckDisableMetadataFixes ? nullptr : Sel);
     // We use the DebugLoc from the original load here, as this instruction
     // materializes the value that would previously have been loaded.
     cast<SelectInst>(Res)->setDebugLoc(Load->getDebugLoc());
@@ -1640,7 +1654,7 @@ static Value *findDominatingValue(const MemoryLocation &Loc, Type *LoadTy,
 }
 
 std::optional<AvailableValue>
-GVNPassImpl::analyzeSelectAvailability(LoadInst *Load, Value *Cond,
+GVNPassImpl::analyzeSelectAvailability(LoadInst *Load, SelectInst *Sel,
                                        Value *TrueAddr, Value *FalseAddr,
                                        Instruction *From) {
   assert(TrueAddr->getType() == Load->getPointerOperandType() &&
@@ -1659,7 +1673,7 @@ GVNPassImpl::analyzeSelectAvailability(LoadInst *Load, Value *Cond,
                                   From, getAliasAnalysis());
   if (!V2)
     return std::nullopt;
-  return AvailableValue::getSelect(Cond, V1, V2);
+  return AvailableValue::getSelect(Sel, V1, V2);
 }
 
 std::optional<AvailableValue>
@@ -1790,8 +1804,7 @@ GVNPassImpl::analyzeLoadAvailability(LoadInst *Load, const ReachingMemVal &Dep,
   // loads and DepInst that may clobber the loads.
   if (auto *Sel = dyn_cast<SelectInst>(DepInst)) {
     assert(Sel->getType() == Load->getPointerOperandType());
-    if (auto AV = analyzeSelectAvailability(Load, Sel->getCondition(),
-                                            Sel->getTrueValue(),
+    if (auto AV = analyzeSelectAvailability(Load, Sel, Sel->getTrueValue(),
                                             Sel->getFalseValue(), DepInst))
       return AV;
     return std::nullopt;
@@ -1833,8 +1846,7 @@ void GVNPassImpl::analyzeLoadAvailability(LoadInst *Load,
     // are searched for at the end of DepBB.
     if (Dep.Kind == DepKind::Select) {
       if (auto AV = analyzeSelectAvailability(
-              Load, const_cast<Value *>(Dep.SelCond),
-              const_cast<Value *>(Dep.SelTrueAddr),
+              Load, Dep.Sel, const_cast<Value *>(Dep.SelTrueAddr),
               const_cast<Value *>(Dep.SelFalseAddr), DepBB->getTerminator())) {
         ValuesPerBlock.push_back(
             AvailableValueInBlock::get(DepBB, std::move(*AV)));
@@ -2338,7 +2350,13 @@ bool GVNPassImpl::performLoopLoadPRE(LoadInst *Load,
 
   // Make sure the memory at this pointer cannot be freed, therefore we can
   // safely reload from it after clobber.
-  if (LoadPtr->canBeFreed())
+  //
+  // The header load has already dereferenced LoadPtr on this iteration, so
+  // only a deallocation between that load and the reload in LoopBlock can make
+  // the same address unsafe to read again. Check every path between these two
+  // points for an instruction that may deallocate the memory.
+  if (LoadPtr->canBeFreed() &&
+      !willNotFreeBetween(Load, LoopBlock->getTerminator(), DT))
     return false;
 
   // TODO: Support critical edge splitting if blocker has more than 1 successor.
@@ -2393,9 +2411,9 @@ bool GVNPassImpl::processNonLocalLoad(LoadInst *Load) {
     BasicBlock *BB = Dep.getBB();
     Instruction *Inst = R.getInst();
     if (R.isSelect()) {
-      auto [Cond, Addrs] = SelAddr.getSelectCondAndAddrs();
+      auto [Sel, Addrs] = SelAddr.getSelectAndAddrs();
       MemVals.emplace_back(
-          ReachingMemVal::getSelect(BB, Cond, Addrs.first, Addrs.second));
+          ReachingMemVal::getSelect(BB, Sel, Addrs.first, Addrs.second));
       continue;
     }
     Value *Address = SelAddr.getAddr();
@@ -2951,7 +2969,7 @@ bool GVNPassImpl::findReachingValuesForLoad(
   // Phase 1. First off, look for a local dependency to avoid having to
   // disambiguate between before the load and after the load of the starting
   // block (as the load may be visited from a backedge).
-  do {
+  for (;;) {
     // Scan users of the clobbering memory access.
     if (auto RMV = scanMemoryAccessesUsers(
             Loc, IsInvariantLoad, StartBlock,
@@ -2976,7 +2994,7 @@ bool GVNPassImpl::findReachingValuesForLoad(
     // It may happen that the clobbering memory access does not actually
     // clobber our load location, transition to its defining memory access.
     ClobberMA = cast<MemoryUseOrDef>(ClobberMA)->getDefiningAccess();
-  } while (ClobberMA->getBlock() == StartBlock);
+  }
 
   // Non-local speculations are not allowed under ASan.
   if (L->getFunction()->hasFnAttribute(Attribute::SanitizeAddress) ||
@@ -3634,6 +3652,39 @@ bool GVNPassImpl::propagateEquality(
   return Changed;
 }
 
+bool GVNPassImpl::replaceWithEquivalentCmp(CmpInst *Cmp) {
+  auto FindCmpLeader = [&](CmpInst::Predicate Pred) -> Value * {
+    uint32_t Num = VN.lookupCmp(Cmp->getOpcode(), Pred, Cmp->getOperand(0),
+                                Cmp->getOperand(1));
+    if (Num != 0)
+      return findLeader(Cmp->getParent(), Num);
+    return nullptr;
+  };
+
+  // Substitute cmp instruction with not if possible.
+  if (Value *Repl = FindCmpLeader(Cmp->getInversePredicate())) {
+    patchReplacementInstruction(Cmp, Repl);
+    BinaryOperator *Not = BinaryOperator::CreateNot(
+        Repl, Repl->getName() + ".not", Cmp->getIterator());
+    Not->setDebugLoc(Cmp->getDebugLoc());
+    Cmp->replaceAllUsesWith(Not);
+    salvageAndRemoveInstruction(Cmp);
+    return true;
+  }
+
+  // Substitute icmp samesign upred with icmp spred
+  auto *ICmp = dyn_cast<ICmpInst>(Cmp);
+  if (ICmp && ICmp->hasSameSign() && !ICmp->isEquality()) {
+    if (Value *Repl = FindCmpLeader(
+            ICmpInst::getFlippedSignednessPredicate(ICmp->getPredicate()))) {
+      patchAndReplaceAllUsesWith(Cmp, Repl);
+      salvageAndRemoveInstruction(Cmp);
+      return true;
+    }
+  }
+  return false;
+}
+
 /// When calculating availability, handle an instruction
 /// by inserting it into the appropriate sets.
 bool GVNPassImpl::processInstruction(Instruction *I) {
@@ -3766,39 +3817,9 @@ bool GVNPassImpl::processInstruction(Instruction *I) {
   // in the domtree: it can't!
   Value *Repl = Num < NextNum ? findLeader(I->getParent(), Num) : nullptr;
   if (!Repl) {
-    // Substitute cmp instruction with not if possible.
-    if (CmpInst *Cmp = dyn_cast<CmpInst>(I)) {
-      uint32_t NotNum =
-          VN.lookupCmp(Cmp->getOpcode(), Cmp->getInversePredicate(),
-                       Cmp->getOperand(0), Cmp->getOperand(1));
-      if (NotNum != 0) {
-        Value *NotRepl = findLeader(I->getParent(), NotNum);
-        if (NotRepl) {
-          patchReplacementInstruction(I, NotRepl);
-          BinaryOperator *Not = BinaryOperator::CreateNot(
-              NotRepl, NotRepl->getName() + ".not", I->getIterator());
-          Not->setDebugLoc(I->getDebugLoc());
-          I->replaceAllUsesWith(Not);
-          salvageAndRemoveInstruction(I);
-          return true;
-        }
-      }
-      auto *ICmp = dyn_cast<ICmpInst>(Cmp);
-      if (ICmp && ICmp->hasSameSign() && !ICmp->isEquality()) {
-        uint32_t SameSignNum = VN.lookupCmp(
-            ICmp->getOpcode(),
-            ICmpInst::getFlippedSignednessPredicate(ICmp->getPredicate()),
-            ICmp->getOperand(0), ICmp->getOperand(1));
-        if (SameSignNum != 0) {
-          Repl = findLeader(I->getParent(), SameSignNum);
-          if (Repl) {
-            patchAndReplaceAllUsesWith(I, Repl);
-            salvageAndRemoveInstruction(I);
-            return true;
-          }
-        }
-      }
-    }
+    if (auto *Cmp = dyn_cast<CmpInst>(I); Cmp && replaceWithEquivalentCmp(Cmp))
+      return true;
+
     // Failure, just remember this instance for future use.
     LeaderTable.insert(Num, I, I->getParent());
     return false;

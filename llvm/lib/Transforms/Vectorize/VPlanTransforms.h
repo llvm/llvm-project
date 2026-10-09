@@ -173,7 +173,7 @@ struct VPlanTransforms {
   /// recurrence cannot be handled.
   LLVM_ABI_FOR_TEST static bool createHeaderPhiRecipes(
       VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &OrigLoop,
-      const VPDominatorTree &VPDT,
+      OptimizationRemarkEmitter *ORE, const VPDominatorTree &VPDT,
       const MapVector<PHINode *, InductionDescriptor> &Inductions,
       const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
       const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
@@ -483,6 +483,11 @@ struct VPlanTransforms {
   static void sinkPredicatedStores(VPlan &Plan, PredicatedScalarEvolution &PSE,
                                    const Loop *L);
 
+  /// Widens memory operations by a factor of UF based on a target hook.
+  /// This allows targets to use wider memory operations when profitable.
+  static void widenMemoryAccessesByUF(VPlan &Plan, ElementCount VF, unsigned UF,
+                                      const TargetTransformInfo &TTI);
+
   // Materialize vector trip counts for constants early if it can simply be
   // computed as (Original TC / VF * UF) * VF * UF.
   static void
@@ -652,12 +657,14 @@ struct VPlanTransforms {
 
   /// Make VPlan-based scalarization decision prior to delegating to the ones
   /// made by the legacy CM. Only transforms "usesFirstLaneOnly` def-use chains
-  /// enabled by prior widening of consecutive memory operations for now.
+  /// enabled by prior widening of consecutive memory operations and calls for
+  /// now.
   static void makeScalarizationDecisions(VPlan &Plan, VFRange &Range);
 
   /// Convert call VPInstructions in \p Plan into widened call, vector
   /// intrinsic or replicate recipes based on a cost comparison via \p CostCtx.
-  static void makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
+  /// Returns true if any call was widened.
+  static bool makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
                                         VPRecipeBuilder &RecipeBuilder,
                                         VPCostContext &CostCtx);
 

@@ -520,8 +520,8 @@ bool TargetTransformInfo::isLegalMaskedGather(Type *DataType,
 
 bool TargetTransformInfo::isLegalAltInstr(
     VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
-    const SmallBitVector &OpcodeMask) const {
-  return TTIImpl->isLegalAltInstr(VecTy, Opcode0, Opcode1, OpcodeMask);
+    const SmallBitVector &OpcodeMask, ArrayRef<const Value *> Scalars) const {
+  return TTIImpl->isLegalAltInstr(VecTy, Opcode0, Opcode1, OpcodeMask, Scalars);
 }
 
 bool TargetTransformInfo::isLegalMaskedScatter(Type *DataType,
@@ -552,6 +552,13 @@ bool TargetTransformInfo::isLegalMaskedExpandLoad(Type *DataType,
 bool TargetTransformInfo::isLegalStridedLoadStore(Type *DataType,
                                                   Align Alignment) const {
   return TTIImpl->isLegalStridedLoadStore(DataType, Alignment);
+}
+
+bool TargetTransformInfo::hasMultiVectorLoadStore(
+    unsigned NumVectors, TTI::MaskSource Mask, VectorType *VectorTy,
+    bool IsStore, std::optional<Instruction::CastOps> CastHint) const {
+  return TTIImpl->hasMultiVectorLoadStore(NumVectors, Mask, VectorTy, IsStore,
+                                          CastHint);
 }
 
 bool TargetTransformInfo::isLegalInterleavedAccessType(
@@ -1095,9 +1102,10 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
 
 InstructionCost TargetTransformInfo::getAltInstrCost(
     VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
-    const SmallBitVector &OpcodeMask, TTI::TargetCostKind CostKind) const {
-  InstructionCost Cost =
-      TTIImpl->getAltInstrCost(VecTy, Opcode0, Opcode1, OpcodeMask, CostKind);
+    const SmallBitVector &OpcodeMask, TTI::TargetCostKind CostKind,
+    ArrayRef<const Value *> Scalars) const {
+  InstructionCost Cost = TTIImpl->getAltInstrCost(
+      VecTy, Opcode0, Opcode1, OpcodeMask, CostKind, Scalars);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
