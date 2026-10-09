@@ -348,7 +348,6 @@ const Stmt *ExplodedNode::getNextStmtForDiagnostics() const {
     if (N->getLocation().isPurgeKind())
       continue;
     if (ProgramPoint P = N->getLocation(); P.getAs<LifetimeEnd>())
-      // P.dump();
       continue;
     if (const Stmt *S = N->getStmtForDiagnostics()) {
       // Check if the statement is '?' or '&&'/'||'.  These are "merges",
