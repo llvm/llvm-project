@@ -313,6 +313,16 @@ public:
 
   ArrayRef<SCEVUse> operands() const { return Operands; }
 
+  /// Set the exact flag without clearing previously set flags.
+  void setExactFlag(SCEVFlags Flags) {
+    assert(!(Flags & ~SCEV::FlagExact) && "Unexpected flags set");
+    SubclassData |= static_cast<unsigned short>(Flags & SCEV::FlagExact);
+  }
+
+  SCEVFlags getExactFlag() const {
+    return static_cast<SCEVFlags>(SubclassData) & SCEV::FlagExact;
+  }
+
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const SCEV *S) { return S->getSCEVType() == scUDivExpr; }
 };
@@ -1005,15 +1015,21 @@ private:
 
 template <typename SCEVPtrT>
 inline SCEVUseT<SCEVPtrT>::SCEVUseT(SCEVPtrT S, SCEVFlags Flags) : Base(S, 0) {
-  assert((Flags & SCEVFlags::FlagsNoWrapMask) == Flags &&
-         "Expected only no-wrap flags");
-  if (any(Flags)) {
+  if (any(Flags & SCEVFlags::FlagsNoWrapMask)) {
     assert((isa<SCEVAddExpr, SCEVMulExpr, SCEVAddRecExpr>(S)) &&
-           "use flags require an expression that can carry no-wrap flags");
-    // Drop flags already present on S.
+           "use no-wrap flags require an expression that can carry one");
+    // Drop no-wrap flags already present on S.
     Flags &= ~cast<SCEVNAryExpr>(S)->getNoWrapFlags();
+    Base::setInt(static_cast<unsigned>(Flags) >> 1);
+    return;
   }
-  Base::setInt(static_cast<unsigned>(Flags) >> 1);
+  if (any(Flags & SCEVFlags::FlagExact)) {
+    assert(isa<SCEVUDivExpr>(S) &&
+           "use exact flag requires an expression that can carry one");
+    // Drop exact flags already present on S.
+    Flags &= ~cast<SCEVUDivExpr>(S)->getExactFlag();
+    Base::setInt(static_cast<unsigned>(Flags) >> 3);
+  }
 }
 
 template <typename SCEVPtrT>
@@ -1022,6 +1038,24 @@ inline SCEVFlags SCEVUseT<SCEVPtrT>::getNoWrapFlags(SCEVFlags Mask) const {
   if (auto *NAry = dyn_cast<SCEVNAryExpr>(Base::getPointer()))
     Flags = NAry->getNoWrapFlags();
   return (Flags | getUseNoWrapFlags()) & Mask;
+}
+
+template <>
+inline SCEVFlags SCEVUseT<const SCEVUDivExpr *>::getExactFlag() const {
+  SCEVFlags Flags = SCEVFlags::FlagNone;
+  if (auto *UDiv = dyn_cast<SCEVUDivExpr>(Base::getPointer()))
+    Flags = UDiv->getExactFlag();
+  return (Flags | getUseFlags()) & SCEV::FlagExact;
+}
+
+template <typename SCEVPtrT>
+inline SCEVFlags SCEVUseT<SCEVPtrT>::getUseFlags() const {
+  if constexpr (std::is_convertible_v<SCEVPtrT, const SCEVUDivExpr *>)
+    return static_cast<SCEVFlags>(Base::getInt() << 3);
+  SCEVFlags UseFlags = static_cast<SCEVFlags>(Base::getInt() << 1);
+  if (any(UseFlags & (SCEVFlags::FlagNUW | SCEVFlags::FlagNSW)))
+    UseFlags |= SCEVFlags::FlagNW;
+  return UseFlags;
 }
 
 } // end namespace llvm
