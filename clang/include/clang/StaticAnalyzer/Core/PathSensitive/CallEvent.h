@@ -525,8 +525,6 @@ public:
 
   RuntimeDefinition getRuntimeDefinition() const override;
 
-  bool argumentsMayEscape() const override;
-
   void getInitialStackFrameContents(const StackFrame *CalleeSF,
                                     BindingsTy &Bindings) const override;
 
