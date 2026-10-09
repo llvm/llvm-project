@@ -196,7 +196,7 @@ infrastructure are described first, followed by tool-specific sections.
 
 - Improved {doc}`bugprone-suspicious-stringview-data-usage
   <clang-tidy/checks/bugprone/suspicious-stringview-data-usage>` by allowing
-  unqualified patterns in the `AllowedCallees` option to match constructor names.
+  unqualified patterns in the {option}`AllowedCallees` to match constructor names.
 
 - Improved {doc}`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by diagnosing
