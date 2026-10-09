@@ -63,6 +63,7 @@
 #include <algorithm>
 #include <bitset>
 #include <cctype>
+#include <list>
 #include <numeric>
 using namespace llvm;
 
@@ -1966,10 +1967,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::MUL, MVT::v64i8,  Custom);
 
     setOperationAction(ISD::MULHU, MVT::v8i64, Custom);
-    if (Subtarget.is64Bit()) {
-      setOperationAction(ISD::UMUL_LOHI, MVT::v8i64, Custom);
-      setOperationAction(ISD::SMUL_LOHI, MVT::v8i64, Custom);
-    }
+    setOperationAction(ISD::MULHS, MVT::v8i64, Custom);
     setOperationAction(ISD::MULHU, MVT::v16i32, Custom);
     setOperationAction(ISD::MULHS, MVT::v16i32, Custom);
     setOperationAction(ISD::MULHS, MVT::v32i16, HasBWI ? Legal : Custom);
@@ -2054,9 +2052,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     if (Subtarget.hasDQI()) {
       setOperationAction(ISD::MUL,        MVT::v8i64, Legal);
-
-      // MULHS needs vpmullq (AVX512DQ) for its low multiply to be a win.
-      setOperationAction(ISD::MULHS, MVT::v8i64, Custom);
     }
 
     if (Subtarget.hasCDI()) {
@@ -3005,6 +3000,15 @@ bool X86::mayFoldIntoZeroExtend(SDValue Op) {
     unsigned Opcode = Op.getNode()->user_begin()->getOpcode();
     return (ISD::ZERO_EXTEND == Opcode);
   }
+  return false;
+}
+
+// Return true if its cheap to bitcast this to a scalar integer type on a GPR.
+static bool mayFoldIntoScalarInteger(SDValue Op) {
+  if (peekThroughBitcasts(Op).getValueType().isScalarInteger())
+    return true;
+  if (isa<ConstantSDNode>(Op) || isa<ConstantFPSDNode>(Op))
+    return true;
   return false;
 }
 
@@ -20599,14 +20603,12 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
     if (SrcVT == MVT::v2i32 && VT == MVT::v2f64) {
       // Note: Since v2f64 is a legal type. We don't need to zero extend the
       // source for strict FP.
+      Src = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i32, Src,
+                        DAG.getUNDEF(SrcVT));
       if (IsStrict)
-        return DAG.getNode(
-            X86ISD::STRICT_CVTSI2P, dl, {VT, MVT::Other},
-            {Chain, DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i32, Src,
-                                DAG.getUNDEF(SrcVT))});
-      return DAG.getNode(X86ISD::CVTSI2P, dl, VT,
-                         DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i32, Src,
-                                     DAG.getUNDEF(SrcVT)));
+        return DAG.getNode(X86ISD::STRICT_CVTSI2P, dl, {VT, MVT::Other},
+                           {Chain, Src});
+      return DAG.getNode(X86ISD::CVTSI2P, dl, VT, Src);
     }
     if (SrcVT == MVT::v2i64 || SrcVT == MVT::v4i64)
       return lowerINT_TO_FP_vXi64(Op, dl, DAG, Subtarget);
@@ -31063,7 +31065,7 @@ static bool supportedVectorShiftWithImm(EVT VT, const X86Subtarget &Subtarget,
   if (!(VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()))
     return false;
 
-  if (VT.getScalarSizeInBits() < 16)
+  if (VT.getScalarSizeInBits() < 16 || VT.getScalarSizeInBits() > 64)
     return false;
 
   if (VT.is512BitVector() && Subtarget.useAVX512Regs() &&
@@ -48991,24 +48993,19 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   // (cheaper as immediates) and compare-driven conds (CMOV already reuses
   // the flags).
   if (N->getOpcode() == ISD::SELECT && !CondVT.isVector() &&
-      Subtarget.hasSSE2() && !isIntOrFPConstant(LHS) &&
-      !isIntOrFPConstant(RHS)) {
+      Subtarget.hasSSE2()) {
     // Only worth it if both operands already live in a vector register
-    auto IsBitcastFromGPR = [](SDValue Op) {
-      return Op.getOpcode() == ISD::BITCAST &&
-             Op.getOperand(0).getValueType().isScalarInteger();
-    };
     SDValue F16LHS, F16RHS;
     if (!VT.isVector() && isSoftF16(VT, Subtarget)) {
-      if (!IsBitcastFromGPR(LHS) || !IsBitcastFromGPR(RHS)) {
+      if (!mayFoldIntoScalarInteger(LHS) || !mayFoldIntoScalarInteger(RHS)) {
         F16LHS = DAG.getBitcast(MVT::f16, LHS);
         F16RHS = DAG.getBitcast(MVT::f16, RHS);
       }
     } else if (VT == MVT::i16 && LHS.getOpcode() == ISD::BITCAST &&
                RHS.getOpcode() == ISD::BITCAST) {
-      MVT SVT = LHS.getOperand(0).getSimpleValueType();
+      EVT SVT = LHS.getOperand(0).getValueType();
       if ((SVT == MVT::f16 || SVT == MVT::bf16) &&
-          SVT == RHS.getOperand(0).getSimpleValueType()) {
+          SVT == RHS.getOperand(0).getValueType()) {
         F16LHS = DAG.getBitcast(MVT::f16, LHS.getOperand(0));
         F16RHS = DAG.getBitcast(MVT::f16, RHS.getOperand(0));
       }

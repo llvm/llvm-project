@@ -24,11 +24,12 @@ void LibraryOptionsParser::forEachOption(
     unsigned Kind = T.getOptionKind(ID);
     if (Kind != Option::FlagOrEqClass && Kind != Option::SeparateOrEqClass)
       continue;
+    StringRef V = T.getOptionMetaVar(ID);
     std::string MetaVar;
-    if (Kind == Option::SeparateOrEqClass) {
-      StringRef V = T.getOptionMetaVar(ID);
+    if (Kind == Option::SeparateOrEqClass)
       MetaVar = ("=" + (V.empty() ? StringRef("<value>") : V)).str();
-    }
+    else if (!V.empty())
+      MetaVar = ("[=" + V + "]").str();
     Fn(T.getOptionName(ID), MetaVar, T.getOptionHelpText(ID));
   }
 }

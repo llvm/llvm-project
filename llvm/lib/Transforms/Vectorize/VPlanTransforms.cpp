@@ -846,8 +846,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
     // We can preserve nuw when the step is non-negative.
     const APInt *Step;
     if (match(WideIV->getStepValue(), m_APInt(Step)) && Step->isNonNegative())
-      WrapFlags = {static_cast<bool>(WideIV->getNoWrapFlagsOrNone().HasNUW),
-                   false};
+      WrapFlags = WideIV->getNoWrapFlagsOrNone().withoutNoSignedWrap();
     VPScalarIVStepsRecipe *Steps = vputils::createScalarIVSteps(
         Plan, ID.getKind(), ID.getInductionOpcode(),
         dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()),
@@ -1298,7 +1297,7 @@ static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
   if (match(Def, m_ExtractLastLane(m_VPValue(A)))) {
     if (match(A, m_BuildVector())) {
       auto *BuildVector = cast<VPInstruction>(A);
-      return BuildVector->getOperand(BuildVector->getNumOperands() - 1);
+      return BuildVector->getLastOperand();
     }
 
     if (match(A, m_Broadcast(m_VPValue(B))))
@@ -2299,9 +2298,10 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
 
     // The issue with (Insert|Extract)Value is that the index of the
     // insert/extract is not a proper operand in LLVM IR, and hence also not in
-    // VPlan.
+    // VPlan. Allocas must not be merged, as each creates a distinct allocation.
     if (!C || (!C->first && (C->second == Instruction::InsertValue ||
-                             C->second == Instruction::ExtractValue)))
+                             C->second == Instruction::ExtractValue ||
+                             C->second == Instruction::Alloca)))
       return false;
 
     // Widened loads (including the EVL variant) are handled, as cse() only
@@ -5174,8 +5174,7 @@ createPartialReductionExpression(VPReductionRecipe *Red) {
   // -> VPExpressionRecipe(op, sub/neg, red)
   if (match(VecOp, m_AnyNeg(m_WidenAnyExtend(m_VPValue())))) {
     auto *Neg = cast<VPWidenRecipe>(VecOp);
-    auto *Ext =
-        cast<VPWidenCastRecipe>(Neg->getOperand(Neg->getNumOperands() - 1));
+    auto *Ext = cast<VPWidenCastRecipe>(Neg->getLastOperand());
     return new VPExpressionRecipe(Ext, Neg, Red);
   }
 
@@ -6106,9 +6105,10 @@ static CallWideningDecision decideCallWidening(VPInstruction &VPI,
   return CallWideningDecision::KindTy::Scalarize;
 }
 
-void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
+bool VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
                                                 VPRecipeBuilder &RecipeBuilder,
                                                 VPCostContext &CostCtx) {
+  bool Widened = false;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksAs<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPInstruction &VPI :
@@ -6135,6 +6135,7 @@ void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
         Type *ResultTy = VPI.getScalarType();
         Replacement = new VPWidenIntrinsicRecipe(*CI, ID, Ops, ResultTy, VPI,
                                                  VPI, VPI.getDebugLoc());
+        Widened = true;
         break;
       }
       case CallWideningDecision::KindTy::VectorVariant: {
@@ -6147,6 +6148,7 @@ void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
         Ops.push_back(VPI.getOperand(VPI.getNumOperandsWithoutMask() - 1));
         Replacement = new VPWidenCallRecipe(CI, Decision.Variant, Ops, VPI, VPI,
                                             VPI.getDebugLoc());
+        Widened = true;
         break;
       }
       case CallWideningDecision::KindTy::Scalarize:
@@ -6159,6 +6161,7 @@ void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
       VPI.eraseFromParent();
     }
   }
+  return Widened;
 }
 
 void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
