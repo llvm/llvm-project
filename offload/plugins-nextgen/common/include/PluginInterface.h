@@ -101,6 +101,15 @@ template <typename... ArgsTy>
                                     ArgsTy... Args);
 } // namespace Plugin
 
+/// Decide whether an operation must be synchronized eagerly because the
+/// force-synchronization escape hatch (OFFLOAD_FORCE_SYNC_OPS) is enabled. Only
+/// external async info objects are affected; local ones are always synchronized
+/// on finalization. A pending error suppresses synchronization.
+inline bool shouldForceSync(bool ForceSyncOps, bool IsLocalAsyncInfo,
+                            bool HasQueue, bool HasError) {
+  return ForceSyncOps && !IsLocalAsyncInfo && HasQueue && !HasError;
+}
+
 /// Class that wraps the __tgt_async_info to simply its usage. In case the
 /// object is constructed without a valid __tgt_async_info, the object will use
 /// an internal one and will synchronize the current thread with the pending
@@ -185,13 +194,11 @@ enum class DeviceInfo {
 
 /// Tree node for device information
 ///
-/// This information is either printed or used by liboffload to extract certain
-/// device queries. Each property has an optional key, an optional value
-/// and optional children. The children can be used to store additional
-/// information (such as x, y and z components of ranges).
+/// This information is used by liboffload to extract certain device queries.
+/// Each property has an optional key, an optional value and optional children.
+/// The children can be used to store additional information (such as x, y and
+/// z components of ranges).
 struct InfoTreeNode {
-  static constexpr uint64_t IndentSize = 4;
-
   std::string Key;
   using VariantType = std::variant<uint64_t, std::string, bool, std::monostate>;
   VariantType Value;
@@ -256,64 +263,6 @@ struct InfoTreeNode {
     if (Result != DeviceInfoMap.end())
       return &(*Children)[Result->second];
     return std::nullopt;
-  }
-
-  /// Print all info entries in the tree
-  void print() const {
-    // Fake an additional indent so that values are offset from the keys
-    doPrint(0, maxKeySize(1));
-  }
-
-private:
-  void doPrint(int Level, uint64_t MaxKeySize) const {
-    if (Key.size()) {
-      // Compute the indentations for the current entry.
-      uint64_t KeyIndentSize = Level * IndentSize;
-      uint64_t ValIndentSize =
-          MaxKeySize - (Key.size() + KeyIndentSize) + IndentSize;
-
-      llvm::outs() << std::string(KeyIndentSize, ' ') << Key
-                   << std::string(ValIndentSize, ' ');
-      std::visit(
-          [](auto &&V) {
-            using T = std::decay_t<decltype(V)>;
-            if constexpr (std::is_same_v<T, std::string>)
-              llvm::outs() << V;
-            else if constexpr (std::is_same_v<T, bool>)
-              llvm::outs() << (V ? "Yes" : "No");
-            else if constexpr (std::is_same_v<T, uint64_t>)
-              llvm::outs() << V;
-            else if constexpr (std::is_same_v<T, std::monostate>) {
-              // Do nothing
-            } else
-              // Use a type-dependent condition so the assert only fires when
-              // this branch is actually instantiated. GCC < 13 does not
-              // implement CWG2518 and rejects a non-dependent
-              // static_assert(false) even in a discarded constexpr branch.
-              static_assert(!sizeof(T *), "doPrint visit not exhaustive");
-          },
-          Value);
-      llvm::outs() << (Units.empty() ? "" : " ") << Units << "\n";
-    }
-
-    // Print children
-    if (Children)
-      for (const auto &Entry : *Children)
-        Entry.doPrint(Level + 1, MaxKeySize);
-  }
-
-  // Recursively calculates the maximum width of each key, including indentation
-  uint64_t maxKeySize(int Level) const {
-    uint64_t MaxKeySize = 0;
-
-    if (Children)
-      for (const auto &Entry : *Children) {
-        uint64_t KeySize = Entry.Key.size() + Level * IndentSize;
-        MaxKeySize = std::max(MaxKeySize, KeySize);
-        MaxKeySize = std::max(MaxKeySize, Entry.maxKeySize(Level + 1));
-      }
-
-    return MaxKeySize;
   }
 };
 
@@ -1176,9 +1125,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Expected<InfoTreeNode> obtainInfo();
   virtual Expected<InfoTreeNode> obtainInfoImpl() = 0;
 
-  /// Print information about the device.
-  Error printInfo();
-
   /// Return true if the device has work that is either queued or currently
   /// running
   ///
@@ -1375,6 +1321,13 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// deallocations are tracked.
   BoolEnvar OMPX_TrackAllocationTraces =
       BoolEnvar("OFFLOAD_TRACK_ALLOCATION_TRACES", false);
+
+  /// Environment flag that forces every device operation to be synchronized,
+  /// draining the queue after each operation. Debugging escape hatch.
+  BoolEnvar OF_ForceSyncOps = BoolEnvar("OFFLOAD_FORCE_BLOCKING", false);
+
+  /// Return whether all device operations should be forced synchronous.
+  bool forceSyncOps() const { return OF_ForceSyncOps; }
 
   /// Array of images loaded into the device. Images are automatically
   /// deallocated by the allocator.
@@ -1660,9 +1613,6 @@ public:
   /// Returns non-zero if the \p Image is compatible with the device.
   int32_t isDeviceCompatible(int32_t DeviceId, StringRef Image);
 
-  /// Return the number of devices this plugin can support.
-  int32_t number_of_devices();
-
   /// Returns non-zero if the data can be exchanged between the two devices.
   int32_t is_data_exchangable(int32_t SrcDeviceId, int32_t DstDeviceId);
 
@@ -1707,10 +1657,6 @@ public:
   int32_t data_submit_async(int32_t DeviceId, void *TgtPtr, void *HstPtr,
                             int64_t Size, __tgt_async_info *AsyncInfoPtr);
 
-  /// Copy data from the given device.
-  int32_t data_retrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr,
-                        int64_t Size);
-
   /// Copy data from the given device asynchronously.
   int32_t data_retrieve_async(int32_t DeviceId, void *HstPtr, void *TgtPtr,
                               int64_t Size, __tgt_async_info *AsyncInfoPtr);
@@ -1740,12 +1686,6 @@ public:
   /// Query the current state of an asynchronous queue.
   int32_t query_async(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);
 
-  /// Obtain information about the given device.
-  InfoTreeNode obtain_device_info(int32_t DeviceId);
-
-  /// Prints information about the given devices supported by the plugin.
-  void print_device_info(int32_t DeviceId);
-
   /// Creates an event in the given plugin if supported.
   int32_t create_event(int32_t DeviceId, void **EventPtr);
 
@@ -1760,15 +1700,8 @@ public:
   /// Synchronize execution until an event is done.
   int32_t sync_event(int32_t DeviceId, void *EventPtr);
 
-  /// Get the elapsed time in milliseconds between two events.
-  int32_t get_event_elapsed_time(int32_t DeviceId, void *StartEventPtr,
-                                 void *EndEventPtr, float *ElapsedTime);
-
   /// Remove the event from the plugin.
   int32_t destroy_event(int32_t DeviceId, void *EventPtr);
-
-  /// Remove the event from the plugin.
-  void set_info_flag(uint32_t NewInfoLevel);
 
   /// Returns if the plugin can support automatic copy.
   int32_t use_auto_zero_copy(int32_t DeviceId);
@@ -1810,13 +1743,6 @@ public:
   /// Queue an asynchronous barrier in the queue associated with the interop
   /// object and return immediately.
   int32_t async_barrier(omp_interop_val_t *Interop);
-
-  /// Returns a Range over all the devices in the plugin that can be
-  /// used in a for loop:
-  /// for (&Device : GenericPluginRef.getDevicesRange()) {
-  auto getDevicesRange() {
-    return llvm::make_range(Devices.begin(), Devices.end());
-  }
 
 private:
   /// Indicates if the platform runtime has been fully initialized.

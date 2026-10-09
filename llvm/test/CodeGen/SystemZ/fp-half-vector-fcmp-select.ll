@@ -49,7 +49,7 @@ define void @fun0(ptr %Src, ptr %Dst) {
 ; CHECK-NEXT:    ldgr %f10, %r0
 ; CHECK-NEXT:    lgh %r0, 2(%r2)
 ; CHECK-NEXT:    sllg %r0, %r0, 48
-; CHECK-NEXT:    ldgr %f9, %r0
+; CHECK-NEXT:    ldgr %f8, %r0
 ; CHECK-NEXT:    lgh %r0, 0(%r2)
 ; CHECK-NEXT:    sllg %r0, %r0, 48
 ; CHECK-NEXT:    ldgr %f12, %r0
@@ -64,7 +64,7 @@ define void @fun0(ptr %Src, ptr %Dst) {
 ; CHECK-NEXT:    ldgr %f13, %r0
 ; CHECK-NEXT:    lgh %r0, 18(%r2)
 ; CHECK-NEXT:    sllg %r0, %r0, 48
-; CHECK-NEXT:    ldgr %f8, %r0
+; CHECK-NEXT:    ldgr %f9, %r0
 ; CHECK-NEXT:    lgh %r0, 16(%r2)
 ; CHECK-NEXT:    lgh %r8, 10(%r2)
 ; CHECK-NEXT:    lgh %r6, 8(%r2)
@@ -90,15 +90,15 @@ define void @fun0(ptr %Src, ptr %Dst) {
 ; CHECK-NEXT:    brasl %r14, __truncsfhf2@PLT
 ; CHECK-NEXT:    # kill: def $f0h killed $f0h def $f0d
 ; CHECK-NEXT:    std %f0, 176(%r15) # 8-byte Spill
-; CHECK-NEXT:    ler %f0, %f8
-; CHECK-NEXT:    brasl %r14, __extendhfsf2@PLT
-; CHECK-NEXT:    ler %f8, %f0
 ; CHECK-NEXT:    ler %f0, %f9
 ; CHECK-NEXT:    brasl %r14, __extendhfsf2@PLT
-; CHECK-NEXT:    cebr %f0, %f8
+; CHECK-NEXT:    ler %f9, %f0
+; CHECK-NEXT:    ler %f0, %f8
+; CHECK-NEXT:    brasl %r14, __extendhfsf2@PLT
+; CHECK-NEXT:    cebr %f0, %f9
 ; CHECK-NEXT:    je .LBB0_4
 ; CHECK-NEXT:  # %bb.3:
-; CHECK-NEXT:    ler %f0, %f8
+; CHECK-NEXT:    ler %f0, %f9
 ; CHECK-NEXT:  .LBB0_4:
 ; CHECK-NEXT:    sllg %r11, %r8, 48
 ; CHECK-NEXT:    sllg %r8, %r7, 48
