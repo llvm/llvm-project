@@ -1198,6 +1198,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FP_TO_SINT_SAT,    VT, Custom);
     }
 
+    // Custom lowering for vector saturating float to int conversions.
+    // f32/f64 sources are expanded by expandFP_TO_INT_SAT; f16/bf16 fall back
+    // to scalarization. v2i64 is excluded: unsigned f64->u64 on SSE2 is
+    // expensive enough that scalarizing via the scalar Custom handler is better.
+    setOperationAction(ISD::FP_TO_UINT_SAT,     MVT::v4i32, Custom);
+    setOperationAction(ISD::FP_TO_SINT_SAT,     MVT::v4i32, Custom);
+
     setOperationAction(ISD::SINT_TO_FP,         MVT::v4i32, Custom);
     setOperationAction(ISD::STRICT_SINT_TO_FP,  MVT::v4i32, Custom);
     setOperationAction(ISD::SINT_TO_FP,         MVT::v2i32, Custom);
@@ -1728,6 +1735,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
     setOperationAction(ISD::SETCC, MVT::v8f16, Custom);
     setOperationAction(ISD::SETCC, MVT::v16f16, Custom);
+
+    for (MVT VT : {MVT::v8i32, MVT::v4i64}) {
+      setOperationAction(ISD::FP_TO_UINT_SAT, VT, Custom);
+      setOperationAction(ISD::FP_TO_SINT_SAT, VT, Custom);
+    }
   }
 
   // This block controls legalization of the mask vector sizes that are
@@ -2049,6 +2061,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::STRICT_UINT_TO_FP, ISD::FP_TO_SINT, ISD::FP_TO_UINT,
                        ISD::STRICT_FP_TO_SINT, ISD::STRICT_FP_TO_UINT})
         setOperationAction(Opc,           MVT::v8i64, Custom);
+
+    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v16i32, Custom);
+    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v16i32, Custom);
+    if (Subtarget.hasDQI() || Subtarget.hasFP16()) {
+      setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v8i64, Custom);
+      setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v8i64, Custom);
+    }
 
     if (Subtarget.hasDQI()) {
       setOperationAction(ISD::MUL,        MVT::v8i64, Legal);
@@ -22569,8 +22588,13 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
 
   // This code is only for floats and doubles. Fall back to generic code for
   // anything else.
-  if (!isScalarFPTypeInSSEReg(SrcVT) || isBF16orSoftF16(SrcVT, Subtarget))
+  if (!isScalarFPTypeInSSEReg(SrcVT) || isBF16orSoftF16(SrcVT, Subtarget)) {
+    // For vector sources, use the generic expansion (min/max clamp + fptosi).
+    // f16/bf16 sources are excluded as they need promotion not handled here.
+    if (SrcVT.isVector())
+      return expandFP_TO_INT_SAT(Op.getNode(), DAG);
     return SDValue();
+  }
 
   unsigned SatWidth = SatVT.getScalarSizeInBits();
   unsigned DstWidth = DstVT.getScalarSizeInBits();
