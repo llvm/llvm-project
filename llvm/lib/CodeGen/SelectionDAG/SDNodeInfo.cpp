@@ -229,6 +229,10 @@ void SDNodeInfo::verifyNode(const SelectionDAG &DAG, const SDNode *N) const {
       }
       break;
     case SDTCisVec:
+      if (!VT.isVector()) {
+        SS << Val << " must have vector type, but has type " << VT;
+        reportNodeError(DAG, N, SS.str());
+      }
       break;
     case SDTCisSameAs:
       break;
