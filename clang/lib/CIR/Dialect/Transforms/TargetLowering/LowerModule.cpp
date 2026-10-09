@@ -132,15 +132,9 @@ std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
     codeGenOpts.OptimizeSize = optInfo.getSize();
   }
 
-  auto res =
-      std::make_unique<LowerModule>(std::move(langOpts), std::move(codeGenOpts),
-                                    module, std::move(targetInfo));
-
-  // FIXME(cir) this should never happen when all ABIs are implemented.
-  if (!res->hasCXXABI())
-    return nullptr;
-
-  return res;
+  return std::make_unique<LowerModule>(std::move(langOpts),
+                                       std::move(codeGenOpts), module,
+                                       std::move(targetInfo));
 }
 
 } // namespace cir

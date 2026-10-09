@@ -57,8 +57,6 @@ public:
   const clang::TargetInfo &getTarget() const { return *target; }
   mlir::MLIRContext *getMLIRContext() { return module.getContext(); }
 
-  void emitError(llvm::StringRef error) const { module->emitError(error); }
-
   const TargetLoweringInfo &getTargetLoweringInfo();
 };
 

@@ -1,5 +1,5 @@
 // RUN: cir-opt %s --cir-lowering-prepare -verify-diagnostics
 
-// expected-warning@+1 {{Cannot create a CIR lower module, skipping the LoweringPrepare pass}}
+// expected-error @below {{cir-lowering-prepare requires a module with a triple}}
 module {
 }
