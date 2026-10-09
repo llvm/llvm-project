@@ -855,6 +855,8 @@ TEST_F(OpenMPIRBuilderTest, ParallelSimple) {
 
   EXPECT_TRUE(OutlinedFn->hasInternalLinkage());
   EXPECT_EQ(OutlinedFn->arg_size(), 3U);
+  EXPECT_TRUE(OutlinedFn->hasParamAttribute(2, Attribute::NoAlias));
+  EXPECT_TRUE(OutlinedFn->hasParamAttribute(2, Attribute::NoFreeObj));
 
   EXPECT_EQ(&OutlinedFn->getEntryBlock(), PrivAI->getParent());
   EXPECT_TRUE(OutlinedFn->hasOneUse());
