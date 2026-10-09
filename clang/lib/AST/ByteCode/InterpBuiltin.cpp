@@ -325,7 +325,8 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
 
   QualType ElemTy = getElemType(A);
   // Different element types shouldn't happen, but with casts they can.
-  if (!S.getASTContext().hasSameUnqualifiedType(ElemTy, getElemType(B)))
+  if (!S.getASTContext().hasSameUnqualifiedType(ElemTy, getElemType(B)) ||
+      !S.getContext().canClassify(ElemTy))
     return false;
 
   PrimType ElemT = *S.getContext().classify(ElemTy);
