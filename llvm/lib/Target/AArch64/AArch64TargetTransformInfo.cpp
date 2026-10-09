@@ -4030,6 +4030,16 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                                  const Instruction *I) const {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
+
+  // Codegen is not able to select all <vscale x 1 x Ty> casts yet.
+  if (auto *VTy = dyn_cast<ScalableVectorType>(Dst);
+      VTy && VTy->getElementCount() == ElementCount::getScalable(1)) {
+    if (!is_contained({ISD::TRUNCATE, ISD::SIGN_EXTEND, ISD::ZERO_EXTEND,
+                       ISD::BITCAST, ISD::ADDRSPACECAST},
+                      ISD))
+      return InstructionCost::getInvalid();
+  }
+
   // If the cast is observable, and it is used by a widening instruction (e.g.,
   // uaddl, saddw, etc.), it may be free.
   if (I && !I->users().empty()) {
@@ -4099,6 +4109,12 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
 
   EVT SrcTy = TLI->getValueType(DL, Src);
   EVT DstTy = TLI->getValueType(DL, Dst);
+
+  // SVE has no elements wider than 64 bits. The generic cost for a bitcast
+  // between unsupported scalable types can otherwise appear to be free.
+  if ((SrcTy.isScalableVector() && SrcTy.getScalarSizeInBits() > 64) ||
+      (DstTy.isScalableVector() && DstTy.getScalarSizeInBits() > 64))
+    return InstructionCost::getInvalid();
 
   // From a vector to a scalarized vector will be an series of extract-element
   // and extends.
