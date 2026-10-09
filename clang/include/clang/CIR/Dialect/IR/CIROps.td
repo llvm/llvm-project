@@ -4727,7 +4727,9 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
       UnitAttr:$musttail,
       OptionalAttr<CIR_MemoryEffectsAttr>:$memory_effects,
       OptionalAttr<DictArrayAttr>:$arg_attrs,
-      OptionalAttr<DictArrayAttr>:$res_attrs
+      OptionalAttr<DictArrayAttr>:$res_attrs,
+      DefaultValuedAttr<CIR_CallingConvAttr, "cir::CallingConv::C">
+        :$calling_conv
       );
 }
 
@@ -4746,10 +4748,16 @@ def CIR_CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
     empty. The first operand of this operation must be a pointer to the callee
     function. The rest operands are arguments to the callee function.
 
+    The `calling_conv` attribute specifies the calling convention used at the
+    call site. It defaults to `CallingConv::C`, which is omitted when printed.
+    Other calling conventions are printed as `cc(<mnemonic>)`, e.g.
+    `cc(spir_function)`.
+
     Example:
 
     ```
     %0 = cir.call @foo()
+    cir.call @bar() cc(spir_function) : () -> ()
     ```
   }];
 
