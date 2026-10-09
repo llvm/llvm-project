@@ -229,10 +229,7 @@ private:
       Casts.push_back(Cast);
     }
 
-    void popCast() {
-      assert(!Casts.empty() && "No cast to pop");
-      Casts.pop_back();
-    }
+    void popCast() { Casts.pop_back(); }
 
     bool hasSignExtension() const {
       // The innermost extension determines whether signed overflow matters:
