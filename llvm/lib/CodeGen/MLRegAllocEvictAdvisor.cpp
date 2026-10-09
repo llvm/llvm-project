@@ -592,9 +592,7 @@ private:
   std::optional<unsigned> LastFunctionNumber;
 
   static std::string getContextName(const MachineFunction &MF) {
-    if (!MF.getName().empty())
-      return MF.getName().str();
-    return ("__unnamed_" + Twine(MF.getFunctionNumber())).str();
+    return getLoggerContextName(MF.getName(), MF.getFunctionNumber());
   }
 };
 

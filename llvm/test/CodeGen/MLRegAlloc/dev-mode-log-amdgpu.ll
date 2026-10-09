@@ -17,8 +17,8 @@
 ; RUN: grep -a '^{"\(context\|observation\|outcome\)"' %t2 \
 ; RUN:   | FileCheck %s --check-prefix=PRIO --match-full-lines
 
-; EVICT:      {"context":"__unnamed_0"}
-; PRIO:      {"context":"__unnamed_0"}
+; EVICT:      {"context":"{__unnamed_0}"}
+; PRIO:      {"context":"{__unnamed_0}"}
 ; PRIO-NEXT: {"observation":0}
 ; PRIO-NEXT: {"outcome":0}
 ; PRIO-NEXT: {"observation":1}
@@ -32,8 +32,8 @@ define amdgpu_kernel void @0(ptr addrspace(1) %p) {
   ret void
 }
 
-; EVICT-NEXT: {"context":"__unnamed_1"}
-; PRIO-NEXT: {"context":"__unnamed_1"}
+; EVICT-NEXT: {"context":"{__unnamed_1}"}
+; PRIO-NEXT: {"context":"{__unnamed_1}"}
 ; PRIO-NEXT: {"observation":0}
 ; PRIO-NEXT: {"outcome":0}
 ; PRIO-NEXT: {"observation":1}
