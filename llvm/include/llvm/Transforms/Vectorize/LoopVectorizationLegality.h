@@ -48,6 +48,8 @@ class TargetLibraryInfo;
 class TargetTransformInfo;
 class Type;
 
+LLVM_ABI extern cl::opt<bool> VectorizeVectorLoops;
+
 /// Utility class for getting and setting loop vectorizer hints in the form
 /// of loop metadata.
 /// This class keeps a number of loop annotations locally (as member variables)
@@ -486,6 +488,8 @@ public:
   const SmallVector<BasicBlock *, 4> &getCountableExitingBlocks() const {
     return CountableExitingBlocks;
   }
+
+  bool LoopContainsVectors = false;
 
 private:
   /// Return true if the pre-header, exiting and latch blocks of \p Lp and all
