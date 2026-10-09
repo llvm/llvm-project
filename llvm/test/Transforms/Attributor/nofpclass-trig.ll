@@ -93,6 +93,17 @@ define float @ret_sinh_nonpos(float nofpclass(pinf psub pnorm) %arg) {
   ret float %call
 }
 
+; Even without +0.0 input, denormal flushing may produce +0.0 output.
+define float @ret_sinh_nonpos_pzero_possible(float nofpclass(pinf pzero psub pnorm) %arg) {
+; CHECK-LABEL: define nofpclass(pinf psub pnorm) float @ret_sinh_nonpos_pzero_possible
+; CHECK-SAME: (float nofpclass(pinf pzero psub pnorm) [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pinf psub pnorm) float @llvm.sinh.f32(float nofpclass(pinf pzero psub pnorm) [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.sinh.f32(float %arg)
+  ret float %call
+}
+
 define float @ret_sinh_negnormal_negsubnormal_mode_dynamic_dynamic(float nofpclass(nan inf zero psub pnorm) %arg) #0 {
 ; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) float @ret_sinh_negnormal_negsubnormal_mode_dynamic_dynamic
 ; CHECK-SAME: (float nofpclass(nan inf zero psub pnorm) [[ARG:%.*]]) #[[ATTR2]] {
