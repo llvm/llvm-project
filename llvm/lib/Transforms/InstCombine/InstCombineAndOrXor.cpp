@@ -3676,6 +3676,64 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
     return Builder.createIsFPClass(X, IsAnd ? FPClassTest::fcNormal
                                             : ~FPClassTest::fcNormal);
 
+  // srem(X, C) with C > 0 has the same sign as X (or is zero).
+  // So srem(X, C) > 0 requires X > 0, and srem(X, C) < 0 requires X < 0.
+  // If one icmp requires srem(X, C) to have a certain sign and the other
+  // icmp constrains X to the opposite sign, the AND is always false.
+  if (IsAnd) {
+    auto checkSRemSignContradiction =
+        [&](CmpPredicate PredRem, Value *RemOp, const APInt *RemC,
+            CmpPredicate PredX, Value *XOp, const APInt *XC) -> Value * {
+      Value *X;
+      const APInt *DivC;
+      if (!match(RemOp, m_SRem(m_Value(X), m_APInt(DivC))) ||
+          !DivC->isStrictlyPositive() || X != XOp || !RemC || !XC)
+        return nullptr;
+
+      // Determine if the rem icmp requires strictly positive/negative result.
+      // sgt srem, K -> srem > K -> positive if K >= 0
+      // sge srem, K -> srem >= K -> positive if K >= 1
+      // slt srem, K -> srem < K -> negative if K <= 0
+      // sle srem, K -> srem <= K -> negative if K <= -1
+      bool RemRequiresPos = false, RemRequiresNeg = false;
+      if (PredRem == ICmpInst::ICMP_SGT && RemC->isNonNegative())
+        RemRequiresPos = true;
+      else if (PredRem == ICmpInst::ICMP_SGE && RemC->isStrictlyPositive())
+        RemRequiresPos = true;
+      else if (PredRem == ICmpInst::ICMP_SLT && RemC->isNonPositive())
+        RemRequiresNeg = true;
+      else if (PredRem == ICmpInst::ICMP_SLE && RemC->isNegative())
+        RemRequiresNeg = true;
+      else
+        return nullptr;
+
+      // Check if the X icmp implies the opposite sign.
+      if (RemRequiresPos) {
+        // srem requires X > 0. Contradict if X icmp implies X <= 0.
+        // slt X, K: X < K, implies X <= 0 when K <= 1
+        // sle X, K: X <= K, implies X <= 0 when K <= 0
+        if ((PredX == ICmpInst::ICMP_SLT && XC->sle(1)) ||
+            (PredX == ICmpInst::ICMP_SLE && XC->isNonPositive()))
+          return ConstantInt::getFalse(LHS->getType());
+      } else {
+        // RemRequiresNeg: srem requires X < 0. Contradict if X >= 0.
+        // sgt X, K: X > K, implies X >= 0 when K >= -1
+        // sge X, K: X >= K, implies X >= 0 when K >= 0
+        if ((PredX == ICmpInst::ICMP_SGT && XC->sge(-1)) ||
+            (PredX == ICmpInst::ICMP_SGE && XC->isNonNegative()))
+          return ConstantInt::getFalse(LHS->getType());
+      }
+      return nullptr;
+    };
+
+    if (Value *V = checkSRemSignContradiction(PredR, RHS0, RHSC, PredL, LHS0,
+                                              LHSC))
+      return V;
+    if (Value *V = checkSRemSignContradiction(PredL, LHS0, LHSC, PredR, RHS0,
+                                              RHSC))
+      return V;
+  }
+
   return foldAndOrOfICmpsUsingRanges(PredL, LHS0, LHS1, LHSOneUse, PredR, RHS0,
                                      RHS1, RHSOneUse, IsAnd);
 }
