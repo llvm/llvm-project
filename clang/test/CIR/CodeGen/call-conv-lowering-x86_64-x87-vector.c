@@ -260,6 +260,61 @@ struct S4 call_s4(struct S4 s) { return take_s4(s); }
 // LLVM-AVX: call void @take_s4(ptr dead_on_unwind writable sret(%struct.S4) align 64 %{{[^,)]+}}, ptr noundef byval(%struct.S4) align 64 %{{[^,)]+}})
 // LLVM-AVX512: call <4 x x86_fp80> @take_s4(<4 x x86_fp80> %{{[^,)]+}})
 
+// Three elements take 48 bytes, which clang rounds up to 64, so they pass in
+// registers only with AVX-512.  CIRGen cannot load or store a three-element
+// vector yet, so these values only flow from a call into a return or another
+// call.
+typedef long double ld3 __attribute__((ext_vector_type(3)));
+ld3 src_ld3(void);
+void sink_ld3(ld3);
+
+ld3 fwd_ld3(void) { return src_ld3(); }
+
+// CIR: cir.func {{.*}}@fwd_ld3() -> !cir.vector<3 x !cir.long_double<!cir.f80>>
+// CIR: cir.call @src_ld3() : () -> !cir.vector<3 x !cir.long_double<!cir.f80>>
+// LLVM: define dso_local <3 x x86_fp80> @fwd_ld3()
+// LLVM: call <3 x x86_fp80> @src_ld3()
+
+void pass_ld3(void) { sink_ld3(src_ld3()); }
+
+// CIR-SSE: cir.call @sink_ld3(%{{.+}}) : (!cir.ptr<!cir.vector<3 x !cir.long_double<!cir.f80>>> {llvm.align = 64 : i64, llvm.byval = !cir.vector<3 x !cir.long_double<!cir.f80>>, llvm.noundef}) -> ()
+// CIR-AVX: cir.call @sink_ld3(%{{.+}}) : (!cir.ptr<!cir.vector<3 x !cir.long_double<!cir.f80>>> {llvm.align = 64 : i64, llvm.byval = !cir.vector<3 x !cir.long_double<!cir.f80>>, llvm.noundef}) -> ()
+// CIR-AVX512: cir.call @sink_ld3(%{{.+}}) : (!cir.vector<3 x !cir.long_double<!cir.f80>> {llvm.noundef}) -> ()
+// LLVM-SSE: call void @sink_ld3(ptr noundef byval(<3 x x86_fp80>) align 64 %{{[^,)]+}})
+// LLVM-AVX: call void @sink_ld3(ptr noundef byval(<3 x x86_fp80>) align 64 %{{[^,)]+}})
+// LLVM-AVX512: call void @sink_ld3(<3 x x86_fp80> noundef %{{[^,)]+}})
+
+struct S3 { ld3 v; };
+struct S3 src_s3(void);
+void sink_s3(struct S3);
+
+struct S3 fwd_s3(void) { return src_s3(); }
+
+// CIR-SSE: cir.func {{.*}}@fwd_s3(%arg0: !cir.ptr<!rec_S3> {llvm.align = 64 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_S3, llvm.writable} loc({{[^)]+}}))
+// CIR-AVX: cir.func {{.*}}@fwd_s3(%arg0: !cir.ptr<!rec_S3> {llvm.align = 64 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_S3, llvm.writable} loc({{[^)]+}}))
+// CIR-AVX512: cir.func {{.*}}@fwd_s3() -> !cir.vector<3 x !cir.f80>
+// LLVM-SSE: define dso_local void @fwd_s3(ptr dead_on_unwind noalias writable sret(%struct.S3) align 64 %{{[^,)]+}})
+// LLVM-AVX: define dso_local void @fwd_s3(ptr dead_on_unwind noalias writable sret(%struct.S3) align 64 %{{[^,)]+}})
+// LLVM-AVX512: define dso_local <3 x x86_fp80> @fwd_s3()
+
+void pass_s3(void) { sink_s3(src_s3()); }
+
+// CIR-SSE: cir.call @sink_s3(%{{.+}}) : (!cir.ptr<!rec_S3> {llvm.align = 64 : i64, llvm.byval = !rec_S3, llvm.noundef}) -> ()
+// CIR-AVX: cir.call @sink_s3(%{{.+}}) : (!cir.ptr<!rec_S3> {llvm.align = 64 : i64, llvm.byval = !rec_S3, llvm.noundef}) -> ()
+// CIR-AVX512: cir.call @sink_s3(%{{.+}}) : (!cir.vector<3 x !cir.f80>) -> ()
+// LLVM-SSE: call void @sink_s3(ptr noundef byval(%struct.S3) align 64 %{{[^,)]+}})
+// LLVM-AVX: call void @sink_s3(ptr noundef byval(%struct.S3) align 64 %{{[^,)]+}})
+// LLVM-AVX512: call void @sink_s3(<3 x x86_fp80> %{{[^,)]+}})
+
+void var_ld3(void) { var(1, src_ld3()); }
+
+// CIR-SSE: cir.call @var(%{{.+}}, %{{.+}}) : (!s32i {llvm.noundef}, !cir.ptr<!cir.vector<3 x !cir.long_double<!cir.f80>>> {llvm.align = 64 : i64, llvm.byval = !cir.vector<3 x !cir.long_double<!cir.f80>>, llvm.noundef}) -> ()
+// CIR-AVX: cir.call @var(%{{.+}}, %{{.+}}) : (!s32i {llvm.noundef}, !cir.ptr<!cir.vector<3 x !cir.long_double<!cir.f80>>> {llvm.align = 64 : i64, llvm.byval = !cir.vector<3 x !cir.long_double<!cir.f80>>, llvm.noundef}) -> ()
+// CIR-AVX512: cir.call @var(%{{.+}}, %{{.+}}) : (!s32i {llvm.noundef}, !cir.vector<3 x !cir.long_double<!cir.f80>> {llvm.noundef}) -> ()
+// LLVM-SSE: call void (i32, ...) @var(i32 noundef 1, ptr noundef byval(<3 x x86_fp80>) align 64 %{{[^,)]+}})
+// LLVM-AVX: call void (i32, ...) @var(i32 noundef 1, ptr noundef byval(<3 x x86_fp80>) align 64 %{{[^,)]+}})
+// LLVM-AVX512: call void (i32, ...) @var(i32 noundef 1, <3 x x86_fp80> noundef %{{[^,)]+}})
+
 // A long double stores its first 10 bytes, so it can share a union with
 // members whose data ends within them, counting neither a record's tail
 // padding nor an empty array.
