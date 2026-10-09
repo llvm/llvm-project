@@ -19,6 +19,8 @@
 #include <cassert>
 #include <compare>
 #include <concepts>
+#include <cstddef>
+#include <limits>
 #include <vector>
 
 #include "test_macros.h"
@@ -108,6 +110,71 @@ constexpr void test_comparison_categories() {
       std::partial_ordering::unordered);
 }
 
+struct DefaultedOrder {
+  int i;
+  constexpr auto operator<=>(const DefaultedOrder&) const = default;
+};
+
+struct ReversedWeakOrder {
+  int i;
+  constexpr std::weak_ordering operator<=>(const ReversedWeakOrder& other) const { return other.i <=> i; }
+  constexpr bool operator==(const ReversedWeakOrder&) const = default;
+};
+
+template <class T, class Order>
+constexpr void test_long_range(T lhs, T rhs, Order expected) {
+  std::array<T, 300> a{};
+  std::array<T, 300> b{};
+  a[257] = lhs;
+  b[257] = rhs;
+  test_lexicographical_compare<const T*, const T*>(a, b, expected);
+  test_lexicographical_compare<const T*, const T*>(a, std::array<T, 257>{}, std::strong_ordering::greater);
+}
+
+constexpr void test_element_types() {
+  using SChar = signed char;
+  using UChar = unsigned char;
+  test_lexicographical_compare<const SChar*, const SChar*>(
+      std::array<SChar, 2>{0, -1}, std::array<SChar, 2>{0, 1}, std::strong_ordering::less);
+  test_lexicographical_compare<const UChar*, const UChar*>(
+      std::array<UChar, 2>{0, 255}, std::array<UChar, 2>{0, 1}, std::strong_ordering::greater);
+  test_lexicographical_compare<const UChar*, const UChar*>(
+      std::array<UChar, 2>{1, 2}, std::array<UChar, 3>{1, 2, 0}, std::strong_ordering::less);
+  test_lexicographical_compare<const UChar*, const UChar*>(
+      std::array<UChar, 0>{}, std::array<UChar, 0>{}, std::strong_ordering::equal);
+  test_lexicographical_compare<const std::byte*, const std::byte*>(
+      std::array{std::byte{0}, std::byte{255}}, std::array{std::byte{0}, std::byte{1}}, std::strong_ordering::greater);
+  test_lexicographical_compare<const char*, const char*>(
+      std::array{'a', 'b'}, std::array{'a', 'b', 'c'}, std::strong_ordering::less);
+  test_lexicographical_compare<const bool*, const bool*>(
+      std::array{true, false}, std::array{true, true}, std::strong_ordering::less);
+  test_lexicographical_compare<const int*, const int*>(std::array{-1}, std::array{1}, std::strong_ordering::less);
+  test_lexicographical_compare<const int*, const int*>(std::array{256}, std::array{1}, std::strong_ordering::greater);
+  test_lexicographical_compare<const long long*, const long long*>(
+      std::array{1LL, -1LL}, std::array{1LL, 1LL}, std::strong_ordering::less);
+
+  test_lexicographical_compare<const double*, const double*>(
+      std::array{-0.0, 1.0}, std::array{0.0, 2.0}, std::partial_ordering::less);
+  test_lexicographical_compare<const double*, const double*>(
+      std::array{1.0, std::numeric_limits<double>::quiet_NaN()},
+      std::array{1.0, std::numeric_limits<double>::quiet_NaN()},
+      std::partial_ordering::unordered);
+
+  test_lexicographical_compare<const DefaultedOrder*, const DefaultedOrder*>(
+      std::array<DefaultedOrder, 2>{{{1}, {-1}}},
+      std::array<DefaultedOrder, 2>{{{1}, {1}}},
+      std::strong_ordering::less);
+  test_lexicographical_compare<const ReversedWeakOrder*, const ReversedWeakOrder*>(
+      std::array<ReversedWeakOrder, 2>{{{1}, {2}}},
+      std::array<ReversedWeakOrder, 2>{{{1}, {3}}},
+      std::weak_ordering::greater);
+
+  test_long_range<SChar>(1, -1, std::strong_ordering::greater);
+  test_long_range<UChar>(1, 255, std::strong_ordering::less);
+  test_long_range<int>(256, 1, std::strong_ordering::greater);
+  test_long_range<long long>(-1, 1, std::strong_ordering::less);
+}
+
 // Check that it works with proxy iterators
 constexpr void test_proxy_iterators() {
     std::vector<bool> vec(10, true);
@@ -118,6 +185,7 @@ constexpr void test_proxy_iterators() {
 constexpr bool test() {
   test_iterator_types();
   test_comparison_categories();
+  test_element_types();
   test_proxy_iterators();
 
   return true;
