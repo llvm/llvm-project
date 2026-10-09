@@ -1440,4 +1440,110 @@ TEST_F(CloneModule, GlobalWithBlockAddressesInitializer) {
   ASSERT_NE(OriginalBa->getBasicBlock(), ClonedBa->getBasicBlock());
 }
 
+TEST_F(CloneModule, ODRUniqueTypeMethodVerifier) {
+  // Test that the following IR, reduced from a self-host clang-22 compile,
+  // doesn't trip the verifier after cloning. See the IR body for an additional
+  // explanatory comment.
+  //
+  // The focus of the test is "operator!=" which is a DISubprogram that is:
+  //   * a declaration (therefore not distinct),
+  //   * has uniqued metadata fields used for ODR-type-method uniquing
+  //     (linkage name, scope, template params),
+  //   * and has other distinct metadata fields (type).
+  //
+  // The issue can be reproduced from C++ from this less-reduced C++:
+  // ```
+  // template <typename e> class BaseIt {
+  // public:
+  //   [[gnu::nodebug]] BaseIt();
+  //   bool operator!=(e);
+  // };
+  //
+  // template <typename TLambda> class It : public BaseIt<It<TLambda>> {
+  // public:
+  //   It() {}
+  //   [[gnu::nodebug]] It end();
+  //   [[gnu::nodebug]] It begin();
+  //   [[gnu::nodebug]] int *operator++();
+  //   [[gnu::nodebug]] int operator*();
+  // };
+  //
+  // template <typename TLambda > [[gnu::nodebug]]  It<TLambda> i(TLambda) {
+  //   return {};
+  // }
+  //
+  // class ar {
+  // public:
+  //   static auto lol() {
+  //     return i([] {});
+  //   }
+  // };
+  //
+  // [[gnu::nodebug]] ar au;
+  //
+  // bool func() {
+  //   for ([[gnu::nodebug]] auto av : au.lol())
+  //     ;
+  // }
+  // ```
+
+  StringRef IR = R"(
+    declare !dbg !4 i1 @f(ptr)
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!3}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "reduced", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, retainedTypes: !2, splitDebugInlining: false, nameTableKind: None)
+    !1 = !DIFile(filename: "reduced.cpp", directory: "/")
+    !2 = !{}
+    !3 = !{i32 2, !"Debug Info Version", i32 3}
+;;
+;; operator!= (!4) has a `scope` (!5) that is an ODR type, meaning ODR-uniquing
+;; takes place for the DISubprogram. Its `type` (!6) includes a distinct
+;; DICompositeType (!8).
+;;
+;; The old debug ODR-uniquing infrastructure was implemented such that
+;; DISubprograms that meet certain conditions (such as !4) are uniqued if a
+;; subset of fields are equal (`scope`, `linkageName`, `templateParams`) rather
+;; than all fields being equal which is how uniquing usually works.
+;;
+;; CloneModule clones and remaps the operands. With the old scheme described
+;; above, the two cloned DISubprogram are collapsed down to one because
+;; the scope, linkageName and templateParams are equal between the two
+;; instances (importantly this is enabled due to the `scope` (!5) not being
+;; distinct).
+;;
+;; The distinct DICompositeType (!8) thus becomes reachable from the new
+;; module, which is an error. A symptom of this is that the original module's
+;; DICompileUnit is reachable from there too, and the verifier spots this
+;; because it isn't in the module's llvm.dbg.cu list.
+;;
+;; Obviously a cloned module shouldn't produce invalid IR and to achieve this
+;; debug ODR uniquing is now only enabled at strategic times rather than being
+;; always-on.
+;;
+    !4 = !DISubprogram(name: "operator!=", linkageName: "_ZN6BaseItI2ItIZN2ar3lolEvEUlvE_EEneES3_", scope: !5, file: !1, line: 4, type: !6, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized)
+    !5 = !DICompositeType(tag: DW_TAG_class_type, name: "BaseIt<It<(lambda)> >", file: !1, line: 1, size: 8, flags: DIFlagFwdDecl | DIFlagNonTrivial, identifier: "_ZTS6BaseItI2ItIZN2ar3lolEvEUlvE_EE")
+    !6 = distinct !DISubroutineType(types: !7)
+    !7 = !{!8}
+    !8 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "It<(lambda)>", file: !1, line: 7, size: 8, flags: DIFlagTypePassByValue | DIFlagNonTrivial, elements: !2, templateParams: !9, identifier: "_ZTS2ItIZN2ar3lolEvEUlvE_E")
+    !9 = !{!10}
+    !10 = !DITemplateTypeParameter(name: "TLambda", type: !11)
+    !11 = distinct !DICompositeType(tag: DW_TAG_class_type, scope: !12, file: !1, line: 23, size: 8, flags: DIFlagTypePassByValue | DIFlagNonTrivial, elements: !2, identifier: "_ZTSZN2ar3lolEvEUlvE_")
+    !12 = distinct !DISubprogram(name: "lol", linkageName: "_ZN2ar3lolEv", scope: !13, file: !1, line: 22, type: !14, scopeLine: 22, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, declaration: !15, retainedNodes: !2, keyInstructions: true)
+    !13 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "ar", file: !1, line: 20, size: 8, flags: DIFlagTypePassByValue, elements: !2, identifier: "_ZTS2ar")
+    !14 = !DISubroutineType(types: !7)
+    !15 = !DISubprogram(name: "lol", linkageName: "_ZN2ar3lolEv", scope: !13, file: !1, line: 22, type: !14, scopeLine: 22, flags: DIFlagPublic | DIFlagPrototyped | DIFlagStaticMember, spFlags: DISPFlagOptimized)
+  )";
+
+  LLVMContext Context;
+  SMDiagnostic Error;
+
+  std::unique_ptr<Module> M = parseAssemblyString(IR, Error, Context);
+  ASSERT_FALSE(verifyModule(*M, &errs()));
+
+  std::unique_ptr<Module> Clone = llvm::CloneModule(*M);
+  EXPECT_FALSE(verifyModule(*Clone));
+}
+
 } // namespace

@@ -29,6 +29,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugInfoODRUniquer.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -507,7 +508,7 @@ class MetadataLoader::MetadataLoaderImpl {
 
   /// Functions that need to be matched with subprograms when upgrading old
   /// metadata.
-  SmallDenseMap<Function *, DISubprogram *, 16> FunctionsWithSPs;
+  SmallDenseMap<Function *, TrackingMDNodeRef, 16> FunctionsWithSPs;
 
   /// retainedNodes of these subprograms should be cleaned up from incorrectly
   /// scoped local types.
@@ -855,7 +856,7 @@ public:
     return MetadataList.getMetadataFwdRef(ID);
   }
 
-  DISubprogram *lookupSubprogramForFunction(Function *F) {
+  TrackingMDNodeRef lookupSubprogramForFunction(Function *F) {
     return FunctionsWithSPs.lookup(F);
   }
 
@@ -1345,6 +1346,10 @@ void MetadataLoader::MetadataLoaderImpl::resolveForwardRefsAndPlaceholders(
     while (MetadataList.hasFwdRefs())
       lazyLoadOneMetadata(MetadataList.getNextFwdRef(), Placeholders);
   }
+
+  if (Context.isODRUniquingDebugTypes())
+    Context.getDebugTypeODRUniquer()->finalizeUnresolvedSubprogramDecls();
+
   // At this point we don't have any forward reference remaining, or temporary
   // that haven't been loaded. We can safely drop RAUW support and mark cycles
   // as resolved.
@@ -2178,37 +2183,87 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     }
 
     Metadata *CUorFn = getMDOrNull(Record[12 + OffsetB]);
-    DISubprogram *SP = GET_OR_DISTINCT(
-        DISubprogram,
-        (Context,
-         getDITypeRefOrNull(Record[1]),           // scope
-         getMDString(Record[2]),                  // name
-         getMDString(Record[3]),                  // linkageName
-         getMDOrNull(Record[4]),                  // file
-         Record[5],                               // line
-         getMDOrNull(Record[6]),                  // type
-         Record[7 + OffsetA],                     // scopeLine
-         getDITypeRefOrNull(Record[8 + OffsetA]), // containingType
-         Record[10 + OffsetA],                    // virtualIndex
-         HasThisAdj ? Record[16 + OffsetB] : 0,   // thisAdjustment
-         Flags,                                   // flags
-         SPFlags,                                 // SPFlags
-         HasUnit ? CUorFn : nullptr,              // unit
-         getMDOrNull(Record[13 + OffsetB]),       // templateParams
-         getMDOrNull(Record[14 + OffsetB]),       // declaration
-         getMDOrNull(Record[15 + OffsetB]),       // retainedNodes
-         HasThrownTypes ? getMDOrNull(Record[17 + OffsetB])
-                        : nullptr, // thrownTypes
-         HasAnnotations ? getMDOrNull(Record[18 + OffsetB])
-                        : nullptr, // annotations
-         HasTargetFuncName ? getMDString(Record[19 + OffsetB])
-                           : nullptr, // targetFuncName
-         UsesKeyInstructions));
-    MetadataList.assignValue(SP, NextMetadataNo);
-    NextMetadataNo++;
 
-    if (IsDistinct)
-      NewDistinctSPs.push_back(SP);
+    DISubprogram *SP = nullptr;
+    bool MaybeODRUnique = Context.isODRUniquingDebugTypes() && !IsDistinct &&
+                          !(SPFlags & DISubprogram::SPFlagDefinition) &&
+                          getMDString(Record[3]);
+
+    if (MaybeODRUnique && !isa<DIScope>(getDITypeRefOrNull(Record[1]))) {
+      // The scope is a temporary forward reference, meaning we can't perform
+      // ODR-uniquing yet. In order to perform ODR uniquing later the SP must
+      // be replacable, so create a temporary one.
+      TempDISubprogram Tmp = DISubprogram::getTemporary(
+          Context,
+          getDITypeRefOrNull(Record[1]),           // scope
+          getMDString(Record[2]),                  // name
+          getMDString(Record[3]),                  // linkageName
+          getMDOrNull(Record[4]),                  // file
+          Record[5],                               // line
+          getMDOrNull(Record[6]),                  // type
+          Record[7 + OffsetA],                     // scopeLine
+          getDITypeRefOrNull(Record[8 + OffsetA]), // containingType
+          Record[10 + OffsetA],                    // virtualIndex
+          HasThisAdj ? Record[16 + OffsetB] : 0,   // thisAdjustment
+          Flags,                                   // flags
+          SPFlags,                                 // SPFlags
+          HasUnit ? CUorFn : nullptr,              // unit
+          getMDOrNull(Record[13 + OffsetB]),       // templateParams
+          getMDOrNull(Record[14 + OffsetB]),       // declaration
+          getMDOrNull(Record[15 + OffsetB]),       // retainedNodes
+          HasThrownTypes ? getMDOrNull(Record[17 + OffsetB])
+                         : nullptr, // thrownTypes
+          HasAnnotations ? getMDOrNull(Record[18 + OffsetB])
+                         : nullptr, // annotations
+          HasTargetFuncName ? getMDString(Record[19 + OffsetB])
+                            : nullptr, // targetFuncName
+          UsesKeyInstructions);
+      Context.getDebugTypeODRUniquer()->addUnresolvedODRSubprogramDecl(
+          std::move(Tmp));
+      SP = Tmp.get();
+    } else {
+
+      if (MaybeODRUnique)
+        SP = Context.getDebugTypeODRUniquer()->getODRSubprogramDecl(
+            cast<DIScope>(getDITypeRefOrNull(Record[1])),
+            getMDString(Record[3])->getString());
+
+      if (!SP)
+        SP = GET_OR_DISTINCT(
+            DISubprogram,
+            (Context,
+             getDITypeRefOrNull(Record[1]),           // scope
+             getMDString(Record[2]),                  // name
+             getMDString(Record[3]),                  // linkageName
+             getMDOrNull(Record[4]),                  // file
+             Record[5],                               // line
+             getMDOrNull(Record[6]),                  // type
+             Record[7 + OffsetA],                     // scopeLine
+             getDITypeRefOrNull(Record[8 + OffsetA]), // containingType
+             Record[10 + OffsetA],                    // virtualIndex
+             HasThisAdj ? Record[16 + OffsetB] : 0,   // thisAdjustment
+             Flags,                                   // flags
+             SPFlags,                                 // SPFlags
+             HasUnit ? CUorFn : nullptr,              // unit
+             getMDOrNull(Record[13 + OffsetB]),       // templateParams
+             getMDOrNull(Record[14 + OffsetB]),       // declaration
+             getMDOrNull(Record[15 + OffsetB]),       // retainedNodes
+             HasThrownTypes ? getMDOrNull(Record[17 + OffsetB])
+                            : nullptr, // thrownTypes
+             HasAnnotations ? getMDOrNull(Record[18 + OffsetB])
+                            : nullptr, // annotations
+             HasTargetFuncName ? getMDString(Record[19 + OffsetB])
+                               : nullptr, // targetFuncName
+             UsesKeyInstructions));
+      MetadataList.assignValue(SP, NextMetadataNo);
+      NextMetadataNo++;
+
+      if (MaybeODRUnique)
+        Context.getDebugTypeODRUniquer()->addSubprogramDecl(SP);
+
+      if (IsDistinct)
+        NewDistinctSPs.push_back(SP);
+    }
 
     // Upgrade sp->function mapping to function->sp mapping.
     if (HasFn) {
@@ -2216,8 +2271,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         if (auto *F = dyn_cast<Function>(CMD->getValue())) {
           if (F->isMaterializable())
             // Defer until materialized; unmaterialized functions may not have
-            // metadata.
-            FunctionsWithSPs[F] = SP;
+            // metadata. SP may be temporary, so wrap it in TrackingMDNodeRef.
+            FunctionsWithSPs[F] = TrackingMDNodeRef(SP);
           else if (!F->empty())
             F->setSubprogram(SP);
         }
@@ -2877,7 +2932,7 @@ Metadata *MetadataLoader::getMetadataFwdRefOrLoad(unsigned Idx) {
   return Pimpl->getMetadataFwdRefOrLoad(Idx);
 }
 
-DISubprogram *MetadataLoader::lookupSubprogramForFunction(Function *F) {
+TrackingMDNodeRef MetadataLoader::lookupSubprogramForFunction(Function *F) {
   return Pimpl->lookupSubprogramForFunction(F);
 }
 
