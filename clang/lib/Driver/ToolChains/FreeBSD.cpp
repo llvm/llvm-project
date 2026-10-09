@@ -254,7 +254,9 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (crt1)
       CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crt1)));
 
-    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crti.o")));
+    // LoongArch does not provide the obsolete _init/_fini interface.
+    if (ToolChain.getArch() != llvm::Triple::loongarch64)
+      CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crti.o")));
 
     const char *crtbegin = nullptr;
     if (Args.hasArg(options::OPT_static))
@@ -372,7 +374,8 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     else
       crtend = "crtend.o";
     CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crtend)));
-    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtn.o")));
+    if (ToolChain.getArch() != llvm::Triple::loongarch64)
+      CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtn.o")));
   }
 
   ToolChain.addProfileRTLibs(Args, CmdArgs);
