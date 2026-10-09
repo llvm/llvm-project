@@ -2601,11 +2601,11 @@ Address CIRGenFunction::emitArrayToPointerDecay(const Expr *e,
   LValue lv = emitLValue(e);
   Address addr = lv.getAddress();
 
-  // If the array type was an incomplete type, we need to make sure
-  // the decay ends up being the right type.
   if (e->getType()->isVariableArrayType())
     return addr;
 
+  // If the array type was an incomplete type, we need to make sure
+  // the decay ends up being the right type.
   mlir::Type arrayTy = convertType(e->getType());
   assert(mlir::isa<cir::ArrayType>(arrayTy) && "expected array");
   addr = addr.withElementType(builder, arrayTy);
