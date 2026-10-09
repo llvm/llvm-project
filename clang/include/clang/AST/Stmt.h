@@ -3110,7 +3110,7 @@ public:
 
   /// If this is a named break/continue, get the loop or switch statement
   /// that this targets. May return null if the target LabelStmt has not
-  /// yet been created. Do not call if this is an unnamed break/continue.
+  /// yet been created. Asserts if this is an unnamed break/continue.
   /// \pre `isNamed()`
   const Stmt *getNamedLoopOrSwitch() const;
 
