@@ -1415,10 +1415,7 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
       // other access might also depend on this pointer). We also cannot add
       // scopes to arbitrary functions unless we know they don't access any
       // non-parameter pointer-values.
-      bool CanAddScopes = !UsesAliasingPtr;
-      if (CanAddScopes && IsFuncCall)
-        CanAddScopes = IsArgMemOnlyCall;
-
+      bool CanAddScopes = !UsesAliasingPtr && (!IsFuncCall || IsArgMemOnlyCall);
       if (CanAddScopes)
         for (const Argument *A : NoAliasArgs) {
           if (ObjSet.count(A))
