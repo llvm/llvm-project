@@ -5238,6 +5238,99 @@ static bool isAbsoluteValueULEOne(const Value *V) {
          match(V, m_Intrinsic<Intrinsic::amdgcn_fract>(m_Value()));
 }
 
+/// Map math libcalls to their corresponding intrinsic. This is useful for when
+/// we cannot transform a libcall into an intrinsic (e.g. because errno would be
+/// written to), but we still want to perform analysis on the return value.
+///
+/// Unlike getIntrinsicForCallSite, the callsite is not required to only read
+/// memory, since only the returned value is used here.
+static Intrinsic::ID getIntrinsicForMathLibCall(const CallInst &CI,
+                                                const TargetLibraryInfo *TLI) {
+  if (!TLI)
+    return Intrinsic::not_intrinsic;
+
+  // Bail out on mis-typed callsites and functions with local linkage.
+  const Function *F = CI.getCalledFunction();
+  if (!F || F->hasLocalLinkage())
+    return Intrinsic::not_intrinsic;
+
+  // TLI validates the declaration's prototype, rejects callsites marked
+  // 'nobuiltin', and determines which libcalls the target actually provides.
+  LibFunc Func = TLI->getLibFunc(CI);
+  if (Func == NotLibFunc || !TLI->has(Func))
+    return Intrinsic::not_intrinsic;
+
+  switch (Func) {
+  case LibFunc_sin:
+  case LibFunc_sinf:
+  case LibFunc_sinl:
+    return Intrinsic::sin;
+  case LibFunc_cos:
+  case LibFunc_cosf:
+  case LibFunc_cosl:
+    return Intrinsic::cos;
+  case LibFunc_tan:
+  case LibFunc_tanf:
+  case LibFunc_tanl:
+    return Intrinsic::tan;
+  case LibFunc_asin:
+  case LibFunc_asinf:
+  case LibFunc_asinl:
+    return Intrinsic::asin;
+  case LibFunc_acos:
+  case LibFunc_acosf:
+  case LibFunc_acosl:
+    return Intrinsic::acos;
+  case LibFunc_atan:
+  case LibFunc_atanf:
+  case LibFunc_atanl:
+    return Intrinsic::atan;
+  case LibFunc_atan2:
+  case LibFunc_atan2f:
+  case LibFunc_atan2l:
+    return Intrinsic::atan2;
+  case LibFunc_sinh:
+  case LibFunc_sinhf:
+  case LibFunc_sinhl:
+    return Intrinsic::sinh;
+  case LibFunc_cosh:
+  case LibFunc_coshf:
+  case LibFunc_coshl:
+    return Intrinsic::cosh;
+  case LibFunc_tanh:
+  case LibFunc_tanhf:
+  case LibFunc_tanhl:
+    return Intrinsic::tanh;
+  case LibFunc_exp:
+  case LibFunc_expf:
+  case LibFunc_expl:
+    return Intrinsic::exp;
+  case LibFunc_exp2:
+  case LibFunc_exp2f:
+  case LibFunc_exp2l:
+    return Intrinsic::exp2;
+  case LibFunc_fabs:
+  case LibFunc_fabsf:
+  case LibFunc_fabsl:
+    return Intrinsic::fabs;
+  case LibFunc_copysign:
+  case LibFunc_copysignf:
+  case LibFunc_copysignl:
+    return Intrinsic::copysign;
+  case LibFunc_pow:
+  case LibFunc_powf:
+  case LibFunc_powl:
+    return Intrinsic::pow;
+  case LibFunc_sqrt:
+  case LibFunc_sqrtf:
+  case LibFunc_sqrtl:
+    return Intrinsic::sqrt;
+  // TODO: Add log, log2, log10, exp10, round to integral, min/max, and others.
+  default:
+    return Intrinsic::not_intrinsic;
+  }
+}
+
 void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                          FPClassTest InterestedClasses, KnownFPClass &Known,
                          const SimplifyQuery &Q, unsigned Depth) {
@@ -5404,7 +5497,13 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   }
   case Instruction::Call: {
     const CallInst *II = cast<CallInst>(Op);
-    const Intrinsic::ID IID = II->getIntrinsicID();
+    Intrinsic::ID IID = II->getIntrinsicID();
+
+    // Libcalls which have an equivalent intrinsic are treated as-if they were
+    // that intrinsic.
+    if (IID == Intrinsic::not_intrinsic)
+      IID = getIntrinsicForMathLibCall(*II, Q.TLI);
+
     switch (IID) {
     case Intrinsic::fabs: {
       if ((InterestedClasses & (fcNan | fcPositive)) != fcNone) {
