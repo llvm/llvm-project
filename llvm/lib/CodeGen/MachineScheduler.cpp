@@ -4425,32 +4425,6 @@ SUnit *GenericScheduler::pickNode(bool &IsTopNode) {
   return SU;
 }
 
-/// Clear potentially-stale read-undef flags on subregister defs of VRegs in
-/// MI, then re-add the ones still valid according to LIS. Instructions
-/// without an affected def are left untouched. The clear must come first
-/// because adjustLaneLiveness only adds flags; the re-add avoids introducing
-/// reads of undefined lanes.
-static void recomputeReadUndefFlags(MachineInstr &MI, ArrayRef<Register> VRegs,
-                                    LiveIntervals &LIS,
-                                    const TargetRegisterInfo &TRI) {
-  bool HasAffectedDef = false;
-  for (MachineOperand &MO : MI.all_defs()) {
-    if (!MO.getReg().isVirtual() || MO.getSubReg() == 0 ||
-        !llvm::is_contained(VRegs, MO.getReg()))
-      continue;
-    MO.setIsUndef(false);
-    HasAffectedDef = true;
-  }
-  if (!HasAffectedDef)
-    return;
-
-  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
-  RegisterOperands RegOpers;
-  RegOpers.collect(MI, TRI, MRI, /*TrackLaneMasks=*/true,
-                   /*IgnoreDead=*/false);
-  RegOpers.adjustLaneLiveness(LIS, MRI, MI);
-}
-
 void GenericScheduler::reschedulePhysReg(SUnit *SU, bool isTop) {
   MachineBasicBlock::iterator InsertPos = SU->getInstr();
   if (!isTop)
@@ -4506,7 +4480,8 @@ void GenericScheduler::reschedulePhysReg(SUnit *SU, bool isTop) {
 
     // 3) Recompute the read-undef flags invalidated by the move, on the copy
     // itself and on every instruction it moved past.
-    recomputeReadUndefFlags(*Copy, CopyVRegs, *LIS, *TRI);
+    RegisterOperands::restoreLivenessFlags(*Copy, *TRI, DAG->MRI, *LIS,
+                                           /*TrackLaneMasks=*/true, CopyVRegs);
     MachineBasicBlock::iterator NewIt = Copy->getIterator();
     SlotIndex NewIdx = LIS->getInstructionIndex(*Copy);
     MachineBasicBlock::iterator FixBegin = NewIt, FixEnd = NewIt;
@@ -4519,7 +4494,9 @@ void GenericScheduler::reschedulePhysReg(SUnit *SU, bool isTop) {
     }
     for (auto I = FixBegin; I != FixEnd; ++I)
       if (!I->isDebugInstr())
-        recomputeReadUndefFlags(*I, CopyVRegs, *LIS, *TRI);
+        RegisterOperands::restoreLivenessFlags(*I, *TRI, DAG->MRI, *LIS,
+                                               /*TrackLaneMasks=*/true,
+                                               CopyVRegs);
   }
 }
 
