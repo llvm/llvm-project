@@ -7,6 +7,7 @@
 ! RUN: FileCheck --check-prefix=DOWN --input-file=%t/down.mod %s
 ! RUN: FileCheck --check-prefix=ONLYMOD --input-file=%t/down_only.mod %s
 ! RUN: FileCheck --check-prefix=RENMOD --input-file=%t/down_rename.mod %s
+! RUN: FileCheck --check-prefix=PRIVMOD --input-file=%t/down_private.mod %s
 ! RUN: FileCheck --check-prefix=DTMID --input-file=%t/dtmiddle.mod %s
 ! RUN: FileCheck --check-prefix=DTDOWN --input-file=%t/dtdown.mod %s
 
@@ -25,6 +26,13 @@
 ! use middle,only:jprb and use middle,only:myjprb=>jprb, which resolve
 ! through ModuleVisitor::AddUse rather than the whole-module
 ! AddUseForPublicSymbols path that DOWN exercises.
+!
+! DOWN_PRIVATE pins the attrs mask applied when propagating the ambiguity:
+! making a use-associated (here, ambiguous) name PRIVATE in the re-exporting
+! module is legal (F2023 14.2.2 p9), and exercises the same ~Attrs{PUBLIC,
+! PRIVATE, SAVE} exclusion as the ordinary UseDetails case.  Dropping that
+! mask from only the ambiguous-name branch would still pass every other
+! case in this file but reject this one.
 !
 ! DTMIDDLE/DTDOWN cover a second, independent way of creating the
 ! ambiguous poison-pill symbol: two distinct derived types of the same
@@ -59,6 +67,10 @@ module down_only
 end module
 module down_rename
   use middle, only: myjprb => jprb
+end module
+module down_private
+  use middle
+  private :: jprb
 end module
 module dtpk
   type :: dt
@@ -109,6 +121,7 @@ end module
 use down
 use down_only
 use down_rename
+use down_private
 use dtdown
 use gdown
 print *, g(1), g(1.0)
@@ -137,6 +150,10 @@ end
 ! RENMOD: module down_rename
 ! RENMOD-NOT: jprb
 ! RENMOD: end
+
+! PRIVMOD: module down_private
+! PRIVMOD-NOT: jprb
+! PRIVMOD: end
 
 ! DTMID: module dtmiddle
 ! DTMID-NOT: dt

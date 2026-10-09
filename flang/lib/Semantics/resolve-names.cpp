@@ -4404,6 +4404,14 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
   // declaration, not of the entity being use-associated.
   static constexpr Attrs notInheritedFromUseAttrs{
       Attr::PUBLIC, Attr::PRIVATE, Attr::SAVE};
+  // Shared bookkeeping for the UseErrorDetails and UseDetails cases below,
+  // which must stay in sync with each other.
+  auto copyAttrsAndFlags{[&](Symbol &local, const Symbol &used) {
+    local.attrs() = used.attrs() & ~notInheritedFromUseAttrs;
+    local.implicitAttrs() =
+        local.attrs() & Attrs{Attr::ASYNCHRONOUS, Attr::VOLATILE};
+    local.flags() = used.flags();
+  }};
   Symbol *localSymbol{&originalLocal};
   if (auto *details{localSymbol->detailsIf<UseErrorDetails>()}) {
     details->add_occurrence(location, useSymbol);
@@ -4435,16 +4443,11 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
       // latter would produce a local UseDetails whose target module file
       // omits the name, so it would not survive a module file round trip.
       localSymbol->set_details(UseErrorDetails{*useError});
-      localSymbol->attrs() = useSymbol.attrs() & ~notInheritedFromUseAttrs;
-      localSymbol->implicitAttrs() =
-          localSymbol->attrs() & Attrs{Attr::ASYNCHRONOUS, Attr::VOLATILE};
+      copyAttrsAndFlags(*localSymbol, useSymbol);
       return;
     } else { // just create UseDetails
       localSymbol->set_details(UseDetails{localName, useSymbol});
-      localSymbol->attrs() = useSymbol.attrs() & ~notInheritedFromUseAttrs;
-      localSymbol->implicitAttrs() =
-          localSymbol->attrs() & Attrs{Attr::ASYNCHRONOUS, Attr::VOLATILE};
-      localSymbol->flags() = useSymbol.flags();
+      copyAttrsAndFlags(*localSymbol, useSymbol);
       return;
     }
   }
