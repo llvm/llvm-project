@@ -46,7 +46,7 @@ define signext i32 @test(ptr noalias %PtrA, ptr noalias %PtrB, i32 signext %LenA
 ; CHECK-NEXT:    stw 10, 4(9)
 ; CHECK-NEXT:    b .LBB0_1
 ; CHECK-NEXT:  .LBB0_5: # %if.then
-; CHECK-NEXT:    lwax 3, 9, 3
+; CHECK-NEXT:    lwax 3, 3, 9
 ; CHECK-NEXT:    blr
 entry:
   br label %block2
