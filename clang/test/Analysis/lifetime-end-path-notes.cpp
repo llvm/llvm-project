@@ -11,10 +11,9 @@ void testPathNotesWithLoopScopeEnd() {
   for (int i = 0; i < 3; ++i) {
   // expected-note@-1 3 {{Loop condition is true.  Entering loop body}}
   // expected-note@-2   {{The value 2 is assigned to 'i'}}
-  // expected-note@-3   {{Loop condition is false. Execution continues on line 18}}
+  // expected-note@-3   {{Loop condition is false. Execution continues on line 17}}
     p = &i; // expected-note {{Value assigned to 'p'}}
-  }
-  // expected-note@-1 {{'i' is destroyed here}}
+  } // expected-note {{'i' is destroyed here}}
   *p = 4;
   // expected-warning@-1 {{Use of 'i' after its lifetime ended}}
   // expected-note@-2    {{Use of 'i' after its lifetime ended}}
@@ -26,12 +25,11 @@ void testPathNotesWithBlockScopeEnd() {
     int n = 0;
     while (n < 3) {
     // expected-note@-1 3 {{Loop condition is true.  Entering loop body}}
-    // expected-note@-2   {{Loop condition is false. Execution continues on line 35}}
+    // expected-note@-2   {{Loop condition is false. Execution continues on line 33}}
       p = &n; // expected-note {{Value assigned to 'p'}}
       ++n;    // expected-note {{The value 2 is assigned to 'n'}}
     }
-  }
-  // expected-note@-1 {{'n' is destroyed here}}
+  } // expected-note {{'n' is destroyed here}}
   *p = 4;
   // expected-warning@-1 {{Use of 'n' after its lifetime ended}}
   // expected-note@-2    {{Use of 'n' after its lifetime ended}}
@@ -42,7 +40,7 @@ void testPathNotesWithWarnIfReached() {
     int i = 0;
     while (i < 3) {
     // expected-note@-1 3 {{Loop condition is true.  Entering loop body}}
-    // expected-note@-2   {{Loop condition is false. Execution continues on line 49}} 
+    // expected-note@-2   {{Loop condition is false. Execution continues on line 47}} 
       ++i;
     }
   }
