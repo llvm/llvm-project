@@ -629,58 +629,60 @@ bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
   return true;
 }
 
+static std::optional<unsigned> getI16ExtractIndex(const SDNode *N) {
+  if (!N->isMachineOpcode() || N->use_empty())
+    return std::nullopt;
+  switch (N->getMachineOpcode()) {
+  default:
+    return std::nullopt;
+  case NVPTX::CVT_u16_u32:
+    if (N->getConstantOperandVal(1) != NVPTX::PTXCvtMode::NONE)
+      return std::nullopt;
+    [[fallthrough]];
+  case NVPTX::I32toI16L:
+  case NVPTX::I32toI16L_Sink:
+    return 0;
+  case NVPTX::I32toI16H:
+  case NVPTX::I32toI16H_Sink:
+    return 1;
+  }
+}
+
 // Merge scalar truncations and individual vector extracts after selection, when
 // bitcasts no longer hide that they extract the same 16-bit halves.
 static void mergeI16Unpacks(SelectionDAG &DAG) {
-  struct HalfExtracts {
-    SmallVector<SDValue, 2> Low, High;
-  };
-  SmallMapVector<SDValue, HalfExtracts, 8> Extracts;
-  for (SDNode &N : DAG.allnodes()) {
-    if (!N.isMachineOpcode() || N.use_empty())
-      continue;
-    bool IsHigh = false;
-    switch (N.getMachineOpcode()) {
-    default:
-      continue;
-    case NVPTX::CVT_u16_u32:
-      if (N.getConstantOperandVal(1) != NVPTX::PTXCvtMode::NONE)
-        continue;
-      break;
-    case NVPTX::I32toI16L:
-    case NVPTX::I32toI16L_Sink:
-      break;
-    case NVPTX::I32toI16H:
-    case NVPTX::I32toI16H_Sink:
-      IsHigh = true;
-      break;
-    }
-    auto &Halves = Extracts[N.getOperand(0)];
-    (IsHigh ? Halves.High : Halves.Low).push_back(SDValue(&N, 0));
-  }
+  auto Position = DAG.allnodes_begin();
+  // Replacing extracts can CSE downstream nodes, including the next node.
+  SelectionDAG::DAGNodeDeletedListener Listener(
+      DAG, [&](SDNode *Deleted, SDNode *) {
+        if (Position == SelectionDAG::allnodes_iterator(Deleted))
+          ++Position;
+      });
 
-  SmallVector<SDValue, 8> From, To;
-  for (auto &[Word, Halves] : Extracts) {
-    if (Halves.Low.empty() || Halves.High.empty())
+  bool Changed = false;
+  while (Position != DAG.allnodes_end()) {
+    SDNode *N = &*Position++;
+    if (!getI16ExtractIndex(N))
       continue;
-    SDNode *Scatter = DAG.getMachineNode(
-        NVPTX::I32toV2I16, SDLoc(Halves.Low.front()), MVT::i16, MVT::i16, Word);
-    // All these selected instructions use B16 registers, including extracts
-    // whose DAG result types are f16 or bf16.
-    for (SDValue V : Halves.Low) {
-      From.push_back(V);
-      To.push_back(SDValue(Scatter, 0));
+    SDValue Word = N->getOperand(0);
+    SmallVector<SDValue, 2> Halves[2];
+    for (SDNode *User : Word->users()) {
+      std::optional<unsigned> Index = getI16ExtractIndex(User);
+      if (Index && User->getOperand(0) == Word)
+        Halves[*Index].emplace_back(User, 0);
     }
-    for (SDValue V : Halves.High) {
-      From.push_back(V);
-      To.push_back(SDValue(Scatter, 1));
-    }
+    if (Halves[0].empty() || Halves[1].empty())
+      continue;
+
+    SDNode *Scatter = DAG.getMachineNode(NVPTX::I32toV2I16, SDLoc(N), MVT::i16,
+                                         MVT::i16, Word);
+    for (unsigned Index : {0u, 1u})
+      for (SDValue V : Halves[Index])
+        DAG.ReplaceAllUsesOfValueWith(V, SDValue(Scatter, Index));
+    Changed = true;
   }
-  if (!From.empty()) {
-    // Replace together so that recursive CSE cannot invalidate pending nodes.
-    DAG.ReplaceAllUsesOfValuesWith(From.data(), To.data(), From.size());
+  if (Changed)
     DAG.RemoveDeadNodes();
-  }
 }
 
 void NVPTXDAGToDAGISel::PostprocessISelDAG() { mergeI16Unpacks(*CurDAG); }
