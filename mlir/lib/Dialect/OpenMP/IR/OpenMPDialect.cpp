@@ -3291,9 +3291,8 @@ static void getPrivatisationEffects(
     auto privatiser =
         SymbolTable::lookupNearestSymbolFrom<PrivateClauseOp>(op, privateSym);
     // RecursiveMemoryEffects only covers regions nested in the directive, not
-    // symbol-referenced regions, user defined types have arbitrary recipe
-    // bodies. Default to a conservative model of read and write to arbitrary
-    // memory.
+    // symbol-referenced regions, user defined types have arbitrary recipe bodies.
+    // Default to a conservative model of read and write to arbitrary memory.
     if (!privatiser || !areRegionsMemoryEffectFree(privatiser)) {
       effects.emplace_back(MemoryEffects::Read::get());
       effects.emplace_back(MemoryEffects::Write::get());
@@ -3301,27 +3300,29 @@ static void getPrivatisationEffects(
   }
 }
 
-template <typename OpType>
-static void
-getLastprivateEffects(OpType op,
-                      SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  auto iface = cast<BlockArgOpenMPOpInterface>(op.getOperation());
-  // We cannot determine if the variable is lastprivate, so assume all private
-  // variables are.
-  for (auto entry : llvm::zip_equal(op.getPrivateVarsMutable(),
-                                    iface.getPrivateBlockArgs())) {
+void SectionsOp::getEffects(
+    llvm::SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  // TODO: Nowait does not eliminate an implicit barrier if the reduction clause
+  // is also present
+  if (!getNowait() || (!getReductionVarsMutable().empty() && getNowait())) {
+    effects.emplace_back(MemoryEffects::Read::get());
+    effects.emplace_back(MemoryEffects::Write::get());
+  }
+
+  getPrivatisationEffects(*this, effects);
+  auto iface = cast<BlockArgOpenMPOpInterface>(getOperation());
+  // We cannot determine if the variable is lastprivate, so assume all privates
+  // are.
+  for (auto entry :
+       llvm::zip_equal(getPrivateVarsMutable(), iface.getPrivateBlockArgs())) {
     effects.emplace_back(MemoryEffects::Read::get(), std::get<1>(entry));
     effects.emplace_back(MemoryEffects::Write::get(), &std::get<0>(entry));
   }
-}
 
-/// Model accumulator initialisation and destruction and referenced recipes for
-/// a reduction clause.
-static void
-getReductionEffects(Operation *op, MutableOperandRange reductionVars,
-                    ArrayRef<BlockArgument> reductionArgs,
-                    std::optional<ArrayAttr> reductionSyms,
-                    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  Block::BlockArgListType reductionArgs = iface.getReductionBlockArgs();
+  MutableOperandRange reductionVars = getReductionVarsMutable();
+
   for (auto entry : llvm::zip_equal(reductionVars, reductionArgs)) {
     OpOperand &original = std::get<0>(entry);
     BlockArgument privateAccumulator = std::get<1>(entry);
@@ -3330,16 +3331,15 @@ getReductionEffects(Operation *op, MutableOperandRange reductionVars,
     effects.emplace_back(MemoryEffects::Free::get(), privateAccumulator);
 
     effects.emplace_back(MemoryEffects::Read::get(), privateAccumulator);
-    effects.emplace_back(MemoryEffects::Write::get(), privateAccumulator);
 
     effects.emplace_back(MemoryEffects::Read::get(), &original);
     effects.emplace_back(MemoryEffects::Write::get(), &original);
   }
 
-  if (reductionSyms) {
+  if (auto reductionSyms = getReductionSyms()) {
     for (Attribute attr : *reductionSyms) {
       auto recipe = SymbolTable::lookupNearestSymbolFrom<DeclareReductionOp>(
-          op, cast<SymbolRefAttr>(attr));
+          *this, cast<SymbolRefAttr>(attr));
       if (recipe && areRegionsMemoryEffectFree(recipe))
         continue;
       // RecursiveMemoryEffects only covers operations nested in this directive.
@@ -3350,36 +3350,6 @@ getReductionEffects(Operation *op, MutableOperandRange reductionVars,
       break;
     }
   }
-}
-
-static void getBarrierEffects(
-    llvm::SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-        &effects) {
-  effects.emplace_back(MemoryEffects::Read::get(),
-                       ThreadprivateRuntimeResource::get());
-  effects.emplace_back(MemoryEffects::Write::get(),
-                       ThreadprivateRuntimeResource::get());
-}
-
-void SectionsOp::getEffects(
-    llvm::SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-        &effects) {
-  // The presence of the nowait clause eliminates the implicit barrier at the
-  // end of a sections construct
-  // TODO: Presence of a nowait clause does not currently eliminate an implicit
-  // barrier if the reduction clause is also present (when it should), so we
-  // keep the barrier.
-  if (!getNowait() || (!getReductionVarsMutable().empty() && getNowait())) {
-    getBarrierEffects(effects);
-  }
-
-  getPrivatisationEffects(*this, effects);
-  getLastprivateEffects(*this, effects);
-
-  auto iface = cast<BlockArgOpenMPOpInterface>(getOperation());
-  getReductionEffects(*this, getReductionVarsMutable(),
-                      iface.getReductionBlockArgs(), getReductionSyms(),
-                      effects);
 }
 
 //===----------------------------------------------------------------------===//
