@@ -721,6 +721,7 @@ bool VPInstruction::doesGenerateSingleScalar() const {
   switch (Opcode) {
   case Instruction::Freeze:
   case Instruction::ICmp:
+  case Instruction::FCmp:
   case Instruction::PHI:
   case Instruction::Select:
   case VPInstruction::BranchOnCond:
