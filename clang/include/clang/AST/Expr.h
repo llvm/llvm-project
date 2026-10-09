@@ -1095,8 +1095,8 @@ public:
 /// Describes the kind of result that can be tail-allocated.
 enum class ConstantResultStorageKind { None, Int64, APValue };
 
-/// ConstantExpr - An expression that occurs in a constant context and
-/// optionally the result of evaluating the expression.
+/// An expression that occurs in a constant context and
+/// the result of evaluating the expression.
 class ConstantExpr final
     : public FullExpr,
       private llvm::TrailingObjects<ConstantExpr, APValue, uint64_t> {

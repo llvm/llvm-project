@@ -7658,8 +7658,6 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
               << Init->getSourceBitField();
           return ExprError();
         }
-
-        ILE->setInit(i, ConstantExpr::Create(Context, Init));
       }
 
   auto *E = new (Context) CompoundLiteralExpr(LParenLoc, TInfo, literalType, VK,
@@ -18282,12 +18280,14 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
   // Circumvent ICE checking in C++11 to avoid evaluating the expression twice
   // in the non-ICE case.
   if (!getLangOpts().CPlusPlus11 && E->isIntegerConstantExpr(Context)) {
+
+    if (!Result)
+      return E;
+
     SmallVector<PartialDiagnosticAt, 8> Notes;
-    if (Result)
-      *Result = E->EvaluateKnownConstIntCheckOverflow(Context, &Notes);
+    *Result = E->EvaluateKnownConstIntCheckOverflow(Context, &Notes);
     if (!isa<ConstantExpr>(E))
-      E = Result ? ConstantExpr::Create(Context, E, APValue(*Result))
-                 : ConstantExpr::Create(Context, E);
+      E = ConstantExpr::Create(Context, E, APValue(*Result));
 
     if (Notes.empty())
       return E;
@@ -18330,7 +18330,7 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
       EvalResult.Val.isInt() && !EvalResult.HasSideEffects &&
       (!getLangOpts().CPlusPlus || !EvalResult.HasUndefinedBehavior);
 
-  if (!isa<ConstantExpr>(E))
+  if (Folded && !isa<ConstantExpr>(E))
     E = ConstantExpr::Create(Context, E, EvalResult.Val);
 
   // For -fms-compatibility mode we relax some requirements

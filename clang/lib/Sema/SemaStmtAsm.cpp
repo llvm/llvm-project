@@ -262,7 +262,7 @@ ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel) {
 
   ConstantExpr *Res = ConstantExpr::Create(getASTContext(), Expr,
                                            ConstantResultStorageKind::APValue);
-  Res->SetResult(V, getASTContext());
+  Res->MoveIntoResult(V, getASTContext());
   return Res;
 }
 
