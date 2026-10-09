@@ -1311,6 +1311,16 @@ void Writer::buildFixupChains() {
   constexpr uint32_t stride = 4; // for DYLD_CHAINED_PTR_64
 
   for (size_t i = 0, count = loc.size(); i < count;) {
+    // The distance between consecutive fixups can't show that the first fixup
+    // on a page is unaligned, so check each page's first fixup directly.
+    if (loc[i].offset % stride != 0) {
+      error(loc[i].isec->getSegName() + "," + loc[i].isec->getName() +
+            ", offset " +
+            Twine(loc[i].offset - loc[i].isec->parent->getSegmentOffset()) +
+            ": fixup is unaligned (its address is not a multiple of the "
+            "stride). Re-link with -no_fixup_chains");
+      return;
+    }
     const OutputSegment *oseg = loc[i].isec->parent->parent;
     uint8_t *buf = buffer->getBufferStart() + oseg->fileOff;
     uint64_t pageIdx = loc[i].offset / pageSize;
