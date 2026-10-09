@@ -6,7 +6,8 @@ define void @sext_i16_uitofp_float(ptr %a, ptr %fo) {
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[FO:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[A]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <4 x i16> [[TMP1]] to <4 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = uitofp <4 x i32> [[TMP2]] to <4 x float>
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i32> [[TMP2]] to <4 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = uitofp <4 x i64> [[TMP3]] to <4 x float>
 ; CHECK-NEXT:    store <4 x float> [[TMP4]], ptr [[FO]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -43,7 +44,8 @@ define void @shared_sext_uitofp_sitofp(ptr %a, ptr %fo) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[TMP2]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext <4 x i32> [[TMP3]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i64> [[TMP4]], splat (i64 2)
-; CHECK-NEXT:    [[TMP7:%.*]] = uitofp <4 x i32> [[TMP3]] to <4 x float>
+; CHECK-NEXT:    [[TMP6:%.*]] = sext <4 x i32> [[TMP3]] to <4 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = uitofp <4 x i64> [[TMP6]] to <4 x float>
 ; CHECK-NEXT:    [[TMP8:%.*]] = sitofp <4 x i64> [[TMP5]] to <4 x float>
 ; CHECK-NEXT:    [[TMP9:%.*]] = fadd <4 x float> [[TMP7]], [[TMP8]]
 ; CHECK-NEXT:    store <4 x float> [[TMP9]], ptr [[FO]], align 4
