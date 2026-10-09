@@ -2753,6 +2753,18 @@ public:
   //                         OpenMP Emission
   //===--------------------------------------------------------------------===//
 public:
+  /// The enclosing omp.target's host-evaluated loop bounds -- a normalized
+  /// [0, tripCount) range matching emitOMPLoopNest's convention -- forwarded
+  /// as host_eval block arguments and consumed once by the nested
+  /// omp.wsloop.
+  struct OMPHostEvalBounds {
+    mlir::Value zero;
+    mlir::Value tripCount;
+    mlir::Value one;
+    bool applied = false;
+  };
+  std::optional<OMPHostEvalBounds> ompHostEvalBounds;
+
   mlir::LogicalResult emitOMPScopeDirective(const OMPScopeDirective &s);
   mlir::LogicalResult emitOMPErrorDirective(const OMPErrorDirective &s);
   mlir::LogicalResult emitOMPParallelDirective(const OMPParallelDirective &s);
