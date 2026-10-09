@@ -6908,6 +6908,8 @@ bool Sema::BuiltinAssumeAligned(CallExpr *TheCall) {
       Diag(TheCall->getBeginLoc(), diag::warn_assume_aligned_too_great)
           << SecondArg->getSourceRange() << Sema::MaximumAlignment;
 
+    SecondArg = DefaultLvalueConversion(SecondArg).get();
+
     TheCall->setArg(1,
                     ConstantExpr::Create(Context, SecondArg, APValue(Result)));
   }
