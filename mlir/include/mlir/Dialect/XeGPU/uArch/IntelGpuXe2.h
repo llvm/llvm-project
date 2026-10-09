@@ -39,11 +39,35 @@ struct Xe2 : public uArch {
 //===----------------------------------------------------------------------===//
 
 namespace detail {
+// Restrictions Xe2 places on the 2D memory region accessed by the subgroup 2D
+// block load / store / prefetch instructions.
+//
+// These are the hardware requirements as implemented by the Intel Graphics
+// Compiler, and may differ from the restrictions documented for the Khronos
+// extension that the XeVM lowering emits calls to. That extension only states
+// that behavior is undefined when its restrictions are not met; it does not
+// require an implementation to reject such cases, so the compiler is free to
+// support them.
+//
+// The base address must be cache-line (64 byte) aligned. The base width must be
+// at least 32 bytes and a multiple of 4 bytes. The base pitch must be at least
+// 32 bytes and a multiple of 16 bytes.
+inline constexpr BlockIOMemoryRestrictions kXe2BlockIORestrictions = {
+    /*baseAddressAlignmentBytes=*/64,
+    /*minBaseWidthBytes=*/32,
+    /*baseWidthAlignmentBytes=*/4,
+    /*minBasePitchBytes=*/32,
+    /*basePitchAlignmentBytes=*/16,
+};
+
 inline llvm::ArrayRef<const Instruction *> getXe2InstructionRegistry() {
   static const SubgroupMatrixMultiplyAcc dpasInst{16, 32};
-  static const Subgroup2DBlockLoadInstruction loadNdInst;
-  static const Subgroup2DBlockStoreInstruction storeNdInst;
-  static const Subgroup2DBlockPrefetchInstruction prefetchNdInst;
+  static const Subgroup2DBlockLoadInstruction loadNdInst{
+      kXe2BlockIORestrictions};
+  static const Subgroup2DBlockStoreInstruction storeNdInst{
+      kXe2BlockIORestrictions};
+  static const Subgroup2DBlockPrefetchInstruction prefetchNdInst{
+      kXe2BlockIORestrictions};
   static const StoreScatterInstruction storeScatterInst;
   static const LoadGatherInstruction loadGatherInst;
   static const Instruction *arr[] = {&dpasInst,         &loadNdInst,

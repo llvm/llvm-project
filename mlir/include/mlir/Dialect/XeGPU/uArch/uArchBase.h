@@ -95,9 +95,10 @@ struct uArch {
     PVC = Xe2_First,
     BMG,
     Xe2_Last = BMG,
-    Xe3_First,
-    CRI = Xe3_First,
-    Xe3_Last = CRI
+    // Xe3p family
+    Xe3p_First,
+    CRI = Xe3p_First,
+    Xe3p_Last = CRI
   };
 
   // Constructor
@@ -160,14 +161,44 @@ struct MMAInstructionInterface {
   virtual ~MMAInstructionInterface() = default;
 };
 
+// Restrictions on the 2D memory region that a subgroup 2D block instruction may
+// access. These constrain the memory operand rather than the block shape.
+//
+// Unlike the supported block shapes, none of these limits are common across
+// architectures, so only the layout is defined here; the values are supplied by
+// the concrete uArch, see IntelGpuXe2.h and IntelGpuXe3p.h. All quantities are
+// in bytes.
+struct BlockIOMemoryRestrictions {
+  // Required alignment of the base address of the 2D region.
+  int32_t baseAddressAlignmentBytes;
+  // Minimum size of the base width, i.e. the number of bytes in one row of the
+  // 2D region.
+  int32_t minBaseWidthBytes;
+  // Required alignment of the base width.
+  int32_t baseWidthAlignmentBytes;
+  // Minimum size of the base pitch, i.e. the number of bytes between the start
+  // of two consecutive rows of the 2D region.
+  int32_t minBasePitchBytes;
+  // Required alignment of the base pitch. The pitch must additionally be no
+  // smaller than the base width.
+  int32_t basePitchAlignmentBytes;
+};
+
 // Interface for subgroup-level 2D block instructions (load / store / prefetch).
 // All three describe the set of hardware-supported block shapes via
 // (width, height, count) tuples and share a packed-format bit size. The
 // transform / transpose / upConv flags are only meaningful for loads; store
 // and prefetch implementations ignore them.
+//
+// The supported block shapes come from the Khronos extensions and are shared by
+// all architectures, so they are defined here. The restrictions on the
+// underlying 2D memory region are architecture specific and are therefore
+// injected by the concrete uArch via `memoryRestrictions`.
 struct BlockIOInstructionInterface : public Instruction {
-  BlockIOInstructionInterface(InstructionKind kind)
-      : Instruction(kind, InstructionScope::Subgroup) {}
+  BlockIOInstructionInterface(InstructionKind kind,
+                              const BlockIOMemoryRestrictions &restrictions)
+      : Instruction(kind, InstructionScope::Subgroup),
+        memoryRestrictions(restrictions) {}
 
   static bool classof(const Instruction *B) {
     InstructionKind kind = B->getInstructionKind();
@@ -191,12 +222,21 @@ struct BlockIOInstructionInterface : public Instruction {
 
   // Bit size of the packed format used by this block instruction.
   virtual int32_t getPackedFormatBitSize() const = 0;
+
+  // Restrictions on the base address / width / pitch of the 2D memory region
+  // accessed by this instruction.
+  const BlockIOMemoryRestrictions &getMemoryRestrictions() const {
+    return memoryRestrictions;
+  }
+
   virtual ~BlockIOInstructionInterface() = default;
 
 protected:
   virtual std::optional<BlockShapes>
   computeBlockWidthHeightCount(Type elemTy, bool hasTransform,
                                bool hasTranspose, bool upConv) const = 0;
+
+  const BlockIOMemoryRestrictions memoryRestrictions;
 };
 
 //===----------------------------------------------------------------------===//
@@ -240,8 +280,10 @@ struct StoreScatterInstruction
 //===----------------------------------------------------------------------===//
 
 struct Subgroup2DBlockStoreInstruction : public BlockIOInstructionInterface {
-  Subgroup2DBlockStoreInstruction()
-      : BlockIOInstructionInterface(InstructionKind::Subgroup2DBlockStore) {}
+  Subgroup2DBlockStoreInstruction(
+      const BlockIOMemoryRestrictions &memoryRestrictions)
+      : BlockIOInstructionInterface(InstructionKind::Subgroup2DBlockStore,
+                                    memoryRestrictions) {}
   static bool classof(const Instruction *B) {
     return B->getInstructionKind() == InstructionKind::Subgroup2DBlockStore;
   }
@@ -268,8 +310,10 @@ protected:
 };
 
 struct Subgroup2DBlockLoadInstruction : public BlockIOInstructionInterface {
-  Subgroup2DBlockLoadInstruction()
-      : BlockIOInstructionInterface(InstructionKind::Subgroup2DBlockLoad) {}
+  Subgroup2DBlockLoadInstruction(
+      const BlockIOMemoryRestrictions &memoryRestrictions)
+      : BlockIOInstructionInterface(InstructionKind::Subgroup2DBlockLoad,
+                                    memoryRestrictions) {}
   static bool classof(const Instruction *B) {
     return B->getInstructionKind() == InstructionKind::Subgroup2DBlockLoad;
   }
@@ -331,8 +375,10 @@ protected:
 };
 
 struct Subgroup2DBlockPrefetchInstruction : public BlockIOInstructionInterface {
-  Subgroup2DBlockPrefetchInstruction()
-      : BlockIOInstructionInterface(InstructionKind::Subgroup2DBlockPrefetch) {}
+  Subgroup2DBlockPrefetchInstruction(
+      const BlockIOMemoryRestrictions &memoryRestrictions)
+      : BlockIOInstructionInterface(InstructionKind::Subgroup2DBlockPrefetch,
+                                    memoryRestrictions) {}
   static bool classof(const Instruction *B) {
     return B->getInstructionKind() == InstructionKind::Subgroup2DBlockPrefetch;
   }
