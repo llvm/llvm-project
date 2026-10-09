@@ -1296,6 +1296,25 @@ Instruction *InstCombinerImpl::foldICmpWithZero(ICmpInst &Cmp) {
     // will fold to a constant elsewhere.
   }
 
+  // (icmp eq/ne (or (add X, Y), Y), 0) -> (icmp eq/ne (or X, Y), 0)
+  // Because or(A, B) == 0 iff A == 0 and B == 0, and (X + Y) == 0 and Y == 0
+  // iff X == 0 and Y == 0, the zero-test is preserved.
+  if (ICmpInst::isEquality(Pred)) {
+    Value *OrOp0, *OrOp1;
+    if (match(Cmp.getOperand(0), m_c_Or(m_Value(OrOp0), m_Value(OrOp1)))) {
+      Value *X, *Y;
+      // Check if one operand is add(X, Y) and the other is Y
+      if (match(OrOp0, m_Add(m_Value(X), m_Value(Y))) && Y == OrOp1) {
+        Value *NewOr = Builder.CreateOr(X, Y);
+        return new ICmpInst(Pred, NewOr, Cmp.getOperand(1));
+      }
+      if (match(OrOp1, m_Add(m_Value(X), m_Value(Y))) && Y == OrOp0) {
+        Value *NewOr = Builder.CreateOr(X, Y);
+        return new ICmpInst(Pred, NewOr, Cmp.getOperand(1));
+      }
+    }
+  }
+
   // (icmp eq/ne f(X), 0) -> (icmp eq/ne X, 0)
   // where f(X) == 0 if and only if X == 0
   if (ICmpInst::isEquality(Pred))
