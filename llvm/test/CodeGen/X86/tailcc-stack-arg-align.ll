@@ -18,7 +18,7 @@ define internal tailcc void @callee_i128(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e,
 define void @call_i128() nounwind {
 ; CHECK-LABEL: call_i128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $40, %rsp
+; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    movq $0, 16(%rsp)
 ; CHECK-NEXT:    movq $0, 8(%rsp)
 ; CHECK-NEXT:    movq $6, (%rsp)
@@ -45,7 +45,7 @@ define internal tailcc void @callee_v4f32(<4 x float> %v0, <4 x float> %v1, <4 x
 define void @call_v4f32() nounwind {
 ; CHECK-LABEL: call_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $40, %rsp
+; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    movaps %xmm0, (%rsp)
 ; CHECK-NEXT:    movq $0, 16(%rsp)
@@ -75,11 +75,11 @@ declare tailcc ptr @callee_i128_ptr(ptr, ptr, ptr, ptr, ptr, ptr, i128, ptr)
 define tailcc ptr @musttail_i128(ptr %p) nounwind {
 ; CHECK-LABEL: musttail_i128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $32, %rsp
+; CHECK-NEXT:    subq $16, %rsp
+; CHECK-NEXT:    movq %rdi, 24(%rsp)
+; CHECK-NEXT:    movq 16(%rsp), %rax
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    movaps %xmm0, 8(%rsp)
-; CHECK-NEXT:    movq %rdi, 24(%rsp)
-; CHECK-NEXT:    movq 32(%rsp), %rax
 ; CHECK-NEXT:    movq %rax, (%rsp)
 ; CHECK-NEXT:    movq %rdi, %rsi
 ; CHECK-NEXT:    movq %rdi, %rdx
