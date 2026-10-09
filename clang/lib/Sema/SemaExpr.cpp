@@ -16837,12 +16837,13 @@ void Sema::ActOnStmtExprError() {
 }
 
 ExprResult Sema::ActOnStmtExpr(Scope *S, SourceLocation LPLoc, Stmt *SubStmt,
-                               SourceLocation RPLoc) {
-  return BuildStmtExpr(LPLoc, SubStmt, RPLoc, getTemplateDepth(S));
+                               SourceLocation RPLoc, bool HasResult) {
+  return BuildStmtExpr(LPLoc, SubStmt, RPLoc, getTemplateDepth(S), HasResult);
 }
 
 ExprResult Sema::BuildStmtExpr(SourceLocation LPLoc, Stmt *SubStmt,
-                               SourceLocation RPLoc, unsigned TemplateDepth) {
+                               SourceLocation RPLoc, unsigned TemplateDepth,
+                               bool HasResult) {
   assert(SubStmt && isa<CompoundStmt>(SubStmt) && "Invalid action invocation!");
   CompoundStmt *Compound = cast<CompoundStmt>(SubStmt);
 
@@ -16860,7 +16861,7 @@ ExprResult Sema::BuildStmtExpr(SourceLocation LPLoc, Stmt *SubStmt,
   // as the type of the stmtexpr.
   QualType Ty = Context.VoidTy;
   bool StmtExprMayBindToTemp = false;
-  if (!Compound->body_empty()) {
+  if (HasResult && !Compound->body_empty()) {
     if (const auto *LastStmt = dyn_cast<ValueStmt>(Compound->body_back())) {
       if (const Expr *Value = LastStmt->getExprStmt()) {
         StmtExprMayBindToTemp = true;
