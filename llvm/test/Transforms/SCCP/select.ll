@@ -67,6 +67,31 @@ f:
   ret i1 %rf
 }
 
+define i1 @f3_variable_operand(i1 %c, i64 %a) {
+; CHECK-LABEL: define i1 @f3_variable_operand(
+; CHECK-SAME: i1 [[C:%.*]], i64 [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i64 [[A]], i64 1
+; CHECK-NEXT:    br i1 [[C]], label %[[T:.*]], label %[[F:.*]]
+; CHECK:       [[T]]:
+; CHECK-NEXT:    [[RT:%.*]] = icmp eq i64 [[S]], [[A]]
+; CHECK-NEXT:    ret i1 [[RT]]
+; CHECK:       [[F]]:
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %s = select i1 %c, i64 %a, i64 1
+  br i1 %c, label %t, label %f
+
+t:
+  %rt = icmp eq i64 %s, %a
+  ret i1 %rt
+
+f:
+  %rf = icmp eq i64 %s, 1
+  ret i1 %rf
+}
+
 define i1 @f3_cond_and(i1 %c, i1 %d) {
 ; CHECK-LABEL: define i1 @f3_cond_and(
 ; CHECK-SAME: i1 [[C:%.*]], i1 [[D:%.*]]) {
