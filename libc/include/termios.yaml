@@ -95,4 +95,10 @@ functions:
     arguments:
       - type: int
       - type: struct winsize *
-
+  - name: tcsetwinsize
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: int
+      - type: const struct winsize *
