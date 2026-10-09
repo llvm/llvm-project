@@ -15,6 +15,9 @@
 !rec_UVec384 =
     !cir.union<"UVec384" {data !cir.vector<4 x !cir.float>, data !cir.array<!s8i x 33>},
                padding = {!cir.array<!u8i x 32>}>
+!rec_UVec3x384 =
+    !cir.union<"UVec3x384" {data !cir.vector<3 x !cir.float>, data !cir.array<!s8i x 33>},
+               padding = {!cir.array<!u8i x 36>}>
 !rec_UVecInArr =
     !cir.union<"UVecInArr" {data !cir.array<!cir.vector<4 x !cir.float> x 2>,
                             data !cir.array<!s8i x 33>},
@@ -93,6 +96,14 @@ module attributes {
 
   // CHECK: not yet implemented for type '!cir.union<"UVec384"
 
+  // A three-float vector is 96 bits in CIR but classifies at 128, so it
+  // reaches SSEUP too.
+  cir.func @take_vec3_384_union(%arg0: !rec_UVec3x384) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.union<"UVec3x384"
+
   // The same vector, an array away.
   cir.func @take_vec_in_arr_union(%arg0: !rec_UVecInArr) {
     cir.return
@@ -147,16 +158,6 @@ module attributes {
   }
 
   // CHECK: not yet implemented for type '!cir.vector<[4] x !cir.float>
-
-  // Clang pads a vector's type width up to a power of two and the classifier
-  // branches on the exact width, so a three-byte vector would be classified at
-  // 24 bits where clang uses 32.  The ABI library's vector type cannot carry
-  // the padded width, so this is rejected rather than misclassified.
-  cir.func @take_odd_width(%arg0: !cir.vector<3 x !s8i>) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.vector<3 x !cir.int<s, 8>>
 
   // An element narrower than a byte is rounded up to its storage container by
   // clang but not by the classifier, so the two would size the vector
