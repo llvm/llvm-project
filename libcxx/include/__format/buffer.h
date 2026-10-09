@@ -308,8 +308,8 @@ public:
       __prepare_write(0);
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_t __capacity() const { return __capacity_; }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_t __size() const { return __size_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr size_t __capacity() const { return __capacity_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr size_t __size() const { return __size_; }
 
 private:
   _CharT* __ptr_;
@@ -374,12 +374,12 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __allocating_buffer(__max_output_size* __max_output_size)
       : __output_buffer<_CharT>{__small_buffer_, __buffer_size_, __prepare_write, __max_output_size} {}
 
-  _LIBCPP_HIDE_FROM_ABI ~__allocating_buffer() {
+  _LIBCPP_HIDE_FROM_ABI constexpr ~__allocating_buffer() {
     if (__ptr_ != __small_buffer_)
       _Alloc{}.deallocate(__ptr_, this->__capacity());
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI basic_string_view<_CharT> __view() { return {__ptr_, this->__size()}; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view<_CharT> __view() { return {__ptr_, this->__size()}; }
 
 private:
   using _Alloc _LIBCPP_NODEBUG = allocator<_CharT>;
@@ -426,8 +426,8 @@ public:
       : __direct_iterator_buffer{__out_it, nullptr} {}
 
   [[nodiscard]]
-  _LIBCPP_HIDE_FROM_ABI explicit constexpr 
-  __direct_iterator_buffer(_OutIt __out_it, __max_output_size* __max_output_size)
+  _LIBCPP_HIDE_FROM_ABI explicit constexpr __direct_iterator_buffer(
+      _OutIt __out_it, __max_output_size* __max_output_size)
       : __output_buffer<_CharT>{std::__unwrap_iter(__out_it), __buffer_size, __prepare_write, __max_output_size},
         __out_it_(__out_it) {}
 
@@ -456,7 +456,8 @@ public:
       : __container_inserter_buffer{__out_it, nullptr} {}
 
   [[nodiscard]]
-  _LIBCPP_HIDE_FROM_ABI explicit constexpr __container_inserter_buffer(_OutIt __out_it, __max_output_size* __max_output_size)
+  _LIBCPP_HIDE_FROM_ABI explicit constexpr __container_inserter_buffer(
+      _OutIt __out_it, __max_output_size* __max_output_size)
       : __output_buffer<_CharT>{__small_buffer_, __buffer_size, __prepare_write, __max_output_size},
         __container_{__out_it.__get_container()} {}
 
@@ -633,7 +634,7 @@ public:
     __capacity_   = __result.count;
   }
 
-  _LIBCPP_HIDE_FROM_ABI ~__retarget_buffer() {
+  _LIBCPP_HIDE_FROM_ABI constexpr ~__retarget_buffer() {
     std::destroy_n(__ptr_, __size_);
     allocator_traits<_Alloc>::deallocate(__alloc_, __ptr_, __capacity_);
   }
