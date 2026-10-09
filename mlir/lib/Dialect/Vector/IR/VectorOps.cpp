@@ -7113,16 +7113,14 @@ public:
 
     if (createMaskOp) {
       auto maskOperands = createMaskOp.getOperands();
-      size_t numOperands = maskOperands.size();
 
-      auto maskOperandsToDrop =
-          (Side == UnitDimSide::Trailing)
-              ? maskOperands.take_back(numOperands - numDimsToDrop)
-              : maskOperands.take_front(numOperands - numDimsToDrop);
+      auto maskOperandsToDrop = (Side == UnitDimSide::Trailing)
+                                    ? maskOperands.take_back(numDimsToDrop)
+                                    : maskOperands.take_front(numDimsToDrop);
 
       // Check that every mask-dim-size to-be-dropped is constant and == 1. We
       // could also check for == 0, but that's left as a TODO.
-      if (llvm::all_of(maskOperandsToDrop, [](Value maskDim) {
+      if (llvm::any_of(maskOperandsToDrop, [](Value maskDim) {
             auto cst = maskDim.getDefiningOp<arith::ConstantIndexOp>();
             return !cst || (cst.value() != 1);
           }))
@@ -7138,12 +7136,11 @@ public:
 
     if (constantMaskOp) {
       auto maskDimSizes = constantMaskOp.getMaskDimSizes();
-      size_t numDims = maskDimSizes.size();
 
       ArrayRef<int64_t> maskDimSizesToDrop =
           (Side == UnitDimSide::Trailing)
-              ? maskDimSizes.take_back(numDims - numDimsToDrop)
-              : maskDimSizes.take_front(numDims - numDimsToDrop);
+              ? maskDimSizes.take_back(numDimsToDrop)
+              : maskDimSizes.take_front(numDimsToDrop);
 
       // Check that every mask-dim-size to-be-dropped is constant and == 1. We
       // could also check for == 0, but that's left as a TODO.

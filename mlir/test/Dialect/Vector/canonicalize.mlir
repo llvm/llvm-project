@@ -3595,6 +3595,23 @@ func.func @fold_shape_cast_with_mask_trailing_unit(%arg0: tensor<1x?xf32>) -> ve
 
 // -----
 
+// CHECK-LABEL:   func.func @fold_shape_cast_with_mask_trailing_unit_dynamic(
+// CHECK-SAME:     %[[N:.*]]: index) -> vector<8xi1> {
+func.func @fold_shape_cast_with_mask_trailing_unit_dynamic(%n: index) -> vector<8xi1> {
+// CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG: %[[C8:.*]] = arith.constant 8 : index
+// CHECK:     %[[MASK:.*]] = vector.create_mask %[[C8]], %[[N]], %[[C1]] : vector<8x1x1xi1>
+// CHECK:     %[[CAST:.*]] = vector.shape_cast %[[MASK]] : vector<8x1x1xi1> to vector<8xi1>
+// CHECK:     return %[[CAST]] : vector<8xi1>
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+  %mask = vector.create_mask %c8, %n, %c1 : vector<8x1x1xi1>
+  %cast = vector.shape_cast %mask : vector<8x1x1xi1> to vector<8xi1>
+  return %cast : vector<8xi1>
+}
+
+// -----
+
 // CHECK-LABEL:   func.func @fold_shape_cast_with_mask_trailing_unit_scalable(
 // CHECK-SAME:    %[[VAL_0:.*]]: tensor<1x?xf32>) -> vector<1x[4]xi1> {
 func.func @fold_shape_cast_with_mask_trailing_unit_scalable(%arg0: tensor<1x?xf32>) -> vector<1x[4]xi1> {
@@ -3658,6 +3675,40 @@ func.func @fold_shape_cast_with_mask_leading_unit(%arg0: tensor<1x?xf32>) -> vec
   %1 = vector.create_mask %c1, %c1, %dim, %c1 : vector<1x1x4x1xi1>
   %2 = vector.shape_cast %1 : vector<1x1x4x1xi1> to vector<4x1xi1>
   return %2 : vector<4x1xi1>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @fold_shape_cast_with_mask_leading_unit_dynamic(
+// CHECK-SAME:     %[[N:.*]]: index) -> vector<8xi1> {
+func.func @fold_shape_cast_with_mask_leading_unit_dynamic(%n: index) -> vector<8xi1> {
+// CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG: %[[C8:.*]] = arith.constant 8 : index
+// CHECK:     %[[MASK:.*]] = vector.create_mask %[[C1]], %[[N]], %[[C8]] : vector<1x1x8xi1>
+// CHECK:     %[[CAST:.*]] = vector.shape_cast %[[MASK]] : vector<1x1x8xi1> to vector<8xi1>
+// CHECK:     return %[[CAST]] : vector<8xi1>
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+  %mask = vector.create_mask %c1, %n, %c8 : vector<1x1x8xi1>
+  %cast = vector.shape_cast %mask : vector<1x1x8xi1> to vector<8xi1>
+  return %cast : vector<8xi1>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @fold_shape_cast_with_mask_leading_unit_dynamic_mixed_bounds(
+// CHECK-SAME:     %[[N:.*]]: index, %[[M:.*]]: index) -> vector<8x4xi1> {
+func.func @fold_shape_cast_with_mask_leading_unit_dynamic_mixed_bounds(%n: index, %m: index) -> vector<8x4xi1> {
+// CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG: %[[C8:.*]] = arith.constant 8 : index
+// CHECK:     %[[MASK:.*]] = vector.create_mask %[[C1]], %[[N]], %[[C8]], %[[M]] : vector<1x1x8x4xi1>
+// CHECK:     %[[CAST:.*]] = vector.shape_cast %[[MASK]] : vector<1x1x8x4xi1> to vector<8x4xi1>
+// CHECK:     return %[[CAST]] : vector<8x4xi1>
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+  %mask = vector.create_mask %c1, %n, %c8, %m : vector<1x1x8x4xi1>
+  %cast = vector.shape_cast %mask : vector<1x1x8x4xi1> to vector<8x4xi1>
+  return %cast : vector<8x4xi1>
 }
 
 // -----
