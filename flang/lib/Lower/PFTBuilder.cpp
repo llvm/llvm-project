@@ -2825,7 +2825,8 @@ static bool isInLoopBody(const Fortran::lower::pft::Evaluation *eval,
 /// wrap's yield sits, so it lands on the boundary. An EXIT targets the
 /// construct exit, beyond the loop entirely, and does escape.
 /// Return true if control can get from where \p start branches back to \p
-/// start itself, without leaving \p loop's body.
+/// start itself, without leaving \p loop's body, and can never get from there
+/// to the end of the body.
 ///
 /// A branch closes a cycle with whatever carries control back to it, and that
 /// return path is made of ordinary statements: the one branched to simply runs
@@ -2833,10 +2834,12 @@ static bool isInLoopBody(const Fortran::lower::pft::Evaluation *eval,
 /// Following a single path would lose the way back wherever control could go
 /// more than one way, so every successor is followed.
 ///
-/// A cycle may run forever, which disqualifies the loop holding it: its
-/// structured form puts the body in an scf.execute_region carrying no memory
-/// effects, and DCE deletes such a region outright. Whether the cycle can be
-/// left is not checked, so a loop that does terminate is rejected as well.
+/// A cycle that cannot be left runs forever, which disqualifies the loop
+/// holding it: its structured form puts the body in an scf.execute_region
+/// carrying no memory effects, and DCE deletes such a region outright. A
+/// cycle that control can leave for the EndDoStmt keeps the region's yield
+/// reachable, so the loop qualifies: whether the cycle is actually left is up
+/// to the program, as it is for a DO WHILE.
 ///
 /// The search stays inside the body. Beyond it lies the loop's own iteration
 /// edge, from the EndDoStmt back to the DO statement, which would carry the
@@ -2880,19 +2883,29 @@ static bool startsBranchCycle(const Fortran::lower::pft::Evaluation &start,
           out.push_back(e.lexicalSuccessor);
       };
 
+  const Fortran::lower::pft::Evaluation *endDoStmt =
+      &loop.evaluationList->back();
+
   llvm::SmallVector<const Fortran::lower::pft::Evaluation *> worklist;
   successors(start, worklist);
 
+  bool closesCycle = false;
   llvm::SmallPtrSet<const Fortran::lower::pft::Evaluation *, 16> seen;
   while (!worklist.empty()) {
     const Fortran::lower::pft::Evaluation *e = worklist.pop_back_val();
-    if (e == &start)
-      return true;
+    // Reaching the end of the body means control can leave the cycle.
+    if (e == endDoStmt)
+      return false;
+    // A cycle alone is not enough: keep looking for a way out of it.
+    if (e == &start) {
+      closesCycle = true;
+      continue;
+    }
     if (!isInLoopBody(e, loop) || !seen.insert(e).second)
       continue;
     successors(*e, worklist);
   }
-  return false;
+  return closesCycle;
 }
 
 static bool isStructurableWithUnstructuredInternals(
