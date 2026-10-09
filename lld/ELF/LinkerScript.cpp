@@ -1973,6 +1973,11 @@ bool LinkerScript::shouldAddProvideSym(StringRef symName) {
   // undefined references from the RHS, the result of this function for a
   // symbol must be the same for each call. We use unusedProvideSyms to not
   // change the return value of a demoted symbol.
+  // Symbols defined with --defsym are considered defined before linker script
+  // commands are processed (GNU ld behavior), so a PROVIDE directive never
+  // defines such a symbol.
+  if (defsymSymbols.contains(symName))
+    return false;
   Symbol *sym = ctx.symtab->find(symName);
   if (!sym)
     return false;

@@ -19,6 +19,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Compiler.h"
 #include <cstddef>
 #include <cstdint>
@@ -432,6 +433,10 @@ public:
 
   // A list of symbols referenced by the script.
   SmallVector<llvm::StringRef, 0> referencedSymbols;
+
+  // Symbols defined with --defsym. GNU ld treats them as defined before linker
+  // script commands are processed, so PROVIDE directives cannot override them.
+  llvm::StringSet<> defsymSymbols;
 
   // Used to implement INSERT [AFTER|BEFORE]. Contains output sections that need
   // to be reordered.
