@@ -1918,6 +1918,12 @@ bool SIFoldOperandsImpl::tryFoldRedundantAND(MachineInstr &ChildMI) const {
   } else if (ST->zeroesHigh16BitsOfDest(ParentMI->getOpcode())) {
     // Parent instruction implicitly zeros high 16 bits.
     ParentMask = 0xffff;
+  } else if (TII->isUByteLoad(ParentMI->getOpcode())) {
+    // 8-bit load that zero-extends to 32 bits
+    ParentMask = 0xff;
+  } else if (TII->isUShortLoad(ParentMI->getOpcode())) {
+    // 16-bit load that zero-extends to 32 bits
+    ParentMask = 0xffff;
   } else {
     return false;
   }

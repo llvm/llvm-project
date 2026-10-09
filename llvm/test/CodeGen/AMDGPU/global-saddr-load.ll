@@ -3933,8 +3933,6 @@ define amdgpu_ps <2 x half> @global_load_saddr_i16_d16lo_undef_hi(ptr addrspace(
 ; GFX12-GISEL-FAKE16:       ; %bb.0:
 ; GFX12-GISEL-FAKE16-NEXT:    global_load_u16 v0, v0, s[2:3]
 ; GFX12-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-GISEL-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX12-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-FAKE16-NEXT:    v_lshl_or_b32 v0, s0, 16, v0
 ; GFX12-GISEL-FAKE16-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
@@ -3974,8 +3972,6 @@ define amdgpu_ps <2 x half> @global_load_saddr_i16_d16lo_undef_hi_immneg128(ptr 
 ; GFX12-GISEL-FAKE16:       ; %bb.0:
 ; GFX12-GISEL-FAKE16-NEXT:    global_load_u16 v0, v0, s[2:3] offset:-128
 ; GFX12-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-GISEL-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX12-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-FAKE16-NEXT:    v_lshl_or_b32 v0, s0, 16, v0
 ; GFX12-GISEL-FAKE16-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
@@ -4023,7 +4019,6 @@ define amdgpu_ps <2 x half> @global_load_saddr_i16_d16lo_zero_hi(ptr addrspace(1
 ; GFX12-GISEL-FAKE16:       ; %bb.0:
 ; GFX12-GISEL-FAKE16-NEXT:    global_load_u16 v0, v0, s[2:3]
 ; GFX12-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-GISEL-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX12-GISEL-FAKE16-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -4069,7 +4064,6 @@ define amdgpu_ps <2 x half> @global_load_saddr_i16_d16lo_zero_hi_immneg128(ptr a
 ; GFX12-GISEL-FAKE16:       ; %bb.0:
 ; GFX12-GISEL-FAKE16-NEXT:    global_load_u16 v0, v0, s[2:3] offset:-128
 ; GFX12-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-GISEL-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX12-GISEL-FAKE16-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset

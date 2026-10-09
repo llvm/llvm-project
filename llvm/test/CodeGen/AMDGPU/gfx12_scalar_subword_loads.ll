@@ -483,8 +483,6 @@ define amdgpu_ps void @s_buffer_load_ubyte_imm_offset(<4 x i32> inreg %src, ptr 
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    s_buffer_load_u8 s0, s[0:3], 0x4
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    s_and_b32 s0, s0, 0xff
-; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GCN-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -500,8 +498,6 @@ define amdgpu_ps void @s_buffer_load_ubyte_sgpr(<4 x i32> inreg %src, ptr addrsp
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    s_buffer_load_u8 s0, s[0:3], s4 offset:0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    s_and_b32 s0, s0, 0xff
-; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GCN-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -517,8 +513,6 @@ define amdgpu_ps void @s_buffer_load_ubyte_sgpr_or_imm_offset(<4 x i32> inreg %s
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    s_buffer_load_u8 s0, s[0:3], s4 offset:0x64
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    s_and_b32 s0, s0, 0xff
-; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GCN-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -609,8 +603,6 @@ define amdgpu_ps void @s_buffer_load_ushort_imm_offset(<4 x i32> inreg %src, ptr
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    s_buffer_load_u16 s0, s[0:3], 0x4
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    s_and_b32 s0, s0, 0xffff
-; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GCN-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -626,8 +618,6 @@ define amdgpu_ps void @s_buffer_load_ushort_sgpr(<4 x i32> inreg %src, ptr addrs
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    s_buffer_load_u16 s0, s[0:3], s4 offset:0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    s_and_b32 s0, s0, 0xffff
-; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GCN-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -643,8 +633,6 @@ define amdgpu_ps void @s_buffer_load_ushort_sgpr_or_imm_offset(<4 x i32> inreg %
 ; GCN:       ; %bb.0: ; %main_body
 ; GCN-NEXT:    s_buffer_load_u16 s0, s[0:3], s4 offset:0x64
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    s_and_b32 s0, s0, 0xffff
-; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GCN-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm

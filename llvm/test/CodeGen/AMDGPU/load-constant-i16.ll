@@ -5353,16 +5353,15 @@ define amdgpu_kernel void @constant_zextload_i16_to_i64(ptr addrspace(1) %out, p
 ; GCN-NOHSA-VI-LABEL: constant_zextload_i16_to_i64:
 ; GCN-NOHSA-VI:       ; %bb.0:
 ; GCN-NOHSA-VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NOHSA-VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v1, s3
-; GCN-NOHSA-VI-NEXT:    flat_load_ushort v2, v[0:1]
-; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-NOHSA-VI-NEXT:    flat_load_ushort v0, v[0:1]
+; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v2, s0
+; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v3, s1
+; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NOHSA-VI-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NOHSA-VI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GCN-NOHSA-VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
+; GCN-NOHSA-VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GCN-NOHSA-VI-NEXT:    s_endpgm
 ;
 ; EG-LABEL: constant_zextload_i16_to_i64:
@@ -5529,16 +5528,15 @@ define amdgpu_kernel void @constant_zextload_v1i16_to_v1i64(ptr addrspace(1) %ou
 ; GCN-NOHSA-VI-LABEL: constant_zextload_v1i16_to_v1i64:
 ; GCN-NOHSA-VI:       ; %bb.0:
 ; GCN-NOHSA-VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NOHSA-VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v1, s3
-; GCN-NOHSA-VI-NEXT:    flat_load_ushort v2, v[0:1]
-; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-NOHSA-VI-NEXT:    flat_load_ushort v0, v[0:1]
+; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v2, s0
+; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v3, s1
+; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NOHSA-VI-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NOHSA-VI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GCN-NOHSA-VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
+; GCN-NOHSA-VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GCN-NOHSA-VI-NEXT:    s_endpgm
 ;
 ; EG-LABEL: constant_zextload_v1i16_to_v1i64:

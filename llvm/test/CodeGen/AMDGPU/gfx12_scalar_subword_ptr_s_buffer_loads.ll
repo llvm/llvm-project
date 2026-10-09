@@ -134,8 +134,6 @@ define amdgpu_ps void @ptr_s_buffer_load_ubyte_imm_offset(ptr addrspace(8) inreg
 ; DAG-NEXT:    s_mov_b32 s4, s2
 ; DAG-NEXT:    s_buffer_load_u8 s0, s[4:7], 0x4
 ; DAG-NEXT:    s_wait_kmcnt 0x0
-; DAG-NEXT:    s_and_b32 s0, s0, 0xff
-; DAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; DAG-NEXT:    v_mov_b32_e32 v2, s0
 ; DAG-NEXT:    global_store_b32 v[0:1], v2, off
 ; DAG-NEXT:    s_endpgm
@@ -148,8 +146,6 @@ define amdgpu_ps void @ptr_s_buffer_load_ubyte_imm_offset(ptr addrspace(8) inreg
 ; GISEL-NEXT:    s_mov_b32 s3, s5
 ; GISEL-NEXT:    s_buffer_load_u8 s0, s[0:3], 0x4
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
-; GISEL-NEXT:    s_and_b32 s0, s0, 0xff
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GISEL-NEXT:    global_store_b32 v[0:1], v2, off
 ; GISEL-NEXT:    s_endpgm
@@ -169,8 +165,6 @@ define amdgpu_ps void @ptr_s_buffer_load_ubyte_sgpr(ptr addrspace(8) inreg %src,
 ; DAG-NEXT:    s_mov_b32 s8, s2
 ; DAG-NEXT:    s_buffer_load_u8 s0, s[8:11], s6 offset:0x0
 ; DAG-NEXT:    s_wait_kmcnt 0x0
-; DAG-NEXT:    s_and_b32 s0, s0, 0xff
-; DAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; DAG-NEXT:    v_mov_b32_e32 v2, s0
 ; DAG-NEXT:    global_store_b32 v[0:1], v2, off
 ; DAG-NEXT:    s_endpgm
@@ -183,8 +177,6 @@ define amdgpu_ps void @ptr_s_buffer_load_ubyte_sgpr(ptr addrspace(8) inreg %src,
 ; GISEL-NEXT:    s_mov_b32 s3, s5
 ; GISEL-NEXT:    s_buffer_load_u8 s0, s[0:3], s6 offset:0x0
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
-; GISEL-NEXT:    s_and_b32 s0, s0, 0xff
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GISEL-NEXT:    global_store_b32 v[0:1], v2, off
 ; GISEL-NEXT:    s_endpgm
@@ -204,8 +196,6 @@ define amdgpu_ps void @ptr_s_buffer_load_ubyte_sgpr_or_imm_offset(ptr addrspace(
 ; DAG-NEXT:    s_mov_b32 s8, s2
 ; DAG-NEXT:    s_buffer_load_u8 s0, s[8:11], s6 offset:0x64
 ; DAG-NEXT:    s_wait_kmcnt 0x0
-; DAG-NEXT:    s_and_b32 s0, s0, 0xff
-; DAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; DAG-NEXT:    v_mov_b32_e32 v2, s0
 ; DAG-NEXT:    global_store_b32 v[0:1], v2, off
 ; DAG-NEXT:    s_endpgm
@@ -218,8 +208,6 @@ define amdgpu_ps void @ptr_s_buffer_load_ubyte_sgpr_or_imm_offset(ptr addrspace(
 ; GISEL-NEXT:    s_mov_b32 s3, s5
 ; GISEL-NEXT:    s_buffer_load_u8 s0, s[0:3], s6 offset:0x64
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
-; GISEL-NEXT:    s_and_b32 s0, s0, 0xff
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GISEL-NEXT:    global_store_b32 v[0:1], v2, off
 ; GISEL-NEXT:    s_endpgm
@@ -392,8 +380,6 @@ define amdgpu_ps void @ptr_s_buffer_load_ushort_imm_offset(ptr addrspace(8) inre
 ; DAG-NEXT:    s_mov_b32 s4, s2
 ; DAG-NEXT:    s_buffer_load_u16 s0, s[4:7], 0x4
 ; DAG-NEXT:    s_wait_kmcnt 0x0
-; DAG-NEXT:    s_and_b32 s0, s0, 0xffff
-; DAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; DAG-NEXT:    v_mov_b32_e32 v2, s0
 ; DAG-NEXT:    global_store_b32 v[0:1], v2, off
 ; DAG-NEXT:    s_endpgm
@@ -406,8 +392,6 @@ define amdgpu_ps void @ptr_s_buffer_load_ushort_imm_offset(ptr addrspace(8) inre
 ; GISEL-NEXT:    s_mov_b32 s3, s5
 ; GISEL-NEXT:    s_buffer_load_u16 s0, s[0:3], 0x4
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
-; GISEL-NEXT:    s_and_b32 s0, s0, 0xffff
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GISEL-NEXT:    global_store_b32 v[0:1], v2, off
 ; GISEL-NEXT:    s_endpgm
@@ -427,8 +411,6 @@ define amdgpu_ps void @ptr_s_buffer_load_ushort_sgpr(ptr addrspace(8) inreg %src
 ; DAG-NEXT:    s_mov_b32 s8, s2
 ; DAG-NEXT:    s_buffer_load_u16 s0, s[8:11], s6 offset:0x0
 ; DAG-NEXT:    s_wait_kmcnt 0x0
-; DAG-NEXT:    s_and_b32 s0, s0, 0xffff
-; DAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; DAG-NEXT:    v_mov_b32_e32 v2, s0
 ; DAG-NEXT:    global_store_b32 v[0:1], v2, off
 ; DAG-NEXT:    s_endpgm
@@ -441,8 +423,6 @@ define amdgpu_ps void @ptr_s_buffer_load_ushort_sgpr(ptr addrspace(8) inreg %src
 ; GISEL-NEXT:    s_mov_b32 s3, s5
 ; GISEL-NEXT:    s_buffer_load_u16 s0, s[0:3], s6 offset:0x0
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
-; GISEL-NEXT:    s_and_b32 s0, s0, 0xffff
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GISEL-NEXT:    global_store_b32 v[0:1], v2, off
 ; GISEL-NEXT:    s_endpgm
@@ -462,8 +442,6 @@ define amdgpu_ps void @ptr_s_buffer_load_ushort_sgpr_or_imm_offset(ptr addrspace
 ; DAG-NEXT:    s_mov_b32 s8, s2
 ; DAG-NEXT:    s_buffer_load_u16 s0, s[8:11], s6 offset:0x64
 ; DAG-NEXT:    s_wait_kmcnt 0x0
-; DAG-NEXT:    s_and_b32 s0, s0, 0xffff
-; DAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; DAG-NEXT:    v_mov_b32_e32 v2, s0
 ; DAG-NEXT:    global_store_b32 v[0:1], v2, off
 ; DAG-NEXT:    s_endpgm
@@ -476,8 +454,6 @@ define amdgpu_ps void @ptr_s_buffer_load_ushort_sgpr_or_imm_offset(ptr addrspace
 ; GISEL-NEXT:    s_mov_b32 s3, s5
 ; GISEL-NEXT:    s_buffer_load_u16 s0, s[0:3], s6 offset:0x64
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
-; GISEL-NEXT:    s_and_b32 s0, s0, 0xffff
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GISEL-NEXT:    global_store_b32 v[0:1], v2, off
 ; GISEL-NEXT:    s_endpgm

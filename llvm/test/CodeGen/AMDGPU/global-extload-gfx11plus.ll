@@ -73,7 +73,6 @@ define amdgpu_kernel void @zextload_global_i8_to_i64(ptr addrspace(1) %out, ptr 
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    global_load_u8 v0, v1, s[2:3]
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-FAKE16-NEXT:    global_store_b64 v1, v[0:1], s[0:1]
 ; GFX11-FAKE16-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(1) %in
@@ -165,7 +164,6 @@ define amdgpu_kernel void @zextload_global_i16_to_i64(ptr addrspace(1) %out, ptr
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    global_load_u16 v0, v1, s[2:3]
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-FAKE16-NEXT:    global_store_b64 v1, v[0:1], s[0:1]
 ; GFX11-FAKE16-NEXT:    s_endpgm
   %a = load i16, ptr addrspace(1) %in

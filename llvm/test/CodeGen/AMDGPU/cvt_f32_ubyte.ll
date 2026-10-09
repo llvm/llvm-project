@@ -1932,8 +1932,8 @@ define amdgpu_kernel void @load_v7i8_to_v7f32(ptr addrspace(1) noalias %out, ptr
 ; GFX9-NEXT:    s_waitcnt vmcnt(5)
 ; GFX9-NEXT:    v_cvt_f32_ubyte0_e32 v6, v1
 ; GFX9-NEXT:    s_waitcnt vmcnt(4)
-; GFX9-NEXT:    v_cvt_f32_ubyte1_sdwa v5, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0
-; GFX9-NEXT:    v_cvt_f32_ubyte0_sdwa v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0
+; GFX9-NEXT:    v_cvt_f32_ubyte1_e32 v5, v2
+; GFX9-NEXT:    v_cvt_f32_ubyte0_e32 v4, v2
 ; GFX9-NEXT:    s_waitcnt vmcnt(3)
 ; GFX9-NEXT:    v_cvt_f32_ubyte0_e32 v3, v3
 ; GFX9-NEXT:    s_waitcnt vmcnt(2)

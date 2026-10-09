@@ -5107,7 +5107,6 @@ define amdgpu_kernel void @local_zextload_i16_to_i64(ptr addrspace(3) %out, ptr 
 ; VI-NEXT:    ds_read_u16 v0, v0
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; VI-NEXT:    ds_write_b64 v2, v[0:1]
 ; VI-NEXT:    s_endpgm
 ;
@@ -5233,7 +5232,6 @@ define amdgpu_kernel void @local_zextload_v1i16_to_v1i64(ptr addrspace(3) %out, 
 ; VI-NEXT:    ds_read_u16 v0, v0
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; VI-NEXT:    ds_write_b64 v2, v[0:1]
 ; VI-NEXT:    s_endpgm
 ;

@@ -4553,8 +4553,6 @@ define amdgpu_ps <2 x half> @flat_load_saddr_i16_d16lo_undef_hi(ptr inreg %sbase
 ; GFX1250-GISEL-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v3, vcc_lo
 ; GFX1250-GISEL-FAKE16-NEXT:    flat_load_u16 v0, v[0:1]
 ; GFX1250-GISEL-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-FAKE16-NEXT:    v_lshl_or_b32 v0, s0, 16, v0
 ; GFX1250-GISEL-FAKE16-NEXT:    ; return to shader part epilog
 ;
@@ -4618,8 +4616,6 @@ define amdgpu_ps <2 x half> @flat_load_saddr_i16_d16lo_undef_hi_immneg128(ptr in
 ; GFX1250-GISEL-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v3, vcc_lo
 ; GFX1250-GISEL-FAKE16-NEXT:    flat_load_u16 v0, v[0:1] offset:-128
 ; GFX1250-GISEL-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-FAKE16-NEXT:    v_lshl_or_b32 v0, s0, 16, v0
 ; GFX1250-GISEL-FAKE16-NEXT:    ; return to shader part epilog
 ;
@@ -4670,7 +4666,6 @@ define amdgpu_ps <2 x half> @flat_load_saddr_i16_d16lo_zero_hi(ptr inreg %sbase,
 ; GFX1250-SDAG-FAKE16-NEXT:    v_add_nc_u64_e32 v[0:1], s[2:3], v[0:1]
 ; GFX1250-SDAG-FAKE16-NEXT:    flat_load_u16 v0, v[0:1]
 ; GFX1250-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-SDAG-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX1250-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: flat_load_saddr_i16_d16lo_zero_hi:
@@ -4685,7 +4680,6 @@ define amdgpu_ps <2 x half> @flat_load_saddr_i16_d16lo_zero_hi(ptr inreg %sbase,
 ; GFX1250-GISEL-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v3, vcc_lo
 ; GFX1250-GISEL-FAKE16-NEXT:    flat_load_u16 v0, v[0:1]
 ; GFX1250-GISEL-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX1250-GISEL-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-TRUE16-LABEL: flat_load_saddr_i16_d16lo_zero_hi:
@@ -4750,7 +4744,6 @@ define amdgpu_ps <2 x half> @flat_load_saddr_i16_d16lo_zero_hi_immneg128(ptr inr
 ; GFX1250-SDAG-FAKE16-NEXT:    v_add_nc_u64_e32 v[0:1], s[2:3], v[0:1]
 ; GFX1250-SDAG-FAKE16-NEXT:    flat_load_u16 v0, v[0:1] offset:-128
 ; GFX1250-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-SDAG-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX1250-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: flat_load_saddr_i16_d16lo_zero_hi_immneg128:
@@ -4765,7 +4758,6 @@ define amdgpu_ps <2 x half> @flat_load_saddr_i16_d16lo_zero_hi_immneg128(ptr inr
 ; GFX1250-GISEL-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v3, vcc_lo
 ; GFX1250-GISEL-FAKE16-NEXT:    flat_load_u16 v0, v[0:1] offset:-128
 ; GFX1250-GISEL-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX1250-GISEL-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-TRUE16-LABEL: flat_load_saddr_i16_d16lo_zero_hi_immneg128:
