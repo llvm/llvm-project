@@ -84,6 +84,81 @@ module attributes {gpu.container_module} {
     return
   }
 
+  // CHECK-LABEL: func @matmul_transpose_a
+  // CHECK: llvm.call @mgpuCreateCoo
+  // CHECK: llvm.call @mgpuCreateDnMat
+  // CHECK: %[[BUFFERSIZE_MA:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[BUFFERSIZE_MB:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: llvm.call @mgpuSpMMBufferSize(%[[BUFFERSIZE_MA]], %[[BUFFERSIZE_MB]],
+  // CHECK: %[[SPMM_MA:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[SPMM_MB:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: llvm.call @mgpuSpMM(%[[SPMM_MA]], %[[SPMM_MB]],
+  // CHECK: llvm.call @mgpuDestroySpMat
+  // CHECK: llvm.call @mgpuDestroyDnMat
+  func.func @matmul_transpose_a(%arg0: index) {
+    %token0 = gpu.wait async
+    %mem1, %token1 = gpu.alloc async [%token0] (%arg0) : memref<?xindex>
+    %mem2, %token2 = gpu.alloc async [%token1] (%arg0) : memref<?xf64>
+    %spmat, %token3 = gpu.create_coo async [%token2] %arg0, %arg0, %arg0, %mem1, %mem1, %mem2 : memref<?xindex>, memref<?xindex>, memref<?xf64>
+    %dnmat, %token4 = gpu.create_dn_tensor async [%token3] %mem2, %arg0, %arg0 : index, index into memref<?xf64>
+    %bufferSz, %token5 = gpu.spmm_buffer_size async [%token4] %spmat{TRANSPOSE}, %dnmat, %dnmat : index into f64
+    %token6 = gpu.spmm async [%token5] %spmat{TRANSPOSE}, %dnmat, %dnmat, %mem2 : memref<?xf64> into f64
+    %token7 = gpu.destroy_sp_mat async [%token6] %spmat
+    %token8 = gpu.destroy_dn_tensor async [%token7] %dnmat
+    gpu.wait [%token8]
+    return
+  }
+
+  // CHECK-LABEL: func @matmul_transpose_b
+  // CHECK: llvm.call @mgpuCreateCoo
+  // CHECK: llvm.call @mgpuCreateDnMat
+  // CHECK: %[[BUFFERSIZE_MA:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: %[[BUFFERSIZE_MB:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: llvm.call @mgpuSpMMBufferSize(%[[BUFFERSIZE_MA]], %[[BUFFERSIZE_MB]],
+  // CHECK: %[[SPMM_MA:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: %[[SPMM_MB:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: llvm.call @mgpuSpMM(%[[SPMM_MA]], %[[SPMM_MB]],
+  // CHECK: llvm.call @mgpuDestroySpMat
+  // CHECK: llvm.call @mgpuDestroyDnMat
+  func.func @matmul_transpose_b(%arg0: index) {
+    %token0 = gpu.wait async
+    %mem1, %token1 = gpu.alloc async [%token0] (%arg0) : memref<?xindex>
+    %mem2, %token2 = gpu.alloc async [%token1] (%arg0) : memref<?xf64>
+    %spmat, %token3 = gpu.create_coo async [%token2] %arg0, %arg0, %arg0, %mem1, %mem1, %mem2 : memref<?xindex>, memref<?xindex>, memref<?xf64>
+    %dnmat, %token4 = gpu.create_dn_tensor async [%token3] %mem2, %arg0, %arg0 : index, index into memref<?xf64>
+    %bufferSz, %token5 = gpu.spmm_buffer_size async [%token4] %spmat, %dnmat{TRANSPOSE}, %dnmat : index into f64
+    %token6 = gpu.spmm async [%token5] %spmat, %dnmat{TRANSPOSE}, %dnmat, %mem2 : memref<?xf64> into f64
+    %token7 = gpu.destroy_sp_mat async [%token6] %spmat
+    %token8 = gpu.destroy_dn_tensor async [%token7] %dnmat
+    gpu.wait [%token8]
+    return
+  }
+
+  // CHECK-LABEL: func @matmul_transpose_ab
+  // CHECK: llvm.call @mgpuCreateCoo
+  // CHECK: llvm.call @mgpuCreateDnMat
+  // CHECK: %[[BUFFERSIZE_MA:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[BUFFERSIZE_MB:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: llvm.call @mgpuSpMMBufferSize(%[[BUFFERSIZE_MA]], %[[BUFFERSIZE_MB]],
+  // CHECK: %[[SPMM_MA:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[SPMM_MB:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: llvm.call @mgpuSpMM(%[[SPMM_MA]], %[[SPMM_MB]],
+  // CHECK: llvm.call @mgpuDestroySpMat
+  // CHECK: llvm.call @mgpuDestroyDnMat
+  func.func @matmul_transpose_ab(%arg0: index) {
+    %token0 = gpu.wait async
+    %mem1, %token1 = gpu.alloc async [%token0] (%arg0) : memref<?xindex>
+    %mem2, %token2 = gpu.alloc async [%token1] (%arg0) : memref<?xf64>
+    %spmat, %token3 = gpu.create_coo async [%token2] %arg0, %arg0, %arg0, %mem1, %mem1, %mem2 : memref<?xindex>, memref<?xindex>, memref<?xf64>
+    %dnmat, %token4 = gpu.create_dn_tensor async [%token3] %mem2, %arg0, %arg0 : index, index into memref<?xf64>
+    %bufferSz, %token5 = gpu.spmm_buffer_size async [%token4] %spmat{TRANSPOSE}, %dnmat{TRANSPOSE}, %dnmat : index into f64
+    %token6 = gpu.spmm async [%token5] %spmat{TRANSPOSE}, %dnmat{TRANSPOSE}, %dnmat, %mem2 : memref<?xf64> into f64
+    %token7 = gpu.destroy_sp_mat async [%token6] %spmat
+    %token8 = gpu.destroy_dn_tensor async [%token7] %dnmat
+    gpu.wait [%token8]
+    return
+  }
+
   // CHECK-LABEL: func @spgemm
   // CHECK: llvm.call @mgpuStreamCreate
   // CHECK: llvm.call @mgpuMemAlloc
