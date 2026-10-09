@@ -1,4 +1,5 @@
 algorithm cctype
+algorithm cerrno
 algorithm climits
 algorithm compare
 algorithm cstdint
@@ -620,6 +621,7 @@ mdspan span
 mdspan stdexcept
 mdspan version
 memory cctype
+memory cerrno
 memory climits
 memory compare
 memory cstdint
@@ -656,6 +658,7 @@ mutex version
 new version
 numbers version
 numeric cctype
+numeric cerrno
 numeric climits
 numeric compare
 numeric cstdint
@@ -743,6 +746,7 @@ queue tuple
 queue vector
 queue version
 random cctype
+random cerrno
 random climits
 random compare
 random cstdint

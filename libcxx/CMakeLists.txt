@@ -803,6 +803,8 @@ elseif(LIBCXX_PSTL_BACKEND STREQUAL "std_thread")
   config_define(1 _LIBCPP_PSTL_BACKEND_STD_THREAD)
 elseif(LIBCXX_PSTL_BACKEND STREQUAL "libdispatch")
   config_define(1 _LIBCPP_PSTL_BACKEND_LIBDISPATCH)
+elseif(LIBCXX_PSTL_BACKEND STREQUAL "statpart")
+  config_define(1 _LIBCPP_PSTL_BACKEND_STATPART)
 else()
   message(FATAL_ERROR "LIBCXX_PSTL_BACKEND is set to ${LIBCXX_PSTL_BACKEND}, which is not a valid backend.
                        Valid backends are: serial, std_thread and libdispatch")
