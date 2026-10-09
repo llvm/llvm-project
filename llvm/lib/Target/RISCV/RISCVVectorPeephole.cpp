@@ -68,6 +68,7 @@ private:
   Register
   lookThruCopies(Register Reg, bool OneUseOnly = false,
                  SmallVectorImpl<MachineInstr *> *Copies = nullptr) const;
+  void eraseInstrAndUndefDebugUses(MachineInstr &MI) const;
 };
 
 class RISCVVectorPeepholeLegacy : public MachineFunctionPass {
@@ -326,6 +327,14 @@ Register RISCVVectorPeepholeImpl::lookThruCopies(
   return Reg;
 }
 
+/// Erase an instruction whose result does not survive, undefining its debug
+/// uses before removing the definition.
+void RISCVVectorPeepholeImpl::eraseInstrAndUndefDebugUses(
+    MachineInstr &MI) const {
+  MRI->markUsesInDebugValueAsUndef(MI.getOperand(0).getReg());
+  MI.eraseFromParent();
+}
+
 /// If a PseudoVMERGE_VVM's true operand is a masked pseudo and both have the
 /// same mask, and the masked pseudo's passthru is the same as the false
 /// operand, we can convert the PseudoVMERGE_VVM to a PseudoVMV_V_V.
@@ -380,9 +389,12 @@ bool RISCVVectorPeepholeImpl::convertSameMaskVMergeToVMv(MachineInstr &MI) {
   if (TruePassthruReg != FalseReg) {
     // If True's passthru is undef see if we can change it to False
     if (TruePassthruReg.isValid() ||
-        !MRI->hasOneUse(MI.getOperand(3).getReg()) ||
+        !MRI->hasOneNonDBGUse(MI.getOperand(3).getReg()) ||
         !ensureDominates(&MI.getOperand(2), *True))
       return false;
+    // True may have moved below its debug users and its passthru is about to
+    // change. The old debug location no longer describes the rewritten value.
+    MRI->markUsesInDebugValueAsUndef(True->getOperand(0).getReg());
     True->getOperand(1).setReg(MI.getOperand(2).getReg());
     // If True is masked then its passthru needs to be in VRNoV0.
     MRI->constrainRegClass(True->getOperand(1).getReg(),
@@ -520,7 +532,7 @@ bool RISCVVectorPeepholeImpl::foldUndefPassthruVMV_V_V(MachineInstr &MI) {
   // agnostic policy if MI's undef tail subsumes the input's.
   MachineInstr *Src = MRI->getVRegDef(MI.getOperand(2).getReg());
   if (Src && !Src->hasUnmodeledSideEffects() &&
-      MRI->hasOneUse(MI.getOperand(2).getReg()) &&
+      MRI->hasOneNonDBGUse(MI.getOperand(2).getReg()) &&
       RISCVII::hasVLOp(Src->getDesc().TSFlags) &&
       RISCVII::hasVecPolicyOp(Src->getDesc().TSFlags) && hasSameEEW(MI, *Src)) {
     const MachineOperand &MIVL = MI.getOperand(3);
@@ -530,8 +542,11 @@ bool RISCVVectorPeepholeImpl::foldUndefPassthruVMV_V_V(MachineInstr &MI) {
     MachineOperand &SrcPolicy =
         Src->getOperand(RISCVII::getVecPolicyOpNum(Src->getDesc()));
 
-    if (RISCV::isVLKnownLE(*MRI, MIVL, SrcVL))
+    if (RISCV::isVLKnownLE(*MRI, MIVL, SrcVL)) {
+      // Tail elements are about to become undefined.
+      MRI->markUsesInDebugValueAsUndef(Src->getOperand(0).getReg());
       SrcPolicy.setImm(SrcPolicy.getImm() | RISCVVType::TAIL_AGNOSTIC);
+    }
   }
 
   MRI->constrainRegClass(MI.getOperand(2).getReg(),
@@ -542,8 +557,8 @@ bool RISCVVectorPeepholeImpl::foldUndefPassthruVMV_V_V(MachineInstr &MI) {
   return true;
 }
 
-/// If a PseudoVMV_V_V is the only user of its input, fold its passthru and VL
-/// into it.
+/// If a PseudoVMV_V_V is the only non-debug user of its input, fold its
+/// passthru and VL into it.
 ///
 /// %x = PseudoVADD_V_V_M1 %passthru, %a, %b, %vl1, sew, policy
 /// %y = PseudoVMV_V_V_M1 %passthru, %x, %vl2, sew, policy
@@ -558,7 +573,7 @@ bool RISCVVectorPeepholeImpl::foldVMV_V_V(MachineInstr &MI) {
 
   MachineOperand &Passthru = MI.getOperand(1);
 
-  if (!MRI->hasOneUse(MI.getOperand(2).getReg()))
+  if (!MRI->hasOneNonDBGUse(MI.getOperand(2).getReg()))
     return false;
 
   MachineInstr *Src = MRI->getVRegDef(MI.getOperand(2).getReg());
@@ -601,6 +616,9 @@ bool RISCVVectorPeepholeImpl::foldVMV_V_V(MachineInstr &MI) {
   if (!ensureDominates(&Passthru, *Src))
     return false;
 
+  // Src is about to be changed to compute MI's value. Invalidate its existing
+  // debug users before replaceRegWith redirects MI's debug users to Src.
+  MRI->markUsesInDebugValueAsUndef(Src->getOperand(0).getReg());
   if (NeedsCommute) {
     auto [OpIdx1, OpIdx2] = *NeedsCommute;
     [[maybe_unused]] bool Commuted =
@@ -663,7 +681,7 @@ bool RISCVVectorPeepholeImpl::foldVMergeToMask(MachineInstr &MI) const {
   Register FalseReg = lookThruCopies(FalseOp.getReg());
   Register TrueReg = lookThruCopies(MI.getOperand(3).getReg(),
                                     /*OneUseOnly=*/true, &TrueCopies);
-  if (!TrueReg.isVirtual() || !MRI->hasOneUse(TrueReg))
+  if (!TrueReg.isVirtual() || !MRI->hasOneNonDBGUse(TrueReg))
     return false;
   MachineInstr *TrueDef = MRI->getVRegDef(TrueReg);
   if (!TrueDef)
@@ -757,6 +775,10 @@ bool RISCVVectorPeepholeImpl::foldVMergeToMask(MachineInstr &MI) const {
   if (!ensureDominates({&MaskOp, &FalseOp, &MinVL}, True))
     return false;
 
+  // True is about to be rewritten to compute MI's value under MI's register.
+  // Undef True's own debug users first; after replaceRegWith they would
+  // describe MI's value instead.
+  MRI->markUsesInDebugValueAsUndef(TrueReg);
   if (NeedsCommute) {
     auto [OpIdx1, OpIdx2] = *NeedsCommute;
     [[maybe_unused]] bool Commuted =
@@ -795,7 +817,7 @@ bool RISCVVectorPeepholeImpl::foldVMergeToMask(MachineInstr &MI) const {
   // Cleanup all the COPYs on True's value. We have to manually do this because
   // sometimes sinking True causes these COPY to be invalid (use before define).
   for (MachineInstr *TrueCopy : TrueCopies)
-    TrueCopy->eraseFromParent();
+    eraseInstrAndUndefDebugUses(*TrueCopy);
 
   return true;
 }
@@ -824,8 +846,9 @@ bool RISCVVectorPeepholeImpl::foldVMANDToMaskedCompare(MachineInstr &MI) const {
   // the original vmand did not require. If the vmand's result has more than one
   // use then it is an interior mask value rather than a final result feeding
   // v0, and introducing the v0 requirement tends to add vmv1r.v moves. Only
-  // fold single-use results, where the value coalesces onto v0 for free.
-  if (!MRI->hasOneUse(MI.getOperand(0).getReg()))
+  // fold results with a single non-debug use, where the value coalesces onto
+  // v0 for free.
+  if (!MRI->hasOneNonDBGUse(MI.getOperand(0).getReg()))
     return false;
 
   // Try each operand as the comparison to be masked; the other becomes the
@@ -833,12 +856,12 @@ bool RISCVVectorPeepholeImpl::foldVMANDToMaskedCompare(MachineInstr &MI) const {
   for (unsigned CmpIdx : {1, 2}) {
     unsigned MaskIdx = CmpIdx == 1 ? 2 : 1;
 
-    // The comparison must be single use so that folding it into MI doesn't
-    // leave an extra unmasked comparison behind.
+    // The comparison must have a single non-debug use so that folding it into
+    // MI doesn't leave an extra unmasked comparison behind.
     SmallVector<MachineInstr *, 4> CmpCopies;
     Register CmpReg = lookThruCopies(MI.getOperand(CmpIdx).getReg(),
                                      /*OneUseOnly=*/true, &CmpCopies);
-    if (!CmpReg.isVirtual() || !MRI->hasOneUse(CmpReg))
+    if (!CmpReg.isVirtual() || !MRI->hasOneNonDBGUse(CmpReg))
       continue;
     MachineInstr &Cmp = *MRI->getUniqueVRegDef(CmpReg);
     if (Cmp.getParent() != MI.getParent())
@@ -939,9 +962,10 @@ bool RISCVVectorPeepholeImpl::foldVMANDToMaskedCompare(MachineInstr &MI) const {
     }
     MRI->clearKillFlags(MaskReg);
     MI.eraseFromParent();
-    Cmp.eraseFromParent();
+    // The comparison is about to be erased.
+    eraseInstrAndUndefDebugUses(Cmp);
     for (MachineInstr *CmpCopy : CmpCopies)
-      CmpCopy->eraseFromParent();
+      eraseInstrAndUndefDebugUses(*CmpCopy);
 
     return true;
   }
