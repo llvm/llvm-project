@@ -56,7 +56,6 @@
 #include "clang/Basic/SyncScope.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Lexer.h" // TODO: Extract static functions to fix layering.
-#include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Ownership.h"
@@ -1320,49 +1319,6 @@ private:
   const DiagnoseAsBuiltinAttr *DABAttr;
   unsigned SizeTypeWidth;
 };
-
-static std::optional<uint64_t> tryExpandMacroAsUInt(StringRef Macro,
-                                                    const Preprocessor &PP) {
-  const IdentifierInfo *MacroII = PP.getIdentifierInfo(Macro);
-  if (!MacroII)
-    return std::nullopt;
-  const MacroInfo *MI = PP.getMacroInfo(MacroII);
-  if (!MI || MI->tokens_empty())
-    return std::nullopt;
-
-  ArrayRef<Token> Tokens = MI->tokens();
-  while (Tokens.size() >= 2 && Tokens.front().is(tok::l_paren) &&
-         Tokens.back().is(tok::r_paren))
-    Tokens = Tokens.drop_front().drop_back();
-  if (Tokens.size() != 1 || !Tokens.front().is(tok::numeric_constant))
-    return std::nullopt;
-
-  bool InvalidSpelling = false;
-  SmallString<32> Buffer;
-  StringRef ValueStr = PP.getSpelling(Tokens.front(), Buffer, &InvalidSpelling);
-  if (InvalidSpelling)
-    return std::nullopt;
-
-  ValueStr = ValueStr.rtrim("uUlL");
-  uint64_t Val;
-  if (ValueStr.getAsInteger(/*Radix=*/0, Val))
-    return std::nullopt;
-  return Val;
-}
-
-static std::optional<uint64_t> getPathMaxValue(const ASTContext &Ctx,
-                                               const Preprocessor &PP) {
-  if (std::optional<uint64_t> MacroVal = tryExpandMacroAsUInt("PATH_MAX", PP))
-    return MacroVal;
-
-  const llvm::Triple &T = Ctx.getTargetInfo().getTriple();
-  if (T.isOSLinux() || T.isOSFuchsia() || T.isOSAIX() || T.isOSHaiku())
-    return 4096;
-  if (T.isOSDarwin() || T.isOSFreeBSD() || T.isOSNetBSD() || T.isOSOpenBSD() ||
-      T.isOSSolaris())
-    return 1024;
-  return std::nullopt;
-}
 } // anonymous namespace
 
 void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
@@ -1646,12 +1602,20 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     break;
   }
   case Builtin::BIrealpath: {
-    std::optional<uint64_t> PathMax = getPathMaxValue(Context, PP);
-    if (!PathMax)
+    BufferSize = Checker.ComputeSizeArgument(1);
+    if (!BufferSize)
+      return;
+    const llvm::Triple &T = Context.getTargetInfo().getTriple();
+    uint64_t PathMax = 0;
+    if (T.isOSLinux() || T.isOSFuchsia() || T.isOSAIX() || T.isOSHaiku())
+      PathMax = 4096;
+    else if (T.isOSDarwin() || T.isOSFreeBSD() || T.isOSNetBSD() ||
+             T.isOSOpenBSD() || T.isOSSolaris())
+      PathMax = 1024;
+    else
       return;
     DiagID = diag::warn_fortify_source_buffer_too_small;
-    AccessSize = llvm::APSInt::getUnsigned(*PathMax).extOrTrunc(SizeTypeWidth);
-    BufferSize = Checker.ComputeSizeArgument(1);
+    AccessSize = llvm::APSInt::getUnsigned(PathMax).extOrTrunc(SizeTypeWidth);
     break;
   }
   // memchr(buf, val, size)

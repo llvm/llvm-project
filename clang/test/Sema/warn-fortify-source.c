@@ -183,15 +183,6 @@ void call_realpath(const char *path, char *unknown_buf) {
   realpath(path, small_buf); // expected-warning {{'realpath' may overflow; destination buffer has size 1023, but at least 1024 bytes are required}}
 }
 
-#define PATH_MAX (4096)
-void call_realpath_macro(const char *path) {
-  char ok_buf[4096];
-  char small_buf[4095];
-  realpath(path, ok_buf);
-  realpath(path, small_buf); // expected-warning {{'realpath' may overflow; destination buffer has size 4095, but at least 4096 bytes are required}}
-}
-#undef PATH_MAX
-
 void call_snprintf(double d, int n) {
   char buf[10];
   __builtin_snprintf(buf, 10, "merp");
