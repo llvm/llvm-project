@@ -1,4 +1,4 @@
-; RUN: llc -ppc-enable-prefetching=true -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -ppc-prefetching=true -verify-machineinstrs < %s | FileCheck %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux"
 

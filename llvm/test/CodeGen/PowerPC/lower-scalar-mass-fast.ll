@@ -1,5 +1,5 @@
-; RUN: llc -ppc-enable-gen-scalar-mass -O3 -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
-; RUN: llc -ppc-enable-gen-scalar-mass -O3 -mtriple=powerpc-ibm-aix-xcoff < %s | FileCheck %s
+; RUN: llc -ppc-scalar-mass -O3 -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -ppc-scalar-mass -O3 -mtriple=powerpc-ibm-aix-xcoff < %s | FileCheck %s
 
 declare float @acosf (float);
 declare float @acoshf (float);

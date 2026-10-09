@@ -50,9 +50,9 @@
 using namespace llvm;
 
 static cl::opt<bool> EnableBranchCoalescing(
-    "ppc-enable-branch-coalesce", cl::Hidden,
+    "ppc-branch-coalesce", cl::Hidden,
     cl::desc("enable coalescing of duplicate branches for PPC"));
-static cl::opt<bool> EnableCTRLoops("ppc-enable-ctrloops",
+static cl::opt<bool> EnableCTRLoops("ppc-ctr-loops",
                                     cl::desc("Enable CTR loops for PPC"),
                                     cl::init(true), cl::Hidden);
 
@@ -81,12 +81,12 @@ EnableGEPOpt("ppc-gep-opt", cl::Hidden,
              cl::init(true));
 
 static cl::opt<bool>
-    EnablePrefetch("ppc-enable-prefetching",
+    EnablePrefetch("ppc-prefetching",
                    cl::desc("enable software prefetching on PPC"),
                    cl::init(false), cl::Hidden);
 
 static cl::opt<bool>
-    EnableExtraTOCRegDeps("ppc-enable-extra-toc-reg-deps",
+    EnableExtraTOCRegDeps("ppc-extra-toc-reg-deps",
                           cl::desc("Add extra TOC register dependencies"),
                           cl::init(true), cl::Hidden);
 
@@ -101,7 +101,7 @@ static cl::opt<bool>
                   cl::init(true), cl::Hidden);
 
 cl::opt<bool> EnablePPCGenScalarMASSEntries(
-    "ppc-enable-gen-scalar-mass", cl::init(false),
+    "ppc-scalar-mass", cl::init(false),
     cl::desc("Enable lowering math functions to their corresponding MASS "
              "(scalar) entries"),
     cl::Hidden);

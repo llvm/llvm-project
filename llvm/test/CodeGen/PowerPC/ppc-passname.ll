@@ -95,12 +95,12 @@
 
 
 ; Test pass name: ppc-branch-coalescing.
-; RUN: llc -ppc-enable-branch-coalesce -mtriple=powerpc64le-unknown-unknown < %s -debug-pass=Structure -stop-before=ppc-branch-coalescing -o /dev/null 2>&1 | FileCheck %s -check-prefix=STOP-BEFORE-BRANCH-COALESCING
+; RUN: llc -ppc-branch-coalesce -mtriple=powerpc64le-unknown-unknown < %s -debug-pass=Structure -stop-before=ppc-branch-coalescing -o /dev/null 2>&1 | FileCheck %s -check-prefix=STOP-BEFORE-BRANCH-COALESCING
 ; STOP-BEFORE-BRANCH-COALESCING-NOT: -ppc-branch-coalescing
 ; STOP-BEFORE-BRANCH-COALESCING-NOT: "ppc-branch-coalescing" pass is not registered.
 ; STOP-BEFORE-BRANCH-COALESCING-NOT: Branch Coalescing 
 
-; RUN: llc -ppc-enable-branch-coalesce -mtriple=powerpc64le-unknown-unknown < %s -debug-pass=Structure -stop-after=ppc-branch-coalescing -o /dev/null 2>&1 | FileCheck %s -check-prefix=STOP-AFTER-BRANCH-COALESCING
+; RUN: llc -ppc-branch-coalesce -mtriple=powerpc64le-unknown-unknown < %s -debug-pass=Structure -stop-after=ppc-branch-coalescing -o /dev/null 2>&1 | FileCheck %s -check-prefix=STOP-AFTER-BRANCH-COALESCING
 ; STOP-AFTER-BRANCH-COALESCING: -ppc-branch-coalescing
 ; STOP-AFTER-BRANCH-COALESCING-NOT: "ppc-branch-coalescing" pass is not registered.
 ; STOP-AFTER-BRANCH-COALESCING: Branch Coalescing 
