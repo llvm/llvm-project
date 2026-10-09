@@ -1,4 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection,alpha.core.DanglingPtrDeref -analyzer-config cfg-lifetime=true -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection,alpha.core.DanglingPtrDeref\
+// RUN:  -analyzer-config cfg-lifetime=true -analyzer-output=text -verify %s
 
 void clang_analyzer_warnIfReached();
 
@@ -10,7 +11,7 @@ void testPathNotesWithLoopScopeEnd() {
   for (int i = 0; i < 3; ++i) {
   // expected-note@-1 3 {{Loop condition is true.  Entering loop body}}
   // expected-note@-2   {{The value 2 is assigned to 'i'}}
-  // expected-note@-3   {{Loop condition is false. Execution continues on line 17}}
+  // expected-note@-3   {{Loop condition is false. Execution continues on line 18}}
     p = &i; // expected-note {{Value assigned to 'p'}}
   }
   // expected-note@-1 {{'i' is destroyed here}}
@@ -25,7 +26,7 @@ void testPathNotesWithBlockScopeEnd() {
     int n = 0;
     while (n < 3) {
     // expected-note@-1 3 {{Loop condition is true.  Entering loop body}}
-    // expected-note@-2   {{Loop condition is false. Execution continues on line 34}}
+    // expected-note@-2   {{Loop condition is false. Execution continues on line 35}}
       p = &n; // expected-note {{Value assigned to 'p'}}
       ++n;    // expected-note {{The value 2 is assigned to 'n'}}
     }
@@ -41,7 +42,7 @@ void testPathNotesWithWarnIfReached() {
     int i = 0;
     while (i < 3) {
     // expected-note@-1 3 {{Loop condition is true.  Entering loop body}}
-    // expected-note@-2   {{Loop condition is false. Execution continues on line 48}} 
+    // expected-note@-2   {{Loop condition is false. Execution continues on line 49}} 
       ++i;
     }
   }
