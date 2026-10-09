@@ -2525,6 +2525,13 @@ private:
   /// vector savings the count check does not model.
   bool bypassesInstCountCheck(InstructionCost TreeCost) const;
 
+  /// Collects into \p UserOps the user operations of the gathers of the scalars
+  /// of \p E, for TTI::getBuildVectorContextHint(). Returns false if no user is
+  /// found or some user cannot be described.
+  bool
+  collectGatherUserOps(const TreeEntry &E,
+                       SmallVectorImpl<TTI::BuildVectorUseOp> &UserOps) const;
+
   /// \returns the fadd/fsub user of the single-use fmul \p I, which the
   /// backend fuses with \p I into an fmuladd in the scalar code, and the cost
   /// of that fmuladd, or {nullptr, invalid cost}. If \p InTree is set, the
@@ -13435,6 +13442,25 @@ bool BoUpSLP::bypassesInstCountCheck(InstructionCost TreeCost) const {
   });
 }
 
+bool BoUpSLP::collectGatherUserOps(
+    const TreeEntry &E, SmallVectorImpl<TTI::BuildVectorUseOp> &UserOps) const {
+  UserOps.clear();
+  for (const auto &TE :
+       make_filter_range(VectorizableTree, [&](const auto &TE) {
+         return !DeletedNodes.contains(TE.get());
+       })) {
+    if (!(TE->isGather() || TransformedToGatherNodes.contains(TE.get())) ||
+        !E.isSame(TE->Scalars))
+      continue;
+    const TreeEntry *UserTE = TE->UserTreeIndex.UserTE;
+    if (!UserTE || !UserTE->hasState() || UserTE->isAltShuffle() ||
+        TransformedToGatherNodes.contains(UserTE))
+      return false;
+    UserOps.emplace_back(UserTE->getOpcode(), TE->UserTreeIndex.EdgeIdx);
+  }
+  return !UserOps.empty();
+}
+
 uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
   uint64_t Total = 0;
   for (const std::unique_ptr<TreeEntry> &Ptr : VectorizableTree) {
@@ -23729,24 +23755,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
       auto GatherUserOps =
           [&](SmallVectorImpl<TTI::BuildVectorUseOp> &UserOps) {
             UserOps.clear();
-            if (NeedFreeze)
-              return false;
-            for (const auto &TE :
-                 make_filter_range(VectorizableTree, [&](const auto &TE) {
-                   return !DeletedNodes.contains(TE.get());
-                 })) {
-              if (!(TE->isGather() ||
-                    TransformedToGatherNodes.contains(TE.get())) ||
-                  !E->isSame(TE->Scalars))
-                continue;
-              auto *UserTE = TE->UserTreeIndex.UserTE;
-              if (!UserTE || !UserTE->hasState() || UserTE->isAltShuffle() ||
-                  TransformedToGatherNodes.contains(UserTE))
-                return false;
-              UserOps.emplace_back(UserTE->getOpcode(),
-                                   TE->UserTreeIndex.EdgeIdx);
-            }
-            return !UserOps.empty();
+            return !NeedFreeze && collectGatherUserOps(*E, UserOps);
           };
       ContextHint =
           TTI->getBuildVectorContextHint(ReuseMask, E->Scalars, GatherUserOps);
