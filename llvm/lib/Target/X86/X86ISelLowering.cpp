@@ -5016,7 +5016,7 @@ static SDValue concatSubVectors(SDValue V1, SDValue V2, SelectionDAG &DAG,
   unsigned SubNumElts = SubVT.getVectorNumElements();
   unsigned SubVectorWidth = SubVT.getSizeInBits();
   EVT VT = EVT::getVectorVT(*DAG.getContext(), SubSVT, 2 * SubNumElts);
-  SDValue V = insertSubVector(DAG.getUNDEF(VT), V1, 0, DAG, dl, SubVectorWidth);
+  SDValue V = insertSubVector(DAG.getPOISON(VT), V1, 0, DAG, dl, SubVectorWidth);
   return insertSubVector(V, V2, SubNumElts, DAG, dl, SubVectorWidth);
 }
 
