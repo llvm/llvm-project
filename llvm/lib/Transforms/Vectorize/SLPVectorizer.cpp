@@ -29380,6 +29380,7 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
 
   Stores.clear();
   GEPs.clear();
+  IndexedGEPs.clear();
   bool Changed = false;
 
   // If the target claims to have no vector registers don't attempt
@@ -29421,6 +29422,11 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
     // Start new block - clear the list of reduction roots.
     R.clearReductionData();
     collectSeedInstructions(BB);
+    // Saved to keep their index computations out of the once-used seed attempt.
+    if (VectorizeOnceUsed)
+      for (const GEPList &List : make_second_range(GEPs))
+        if (List.size() >= 2)
+          append_range(IndexedGEPs[BB], List);
 
     // Vectorize trees that end at stores.
     if (!Stores.empty()) {
@@ -36572,6 +36578,11 @@ bool SLPVectorizerPass::vectorizeOnceUsedSeeds(BasicBlock *BB, BoUpSLP &R) {
   SmallDenseMap<std::pair<size_t, size_t>, unsigned> KeyToGroup;
   SmallDenseMap<Value *, unsigned> SeedGroups;
   PoorThroughputOpCache PoorThroughputCache;
+  SmallPtrSet<Value *, 16> IndexedGEPsInBB;
+  if (auto It = IndexedGEPs.find(BB); It != IndexedGEPs.end())
+    for (Value *GEP : It->second)
+      if (GEP)
+        IndexedGEPsInBB.insert(GEP);
   for (Instruction &I : make_filter_range(*BB, [&](Instruction &I) {
          return !R.isDeleted(&I) && I.hasOneUse() && !R.isEphemeralValue(&I) &&
                 !R.isVectorized(&I) && !R.isAnalyzedScalar(&I) &&
@@ -36579,6 +36590,10 @@ bool SLPVectorizerPass::vectorizeOnceUsedSeeds(BasicBlock *BB, BoUpSLP &R) {
                 isOnceUsedSeed(&I) && !isNonVectorizableInst(&I, TLI) &&
                 !R.hasResolvedUser(&I);
        })) {
+    // Index chains of collected GEPs are handled by vectorizeGEPIndices.
+    if (GetElementPtrInst *GEP = getIndexChainGEP(&I);
+        GEP && GEP->getParent() == BB && IndexedGEPsInBB.contains(GEP))
+      continue;
     // The poor-throughput ops are seeded on their own, with the different
     // grouping.
     if (VectorizePoorThroughput &&
@@ -36693,6 +36708,12 @@ bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
         auto *GEPIdx = GEP->idx_begin()->get();
         assert(GEP->getNumIndices() == 1 && !isa<Constant>(GEPIdx));
         Bundle[BundleIndex++] = GEPIdx;
+      }
+
+      if (isStrengthReducibleIndexBundle(Bundle, *SE, *LI, SLPReVec)) {
+        LLVM_DEBUG(dbgs() << "SLP: Not vectorizing strength-reducible address "
+                             "computations.\n");
+        continue;
       }
 
       // Try and vectorize the indices. We are currently only interested in

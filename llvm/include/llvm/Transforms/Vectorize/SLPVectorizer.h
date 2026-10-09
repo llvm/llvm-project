@@ -19,10 +19,12 @@
 #define LLVM_TRANSFORMS_VECTORIZE_SLPVECTORIZER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ValueHandle.h"
 
 namespace llvm {
 
@@ -210,6 +212,10 @@ private:
 
   /// The getelementptr instructions in a basic block organized by base pointer.
   GEPListMap GEPs;
+
+  /// The getelementptr instructions whose indices are candidates for
+  /// vectorizeGEPIndices, organized by basic block.
+  DenseMap<BasicBlock *, SmallVector<WeakTrackingVH>> IndexedGEPs;
 };
 
 } // end namespace llvm
