@@ -608,6 +608,10 @@ features cannot lower the translation-unit ABI level;
  
 - Clang now diagnoses arrays whose size is deduced from an initializer list when they exceed the maximum object size
 
+- Added `-Wunsafe-buffer-usage-main-argv` as a diagnostic group under
+  `-Wunsafe-buffer-usage` to control warnings on `main`'s `argv` parameter,
+  allowing users to suppress them with `-Wno-unsafe-buffer-usage-main-argv`.
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
