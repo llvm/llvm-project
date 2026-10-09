@@ -11162,8 +11162,7 @@ class InstructionsCompatibilityAnalysis {
         };
 
     for (Instruction *I : make_isa_range<Instruction>(VL)) {
-      if ((I == MainOp && (!S.isAltShuffle() || I == SMain)) ||
-          (!S.isAltShuffle() && I == SMain))
+      if ((I == MainOp && (!S.isAltShuffle() || I == SMain)))
         continue;
       SmallVector<BoUpSLP::ValueList> VOps;
       buildOriginalOperands(S, I == SMain ? MainOp : I, VOps);

@@ -476,8 +476,7 @@ define void @shl_mul_copyable(ptr %p, ptr %s) {
 ; CHECK-LABEL: @shl_mul_copyable(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[P:%.*]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i16> [[TMP0]], <i16 5, i16 1, i16 1, i16 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = shl <4 x i16> [[TMP1]], <i16 0, i16 3, i16 1, i16 9>
+; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i16> [[TMP0]], <i16 5, i16 8, i16 2, i16 512>
 ; CHECK-NEXT:    store <4 x i16> [[TMP2]], ptr [[S:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
