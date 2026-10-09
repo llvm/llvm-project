@@ -97,7 +97,7 @@ static llvm::cl::opt<bool> LimitedCoverage(
 static llvm::cl::opt<bool> EmitModuleLocalHints(
     "clang-emit-module-local-hints", llvm::cl::Hidden, llvm::cl::init(false),
     llvm::cl::desc("Mark inline and template functions defined in the main "
-                   "source file with \"frontend-hint-likely-module-local\""));
+                   "source file with \"likely-module-local\""));
 
 static const char AnnotationSection[] = "llvm.metadata";
 static constexpr auto ErrnoTBAAMDName = "llvm.errno.tbaa";
@@ -3311,7 +3311,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     // template's definition, not instantiation.
     bool InMainFile = SM.isInMainFile(D->getLocation());
     if (FD && (FD->isInlined() || FD->isTemplateInstantiation()) && InMainFile)
-      B.addAttribute("frontend-hint-likely-module-local");
+      B.addAttribute("likely-module-local");
   }
 
   F->addFnAttrs(B);
