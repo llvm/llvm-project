@@ -131,6 +131,17 @@ public:
   }
 };
 
+/// Returns the offset in bytes between successive objects of \p ty, including
+/// alignment padding, as CIRDataLayout::getTypeAllocSize does, for code that
+/// has only an mlir::DataLayout.
+///
+/// For example, a three-float vector is 12 bytes with an alloc size of 16.
+inline uint64_t getTypeAllocSize(const mlir::DataLayout &dataLayout,
+                                 mlir::Type ty) {
+  return llvm::alignTo(dataLayout.getTypeSize(ty),
+                       dataLayout.getTypeABIAlignment(ty));
+}
+
 } // namespace cir
 
 #endif // CLANG_CIR_DIALECT_IR_CIRDATALAYOUT_H
