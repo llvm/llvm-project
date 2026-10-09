@@ -435,8 +435,7 @@ AsmPrinter::AsmPrinter(TargetMachine &tm, std::unique_ptr<MCStreamer> Streamer,
   GetMBHI = [this](MachineFunction &MF) {
     return &getAnalysis<MachineBlockHashInfo>().getMBHI();
   };
-  GetBBSPR =
-      [this](MachineFunction &MF) {
+  GetBBSPR = [this](MachineFunction &MF) {
     auto *BBSPRPass =
         getAnalysisIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>();
     return BBSPRPass ? &BBSPRPass->getBBSPR() : nullptr;

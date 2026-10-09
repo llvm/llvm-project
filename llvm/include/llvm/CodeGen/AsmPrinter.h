@@ -189,8 +189,7 @@ public:
   std::function<MachineBlockHashInfoResult *(MachineFunction &)> GetMBHI;
   /// Returns the basic block sections profile reader if available, nullptr
   /// otherwise.
-  std::function<BasicBlockSectionsProfileReader *(MachineFunction &)>
-      GetBBSPR;
+  std::function<BasicBlockSectionsProfileReader *(MachineFunction &)> GetBBSPR;
   std::function<void(Module &)> BeginGCAssembly;
   std::function<void(Module &)> FinishGCAssembly;
   std::function<void(Module &)> EmitStackMaps;
