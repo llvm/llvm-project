@@ -246,13 +246,13 @@ bool AMDGPUMIRFormatter::parseSWaitcntImmMnemonic(
     unsigned Max;
     if (Name == VmcntName) {
       Max = AMDGPU::getVmcntBitMask(Version);
-      Vmcnt = static_cast<unsigned>(Num);
+      Vmcnt = Num;
     } else if (Name == ExpcntName) {
       Max = AMDGPU::getExpcntBitMask(Version);
-      Expcnt = static_cast<unsigned>(Num);
+      Expcnt = Num;
     } else if (Name == LgkmcntName) {
       Max = AMDGPU::getLgkmcntBitMask(Version);
-      Lgkmcnt = static_cast<unsigned>(Num);
+      Lgkmcnt = Num;
     } else {
       return ErrorCallback(NamePos, "invalid counter name");
     }
@@ -311,10 +311,10 @@ bool AMDGPUMIRFormatter::parseSWaitLoadcntDscntImmMnemonic(
     unsigned Max;
     if (Name == LoadcntName) {
       Max = AMDGPU::getLoadcntBitMask(Version);
-      Loadcnt = static_cast<unsigned>(Num);
+      Loadcnt = Num;
     } else if (Name == DscntName) {
       Max = AMDGPU::getDscntBitMask(Version);
-      Dscnt = static_cast<unsigned>(Num);
+      Dscnt = Num;
     } else {
       return ErrorCallback(NamePos, "invalid counter name");
     }
@@ -380,33 +380,26 @@ bool AMDGPUMIRFormatter::parseSWaitAluImmMnemonic(
     unsigned Max;
     if (Name == VaVdstName) {
       Max = AMDGPU::DepCtr::getVaVdstBitMask();
-      ImmEnc =
-          AMDGPU::DepCtr::encodeFieldVaVdst(ImmEnc, static_cast<unsigned>(Num));
+      ImmEnc = AMDGPU::DepCtr::encodeFieldVaVdst(ImmEnc, Num);
     } else if (Name == VmVsrcName) {
       Max = AMDGPU::DepCtr::getVmVsrcBitMask();
-      ImmEnc =
-          AMDGPU::DepCtr::encodeFieldVmVsrc(ImmEnc, static_cast<unsigned>(Num));
+      ImmEnc = AMDGPU::DepCtr::encodeFieldVmVsrc(ImmEnc, Num);
     } else if (Name == VaSdstName) {
       Max = AMDGPU::DepCtr::getVaSdstBitMask();
-      ImmEnc =
-          AMDGPU::DepCtr::encodeFieldVaSdst(ImmEnc, static_cast<unsigned>(Num));
+      ImmEnc = AMDGPU::DepCtr::encodeFieldVaSdst(ImmEnc, Num);
     } else if (Name == VaSsrcName) {
       Max = AMDGPU::DepCtr::getVaSsrcBitMask();
-      ImmEnc =
-          AMDGPU::DepCtr::encodeFieldVaSsrc(ImmEnc, static_cast<unsigned>(Num));
+      ImmEnc = AMDGPU::DepCtr::encodeFieldVaSsrc(ImmEnc, Num);
     } else if (Name == HoldCntName) {
       const AMDGPU::IsaVersion &Version = AMDGPU::getIsaVersion(STI.getCPU());
       Max = AMDGPU::DepCtr::getHoldCntBitMask(Version);
-      ImmEnc = AMDGPU::DepCtr::encodeFieldHoldCnt(
-          ImmEnc, static_cast<unsigned>(Num), Version);
+      ImmEnc = AMDGPU::DepCtr::encodeFieldHoldCnt(ImmEnc, Num, Version);
     } else if (Name == VaVccName) {
       Max = AMDGPU::DepCtr::getVaVccBitMask();
-      ImmEnc =
-          AMDGPU::DepCtr::encodeFieldVaVcc(ImmEnc, static_cast<unsigned>(Num));
+      ImmEnc = AMDGPU::DepCtr::encodeFieldVaVcc(ImmEnc, Num);
     } else if (Name == SaSdstName) {
       Max = AMDGPU::DepCtr::getSaSdstBitMask();
-      ImmEnc =
-          AMDGPU::DepCtr::encodeFieldSaSdst(ImmEnc, static_cast<unsigned>(Num));
+      ImmEnc = AMDGPU::DepCtr::encodeFieldSaSdst(ImmEnc, Num);
     } else {
       return ErrorCallback(NamePos, "invalid counter name");
     }
