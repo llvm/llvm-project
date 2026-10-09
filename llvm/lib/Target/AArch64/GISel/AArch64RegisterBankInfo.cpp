@@ -520,7 +520,7 @@ void AArch64RegisterBankInfo::applyMappingImpl(
             OpdMapper.getInstrMapping().getID() <= 4) &&
            "Don't know how to handle that ID");
     return applyDefaultMapping(OpdMapper);
-  case AArch64::G_DUP: {
+  case AArch64::G_SPLAT_VECTOR: {
     if (foldTruncOfI32Constant(MI, 1, MRI))
       return applyDefaultMapping(OpdMapper);
 
@@ -765,7 +765,7 @@ bool AArch64RegisterBankInfo::onlyDefinesFP(const MachineInstr &MI,
                                             const AArch64RegisterInfo &TRI,
                                             unsigned Depth) const {
   switch (MI.getOpcode()) {
-  case AArch64::G_DUP:
+  case AArch64::G_SPLAT_VECTOR:
   case AArch64::G_SADDLP:
   case AArch64::G_UADDLP:
   case TargetOpcode::G_SITOFP:
@@ -1072,17 +1072,15 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     }
     break;
   }
-  case AArch64::G_DUP: {
+  case AArch64::G_SPLAT_VECTOR: {
     Register ScalarReg = MI.getOperand(1).getReg();
     LLT ScalarTy = MRI.getType(ScalarReg);
     auto ScalarDef = MRI.getVRegDef(ScalarReg);
     // We want to select dup(load) into LD1R.
     if (ScalarDef->getOpcode() == TargetOpcode::G_LOAD)
       OpRegBankIdx = {PMI_FirstFPR, PMI_FirstFPR};
-    // s8 is an exception for G_DUP, which we always want on gpr.
-    else if (ScalarTy.getSizeInBits() != 8 &&
-             (getRegBank(ScalarReg, MRI, TRI) == &AArch64::FPRRegBank ||
-              onlyDefinesFP(*ScalarDef, MRI, TRI)))
+    else if (getRegBank(ScalarReg, MRI, TRI) == &AArch64::FPRRegBank ||
+             onlyDefinesFP(*ScalarDef, MRI, TRI))
       OpRegBankIdx = {PMI_FirstFPR, PMI_FirstFPR};
     else {
       if (ScalarTy.getSizeInBits() < 32 &&
