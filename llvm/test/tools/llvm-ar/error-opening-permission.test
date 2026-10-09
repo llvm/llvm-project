@@ -11,5 +11,6 @@
 # RUN: chmod 100 %t/permission.b
 # RUN: not llvm-ar p %t/permission.b 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=NO-PERMISSION -DARCHIVE=%t/permission.b -DMSG=%errc_EACCES
+# RUN: chmod 700 %t/permission.b
 
 # NO-PERMISSION: error: unable to open '[[ARCHIVE]]': [[MSG]]
