@@ -562,6 +562,11 @@ features cannot lower the translation-unit ABI level;
   duck typing rather than a hardcoded type list, suppressing false positives
   when both methods are called on the same user-defined container object.
 
+- `-Wunsafe-buffer-usage` now warns when a field annotated with
+  `[[clang::unsafe_buffer_usage]]` is initialized in a constructor's member
+  initializer list or in aggregate initialization, such as `S s = {.ptr = p}`
+  or `S s(p)`, the same as an assignment to the field. (#GH115347)
+
 - `-Wc++98-compat` now diagnoses explicit conversion functions in C++20 and
   later, matching the behavior in C++11 through C++17. (#GH161689)
 

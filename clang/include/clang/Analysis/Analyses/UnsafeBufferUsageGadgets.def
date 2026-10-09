@@ -36,6 +36,7 @@ WARNING_GADGET(Decrement)
 WARNING_OPTIONAL_GADGET(PointerArithmetic)
 WARNING_GADGET(UnsafeBufferUsageAttr)
 WARNING_GADGET(UnsafeBufferUsageCtorAttr)
+WARNING_GADGET(UnsafeBufferUsageFieldInit) // `S s = {.f = x}`, `C() : f(x)`
 WARNING_GADGET(DataInvocation)
 WARNING_GADGET(UniquePtrArrayAccess)
 WARNING_OPTIONAL_GADGET(ArraySubscript)
