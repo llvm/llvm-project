@@ -76,4 +76,38 @@ exit:
   ret i16 %iv
 }
 
+; The i8 compare is rewritten in terms of the i64 IV, and its immediate (864)
+; does not fit in i8; it is truncated to 96.
+define void @test3() {
+; CHECK-LABEL: define void @test3() {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], %[[LOOP]] ], [ 900, %[[ENTRY]] ]
+; CHECK-NEXT:    [[TMP:%.*]] = trunc i64 [[LSR_IV]] to i8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP]], 96
+; CHECK-NEXT:    call void @use(i1 [[CMP]])
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV]], -1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv1 = phi i64 [ 100, %entry ], [ %iv1.next, %loop ]
+  %iv2 = phi i8 [ 5, %entry ], [ %iv2.inc, %loop ]
+  %iv2.inc = add i8 %iv2, 1
+  %cmp = icmp eq i8 %iv2.inc, 42
+  call void @use(i1 %cmp)
+  %iv1.next = add i64 %iv1, 1
+  %exitcond = icmp eq i64 %iv1.next, 1000
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 attributes #0 = { "target-cpu"="x86-64" }
