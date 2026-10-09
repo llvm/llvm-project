@@ -62,3 +62,50 @@ subroutine regression
 !$ real x, &
  stop
 end
+
+! Free source form conditional compilation sentinel on a continuation line
+! that is immediately followed by the continued text, with no white space or
+! ampersand in between (https://github.com/llvm/llvm-project/issues/198771).
+! CHECK-LABEL: subroutine mixed_form4()
+! CHECK-OMP: i=1111111_4
+! CHECK-NO-OMP: i=1010001_4
+subroutine mixed_form4()
+!$ i = 0
+ i = 1&
+   !$ +10 &
+!$+100&
+!$&+ 1000&
+ &+ 10000&
+!$& +100000&
+ & +1000000
+end subroutine
+
+! Same, but continuing a conditional compilation line.
+! CHECK-LABEL: subroutine mixed_form5()
+! CHECK-OMP: i=21_4
+! CHECK-NO-OMP-NOT: i=21_4
+subroutine mixed_form5()
+!$ i = 1&
+!$+10&
+!$*2
+end subroutine
+
+! An initial line still needs white space after the sentinel, so these
+! are comments.
+! CHECK-LABEL: subroutine initial_line()
+! CHECK-OMP-NOT: i=5_4
+! CHECK-OMP-NOT: j=6_4
+subroutine initial_line()
+!$i = 5
+!$+j = 6
+end subroutine
+
+! Comment lines between continued conditional compilation lines.
+! CHECK-LABEL: subroutine cond_comment()
+! CHECK-OMP: i=5_4
+subroutine cond_comment()
+!$ i = 1 &
+! comment
+!$!comment
+!$ + 4
+end subroutine
