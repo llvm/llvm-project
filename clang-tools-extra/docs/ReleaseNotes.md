@@ -250,6 +250,10 @@ infrastructure are described first, followed by tool-specific sections.
   - No longer diagnoses parameters of `main`, whose signature is fixed by the
     standard.
 
+  - No longer diagnoses variables used as operands of `std::move` in template
+    instantiations, where the suggested `const` would break the move for
+    instantiations with real move semantics.
+
 - Fixed an infinite loop in {doc}`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` when checking a class that
   inherits from itself or has a circular inheritance graph.
