@@ -1518,7 +1518,26 @@ bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
     // Otherwise, special case the single use in the phi recurrence.
     return BO->hasOneUse() && DT.dominates(Cmp->getParent(), L->getLoopLatch());
   };
-  if (BO->getParent() != Cmp->getParent() && !IsReplacableIVIncrement(BO)) {
+
+  auto QuickDomAndPressureCheck = [=] {
+    // A cheap dominance check.
+    if (BO->getParent()->getUniquePredecessor() != Cmp->getParent())
+      return false;
+
+    // If the only uses of Arg0/Arg1 are the BO and Cmp, replacing them
+    // with an intrinsic means we're replacing one live value (the non-constnat
+    // argument) with another (the intrinsic), thus keeping register preassure
+    // unchanged.
+    if (!isa<ConstantInt>(Arg0) && Arg0->hasNUsesOrMore(3))
+      return false;
+    if (!isa<ConstantInt>(Arg1) && Arg1->hasNUsesOrMore(3))
+      return false;
+
+    return true;
+  };
+
+  if (BO->getParent() != Cmp->getParent() && !QuickDomAndPressureCheck() &&
+      !IsReplacableIVIncrement(BO)) {
     // We used to use a dominator tree here to allow multi-block optimization.
     // But that was problematic because:
     // 1. It could cause a perf regression by hoisting the math op into the
@@ -1537,6 +1556,9 @@ bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
     // - Upon computing Cmp, we effectively compute something equivalent to the
     //   IV increment (despite it loops differently in the IR). So moving it up
     //   to the cmp point does not really increase register pressure.
+    //
+    // Also, if Cmp's block trivially dominates BO's and the non-const
+    // argument doesn't have any other uses, we handle that too.
     return false;
   }
 
