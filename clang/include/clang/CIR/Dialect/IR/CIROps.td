@@ -4908,12 +4908,12 @@ def CIR_CoroutineOp : CIR_Op<"coroutine", [
 
     - `unwind`: TODO.
 
-    - `destroy`: destroys the coroutine frame (`coro.free` + `delete`).
-      Reached by an explicit `destroy()` call on a suspended handle, by
-      normal completion through `final_suspend`, or by an exception
-      escaping the coroutine. Falls through to `exit` except when reached
-      due to an escaping exception, where it continues propagating that
-      exception instead.
+    - `destroy`: destroys the coroutine state: the promise, then the
+      parameter copies, then the coroutine frame (`coro.free` + `delete`).
+      Reached by an explicit `destroy()` call on a suspended handle, or by
+      normal completion through `final_suspend`, and falls through to
+      `exit`. It runs the destructors unconditionally, so an exception must
+      not reach it. Exceptional exits are not modeled in `unwind`.
 
     - `exit`: the shared return-to-caller path. Reached directly from any
       suspend point that isn't being destroyed (the coroutine is just
