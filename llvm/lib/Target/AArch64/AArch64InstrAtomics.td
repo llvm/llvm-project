@@ -328,9 +328,6 @@ class atomic_hint_store<PatFrag Base, int Relaxed, code Pred>
             (Base node:$val, node:$ptr), Pred> {
   let IsAtomic = 1;
   let IsAtomicOrderingReleaseOrStronger = !eq(Relaxed, 0);
-
-  // TODO: Change once mem.cache_hint supported in GISel
-  let GISelPredicateCode = [{ return false; }];
 }
 
 multiclass AtomicHintPatternsAddrMode<int Hint, code Pred> {
@@ -422,7 +419,7 @@ multiclass AtomicHintPatterns<int Relaxed, int Hint, code Pred> {
             (ATOMIC_STORE_HINT_X GPR64:$data, GPR64sp:$addr, (i32 Relaxed), (i32 Hint))>;
 }
 
-let AddedComplexity = 15 in {
+let AddedComplexity = 1, GISelShouldIgnore = 1 in {
   defm : AtomicHintPatternsAddrMode<48, [{ return isAtomicMemoryHint(N, AArch64MemoryHint::STSHH_KEEP); }]>;
   defm : AtomicHintPatternsAddrMode<49, [{ return isAtomicMemoryHint(N, AArch64MemoryHint::STSHH_STRM); }]>;
   defm : AtomicHintPatternsAddrMode<52, [{ return isAtomicMemoryHint(N, AArch64MemoryHint::STCPH); }]>;
