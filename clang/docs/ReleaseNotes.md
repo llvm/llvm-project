@@ -257,6 +257,12 @@ features cannot lower the translation-unit ABI level;
 - Clang now allows GNU computed `goto` extension in `constexpr` functions, matching the relaxed
   `constexpr` function body rules introduced in C++23.
 
+- Atomic operations on `_BitInt(N)` are now supported, including
+  `_Atomic(_BitInt(N))`, the `__c11_atomic_*` / `__atomic_*` builtins, and
+  `std::atomic`. Widths the target cannot operate on inline use the
+  `__atomic_*` libcalls; arithmetic read-modify-write on a width with padding
+  bits is emitted as a compare-exchange loop computing at the value width.
+
 - Added support for the `__builtin_strlcat` and `__builtin_strlcpy` builtins.
 
 - Added `__builtin_sort_pack` to sort a pack of types using the same
