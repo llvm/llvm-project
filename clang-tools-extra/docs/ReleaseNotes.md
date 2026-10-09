@@ -71,10 +71,6 @@ infrastructure are described first, followed by tool-specific sections.
   Custom checks are subject to `FastCheckFilter`, and therefore require
   `FastCheckFilter: Loose` or `None` to run.
 
-- A header that declares a name also found in the standard library, such as
-  `strcmp` in a freestanding project's own string header, is no longer
-  reported as an unused include. Removing the include broke the build.
-
 #### Semantic Highlighting
 
 #### Compile flags
@@ -131,6 +127,14 @@ infrastructure are described first, followed by tool-specific sections.
 ### Improvements to clang-doc
 
 ### Improvements to clang-query
+
+### Improvements to include-cleaner
+
+- A project's own declarations of standard library names, such as `strcmp` in
+  a freestanding project's string header, now count as providers. Such headers
+  are no longer reported as unused, and uses of those names are no longer
+  reported as missing an include. This applies to clangd and the
+  {doc}`misc-include-cleaner <clang-tidy/checks/misc/include-cleaner>` check.
 
 ### Improvements to clang-tidy
 
@@ -248,13 +252,6 @@ infrastructure are described first, followed by tool-specific sections.
     
   - No longer diagnoses parameters of `main`, whose signature is fixed by the
     standard.
-
-- Improved {doc}`misc-include-cleaner
-  <clang-tidy/checks/misc/include-cleaner>` check by treating a project's own
-  declarations of standard library names, such as `strcmp` in a freestanding
-  project's string header, as providers. Such headers are no longer reported
-  as unused, and uses of those names are no longer reported as missing an
-  include.
 
 - Fixed an infinite loop in {doc}`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` when checking a class that
