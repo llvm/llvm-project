@@ -1295,8 +1295,16 @@ bool Context::isValid(raw_ostream &OS) const {
         return false;
       }
       return true;
-    case Type::StructTyID:
     case Type::ArrayTyID:
+      // The number of elements is used as uint32_t in the value
+      // representation. Reject arrays with too many elements to avoid
+      // truncation.
+      if (cast<ArrayType>(Ty)->getNumElements() > UINT32_MAX) {
+        OS << "The number of elements of " << *Ty << " is too large!\n";
+        return false;
+      }
+      [[fallthrough]];
+    case Type::StructTyID:
       if (ValidAggTys.contains(Ty))
         return true;
       for (unsigned I = 0, E = Ty->getNumContainedTypes(); I != E; ++I)
