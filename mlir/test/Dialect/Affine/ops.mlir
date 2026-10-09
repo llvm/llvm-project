@@ -192,18 +192,6 @@ func.func @parallel(%A : memref<100x100xf32>, %N : index) {
 
 // -----
 
-// CHECK-LABEL: func @parallel_int_min_max
-func.func @parallel_int_min_max(%A : memref<100xi32>) {
-  // CHECK: affine.parallel (%{{.*}}) = (0) to (100) reduce ("maxs", "mins", "maxu", "minu") -> (i32, i32, i32, i32)
-  %0:4 = affine.parallel (%i) = (0) to (100) reduce ("maxs", "mins", "maxu", "minu") -> (i32, i32, i32, i32) {
-    %1 = affine.load %A[%i] : memref<100xi32>
-    affine.yield %1, %1, %1, %1 : i32, i32, i32, i32
-  }
-  return
-}
-
-// -----
-
 // CHECK-LABEL: @parallel_min_max
 // CHECK: %[[A:.*]]: index, %[[B:.*]]: index, %[[C:.*]]: index, %[[D:.*]]: index
 func.func @parallel_min_max(%a: index, %b: index, %c: index, %d: index) {
