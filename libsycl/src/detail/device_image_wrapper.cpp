@@ -11,6 +11,9 @@
 #include <detail/context_impl.hpp>
 #include <detail/offload/offload_utils.hpp>
 
+#include <cassert>
+#include <tuple>
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
@@ -26,7 +29,7 @@ ProgramWrapper::ProgramWrapper(ContextImpl &Context, ol_device_handle_t Device,
 }
 
 ProgramWrapper::~ProgramWrapper() {
-  assert(MProgram);
+  assert(MProgram && "Program handle can't be nullptr");
   std::ignore = olDestroyProgram(MProgram);
   // TODO: define a way to report errors from dtors.
 }

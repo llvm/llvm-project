@@ -6,6 +6,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.arpa.inet.inet_aton
     libc.src.arpa.inet.inet_ntoa
     libc.src.arpa.inet.inet_ntop
+    libc.src.arpa.inet.inet_pton
     libc.src.arpa.inet.ntohl
     libc.src.arpa.inet.ntohs
 
@@ -270,6 +271,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.srand
     libc.src.stdlib.strfromd
     libc.src.stdlib.strfromf
+    libc.src.stdlib.strfromf128
     libc.src.stdlib.strfroml
     libc.src.stdlib.strtod
     libc.src.stdlib.strtof
@@ -305,6 +307,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.stdin
     libc.src.stdio.stdout
     libc.src.stdio.tmpfile
+    libc.src.stdio.tmpnam
     libc.src.stdio.vsscanf
     libc.src.stdio.vfprintf
     libc.src.stdio.vprintf
@@ -444,6 +447,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/auxv.h entrypoints
     libc.src.sys.auxv.getauxval
 
+    # sys/inotify.h entrypoints
+    libc.src.sys.inotify.inotify_add_watch
+    libc.src.sys.inotify.inotify_init
+    libc.src.sys.inotify.inotify_init1
+    libc.src.sys.inotify.inotify_rm_watch
+
     # termios.h entrypoints
     libc.src.termios.cfgetispeed
     libc.src.termios.cfgetospeed
@@ -454,6 +463,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.termios.tcflush
     libc.src.termios.tcgetattr
     libc.src.termios.tcgetsid
+    libc.src.termios.tcgetwinsize
     libc.src.termios.tcsendbreak
     libc.src.termios.tcsetattr
 
@@ -472,6 +482,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.faccessat
     libc.src.unistd.fchdir
     libc.src.unistd.fchown
+    libc.src.unistd.fchownat
     libc.src.unistd.fdatasync
     libc.src.unistd.fpathconf
     libc.src.unistd.fsync
@@ -1331,6 +1342,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.dirent.dirfd
     libc.src.dirent.opendir
     libc.src.dirent.readdir
+    libc.src.dirent.scandir
     libc.src.dirent.fdopendir
 
     # pthread.h entrypoints
@@ -1676,9 +1688,6 @@ endif()
 if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND TARGET_LIBC_ENTRYPOINTS
-      # arpa/inet.h entrypoints
-      libc.src.arpa.inet.inet_pton
-
       # fnmatch.h entrypoints
       libc.src.fnmatch.fnmatch
 

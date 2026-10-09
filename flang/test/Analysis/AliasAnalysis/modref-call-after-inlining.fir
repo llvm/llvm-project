@@ -29,9 +29,9 @@ func.func @_QPtest() {
   %c10 = arith.constant 10 : index                                                     
   %0 = fir.alloca !fir.array<10xf32> {bindc_name = "x", uniq_name = "_QFtestEx"}       
   %1 = fir.shape %c10 : (index) -> !fir.shape<1>                                       
-  %2:2 = hlfir.declare %0(%1) {uniq_name = "_QFtestEx"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+  %2:2 = hlfir.declare %0(%1) uniq_name("_QFtestEx") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
   %3 = fir.dummy_scope : !fir.dscope
-  %4:2 = hlfir.declare %2#1(%1) dummy_scope %3 {test.ptr = "x", fortran_attrs = #fir.var_attrs<internal_assoc>, uniq_name = "_QFinline_meEx"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+  %4:2 = hlfir.declare %2#1(%1) dummy_scope %3 uniq_name("_QFinline_meEx") fortran_attrs<internal_assoc> {test.ptr = "x"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
   %5 = fir.alloca tuple<!fir.box<!fir.array<10xf32>>>
   %6 = fir.coordinate_of %5, %c0_i32 : (!fir.ref<tuple<!fir.box<!fir.array<10xf32>>>>, i32) -> !fir.ref<!fir.box<!fir.array<10xf32>>>
   %7 = fir.embox %4#1(%1) : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xf32>>

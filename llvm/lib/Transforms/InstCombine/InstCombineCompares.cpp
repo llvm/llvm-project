@@ -12,6 +12,7 @@
 
 #include "InstCombineInternal.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -151,7 +152,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   uint64_t ArrayElementCount =
       divideCeil((GlobalSize.getFixedValue() - ConstOffset.getZExtValue()),
                  Stride.getZExtValue());
-  if (ArrayElementCount > MaxArraySizeForCombine)
+  if (ArrayElementCount > CLOpts.maxarray_size)
     return nullptr;
 
   enum { Overdefined = -3, Undefined = -2 };
@@ -488,7 +489,7 @@ static void setInsertionPoint(IRBuilder<> &Builder, Value *V,
                               bool Before = true) {
   if (auto *PHI = dyn_cast<PHINode>(V)) {
     BasicBlock *Parent = PHI->getParent();
-    Builder.SetInsertPoint(Parent, Parent->getFirstInsertionPt());
+    Builder.SetInsertPoint(Parent->getFirstInsertionPt());
     return;
   }
   if (auto *I = dyn_cast<Instruction>(V)) {
@@ -500,7 +501,7 @@ static void setInsertionPoint(IRBuilder<> &Builder, Value *V,
   if (auto *A = dyn_cast<Argument>(V)) {
     // Set the insertion point in the entry block.
     BasicBlock &Entry = A->getParent()->getEntryBlock();
-    Builder.SetInsertPoint(&Entry, Entry.getFirstInsertionPt());
+    Builder.SetInsertPoint(Entry.getFirstInsertionPt());
     return;
   }
   // Otherwise, this is a constant and we don't need to set a new
@@ -538,7 +539,7 @@ static Value *rewriteGEPAsOffset(Value *Start, Value *Base, GEPNoWrapFlags NW,
           PHINode::Create(IndexType, PHI->getNumIncomingValues(),
                           PHI->getName() + ".idx", PHI->getIterator());
   }
-  IRBuilder<> Builder(Base->getContext());
+  IRBuilder<> Builder(IC.getModule());
 
   // Create all the other instructions.
   for (Value *Val : Explored) {
@@ -3577,6 +3578,22 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
     }
   }
 
+  // Fold the canonicalized form of vector_reduce_or if the arg is
+  // get_active_lane mask.
+  // icmp ne (bitcast <N x i1> to iN (get_active_lane_mask(l, h))), 0 ->
+  //            icmp ult l, h
+  // icmp eq (bitcast <N x i1> to iN (get_active_lane_mask(l, h))), 0 ->
+  //            icmp uge l, h
+  Value *Upper, *Lower;
+  if (match(BCSrcOp, m_Intrinsic<Intrinsic::get_active_lane_mask>(
+                         m_Value(Lower), m_Value(Upper))) &&
+      match(Op1, m_Zero()) && DstType->isIntegerTy()) {
+    if (Pred == ICmpInst::ICMP_NE)
+      return new ICmpInst(ICmpInst::ICMP_ULT, Lower, Upper);
+    if (Pred == ICmpInst::ICMP_EQ)
+      return new ICmpInst(ICmpInst::ICMP_UGE, Lower, Upper);
+  }
+
   const APInt *C;
   if (!match(Cmp.getOperand(1), m_APInt(C)) || !DstType->isIntegerTy() ||
       !SrcType->isIntOrIntVectorTy())
@@ -4551,6 +4568,32 @@ Instruction *InstCombinerImpl::foldSelectICmp(CmpPredicate Pred, SelectInst *SI,
     if (!Op2)
       Op2 = Builder.CreateICmp(Pred, SI->getOperand(2), RHS, I.getName());
     return SelectInst::Create(SI->getOperand(0), Op1, Op2, "", nullptr, SI);
+  }
+
+  // Fold icmp eq/ne X, select(icmp pred X, P, C1, C2)
+  // When the select condition compares X with a constant P and the select
+  // arms are constants C1/C2, we can fold to a set membership test.
+  // Example: X == select(X >s 0, 2, 0) -> (X == 2) | (X == 0)
+  // This is valid when C1 satisfies the condition (C1 >s 0) and C2 does not.
+  if (ICmpInst::isEquality(Pred)) {
+    CmpPredicate CondPred;
+    const APInt *C1, *C2, *P;
+    if (match(SI,
+              m_OneUse(m_Select(m_ICmp(CondPred, m_Specific(RHS), m_APInt(P)),
+                                m_APInt(C1), m_APInt(C2))))) {
+      bool C1SatisfiesCond = ICmpInst::compare(*C1, *P, CondPred);
+      bool C2SatisfiesCond = ICmpInst::compare(*C2, *P, CondPred);
+
+      if (C1SatisfiesCond && !C2SatisfiesCond) {
+        // X == select(cond, C1, C2) -> (X == C1) | (X == C2)
+        // X != select(cond, C1, C2) -> (X != C1) & (X != C2)
+        Value *Cmp1 = Builder.CreateICmp(Pred, RHS, SI->getTrueValue());
+        Value *Cmp2 = Builder.CreateICmp(Pred, RHS, SI->getFalseValue());
+        if (Pred == ICmpInst::ICMP_EQ)
+          return BinaryOperator::CreateOr(Cmp1, Cmp2);
+        return BinaryOperator::CreateAnd(Cmp1, Cmp2);
+      }
+    }
   }
 
   return nullptr;
@@ -8201,6 +8244,24 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   // TODO: Hoist this above the min/max bailout.
   if (Instruction *R = foldICmpWithCastOp(I))
     return R;
+
+  // icmp (zext X), (and (trunc Y), Mask) -> icmp X, trunc Y IFF Mask exactly
+  // covers the bits of X
+  {
+    Value *Y;
+    const APInt *Mask;
+    if (match(I.getOperand(1), m_ZExt(m_Value(X))) &&
+        match(I.getOperand(0),
+              m_OneUse(m_And(m_Trunc(m_Value(Y)), m_APInt(Mask))))) {
+      Type *SmallType = X->getType();
+      unsigned SmallWidth = SmallType->getScalarSizeInBits();
+      if (Mask->isMask(SmallWidth) &&
+          shouldChangeType(I.getOperand(0)->getType(), SmallType)) {
+        Value *NewTrunc = Builder.CreateTrunc(Y, SmallType);
+        return new ICmpInst(I.getUnsignedPredicate(), NewTrunc, X);
+      }
+    }
+  }
 
   {
     Value *X, *Y;

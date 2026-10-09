@@ -1,7 +1,7 @@
 --- |
- ; RUN: llc %s -mtriple=x86_64 -run-pass=livedebugvalues -o - -experimental-debug-variable-locations | FileCheck %s -implicit-check-not=DBG_VALUE
+ ; RUN: llc %s -mtriple=x86_64 -run-pass=live-debug-values -o - -experimental-debug-variable-locations | FileCheck %s -implicit-check-not=DBG_VALUE
   ;
-  ; Test that InstrRefBasedLDV / livedebugvalues doesn't crash when it sees
+  ; Test that InstrRefBasedLDV / live-debug-values doesn't crash when it sees
   ; illegal instruction referencing debug-info. This can be caused by
   ; optimisations not updating debug-info or doing it incorrectly, which is
   ; inevitable. When that happens, we should safely drop the variable location,

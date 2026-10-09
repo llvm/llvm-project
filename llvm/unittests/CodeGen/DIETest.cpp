@@ -222,4 +222,42 @@ TEST(DIEValueListTest, DeleteValue) {
   EXPECT_FALSE(List.deleteValue(dwarf::DW_AT_high_pc));
 }
 
+TEST(DIETest, GetUnitDie) {
+  // A DIEUnit owns exactly one DIE, its unit DIE, whatever the root tag is, so
+  // the walk up from a nested DIE has to reach the unit for every unit root
+  // tag.
+  static const dwarf::Tag UnitTags[] = {
+      dwarf::DW_TAG_compile_unit, dwarf::DW_TAG_partial_unit,
+      dwarf::DW_TAG_type_unit, dwarf::DW_TAG_skeleton_unit};
+
+  BumpPtrAllocator Alloc;
+  for (dwarf::Tag UnitTag : UnitTags) {
+    BasicDIEUnit Unit(UnitTag);
+    Unit.setDebugSectionOffset(0x100);
+
+    DIE &Root = Unit.getUnitDie();
+    DIE &Namespace = Root.addChild(DIE::get(Alloc, dwarf::DW_TAG_namespace));
+    DIE &Struct =
+        Namespace.addChild(DIE::get(Alloc, dwarf::DW_TAG_structure_type));
+    Struct.setOffset(0x20);
+
+    EXPECT_EQ(&Root, Struct.getUnitDie());
+    EXPECT_EQ(static_cast<DIEUnit *>(&Unit), Struct.getUnit());
+    EXPECT_EQ(0x120u, Struct.getDebugSectionOffset());
+  }
+}
+
+TEST(DIETest, GetUnitDieWithoutUnit) {
+  // A tree carrying a unit root tag that was never handed to a DIEUnit belongs
+  // to no unit, so there is no absolute offset to compute for anything in it.
+  BumpPtrAllocator Alloc;
+  DIE *Root = DIE::get(Alloc, dwarf::DW_TAG_compile_unit);
+  DIE &Struct = Root->addChild(DIE::get(Alloc, dwarf::DW_TAG_structure_type));
+
+  EXPECT_EQ(nullptr, Root->getUnitDie());
+  EXPECT_EQ(nullptr, Root->getUnit());
+  EXPECT_EQ(nullptr, Struct.getUnitDie());
+  EXPECT_EQ(nullptr, Struct.getUnit());
+}
+
 } // end namespace

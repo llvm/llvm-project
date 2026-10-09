@@ -26,6 +26,7 @@ namespace cir {
 struct MissingFeatures {
   // Address space related
   static bool addressSpace() { return false; }
+  static bool spirvDefaultIsGenericAddrSpace() { return false; }
 
   // Unhandled global/linkage information.
   static bool opGlobalThreadLocal() { return false; }
@@ -80,7 +81,6 @@ struct MissingFeatures {
   static bool opFuncOptNoneAttr() { return false; }
   static bool opFuncParameterAttributes() { return false; }
   static bool opFuncReadOnly() { return false; }
-  static bool opFuncUnwindTablesAttr() { return false; }
   static bool opFuncWillReturn() { return false; }
   static bool opFuncPreferredAlignment() { return false; }
   static bool setLLVMFunctionFEnvAttributes() { return false; }
@@ -205,7 +205,6 @@ struct MissingFeatures {
   static bool checkBitfieldClipping() { return false; }
   static bool cirgenABIInfo() { return false; }
   static bool cleanupAfterErrorDiags() { return false; }
-  static bool cleanupDeactivationScope() { return false; }
   static bool cleanupsToDeactivate() { return false; }
   static bool constEmitterArrayILE() { return false; }
   static bool constEmitterVectorILE() { return false; }
@@ -254,7 +253,6 @@ struct MissingFeatures {
   static bool getRuntimeFunctionDecl() { return false; }
   static bool globalViewIntLowering() { return false; }
   static bool handleBuiltinICEArguments() { return false; }
-  static bool hip() { return false; }
   static bool incrementProfileCounter() { return false; }
   static bool insertBuiltinUnpredictable() { return false; }
   static bool instrumentation() { return false; }

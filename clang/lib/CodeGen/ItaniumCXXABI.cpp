@@ -3545,49 +3545,6 @@ public:
   ItaniumRTTIBuilder(const ItaniumCXXABI &ABI)
       : CGM(ABI.CGM), VMContext(CGM.getModule().getContext()), CXXABI(ABI) {}
 
-  // Pointer type info flags.
-  enum {
-    /// PTI_Const - Type has const qualifier.
-    PTI_Const = 0x1,
-
-    /// PTI_Volatile - Type has volatile qualifier.
-    PTI_Volatile = 0x2,
-
-    /// PTI_Restrict - Type has restrict qualifier.
-    PTI_Restrict = 0x4,
-
-    /// PTI_Incomplete - Type is incomplete.
-    PTI_Incomplete = 0x8,
-
-    /// PTI_ContainingClassIncomplete - Containing class is incomplete.
-    /// (in pointer to member).
-    PTI_ContainingClassIncomplete = 0x10,
-
-    /// PTI_TransactionSafe - Pointee is transaction_safe function (C++ TM TS).
-    //PTI_TransactionSafe = 0x20,
-
-    /// PTI_Noexcept - Pointee is noexcept function (C++1z).
-    PTI_Noexcept = 0x40,
-  };
-
-  // VMI type info flags.
-  enum {
-    /// VMI_NonDiamondRepeat - Class has non-diamond repeated inheritance.
-    VMI_NonDiamondRepeat = 0x1,
-
-    /// VMI_DiamondShaped - Class is diamond shaped.
-    VMI_DiamondShaped = 0x2
-  };
-
-  // Base class type info flags.
-  enum {
-    /// BCTI_Virtual - Base class is virtual.
-    BCTI_Virtual = 0x1,
-
-    /// BCTI_Public - Base class is public.
-    BCTI_Public = 0x2
-  };
-
   /// BuildTypeInfo - Build the RTTI type info struct for the given type, or
   /// link to an existing RTTI descriptor if one already exists.
   llvm::Constant *BuildTypeInfo(QualType Ty);
@@ -3769,6 +3726,7 @@ static bool TypeInfoIsInStandardLibrary(const BuiltinType *Ty) {
     case BuiltinType::SatUFract:
     case BuiltinType::SatULongFract:
     case BuiltinType::BFloat16:
+    case BuiltinType::MetaInfo:
       return false;
 
     case BuiltinType::Dependent:
@@ -3864,71 +3822,6 @@ static bool ShouldUseExternalRTTIDescriptor(CodeGenModule &CGM,
   return false;
 }
 
-/// IsIncompleteClassType - Returns whether the given record type is incomplete.
-static bool IsIncompleteClassType(const RecordType *RecordTy) {
-  return !RecordTy->getDecl()->getDefinitionOrSelf()->isCompleteDefinition();
-}
-
-/// ContainsIncompleteClassType - Returns whether the given type contains an
-/// incomplete class type. This is true if
-///
-///   * The given type is an incomplete class type.
-///   * The given type is a pointer type whose pointee type contains an
-///     incomplete class type.
-///   * The given type is a member pointer type whose class is an incomplete
-///     class type.
-///   * The given type is a member pointer type whoise pointee type contains an
-///     incomplete class type.
-/// is an indirect or direct pointer to an incomplete class type.
-static bool ContainsIncompleteClassType(QualType Ty) {
-  if (const RecordType *RecordTy = dyn_cast<RecordType>(Ty)) {
-    if (IsIncompleteClassType(RecordTy))
-      return true;
-  }
-
-  if (const PointerType *PointerTy = dyn_cast<PointerType>(Ty))
-    return ContainsIncompleteClassType(PointerTy->getPointeeType());
-
-  if (const MemberPointerType *MemberPointerTy =
-      dyn_cast<MemberPointerType>(Ty)) {
-    // Check if the class type is incomplete.
-    if (!MemberPointerTy->getMostRecentCXXRecordDecl()->hasDefinition())
-      return true;
-
-    return ContainsIncompleteClassType(MemberPointerTy->getPointeeType());
-  }
-
-  return false;
-}
-
-// CanUseSingleInheritance - Return whether the given record decl has a "single,
-// public, non-virtual base at offset zero (i.e. the derived class is dynamic
-// iff the base is)", according to Itanium C++ ABI, 2.95p6b.
-static bool CanUseSingleInheritance(const CXXRecordDecl *RD) {
-  // Check the number of bases.
-  if (RD->getNumBases() != 1)
-    return false;
-
-  // Get the base.
-  CXXRecordDecl::base_class_const_iterator Base = RD->bases_begin();
-
-  // Check that the base is not virtual.
-  if (Base->isVirtual())
-    return false;
-
-  // Check that the base is public.
-  if (Base->getAccessSpecifier() != AS_public)
-    return false;
-
-  // Check that the class is dynamic iff the base is.
-  auto *BaseDecl = Base->getType()->castAsCXXRecordDecl();
-  if (!BaseDecl->isEmpty() &&
-      BaseDecl->isDynamicClass() != RD->isDynamicClass())
-    return false;
-
-  return true;
-}
-
 void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty,
                                             llvm::Constant *StorageAddress) {
   // abi::__class_type_info.
@@ -4005,7 +3898,7 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty,
 
     if (!RD->hasDefinition() || !RD->getNumBases()) {
       VTableName = ClassTypeInfo;
-    } else if (CanUseSingleInheritance(RD)) {
+    } else if (CodeGenUtils::canUseSingleInheritance(RD)) {
       VTableName = SIClassTypeInfo;
     } else {
       VTableName = VMIClassTypeInfo;
@@ -4102,7 +3995,7 @@ static llvm::GlobalVariable::LinkageTypes getTypeInfoLinkage(CodeGenModule &CGM,
   //   generated for the incomplete type that will not resolve to the final
   //   complete class RTTI (because the latter need not exist), possibly by
   //   making it a local static object.
-  if (ContainsIncompleteClassType(Ty))
+  if (CodeGenUtils::containsIncompleteClassType(Ty))
     return llvm::GlobalValue::InternalLinkage;
 
   switch (Ty->getLinkage()) {
@@ -4323,7 +4216,7 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
       break;
     }
 
-    if (CanUseSingleInheritance(RD))
+    if (CodeGenUtils::canUseSingleInheritance(RD))
       BuildSIClassTypeInfo(RD);
     else
       BuildVMIClassTypeInfo(RD);
@@ -4442,64 +4335,6 @@ void ItaniumRTTIBuilder::BuildSIClassTypeInfo(const CXXRecordDecl *RD) {
   Fields.push_back(BaseTypeInfo);
 }
 
-namespace {
-  /// SeenBases - Contains virtual and non-virtual bases seen when traversing
-  /// a class hierarchy.
-  struct SeenBases {
-    llvm::SmallPtrSet<const CXXRecordDecl *, 16> NonVirtualBases;
-    llvm::SmallPtrSet<const CXXRecordDecl *, 16> VirtualBases;
-  };
-}
-
-/// ComputeVMIClassTypeInfoFlags - Compute the value of the flags member in
-/// abi::__vmi_class_type_info.
-///
-static unsigned ComputeVMIClassTypeInfoFlags(const CXXBaseSpecifier *Base,
-                                             SeenBases &Bases) {
-
-  unsigned Flags = 0;
-
-  auto *BaseDecl = Base->getType()->castAsCXXRecordDecl();
-  if (Base->isVirtual()) {
-    // Mark the virtual base as seen.
-    if (!Bases.VirtualBases.insert(BaseDecl).second) {
-      // If this virtual base has been seen before, then the class is diamond
-      // shaped.
-      Flags |= ItaniumRTTIBuilder::VMI_DiamondShaped;
-    } else {
-      if (Bases.NonVirtualBases.count(BaseDecl))
-        Flags |= ItaniumRTTIBuilder::VMI_NonDiamondRepeat;
-    }
-  } else {
-    // Mark the non-virtual base as seen.
-    if (!Bases.NonVirtualBases.insert(BaseDecl).second) {
-      // If this non-virtual base has been seen before, then the class has non-
-      // diamond shaped repeated inheritance.
-      Flags |= ItaniumRTTIBuilder::VMI_NonDiamondRepeat;
-    } else {
-      if (Bases.VirtualBases.count(BaseDecl))
-        Flags |= ItaniumRTTIBuilder::VMI_NonDiamondRepeat;
-    }
-  }
-
-  // Walk all bases.
-  for (const auto &I : BaseDecl->bases())
-    Flags |= ComputeVMIClassTypeInfoFlags(&I, Bases);
-
-  return Flags;
-}
-
-static unsigned ComputeVMIClassTypeInfoFlags(const CXXRecordDecl *RD) {
-  unsigned Flags = 0;
-  SeenBases Bases;
-
-  // Walk all bases.
-  for (const auto &I : RD->bases())
-    Flags |= ComputeVMIClassTypeInfoFlags(&I, Bases);
-
-  return Flags;
-}
-
 /// BuildVMIClassTypeInfo - Build an abi::__vmi_class_type_info, used for
 /// classes with bases that do not satisfy the abi::__si_class_type_info
 /// constraints, according ti the Itanium C++ ABI, 2.9.5p5c.
@@ -4511,7 +4346,7 @@ void ItaniumRTTIBuilder::BuildVMIClassTypeInfo(const CXXRecordDecl *RD) {
   //   __flags is a word with flags describing details about the class
   //   structure, which may be referenced by using the __flags_masks
   //   enumeration. These flags refer to both direct and indirect bases.
-  unsigned Flags = ComputeVMIClassTypeInfoFlags(RD);
+  unsigned Flags = CodeGenUtils::computeVMIClassTypeInfoFlags(RD);
   Fields.push_back(llvm::ConstantInt::get(UnsignedIntLTy, Flags));
 
   // Itanium C++ ABI 2.9.5p6c:
@@ -4578,41 +4413,12 @@ void ItaniumRTTIBuilder::BuildVMIClassTypeInfo(const CXXRecordDecl *RD) {
     // The low-order byte of __offset_flags contains flags, as given by the
     // masks from the enumeration __offset_flags_masks.
     if (Base.isVirtual())
-      OffsetFlags |= BCTI_Virtual;
+      OffsetFlags |= CodeGenUtils::BCTI_Virtual;
     if (Base.getAccessSpecifier() == AS_public)
-      OffsetFlags |= BCTI_Public;
+      OffsetFlags |= CodeGenUtils::BCTI_Public;
 
     Fields.push_back(llvm::ConstantInt::getSigned(OffsetFlagsLTy, OffsetFlags));
   }
-}
-
-/// Compute the flags for a __pbase_type_info, and remove the corresponding
-/// pieces from \p Type.
-static unsigned extractPBaseFlags(ASTContext &Ctx, QualType &Type) {
-  unsigned Flags = 0;
-
-  if (Type.isConstQualified())
-    Flags |= ItaniumRTTIBuilder::PTI_Const;
-  if (Type.isVolatileQualified())
-    Flags |= ItaniumRTTIBuilder::PTI_Volatile;
-  if (Type.isRestrictQualified())
-    Flags |= ItaniumRTTIBuilder::PTI_Restrict;
-  Type = Type.getUnqualifiedType();
-
-  // Itanium C++ ABI 2.9.5p7:
-  //   When the abi::__pbase_type_info is for a direct or indirect pointer to an
-  //   incomplete class type, the incomplete target type flag is set.
-  if (ContainsIncompleteClassType(Type))
-    Flags |= ItaniumRTTIBuilder::PTI_Incomplete;
-
-  if (auto *Proto = Type->getAs<FunctionProtoType>()) {
-    if (Proto->isNothrow()) {
-      Flags |= ItaniumRTTIBuilder::PTI_Noexcept;
-      Type = Ctx.getFunctionTypeWithExceptionSpec(Type, EST_None);
-    }
-  }
-
-  return Flags;
 }
 
 /// BuildPointerTypeInfo - Build an abi::__pointer_type_info struct,
@@ -4621,7 +4427,7 @@ void ItaniumRTTIBuilder::BuildPointerTypeInfo(QualType PointeeTy) {
   // Itanium C++ ABI 2.9.5p7:
   //   __flags is a flag word describing the cv-qualification and other
   //   attributes of the type pointed to
-  unsigned Flags = extractPBaseFlags(CGM.getContext(), PointeeTy);
+  unsigned Flags = CodeGenUtils::extractPBaseFlags(CGM.getContext(), PointeeTy);
 
   llvm::Type *UnsignedIntLTy =
     CGM.getTypes().ConvertType(CGM.getContext().UnsignedIntTy);
@@ -4644,11 +4450,11 @@ ItaniumRTTIBuilder::BuildPointerToMemberTypeInfo(const MemberPointerType *Ty) {
   // Itanium C++ ABI 2.9.5p7:
   //   __flags is a flag word describing the cv-qualification and other
   //   attributes of the type pointed to.
-  unsigned Flags = extractPBaseFlags(CGM.getContext(), PointeeTy);
+  unsigned Flags = CodeGenUtils::extractPBaseFlags(CGM.getContext(), PointeeTy);
 
   const auto *RD = Ty->getMostRecentCXXRecordDecl();
   if (!RD->hasDefinition())
-    Flags |= PTI_ContainingClassIncomplete;
+    Flags |= CodeGenUtils::PTI_ContainingClassIncomplete;
 
   llvm::Type *UnsignedIntLTy =
     CGM.getTypes().ConvertType(CGM.getContext().UnsignedIntTy);
@@ -4737,7 +4543,19 @@ ItaniumCXXABI::RTTIUniquenessKind ItaniumCXXABI::classifyRTTIUniqueness(
 // Find out how to codegen the complete destructor and constructor
 namespace {
 enum class StructorCodegen { Emit, RAUW, Alias, COMDAT };
+} // namespace
+
+// Returns true if the complete constructor/destructor variant must be retained
+// as a distinct symbol rather than being silently replaced in the IR (RAUW).
+static bool
+structorSymbolMustBeRetained(CodeGenModule &CGM, const CXXMethodDecl *MD,
+                             llvm::GlobalValue::LinkageTypes Linkage) {
+  if (MD->hasAttr<UsedAttr>())
+    return true;
+  return CGM.getCodeGenOpts().KeepInlineFunctions && MD->isInlined() &&
+         Linkage != llvm::GlobalValue::AvailableExternallyLinkage;
 }
+
 static StructorCodegen getCodegenToUse(CodeGenModule &CGM,
                                        const CXXMethodDecl *MD) {
   if (!CGM.getCodeGenOpts().CXXCtorDtorAliases)
@@ -4757,7 +4575,8 @@ static StructorCodegen getCodegenToUse(CodeGenModule &CGM,
   }
   llvm::GlobalValue::LinkageTypes Linkage = CGM.getFunctionLinkage(AliasDecl);
 
-  if (llvm::GlobalValue::isDiscardableIfUnused(Linkage))
+  if (llvm::GlobalValue::isDiscardableIfUnused(Linkage) &&
+      !structorSymbolMustBeRetained(CGM, MD, Linkage))
     return StructorCodegen::RAUW;
 
   // FIXME: Should we allow available_externally aliases?
@@ -5268,7 +5087,7 @@ WebAssemblyCXXABI::emitTerminateForUnexpectedException(CodeGenFunction &CGF,
   // and call __clang_call_terminate only in Emscripten EH.
   // TODO Consider code transformation that makes calling __clang_call_terminate
   // in Wasm EH possible.
-  if (Exn && !EHPersonality::get(CGF).isWasmPersonality()) {
+  if (Exn && !getEHPersonality(CGF).isWasmPersonality()) {
     assert(CGF.CGM.getLangOpts().CPlusPlus);
     return CGF.EmitNounwindRuntimeCall(getClangCallTerminateFn(CGF.CGM), Exn);
   }

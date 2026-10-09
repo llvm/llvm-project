@@ -92,8 +92,9 @@ static bool recordCanPassInRegs(ModuleOp modOp, cir::RecordType recTy) {
 /// Whether the classifier could give this type the SSEUP class, looking
 /// through arrays and records at the types they hold.
 static bool mayReachSseUp(mlir::Type ty, const DataLayout &dl) {
+  // The classifier sizes a vector with its width rounded up to a power of two.
   if (isa<cir::VectorType>(ty))
-    return dl.getTypeSizeInBits(ty).getFixedValue() >= 128;
+    return llvm::PowerOf2Ceil(dl.getTypeSizeInBits(ty).getFixedValue()) >= 128;
   if (auto fpTy = dyn_cast<cir::FPTypeInterface>(ty))
     return &fpTy.getFloatSemantics() == &llvm::APFloat::IEEEquad();
   if (auto arrTy = dyn_cast<cir::ArrayType>(ty))
@@ -220,11 +221,6 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
     } else {
       return false;
     }
-    // Clang also rounds the vector's own width up to a power of two, and the
-    // classifier branches on the exact width, so a three-char vector would be
-    // classified at 24 bits where clang uses 32.
-    if (!llvm::isPowerOf2_64(dl.getTypeSizeInBits(ty).getFixedValue()))
-      return false;
     return isSupportedType(elemTy, dl);
   }
   if (auto arrTy = dyn_cast<cir::ArrayType>(ty))
@@ -920,18 +916,6 @@ cir::FuncOp lookupCallee(Operation *callOp, SymbolTable &symbolTable) {
   return symbolTable.lookup<cir::FuncOp>(callee.getValue());
 }
 
-/// The signature an indirect call reaches its callee through, or a null type
-/// for a direct call.  The callee's pointer-to-function shape is asserted
-/// rather than verified: the dialect checks operand types against the callee
-/// only for a direct call, so IR that breaks it fails here instead of in the
-/// verifier.
-cir::FuncType indirectCalleeType(cir::CIRCallOpInterface call) {
-  if (!call.isIndirect())
-    return {};
-  return cast<cir::FuncType>(
-      cast<cir::PointerType>(call.getIndirectCall().getType()).getPointee());
-}
-
 void CallConvLoweringPass::runOnOperation() {
   ModuleOp moduleOp = getOperation();
   MLIRContext *ctx = &getContext();
@@ -1168,7 +1152,7 @@ void CallConvLoweringPass::runOnOperation() {
   // cached as the next one to visit.
   SmallVector<cir::CIRCallOpInterface> indirectCalls;
   moduleOp.walk([&](cir::CIRCallOpInterface c) {
-    if (indirectCalleeType(c))
+    if (c.isIndirect())
       indirectCalls.push_back(c);
   });
   for (cir::CIRCallOpInterface c : indirectCalls) {
@@ -1181,7 +1165,7 @@ void CallConvLoweringPass::runOnOperation() {
       signalPassFailure();
       return;
     }
-    cir::FuncType funcTy = indirectCalleeType(c);
+    cir::FuncType funcTy = getIndirectCalleeType(c);
     auto classifySignature =
         [&](mlir::TypeRange argTypes) -> std::optional<FunctionClassification> {
       // A callee resolved at run time carries no features of its own, so the
@@ -1199,28 +1183,18 @@ void CallConvLoweringPass::runOnOperation() {
     };
 
     // An argument passed through an ellipsis has no counterpart in the
-    // pointee's parameter list, so classify the call's own operands to learn
-    // what the ABI does with it.  If nothing in the full list needs a rewrite
-    // the call already carries its wire form and can stand as written.
-    // Anything else needs a rewrite the pointee's signature cannot describe,
-    // since it has no entry for the arguments past the ellipsis.
-    if (c.getNumArgOperands() > funcTy.getNumInputs()) {
-      std::optional<FunctionClassification> callFc =
-          classifySignature(c.getArgOperands().getTypes());
-      if (!callFc) {
-        signalPassFailure();
-        return;
-      }
-      if (!callFc->needsRewrite())
-        continue;
-      c->emitOpError() << "variadic arguments to an indirect call not yet "
-                          "implemented in CallConvLowering";
-      signalPassFailure();
-      return;
-    }
-
+    // pointee's parameter list.  On x86_64 such a call is classified from its
+    // own operands, as a direct one is.  Under target=test it is classified
+    // from the pointee alone, and rewriteCallSite reports the call.
+    bool classifyCallSite =
+        isX86 && c.getNumArgOperands() > funcTy.getNumInputs();
     std::optional<FunctionClassification> fc =
-        classifySignature(funcTy.getInputs());
+        classifyCallSite
+            ? classifyX86_64VariadicCall(
+                  c, funcTy, dl, *x86TypeMapper,
+                  x86TargetFor(avxLevelFor(c->getParentOfType<cir::FuncOp>())),
+                  moduleOp)
+            : classifySignature(funcTy.getInputs());
     if (!fc) {
       signalPassFailure();
       return;
