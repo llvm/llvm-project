@@ -3856,6 +3856,7 @@ defm isspace_shared_cluster : ISSPACEP<"shared::cluster",
                                        [SM90]>;
 
 // Special register reads
+let isAsCheapAsAMove = true in
 def MOV_SPECIAL : BasicNVPTXInst<(outs B32:$d),
                             (ins SpecialRegs:$r),
                             "mov.b32", []>;
@@ -5751,6 +5752,7 @@ class PTX_READ_SREG_R64<string regname, Intrinsic intop, list<Predicate> Preds=[
               [(set i64:$d, (intop))]>,
     Requires<Preds>;
 
+let isAsCheapAsAMove = true in
 class PTX_READ_SREG_R32<string regname, Intrinsic intop, list<Predicate> Preds=[]>
   : NVPTXInst<(outs B32:$d), (ins),
               "mov.u32 \t$d, %" # regname # ";",
@@ -5828,10 +5830,12 @@ def: Pat <(i64 (readcyclecounter)), (SREG_CLOCK64)>;
 def: Pat <(i64 (readsteadycounter)), (SREG_GLOBALTIMER)>;
 def: Pat <(i32 (readsteadycounter)), (SREG_GLOBALTIMER_LO)>;
 
+let isAsCheapAsAMove = false in {
 def INT_PTX_SREG_PM0 : PTX_READ_SREG_R32<"pm0", int_nvvm_read_ptx_sreg_pm0>;
 def INT_PTX_SREG_PM1 : PTX_READ_SREG_R32<"pm1", int_nvvm_read_ptx_sreg_pm1>;
 def INT_PTX_SREG_PM2 : PTX_READ_SREG_R32<"pm2", int_nvvm_read_ptx_sreg_pm2>;
 def INT_PTX_SREG_PM3 : PTX_READ_SREG_R32<"pm3", int_nvvm_read_ptx_sreg_pm3>;
+}
 
 // Reserved shared memory special register reads
 foreach suffix = ["begin", "end", "cap", "0", "1"] in {
@@ -5843,6 +5847,7 @@ foreach suffix = ["begin", "end", "cap", "0", "1"] in {
 
 // TODO: It would be nice to use PTX_READ_SREG here, but it doesn't
 // handle the constant.
+let isAsCheapAsAMove = true in
 def INT_PTX_SREG_WARPSIZE :
     NVPTXInst<(outs B32:$dst), (ins), "mov.u32 \t$dst, WARP_SZ;",
               [(set i32:$dst, (int_nvvm_read_ptx_sreg_warpsize))]>;
