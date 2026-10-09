@@ -12583,28 +12583,36 @@ SDValue AArch64TargetLowering::LowerBitreverse(SDValue Op,
 
   case MVT::v2i32: {
     VST = MVT::v8i8;
-    REVB = DAG.getNode(AArch64ISD::REV32, DL, VST, Op.getOperand(0));
+    REVB =
+        DAG.getNode(AArch64ISD::REV32, DL, VST,
+                    DAG.getNode(AArch64ISD::NVCAST, DL, VST, Op.getOperand(0)));
 
     break;
   }
 
   case MVT::v4i32: {
     VST = MVT::v16i8;
-    REVB = DAG.getNode(AArch64ISD::REV32, DL, VST, Op.getOperand(0));
+    REVB =
+        DAG.getNode(AArch64ISD::REV32, DL, VST,
+                    DAG.getNode(AArch64ISD::NVCAST, DL, VST, Op.getOperand(0)));
 
     break;
   }
 
   case MVT::v1i64: {
     VST = MVT::v8i8;
-    REVB = DAG.getNode(AArch64ISD::REV64, DL, VST, Op.getOperand(0));
+    REVB =
+        DAG.getNode(AArch64ISD::REV64, DL, VST,
+                    DAG.getNode(AArch64ISD::NVCAST, DL, VST, Op.getOperand(0)));
 
     break;
   }
 
   case MVT::v2i64: {
     VST = MVT::v16i8;
-    REVB = DAG.getNode(AArch64ISD::REV64, DL, VST, Op.getOperand(0));
+    REVB =
+        DAG.getNode(AArch64ISD::REV64, DL, VST,
+                    DAG.getNode(AArch64ISD::NVCAST, DL, VST, Op.getOperand(0)));
 
     break;
   }
@@ -22044,7 +22052,9 @@ static SDValue tryCombineToREV(SDNode *N, SelectionDAG &DAG,
   }
 
   return DAG.getNode(AArch64ISD::NVCAST, DL, VT,
-                     DAG.getNode(RevOp, DL, HalfVT, N0->getOperand(0)));
+                     DAG.getNode(RevOp, DL, HalfVT,
+                                 DAG.getNode(AArch64ISD::NVCAST, DL, HalfVT,
+                                             N0->getOperand(0))));
 }
 
 // (and/or X, (splat (not Y))) -> (and/or X, (not (splat Y)))
