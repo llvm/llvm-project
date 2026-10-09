@@ -1376,6 +1376,16 @@ mlir::Speculation::Speculatability fir::BoxAddrOp::getSpeculatability() {
 }
 
 //===----------------------------------------------------------------------===//
+// BoxSetAddrOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult fir::BoxSetAddrOp::verify() {
+  if (!mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(getBoxRef().getType())))
+    return emitOpError("box_ref must be a reference to a fir.box or fir.class");
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // BoxCharLenOp
 //===----------------------------------------------------------------------===//
 
