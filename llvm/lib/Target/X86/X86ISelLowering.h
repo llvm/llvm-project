@@ -746,6 +746,10 @@ namespace llvm {
       return TargetLoweringBase::getTypeToTransformTo(Context, VT);
     }
 
+    /// Return true if \p VT has the rsqrt* based estimate of the square root,
+    /// or of its reciprocal if \p Reciprocal is set.
+    bool hasSqrtEstimate(EVT VT, bool Reciprocal) const;
+
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>
     findRepresentativeClass(const TargetRegisterInfo *TRI,

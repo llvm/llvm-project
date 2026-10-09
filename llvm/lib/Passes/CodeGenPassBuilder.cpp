@@ -150,6 +150,10 @@ CodeGenPassBuilder::CodeGenPassBuilder(TargetMachine &TM,
   if (Opt.EnableGlobalISelAbort)
     TM.Options.GlobalISelAbort = *Opt.EnableGlobalISelAbort;
 
+  if (Opt.EnableRegAllocFastTied != cl::boolOrDefault::BOU_UNSET)
+    TM.setEnableTiedFastRegAlloc(Opt.EnableRegAllocFastTied ==
+                                 cl::boolOrDefault::BOU_TRUE);
+
   // An explicit RegAlloc choice implies its pipeline: only the fast
   // allocator uses the unoptimized one.
   if (Opt.OptimizeRegAlloc == cl::boolOrDefault::BOU_UNSET) {
@@ -703,8 +707,8 @@ Error CodeGenPassBuilder::addMachinePasses(PassManagerWrapper &PMW) {
 
   addMachineFunctionPass(RemoveLoadsIntoFakeUsesPass(), PMW);
   addMachineFunctionPass(StackMapLivenessPass(), PMW);
-  addMachineFunctionPass(
-      LiveDebugValuesPass(TM.Options.ShouldEmitDebugEntryValues()), PMW);
+  addMachineFunctionPass(LiveDebugValuesPass(TM.shouldEmitDebugEntryValues()),
+                         PMW);
   addMachineFunctionPass(MachineSanitizerBinaryMetadataPass(), PMW);
 
   if (TM.Options.EnableMachineOutliner &&
@@ -842,7 +846,8 @@ CodeGenPassBuilder::addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) {
 /// register allocation. No coalescing or scheduling.
 Error CodeGenPassBuilder::addFastRegAlloc(PassManagerWrapper &PMW) {
   addMachineFunctionPass(PHIEliminationPass(), PMW);
-  addMachineFunctionPass(TwoAddressInstructionPass(), PMW);
+  if (!TM.enableTiedFastRegAlloc())
+    addMachineFunctionPass(TwoAddressInstructionPass(), PMW);
   return addRegAssignAndRewriteFast(PMW);
 }
 
@@ -870,17 +875,16 @@ Error CodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
   addMachineFunctionPass(
       RequireAnalysisPass<LiveVariablesAnalysis, MachineFunction>(), PMW);
 
+  // LiveIntervals is computed unconditionally before TwoAddressInstruction so
+  // that pass can rely on it instead of LiveVariables. This is a step toward
+  // removing LiveVariables entirely.
+  addMachineFunctionPass(
+      RequireAnalysisPass<LiveIntervalsAnalysis, MachineFunction>(), PMW);
+
   // Edge splitting is smarter with machine loop info.
   addMachineFunctionPass(
       RequireAnalysisPass<MachineLoopAnalysis, MachineFunction>(), PMW);
   addMachineFunctionPass(PHIEliminationPass(), PMW);
-
-  // LiveIntervals is computed unconditionally before TwoAddressInstruction so
-  // that pass can rely on it instead of LiveVariables. This is a step toward
-  // removing LiveVariables entirely.
-  // FIXME: Eventually, we want to run LiveIntervals before PHI elimination.
-  addMachineFunctionPass(
-      RequireAnalysisPass<LiveIntervalsAnalysis, MachineFunction>(), PMW);
 
   addMachineFunctionPass(TwoAddressInstructionPass(), PMW);
   addMachineFunctionPass(RegisterCoalescerPass(), PMW);

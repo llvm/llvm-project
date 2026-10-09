@@ -2860,7 +2860,7 @@ std::optional<APInt> AffineForOp::getStaticTripCount() {
   for (unsigned i = 0, e = tripCountValueMap.getNumResults(); i < e; ++i) {
     AffineExpr expr = tripCountValueMap.getResult(i).ceilDiv(step);
     if (auto constExpr = llvm::dyn_cast<AffineConstantExpr>(expr)) {
-      uint64_t value = constExpr.getValue();
+      uint64_t value = std::max<int64_t>(constExpr.getValue(), 0);
       if (tripCount.has_value())
         tripCount = std::min(*tripCount, value);
       else

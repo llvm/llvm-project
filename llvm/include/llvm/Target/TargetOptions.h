@@ -50,6 +50,21 @@ enum class BasicBlockSection {
   None    // Do not use Basic Block Sections.
 };
 
+/// Late function splitting mode. Decides which functions are eligible to have
+/// their cold blocks moved into a separate section.
+enum class FunctionSplittingMode {
+  None,           // Hard off. Never create a cold section, even for functions
+                  // which have a basic block sections profile. Such functions
+                  // are still laid out using the profile, but are emitted as a
+                  // single contiguous section.
+  BBSectionsOnly, // Split only functions that have a basic block sections
+                  // profile. Functions without one are not split, even if
+                  // they have PGO/SamplePGO data. This is the default, and
+                  // matches the behavior without -fsplit-machine-functions.
+  All             // Split functions using the basic block sections profile
+                  // where it is available, and PGO/AutoFDO elsewhere.
+};
+
 /// Identify a debugger for "tuning" the debug info.
 ///
 /// The "debugger tuning" concept allows us to present a more intuitive
@@ -113,13 +128,11 @@ public:
         TrapUnreachable(false), NoTrapAfterNoreturn(false), TLSSize(0),
         EmulatedTLS(false), EnableTLSDESC(false), EnableIPRA(false),
         EmitStackSizeSection(false), EnableMachineOutliner(false),
-        EnableMachineFunctionSplitter(false),
         EnableStaticDataPartitioning(false), EnableDefaultMachineVerifier(true),
         EmitAddrsig(false), BBAddrMap(false), EmitCallGraphSection(false),
-        EmitCallSiteInfo(false), SupportsDebugEntryValues(false),
-        EnableDebugEntryValues(false), ValueTrackingVariableLocations(false),
-        ForceDwarfFrameSection(false), XRayFunctionIndex(true),
-        DebugStrictDwarf(false), Hotpatch(false), JMCInstrument(false),
+        EmitCallSiteInfo(false), EnableDebugEntryValues(false),
+        ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
+        XRayFunctionIndex(true), DebugStrictDwarf(false), JMCInstrument(false),
         EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
         VerifyArgABICompliance(true) {}
 
@@ -209,9 +222,6 @@ public:
   /// Enables the MachineOutliner pass.
   unsigned EnableMachineOutliner : 1;
 
-  /// Enables the MachineFunctionSplitter pass.
-  unsigned EnableMachineFunctionSplitter : 1;
-
   /// Enables the StaticDataSplitter pass.
   unsigned EnableStaticDataPartitioning : 1;
 
@@ -229,6 +239,10 @@ public:
   /// Emit basic blocks into separate sections.
   BasicBlockSection BBSections = BasicBlockSection::None;
 
+  /// Which functions are eligible for late function splitting.
+  FunctionSplittingMode FunctionSplitting =
+      FunctionSplittingMode::BBSectionsOnly;
+
   /// Memory Buffer that contains information on sampled basic blocks and used
   /// to selectively generate basic block sections.
   std::shared_ptr<MemoryBuffer> BBSectionsFuncListBuf;
@@ -240,16 +254,12 @@ public:
   /// info, and it is restricted only to optimized code. This can be used for
   /// something else, so that should be controlled in the frontend.
   unsigned EmitCallSiteInfo : 1;
-  /// Set if the target supports the debug entry values by default.
-  unsigned SupportsDebugEntryValues : 1;
   /// When set to true, the EnableDebugEntryValues option forces production
   /// of debug entry values even if the target does not officially support
   /// it. Useful for testing purposes only. This flag should never be checked
-  /// directly, always use \ref ShouldEmitDebugEntryValues instead.
+  /// directly, always use \ref TargetMachine::shouldEmitDebugEntryValues
+  /// instead.
   unsigned EnableDebugEntryValues : 1;
-  /// NOTE: There are targets that still do not support the debug entry values
-  /// production.
-  LLVM_ABI bool ShouldEmitDebugEntryValues() const;
 
   // When set to true, use experimental new debug variable location tracking,
   // which seeks to follow the values of variables rather than their location,
@@ -265,9 +275,6 @@ public:
   /// When set to true, don't use DWARF extensions in later DWARF versions.
   /// By default, it is set to false.
   unsigned DebugStrictDwarf : 1;
-
-  /// Emit the hotpatch flag in CodeView debug.
-  unsigned Hotpatch : 1;
 
   /// Enable JustMyCode instrumentation.
   unsigned JMCInstrument : 1;

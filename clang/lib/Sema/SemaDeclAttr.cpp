@@ -1377,6 +1377,16 @@ static void handleNonNullAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     NonNullArgs.push_back(Idx);
   }
 
+  // If an argument was specified and there was an attribute ignored warning
+  // issued for it, do not apply the nonnull attribute without any arguments as
+  // that has incorrect semantics in a function like:
+  //   __attribute__((nonnull(1))) void f(int val, int *ptr);
+  // because that will signal that 'ptr' is nonnull when it's not intended to
+  // be marked as such. However, continue on if there is at least one valid
+  // parameter index.
+  if (AL.getNumArgs() != 0 && NonNullArgs.empty())
+    return;
+
   // If no arguments were specified to __attribute__((nonnull)) then all pointer
   // arguments have a nonnull attribute; warn if there aren't any. Skip this
   // check if the attribute came from a macro expansion or a template
@@ -7226,9 +7236,22 @@ static void handleHandleAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(Attr::Create(S.Context, Argument, AL));
 }
 
-template<typename Attr>
 static void handleUnsafeBufferUsage(Sema &S, Decl *D, const ParsedAttr &AL) {
-  D->addAttr(Attr::Create(S.Context, AL));
+  StringRef Category;
+  if (AL.getAttrName()->getName() == "unsafe_buffer_usage_in_container") {
+    if (!AL.checkExactlyNumArgs(S, 0))
+      return;
+    Category = "container";
+  } else if (AL.getNumArgs() != 0) {
+    SourceLocation Loc;
+    if (!S.checkStringLiteralArgumentAttr(AL, 0, Category, &Loc))
+      return;
+    if (Category != "container") {
+      S.Diag(Loc, diag::warn_attribute_type_not_supported) << AL << Category;
+      return;
+    }
+  }
+  D->addAttr(UnsafeBufferUsageAttr::Create(S.Context, Category, AL));
 }
 
 static void handleCFGuardAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -8272,6 +8295,9 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_HLSLResourceBinding:
     S.HLSL().handleResourceBindingAttr(D, AL);
     break;
+  case ParsedAttr::AT_HLSLInterpolationModifier:
+    S.HLSL().handleInterpolationModifierAttr(D, AL);
+    break;
   case ParsedAttr::AT_HLSLParamModifier:
     S.HLSL().handleParamModifierAttr(D, AL);
     break;
@@ -8454,7 +8480,7 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
     break;
 
   case ParsedAttr::AT_UnsafeBufferUsage:
-    handleUnsafeBufferUsage<UnsafeBufferUsageAttr>(S, D, AL);
+    handleUnsafeBufferUsage(S, D, AL);
     break;
 
   case ParsedAttr::AT_UseHandle:

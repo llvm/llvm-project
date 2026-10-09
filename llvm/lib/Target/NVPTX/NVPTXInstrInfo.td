@@ -23,6 +23,21 @@ let OperandType = "OPERAND_IMMEDIATE" in {
 
 def brtarget    : Operand<OtherVT>;
 
+// Keep the register class so that register operands are constrained and
+// verified, but permit an immediate in the same operand slot.
+class NVPTXRegOrImm<NVPTXRegClass RC> : RegisterOperand<RC> {
+  let OperandType = "OPERAND_UNKNOWN";
+}
+
+def B1Op : NVPTXRegOrImm<B1>;
+def B16Op : NVPTXRegOrImm<B16>;
+def B32Op : NVPTXRegOrImm<B32>;
+def B64Op : NVPTXRegOrImm<B64>;
+
+// Use only in result patterns to request EmitConvertToTarget. Constants become
+// target constants, while register values pass through unchanged.
+defvar reg_or_imm = imm;
+
 // CVT conversion modes
 // These must match the enum in NVPTX.h
 def CvtNONE : PatLeaf<(i32 0x0)>;
@@ -150,8 +165,7 @@ class SubtargetPredicate : Predicate<"Subtarget->" # NAME # "()">;
 
 def hasAtomAddF64 : SubtargetPredicate;
 def hasAtomScope : SubtargetPredicate;
-def hasAtomBitwise64 : SubtargetPredicate;
-def hasAtomMinMax64 : SubtargetPredicate;
+def hasAtomMinMaxAndOrXor : SubtargetPredicate;
 def hasAtomSwap128 : SubtargetPredicate;
 def hasClusters : SubtargetPredicate;
 def hasPTXASUnreachableBug : SubtargetPredicate;
@@ -183,7 +197,11 @@ def hasTensormapReplaceSupport : SubtargetPredicate;
 //  - TMA S2G im2col_w mode support
 //  - tcgen05.commit shared mem A variants.
 //  - conversions involving ue5m3x2
+//  - conversions involving scaled::n1::ue8m0
 def hasRubinFamilySupport : PredOr<[SM107f]>;
+
+// Checks sparse compression/decompression instruction support.
+def hasSPCompress : PredOr<[SM107a]>;
 
 // Checks tcgen05.shift instruction support.
 def hasTcgen05ShiftSupport : PredOr<[SM100a, SM103a, SM110a]>;
@@ -306,8 +324,10 @@ class RegTyInfo<ValueType ty, NVPTXRegClass rc, string ptx_type, Operand imm, SD
   ValueType Ty = ty;
   NVPTXRegClass RC = rc;
   Operand Imm = imm;
+  // In result patterns, this converts literals and passes registers through.
   SDNode ImmNode = imm_node;
   bit SupportsImm = supports_imm;
+  DAGOperand RegOrImm = NVPTXRegOrImm<rc>;
   int Size = ty.Size;
   string PtxType = ptx_type;
 }
@@ -338,7 +358,7 @@ def F32X2RT  : RegTyInfo<v2f32, B64, "f32x2", ?, ?, supports_imm = 0>;
 //         ---> "add.s32 \t$dst, $a, $b;"
 //
 //   * BasicFlagsNVPTXInst<(outs B32:$d),
-//                         (ins B32:$a, B32:$b, Hexu32imm:$c),
+//                         (ins B32Op:$a, B32Op:$b, B32OpHex:$c),
 //                         (ins PrmtMode:$mode),
 //                         "prmt.b32${mode}">;
 //         ---> "prmt.b32${mode} \t$d, $a, $b, $c;"
@@ -379,30 +399,20 @@ class BasicNVPTXInst<dag outs, dag insv, string asmstr, list<dag> pattern = []>
 
 
 multiclass I3Inst<string op_str, SDPatternOperator op_node, RegTyInfo t,
-                  bit commutative, list<Predicate> requires = []> {
-  def rr :
-    BasicNVPTXInst<(outs t.RC:$dst), (ins t.RC:$a, t.RC:$b),
-              op_str,
-              [(set t.Ty:$dst, (op_node t.Ty:$a, t.Ty:$b))]>,
-              Requires<requires>;
-  def ri :
-    BasicNVPTXInst<(outs t.RC:$dst), (ins t.RC:$a, t.Imm:$b),
-              op_str,
-              [(set t.Ty:$dst, (op_node t.Ty:$a, (t.Ty imm:$b)))]>,
-              Requires<requires>;
-  if !not(commutative) then
-    def ir :
-      BasicNVPTXInst<(outs t.RC:$dst), (ins t.Imm:$a, t.RC:$b),
-                op_str,
-                [(set t.Ty:$dst, (op_node (t.Ty imm:$a), t.Ty:$b))]>,
-                Requires<requires>;
+                  list<Predicate> requires = [], bit side_effects = false> {
+  let hasSideEffects = side_effects in
+  def NAME :
+    BasicNVPTXInst<(outs t.RC:$dst), (ins t.RegOrImm:$a, t.RegOrImm:$b),
+              op_str>;
+  def : Pat<(t.Ty (op_node t.Ty:$a, t.Ty:$b)),
+            (!cast<Instruction>(NAME) t.ImmNode:$a, t.ImmNode:$b)>, Requires<requires>;
 }
 
 // Template for instructions which take three int64, int32, or int16 args.
 // The instructions are named "<OpcStr><Width>" (e.g. "add.s64").
-multiclass I3<string op_str, SDPatternOperator op_node, bit commutative> {
+multiclass I3<string op_str, SDPatternOperator op_node> {
   foreach t = [I16RT, I32RT, I64RT] in
-    defm t.Size# : I3Inst<op_str # t.Size, op_node, t, commutative>;
+    defm t.Size# : I3Inst<op_str # t.Size, op_node, t>;
 }
 
 class I16x2<string OpcStr, SDNode OpNode> :
@@ -413,12 +423,10 @@ class I16x2<string OpcStr, SDNode OpNode> :
 
 // Template for instructions which take 3 int args.  The instructions are
 // named "<OpcStr>.s32" (e.g. "addc.cc.s32").
-multiclass ADD_SUB_INT_CARRY<string op_str, SDNode op_node, bit commutative> {
-  let hasSideEffects = 1 in {
-    defm i32 : I3Inst<op_str # ".s32", op_node, I32RT, commutative>;
-    defm i64 : I3Inst<op_str # ".s64", op_node, I64RT, commutative,
-                     requires = [PTX43]>;
-  }
+multiclass ADD_SUB_INT_CARRY<string op_str, SDNode op_node> {
+  defm i32 : I3Inst<op_str # ".s32", op_node, I32RT, side_effects = true>;
+  defm i64 : I3Inst<op_str # ".s64", op_node, I64RT,
+                   requires = [PTX43], side_effects = true>;
 }
 
 // Template for minimum/maximum instructions.
@@ -638,26 +646,27 @@ let hasSideEffects = false in {
   // Generate a cvt to the given type from all possible types.  Each instance
   // takes a CvtMode immediate that defines the conversion mode to use.  It can
   // be CvtNONE to omit a conversion mode.
-  multiclass CVT_FROM_ALL<string ToType, RegisterClass RC, list<Predicate> Preds = []> {
+  multiclass CVT_FROM_ALL<string ToType, RegisterClass RC,
+                          list<Predicate> Preds = [], bit supports_imm = false> {
     foreach sign = ["s", "u"] in {
       def _ # sign # "8" :
         BasicFlagsNVPTXInst<(outs RC:$dst),
-                  (ins B16:$src), (ins CvtMode:$mode),
+                  (ins !if(supports_imm, B16Op, B16):$src), (ins CvtMode:$mode),
                   "cvt${mode:base}${mode:ftz}${mode:sat}." # ToType # "." # sign # "8">,
         Requires<Preds>;
       def _ # sign # "16" :
         BasicFlagsNVPTXInst<(outs RC:$dst),
-                  (ins B16:$src), (ins CvtMode:$mode),
+                  (ins !if(supports_imm, B16Op, B16):$src), (ins CvtMode:$mode),
                   "cvt${mode:base}${mode:ftz}${mode:sat}." # ToType # "." # sign # "16">,
         Requires<Preds>;
       def _ # sign # "32" :
         BasicFlagsNVPTXInst<(outs RC:$dst),
-                  (ins B32:$src), (ins CvtMode:$mode),
+                  (ins !if(supports_imm, B32Op, B32):$src), (ins CvtMode:$mode),
                   "cvt${mode:base}${mode:ftz}${mode:sat}." # ToType # "." # sign # "32">,
         Requires<Preds>;
       def _ # sign # "64" :
         BasicFlagsNVPTXInst<(outs RC:$dst),
-                  (ins B64:$src), (ins CvtMode:$mode),
+                  (ins !if(supports_imm, B64Op, B64):$src), (ins CvtMode:$mode),
                   "cvt${mode:base}${mode:ftz}${mode:sat}." # ToType # "." # sign # "64">,
         Requires<Preds>;
     }
@@ -692,16 +701,16 @@ let hasSideEffects = false in {
 
   // Generate cvts from all types to all types.
   foreach sign = ["s", "u"] in {
-    defm CVT_ # sign # "8"  : CVT_FROM_ALL<sign # "8",  B16>;
-    defm CVT_ # sign # "16" : CVT_FROM_ALL<sign # "16", B16>;
-    defm CVT_ # sign # "32" : CVT_FROM_ALL<sign # "32", B32>;
-    defm CVT_ # sign # "64" : CVT_FROM_ALL<sign # "64", B64>;
+    defm CVT_ # sign # "8"  : CVT_FROM_ALL<sign # "8",  B16, supports_imm = true>;
+    defm CVT_ # sign # "16" : CVT_FROM_ALL<sign # "16", B16, supports_imm = true>;
+    defm CVT_ # sign # "32" : CVT_FROM_ALL<sign # "32", B32, supports_imm = true>;
+    defm CVT_ # sign # "64" : CVT_FROM_ALL<sign # "64", B64, supports_imm = true>;
   }
   defm CVT_f16 : CVT_FROM_ALL<"f16", B16>;
   defm CVT_bf16 : CVT_FROM_ALL<"bf16", B16, [SM90]>;
   defm CVT_f32 : CVT_FROM_ALL<"f32", B32>;
   defm CVT_f64 : CVT_FROM_ALL<"f64", B64>;
-  
+
   multiclass CVT_FROM_FLOAT_SATFINITE<string ToName, RegisterClass RC> {
     def _f32_sf :
       BasicFlagsNVPTXInst<(outs RC:$dst),
@@ -713,12 +722,12 @@ let hasSideEffects = false in {
 
   // These cvts are different from those above: The source and dest registers
   // are of the same type.
-  def CVT_INREG_s16_s8  : BasicNVPTXInst<(outs B16:$dst), (ins B16:$src), "cvt.s16.s8">;
-  def CVT_INREG_s32_s8  : BasicNVPTXInst<(outs B32:$dst), (ins B32:$src), "cvt.s32.s8">;
-  def CVT_INREG_s32_s16 : BasicNVPTXInst<(outs B32:$dst), (ins B32:$src), "cvt.s32.s16">;
-  def CVT_INREG_s64_s8  : BasicNVPTXInst<(outs B64:$dst), (ins B64:$src), "cvt.s64.s8">;
-  def CVT_INREG_s64_s16 : BasicNVPTXInst<(outs B64:$dst), (ins B64:$src), "cvt.s64.s16">;
-  def CVT_INREG_s64_s32 : BasicNVPTXInst<(outs B64:$dst), (ins B64:$src), "cvt.s64.s32">;
+  def CVT_INREG_s16_s8  : BasicNVPTXInst<(outs B16:$dst), (ins B16Op:$src), "cvt.s16.s8">;
+  def CVT_INREG_s32_s8  : BasicNVPTXInst<(outs B32:$dst), (ins B32Op:$src), "cvt.s32.s8">;
+  def CVT_INREG_s32_s16 : BasicNVPTXInst<(outs B32:$dst), (ins B32Op:$src), "cvt.s32.s16">;
+  def CVT_INREG_s64_s8  : BasicNVPTXInst<(outs B64:$dst), (ins B64Op:$src), "cvt.s64.s8">;
+  def CVT_INREG_s64_s16 : BasicNVPTXInst<(outs B64:$dst), (ins B64Op:$src), "cvt.s64.s16">;
+  def CVT_INREG_s64_s32 : BasicNVPTXInst<(outs B64:$dst), (ins B64Op:$src), "cvt.s64.s32">;
 
   multiclass CVT_FROM_FLOAT_V2_SM80<string FromName, RegisterClass RC> {
     def _f32 :
@@ -753,6 +762,16 @@ let hasSideEffects = false in {
   defm CVT_f16x2 : CVT_FROM_FLOAT_V2_RS<"f16x2", B32>;
   defm CVT_bf16x2 : CVT_FROM_FLOAT_V2_RS<"bf16x2", B32>;
 
+  class CVT_TO_NARROWFP_SCALE_N1<dag ins, string DstType, string SrcType, string SrcOps>
+      : NVPTXInst<(outs B16:$dst), ins,
+            "{{ \n\t" #
+            ".reg .b8 \t%b8_in; \n\t" #
+            "cvt.u8.u16 \t%b8_in, $scale; \n\t" #
+            "cvt${mode:base}.satfinite${mode:relu}${mode:pzo}.scaled::n1::ue8m0." #
+            DstType # "." # SrcType # " \t$dst, " # SrcOps # ", %b8_in; \n\t" #
+            "}}", []>,
+        Requires<[hasRubinFamilySupport]>;
+
   // FP8 conversions.
   multiclass CVT_TO_F8X2<string F8Name> {
     def _f32 :
@@ -772,6 +791,12 @@ let hasSideEffects = false in {
                 "cvt${mode:base}.satfinite${mode:relu}${mode:pzo}." #
                   F8Name # "x2.bf16x2">,
       Requires<[hasFP16X2ToNarrowFPConversionSupport]>;
+    def _f32_scale_n1 : CVT_TO_NARROWFP_SCALE_N1<(ins B32:$src1, B32:$src2, B16:$scale, CvtMode:$mode),
+                                                  F8Name # "x2", "f32", "$src1, $src2">;
+    def _f16x2_scale_n1 : CVT_TO_NARROWFP_SCALE_N1<(ins B32:$src1, B16:$scale, CvtMode:$mode),
+                                                    F8Name # "x2", "f16x2", "$src1">;
+    def _bf16x2_scale_n1 : CVT_TO_NARROWFP_SCALE_N1<(ins B32:$src1, B16:$scale, CvtMode:$mode),
+                                                    F8Name # "x2", "bf16x2", "$src1">;
   }
 
   defm CVT_e4m3x2 : CVT_TO_F8X2<"e4m3">;
@@ -881,6 +906,12 @@ let Predicates = [hasS2F6X2ConversionSupport] in {
               "cvt${mode:base}.satfinite${mode:relu}${mode:pzo}." #
                 FP6Name # "x2.bf16x2">,
       Requires<[hasFP16X2ToNarrowFPConversionSupport]>;
+    def _f32_sf_scale_n1 : CVT_TO_NARROWFP_SCALE_N1<(ins B32:$src1, B32:$src2, B16:$scale, CvtMode:$mode),
+                                                    FP6Name # "x2", "f32", "$src1, $src2">;
+    def _f16x2_sf_scale_n1 : CVT_TO_NARROWFP_SCALE_N1<(ins B32:$src1, B16:$scale, CvtMode:$mode),
+                                                      FP6Name # "x2", "f16x2", "$src1">;
+    def _bf16x2_sf_scale_n1 : CVT_TO_NARROWFP_SCALE_N1<(ins B32:$src1, B16:$scale, CvtMode:$mode),
+                                                        FP6Name # "x2", "bf16x2", "$src1">;
   }
 
   defm CVT_e2m3x2 : CVT_TO_FP6X2<"e2m3">;
@@ -936,6 +967,25 @@ let Predicates = [hasS2F6X2ConversionSupport] in {
       "cvt.u16.u8 \t$dst, %e2m1x2_out; \n\t" #
       "}}", []>,
       Requires<[hasFP16X2ToNarrowFPConversionSupport]>;
+
+  class CVT_TO_E2M1X2_SCALE_N1<dag ins, string SrcType, string SrcOps>
+      : NVPTXInst<(outs B16:$dst), ins,
+            "{{ \n\t" #
+            ".reg .b8 \t%e2m1x2_out; \n\t" #
+            ".reg .b8 \t%b8_in; \n\t" #
+            "cvt.u8.u16 \t%b8_in, $scale; \n\t" #
+            "cvt${mode:base}.satfinite${mode:relu}${mode:pzo}.scaled::n1::ue8m0.e2m1x2." #
+            SrcType # " \t%e2m1x2_out, " # SrcOps # ", %b8_in; \n\t" #
+            "cvt.u16.u8 \t$dst, %e2m1x2_out; \n\t" #
+            "}}", []>,
+        Requires<[hasRubinFamilySupport]>;
+
+  def CVT_e2m1x2_f32_sf_scale_n1 : CVT_TO_E2M1X2_SCALE_N1<(ins B32:$src1, B32:$src2, B16:$scale, CvtMode:$mode),
+                                                          "f32", "$src1, $src2">;
+  def CVT_e2m1x2_f16x2_sf_scale_n1 : CVT_TO_E2M1X2_SCALE_N1<(ins B32:$src1, B16:$scale, CvtMode:$mode),
+                                                            "f16x2", "$src1">;
+  def CVT_e2m1x2_bf16x2_sf_scale_n1 : CVT_TO_E2M1X2_SCALE_N1<(ins B32:$src1, B16:$scale, CvtMode:$mode),
+                                                              "bf16x2", "$src1">;
 
   // UE8M0x2 conversions.
   class CVT_f32_to_ue8m0x2<string sat = ""> :
@@ -1088,66 +1138,68 @@ def TESTINF_f64r : BasicNVPTXInst<(outs B1:$p), (ins B64:$a),
 
 // int16, int32, and int64 signed addition.  Since nvptx is 2's complement, we
 // also use these for unsigned arithmetic.
-defm ADD : I3<"add.s", add, commutative = true>;
-defm SUB : I3<"sub.s", sub, commutative = false>;
+defm ADD : I3<"add.s", add>;
+defm SUB : I3<"sub.s", sub>;
 
 def ADD16x2 : I16x2<"add.s", add>;
 
 // int32 and int64 addition and subtraction with carry-out.
-defm ADDCC : ADD_SUB_INT_CARRY<"add.cc", addc, commutative = true>;
-defm SUBCC : ADD_SUB_INT_CARRY<"sub.cc", subc, commutative = false>;
+defm ADDCC : ADD_SUB_INT_CARRY<"add.cc", addc>;
+defm SUBCC : ADD_SUB_INT_CARRY<"sub.cc", subc>;
 
 // int32 and int64 addition and subtraction with carry-in and carry-out.
-defm ADDCCC : ADD_SUB_INT_CARRY<"addc.cc", adde, commutative = true>;
-defm SUBCCC : ADD_SUB_INT_CARRY<"subc.cc", sube, commutative = false>;
+defm ADDCCC : ADD_SUB_INT_CARRY<"addc.cc", adde>;
+defm SUBCCC : ADD_SUB_INT_CARRY<"subc.cc", sube>;
 
-defm MULT : I3<"mul.lo.s", mul, commutative = true>;
+defm MULT : I3<"mul.lo.s", mul>;
 
-defm MUL_HI_S : I3<"mul.hi.s", mulhs, commutative = true>;
-defm MUL_HI_U : I3<"mul.hi.u", mulhu, commutative = true>;
+defm MUL_HI_S : I3<"mul.hi.s", mulhs>;
+defm MUL_HI_U : I3<"mul.hi.u", mulhu>;
 
-defm SDIV : I3<"div.s", sdiv, commutative = false>;
-defm UDIV : I3<"div.u", udiv, commutative = false>;
+defm SDIV : I3<"div.s", sdiv>;
+defm UDIV : I3<"div.u", udiv>;
 
-// The ri versions of rem.s and rem.u won't be selected; DAGCombiner::visitSREM
-// will lower it.
-defm SREM : I3<"rem.s", srem, commutative = false>;
-defm UREM : I3<"rem.u", urem, commutative = false>;
+// Remainders with constant divisors are lowered by DAGCombiner.
+defm SREM : I3<"rem.s", srem>;
+defm UREM : I3<"rem.u", urem>;
 
 foreach t = [I16RT, I32RT, I64RT] in {
   // PTX abs.s is undefined for INT_MIN, so it matches ABS_MIN_POISON
   // semantics (where INT_MIN input is poison). ISD::ABS requires
   // abs(INT_MIN) == INT_MIN and is expanded separately.
   def ABS_S # t.Size :
-    BasicNVPTXInst<(outs t.RC:$dst), (ins t.RC:$a),
-                   "abs.s" # t.Size,
-                   [(set t.Ty:$dst, (abs_min_poison t.Ty:$a))]>;
-
+    BasicNVPTXInst<(outs t.RC:$dst), (ins t.RegOrImm:$a),
+                   "abs.s" # t.Size>;
   def NEG_S # t.Size :
-    BasicNVPTXInst<(outs t.RC:$dst), (ins t.RC:$src),
-                   "neg.s" # t.Size,
-                   [(set t.Ty:$dst, (ineg t.Ty:$src))]>;
+    BasicNVPTXInst<(outs t.RC:$dst), (ins t.RegOrImm:$src),
+                   "neg.s" # t.Size>;
+  def : Pat<(t.Ty (abs_min_poison t.Ty:$a)),
+            (!cast<Instruction>("ABS_S" # t.Size) reg_or_imm:$a)>;
+  def : Pat<(t.Ty (ineg t.Ty:$src)),
+            (!cast<Instruction>("NEG_S" # t.Size) reg_or_imm:$src)>;
 }
 
 // Integer min/max.
-defm SMAX : I3<"max.s", smax, commutative = true>;
-defm UMAX : I3<"max.u", umax, commutative = true>;
-defm SMIN : I3<"min.s", smin, commutative = true>;
-defm UMIN : I3<"min.u", umin, commutative = true>;
+defm SMAX : I3<"max.s", smax>;
+defm UMAX : I3<"max.u", umax>;
+defm SMIN : I3<"min.s", smin>;
+defm UMIN : I3<"min.u", umin>;
 
 def SMAX16x2 : I16x2<"max.s", smax>;
 def UMAX16x2 : I16x2<"max.u", umax>;
 def SMIN16x2 : I16x2<"min.s", smin>;
 def UMIN16x2 : I16x2<"min.u", umin>;
 
-let Predicates = [PTX80, SM90] in {
+def MIN_RELU_S32 : BasicNVPTXInst<(outs B32:$dst), (ins B32Op:$a, B32Op:$b),
+                   "min.relu.s32">;
+def MAX_RELU_S32 : BasicNVPTXInst<(outs B32:$dst), (ins B32Op:$a, B32Op:$b),
+                   "max.relu.s32">;
 
-  def MIN_RELU_S32 : BasicNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
-                     "min.relu.s32",
-                     [(set i32:$dst, (smax (smin i32:$a, i32:$b), 0))]>;
-  def MAX_RELU_S32 : BasicNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
-                     "max.relu.s32",
-                     [(set i32:$dst, (smax (smax i32:$a, i32:$b), 0))]>;
+let Predicates = [PTX80, SM90] in {
+  def : Pat<(i32 (smax (smin i32:$a, i32:$b), 0)),
+            (MIN_RELU_S32 reg_or_imm:$a, reg_or_imm:$b)>;
+  def : Pat<(i32 (smax (smax i32:$a, i32:$b), 0)),
+            (MAX_RELU_S32 reg_or_imm:$a, reg_or_imm:$b)>;
   def MIN_RELU_S16x2 : BasicNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
                      "min.relu.s16x2",
                      [(set v2i16:$dst, (smax (smin v2i16:$a, v2i16:$b),
@@ -1168,14 +1220,11 @@ def umul_wide : SDNode<"NVPTXISD::MUL_WIDE_UNSIGNED", SDTMulWide, [SDNPCommutati
 
 
 multiclass MULWIDEInst<string suffix, SDPatternOperator op, RegTyInfo big_t, RegTyInfo small_t> {
-  def suffix # _rr :
-    BasicNVPTXInst<(outs big_t.RC:$dst), (ins small_t.RC:$a, small_t.RC:$b), 
-                   "mul.wide." # suffix,
-                   [(set big_t.Ty:$dst, (op small_t.Ty:$a, small_t.Ty:$b))]>;
-  def suffix # _ri :
-    BasicNVPTXInst<(outs big_t.RC:$dst), (ins small_t.RC:$a, small_t.Imm:$b), 
-                   "mul.wide." # suffix,
-                   [(set big_t.Ty:$dst, (op small_t.Ty:$a, imm:$b))]>;
+  def suffix :
+    BasicNVPTXInst<(outs big_t.RC:$dst), (ins small_t.RegOrImm:$a, small_t.RegOrImm:$b),
+                   "mul.wide." # suffix>;
+  def : Pat<(big_t.Ty (op small_t.Ty:$a, small_t.Ty:$b)),
+            (!cast<Instruction>(NAME # suffix) small_t.ImmNode:$a, small_t.ImmNode:$b)>;
 }
 
 defm MUL_WIDE : MULWIDEInst<"s32", smul_wide, I64RT, I32RT>;
@@ -1186,83 +1235,48 @@ defm MUL_WIDE : MULWIDEInst<"u16", umul_wide, I32RT, I16RT>;
 //
 // Integer multiply-add
 //
-multiclass MADInst<string suffix, SDPatternOperator op, RegTyInfo big_t, RegTyInfo small_t> {
-  def rrr:
+multiclass MADInst<string suffix, SDPatternOperator op, RegTyInfo big_t,
+                   RegTyInfo small_t, Predicate pred = hasOptEnabled> {
+  def NAME :
     BasicNVPTXInst<(outs big_t.RC:$dst),
-              (ins small_t.RC:$a, small_t.RC:$b, big_t.RC:$c),
-              "mad." # suffix,
-              [(set big_t.Ty:$dst, (add (OneUse2<op> small_t.Ty:$a, small_t.Ty:$b), big_t.Ty:$c))]>;
-  def rri:
-    BasicNVPTXInst<(outs big_t.RC:$dst),
-              (ins small_t.RC:$a, small_t.RC:$b, big_t.Imm:$c),
-              "mad." # suffix,
-              [(set big_t.Ty:$dst, (add (OneUse2<op> small_t.Ty:$a, small_t.Ty:$b), imm:$c))]>;
-  def rir:
-    BasicNVPTXInst<(outs big_t.RC:$dst),
-              (ins small_t.RC:$a, small_t.Imm:$b, big_t.RC:$c),
-              "mad." # suffix,
-              [(set big_t.Ty:$dst, (add (OneUse2<op> small_t.Ty:$a, imm:$b), big_t.Ty:$c))]>;
-  def rii:
-    BasicNVPTXInst<(outs big_t.RC:$dst),
-              (ins small_t.RC:$a, small_t.Imm:$b, big_t.Imm:$c),
-              "mad." # suffix,
-              [(set big_t.Ty:$dst, (add (OneUse2<op> small_t.Ty:$a, imm:$b), imm:$c))]>;
+              (ins small_t.RegOrImm:$a, small_t.RegOrImm:$b, big_t.RegOrImm:$c),
+              "mad." # suffix>;
+  def : Pat<(big_t.Ty (add (OneUse2<op> small_t.Ty:$a, small_t.Ty:$b), big_t.Ty:$c)),
+            (!cast<Instruction>(NAME) small_t.ImmNode:$a, small_t.ImmNode:$b, big_t.ImmNode:$c)>,
+      Requires<[pred]>;
 }
 
-let Predicates = [hasOptEnabled] in {
-  defm MAD_LO_S16 : MADInst<"lo.s16", mul, I16RT, I16RT>;
-  defm MAD_LO_S32 : MADInst<"lo.s32", mul, I32RT, I32RT>;
-  defm MAD_LO_S64 : MADInst<"lo.s64", mul, I64RT, I64RT>;
+defm MAD_LO_S16 : MADInst<"lo.s16", mul, I16RT, I16RT>;
+defm MAD_LO_S32 : MADInst<"lo.s32", mul, I32RT, I32RT>;
+defm MAD_LO_S64 : MADInst<"lo.s64", mul, I64RT, I64RT>;
 
-  // Generating mad.wide causes a regression in some cases: 
-  // https://github.com/llvm/llvm-project/pull/150477#issuecomment-3191367837
-  // Only do so when the user requests it.
-  let Predicates = [doMADWideOpt] in {
-    defm MAD_WIDE_U16 : MADInst<"wide.u16", umul_wide, I32RT, I16RT>;
-    defm MAD_WIDE_S16 : MADInst<"wide.s16", smul_wide, I32RT, I16RT>;
-    defm MAD_WIDE_U32 : MADInst<"wide.u32", umul_wide, I64RT, I32RT>;
-    defm MAD_WIDE_S32 : MADInst<"wide.s32", smul_wide, I64RT, I32RT>;
-  }
-}
+// Generating mad.wide causes a regression in some cases:
+// https://github.com/llvm/llvm-project/pull/150477#issuecomment-3191367837
+// Only do so when the user requests it.
+defm MAD_WIDE_U16 : MADInst<"wide.u16", umul_wide, I32RT, I16RT, doMADWideOpt>;
+defm MAD_WIDE_S16 : MADInst<"wide.s16", smul_wide, I32RT, I16RT, doMADWideOpt>;
+defm MAD_WIDE_U32 : MADInst<"wide.u32", umul_wide, I64RT, I32RT, doMADWideOpt>;
+defm MAD_WIDE_S32 : MADInst<"wide.s32", smul_wide, I64RT, I32RT, doMADWideOpt>;
 
 //
 // Carryless multiply-add
 //
 multiclass CLMADInst<string mode, SDPatternOperator op> {
-  def rrr: BasicNVPTXInst<
+  def NAME : BasicNVPTXInst<
       (outs B64:$dst),
-      (ins B64:$a, B64:$b, B64:$c),
-      "clmad." # mode # ".u64",
-      [(set i64:$dst,
-            (xor (OneUse2<op> i64:$a, i64:$b), i64:$c))]>;
-  def rri: BasicNVPTXInst<
-      (outs B64:$dst),
-      (ins B64:$a, B64:$b, i64imm:$c),
-      "clmad." # mode # ".u64",
-      [(set i64:$dst,
-            (xor (OneUse2<op> i64:$a, i64:$b), imm:$c))]>;
-  def rir: BasicNVPTXInst<
-      (outs B64:$dst),
-      (ins B64:$a, i64imm:$b, B64:$c),
-      "clmad." # mode # ".u64",
-      [(set i64:$dst,
-            (xor (OneUse2<op> i64:$a, imm:$b), i64:$c))]>;
-  def rii: BasicNVPTXInst<
-      (outs B64:$dst),
-      (ins B64:$a, i64imm:$b, i64imm:$c),
-      "clmad." # mode # ".u64",
-      [(set i64:$dst,
-            (xor (OneUse2<op> i64:$a, imm:$b), imm:$c))]>;
-  def : Pat<(op i64:$a, i64:$b),
-            (!cast<NVPTXInst>(NAME # "rri") $a, $b, 0)>;
-  def : Pat<(op i64:$a, imm:$b),
-            (!cast<NVPTXInst>(NAME # "rii") $a, imm:$b, 0)>;
+      (ins B64Op:$a, B64Op:$b, B64Op:$c),
+      "clmad." # mode # ".u64">;
+  let Predicates = [hasCLMAD] in {
+    def : Pat<(i64 (xor (OneUse2<op> i64:$a, i64:$b), i64:$c)),
+              (!cast<Instruction>(NAME) reg_or_imm:$a, reg_or_imm:$b, reg_or_imm:$c)>;
+
+    def : Pat<(op i64:$a, i64:$b),
+              (!cast<NVPTXInst>(NAME) reg_or_imm:$a, reg_or_imm:$b, (i64 0))>;
+  }
 }
 
-let Predicates = [hasCLMAD] in {
-  defm CLMAD_HI : CLMADInst<"hi", clmulh>;
-  defm CLMAD_LO : CLMADInst<"lo", clmul>;
-}
+defm CLMAD_HI : CLMADInst<"hi", clmulh>;
+defm CLMAD_LO : CLMADInst<"lo", clmul>;
 
 //-----------------------------------
 // Floating Point Arithmetic
@@ -1550,7 +1564,7 @@ let Predicates = [SM90] in {
 // .b32, .b64, and .pred (predicate registers -- i.e., i1) versions of OpcStr.
 multiclass BITWISE<string OpcStr, SDNode OpNode> {
   foreach t = [I1RT, I16RT, I32RT, I64RT] in
-    defm _ # t.PtxType : I3Inst<OpcStr # "." # t.PtxType, OpNode, t, commutative = true>;
+    defm _ # t.PtxType : I3Inst<OpcStr # "." # t.PtxType, OpNode, t>;
 }
 
 defm OR  : BITWISE<"or", or>;
@@ -1558,62 +1572,56 @@ defm AND : BITWISE<"and", and>;
 defm XOR : BITWISE<"xor", xor>;
 
 // PTX does not support mul on predicates, convert to and instructions
-def : Pat<(mul i1:$a, i1:$b), (AND_predrr $a, $b)>;
-def : Pat<(mul i1:$a, imm:$b), (AND_predri $a, imm:$b)>;
+def : Pat<(mul i1:$a, i1:$b),
+          (AND_pred reg_or_imm:$a, reg_or_imm:$b)>;
 
 foreach op = [add, sub] in {
-  def : Pat<(op i1:$a, i1:$b), (XOR_predrr $a, $b)>;
-  def : Pat<(op i1:$a, imm:$b), (XOR_predri $a, imm:$b)>;
+  def : Pat<(op i1:$a, i1:$b),
+          (XOR_pred reg_or_imm:$a, reg_or_imm:$b)>;
 }
 
 // These transformations were once reliably performed by instcombine, but thanks
 // to poison semantics they are no longer safe for LLVM IR, perform them here
 // instead.
-def : Pat<(select i1:$a, i1:$b, 0), (AND_predrr $a, $b)>;
-def : Pat<(select i1:$a, 1, i1:$b), (OR_predrr $a, $b)>;
+def : Pat<(select i1:$a, i1:$b, 0),
+          (AND_pred reg_or_imm:$a, reg_or_imm:$b)>;
+def : Pat<(select i1:$a, 1, i1:$b),
+          (OR_pred reg_or_imm:$a, reg_or_imm:$b)>;
 
 // Lower logical v2i16/v4i8 ops as bitwise ops on b32.
 foreach vt = [v2i16, v4i8] in {
-  def : Pat<(or vt:$a, vt:$b), (OR_b32rr $a, $b)>;
-  def : Pat<(xor vt:$a, vt:$b), (XOR_b32rr $a, $b)>;
-  def : Pat<(and vt:$a, vt:$b), (AND_b32rr $a, $b)>;
+  def : Pat<(or vt:$a, vt:$b), (OR_b32 $a, $b)>;
+  def : Pat<(xor vt:$a, vt:$b), (XOR_b32 $a, $b)>;
+  def : Pat<(and vt:$a, vt:$b), (AND_b32 $a, $b)>;
 
   // The constants get legalized into a bitcast from i32, so that's what we need
   // to match here.
   def: Pat<(or vt:$a, (vt (bitconvert (i32 imm:$b)))),
-           (OR_b32ri $a, imm:$b)>;
+           (OR_b32 $a, imm:$b)>;
   def: Pat<(xor vt:$a, (vt (bitconvert (i32 imm:$b)))),
-           (XOR_b32ri $a, imm:$b)>;
+           (XOR_b32 $a, imm:$b)>;
   def: Pat<(and vt:$a, (vt (bitconvert (i32 imm:$b)))),
-           (AND_b32ri $a, imm:$b)>;
+           (AND_b32 $a, imm:$b)>;
 }
 
-foreach t = [I1RT, I16RT, I32RT, I64RT] in
-  def NOT_ # t.PtxType : BasicNVPTXInst<(outs t.RC:$dst), (ins t.RC:$src),
-                                        "not." # t.PtxType,
-                                        [(set t.Ty:$dst, (not t.Ty:$src))]>;
+foreach t = [I1RT, I16RT, I32RT, I64RT] in {
+  def NOT_ # t.PtxType : BasicNVPTXInst<(outs t.RC:$dst), (ins t.RegOrImm:$src),
+                                        "not." # t.PtxType>;
+  def : Pat<(t.Ty (not t.Ty:$src)),
+            (!cast<Instruction>("NOT_" # t.PtxType) reg_or_imm:$src)>;
+}
 
 // Template for left/right shifts.  Takes three operands,
-//   [dest (reg), src (reg), shift (reg or imm)].
+//   [dest (reg), src (reg or imm), shift (reg or imm)].
 // dest and src may be int64, int32, or int16, but shift is always int32.
 //
-// This template also defines a 32-bit shift (imm, imm) instruction.
 multiclass SHIFT<string OpcStr, SDNode OpNode> {
-  let hasSideEffects = false in {
-    foreach t = [I64RT, I32RT, I16RT] in {
-      def t.Size # _rr :
-        BasicNVPTXInst<(outs t.RC:$dst), (ins t.RC:$a, B32:$b),
-                  OpcStr # t.Size,
-                  [(set t.Ty:$dst, (OpNode t.Ty:$a, i32:$b))]>;
-      def t.Size # _ri :
-        BasicNVPTXInst<(outs t.RC:$dst), (ins t.RC:$a, i32imm:$b),
-                  OpcStr # t.Size,
-                  [(set t.Ty:$dst, (OpNode t.Ty:$a, (i32 imm:$b)))]>;
-      def t.Size # _ii :
-        BasicNVPTXInst<(outs t.RC:$dst), (ins t.RC:$a, i32imm:$b),
-                  OpcStr # t.Size,
-                  [(set t.Ty:$dst, (OpNode (t.Ty imm:$a), (i32 imm:$b)))]>;
-    }
+  foreach t = [I64RT, I32RT, I16RT] in {
+    def t.Size # "" :
+      BasicNVPTXInst<(outs t.RC:$dst), (ins t.RegOrImm:$a, B32Op:$b),
+                     OpcStr # t.Size>;
+    def : Pat<(t.Ty (OpNode t.Ty:$a, i32:$b)),
+              (!cast<Instruction>(NAME # t.Size) reg_or_imm:$a, reg_or_imm:$b)>;
   }
 }
 
@@ -1631,21 +1639,20 @@ defm SHL_CLAMP : SHIFT<"shl.b", shl_clamp>;
 defm SRL_CLAMP : SHIFT<"shr.u", srl_clamp>;
 
 // Bit-reverse
-foreach t = [I64RT, I32RT] in
+foreach t = [I64RT, I32RT] in {
   def BREV_ # t.PtxType :
-    BasicNVPTXInst<(outs t.RC:$dst), (ins t.RC:$a),
-               "brev." # t.PtxType,
-               [(set t.Ty:$dst, (bitreverse t.Ty:$a))]>;
-
+    BasicNVPTXInst<(outs t.RC:$dst), (ins t.RegOrImm:$a),
+               "brev." # t.PtxType>;
+  def : Pat<(t.Ty (bitreverse t.Ty:$a)),
+            (!cast<Instruction>("BREV_" # t.PtxType) reg_or_imm:$a)>;
+}
 
 //
 // BFE - bit-field extract
 //
 
 // Template for BFE/BFI instructions.
-// Args: [dest (reg), src (reg), start (reg or imm), end (reg or imm)].
-// Start may be an imm only if end is also an imm.  FIXME: Is this a
-// restriction in PTX?
+// Args: [dest (reg), src (reg or imm), start (reg or imm), end (reg or imm)].
 //
 // dest and src may be int32 or int64, but start and end are always int32.
 def SDTBFI :
@@ -1658,111 +1665,44 @@ def SDTPRMT :
                        SDTCisVT<2, i32>, SDTCisVT<3, i32>, SDTCisVT<4, i32>]>;
 def prmt : SDNode<"NVPTXISD::PRMT", SDTPRMT>;
 
-multiclass BFE<string Instr, RegisterClass RC> {
-  def rrr
-    : BasicNVPTXInst<(outs RC:$d), (ins RC:$a, B32:$b, B32:$c), Instr>;
-  def rri
-    : BasicNVPTXInst<(outs RC:$d), (ins RC:$a, B32:$b, i32imm:$c), Instr>;
-  def rii
-    : BasicNVPTXInst<(outs RC:$d), (ins RC:$a, i32imm:$b, i32imm:$c), Instr>;
+multiclass BFE<string Instr, NVPTXRegClass RC> {
+  let hasSideEffects = false in
+  def NAME : BasicNVPTXInst<(outs RC:$d), (ins NVPTXRegOrImm<RC>:$a, B32Op:$b, B32Op:$c), Instr>;
 }
 
-multiclass BFI<string Instr, ValueType T, RegisterClass RC, Operand ImmCls> {
-  def rrrr
-    : BasicNVPTXInst<(outs RC:$f),
-                (ins RC:$a, RC:$b, B32:$c, B32:$d),
-                Instr,
-                [(set T:$f, (bfi T:$a, T:$b, i32:$c, i32:$d))]>;
-  def rrri
-    : BasicNVPTXInst<(outs RC:$f),
-                (ins RC:$a, RC:$b, B32:$c, i32imm:$d),
-                Instr,
-                [(set T:$f, (bfi T:$a, T:$b, i32:$c, imm:$d))]>;
-  def rrii
-    : BasicNVPTXInst<(outs RC:$f),
-                (ins RC:$a, RC:$b, i32imm:$c, i32imm:$d),
-                Instr,
-                [(set T:$f, (bfi T:$a, T:$b, imm:$c, imm:$d))]>;
-  def irrr
-    : BasicNVPTXInst<(outs RC:$f),
-                (ins ImmCls:$a, RC:$b, B32:$c, B32:$d),
-                Instr,
-                [(set T:$f, (bfi (T imm:$a), T:$b, i32:$c, i32:$d))]>;
-  def irri
-    : BasicNVPTXInst<(outs RC:$f),
-                (ins ImmCls:$a, RC:$b, B32:$c, i32imm:$d),
-                Instr,
-                [(set T:$f, (bfi (T imm:$a), T:$b, i32:$c, imm:$d))]>;
-  def irii
-    : BasicNVPTXInst<(outs RC:$f),
-                (ins ImmCls:$a, RC:$b, i32imm:$c, i32imm:$d),
-                Instr,
-                [(set T:$f, (bfi (T imm:$a), T:$b, imm:$c, imm:$d))]>;
+multiclass BFI<string Instr, ValueType T, NVPTXRegClass RC> {
+  def NAME : BasicNVPTXInst<(outs RC:$f),
+                (ins NVPTXRegOrImm<RC>:$a, NVPTXRegOrImm<RC>:$b, B32Op:$c, B32Op:$d),
+                Instr>;
+  def : Pat<(T (bfi T:$a, T:$b, i32:$c, i32:$d)),
+            (!cast<Instruction>(NAME) reg_or_imm:$a, reg_or_imm:$b, reg_or_imm:$c, reg_or_imm:$d)>;
 }
 
-def Hexu32imm : Operand<i32> {
-  let PrintMethod = "printHexu32imm";
+def B32OpHex : NVPTXRegOrImm<B32> {
+  let PrintMethod = "printRegOrHexImm";
 }
 
-let hasSideEffects = false in {
-  // order is somewhat important here. signed/unsigned variants match
-  // the same patterns, so the first one wins. Having unsigned byte extraction
-  // has the benefit of always having zero in unused bits, which makes some
-  // optimizations easier (e.g. no need to mask them).
-  defm BFE_U32 : BFE<"bfe.u32", B32>;
-  defm BFE_S32 : BFE<"bfe.s32", B32>;
-  defm BFE_U64 : BFE<"bfe.u64", B64>;
-  defm BFE_S64 : BFE<"bfe.s64", B64>;
+// Order is somewhat important here. Signed/unsigned variants match
+// the same patterns, so the first one wins. Having unsigned byte extraction
+// has the benefit of always having zero in unused bits, which makes some
+// optimizations easier (e.g. no need to mask them).
+defm BFE_U32 : BFE<"bfe.u32", B32>;
+defm BFE_S32 : BFE<"bfe.s32", B32>;
+defm BFE_U64 : BFE<"bfe.u64", B64>;
+defm BFE_S64 : BFE<"bfe.s64", B64>;
 
-  defm BFI_B32 : BFI<"bfi.b32", i32, B32, i32imm>;
-  defm BFI_B64 : BFI<"bfi.b64", i64, B64, i64imm>;
+defm BFI_B32 : BFI<"bfi.b32", i32, B32>;
+defm BFI_B64 : BFI<"bfi.b64", i64, B64>;
 
-  def PRMT_B32rrr
-    : BasicFlagsNVPTXInst<(outs B32:$d),
-                (ins B32:$a, B32:$b, B32:$c),
-                (ins PrmtMode:$mode),
-                "prmt.b32$mode",
-                [(set i32:$d, (prmt i32:$a, i32:$b, i32:$c, imm:$mode))]>;
-  def PRMT_B32rri
-    : BasicFlagsNVPTXInst<(outs B32:$d),
-                (ins B32:$a, B32:$b, Hexu32imm:$c),
-                (ins PrmtMode:$mode),
-                "prmt.b32$mode",
-                [(set i32:$d, (prmt i32:$a, i32:$b, imm:$c, imm:$mode))]>;
-  def PRMT_B32rir
-  : BasicFlagsNVPTXInst<(outs B32:$d),
-              (ins B32:$a, i32imm:$b, B32:$c),
-              (ins PrmtMode:$mode),
-              "prmt.b32$mode",
-              [(set i32:$d, (prmt i32:$a, imm:$b, i32:$c, imm:$mode))]>;
-  def PRMT_B32rii
-    : BasicFlagsNVPTXInst<(outs B32:$d),
-                (ins B32:$a, i32imm:$b, Hexu32imm:$c),
-                (ins PrmtMode:$mode),
-                "prmt.b32$mode",
-                [(set i32:$d, (prmt i32:$a, imm:$b, imm:$c, imm:$mode))]>;
-  def PRMT_B32irr
-    : BasicFlagsNVPTXInst<(outs B32:$d),
-                (ins i32imm:$a, B32:$b, B32:$c), (ins PrmtMode:$mode),
-                "prmt.b32$mode",
-                [(set i32:$d, (prmt imm:$a, i32:$b, i32:$c, imm:$mode))]>;
-  def PRMT_B32iri
-    : BasicFlagsNVPTXInst<(outs B32:$d),
-                (ins i32imm:$a, B32:$b, Hexu32imm:$c), (ins PrmtMode:$mode),
-                "prmt.b32$mode",
-                [(set i32:$d, (prmt imm:$a, i32:$b, imm:$c, imm:$mode))]>;
-  def PRMT_B32iir
-    : BasicFlagsNVPTXInst<(outs B32:$d),
-                (ins i32imm:$a, i32imm:$b, B32:$c), (ins PrmtMode:$mode),
-                "prmt.b32$mode",
-                [(set i32:$d, (prmt imm:$a, imm:$b, i32:$c, imm:$mode))]>;
-
-}
+def PRMT_B32 : BasicFlagsNVPTXInst<(outs B32:$d),
+      (ins B32Op:$a, B32Op:$b, B32OpHex:$c),
+      (ins PrmtMode:$mode), "prmt.b32$mode">;
+def : Pat<(i32 (prmt i32:$a, i32:$b, i32:$c, imm:$mode)),
+          (PRMT_B32 reg_or_imm:$a, reg_or_imm:$b, reg_or_imm:$c, (i32 imm:$mode))>;
 
 // PRMT folding patterns
 def : Pat<(fshr i32:$hi, i32:$lo, (shl i32:$amt, (i32 3))),
-          (PRMT_B32rrr $lo, $hi, $amt, PrmtF4E)>;
-
+          (PRMT_B32 reg_or_imm:$lo, reg_or_imm:$hi, reg_or_imm:$amt, PrmtF4E)>;
 
 def byte_extract_prmt : ImmLeaf<i32, [{
   return (Imm == 0x7770) || (Imm == 0x7771) || (Imm == 0x7772) || (Imm == 0x7773);
@@ -1779,27 +1719,27 @@ def to_sign_extend_selector : SDNodeXForm<imm, [{
 
 // byte extraction + signed/unsigned extension to i32.
 def : Pat<(i32 (sext_inreg (prmt i32:$s, 0, byte_extract_prmt:$sel, PrmtNONE), i8)),
-          (PRMT_B32rii $s, 0, (to_sign_extend_selector $sel), PrmtNONE)>;
+          (PRMT_B32 reg_or_imm:$s, (i32 0), (i32 (to_sign_extend_selector $sel)), PrmtNONE)>;
 
 // byte extraction + signed extension to i16
 def : Pat<(i16 (sext_inreg (trunc (prmt i32:$s, 0, byte_extract_prmt:$sel, PrmtNONE)), i8)),
-          (CVT_u16_u32 (PRMT_B32rii $s, 0, (to_sign_extend_selector $sel), PrmtNONE), CvtNONE)>;
-
+          (CVT_u16_u32 (PRMT_B32 reg_or_imm:$s, (i32 0),
+                               (i32 (to_sign_extend_selector $sel)), PrmtNONE), CvtNONE)>;
 
 // Byte extraction via shift/trunc/sext
-def : Pat<(i16 (sext_inreg (trunc i32:$s), i8)), (CVT_s8_s32 $s, CvtNONE)>;
-def : Pat<(i16 (sext_inreg (trunc i64:$s), i8)), (CVT_s8_s64 $s, CvtNONE)>;
+def : Pat<(i16 (sext_inreg (trunc i32:$s), i8)), (CVT_s8_s32 reg_or_imm:$s, CvtNONE)>;
+def : Pat<(i16 (sext_inreg (trunc i64:$s), i8)), (CVT_s8_s64 reg_or_imm:$s, CvtNONE)>;
 
-def : Pat<(sext_inreg (srl i32:$s, (i32 imm:$o)), i8), (BFE_S32rii $s, imm:$o, 8)>;
-def : Pat<(sext_inreg (srl i64:$s, (i32 imm:$o)), i8), (BFE_S64rii $s, imm:$o, 8)>;
+def : Pat<(sext_inreg (srl i32:$s, (i32 imm:$o)), i8), (BFE_S32 reg_or_imm:$s, imm:$o, (i32 8))>;
+def : Pat<(sext_inreg (srl i64:$s, (i32 imm:$o)), i8), (BFE_S64 reg_or_imm:$s, imm:$o, (i32 8))>;
 
 def : Pat<(i16 (sext_inreg (trunc (srl i32:$s, (i32 imm:$o))), i8)),
-          (CVT_s8_s32 (BFE_S32rii $s, imm:$o, 8), CvtNONE)>;
+          (CVT_s8_s32 (BFE_S32 reg_or_imm:$s, imm:$o, (i32 8)), CvtNONE)>;
 def : Pat<(i16 (sext_inreg (trunc (srl i64:$s, (i32 imm:$o))), i8)),
-          (CVT_s8_s64 (BFE_S64rii $s, imm:$o, 8), CvtNONE)>;
+          (CVT_s8_s64 (BFE_S64 reg_or_imm:$s, imm:$o, (i32 8)), CvtNONE)>;
 
 def : Pat<(i16 (sra (i16 (trunc i32:$s)), (i32 8))),
-          (CVT_s8_s32 (BFE_S32rii $s, 8, 8), CvtNONE)>;
+          (CVT_s8_s32 (BFE_S32 reg_or_imm:$s, (i32 8), (i32 8)), CvtNONE)>;
 
 //-----------------------------------
 // Comparison instructions (setp, set)
@@ -1840,24 +1780,12 @@ multiclass FSETP<RegTyInfo t, bit allow_ftz = true> {
 }
 
 multiclass ISETP<RegTyInfo t> {
-  defvar op_str = "setp.${cmp:ICmp}.${cmp:IType}" # t.Size;
-  let hasSideEffects = false, isCompare = 1, isCommutable = 1 in {
-    def rr :
-      BasicFlagsNVPTXInst<(outs B1:$dst), (ins t.RC:$a, t.RC:$b),
-                          (ins CmpMode:$cmp), op_str>;
-    def ri :
-      BasicFlagsNVPTXInst<(outs B1:$dst), (ins t.RC:$a, t.Imm:$b),
-                          (ins CmpMode:$cmp), op_str>;
-    def ir :
-      BasicFlagsNVPTXInst<(outs B1:$dst), (ins t.Imm:$a, t.RC:$b),
-                          (ins CmpMode:$cmp), op_str>;
-  }
+  let isCompare = 1, isCommutable = 1 in
+    def NAME : BasicFlagsNVPTXInst<(outs B1:$dst),
+        (ins t.RegOrImm:$a, t.RegOrImm:$b), (ins CmpMode:$cmp),
+        "setp.${cmp:ICmp}.${cmp:IType}" # t.Size>;
   def : Pat<(i1 (setcc t.Ty:$a, t.Ty:$b, cond:$cc)),
-            (!cast<NVPTXInst>(NAME # "rr") $a, $b, (cond2cc $cc))>;
-  def : Pat<(i1 (setcc t.Ty:$a, imm:$b, cond:$cc)),
-            (!cast<NVPTXInst>(NAME # "ri") $a, imm:$b, (cond2cc $cc))>;
-  def : Pat<(i1 (setcc imm:$a, t.Ty:$b, cond:$cc)),
-            (!cast<NVPTXInst>(NAME # "ir") imm:$a, $b, (cond2cc $cc))>;
+            (!cast<NVPTXInst>(NAME) t.ImmNode:$a, t.ImmNode:$b, (cond2cc $cc))>;
 }
 
 defm SETP_i16 : ISETP<I16RT>;
@@ -1921,9 +1849,7 @@ let hasSideEffects = false in {
                                      "mov.b32 \t$d, __local_depot$num;">;
   def MOV_DEPOT_ADDR_64 : NVPTXInst<(outs B64:$d), (ins i32imm:$num),
                                     "mov.b64 \t$d, __local_depot$num;">;
-}
 
-let hasSideEffects = false in {
   let isMoveReg = true, isAsCheapAsAMove = true in
     class MOVr<RegisterClass RC, string OpStr> :
       BasicNVPTXInst<(outs RC:$dst), (ins RC:$src), "mov." # OpStr>;
@@ -2013,9 +1939,11 @@ def cond_signed : PatLeaf<(cond), [{
 def : Pat<(setcc (i16 (sext_inreg (trunc (prmt i32:$a, 0, byte_extract_prmt:$sel_a, PrmtNONE)), i8)),
                  (i16 (sext_inreg (trunc (prmt i32:$b, 0, byte_extract_prmt:$sel_b, PrmtNONE)), i8)),
                  cond_signed:$cc),
-          (SETP_i32rr (PRMT_B32rii i32:$a, 0, (to_sign_extend_selector $sel_a), PrmtNONE),
-                      (PRMT_B32rii i32:$b, 0, (to_sign_extend_selector $sel_b), PrmtNONE),
-                      (cond2cc $cc))>;
+          (SETP_i32 (PRMT_B32 reg_or_imm:$a, (i32 0),
+                             (i32 (to_sign_extend_selector $sel_a)), PrmtNONE),
+                    (PRMT_B32 reg_or_imm:$b, (i32 0),
+                              (i32 (to_sign_extend_selector $sel_b)), PrmtNONE),
+                    (cond2cc $cc))>;
 
 def SDTDeclareArrayParam :
   SDTypeProfile<0, 3, [SDTCisVT<0, i32>, SDTCisVT<1, i32>, SDTCisVT<2, i32>]>;
@@ -2177,9 +2105,9 @@ class ST<DAGOperand O>
           " \t[$addr], $src${policy};">;
 
 let mayStore=1, hasSideEffects=0 in {
-  def ST_i16 : ST<RI16>;
-  def ST_i32 : ST<RI32>;
-  def ST_i64 : ST<RI64>;
+  def ST_i16 : ST<B16Op>;
+  def ST_i32 : ST<B32Op>;
+  def ST_i64 : ST<B64Op>;
 }
 
 // The following is used only in and after vector elementizations.  Vector
@@ -2276,9 +2204,9 @@ multiclass ST_VEC<DAGOperand O, bit support_v8 = false> {
 }
 
 let mayStore=1, hasSideEffects=0 in {
-  defm STV_i16 : ST_VEC<RI16>;
-  defm STV_i32 : ST_VEC<RI32, support_v8 = true>;
-  defm STV_i64 : ST_VEC<RI64>;
+  defm STV_i16 : ST_VEC<B16Op>;
+  defm STV_i32 : ST_VEC<B32Op, support_v8 = true>;
+  defm STV_i64 : ST_VEC<B64Op>;
 }
 
 //---- Conversion ----
@@ -2416,46 +2344,49 @@ def : Pat<(i32 (anyext i1:$a)), (SELP_b32ii -1, 0, $a)>;
 def : Pat<(i64 (anyext i1:$a)), (SELP_b64ii -1, 0, $a)>;
 
 // sext i16
-def : Pat<(i32 (sext i16:$a)), (CVT_s32_s16 $a, CvtNONE)>;
-def : Pat<(i64 (sext i16:$a)), (CVT_s64_s16 $a, CvtNONE)>;
+def : Pat<(i32 (sext i16:$a)), (CVT_s32_s16 reg_or_imm:$a, CvtNONE)>;
+def : Pat<(i64 (sext i16:$a)), (CVT_s64_s16 reg_or_imm:$a, CvtNONE)>;
 
 // zext i16
-def : Pat<(i32 (zext i16:$a)), (CVT_u32_u16 $a, CvtNONE)>;
-def : Pat<(i64 (zext i16:$a)), (CVT_u64_u16 $a, CvtNONE)>;
+def : Pat<(i32 (zext i16:$a)), (CVT_u32_u16 reg_or_imm:$a, CvtNONE)>;
+def : Pat<(i64 (zext i16:$a)), (CVT_u64_u16 reg_or_imm:$a, CvtNONE)>;
 
 // anyext i16
-def : Pat<(i32 (anyext i16:$a)), (CVT_u32_u16 $a, CvtNONE)>;
-def : Pat<(i64 (anyext i16:$a)), (CVT_u64_u16 $a, CvtNONE)>;
+def : Pat<(i32 (anyext i16:$a)), (CVT_u32_u16 reg_or_imm:$a, CvtNONE)>;
+def : Pat<(i64 (anyext i16:$a)), (CVT_u64_u16 reg_or_imm:$a, CvtNONE)>;
 
 // sext i32
-def : Pat<(i64 (sext i32:$a)), (CVT_s64_s32 $a, CvtNONE)>;
+def : Pat<(i64 (sext i32:$a)), (CVT_s64_s32 reg_or_imm:$a, CvtNONE)>;
 
 // zext i32
-def : Pat<(i64 (zext i32:$a)), (CVT_u64_u32 $a, CvtNONE)>;
+def : Pat<(i64 (zext i32:$a)), (CVT_u64_u32 reg_or_imm:$a, CvtNONE)>;
 
 // anyext i32
-def : Pat<(i64 (anyext i32:$a)), (CVT_u64_u32 $a, CvtNONE)>;
+def : Pat<(i64 (anyext i32:$a)), (CVT_u64_u32 reg_or_imm:$a, CvtNONE)>;
 
 
 // truncate i64
-def : Pat<(i32 (trunc i64:$a)), (CVT_u32_u64 $a, CvtNONE)>;
-def : Pat<(i16 (trunc i64:$a)), (CVT_u16_u64 $a, CvtNONE)>;
-def : Pat<(i1  (trunc i64:$a)), (SETP_i64ri (AND_b64ri $a, 1), 0, CmpNE)>;
+def : Pat<(i32 (trunc i64:$a)), (CVT_u32_u64 reg_or_imm:$a, CvtNONE)>;
+def : Pat<(i16 (trunc i64:$a)), (CVT_u16_u64 reg_or_imm:$a, CvtNONE)>;
+def : Pat<(i1 (trunc i64:$a)),
+          (SETP_i64 (AND_b64 reg_or_imm:$a, (i64 1)), (i64 0), CmpNE)>;
 
 // truncate i32
-def : Pat<(i16 (trunc i32:$a)), (CVT_u16_u32 $a, CvtNONE)>;
-def : Pat<(i1  (trunc i32:$a)), (SETP_i32ri (AND_b32ri $a, 1), 0, CmpNE)>;
+def : Pat<(i16 (trunc i32:$a)), (CVT_u16_u32 reg_or_imm:$a, CvtNONE)>;
+def : Pat<(i1 (trunc i32:$a)),
+          (SETP_i32 (AND_b32 reg_or_imm:$a, (i32 1)), (i32 0), CmpNE)>;
 
 // truncate i16
-def : Pat<(i1 (trunc i16:$a)), (SETP_i16ri (AND_b16ri $a, 1), 0, CmpNE)>;
+def : Pat<(i1 (trunc i16:$a)),
+          (SETP_i16 (AND_b16 reg_or_imm:$a, (i16 1)), (i16 0), CmpNE)>;
 
 // sext_inreg
-def : Pat<(sext_inreg i16:$a, i8), (CVT_INREG_s16_s8 $a)>;
-def : Pat<(sext_inreg i32:$a, i8), (CVT_INREG_s32_s8 $a)>;
-def : Pat<(sext_inreg i32:$a, i16), (CVT_INREG_s32_s16 $a)>;
-def : Pat<(sext_inreg i64:$a, i8), (CVT_INREG_s64_s8 $a)>;
-def : Pat<(sext_inreg i64:$a, i16), (CVT_INREG_s64_s16 $a)>;
-def : Pat<(sext_inreg i64:$a, i32), (CVT_INREG_s64_s32 $a)>;
+def : Pat<(sext_inreg i16:$a, i8), (CVT_INREG_s16_s8 reg_or_imm:$a)>;
+def : Pat<(sext_inreg i32:$a, i8), (CVT_INREG_s32_s8 reg_or_imm:$a)>;
+def : Pat<(sext_inreg i32:$a, i16), (CVT_INREG_s32_s16 reg_or_imm:$a)>;
+def : Pat<(sext_inreg i64:$a, i8), (CVT_INREG_s64_s8 reg_or_imm:$a)>;
+def : Pat<(sext_inreg i64:$a, i16), (CVT_INREG_s64_s16 reg_or_imm:$a)>;
+def : Pat<(sext_inreg i64:$a, i32), (CVT_INREG_s64_s32 reg_or_imm:$a)>;
 
 let hasSideEffects = false in {
   // pack a set of smaller int registers to a larger int register
@@ -2552,9 +2483,9 @@ foreach vt = [v2f32, v2i32] in {
 }
 
 def: Pat<(v2i16 (scalar_to_vector i16:$a)),
-         (CVT_u32_u16 $a, CvtNONE)>;
+         (CVT_u32_u16 reg_or_imm:$a, CvtNONE)>;
 def: Pat<(v2i32 (scalar_to_vector i32:$a)),
-         (CVT_u64_u32 $a, CvtNONE)>;
+         (CVT_u64_u32 reg_or_imm:$a, CvtNONE)>;
 def: Pat<(v2f16 (scalar_to_vector f16:$a)),
          (V2I16toI32 $a, 0)>;
 def: Pat<(v2f32 (scalar_to_vector f32:$a)),
@@ -2579,53 +2510,75 @@ def fshr_clamp : SDNode<"NVPTXISD::FSHR_CLAMP", SDTIntShiftDOp, []>;
 
 // Funnel shift, requires >= sm_32.  Does not trap if amt is out of range, so
 // no side effects.
-let hasSideEffects = false in {
-  multiclass ShfInst<string mode, SDNode op> {
-    def _i
-      : BasicNVPTXInst<(outs B32:$dst),
-                  (ins  B32:$lo, B32:$hi, i32imm:$amt),
-                  "shf." # mode # ".b32",
-                  [(set i32:$dst,
-                      (op i32:$hi, i32:$lo, (i32 imm:$amt)))]>,
-        Requires<[hasHWROT32]>;
-
-    def _r
-      : BasicNVPTXInst<(outs B32:$dst),
-                  (ins  B32:$lo, B32:$hi, B32:$amt),
-                  "shf." # mode # ".b32",
-                  [(set i32:$dst,
-                      (op i32:$hi, i32:$lo, i32:$amt))]>,
-        Requires<[hasHWROT32]>;
-  }
-
-  defm SHF_L_CLAMP : ShfInst<"l.clamp", fshl_clamp>;
-  defm SHF_R_CLAMP : ShfInst<"r.clamp", fshr_clamp>;
-  defm SHF_L_WRAP  : ShfInst<"l.wrap", fshl>;
-  defm SHF_R_WRAP  : ShfInst<"r.wrap", fshr>;
+multiclass ShfInst<string mode, SDNode op> {
+  def NAME : BasicNVPTXInst<(outs B32:$dst),
+                (ins B32Op:$lo, B32Op:$hi, B32Op:$amt),
+                "shf." # mode # ".b32">;
+  def : Pat<(i32 (op i32:$hi, i32:$lo, i32:$amt)),
+            (!cast<Instruction>(NAME) reg_or_imm:$lo, reg_or_imm:$hi, reg_or_imm:$amt)>,
+      Requires<[hasHWROT32]>;
 }
+
+defm SHF_L_CLAMP : ShfInst<"l.clamp", fshl_clamp>;
+defm SHF_R_CLAMP : ShfInst<"r.clamp", fshr_clamp>;
+defm SHF_L_WRAP  : ShfInst<"l.wrap", fshl>;
+defm SHF_R_WRAP  : ShfInst<"r.wrap", fshr>;
 
 def : Pat<(i32 (int_nvvm_fshl_clamp i32:$hi, i32:$lo, i32:$amt)),
-          (SHF_L_CLAMP_r $lo, $hi, $amt)>;
-def : Pat<(i32 (int_nvvm_fshl_clamp i32:$hi, i32:$lo, (i32 imm:$amt))),
-          (SHF_L_CLAMP_i $lo, $hi, imm:$amt)>;
+          (SHF_L_CLAMP reg_or_imm:$lo, reg_or_imm:$hi, reg_or_imm:$amt)>;
 def : Pat<(i32 (int_nvvm_fshr_clamp i32:$hi, i32:$lo, i32:$amt)),
-          (SHF_R_CLAMP_r $lo, $hi, $amt)>;
-def : Pat<(i32 (int_nvvm_fshr_clamp i32:$hi, i32:$lo, (i32 imm:$amt))),
-          (SHF_R_CLAMP_i $lo, $hi, imm:$amt)>;
+          (SHF_R_CLAMP reg_or_imm:$lo, reg_or_imm:$hi, reg_or_imm:$amt)>;
 
-let hasSideEffects = false in {
-  foreach RT = [I32RT, I64RT] in {
-    // Count leading zeros
-    def CLZr # RT.Size : BasicNVPTXInst<(outs B32:$d), (ins RT.RC:$a),
-                                   "clz.b" # RT.Size,
-                                   [(set i32:$d, (ctlz RT.Ty:$a))]>;
+foreach RT = [I32RT, I64RT] in {
+  // Count leading zeros
+  def CLZr # RT.Size : BasicNVPTXInst<(outs B32:$d), (ins RT.RegOrImm:$a),
+                                    "clz.b" # RT.Size>;
 
-    // Population count
-    def POPCr # RT.Size : BasicNVPTXInst<(outs B32:$d), (ins RT.RC:$a),
-                                    "popc.b" # RT.Size,
-                                    [(set i32:$d, (ctpop RT.Ty:$a))]>;
-  }
+  // Population count
+  def POPCr # RT.Size : BasicNVPTXInst<(outs B32:$d), (ins RT.RegOrImm:$a),
+                                     "popc.b" # RT.Size>;
+  def : Pat<(i32 (ctlz RT.Ty:$a)),
+            (!cast<Instruction>("CLZr" # RT.Size) reg_or_imm:$a)>;
+  def : Pat<(i32 (ctpop RT.Ty:$a)),
+            (!cast<Instruction>("POPCr" # RT.Size) reg_or_imm:$a)>;
 }
+
+def : Pat<(f16 (fpround (f32 (fpextend bf16:$a)))),
+          (CVT_f16_bf16 $a, CvtRN)>, Requires<[SM90]>;
+def : Pat<(bf16 (fpround (f32 (fpextend f16:$a)))),
+          (CVT_bf16_f16 $a, CvtRN)>, Requires<[SM90]>;
+
+multiclass CVT_FPTRUNC_ROUND<string RoundMode, PatLeaf Mode, PatLeaf ModeFTZ,
+                           bit RoundToInfinity> {
+  defvar Round = TImmLeaf<i32,
+      "return Imm == static_cast<int>(RoundingMode::" # RoundMode # ");">;
+
+  def : Pat<(f16 (fptrunc_round f32:$a, Round)),
+            (CVT_f16_f32 $a, Mode)>;
+  def : Pat<(bf16 (fptrunc_round f32:$a, Round)),
+            (CVT_bf16_f32 $a, Mode)>,
+        Requires<!if(RoundToInfinity, [SM90], [SM80])>;
+
+  def : Pat<(f16 (fptrunc_round f64:$a, Round)),
+            (CVT_f16_f64 $a, Mode)>;
+  def : Pat<(bf16 (fptrunc_round f64:$a, Round)),
+            (CVT_bf16_f64 $a, Mode)>, Requires<[SM90]>;
+  def : Pat<(f32 (fptrunc_round f64:$a, Round)),
+            (CVT_f32_f64 $a, ModeFTZ)>, Requires<[doF32FTZ]>;
+  def : Pat<(f32 (fptrunc_round f64:$a, Round)),
+            (CVT_f32_f64 $a, Mode)>;
+
+  // Flushing the intermediate f32 can change directed rounding to f16.
+  def : Pat<(f16 (fptrunc_round (f32 (fpextend bf16:$a)), Round)),
+            (CVT_f16_bf16 $a, Mode)>,
+        Requires<!if(RoundToInfinity, [SM90, doNoF32FTZ], [SM90])>;
+  def : Pat<(bf16 (fptrunc_round (f32 (fpextend f16:$a)), Round)),
+            (CVT_bf16_f16 $a, Mode)>, Requires<[SM90]>;
+}
+
+defm : CVT_FPTRUNC_ROUND<"TowardZero", CvtRZ, CvtRZ_FTZ, 0>;
+defm : CVT_FPTRUNC_ROUND<"TowardNegative", CvtRM, CvtRM_FTZ, 1>;
+defm : CVT_FPTRUNC_ROUND<"TowardPositive", CvtRP, CvtRP_FTZ, 1>;
 
 // fpround f32 -> f16
 def : Pat<(f16 (fpround f32:$a)), (CVT_f16_f32 $a, CvtRN)>;
