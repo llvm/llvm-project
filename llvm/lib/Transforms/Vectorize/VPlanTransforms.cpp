@@ -2081,7 +2081,7 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
     assert(!WideIV->getTruncInst() &&
            "canonical IV is not expected to have a truncation");
     auto *NewWideIV = new VPWidenIntOrFpInductionRecipe(
-        WideIV->getPHINode(), Plan.getZero(NewIVTy),
+        WideIV->getIVPhi(), WideIV->getPHINode(), Plan.getZero(NewIVTy),
         Plan.getConstantInt(NewIVTy, 1), WideIV->getVFValue(),
         WideIV->getInductionDescriptor(), *WideIV, WideIV->getDebugLoc());
     NewWideIV->insertBefore(WideIV);
@@ -4990,8 +4990,9 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
       // true in the loop. Use it to select the initial start value, if it was
       // never true.
       auto *AnyOfPhi = new VPReductionPHIRecipe(
-          /*Phi=*/nullptr, RecurKind::Or, *Plan.getFalse(), *Plan.getFalse(),
-          RdxUnordered{1}, {}, /*HasUsesOutsideReductionChain=*/false);
+          /*IVPhi=*/nullptr, /*UVPhi=*/nullptr, RecurKind::Or, *Plan.getFalse(),
+          *Plan.getFalse(), RdxUnordered{1}, {},
+          /*HasUsesOutsideReductionChain=*/false);
       AnyOfPhi->insertAfter(PhiR);
 
       VPBuilder LoopBuilder(BackedgeVal->getDefiningRecipe());
@@ -5010,7 +5011,7 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     RdxResult->eraseFromParent();
 
     auto *NewPhiR = new VPReductionPHIRecipe(
-        cast<PHINode>(PhiR->getUnderlyingInstr()), RecurKind::FindIV, *StartVPV,
+        PhiR->getIVPhi(), PhiR->getPHINode(), RecurKind::FindIV, *StartVPV,
         *NewFindLastSelect, RdxUnordered{1}, {},
         PhiR->hasUsesOutsideReductionChain());
     if (SunkExpression)
@@ -6215,8 +6216,9 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
       // Wrap flags of the original induction do not hold in the truncated
       // type, so do not propagate them.
       auto *NarrowIV = new VPWidenIntOrFpInductionRecipe(
-          WideIV->getPHINode(), WideIV->getStartValue(), WideIV->getStepValue(),
-          WideIV->getVFValue(), WideIV->getInductionDescriptor(), Trunc,
+          WideIV->getIVPhi(), WideIV->getPHINode(), WideIV->getStartValue(),
+          WideIV->getStepValue(), WideIV->getVFValue(),
+          WideIV->getInductionDescriptor(), Trunc,
           VPIRFlags::WrapFlagsTy(false, false), VPI.getDebugLoc());
       NarrowIV->insertBefore(*HeaderVPBB, HeaderVPBB->getFirstNonPhi());
       VPI.replaceAllUsesWith(NarrowIV);
