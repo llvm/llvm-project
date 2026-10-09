@@ -1054,6 +1054,7 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
   TypeIndex ti;
   llvm::StringRef name;
   lldb::addr_t addr = 0;
+  SegmentOffset so;
   bool is_external = false;
   DWARFExpression location_expr;
   switch (sym.kind()) {
@@ -1071,6 +1072,7 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
     scope = (sym.kind() == S_GDATA32) ? eValueTypeVariableGlobal
                                       : eValueTypeVariableStatic;
     name = ds.Name;
+    so = SegmentOffset(ds.Segment, ds.DataOffset);
     addr = m_index->MakeVirtualAddress(ds.Segment, ds.DataOffset);
     if (addr == LLDB_INVALID_ADDRESS)
       return nullptr;
@@ -1091,6 +1093,7 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
     }
     ti = tlds.Type;
     name = tlds.Name;
+    so = SegmentOffset(tlds.Segment, tlds.DataOffset);
     addr = m_index->MakeVirtualAddress(tlds.Segment, tlds.DataOffset);
     scope = eValueTypeVariableThreadLocal;
     if (addr == LLDB_INVALID_ADDRESS)
@@ -1128,15 +1131,16 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
 
   DWARFExpressionList location(module_sp, location_expr, nullptr);
 
-  std::string global_name("::");
-  global_name += name;
+  llvm::StringRef mangled_name = FindMangledSymbol(so).value_or("");
+  if (!Mangled::IsMangledName(mangled_name))
+    mangled_name = {};
   bool artificial = false;
   bool location_is_constant_data = false;
   bool static_member = false;
   VariableSP var_sp = std::make_shared<Variable>(
-      toOpaqueUid(var_id), name.str().c_str(), global_name.c_str(), type_sp,
-      scope, comp_unit.get(), ranges, &decl, location, is_external, artificial,
-      location_is_constant_data, static_member);
+      toOpaqueUid(var_id), name.str().c_str(), mangled_name.str().c_str(),
+      type_sp, scope, comp_unit.get(), ranges, &decl, location, is_external,
+      artificial, location_is_constant_data, static_member);
 
   return var_sp;
 }
