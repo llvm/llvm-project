@@ -99,3 +99,31 @@ TEST(AnOpRewritePatternTest, PatternFuncAttributes) {
             test::OpB::getOperationName());
 }
 } // end anonymous namespace
+
+#if MLIR_ENABLE_PDL_IN_PATTERNMATCH
+namespace {
+FailureOr<StringAttr> derivedValueRewriteFunc(PatternRewriter &rewriter,
+                                              Operation *op, StringAttr attr,
+                                              IntegerType type) {
+  return attr;
+}
+
+LogicalResult derivedValueConstraintFunc(PatternRewriter &rewriter,
+                                         Operation *op, TypeAttr attr) {
+  return success();
+}
+
+TEST(PDLPatternModuleTest, RegisterFunctionsWithDerivedValues) {
+  PDLPatternModule pdlPattern;
+
+  pdlPattern.registerRewriteFunction("rewriter", derivedValueRewriteFunc);
+  pdlPattern.registerConstraintFunction("constraint",
+                                        derivedValueConstraintFunc);
+
+  ASSERT_EQ(pdlPattern.getRewriteFunctions().size(), 1U);
+  ASSERT_TRUE(pdlPattern.getRewriteFunctions().contains("rewriter"));
+  ASSERT_EQ(pdlPattern.getConstraintFunctions().size(), 1U);
+  ASSERT_TRUE(pdlPattern.getConstraintFunctions().contains("constraint"));
+}
+} // end anonymous namespace
+#endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH
