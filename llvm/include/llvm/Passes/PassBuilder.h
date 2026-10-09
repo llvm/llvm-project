@@ -36,6 +36,7 @@ class StringRef;
 class AAManager;
 class TargetMachine;
 class ModuleSummaryIndex;
+struct PassesOptions;
 
 /// Tunable parameters for passes in the default pipelines.
 class PipelineTuningOptions {
@@ -112,6 +113,7 @@ public:
 /// of the built-in passes, and those may reference these members during
 /// construction.
 class PassBuilder {
+  const PassesOptions &Opts;
   TargetMachine *TM;
   PipelineTuningOptions PTO;
   std::optional<PGOOptions> PGOOpt;

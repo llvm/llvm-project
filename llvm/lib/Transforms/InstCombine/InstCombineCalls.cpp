@@ -3504,19 +3504,22 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     // ldexp(x, zext(i1 y)) -> fmul x, (select y, 2.0, 1.0)
     // ldexp(x, sext(i1 y)) -> fmul x, (select y, 0.5, 1.0)
+    // For both of the cases below, we have no information on the distribution
+    // of x in the general case, so we mark the created selects as having
+    // unknown branch weights.
     Value *ExtSrc;
     if (match(Exp, m_ZExt(m_Value(ExtSrc))) &&
         ExtSrc->getType()->getScalarSizeInBits() == 1) {
-      Value *Select =
-          Builder.CreateSelect(ExtSrc, ConstantFP::get(II->getType(), 2.0),
-                               ConstantFP::get(II->getType(), 1.0));
+      Value *Select = Builder.CreateSelectWithUnknownProfile(
+          ExtSrc, ConstantFP::get(II->getType(), 2.0),
+          ConstantFP::get(II->getType(), 1.0), DEBUG_TYPE);
       return BinaryOperator::CreateFMulFMF(Src, Select, II);
     }
     if (match(Exp, m_SExt(m_Value(ExtSrc))) &&
         ExtSrc->getType()->getScalarSizeInBits() == 1) {
-      Value *Select =
-          Builder.CreateSelect(ExtSrc, ConstantFP::get(II->getType(), 0.5),
-                               ConstantFP::get(II->getType(), 1.0));
+      Value *Select = Builder.CreateSelectWithUnknownProfile(
+          ExtSrc, ConstantFP::get(II->getType(), 0.5),
+          ConstantFP::get(II->getType(), 1.0), DEBUG_TYPE);
       return BinaryOperator::CreateFMulFMF(Src, Select, II);
     }
 
@@ -3525,17 +3528,23 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     ///
     // TODO: If we cared, should insert a canonicalize for x
     Value *SelectCond, *SelectLHS, *SelectRHS;
+    Instruction *SelectInst = nullptr;
     if (match(II->getArgOperand(1),
-              m_OneUse(m_Select(m_Value(SelectCond), m_Value(SelectLHS),
-                                m_Value(SelectRHS))))) {
+              m_OneUse(m_Instruction(
+                  SelectInst, m_Select(m_Value(SelectCond), m_Value(SelectLHS),
+                                       m_Value(SelectRHS)))))) {
       Value *NewLdexp = nullptr;
       Value *Select = nullptr;
       if (match(SelectRHS, m_ZeroInt())) {
         NewLdexp = Builder.CreateLdexp(Src, SelectLHS, II);
-        Select = Builder.CreateSelect(SelectCond, NewLdexp, Src);
+        Select = Builder.CreateSelect(
+            SelectCond, NewLdexp, Src, "",
+            ProfcheckDisableMetadataFixes ? nullptr : SelectInst);
       } else if (match(SelectLHS, m_ZeroInt())) {
         NewLdexp = Builder.CreateLdexp(Src, SelectRHS, II);
-        Select = Builder.CreateSelect(SelectCond, Src, NewLdexp);
+        Select = Builder.CreateSelect(
+            SelectCond, Src, NewLdexp, "",
+            ProfcheckDisableMetadataFixes ? nullptr : SelectInst);
       }
 
       if (NewLdexp) {
