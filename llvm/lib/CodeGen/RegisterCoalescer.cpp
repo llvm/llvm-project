@@ -2001,6 +2001,22 @@ void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
       dbgs() << *UseMI;
     });
   }
+
+  // A sub-register def without <read-undef> implicitly reads the other lanes
+  // of DstReg. Like the full-register uses above, it may have no reaching def
+  // after the join if its incoming value was an erasable IMPLICIT_DEF that has
+  // been removed. Such a def reads nothing, so mark it <read-undef>. This runs
+  // after the rename loop to also cover defs renamed from SrcReg.
+  if (DstInt && DstReg != SrcReg && !DstInt->hasSubRanges()) {
+    for (MachineOperand &MO : MRI->def_operands(DstReg)) {
+      if (MO.getSubReg() == 0 || MO.isUndef())
+        continue;
+      SlotIndex DefIdx =
+          LIS->getInstructionIndex(*MO.getParent()).getRegSlot(true);
+      if (!DstInt->liveAt(DefIdx))
+        MO.setIsUndef(true);
+    }
+  }
 }
 
 bool RegisterCoalescer::canJoinPhys(const CoalescerPair &CP) {

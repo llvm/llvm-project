@@ -3,6 +3,30 @@
 # RUN:   | FileCheck %s --implicit-check-not="undef {{.*}}.sub_8bit:"
 
 ---
+# The sub_8bit value is an IMPLICIT_DEF that is still read (by TEST8rr) after
+# the sub_8bit_hi redef, so the join of %3 = COPY %1 prunes it. The redef must
+# end up <read-undef>.
+name:            undef_origin
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: undef_origin
+    ; CHECK: undef [[MOV8ri:%[0-9]+]].sub_8bit_hi:gr16_abcd = MOV8ri 1
+    ; CHECK-NEXT: TEST8rr [[MOV8ri]].sub_8bit, [[MOV8ri]].sub_8bit, implicit-def $eflags
+    ; CHECK-NEXT: [[ADD16rr:%[0-9]+]]:gr16 = ADD16rr [[MOV8ri]], [[MOV8ri]], implicit-def dead $eflags
+    ; CHECK-NEXT: $ax = COPY [[ADD16rr]]
+    ; CHECK-NEXT: RET 0, implicit $ax
+    %0:gr8 = IMPLICIT_DEF
+    undef %1.sub_8bit:gr16_abcd = COPY %0
+    %3:gr16_abcd = COPY killed %1
+    %3.sub_8bit_hi:gr16_abcd = MOV8ri 1
+    %4:gr16_abcd = COPY killed %3
+    TEST8rr %0, %0, implicit-def $eflags
+    %5:gr16 = ADD16rr %4, %4, implicit-def dead $eflags
+    $ax = COPY %5
+    RET 0, implicit $ax
+...
+---
 # The IMPLICIT_DEF only redefines sub_8bit, so sub_8bit_hi still holds 7.
 # After the IMPLICIT_DEF is erased, that value must stay live up to the
 # sub_8bit redef of %3, which reads it and must not become <read-undef>.
