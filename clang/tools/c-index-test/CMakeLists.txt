@@ -31,6 +31,9 @@ else()
   target_link_libraries(c-index-test
     PRIVATE
     libclang
+  )
+  clang_target_link_libraries(c-index-test
+    PRIVATE
     clangAST
     clangBasic
     clangDriver
