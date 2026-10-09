@@ -33,7 +33,7 @@ jobs:
     if: github.repository_owner == 'llvm'
     runs-on: llvm-premerge-linux-32-runners
     container:
-      image: ghcr.io/llvm/libcxx-linux-builder:d79f222aea61926e7c81fa8908b12f52ea70111f
+      image: ghcr.io/llvm/libcxx-linux-builder:5e1edea790610e7ef8c5e06b6e5185fe5dd1c830
     env:
       CC: clang-23
       CXX: clang++-23
