@@ -212,6 +212,17 @@ add_header_library(
     expected.h
 )
 
+add_header_library(
+  unique_ptr
+  HDRS
+    unique_ptr.h
+  DEPENDS
+    .type_traits
+    .utility
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
 add_object_library(
   new
   SRCS
