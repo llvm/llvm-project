@@ -905,8 +905,9 @@ _LIBCPP_VARIANT_COPY_CONSTRUCTOR(
 _LIBCPP_VARIANT_COPY_CONSTRUCTOR(
     _Trait::_Available,
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __copy_constructor(const __copy_constructor& __that) noexcept(
-        __all<is_nothrow_copy_constructible_v<_Types>...>::value)
-    : __copy_constructor(__valueless_t{}) { this->__generic_construct(*this, __that); } _LIBCPP_EAT_SEMICOLON);
+        __all<is_nothrow_copy_constructible_v<_Types>...>::value) : __copy_constructor(__valueless_t{}) {
+      this->__generic_construct(*this, __that);
+    } _LIBCPP_EAT_SEMICOLON);
 
 _LIBCPP_VARIANT_COPY_CONSTRUCTOR(
     _Trait::_Unavailable,
