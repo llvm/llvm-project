@@ -1,4 +1,4 @@
-//===- NativeTypeTypedef.h - info about typedef ------------------*- C++-*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_NATIVE_NATIVETYPETYPEDEF_H
-#define LLVM_DEBUGINFO_PDB_NATIVE_NATIVETYPETYPEDEF_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_NATIVETYPETYPEDEFUDT_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_NATIVETYPETYPEDEFUDT_H
 
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
@@ -22,13 +22,14 @@ namespace pdb {
 
 class NativeSession;
 
-class LLVM_ABI NativeTypeTypedef : public NativeRawSymbol {
+/// A typedef from the module symbol stream (S_UDT).
+class LLVM_ABI NativeTypeTypedefUDT : public NativeRawSymbol {
 public:
   // Create a pointer record for a non-simple type.
-  NativeTypeTypedef(NativeSession &Session, SymIndexId Id,
-                    codeview::UDTSym Typedef);
+  NativeTypeTypedefUDT(NativeSession &Session, SymIndexId Id,
+                       codeview::UDTSym Typedef);
 
-  ~NativeTypeTypedef() override;
+  ~NativeTypeTypedefUDT() override;
 
   void dump(raw_ostream &OS, int Indent, PdbSymbolIdField ShowIdFields,
             PdbSymbolIdField RecurseIdFields) const override;
@@ -43,4 +44,4 @@ protected:
 } // namespace pdb
 } // namespace llvm
 
-#endif // LLVM_DEBUGINFO_PDB_NATIVE_NATIVETYPETYPEDEF_H
+#endif // LLVM_DEBUGINFO_PDB_NATIVE_NATIVETYPETYPEDEFUDT_H
