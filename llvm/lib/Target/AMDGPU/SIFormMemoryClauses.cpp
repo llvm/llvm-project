@@ -62,7 +62,6 @@ char SIFormMemoryClausesLegacy::ID = 0;
 
 char &llvm::SIFormMemoryClausesID = SIFormMemoryClausesLegacy::ID;
 
-
 bool SIFormMemoryClausesLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;

@@ -62,7 +62,6 @@ char AMDGPUFormSSAMemoryClausesLegacy::ID = 0;
 
 char &llvm::AMDGPUFormSSAMemoryClausesID = AMDGPUFormSSAMemoryClausesLegacy::ID;
 
-
 bool AMDGPUFormSSAMemoryClausesLegacy::runOnMachineFunction(
     MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))

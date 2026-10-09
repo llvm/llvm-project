@@ -1904,11 +1904,11 @@ void GCNPassConfig::addOptimizedRegAlloc() {
       !EnableAMDGPUFormSSAMemoryClauses)
     insertPass(EndOfPreRA, &SIFormMemoryClausesID);
 
-  // Run the SSA form of the memory clause pass before PHI elimination by
-  // anchoring to UnreachableMachineBlockElim, which is added once
-  // unconditionally in the base pipeline before PHI elimination.
+  // Run the SSA form of the memory clause pass after the SSA machine scheduler
+  // (so it sees the scheduler's final instruction order) but before PHI
+  // elimination (so it still operates in SSA form).
   if (EnableAMDGPUFormSSAMemoryClauses)
-    insertPass(&UnreachableMachineBlockElimID, &AMDGPUFormSSAMemoryClausesID);
+    insertPass(&SSAMachineSchedulerID, &AMDGPUFormSSAMemoryClausesID);
 
   TargetPassConfig::addOptimizedRegAlloc();
 }
@@ -2714,12 +2714,11 @@ Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
       !EnableAMDGPUFormSSAMemoryClauses)
     insertPass<MachineSchedulerPass>(SIFormMemoryClausesPass());
 
-  // Run the SSA form of the memory clause pass before PHI elimination by
-  // anchoring to UnreachableMachineBlockElim, which is added once
-  // unconditionally in the base pipeline before PHI elimination.
+  // Run the SSA form of the memory clause pass after the SSA machine scheduler
+  // (so it sees the scheduler's final instruction order) but before PHI
+  // elimination (so it still operates in SSA form).
   if (EnableAMDGPUFormSSAMemoryClauses)
-    insertPass<UnreachableMachineBlockElimPass>(
-        AMDGPUFormSSAMemoryClausesPass());
+    insertPass<SSAMachineSchedulerPass>(AMDGPUFormSSAMemoryClausesPass());
 
   return Base::addOptimizedRegAlloc(PMW);
 }
