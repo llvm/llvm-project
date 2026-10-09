@@ -1847,10 +1847,9 @@ private:
 
 } // end anonymous namespace
 
-std::optional<int64_t>
-llvm::getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp,
-                          Type *AccessTy, Value *Ptr,
-                          PredicatedScalarEvolution &PSE) {
+static std::optional<int64_t>
+getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
+                    Value *Ptr, PredicatedScalarEvolution &PSE) {
   if (isa<ScalableVectorType>(AccessTy)) {
     LLVM_DEBUG(dbgs() << "LAA: Bad stride - Scalable object: " << *AccessTy
                       << "\n");
