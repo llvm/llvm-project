@@ -8752,12 +8752,13 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
 
   // The generated half-width UREM is normally optimized using high multiply.
   // If the wide UREM libcall is unavailable, a legal or custom half-width
-  // UDIVREM can lower it instead.
+  // UDIVREM can lower it instead. An illegal half-width type is expanded
+  // again by the type legalizer, either by this expansion or with a libcall.
   bool CanDecomposeUREMWithoutMulHi =
       Opcode == ISD::UREM &&
       getLibcallImpl(RTLIB::getUREM(N->getValueType(0))) ==
           RTLIB::Unsupported &&
-      isOperationLegalOrCustom(ISD::UDIVREM, HiLoVT);
+      (isOperationLegalOrCustom(ISD::UDIVREM, HiLoVT) || !isTypeLegal(HiLoVT));
   if (!CanDecomposeUREMWithoutMulHi &&
       !isOperationLegalOrCustom(ISD::MULHU, HiLoVT) &&
       !isOperationLegalOrCustom(ISD::UMUL_LOHI, HiLoVT))
