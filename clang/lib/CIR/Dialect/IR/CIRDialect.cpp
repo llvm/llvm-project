@@ -114,7 +114,8 @@ Operation *cir::CIRDialect::materializeConstant(mlir::OpBuilder &builder,
 
 static bool isOpenCLVersionAttrName(StringRef attrName) {
   return attrName == CIRDialect::getOpenCLVersionAttrName() ||
-         attrName == CIRDialect::getOpenCLCXXVersionAttrName();
+         attrName == CIRDialect::getOpenCLCXXVersionAttrName() ||
+         attrName == CIRDialect::getOpenCLSPIRVersionAttrName();
 }
 
 static LogicalResult verifyOpenCLVersionAttrPlacement(Operation *op,
@@ -672,9 +673,55 @@ cir::LocalInitOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (getTls() && !global.getTlsModel())
     return emitOpError("access to global not marked thread local");
 
-  if (!global.getStaticLocalGuard().has_value())
+  if (!global.getDynamicInitGuard().has_value())
     return emitOpError("static_local attribute mismatch");
 
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// RegisterExitDtorOp
+//===----------------------------------------------------------------------===//
+
+/// Returns true if \p op is nested in the ctor region of a cir.global or
+/// cir.local_init without crossing a cir.func or a cir.register_exit_dtor.
+static bool isInVarCtorRegion(mlir::Operation *op) {
+  for (mlir::Operation *parent = op->getParentOp(); parent;
+       parent = parent->getParentOp()) {
+    mlir::Region *ctorRegion = nullptr;
+    if (auto global = mlir::dyn_cast<cir::GlobalOp>(parent))
+      ctorRegion = &global.getCtorRegion();
+    else if (auto localInit = mlir::dyn_cast<cir::LocalInitOp>(parent))
+      ctorRegion = &localInit.getCtorRegion();
+    else if (mlir::isa<cir::FuncOp, cir::RegisterExitDtorOp>(parent))
+      return false;
+    if (ctorRegion)
+      return ctorRegion->isAncestor(op->getParentRegion());
+  }
+  return false;
+}
+
+LogicalResult cir::RegisterExitDtorOp::verify() {
+  mlir::Block &body = getBody().front();
+  if (body.without_terminator().empty())
+    return emitOpError("body must destroy the object");
+  if (body.getTerminator()->getNumOperands())
+    return emitOpError("body must not yield a value");
+  if (!isInVarCtorRegion(*this))
+    return emitOpError("must be in the ctor region of a cir.global or "
+                       "cir.local_init");
+  return success();
+}
+
+LogicalResult
+cir::RegisterExitDtorOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  auto global = symbolTable.lookupNearestSymbolFrom<cir::GlobalOp>(
+      *this, getObjectAttr());
+  if (!global)
+    return emitOpError("'")
+           << getObject() << "' does not reference a valid cir.global";
+  if (!global.getCtorRegion().empty() || !global.getDtorRegion().empty())
+    return emitOpError("object must not have ctor or dtor regions");
   return success();
 }
 
@@ -1337,8 +1384,15 @@ static ParseResult checkEffectAttrKinds(mlir::OpAsmParser &parser,
              << CIRDialect::getMemoryEffectsAttrName()
              << "' must be a #cir.memory_effects attribute";
 
+  if (mlir::Attribute uwtable = attrs.get(CIRDialect::getUwtableAttrName()))
+    if (!mlir::isa<cir::UnwindTableKindAttr>(uwtable))
+      return parser.emitError(loc, "attribute '")
+             << CIRDialect::getUwtableAttrName()
+             << "' must be a #cir.uwtable attribute";
+
   for (llvm::StringRef name :
-       {CIRDialect::getNoUnwindAttrName(), CIRDialect::getWillReturnAttrName()})
+       {CIRDialect::getNoUnwindAttrName(), CIRDialect::getWillReturnAttrName(),
+        CIRDialect::getMustProgressAttrName()})
     if (mlir::Attribute flag = attrs.get(name))
       if (!mlir::isa<mlir::UnitAttr>(flag))
         return parser.emitError(loc, "attribute '")
@@ -1378,6 +1432,20 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
   if (hasDestinationBlocks &&
       parseTryCallDestinations(parser, result).failed()) {
     return ::mlir::failure();
+  }
+
+  if (parser.parseOptionalKeyword("cc").succeeded()) {
+    cir::CallingConv callingConv;
+    if (parser.parseLParen().failed())
+      return failure();
+    if (parseCIRKeyword<cir::CallingConv>(parser, callingConv).failed())
+      return parser.emitError(parser.getCurrentLocation(),
+                              "unknown calling convention");
+    if (parser.parseRParen().failed())
+      return failure();
+    result.addAttribute(
+        CIRDialect::getCallingConvAttrName(),
+        cir::CallingConvAttr::get(parser.getContext(), callingConv));
   }
 
   if (parser.parseOptionalKeyword("musttail").succeeded())
@@ -1487,6 +1555,10 @@ static void printCallCommon(mlir::Operation *op,
     printer << tryCall.getUnwindDest();
   }
 
+  cir::CallingConv callingConv = callLikeOp.getCallingConv();
+  if (callingConv != cir::CallingConv::C)
+    printer << " cc(" << stringifyCallingConv(callingConv) << ")";
+
   if (op->hasAttr(CIRDialect::getMustTailAttrName()))
     printer << " musttail";
 
@@ -1501,6 +1573,7 @@ static void printCallCommon(mlir::Operation *op,
 
   llvm::StringRef elidedAttrs[] = {
       CIRDialect::getCalleeAttrName(),
+      CIRDialect::getCallingConvAttrName(),
       CIRDialect::getMustTailAttrName(),
       CIRDialect::getNoThrowAttrName(),
       CIRDialect::getNoUnwindAttrName(),
@@ -2059,7 +2132,17 @@ LogicalResult cir::BrOp::canonicalize(BrOp op, PatternRewriter &rewriter) {
   if (isa<cir::LabelOp, cir::IndirectBrOp>(dst->front()))
     return failure();
 
-  auto operands = op.getDestOperands();
+  // An operand that is an argument of the destination itself (possible in an
+  // unreachable cycle) would be replaced by itself, leaving its other uses
+  // dangling once the destination is erased.
+  if (llvm::any_of(op.getDestOperands(), [&](Value operand) {
+        auto arg = dyn_cast<BlockArgument>(operand);
+        return arg && arg.getOwner() == dst;
+      }))
+    return failure();
+
+  // Copy the operands out: erasing the branch frees its operand storage.
+  SmallVector<Value> operands(op.getDestOperands());
   rewriter.eraseOp(op);
   rewriter.mergeBlocks(dst, src, operands);
   return success();
@@ -2250,6 +2333,26 @@ void cir::SwitchFlatOp::build(OpBuilder &builder, OperationState &result,
         defaultDestination, caseDestinations);
 }
 
+SuccessorOperands cir::SwitchFlatOp::getSuccessorOperands(unsigned index) {
+  assert(index < getNumSuccessors() && "invalid successor index");
+  if (index == 0)
+    return SuccessorOperands(getDefaultOperandsMutable());
+  return SuccessorOperands(getCaseOperandsMutable()[index - 1]);
+}
+
+Block *
+cir::SwitchFlatOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
+  auto cond = dyn_cast_if_present<cir::IntAttr>(operands.front());
+  if (!cond)
+    return nullptr;
+  for (auto [value, dest] : llvm::zip(getCaseValues(), getCaseDestinations())) {
+    const APInt &caseValue = cast<cir::IntAttr>(value).getValue();
+    if (caseValue == cond.getValue())
+      return dest;
+  }
+  return getDefaultDestination();
+}
+
 /// <cases> ::= `[` (case (`,` case )* )? `]`
 /// <case>  ::= integer `:` bb-id (`(` ssa-use-and-type-list `)`)?
 static ParseResult parseSwitchFlatOpCases(
@@ -2353,23 +2456,38 @@ mlir::LogicalResult cir::GlobalOp::verify() {
       return failure();
   }
 
-  if ((getStaticLocalGuard().has_value()) &&
+  // The initial value can't be recomputed from the type once the ctor is
+  // lowered (e.g. a null member pointer becomes -1 after CXXABILowering).
+  if (!getCtorRegion().empty() && !getInitialValue().has_value())
+    return emitOpError(
+        "cannot have a constructor region without an initial value");
+
+  std::optional<DynamicInitInfoAttr> info = getDynamicInitInfo();
+
+  if ((getDynamicInitGuard().has_value()) && (!info || info->getLocal()) &&
       (!getCtorRegion().empty() || !getDtorRegion().empty()))
     return emitOpError(
         "Cannot have a static-local global-op with a constructor or "
         "destructor, they require in-function initialization via LocalInitOp");
 
-  // CIRGen emits 'static_local_guard' and 'static_local_info' together and
+  // CIRGen emits 'dynamic_init_guard' and 'dynamic_init_info' together and
   // they are only meaningful together: the guard drives lowering, which reads
   // the info. Require both or neither so malformed .cir can carry neither a
   // guard without info nor a dangling info nothing will read.
-  if (getStaticLocalGuard().has_value() != getStaticLocalInfo().has_value())
-    return emitOpError("'static_local_guard' and 'static_local_info' must be "
+  if (getDynamicInitGuard().has_value() != getDynamicInitInfo().has_value())
+    return emitOpError("'dynamic_init_guard' and 'dynamic_init_info' must be "
                        "present together");
 
   if (getTlsRefs()) {
-    if (getStaticLocalGuard().has_value())
-      return emitOpError("cannot have both static local and tls references");
+    // 'Unordered' TLS globals (variable template instantiations) legitimately
+    // carry both: they can't use the shared __tls_init guard, so CIRGen also
+    // gives them their own dynamic-init guard, mangled the same as
+    // 'tls_refs's own guard name. 'Ordered' TLS globals share __tls_init and
+    // have no per-variable guard name, so a dynamic-init guard there would be
+    // a mismatch.
+    if (getDynamicInitGuard().has_value() && !getTlsRefs()->getGuardName())
+      return emitOpError("cannot have a dynamic-init guard combined with "
+                         "ordered tls references");
     if (!getTlsModel())
       return emitOpError("'tls_refs' only valid for tls");
   }
@@ -2452,6 +2570,33 @@ void cir::GlobalOp::getSuccessorRegions(
     regions.push_back(RegionSuccessor(dtorRegion));
 }
 
+static void printComdatName(OpAsmPrinter &p, StringAttr comdat) {
+  if (!comdat)
+    return;
+  p << "comdat";
+  if (!comdat.getValue().empty())
+    p << "(\"" << comdat.getValue() << "\")";
+}
+
+static void printComdatName(OpAsmPrinter &p, cir::GlobalOp op,
+                            StringAttr comdat) {
+  printComdatName(p, comdat);
+}
+
+static ParseResult parseComdatName(OpAsmParser &parser,
+                                   StringAttr &comdatAttr) {
+  if (parser.parseOptionalKeyword("comdat").failed())
+    return success();
+  std::string comdatKey;
+  if (succeeded(parser.parseOptionalLParen())) {
+    if (parser.parseString(&comdatKey).failed() ||
+        parser.parseRParen().failed())
+      return failure();
+  }
+  comdatAttr = parser.getBuilder().getStringAttr(comdatKey);
+  return success();
+}
+
 static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, cir::GlobalOp op,
                                              TypeAttr type, Attribute initAttr,
                                              mlir::Region &ctorRegion,
@@ -2465,17 +2610,14 @@ static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, cir::GlobalOp op,
   }
 
   p << "= ";
+  if (initAttr)
+    printConstant(p, initAttr);
+
   if (!ctorRegion.empty()) {
-    p << "ctor ";
-    printType();
-    p << " ";
+    p << " ctor ";
     p.printRegion(ctorRegion,
                   /*printEntryBlockArgs=*/false,
                   /*printBlockTerminators=*/false);
-  } else {
-    // This also prints the type...
-    if (initAttr)
-      printConstant(p, initAttr);
   }
 
   if (!dtorRegion.empty()) {
@@ -2498,26 +2640,24 @@ static ParseResult parseGlobalOpTypeAndInitialValue(OpAsmParser &parser,
     if (parser.parseColonType(opTy))
       return failure();
   } else {
-    // Parse contructor, example:
-    //  cir.global @rgb = ctor : type { ... }
+    // Parse constant with initializer, examples:
+    //  cir.global @y = 3.400000e+00 : f32
+    //  cir.global @rgb = #cir.const_array<[...] : !cir.array<i8 x 3>>
+    if (parseConstantValue(parser, initialValueAttr).failed())
+      return failure();
+
+    assert(mlir::isa<mlir::TypedAttr>(initialValueAttr) &&
+           "Non-typed attrs shouldn't appear here.");
+    opTy = mlir::cast<mlir::TypedAttr>(initialValueAttr).getType();
+
+    // Parse constructor, example:
+    //  cir.global @rgb = #cir.zero : type ctor { ... }
     if (!parser.parseOptionalKeyword("ctor")) {
-      if (parser.parseColonType(opTy))
-        return failure();
       auto parseLoc = parser.getCurrentLocation();
       if (parser.parseRegion(ctorRegion, /*arguments=*/{}, /*argTypes=*/{}))
         return failure();
       if (ensureRegionTerm(parser, ctorRegion, parseLoc).failed())
         return failure();
-    } else {
-      // Parse constant with initializer, examples:
-      //  cir.global @y = 3.400000e+00 : f32
-      //  cir.global @rgb = #cir.const_array<[...] : !cir.array<i8 x 3>>
-      if (parseConstantValue(parser, initialValueAttr).failed())
-        return failure();
-
-      assert(mlir::isa<mlir::TypedAttr>(initialValueAttr) &&
-             "Non-typed attrs shouldn't appear here.");
-      opTy = mlir::cast<mlir::TypedAttr>(initialValueAttr).getType();
     }
 
     // Parse destructor, example:
@@ -2561,10 +2701,13 @@ cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
       return emitOpError("access to global not marked thread local");
 
     // Verify that the static_local attribute on GetGlobalOp matches the
-    // static_local_guard attribute on GlobalOp. GetGlobalOp uses a UnitAttr,
-    // GlobalOp uses StaticLocalGuardAttr. Both should be present, or neither.
+    // dynamic_init_guard attribute on GlobalOp. GetGlobalOp uses a UnitAttr,
+    // GlobalOp uses DynamicInitGuardAttr. Both should be present, or neither.
     bool getGlobalIsStaticLocal = getStaticLocal();
-    bool globalIsStaticLocal = g.getStaticLocalGuard().has_value();
+    bool globalIsStaticLocal =
+        g.getDynamicInitGuard().has_value() &&
+        (!g.getDynamicInitInfo() || g.getDynamicInitInfo()->getLocal());
+
     if (getGlobalIsStaticLocal != globalIsStaticLocal &&
         !getOperation()->getParentOfType<cir::GlobalOp>())
       return emitOpError("static_local attribute mismatch");
@@ -2736,16 +2879,12 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   if (parser.parseOptionalKeyword(noProtoNameAttr).succeeded())
     state.addAttribute(noProtoNameAttr, parser.getBuilder().getUnitAttr());
 
-  if (parser.parseOptionalKeyword(comdatNameAttr).succeeded()) {
-    std::string comdatKey;
-    if (mlir::succeeded(parser.parseOptionalLParen())) {
-      if (parser.parseString(&comdatKey).failed())
-        return failure();
-      if (parser.parseRParen().failed())
-        return failure();
-    }
-    state.addAttribute(comdatNameAttr,
-                       parser.getBuilder().getStringAttr(comdatKey));
+  {
+    StringAttr comdatAttr;
+    if (parseComdatName(parser, comdatAttr).failed())
+      return failure();
+    if (comdatAttr)
+      state.addAttribute(comdatNameAttr, comdatAttr);
   }
 
   auto parseAlignmentBody = [&](int64_t &value) {
@@ -2959,10 +3098,11 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     return failure();
 
   // Every other declared attribute has dedicated syntax above, so
-  // memory_effects is the only one the explicit list may carry.  Without the
-  // exception cir.func could not parse back what it prints.
+  // memory_effects and uwtable is the only one the explicit list may carry.
+  // Without the exception cir.func could not parse back what it prints.
   for (StringRef disallowed : cir::FuncOp::getAttributeNames()) {
-    if (disallowed == CIRDialect::getMemoryEffectsAttrName())
+    if (disallowed == CIRDialect::getMemoryEffectsAttrName() ||
+        disallowed == CIRDialect::getUwtableAttrName())
       continue;
     if (parsedAttrs.get(disallowed))
       return parser.emitError(loc, "attribute '")
@@ -3060,8 +3200,11 @@ bool cir::FuncOp::isCxxTrivialMemberFunction() {
 }
 
 mlir::Region *cir::FuncOp::getCallableRegion() {
-  // TODO(CIR): This function will have special handling for aliases and a
-  // check for an external function, once those features have been upstreamed.
+  // Declarations and aliases have no body to analyze or inline. Returning the
+  // empty region would make interprocedural analyses (e.g. SCCP) treat calls
+  // to them as having no returns, leaving their results uninitialized.
+  if (getBody().empty())
+    return nullptr;
   return &getBody();
 }
 
@@ -3080,10 +3223,9 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   if (getNoProto())
     p << " no_proto";
 
-  if (std::optional<StringRef> comdatKey = getComdat()) {
-    p << " comdat";
-    if (!comdatKey->empty())
-      p << "(\"" << *comdatKey << "\")";
+  if (getComdatAttr()) {
+    p << ' ';
+    printComdatName(p, getComdatAttr());
   }
 
   if (getAlignment())
@@ -3153,10 +3295,12 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   }
 
   // Every declared attribute is printed by the syntax above, except
-  // memory_effects, which has none and so must reach the dictionary.
+  // memory_effects and uwtable, which have none and so must reach the
+  // dictionary.
   llvm::SmallVector<llvm::StringRef> elidedAttrs;
   for (llvm::StringRef name : cir::FuncOp::getAttributeNames())
-    if (name != CIRDialect::getMemoryEffectsAttrName())
+    if (name != CIRDialect::getMemoryEffectsAttrName() &&
+        name != CIRDialect::getUwtableAttrName())
       elidedAttrs.push_back(name);
   function_interface_impl::printFunctionAttributes(p, *this, elidedAttrs);
 
@@ -4861,6 +5005,16 @@ ParseResult cir::InlineAsmOp::parse(OpAsmParser &parser,
   return mlir::success();
 }
 
+void InlineAsmOp::getEffects(
+    llvm::SmallVectorImpl<mlir::MemoryEffects::EffectInstance> &effects) {
+  // If we have any side effects (that is, we're volatile asm), add a read and
+  // write memory effect. We do this the same as the llvm dialect InlineAsmOp.
+  if (getSideEffects()) {
+    effects.emplace_back(mlir::MemoryEffects::Read::get());
+    effects.emplace_back(mlir::MemoryEffects::Write::get());
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // ThrowOp / TryThrowOp
 //===----------------------------------------------------------------------===//
@@ -4949,7 +5103,49 @@ void cir::TryOp::getSuccessorRegions(
     regions.push_back(mlir::RegionSuccessor(&handlerRegion));
 }
 
-LogicalResult cir::TryOp::verify() {
+/// Verify that each cir.init_catch_param in \p handlerRegion, outside any
+/// nested cir.try, agrees with the handler's leading cir.construct_catch_param
+/// \p constructOp, which may be null.  A cir.init_catch_param of kind
+/// reference_to_pointer or non_trivial_copy needs \p constructOp on its
+/// parameter, and a cir.init_catch_param on the parameter of \p constructOp
+/// must have the kind of \p constructOp.
+static LogicalResult
+verifyCatchParamPairing(mlir::Region &handlerRegion,
+                        cir::ConstructCatchParamOp constructOp) {
+  mlir::WalkResult result =
+      handlerRegion.walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *op) {
+        if (mlir::isa<cir::TryOp>(op))
+          return mlir::WalkResult::skip();
+        auto initOp = mlir::dyn_cast<cir::InitCatchParamOp>(op);
+        if (!initOp)
+          return mlir::WalkResult::advance();
+
+        cir::InitCatchKind kind = initOp.getKind();
+        bool sameParam =
+            constructOp && constructOp.getParamAddr() == initOp.getParamAddr();
+        if (sameParam && constructOp.getKind() != kind) {
+          initOp.emitOpError("kind '")
+              << cir::stringifyInitCatchKind(kind)
+              << "' does not match the kind '"
+              << cir::stringifyInitCatchKind(constructOp.getKind())
+              << "' of the preceding 'cir.construct_catch_param'";
+          return mlir::WalkResult::interrupt();
+        }
+        if ((kind == cir::InitCatchKind::ReferenceToPointer ||
+             kind == cir::InitCatchKind::NonTrivialCopy) &&
+            !sameParam) {
+          initOp.emitOpError("'")
+              << cir::stringifyInitCatchKind(kind)
+              << "' requires a preceding 'cir.construct_catch_param' of the "
+                 "same kind on the same parameter";
+          return mlir::WalkResult::interrupt();
+        }
+        return mlir::WalkResult::advance();
+      });
+  return failure(result.wasInterrupted());
+}
+
+LogicalResult cir::TryOp::verifyRegions() {
   mlir::ArrayAttr handlerTypes = getHandlerTypes();
   if (!handlerTypes) {
     if (!getHandlerRegions().empty())
@@ -5042,11 +5238,16 @@ LogicalResult cir::TryOp::verify() {
       firstOp = scopeBody.empty() ? nullptr : &scopeBody.front();
     }
 
-    if (mlir::isa_and_present<cir::ConstructCatchParamOp>(firstOp))
+    auto constructOp =
+        mlir::dyn_cast_if_present<cir::ConstructCatchParamOp>(firstOp);
+    if (constructOp)
       firstOp = firstOp->getNextNode();
     if (!mlir::isa_and_present<cir::BeginCatchOp>(firstOp))
       return emitOpError(
           "catch handler region must start with 'cir.begin_catch'");
+
+    if (failed(verifyCatchParamPairing(handlerRegion, constructOp)))
+      return failure();
   }
 
   return success();
@@ -5173,8 +5374,8 @@ static mlir::ParseResult parseTryHandlerRegions(
   }
 
   // A filter handler carries the type info symbols permitted by the enclosing
-  // function's dynamic exception specification. TryOp::verify enforces that it
-  // is paired with an unexpected handler and that the two stand alone.
+  // function's dynamic exception specification. TryOp::verifyRegions enforces
+  // that it is paired with an unexpected handler and that the two stand alone.
   if (parser.parseOptionalKeyword("filter").succeeded()) {
     mlir::SMLoc filterLoc = parser.getCurrentLocation();
     llvm::SmallVector<mlir::Attribute, 4> permittedTypes;
@@ -5299,8 +5500,39 @@ LogicalResult cir::MemChrOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// InitCatchParamOp
+//===----------------------------------------------------------------------===//
+
+/// For the reference_to_pointer and reference_to_record_pointer kinds, emit an
+/// error on \p op unless \p paramAddrType is the type of the address of a
+/// reference to a pointer.  Any other \p kind is accepted.
+static LogicalResult verifyCatchParamAddr(mlir::Operation *op,
+                                          cir::InitCatchKind kind,
+                                          cir::PointerType paramAddrType) {
+  if (kind != cir::InitCatchKind::ReferenceToPointer &&
+      kind != cir::InitCatchKind::ReferenceToRecordPointer)
+    return success();
+
+  auto refType = mlir::dyn_cast<cir::PointerType>(paramAddrType.getPointee());
+  if (!refType || !mlir::isa<cir::PointerType>(refType.getPointee()))
+    return op->emitOpError("'")
+           << cir::stringifyInitCatchKind(kind)
+           << "' requires 'param_addr' to be the address of a reference to a "
+              "pointer";
+  return success();
+}
+
+LogicalResult cir::InitCatchParamOp::verify() {
+  return verifyCatchParamAddr(*this, getKind(), getParamAddr().getType());
+}
+
+//===----------------------------------------------------------------------===//
 // ConstructCatchParamOp
 //===----------------------------------------------------------------------===//
+
+LogicalResult cir::ConstructCatchParamOp::verify() {
+  return verifyCatchParamAddr(*this, getKind(), getParamAddr().getType());
+}
 
 LogicalResult cir::ConstructCatchParamOp::verifySymbolUses(
     SymbolTableCollection &symbolTable) {

@@ -1255,7 +1255,11 @@ KnownBits KnownBits::sdiv(const KnownBits &LHS, const KnownBits &RHS,
     if (Exact || (-LHS.getSignedMaxValue()).uge(RHS.getSignedMaxValue())) {
       APInt Denom = RHS.getSignedMinValue();
       APInt Num = LHS.getSignedMinValue();
-      Res = Denom.isZero() ? Num : Num.sdiv(Denom);
+      // If the denominator may be zero, use the lowest unknown bit as the
+      // minimum non-zero denominator, matching udiv.
+      if (Denom.isZero())
+        Denom.setBit(RHS.countMinTrailingZeros());
+      Res = Num.sdiv(Denom);
     }
   } else if (LHS.isStrictlyPositive() && RHS.isNegative()) {
     // Result is negative if Exact OR LHS u>= -RHS.

@@ -105,6 +105,13 @@ features cannot lower the translation-unit ABI level;
   This also fixes a crash when such a struct was passed or returned.
   `-fclang-abi-compat=23` restores the previous behavior. (#GH202205)
 
+- On 32-bit x86, Clang now matches GCC when classifying arguments for the
+  `regparm` calling convention. Floating-point types other than `float` and
+  `double` no longer consume general-purpose register slots, complex values
+  are passed on the stack without consuming register slots, and unions are no
+  longer classified according to a single member. `-fclang-abi-compat=23`
+  restores the previous behavior. (#GH227130)
+
 - Clang now considers matrix types in its isHomogeneousAggregate() handling,
   which can lead to differences in how structures containing matrix types are
   classified for ABI purposes. The previous exclusion of matrix types appears
@@ -140,6 +147,11 @@ features cannot lower the translation-unit ABI level;
 - `CompletionString.availability` now returns instances of `AvailabilityKind`.
   As a result, the `__str__` representation of its return values changed.
   Like other libclang enums, it now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`.
+
+- Change the behavior of the deprecated `CodeCompletionResults.results` property.
+  It is used as an implementation detail now and should not be accessed directly.
+  Existing uses of it should be changed to use `CodeCompletionResults` directly:
+  it nows supports `__len__` and `__getitem__`, so it can be used the same as `CodeCompletionResults.results` previously.
 
 - `Cursor` instance's `enum_value` method now returns 1 instead of -1 for `true` bool enumeration values
 
@@ -250,7 +262,14 @@ features cannot lower the translation-unit ABI level;
 - Added `__builtin_sort_pack` to sort a pack of types using the same
   order as `__builtin_type_order`.
 
+- Updates Unicode Names data to Unicode 18.0 (from Unicode 18.0 Beta).
+
 ### New Compiler Flags
+
+- New option `-fmodules-validate-directory-dependencies` makes an implicitly
+  built module out of date when a header is added to a directory it enumerated,
+  such as an umbrella directory or the directory of an umbrella header, after it
+  was built. Off by default.
 
 - New option `-fdefined-pointer-subtraction` added to preserve stable semantics
   when subtracting pointers to unrelated objects.
@@ -276,6 +295,11 @@ features cannot lower the translation-unit ABI level;
   unit to be emitted into the object file, even when they are inlined into all
   callers or are otherwise unused.
 
+- Added a new `-ast-dump-filter-path` option to filter AST dump output
+  based on the source file path of declarations. The filter uses glob-style
+  matching on the presumed source location (accounting for macro expansions
+  and `#line` directives). (#GH194210)
+
 ### Deprecated Compiler Flags
 
 ### Modified Compiler Flags
@@ -288,6 +312,11 @@ features cannot lower the translation-unit ABI level;
   `-ftrivial-auto-var-init=` entry in the User's Manual for the details,
   including where C deliberately departs from C 6.2.4p6.
 
+- `--config` files now support trailing `#` comments after an option, in
+  addition to whole-line comments. Mid-line comment-denoting `#`s must be
+  separated from surrounding arguments by whitespace. Quoted arguments can no
+  longer be split across multiple lines using a backslash.
+
 ### Removed Compiler Flags
 
 ### Attribute Changes in Clang
@@ -298,7 +327,19 @@ features cannot lower the translation-unit ABI level;
 
 - Clang now accepts `_single_inheritance` under `-fms-compatibility` as an alias for `__single_inheritance`; `_multiple_inheritance` and `_virtual_inheritance` were already correctly supported as aliases.
 
+- Fixed a bug with handling a `nonnull` attribute with an invalid argument
+  index such that it would inadvertently apply the attribute with no arguments,
+  causing all function parameters of pointer type to be considered nonnull. (#GH228670)
+
+- Added `[[clang::unsafe_buffer_usage_in_container]]` (and equivalent spelling
+  `[[clang::unsafe_buffer_usage("container")]]`) to allow two-parameter container
+  and view constructors and factory functions to opt in to
+  `-Wunsafe-buffer-usage-in-container` diagnostics.
+
 ### Improvements to Clang's diagnostics
+
+- Fixed spurious `-Wimplicit-void-ptr-cast` warnings in C for parenthesized
+  null pointer macros such as `(NULL)`. (#GH171874)
 
 - `-Wfortify-source` now diagnoses when `strlcat`, `__builtin_strlcat`, `strlcpy`, or
   `__builtin_strlcpy` is called with a size argument larger than the destination buffer.
@@ -492,6 +533,12 @@ features cannot lower the translation-unit ABI level;
 
 - Improved how Unicode characters are displayed in diagnostic messages.
 
+- Clang no longer retains source comments in the AST when nothing will read them
+  back. Comments are now collected only when they may be consumed (e.g. with
+  ``-fparse-all-comments``, when ``-Wdocumentation`` is enabled, when emitting a
+  PCH/module, or during code completion), reducing memory overhead for typical
+  compilations.
+
 - `-Wtautological-pointer-compare` and `-Wpointer-bool-conversion` now
   diagnose a reference to a function (e.g. of type `void (&)()`) compared
   against or converted to a null pointer, the same as a bare function name.
@@ -506,6 +553,14 @@ features cannot lower the translation-unit ABI level;
 - `-Wno-unsafe-buffer-usage-in-static-sized-array` now also suppresses warnings
   for pointer arithmetic on statically-sized arrays when the offset is a
   non-negative constant within the array bounds.
+
+- `-Wunsafe-buffer-usage-in-container` now warns on unsafe calls to
+  two-parameter constructors and factory functions annotated with
+  `[[clang::unsafe_buffer_usage_in_container]]` or
+  `[[clang::unsafe_buffer_usage("container")]]`. For these annotated functions,
+  the safe `(.data(), .size())` and `(.begin(), .end())` argument checks use
+  duck typing rather than a hardcoded type list, suppressing false positives
+  when both methods are called on the same user-defined container object.
 
 - `-Wc++98-compat` now diagnoses explicit conversion functions in C++20 and
   later, matching the behavior in C++11 through C++17. (#GH161689)
@@ -546,6 +601,13 @@ features cannot lower the translation-unit ABI level;
 
 - Improve Clang diagnoses when unary `__imag` operator with non-complex type operand is used as lvalue. (#GH222383)
 
+- Added `-Wredundant-defer` to diagnose redundant uses of the `_Defer`
+  keyword, such as when deferring the last statement of a block; when
+  used as the body of a conditional; or when it immediately precedes
+  a `break`/`continue` statement or a `return` with no argument.
+ 
+- Clang now diagnoses arrays whose size is deduced from an initializer list when they exceed the maximum object size
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -555,6 +617,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed incorrect handling of C++ import preprocessing token when a digraph character after import. (#GH190693)
 - Fixed a crash when emitting RTTI for a `dllexport` class, or the fundamental type descriptors for `__cxxabiv1::__fundamental_type_info`, under `-fvisibility=hidden`. (#GH207963)
 - Fixed an assertion failure when passing a wide string literal to `__builtin_nan`. (#GH212108)
+- Fixed an assertion failure when converting between an x87 `long double` vector and another vector type of the same size. (#GH173254), (#GH63548)
 - Fixed a constraint comparison bug in partial ordering. (#GH182671)
 - Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
 - Fixed an assertion on omp taskloop transparent (#GH197162)
@@ -572,6 +635,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed a bug where a stray closing curley brace in an OpenMP/OpenACC pragma could cause pragma parsing issues when inside of a member function. (#GH214195)
 - Fixed a bug where preprocessor directives following comments were not correctly recognized when using -C. (#GH48361)
 - Fixed a crash when declaring a member template within a local class inside an OpenMP region. (#GH216052)
+- Fixed a crash when an OpenMP `copyprivate` clause names a non-static data member that is not private in the
+  enclosing context, which is now diagnosed, a data member inside a member function template, or a structured
+  binding. (#GH217893)
 - Fixed an assertion failure when a variable implicitly mapped by an OpenMP `target` directive has a class type
   (such as `std::map`) whose mapper lookup instantiates a class template specialization. (#GH154704)
 - Fixed a bug where repeated #imports of modular headers in non-modular compilation were translated to #pragma clang module import. (#GH216924)
@@ -579,14 +645,18 @@ features cannot lower the translation-unit ABI level;
 - Fixed crashes on an OpenMP `target` region inside a lambda or block at namespace scope, including when the region used a global reference. (#GH223397)
 - Fixed a crash when an `asm` label names the register for a global variable of incomplete type. (#GH219746)
 - Fixed an ICE hat occurred when using `__imag int/float` as lvalue in assignment. (#GH119498)
+- Fixed a C23 rejects-valid where `auto T x;` (with `T` a typedef-name) was rejected as a missing initializer. (#GH164930)
 - Fixed an assertion failure in `-Wsign-compare` when a negated or complemented vector of unsigned integers was compared against a signed constant. (#GH203575)
 - Fixed an assertion failure when a constant statement expression that declares a variable is used as a bound of an OpenMP loop. A statement expression in a bound of a non-rectangular loop is now diagnosed. (#GH153987)
 - Fixed a bug where a bit-field accessed as the result of a statement expression
   (e.g. `({ s.b; })`) was not subject to integer promotion, unlike an ordinary
   bit-field access. (#GH221542)
 - No longer crashing due to follow-on diagnostics when there is an invalid operand in a logical operator involving a vector operand. (#GH227588)
+- Fixed assertion failures caused by stale linkage information when an extern variable or function declaration is merged with a preceding static declaration. (#GH204759, #GH204754)
 - Fixed a crash due to typo correction mishandling custom keywords `_virtual_inheritance` and `_multiple_inheritance` in `-fms-compatibility` mode. (#GH228003)
-  
+- Clang no longer treats a file-scope `thread_local` declaration without an initializer as a tentative definition in C23 mode. As specified by C23 6.9.3, such a declaration is a definition, so declaring the same variable more that once is now diagnosed as a redefinition. (#GH217636)
+- Fixed an assertion failure on use of an uninitialized token in dependency directives lexing in clang-scan-deps.
+
 #### Bug Fixes to Compiler Builtins
 
 - Fixed a crash when classifying a call to a builtin with dependent arguments,
@@ -595,6 +665,8 @@ features cannot lower the translation-unit ABI level;
   inside a member function call synthesized by ``__builtin_invoke``. (#GH185241)
 - Fixed a crash in ``__builtin_dump_struct`` when ``-Werror`` promotes
   format warnings to errors. (#GH211943)
+- Fixed a crash when `__atomic_always_lock_free` or `__atomic_is_lock_free` is
+  called with a size of zero. (#GH170139, #GH120082)
 - Fixed wrong code generation in `__builtin_clear_padding` wherein the wrong
   bits of the following types were cleared: `_BitInt`, struct bitfields, and
   packed boolean vectors. (#GH215809), (#GH216063), (#GH224033)
@@ -602,14 +674,30 @@ features cannot lower the translation-unit ABI level;
   reference to a vector type; `vec_step` (in C++ for OpenCL) and
   `__builtin_ptrauth_type_discriminator` similarly no longer accept reference
   types that their evaluation silently mishandled. (#GH216997)
+- Fix a crash when using `__builtin_assume_aligned` with dynamic allocations
+  during constant evaluation. (#GH173767)
+- Fixed a crash when constant-evaluating `__builtin_align_up`, `__builtin_align_down`,
+  or `__builtin_is_aligned` with pointers without an underlying object. Null pointers
+  are handled as aligned values, while other base-less pointers are rejected during constant
+  evaluation.
 
 #### Bug Fixes to Attribute Support
+
+- Fixed an assertion failure when parsing malformed GNU `__attribute__`
+  syntax followed by a parenthesized expression list in C code. (#GH225045)
+
+- Clang now diagnoses incompatible `weak` and `ifunc` attributes, including
+  weak linkage introduced through redeclarations or `#pragma weak`. (#GH220923)
 
 - Fixed crash (assertion) when the `alloc_align` attribute was applied to a declaration whose type has a `FunctionProtoType` but which is not itself a `FunctionDecl`, such as a function-pointer variable. (#GH122058)
 
 - Fixed a crash on `bool` vectors declared with `ext_vector_type` and more than
   2^23 elements; `ext_vector_type` and `vector_size` now both reject vectors
   with more than 2^23 elements or larger than 2^28 bytes. (#GH165458)
+
+- Fixed an assertion failure when an unscoped enumeration type was used as
+  the element type of a vector declared with `ext_vector_type`. Clang now
+  diagnoses such element types as invalid. (#GH225037)
 
 - The `counted_by`/`counted_by_or_null` diagnostic that rejects a pointer whose
   pointee is a struct with a flexible array member (e.g.
@@ -621,6 +709,11 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when an `address_space` attribute with a dependent argument was
   written after the declarator-id, where it appertains to the declared entity
   rather than to a declarator chunk. (#GH196982, #GH111463)
+
+- Fixed an assertion failure when the `alias` attribute was applied to an
+  `extern` variable with an initializer. Static data members declared with
+  `alias` are now correctly diagnosed as definitions when followed by an
+  out-of-line definition. (#GH204762)
 
 #### Bug Fixes to C++ Support
 
@@ -652,6 +745,10 @@ features cannot lower the translation-unit ABI level;
 - Fixed a bug where top-level CV qualifiers (such as ``const``) were dropped from pointers modified by Microsoft pointer attributes (like ``__ptr32`` and ``__ptr64``) and WebAssembly's ``__funcref``.
 
 - Fixed a bug where we accepted ``__super`` being qualified by a scope specifier, causing codegen to assertion fail elsewhere. (#GH212988)
+- Fixed an assertion when typo correction replaced or dropped the qualifier of
+  a name such as `foo::S<int>` while the parser was deciding whether a
+  parenthesized construct like `(void(foo::S<int>))` is a type-id or an
+  expression. (#GH221890)
 - Fixed an issue where we tried to compare invalid NTTPs for variable declarations, which ended up in hitting an assertion with a constrained non-plain-auto NTTP, which we don't quite implement yet. (#GH208658)
 
 - Fixed a crash when a using-declaration naming an unresolvable member of a
@@ -680,6 +777,10 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash on invalid code where a ``decltype`` not followed by ``(`` was
   parsed where a nested-name-specifier could appear (e.g. ``int decltype = 0;``).
   Clang now diagnoses the error instead of asserting. (#GH211207)
+
+- Fixed a spurious unused function warning when using `operator<=>` within an anonymous namespace. (#GH125233)
+
+- Fixed a regression where the rewritten comparison operator was not instantiated properly. (#GH104720)
 
 - Fixed an assertion failure when a parenthesized structured binding declarator
   was followed by a function declarator and body (e.g. ``([a, b])() {}``).
@@ -787,9 +888,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed ambiguous overload where two non-static member functions with
   different signatures could be incorrectly considered equivalent. (#GH224499)
 
-- Fixed an assertion failure when explicitly instantiating a nested member with 
-  an ill-formed template argument. Clang now checks for a failed declaration 
-  lookup before asserting that the name is not dependent, avoiding an assertion 
+- Fixed an assertion failure when explicitly instantiating a nested member with
+  an ill-formed template argument. Clang now checks for a failed declaration
+  lookup before asserting that the name is not dependent, avoiding an assertion
   after an earlier diagnostic has caused the declaration to be unavailable. (#GH220525)
 
 - Fixed a crash in constant evaluation when a new-expression selects a
@@ -889,6 +990,12 @@ features cannot lower the translation-unit ABI level;
 
 #### Arm and AArch64 Support
 
+- Added support for the following Arm processors (command-line identifiers in
+  parentheses):
+
+  - C2-Pro (`c2-pro`).
+  - C2-Ultra (`c2-ultra`).
+
 - Added support for pointer authentication discrimination of C++ virtual table
   pointers stored in VTTs via the `-fptrauth-vtt-vtable-pointer-discrimination`
   option.
@@ -914,6 +1021,9 @@ features cannot lower the translation-unit ABI level;
   not Arm64EC or x64) reuses the tail padding of the over-aligned base for the
   subsequent base; Clang now does the same.
   ([#210174](https://github.com/llvm/llvm-project/issues/210174))
+
+- Fixed ``/hotpatch`` with LTO, where objects were not marked as hotpatchable,
+  so ``/FUNCTIONPADMIN`` didn't pad their functions.
 
 #### LoongArch Support
 
@@ -994,6 +1104,9 @@ features cannot lower the translation-unit ABI level;
 - `QualifierOrder` now supports `typedef`, `consteval`, `constinit`,
   `thread_local`, `extern`, `mutable`, `signed`, `unsigned`, `long`, `short`,
   and `explicit` declaration specifiers.
+- Extend `IndentAccessModifiers` with `AfterFirstAccessModifier` to indent
+  members before the first explicit access modifier by one level. Existing
+  configuration values `true` and `false` remain supported.
 
 ### libclang
 
@@ -1076,6 +1189,8 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 - Mapping of expressions with base-pointers through a user-defined mapper (e.g.
   `map(s.p[0:n])`) now conforms to OpenMP's conditional pointer-attachment,
   matching the behavior of such maps outside a mapper.
+- Fixed a crash when the `safelen` and `simdlen` clauses of an OpenMP directive
+  have arguments of different integer types. (#GH108367)
 - The `holds` clause on the `assume` directive now lowers side-effect-free
   conditions to `llvm.assume`, enabling downstream optimizations. Previously
   the clause was parsed but its condition was discarded without effect.

@@ -188,7 +188,7 @@ static ScheduleDAGInstrs *createVLIWMachineSched(MachineSchedContext *C) {
   DAG->addMutation(std::make_unique<HexagonSubtarget::UsrOverflowMutation>());
   DAG->addMutation(std::make_unique<HexagonSubtarget::HVXMemLatencyMutation>());
   DAG->addMutation(std::make_unique<HexagonSubtarget::CallMutation>());
-  DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII, DAG->TRI));
+  DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII));
   return DAG;
 }
 

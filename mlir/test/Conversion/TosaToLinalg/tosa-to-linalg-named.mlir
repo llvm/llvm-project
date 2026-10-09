@@ -1,6 +1,7 @@
-// RUN: mlir-opt --verify-each --split-input-file -pass-pipeline="builtin.module(func.func(tosa-to-linalg-named))" %s -verify-diagnostics -o -| FileCheck %s
+// RUN: mlir-opt --verify-each --split-input-file -pass-pipeline="builtin.module(func.func(tosa-to-linalg-named))" %s -verify-diagnostics -o -| FileCheck %s --check-prefixes=CHECK,FINITE
 // RUN: mlir-opt --verify-each --split-input-file -pass-pipeline="builtin.module(func.func(tosa-to-linalg-named{prefer-conv2d-kernel-layout-hwcf=true}))" %s -verify-diagnostics -o -| FileCheck --check-prefix="HWCF" %s
 // RUN: mlir-opt --verify-each --split-input-file -pass-pipeline="builtin.module(func.func(tosa-to-linalg-named,cse))" %s -verify-diagnostics -o -| FileCheck --check-prefix="CHECK-CSE" %s
+// RUN: mlir-opt --verify-each --split-input-file -pass-pipeline="builtin.module(func.func(tosa-to-linalg-named{allow-non-finites=true}))" %s -verify-diagnostics -o -| FileCheck %s --check-prefixes=CHECK,NONFINITE
 
 // CHECK-LABEL: @matmul
 func.func @matmul(%arg0: tensor<1x5x3xf32>, %arg1: tensor<1x3x6xf32>) -> (tensor<1x5x6xf32>) {
@@ -97,7 +98,8 @@ func.func @matmul_dyn_output(%arg0: tensor<1x1x8xf32>, %arg1: tensor<1x8x1xf32>)
 
 // CHECK-LABEL: @max_pool
 func.func @max_pool(%arg0: tensor<1x6x34x62xf32>) -> () {
-  // CHECK-DAG: [[CONST:%.+]] = arith.constant -3.40282347E+38
+  // FINITE-DAG: [[CONST:%.+]] = arith.constant -3.40282347E+38
+  // NONFINITE-DAG: [[CONST:%.+]] = arith.constant 0xFF800000
   // CHECK-DAG: [[INIT:%.+]] = tensor.empty()
   // CHECK-DAG: [[FILL:%.+]] = linalg.fill ins([[CONST]]{{.*}}outs([[INIT]]
   // CHECK-DAG: [[KERNEL:%.+]] = tensor.empty()
@@ -106,12 +108,126 @@ func.func @max_pool(%arg0: tensor<1x6x34x62xf32>) -> () {
   return
 }
 
+// -----
+
+// Lower IGNORE mode with a NaN accumulator so an all-NaN window stays NaN.
+// CHECK-LABEL: @max_pool_ignore
+func.func @max_pool_ignore(%arg0: tensor<1x4x4x1xf32>) -> tensor<1x3x3x1xf32> {
+  // CHECK: %[[NAN:.*]] = arith.constant 0x7FC00000 : f32
+  // CHECK: %[[FILL:.*]] = linalg.fill ins(%[[NAN]] : f32)
+  // CHECK: %[[POOL:.*]] = linalg.generic
+  // CHECK-SAME: outs(%[[FILL]] : tensor<1x3x3x1xf32>)
+  // CHECK: ^bb0(%[[INPUT:.*]]: f32, %[[WINDOW:.*]]: f32, %[[ACC:.*]]: f32):
+  // CHECK-DAG: %[[MAX:.*]] = arith.maximumf %[[ACC]], %[[INPUT]] : f32
+  // CHECK-DAG: %[[INPUT_NAN:.*]] = arith.cmpf uno, %[[INPUT]], %[[INPUT]] : f32
+  // CHECK-DAG: %[[ACC_NAN:.*]] = arith.cmpf uno, %[[ACC]], %[[ACC]] : f32
+  // CHECK: %[[CANDIDATE:.*]] = arith.select %[[ACC_NAN]], %[[INPUT]], %[[MAX]] : f32
+  // CHECK: %[[RESULT:.*]] = arith.select %[[INPUT_NAN]], %[[ACC]], %[[CANDIDATE]] : f32
+  // CHECK: linalg.yield %[[RESULT]] : f32
+  // CHECK: return %[[POOL]] : tensor<1x3x3x1xf32>
+  %0 = tosa.max_pool2d %arg0 kernel([2, 2]) stride([1, 1]) pad([0, 0, 0, 0]) nan_mode<IGNORE> :
+    (tensor<1x4x4x1xf32>) -> tensor<1x3x3x1xf32>
+  return %0 : tensor<1x3x3x1xf32>
+}
+
+// -----
+
+// Check that IGNORE mode also uses NaN to pad the input.
+// CHECK-LABEL: @max_pool_ignore_padded
+func.func @max_pool_ignore_padded(%arg0: tensor<1x4x4x1xf32>) -> tensor<1x3x4x1xf32> {
+  // CHECK: %[[PAD_NAN:.*]] = arith.constant 0x7FC00000 : f32
+  // CHECK: %[[PADDED:.*]] = tensor.pad %arg0 low[0, 0, 0, 0] high[0, 0, 1, 0]
+  // CHECK:   tensor.yield %[[PAD_NAN]] : f32
+  // CHECK: %[[INIT_NAN:.*]] = arith.constant 0x7FC00000 : f32
+  // CHECK: %[[FILL:.*]] = linalg.fill ins(%[[INIT_NAN]] : f32)
+  // CHECK: %[[POOL:.*]] = linalg.generic
+  // CHECK-SAME: ins(%[[PADDED]]
+  // CHECK: return %[[POOL]] : tensor<1x3x4x1xf32>
+  %0 = tosa.max_pool2d %arg0 kernel([2, 2]) stride([1, 1]) pad([0, 0, 0, 1]) nan_mode<IGNORE> :
+    (tensor<1x4x4x1xf32>) -> tensor<1x3x4x1xf32>
+  return %0 : tensor<1x3x4x1xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @max_pool_ignore_bf16
+func.func @max_pool_ignore_bf16(%arg0: tensor<1x4x4x1xbf16>) -> tensor<1x3x3x1xbf16> {
+  // CHECK: %[[NAN:.*]] = arith.constant 0x7FC0 : bf16
+  // CHECK: %[[FILL:.*]] = linalg.fill ins(%[[NAN]] : bf16)
+  // CHECK: %[[POOL:.*]] = linalg.generic
+  // CHECK-SAME: outs(%[[FILL]] : tensor<1x3x3x1xbf16>)
+  // CHECK: ^bb0(%[[INPUT:.*]]: bf16, %[[WINDOW:.*]]: bf16, %[[ACC:.*]]: bf16):
+  // CHECK-DAG: %[[MAX:.*]] = arith.maximumf %[[ACC]], %[[INPUT]] : bf16
+  // CHECK-DAG: %[[INPUT_NAN:.*]] = arith.cmpf uno, %[[INPUT]], %[[INPUT]] : bf16
+  // CHECK-DAG: %[[ACC_NAN:.*]] = arith.cmpf uno, %[[ACC]], %[[ACC]] : bf16
+  // CHECK: %[[CANDIDATE:.*]] = arith.select %[[ACC_NAN]], %[[INPUT]], %[[MAX]] : bf16
+  // CHECK: %[[RESULT:.*]] = arith.select %[[INPUT_NAN]], %[[ACC]], %[[CANDIDATE]] : bf16
+  // CHECK: linalg.yield %[[RESULT]] : bf16
+  // CHECK: return %[[POOL]] : tensor<1x3x3x1xbf16>
+  %0 = tosa.max_pool2d %arg0 kernel([2, 2]) stride([1, 1]) pad([0, 0, 0, 0]) nan_mode<IGNORE> :
+    (tensor<1x4x4x1xbf16>) -> tensor<1x3x3x1xbf16>
+  return %0 : tensor<1x3x3x1xbf16>
+}
+
+// -----
+
+// CHECK-LABEL: @max_pool_ignore_f16
+func.func @max_pool_ignore_f16(%arg0: tensor<1x4x4x1xf16>) -> tensor<1x3x3x1xf16> {
+  // CHECK: %[[NAN:.*]] = arith.constant 0x7E00 : f16
+  // CHECK: %[[FILL:.*]] = linalg.fill ins(%[[NAN]] : f16)
+  // CHECK: %[[POOL:.*]] = linalg.generic
+  // CHECK-SAME: outs(%[[FILL]] : tensor<1x3x3x1xf16>)
+  // CHECK: ^bb0(%[[INPUT:.*]]: f16, %[[WINDOW:.*]]: f16, %[[ACC:.*]]: f16):
+  // CHECK-DAG: %[[MAX:.*]] = arith.maximumf %[[ACC]], %[[INPUT]] : f16
+  // CHECK-DAG: %[[INPUT_NAN:.*]] = arith.cmpf uno, %[[INPUT]], %[[INPUT]] : f16
+  // CHECK-DAG: %[[ACC_NAN:.*]] = arith.cmpf uno, %[[ACC]], %[[ACC]] : f16
+  // CHECK: %[[CANDIDATE:.*]] = arith.select %[[ACC_NAN]], %[[INPUT]], %[[MAX]] : f16
+  // CHECK: %[[RESULT:.*]] = arith.select %[[INPUT_NAN]], %[[ACC]], %[[CANDIDATE]] : f16
+  // CHECK: linalg.yield %[[RESULT]] : f16
+  // CHECK: return %[[POOL]] : tensor<1x3x3x1xf16>
+  %0 = tosa.max_pool2d %arg0 kernel([2, 2]) stride([1, 1]) pad([0, 0, 0, 0]) nan_mode<IGNORE> :
+    (tensor<1x4x4x1xf16>) -> tensor<1x3x3x1xf16>
+  return %0 : tensor<1x3x3x1xf16>
+}
+
+// -----
+
+// PROPAGATE mode seeds the accumulator with the minimum of the element type,
+// which is -infinity only when non-finite values are allowed.
+// CHECK-LABEL: @max_pool_propagate_bf16
+func.func @max_pool_propagate_bf16(%arg0: tensor<1x4x4x1xbf16>) -> tensor<1x3x3x1xbf16> {
+  // FINITE: %[[CONST:.*]] = arith.constant -3.389530e+38 : bf16
+  // NONFINITE: %[[CONST:.*]] = arith.constant 0xFF80 : bf16
+  // CHECK: %[[FILL:.*]] = linalg.fill ins(%[[CONST]] : bf16)
+  // CHECK: linalg.pooling_nhwc_max
+  // CHECK-SAME: outs(%[[FILL]] : tensor<1x3x3x1xbf16>)
+  %0 = tosa.max_pool2d %arg0 kernel([2, 2]) stride([1, 1]) pad([0, 0, 0, 0]) :
+    (tensor<1x4x4x1xbf16>) -> tensor<1x3x3x1xbf16>
+  return %0 : tensor<1x3x3x1xbf16>
+}
+
+// -----
+
+// CHECK-LABEL: @max_pool_propagate_f16
+func.func @max_pool_propagate_f16(%arg0: tensor<1x4x4x1xf16>) -> tensor<1x3x3x1xf16> {
+  // FINITE: %[[CONST:.*]] = arith.constant -6.550400e+04 : f16
+  // NONFINITE: %[[CONST:.*]] = arith.constant 0xFC00 : f16
+  // CHECK: %[[FILL:.*]] = linalg.fill ins(%[[CONST]] : f16)
+  // CHECK: linalg.pooling_nhwc_max
+  // CHECK-SAME: outs(%[[FILL]] : tensor<1x3x3x1xf16>)
+  %0 = tosa.max_pool2d %arg0 kernel([2, 2]) stride([1, 1]) pad([0, 0, 0, 0]) :
+    (tensor<1x4x4x1xf16>) -> tensor<1x3x3x1xf16>
+  return %0 : tensor<1x3x3x1xf16>
+}
+
 // CHECK-LABEL: @max_pool_padded
 func.func @max_pool_padded(%arg0: tensor<1x6x34x62xf32>) -> () {
-  // CHECK-DAG: [[CONST:%.+]] = arith.constant -3.40282347E+38 : f32
+  // FINITE-DAG: [[CONST:%.+]] = arith.constant -3.40282347E+38 : f32
+  // NONFINITE-DAG: [[CONST:%.+]] = arith.constant 0xFF800000 : f32
   // CHECK-DAG: [[PAD:%.+]] = tensor.pad %arg0 low[0, 0, 0, 0] high[0, 0, 1, 0]
   // CHECK-DAG:   tensor.yield [[CONST]]
-  // CHECK-DAG: [[INITVAL:%.+]] = arith.constant -3.40282347E+38 : f32
+  // FINITE-DAG: [[INITVAL:%.+]] = arith.constant -3.40282347E+38 : f32
+  // NONFINITE-DAG: [[INITVAL:%.+]] = arith.constant 0xFF800000 : f32
   // CHECK-DAG: [[INIT:%.+]] = tensor.empty()
   // CHECK-DAG: [[FILL:%.+]] = linalg.fill ins([[INITVAL]]{{.*}}outs([[INIT]]
   // CHECK-DAG: [[KERNEL:%.+]] = tensor.empty()
@@ -124,7 +240,8 @@ func.func @max_pool_padded(%arg0: tensor<1x6x34x62xf32>) -> () {
 func.func @max_pool_dyn(%arg0: tensor<?x6x34x62xf32>) -> () {
   // CHECK: %[[C0:.+]] = arith.constant 0
   // CHECK: %[[BATCH:.+]] = tensor.dim %arg0, %[[C0]]
-  // CHECK: %[[CONST:.+]] = arith.constant -3.40282347E+38
+  // FINITE: %[[CONST:.+]] = arith.constant -3.40282347E+38
+  // NONFINITE: %[[CONST:.+]] = arith.constant 0xFF800000
   // CHECK: %[[INIT:.+]] = tensor.empty(%[[BATCH]])
   // CHECK: %[[FILL:.+]] = linalg.fill ins(%[[CONST]]{{.*}}outs(%[[INIT]]
   // CHECK: %[[KERNEL:.+]] = tensor.empty()

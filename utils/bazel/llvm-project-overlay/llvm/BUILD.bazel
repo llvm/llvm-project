@@ -40,6 +40,18 @@ config_setting(
     },
 )
 
+# Use LLVM libunwind's per-FDE registration API. This does not link libunwind.
+# Usage: --@llvm-project//llvm:use_libunwind_for_eh_frame_registration=true
+bool_flag(
+    name = "use_libunwind_for_eh_frame_registration",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "libunwind_eh_frame_registration_enabled",
+    flag_values = {":use_libunwind_for_eh_frame_registration": "true"},
+)
+
 exports_files([
     "LICENSE.TXT",
     "cmake/modules/llvm-driver-template.cpp.in",
@@ -381,26 +393,40 @@ config_setting(
     flag_values = {"@rules_cc//cc/compiler:compiler": "clang-cl"},
 )
 
+config_setting(
+    name = "is_x86_64_windows_msvc",
+    constraint_values = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:windows",
+    ],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "msvc-cl"},
+)
+
 BLAKE3_x86_64_ASM_SOURCE_PATTERNS = [
-    "lib/Support/BLAKE3/blake3_avx2_x86-64_%s.S",
-    "lib/Support/BLAKE3/blake3_avx512_x86-64_%s.S",
-    "lib/Support/BLAKE3/blake3_sse2_x86-64_%s.S",
-    "lib/Support/BLAKE3/blake3_sse41_x86-64_%s.S",
+    "lib/Support/BLAKE3/blake3_avx2_x86-64_%s",
+    "lib/Support/BLAKE3/blake3_avx512_x86-64_%s",
+    "lib/Support/BLAKE3/blake3_sse2_x86-64_%s",
+    "lib/Support/BLAKE3/blake3_sse41_x86-64_%s",
 ]
 
 filegroup(
     name = "blake3_x86_64_asm",
     srcs = select({
         ":is_x86_64_windows_clang_mingw": [
-            pattern % "windows_gnu"
+            pattern % "windows_gnu.S"
             for pattern in BLAKE3_x86_64_ASM_SOURCE_PATTERNS
         ],
         ":is_x86_64_windows_clang_cl": [
-            pattern % "windows_gnu"
+            pattern % "windows_gnu.S"
+            for pattern in BLAKE3_x86_64_ASM_SOURCE_PATTERNS
+        ],
+        # cl.exe cannot consume GAS syntax; ml64 assembles the MASM variants.
+        ":is_x86_64_windows_msvc": [
+            pattern % "windows_msvc.asm"
             for pattern in BLAKE3_x86_64_ASM_SOURCE_PATTERNS
         ],
         "//conditions:default": [
-            pattern % "unix"
+            pattern % "unix.S"
             for pattern in BLAKE3_x86_64_ASM_SOURCE_PATTERNS
         ],
     }),
@@ -2428,6 +2454,15 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "CodeGenOptionsTableGen",
+    strip_include_prefix = "lib/CodeGen",
+    tbl_outs = {"lib/CodeGen/CodeGenOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/CodeGen/CodeGenOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "CodeGen",
     srcs = glob(
@@ -2459,6 +2494,7 @@ cc_library(
         ":BitWriter",
         ":CFGuard",
         ":CGData",
+        ":CodeGenOptionsTableGen",
         ":CodeGenTypes",
         ":Core",
         ":DebugInfoCodeView",
@@ -2471,6 +2507,7 @@ cc_library(
         ":MCParser",
         ":ObjCARC",
         ":Object",
+        ":Option",
         ":ProfileData",
         ":Remarks",
         ":Scalar",
@@ -2619,6 +2656,10 @@ llvm_target_lib_list = [lib for lib in [
                 ["-gen-exegesis"],
                 "lib/Target/AArch64/AArch64GenExegesis.inc",
             ),
+        ],
+        "tbl_deps": [
+            ":AArch64MCOptionsTableGen",
+            ":AArch64OptionsTableGen",
         ],
     },
     {
@@ -3501,6 +3542,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/SystemZ/SystemZGenDisassemblerTables.inc",
             ),
             (
+                ["-gen-insn-directive-match-table"],
+                "lib/Target/SystemZ/SystemZGenInsnMatchTable.inc",
+            ),
+            (
                 ["-gen-emitter"],
                 "lib/Target/SystemZ/SystemZGenMCCodeEmitter.inc",
             ),
@@ -3741,6 +3786,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/X86/X86GenMnemonicTables.inc",
             ),
         ],
+        "tbl_deps": [
+            ":X86MCOptionsTableGen",
+            ":X86OptionsTableGen",
+        ],
     },
     {
         "name": "XCore",
@@ -3955,11 +4004,47 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "AArch64MCOptionsTableGen",
+    strip_include_prefix = "lib/Target/AArch64",
+    tbl_outs = {"lib/Target/AArch64/AArch64MCOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/AArch64/MCTargetDesc/AArch64MCOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "AArch64OptionsTableGen",
+    strip_include_prefix = "lib/Target/AArch64",
+    tbl_outs = {"lib/Target/AArch64/AArch64Options.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/AArch64/AArch64Options.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
     name = "SparcOptionsTableGen",
     strip_include_prefix = "lib/Target/Sparc",
     tbl_outs = {"lib/Target/Sparc/SparcOptions.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/Sparc/SparcOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "X86MCOptionsTableGen",
+    strip_include_prefix = "lib/Target/X86",
+    tbl_outs = {"lib/Target/X86/X86MCOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/X86/MCTargetDesc/X86MCOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "X86OptionsTableGen",
+    strip_include_prefix = "lib/Target/X86",
+    tbl_outs = {"lib/Target/X86/X86Options.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/X86/X86Options.td",
     deps = [":OptParserTdFiles"],
 )
 
@@ -4306,10 +4391,20 @@ cc_library(
     textual_hdrs = ["lib/Passes/PassRegistry.def"],
 )
 
+gentbl_cc_library(
+    name = "PassesOptionsTableGen",
+    strip_include_prefix = "lib/Passes",
+    tbl_outs = {"lib/Passes/PassesOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Passes/PassesOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "Passes",
     srcs = glob([
         "lib/Passes/*.cpp",
+        "lib/Passes/*.h",
     ]),
     hdrs = glob([
         "include/llvm/Passes/*.h",
@@ -4331,6 +4426,8 @@ cc_library(
         ":Instrumentation",
         ":MC",
         ":ObjCARC",
+        ":Option",
+        ":PassesOptionsTableGen",
         ":Plugins",
         ":Scalar",
         ":Support",
@@ -4429,6 +4526,10 @@ cc_library(
     ) + ["include/llvm-c/ExecutionEngine.h"],
     copts = llvm_copts,
     features = ["-parse_headers"],
+    local_defines = select({
+        ":libunwind_eh_frame_registration_enabled": ["HAVE_UNW_ADD_DYNAMIC_FDE=1"],
+        "//conditions:default": [],
+    }),
     deps = [
         ":BinaryFormat",
         ":CodeGen",
@@ -4647,6 +4748,10 @@ cc_library(
         "//conditions:default": [
             "-lrt",
         ],
+    }),
+    local_defines = select({
+        ":libunwind_eh_frame_registration_enabled": ["HAVE_UNW_ADD_DYNAMIC_FDE=1"],
+        "//conditions:default": [],
     }),
     deps = [
         ":BinaryFormat",

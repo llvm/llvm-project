@@ -127,44 +127,85 @@ set(LIBC_TEST_HERMETIC_ONLY "" OFF CACHE BOOL "Only enable hermetic tests.")
 
 list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT ${LIBC_COMMON_TUNE_OPTIONS})
 
-# Check --print-resource-dir to find the compiler resource dir if this flag
-# is supported by the compiler.
-execute_process(
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-  COMMAND ${CMAKE_CXX_COMPILER} --print-resource-dir
-  RESULT_VARIABLE COMMAND_RETURN_CODE
-  OUTPUT_VARIABLE COMPILER_RESOURCE_DIR
-)
-# Retrieve the host compiler's resource dir.
-if(COMMAND_RETURN_CODE EQUAL 0)
-  set(COMPILER_RESOURCE_DIR
-    "${COMPILER_RESOURCE_DIR}" CACHE PATH "path to compiler resource dir"
-  )
-  message(STATUS "Set COMPILER_RESOURCE_DIR to "
-    "${COMPILER_RESOURCE_DIR} using --print-resource-dir")
-else()
-  # Try with GCC option: -print-search-dirs, which will output in the form:
-  #   install: <path>
-  #   programs: ........
-  # So we try to capture the <path> after "install: " in the first line of the
-  # output.
-  execute_process(
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    COMMAND ${CMAKE_CXX_COMPILER} -print-search-dirs
-    RESULT_VARIABLE COMMAND_RETURN_CODE
-    OUTPUT_VARIABLE COMPILER_RESOURCE_DIR
-  )
-  if(COMMAND_RETURN_CODE EQUAL 0)
-    string(REPLACE " " ";" COMPILER_RESOURCE_DIR ${COMPILER_RESOURCE_DIR})
-    string(REPLACE "\n" ";" COMPILER_RESOURCE_DIR "${COMPILER_RESOURCE_DIR}")
-    list(GET COMPILER_RESOURCE_DIR 1 COMPILER_RESOURCE_DIR)
-    message(STATUS "Set COMPILER_RESOURCE_DIR to "
-      "${COMPILER_RESOURCE_DIR} using --print-search-dirs")
-  else()
+# Find the compiler resource dir for compilers that support it.
+if(NOT COMPILER_RESOURCE_DIR)
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    execute_process(
+      COMMAND ${CMAKE_CXX_COMPILER} --print-resource-dir
+      RESULT_VARIABLE COMMAND_RETURN_CODE
+      OUTPUT_VARIABLE RES_DIR
+      ERROR_QUIET
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(COMMAND_RETURN_CODE EQUAL 0)
+      set(COMPILER_RESOURCE_DIR
+        "${RES_DIR}" CACHE PATH "path to compiler resource dir"
+      )
+      message(STATUS "Set COMPILER_RESOURCE_DIR to "
+        "${COMPILER_RESOURCE_DIR} using --print-resource-dir")
+    endif()
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    execute_process(
+      COMMAND ${CMAKE_CXX_COMPILER} -print-search-dirs
+      RESULT_VARIABLE COMMAND_RETURN_CODE
+      OUTPUT_VARIABLE RES_DIR
+      ERROR_QUIET
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(COMMAND_RETURN_CODE EQUAL 0 AND RES_DIR MATCHES "install:[ \t]*([^\r\n]+)")
+      string(STRIP "${CMAKE_MATCH_1}" RES_DIR)
+      set(COMPILER_RESOURCE_DIR
+        "${RES_DIR}" CACHE PATH "path to compiler resource dir"
+      )
+      message(STATUS "Set COMPILER_RESOURCE_DIR to "
+        "${COMPILER_RESOURCE_DIR} using --print-search-dirs")
+    endif()
+  elseif(MSVC)
     if(LIBC_TARGET_OS_IS_GPU)
       message(FATAL_ERROR "COMPILER_RESOURCE_DIR must be set for GPU builds")
     else()
-      set(COMPILER_RESOURCE_DIR OFF)
+      set(COMPILER_RESOURCE_DIR OFF CACHE PATH "path to compiler resource dir")
+      message(STATUS "COMPILER_RESOURCE_DIR not set (not supported by MSVC)")
+    endif()
+  else()
+    # Try generic options for other compilers.
+    execute_process(
+      COMMAND ${CMAKE_CXX_COMPILER} --print-resource-dir
+      RESULT_VARIABLE COMMAND_RETURN_CODE
+      OUTPUT_VARIABLE RES_DIR
+      ERROR_QUIET
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(COMMAND_RETURN_CODE EQUAL 0)
+      set(COMPILER_RESOURCE_DIR
+        "${RES_DIR}" CACHE PATH "path to compiler resource dir"
+      )
+      message(STATUS "Set COMPILER_RESOURCE_DIR to "
+        "${COMPILER_RESOURCE_DIR} using --print-resource-dir")
+    else()
+      execute_process(
+        COMMAND ${CMAKE_CXX_COMPILER} -print-search-dirs
+        RESULT_VARIABLE COMMAND_RETURN_CODE
+        OUTPUT_VARIABLE RES_DIR
+        ERROR_QUIET
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+      )
+      if(COMMAND_RETURN_CODE EQUAL 0 AND RES_DIR MATCHES "install:[ \t]*([^\r\n]+)")
+        string(STRIP "${CMAKE_MATCH_1}" RES_DIR)
+        set(COMPILER_RESOURCE_DIR
+          "${RES_DIR}" CACHE PATH "path to compiler resource dir"
+        )
+        message(STATUS "Set COMPILER_RESOURCE_DIR to "
+          "${COMPILER_RESOURCE_DIR} using --print-search-dirs")
+      endif()
+    endif()
+  endif()
+
+  if(NOT COMPILER_RESOURCE_DIR AND NOT MSVC)
+    if(LIBC_TARGET_OS_IS_GPU)
+      message(FATAL_ERROR "COMPILER_RESOURCE_DIR must be set for GPU builds")
+    else()
+      set(COMPILER_RESOURCE_DIR OFF CACHE PATH "path to compiler resource dir")
       message(STATUS "COMPILER_RESOURCE_DIR not set
                       --print-resource-dir not supported by host compiler")
     endif()
@@ -221,11 +262,20 @@ if(LIBC_ENABLE_COVERAGE)
       CACHE INTERNAL "Clang profile runtime")
   endif()
 endif()
+option(LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP
+       "Link hermetic tests against LLVM libc's own startup object"
+       ON)
 option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
 option(LLVM_LIBC_ALL_HEADERS "Outputs all functions in header files, regardless of whether they are enabled on this target" OFF)
 option(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS
   "Enable entrypoints with known-incomplete implementations (off by default)" OFF)
+option(LLVM_LIBC_ENABLE_MINOR_VARIANT
+  "Build LLVM libc minor variant archive" OFF)
+set(LLVM_LIBC_SUBARCHIVE_NAME "" CACHE STRING
+  "Target and archive name for the LLVM libc minor variant")
+set(LLVM_LIBC_SUBARCHIVE_ENTRYPOINTS "" CACHE STRING
+  "Semicolon-separated entrypoint targets for the LLVM libc minor variant")
 
 option(LIBC_CONFIG_PATH "The path to user provided folder that configures the build for the target system." OFF)
 

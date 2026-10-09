@@ -53,6 +53,7 @@
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/Listener.h"
+#include "lldb/Utility/Locked.h"
 #include "lldb/Utility/NameMatches.h"
 #include "lldb/Utility/Policy.h"
 #include "lldb/Utility/ProcessAddress.h"
@@ -374,6 +375,7 @@ class Process : public std::enable_shared_from_this<Process>,
   friend class Target;
   friend class ThreadList;
   friend class MemoryCache;
+  friend class ThreadPlanSingleThreadTimeout;
 
 public:
   /// Broadcaster event bits definitions.
@@ -666,11 +668,12 @@ public:
   ///     been initialized yet.
   ///
   /// \return
-  ///     The cached utility function or null if the platform is not the
-  ///     same as the target's platform.
-  UtilityFunction *GetLoadImageUtilityFunction(
+  ///     The cached utility function, or an Error if the platform is not
+  ///     the same as the target's platform, or if it could not be created.
+  llvm::Expected<UtilityFunction &> GetLoadImageUtilityFunction(
       Platform *platform,
-      llvm::function_ref<std::unique_ptr<UtilityFunction>()> factory);
+      llvm::function_ref<llvm::Expected<std::unique_ptr<UtilityFunction>>()>
+          factory);
 
   /// Get the dynamic loader plug-in for this process.
   ///
@@ -1864,6 +1867,10 @@ public:
     return LLDB_INVALID_ADDRESS;
   }
 
+  /// Determines whether DoAllocateMemory is expected to succeed, without
+  /// running code in the process.
+  virtual bool DoCanAllocateMemory() { return false; }
+
   virtual Status WriteObjectFile(std::vector<ObjectFile::LoadableData> entries);
 
   /// The public interface to allocating memory in the process.
@@ -2663,10 +2670,27 @@ void PruneThreadPlans();
   ///     assumed to be valid and will be managed by the newly created
   ///     connection.
   ///
+  /// \param[in] secondary_fd A descriptor for the secondary side of that same
+  ///     terminal as file_descriptor. This is used to keep the terminal (and
+  ///     its output buffer alive). The process takes ownership of it and keeps
+  ///     it open until it stops monitoring fd.
+  ///
+  ///     Pass std::nullopt if fd is not a pseudo terminal or no such
+  ///     descriptor is available.
+  ///
   /// \see lldb_private::Process::STDIOReadThreadBytesReceived()
   /// \see lldb_private::IOHandlerProcessSTDIO
   /// \see lldb_private::ConnectionFileDescriptor
-  void SetSTDIOFileDescriptor(int file_descriptor);
+  void SetSTDIOFileDescriptor(int file_descriptor,
+                              std::optional<int> secondary_fd = std::nullopt);
+
+#if !defined(_WIN32)
+  /// Associates the primary side of \a pty with the process' STDIO handling.
+  /// The process takes ownership of both of \a pty's descriptors.
+  ///
+  /// \see SetSTDIOFileDescriptor()
+  void SetSTDIOPseudoTerminal(PseudoTerminal &pty);
+#endif
 
   // Add a permanent region of memory that should never be read or written to.
   // This can be used to ensure that memory reads or writes to certain areas of
@@ -3520,6 +3544,9 @@ protected:
   mutable std::mutex m_process_input_reader_mutex;
   ThreadedCommunication m_stdio_communication;
   std::recursive_mutex m_stdio_communication_mutex;
+  /// The secondary side of the pseudo terminal the inferior uses for stdio.
+  /// std::nullopt if no pseudo terminal is open.
+  Guarded<std::optional<int>, std::mutex> m_stdio_secondary_fd;
   bool m_stdin_forward; /// Remember if stdin must be forwarded to remote debug
                         /// server
   std::string m_stdout_data;
@@ -3590,6 +3617,9 @@ protected:
 
   std::unique_ptr<UtilityFunction> m_dlopen_utility_func_up;
   llvm::once_flag m_dlopen_utility_func_flag_once;
+  /// The error from the one attempt to create m_dlopen_utility_func_up,
+  /// set only if that attempt failed.
+  Status m_dlopen_utility_func_error;
 
   /// Per process source file cache.
   SourceManager::SourceFileCache m_source_file_cache;
@@ -3679,6 +3709,15 @@ protected:
 
   static void STDIOReadThreadBytesReceived(void *baton, const void *src,
                                            size_t src_len);
+
+  /// Stop monitoring the process' stdio.
+  ///
+  /// \param drain
+  ///     Whether to read any remaining stdio buffers before.
+  void StopSTDIOMonitoring(bool drain);
+
+  /// Close m_stdio_secondary_fd if it is still open.
+  void CloseSTDIOSecondaryFileDescriptor();
 
   bool PushProcessIOHandler();
 

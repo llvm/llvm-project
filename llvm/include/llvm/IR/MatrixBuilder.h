@@ -32,7 +32,7 @@ class Module;
 
 class MatrixBuilder {
   IRBuilderBase &B;
-  Module *getModule() { return B.GetInsertBlock()->getParent()->getParent(); }
+  Module *getModule() { return B.getModule(); }
 
   std::pair<Value *, Value *> splatScalarOperandIfNeeded(Value *LHS,
                                                          Value *RHS) {
