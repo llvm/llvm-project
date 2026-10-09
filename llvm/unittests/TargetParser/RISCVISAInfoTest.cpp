@@ -89,6 +89,9 @@ TEST(ParseNormalizedArchString, DuplicateExtension) {
         toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
         "duplicate extension 'a'");
   }
+  EXPECT_EQ(toString(RISCVISAInfo::parseNormalizedArchString("rv64y0p910_i2p1")
+                         .takeError()),
+            "duplicate extension 'i'");
 }
 
 TEST(ParseNormalizedArchString, AcceptsValidBaseISAsAndSetsXLen) {

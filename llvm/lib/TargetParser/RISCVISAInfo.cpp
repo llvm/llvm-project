@@ -12,6 +12,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <atomic>
@@ -1057,10 +1058,14 @@ std::string RISCVISAInfo::toString() const {
   ListSeparator LS("_");
   for (auto const &Ext : Exts) {
     StringRef ExtName = Ext.first;
-    // Plain 'y' always implies 'i' (which is omitted in the normalized arch
-    // string). Y+E requires a long base name arch string.
-    if (HasY && ExtName == "i")
-      continue;
+    if (HasY) {
+      // Plain 'y' always implies 'i' (which is omitted in the normalized arch
+      // string). Y+E requires a long base name arch string.
+      if (ExtName == "i")
+        continue;
+      if (ExtName == "e")
+        reportFatalUsageError("Y+E is not supported yet");
+    }
     auto ExtInfo = Ext.second;
     Arch << LS << ExtName;
     Arch << ExtInfo.Major << "p" << ExtInfo.Minor;
