@@ -1114,18 +1114,6 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     return emitBuiltinWithOneOverloadedType<5>(
                expr, "amdgcn.raw.ptr.buffer.atomic.fmax")
         .getValue();
-  case AMDGPU::BI__builtin_amdgcn_s_prefetch_data: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
-  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f64: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
   case AMDGPU::BI__builtin_amdgcn_s_prefetch_data:
     return emitBuiltinWithOneOverloadedType<2>(
                expr, "amdgcn.s.prefetch.data",
