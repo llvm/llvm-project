@@ -957,6 +957,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   getActionDefinitionsBuilder(G_STACKRESTORE)
     .legalFor({PrivatePtr});
 
+  getActionDefinitionsBuilder(G_WRITE_REGISTER).legalFor({S32, S64});
+
   getActionDefinitionsBuilder({G_GET_FPENV, G_SET_FPENV}).customFor({S64});
 
   getActionDefinitionsBuilder({G_GET_ROUNDING, G_SET_ROUNDING}).legalFor({S32});
@@ -993,14 +995,20 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
 
   if (ST.hasBF16PackedInsts()) {
-    FPOpActions.legalFor({V2BF16}).clampMaxNumElementsStrict(0, BF16, 2);
-    FCanonicalizeActions.legalFor({V2BF16}).clampMaxNumElementsStrict(0, BF16,
-                                                                      2);
-    StrictFPOpActions.legalFor({V2BF16}).clampMaxNumElementsStrict(0, BF16, 2);
+    // Promote scalar bf16 operations to v2bf16 (packed) operations
+    FPOpActions.moreElementsIf(typeIs(0, BF16), changeTo(0, V2BF16))
+        .legalFor({V2BF16})
+        .clampMaxNumElementsStrict(0, BF16, 2);
+    FCanonicalizeActions.moreElementsIf(typeIs(0, BF16), changeTo(0, V2BF16))
+        .legalFor({V2BF16})
+        .clampMaxNumElementsStrict(0, BF16, 2);
+    StrictFPOpActions.moreElementsIf(typeIs(0, BF16), changeTo(0, V2BF16))
+        .legalFor({V2BF16})
+        .clampMaxNumElementsStrict(0, BF16, 2);
+  } else {
+    FPOpActions.widenScalarFor({BF16}, changeElementTo(0, F32));
+    FCanonicalizeActions.widenScalarFor({BF16}, changeElementTo(0, F32));
   }
-
-  FPOpActions.widenScalarFor({BF16}, changeElementTo(0, F32));
-  FCanonicalizeActions.widenScalarFor({BF16}, changeElementTo(0, F32));
 
   if (ST.hasAnyPackedFP32Ops()) {
     FPOpActions.legalFor({V2F32});
@@ -1056,7 +1064,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   // V2BF16
   if (ST.hasBF16PackedInsts()) {
     MinNumMaxNumIeee.legalFor({V2BF16}).clampMaxNumElementsStrict(0, BF16, 2);
-    MinNumMaxNum.customFor({V2BF16}).clampMaxNumElementsStrict(0, BF16, 2);
+    MinNumMaxNum.moreElementsIf(typeIs(0, BF16), changeTo(0, V2BF16))
+        .customFor({V2BF16})
+        .clampMaxNumElementsStrict(0, BF16, 2);
+  } else {
+    MinNumMaxNum.widenScalarFor({BF16}, changeElementTo(0, F32));
   }
 
   MinNumMaxNumIeee.scalarize(0);
@@ -1195,7 +1207,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
 
   if (ST.hasBF16PackedInsts()) {
-    FSubActions.lowerFor({V2BF16}).clampMaxNumElementsStrict(0, BF16, 2);
+    FSubActions.moreElementsIf(typeIs(0, BF16), changeTo(0, V2BF16))
+        .lowerFor({V2BF16})
+        .clampMaxNumElementsStrict(0, BF16, 2);
+  } else {
+    FSubActions.widenScalarFor({BF16}, changeElementTo(0, F32));
   }
 
   if (ST.hasAnyPackedFP32Ops())
@@ -1258,7 +1274,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                     .legalFor({{I32, F32}, {I32, F64}})
                     .customFor({{I64, F32}, {I64, F64}})
                     .widenScalarFor({{I32, F16}}, changeElementSizeTo(1, F32))
-                    .narrowScalarFor({{I64, F16}}, changeElementSizeTo(0, I32));
+                    .narrowScalarFor({{I64, F16}}, changeElementSizeTo(0, I32))
+                    .widenScalarFor({{I16, BF16}, {I32, BF16}, {I64, BF16}},
+                                    changeElementTo(1, F32));
   if (ST.has16BitInsts())
     FPToI.legalFor({{I16, F16}});
   else
@@ -1366,7 +1384,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   if (ST.hasSALUFloatInsts())
     FCmpBuilder.legalForCartesianProduct({I32}, {F16, F32});
 
-  FCmpBuilder.widenScalarToNextPow2(1).minScalar(1, F32).scalarize(0);
+  FCmpBuilder.widenScalarFor({{I1, BF16}}, changeElementTo(1, F32))
+      .widenScalarToNextPow2(1)
+      .minScalar(1, F32)
+      .scalarize(0);
 
   getActionDefinitionsBuilder(G_FPOW)
       .customFor({F32})
@@ -1712,16 +1733,16 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
               // Split extloads.
               if (DstSize > MemSize)
-                return std::pair(0, LLT::scalar(MemSize));
+                return std::pair(0, LLT::integer(MemSize));
 
               unsigned MaxSize = maxSizeForAddrSpace(
                   ST, PtrTy.getAddressSpace(), Op == G_LOAD,
                   Query.MMODescrs[0].Ordering != AtomicOrdering::NotAtomic);
               if (MemSize > MaxSize)
-                return std::pair(0, LLT::scalar(MaxSize));
+                return std::pair(0, LLT::integer(MaxSize));
 
               uint64_t Align = Query.MMODescrs[0].AlignInBits;
-              return std::pair(0, LLT::scalar(Align));
+              return std::pair(0, LLT::integer(Align));
             })
         .fewerElementsIf(
             [=](const LegalityQuery &Query) -> bool {
@@ -2271,7 +2292,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
        G_FCOPYSIGN,
 
        G_ATOMIC_CMPXCHG_WITH_SUCCESS, G_ATOMICRMW_NAND, G_ATOMICRMW_FSUB,
-       G_READ_REGISTER, G_WRITE_REGISTER,
+       G_READ_REGISTER,
 
        G_SADDO, G_SSUBO})
       .lower();
@@ -6531,35 +6552,6 @@ bool AMDGPULegalizerInfo::legalizeImplicitArgPtr(MachineInstr &MI,
   return true;
 }
 
-bool AMDGPULegalizerInfo::getLDSKernelId(Register DstReg,
-                                         MachineRegisterInfo &MRI,
-                                         MachineIRBuilder &B) const {
-  Function &F = B.getMF().getFunction();
-  std::optional<uint32_t> KnownSize =
-      AMDGPUMachineFunctionInfo::getLDSKernelIdMetadata(F);
-  if (KnownSize.has_value())
-    B.buildConstant(DstReg, *KnownSize);
-  return false;
-}
-
-bool AMDGPULegalizerInfo::legalizeLDSKernelId(MachineInstr &MI,
-                                              MachineRegisterInfo &MRI,
-                                              MachineIRBuilder &B) const {
-
-  const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
-  if (!MFI->isEntryFunction()) {
-    return legalizePreloadedArgIntrin(MI, MRI, B,
-                                      AMDGPUFunctionArgInfo::LDS_KERNEL_ID);
-  }
-
-  Register DstReg = MI.getOperand(0).getReg();
-  if (!getLDSKernelId(DstReg, MRI, B))
-    return false;
-
-  MI.eraseFromParent();
-  return true;
-}
-
 bool AMDGPULegalizerInfo::legalizeIsAddrSpace(MachineInstr &MI,
                                               MachineRegisterInfo &MRI,
                                               MachineIRBuilder &B,
@@ -6727,11 +6719,14 @@ Register AMDGPULegalizerInfo::fixStoreSourceType(MachineIRBuilder &B,
     Ty = getBitcastRegisterType(Ty);
     VData = B.buildBitcast(Ty, VData).getReg(0);
   }
-  // Fixup illegal register types for i8 stores.
-  if (Ty == LLT::integer(8) || Ty == LLT::integer(16) || Ty == F16) {
-    Register AnyExt = B.buildAnyExt(LLT::integer(32), VData).getReg(0);
-    return AnyExt;
+  if (Ty.isFloat(16)) {
+    Ty = LLT::integer(16);
+    VData = B.buildBitcast(Ty, VData).getReg(0);
   }
+
+  // Fixup illegal register types for i8 stores.
+  if (Ty == LLT::integer(8) || Ty == LLT::integer(16))
+    return B.buildAnyExt(LLT::integer(32), VData).getReg(0);
 
   if (Ty.isVector()) {
     if (Ty.getElementType().getSizeInBits() == 16 && Ty.getNumElements() <= 4) {

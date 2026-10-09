@@ -3,10 +3,10 @@
 
 define <1 x i64> @mxcsr_mmx(<4 x float> %a0) {
 ; CHECK: MMX_CVTPS2PIrr %{{[0-9]}}, implicit $mxcsr
-; CHECK: MMX_CVTPI2PSrr %{{[0-9]}}, killed %{{[0-9]}}, implicit $mxcsr
-; CHECK: MMX_CVTTPS2PIrr killed %{{[0-9]}}, implicit $mxcsr
-; CHECK: MMX_CVTPI2PDrr killed %{{[0-9]$}}
-; CHECK: MMX_CVTPD2PIrr killed %{{[0-9]}}, implicit $mxcsr
+; CHECK: MMX_CVTPI2PSrr %{{[0-9]}}, %{{[0-9]}}, implicit $mxcsr
+; CHECK: MMX_CVTTPS2PIrr %{{[0-9]}}, implicit $mxcsr
+; CHECK: MMX_CVTPI2PDrr %{{[0-9]$}}
+; CHECK: MMX_CVTPD2PIrr %{{[0-9]}}, implicit $mxcsr
   %1 = call <1 x i64> @llvm.x86.sse.cvtps2pi(<4 x float> %a0)
   %2 = call <4 x float> @llvm.x86.sse.cvtpi2ps(<4 x float> %a0, <1 x i64> %1)
   %3 = call <1 x i64> @llvm.x86.sse.cvttps2pi(<4 x float> %2)

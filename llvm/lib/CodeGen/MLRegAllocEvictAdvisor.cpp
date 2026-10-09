@@ -39,6 +39,7 @@
 #include "llvm/Support/ErrorHandling.h"
 
 #include <bitset>
+#include <cmath>
 #include <memory>
 
 using namespace llvm;
@@ -551,13 +552,16 @@ public:
 
   void logRewardIfNeeded(const MachineFunction &MF,
                          llvm::function_ref<float()> GetReward) override {
-    if (!Log || !Log->hasAnyObservationForContext(MF.getName()))
+    if (!Log)
+      return;
+    std::string Ctx = getContextName(MF);
+    if (!Log->hasAnyObservationForContext(Ctx))
       return;
     // The function pass manager would run all the function passes for a
     // function, so we assume the last context belongs to this function. If
     // this invariant ever changes, we can implement at that time switching
     // contexts. At this point, it'd be an error
-    if (Log->currentContext() != MF.getName()) {
+    if (Log->currentContext() != Ctx) {
       MF.getFunction().getContext().emitError(
           "The training log context shouldn't have had changed.");
     }
@@ -570,8 +574,10 @@ public:
              MachineBlockFrequencyInfo *MBFI, MachineLoopInfo *Loops) override {
     if (!Runner)
       return nullptr;
-    if (Log)
-      Log->switchContext(MF.getName());
+    if (Log && LastFunctionNumber != MF.getFunctionNumber()) {
+      LastFunctionNumber = MF.getFunctionNumber();
+      Log->switchContext(getContextName(MF));
+    }
     assert(MBFI && Loops &&
            "Invalid provider state: must have analysis available");
     return std::make_unique<DevelopmentModeEvictAdvisor>(
@@ -584,6 +590,11 @@ private:
 
   std::unique_ptr<MLModelRunner> Runner;
   std::unique_ptr<Logger> Log;
+  std::optional<unsigned> LastFunctionNumber;
+
+  static std::string getContextName(const MachineFunction &MF) {
+    return getLoggerContextName(MF.getName(), MF.getFunctionNumber());
+  }
 };
 
 class DevelopmentModeEvictionAdvisorAnalysisLegacy final
@@ -817,7 +828,8 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
     if (DoNotNormalize.test(FeatureIndex))
       continue;
     for (size_t Pos = 0; Pos < NumColumns; ++Pos) {
-      Runner->getTensor<float>(FeatureIndex)[Pos] /= Largest[FeatureIndex];
+      float &V = Runner->getTensor<float>(FeatureIndex)[Pos];
+      V = std::isinf(V) ? 1.0f : V / Largest[FeatureIndex];
     }
   }
   *Runner->getTensor<float>(FeatureIDs::progress) =
@@ -969,9 +981,9 @@ void MLEvictAdvisor::extractFeatures(
 #define SET(ID, TYPE, VAL)                                                     \
   do {                                                                         \
     Runner->getTensor<TYPE>(FeatureIDs::ID)[Pos] = static_cast<TYPE>(VAL);     \
-    if (!DoNotNormalize.test(FeatureIDs::ID))                                  \
-      Largest[FeatureIDs::ID] =                                                \
-          std::max(Largest[FeatureIDs::ID], static_cast<float>(VAL));          \
+    float F = static_cast<float>(VAL);                                         \
+    if (!DoNotNormalize.test(FeatureIDs::ID) && !std::isinf(F))                \
+      Largest[FeatureIDs::ID] = std::max(Largest[FeatureIDs::ID], F);          \
   } while (false)
   SET(mask, int64_t, 1);
   SET(is_free, int64_t, Intervals.empty());
