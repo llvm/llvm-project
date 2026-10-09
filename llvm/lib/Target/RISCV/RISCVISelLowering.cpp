@@ -28279,6 +28279,11 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFunction::CallSiteInfo CSInfo;
 
+  if (auto *GA = dyn_cast<GlobalAddressSDNode>(Callee))
+    checkRISCVStateCall(MF.getFunction(), GA->getGlobal());
+  else if (auto *ES = dyn_cast<ExternalSymbolSDNode>(Callee))
+    checkRISCVStateCall(MF.getFunction(), ES->getSymbol());
+
   // Set type id for call site info.
   setTypeIdForCallsiteInfo(CB, MF, CSInfo);
 

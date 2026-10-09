@@ -590,6 +590,12 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   const RISCVSubtarget &Subtarget =
       MIRBuilder.getMF().getSubtarget<RISCVSubtarget>();
+
+  if (Info.Callee.isGlobal())
+    checkRISCVStateCall(MF.getFunction(), Info.Callee.getGlobal());
+  else if (Info.Callee.isSymbol())
+    checkRISCVStateCall(MF.getFunction(), Info.Callee.getSymbolName());
+
   for (auto &AInfo : Info.OrigArgs) {
     if (!isSupportedArgumentType(AInfo.Ty, Subtarget))
       return false;

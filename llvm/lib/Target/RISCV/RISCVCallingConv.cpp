@@ -12,11 +12,32 @@
 
 #include "RISCVCallingConv.h"
 #include "RISCVMachineFunctionInfo.h"
+#include "RISCVStateAttributes.h"
 #include "RISCVSubtarget.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/MC/MCRegister.h"
 
 using namespace llvm;
+
+void llvm::checkRISCVStateCall(const Function &Caller, StringRef CalleeName) {
+  if (!RISCVState::hasAttribute(Caller))
+    return;
+
+  std::string Message = (Caller.getName() + ": cannot emit call to '" +
+                         CalleeName + "' from an RISC-V attributed function.")
+                            .str();
+  Caller.getContext().diagnose(DiagnosticInfoGeneric(Message));
+}
+
+void llvm::checkRISCVStateCall(const Function &Caller,
+                               const GlobalValue *Callee) {
+  const auto *CalleeFn = dyn_cast_or_null<Function>(Callee);
+  if (CalleeFn && RISCVState::hasAttribute(*CalleeFn))
+    return;
+
+  if (Callee)
+    checkRISCVStateCall(Caller, Callee->getName());
+}
 
 // This does not have the regular `CCAssignFn` signature, it has an extra
 // `bool IsRet` parameter.
