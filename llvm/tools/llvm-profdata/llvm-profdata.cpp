@@ -3616,7 +3616,7 @@ static Error order_main() {
       IdToPageNumber[Node.Id] = IdToPageNumber.size() / 32;
 
     SmallSet<unsigned, 0> TouchedPages;
-    unsigned Area = 0;
+    uint64_t Area = 0;
     for (auto &Trace : TestTraces) {
       for (auto Id : Trace.FunctionNameRefs) {
         auto It = IdToPageNumber.find(Id);
@@ -3627,7 +3627,8 @@ static Error order_main() {
       }
       TouchedPages.clear();
     }
-    OS << "# Total area under the page fault curve: " << (float)Area << "\n";
+    OS << "# Average area under the page fault curve: "
+       << (float)Area / TestTraces.size() << "\n";
   }
   OS << "# Warning: Mach-O may prefix symbols with \"_\" depending on the "
         "linkage and this output does not take that into account. Some "
