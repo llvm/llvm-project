@@ -10,6 +10,7 @@
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/IR/DIBuilder.h"
 
 // Check that we are able to track bits through PHIs
 // and get the intersections of everything we know on each operand.
@@ -2588,6 +2589,96 @@ TEST_F(AArch64GISelMITest, SimplifyDemandedBitsThroughShl) {
   Register InnerDst = Inner->getOperand(0).getReg();
   simplifyDemandedBitsOperand(*MF, B, *Use, APInt(32, 0xFFF));
   EXPECT_TRUE(MRI->use_nodbg_empty(InnerDst));
+}
+
+TEST_F(AArch64GISelMITest, SimplifyDemandedBitsDropsPoisonFlagsAfterProbe) {
+  StringRef MIRString = R"(
+    %x:_(i32) = G_TRUNC %0
+    %mask:_(i32) = G_CONSTANT i32 -8
+    %masked:_(i32) = G_AND %x, %mask
+    %one:_(i32) = G_CONSTANT i32 1
+    %four:_(i32) = G_CONSTANT i32 4
+    %shl:_(i32) = nuw nsw G_SHL %masked, %one
+    %lshr:_(i32) = exact G_LSHR %shl, %four
+    %out:_(i32) = COPY %lshr
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  MachineInstr *Shl = findOpcode(*MF, TargetOpcode::G_SHL);
+  MachineInstr *LShr = findOpcode(*MF, TargetOpcode::G_LSHR);
+  ASSERT_NE(Shl, nullptr);
+  ASSERT_NE(LShr, nullptr);
+  Register Masked = Shl->getOperand(1).getReg();
+  Register X = MRI->getVRegDef(Masked)->getOperand(1).getReg();
+  Register ShlReg = Shl->getOperand(0).getReg();
+
+  DIBuilder DIB(*MF->getFunction().getParent());
+  DIFile *File = DIB.createFile("test.c", "/");
+  DIB.createCompileUnit(DISourceLanguageName(dwarf::DW_LANG_C), File, "", false,
+                        "", 0);
+  auto *SP =
+      DIB.createFunction(File, "func", "", File, 1,
+                         DIB.createSubroutineType(DIB.getOrCreateTypeArray({})),
+                         1, DINode::FlagZero, DISubprogram::SPFlagDefinition);
+  MF->getFunction().setSubprogram(SP);
+  auto *Int = DIB.createBasicType("int", 32, dwarf::DW_ATE_signed);
+  B.setDebugLoc(DILocation::get(Context, 1, 0, SP));
+  auto BuildDbgValue = [&](Register Reg, StringRef Name) {
+    return B
+        .buildDirectDbgValue(Reg,
+                             DIB.createAutoVariable(SP, Name, File, 1, Int),
+                             DIB.createExpression())
+        .getInstr();
+  };
+  MachineInstr *MaskedDbg = BuildDbgValue(Masked, "masked");
+  MachineInstr *ShlDbg = BuildDbgValue(ShlReg, "shifted");
+  Register LShrReg = LShr->getOperand(0).getReg();
+  MachineInstr *LShrDbg = BuildDbgValue(LShrReg, "result");
+  DIB.finalize();
+
+  GISelValueTracking VT(*MF);
+  CombinerHelper Helper(VT, B, /*IsPreLegalize=*/false, &VT);
+  BuildFnTy Apply;
+  ASSERT_TRUE(Helper.matchSimplifyDemandedBits(*LShr, Apply));
+  EXPECT_EQ(Shl->getOperand(1).getReg(), Masked);
+  EXPECT_TRUE(Shl->getFlag(MachineInstr::NoUWrap));
+  EXPECT_TRUE(Shl->getFlag(MachineInstr::NoSWrap));
+  EXPECT_TRUE(LShr->getFlag(MachineInstr::IsExact));
+  EXPECT_EQ(MaskedDbg->getOperand(0).getReg(), Masked);
+  EXPECT_EQ(ShlDbg->getOperand(0).getReg(), ShlReg);
+  EXPECT_EQ(LShrDbg->getOperand(0).getReg(), LShrReg);
+
+  Apply(B);
+  EXPECT_EQ(Shl->getOperand(1).getReg(), X);
+  EXPECT_FALSE(Shl->getFlag(MachineInstr::NoUWrap));
+  EXPECT_FALSE(Shl->getFlag(MachineInstr::NoSWrap));
+  // The outer shift's operand register is unchanged, but its low bits changed.
+  EXPECT_EQ(LShr->getOperand(1).getReg(), ShlReg);
+  EXPECT_FALSE(LShr->getFlag(MachineInstr::IsExact));
+  EXPECT_TRUE(MaskedDbg->isUndefDebugValue());
+  EXPECT_TRUE(ShlDbg->isUndefDebugValue());
+  EXPECT_EQ(LShrDbg->getOperand(0).getReg(), LShrReg);
+}
+
+TEST_F(AArch64GISelMITest, SimplifyDemandedBitsZeroDemandDropsPoisonFlags) {
+  StringRef MIRString = R"(
+    %x:_(i32) = G_TRUNC %0
+    %ones:_(i32) = G_CONSTANT i32 -1
+    %or:_(i32) = disjoint G_OR %x, %ones
+    %out:_(i32) = COPY %or
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  MachineInstr *Or = findOpcode(*MF, TargetOpcode::G_OR);
+  ASSERT_NE(Or, nullptr);
+  simplifyDemandedBitsOperand(*MF, B, *Or, APInt(32, 0));
+  EXPECT_EQ(MRI->getVRegDef(Or->getOperand(1).getReg())->getOpcode(),
+            TargetOpcode::G_IMPLICIT_DEF);
+  EXPECT_FALSE(Or->getFlag(MachineInstr::Disjoint));
 }
 
 TEST_F(AArch64GISelMITest, SimplifyDemandedBitsAshrToLshr) {
