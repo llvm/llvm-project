@@ -914,6 +914,10 @@ features cannot lower the translation-unit ABI level;
   the initializer of another specialization of the same variable template.
   (#GH134148)
 
+- Fixed an assertion failure in partial ordering of function templates whose
+  parameters use pack-indexed template template parameters (`TT...[N]<int>`)
+  with different template parameter lists. (#GH228870)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -999,6 +1003,9 @@ features cannot lower the translation-unit ABI level;
 
   - C2-Pro (`c2-pro`).
   - C2-Ultra (`c2-ultra`).
+
+- Assembler/disassembler support has been added for Armv9.8-A (2026)
+  architecture extensions.
 
 - Added support for pointer authentication discrimination of C++ virtual table
   pointers stored in VTTs via the `-fptrauth-vtt-vtable-pointer-discrimination`
