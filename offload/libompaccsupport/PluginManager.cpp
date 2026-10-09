@@ -652,3 +652,19 @@ Expected<DeviceTy &> PluginManager::getDevice(uint32_t DeviceNo) {
                          "failed to load images on device '%i'", DeviceNo);
   return *DevicePtr;
 }
+
+int PluginManager::getNumActivePlugins() const {
+  int count = 0;
+  if (auto Err = iteratePlatforms(
+          [](ol_platform_handle_t Platform, void *Data) {
+            bool Active = false;
+            if (olGetPlatformInfo(Platform, OL_PLATFORM_INFO_ACTIVE,
+                                  sizeof(Active), &Active) == OL_SUCCESS &&
+                Active)
+              ++(*reinterpret_cast<int *>(Data));
+          },
+          reinterpret_cast<void *>(&count))) {
+    consumeError(std::move(Err));
+  }
+  return count;
+}
