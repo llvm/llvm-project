@@ -725,7 +725,9 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
       // threshold, prevent the range from being evicted. We still let the
       // range through if it is urgent as we are required to produce an
       // eviction if the candidate is not spillable.
-      if (getEvictionCount(Intf->reg()) > MaxEvictionCount && !Urgent)
+      // The cap does not apply when the default advisor decides.
+      if (!isa<NoInferenceModelRunner>(Runner) &&
+          getEvictionCount(Intf->reg()) > MaxEvictionCount && !Urgent)
         return false;
 
       // Only evict older cascades or live ranges without a cascade.
