@@ -5796,11 +5796,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   RUN_VPLAN_PASS(VPlanTransforms::expandBranchOnTwoConds, BestVPlan);
   // Convert loops with variable-length stepping after regions are dissolved.
   RUN_VPLAN_PASS(VPlanTransforms::convertToVariableLengthStep, BestVPlan);
-  // Remove dead back-edges for single-iteration loops with BranchOnCond(true).
-  // Only process loop latches to avoid removing edges from the middle block,
-  // which may be needed for epilogue vectorization.
   RUN_VPLAN_PASS(VPlanTransforms::removeBranchOnConst, BestVPlan,
-                 /*OnlyLatches=*/true);
+                 /*OnlyLatches=*/false);
   RUN_VPLAN_PASS(VPlanTransforms::materializeBackedgeTakenCount, BestVPlan,
                  VectorPH);
   std::optional<uint64_t> MaxRuntimeStep = getMaxRuntimeElementCount(
@@ -7301,19 +7298,18 @@ static void preparePlanForEpilogueVectorLoop(
             Plan.getOrAddLiveIn(ResumeForEpi->getUnderlyingValue()));
 
   VPBasicBlock *VectorPH = Plan.getVectorPreheader();
-  assert(VectorPH->getNumPredecessors() == 2 &&
-         VectorPH->getPredecessors()[0] == EpilogueCheck &&
+  assert(VectorPH->getPredecessors()[0] == EpilogueCheck &&
          "vector preheader must be entered from the epilogue check first");
   // Returns the value to resume at for \p ResumeForEpi: a phi in the vector
   // preheader merging the value computed by the main vector loop with the
   // value used when the main vector loop has been bypassed, or the former if
-  // both are equal.
+  // the main vector loop cannot be bypassed or both are equal.
   auto GetResumeValue = [&](VPInstruction *ResumeForEpi,
                             const Twine &Name) -> VPValue * {
     VPValue *MainV = Plan.getOrAddLiveIn(ResumeForEpi->getUnderlyingValue());
     VPValue *BypassV =
         Plan.getOrAddLiveIn(ResumeForEpi->getOperand(1)->getUnderlyingValue());
-    if (MainV == BypassV)
+    if (VectorPH->getSinglePredecessor() || MainV == BypassV)
       return MainV;
     return VPBuilder(VectorPH, VectorPH->getFirstNonPhi())
         .createScalarPhi({MainV, BypassV}, {}, Name);
@@ -7964,18 +7960,28 @@ bool LoopVectorizePass::processLoop(Loop *L) {
              << ", Epilogue Loop VF:" << EpilogueVF << ", Epilogue Loop UF:1\n";
     });
     InnerLoopVectorizer MainILV(L, PSE, LI, DT, TTI, AC, VF.Width, IC, Checks);
-    // Keep track of the iteration count check of the main vector loop.
-    VPBasicBlock *MainBlocks[] = {cast<VPBasicBlock>(
-        BestMainPlan.getVectorPreheader()->getSinglePredecessor())};
+    // Keep track of the middle block and the iteration count check of the main
+    // vector loop, whose edges to the scalar preheader may get folded.
+    VPBasicBlock *MainBlocks[] = {
+        BestMainPlan.getMiddleBlock(),
+        cast<VPBasicBlock>(
+            BestMainPlan.getVectorPreheader()->getSinglePredecessor())};
     auto ExpandedSCEVs = LVP.executePlan(
         VF.Width, IC, BestMainPlan, MainILV, DT,
         LoopVectorizationPlanner::EpilogueVectorizationKind::MainLoop,
         MainBlocks);
-    VPBasicBlock *MainCheck = MainBlocks[0];
+    auto [MainMiddle, MainCheck] = MainBlocks;
     ++LoopsVectorized;
     DEBUG_WITH_TYPE(VerboseDebug, {
       dbgs() << "intermediate fn:\n" << *L->getHeader()->getParent() << "\n";
     });
+
+    // Skip the epilogue if the middle block no longer branches to the main
+    // scalar preheader, which the epilogue plan is entered from: the main
+    // vector loop either covers all iterations or is dead.
+    if (!is_contained(MainMiddle->getSuccessors(),
+                      BestMainPlan.getScalarPreheader()))
+      return true;
 
     BasicBlock *EntryBB =
         cast<VPIRBasicBlock>(BestMainPlan.getEntry())->getIRBasicBlock();

@@ -38,15 +38,15 @@ define i64 @resume_values(ptr noalias %A, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%{{.+}}> = resume-for-epilogue vp<%n.vec>, ir<0>
-; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = compute-reduction-result (add) ir<%red.next>
+; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = compute-reduction-result (add) ir<%red.next>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<%n.vec>
 ; CHECK-NEXT:    EMIT-SCALAR vp<%{{.+}}> = resume-for-epilogue vp<%n.vec>, ir<0>
-; CHECK-NEXT:    EMIT-SCALAR vp<%{{.+}}> = resume-for-epilogue vp<[[VP8]]>, ir<5>
+; CHECK-NEXT:    EMIT-SCALAR vp<%{{.+}}> = resume-for-epilogue vp<[[VP9]]>, ir<5>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:    IR   %red.next.lcssa = phi i64 [ %red.next, %loop ] (extra operand: vp<[[VP8]]> from middle.block)
+; CHECK-NEXT:    IR   %red.next.lcssa = phi i64 [ %red.next, %loop ] (extra operand: vp<[[VP9]]> from middle.block)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<scalar.ph>:
@@ -204,15 +204,15 @@ define i64 @bypass_blocks(ptr %A, ptr %B, i32 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%{{.+}}> = resume-for-epilogue vp<%n.vec>, ir<0>
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = compute-reduction-result (add) ir<%red.next>
+; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = compute-reduction-result (add) ir<%red.next>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<%n.vec>
 ; CHECK-NEXT:    EMIT-SCALAR vp<%{{.+}}> = resume-for-epilogue vp<%n.vec>, ir<0>
-; CHECK-NEXT:    EMIT-SCALAR vp<%{{.+}}> = resume-for-epilogue vp<[[VP10]]>, ir<0>
+; CHECK-NEXT:    EMIT-SCALAR vp<%{{.+}}> = resume-for-epilogue vp<[[VP11]]>, ir<0>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:    IR   %red.next.lcssa = phi i64 [ %red.next, %loop ] (extra operand: vp<[[VP10]]> from middle.block)
+; CHECK-NEXT:    IR   %red.next.lcssa = phi i64 [ %red.next, %loop ] (extra operand: vp<[[VP11]]> from middle.block)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<scalar.ph>:
@@ -348,8 +348,7 @@ define void @all_iterations_in_main_loop_with_memcheck(ptr %dst, ptr %src) {
 ; CHECK-NEXT:  ir-bb<entry>:
 ; CHECK-NEXT:    IR   %src2 = ptrtoaddr ptr %src to i64
 ; CHECK-NEXT:    IR   %dst1 = ptrtoaddr ptr %dst to i64
-; CHECK-NEXT:    EMIT branch-on-cond ir<false>
-; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.memcheck>
+; CHECK-NEXT:  Successor(s): ir-bb<vector.memcheck>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<vector.memcheck>:
 ; CHECK-NEXT:    IR   %0 = sub i64 %dst1, %src2
@@ -359,8 +358,7 @@ define void @all_iterations_in_main_loop_with_memcheck(ptr %dst, ptr %src) {
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.main.loop.iter.check
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.main.loop.iter.check:
-; CHECK-NEXT:    EMIT branch-on-cond ir<false>
-; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+; CHECK-NEXT:  Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
 ; CHECK-NEXT:  Successor(s): vector.body
@@ -373,15 +371,14 @@ define void @all_iterations_in_main_loop_with_memcheck(ptr %dst, ptr %src) {
 ; CHECK-NEXT:    CLONE ir<%gep.dst> = getelementptr inbounds ir<%dst>, vp<%index>
 ; CHECK-NEXT:    WIDEN store ir<%gep.dst>, ir<%add>
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<8>
-; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = icmp eq vp<%index.next>, ir<16>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP4]]>
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = icmp eq vp<%index.next>, ir<16>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP2]]>
 ; CHECK-NEXT:  Successor(s): middle.block, vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%{{.+}}> = resume-for-epilogue ir<16>, ir<0>
 ; CHECK-NEXT:    EMIT-SCALAR vp<%{{.+}}> = resume-for-epilogue ir<16>, ir<0>
-; CHECK-NEXT:    EMIT branch-on-cond ir<true>
-; CHECK-NEXT:  Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
 ; CHECK-NEXT:  No successors
@@ -400,75 +397,7 @@ define void @all_iterations_in_main_loop_with_memcheck(ptr %dst, ptr %src) {
 ; CHECK-NEXT:    IR   %ec = icmp eq i64 %iv.next, 16
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }
-;
-; CHECK-LABEL: VPlan for loop in 'all_iterations_in_main_loop_with_memcheck'
-; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
-; CHECK-NEXT:  Live-in ir<16> = vector-trip-count
-; CHECK-NEXT:  Live-in ir<16> = original trip-count
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    IR   %src2 = ptrtoaddr ptr %src to i64
-; CHECK-NEXT:    IR   %dst1 = ptrtoaddr ptr %dst to i64
-; CHECK-NEXT:  Successor(s): ir-bb<vec.epilog.scalar.ph>, ir-bb<vector.memcheck>
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<vector.memcheck>:
-; CHECK-NEXT:  Successor(s): ir-bb<vec.epilog.scalar.ph>, ir-bb<vector.main.loop.iter.check>
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<vector.main.loop.iter.check>:
-; CHECK-NEXT:  Successor(s): vec.epilog.ph, ir-bb<vector.ph>
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<vector.ph>:
-; CHECK-NEXT:  Successor(s): ir-bb<vector.body>
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<vector.body>:
-; CHECK-NEXT:  Successor(s): ir-bb<middle.block>
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<middle.block>:
-; CHECK-NEXT:  Successor(s): ir-bb<vec.epilog.iter.check>
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<vec.epilog.iter.check>:
-; CHECK-NEXT:    EMIT vp<%min.epilog.iters.check> = icmp ult ir<0>, ir<4>
-; CHECK-NEXT:    EMIT branch-on-cond vp<%min.epilog.iters.check>
-; CHECK-NEXT:  Successor(s): ir-bb<vec.epilog.scalar.ph>, vec.epilog.ph
-; CHECK-EMPTY:
-; CHECK-NEXT:  vec.epilog.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%vec.epilog.resume.val> = phi [ ir<16>, ir-bb<vec.epilog.iter.check> ], [ ir<0>, ir-bb<vector.main.loop.iter.check> ]
-; CHECK-NEXT:  Successor(s): vec.epilog.vector.body
-; CHECK-EMPTY:
-; CHECK-NEXT:  vec.epilog.vector.body:
-; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ vp<%vec.epilog.resume.val>, vec.epilog.ph ], [ vp<%index.next>, vec.epilog.vector.body ]
-; CHECK-NEXT:    CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<%index>
-; CHECK-NEXT:    WIDEN ir<%l> = load ir<%gep.src>
-; CHECK-NEXT:    WIDEN ir<%add> = add ir<%l>, ir<1>
-; CHECK-NEXT:    CLONE ir<%gep.dst> = getelementptr inbounds ir<%dst>, vp<%index>
-; CHECK-NEXT:    WIDEN store ir<%gep.dst>, ir<%add>
-; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<4>
-; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = icmp eq vp<%index.next>, ir<16>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP2]]>
-; CHECK-NEXT:  Successor(s): vec.epilog.middle.block, vec.epilog.vector.body
-; CHECK-EMPTY:
-; CHECK-NEXT:  vec.epilog.middle.block:
-; CHECK-NEXT:    EMIT branch-on-cond ir<true>
-; CHECK-NEXT:  Successor(s): ir-bb<exit>, ir-bb<vec.epilog.scalar.ph>
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:  No successors
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<vec.epilog.scalar.ph>:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ ir<16>, vec.epilog.middle.block ], [ ir<16>, ir-bb<vec.epilog.iter.check> ], [ ir<0>, ir-bb<vector.memcheck> ], [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT:  Successor(s): ir-bb<loop>
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<loop>:
-; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %vec.epilog.scalar.ph ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from ir-bb<vec.epilog.scalar.ph>)
-; CHECK-NEXT:    IR   %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
-; CHECK-NEXT:    IR   %l = load i32, ptr %gep.src, align 4
-; CHECK-NEXT:    IR   %add = add i32 %l, 1
-; CHECK-NEXT:    IR   %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %iv
-; CHECK-NEXT:    IR   store i32 %add, ptr %gep.dst, align 4
-; CHECK-NEXT:    IR   %iv.next = add i64 %iv, 1
-; CHECK-NEXT:    IR   %ec = icmp eq i64 %iv.next, 16
-; CHECK-NEXT:  No successors
-; CHECK-NEXT:  }
+; CHECK-NOT:   VPlan for loop in 'all_iterations_in_main_loop_with_memcheck'
 ;
 entry:
   br label %loop
@@ -496,8 +425,7 @@ define void @all_iterations_in_main_loop_with_scevcheck(ptr %p, i32 %off) {
 ; CHECK-NEXT:  Live-in ir<16> = vector-trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    EMIT branch-on-cond ir<false>
-; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.scevcheck>
+; CHECK-NEXT:  Successor(s): ir-bb<vector.scevcheck>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<vector.scevcheck>:
 ; CHECK-NEXT:    IR   %0 = add i32 %off, 15
@@ -506,31 +434,29 @@ define void @all_iterations_in_main_loop_with_scevcheck(ptr %p, i32 %off) {
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.main.loop.iter.check
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.main.loop.iter.check:
-; CHECK-NEXT:    EMIT branch-on-cond ir<false>
-; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+; CHECK-NEXT:  Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = add ir<%off>, ir<16>
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = add ir<%off>, ir<16>
 ; CHECK-NEXT:  Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
-; CHECK-NEXT:    EMIT-SCALAR vp<[[VP5:%[0-9]+]]> = trunc vp<%index> to i32
-; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = add ir<%off>, vp<[[VP5]]>
-; CHECK-NEXT:    EMIT-SCALAR ir<%idx> = zext vp<[[VP6]]> to i64
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP3:%[0-9]+]]> = trunc vp<%index> to i32
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = add ir<%off>, vp<[[VP3]]>
+; CHECK-NEXT:    EMIT-SCALAR ir<%idx> = zext vp<[[VP4]]> to i64
 ; CHECK-NEXT:    CLONE ir<%gep> = getelementptr inbounds ir<%p>, ir<%idx>
 ; CHECK-NEXT:    WIDEN store ir<%gep>, ir<1>
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<8>
-; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = icmp eq vp<%index.next>, ir<16>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP7]]>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = icmp eq vp<%index.next>, ir<16>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP5]]>
 ; CHECK-NEXT:  Successor(s): middle.block, vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%{{.+}}> = resume-for-epilogue ir<16>, ir<0>
 ; CHECK-NEXT:    EMIT-SCALAR vp<%{{.+}}> = resume-for-epilogue ir<16>, ir<0>
-; CHECK-NEXT:    EMIT-SCALAR vp<%{{.+}}> = resume-for-epilogue vp<[[VP4]]>, ir<%off>
-; CHECK-NEXT:    EMIT branch-on-cond ir<true>
-; CHECK-NEXT:  Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
+; CHECK-NEXT:    EMIT-SCALAR vp<%{{.+}}> = resume-for-epilogue vp<[[VP2]]>, ir<%off>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
 ; CHECK-NEXT:  No successors
@@ -549,75 +475,7 @@ define void @all_iterations_in_main_loop_with_scevcheck(ptr %p, i32 %off) {
 ; CHECK-NEXT:    IR   %ec = icmp eq i64 %iv.next, 16
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }
-;
-; CHECK-LABEL: VPlan for loop in 'all_iterations_in_main_loop_with_scevcheck'
-; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
-; CHECK-NEXT:  Live-in ir<16> = vector-trip-count
-; CHECK-NEXT:  Live-in ir<16> = original trip-count
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:  Successor(s): ir-bb<vec.epilog.scalar.ph>, ir-bb<vector.scevcheck>
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<vector.scevcheck>:
-; CHECK-NEXT:  Successor(s): ir-bb<vec.epilog.scalar.ph>, ir-bb<vector.main.loop.iter.check>
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<vector.main.loop.iter.check>:
-; CHECK-NEXT:  Successor(s): vec.epilog.ph, ir-bb<vector.ph>
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<vector.ph>:
-; CHECK-NEXT:  Successor(s): ir-bb<vector.body>
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<vector.body>:
-; CHECK-NEXT:  Successor(s): ir-bb<middle.block>
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<middle.block>:
-; CHECK-NEXT:  Successor(s): ir-bb<vec.epilog.iter.check>
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<vec.epilog.iter.check>:
-; CHECK-NEXT:    EMIT vp<%min.epilog.iters.check> = icmp ult ir<0>, ir<4>
-; CHECK-NEXT:    EMIT branch-on-cond vp<%min.epilog.iters.check>
-; CHECK-NEXT:  Successor(s): ir-bb<vec.epilog.scalar.ph>, vec.epilog.ph
-; CHECK-EMPTY:
-; CHECK-NEXT:  vec.epilog.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%vec.epilog.resume.val> = phi [ ir<16>, ir-bb<vec.epilog.iter.check> ], [ ir<0>, ir-bb<vector.main.loop.iter.check> ]
-; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = add ir<%off>, ir<16>
-; CHECK-NEXT:  Successor(s): vec.epilog.vector.body
-; CHECK-EMPTY:
-; CHECK-NEXT:  vec.epilog.vector.body:
-; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ vp<%vec.epilog.resume.val>, vec.epilog.ph ], [ vp<%index.next>, vec.epilog.vector.body ]
-; CHECK-NEXT:    EMIT-SCALAR vp<[[VP3:%[0-9]+]]> = trunc vp<%index> to i32
-; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = add ir<%off>, vp<[[VP3]]>
-; CHECK-NEXT:    EMIT-SCALAR ir<%idx> = zext vp<[[VP4]]> to i64
-; CHECK-NEXT:    CLONE ir<%gep> = getelementptr inbounds ir<%p>, ir<%idx>
-; CHECK-NEXT:    WIDEN store ir<%gep>, ir<1>
-; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<4>
-; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = icmp eq vp<%index.next>, ir<16>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP5]]>
-; CHECK-NEXT:  Successor(s): vec.epilog.middle.block, vec.epilog.vector.body
-; CHECK-EMPTY:
-; CHECK-NEXT:  vec.epilog.middle.block:
-; CHECK-NEXT:    EMIT branch-on-cond ir<true>
-; CHECK-NEXT:  Successor(s): ir-bb<exit>, ir-bb<vec.epilog.scalar.ph>
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:  No successors
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<vec.epilog.scalar.ph>:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ ir<16>, vec.epilog.middle.block ], [ ir<16>, ir-bb<vec.epilog.iter.check> ], [ ir<0>, ir-bb<vector.scevcheck> ], [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val>.1 = phi [ vp<[[VP2]]>, vec.epilog.middle.block ], [ ir<%2>, ir-bb<vec.epilog.iter.check> ], [ ir<%off>, ir-bb<vector.scevcheck> ], [ ir<%off>, ir-bb<entry> ]
-; CHECK-NEXT:  Successor(s): ir-bb<loop>
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<loop>:
-; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %vec.epilog.scalar.ph ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from ir-bb<vec.epilog.scalar.ph>)
-; CHECK-NEXT:    IR   %iv.narrow = phi i32 [ %off, %vec.epilog.scalar.ph ], [ %iv.narrow.next, %loop ] (extra operand: vp<%bc.resume.val>.1 from ir-bb<vec.epilog.scalar.ph>)
-; CHECK-NEXT:    IR   %idx = zext i32 %iv.narrow to i64
-; CHECK-NEXT:    IR   %gep = getelementptr inbounds i32, ptr %p, i64 %idx
-; CHECK-NEXT:    IR   store i32 1, ptr %gep, align 4
-; CHECK-NEXT:    IR   %iv.narrow.next = add i32 %iv.narrow, 1
-; CHECK-NEXT:    IR   %iv.next = add i64 %iv, 1
-; CHECK-NEXT:    IR   %ec = icmp eq i64 %iv.next, 16
-; CHECK-NEXT:  No successors
-; CHECK-NEXT:  }
+; CHECK-NOT:   VPlan for loop in 'all_iterations_in_main_loop_with_scevcheck'
 ;
 entry:
   br label %loop
@@ -651,27 +509,7 @@ define void @dead_main_vector_loop(ptr %dst, i64 %n) {
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.main.loop.iter.check
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.main.loop.iter.check:
-; CHECK-NEXT:    EMIT branch-on-cond ir<true>
-; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
-; CHECK-EMPTY:
-; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = and ir<%clamped>, ir<7>
-; CHECK-NEXT:    EMIT vp<%n.vec> = sub ir<%clamped>, vp<[[VP4]]>
-; CHECK-NEXT:  Successor(s): vector.body
-; CHECK-EMPTY:
-; CHECK-NEXT:  vector.body:
-; CHECK-NEXT:    WIDEN store ir<%dst>, ir<1>
-; CHECK-NEXT:  Successor(s): middle.block
-; CHECK-EMPTY:
-; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT-SCALAR vp<%{{.+}}> = resume-for-epilogue vp<%n.vec>, ir<0>
-; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%clamped>, vp<%n.vec>
-; CHECK-NEXT:    EMIT-SCALAR vp<%{{.+}}> = resume-for-epilogue vp<%n.vec>, ir<0>
-; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
-; CHECK-NEXT:  Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:  No successors
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<scalar.ph>:
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
@@ -684,64 +522,7 @@ define void @dead_main_vector_loop(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    IR   %ec = icmp eq i64 %iv.next, %clamped
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }
-;
-; CHECK-LABEL: VPlan for loop in 'dead_main_vector_loop'
-; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
-; CHECK-NEXT:  Live-in ir<%clamped> = original trip-count
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    IR   %clamped = call i64 @llvm.umin.i64(i64 %n, i64 4)
-; CHECK-NEXT:    IR   %min.iters.check = icmp ult i64 %clamped, 4
-; CHECK-NEXT:  Successor(s): ir-bb<vec.epilog.scalar.ph>, ir-bb<vector.main.loop.iter.check>
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<vector.main.loop.iter.check>:
-; CHECK-NEXT:  Successor(s): vec.epilog.ph, ir-bb<vector.ph>
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<vector.ph>:
-; CHECK-NEXT:  Successor(s): ir-bb<vector.body>
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<vector.body>:
-; CHECK-NEXT:  Successor(s): ir-bb<middle.block>
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<middle.block>:
-; CHECK-NEXT:  Successor(s): ir-bb<vec.epilog.iter.check>
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<vec.epilog.iter.check>:
-; CHECK-NEXT:    EMIT vp<%min.epilog.iters.check> = icmp ult ir<%clamped>, ir<4>
-; CHECK-NEXT:    EMIT branch-on-cond vp<%min.epilog.iters.check>
-; CHECK-NEXT:  Successor(s): ir-bb<vec.epilog.scalar.ph>, vec.epilog.ph
-; CHECK-EMPTY:
-; CHECK-NEXT:  vec.epilog.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%vec.epilog.resume.val> = phi [ ir<0>, ir-bb<vec.epilog.iter.check> ], [ ir<0>, ir-bb<vector.main.loop.iter.check> ]
-; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = and ir<%clamped>, ir<3>
-; CHECK-NEXT:    EMIT vp<%n.vec> = sub ir<%clamped>, vp<[[VP3]]>
-; CHECK-NEXT:  Successor(s): vec.epilog.vector.body
-; CHECK-EMPTY:
-; CHECK-NEXT:  vec.epilog.vector.body:
-; CHECK-NEXT:    CLONE ir<%gep> = getelementptr inbounds ir<%dst>, vp<%vec.epilog.resume.val>
-; CHECK-NEXT:    WIDEN store ir<%gep>, ir<1>
-; CHECK-NEXT:  Successor(s): vec.epilog.middle.block
-; CHECK-EMPTY:
-; CHECK-NEXT:  vec.epilog.middle.block:
-; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%clamped>, vp<%n.vec>
-; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
-; CHECK-NEXT:  Successor(s): ir-bb<exit>, ir-bb<vec.epilog.scalar.ph>
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:  No successors
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<vec.epilog.scalar.ph>:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<%n.vec>, vec.epilog.middle.block ], [ ir<0>, ir-bb<vec.epilog.iter.check> ], [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT:  Successor(s): ir-bb<loop>
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<loop>:
-; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %vec.epilog.scalar.ph ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from ir-bb<vec.epilog.scalar.ph>)
-; CHECK-NEXT:    IR   %gep = getelementptr inbounds i32, ptr %dst, i64 %iv
-; CHECK-NEXT:    IR   store i32 1, ptr %gep, align 4
-; CHECK-NEXT:    IR   %iv.next = add i64 %iv, 1
-; CHECK-NEXT:    IR   %ec = icmp eq i64 %iv.next, %clamped
-; CHECK-NEXT:  No successors
-; CHECK-NEXT:  }
+; CHECK-NOT:   VPlan for loop in 'dead_main_vector_loop'
 ;
 entry:
   %clamped = call i64 @llvm.umin.i64(i64 %n, i64 4)
@@ -923,7 +704,30 @@ done:
 define i32 @any_of_resume(ptr noalias %src, i64 %n) {
 ; CHECK-LABEL: VPlan for loop in 'any_of_resume'
 ; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
-; CHECK:       vec.epilog.ph:
+; CHECK-NEXT:  Live-in ir<%n> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:    IR   %min.iters.check = icmp ult i64 %n, 4
+; CHECK-NEXT:  Successor(s): ir-bb<vec.epilog.scalar.ph>, ir-bb<vector.main.loop.iter.check>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<vector.main.loop.iter.check>:
+; CHECK-NEXT:  Successor(s): vec.epilog.ph, ir-bb<vector.ph>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<vector.ph>:
+; CHECK-NEXT:  Successor(s): ir-bb<vector.body>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<vector.body>:
+; CHECK-NEXT:  Successor(s): ir-bb<middle.block>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<middle.block>:
+; CHECK-NEXT:  Successor(s): ir-bb<vec.epilog.iter.check>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<vec.epilog.iter.check>:
+; CHECK-NEXT:    EMIT vp<%min.epilog.iters.check> = icmp ult ir<%0>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.epilog.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<vec.epilog.scalar.ph>, vec.epilog.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vec.epilog.ph:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%vec.epilog.resume.val> = phi [ ir<%n.vec>, ir-bb<vec.epilog.iter.check> ], [ ir<0>, ir-bb<vector.main.loop.iter.check> ]
 ; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ ir<%rdx.select>, ir-bb<vec.epilog.iter.check> ], [ ir<0>, ir-bb<vector.main.loop.iter.check> ]
 ; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = and ir<%n>, ir<3>
@@ -934,7 +738,44 @@ define i32 @any_of_resume(ptr noalias %src, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vec.epilog.vector.body:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ vp<%vec.epilog.resume.val>, vec.epilog.ph ], [ vp<%index.next>, vec.epilog.vector.body ]
-; CHECK-NEXT:    WIDEN-REDUCTION-PHI ir<%rdx> = phi (any-of) vp<[[VP5]]>, vp<{{.+}}>
+; CHECK-NEXT:    WIDEN-REDUCTION-PHI ir<%rdx> = phi (any-of) vp<[[VP5]]>, vp<[[VP6:%[0-9]+]]>
+; CHECK-NEXT:    CLONE ir<%gep> = getelementptr inbounds ir<%src>, vp<%index>
+; CHECK-NEXT:    WIDEN ir<%l> = load ir<%gep>
+; CHECK-NEXT:    WIDEN ir<%c> = icmp eq ir<%l>, ir<0>
+; CHECK-NEXT:    EMIT vp<[[VP6]]> = or ir<%rdx>, ir<%c>
+; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<4>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = icmp eq vp<%index.next>, vp<%n.vec>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP7]]>
+; CHECK-NEXT:  Successor(s): vec.epilog.middle.block, vec.epilog.vector.body
+; CHECK-EMPTY:
+; CHECK-NEXT:  vec.epilog.middle.block:
+; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = compute-reduction-result (or) vp<[[VP6]]>
+; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = freeze vp<[[VP9]]>
+; CHECK-NEXT:    EMIT vp<%rdx.select> = select vp<[[VP10]]>, ir<1>, ir<0>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<%n.vec>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, ir-bb<vec.epilog.scalar.ph>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>:
+; CHECK-NEXT:    IR   %sel.lcssa = phi i32 [ %sel, %loop ], [ %rdx.select, %middle.block ] (extra operand: vp<%rdx.select> from vec.epilog.middle.block)
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<vec.epilog.scalar.ph>:
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<%n.vec>, vec.epilog.middle.block ], [ ir<%n.vec>, ir-bb<vec.epilog.iter.check> ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx>.1 = phi [ vp<%rdx.select>, vec.epilog.middle.block ], [ ir<%rdx.select>, ir-bb<vec.epilog.iter.check> ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:  Successor(s): ir-bb<loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<loop>:
+; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %vec.epilog.scalar.ph ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from ir-bb<vec.epilog.scalar.ph>)
+; CHECK-NEXT:    IR   %rdx = phi i32 [ 0, %vec.epilog.scalar.ph ], [ %sel, %loop ] (extra operand: vp<%bc.merge.rdx>.1 from ir-bb<vec.epilog.scalar.ph>)
+; CHECK-NEXT:    IR   %gep = getelementptr inbounds i8, ptr %src, i64 %iv
+; CHECK-NEXT:    IR   %l = load i8, ptr %gep, align 1
+; CHECK-NEXT:    IR   %c = icmp eq i8 %l, 0
+; CHECK-NEXT:    IR   %sel = select i1 %c, i32 1, i32 %rdx
+; CHECK-NEXT:    IR   %iv.next = add i64 %iv, 1
+; CHECK-NEXT:    IR   %ec = icmp eq i64 %iv.next, %n
+; CHECK-NEXT:  No successors
+; CHECK-NEXT:  }
 ;
 entry:
   br label %loop
@@ -957,7 +798,30 @@ exit:
 define i64 @find_iv_resume(ptr noalias %a, i64 %n) {
 ; CHECK-LABEL: VPlan for loop in 'find_iv_resume'
 ; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
-; CHECK:       vec.epilog.ph:
+; CHECK-NEXT:  Live-in ir<%n> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:    IR   %min.iters.check = icmp ult i64 %n, 4
+; CHECK-NEXT:  Successor(s): ir-bb<vec.epilog.scalar.ph>, ir-bb<vector.main.loop.iter.check>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<vector.main.loop.iter.check>:
+; CHECK-NEXT:  Successor(s): vec.epilog.ph, ir-bb<vector.ph>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<vector.ph>:
+; CHECK-NEXT:  Successor(s): ir-bb<vector.body>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<vector.body>:
+; CHECK-NEXT:  Successor(s): ir-bb<middle.block>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<middle.block>:
+; CHECK-NEXT:  Successor(s): ir-bb<vec.epilog.iter.check>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<vec.epilog.iter.check>:
+; CHECK-NEXT:    EMIT vp<%min.epilog.iters.check> = icmp ult ir<%0>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.epilog.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<vec.epilog.scalar.ph>, vec.epilog.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vec.epilog.ph:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%vec.epilog.resume.val> = phi [ ir<%n.vec>, ir-bb<vec.epilog.iter.check> ], [ ir<0>, ir-bb<vector.main.loop.iter.check> ]
 ; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ ir<%7>, ir-bb<vec.epilog.iter.check> ], [ ir<3>, ir-bb<vector.main.loop.iter.check> ]
 ; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = and ir<%n>, ir<3>
@@ -965,8 +829,54 @@ define i64 @find_iv_resume(ptr noalias %a, i64 %n) {
 ; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = icmp eq vp<%bc.merge.rdx>, ir<3>
 ; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = select vp<[[VP4]]>, ir<-9223372036854775808>, vp<%bc.merge.rdx>
 ; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = broadcast vp<[[VP5]]>
-; CHECK:       vec.epilog.vector.body:
-; CHECK:         WIDEN-REDUCTION-PHI ir<%rdx> = phi (find-iv) vp<[[VP6]]>, ir<%sel>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = step-vector i64
+; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = broadcast vp<%vec.epilog.resume.val>
+; CHECK-NEXT:    EMIT vp<%induction> = add nuw nsw vp<[[VP8]]>, vp<[[VP7]]>
+; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = broadcast ir<4>
+; CHECK-NEXT:  Successor(s): vec.epilog.vector.body
+; CHECK-EMPTY:
+; CHECK-NEXT:  vec.epilog.vector.body:
+; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ vp<%vec.epilog.resume.val>, vec.epilog.ph ], [ vp<%index.next>, vec.epilog.vector.body ]
+; CHECK-NEXT:    WIDEN-PHI vp<[[VP10:%[0-9]+]]> = phi [ vp<%induction>, vec.epilog.ph ], [ vp<%vec.ind.next>, vec.epilog.vector.body ]
+; CHECK-NEXT:    WIDEN-REDUCTION-PHI ir<%rdx> = phi (find-iv) vp<[[VP6]]>, ir<%sel>
+; CHECK-NEXT:    CLONE ir<%gep> = getelementptr inbounds ir<%a>, vp<%index>
+; CHECK-NEXT:    WIDEN ir<%l> = load ir<%gep>
+; CHECK-NEXT:    WIDEN ir<%c> = icmp eq ir<%l>, ir<3>
+; CHECK-NEXT:    WIDEN ir<%sel> = select ir<%c>, vp<[[VP10]]>, ir<%rdx>
+; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<4>
+; CHECK-NEXT:    EMIT vp<%vec.ind.next> = add nuw nsw vp<[[VP10]]>, vp<[[VP9]]>
+; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = icmp eq vp<%index.next>, vp<%n.vec>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP11]]>
+; CHECK-NEXT:  Successor(s): vec.epilog.middle.block, vec.epilog.vector.body
+; CHECK-EMPTY:
+; CHECK-NEXT:  vec.epilog.middle.block:
+; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = compute-reduction-result (smax) ir<%sel>
+; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = icmp ne vp<[[VP13]]>, ir<-9223372036854775808>
+; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = select vp<[[VP14]]>, vp<[[VP13]]>, ir<3>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<%n.vec>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, ir-bb<vec.epilog.scalar.ph>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>:
+; CHECK-NEXT:    IR   %sel.lcssa = phi i64 [ %sel, %loop ], [ %7, %middle.block ] (extra operand: vp<[[VP15]]> from vec.epilog.middle.block)
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<vec.epilog.scalar.ph>:
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<%n.vec>, vec.epilog.middle.block ], [ ir<%n.vec>, ir-bb<vec.epilog.iter.check> ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx>.1 = phi [ vp<[[VP15]]>, vec.epilog.middle.block ], [ ir<%7>, ir-bb<vec.epilog.iter.check> ], [ ir<3>, ir-bb<entry> ]
+; CHECK-NEXT:  Successor(s): ir-bb<loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<loop>:
+; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %vec.epilog.scalar.ph ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from ir-bb<vec.epilog.scalar.ph>)
+; CHECK-NEXT:    IR   %rdx = phi i64 [ 3, %vec.epilog.scalar.ph ], [ %sel, %loop ] (extra operand: vp<%bc.merge.rdx>.1 from ir-bb<vec.epilog.scalar.ph>)
+; CHECK-NEXT:    IR   %gep = getelementptr inbounds i64, ptr %a, i64 %iv
+; CHECK-NEXT:    IR   %l = load i64, ptr %gep, align 4
+; CHECK-NEXT:    IR   %c = icmp eq i64 %l, 3
+; CHECK-NEXT:    IR   %sel = select i1 %c, i64 %iv, i64 %rdx
+; CHECK-NEXT:    IR   %iv.next = add nuw nsw i64 %iv, 1
+; CHECK-NEXT:    IR   %ec = icmp eq i64 %iv.next, %n
+; CHECK-NEXT:  No successors
+; CHECK-NEXT:  }
 ;
 entry:
   br label %loop

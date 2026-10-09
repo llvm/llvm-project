@@ -97,11 +97,11 @@ exit:
 define float @ordered_reduction_epilogue_single_vector_iterations(ptr %p, i64 %n) "prefer-vector-width"="512" {
 ; CHECK-LABEL: define float @ordered_reduction_epilogue_single_vector_iterations(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ITER_CHECK:.*]]:
+; CHECK-NEXT:  [[ITER_CHECK:.*:]]
 ; CHECK-NEXT:    [[BOUND:%.*]] = call i64 @llvm.umin.i64(i64 [[N]], i64 16)
-; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -118,16 +118,14 @@ define float @ordered_reduction_epilogue_single_vector_iterations(ptr %p, i64 %n
 ; CHECK-NEXT:    [[TMP6:%.*]] = call float @llvm.vector.reduce.fadd.v16f32(float [[TMP5]], <16 x float> [[WIDE_LOAD3]])
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; CHECK-NEXT:    br label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF6:![0-9]+]]
+; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VEC_EPILOG_PH:.*]], !prof [[PROF6:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
-; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 64, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP6]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi float [ [[BC_MERGE_RDX]], %[[VEC_EPILOG_PH]] ], [ [[TMP8:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 64, %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi float [ [[TMP6]], %[[VEC_EPILOG_PH]] ], [ [[TMP8:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr float, ptr [[P]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <16 x float>, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[TMP8]] = call float @llvm.vector.reduce.fadd.v16f32(float [[VEC_PHI]], <16 x float> [[WIDE_LOAD4]])
@@ -135,14 +133,12 @@ define float @ordered_reduction_epilogue_single_vector_iterations(ptr %p, i64 %n
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 80
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 80, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 64, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX5:%.*]] = phi float [ [[TMP8]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP6]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi float [ [[BC_MERGE_RDX5]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[FADD:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 64, %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi float [ [[TMP6]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[FADD:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr float, ptr [[P]], i64 [[IV]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load float, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[FADD]] = fadd float [[RED]], [[LOAD]]
@@ -150,7 +146,7 @@ define float @ordered_reduction_epilogue_single_vector_iterations(ptr %p, i64 %n
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[IV_NEXT]], 80
 ; CHECK-NEXT:    br i1 [[COND]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi float [ [[FADD]], %[[LOOP]] ], [ [[TMP6]], %[[MIDDLE_BLOCK]] ], [ [[TMP8]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi float [ [[FADD]], %[[LOOP]] ], [ [[TMP8]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret float [[RES]]
 ;
 entry:
@@ -175,10 +171,10 @@ exit:
 define float @ordered_reduction_nonzero_start_single_iteration_vector_loops(ptr %p, i64 %n) "prefer-vector-width"="512" {
 ; CHECK-LABEL: define float @ordered_reduction_nonzero_start_single_iteration_vector_loops(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ITER_CHECK:.*]]:
-; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; CHECK-NEXT:  [[ITER_CHECK:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -195,16 +191,14 @@ define float @ordered_reduction_nonzero_start_single_iteration_vector_loops(ptr 
 ; CHECK-NEXT:    [[TMP6:%.*]] = call float @llvm.vector.reduce.fadd.v16f32(float [[TMP5]], <16 x float> [[WIDE_LOAD3]])
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; CHECK-NEXT:    br label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF6]]
+; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VEC_EPILOG_PH:.*]], !prof [[PROF6]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
-; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 64, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP6]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 4.200000e+01, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi float [ [[BC_MERGE_RDX]], %[[VEC_EPILOG_PH]] ], [ [[TMP8:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 64, %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi float [ [[TMP6]], %[[VEC_EPILOG_PH]] ], [ [[TMP8:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr float, ptr [[P]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <16 x float>, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[TMP8]] = call float @llvm.vector.reduce.fadd.v16f32(float [[VEC_PHI]], <16 x float> [[WIDE_LOAD4]])
@@ -212,14 +206,12 @@ define float @ordered_reduction_nonzero_start_single_iteration_vector_loops(ptr 
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 80
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 80, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 64, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX5:%.*]] = phi float [ [[TMP8]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP6]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 4.200000e+01, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi float [ [[BC_MERGE_RDX5]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[FADD:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 64, %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi float [ [[TMP6]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[FADD:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr float, ptr [[P]], i64 [[IV]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load float, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[FADD]] = fadd float [[RED]], [[LOAD]]
@@ -227,7 +219,7 @@ define float @ordered_reduction_nonzero_start_single_iteration_vector_loops(ptr 
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[IV_NEXT]], 80
 ; CHECK-NEXT:    br i1 [[COND]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi float [ [[FADD]], %[[LOOP]] ], [ [[TMP6]], %[[MIDDLE_BLOCK]] ], [ [[TMP8]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi float [ [[FADD]], %[[LOOP]] ], [ [[TMP8]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret float [[RES]]
 ;
 entry:
