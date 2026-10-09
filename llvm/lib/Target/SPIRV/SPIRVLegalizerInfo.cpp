@@ -521,7 +521,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                        LegalizeMutations::changeElementCountTo(
                            1, ElementCount::getFixed(MaxVectorSize)))
       .legalIf(all(typeInSet(0, allBoolScalarsAndVectors),
-                   typeInSet(1, allFloatScalarsAndVectors)));
+                   typeInSet(1, allFloatScalarsAndVectors)))
+      .moreElementsToNextPow2(1);
 
   getActionDefinitionsBuilder({G_ATOMICRMW_OR, G_ATOMICRMW_ADD, G_ATOMICRMW_AND,
                                G_ATOMICRMW_MAX, G_ATOMICRMW_MIN,
@@ -622,7 +623,11 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_FCOPYSIGN)
       .legalForCartesianProduct(allFloatScalarsAndVectors,
-                                allFloatScalarsAndVectors);
+                                allFloatScalarsAndVectors)
+      .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
+                       LegalizeMutations::changeElementCountTo(
+                           0, ElementCount::getFixed(MaxVectorSize)))
+      .moreElementsToNextPow2(0);
 
   getActionDefinitionsBuilder(G_FPOWI).legalForCartesianProduct(
       allFloatScalarsAndVectors, allIntScalarsAndVectors);
