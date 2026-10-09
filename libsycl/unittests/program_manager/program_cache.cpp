@@ -139,7 +139,7 @@ TEST_F(ProgramCacheTest, ContextDestructionDropsCacheEntries) {
   detail::DeviceKernelInfo &Info = getKernelInfo(KernelName);
   EXPECT_NE(Info.tryGetCachedKernel(RawContext, DeviceHandle), nullptr);
 
-  Context.reset(); // Destroy the context, RawContext is dandling now.
+  Context.reset(); // Destroy the context, RawContext is dangling now.
 
   EXPECT_EQ(Info.tryGetCachedKernel(RawContext, DeviceHandle), nullptr);
 }
