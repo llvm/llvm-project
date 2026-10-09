@@ -8873,7 +8873,6 @@ static BasicBlock *allPredecessorsComeFromSameSource(BasicBlock *BB) {
   return PredPred;
 }
 
-
 /// Bypass a PHI-only detour when both paths provide the same values.
 ///
 /// Before:                         After:
@@ -9079,8 +9078,7 @@ bool SimplifyCFGOpt::simplifyCondBranch(CondBrInst *BI, IRBuilder<> &Builder) {
     return requestResimplify();
   }
 
-  if (bypassTrivialSuccessor(BI, DTU, LoopHeaders,
-                             Options.NeedCanonicalLoop))
+  if (bypassTrivialSuccessor(BI, DTU, LoopHeaders, Options.NeedCanonicalLoop))
     return requestResimplify();
 
   // If this basic block is ONLY a compare and a branch, and if a predecessor
