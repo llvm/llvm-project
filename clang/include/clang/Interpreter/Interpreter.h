@@ -59,6 +59,13 @@ public:
 
   void SetTargetTriple(std::string TT) { TargetTriple = TT; }
 
+  /// Set the stream used for informational verbose output. The caller must
+  /// ensure that the stream outlives compiler instances created by this
+  /// builder. Diagnostics are not redirected.
+  void SetVerboseOutputStream(llvm::raw_ostream &OS) {
+    VerboseOutputStream = &OS;
+  }
+
   // General C++
   llvm::Expected<std::unique_ptr<CompilerInstance>> CreateCpp();
 
@@ -84,6 +91,7 @@ private:
 
   std::vector<const char *> UserArgs;
   std::optional<std::string> TargetTriple;
+  llvm::raw_ostream *VerboseOutputStream = nullptr;
 
   llvm::StringRef OffloadArch;
   llvm::StringRef CudaSDKPath;
