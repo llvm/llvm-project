@@ -879,8 +879,58 @@ static bool usedOutsideSplit(Value v, Operation *split) {
   return false;
 }
 
+/// Returns the map block argument of \p targetOp that \p addr is derived from
+/// through fir.declare and fir.convert, or nullptr otherwise.
+static BlockArgument getMappedBlockArg(Value addr, omp::TargetOp targetOp) {
+  while (Operation *def = addr.getDefiningOp()) {
+    if (auto declare = dyn_cast<fir::DeclareOp>(def))
+      addr = declare.getMemref();
+    else if (auto convert = dyn_cast<fir::ConvertOp>(def))
+      addr = convert.getValue();
+    else
+      return nullptr;
+  }
+  auto argIface = cast<omp::BlockArgOpenMPOpInterface>(*targetOp);
+  auto arg = cast<BlockArgument>(addr);
+  return llvm::is_contained(argIface.getMapBlockArgs(), arg) ? arg : nullptr;
+}
+
+/// Returns true if \p addr, or a fir.declare or fir.convert of it, has a user
+/// other than fir.load that runs after \p load and no later than
+/// \p splitBefore. The split op counts since the post target recomputes after
+/// it runs.
+static bool isWrittenAfterLoad(Value addr, fir::LoadOp load,
+                               Operation *splitBefore) {
+  Block *targetBlock = splitBefore->getBlock();
+  for (Operation *user : addr.getUsers()) {
+    if (isa<fir::LoadOp>(user))
+      continue;
+    if (isa<fir::DeclareOp, fir::ConvertOp>(user)) {
+      if (isWrittenAfterLoad(user->getResult(0), load, splitBefore))
+        return true;
+      continue;
+    }
+    Operation *ancestor = targetBlock->findAncestorOpInBlock(*user);
+    if (ancestor && load->isBeforeInBlock(ancestor) &&
+        !splitBefore->isBeforeInBlock(ancestor))
+      return true;
+  }
+  return false;
+}
+
 /// isRecomputableAfterFission checks if an operation can be recomputed
 static bool isRecomputableAfterFission(Operation *op, Operation *splitBefore) {
+  // A descriptor load must be recomputed from the mapped descriptor in each
+  // split target. Caching the box by value captures a host base_addr that the
+  // flat to/from copy cannot re-attach to the device data. Only safe when the
+  // descriptor is not written between the load and the split op.
+  if (auto load = dyn_cast<fir::LoadOp>(op)) {
+    if (isa<fir::BaseBoxType>(load.getType())) {
+      auto targetOp = cast<omp::TargetOp>(splitBefore->getParentOp());
+      BlockArgument arg = getMappedBlockArg(load.getMemref(), targetOp);
+      return arg && !isWrittenAfterLoad(arg, load, splitBefore);
+    }
+  }
   // If the op has side effects, it cannot be recomputed.
   // We consider fir.declare as having no side effects.
   return isa<fir::DeclareOp>(op) || isMemoryEffectFree(op);
