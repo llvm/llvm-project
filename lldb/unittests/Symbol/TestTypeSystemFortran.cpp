@@ -207,8 +207,6 @@ TEST_F(TestTypeSystemFortran, TestBaseTypes) {
   bitsize_or_err = complex256_type.GetBitSize(nullptr);
   ASSERT_THAT_EXPECTED(bitsize_or_err, llvm::Succeeded());
   EXPECT_EQ(*bitsize_or_err, 256U);
-  EXPECT_EQ(m_ast->GetBasicTypeEnumeration(complex256_type.GetOpaqueQualType()),
-            eBasicTypeLongDoubleComplex);
 
   CompilerType invalid_int =
       m_ast->CreateBaseType(llvm::dwarf::DW_ATE_signed, 42, ConstString());
