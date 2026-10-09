@@ -4566,6 +4566,22 @@ private:
     return false;
   }
 
+  // Return true if any instruction reachable from V through pointer-forwarding
+  // uses (GEPs, casts, selects) is volatile.
+  static bool hasVolatileUser(const Value &V) {
+    SmallVector<const Value *, 4> Worklist(V.users());
+    while (!Worklist.empty()) {
+      if (const auto *I = dyn_cast<Instruction>(Worklist.pop_back_val())) {
+        if (I->isVolatile())
+          return true;
+        if (isa<GetElementPtrInst, BitCastInst, AddrSpaceCastInst, SelectInst>(
+                I))
+          append_range(Worklist, I->users());
+      }
+    }
+    return false;
+  }
+
   // Unfold gep (select cond, ptr1, ptr2), idx
   //   => select cond, gep(ptr1, idx), gep(ptr2, idx)
   // and  gep ptr, (select cond, idx1, idx2)
@@ -4574,13 +4590,19 @@ private:
   bool unfoldGEPSelect(GetElementPtrInst &GEPI) {
     // Check whether the GEP has exactly one select operand and all indices
     // will become constant after the transform.
-    Instruction *Sel = dyn_cast<SelectInst>(GEPI.getPointerOperand());
-    for (Value *Op : GEPI.indices()) {
+    Value *PtrOp = GEPI.getPointerOperand();
+    Instruction *Sel = dyn_cast<SelectInst>(PtrOp->stripPointerCasts());
+    bool CrossesAddressSpace =
+        Sel && PtrOp->getType()->getPointerAddressSpace() !=
+                   Sel->getType()->getPointerAddressSpace();
+    unsigned SelOpNum = 0;
+    for (auto &Op : GEPI.indices()) {
       if (auto *SI = dyn_cast<SelectInst>(Op)) {
         if (Sel)
           return false;
 
         Sel = SI;
+        SelOpNum = Op.getOperandNo();
         if (!isa<ConstantInt>(SI->getTrueValue()) ||
             !isa<ConstantInt>(SI->getFalseValue()))
           return false;
@@ -4590,6 +4612,7 @@ private:
         if (Sel)
           return false;
         Sel = ZI;
+        SelOpNum = Op.getOperandNo();
         if (!ZI->getSrcTy()->isIntegerTy(1))
           return false;
         continue;
@@ -4602,17 +4625,18 @@ private:
     if (!Sel)
       return false;
 
+    // Do not duplicate address-space casts for volatile accesses. Unfolding the
+    // GEP can increase code size and register pressure.
+    if (CrossesAddressSpace && hasVolatileUser(GEPI))
+      return false;
+
     LLVM_DEBUG(dbgs() << "  Rewriting gep(select) -> select(gep):\n";
                dbgs() << "    original: " << *Sel << "\n";
                dbgs() << "              " << GEPI << "\n";);
 
     auto GetNewOps = [&](Value *SelOp) {
-      SmallVector<Value *> NewOps;
-      for (Value *Op : GEPI.operands())
-        if (Op == Sel)
-          NewOps.push_back(SelOp);
-        else
-          NewOps.push_back(Op);
+      SmallVector<Value *> NewOps(GEPI.operands());
+      NewOps[SelOpNum] = SelOp;
       return NewOps;
     };
 
@@ -4634,12 +4658,19 @@ private:
     IRB.SetInsertPoint(&GEPI);
     GEPNoWrapFlags NW = GEPI.getNoWrapFlags();
 
+    auto *NTruePtr = TrueOps[0];
+    NTruePtr = IRB.CreateAddrSpaceCast(NTruePtr, GEPI.getPointerOperandType(),
+                                       NTruePtr->getName() + ".cast");
+    auto *NFalsePtr = FalseOps[0];
+    NFalsePtr = IRB.CreateAddrSpaceCast(NFalsePtr, GEPI.getPointerOperandType(),
+                                        NFalsePtr->getName() + ".cast");
+
     Type *Ty = GEPI.getSourceElementType();
-    Value *NTrue = IRB.CreateGEP(Ty, TrueOps[0], ArrayRef(TrueOps).drop_front(),
+    Value *NTrue = IRB.CreateGEP(Ty, NTruePtr, ArrayRef(TrueOps).drop_front(),
                                  True->getName() + ".sroa.gep", NW);
 
     Value *NFalse =
-        IRB.CreateGEP(Ty, FalseOps[0], ArrayRef(FalseOps).drop_front(),
+        IRB.CreateGEP(Ty, NFalsePtr, ArrayRef(FalseOps).drop_front(),
                       False->getName() + ".sroa.gep", NW);
 
     Value *NSel = MDFrom
@@ -4650,7 +4681,11 @@ private:
                             Sel->getName() + ".sroa.sel");
     Visited.erase(&GEPI);
     GEPI.replaceAllUsesWith(NSel);
-    GEPI.eraseFromParent();
+    RecursivelyDeleteTriviallyDeadInstructions(
+        &GEPI, nullptr, nullptr, [&](Value *V) {
+          if (auto *I = dyn_cast<Instruction>(V))
+            Visited.erase(I);
+        });
     Instruction *NSelI = cast<Instruction>(NSel);
     Visited.insert(NSelI);
     enqueueUsers(*NSelI);
