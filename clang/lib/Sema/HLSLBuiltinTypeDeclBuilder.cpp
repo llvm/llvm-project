@@ -433,7 +433,7 @@ TemplateParameterListBuilder::constructConceptSpecializationExpr(
   // Constraint satisfaction is used to construct the
   // ConceptSpecailizationExpr, and represents the 2nd Template Argument,
   // located at the bottom of the sample AST above.
-  const ConstraintSatisfaction CS(CD, {ConceptTA});
+  ConstraintSatisfaction CS;
   TemplateArgumentLoc TAL =
       S.getTrivialTemplateArgumentLoc(ConceptTA, QualType(), SourceLocation());
 

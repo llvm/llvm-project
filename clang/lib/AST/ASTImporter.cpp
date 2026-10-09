@@ -1075,8 +1075,8 @@ StringRef ASTNodeImporter::ImportASTStringRef(StringRef FromStr) {
 
 Error ASTNodeImporter::ImportConstraintSatisfaction(
     const ASTConstraintSatisfaction &FromSat, ConstraintSatisfaction &ToSat) {
-  ToSat.IsSatisfied = FromSat.IsSatisfied;
-  ToSat.ContainsErrors = FromSat.ContainsErrors;
+  ToSat.IsSatisfied = FromSat.isSatisfied();
+  ToSat.ContainsErrors = FromSat.containsErrors();
   if (!ToSat.IsSatisfied) {
     for (auto Record = FromSat.begin(); Record != FromSat.end(); ++Record) {
       if (const Expr *E = Record->dyn_cast<const Expr *>()) {

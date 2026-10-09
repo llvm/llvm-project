@@ -1323,14 +1323,12 @@ bool Sema::CheckConstraintSatisfaction(
 
   llvm::FoldingSetNodeID ID;
   ConstraintSatisfaction::Profile(ID, Context, Owner, FlattenedArgs);
-  llvm::FoldingSetInsertToken Token;
-  if (auto *Cached = SatisfactionCache.lookup(ID, Token)) {
+  if (auto *Cached = SatisfactionCache.lookup(ID)) {
     OutSatisfaction = *Cached;
     return false;
   }
 
-  auto Satisfaction =
-      std::make_unique<ConstraintSatisfaction>(Owner, FlattenedArgs);
+  auto Satisfaction = std::make_unique<ConstraintSatisfaction>();
   if (::CheckConstraintSatisfaction(
           *this, Template, AssociatedConstraints, TemplateArgsLists,
           TemplateIDRange, *Satisfaction, ConvertedExpr, TopLevelConceptId)) {
@@ -1338,7 +1336,7 @@ bool Sema::CheckConstraintSatisfaction(
     return true;
   }
 
-  if (auto *Cached = SatisfactionCache.lookup(ID, Token)) {
+  if (auto *Cached = SatisfactionCache.lookup(ID)) {
     // The evaluation of this constraint resulted in us trying to re-evaluate it
     // recursively. This isn't really possible, except we try to form a
     // RecoveryExpr as a part of the evaluation.  If this is the case, just
@@ -1354,7 +1352,7 @@ bool Sema::CheckConstraintSatisfaction(
   // Else we can simply add this satisfaction to the list.
   OutSatisfaction = *Satisfaction;
   // Note that entries of SatisfactionCache are deleted in Sema's destructor.
-  SatisfactionCache.insert(Satisfaction.release());
+  SatisfactionCache.insert({ID, Satisfaction.release()});
   return false;
 }
 
@@ -2060,7 +2058,7 @@ void Sema::DiagnoseUnsatisfiedConstraint(
   const ASTConstraintSatisfaction &Satisfaction =
       ConstraintExpr->getSatisfaction();
 
-  assert(!Satisfaction.IsSatisfied &&
+  assert(!Satisfaction.isSatisfied() &&
          "Attempted to diagnose a satisfied constraint");
 
   ::DiagnoseUnsatisfiedConstraint(*this, Satisfaction.records(),
