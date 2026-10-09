@@ -1555,6 +1555,103 @@ TEST_F(ScalarEvolutionsTest, ProveImplicationViaNarrowing) {
   });
 }
 
+// x <u y && y >=s 0 --> x >=s 0.
+TEST_F(ScalarEvolutionsTest, ImpliedNonNegativeFromULT) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M =
+      parseAssemblyString("define void @foo(i32 %x, i32 %y, i32 %z, ptr %p) { "
+                          "entry: "
+                          "  %len = load i32, ptr %p, !range !0 "
+                          "  %len.smax = load i32, ptr %p, !range !1 "
+                          "  %len.smin = load i32, ptr %p, !range !2 "
+                          "  %len.big = load i32, ptr %p, !range !3 "
+                          "  %nonpos = load i32, ptr %p, !range !4 "
+                          "  ret void "
+                          "} "
+                          // [0, INT_MAX)
+                          "!0 = !{i32 0, i32 2147483647} "
+                          // [0, INT_MAX]
+                          "!1 = !{i32 0, i32 -2147483648} "
+                          // [0, INT_MIN] as unsigned
+                          "!2 = !{i32 0, i32 -2147483647} "
+                          // [0, INT_MIN + 1] as unsigned
+                          "!3 = !{i32 0, i32 -2147483646} "
+                          // [INT_MIN, 0]
+                          "!4 = !{i32 -2147483648, i32 1} ",
+                          Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    auto GetArg = [&](unsigned I) { return SE.getSCEV(F.getArg(I)); };
+    auto GetInst = [&](StringRef Name) {
+      return SE.getSCEV(getInstructionByName(F, Name));
+    };
+    const SCEV *X = GetArg(0), *Y = GetArg(1), *Z = GetArg(2);
+    const SCEV *Len = GetInst("len");
+    const SCEV *LenSMax = GetInst("len.smax");
+    const SCEV *LenSMin = GetInst("len.smin");
+    const SCEV *LenBig = GetInst("len.big");
+    const SCEV *NonPos = GetInst("nonpos");
+    Type *Ty = X->getType();
+    const SCEV *Zero = SE.getZero(Ty);
+    const SCEV *MinusOne = SE.getMinusOne(Ty);
+    const SCEV *MinusThree = SE.getConstant(Ty, -3, /*isSigned=*/true);
+    const auto SGE = ICmpInst::ICMP_SGE, SGT = ICmpInst::ICMP_SGT;
+    const auto SLT = ICmpInst::ICMP_SLT;
+    const auto ULT = ICmpInst::ICMP_ULT, ULE = ICmpInst::ICMP_ULE;
+    const auto UGT = ICmpInst::ICMP_UGT;
+
+    // FIXME: All the checks down to the mixed widths case should be
+    // EXPECT_TRUE.
+
+    // x <u len  &&  len >=s 0  -->  x >=s 0.
+    EXPECT_FALSE(isImpliedCond(SE, SGE, X, Zero, ULT, X, Len));
+    EXPECT_FALSE(isImpliedCond(SE, SGT, X, MinusOne, ULT, X, Len));
+    EXPECT_FALSE(isImpliedCond(SE, SGE, X, Zero, ULE, X, Len));
+    EXPECT_FALSE(isImpliedCond(SE, SGE, X, Zero, UGT, Len, X));
+
+    // Weaker lower bounds.
+    EXPECT_FALSE(isImpliedCond(SE, SGE, X, MinusThree, ULT, X, Len));
+    EXPECT_FALSE(isImpliedCond(SE, SGE, X, NonPos, ULT, X, Len));
+
+    // len may be INT_MAX.
+    EXPECT_FALSE(isImpliedCond(SE, SGE, X, Zero, ULE, X, LenSMax));
+    // len may be INT_MIN.
+    EXPECT_FALSE(isImpliedCond(SE, SGE, X, Zero, ULT, X, LenSMin));
+
+    // Mixed widths: sext(x) <u zext(len)  -->  x >=s 0.
+    Type *I64 = Type::getInt64Ty(F.getContext());
+    const SCEV *XSExt = SE.getSignExtendExpr(X, I64);
+    const SCEV *LenZExt = SE.getZeroExtendExpr(Len, I64);
+    EXPECT_FALSE(isImpliedCond(SE, SGE, X, Zero, ULT, XSExt, LenZExt));
+
+    // len may be INT_MIN + 1, so x may be INT_MIN.
+    EXPECT_FALSE(isImpliedCond(SE, SGE, X, Zero, ULT, X, LenBig));
+    // len is unconstrained: x = -2 satisfies x <u -1.
+    EXPECT_FALSE(isImpliedCond(SE, SGE, X, Zero, ULT, X, Y));
+
+    // The condition bounds another value, or bounds x only from below.
+    EXPECT_FALSE(isImpliedCond(SE, SGE, X, Zero, ULT, Z, Len));
+    EXPECT_FALSE(isImpliedCond(SE, SGE, X, Zero, ULT, Len, X));
+    // x <s len does not bound x from below: x = -1, len = 0.
+    EXPECT_FALSE(isImpliedCond(SE, SGE, X, Zero, SLT, X, Len));
+
+    // x may be 0.
+    EXPECT_FALSE(isImpliedCond(SE, SGT, X, Zero, ULT, X, Len));
+    // x and nonpos may both be 0.
+    EXPECT_FALSE(isImpliedCond(SE, SGT, X, NonPos, ULT, X, Len));
+    // x <s 0 contradicts x >=s 0.
+    EXPECT_FALSE(isImpliedCond(SE, SLT, X, Zero, ULT, X, Len));
+
+    // TODO: x + 1 >s 0 holds as well.
+    const SCEV *XPlusOne = SE.getAddExpr(X, SE.getOne(Ty), SCEV::FlagNSW);
+    EXPECT_FALSE(isImpliedCond(SE, SGT, XPlusOne, Zero, ULT, X, Len));
+  });
+}
+
 TEST_F(ScalarEvolutionsTest, MatchURem) {
   LLVMContext C;
   SMDiagnostic Err;
