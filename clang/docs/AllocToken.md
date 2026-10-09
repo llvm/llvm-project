@@ -49,11 +49,12 @@ The following command-line options affect generated token IDs:
 
 - `-falloc-token-max=<N>`
   : Configures the maximum number of token IDs. By default the number of tokens
-    is bounded by `SIZE_MAX`. In the `typefunchashpointersplit` and
-    `typefunchash` modes, the number of token IDs is `N` rounded down to a
-    power of two. As an exception, if `N` is of the form `2^k-1`
-    (e.g. the default `SIZE_MAX`), these modes use all `k` bits and token IDs
-    are in `[0, N]`, i.e. a token ID may be equal to `N`.
+    is bounded by `SIZE_MAX`.
+
+    - In the `typefunchashpointersplit` and `typefunchash` modes, the number of
+      token IDs is `N` rounded down to a power of two. As an exception, if `N`
+      is of the form `2^k-1` (e.g. the default `SIZE_MAX`), all `k` bits are
+      used and token IDs are in `[0, N]`, i.e. a token ID may be equal to `N`.
 
 ## Querying Token IDs with `__builtin_infer_alloc_token`
 

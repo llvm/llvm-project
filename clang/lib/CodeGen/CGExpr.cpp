@@ -1347,6 +1347,8 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *ArrayExpr,
             IndexInst);
 }
 
+/// Returns the qualified name of \p D for use as the function name in
+/// !alloc_token metadata, or "" if \p D is null or not a NamedDecl.
 static SmallString<64> getAllocTokenFunctionName(const Decl *D,
                                                  const ASTContext &Ctx) {
   SmallString<64> Name;
