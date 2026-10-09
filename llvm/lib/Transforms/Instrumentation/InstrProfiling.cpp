@@ -245,8 +245,10 @@ static void makeAtomic(Instruction *Load, Instruction *Store) {
   auto *Addend = Addition->getOperand(1);
 
   IRBuilder<> Builder(Load);
-  Builder.CreateAtomicRMW(AtomicRMWInst::Add, Store->getOperand(1), Addend,
-                          MaybeAlign(), AtomicOrdering::Monotonic);
+  Builder
+      .CreateAtomicRMW(AtomicRMWInst::Add, Store->getOperand(1), Addend,
+                       MaybeAlign(), AtomicOrdering::Monotonic)
+      ->setNoSanitizeMetadata();
   Store->eraseFromParent();
   Addition->eraseFromParent();
   Load->eraseFromParent();
@@ -352,8 +354,8 @@ private:
   /// Returns true if profile counter update register promotion is enabled.
   bool isCounterPromotionEnabled() const;
 
-  /// Returns true if profile counter updates should be atomic.
-  bool isAtomic() const;
+  /// Returns true if profile counter updates in \p F should be atomic.
+  bool isAtomic(const Function &F) const;
 
   /// Return true if profile sampling is enabled.
   bool isSamplingEnabled() const;
@@ -518,12 +520,16 @@ public:
       // Generate the relaxed atomic RMW if we've asked for it and no more
       // promotion is possible.
       if ((IsAtomic && !TargetLoop) || AtomicCounterUpdatePromoted)
-        Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, LiveInValue,
-                                MaybeAlign(), AtomicOrdering::Monotonic);
+        Builder
+            .CreateAtomicRMW(AtomicRMWInst::Add, Addr, LiveInValue,
+                             MaybeAlign(), AtomicOrdering::Monotonic)
+            ->setNoSanitizeMetadata();
       else {
         LoadInst *OldVal = Builder.CreateLoad(Ty, Addr, "pgocount.promoted");
+        OldVal->setNoSanitizeMetadata();
         auto *NewVal = Builder.CreateAdd(OldVal, LiveInValue);
         auto *NewStore = Builder.CreateStore(NewVal, Addr);
+        NewStore->setNoSanitizeMetadata();
 
         // Now update the parent loop's candidate list:
         if (TargetLoop)
@@ -953,8 +959,11 @@ bool InstrLowerer::isCounterPromotionEnabled() const {
   return Options.DoCounterPromotion;
 }
 
-bool InstrLowerer::isAtomic() const {
-  return Options.Atomic || AtomicCounterUpdateAll;
+bool InstrLowerer::isAtomic(const Function &F) const {
+  // Non-atomic counter updates are data races, which ThreadSanitizer would
+  // report. Use atomic updates in functions that TSan instruments.
+  return Options.Atomic || AtomicCounterUpdateAll ||
+         F.hasFnAttribute(Attribute::SanitizeThread);
 }
 
 static void doAtomicCheck(Function *F) {
@@ -996,7 +1005,7 @@ void InstrLowerer::promoteCounterLoadStores(Function *F) {
     BasicBlock *BB = CounterLoad->getParent();
     Loop *ParentLoop = LI.getLoopFor(BB);
     if (!ParentLoop) {
-      if (isAtomic())
+      if (isAtomic(*F))
         makeAtomic(CounterLoad, CounterStore);
       continue;
     }
@@ -1009,11 +1018,11 @@ void InstrLowerer::promoteCounterLoadStores(Function *F) {
   // iteratively hoisted outside the loop nest.
   for (auto *Loop : llvm::reverse(Loops)) {
     PGOCounterPromoter Promoter(LoopPromotionCandidates, *Loop, LI, BFI.get(),
-                                isAtomic());
+                                isAtomic(*F));
     Promoter.run(&TotalCountersPromoted);
   }
 
-  if (isAtomic() && VerifyAtomicPromotion)
+  if (isAtomic(*F) && VerifyAtomicPromotion)
     doAtomicCheck(F);
 }
 
@@ -1274,11 +1283,19 @@ Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
 void InstrLowerer::lowerCover(InstrProfCoverInst *CoverInstruction) {
   auto *Addr = getCounterAddress(CoverInstruction);
   IRBuilder<> Builder(CoverInstruction);
+  // Optimizations can merge the counter update with a user access, and then
+  // ThreadSanitizer ends up instrumenting the counter access - and can report
+  // it as a data race. Making updates atomic cures this.
+  bool TSanInstrumented = CoverInstruction->getFunction()->hasFnAttribute(
+      Attribute::SanitizeThread);
   if (ConditionalCounterUpdate) {
     Instruction *SplitBefore = CoverInstruction->getNextNode();
     auto &Ctx = CoverInstruction->getParent()->getContext();
     auto *Int8Ty = llvm::Type::getInt8Ty(Ctx);
-    Value *Load = Builder.CreateLoad(Int8Ty, Addr, "pgocount");
+    auto *Load = Builder.CreateLoad(Int8Ty, Addr, "pgocount");
+    Load->setNoSanitizeMetadata();
+    if (TSanInstrumented)
+      Load->setAtomic(AtomicOrdering::Monotonic);
     Value *Cmp = Builder.CreateIsNotNull(Load, "pgocount.ifnonzero");
     Instruction *ThenBranch =
         SplitBlockAndInsertIfThen(Cmp, SplitBefore, false);
@@ -1286,7 +1303,10 @@ void InstrLowerer::lowerCover(InstrProfCoverInst *CoverInstruction) {
   }
 
   // We store zero to represent that this block is covered.
-  Builder.CreateStore(Builder.getInt8(0), Addr);
+  auto *Store = Builder.CreateStore(Builder.getInt8(0), Addr);
+  Store->setNoSanitizeMetadata();
+  if (TSanInstrumented)
+    Store->setAtomic(AtomicOrdering::Monotonic);
   CoverInstruction->eraseFromParent();
 }
 
@@ -1423,15 +1443,19 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
   auto *Addr = getCounterAddress(Inc);
   // If promotion is enabled then delay generating atomic updates until
   // after promotion is done.
-  if ((!isCounterPromotionEnabled() && isAtomic()) ||
+  if ((!isCounterPromotionEnabled() && isAtomic(*Inc->getFunction())) ||
       (Inc->getIndex()->isNullValue() && AtomicFirstCounter)) {
-    Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, Inc->getStep(),
-                            MaybeAlign(), AtomicOrdering::Monotonic);
+    Builder
+        .CreateAtomicRMW(AtomicRMWInst::Add, Addr, Inc->getStep(), MaybeAlign(),
+                         AtomicOrdering::Monotonic)
+        ->setNoSanitizeMetadata();
   } else {
     Value *IncStep = Inc->getStep();
-    Value *Load = Builder.CreateLoad(IncStep->getType(), Addr, "pgocount");
+    auto *Load = Builder.CreateLoad(IncStep->getType(), Addr, "pgocount");
+    Load->setNoSanitizeMetadata();
     auto *Count = Builder.CreateAdd(Load, Inc->getStep());
     auto *Store = Builder.CreateStore(Count, Addr);
+    Store->setNoSanitizeMetadata();
     if (isCounterPromotionEnabled())
       PromotionCandidates.emplace_back(cast<Instruction>(Load), Store);
   }
@@ -1491,8 +1515,12 @@ void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
   // Load profile bitmap byte.
   //  %mcdc.bits = load i8, ptr %4, align 1
   auto *Bitmap = Builder.CreateLoad(Int8Ty, BitmapByteAddr, "mcdc.bits");
+  Bitmap->setNoSanitizeMetadata();
 
-  if (isAtomic()) {
+  if (isAtomic(*Update->getFunction())) {
+    if (Update->getFunction()->hasFnAttribute(Attribute::SanitizeThread))
+      Bitmap->setAtomic(AtomicOrdering::Monotonic);
+
     // If ((Bitmap & Val) != Val), then execute atomic (Bitmap |= Val).
     // Note, just-loaded Bitmap might not be up-to-date. Use it just for
     // early testing.
@@ -1506,8 +1534,10 @@ void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
 
     // Execute if (unlikely(ShouldStore)).
     Builder.SetInsertPoint(ThenBranch);
-    Builder.CreateAtomicRMW(AtomicRMWInst::Or, BitmapByteAddr, ShiftedVal,
-                            MaybeAlign(), AtomicOrdering::Monotonic);
+    Builder
+        .CreateAtomicRMW(AtomicRMWInst::Or, BitmapByteAddr, ShiftedVal,
+                         MaybeAlign(), AtomicOrdering::Monotonic)
+        ->setNoSanitizeMetadata();
   } else {
     // Perform logical OR of profile bitmap byte and shifted bit offset.
     //  %8 = or i8 %mcdc.bits, %7
@@ -1515,7 +1545,7 @@ void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
 
     // Store the updated profile bitmap byte.
     //  store i8 %8, ptr %3, align 1
-    Builder.CreateStore(Result, BitmapByteAddr);
+    Builder.CreateStore(Result, BitmapByteAddr)->setNoSanitizeMetadata();
   }
 
   Update->eraseFromParent();
