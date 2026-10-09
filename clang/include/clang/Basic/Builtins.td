@@ -3914,44 +3914,37 @@ def VFork : LibBuiltin<"unistd.h"> {
 
 def Umask : LibBuiltin<"sys/stat.h"> {
   let Spellings = ["umask"];
-  let Attributes = [IgnoreSignature, NoThrow];
-  let Prototype = ""; // mode_t(mode_t); mode_t is target-specific
+  let Attributes = [NoThrow];
+  let Prototype = "mode_t(mode_t)";
 }
 
 // POSIX sys/socket.h
 
 def Recv : LibBuiltin<"sys/socket.h"> {
   let Spellings = ["recv"];
-  let Attributes = [IgnoreSignature];
-  // ssize_t(int, void*, size_t, int); ssize_t is target-specific
-  let Prototype = "";
+  let Prototype = "ssize_t(int, void*, size_t, int)";
 }
 
 def RecvFrom : LibBuiltin<"sys/socket.h"> {
   let Spellings = ["recvfrom"];
-  let Attributes = [IgnoreSignature];
-  // ssize_t(int, void*, size_t, int, struct sockaddr*, socklen_t*);
-  // types are target-specific
-  let Prototype = "";
+  let Prototype = "ssize_t(int, void*, size_t, int, struct sockaddr*, socklen_t*)";
 }
 
 // POSIX poll.h
 
 def Poll : LibBuiltin<"poll.h"> {
   let Spellings = ["poll"];
-  let Attributes = [IgnoreSignature];
-  // int(struct pollfd*, nfds_t, int); struct pollfd and nfds_t are
-  // target-specific
-  let Prototype = "";
+  let Prototype = "int(struct pollfd*, nfds_t, int)";
 }
 
 def PPoll : LibBuiltin<"poll.h"> {
-  let Spellings = ["ppoll", "ppoll64"];
-  let Attributes = [IgnoreSignature];
-  // int(struct pollfd*, nfds_t, const struct timespec*, const sigset_t*);
-  // struct pollfd, nfds_t, struct timespec, and sigset_t/sigset64_t are
-  // target-specific
-  let Prototype = "";
+  let Spellings = ["ppoll"];
+  let Prototype = "int(struct pollfd*, nfds_t, const struct timespec*, const sigset_t*)";
+}
+
+def PPoll64 : LibBuiltin<"poll.h"> {
+  let Spellings = ["ppoll64"];
+  let Prototype = "int(struct pollfd*, nfds_t, const struct timespec*, const sigset64_t*)";
 }
 
 // POSIX pthread.h
