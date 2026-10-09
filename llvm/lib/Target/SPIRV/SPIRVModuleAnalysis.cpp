@@ -2868,10 +2868,11 @@ static bool isFastMathModeAvailable(const SPIRVSubtarget &ST) {
   return ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2);
 }
 
-static void handleMIFlagDecoration(
+static bool handleMIFlagDecoration(
     MachineInstr &I, const SPIRVSubtarget &ST, const SPIRVInstrInfo &TII,
     SPIRV::RequirementHandler &Reqs, const SPIRVGlobalRegistry *GR,
     SPIRV::FPFastMathDefaultInfoVector &FPFastMathDefaultInfoVec) {
+  bool Changed = false;
   // Insert after I so that the decorated register is defined before its use.
   MachineBasicBlock::iterator InsertPt = std::next(I.getIterator());
   auto Decorate = [&](SPIRV::Decoration::Decoration Dec,
@@ -2879,6 +2880,7 @@ static void handleMIFlagDecoration(
     MachineIRBuilder MIRBuilder(*I.getParent(), InsertPt);
     MIRBuilder.setDebugLoc(I.getDebugLoc());
     buildOpDecorate(I.getOperand(0).getReg(), MIRBuilder, Dec, DecArgs);
+    Changed = true;
   };
   if (TII.canUseIntegerWrapDecoration(I)) {
     if (I.getFlag(MachineInstr::MIFlag::NoSWrap) &&
@@ -2901,14 +2903,14 @@ static void handleMIFlagDecoration(
           I, ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) ||
       (ST.isKernel() && I.getOpcode() == SPIRV::OpExtInst);
   if (!CanUseFM)
-    return;
+    return Changed;
 
   unsigned FMFlags = getFastMathFlags(I, ST);
   if (FMFlags == SPIRV::FPFastMathMode::None) {
     // We also need to check if any FPFastMathDefault info was set for the
     // types used in this instruction.
     if (FPFastMathDefaultInfoVec.empty())
-      return;
+      return Changed;
 
     // There are three types of instructions that can use fast math flags:
     // 1. Arithmetic instructions (FAdd, FMul, FSub, FDiv, FRem, etc.)
@@ -2943,10 +2945,11 @@ static void handleMIFlagDecoration(
     }
 
     if (FMFlags == SPIRV::FPFastMathMode::None && !Emit)
-      return;
+      return Changed;
   }
   if (isFastMathModeAvailable(ST))
     Decorate(SPIRV::Decoration::FPFastMathMode, {FMFlags});
+  return Changed;
 }
 
 static void addMBBNames(const Module &M, MachineFunctionGetter GetMF,
@@ -3147,7 +3150,7 @@ SPIRVModuleAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
   return MAI;
 }
 
-static void prepareModuleAnalysis(MachineFunction &MF) {
+static bool prepareModuleAnalysis(MachineFunction &MF) {
   const auto &ST = MF.getSubtarget<SPIRVSubtarget>();
   SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
   const SPIRVInstrInfo &TII = *ST.getInstrInfo();
@@ -3157,10 +3160,12 @@ static void prepareModuleAnalysis(MachineFunction &MF) {
   const Function &F = MF.getFunction();
   collectFPFastMathDefaults(*F.getParent(), FPFastMathDefaultInfoMap, ST, &F);
   // Add decorations related to MI flags.
+  bool Changed = false;
   for (auto &MBB : MF)
     for (auto &MI : make_early_inc_range(MBB))
-      handleMIFlagDecoration(MI, ST, TII, Reqs, GR,
-                             FPFastMathDefaultInfoMap[&F]);
+      Changed |= handleMIFlagDecoration(MI, ST, TII, Reqs, GR,
+                                        FPFastMathDefaultInfoMap[&F]);
+  return Changed;
 }
 
 namespace {
@@ -3169,8 +3174,7 @@ public:
   static char ID;
   SPIRVPrepareModuleAnalysisLegacy() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override {
-    prepareModuleAnalysis(MF);
-    return true;
+    return prepareModuleAnalysis(MF);
   }
 };
 } // namespace
@@ -3188,6 +3192,6 @@ FunctionPass *llvm::createSPIRVPrepareModuleAnalysisLegacyPass() {
 PreservedAnalyses
 SPIRVPrepareModuleAnalysisPass::run(MachineFunction &MF,
                                     MachineFunctionAnalysisManager &MFAM) {
-  prepareModuleAnalysis(MF);
-  return getMachineFunctionPassPreservedAnalyses();
+  return prepareModuleAnalysis(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                   : PreservedAnalyses::all();
 }

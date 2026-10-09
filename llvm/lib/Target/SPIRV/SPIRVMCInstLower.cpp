@@ -79,8 +79,9 @@ void SPIRVMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI,
           MF->getSubtarget<SPIRVSubtarget>().getSPIRVGlobalRegistry();
       Register TypeReg =
           GR->getSPIRVTypeID(GR->getSPIRVTypeForVReg(MO.getReg(), MF));
-      OutMI.addOperand(
-          MCOperand::createReg(MAI->getRegisterAlias(MF, TypeReg)));
+      MCRegister TypeAlias = MAI->getRegisterAlias(MF, TypeReg);
+      assert(TypeAlias.isValid() && "OpPhi result type has no global ID");
+      OutMI.addOperand(MCOperand::createReg(TypeAlias));
     }
   }
 }
