@@ -11,9 +11,13 @@ declare void @no_throw(i32) nounwind
 ; must not be sunk past the call.
 define void @noalias_arg_store_across_may_throw(ptr noalias %p, ptr noalias %q, i32 %k) {
 ; CHECK-LABEL: @noalias_arg_store_across_may_throw(
+; CHECK-NEXT:    [[Q1:%.*]] = getelementptr inbounds i8, ptr [[Q:%.*]], i64 8
+; CHECK-NEXT:    [[A:%.*]] = load double, ptr [[Q]], align 8
+; CHECK-NEXT:    [[B:%.*]] = load double, ptr [[Q1]], align 8
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 8
+; CHECK-NEXT:    store double [[A]], ptr [[P]], align 8
 ; CHECK-NEXT:    call void @may_throw(i32 [[K:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[Q:%.*]], align 8
-; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    store double [[B]], ptr [[P1]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %q1 = getelementptr inbounds i8, ptr %q, i64 8
@@ -47,9 +51,12 @@ define void @noalias_arg_stores_before_may_throw(ptr noalias %p, ptr noalias %q,
 ; A readnone call can still unwind, and the global is visible to the caller.
 define void @global_store_across_readnone_may_throw(ptr noalias %q, i32 %k) {
 ; CHECK-LABEL: @global_store_across_readnone_may_throw(
+; CHECK-NEXT:    [[Q1:%.*]] = getelementptr inbounds i8, ptr [[Q:%.*]], i64 8
+; CHECK-NEXT:    [[A:%.*]] = load double, ptr [[Q]], align 8
+; CHECK-NEXT:    [[B:%.*]] = load double, ptr [[Q1]], align 8
+; CHECK-NEXT:    store double [[A]], ptr @g, align 8
 ; CHECK-NEXT:    call void @may_throw_readnone(i32 [[K:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[Q:%.*]], align 8
-; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr @g, align 8
+; CHECK-NEXT:    store double [[B]], ptr getelementptr inbounds (i8, ptr @g, i64 8), align 8
 ; CHECK-NEXT:    ret void
 ;
   %q1 = getelementptr inbounds i8, ptr %q, i64 8
