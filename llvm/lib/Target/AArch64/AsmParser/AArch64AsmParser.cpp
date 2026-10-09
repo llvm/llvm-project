@@ -296,7 +296,6 @@ private:
   ParseStatus tryParseSVEVecLenSpecifier(OperandVector &Operands);
   ParseStatus tryParseGPR64x8(OperandVector &Operands);
   ParseStatus tryParseImmRange(OperandVector &Operands);
-  template <int> ParseStatus tryParseAdjImm0_63(OperandVector &Operands);
 
 public:
   enum AArch64MatchResultTy {
@@ -8795,39 +8794,5 @@ ParseStatus AArch64AsmParser::tryParseImmRange(OperandVector &Operands) {
 
   Operands.push_back(
       AArch64Operand::CreateImmRange(ImmFVal, ImmLVal, S, E, getContext()));
-  return ParseStatus::Success;
-}
-
-template <int Adj>
-ParseStatus AArch64AsmParser::tryParseAdjImm0_63(OperandVector &Operands) {
-  SMLoc S = getLoc();
-
-  parseOptionalToken(AsmToken::Hash);
-  bool IsNegative = parseOptionalToken(AsmToken::Minus);
-
-  if (getTok().isNot(AsmToken::Integer))
-    return ParseStatus::NoMatch;
-
-  const MCExpr *Ex;
-  if (getParser().parseExpression(Ex))
-    return ParseStatus::NoMatch;
-
-  int64_t Imm = dyn_cast<MCConstantExpr>(Ex)->getValue();
-  if (IsNegative)
-    Imm = -Imm;
-
-  // We want an adjusted immediate in the range [0, 63]. If we don't have one,
-  // return a value, which is certain to trigger a error message about invalid
-  // immediate range instead of a non-descriptive invalid operand error.
-  static_assert(Adj == 1 || Adj == -1, "Unsafe immediate adjustment");
-  if (Imm == INT64_MIN || Imm == INT64_MAX || Imm + Adj < 0 || Imm + Adj > 63)
-    Imm = -2;
-  else
-    Imm += Adj;
-
-  SMLoc E = SMLoc::getFromPointer(getLoc().getPointer() - 1);
-  Operands.push_back(AArch64Operand::CreateImm(
-      MCConstantExpr::create(Imm, getContext()), S, E, getContext()));
-
   return ParseStatus::Success;
 }
