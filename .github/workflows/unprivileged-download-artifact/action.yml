@@ -5,20 +5,20 @@ inputs:
   run-id:
     description: >-
       The run-id for the workflow run that you want to download the artifact
-      from.  If ommitted it will download the most recently created artifact
+      from.  If omitted it will download the most recently created artifact
       from the repo with the artifact-name.
     required: false
   artifact-name:
-    desciption: The name of the artifact to download.
+    description: The name of the artifact to download.
     required: true
 
 
 outputs:
-  filename:
+  artifact-names:
     description: >-
-      The filename of the downloaded artifact or the empty string if the
-      artifact was not found.
-    value: ${{ steps.download-artifact.outputs.filename }}
+      Space-separated names of the downloaded artifacts, or the empty string
+      if no artifact was found.
+    value: ${{ steps.artifact-url.outputs.names }}
   artifact-ids:
     description: "The id of the artifact being downloaded."
     value: ${{ steps.artifact-url.outputs.ids }}
