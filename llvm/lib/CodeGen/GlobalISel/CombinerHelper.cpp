@@ -8569,10 +8569,26 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
 
   MachineInstr *DefMI = MRI.getVRegDef(OpReg);
   assert(DefMI && "Expected a definition in generic SSA MIR");
+  // Undemanded bits can still affect poison-generating flags in the user.
+  auto DropPoisonFlags = [&]() {
+    if (!DoRewrite ||
+        !(MI.getFlags() & MachineInstr::getPoisonGeneratingFlags()))
+      return;
+    Observer.changingInstr(MI);
+    MI.clearFlags(MachineInstr::getPoisonGeneratingFlags());
+    Observer.changedInstr(MI);
+  };
+  // Debug users can observe bits that are not demanded by other users.
+  auto InvalidateDebugUses = [&](const APInt &Demanded) {
+    if (DoRewrite && !Demanded.isAllOnes())
+      MRI.markUsesInDebugValueAsUndef(OpReg);
+  };
   auto Rewrite = [&](Register Repl) {
     if (!DoRewrite || Repl == OpReg)
       return Repl != OpReg;
+    DropPoisonFlags();
     if (DefMI->getNumExplicitDefs() == 1 && MRI.hasOneNonDBGUse(OpReg)) {
+      InvalidateDebugUses(DemandedBits);
       replaceRegWith(MRI, OpReg, Repl);
       eraseInst(*DefMI);
     } else {
@@ -8594,6 +8610,7 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
     Builder.setInsertPt(SaveMBB, SavePt);
     Builder.setDebugLoc(SaveDL);
     // The producer may have side effects; replace only this use.
+    DropPoisonFlags();
     replaceRegOpWith(MRI, MI.getOperand(OpNo), Undef);
     return true;
   }
@@ -8675,6 +8692,10 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
     KnownBits LHSKnown(BW);
     Changed |= simplifyDemandedBitsImpl(*DefMI, /*OpNo=*/1, LHSDemand, LHSKnown,
                                         Depth + 1, DoRewrite);
+    if (Changed) {
+      DropPoisonFlags();
+      InvalidateDebugUses(Demanded);
+    }
     Known = Opcode == TargetOpcode::G_AND ? LHSKnown & RHSKnown
                                           : LHSKnown | RHSKnown;
     return Changed;
@@ -8692,6 +8713,10 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
     KnownBits SrcKnown(BW);
     bool Changed = simplifyDemandedBitsImpl(*DefMI, /*OpNo=*/1, SrcDemand,
                                             SrcKnown, Depth + 1, DoRewrite);
+    if (Changed) {
+      DropPoisonFlags();
+      InvalidateDebugUses(Demanded);
+    }
     KnownBits AmtKnown = KnownBits::makeConstant(APInt(BW, ShAmt));
     switch (Opcode) {
     case TargetOpcode::G_SHL:
