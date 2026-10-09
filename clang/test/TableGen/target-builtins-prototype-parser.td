@@ -6,6 +6,7 @@
 // RUN: not clang-tblgen -I %p/../../include/ %s --gen-clang-builtins -DERROR_EXPECTED_B 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_B
 // RUN: not clang-tblgen -I %p/../../include/ %s --gen-clang-builtins -DERROR_EXPECTED_C 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_C
 // RUN: not clang-tblgen -I %p/../../include/ %s --gen-clang-builtins -DERROR_EXPECTED_D 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_D
+// RUN: not clang-tblgen -I %p/../../include/ %s --gen-clang-builtins -DERROR_EXPECTED_E 2>&1 | FileCheck %s --check-prefix=ERROR_EXPECTED_E
 
 include "clang/Basic/BuiltinsBase.td"
 
@@ -111,6 +112,12 @@ def : Builtin {
   let Spellings = ["__builtin_17"];
 }
 
+def : LibBuiltin<"poll.h"> {
+// CHECK: Builtin::Info{{.*}} __builtin_18 {{.*}} /* ir6pollfd*t6nfds_tr8timespecC*t8sigset_tC* */
+  let Prototype = "int(struct pollfd *, nfds_t, const struct timespec *, const sigset_t *)";
+  let Spellings = ["__builtin_18"];
+}
+
 #ifdef ERROR_EXPECTED_LANES
 def : Builtin {
 // ERROR_EXPECTED_LANES: :[[# @LINE + 1]]:7: error: Expected number of lanes after '_ExtVector<'
@@ -164,5 +171,13 @@ def : Builtin {
 // ERROR_EXPECTED_D: :[[# @LINE + 1]]:7: error: Expected number of lanes after '_ExtVector<'
   let Prototype = "_ExtVector<>(void)";
   let Spellings = ["__builtin_test_use_clang_extended_vectors"];
+}
+#endif
+
+#ifdef ERROR_EXPECTED_E
+def : Builtin {
+// ERROR_EXPECTED_E: :[[# @LINE + 1]]:7: error: Unknown Type: uint128_t
+  let Prototype = "uint128_t(void)";
+  let Spellings = ["__builtin_test_unknown_typedef_in_builtin"];
 }
 #endif

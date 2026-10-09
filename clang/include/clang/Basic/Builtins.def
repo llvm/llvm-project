@@ -44,6 +44,8 @@
 //  SJ -> sigjmp_buf
 //  K -> ucontext_t
 //  p -> pid_t
+//  r -> struct, followed by the byte length of the tag name and the tag name.
+//  t -> typedef, followed by the byte length of the name and the name.
 //  . -> "...".  This may only occur at the end of the function list.
 //
 // Types may be prefixed with the following modifiers:
