@@ -206,7 +206,11 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 
 declare i32 @dummy(ptr, ptr)
 
-; A case where zext should not be eliminated when its operands could only be extended by sext.
+; TODO: the zext can be eliminated.
+; %i.02 starts at 0 and increments with nsw.
+; There's the guard M >s 0, so %add3 = %i.02 + %M (nsw)
+; is non-negative on every iteration and so
+; zext(%add3) == sext(%add3) == wide add.
 define i32 @foo3(i32 %M) {
 ; CHECK-LABEL: @foo3(
 ; CHECK-NEXT:  entry:
@@ -272,6 +276,46 @@ for.cond.for.end_crit_edge:                       ; preds = %for.inc
 for.end:                                          ; preds = %for.cond.for.end_crit_edge, %entry
   %call = call i32 @dummy(ptr @a, ptr @b)
   ret i32 0
+}
+
+; %M may be negative, so %add3 = %i.02 + %M may be negative, and
+; zext(%add3) != sext(%add3). So the trunc of the wide add and the zext
+; can't be eliminated.
+define void @foo3_neg(ptr %p, i32 %M) {
+; CHECK-LABEL: @foo3_neg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[M:%.*]] to i64
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[M]], i32 1)
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SMAX]] to i64
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[INDVARS_IV]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc nsw i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[IDXPROM4:%.*]] = zext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[IDXPROM4]]
+; CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX5]], align 4
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END:%.*]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %i.02 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %add3 = add nsw i32 %i.02, %M
+  %idxprom4 = zext i32 %add3 to i64
+  %arrayidx5 = getelementptr i32, ptr %p, i64 %idxprom4
+  store i32 0, ptr %arrayidx5, align 4
+  %inc = add nsw i32 %i.02, 1
+  %cmp = icmp slt i32 %inc, %M
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:
+  ret void
 }
 
 %struct.image = type {i32, i32}
