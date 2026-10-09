@@ -721,3 +721,16 @@ func.func @scf2gpu_index_creation_1d() {
 //       CHECK:   gpu.launch
 //       CHECK:     %[[IDX:.*]] = affine.apply
 //       CHECK:     arith.addi %[[IDX]],
+
+// -----
+
+// Unsigned bounds are not supported: the mapping is refused and the loop
+// stays illegal.
+func.func @parallel_loop_unsigned(%arg0 : index, %arg1 : index, %arg2 : index,
+                                  %buf : memref<?xf32>) {
+  // expected-error @+1 {{failed to legalize operation 'scf.parallel'}}
+  scf.parallel unsigned (%i0) = (%arg0) to (%arg1) step (%arg2) {
+    %val = memref.load %buf[%i0] : memref<?xf32>
+  } { mapping = [#gpu.loop_dim_map<processor = block_x, map = (d0) -> (d0), bound = (d0) -> (d0)>] }
+  return
+}

@@ -111,6 +111,7 @@ private:
     return selectShiftMask(Root, 32);
   }
   ComplexRendererFns selectAddrRegImm(MachineOperand &Root) const;
+  ComplexRendererFns selectBrindRegImm(MachineOperand &Root) const;
   ComplexRendererFns selectAddrRegImmLsb00000(MachineOperand &Root) const;
 
   // Plan for materializing a constant address as (Hi materialization, Lo12
@@ -642,6 +643,28 @@ RISCVInstructionSelector::selectAddrRegImm(MachineOperand &Root) const {
       mi_match(RootReg, *MRI, m_ICst(CVal))) {
     if (auto Fns = computeConstAddr(CVal, /*IsPrefetch=*/false, Register()))
       return Fns;
+  }
+
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(RootReg); },
+           [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }}};
+}
+
+InstructionSelector::ComplexRendererFns
+RISCVInstructionSelector::selectBrindRegImm(MachineOperand &Root) const {
+  if (!Root.isReg())
+    return std::nullopt;
+
+  Register RootReg = Root.getReg();
+
+  // base + constant offset (G_PTR_ADD). Doesn't match a FrameIndex, unlike
+  // selectAddrRegImm, since the callers of this (e.g. indirect branches)
+  // can't take a FrameIndex or global address operand.
+  Register BaseReg;
+  int64_t RHSC;
+  if (mi_match(RootReg, *MRI, m_GPtrAdd(m_Reg(BaseReg), m_ICst(RHSC))) &&
+      isInt<12>(RHSC)) {
+    return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(BaseReg); },
+             [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC); }}};
   }
 
   return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(RootReg); },
@@ -1361,9 +1384,9 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     // Use sext.h/zext.h for i16 with Zbb.
     if (SrcSize == 16 &&
         (STI.hasStdExtZbb() || (!IsSigned && STI.hasStdExtZbkb()))) {
-      MI.setDesc(TII.get(IsSigned       ? RISCV::SEXT_H
-                         : STI.isRV64() ? RISCV::ZEXT_H_RV64
-                                        : RISCV::ZEXT_H_RV32));
+      MI.setDesc(TII.get(IsSigned        ? RISCV::SEXT_H
+                         : STI.is64Bit() ? RISCV::ZEXT_H_RV64
+                                         : RISCV::ZEXT_H_RV32));
       constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
       return true;
     }
@@ -1470,11 +1493,6 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     constrainSelectedInstRegOperands(*Bcc, TII, TRI, RBI);
     return true;
   }
-  case TargetOpcode::G_BRINDIRECT:
-    MI.setDesc(TII.get(RISCV::PseudoBRIND));
-    MI.addOperand(MachineOperand::CreateImm(0));
-    constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
-    return true;
   case TargetOpcode::G_SELECT:
     return selectSelect(MI);
   case TargetOpcode::G_FCMP:

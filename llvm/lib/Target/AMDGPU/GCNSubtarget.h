@@ -124,8 +124,10 @@ public:
       AMDGPU::TargetIDSetting SramEccSetting = AMDGPU::TargetIDSetting::Any);
   ~GCNSubtarget() override;
 
-  GCNSubtarget &initializeSubtargetDependencies(const Triple &TT, StringRef GPU,
-                                                StringRef FS);
+  GCNSubtarget &
+  initializeSubtargetDependencies(const Triple &TT, StringRef GPU, StringRef FS,
+                                  AMDGPU::TargetIDSetting XnackSetting,
+                                  AMDGPU::TargetIDSetting SramEccSetting);
 
   /// Diagnose inconsistent subtarget features before attempting to codegen
   /// function \p F.
@@ -221,8 +223,6 @@ public:
   /// the original value.
   bool zeroesHigh16BitsOfDest(unsigned Opcode) const;
 
-  bool hasHWFP64() const { return HasFP64; }
-
   bool hasAddr64() const {
     return (getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS);
   }
@@ -303,11 +303,6 @@ public:
     return getGeneration() <= SEA_ISLANDS ? 1 : 2;
   }
 
-  /// Return the amount of LDS that can be used that will not restrict the
-  /// occupancy lower than WaveCount.
-  unsigned getMaxLocalMemSizeWithWaveCount(unsigned WaveCount,
-                                           const Function &) const;
-
   bool supportsMinMaxDenormModes() const {
     return getGeneration() >= AMDGPUSubtarget::GFX9;
   }
@@ -364,6 +359,11 @@ public:
 
   bool isCuModeEnabled() const { return EnableCuMode; }
 
+  /// \returns Whether a work-group runs on all of the block's SIMDs.
+  bool isFullSIMDMode() const {
+    return (HasGFX1250Insts && getGeneration() < GFX13) || !EnableCuMode;
+  }
+
   bool isPreciseMemoryEnabled() const { return EnablePreciseMemory; }
 
   bool hasFlatScrRegister() const { return hasFlatAddressSpace(); }
@@ -381,10 +381,6 @@ public:
     return hasArchitectedFlatScratch() ||
            (EnableFlatScratch && hasFlatScratchInsts());
   }
-
-  bool hasGlobalAddTidInsts() const { return HasGFX10_BEncoding; }
-
-  bool hasAtomicCSub() const { return HasGFX10_BEncoding; }
 
   bool hasExportInsts() const {
     return !hasGFX940Insts() && !hasGFX1250Insts();
@@ -479,6 +475,8 @@ public:
 
   bool enableMachineScheduler() const override { return true; }
 
+  bool enableSSAMachineScheduler() const override { return true; }
+
   bool useAA() const override;
 
   bool enableSubRegLiveness() const override { return true; }
@@ -527,6 +525,8 @@ public:
 
   // Has V_PK_MOV_B32 opcode
   bool hasPkMovB32() const { return HasGFX90AInsts; }
+
+  bool hasBufferTFEFormatD16() const { return !HasGFX90AInsts; }
 
   bool hasFmaakFmamkF32Insts() const {
     return getGeneration() >= GFX10 || hasGFX940Insts();
@@ -623,6 +623,8 @@ public:
   }
 
   bool hasCvtScaleForwardingHazard() const { return HasGFX950Insts; }
+
+  bool hasPermlaneForwardingHazard() const { return HasGFX950Insts; }
 
   // All GFX9 targets experience a fetch delay when an instruction at the start
   // of a loop header is split by a 32-byte fetch window boundary, but GFX950
@@ -909,8 +911,6 @@ public:
   /// unit requirement.
   unsigned getMaxNumVGPRs(const Function &F) const;
 
-  unsigned getMaxNumAGPRs(const Function &F) const { return getMaxNumVGPRs(F); }
-
   /// Return a pair of maximum numbers of VGPRs and AGPRs that meet the number
   /// of waves per execution unit required for the function \p MF.
   std::pair<unsigned, unsigned> getMaxNumVectorRegs(const Function &F) const;
@@ -1091,8 +1091,6 @@ public:
   bool hasPrivateSegmentSize() const { return PrivateSegmentSize; }
 
   unsigned getNumKernargPreloadSGPRs() const { return NumKernargPreloadSGPRs; }
-
-  unsigned getNumUsedUserSGPRs() const { return NumUsedUserSGPRs; }
 
   unsigned getNumFreeUserSGPRs();
 

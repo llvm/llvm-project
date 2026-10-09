@@ -407,11 +407,6 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
     I.eraseFromParent();
     return true;
   }
-  case G_BRINDIRECT: {
-    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::PseudoIndirectBranch))
-             .add(I.getOperand(0));
-    break;
-  }
   case G_PHI: {
     const Register DestReg = I.getOperand(0).getReg();
 
@@ -457,10 +452,12 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
       if (MMO->getSize() != 4 || !isRegInGprb(I.getOperand(0).getReg(), MRI))
         return false;
 
+      unsigned LeftOffset = SignedOffset + (STI.isLittle() ? 3 : 0);
+      unsigned RightOffset = SignedOffset + (STI.isLittle() ? 0 : 3);
       if (I.getOpcode() == G_STORE) {
-        if (!buildUnalignedStore(I, Mips::SWL, BaseAddr, SignedOffset + 3, MMO))
+        if (!buildUnalignedStore(I, Mips::SWL, BaseAddr, LeftOffset, MMO))
           return false;
-        if (!buildUnalignedStore(I, Mips::SWR, BaseAddr, SignedOffset, MMO))
+        if (!buildUnalignedStore(I, Mips::SWR, BaseAddr, RightOffset, MMO))
           return false;
         I.eraseFromParent();
         return true;
@@ -471,11 +468,11 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
         BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::IMPLICIT_DEF))
             .addDef(ImplDef);
         Register Tmp = MRI.createVirtualRegister(&Mips::GPR32RegClass);
-        if (!buildUnalignedLoad(I, Mips::LWL, Tmp, BaseAddr, SignedOffset + 3,
+        if (!buildUnalignedLoad(I, Mips::LWL, Tmp, BaseAddr, LeftOffset,
                                 ImplDef, MMO))
           return false;
         if (!buildUnalignedLoad(I, Mips::LWR, I.getOperand(0).getReg(),
-                                BaseAddr, SignedOffset, Tmp, MMO))
+                                BaseAddr, RightOffset, Tmp, MMO))
           return false;
         I.eraseFromParent();
         return true;

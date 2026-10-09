@@ -1,4 +1,5 @@
 set(LLVM_LINK_COMPONENTS
+  BinaryFormat
   DebugInfoDWARF
   Object
   MC
@@ -8,6 +9,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_bolt_unittest(CoreTests
   BinaryContext.cpp
+  Relocation.cpp
   ClusteredRows.cpp
   MCPlusBuilder.cpp
   MemoryMaps.cpp
