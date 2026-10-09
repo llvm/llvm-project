@@ -3808,9 +3808,8 @@ static bool canFoldOuterExtendIntoMul(ExtendKind ExtKind, VPWidenRecipe *Mul,
   if (Mul->getScalarType()->getScalarSizeInBits() >=
       LHSSrcTy->getScalarSizeInBits() + RHSSrcTy->getScalarSizeInBits())
     return true;
-  // If the values are zero extended, either NUW or NSW is sufficient.
   if (ExtKind == ExtendKind::PR_ZeroExtend)
-    return Mul->hasNoUnsignedWrap() || Mul->hasNoSignedWrap();
+    return Mul->hasNoUnsignedWrap();
   return ExtKind == ExtendKind::PR_SignExtend && Mul->hasNoSignedWrap();
 }
 

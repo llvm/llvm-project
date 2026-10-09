@@ -266,8 +266,8 @@ exit:
   ret i32 %add
 }
 
-define i32 @zext_i8_mul_nsw_i12_zext_i32(ptr %a, ptr %b, i64 %n) {
-; CHECK-LABEL: define i32 @zext_i8_mul_nsw_i12_zext_i32(
+define i32 @zext_i8_mul_nsw_nuw_i12_zext_i32(ptr %a, ptr %b, i64 %n) {
+; CHECK-LABEL: define i32 @zext_i8_mul_nsw_nuw_i12_zext_i32(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
@@ -308,7 +308,7 @@ loop:
   %gep.b = getelementptr i8, ptr %b, i64 %iv
   %load.b = load i8, ptr %gep.b, align 1
   %ext.b = zext i8 %load.b to i12
-  %mul = mul nsw i12 %ext.a, %ext.b
+  %mul = mul nsw nuw i12 %ext.a, %ext.b
   %mul.ext = zext i12 %mul to i32
   %add = add i32 %acc, %mul.ext
   %iv.next = add i64 %iv, 1
