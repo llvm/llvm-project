@@ -641,8 +641,10 @@ static llvm::Expected<KernelLaunchEnvironmentTy *> getKernelLaunchEnvironment(
        DPxPTR(&LocalKLE), DPxPTR(*AllocOrErr),
        sizeof(KernelLaunchEnvironmentTy));
 
-  if (auto Err = GenericDevice.dataSubmit(
-          *AllocOrErr, &LocalKLE, sizeof(KernelLaunchEnvironmentTy), AsyncInfo))
+  // The allocation is fresh, so nothing pending on the queue accesses it.
+  if (auto Err = GenericDevice.dataSubmit(*AllocOrErr, &LocalKLE,
+                                          sizeof(KernelLaunchEnvironmentTy),
+                                          AsyncInfo, /*Unordered=*/true))
     return Err;
   return static_cast<KernelLaunchEnvironmentTy *>(*AllocOrErr);
 }
