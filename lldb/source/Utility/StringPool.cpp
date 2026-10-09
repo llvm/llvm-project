@@ -125,7 +125,7 @@ void StringPool::Initialize() {
 
 void StringPool::Terminate() { g_system_pool = nullptr; }
 
-StringPoolRef StringPool::GetSystem() {
+StringPoolRef StringPool::GetSystemPool() {
   assert(g_system_pool && "system pool not initialized");
   return StringPoolRef(*g_system_pool);
 }
