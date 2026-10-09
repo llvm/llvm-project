@@ -800,6 +800,9 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
       if (ExpressionChangedStart == I)
         break;
 
+      // The rewritten instruction no longer reliably represents its original
+      // source operation after being moved within the expression tree.
+      ExpressionChangedStart->dropLocation();
       ExpressionChangedStart->moveBefore(I->getIterator());
       ExpressionChangedStart =
           cast<BinaryOperator>(*ExpressionChangedStart->user_begin());
