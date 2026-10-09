@@ -262,6 +262,11 @@ int main(int argc, char **argv) {
   Ctx.setNaNPropagationBehavior(NaNPropagationBehavior);
   Ctx.reseed(Seed);
 
+  if (!NoVerify && !Ctx.isValid(errs())) {
+    WithColor::error() << InputFile << ": input module cannot be executed!\n";
+    return 1;
+  }
+
   if (!Ctx.initGlobalValues()) {
     WithColor::error() << "Failed to initialize global values (e.g., the "
                           "memory limit may be too low).\n";

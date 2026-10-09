@@ -1270,6 +1270,83 @@ uint64_t Context::getEffectiveTypeStoreSize(Type *Ty) {
   return getEffectiveTypeSize(DL.getTypeStoreSize(Ty));
 }
 
+bool Context::isValid(raw_ostream &OS) const {
+  assert(isPowerOf2_32(VScale) && "VScale must be a power of two.");
+  uint32_t MaxNumElements = UINT32_MAX / VScale;
+
+  SmallPtrSet<Type *, 16> ValidAggTys;
+  auto IsSupportedType = [&](auto &&Self, Type *Ty) {
+    switch (Ty->getTypeID()) {
+    case Type::X86_AMXTyID:
+    case Type::TargetExtTyID:
+      OS << "Unsupported type " << *Ty << '\n';
+      return false;
+    case Type::ScalableVectorTyID:
+      // Avoid overflow when computing EVL.
+      if (cast<VectorType>(Ty)->getElementCount().getKnownMinValue() >=
+          MaxNumElements) {
+        OS << "The number of elements of " << *Ty << " is too large!\n";
+        return false;
+      }
+      [[fallthrough]];
+    case Type::FixedVectorTyID:
+      if (cast<VectorType>(Ty)->getElementType()->isTargetExtTy()) {
+        OS << "Unsupported type " << *Ty << '\n';
+        return false;
+      }
+      return true;
+    case Type::StructTyID:
+    case Type::ArrayTyID:
+      if (ValidAggTys.contains(Ty))
+        return true;
+      for (unsigned I = 0, E = Ty->getNumContainedTypes(); I != E; ++I)
+        if (!Self(Self, Ty->getContainedType(I)))
+          return false;
+      ValidAggTys.insert(Ty);
+      return true;
+    default:
+      return true;
+    }
+  };
+
+#define CHECK(TYPE)                                                            \
+  if (!IsSupportedType(IsSupportedType, TYPE))                                 \
+  return false
+
+  for (auto &F : M) {
+    CHECK(F.getReturnType());
+    for (auto &Arg : F.args())
+      CHECK(Arg.getType());
+    for (auto &BB : F)
+      for (auto &I : BB) {
+        CHECK(I.getType());
+        switch (I.getOpcode()) {
+        case Instruction::Call:
+        case Instruction::Invoke:
+          for (auto &Op : I.operands())
+            CHECK(Op->getType());
+          break;
+        case Instruction::Store:
+        case Instruction::ExtractElement:
+        case Instruction::ExtractValue:
+        case Instruction::BitCast:
+        case Instruction::ShuffleVector:
+          CHECK(I.getOperand(0)->getType());
+          break;
+        default:
+          break;
+        }
+      }
+  }
+
+  for (auto &G : M.globals())
+    CHECK(G.getValueType());
+
+#undef CHECK
+
+  return true;
+}
+
 RoundingMode Context::getCurrentRoundingMode() const {
   return CurrentRoundingMode;
 }
