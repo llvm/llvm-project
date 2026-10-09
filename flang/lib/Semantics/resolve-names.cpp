@@ -6483,10 +6483,8 @@ bool DeclarationVisitor::Pre(const parser::NamedConstant &x) {
 
 bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
   const parser::Name &name{std::get<parser::NamedConstant>(enumerator.t).v};
-  constexpr std::int64_t minCInt{
-      std::numeric_limits<std::int32_t>::min()};
-  constexpr std::int64_t maxCInt{
-      std::numeric_limits<std::int32_t>::max()};
+  constexpr std::int64_t minCInt{std::numeric_limits<std::int32_t>::min()};
+  constexpr std::int64_t maxCInt{std::numeric_limits<std::int32_t>::max()};
   Symbol *symbol{FindInScope(name)};
   if (symbol && !symbol->has<UnknownDetails>()) {
     // Contrary to named constants appearing in a PARAMETER statement,
@@ -6545,8 +6543,8 @@ bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
 
   if (symbol) {
     if (enumerationState_.value) {
-      symbol->get<ObjectEntityDetails>().set_init(SomeExpr{
-          evaluate::Expr<evaluate::CInteger>{
+      symbol->get<ObjectEntityDetails>().set_init(
+          SomeExpr{evaluate::Expr<evaluate::CInteger>{
               static_cast<evaluate::CInteger::Scalar>(
                   *enumerationState_.value)}});
     } else {
