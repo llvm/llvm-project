@@ -442,15 +442,22 @@ define void @neg_cleanup_mismatch() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @neg_cleanup_mismatch(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @fn()
-; CHECK-NEXT:            to label [[INVOKE2:%.*]] unwind label [[LPAD2:%.*]]
+; CHECK-NEXT:            to label [[INVOKE2:%.*]] unwind label [[LPAD1:%.*]]
 ; CHECK:       invoke2:
 ; CHECK-NEXT:    invoke void @fn()
-; CHECK-NEXT:            to label [[COMMON_RET:%.*]] unwind label [[LPAD2]]
+; CHECK-NEXT:            to label [[COMMON_RET:%.*]] unwind label [[LPAD2:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
+; CHECK:       lpad1:
+; CHECK-NEXT:    [[EXN:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:            catch ptr @_ZTIi
+; CHECK-NEXT:    br label [[SHARED_RESUME:%.*]]
 ; CHECK:       lpad2:
 ; CHECK-NEXT:    [[EXN2:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:            catch ptr @_ZTIi
+; CHECK-NEXT:    br label [[SHARED_RESUME]]
+; CHECK:       shared_resume:
 ; CHECK-NEXT:    call void @fn()
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;

@@ -40,8 +40,16 @@ lpad:
 
 define void @without_cleanup() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: define void @without_cleanup() personality ptr @__gxx_personality_v0 {
-; CHECK-NEXT:    tail call void @with_cleanup()
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    invoke void @fn()
+; CHECK-NEXT:            to label %[[RET:.*]] unwind label %[[LPAD:.*]]
+; CHECK:       [[RET]]:
 ; CHECK-NEXT:    ret void
+; CHECK:       [[LPAD]]:
+; CHECK-NEXT:    [[E:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            catch ptr @_ZTIi
+; CHECK-NEXT:    call void @side()
+; CHECK-NEXT:    resume { ptr, i32 } [[E]]
 ;
 entry:
   invoke void @fn()
