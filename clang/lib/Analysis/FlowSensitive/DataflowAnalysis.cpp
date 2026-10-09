@@ -16,23 +16,33 @@
 #include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
 #include "clang/Analysis/FlowSensitive/Z3Solver.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/ErrorHandling.h"
 
 namespace clang {
 namespace dataflow {
 
-std::unique_ptr<Solver> createDefaultSolver() {
+std::unique_ptr<Solver> createSolver(SolverMode Mode) {
+  constexpr std::int64_t kDefaultMaxSATIterations = 1'000'000'000;
 #ifdef LLVM_WITH_Z3
-  // When Z3 is available, do a tiering strategy:
-  // - a simple solver for simple functions
-  // - fall back to a production-grade solver for more complex functions.
-  llvm::SmallVector<std::unique_ptr<dataflow::Solver>> Tiers;
-  constexpr std::int64_t MaxSATIterations = 5'000'000;
-  Tiers.push_back(
-      std::make_unique<dataflow::WatchedLiteralsSolver>(MaxSATIterations));
-
-  constexpr std::uint32_t Z3Rlimit = 1'000'000'000;
-  Tiers.push_back(std::make_unique<dataflow::Z3Solver>(Z3Rlimit));
-  return std::make_unique<TieredSolver>(std::move(Tiers));
+  constexpr std::uint32_t kDefaultZ3Rlimit = 1'000'000'000;
+  switch (Mode) {
+  case SolverMode::WatchedLiterals:
+    return std::make_unique<WatchedLiteralsSolver>(kDefaultMaxSATIterations);
+  case SolverMode::Z3:
+    return std::make_unique<Z3Solver>(kDefaultZ3Rlimit);
+  case SolverMode::Tiered: {
+    // When Z3 is available, do a tiering strategy:
+    // - a simple solver for simple functions
+    // - fall back to a production-grade solver for more complex functions.
+    llvm::SmallVector<std::unique_ptr<dataflow::Solver>> Tiers;
+    constexpr std::int64_t MaxSATIterations = 5'000'000;
+    Tiers.push_back(
+        std::make_unique<dataflow::WatchedLiteralsSolver>(MaxSATIterations));
+    Tiers.push_back(std::make_unique<dataflow::Z3Solver>(kDefaultZ3Rlimit));
+    return std::make_unique<TieredSolver>(std::move(Tiers));
+  }
+  }
+  llvm_unreachable("Unhandled SolverMode");
 #else
   /// Default for the maximum number of SAT solver iterations during analysis.
   /// The value was chosen based on the following observations:
@@ -41,9 +51,12 @@ std::unique_ptr<Solver> createDefaultSolver() {
   ///   iterations.
   /// - This limit is still low enough to keep runtimes acceptable (on typical
   ///   machines) in cases where we hit the limit.
-  constexpr std::int64_t kDefaultMaxSATIterations = 1'000'000'000;
   return std::make_unique<WatchedLiteralsSolver>(kDefaultMaxSATIterations);
 #endif
+}
+
+std::unique_ptr<Solver> createDefaultSolver() {
+  return createSolver(SolverMode::Tiered);
 }
 
 } // namespace dataflow

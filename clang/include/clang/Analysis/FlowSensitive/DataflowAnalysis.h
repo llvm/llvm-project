@@ -212,6 +212,16 @@ template <typename AnalysisT, typename Diagnostic> struct DiagnosisCallbacks {
 /// A factory for creating a Solver.
 using SolverFactory = std::function<std::unique_ptr<Solver>()>;
 
+enum class SolverMode {
+  WatchedLiterals,
+  Z3,
+  Tiered,
+};
+
+/// Creates a Solver for the given `Mode` (falling back to
+/// `WatchedLiteralsSolver` if Z3 is not available).
+std::unique_ptr<Solver> createSolver(SolverMode Mode);
+
 /// Default SolverFactory.
 std::unique_ptr<Solver> createDefaultSolver();
 

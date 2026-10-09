@@ -44,12 +44,9 @@ public:
   bool reachedLimit() const override { return EverTimedOut; }
 
 private:
-  std::uint32_t Rlimit = 0;     // 0 is unlimited
-  std::uint32_t RlimitUsed = 0; // track rlimit used (if Rlimit is non-zero)
+  std::uint32_t Rlimit = 0; // 0 is unlimited
   bool EverTimedOut = false;
   llvm::SMTSolverRef Solver;
-
-  void updateRlimitUsed(const llvm::SMTSolverRef &Solver);
 };
 
 } // namespace dataflow

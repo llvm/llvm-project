@@ -49,28 +49,22 @@ buildSolution(const llvm::SMTSolverRef &Solver,
   return Solution;
 }
 
-void Z3Solver::updateRlimitUsed(const llvm::SMTSolverRef &Solver) {
-  if (Rlimit > 0) {
-    std::uint32_t NextRlimitUsed =
-        Solver->getStatistics()->getUnsigned("rlimit count");
-    std::uint32_t Next = RlimitUsed + NextRlimitUsed;
-    // If overflow, clamp
-    if (Next < RlimitUsed)
-      RlimitUsed = Rlimit;
-    // If going past Rlimit, clamp
-    else if (Next > Rlimit)
-      RlimitUsed = Rlimit;
-    else
-      RlimitUsed = Next;
-  }
-}
-
 Solver::Result Z3Solver::solve(llvm::ArrayRef<const Formula *> Constraints) {
   if (Constraints.empty()) {
     return Result::Satisfiable(llvm::DenseMap<Atom, Result::Assignment>());
   }
-  if (Rlimit > 0 && RlimitUsed == Rlimit) {
+  if (EverTimedOut) {
     return Result::TimedOut();
+  }
+  std::uint32_t RlimitUsed = 0;
+  if (Rlimit > 0) {
+    // Z3's "rlimit count" statistic is cumulative across `Solver->reset()`
+    // calls on the same Z3 context.
+    RlimitUsed = Solver->getStatistics()->getUnsigned("rlimit count");
+    if (RlimitUsed >= Rlimit) {
+      EverTimedOut = true;
+      return Result::TimedOut();
+    }
   }
 
   llvm::DenseMap<Variable, Atom> Atomics;
@@ -117,9 +111,6 @@ Solver::Result Z3Solver::solve(llvm::ArrayRef<const Formula *> Constraints) {
   }
 
   std::optional<bool> IsSat = Solver->check();
-
-  // Update rlimit
-  updateRlimitUsed(Solver);
 
   if (IsSat.has_value()) {
     if (IsSat.value()) {
