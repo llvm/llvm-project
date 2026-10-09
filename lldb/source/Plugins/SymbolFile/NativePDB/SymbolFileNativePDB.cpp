@@ -1054,6 +1054,7 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
   TypeIndex ti;
   llvm::StringRef name;
   lldb::addr_t addr = 0;
+  SegmentOffset so;
   bool is_external = false;
   DWARFExpression location_expr;
   switch (sym.kind()) {
@@ -1071,6 +1072,7 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
     scope = (sym.kind() == S_GDATA32) ? eValueTypeVariableGlobal
                                       : eValueTypeVariableStatic;
     name = ds.Name;
+    so = SegmentOffset(ds.Segment, ds.DataOffset);
     addr = m_index->MakeVirtualAddress(ds.Segment, ds.DataOffset);
     if (addr == LLDB_INVALID_ADDRESS)
       return nullptr;
@@ -1091,6 +1093,7 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
     }
     ti = tlds.Type;
     name = tlds.Name;
+    so = SegmentOffset(tlds.Segment, tlds.DataOffset);
     addr = m_index->MakeVirtualAddress(tlds.Segment, tlds.DataOffset);
     scope = eValueTypeVariableThreadLocal;
     if (addr == LLDB_INVALID_ADDRESS)
@@ -1128,8 +1131,7 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
 
   DWARFExpressionList location(module_sp, location_expr, nullptr);
 
-  llvm::StringRef mangled_name =
-      FindMangledSymbol(SegmentOffset(section, offset)).value_or("");
+  llvm::StringRef mangled_name = FindMangledSymbol(so).value_or("");
   if (!Mangled::IsMangledName(mangled_name))
     mangled_name = {};
   bool artificial = false;
