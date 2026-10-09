@@ -2050,13 +2050,13 @@ define <4 x float> @sub_8f32_0u2u(<8 x float> %a, <8 x float> %b) {
 ; SSE4-NEXT:    ret <4 x float> [[RESULT]]
 ;
 ; AVX2-LABEL: @sub_8f32_0u2u(
-; AVX2-NEXT:    [[SHIFT2:%.*]] = shufflevector <8 x float> [[B:%.*]], <8 x float> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX2-NEXT:    [[FOLDEXTEXTBINOP3:%.*]] = fsub <8 x float> [[B]], [[SHIFT2]]
-; AVX2-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[FOLDEXTEXTBINOP3]], <8 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
-; AVX2-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[B1:%.*]], <8 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
-; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[B1]], <8 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
-; AVX2-NEXT:    [[TMP2:%.*]] = fsub <4 x float> [[TMP4]], [[TMP3]]
-; AVX2-NEXT:    [[RESULT:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 poison, i32 4, i32 poison>
+; AVX2-NEXT:    [[SHIFT:%.*]] = shufflevector <8 x float> [[A:%.*]], <8 x float> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; AVX2-NEXT:    [[FOLDEXTEXTBINOP:%.*]] = fsub <8 x float> [[A]], [[SHIFT]]
+; AVX2-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[FOLDEXTEXTBINOP]], <8 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
+; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <8 x float> [[B:%.*]], <8 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
+; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[B]], <8 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+; AVX2-NEXT:    [[TMP4:%.*]] = fsub <4 x float> [[TMP2]], [[TMP3]]
+; AVX2-NEXT:    [[RESULT:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP4]], <4 x i32> <i32 0, i32 poison, i32 4, i32 poison>
 ; AVX2-NEXT:    ret <4 x float> [[RESULT]]
 ;
 ; AVX512-LABEL: @sub_8f32_0u2u(
