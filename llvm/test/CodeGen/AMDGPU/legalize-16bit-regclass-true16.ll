@@ -19,9 +19,9 @@ define i16 @src_s32_lo16_use_valu16(half inreg %sign) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY [[COPY]]
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 32768
-  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 killed [[COPY1]], killed [[S_MOV_B32_]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 18688
-  ; CHECK-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 killed [[S_AND_B32_]], killed [[S_MOV_B32_1]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_AND_B32_]], [[S_MOV_B32_1]], implicit-def dead $scc
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[S_OR_B32_]].lo16
   ; CHECK-NEXT:   $vgpr0 = COPY [[COPY2]]
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
@@ -39,17 +39,17 @@ define half @src_s32_hi16_use_valu16(double %sign) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE killed [[DEF]], %subreg.sub0, [[COPY]], %subreg.sub1
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[DEF]], %subreg.sub0, [[COPY]], %subreg.sub1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY killed [[COPY1]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_16 = COPY [[COPY2]].hi16
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 32768
-  ; CHECK-NEXT:   [[V_AND_B16_t16_e64_:%[0-9]+]]:vgpr_16 = V_AND_B16_t16_e64 0, killed [[S_MOV_B32_]], 0, killed [[COPY3]], 0, implicit $exec
+  ; CHECK-NEXT:   [[V_AND_B16_t16_e64_:%[0-9]+]]:vgpr_16 = V_AND_B16_t16_e64 0, [[S_MOV_B32_]], 0, [[COPY3]], 0, implicit $exec
   ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF3:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vgpr_32 = REG_SEQUENCE killed [[V_AND_B16_t16_e64_]], %subreg.lo16, killed [[DEF2]], %subreg.hi16
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY killed [[REG_SEQUENCE1]]
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY killed [[COPY4]]
+  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_AND_B16_t16_e64_]], %subreg.lo16, [[DEF2]], %subreg.hi16
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY [[REG_SEQUENCE1]]
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[COPY4]]
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_16 = COPY [[COPY5]].lo16
   ; CHECK-NEXT:   $vgpr0 = COPY [[COPY6]]
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
@@ -70,9 +70,9 @@ define amdgpu_kernel void @src_s32_lo16_use_salu32(<2 x i16> inreg %a, i16 inreg
   ; CHECK-NEXT:   [[S_LOAD_DWORD_IMM1:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 40, 0 :: (dereferenceable invariant load (s32) from constant-pool + 40, align 8, addrspace 4)
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM [[COPY]](p4), 44, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset, align 4, addrspace 4)
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   [[S_PACK_HL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HL_B32_B16 killed [[S_LOAD_DWORD_IMM]], killed [[S_LOAD_DWORD_IMM1]]
+  ; CHECK-NEXT:   [[S_PACK_HL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HL_B32_B16 [[S_LOAD_DWORD_IMM]], [[S_LOAD_DWORD_IMM1]]
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[S_PACK_HL_B32_B16_]]
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORD_SADDR killed [[V_MOV_B32_e32_]], killed [[COPY1]], killed [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (store (s32) into %ir.out.load, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORD_SADDR [[V_MOV_B32_e32_]], [[COPY1]], [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (store (s32) into %ir.out.load, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   %hi = extractelement <2 x i16> %a, i32 1
   %v0 = insertelement <2 x i16> poison, i16 %hi, i32 0
@@ -93,21 +93,21 @@ define amdgpu_kernel void @src_v32_lo16_use_salu32(ptr addrspace(1) %a, ptr addr
   ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s128) from %ir.a.kernarg.offset, align 4, addrspace 4)
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
-  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE killed [[COPY3]], %subreg.sub0, killed [[COPY2]], %subreg.sub1
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub3
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub2
-  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE killed [[COPY5]], %subreg.sub0, killed [[COPY4]], %subreg.sub1
+  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1023
-  ; CHECK-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]](i32), killed [[S_MOV_B32_]], implicit $exec
+  ; CHECK-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]](i32), [[S_MOV_B32_]], implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 2
-  ; CHECK-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 killed [[S_MOV_B32_1]], killed [[V_AND_B32_e64_]], implicit $exec
-  ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR killed [[REG_SEQUENCE]], killed [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s32) from %ir.gep, addrspace 1)
+  ; CHECK-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 [[S_MOV_B32_1]], [[V_AND_B32_e64_]], implicit $exec
+  ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[REG_SEQUENCE]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s32) from %ir.gep, addrspace 1)
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sgpr_32 = COPY [[GLOBAL_LOAD_DWORD_SADDR]]
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[GLOBAL_LOAD_DWORD_SADDR]]
-  ; CHECK-NEXT:   [[S_PACK_HL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HL_B32_B16 [[COPY7]], killed [[COPY6]]
+  ; CHECK-NEXT:   [[S_PACK_HL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HL_B32_B16 [[COPY7]], [[COPY6]]
   ; CHECK-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[S_PACK_HL_B32_B16_]], %subreg.sub0, [[S_PACK_HL_B32_B16_]], %subreg.sub1
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX2_SADDR killed [[V_MOV_B32_e32_]], killed [[REG_SEQUENCE2]], killed [[REG_SEQUENCE1]], 0, 0, implicit $exec :: (store (s64) into %ir.3, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX2_SADDR [[V_MOV_B32_e32_]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], 0, 0, implicit $exec :: (store (s64) into %ir.3, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr i32, ptr addrspace(1) %a, i32 %tid
@@ -130,26 +130,26 @@ define amdgpu_kernel void @src_v32_hi16_use_salu32(ptr addrspace(1) %a, ptr addr
   ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s128) from %ir.a.kernarg.offset, align 4, addrspace 4)
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
-  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE killed [[COPY3]], %subreg.sub0, killed [[COPY2]], %subreg.sub1
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub3
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub2
-  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE killed [[COPY5]], %subreg.sub0, killed [[COPY4]], %subreg.sub1
+  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1023
-  ; CHECK-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]](i32), killed [[S_MOV_B32_]], implicit $exec
+  ; CHECK-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]](i32), [[S_MOV_B32_]], implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 2
-  ; CHECK-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 killed [[S_MOV_B32_1]], killed [[V_AND_B32_e64_]], implicit $exec
-  ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR killed [[REG_SEQUENCE]], killed [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s32) from %ir.gep, addrspace 1)
+  ; CHECK-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 [[S_MOV_B32_1]], [[V_AND_B32_e64_]], implicit $exec
+  ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[REG_SEQUENCE]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s32) from %ir.gep, addrspace 1)
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORD_SADDR]]
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_16 = COPY [[COPY6]].hi16
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vgpr_32 = REG_SEQUENCE killed [[COPY7]], %subreg.lo16, killed [[DEF]], %subreg.hi16
-  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_32 = COPY killed [[REG_SEQUENCE2]]
+  ; CHECK-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[COPY7]], %subreg.lo16, [[DEF]], %subreg.hi16
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_32 = COPY [[REG_SEQUENCE2]]
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[GLOBAL_LOAD_DWORD_SADDR]]
-  ; CHECK-NEXT:   [[S_PACK_HL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HL_B32_B16 [[COPY9]], killed [[COPY8]]
+  ; CHECK-NEXT:   [[S_PACK_HL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HL_B32_B16 [[COPY9]], [[COPY8]]
   ; CHECK-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[S_PACK_HL_B32_B16_]], %subreg.sub0, [[S_PACK_HL_B32_B16_]], %subreg.sub1
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX2_SADDR killed [[V_MOV_B32_e32_]], killed [[REG_SEQUENCE3]], killed [[REG_SEQUENCE1]], 0, 0, implicit $exec :: (store (s64) into %ir.3, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX2_SADDR [[V_MOV_B32_e32_]], [[REG_SEQUENCE3]], [[REG_SEQUENCE1]], 0, 0, implicit $exec :: (store (s64) into %ir.3, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr i32, ptr addrspace(1) %a, i32 %tid
@@ -171,12 +171,12 @@ define amdgpu_cs half @crossbank_s32_v16(half %arg0, half inreg %arg1) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK-NEXT:   [[V_MOV_B16_t16_e64_:%[0-9]+]]:vgpr_16 = V_MOV_B16_t16_e64 0, 15360, 0, implicit $exec
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_16 = COPY [[COPY]]
-  ; CHECK-NEXT:   [[V_ADD_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_ADD_F16_t16_e64 0, [[COPY1]], 0, killed [[V_MOV_B16_t16_e64_]], 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_ADD_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_ADD_F16_t16_e64 0, [[COPY1]], 0, [[V_MOV_B16_t16_e64_]], 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE killed [[V_ADD_F16_t16_e64_]], %subreg.lo16, killed [[DEF]], %subreg.hi16
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY killed [[REG_SEQUENCE]]
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY killed [[COPY2]]
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_ADD_F16_t16_e64_]], %subreg.lo16, [[DEF]], %subreg.hi16
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY [[REG_SEQUENCE]]
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY2]]
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_16 = COPY [[COPY3]].lo16
   ; CHECK-NEXT:   $vgpr0 = COPY [[COPY4]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
@@ -195,9 +195,9 @@ define amdgpu_ps i32 @fold_reg_sequence_s32_lo16_undef(i16 inreg %a) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY [[COPY]]
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 15
-  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 killed [[COPY1]], killed [[S_MOV_B32_]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[S_AND_B32_]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY2]], implicit $exec
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY2]], implicit $exec
   ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG $sgpr0
   %zext = zext i16 %a to i32
