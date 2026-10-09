@@ -642,3 +642,33 @@ ret:
   %select = select i1 %cond2, half %phi.must.be.nan, half 0.0
   ret half %select
 }
+
+; Make sure recursion through the phi does not undo the replacement of
+; %select with %value. This used to cause an infinite loop.
+define void @recursive_phi(float %factor, i1 %condition, i1 %again) {
+; CHECK-LABEL: define void @recursive_phi(
+; CHECK-SAME: float [[FACTOR:%.*]], i1 [[CONDITION:%.*]], i1 [[AGAIN:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    br label %[[BACK:.*]]
+; CHECK:       [[BACK]]:
+; CHECK-NEXT:    br i1 [[AGAIN]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %value = phi float [ 0.0, %entry ], [ %mul, %back ]
+  %select = select i1 %condition, float 0x7FF8000000000000, float %value
+  %mul = fmul nnan nsz float %select, %factor
+  br label %back
+
+back:
+  br i1 %again, label %loop, label %exit
+
+exit:
+  ret void
+}

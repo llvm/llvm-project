@@ -3862,6 +3862,10 @@ bool InstCombinerImpl::SimplifyDemandedFPClass(Instruction *I, unsigned OpNo,
 
   if (!NewVal)
     return false;
+  // Recursion through a PHI may have already replaced this use. If the
+  // recursive simplification only changed V in place, do not restore it.
+  if (NewVal == V && U.get() != V)
+    return true;
   if (Instruction *OpInst = dyn_cast<Instruction>(U))
     salvageDebugInfo(*OpInst);
 
