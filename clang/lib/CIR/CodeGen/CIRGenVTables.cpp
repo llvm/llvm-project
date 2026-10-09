@@ -830,7 +830,10 @@ void CIRGenFunction::emitMustTailThunk(GlobalDecl gd,
   cir::FuncType calleeTy = callee.getFunctionType();
   mlir::Type retTy = calleeTy.getReturnType();
 
-  cir::CallOp call = builder.createCallOp(loc, callee, args);
+  assert(!cir::MissingFeatures::opCallAttrs());
+  cir::CallOp call =
+      builder.createCallOp(loc, callee, args, /*attrs=*/{}, /*argAttrs=*/{},
+                           /*resAttrs=*/{}, curFnInfo->getCallingConvention());
   call->setAttr(cir::CIRDialect::getMustTailAttrName(),
                 mlir::UnitAttr::get(builder.getContext()));
 

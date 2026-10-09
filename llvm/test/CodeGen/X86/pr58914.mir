@@ -12,15 +12,15 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $rcx, $ymm0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64_nosp = COPY killed $rcx
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vr256x = COPY killed $ymm0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64_nosp = COPY $rcx
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vr256x = COPY $ymm0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vk16wm = COPY $rsp
   ; CHECK-NEXT:   [[VBLENDMPDZ256rmk:%[0-9]+]]:vr256x = VBLENDMPDZ256rmk killed [[COPY2]], [[COPY1]], %stack.0, 8, [[COPY]], 0, $noreg
-  ; CHECK-NEXT:   RET killed [[VBLENDMPDZ256rmk]]
+  ; CHECK-NEXT:   RET [[VBLENDMPDZ256rmk]]
   bb.0:
     successors: %bb.1(0x7c000000)
     liveins: $rcx, $ymm0

@@ -733,9 +733,9 @@ bool PHIEliminationImpl::SplitPHIEdges(MachineFunction &MF,
         continue;
       MachineBasicBlock *NewBB;
       if (P)
-        NewBB = PreMBB->SplitCriticalEdge(&MBB, *P, nullptr, &MDTU);
+        NewBB = PreMBB->SplitCriticalEdge(&MBB, *P, &MDTU);
       else
-        NewBB = PreMBB->SplitCriticalEdge(&MBB, *MFAM, nullptr, &MDTU);
+        NewBB = PreMBB->SplitCriticalEdge(&MBB, *MFAM, &MDTU);
       if (!NewBB) {
         LLVM_DEBUG(dbgs() << "Failed to split critical edge.\n");
         continue;

@@ -8076,6 +8076,14 @@ bool Sema::areVectorTypesSameSize(QualType SrcTy, QualType DestTy) {
   if (!breakDownVectorType(DestTy, DestLen, DestEltTy))
     return false;
 
+  // x87 long double has padding bits, so it cannot be bitcast to another type.
+  auto IsX87LongDouble = [&](QualType T) {
+    return T->isRealFloatingType() && &Context.getFloatTypeSemantics(T) ==
+                                          &llvm::APFloat::x87DoubleExtended();
+  };
+  if (IsX87LongDouble(SrcEltTy) != IsX87LongDouble(DestEltTy))
+    return false;
+
   // ASTContext::getTypeSize will return the size rounded up to a
   // power of 2, so instead of using that, we need to use the raw
   // element size multiplied by the element count.

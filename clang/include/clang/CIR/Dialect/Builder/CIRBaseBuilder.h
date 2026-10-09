@@ -613,9 +613,12 @@ public:
                            mlir::Type returnType, mlir::ValueRange operands,
                            llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
                            llvm::ArrayRef<mlir::NamedAttrList> argAttrs = {},
-                           llvm::ArrayRef<mlir::NamedAttribute> resAttrs = {}) {
+                           llvm::ArrayRef<mlir::NamedAttribute> resAttrs = {},
+                           cir::CallingConv callingConv = cir::CallingConv::C) {
     auto op = cir::CallOp::create(*this, loc, callee, returnType, operands);
     op->setAttrs(attrs);
+    if (callingConv != cir::CallingConv::C)
+      op.setCallingConv(callingConv);
 
     if (!argAttrs.empty()) {
       llvm::SmallVector<mlir::Attribute> argDictAttrs;
@@ -641,10 +644,11 @@ public:
                            mlir::ValueRange operands,
                            llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
                            llvm::ArrayRef<mlir::NamedAttrList> argAttrs = {},
-                           llvm::ArrayRef<mlir::NamedAttribute> resAttrs = {}) {
+                           llvm::ArrayRef<mlir::NamedAttribute> resAttrs = {},
+                           cir::CallingConv callingConv = cir::CallingConv::C) {
     return createCallOp(loc, mlir::SymbolRefAttr::get(callee),
                         callee.getFunctionType().getReturnType(), operands,
-                        attrs, argAttrs, resAttrs);
+                        attrs, argAttrs, resAttrs, callingConv);
   }
 
   cir::CallOp
@@ -652,12 +656,13 @@ public:
                        cir::FuncType funcType, mlir::ValueRange operands,
                        llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
                        llvm::ArrayRef<mlir::NamedAttrList> argAttrs = {},
-                       llvm::ArrayRef<mlir::NamedAttribute> resAttrs = {}) {
+                       llvm::ArrayRef<mlir::NamedAttribute> resAttrs = {},
+                       cir::CallingConv callingConv = cir::CallingConv::C) {
     llvm::SmallVector<mlir::Value> resOperands{indirectTarget};
     resOperands.append(operands.begin(), operands.end());
 
     return createCallOp(loc, mlir::SymbolRefAttr(), funcType.getReturnType(),
-                        resOperands, attrs, argAttrs, resAttrs);
+                        resOperands, attrs, argAttrs, resAttrs, callingConv);
   }
 
   cir::CallOp createCallOp(mlir::Location loc, mlir::SymbolRefAttr callee,

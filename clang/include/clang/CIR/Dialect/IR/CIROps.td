@@ -1162,8 +1162,8 @@ def CIR_ConditionOp : CIR_Op<"condition", [
 
 defvar CIR_YieldableScopes = [
   "ArrayCtor", "ArrayDtor", "AwaitOp", "CaseOp", "CleanupScopeOp", "CoroutineOp",
-  "DoWhileOp", "ForOp", "GlobalOp", "IfOp", "LocalInitOp", "ScopeOp", "SwitchOp",
-  "TernaryOp", "TryOp", "WhileOp"
+  "DoWhileOp", "ForOp", "GlobalOp", "IfOp", "LocalInitOp", "RegisterExitDtorOp",
+  "ScopeOp", "SwitchOp", "TernaryOp", "TryOp", "WhileOp"
 ];
 
 def CIR_YieldOp : CIR_Op<"yield", [
@@ -4513,6 +4513,51 @@ def CIR_LocalInitOp : CIR_Op<"local_init", [
 }
 
 //===----------------------------------------------------------------------===//
+// RegisterExitDtorOp
+//===----------------------------------------------------------------------===//
+
+def CIR_RegisterExitDtorOp : CIR_Op<"register_exit_dtor", [
+  DeclareOpInterfaceMethods<SymbolUserOpInterface>, IsolatedFromAbove,
+  NoRegionArguments, SingleBlockImplicitTerminator<"cir::YieldOp">
+]> {
+  let summary =
+      "Register the destruction of a global at program or thread exit";
+  let description = [{
+    The `cir.register_exit_dtor` operation registers its body to run when the
+    storage duration of the global `object` ends: at program exit, or at
+    thread exit when `object` is thread local.  The registration happens when
+    the operation executes, so objects registered later are destroyed earlier.
+
+    It must be nested in the ctor region of a `cir.global` or
+    `cir.local_init`, but not inside another `cir.register_exit_dtor`,
+    typically right after the construction of a temporary whose lifetime that
+    variable extends.  `object` must have no ctor or dtor region of its own.
+    The body destroys `object`, which it reaches through `cir.get_global`.
+
+    Example:
+
+    ```
+    cir.global external @r = #cir.zero : !rec_Refs ctor {
+      %0 = cir.get_global @_ZGR1r_ : !cir.ptr<!rec_Tmp>
+      cir.call @_ZN3TmpC1Ei(%0, %1) : (!cir.ptr<!rec_Tmp>, !s32i) -> ()
+      cir.register_exit_dtor @_ZGR1r_ {
+        %2 = cir.get_global @_ZGR1r_ : !cir.ptr<!rec_Tmp>
+        cir.call @_ZN3TmpD1Ev(%2) : (!cir.ptr<!rec_Tmp>) -> ()
+      }
+      ...
+    }
+    ```
+  }];
+
+  let arguments = (ins FlatSymbolRefAttr:$object);
+  let regions = (region SizedRegion<1>:$body);
+  let assemblyFormat = "$object $body attr-dict";
+
+  let hasVerifier = 1;
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
 // LLVMIntrinsicCallOp
 //===----------------------------------------------------------------------===//
 
@@ -4682,7 +4727,9 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
       UnitAttr:$musttail,
       OptionalAttr<CIR_MemoryEffectsAttr>:$memory_effects,
       OptionalAttr<DictArrayAttr>:$arg_attrs,
-      OptionalAttr<DictArrayAttr>:$res_attrs
+      OptionalAttr<DictArrayAttr>:$res_attrs,
+      DefaultValuedAttr<CIR_CallingConvAttr, "cir::CallingConv::C">
+        :$calling_conv
       );
 }
 
@@ -4701,10 +4748,16 @@ def CIR_CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
     empty. The first operand of this operation must be a pointer to the callee
     function. The rest operands are arguments to the callee function.
 
+    The `calling_conv` attribute specifies the calling convention used at the
+    call site. It defaults to `CallingConv::C`, which is omitted when printed.
+    Other calling conventions are printed as `cc(<mnemonic>)`, e.g.
+    `cc(spir_function)`.
+
     Example:
 
     ```
     %0 = cir.call @foo()
+    cir.call @bar() cc(spir_function) : () -> ()
     ```
   }];
 
@@ -6210,6 +6263,114 @@ def CIR_VecExtractOp : CIR_Op<"vec.extract", [
 
   let hasFolder = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// Vector reduction operations
+//===----------------------------------------------------------------------===//
+
+class CIR_VecReduceOp<string mnemonic, Type inputType, string llvmOpName>
+    : CIR_Op<"vec.reduce." # mnemonic, [
+  Pure,
+  TypesMatchWith<"type of 'result' matches element type of 'input'",
+    "input", "result",
+    "mlir::cast<cir::VectorType>($_self).getElementType()">
+]> {
+  let summary = "Reduce a vector using " # mnemonic;
+  let description = [{
+    Reduces the elements of a vector to a scalar of the vector element type.
+  }];
+
+  let arguments = (ins inputType:$input);
+  let results = (outs CIR_VectorElementType:$result);
+
+  let assemblyFormat = [{
+    `(` $input `)` `:` functional-type(operands, results) attr-dict
+  }];
+
+  let llvmOp = llvmOpName;
+}
+
+def CIR_VecReduceAddOp
+    : CIR_VecReduceOp<"add", CIR_VectorOfIntOrBoolType,
+                      "vector_reduce_add">;
+def CIR_VecReduceAndOp
+    : CIR_VecReduceOp<"and", CIR_VectorOfIntOrBoolType,
+                      "vector_reduce_and">;
+def CIR_VecReduceMulOp
+    : CIR_VecReduceOp<"mul", CIR_VectorOfIntOrBoolType,
+                      "vector_reduce_mul">;
+def CIR_VecReduceOrOp
+    : CIR_VecReduceOp<"or", CIR_VectorOfIntOrBoolType,
+                      "vector_reduce_or">;
+def CIR_VecReduceSMaxOp
+    : CIR_VecReduceOp<"smax", CIR_VectorOfSIntType,
+                      "vector_reduce_smax">;
+def CIR_VecReduceSMinOp
+    : CIR_VecReduceOp<"smin", CIR_VectorOfSIntType,
+                      "vector_reduce_smin">;
+def CIR_VecReduceUMaxOp
+    : CIR_VecReduceOp<"umax",
+                      CIR_VectorTypeOf<[CIR_AnyUIntType, CIR_AnyBoolType]>,
+                      "vector_reduce_umax">;
+def CIR_VecReduceUMinOp
+    : CIR_VecReduceOp<"umin",
+                      CIR_VectorTypeOf<[CIR_AnyUIntType, CIR_AnyBoolType]>,
+                      "vector_reduce_umin">;
+def CIR_VecReduceXorOp
+    : CIR_VecReduceOp<"xor", CIR_VectorOfIntOrBoolType,
+                      "vector_reduce_xor">;
+
+// Floating-point reductions use custom lowering to translate CIR fast-math
+// flags to the corresponding LLVM dialect attribute.
+class CIR_VecReduceFPOp<string mnemonic>
+    : CIR_Op<"vec.reduce." # mnemonic, [
+  Pure,
+  TypesMatchWith<"type of 'result' matches element type of 'input'",
+    "input", "result",
+    "mlir::cast<cir::VectorType>($_self).getElementType()">
+]> {
+  let summary = "Reduce a floating-point vector using " # mnemonic;
+  let arguments = (ins
+    CIR_VectorOfFloatType:$input,
+    OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath_flags
+  );
+  let results = (outs CIR_AnyFloatType:$result);
+
+  let assemblyFormat = [{
+    `(` $input `)` `:` functional-type(operands, results)
+    prop-dict attr-dict
+  }];
+}
+
+def CIR_VecReduceFMaxOp : CIR_VecReduceFPOp<"fmax">;
+def CIR_VecReduceFMinOp : CIR_VecReduceFPOp<"fmin">;
+
+class CIR_VecReduceAccFPOp<string mnemonic>
+    : CIR_Op<"vec.reduce." # mnemonic, [
+  Pure,
+  TypesMatchWith<"type of 'accumulator' matches element type of 'input'",
+    "input", "accumulator",
+    "mlir::cast<cir::VectorType>($_self).getElementType()">,
+  TypesMatchWith<"type of 'result' matches element type of 'input'",
+    "input", "result",
+    "mlir::cast<cir::VectorType>($_self).getElementType()">
+]> {
+  let summary = "Reduce a floating-point vector using " # mnemonic;
+  let arguments = (ins
+    CIR_AnyFloatType:$accumulator,
+    CIR_VectorOfFloatType:$input,
+    OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath_flags
+  );
+  let results = (outs CIR_AnyFloatType:$result);
+
+  let assemblyFormat = [{
+    `(` $accumulator `,` $input `)` `:` functional-type(operands, results)
+    prop-dict attr-dict
+  }];
+}
+
+def CIR_VecReduceFAddOp : CIR_VecReduceAccFPOp<"fadd">;
+def CIR_VecReduceFMulOp : CIR_VecReduceAccFPOp<"fmul">;
 
 //===----------------------------------------------------------------------===//
 // VecCmpOp

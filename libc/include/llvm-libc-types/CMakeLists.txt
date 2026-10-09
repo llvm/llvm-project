@@ -315,6 +315,7 @@ add_header(regoff_t HDR regoff_t.h)
 add_header(regmatch_t HDR regmatch_t.h DEPENDS .regoff_t)
 add_header(struct_epoll_event HDR struct_epoll_event.h)
 add_header(struct_epoll_data HDR struct_epoll_data.h)
+add_header(struct_inotify_event HDR struct_inotify_event.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(
   float128
   HDR

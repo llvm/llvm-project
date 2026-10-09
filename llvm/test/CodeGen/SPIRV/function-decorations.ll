@@ -3,16 +3,22 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info -spirv-preserve-auxdata %s -o - | FileCheck %s --implicit-check-not='OpString "spirv.Decorations"'
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info -spirv-preserve-auxdata %s -o - -filetype=obj | spirv-val %}
 
 ; Function decorations apply to the OpFunction ID for both definitions and
 ; declarations. These functions have no LLVM return attributes, so the
 ; FuncParamAttr decorations must come from the metadata.
-; Calling the declaration from two functions also exercises deduplication.
+; Calling the declaration from two functions exercises deduplication. Check
+; that each FuncParamAttr decoration appears exactly once in the annotation
+; section.
 
 ; CHECK-DAG: OpName %[[#Defined:]] "defined"
 ; CHECK-DAG: OpName %[[#Imported:]] "imported"
-; CHECK-DAG: OpDecorate %[[#Defined]] FuncParamAttr Zext
-; CHECK-DAG: OpDecorate %[[#Imported]] FuncParamAttr Sext
+; CHECK-NOT: FuncParamAttr
+; CHECK: OpDecorate %[[#Defined]] FuncParamAttr Zext
+; CHECK-NOT: FuncParamAttr
+; CHECK: OpDecorate %[[#Imported]] FuncParamAttr Sext
+; CHECK-NOT: FuncParamAttr
 ; CHECK: %[[#Imported]] = OpFunction
 ; CHECK-NEXT: OpFunctionEnd
 ; CHECK: %[[#Defined]] = OpFunction

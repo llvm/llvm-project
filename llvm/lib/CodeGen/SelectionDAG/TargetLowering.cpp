@@ -37,6 +37,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include <cctype>
 #include <deque>
+#include <list>
 using namespace llvm;
 using namespace llvm::SDPatternMatch;
 

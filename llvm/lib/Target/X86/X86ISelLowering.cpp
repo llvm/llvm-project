@@ -63,6 +63,7 @@
 #include <algorithm>
 #include <bitset>
 #include <cctype>
+#include <list>
 #include <numeric>
 using namespace llvm;
 

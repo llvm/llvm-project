@@ -1348,6 +1348,7 @@ void ScheduleDAGInstrs::dump() const {
 #endif
 }
 
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
 std::string ScheduleDAGInstrs::getGraphNodeLabel(const SUnit *SU) const {
   std::string s;
   raw_string_ostream oss(s);
@@ -1359,6 +1360,7 @@ std::string ScheduleDAGInstrs::getGraphNodeLabel(const SUnit *SU) const {
     SU->getInstr()->print(oss, /*IsStandalone=*/true);
   return s;
 }
+#endif
 
 /// Return the basic block label. It is not necessarily unique because a block
 /// contains multiple scheduling regions. But it is fine for visualization.

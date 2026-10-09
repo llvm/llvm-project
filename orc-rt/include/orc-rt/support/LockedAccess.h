@@ -34,7 +34,7 @@ template <typename T, typename LockT,
 class LockedAccess {
 public:
   /// Construct a LockedAccess that references \p R and locks \p M.
-  LockedAccess(T &R, MutexT &M) : Lock(M), R(R) {}
+  LockedAccess(T &R, MutexT &M) noexcept : Lock(M), R(R) {}
 
   // LockedAccess is not copyable or movable.
   LockedAccess(const LockedAccess &) = delete;

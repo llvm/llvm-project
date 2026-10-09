@@ -4391,10 +4391,20 @@ cc_library(
     textual_hdrs = ["lib/Passes/PassRegistry.def"],
 )
 
+gentbl_cc_library(
+    name = "PassesOptionsTableGen",
+    strip_include_prefix = "lib/Passes",
+    tbl_outs = {"lib/Passes/PassesOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Passes/PassesOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "Passes",
     srcs = glob([
         "lib/Passes/*.cpp",
+        "lib/Passes/*.h",
     ]),
     hdrs = glob([
         "include/llvm/Passes/*.h",
@@ -4416,6 +4426,8 @@ cc_library(
         ":Instrumentation",
         ":MC",
         ":ObjCARC",
+        ":Option",
+        ":PassesOptionsTableGen",
         ":Plugins",
         ":Scalar",
         ":Support",
