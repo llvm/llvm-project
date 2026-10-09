@@ -1,8 +1,7 @@
 // RUN: mlir-opt %s -mem2reg -split-input-file | FileCheck %s
 
-// Reading a static buffer through a DYNAMIC subview: the read returns the value
-// that was written, and takes the transfer's padding wherever it reads past the
-// subview's extent.
+// Reading a static buffer through a dynamic subview returns the stored value
+// within the subview's extent and the transfer's padding outside it.
 
 // CHECK-LABEL: func.func @read_dyn_subview(
 // CHECK-SAME:      %[[V:.*]]: vector<8x16xf32>, %[[N:.*]]: index, %[[PAD:.*]]: f32
@@ -57,7 +56,7 @@ func.func @write_then_read_dyn_subview(%v: vector<8x16xf32>, %w: vector<8x16xf32
 // -----
 
 // A read with a mask through a dynamic subview combines both masks: the subview
-// extent (create_mask) AND the transfer's own mask operand.
+// extent (vector.create_mask) and the transfer's own mask operand.
 // CHECK-LABEL: func.func @read_with_mask_dyn_subview(
 // CHECK-SAME:      %[[V:.*]]: vector<8x16xf32>, %[[N:.*]]: index, %[[M:.*]]: vector<8x16xi1>, %[[PAD:.*]]: f32
 // CHECK-NOT:     memref.alloca
@@ -76,8 +75,8 @@ func.func @read_with_mask_dyn_subview(%v: vector<8x16xf32>, %n: index, %m: vecto
 
 // -----
 
-// A dynamic subview of a static subview: both views apply, and the mask uses
-// the shape the subview's sizes are relative to (4x16, not the buffer's 8x16).
+// A dynamic subview of a static subview uses the static subview's shape (4x16)
+// for its mask.
 
 // CHECK-LABEL: func.func @dyn_subview_of_static_subview(
 // CHECK-SAME:      %[[V:[a-z0-9_]+]]: vector<8x16xf32>, %[[N:[a-z0-9_]+]]: index
@@ -135,8 +134,7 @@ func.func @dyn_subview_across_cfg(%v: vector<8x16xf32>, %w: vector<8x16xf32>,
 
 // -----
 
-// Negative: a dynamic OFFSET (not just size) subview is not promotable; the
-// buffer is left alone.
+// Negative: a subview with a dynamic offset prevents buffer promotion.
 
 // CHECK-LABEL: func.func @neg_dynamic_offset(
 // CHECK:         memref.alloca

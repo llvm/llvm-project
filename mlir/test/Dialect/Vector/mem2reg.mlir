@@ -591,8 +591,8 @@ func.func @read_with_mask(%v: vector<8xf32>, %m: vector<8xi1>, %pad: f32) -> vec
 
 // -----
 
-// A whole-buffer write with a mask composes select(mask, stored, reachingDef); a
-// later read observes that composed value.
+// A whole-buffer write with a mask selects the stored value for active lanes
+// and preserves the previous value for the rest.
 // CHECK-LABEL: func.func @write_with_mask(
 // CHECK-SAME:      %[[V:.*]]: vector<8xf32>, %[[W:.*]]: vector<8xf32>, %[[M:.*]]: vector<8xi1>
 // CHECK-NOT:     memref.alloca
@@ -649,7 +649,7 @@ func.func @negative_masked_read(%v: vector<8xf32>, %m: vector<8xi1>, %pad: f32) 
 
 // -----
 
-// NEGATIVE: the same for a write.
+// NEGATIVE: a write wrapped in vector.mask also prevents buffer promotion.
 
 // CHECK-LABEL: func.func @negative_masked_write(
 //        CHECK:   memref.alloca

@@ -6,54 +6,39 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements Mem2Reg-related interfaces that let a memref be promoted
-// into a single vector SSA value: `PromotableMemOpInterface` models for the ops
-// that access such a memref and `PromotableAliaserInterface` models for the ops
-// that view it. Mem2Reg calls the memory it promotes a *slot*: a pointer paired
-// with the type of the value it can be promoted to, here a memref and its
-// vector type. Promoting a slot replaces it with that value, used as the slot's
-// reaching definition.
+// This file implements Mem2Reg interfaces for promoting a memref to a single
+// vector SSA value. `PromotableMemOpInterface` handles `memref.copy`, and
+// `PromotableAliaserInterface` handles `memref.subview`. Vector transfer ops are
+// handled by the models in the Vector dialect.
 //
-// A slot is promoted when each of its uses is an access these models can
-// rewrite: a `memref.copy` here, or a vector transfer op in the Vector dialect.
-//
-// A `memref.subview` of the slot is allowed: the view gets its own slot,
-// pairing its result with the vector type corresponding to the view, and is
-// promoted together with the parent, as long as every use of the view is in
-// turn such an access, or another such view.
+// A memory slot pairs a memref with the vector type used to represent its
+// contents. Promotion replaces accesses to the slot with uses and definitions
+// of that vector value. All uses, including those through subviews, must be
+// supported by the models.
 //
 // The accesses are rewritten as follows:
 //
-//   * `memref.copy` is modeled as a transfer of the slot value: if the slot is
-//     the copy's target, the value stored into it is a `vector.transfer_read`
-//     of the copy's source; if the slot is the copy's source, its value is
-//     written to the target with a `vector.transfer_write`. Either way the copy
-//     itself is removed. A copy between two slots is resolved one slot at a
-//     time, each promotion rewriting its own side (see `CopyOpMemOpModel`).
+//   * A `memref.copy` into the slot becomes a `vector.transfer_read` of the
+//     source. A copy out of the slot becomes a `vector.transfer_write` to the
+//     target. A copy between two slots is rewritten one slot at a time.
 //
-//   * a same-rank, unit-stride `memref.subview` is exposed as an alias slot
-//     (via `PromotableAliaserInterface`), so a slot accessed through subviews
-//     promotes as well:
+//   * A same-rank, unit-stride `memref.subview` gets an alias slot that is
+//     promoted together with the parent:
 //
-//     - a static sub-slice becomes an alias of that sub-vector: a read projects
-//       it out of the slot value with `vector.extract_strided_slice` and a
-//       write composes back into the value with `vector.insert_strided_slice`;
+//     - A static subview holds the corresponding sub-vector. Reads extract it
+//       with `vector.extract_strided_slice`; writes update the parent with
+//       `vector.insert_strided_slice`.
 //
-//     - a dynamic sub-slice has no vector type, since vector shapes must be
-//       static. Its alias therefore holds the WHOLE parent vector, and accesses
-//       through it are out-of-bounds transfers of that shape. Promotion masks
-//       the value down to the extent carried by the subview's size operands,
-//       using `vector.create_mask` and `arith.select`. Such a subview must
-//       start at the buffer origin.
+//     - A dynamic subview holds the whole parent vector because vector shapes
+//       must be static. `vector.create_mask` and `arith.select` restrict accesses
+//       to the subview's extent. The subview must start at the parent's origin.
 //
-// A memref accessed through the subviews or copies above must be statically
-// shaped, so that its slot has a fixed-shape vector type. A scalable slot may
-// instead be dynamically shaped, but it is 1-D and promotes through
-// whole-buffer transfers alone: it cannot be subviewed or copied.
+// Copies and subviews require a statically shaped parent buffer. A dynamically
+// shaped buffer can instead promote to a 1-D scalable vector through
+// whole-buffer transfers, but copies and subviews are not supported.
 //
-// Accesses that do not meet the criteria above -- dynamic offsets,
-// rank-reducing or non-unit-stride subviews, non-zero transfer indices -- are
-// left untouched, so the memref is not promoted.
+// Unsupported accesses, such as dynamic subview offsets, rank reduction,
+// non-unit subview strides, or non-zero transfer indices, prevent promotion.
 //
 //===----------------------------------------------------------------------===//
 
@@ -72,16 +57,13 @@ using namespace mlir::vector;
 //  Utilities
 //===----------------------------------------------------------------------===//
 
-/// Whether `subView` is a statically-shaped slice that can be aliased as the
-/// sub-vector it covers, the alias its promotion uses. Promotion projects the
-/// parent buffer's vector value through `vector.extract_strided_slice` /
-/// `insert_strided_slice`, which require:
+/// Returns whether `subView` can be promoted as an alias of a sub-vector.
+/// Promotion uses `vector.extract_strided_slice` and
+/// `vector.insert_strided_slice`, which require:
 ///   * fully static offsets and sizes,
 ///   * unit strides,
 ///   * no rank reduction (result rank == source rank),
-/// so a dropped or dynamic dimension disqualifies the subview. A dynamically-
-/// shaped slice aliases the whole parent buffer instead
-/// (`isAliasableDynamicShapeSubView`).
+/// Dynamic shapes are handled by `isAliasableDynamicShapeSubView` instead.
 static bool isAliasableStaticShapeSubView(memref::SubViewOp subView) {
   auto srcType = dyn_cast<MemRefType>(subView.getSource().getType());
   auto resType = dyn_cast<MemRefType>(subView.getResult().getType());
@@ -117,9 +99,8 @@ static bool isAliasableStaticShapeSubView(memref::SubViewOp subView) {
   return true;
 }
 
-/// The offsets at which the alias sub-vector of a statically-shaped `subView`
-/// sits within the parent slot's value, for `vector.extract_strided_slice` /
-/// `insert_strided_slice`.
+/// Returns the static offsets of `subView` within the parent vector for
+/// `vector.extract_strided_slice` and `vector.insert_strided_slice`.
 static SmallVector<int64_t> getStaticSubViewOffsets(memref::SubViewOp subView) {
   SmallVector<int64_t> offsets;
   for (OpFoldResult offset : subView.getMixedOffsets()) {
@@ -130,9 +111,8 @@ static SmallVector<int64_t> getStaticSubViewOffsets(memref::SubViewOp subView) {
   return offsets;
 }
 
-/// Whether `subView` is a dynamically-shaped slice that can be aliased as the
-/// whole parent buffer, the alias its promotion uses. A statically-shaped slice
-/// aliases just its sub-vector instead (`isAliasableStaticShapeSubView`).
+/// Returns whether `subView` can be promoted as an alias of the whole parent
+/// vector. Static shapes are handled by `isAliasableStaticShapeSubView` instead.
 static bool isAliasableDynamicShapeSubView(memref::SubViewOp subView) {
   // The parent must be statically shaped so the slot has a fixed-shape vector
   // type; only the subview's sizes may be dynamic.
@@ -191,11 +171,10 @@ static Value buildSubViewMask(OpBuilder &builder, Location loc,
 /// in-bounds only when the memref extent is statically at least the vector
 /// extent.
 ///
-/// The padding is a don't-care: `memref.copy` requires both sides to have the
-/// same shape, so the source covers the whole vector at runtime and a dynamic
-/// extent only forces a conservative out-of-bounds marking. For a
-/// dynamic-subview slot, lanes past its extent are in any case discarded by the
-/// aliaser's masked select.
+/// The padding value does not affect the copy: both operands must have the same
+/// runtime shape. For a whole-buffer slot, the source covers the whole vector.
+/// For a dynamic-subview slot, the aliaser's masked select discards lanes outside
+/// the subview's extent.
 static Value readMemRefAsVector(OpBuilder &builder, Location loc, Value mem,
                                 VectorType vecType) {
   assert(!vecType.isScalable() && "expected a fixed-size vector");
@@ -238,28 +217,18 @@ static void writeVectorToMemRef(OpBuilder &builder, Location loc, Value vec,
 }
 
 //===----------------------------------------------------------------------===//
-//  memref.subview aliaser
+//  memref.copy
 //===----------------------------------------------------------------------===//
 namespace {
 /// Mem2Reg model for `memref.copy`.
 ///
-/// Mem2Reg turns a memref slot into one vector SSA value and tracks which value
-/// the buffer holds at each point. Three hooks drive this: (1)
-/// `canUsesBeRemoved` checks every access is one we can handle (otherwise the
-/// buffer stays in memory); (2) `getStored`, called at each op that writes the
-/// buffer, returns the vector value it stores -- this becomes the buffer's
-/// value from then on; (3) `removeBlockingUses` rewrites each access to use
-/// that vector value instead of the memref. A `memref.copy` fits this as a
-/// vector transfer of the value:
-///   * copy INTO the slot (target == slot): `getStored` reads the source into a
-///     vector (`vector.transfer_read`); that becomes the slot's value, and the
-///     copy is deleted.
-///   * copy OUT of the slot (source == slot): on removal the slot's value is
-///     written to the target with a `vector.transfer_write` -- the copy becomes
-///     that write, masked to the valid region if the slot is a dynamic view.
-/// A copy between two slots promotes one slot at a time, in either order (each
-/// promotion rewrites its own side); a dynamic-subview target is masked by the
-/// aliaser's projections.
+/// A copy into the slot becomes a `vector.transfer_read` of the source in
+/// `getStored`. A copy out of the slot becomes a `vector.transfer_write` of the
+/// reaching definition in `removeBlockingUses`.
+///
+/// A copy between two slots is rewritten one slot at a time, in either order.
+/// For dynamic subviews, the aliaser masks writes into the slot, and this model
+/// masks copies out of it.
 struct CopyOpMemOpModel
     : public PromotableMemOpInterface::ExternalModel<CopyOpMemOpModel,
                                                      memref::CopyOp> {
@@ -348,22 +317,16 @@ struct SubViewOpPromotableModel
   }
 };
 
-/// Exposes a same-rank `memref.subview` as a sub-slice alias of a vector slot,
-/// so a buffer accessed through subviews still promotes. When an access (a
-/// transfer or a copy) goes through the subview, Mem2Reg converts between the
-/// parent value and the alias value with two hooks, run around that access's
-/// own mem-op hooks:
-///   * a load reads the parent value projected DOWN to the alias
-///     (`projectSlotValueToAliasValue`);
-///   * a store runs down-project -> `getStored` -> up-project: the parent value
-///     is projected down to feed `getStored`'s `reachingDef`, then
-///     `getStored`'s result is projected UP to the parent
-///     (`projectAliasValueToSlotValue`).
-/// The projections depend on the subview's shape:
-///   * static sub-slice: `extract_strided_slice` down, `insert_strided_slice`
-///     up;
-///   * dynamic sub-slice: identity down, `select(create_mask(sizes), value,
-///     reachingDef)` up -- see `isAliasableDynamicShapeSubView`.
+/// Exposes a same-rank `memref.subview` as an alias of a vector slot.
+///
+/// `projectSlotValueToAliasValue` provides the alias value for loads and for a
+/// store's `getStored` hook. `projectAliasValueToSlotValue` merges the stored
+/// alias value back into the parent.
+///
+/// Static subviews use `vector.extract_strided_slice` and
+/// `vector.insert_strided_slice`. Dynamic subviews keep the whole parent vector:
+/// loads use it directly, and stores use `arith.select` with a mask of the
+/// subview's sizes to preserve the parent value outside the subview.
 struct SubViewOpAliasModel
     : public PromotableAliaserInterface::ExternalModel<SubViewOpAliasModel,
                                                        memref::SubViewOp> {

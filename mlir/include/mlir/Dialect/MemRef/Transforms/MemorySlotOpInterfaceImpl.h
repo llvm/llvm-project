@@ -19,12 +19,12 @@ class OpBuilder;
 namespace memref {
 void registerMemorySlotOpInterfaceExternalModels(DialectRegistry &registry);
 
-/// Whether `slotPtr` is the result of a dynamically-shaped `memref.subview`
-/// that the subview aliaser exposes as an alias of the whole parent value.
+/// Returns whether `slotPtr` is a dynamic `memref.subview` that can be promoted
+/// as an alias of the whole parent vector.
 bool isDynamicSubViewSlot(Value slotPtr);
 
-/// Builds the mask of the valid region of the subview defining `slotPtr`, or
-/// returns null if `isDynamicSubViewSlot(slotPtr)` does not hold.
+/// Builds a mask for the subview's valid region in the parent vector, or returns
+/// null if `isDynamicSubViewSlot(slotPtr)` is false.
 Value buildDynamicSubViewMask(OpBuilder &builder, Location loc, Value slotPtr);
 } // namespace memref
 } // namespace mlir

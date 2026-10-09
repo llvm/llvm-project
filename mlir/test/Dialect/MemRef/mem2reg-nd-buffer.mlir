@@ -1,8 +1,8 @@
-// RUN: mlir-opt %s --pass-pipeline='builtin.module(func.func(mem2reg{region-simplify=false}))' --split-input-file | FileCheck %s
+// RUN: mlir-opt %s -mem2reg -split-input-file | FileCheck %s
 
 
 // `memref.copy` participates in promotion as a transfer of the buffer's value.
-// Copy INTO the whole slot then read -> read of the source; buffer eliminated.
+// Copying into the whole slot and reading it becomes a read of the source.
 
 // CHECK-LABEL: func.func @copy_in_whole(
 // CHECK-SAME:      %[[SRC:.*]]: memref<8x16xf32>, %[[PAD:.*]]: f32
@@ -20,7 +20,7 @@ func.func @copy_in_whole(%src: memref<8x16xf32>, %pad: f32) -> vector<8x16xf32> 
 
 // -----
 
-// Copy OUT of the slot -> a transfer_write of the slot value into the target.
+// Copying out of the slot becomes a transfer_write of its value to the target.
 
 // CHECK-LABEL: func.func @copy_out(
 // CHECK-SAME:      %[[V:.*]]: vector<8x16xf32>, %[[DST:.*]]: memref<8x16xf32>
@@ -37,7 +37,7 @@ func.func @copy_out(%v: vector<8x16xf32>, %dst: memref<8x16xf32>) {
 
 // -----
 
-// Copy between two promotable slots: both promote, the value threads across.
+// Copying between two promotable slots eliminates both buffers.
 
 // CHECK-LABEL: func.func @copy_between_slots(
 // CHECK-SAME:      %[[V:.*]]: vector<8x16xf32>
@@ -74,9 +74,8 @@ func.func @negative_self_copy(%v: vector<8x16xf32>, %pad: f32) -> vector<8x16xf3
 
 // -----
 
-// NEGATIVE: the copy models keep to fixed-size slots. The dynamic size is not
-// what blocks it -- being a vscale multiple is what makes the slot scalable, and
-// such a buffer does promote through transfers (@scalable_whole_buffer_in_loop).
+// NEGATIVE: copies of scalable slots are not supported. Such buffers can still
+// be promoted through transfers (see @scalable_whole_buffer_in_loop).
 
 // CHECK-LABEL: func.func @negative_scalable_copy(
 //        CHECK:   memref.alloca
