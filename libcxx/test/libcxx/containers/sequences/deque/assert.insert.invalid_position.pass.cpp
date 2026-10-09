@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: can-test-hardening-assertions-fast
+// UNSUPPORTED: libcpp-assertion-semantic={{ignore|observe}}
+
 // <deque>
 
 // Make sure insert and emplace catch a position that isn't in [begin(), end()], such as an iterator
 // into another deque or an iterator to an element that was removed.
-
-// REQUIRES: can-test-hardening-assertions-fast
-// UNSUPPORTED: libcpp-assertion-semantic={{ignore|observe}}
 
 #include <deque>
 #include <vector>

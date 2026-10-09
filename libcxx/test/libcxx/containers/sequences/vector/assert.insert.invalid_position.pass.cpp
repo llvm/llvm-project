@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: can-test-hardening-assertions-fast
+// UNSUPPORTED: libcpp-assertion-semantic={{ignore|observe}}
+
 // <vector>
 
 // Make sure insert and emplace catch a position that isn't in [begin(), end()], such as an iterator
 // into another vector or an iterator invalidated by a reallocation.
-
-// REQUIRES: can-test-hardening-assertions-fast
-// UNSUPPORTED: libcpp-assertion-semantic={{ignore|observe}}
 
 #include <vector>
 

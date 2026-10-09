@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <string>
-
-// Make sure insert catches a position that isn't in [begin(), end()], such as an iterator into
-// another string or an iterator invalidated by a reallocation.
-
 // REQUIRES: can-test-hardening-assertions-fast
 // UNSUPPORTED: libcpp-assertion-semantic={{ignore|observe}}
 
 // std::string::insert(const_iterator, char) is instantiated in the dylib, so we need an up-to-date one
 // XFAIL: using-built-library-before-llvm-24
+
+// <string>
+
+// Make sure insert catches a position that isn't in [begin(), end()], such as an iterator into
+// another string or an iterator invalidated by a reallocation.
 
 #include <string>
 
