@@ -636,8 +636,7 @@ bool ConcurrencySanitizer::insertAccessProbe(Instruction *I, Value *Addr,
 
 void ConcurrencySanitizer::insertFuncEntryExit(Function &F) {
   const DataLayout &DL = F.getDataLayout();
-  InstrumentationIRBuilder IRB(&F.getEntryBlock(),
-                               F.getEntryBlock().getFirstNonPHIIt());
+  InstrumentationIRBuilder IRB(&*F.getEntryBlock().getFirstNonPHIIt());
   Type *ProgramAsPtrTy =
       PointerType::get(F.getContext(), DL.getProgramAddressSpace());
   Value *ReturnAddress = IRB.CreateIntrinsic(Intrinsic::returnaddress,
@@ -652,8 +651,7 @@ void ConcurrencySanitizer::insertFuncEntryExit(Function &F) {
 }
 
 void ConcurrencySanitizer::insertRuntimeIgnores(Function &F) {
-  InstrumentationIRBuilder IRB(&F.getEntryBlock(),
-                               F.getEntryBlock().getFirstNonPHIIt());
+  InstrumentationIRBuilder IRB(&*F.getEntryBlock().getFirstNonPHIIt());
   IRB.CreateCall(CsanIgnoreBegin);
   EscapeEnumerator EE(F, "csan_ignore_cleanup", ClHandleCxxExceptions);
   while (IRBuilder<> *AtExit = EE.Next()) {
