@@ -14040,8 +14040,9 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
          "Expected Shl node.");
   IsBSwap = false;
   ForLoads = false;
-  if (TE.State != TreeEntry::Vectorize || !TE.ReorderIndices.empty() ||
-      !TE.ReuseShuffleIndices.empty() || MinBWs.contains(&TE) ||
+  if (TE.State != TreeEntry::Vectorize || TE.isAltShuffle() ||
+      !TE.ReorderIndices.empty() || !TE.ReuseShuffleIndices.empty() ||
+      MinBWs.contains(&TE) ||
       any_of(TE.Scalars, [](Value *V) { return !V->hasOneUse(); }))
     return false;
   Type *ScalarTy = TE.getMainOp()->getType();
