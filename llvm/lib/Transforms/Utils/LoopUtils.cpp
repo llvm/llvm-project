@@ -2281,22 +2281,19 @@ Value *llvm::addDiffRuntimeChecks(Instruction *Loc,
   // the compare, to allow detecting and re-using redundant compares.
   DenseMap<std::pair<Value *, Value *>, Value *> SeenCompares;
 
-  assert(Expander.getAllInsertedInstructions().empty() &&
-         "Expected a freshly created Expander so that we could freely erase "
-         "created instructions on bailout!");
+  // The code below computes the distance between first/last bytes of the
+  // accessed memory during one vector loop iteration as
+  // VF*IC*Stride-(Stride-AccessSize).
 
+  // Bailout if we cannot guarantee this doesn't overflow (necessary for
+  // non-unit-stride accesses). We're expecting that most interesting cases
+  // won't require really huge strides, so a conservative check by adding bit
+  // widths of all multiplication terms is good enough.
   for (const auto &[SrcStart, SinkStart, AccessSize, AbsCommonStrideInBytes,
                     NeedsFreeze] : Checks) {
     assert(IC * AccessSize > 0 &&
            "Threshold must be non-zero to use diff-check");
     Type *Ty = SinkStart->getType();
-
-    // Compute the distance between first/last bytes of the accessed memory
-    // during one vector loop iteration. This is equal to
-    // VF*IC*Stride-(Stride-AccessSize). For non-unit-stride accesses we need to
-    // make sure the computation doesn't overflow. Huge strides aren't very
-    // interesting so we can make a conservative check by adding bit widths of
-    // all multiplication terms.
 
     const SCEV *VFSCEV = SE.getElementCount(Ty, VF);
     unsigned VFBits = SE.getUnsignedRangeMax(VFSCEV).getActiveBits();
@@ -2309,16 +2306,21 @@ Value *llvm::addDiffRuntimeChecks(Instruction *Loc,
 
     if (AccessSize != AbsCommonStrideInBytes &&
         !isUIntN(AvailableStrideBits, AbsCommonStrideInBytes)) {
-      if (MemoryRuntimeCheck)
-        RecursivelyDeleteTriviallyDeadInstructions(MemoryRuntimeCheck);
-      Expander.eraseDeadInstructions(nullptr);
       return nullptr;
     }
+  }
 
+  for (const auto &[SrcStart, SinkStart, AccessSize, AbsCommonStrideInBytes,
+                    NeedsFreeze] : Checks) {
+    Type *Ty = SinkStart->getType();
+    const SCEV *VFSCEV = SE.getElementCount(Ty, VF);
+
+    // Compute VF*IC*Stride-(Stride-AccessSize).
     const SCEV *VectorIterAccessSpan = SE.getMinusSCEV(
         SE.getMulExpr(VFSCEV, SE.getConstant(Ty, IC),
                       SE.getConstant(Ty, AbsCommonStrideInBytes)),
         SE.getConstant(Ty, AbsCommonStrideInBytes - AccessSize));
+
     Value *ThresholdMinusOne = Expander.expandCodeFor(
         SE.getMinusSCEV(VectorIterAccessSpan, SE.getConstant(Ty, 1)), Ty, Loc);
     Value *Diff = Expander.expandCodeFor(
