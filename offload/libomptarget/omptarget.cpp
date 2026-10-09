@@ -219,6 +219,7 @@ void *targetLockExplicit(void *HostPtr, size_t Size, int DeviceNum,
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
+  // Register and page-lock the memory.
   auto LockedPtrOrErr = DeviceOrErr->registerMemory(HostPtr, Size);
   if (!LockedPtrOrErr) {
     ODBG(ODT_Interface) << "Could not lock ptr " << HostPtr << ": "
@@ -237,6 +238,7 @@ void targetUnlockExplicit(void *HostPtr, int DeviceNum, const char *Name) {
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
+  // Unregister and unlock the memory.
   if (auto Err = DeviceOrErr->unregisterMemory(HostPtr))
     ODBG(ODT_Interface) << "Could not unlock ptr " << HostPtr << ": "
                         << toString(std::move(Err));
