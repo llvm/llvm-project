@@ -19991,6 +19991,24 @@ SDValue DAGCombiner::visitFMA(SDNode *N) {
           DAG.FoldConstantArithmetic(N->getOpcode(), DL, VT, {N0, N1, N2}))
     return C;
 
+  if (Level == BeforeLegalizeTypes && VT.isVector() &&
+      VT.getVectorElementType() == MVT::f16 &&
+      N->getFlags().hasApproximateFuncs() &&
+      !TLI.isOperationLegalOrCustom(ISD::FMA, VT) &&
+      !TLI.isOperationLegalOrCustom(ISD::FMA, VT.getScalarType()) &&
+      TLI.isOperationLegal(ISD::FMA, MVT::f32)) {
+    // Approximate FMA may round through f32. Preserve native/custom vector or
+    // scalar f16 FMA and let type legalization handle the f32 vector shape.
+    EVT F32VT = VT.changeVectorElementType(*DAG.getContext(), MVT::f32);
+    SDValue A = DAG.getNode(ISD::FP_EXTEND, DL, F32VT, N0);
+    SDValue B = DAG.getNode(ISD::FP_EXTEND, DL, F32VT, N1);
+    SDValue C = DAG.getNode(ISD::FP_EXTEND, DL, F32VT, N2);
+    SDValue Res = DAG.getNode(ISD::FMA, DL, F32VT, A, B, C);
+
+    return DAG.getNode(ISD::FP_ROUND, DL, VT, Res,
+                       DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
+  }
+
   // (-N0 * -N1) + N2 --> (N0 * N1) + N2
   TargetLowering::NegatibleCost CostN0 =
       TargetLowering::NegatibleCost::Expensive;
