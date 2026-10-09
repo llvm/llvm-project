@@ -5361,7 +5361,7 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   // TODO: Currently unit stride predicates are added unconditionally, even if
   // they are not used for the selected VF (e.g. when only interleaving).
   if (MaxFactors.FixedVF.isVector() || MaxFactors.ScalableVF.isVector())
-    Legal->collectUnitStridePredicates();
+    PSE.addPredicates(Legal->collectUnitStridePredicates());
 
   auto VPlan1 = tryToBuildVPlan1();
   if (!VPlan1)
