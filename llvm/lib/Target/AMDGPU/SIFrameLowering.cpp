@@ -346,8 +346,8 @@ class PrologEpilogSGPRSpillBuilder {
 
     initLiveUnits(LiveUnits, TRI, FuncInfo, MF, MBB, MI, /*IsProlog*/ true);
 
-    MCPhysReg TmpVGPR = static_cast<MCPhysReg>(findScratchNonCalleeSaveRegister(
-        MRI, LiveUnits, AMDGPU::VGPR_32RegClass));
+    MCRegister TmpVGPR = findScratchNonCalleeSaveRegister(
+        MRI, LiveUnits, AMDGPU::VGPR_32RegClass);
     if (!TmpVGPR)
       report_fatal_error("failed to find free scratch register");
 
@@ -444,8 +444,8 @@ class PrologEpilogSGPRSpillBuilder {
     const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
     initLiveUnits(LiveUnits, TRI, FuncInfo, MF, MBB, MI, /*IsProlog*/ false);
-    MCPhysReg TmpVGPR = static_cast<MCPhysReg>(findScratchNonCalleeSaveRegister(
-        MRI, LiveUnits, AMDGPU::VGPR_32RegClass));
+    MCRegister TmpVGPR = findScratchNonCalleeSaveRegister(
+        MRI, LiveUnits, AMDGPU::VGPR_32RegClass);
     if (!TmpVGPR)
       report_fatal_error("failed to find free scratch register");
 
