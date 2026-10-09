@@ -228,3 +228,7 @@ fcmla v0.4s, v1.4s, v2.4s, #0
 .arch_extension bti
 bti c
 // CHECK: bti c
+
+.arch_extension cflt
+cfltz #1, w0
+// CHECK: cflteq #1, w0, #0

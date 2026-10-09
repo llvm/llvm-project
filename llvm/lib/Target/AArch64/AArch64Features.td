@@ -621,6 +621,9 @@ def FeatureF16F32MM : ExtensionWithMArch<"f16f32mm", "F16F32MM", "FEAT_F16F32MM"
 //  Armv9.8 Architecture Extensions
 //===----------------------------------------------------------------------===//
 
+def FeatureCFLT : ExtensionWithMArch<"cflt", "CFLT", "FEAT_CFLT",
+  "Enable Armv9.8-A Conditional Fault instructions">;
+
 //===----------------------------------------------------------------------===//
 //  Future Architecture Technologies
 //===----------------------------------------------------------------------===//
