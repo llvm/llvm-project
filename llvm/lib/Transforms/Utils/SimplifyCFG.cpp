@@ -1808,9 +1808,8 @@ static void hoistConditionalLoadsStores(
         ConstantRange CR = getConstantRangeFromMetadata(*Ranges);
         if (PassThru && !isa<PoisonValue>(PassThru)) {
           auto *C = dyn_cast<Constant>(PassThru);
-          CR = C && !isa<UndefValue>(C)
-                   ? CR.unionWith(C->toConstantRange())
-                   : ConstantRange::getFull(CR.getBitWidth());
+          CR = C ? CR.unionWith(C->toConstantRange())
+                 : ConstantRange::getFull(CR.getBitWidth());
         }
         MaskedLoadStore->addRangeRetAttr(CR);
       }
