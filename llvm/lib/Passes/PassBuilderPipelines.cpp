@@ -2176,7 +2176,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(MainFPM),
                                                 PTO.EagerlyInvalidateAnalyses));
 
-  addModuleInlinerPass(MPM, Level, ThinOrFullLTOPhase::FullLTOPostLink);
+  addModuleInlinerPass(MPM, Opts, Level, ThinOrFullLTOPhase::FullLTOPostLink);
 
   // Lower type metadata and the type.test intrinsic. This pass supports
   // clang's control flow integrity mechanisms (-fsanitize=cfi*) and needs
