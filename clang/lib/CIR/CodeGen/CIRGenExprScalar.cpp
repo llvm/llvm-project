@@ -325,7 +325,7 @@ public:
     mlir::Value matrix = Visit(e->getBase());
     mlir::Location loc = cgf.getLoc(e->getSourceRange());
     if (cgf.cgm.getCodeGenOpts().OptimizationLevel > 0)
-      assert(!cir::MissingFeatures::emitIndexAssumption());
+      assert(!cir::MissingFeatures::emitMatrixIndexAssumption());
     return builder.createMatrixExtract(loc, matrix, rowIdx, columnIdx);
   }
 
