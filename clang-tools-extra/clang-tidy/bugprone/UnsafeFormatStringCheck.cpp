@@ -157,7 +157,8 @@ const StringLiteral *UnsafeFormatStringCheck::getFormatLiteral(
       return dyn_cast<StringLiteral>(Arg);
     }
   }
-  llvm_unreachable("The Call must match one of the functions in CustomFunctions.");
+  llvm_unreachable(
+      "The Call must match one of the functions in CustomFunctions.");
 }
 
 static bool hasUnboundedStringSpecifier(StringRef Fmt, bool IsScanfFamily) {
@@ -199,14 +200,13 @@ static bool hasUnboundedStringSpecifier(StringRef Fmt, bool IsScanfFamily) {
     if (SpecPos < N && Fmt[SpecPos] == '.') {
       SpecPos++;
       if (SpecPos < N && Fmt[SpecPos] == '*') {
-        //precision in argument
+        // precision in argument
         HasPrecision = true;
         SpecPos++;
       } else if (SpecPos < N && Fmt[SpecPos] == 's') {
-        //precision is 0
+        // precision is 0
         HasPrecision = true;
-      }
-      else {
+      } else {
         while (SpecPos < N && isdigit(Fmt[SpecPos])) {
           HasPrecision = true;
           SpecPos++;
@@ -257,8 +257,9 @@ void UnsafeFormatStringCheck::check(const MatchFinder::MatchResult &Result) {
     Format =
         UnsafeFormatStringCheck::getFormatLiteral(Call, CustomScanfFunctions);
     IsScanfFamily = true;
-  } else
+  } else {
     llvm_unreachable("No valid matched node in check()");
+  }
 
   if (!Format)
     return;
@@ -285,7 +286,5 @@ void UnsafeFormatStringCheck::check(const MatchFinder::MatchResult &Result) {
              "overflow; consider using '%%.Ns' where N limits output length")
       << Call->getSourceRange();
 }
-
-
 
 } // namespace clang::tidy::bugprone
