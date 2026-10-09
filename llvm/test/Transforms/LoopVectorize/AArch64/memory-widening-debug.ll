@@ -53,7 +53,6 @@ define void @interleaved_load(ptr noalias readonly %src, ptr noalias %dst, i64 %
 ; FIXED:  LV: Memory widening: InterleaveCost = 2, GatherScatterCost = Invalid, ScalarizationCost = 32
 ; FIXED:  LV: Setting widening decision to Interleave for VF 4 and instruction: %load.0 = load i16, ptr %gep.0, align 2
 ; FIXED:  LV: Setting widening decision to Interleave for VF 4 and instruction: %load.1 = load i16, ptr %gep.1, align 2
-; FIXED:  LV: Memory widening: calculating best strategy for %load.1 = load i16, ptr %gep.1, align 2
 ; FIXED:  LV: Memory widening: calculating best strategy for store i16 %add, ptr %dst.gep, align 2
 ; FIXED:  LV: Memory widening: can be widened normally with cost 1
 ; FIXED:  LV: Setting widening decision to Widen for VF 4 and instruction: store i16 %add, ptr %dst.gep, align 2
@@ -63,7 +62,6 @@ define void @interleaved_load(ptr noalias readonly %src, ptr noalias %dst, i64 %
 ; SVE:  LV: Memory widening: InterleaveCost = 5, GatherScatterCost = 42, ScalarizationCost = Invalid
 ; SVE:  LV: Setting widening decision to Interleave for VF vscale x 2 and instruction: %load.0 = load i16, ptr %gep.0, align 2
 ; SVE:  LV: Setting widening decision to Interleave for VF vscale x 2 and instruction: %load.1 = load i16, ptr %gep.1, align 2
-; SVE:  LV: Memory widening: calculating best strategy for %load.1 = load i16, ptr %gep.1, align 2
 ; SVE:  LV: Memory widening: calculating best strategy for store i16 %add, ptr %dst.gep, align 2
 ; SVE:  LV: Memory widening: can be widened normally with cost 1
 ; SVE:  LV: Setting widening decision to Widen for VF vscale x 2 and instruction: store i16 %add, ptr %dst.gep, align 2
