@@ -220,10 +220,10 @@ static mlir::Value emitToMemory(mlir::ConversionPatternRewriter &rewriter,
         resultTy = mlir::VectorType::get(
             vecTy.getSize(), vecTy.getElementType(), vecTy.getIsScalable());
       else {
-        uint64_t bytePadded = std::max<uint64_t>(vecTy.getSize(), 8);
-        resultTy = mlir::IntegerType::get(origType.getContext(), bytePadded);
-        value = emitBoolVecConversion(
-            rewriter, value, dyn_cast<mlir::IntegerType>(resultTy).getWidth());
+        resultTy = mlir::IntegerType::get(origType.getContext(),
+                                          vecTy.getBoolStorageWidth());
+        value =
+            emitBoolVecConversion(rewriter, value, vecTy.getBoolStorageWidth());
       }
       return mlir::LLVM::BitcastOp::create(rewriter, value.getLoc(), resultTy,
                                            value);
