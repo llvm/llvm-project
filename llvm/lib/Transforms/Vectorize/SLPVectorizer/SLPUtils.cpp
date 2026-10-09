@@ -633,8 +633,8 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
       auto *Idx = dyn_cast<ConstantInt>(EI->getIndexOperand());
       if (!Idx)
         return std::nullopt;
-      // Undefined behavior if Idx is negative or >= Size.
-      if (Idx->getValue().uge(Size))
+      // Undefined behavior if Idx is negative or out of bounds.
+      if (Idx->getValue().uge(getNumElements(Vec->getType())))
         continue;
       unsigned IntIdx = Idx->getValue().getZExtValue();
       Mask[I] = IntIdx;
@@ -661,6 +661,9 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
     }
     CommonShuffleMode = Select;
   }
+  if (Vec2 && Size != std::max(getNumElements(Vec1->getType()),
+                               getNumElements(Vec2->getType())))
+    return std::nullopt;
   // If we're not crossing lanes in different vectors, consider it as blending.
   if (CommonShuffleMode == Select && Vec2)
     return TargetTransformInfo::SK_Select;
