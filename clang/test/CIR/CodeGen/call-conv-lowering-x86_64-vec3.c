@@ -26,16 +26,16 @@ void sink_f3(f3);
 // Three chars take 4 bytes.
 c3 fwd_c3(void) { return src_c3(); }
 
-// CIR: cir.func {{.*}}@fwd_c3() -> !{{[su]}}32i
-// CIR: cir.call @src_c3(){{.*}} : () -> !{{[su]}}32i
+// CIR: cir.func {{.*}}@fwd_c3() -> !u32i
+// CIR: cir.call @src_c3(){{.*}} : () -> !u32i
 // LLVM: define{{.*}} i32 @fwd_c3()
 // LLVM: call i32 @src_c3()
 
 void pass_c3(void) { sink_c3(src_c3()); }
 
 // CIR: cir.func {{.*}}@pass_c3()
-// CIR: cir.call @src_c3(){{.*}} : () -> !{{[su]}}32i
-// CIR: cir.call @sink_c3(%{{.+}}){{.*}} : (!{{[su]}}32i{{.*}}) -> ()
+// CIR: cir.call @src_c3(){{.*}} : () -> !u32i
+// CIR: cir.call @sink_c3(%{{.+}}){{.*}} : (!u32i{{.*}}) -> ()
 // LLVM: define{{.*}} void @pass_c3()
 // LLVM: call i32 @src_c3()
 // LLVM: call void @sink_c3(i32 {{.*}}%{{.+}})
