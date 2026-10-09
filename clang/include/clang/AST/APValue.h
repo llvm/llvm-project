@@ -536,7 +536,8 @@ public:
 
   ValueKind getKind() const { return Kind; }
 
-  /// Visit this value and every recursively nested value.
+  /// Visit this value and every recursively nested value. Iteration order
+  /// is unspecified.
   ///
   /// Visitation stops if \p Visitor returns false.
   void visit(llvm::function_ref<bool(const APValue &)> Visitor) const;
