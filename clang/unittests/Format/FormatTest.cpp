@@ -7790,6 +7790,15 @@ TEST_F(FormatTest, BreakBinaryOperatorsInPresenceOfTemplates) {
                "         and is_swappable_v<hash<T>>\n"
                "         and is_callable_v<hash<T>(T)>;",
                Style);
+
+  FormatStyle Style80 = getLLVMStyle();
+  Style80.BreakBeforeBinaryOperators = FormatStyle::BOS_All;
+  verifyFormat("static constexpr long long variable_with_long_name_without_attribute\n"
+               "    = 1234567890;\n"
+               "static constexpr long long long_variable_with_attribute "
+               "[[maybe_unused]]\n"
+               "    = 9876543210;",
+               Style80);
 }
 
 TEST_F(FormatTest, ConstructorInitializers) {
