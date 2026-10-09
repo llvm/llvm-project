@@ -4023,6 +4023,42 @@ bool AArch64TTIImpl::isExtPartOfAvgExpr(const Instruction *ExtUser, Type *Dst,
   return false;
 }
 
+static InstructionCost getPackUnpackCost(EVT DstVT, EVT SrcVT) {
+  // The cost of unpacking twice is artificially increased for now in order
+  // to avoid regressions against NEON, which will use tbl instructions directly
+  // instead of multiple layers of [s|u]unpk[lo|hi].
+  // We use the unpacks in cases where the destination type is illegal and
+  // requires splitting of the input, even if the input type itself is legal.
+  const unsigned int SVE_UNPACK_ONCE = 4;
+  const unsigned int SVE_UNPACK_TWICE = 16;
+  bool IsSrcUnpacked = isUnpackedVectorVT(SrcVT);
+  bool IsDstUnpacked = isUnpackedVectorVT(DstVT);
+
+  if ((IsSrcUnpacked && IsDstUnpacked) || (!IsSrcUnpacked && !IsDstUnpacked))
+    return InstructionCost(0);
+  if (IsSrcUnpacked && !IsDstUnpacked) {
+    switch ((DstVT.getSizeInBits().getKnownMinValue()) /
+            (SrcVT.getSizeInBits().getKnownMinValue())) {
+    case 2:
+      return InstructionCost(SVE_UNPACK_ONCE);
+    case 4:
+    case 8:
+      return InstructionCost(SVE_UNPACK_TWICE);
+    }
+  }
+  if (IsDstUnpacked && !IsSrcUnpacked) {
+    switch ((SrcVT.getSizeInBits().getKnownMinValue()) /
+            (DstVT.getSizeInBits().getKnownMinValue())) {
+    case 2:
+      return InstructionCost(1); // 1 uzp
+    case 4:
+    case 8:
+      return InstructionCost(2); // 2 uzp
+    }
+  }
+  return InstructionCost(0);
+}
+
 InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                                  Type *Src,
                                                  TTI::CastContextHint CCH,
@@ -4143,6 +4179,17 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
             BF16Tbl, ISD, DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
       return Entry->Cost;
 
+  // Symbolic constants for the SVE sitofp/uitofp entries in the table below
+  // The cost of unpacking twice is artificially increased for now in order
+  // to avoid regressions against NEON, which will use tbl instructions directly
+  // instead of multiple layers of [s|u]unpk[lo|hi].
+  // We use the unpacks in cases where the destination type is illegal and
+  // requires splitting of the input, even if the input type itself is legal.
+  const unsigned int SVE_EXT_COST = 1;
+  const unsigned int SVE_FCVT_COST = 1;
+  const unsigned int SVE_UNPACK_ONCE = 4;
+  const unsigned int SVE_UNPACK_TWICE = 16;
+
   // We have to estimate a cost of fixed length operation upon
   // SVE registers(operations) with the number of registers required
   // for a fixed type to be represented upon SVE registers.
@@ -4154,24 +4201,29 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
         getTypeLegalizationCost(WiderTy.getTypeForEVT(Dst->getContext()));
     unsigned NumElements =
         AArch64::SVEBitsPerBlock / LT.second.getScalarSizeInBits();
-    return LT.first *
-           getCastInstrCost(
-               Opcode,
-               ScalableVectorType::get(Dst->getScalarType(), NumElements),
-               ScalableVectorType::get(Src->getScalarType(), NumElements), CCH,
-               CostKind, I);
+    auto *SrcScalabeTy =
+        ScalableVectorType::get(Src->getScalarType(), NumElements);
+    auto *DstScalabeTy =
+        ScalableVectorType::get(Dst->getScalarType(), NumElements);
+    InstructionCost ConversionCost =
+        getCastInstrCost(Opcode, DstScalabeTy, SrcScalabeTy, CCH, CostKind, I);
+    // Truncate operations won't introduce packing/unpacking instructions that
+    // are not already catered for here, and we should exclude i1 examples too
+    // as they are always packed types.
+    if (ISD != ISD::TRUNCATE && SrcTy.getScalarSizeInBits() > 1) {
+      InstructionCost PackUnpackCost =
+          getPackUnpackCost(TLI->getValueType(DL, DstScalabeTy),
+                            TLI->getValueType(DL, SrcScalabeTy));
+      LLVM_DEBUG(
+          dbgs() << "\n"
+                 << "New Function Return Val: "
+                 << getPackUnpackCost(TLI->getValueType(DL, DstScalabeTy),
+                                      TLI->getValueType(DL, SrcScalabeTy))
+                 << "\n");
+      return LT.first * (ConversionCost + PackUnpackCost);
+    }
+    return LT.first * ConversionCost;
   }
-
-  // Symbolic constants for the SVE sitofp/uitofp entries in the table below
-  // The cost of unpacking twice is artificially increased for now in order
-  // to avoid regressions against NEON, which will use tbl instructions directly
-  // instead of multiple layers of [s|u]unpk[lo|hi].
-  // We use the unpacks in cases where the destination type is illegal and
-  // requires splitting of the input, even if the input type itself is legal.
-  const unsigned int SVE_EXT_COST = 1;
-  const unsigned int SVE_FCVT_COST = 1;
-  const unsigned int SVE_UNPACK_ONCE = 4;
-  const unsigned int SVE_UNPACK_TWICE = 16;
 
   static const TypeConversionCostTblEntry ConversionTbl[] = {
       {ISD::TRUNCATE, MVT::v2i8, MVT::v2i64, 1},    // xtn
