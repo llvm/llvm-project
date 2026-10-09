@@ -2824,11 +2824,11 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
         return {InnerOp, InnerMask};
       return {Op, {}};
     };
-    auto [V, MaskA] = GetSource(A);
+    auto [VA, MaskA] = GetSource(A);
     auto [VB, MaskB] = GetSource(B);
-    if (VB != V)
+    if (VA != VB)
       return false;
-    auto *VTy = cast<FixedVectorType>(V->getType());
+    auto *VTy = cast<FixedVectorType>(VA->getType());
     for (int &M : Mask) {
       if (M < 0)
         continue;
@@ -2838,7 +2838,7 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
         M = MaskB.empty() ? M - NumSrcElts : MaskB[M - NumSrcElts];
     }
     // If the merged shuffle is an identity apart from poison lanes, refine
-    // those lanes to make it a pure identity so that it folds away to V.
+    // those lanes to make it a pure identity so that it folds away to VA.
     if (ShuffleVectorInst::isIdentityMask(Mask, VTy->getNumElements()))
       std::iota(Mask.begin(), Mask.end(), 0);
     // A permute is only removed if the binop using it is removed too.
@@ -2848,7 +2848,7 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
       OldCost += TTI.getInstructionCost(cast<Instruction>(A), CostKind);
     if (RemoveB)
       OldCost += TTI.getInstructionCost(cast<Instruction>(B), CostKind);
-    A = V;
+    A = VA;
     B = PoisonValue::get(VTy);
     SK = TargetTransformInfo::SK_PermuteSingleSrc;
     SrcTy = VTy;
