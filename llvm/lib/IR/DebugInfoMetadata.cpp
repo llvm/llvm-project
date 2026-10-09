@@ -657,8 +657,7 @@ DISubrange::BoundType DISubrange::getCount() const {
          "Count must be signed constant or DIVariable or DIExpression");
 
   if (auto *MD = dyn_cast<ConstantAsMetadata>(CB))
-    if (auto *CV = dyn_cast<ConstantInt>(MD->getValue()))
-      return BoundType(CV);
+    return BoundType(cast<ConstantInt>(MD->getValue()));
 
   if (auto *MD = dyn_cast<DIVariable>(CB))
     return BoundType(MD);
@@ -679,8 +678,7 @@ DISubrange::BoundType DISubrange::getLowerBound() const {
          "LowerBound must be signed constant or DIVariable or DIExpression");
 
   if (auto *MD = dyn_cast<ConstantAsMetadata>(LB))
-    if (auto *CV = dyn_cast<ConstantInt>(MD->getValue()))
-      return BoundType(CV);
+    return BoundType(cast<ConstantInt>(MD->getValue()));
 
   if (auto *MD = dyn_cast<DIVariable>(LB))
     return BoundType(MD);
@@ -701,8 +699,7 @@ DISubrange::BoundType DISubrange::getUpperBound() const {
          "UpperBound must be signed constant or DIVariable or DIExpression");
 
   if (auto *MD = dyn_cast<ConstantAsMetadata>(UB))
-    if (auto *CV = dyn_cast<ConstantInt>(MD->getValue()))
-      return BoundType(CV);
+    return BoundType(cast<ConstantInt>(MD->getValue()));
 
   if (auto *MD = dyn_cast<DIVariable>(UB))
     return BoundType(MD);
@@ -723,8 +720,7 @@ DISubrange::BoundType DISubrange::getStride() const {
          "Stride must be signed constant or DIVariable or DIExpression");
 
   if (auto *MD = dyn_cast<ConstantAsMetadata>(ST))
-    if (auto *CV = dyn_cast<ConstantInt>(MD->getValue()))
-      return BoundType(CV);
+    return BoundType(cast<ConstantInt>(MD->getValue()));
 
   if (auto *MD = dyn_cast<DIVariable>(ST))
     return BoundType(MD);
@@ -845,11 +841,8 @@ DISubrangeType::convertRawToBound(Metadata *IN) const {
   assert(isa<ConstantAsMetadata>(IN) || isa<DIVariable>(IN) ||
          isa<DIExpression>(IN) || isa<DIDerivedType>(IN));
 
-  if (auto *MD = dyn_cast<ConstantAsMetadata>(IN)) {
-    if (auto *CV = dyn_cast<ConstantInt>(MD->getValue()))
-      return BoundType(CV);
-    return BoundType();
-  }
+  if (auto *MD = dyn_cast<ConstantAsMetadata>(IN))
+    return BoundType(cast<ConstantInt>(MD->getValue()));
 
   if (auto *MD = dyn_cast<DIVariable>(IN))
     return BoundType(MD);
