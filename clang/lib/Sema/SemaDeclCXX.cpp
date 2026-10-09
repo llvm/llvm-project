@@ -9266,12 +9266,16 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
   DefaultedComparisonInfo Info =
       DefaultedComparisonAnalyzer(*this, RD, FD, DCK).visit();
 
-  // Function-body instantiation updates a declaration in place. Its canonical
-  // identity and lexical context need not describe the written definition.
+  // Function-body instantiation of an out-of-class definition updates a
+  // declaration in place. Use the written definition for these checks.
+  // In-class friends can acquire previous declarations during instantiation,
+  // so retain their instantiated redeclaration chain.
   const FunctionDecl *DeclAsWritten = FD;
-  if (const FunctionDecl *Pattern = FD->getTemplateInstantiationPattern())
-    if (const FunctionDecl *Definition = Pattern->getDefinition())
+  if (const FunctionDecl *Pattern = FD->getTemplateInstantiationPattern()) {
+    const FunctionDecl *Definition = Pattern->getDefinition();
+    if (Definition && !isa<CXXRecordDecl>(Definition->getLexicalDeclContext()))
       DeclAsWritten = Definition;
+  }
   bool First = DeclAsWritten == DeclAsWritten->getCanonicalDecl();
 
   if (!First) {

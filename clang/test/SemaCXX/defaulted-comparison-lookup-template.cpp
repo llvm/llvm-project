@@ -72,6 +72,17 @@ bool use(C<Foreign::S> a, C<Foreign::S> b) {
 }
 } // namespace InlineTiming
 
+namespace FriendRedeclaration {
+template <class T> struct C;
+bool operator==(const C<int> &, const C<int> &); // expected-note {{previous declaration is here}}
+template <class T> struct C {
+  // An instantiated friend can redeclare a function that the pattern cannot see.
+  friend bool operator==(const C &, const C &) = default; // expected-error {{already declared outside the class}}
+};
+template struct C<int>; // expected-note {{in instantiation of template class}}
+template struct C<float>;
+} // namespace FriendRedeclaration
+
 namespace Nested {
 constexpr bool operator==(Foreign::S a, Foreign::S b) {
   return a.value == b.value;
