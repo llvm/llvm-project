@@ -31,6 +31,7 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicsAArch64.h"
 #include <memory>
 
 #define GET_GICOMBINER_DEPS
@@ -730,6 +731,156 @@ void applySimplifyUADDO(MachineInstr &MI, MachineRegisterInfo &MRI,
       Helper.replaceRegWith(MRI, OldR, AddDst);
     }
   }
+}
+
+// Look for load + shuffles that can be converted to LD2/LD3/LD4
+bool matchDeinterleavingLoad(MachineInstr &MI, MachineRegisterInfo &MRI,
+                             SmallVector<Register> &Srcs) {
+  GLoad &Load = cast<GLoad>(MI);
+  LLT Ty = MRI.getType(Load.getDstReg());
+  if (!Ty.isVector() || !Load.isSimple() ||
+      Load.getMemSizeInBits() != Ty.getSizeInBits())
+    return false;
+
+  switch (Ty.getScalarSizeInBits()) {
+  case 8:
+  case 16:
+  case 32:
+  case 64:
+    break;
+  default:
+    return false;
+  }
+
+  unsigned Factor = 0;
+  for (MachineInstr &Use : MRI.use_nodbg_instructions(Load.getDstReg())) {
+    auto *Shuf = dyn_cast<GShuffleVector>(&Use);
+    if (!Shuf || Shuf->getSrc1Reg() != Load.getDstReg())
+      return false;
+    ArrayRef<int> Mask = Shuf->getMask();
+
+    if (!Factor) {
+      if (ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 2))
+        Factor = 2;
+      else if (ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 3))
+        Factor = 3;
+      else if (ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 4))
+        Factor = 4;
+      else
+        return false;
+
+      Srcs.resize(Factor);
+    }
+
+    LLT SubTy = MRI.getType(Shuf->getReg(0));
+    if (Ty.getSizeInBits() != SubTy.getSizeInBits() * Factor ||
+        SubTy.getSizeInBits() % 64 != 0)
+      return false;
+
+    unsigned Index;
+    if (!ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, Factor, Index) ||
+        Index >= Factor || Srcs[Index].isValid())
+      return false;
+    Srcs[Index] = Shuf->getReg(0);
+  }
+
+  return Factor != 0;
+}
+
+void applyDeinterleavingLoad(MachineInstr &MI, MachineRegisterInfo &MRI,
+                             MachineIRBuilder &B, SmallVector<Register> &Srcs) {
+  unsigned Factor = Srcs.size();
+  unsigned IID;
+  switch (Factor) {
+  case 2:
+    IID = Intrinsic::aarch64_neon_ld2;
+    break;
+  case 3:
+    IID = Intrinsic::aarch64_neon_ld3;
+    break;
+  case 4:
+    IID = Intrinsic::aarch64_neon_ld4;
+    break;
+  default:
+    llvm_unreachable("Unexpected deinterleave size!");
+  }
+
+  Register Pointer = MI.getOperand(1).getReg();
+  assert(MI.getNumMemOperands() == 1);
+  MachineMemOperand *MMO = *MI.memoperands_begin();
+  MachineFunction &MF = *MI.getParent()->getParent();
+
+  // Generate a LD2/3/4 per vector part
+  auto generateLoad = [&](SmallVector<Register> &Srcs, LLT Ty,
+                          unsigned Offset) {
+    auto PtrOffset = Pointer;
+    if (Offset != 0)
+      PtrOffset =
+          B.buildObjectPtrOffset(MRI.getType(Pointer), Pointer,
+                                 B.buildConstant(LLT::integer(64), Offset))
+              .getReg(0);
+    for (Register &S : Srcs)
+      if (!S.isValid())
+        S = MRI.createGenericVirtualRegister(Ty);
+    auto LD = B.buildIntrinsic(IID, Srcs);
+    LD.addReg(PtrOffset);
+    LD.addMemOperand(
+        MF.getMachineMemOperand(MMO, Offset, Ty.multiplyElements(Factor)));
+  };
+
+  // Erase the old instructions
+  for (Register Src : Srcs)
+    if (Src.isValid())
+      MRI.getVRegDef(Src)->eraseFromParent();
+
+  // Generate loads
+  LLT Ty = MRI.getType(*find_if(Srcs, [](Register R) { return R.isValid(); }));
+  LLT MainTy =
+      LLT::fixed_vector(128 / Ty.getScalarSizeInBits(), Ty.getScalarType());
+  if (Ty == MainTy || Ty == MainTy.divide(2)) {
+    // For 128bit and 64bit vectors we build the ld2/ld3/ld4 inplace
+    generateLoad(Srcs, Ty, 0);
+  } else {
+    // For larger vectors we split into more smaller chunks of size 128bit with
+    // a possible 64bit remainder.
+    unsigned NumVecs = Ty.getSizeInBits() / 128;
+    SmallVector<SmallVector<Register>> Regs;
+    for (unsigned I = 0; I < NumVecs; I++) {
+      Regs.push_back(SmallVector<Register>(Factor));
+      generateLoad(Regs.back(), MainTy, I * 16 * Factor);
+    }
+    if (Ty.getSizeInBits() % 128 == 0) {
+      // Merge all Regs into the final result vectors.
+      for (unsigned R = 0; R < Factor; R++) {
+        if (!Srcs[R].isValid())
+          continue;
+        SmallVector<Register> Ops;
+        for (unsigned I = 0; I < NumVecs; I++)
+          Ops.push_back(Regs[I][R]);
+        B.buildMergeLikeInstr(Srcs[R], Ops);
+      }
+    } else {
+      LLT LeftOverTy = MainTy.divide(2);
+      SmallVector<Register> LeftOverRegs(Factor);
+      generateLoad(LeftOverRegs, LeftOverTy, NumVecs * 16 * Factor);
+
+      // Split up Regs to LeftOverTy and combine back to larger vectors.
+      for (unsigned R = 0; R < Factor; R++) {
+        if (!Srcs[R].isValid())
+          continue;
+        SmallVector<Register> Ops;
+        for (unsigned I = 0; I < NumVecs; I++) {
+          auto Unmerge = B.buildUnmerge(LeftOverTy, Regs[I][R]);
+          Ops.push_back(Unmerge.getReg(0));
+          Ops.push_back(Unmerge.getReg(1));
+        }
+        Ops.push_back(LeftOverRegs[R]);
+        B.buildMergeLikeInstr(Srcs[R], Ops);
+      }
+    }
+  }
+
+  MI.eraseFromParent();
 }
 
 class AArch64PreLegalizerCombinerImpl : public Combiner {
