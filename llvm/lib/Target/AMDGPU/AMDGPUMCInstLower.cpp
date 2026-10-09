@@ -170,8 +170,7 @@ void AMDGPUMCInstLower::lowerT16D16Helper(const MachineInstr *MI,
     const MachineOperand &MO = MI->getOperand(I);
     MCOperand MCOp;
     if (I == VDstOrVDataIdx)
-      MCOp = MCOperand::createReg(
-          TRI.get32BitRegister(static_cast<MCPhysReg>(MIVDstOrVData.getReg())));
+      MCOp = MCOperand::createReg(TRI.get32BitRegister(MIVDstOrVData.getReg()));
     else
       lowerOperand(MO, MCOp);
     OutMI.addOperand(MCOp);
@@ -211,8 +210,7 @@ void AMDGPUMCInstLower::lowerT16FmaMixFP16(const MachineInstr *MI,
     const MachineOperand &MO = MI->getOperand(I);
     MCOperand MCOp;
     if (I == VDstIdx)
-      MCOp = MCOperand::createReg(
-          TRI.get32BitRegister(static_cast<MCPhysReg>(VDst.getReg())));
+      MCOp = MCOperand::createReg(TRI.get32BitRegister(VDst.getReg()));
     else
       lowerOperand(MO, MCOp);
     OutMI.addOperand(MCOp);
