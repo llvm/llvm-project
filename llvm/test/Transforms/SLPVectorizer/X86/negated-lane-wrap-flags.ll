@@ -8,7 +8,7 @@ define void @sub_const_lhs_cmp_zero(ptr %p, ptr %in) {
 ; CHECK-LABEL: define void @sub_const_lhs_cmp_zero(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[IN:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[IN]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP1]], <i32 1, i32 3, i32 5, i32 7>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[TMP1]], <i32 1, i32 3, i32 5, i32 7>
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i1> [[TMP3]] to <4 x i32>
 ; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[P]], align 4
@@ -56,7 +56,7 @@ define i1 @add_lane_swapped_abs(ptr %p, ptr %in, ptr %q) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 5, i32 poison>, i32 [[Q3]], i64 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP6:%.*]] = sub nsw <4 x i32> [[TMP5]], [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sub <4 x i32> [[TMP5]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[TMP6]], i1 true)
 ; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> poison, <2 x i32> <i32 1, i32 3>
