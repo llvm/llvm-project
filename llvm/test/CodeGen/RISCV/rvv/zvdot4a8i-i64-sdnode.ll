@@ -12,12 +12,11 @@ define <vscale x 1 x i64> @vdot4a_i64(<vscale x 1 x i64> %acc, <vscale x 8 x i8>
 ; NODOT32-LABEL: vdot4a_i64:
 ; NODOT32:       # %bb.0: # %entry
 ; NODOT32-NEXT:    li a0, 1
-; NODOT32-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
-; NODOT32-NEXT:    vsext.vf4 v12, v9
-; NODOT32-NEXT:    vsext.vf4 v24, v10
-; NODOT32-NEXT:    vwmul.vv v16, v12, v24
-; NODOT32-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; NODOT32-NEXT:    vmul.vx v16, v16, a0
+; NODOT32-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
+; NODOT32-NEXT:    vwmul.vv v16, v9, v10
+; NODOT32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; NODOT32-NEXT:    vsext.vf2 v12, v16
+; NODOT32-NEXT:    vwmul.vx v16, v12, a0
 ; NODOT32-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; NODOT32-NEXT:    vadd.vv v9, v19, v20
 ; NODOT32-NEXT:    vadd.vv v8, v8, v16
@@ -31,10 +30,10 @@ define <vscale x 1 x i64> @vdot4a_i64(<vscale x 1 x i64> %acc, <vscale x 8 x i8>
 ;
 ; NODOT64-LABEL: vdot4a_i64:
 ; NODOT64:       # %bb.0: # %entry
-; NODOT64-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; NODOT64-NEXT:    vsext.vf4 v12, v9
-; NODOT64-NEXT:    vsext.vf4 v24, v10
-; NODOT64-NEXT:    vwmul.vv v16, v12, v24
+; NODOT64-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
+; NODOT64-NEXT:    vwmul.vv v12, v9, v10
+; NODOT64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
+; NODOT64-NEXT:    vsext.vf4 v16, v12
 ; NODOT64-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; NODOT64-NEXT:    vadd.vv v9, v19, v20
 ; NODOT64-NEXT:    vadd.vv v8, v8, v16
@@ -125,12 +124,11 @@ define <vscale x 1 x i64> @vdot4asu_i64(<vscale x 1 x i64> %acc, <vscale x 8 x i
 ; NODOT32-LABEL: vdot4asu_i64:
 ; NODOT32:       # %bb.0: # %entry
 ; NODOT32-NEXT:    li a0, 1
-; NODOT32-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
-; NODOT32-NEXT:    vsext.vf4 v12, v9
-; NODOT32-NEXT:    vzext.vf4 v24, v10
-; NODOT32-NEXT:    vwmulsu.vv v16, v12, v24
-; NODOT32-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; NODOT32-NEXT:    vmul.vx v16, v16, a0
+; NODOT32-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
+; NODOT32-NEXT:    vwmulsu.vv v16, v9, v10
+; NODOT32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; NODOT32-NEXT:    vsext.vf2 v12, v16
+; NODOT32-NEXT:    vwmul.vx v16, v12, a0
 ; NODOT32-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; NODOT32-NEXT:    vadd.vv v9, v19, v20
 ; NODOT32-NEXT:    vadd.vv v8, v8, v16
@@ -144,10 +142,10 @@ define <vscale x 1 x i64> @vdot4asu_i64(<vscale x 1 x i64> %acc, <vscale x 8 x i
 ;
 ; NODOT64-LABEL: vdot4asu_i64:
 ; NODOT64:       # %bb.0: # %entry
-; NODOT64-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; NODOT64-NEXT:    vsext.vf4 v12, v9
-; NODOT64-NEXT:    vzext.vf4 v24, v10
-; NODOT64-NEXT:    vwmulsu.vv v16, v12, v24
+; NODOT64-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
+; NODOT64-NEXT:    vwmulsu.vv v12, v9, v10
+; NODOT64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
+; NODOT64-NEXT:    vsext.vf4 v16, v12
 ; NODOT64-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; NODOT64-NEXT:    vadd.vv v9, v19, v20
 ; NODOT64-NEXT:    vadd.vv v8, v8, v16

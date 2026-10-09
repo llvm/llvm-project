@@ -121,6 +121,31 @@ module attributes {
 
   // CHECK: cir.func{{.*}} @take_union_floats(%arg0: !cir.vector<2 x !cir.float>)
 
+  // A bool vector is packed one bit per element, so four bools occupy one byte
+  // and are passed as an i8, which keeps noundef.
+  cir.func @vbool4(%arg0: !cir.vector<4 x !cir.bool> {llvm.noundef}) -> (!cir.vector<4 x !cir.bool> {llvm.noundef}) {
+    cir.return %arg0 : !cir.vector<4 x !cir.bool>
+  }
+
+  // CHECK: cir.func{{.*}} @vbool4(%arg0: !u8i {llvm.noundef}) -> (!u8i {llvm.noundef})
+
+  // Twenty-four bools are passed as an i32, whose top byte is undefined, so
+  // noundef is dropped from the argument and the return at both the
+  // definition and the call.
+  cir.func @vbool24(%arg0: !cir.vector<24 x !cir.bool> {llvm.noundef}) -> (!cir.vector<24 x !cir.bool> {llvm.noundef}) {
+    cir.return %arg0 : !cir.vector<24 x !cir.bool>
+  }
+
+  // CHECK: cir.func{{.*}} @vbool24(%arg0: !u32i) -> !u32i
+
+  cir.func @call_vbool24(%arg0: !cir.vector<24 x !cir.bool>) -> !cir.vector<24 x !cir.bool> {
+    %0 = cir.call @vbool24(%arg0) : (!cir.vector<24 x !cir.bool> {llvm.noundef}) -> (!cir.vector<24 x !cir.bool> {llvm.noundef})
+    cir.return %0 : !cir.vector<24 x !cir.bool>
+  }
+
+  // CHECK: cir.func{{.*}} @call_vbool24(%arg0: !u32i) -> !u32i
+  // CHECK: cir.call @vbool24(%{{.+}}) : (!u32i) -> !u32i
+
   cir.func @call_v128(%arg0: !cir.vector<4 x !cir.float>) -> !cir.vector<4 x !cir.float> {
     %0 = cir.call @v128(%arg0) : (!cir.vector<4 x !cir.float>) -> !cir.vector<4 x !cir.float>
     cir.return %0 : !cir.vector<4 x !cir.float>
@@ -141,3 +166,6 @@ module attributes {
 // LLVM: define void @take_farr(<2 x float> %{{[^,)]+}})
 // LLVM: define void @take_f3(<2 x float> %{{[^,)]+}}, float %{{[^,)]+}})
 // LLVM: define void @take_union_floats(<2 x float> %{{[^,)]+}})
+// LLVM: define noundef i8 @vbool4(i8 noundef %{{[^,)]+}})
+// LLVM: define i32 @vbool24(i32 %{{[^,)]+}})
+// LLVM: call i32 @vbool24(i32 %{{[^,)]+}})

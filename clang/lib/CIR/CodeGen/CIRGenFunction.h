@@ -292,14 +292,6 @@ public:
   /// global initializers.
   mlir::Operation *curFn = nullptr;
 
-  /// While the initializer of a variable with static storage duration is being
-  /// emitted, the region that destructors registered by that initializer belong
-  /// in: the cir.global's own dtor region for a namespace-scope variable, and
-  /// the enclosing cir.local_init's for a function-local static, which has to
-  /// be destroyed in-function under its guard. Null outside such an
-  /// initializer.
-  mlir::Region *curStaticVarDtorRegion = nullptr;
-
   /// Save Parameter Decl for coroutine.
   llvm::SmallVector<const ParmVarDecl *> fnArgs;
 
@@ -341,6 +333,12 @@ public:
     llvm::RoundingMode oldRounding;
   };
   clang::FPOptions curFPFeatures;
+
+  /// Convert the active Clang floating-point options to CIR fast-math flags.
+  cir::FastMathFlags getCurrentFastMathFlags() const;
+
+  /// Create a CIR fast-math attribute from the specified flags.
+  cir::FastMathFlagsAttr getFastMathFlagsAttr(cir::FastMathFlags fastMathFlags);
 
   /// The symbol table maps a variable name to a value in the current scope.
   /// Entering a function creates a new scope, and the function arguments are
@@ -2058,8 +2056,10 @@ public:
   cir::CoroResumeOp emitCoroResumeBuiltinCall(const CallExpr *e);
   cir::CoroDestroyOp emitCoroDestroyBuiltinCall(const CallExpr *e);
   cir::CoroNoopOp emitCoroNoopBuiltinCall(const CallExpr *e);
+  cir::CoroSuspendOp emitCoroSuspendBuiltinCall(const CallExpr *e);
 
   cir::CoroSizeOp emitCoroSizeBuiltinCall(const CallExpr *e);
+  cir::CoroAlignOp emitCoroAlignBuiltinCall(const CallExpr *e);
   cir::CoroFreeOp emitCoroFreeBuiltin(const CallExpr *e);
   RValue emitCoroutineFrame();
 

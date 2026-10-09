@@ -44,6 +44,9 @@
 !rec_UVec384 =
     !cir.union<"UVec384" {data !cir.vector<4 x !cir.float>, data !cir.array<!s8i x 33>},
                padding = {!cir.array<!u8i x 32>}>
+!rec_UVec3x384 =
+    !cir.union<"UVec3x384" {data !cir.vector<3 x !cir.float>, data !cir.array<!s8i x 33>},
+               padding = {!cir.array<!u8i x 36>}>
 !rec_UVecInArr =
     !cir.union<"UVecInArr" {data !cir.array<!cir.vector<4 x !cir.float> x 2>,
                             data !cir.array<!s8i x 33>},
@@ -122,6 +125,14 @@ module attributes {
 
   // CHECK: not yet implemented for type '!cir.union<"UVec384"
 
+  // A three-float vector is 96 bits in CIR but classifies at 128, so it
+  // reaches SSEUP too.
+  cir.func @take_vec3_384_union(%arg0: !rec_UVec3x384) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.union<"UVec3x384"
+
   // The same vector, an array away.
   cir.func @take_vec_in_arr_union(%arg0: !rec_UVecInArr) {
     cir.return
@@ -177,15 +188,6 @@ module attributes {
 
   // CHECK: not yet implemented for type '!cir.vector<[4] x !cir.float>
 
-  // The classifier rounds a vector's width up to a power of two, as clang
-  // does, and the CIR data layout does not, so a three-char vector would be
-  // coerced at 32 bits from a 24-bit value.
-  cir.func @take_odd_width(%arg0: !cir.vector<3 x !s8i>) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.vector<3 x !cir.int<s, 8>>
-
   // A _BitInt element narrower than a byte has no memory representation in
   // CIR's lowering to LLVM, so this is rejected here rather than failing
   // there.
@@ -194,15 +196,6 @@ module attributes {
   }
 
   // CHECK: not yet implemented for type '!cir.vector<16 x !cir.int<s, 2, bitint>>
-
-  // Three x87 elements are 384 bits, which the classifier rounds up to 512
-  // and CIR does not, so this is rejected for the same reason as the
-  // three-char vector.
-  cir.func @take_x87_three(%arg0: !cir.vector<3 x !cir.long_double<!cir.f80>>) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.vector<3 x !cir.long_double<!cir.f80>>
 
   // A union is moved as a value of its storage type, so a member holding data
   // past the 10 bytes an x87 double extended value stores would lose it.  A
