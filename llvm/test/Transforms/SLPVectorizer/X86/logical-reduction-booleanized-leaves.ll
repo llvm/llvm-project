@@ -328,6 +328,55 @@ entry:
   %r9 = select i1 %t9, i1 %r8, i1 false
   ret i1 %r9
 }
+
+; The i1 disjoint flags constrain bit 0 only; the wide or of the bytes must not
+; carry them.
+define i1 @or_disjoint_9(ptr %input, i8 noundef %x) {
+; CHECK-LABEL: define i1 @or_disjoint_9(
+; CHECK-SAME: ptr [[INPUT:%.*]], i8 noundef [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[INPUT]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.vector.reduce.or.v8i8(<8 x i8> [[TMP0]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = or disjoint i8 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i8 [[OP_RDX]] to i1
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+entry:
+  %a0 = load i8, ptr %input, align 1, !noundef !1
+  %p1 = getelementptr inbounds nuw i8, ptr %input, i64 1
+  %a1 = load i8, ptr %p1, align 1, !noundef !1
+  %p2 = getelementptr inbounds nuw i8, ptr %input, i64 2
+  %a2 = load i8, ptr %p2, align 1, !noundef !1
+  %p3 = getelementptr inbounds nuw i8, ptr %input, i64 3
+  %a3 = load i8, ptr %p3, align 1, !noundef !1
+  %p4 = getelementptr inbounds nuw i8, ptr %input, i64 4
+  %a4 = load i8, ptr %p4, align 1, !noundef !1
+  %p5 = getelementptr inbounds nuw i8, ptr %input, i64 5
+  %a5 = load i8, ptr %p5, align 1, !noundef !1
+  %p6 = getelementptr inbounds nuw i8, ptr %input, i64 6
+  %a6 = load i8, ptr %p6, align 1, !noundef !1
+  %p7 = getelementptr inbounds nuw i8, ptr %input, i64 7
+  %a7 = load i8, ptr %p7, align 1, !noundef !1
+  %t0 = trunc i8 %a0 to i1
+  %t1 = trunc i8 %a1 to i1
+  %t2 = trunc i8 %a2 to i1
+  %t3 = trunc i8 %a3 to i1
+  %t4 = trunc i8 %a4 to i1
+  %t5 = trunc i8 %a5 to i1
+  %t6 = trunc i8 %a6 to i1
+  %t7 = trunc i8 %a7 to i1
+  %tx = trunc i8 %x to i1
+  %s1 = or disjoint i1 %t0, %t1
+  %s2 = or disjoint i1 %s1, %t2
+  %s3 = or disjoint i1 %s2, %t3
+  %s4 = or disjoint i1 %s3, %t4
+  %s5 = or disjoint i1 %s4, %t5
+  %s6 = or disjoint i1 %s5, %t6
+  %s7 = or disjoint i1 %s6, %t7
+  %s8 = or disjoint i1 %s7, %tx
+  ret i1 %s8
+}
+
 !0 = !{i8 0, i8 2}
 !1 = !{}
 ;.
