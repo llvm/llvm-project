@@ -325,7 +325,7 @@ void SIMachineFunctionInfo::splitWWMSpillRegisters(
     SmallVectorImpl<std::pair<Register, int>> &ScratchRegs) const {
   const MCPhysReg *CSRegs = MF.getRegInfo().getCalleeSavedRegs();
   for (auto &Reg : WWMSpills) {
-    if (isCalleeSavedReg(CSRegs, static_cast<MCPhysReg>(Reg.first)))
+    if (isCalleeSavedReg(CSRegs, Reg.first))
       CalleeSavedRegs.push_back(Reg);
     else
       ScratchRegs.push_back(Reg);
@@ -333,7 +333,7 @@ void SIMachineFunctionInfo::splitWWMSpillRegisters(
 }
 
 bool SIMachineFunctionInfo::isCalleeSavedReg(const MCPhysReg *CSRegs,
-                                             MCPhysReg Reg) const {
+                                             MCRegister Reg) const {
   for (unsigned I = 0; CSRegs[I]; ++I) {
     if (CSRegs[I] == Reg)
       return true;
@@ -605,13 +605,13 @@ int SIMachineFunctionInfo::getScavengeFI(MachineFrameInfo &MFI,
   return *ScavengeFI;
 }
 
-MCPhysReg SIMachineFunctionInfo::getNextUserSGPR() const {
+MCRegister SIMachineFunctionInfo::getNextUserSGPR() const {
   assert(NumSystemSGPRs == 0 && "System SGPRs must be added after user SGPRs");
-  return static_cast<MCPhysReg>(AMDGPU::SGPR0 + NumUserSGPRs);
+  return AMDGPU::SGPR0 + NumUserSGPRs;
 }
 
-MCPhysReg SIMachineFunctionInfo::getNextSystemSGPR() const {
-  return static_cast<MCPhysReg>(AMDGPU::SGPR0 + NumUserSGPRs + NumSystemSGPRs);
+MCRegister SIMachineFunctionInfo::getNextSystemSGPR() const {
+  return AMDGPU::SGPR0 + NumUserSGPRs + NumSystemSGPRs;
 }
 
 void SIMachineFunctionInfo::MRI_NoteNewVirtualRegister(Register Reg) {
