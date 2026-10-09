@@ -14200,6 +14200,8 @@ SDValue RISCVTargetLowering::lowerVectorMaskVecReduction(SDValue Op,
   SDValue Mask, VL;
   if (IsVP) {
     Mask = Op.getOperand(2);
+    if (VecVT.isFixedLengthVector())
+      Mask = convertToScalableVector(ContainerVT, Mask, DAG, Subtarget);
     VL = Op.getOperand(3);
   } else {
     std::tie(Mask, VL) =
@@ -14686,10 +14688,9 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
 
   SubVec = DAG.getInsertSubvector(DL, DAG.getUNDEF(InterSubVT), SubVec, 0);
 
-  auto [Mask, VL] = getDefaultVLOps(VecVT, ContainerVecVT, DL, DAG, Subtarget);
-
   ElementCount EndIndex = RemIdx + SubVecVT.getVectorElementCount();
-  VL = DAG.getElementCount(DL, XLenVT, SubVecVT.getVectorElementCount());
+  SDValue VL =
+      DAG.getElementCount(DL, XLenVT, SubVecVT.getVectorElementCount());
 
   // Use tail agnostic policy if we're inserting over InterSubVT's tail.
   unsigned Policy = RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED;
@@ -14708,6 +14709,7 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
     // Construct the vector length corresponding to RemIdx + length(SubVecVT).
     VL = DAG.getNode(ISD::ADD, DL, XLenVT, SlideupAmt, VL);
 
+    SDValue Mask = getAllOnesMask(InterSubVT, VL, DL, DAG);
     SubVec = getVSlideup(DAG, Subtarget, DL, InterSubVT, AlignedExtract, SubVec,
                          SlideupAmt, Mask, VL, Policy);
   }
