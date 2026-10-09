@@ -93,6 +93,7 @@ void addDebugInfoPass(mlir::PassManager &pm,
   options.emitFakeUseForDebugVars =
       (config.OptLevel == llvm::OptimizationLevel::O0) &&
       !disableArgumentFakeUse;
+  options.boundsInStackSlots = config.OptLevel == llvm::OptimizationLevel::O0;
   addPassConditionally(pm, disableDebugInfo,
                        [&]() { return fir::createAddDebugInfoPass(options); });
 }

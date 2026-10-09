@@ -13,8 +13,8 @@
 #define DEBUG_TYPE "flang-debug-type-generator"
 
 #include "flang/Optimizer/Transforms/DebugTypeGenerator.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/CodeGen/DescriptorModel.h"
-#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Pass/Pass.h"
@@ -46,9 +46,11 @@ std::uint64_t getComponentOffset<0>(const mlir::DataLayout &dl,
 
 DebugTypeGenerator::DebugTypeGenerator(mlir::ModuleOp m,
                                        mlir::SymbolTable *symbolTable_,
-                                       const mlir::DataLayout &dl)
+                                       const mlir::DataLayout &dl,
+                                       bool boundsInStackSlots_)
     : module(m), symbolTable(symbolTable_), dataLayout{&dl},
-      kindMapping(getKindMapping(m)), llvmTypeConverter(m, false, false, dl) {
+      boundsInStackSlots(boundsInStackSlots_), kindMapping(getKindMapping(m)),
+      llvmTypeConverter(m, false, false, dl) {
   LLVM_DEBUG(llvm::dbgs() << "DITypeAttr generator\n");
 
   mlir::MLIRContext *context = module.getContext();
@@ -92,22 +94,26 @@ static mlir::LLVM::DITypeAttr genPlaceholderType(mlir::MLIRContext *context) {
                       /*bitSize=*/32, llvm::dwarf::DW_ATE_signed);
 }
 
-fir::AllocaOp getDebugBoundSlot(mlir::Value val) {
-  for (mlir::Operation *user : val.getUsers()) {
-    auto store = mlir::dyn_cast<fir::StoreOp>(user);
-    if (!store || store.getValue() != val)
-      continue;
-    auto slot = store.getMemref().getDefiningOp<fir::AllocaOp>();
-    if (!slot || !slot->hasAttr(fir::getDebugBoundSlotAttrName()))
-      continue;
-    // Slot users should either be above mentioned store or a XDeclareOp which
-    // gets generated in generateArtificialVariable.
-    if (llvm::all_of(slot->getUsers(), [&](mlir::Operation *slotUser) {
-          return slotUser == store || mlir::isa<fir::cg::XDeclareOp>(slotUser);
-        }))
-      return slot;
-  }
-  return {};
+/// Return a stack slot holding \p val wherever the variable declared by
+/// \p declOp is visible.
+static fir::AllocaOp createBoundSlot(mlir::Value val,
+                                     fir::cg::XDeclareOp declOp) {
+  // Generate the slot and store with UnknownLoc so tha they dont impact the
+  // line table.
+  mlir::OpBuilder builder(declOp);
+  mlir::Location loc = builder.getUnknownLoc();
+  builder.setInsertionPointToStart(
+      fir::getAllocaBlock(*declOp->getParentRegion()));
+  fir::AllocaOp slot = fir::AllocaOp::create(builder, loc, val.getType());
+  builder.setInsertionPoint(declOp);
+  fir::StoreOp::create(builder, loc, val, slot);
+  return slot;
+}
+
+bool DebugTypeGenerator::hasBoundSlot(mlir::Value val,
+                                      fir::cg::XDeclareOp declOp) const {
+  auto it = artificialVars.find({val, declOp});
+  return it != artificialVars.end() && it->second.slot;
 }
 
 // Helper function to create DILocalVariableAttr and DbgValueOp when information
@@ -118,6 +124,10 @@ mlir::LLVM::DILocalVariableAttr DebugTypeGenerator::generateArtificialVariable(
     mlir::MLIRContext *context, mlir::Value val,
     mlir::LLVM::DIFileAttr fileAttr, mlir::LLVM::DIScopeAttr scope,
     fir::cg::XDeclareOp declOp) {
+  std::pair<mlir::Value, mlir::Operation *> key{val, declOp};
+  if (auto it = artificialVars.find(key); it != artificialVars.end())
+    return it->second.var;
+
   // There can be multiple artificial variable for a single declOp. To help
   // distinguish them, we pad the name with a counter. The counter is the
   // position of 'val' in the operands of declOp.
@@ -128,7 +138,9 @@ mlir::LLVM::DILocalVariableAttr DebugTypeGenerator::generateArtificialVariable(
   auto name = mlir::StringAttr::get(context, "." + declOp.getUniqName().str() +
                                                  std::to_string(varID));
   builder.setInsertionPoint(declOp);
-  fir::AllocaOp slot = getDebugBoundSlot(val);
+  fir::AllocaOp slot;
+  if (boundsInStackSlots)
+    slot = createBoundSlot(val, declOp);
   mlir::Type type = slot ? slot.getInType() : val.getType();
   if (!slot &&
       (!mlir::isa<mlir::IntegerType>(type) || !type.isSignlessInteger())) {
@@ -150,6 +162,7 @@ mlir::LLVM::DILocalVariableAttr DebugTypeGenerator::generateArtificialVariable(
   else
     mlir::LLVM::DbgValueOp::create(builder, declOp.getLoc(), val, lvAttr,
                                    nullptr);
+  artificialVars[key] = {slot, lvAttr};
   return lvAttr;
 }
 

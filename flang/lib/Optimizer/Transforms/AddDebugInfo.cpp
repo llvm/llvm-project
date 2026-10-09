@@ -386,8 +386,7 @@ bool AddDebugInfoPass::createCommonBlockGlobal(
 
 // Create fake uses for compiler-generated internal variables that represent
 // values needed by a debugger.  This prevents values from being optimized out
-// such as the count and lower bound of dynamic arrays. A value kept in a stack
-// slot does not need one, since the debug info describes the slot.
+// such as the count and lower bound of dynamic arrays.
 template <typename Op>
 static void InsertFakeUseForDebugVar(mlir::OpBuilder &builder, Op declOp,
                                      mlir::Value var) {
@@ -398,7 +397,7 @@ static void InsertFakeUseForDebugVar(mlir::OpBuilder &builder, Op declOp,
                 mlir::dyn_cast<mlir::func::ReturnOp>(block.getTerminator())) {
           mlir::OpBuilder::InsertionGuard guard(builder);
           builder.setInsertionPoint(returnOp);
-          if (!fir::getIntIfConstant(var) && !fir::getDebugBoundSlot(var))
+          if (!fir::getIntIfConstant(var))
             fir::FakeUseOp::create(builder, declOp.getLoc(), var);
         }
       }
@@ -440,17 +439,21 @@ void AddDebugInfoPass::handleLocalVariable(Op declOp, llvm::StringRef name,
 
   if (emitFakeUseForDebugVars) {
     // Create fake uses for internal variables that represent count and lower
-    // bound of dynamic arrays to ensure they are not optimized out.
+    // bound of dynamic arrays to ensure they are not optimized out. A value
+    // that convertType has put in a stack slot needs none, as the debug info
+    // describes the slot and nothing has to keep the value itself alive.
     if (auto arrayTy =
             mlir::dyn_cast<mlir::LLVM::DICompositeTypeAttr>(tyAttr)) {
       if (arrayTy.getTag() == llvm::dwarf::DW_TAG_array_type) {
         if constexpr (std::is_same_v<Op, fir::cg::XDeclareOp>) {
           // Count is represented as a value in the shape attribute
           for (auto val : declOp.getShape())
-            InsertFakeUseForDebugVar(builder, declOp, val);
+            if (!typeGen.hasBoundSlot(val, declOp))
+              InsertFakeUseForDebugVar(builder, declOp, val);
           // Lower bound is represented as a value in the shift attribute
           for (auto val : declOp.getShift())
-            InsertFakeUseForDebugVar(builder, declOp, val);
+            if (!typeGen.hasBoundSlot(val, declOp))
+              InsertFakeUseForDebugVar(builder, declOp, val);
         }
       }
     }
@@ -459,7 +462,8 @@ void AddDebugInfoPass::handleLocalVariable(Op declOp, llvm::StringRef name,
     // are not optimized out.
     if constexpr (std::is_same_v<Op, fir::cg::XDeclareOp>) {
       for (auto val : declOp.getTypeparams())
-        InsertFakeUseForDebugVar(builder, declOp, val);
+        if (!typeGen.hasBoundSlot(val, declOp))
+          InsertFakeUseForDebugVar(builder, declOp, val);
     }
   }
 
@@ -1219,7 +1223,8 @@ void AddDebugInfoPass::runOnOperation() {
     mlir::LLVM::ModuleFlagsOp::create(builder, module.getLoc(),
                                       builder.getArrayAttr(moduleFlags));
   }
-  fir::DebugTypeGenerator typeGen(module, &symbolTable, *dl);
+  fir::DebugTypeGenerator typeGen(module, &symbolTable, *dl,
+                                  boundsInStackSlots);
   // We need 2 type of file paths here.
   // 1. Name of the file as was presented to compiler. This can be absolute
   // or relative to 2.

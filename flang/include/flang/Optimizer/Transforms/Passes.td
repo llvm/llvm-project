@@ -263,7 +263,12 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
            "Command-line flags to append to DWARF producer">,
     Option<"emitFakeUseForDebugVars", "emit-fake-use-for-debug-vars",
            "bool", /*default=*/"false",
-           "Emit fake use for debug variables to extend their lifetime">
+           "Emit fake use for debug variables to extend their lifetime">,
+    Option<"boundsInStackSlots", "bounds-in-stack-slots",
+           "bool", /*default=*/"false",
+           "Keep the bounds and length parameters of a variable in stack "
+           "slots, so that they can be described wherever the variable is "
+           "visible">
   ];
 }
 

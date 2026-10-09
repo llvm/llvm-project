@@ -14,8 +14,10 @@ end subroutine
 ! CHECK-LABEL: define void @array_(
 ! CHECK:         %[[LB_SLOT:[0-9]+]] = alloca
 ! CHECK:         %[[COUNT_SLOT:[0-9]+]] = alloca
-! CHECK:         #dbg_declare(ptr %[[LB_SLOT]], ![[LB:[0-9]+]], !DIExpression(),
-! CHECK:         #dbg_declare(ptr %[[COUNT_SLOT]], ![[COUNT:[0-9]+]], !DIExpression(),
+! CHECK:         store i64 %{{[0-9]+}}, ptr %[[LB_SLOT]]
+! CHECK-NEXT:    #dbg_declare(ptr %[[LB_SLOT]], ![[LB:[0-9]+]], !DIExpression(),
+! CHECK-NEXT:    store i64 %{{[0-9]+}}, ptr %[[COUNT_SLOT]]
+! CHECK-NEXT:    #dbg_declare(ptr %[[COUNT_SLOT]], ![[COUNT:[0-9]+]], !DIExpression(),
 ! CHECK-NOT:     #dbg_value
 ! Test that no fake.use is generated with an integer type i{{[0-9]+}}.
 ! CHECK-NOT:     @llvm.fake.use(i{{[0-9]+}} %
@@ -23,7 +25,8 @@ end subroutine
 
 ! CHECK-LABEL: define void @char_len_(
 ! CHECK:         %[[LEN_SLOT:[0-9]+]] = alloca
-! CHECK:         #dbg_declare(ptr %[[LEN_SLOT]], ![[LEN:[0-9]+]], !DIExpression(),
+! CHECK:         store i64 %{{[0-9]+}}, ptr %[[LEN_SLOT]]
+! CHECK-NEXT:    #dbg_declare(ptr %[[LEN_SLOT]], ![[LEN:[0-9]+]], !DIExpression(),
 ! CHECK-NOT:     #dbg_value
 ! CHECK-NOT:     @llvm.fake.use(i{{[0-9]+}} %
 ! CHECK:         ret void
