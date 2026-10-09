@@ -2526,6 +2526,11 @@ public:
   /// \p E is neither.
   static DeclRefExpr *getCountDeclRef(Expr *E, bool &IsDeref);
 
+  /// The count written on \p T itself: a CountAttributedType under at most the
+  /// parentheses, type attributes and macro qualifiers written with it, which
+  /// Type::getAsAdjusted also looks through. Null if there is none.
+  static const CountAttributedType *getWrittenCountAttributedType(QualType T);
+
   /// Check the type shape for counted_by, sized_by and their _or_null variants.
   /// The caller checks declaration context, count expressions, flexible array
   /// member eligibility and nesting.
@@ -2547,9 +2552,9 @@ public:
                                    bool UpdateFlags = true);
 
   /// Check a counted_by-family attribute in type position and initialize
-  /// \p Flags from \p AttrKind. \p PointerNestLevel counts the pointer, array
-  /// and function declarator chunks enclosing the attribute. \p IsParameter is
-  /// set for a count in a parameter's declarator.
+  /// \p Flags from \p AttrKind. \p PointerNestLevel counts the pointer and
+  /// array declarator chunks enclosing the attribute, from the nearest function
+  /// chunk. \p IsParameter is set for a count in a parameter's declarator.
   ///
   /// \returns true if valid, or false after diagnosing a rejected attribute.
   bool ValidateBoundsAttrTypeForTypePosition(
@@ -2583,10 +2588,11 @@ public:
   bool CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
                                  bool OrNull);
 
-  /// Late-parsed bounds types dropped while their declarator was built. The
-  /// attribute has already been diagnosed and its node is no longer part of
-  /// any type, so the completion pass must skip it rather than parse its
-  /// argument and complete it.
+  /// Late-parsed bounds types dropped while their declarator was built, either
+  /// rejected as nested or lost with a declarator chunk that failed; both are
+  /// already diagnosed. The completion pass must skip such a node rather than
+  /// parse its argument, unless another declarator sharing its declaration
+  /// specifiers still holds it.
   llvm::SmallPtrSet<const BoundsAttributedType *, 1>
       RejectedLateParsedBoundsTypes;
 
@@ -2615,18 +2621,34 @@ public:
   bool CheckCountedByAttrOnParam(QualType ParamTy, Expr *E, bool CountInBytes,
                                  bool OrNull);
 
+  /// Check the count \p E of a counted_by-family attribute on a function
+  /// type's return type: it must be an integer naming one of that function
+  /// type's \p Params.
+  ///
+  /// \returns false iff semantically valid.
+  bool CheckCountedByAttrOnReturn(Expr *E, bool CountInBytes, bool OrNull,
+                                  ArrayRef<DeclaratorChunk::ParamInfo> Params);
+
   /// A parameter declared as an array adjusts to a pointer to its element type.
   /// Move the valid count \p CATy on the array to that pointer.
   void AdjustCountedArrayParamType(ParmVarDecl *PVD,
                                    const CountAttributedType *CATy);
 
-  /// Diagnose a redeclaration \p New of \p Old whose parameters differ from
-  /// \p Old's in a count, on a parameter's own pointer or on one it reaches
-  /// through pointers alone.
+  /// Diagnose a redeclaration \p New of \p Old whose return type or parameters
+  /// differ from \p Old's in a count, on the type's own pointer or on one it
+  /// reaches through pointers alone.
   ///
   /// \returns true iff a difference was diagnosed.
   bool CheckCountAttributedRedeclaration(const FunctionDecl *New,
                                          const FunctionDecl *Old);
+
+  /// Supply the argument of a late-parsed bounds attribute to the type built
+  /// for it on the type of parameter \p PVD, or on the pointer that it points
+  /// to, and check it. \p Arg is null if the argument failed to parse; the
+  /// count is then an error expression at \p AttrLoc.
+  void ActOnLateParsedParamTypeAttrArgument(BoundsAttributedType *BATy,
+                                            ParmVarDecl *PVD, Expr *Arg,
+                                            SourceLocation AttrLoc);
 
   /// Perform Bounds Safety Semantic checks for assigning to a `__counted_by` or
   /// `__counted_by_or_null` pointer type \param LHSTy.

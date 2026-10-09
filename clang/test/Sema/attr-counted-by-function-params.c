@@ -1,9 +1,8 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fexperimental-late-parse-attributes -fsyntax-only -verify %s
 
-// The counted_by family on a function parameter. The count is parsed where it
-// is written, also with late parsing, so it names a parameter declared before
-// the annotated one.
+// The counted_by family on a function parameter, checked the same way with and
+// without late parsing.
 
 #define __counted_by(f)  __attribute__((counted_by(f)))
 #define __counted_by_or_null(f)  __attribute__((counted_by_or_null(f)))
@@ -43,28 +42,25 @@ int sum(int count, int *__counted_by(count) buf) {
 }
 
 //==============================================================================
-// The count is parsed where it is written
-//==============================================================================
-
-// expected-error@+1{{use of undeclared identifier 'count'}}
-void fwd_ref(int *__counted_by(count) buf, int count);
-
-// A callback field's count names the callback's parameters, not the record's
-// fields, so it is not late-parsed with them.
-struct callback_field {
-  int n;
-  void (*cb)(int len, int *__counted_by(len) p);
-  // expected-error@+1{{use of undeclared identifier 'n'}}
-  void (*cb_field)(int *__counted_by(n) p);
-};
-
-//==============================================================================
 // What the count may name
 //==============================================================================
 
 // A parameter of the function, or of an enclosing function declarator.
 void inner(void (*cb)(int len, int *__counted_by(len) p));
 void outer(int n, void (*cb)(int *__counted_by(n) p));
+
+// A callback's return count may only name the callback's own parameters.
+// expected-error@+1{{argument of 'counted_by' attribute cannot refer to declaration from a different scope}}
+void cb_return(int len, int *__counted_by(len) (*cb)(void));
+
+// A callback field's count names the callback's parameters, not the record's
+// fields.
+struct callback_field {
+  int n;
+  void (*cb)(int len, int *__counted_by(len) p);
+  // expected-error@+1{{use of undeclared identifier 'n'}}
+  void (*cb_field)(int *__counted_by(n) p);
+};
 
 // expected-error@+1{{count expression in function declaration may only reference function parameters}}
 void not_a_param(int *__counted_by(global_count) buf);
@@ -108,10 +104,6 @@ void two_levels(int count, int *__counted_by(count) **buf);
 // expected-error@+1{{'counted_by' attribute on nested pointer type is not allowed}}
 void both_counted(int n, int m, int *__counted_by(n) *__counted_by(m) buf);
 
-// A callback's return type is below the callback's pointer.
-// expected-error@+1{{'counted_by' attribute on nested pointer type is not allowed}}
-void cb_return(int len, int *__counted_by(len) (*cb)(void));
-
 // A count that comes with another declaration's type, through '__typeof__', was
 // checked where it was written, so it is not nested here.
 void typeof_param(int count, int *__counted_by(count) buf,
@@ -121,3 +113,6 @@ void typeof_field(struct with_count *s) {
   __typeof__(s->p) (**x);
   (void)x;
 }
+// A parameter declared with a function type adjusts to a function pointer. A
+// count that comes with its return type still describes that return type.
+void typeof_fn_return(__typeof__(((struct with_count *)0)->p) cb(int k));
