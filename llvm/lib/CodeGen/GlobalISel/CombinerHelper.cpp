@@ -8711,7 +8711,6 @@ void CombinerHelper::applyCountZeroToZeroPoison(MachineInstr &MI) const {
   replaceOpcodeWith(MI, getCountZeroPoisonOpcode(MI));
 }
 
-/// Bits of the LHS that can affect the demanded result of G_AND/G_OR.
 static APInt getDemandedLHSForLogicalOp(unsigned Opcode, const APInt &Demanded,
                                         const KnownBits &RHSKnown) {
   assert((Opcode == TargetOpcode::G_AND || Opcode == TargetOpcode::G_OR) &&
@@ -8952,12 +8951,13 @@ bool CombinerHelper::matchSimplifyDemandedBits(MachineInstr &MI,
   };
 
   unsigned Opcode = MI.getOpcode();
-  if (Opcode != TargetOpcode::G_AND && Opcode != TargetOpcode::G_OR)
+  switch (Opcode) {
+  default:
     return false;
-
-  // Let redundant_and/redundant_or fold the root before operand rewrites can
-  // discard the known bits that make it redundant.
-  {
+  case TargetOpcode::G_AND:
+  case TargetOpcode::G_OR: {
+    // Let redundant_and/redundant_or fold the root before operand rewrites can
+    // discard the known bits that make it redundant.
     KnownBits L = VT->getKnownBits(MI.getOperand(1).getReg());
     KnownBits R = VT->getKnownBits(MI.getOperand(2).getReg());
     bool RootRedundant = Opcode == TargetOpcode::G_AND
@@ -8967,14 +8967,15 @@ bool CombinerHelper::matchSimplifyDemandedBits(MachineInstr &MI,
                                    RootDemand.isSubsetOf(R.One | L.Zero);
     if (RootRedundant)
       return false;
+
+    KnownBits RHSKnown(RootDemand.getBitWidth());
+    if (Probe(/*OpNo=*/2, RootDemand, RHSKnown))
+      return true;
+
+    APInt LHSDemand = getDemandedLHSForLogicalOp(Opcode, RootDemand, RHSKnown);
+
+    KnownBits LHSKnown(RootDemand.getBitWidth());
+    return Probe(/*OpNo=*/1, LHSDemand, LHSKnown);
   }
-
-  KnownBits RHSKnown(RootDemand.getBitWidth());
-  if (Probe(/*OpNo=*/2, RootDemand, RHSKnown))
-    return true;
-
-  APInt LHSDemand = getDemandedLHSForLogicalOp(Opcode, RootDemand, RHSKnown);
-
-  KnownBits LHSKnown(RootDemand.getBitWidth());
-  return Probe(/*OpNo=*/1, LHSDemand, LHSKnown);
+  }
 }
