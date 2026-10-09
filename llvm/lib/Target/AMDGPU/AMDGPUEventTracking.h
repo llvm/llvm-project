@@ -8,31 +8,49 @@
 //
 /// \file Tracks a per-InstCounterType event timeline which preserves
 /// information about previously encountered MachineInstr and HWEvents.
+///
+/// The goal of this file is to implement a minimal API to preserve information
+/// about events that increment an instruction counter. Such events are
+/// contained in records called \ref EventTrackerRecord, which include:
+///   - The event kind, as a `HWEvent`
+///   - The instruction that triggered the event
+///   - The height of the record in the overall timeline of the counter, see
+///     \ref EventTrackerRecord for more details.
+///
+/// The "timeline" represents the state of an InstCounterType at a
+/// given point in time for a given MBB during a reverse postorder dataflow
+/// analysis of a function. Such a dataflow analysis is expected to pass over
+/// blocks as many times as necessary until a "fix point" is reached, which is a
+/// state in which the client (the pass that uses the APIs) decides it has
+/// enough information to safely perform its duties (generally, inserting
+/// `s_waitcnt` instructions).
+///
+/// See \ref EventTracker for more information as well.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUEVENTTRACKING_H
-#define LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUEVENTTRACKING_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUEVENTTRACKING_H
+#define LLVM_LIB_TARGET_AMDGPU_AMDGPUEVENTTRACKING_H
 
 #include "AMDGPUHWEvents.h"
 #include "AMDGPUWaitcntUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Twine.h"
 
 namespace llvm {
 class raw_ostream;
 class MachineBasicBlock;
-class MachineOperand;
-class MachineFunction;
 
 namespace AMDGPU {
 namespace eventtracking {
 
-class EventTrackingContext;
 class EventTracker;
 
-/// FIXME: Make this a generic util?
+/// FIXME: Move this to a common file and make it a generic utility.
+///
+/// Represents target-specific information about available \ref InstCounterType
+/// and their specifities. This is handled by reference and is expected to
+/// outlive \ref EventTracker
 struct CounterInfo {
   CounterInfo() = default;
 
@@ -49,8 +67,25 @@ struct CounterInfo {
   unsigned Limit;
 };
 
-/// Represent a record within the \ref EventTracker's timeline for one
-/// \ref InstCounterType.
+/// Information about an event recorded within the \ref EventTracker's timeline
+/// for one \ref InstCounterType. An event (see \ref HWEvents) has an
+/// accompanying \ref MachineInstr, and exists at a fixed height in the
+/// timeline.
+///
+/// An event's height is a conservative minimum estimate of *when* the event
+/// occured. There are two examples that help illustrate this concept:
+///
+/// If we are iterating a single block where there are no records inherited from
+/// incoming basic blocks, then the height of an event is trivial: if there are
+/// N events, the oldest event is at N-1, while the youngest one is at 0.
+/// The height of each existing event increases whenever a new one is recorded.
+///
+/// However, in cases where one record is carried over into multiple successor
+/// blocks, and then merged later (in a diamond pattern for example), then the
+/// divergence (the same record could be at a different height depending on the
+/// CFG path taken) is reconciled by merging the records with the same
+/// \ref MachineInstr and \ref SingleHWEvent into a single record, and the
+/// height of the record is the minimum across the predecessors.
 class EventTrackerRecord {
 public:
   EventTrackerRecord(MachineInstr *MI, SingleHWEvent Kind, uint32_t Height = 0)
@@ -99,17 +134,38 @@ static_assert(sizeof(EventTrackerRecord) == 16,
               "within cache lines, for maximum iteration speed");
 
 /// Per-MBB tracking context which tracks the current value (count) of each
-/// instruction counter and the set of in-flight (alive) \ref EventTrackerRecord
-/// of each instruction counter. This class is only responsible for tracking
-/// records for every InstCounterType. It does not deal with calculating the
-/// waitcnts needed, or doing more advance reasoning over the timeline for
-/// specific queries (e.g. finding an aliasing store). These responsibilities
-/// are for utils/wrappers/users of the class.
+/// instruction counter and the timeline of \ref EventTrackerRecord
+/// for each instruction counter.
+///
+/// This class is only responsible for tracking records for every
+/// \ref InstCounterType. It does not deal with calculating the waitcnts needed,
+/// or doing more advanced reasoning over the timeline for specific queries
+/// (e.g. finding an aliasing store). These responsibilities are for
+/// utils/wrappers/users of the class.
+///
+/// As stated earlier in the file, this is a per-MBB state, it is intended to be
+/// used during a reverse postorder dataflow analysis of a function.
+/// The expected usage pattern is to visit a MBB in instruction order, call
+/// \ref EventTracker::record whenever an interesting event occurs, call
+/// \ref EventTracker::drain whenever a wait on a counter is performed.
+/// In between those operations, the user of the class can use all other methods
+/// to query the current state of a counter, iterate its timeline, etc.
+///
+/// Allocation/storage/mapping of EventTrackers to MBBs is left to the user of
+/// the class via the \ref EventTracker::GetEventTrackerFn
+///
+/// Whenever dataflow analysis leads to re-visiting a block, the user of the
+/// class is expected to re-use the previous state (which is required in case
+/// the MBB is its own predecessor) and call the \ref EventTracker::enterBlock
+/// function, which will clear the state and re-import all incoming state.
 class EventTracker {
 public:
   using GetEventTrackerFn =
       function_ref<EventTracker &(const MachineBasicBlock &)>;
 
+  /// \ref MBB the MachineBasicBlock for this tracker
+  /// \ref CounterInfos Information about available \ref InstCounterType -
+  /// expected to outlive this class as it'll be stored by reference.
   EventTracker(const MachineBasicBlock &MBB,
                ArrayRef<CounterInfo> CounterInfos);
 
@@ -120,33 +176,34 @@ public:
   /// of the \ref EventTrackerRecord and only the record with the lowest height
   /// is kept.
   ///
-  /// \param EventTrackerGetter Is a function that map a MachimeBasicBlock to
+  /// \param EventTrackerGetter Is a function that map a MachineBasicBlock to
   /// the EventTracker used for that MachineBasicBlock.
   void enterBlock(GetEventTrackerFn EventTrackerGetter);
 
-  /// End iteration through the basic block.
-  /// FIXME: Currently does nothing, it's just for symmetry and debug logs.
-  void leaveBlock();
-
   /// Record an event of type \p Event at a MachineInstr \p MI, which will
   /// affect all counters that have \p Event in their event set.
+  /// \pre \ref Event is expected to belong to at least one \ref InstCounterType
   void record(MachineInstr &MI, SingleHWEvent Event);
 
-  /// Wait until the counter \p T reaches the value \p N before
-  /// continuing execution of the program (and recording more events).
-  /// This affects the count of \p T, and removes all records that have a height
-  /// greater than or equal to \p N.
-  void wait(InstCounterType T, unsigned N = 0);
+  /// Drains the timeline of \p T such that:
+  /// - The \ref count of \p T is no higher than \p N
+  /// - There are no records in the timelime where the height of the record is
+  ///   >= \p N.
+  void drain(InstCounterType T, unsigned N = 0);
 
-  /// \returns the current value of the counter \p T at this point in time
+  /// \returns a conservative estimate of the current value of the counter \p T
+  /// (a maximum value across all possible CFG paths).
   unsigned count(InstCounterType T) const;
 
   /// \returns the set of pending HWEvents for \p T
   HWEvents getPendingEvents(InstCounterType T) const;
 
-  /// \returns the set of live records recorded for \p T. This is the list of
-  /// all instructions in-flight for that counter.
-  ArrayRef<EventTrackerRecord> getLiveRecords(InstCounterType T) const;
+  /// \returns the current timeline for \p T, which contains all known in-flight
+  /// records (= records not resolved/drained). The timeline is always sorted by
+  /// the descending height of the records.
+  /// This ArrayRef is not safe for storage as it'll be invalidated when the
+  /// timeline is changed via \ref record, \ref drain or by other means.
+  ArrayRef<EventTrackerRecord> getTimeline(InstCounterType T) const;
 
   /// Prints a dump of the internal tracking state of this class for \p T to the
   /// stream \p OS.
@@ -167,17 +224,20 @@ public:
 #endif
 
 private:
+  /// FIXME: I do not think it is relevant to expose this class like we expose
+  /// \ref EventTrackerRecord at this time. However if this goes complex enough,
+  /// we could clean it up and expose it if it leads to a better API.
   struct CounterData {
     const CounterInfo *CI = nullptr;
 
-    /// Set of live records (events) that make up the `Count`.
-    SmallVector<EventTrackerRecord, 16> LiveRecords;
+    SmallVector<EventTrackerRecord, 16> Timeline;
+
     /// The current value of the counter. This is a max (upper bound) across
     /// all possible execution paths at runtime. It cannot be inferred from the
-    /// LiveRecords alone and is thus a separate tracking domain.
+    /// Timeline alone and is thus a separate tracking domain.
     ///
     /// FIXME: We shouldn't need it for correctness so perhaps it should be
-    /// removed entirely.
+    /// removed entirely, or be marked as debug.
     uint32_t Count = 0;
 
     // TODO: We could imagine storing the per-predecessor height for incoming
@@ -203,7 +263,7 @@ private:
 
   const MachineBasicBlock *MBB;
 
-  // NB: This, combined with the inline storage of LiveRecords, can lead to this
+  // NB: This, combined with the inline storage of Timeline, can lead to this
   // class becoming quite big - verify the size of this object whenever a change
   // is made.
   SmallVector<CounterData, InstCounterType::NUM_INST_CNTS> Counters;

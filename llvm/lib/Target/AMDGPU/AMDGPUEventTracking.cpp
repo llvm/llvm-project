@@ -69,7 +69,7 @@ void EventTracker::enterBlock(GetEventTrackerFn EventTrackerGetter) {
 
   SmallVector<EventTracker *> Preds;
   bool IsSelfPred = false;
-  if (Preds.empty() && !MBB->pred_empty()) {
+  if (!MBB->pred_empty()) {
     for (MachineBasicBlock *Pred : MBB->predecessors()) {
       if (Pred == MBB)
         IsSelfPred = true;
@@ -87,11 +87,6 @@ void EventTracker::enterBlock(GetEventTrackerFn EventTrackerGetter) {
     clear();
     recordIncomings(Preds);
   }
-}
-
-void EventTracker::leaveBlock() {
-  LLVM_DEBUG(dbgs() << "[EventTracker] Leaving "; MBB->printAsOperand(dbgs());
-             dbgs() << '\n');
 }
 
 void EventTracker::record(MachineInstr &MI, SingleHWEvent Event) {
@@ -121,14 +116,14 @@ void EventTracker::record(MachineInstr &MI, SingleHWEvent Event) {
     // All in all, I think this small loop is fine for now, but we can still
     // change the system if we have data backed up by profiling to
     // justify the change.
-    for (auto &Live : CD.LiveRecords)
+    for (auto &Live : CD.Timeline)
       Live.setHeight(Live.getHeight() + 1);
 
     // NOTE: We do not merge with a previous record that has the same (MI+Kind),
     // unlike in recordIncomings. We are okay with having 2 separate records
     // with the same identity (MI+Kind), if one is carried over from a backedge
     // and one is from a more recent iteration.
-    CD.LiveRecords.push_back(Rec);
+    CD.Timeline.push_back(Rec);
 
 #ifndef NDEBUG
     LLVM_DEBUG(if (EventTrackerPrintAll) {
@@ -145,25 +140,25 @@ void EventTracker::record(MachineInstr &MI, SingleHWEvent Event) {
 #endif
 }
 
-void EventTracker::wait(InstCounterType T, unsigned N) {
+void EventTracker::drain(InstCounterType T, unsigned N) {
   CounterData &CD = Counters[T];
-  LLVM_DEBUG(dbgs() << "[EventTracker] Wait on " << getInstCounterName(T)
-                    << " for " << N << '\n');
+  LLVM_DEBUG(dbgs() << "[EventTracker] Drain " << getInstCounterName(T)
+                    << " at " << N << '\n');
 
   // Fast path for clearing the counter
   if (N == 0) {
-    CD.LiveRecords.clear();
+    CD.Timeline.clear();
     CD.Count = 0;
   } else {
     CD.Count = std::min(CD.Count, N);
 
-    auto *RmIt = remove_if(CD.LiveRecords, [&](EventTrackerRecord &E) {
+    auto *RmIt = remove_if(CD.Timeline, [&](EventTrackerRecord &E) {
       if (E.getHeight() < N)
         return false;
       LLVM_DEBUG(dbgs() << "  | Removing "; E.print(dbgs()));
       return true;
     });
-    CD.LiveRecords.erase(RmIt, CD.LiveRecords.end());
+    CD.Timeline.erase(RmIt, CD.Timeline.end());
 
     LLVM_DEBUG(dbgs() << "  | => Updated Count:" << CD.Count << '\n');
 
@@ -186,14 +181,14 @@ unsigned EventTracker::count(InstCounterType T) const {
 
 HWEvents EventTracker::getPendingEvents(InstCounterType T) const {
   HWEvents Res;
-  for (const auto &E : Counters[T].LiveRecords)
+  for (const auto &E : Counters[T].Timeline)
     Res |= E.getKind();
   return Res;
 }
 
 ArrayRef<EventTrackerRecord>
-EventTracker::getLiveRecords(InstCounterType T) const {
-  return Counters[T].LiveRecords;
+EventTracker::getTimeline(InstCounterType T) const {
+  return Counters[T].Timeline;
 }
 
 void EventTracker::print(raw_ostream &OS, InstCounterType T) const {
@@ -219,7 +214,7 @@ void EventTracker::verify() const {
     //    identity, and unless there is a bug, `record` should increment all
     //    pre-existing records when a new one is inserted.
     DenseSet<std::pair<hash_code, unsigned>> RecIdentityCheck;
-    for (const EventTrackerRecord &E : C.LiveRecords) {
+    for (const EventTrackerRecord &E : C.Timeline) {
       if (E.getHeight() > C.Count) {
         OnError();
         dbgs() << "Concerning Record:";
@@ -239,7 +234,7 @@ void EventTracker::verify() const {
     }
 
     // Check live records are sorted
-    if (!is_sorted(C.LiveRecords, compareRecords)) {
+    if (!is_sorted(C.Timeline, compareRecords)) {
       OnError();
       llvm_unreachable("live records are not sorted!");
     }
@@ -263,7 +258,7 @@ void EventTracker::print(raw_ostream &OS, bool IgnoreEmpty,
   for (const CounterData &C : Counters) {
     if (IgnoreEmpty && C.Count == 0)
       continue;
-    print(dbgs(), C, Indent + 2);
+    print(OS, C, Indent + 2);
   }
 }
 
@@ -305,7 +300,7 @@ bool EventTracker::compareRecords(const EventTrackerRecord &A,
 
 void EventTracker::clear() {
   for (CounterData &C : Counters) {
-    C.LiveRecords.clear();
+    C.Timeline.clear();
     C.Count = 0;
   }
 }
@@ -321,7 +316,7 @@ void EventTracker::recordIncomings(ArrayRef<EventTracker *> Preds) {
 
   /// Iterate over all counters that are available to us.
   for (CounterData &CData : Counters) {
-    assert(CData.LiveRecords.empty());
+    assert(CData.Timeline.empty());
 
     DenseMap<hash_code, EventTrackerRecord> Acc;
 
@@ -331,7 +326,7 @@ void EventTracker::recordIncomings(ArrayRef<EventTracker *> Preds) {
       // Merge domain for the count value:
       CData.Count = std::max(CData.Count, PredCData.Count);
 
-      for (EventTrackerRecord &PredEntry : PredCData.LiveRecords) {
+      for (EventTrackerRecord &PredEntry : PredCData.Timeline) {
         // At a join, we collapse records from all predecessors with the same
         // MI+Kind to a single entry with the Height of the entry being the
         // minimum across predecessors.
@@ -346,10 +341,10 @@ void EventTracker::recordIncomings(ArrayRef<EventTracker *> Preds) {
     }
 
     auto AccVals = Acc.values();
-    CData.LiveRecords.append(AccVals.begin(), AccVals.end());
+    CData.Timeline.append(AccVals.begin(), AccVals.end());
 
     // Sort records by Height (descending) for consistent iteration.
-    stable_sort(CData.LiveRecords, compareRecords);
+    stable_sort(CData.Timeline, compareRecords);
   }
 
 #ifdef EXPENSIVE_CHECKS
@@ -366,8 +361,8 @@ void EventTracker::print(raw_ostream &OS, const CounterData &CD,
                          unsigned Indent) {
   OS.indent(Indent) << getInstCounterName(CD.CI->CounterT)
                     << " (Count=" << CD.Count
-                    << ", LiveRecords=" << CD.LiveRecords.size() << ")\n";
-  for (const EventTrackerRecord &E : CD.LiveRecords) {
+                    << ", Timeline=" << CD.Timeline.size() << ")\n";
+  for (const EventTrackerRecord &E : CD.Timeline) {
     OS.indent(Indent + 2);
     E.print(OS);
   }

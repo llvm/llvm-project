@@ -62,7 +62,6 @@ public:
     }
     if (AfterVisit)
       AfterVisit(ET);
-    ET.leaveBlock();
     return ET;
   }
 
@@ -75,12 +74,12 @@ namespace {
 /// Provides some helpers to declaratively check the state of the EventTracker
 /// for one counter. This provides helpers to check the general counter state
 /// (value, etc) but also allows iterating over the timeline from the oldest to
-/// the earliest element.
+/// the youngest element.
 ///
 /// This makes the actual test cases clearer.
 struct TrackerRecordsChecker {
   TrackerRecordsChecker(EventTracker &ET, InstCounterType T)
-      : ET(ET), T(T), Records(ET.getLiveRecords(T)) {}
+      : ET(ET), T(T), Records(ET.getTimeline(T)) {}
 
   unsigned getCount() { return ET.count(T); }
 
@@ -501,7 +500,7 @@ body:             |
   visitAll(BB0);
   visitAll(BB1);
   visitAll(BB2,
-           /*AfterVisit=*/[&](EventTracker &ET) { ET.wait(STORE_CNT, 1); });
+           /*AfterVisit=*/[&](EventTracker &ET) { ET.drain(STORE_CNT, 1); });
   auto &ET = visitAll(BB3);
 
   auto LoadCnt = TrackerRecordsChecker(ET, AMDGPU::LOAD_CNT);
