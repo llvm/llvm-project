@@ -68,6 +68,9 @@ struct PluginManager {
         std::make_unique<DeviceImageTy>(TgtBinDesc, TgtDeviceImage));
   }
 
+  /// Map global data and execute pending ctors
+  int loadImagesOntoDevice(DeviceTy &Device);
+
   /// Return the device presented to the user as device \p DeviceNo if it is
   /// initialized and ready. Otherwise return an error explaining the problem.
   llvm::Expected<DeviceTy &> getDevice(uint32_t DeviceNo);
@@ -189,12 +192,6 @@ private:
                         __tgt_device_image *Img,
                         llvm::SmallVectorImpl<ol_device_handle_t> &UsedDevices);
 };
-
-/// Initialize the plugin manager and OpenMP runtime.
-void initRuntime();
-
-/// Deinitialize the plugin and delete it.
-void deinitRuntime();
 
 namespace llvm::omp::target::helpers {
 // Helper functions to iterate over different elements provided by liboffload.

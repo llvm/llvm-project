@@ -21,4 +21,10 @@ extern PluginManager *PM;
 extern std::atomic<bool> RTLAlive; // Indicates if the RTL has been initialized
 extern std::atomic<int> RTLOngoingSyncs; // Counts ongoing external syncs
 
+/// Initialize the plugin manager and OpenMP runtime.
+void initRuntime();
+
+/// Deinitialize the plugin and delete it.
+void deinitRuntime();
+
 #endif // OMPTARGET_OPENMP_OFFLOADRTL_H

@@ -423,17 +423,17 @@ static uint32_t getDeviceThreadLimit(
 }
 
 /// Map global data and execute pending ctors
-static int loadImagesOntoDevice(PluginManager *PM, DeviceTy &Device) {
+int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
   /*
    * Map global data
    */
   int32_t DeviceId = Device.DeviceID;
   int Rc = OFFLOAD_SUCCESS;
   {
-    std::lock_guard<decltype(PM->TrlTblMtx)> LG(PM->TrlTblMtx);
-    for (auto *HostEntriesBegin : PM->HostEntriesBeginRegistrationOrder) {
+    std::lock_guard<decltype(TrlTblMtx)> LG(TrlTblMtx);
+    for (auto *HostEntriesBegin : HostEntriesBeginRegistrationOrder) {
       TranslationTable *TransTable =
-          &PM->HostEntriesBeginToTransTable[HostEntriesBegin];
+          &HostEntriesBeginToTransTable[HostEntriesBegin];
       ODBG(ODT_Init) << "Trans table " << TransTable->HostTable.EntriesBegin
                      << " : " << TransTable->HostTable.EntriesEnd;
       if (TransTable->HostTable.EntriesBegin ==
@@ -487,8 +487,8 @@ static int loadImagesOntoDevice(PluginManager *PM, DeviceTy &Device) {
           // the device to point to the memory on the host.
           if (!(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT_VTABLE) &&
               !(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT) &&
-              ((PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
-               (PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY)))
+              ((getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
+               (getRequirements() & OMPX_REQ_AUTO_ZERO_COPY)))
             if (Device.RTL->data_submit(DeviceId, DeviceEntry.Address,
                                         Entry.Address,
                                         Entry.Size) != OFFLOAD_SUCCESS)
@@ -658,7 +658,7 @@ Expected<DeviceTy &> PluginManager::getDevice(uint32_t DeviceNo) {
 
   // Check whether global data has been mapped for this device
   if (DevicePtr->hasPendingImages())
-    if (loadImagesOntoDevice(this, *DevicePtr) != OFFLOAD_SUCCESS)
+    if (loadImagesOntoDevice(*DevicePtr) != OFFLOAD_SUCCESS)
       return createError(ErrorCode::BackendFailure,
                          "failed to load images on device '%i'", DeviceNo);
   return *DevicePtr;
