@@ -110,14 +110,15 @@ static PluginProperties &GetGlobalPluginProperties() {
 static bool GetDebugLinkContents(const llvm::object::COFFObjectFile &coff_obj,
                                  std::string &gnu_debuglink_file,
                                  uint32_t &gnu_debuglink_crc) {
-  static ConstString g_sect_name_gnu_debuglink(".gnu_debuglink");
+  static constexpr llvm::StringLiteral g_sect_name_gnu_debuglink(
+      ".gnu_debuglink");
   for (const auto &section : coff_obj.sections()) {
     auto name = section.getName();
     if (!name) {
       llvm::consumeError(name.takeError());
       continue;
     }
-    if (*name == g_sect_name_gnu_debuglink.GetStringRef()) {
+    if (*name == g_sect_name_gnu_debuglink) {
       auto content = section.getContents();
       if (!content) {
         llvm::consumeError(content.takeError());
@@ -127,7 +128,10 @@ static bool GetDebugLinkContents(const llvm::object::COFFObjectFile &coff_obj,
           content->data(), content->size(),
           coff_obj.isLittleEndian() ? eByteOrderLittle : eByteOrderBig, 4);
       lldb::offset_t gnu_debuglink_offset = 0;
-      gnu_debuglink_file = data.GetCStr(&gnu_debuglink_offset);
+      const char *file = data.GetCStr(&gnu_debuglink_offset);
+      if (!file)
+        return false;
+      gnu_debuglink_file = file;
       // Align to the next 4-byte offset
       gnu_debuglink_offset = llvm::alignTo(gnu_debuglink_offset, 4);
       data.GetU32(&gnu_debuglink_offset, &gnu_debuglink_crc, 1);
@@ -946,6 +950,7 @@ std::unique_ptr<CallFrameInfo> ObjectFilePECOFF::CreateCallFrameInfo() {
   if (!data_dir_exception.vmaddr)
     return {};
 
+  // TODO: decode ARM64 .pdata/.xdata so optimized frameless code unwinds.
   if (m_coff_header.machine != llvm::COFF::IMAGE_FILE_MACHINE_AMD64)
     return {};
 
@@ -960,30 +965,26 @@ bool ObjectFilePECOFF::IsStripped() {
 
 SectionType ObjectFilePECOFF::GetSectionType(llvm::StringRef sect_name,
                                              const section_header_t &sect) {
-  ConstString const_sect_name(sect_name);
-  static ConstString g_code_sect_name(".code");
-  static ConstString g_CODE_sect_name("CODE");
-  static ConstString g_data_sect_name(".data");
-  static ConstString g_DATA_sect_name("DATA");
-  static ConstString g_bss_sect_name(".bss");
-  static ConstString g_BSS_sect_name("BSS");
+  static constexpr llvm::StringLiteral g_code_sect_name(".code");
+  static constexpr llvm::StringLiteral g_CODE_sect_name("CODE");
+  static constexpr llvm::StringLiteral g_data_sect_name(".data");
+  static constexpr llvm::StringLiteral g_DATA_sect_name("DATA");
+  static constexpr llvm::StringLiteral g_bss_sect_name(".bss");
+  static constexpr llvm::StringLiteral g_BSS_sect_name("BSS");
 
   if (sect.flags & llvm::COFF::IMAGE_SCN_CNT_CODE &&
-      ((const_sect_name == g_code_sect_name) ||
-       (const_sect_name == g_CODE_sect_name))) {
+      ((sect_name == g_code_sect_name) || (sect_name == g_CODE_sect_name))) {
     return eSectionTypeCode;
   }
   if (sect.flags & llvm::COFF::IMAGE_SCN_CNT_INITIALIZED_DATA &&
-             ((const_sect_name == g_data_sect_name) ||
-              (const_sect_name == g_DATA_sect_name))) {
+      ((sect_name == g_data_sect_name) || (sect_name == g_DATA_sect_name))) {
     if (sect.size == 0 && sect.offset == 0)
       return eSectionTypeZeroFill;
     else
       return eSectionTypeData;
   }
   if (sect.flags & llvm::COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA &&
-             ((const_sect_name == g_bss_sect_name) ||
-              (const_sect_name == g_BSS_sect_name))) {
+      ((sect_name == g_bss_sect_name) || (sect_name == g_BSS_sect_name))) {
     if (sect.size == 0)
       return eSectionTypeZeroFill;
     else
@@ -1043,9 +1044,8 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
 
     SectionSP header_sp = std::make_shared<Section>(
-        module_sp, this, ~user_id_t(0), ConstString("PECOFF header"),
-        eSectionTypeOther, m_coff_header_opt.image_base,
-        m_coff_header_opt.header_size,
+        module_sp, this, ~user_id_t(0), "PECOFF header", eSectionTypeOther,
+        m_coff_header_opt.image_base, m_coff_header_opt.header_size,
         /*file_offset*/ 0, m_coff_header_opt.header_size,
         m_coff_header_opt.sect_alignment,
         /*flags*/ 0);
@@ -1056,14 +1056,13 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
     const uint32_t nsects = m_sect_headers.size();
     for (uint32_t idx = 0; idx < nsects; ++idx) {
       llvm::StringRef sect_name = GetSectionName(m_sect_headers[idx]);
-      ConstString const_sect_name(sect_name);
       SectionType section_type = GetSectionType(sect_name, m_sect_headers[idx]);
 
       SectionSP section_sp = std::make_shared<Section>(
           module_sp,       // Module to which this section belongs
           this,            // Object file to which this section belongs
           idx + 1,         // Section ID is the 1 based section index.
-          const_sect_name, // Name of this section
+          sect_name.str(), // Name of this section
           section_type,
           m_coff_header_opt.image_base +
               m_sect_headers[idx].vmaddr, // File VM address == addresses as
@@ -1165,12 +1164,11 @@ uint32_t ObjectFilePECOFF::ParseDependentModules() {
     // At this moment we only have the base name of the DLL. The full path can
     // only be seen after the dynamic loading.  Our best guess is Try to get it
     // with the help of the object file's directory.
-    llvm::SmallString<128> dll_fullpath;
     FileSpec dll_specs(dll_name);
     dll_specs.SetDirectory(m_file.GetDirectory());
 
-    if (!llvm::sys::fs::real_path(dll_specs.GetPath(), dll_fullpath))
-      m_deps_filespec->EmplaceBack(dll_fullpath);
+    if (FileSystem::Instance().Exists(dll_specs))
+      m_deps_filespec->Append(dll_specs);
     else {
       // Known DLLs or DLL not found in the object file directory.
       m_deps_filespec->EmplaceBack(dll_name);

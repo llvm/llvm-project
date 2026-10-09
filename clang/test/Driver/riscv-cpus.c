@@ -133,6 +133,20 @@
 // RUN: FileCheck --input-file=%t.err -check-prefix=MCPU-NATIVE %s
 // MCPU-NATIVE-NOT: "-target-cpu" "native"
 
+// -march=native is an alias for -mcpu=native. We cannot check much for it, but
+// it should be replaced by a valid CPU string and never treated as an ISA
+// string.
+// RUN: %clang --target=riscv64 -### -c %s -march=native 2> %t.err || true
+// RUN: FileCheck --input-file=%t.err -check-prefix=MARCH-NATIVE %s
+// MARCH-NATIVE-NOT: "-target-cpu" "native"
+// MARCH-NATIVE-NOT: invalid arch name 'native'
+
+// -mcpu takes priority over -march=native when choosing the target CPU,
+// regardless of the order of the options.
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=native -mcpu=rocket-rv64 | FileCheck -check-prefix=MARCH-NATIVE-MCPU %s
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=rocket-rv64 -march=native | FileCheck -check-prefix=MARCH-NATIVE-MCPU %s
+// MARCH-NATIVE-MCPU: "-target-cpu" "rocket-rv64"
+
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=rocket-rv32 | FileCheck -check-prefix=MTUNE-ROCKET32 %s
 // MTUNE-ROCKET32: "-tune-cpu" "rocket-rv32"
 
@@ -164,102 +178,6 @@
 
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=syntacore-scr1-max | FileCheck -check-prefix=MTUNE-SYNTACORE-SCR1-MAX %s
 // MTUNE-SYNTACORE-SCR1-MAX: "-tune-cpu" "syntacore-scr1-max"
-
-// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=tt-ascalon-x | FileCheck -check-prefix=MTUNE-TT-ASCALON-X %s
-// MTUNE-TT-ASCALON-X: "-tune-cpu" "tt-ascalon-x"
-
-// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=tt-ascalon-x | FileCheck -check-prefix=MCPU-TT-ASCALON-X %s
-// MCPU-TT-ASCALON-X: "-target-cpu" "tt-ascalon-x"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+m"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+a"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+f"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+d"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+c"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+v"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+h"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zicbom"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zicbop"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zicboz"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zicntr"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zicond"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zicsr"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zifencei"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zihintntl"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zihintpause"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zihpm"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zimop"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zmmul"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zawrs"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zfa"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zfbfmin"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zfh"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zfhmin"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zca"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zcb"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zba"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zbb"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zbs"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zkr"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zkt"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvbb"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvbc"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zve32f"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zve32x"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zve64d"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zve64f"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zve64x"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvfbfmin"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvfbfwma"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvfh"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvfhmin"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvkb"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvkg"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvkn"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvknc"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvkned"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvkng"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvknha"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvknhb"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvkt"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvl128b"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvl256b"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvl32b"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvl64b"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+smaia"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+smmpm"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+smnpm"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+smrnmi"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+smstateen"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+sscofpmf"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+svinval"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+svnapot"
-// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+svpbmt"
-// MCPU-TT-ASCALON-X-SAME: "-target-abi" "lp64d"
-
-// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=veyron-v1 | FileCheck -check-prefix=MCPU-VEYRON-V1 %s
-// MCPU-VEYRON-V1: "-target-cpu" "veyron-v1"
-// MCPU-VEYRON-V1: "-target-feature" "+m"
-// MCPU-VEYRON-V1: "-target-feature" "+a"
-// MCPU-VEYRON-V1: "-target-feature" "+f"
-// MCPU-VEYRON-V1: "-target-feature" "+d"
-// MCPU-VEYRON-V1: "-target-feature" "+c"
-// MCPU-VEYRON-V1: "-target-feature" "+zicbom"
-// MCPU-VEYRON-V1: "-target-feature" "+zicbop"
-// MCPU-VEYRON-V1: "-target-feature" "+zicboz"
-// MCPU-VEYRON-V1: "-target-feature" "+zicntr"
-// MCPU-VEYRON-V1: "-target-feature" "+zicsr"
-// MCPU-VEYRON-V1: "-target-feature" "+zifencei"
-// MCPU-VEYRON-V1: "-target-feature" "+zihintpause"
-// MCPU-VEYRON-V1: "-target-feature" "+zihpm"
-// MCPU-VEYRON-V1: "-target-feature" "+zba"
-// MCPU-VEYRON-V1: "-target-feature" "+zbb"
-// MCPU-VEYRON-V1: "-target-feature" "+zbc"
-// MCPU-VEYRON-V1: "-target-feature" "+zbs"
-// MCPU-VEYRON-V1: "-target-feature" "+xventanacondops"
-// MCPU-VEYRON-V1: "-target-abi" "lp64d"
-
-// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=veyron-v1 | FileCheck -check-prefix=MTUNE-VEYRON-V1 %s
-// MTUNE-VEYRON-V1: "-tune-cpu" "veyron-v1"
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=xiangshan-nanhu | FileCheck -check-prefix=MTUNE-XIANGSHAN-NANHU %s
 // MTUNE-XIANGSHAN-NANHU: "-tune-cpu" "xiangshan-nanhu"
@@ -388,6 +306,10 @@
 // MARCH-UNSET: "-target-feature" "+a"
 // MARCH-UNSET: "-target-feature" "+c"
 // MARCH-UNSET-SAME: "-target-abi" "ilp32"
+
+// Invalid -march= is an error even with a valid -mcpu
+// RUN: not %clang --target=riscv32 -### -c %s 2>&1 -march=rv32imc -march=bad -mcpu=sifive-e31 | FileCheck -check-prefix=MARCH-INVALID-MCPU %s
+// MARCH-INVALID-MCPU: invalid arch name 'bad', string must begin with rv32{i,e,g,y}, rv64{i,e,g,y}, or a supported profile name
 
 // Check interaction between -mcpu and mtune, -mtune won't affect arch related
 // target feature, but -mcpu will.
@@ -768,3 +690,8 @@
 // COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-xt-c920v2.c`
 // MCPU-XT-C920V2: "-target-cpu" "xt-c920v2"
 // MCPU-XT-C920V2-SAME: "-target-abi" "lp64d"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=gaisler-gr765 | FileCheck -check-prefix=MCPU-GAISLER-GR765 %s
+// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-gaisler-gr765.c`
+// MCPU-GAISLER-GR765: "-target-cpu" "gaisler-gr765"
+// MCPU-GAISLER-GR765-SAME: "-target-abi" "lp64d"

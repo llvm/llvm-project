@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SPIRVAsmPrinter.h"
 #include "MCTargetDesc/SPIRVInstPrinter.h"
 #include "SPIRV.h"
 #include "SPIRVAuxDataHandler.h"
@@ -25,10 +26,15 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCInst.h"
@@ -68,7 +74,11 @@ public:
   explicit SPIRVAsmPrinter(TargetMachine &TM,
                            std::unique_ptr<MCStreamer> Streamer)
       : AsmPrinter(TM, std::move(Streamer), ID), ModuleSectionsEmitted(false),
-        ST(nullptr), TII(nullptr), MAI(nullptr) {}
+        ST(nullptr), TII(nullptr), MAI(nullptr) {
+    GetMAI = [this] {
+      return &getAnalysis<SPIRVModuleAnalysisWrapperPass>().MAI;
+    };
+  }
   static char ID;
   bool ModuleSectionsEmitted;
   const SPIRVSubtarget *ST;
@@ -123,6 +133,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   SPIRV::ModuleAnalysisInfo *MAI;
+  std::function<SPIRV::ModuleAnalysisInfo *()> GetMAI;
 
   // Non-owning pointer to the NSDI handler registered via addAsmPrinterHandler.
   // The handler's lifetime is managed by AsmPrinter (the base class of this
@@ -137,8 +148,8 @@ protected:
 } // namespace
 
 void SPIRVAsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<SPIRVModuleAnalysis>();
-  AU.addPreserved<SPIRVModuleAnalysis>();
+  AU.addRequired<SPIRVModuleAnalysisWrapperPass>();
+  AU.addPreserved<SPIRVModuleAnalysisWrapperPass>();
   AsmPrinter::getAnalysisUsage(AU);
 }
 
@@ -406,7 +417,8 @@ void SPIRVAsmPrinter::outputEntryPoints() {
   // Find all OpVariable IDs with required StorageClass.
   DenseSet<MCRegister> InterfaceIDs;
   for (const MachineInstr *MI : MAI->GlobalVarList) {
-    assert(MI->getOpcode() == SPIRV::OpVariable);
+    assert(MI->getOpcode() == SPIRV::OpVariable ||
+           MI->getOpcode() == SPIRV::OpUntypedVariableKHR);
     auto SC = static_cast<SPIRV::StorageClass::StorageClass>(
         MI->getOperand(2).getImm());
     // Before version 1.4, the interface's storage classes are limited to
@@ -883,7 +895,7 @@ void SPIRVAsmPrinter::outputModuleSections() {
   // Get the global subtarget to output module-level info.
   ST = static_cast<const SPIRVTargetMachine &>(TM).getSubtargetImpl();
   TII = ST->getInstrInfo();
-  MAI = &getAnalysis<SPIRVModuleAnalysis>().MAI;
+  MAI = GetMAI();
   assert(ST && TII && MAI && M && "Module analysis is required");
 
   if (!AuxDataHandler) {
@@ -972,4 +984,41 @@ LLVMInitializeSPIRVAsmPrinter() {
   RegisterAsmPrinter<SPIRVAsmPrinter> X(getTheSPIRV32Target());
   RegisterAsmPrinter<SPIRVAsmPrinter> Y(getTheSPIRV64Target());
   RegisterAsmPrinter<SPIRVAsmPrinter> Z(getTheSPIRVLogicalTarget());
+}
+
+PreservedAnalyses SPIRVAsmPrinterBeginPass::run(Module &M,
+                                                ModuleAnalysisManager &MAM) {
+  SPIRVAsmPrinter &AsmPrinter = static_cast<SPIRVAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doInitialization(M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+SPIRVAsmPrinterPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  SPIRVAsmPrinter &AsmPrinter = static_cast<SPIRVAsmPrinter &>(
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
+          ->getPrinter());
+  setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
+  AsmPrinter.GetMAI = [&MFAM, &MF] {
+    return MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+        .getCachedResult<SPIRVModuleAnalysis>(*MF.getFunction().getParent());
+  };
+  AsmPrinter.runOnMachineFunction(MF);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses SPIRVAsmPrinterEndPass::run(Module &M,
+                                              ModuleAnalysisManager &MAM) {
+  SPIRVAsmPrinter &AsmPrinter = static_cast<SPIRVAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.GetMAI = [&MAM, &M] {
+    return MAM.getCachedResult<SPIRVModuleAnalysis>(M);
+  };
+  AsmPrinter.doFinalization(M);
+  return PreservedAnalyses::all();
 }

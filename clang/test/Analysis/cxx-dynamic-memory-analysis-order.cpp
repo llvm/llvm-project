@@ -38,9 +38,9 @@ void f() {
     // CHECK-NEXT: PreStmt<CXXNewExpr>
     // CHECK-NEXT: PostStmt<CXXNewExpr>
     // CHECK-NEXT: PreStmt<CXXDeleteExpr>
-    // CHECK-NEXT: PostStmt<CXXDeleteExpr>
     // CHECK-NEXT: PreCall (operator delete) [CXXDeallocatorCall]
     // CHECK-NEXT: PostCall (operator delete) [CXXDeallocatorCall]
+    // CHECK-NEXT: PostStmt<CXXDeleteExpr>
 
     p = new int;
     operator delete(p, 23542368);
@@ -90,9 +90,9 @@ void f() {
     // CHECK-NEXT: PreStmt<CXXNewExpr>
     // CHECK-NEXT: PostStmt<CXXNewExpr>
     // CHECK-NEXT: PreStmt<CXXDeleteExpr>
-    // CHECK-NEXT: PostStmt<CXXDeleteExpr>
     // CHECK-NEXT: PreCall (operator delete[]) [CXXDeallocatorCall]
     // CHECK-NEXT: PostCall (operator delete[]) [CXXDeallocatorCall]
+    // CHECK-NEXT: PostStmt<CXXDeleteExpr>
 
     p = new int[2];
     operator delete[](p, 23542368);

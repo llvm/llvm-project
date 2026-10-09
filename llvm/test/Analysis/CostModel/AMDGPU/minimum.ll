@@ -10,7 +10,7 @@
 
 define void @minimum_f16() {
 ; GFX950-FASTF64-LABEL: 'minimum_f16'
-; GFX950-FASTF64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = call half @llvm.minimum.f16(half undef, half undef)
+; GFX950-FASTF64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call half @llvm.minimum.f16(half undef, half undef)
 ; GFX950-FASTF64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = call <2 x half> @llvm.minimum.v2f16(<2 x half> undef, <2 x half> undef)
 ; GFX950-FASTF64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3f16 = call <3 x half> @llvm.minimum.v3f16(<3 x half> undef, <3 x half> undef)
 ; GFX950-FASTF64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f16 = call <4 x half> @llvm.minimum.v4f16(<4 x half> undef, <4 x half> undef)
@@ -37,7 +37,7 @@ define void @minimum_f16() {
 ; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX950-SIZE-LABEL: 'minimum_f16'
-; GFX950-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = call half @llvm.minimum.f16(half undef, half undef)
+; GFX950-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call half @llvm.minimum.f16(half undef, half undef)
 ; GFX950-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = call <2 x half> @llvm.minimum.v2f16(<2 x half> undef, <2 x half> undef)
 ; GFX950-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3f16 = call <3 x half> @llvm.minimum.v3f16(<3 x half> undef, <3 x half> undef)
 ; GFX950-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f16 = call <4 x half> @llvm.minimum.v4f16(<4 x half> undef, <4 x half> undef)

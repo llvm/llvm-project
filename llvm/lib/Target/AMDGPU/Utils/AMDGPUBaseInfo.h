@@ -119,8 +119,16 @@ struct MFMA_F8F6F4_Info {
   uint8_t NumRegsSrcB;
 };
 
-struct CvtScaleF32_F32F16ToF8F4_Info {
-  unsigned Opcode;
+/// Normalized WMMA or SWMMAC family used to select co-execution rules.
+enum class WMMAVariant {
+  Unknown = 0,
+  IU8_16x16x64,
+  F8F6F4_16x16x128,
+  F8F6F4_16x16x128_BothF4,
+  FP8BF8_16x16x64,
+  F16BF16_16x16x32,
+  FP8BF8_16x16x128,
+  F4_32x16x128,
 };
 
 struct True16D16Info {
@@ -133,6 +141,7 @@ struct WMMAInstInfo {
   uint32_t Opcode;
   bool is_wmma_xdl;
   bool HasMatrixScale;
+  WMMAVariant CoExecVariant;
 };
 
 #define GET_MIMGBaseOpcode_DECL
@@ -183,36 +192,15 @@ unsigned getLocalMemorySize(const MCSubtargetInfo &STI);
 /// \p STI.
 unsigned getAddressableLocalMemorySize(const MCSubtargetInfo &STI);
 
-/// \returns Number of execution units per compute unit for given subtarget \p
-/// STI.
-unsigned getEUsPerCU(const MCSubtargetInfo &STI);
-
 /// \returns Maximum number of work groups per compute unit for given subtarget
 /// \p STI and limited by given \p FlatWorkGroupSize.
 unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo &STI,
                                unsigned FlatWorkGroupSize);
 
-/// \returns Minimum number of waves per execution unit for given subtarget \p
-/// STI.
-unsigned getMinWavesPerEU(const MCSubtargetInfo &STI);
-
-/// \returns Maximum number of waves per execution unit for given subtarget \p
-/// STI without any kind of limitation.
-unsigned getMaxWavesPerEU(const MCSubtargetInfo &STI);
-
 /// \returns Number of waves per execution unit required to support the given \p
 /// FlatWorkGroupSize.
 unsigned getWavesPerEUForWorkGroup(const MCSubtargetInfo &STI,
                                    unsigned FlatWorkGroupSize);
-
-/// \returns Minimum flat work group size for given subtarget \p STI.
-unsigned getMinFlatWorkGroupSize(const MCSubtargetInfo &STI);
-
-/// \returns Maximum flat work group size
-constexpr unsigned getMaxFlatWorkGroupSize() {
-  // Some subtargets allow encoding 2048, but this isn't tested or supported.
-  return 1024;
-}
 
 /// \returns Number of waves per work group for given subtarget \p STI and
 /// \p FlatWorkGroupSize.
@@ -235,12 +223,6 @@ unsigned getMaxNumSGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,
 /// STI when the given special registers are used.
 unsigned getNumExtraSGPRs(const MCSubtargetInfo &STI, bool VCCUsed,
                           bool FlatScrUsed, bool XNACKUsed);
-
-/// \returns Number of extra SGPRs implicitly required by given subtarget \p
-/// STI when the given special registers are used. XNACK is inferred from
-/// \p STI.
-unsigned getNumExtraSGPRs(const MCSubtargetInfo &STI, bool VCCUsed,
-                          bool FlatScrUsed);
 
 /// \returns Number of SGPR blocks needed for given subtarget \p STI when
 /// \p NumSGPRs are used. \p NumSGPRs should already include any special
@@ -266,9 +248,6 @@ unsigned getVGPREncodingGranule(
 /// For subtargets with a unified VGPR file and mixed ArchVGPR/AGPR usage,
 /// returns the allocation granule for ArchVGPRs.
 unsigned getArchVGPRAllocGranule();
-
-/// \returns Total number of VGPRs for given subtarget \p STI.
-unsigned getTotalNumVGPRs(const MCSubtargetInfo &STI);
 
 /// Maximum number of VGPR blocks that can be allocated in dynamic VGPR mode.
 static constexpr unsigned MaxDynamicVGPRBlocks = 8;
@@ -321,16 +300,6 @@ unsigned getOccupancyWithNumSGPRs(unsigned SGPRs, unsigned MaxWaves,
                                   unsigned TotalNumSGPRs, unsigned Granule,
                                   unsigned TrapReserve);
 
-/// \returns Number of VGPR blocks needed for given subtarget \p STI when
-/// \p NumVGPRs are used. We actually return the number of blocks -1, since
-/// that's what we encode.
-///
-/// For subtargets which support it, \p EnableWavefrontSize32 should match the
-/// ENABLE_WAVEFRONT_SIZE32 kernel descriptor field.
-unsigned getEncodedNumVGPRBlocks(
-    const MCSubtargetInfo &STI, unsigned NumVGPRs,
-    std::optional<bool> EnableWavefrontSize32 = std::nullopt);
-
 /// \returns Number of VGPR blocks that need to be allocated for the given
 /// subtarget \p STI when \p NumVGPRs are used.
 unsigned getAllocatedNumVGPRBlocks(
@@ -348,13 +317,16 @@ struct EncodingField {
   static constexpr unsigned Width = HighBit - LowBit + 1;
 
   using ValueType = unsigned;
+  static_assert(Width <= sizeof(ValueType) * 8);
   static constexpr ValueType Default = D;
 
   ValueType Value;
   constexpr EncodingField(ValueType Value) : Value(Value) {}
 
   constexpr uint64_t encode() const { return Value; }
-  static ValueType decode(uint64_t Encoded) { return Encoded; }
+  static ValueType decode(uint64_t Encoded) {
+    return static_cast<ValueType>(Encoded);
+  }
 };
 
 // Represents a single bit in an encoded value.
@@ -374,7 +346,7 @@ template <typename... Fields> struct EncodingFields {
 };
 
 LLVM_READONLY
-inline bool hasNamedOperand(uint64_t Opcode, OpName NamedIdx) {
+inline bool hasNamedOperand(uint32_t Opcode, OpName NamedIdx) {
   return getNamedOperandIdx(Opcode, NamedIdx) != -1;
 }
 
@@ -410,6 +382,7 @@ const MIMGBaseOpcodeInfo *getMIMGBaseOpcodeInfo(unsigned BaseOpcode);
 
 struct MIMGDimInfo {
   MIMGDim Dim;
+  MIMGDim NonArrayDim;
   uint8_t NumCoords;
   uint8_t NumGradients;
   bool MSAA;
@@ -476,7 +449,8 @@ const MIMGG16MappingInfo *getMIMGG16MappingInfo(unsigned G);
 
 LLVM_READONLY
 int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
-                  unsigned VDataDwords, unsigned VAddrDwords);
+                  unsigned VDataDwords, unsigned VAddrDwords,
+                  bool IndexedRsrc = false, bool IndexedSamp = false);
 
 LLVM_READONLY
 int getMaskedMIMGOp(unsigned Opc, unsigned NewChannels);
@@ -493,6 +467,8 @@ struct MIMGInfo {
   uint8_t VDataDwords;
   uint8_t VAddrDwords;
   uint8_t VAddrOperands;
+  bool IndexedRsrc;
+  bool IndexedSamp;
 };
 
 LLVM_READONLY
@@ -609,6 +585,30 @@ LLVM_READONLY
 bool isValidWMMAScaleFmtCombination(unsigned AFmt, unsigned AScale,
                                     unsigned BFmt, unsigned BScale);
 
+/// \returns the matrix_a_fmt and matrix_b_fmt operands of an f8f6f4 WMMA.
+/// Works on both MCInst and MachineInstr.
+template <typename InstT>
+std::pair<unsigned, unsigned> getWMMAMatrixFmts(const InstT &MI) {
+  unsigned Opc = MI.getOpcode();
+  int AIdx = getNamedOperandIdx(Opc, OpName::matrix_a_fmt);
+  int BIdx = getNamedOperandIdx(Opc, OpName::matrix_b_fmt);
+  assert(AIdx != -1 && BIdx != -1 && "expected an f8f6f4 WMMA");
+  return {static_cast<unsigned>(MI.getOperand(AIdx).getImm()),
+          static_cast<unsigned>(MI.getOperand(BIdx).getImm())};
+}
+
+/// \returns true if either matrix input of an f8f6f4 WMMA is f8.
+template <typename InstT> bool isWMMAAnyF8(const InstT &MI) {
+  auto [AFmt, BFmt] = getWMMAMatrixFmts(MI);
+  return AFmt <= WMMA::MATRIX_FMT_BF8 || BFmt <= WMMA::MATRIX_FMT_BF8;
+}
+
+/// \returns true if both matrix inputs of an f8f6f4 WMMA are f4.
+template <typename InstT> bool isWMMABothF4(const InstT &MI) {
+  auto [AFmt, BFmt] = getWMMAMatrixFmts(MI);
+  return AFmt == WMMA::MATRIX_FMT_FP4 && BFmt == WMMA::MATRIX_FMT_FP4;
+}
+
 LLVM_READONLY
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
                                                   uint8_t NumComponents,
@@ -660,6 +660,10 @@ enum Component : unsigned {
 // 4 banks result in a mask 3, setting 2 lower bits.
 constexpr unsigned VOPD_VGPR_BANK_MASKS[] = {1, 3, 3, 1};
 constexpr unsigned VOPD3_VGPR_BANK_MASKS[] = {1, 3, 3, 3};
+// GFX11 VOPD interlock hazard requires SRC0/SRC1 to have
+// different parities, not just on different banks. Else,
+// non-deterministic forwarding error may occur.
+constexpr unsigned VOPD_GFX11_VGPR_BANK_MASKS[] = {1, 1, 1, 1};
 
 enum ComponentIndex : unsigned { X = 0, Y = 1 };
 constexpr unsigned COMPONENTS[] = {ComponentIndex::X, ComponentIndex::Y};
@@ -905,12 +909,15 @@ public:
   // even though it violates requirement to be from different banks.
   // If \p VOPD3 is set to true both dst registers allowed to be either odd
   // or even and instruction may have real src2 as opposed to tied accumulator.
+  // If \p HasGFX11InterlockHazard is set then X/Y SRC0 and SRC1 VGPRs
+  // must have different register-number parity.
   bool
   hasInvalidOperand(std::function<MCRegister(unsigned, unsigned)> GetRegIdx,
                     const MCRegisterInfo &MRI, bool SkipSrc = false,
-                    bool AllowSameVGPR = false, bool VOPD3 = false) const {
+                    bool AllowSameVGPR = false, bool VOPD3 = false,
+                    bool HasGFX11InterlockHazard = false) const {
     return getInvalidCompOperandIndex(GetRegIdx, MRI, SkipSrc, AllowSameVGPR,
-                                      VOPD3)
+                                      VOPD3, HasGFX11InterlockHazard)
         .has_value();
   }
 
@@ -922,10 +929,13 @@ public:
   // even though it violates requirement to be from different banks.
   // If \p VOPD3 is set to true both dst registers allowed to be either odd
   // or even and instruction may have real src2 as opposed to tied accumulator.
+  // If \p HasGFX11InterlockHazard is set then X/Y SRC0 and SRC1 VGPRs
+  // must have different register-number parity.
   std::optional<unsigned> getInvalidCompOperandIndex(
       std::function<MCRegister(unsigned, unsigned)> GetRegIdx,
       const MCRegisterInfo &MRI, bool SkipSrc = false,
-      bool AllowSameVGPR = false, bool VOPD3 = false) const;
+      bool AllowSameVGPR = false, bool VOPD3 = false,
+      bool HasGFX11InterlockHazard = false) const;
 
 private:
   RegIndices
@@ -967,14 +977,9 @@ bool isDPMACCInstruction(unsigned Opc);
 LLVM_READONLY
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc);
 
-LLVM_READONLY
-unsigned mapWMMA3AddrTo2AddrOpcode(unsigned Opc);
-
 void initDefaultAMDKernelCodeT(AMDGPUMCKernelCodeT &Header,
                                const MCSubtargetInfo &STI);
 
-bool isGroupSegment(const GlobalValue *GV);
-bool isGlobalSegment(const GlobalValue *GV);
 bool isReadOnlySegment(const GlobalValue *GV);
 
 /// \returns True if constants should be emitted to .text section for given
@@ -1181,7 +1186,9 @@ using HwregOffset = EncodingField<10, 6>;
 struct HwregSize : EncodingField<15, 11, 32> {
   using EncodingField::EncodingField;
   constexpr uint64_t encode() const { return Value - 1; }
-  static ValueType decode(uint64_t Encoded) { return Encoded + 1; }
+  static ValueType decode(uint64_t Encoded) {
+    return static_cast<ValueType>(Encoded + 1);
+  }
 };
 
 using HwregEncoding = EncodingFields<HwregId, HwregOffset, HwregSize>;
@@ -1481,7 +1488,6 @@ constexpr bool mayTailCallThisCC(CallingConv::ID CC) {
   }
 }
 
-bool hasXNACK(const MCSubtargetInfo &STI);
 bool hasMIMG_R128(const MCSubtargetInfo &STI);
 bool hasA16(const MCSubtargetInfo &STI);
 bool hasG16(const MCSubtargetInfo &STI);
@@ -1513,6 +1519,11 @@ bool isGFX1250(const MCSubtargetInfo &STI);
 bool isGFX1250Plus(const MCSubtargetInfo &STI);
 bool isGFX13(const MCSubtargetInfo &STI);
 bool isGFX13Plus(const MCSubtargetInfo &STI);
+
+/// \returns true if a work-group's waves run on all four SIMD32s (one
+/// contiguous LDS) and not just on two.
+bool isFullSIMDMode(const MCSubtargetInfo &STI);
+
 bool supportsWGP(const MCSubtargetInfo &STI);
 bool isNotGFX12Plus(const MCSubtargetInfo &STI);
 bool isNotGFX11Plus(const MCSubtargetInfo &STI);
@@ -1525,6 +1536,12 @@ bool isGFX940(const MCSubtargetInfo &STI);
 bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI);
 bool hasMAIInsts(const MCSubtargetInfo &STI);
 bool hasPopsExitingWaveID(const MCSubtargetInfo &STI);
+
+/// \returns true if the src_private_base and src_private_limit aperture
+/// registers are available on \p STI. Targets with globally addressable
+/// scratch have no private aperture and expose src_flat_scratch_base instead.
+bool hasPrivateApertureRegs(const MCSubtargetInfo &STI);
+
 bool hasVOPD(const MCSubtargetInfo &STI);
 bool hasDPPSrc1SGPR(const MCSubtargetInfo &STI);
 
@@ -1534,6 +1551,10 @@ bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST);
 
 /// Is Reg - scalar register
 bool isSGPR(MCRegister Reg, const MCRegisterInfo *TRI);
+
+/// \returns true if \p Reg is an indexed-resource index register, i.e. either a
+/// 32-bit SGPR (uniform-indexed form) or a Lo256 VGPR (per-lane indexed form).
+bool isRsrcIndexReg(MCRegister Reg, const MCRegisterInfo &MRI);
 
 /// \returns if \p Reg occupies the high 16-bits of a 32-bit register.
 bool isHi16Reg(MCRegister Reg, const MCRegisterInfo &MRI);
@@ -1560,14 +1581,17 @@ inline bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   return isSISrcOperand(Desc.operands()[OpNo]);
 }
 
+/// Is this a scalar (i.e. not packed) bf16 source operand?
+constexpr bool isBF16SrcOperand(const MCOperandInfo &OpInfo) {
+  return OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_BF16 ||
+         OpInfo.OperandType == AMDGPU::OPERAND_REG_INLINE_C_BF16;
+}
+
 /// Is this a KImm operand?
 bool isKImmOperand(const MCInstrDesc &Desc, unsigned OpNo);
 
 /// Is this floating-point operand?
 bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo);
-
-/// Does this operand support only inlinable literals?
-bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo);
 
 /// Get the size in bits of a register from the register class \p RC.
 unsigned getRegBitWidth(unsigned RCID);
@@ -1604,6 +1628,7 @@ inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
   case AMDGPU::OPERAND_REG_IMM_INT16:
   case AMDGPU::OPERAND_REG_IMM_BF16:
   case AMDGPU::OPERAND_REG_IMM_FP16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
@@ -1742,10 +1767,6 @@ inline bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, unsigned DC) {
   return false;
 }
 
-/// \returns true if an instruction may have a 64-bit VGPR operand.
-bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc,
-                             const MCSubtargetInfo &ST);
-
 /// \returns true if an instruction is a DP ALU DPP without any 64-bit operands.
 bool isDPALU_DPP32BitOpc(unsigned Opc);
 
@@ -1793,11 +1814,6 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc);
 /// \returns true if a memory instruction supports scale_offset modifier.
 bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode);
 
-/// \returns lds block size in terms of dwords. \p
-/// This is used to calculate the lds size encoded for PAL metadata 3.0+ which
-/// must be defined in terms of bytes.
-unsigned getLdsDwGranularity(const MCSubtargetInfo &ST);
-
 class ClusterDimsAttr {
 public:
   enum class Kind { Unknown, NoCluster, VariableDims, FixedDims };
@@ -1815,8 +1831,6 @@ public:
   bool isVariableDims() const { return getKind() == Kind::VariableDims; }
 
   void setUnknown() { *this = ClusterDimsAttr(Kind::Unknown); }
-
-  void setNoCluster() { *this = ClusterDimsAttr(Kind::NoCluster); }
 
   void setVariableDims() { *this = ClusterDimsAttr(Kind::VariableDims); }
 

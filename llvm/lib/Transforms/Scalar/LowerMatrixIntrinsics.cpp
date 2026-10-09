@@ -18,6 +18,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LowerMatrixIntrinsics.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -60,50 +61,6 @@ using namespace PatternMatch;
 STATISTIC(FlattenedMatrices, "Number of matrix flattenings");
 STATISTIC(ReshapedMatrices, "Number of matrix reshapes");
 STATISTIC(SplitMatrices, "Number of matrix splits");
-
-static cl::opt<bool>
-    FuseMatrix("fuse-matrix", cl::init(true), cl::Hidden,
-               cl::desc("Enable/disable fusing matrix instructions."));
-// TODO: Allow and use non-square tiles.
-static cl::opt<unsigned> TileSize(
-    "fuse-matrix-tile-size", cl::init(4), cl::Hidden,
-    cl::desc(
-        "Tile size for matrix instruction fusion using square-shaped tiles."));
-static cl::opt<unsigned>
-    TileLoopsThreshold("fuse-matrix-loops-threshold", cl::init(200), cl::Hidden,
-                       cl::desc("Generate loop nests for tiling when expected "
-                                "number of operations exceeds threshold."));
-static cl::opt<bool> ForceFusion(
-    "force-fuse-matrix", cl::init(false), cl::Hidden,
-    cl::desc("Force matrix instruction fusion even if not profitable."));
-static cl::opt<bool> AllowContractEnabled(
-    "matrix-allow-contract", cl::init(false), cl::Hidden,
-    cl::desc("Allow the use of FMAs if available and profitable. This may "
-             "result in different results, due to less rounding error."));
-
-static cl::opt<bool>
-    VerifyShapeInfo("verify-matrix-shapes", cl::Hidden,
-                    cl::desc("Enable/disable matrix shape verification."),
-                    cl::init(false));
-
-enum class MatrixLayoutTy { ColumnMajor, RowMajor };
-
-static cl::opt<MatrixLayoutTy> MatrixLayout(
-    "matrix-default-layout", cl::init(MatrixLayoutTy::ColumnMajor),
-    cl::desc("Sets the default matrix layout"),
-    cl::values(clEnumValN(MatrixLayoutTy::ColumnMajor, "column-major",
-                          "Use column-major layout"),
-               clEnumValN(MatrixLayoutTy::RowMajor, "row-major",
-                          "Use row-major layout")));
-
-static cl::opt<bool> PrintAfterTransposeOpt("matrix-print-after-transpose-opt",
-                                            cl::init(false));
-
-static cl::opt<unsigned> SplitMatmulRemainderOverThreshold(
-    "matrix-split-matmul-remainder-over-threshold", cl::Hidden,
-    cl::desc("Illegal remainder vectors over this size in bits should be split "
-             "in the inner loop of matmul"),
-    cl::init(0));
 
 namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
@@ -207,7 +164,8 @@ struct ShapeInfo {
 
   ShapeInfo(unsigned NumRows = 0, unsigned NumColumns = 0)
       : NumRows(NumRows), NumColumns(NumColumns),
-        IsColumnMajor(MatrixLayout == MatrixLayoutTy::ColumnMajor) {}
+        IsColumnMajor(ScalarOptions::Global.matrix_default_layout ==
+                      MatrixLayoutTy::ColumnMajor) {}
 
   ShapeInfo(Value *NumRows, Value *NumColumns)
       : ShapeInfo(cast<ConstantInt>(NumRows)->getZExtValue(),
@@ -386,6 +344,7 @@ namespace {
 ///    obsolete instructions.
 ///
 class LowerMatrixIntrinsics {
+  const ScalarOptions &Opts;
   Function &Func;
   const DataLayout &DL;
   const TargetTransformInfo &TTI;
@@ -425,15 +384,13 @@ class LowerMatrixIntrinsics {
 
     OpInfoTy OpInfo;
 
-    bool IsColumnMajor = true;
+    bool IsColumnMajor = ScalarOptions::Global.matrix_default_layout ==
+                         MatrixLayoutTy::ColumnMajor;
 
   public:
-    MatrixTy() : IsColumnMajor(MatrixLayout == MatrixLayoutTy::ColumnMajor) {}
-    MatrixTy(ArrayRef<Value *> Vectors)
-        : Vectors(Vectors),
-          IsColumnMajor(MatrixLayout == MatrixLayoutTy::ColumnMajor) {}
-    MatrixTy(unsigned NumRows, unsigned NumColumns, Type *EltTy)
-        : IsColumnMajor(MatrixLayout == MatrixLayoutTy::ColumnMajor) {
+    MatrixTy() = default;
+    MatrixTy(ArrayRef<Value *> Vectors) : Vectors(Vectors) {}
+    MatrixTy(unsigned NumRows, unsigned NumColumns, Type *EltTy) {
 
       unsigned D = isColumnMajor() ? NumColumns : NumRows;
       for (unsigned J = 0; J < D; ++J)
@@ -582,13 +539,13 @@ class LowerMatrixIntrinsics {
   MapVector<Value *, MatrixTy> Inst2ColumnMatrix;
 
 private:
-  static FastMathFlags getFastMathFlags(Instruction *Inst) {
+  FastMathFlags getFastMathFlags(Instruction *Inst) const {
     FastMathFlags FMF;
 
     if (isa<FPMathOperator>(*Inst))
       FMF = Inst->getFastMathFlags();
 
-    FMF.setAllowContract(AllowContractEnabled || FMF.allowContract());
+    FMF.setAllowContract(Opts.matrix_allow_contract || FMF.allowContract());
 
     return FMF;
   }
@@ -596,7 +553,8 @@ private:
 public:
   LowerMatrixIntrinsics(Function &F, TargetTransformInfo &TTI,
                         FunctionAnalysisManager *AM)
-      : Func(F), DL(F.getDataLayout()), TTI(TTI), AM(AM) {}
+      : Opts(ScalarOptions::Global), Func(F), DL(F.getDataLayout()), TTI(TTI),
+        AM(AM) {}
 
   unsigned getNumOps(Type *VT) {
     assert(isa<FixedVectorType>(VT) && "Expected vector type");
@@ -709,8 +667,9 @@ public:
 
     auto SIter = ShapeMap.find(V);
     if (SIter != ShapeMap.end()) {
-      if (VerifyShapeInfo && (SIter->second.NumRows != Shape.NumRows ||
-                              SIter->second.NumColumns != Shape.NumColumns)) {
+      if (Opts.verify_matrix_shapes &&
+          (SIter->second.NumRows != Shape.NumRows ||
+           SIter->second.NumColumns != Shape.NumColumns)) {
         errs() << "Conflicting shapes (" << SIter->second.NumRows << "x"
                << SIter->second.NumColumns << " vs " << Shape.NumRows << "x"
                << Shape.NumColumns << ") for " << *V << "\n";
@@ -1143,7 +1102,7 @@ public:
     bool Changed = false;
     if (!isMinimal()) {
       Changed |= optimizeTransposes();
-      if (PrintAfterTransposeOpt) {
+      if (Opts.matrix_print_after_transpose_opt) {
         dbgs() << "Dump after matrix transpose optimization:\n";
         Func.print(dbgs());
       }
@@ -1409,7 +1368,7 @@ public:
   ///
   /// The intrinsic loads a matrix from memory using a stride between columns.
   MatrixTy LowerColumnMajorLoad(CallInst *Inst, IRBuilder<> &Builder) {
-    assert(MatrixLayout == MatrixLayoutTy::ColumnMajor &&
+    assert(Opts.matrix_default_layout == MatrixLayoutTy::ColumnMajor &&
            "Intrinsic only supports column-major layout!");
     Value *Ptr = Inst->getArgOperand(0);
     Value *Stride = Inst->getArgOperand(1);
@@ -1472,7 +1431,7 @@ public:
   ///
   /// The intrinsic store a matrix back memory using a stride between columns.
   MatrixTy LowerColumnMajorStore(CallInst *Inst, IRBuilder<> &Builder) {
-    assert(MatrixLayout == MatrixLayoutTy::ColumnMajor &&
+    assert(Opts.matrix_default_layout == MatrixLayoutTy::ColumnMajor &&
            "Intrinsic only supports column-major layout!");
     Value *Matrix = Inst->getArgOperand(0);
     Value *Ptr = Inst->getArgOperand(1);
@@ -1578,7 +1537,7 @@ public:
                        SmallPtrSet<Instruction *, 16> &FusedInsts,
                        FastMathFlags FMF) {
     if (FusedInsts.contains(MatMul) ||
-        MatrixLayout != MatrixLayoutTy::ColumnMajor)
+        Opts.matrix_default_layout != MatrixLayoutTy::ColumnMajor)
       return;
     ShapeInfo LShape(MatMul->getArgOperand(2), MatMul->getArgOperand(3));
     ShapeInfo RShape(MatMul->getArgOperand(3), MatMul->getArgOperand(4));
@@ -1591,6 +1550,8 @@ public:
 
     Type *ElementType = cast<FixedVectorType>(LHS->getType())->getElementType();
     bool IsIntVec = ElementType->isIntegerTy();
+
+    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
     // Floating point reductions require reassocation.
     if (!IsIntVec && !FMF.allowReassoc())
@@ -1609,7 +1570,8 @@ public:
     // Returns the cost benefit of using \p Op with the dot product lowering. If
     // the returned cost is < 0, the argument is cheaper to use in the
     // dot-product lowering.
-    auto GetCostForArg = [this, &CanBeFlattened](Value *Op, unsigned N) {
+    auto GetCostForArg = [this, &CanBeFlattened, CostKind](Value *Op,
+                                                           unsigned N) {
       if (!ShapeMap.contains(Op))
         return InstructionCost::getInvalid();
 
@@ -1623,19 +1585,19 @@ public:
         InstructionCost EmbedCost(0);
         // Roughly estimate the cost for embedding the columns into a vector.
         for (unsigned I = 1; I < N; ++I)
-          EmbedCost += TTI.getShuffleCost(
-              TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
-              FixedVectorType::get(EltTy, 1), {}, TTI::TCK_RecipThroughput);
+          EmbedCost +=
+              TTI.getShuffleCost(TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
+                                 FixedVectorType::get(EltTy, 1), CostKind);
         return EmbedCost;
       }
 
       if (match(Op, m_BinOp()) && ShapeMap.contains(Op)) {
         InstructionCost OriginalCost =
             TTI.getArithmeticInstrCost(cast<Instruction>(Op)->getOpcode(),
-                                       EltTy) *
+                                       EltTy, CostKind) *
             N;
         InstructionCost NewCost = TTI.getArithmeticInstrCost(
-            cast<Instruction>(Op)->getOpcode(), VecTy);
+            cast<Instruction>(Op)->getOpcode(), VecTy, CostKind);
         return NewCost - OriginalCost;
       }
 
@@ -1645,9 +1607,9 @@ public:
         // vector.
         InstructionCost EmbedCost(0);
         for (unsigned I = 1; I < N; ++I)
-          EmbedCost -= TTI.getShuffleCost(
-              TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
-              FixedVectorType::get(EltTy, 1), {}, TTI::TCK_RecipThroughput);
+          EmbedCost -=
+              TTI.getShuffleCost(TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
+                                 FixedVectorType::get(EltTy, 1), CostKind);
         return EmbedCost;
       }
 
@@ -1655,8 +1617,10 @@ public:
       if (N == 1)
         return InstructionCost(0);
 
-      return TTI.getMemoryOpCost(Instruction::Load, VecTy, Align(1), 0) -
-             N * TTI.getMemoryOpCost(Instruction::Load, EltTy, Align(1), 0);
+      return TTI.getMemoryOpCost(Instruction::Load, VecTy, Align(1), 0,
+                                 CostKind) -
+             N * TTI.getMemoryOpCost(Instruction::Load, EltTy, Align(1), 0,
+                                     CostKind);
     };
 
     // Iterate over LHS and operations feeding LHS and check if it is profitable
@@ -1688,12 +1652,12 @@ public:
     InstructionCost ReductionCost =
         TTI.getArithmeticReductionCost(
             AddOpCode, cast<FixedVectorType>(LHS->getType()),
-            IsIntVec ? std::nullopt : std::optional(FMF)) +
-        TTI.getArithmeticInstrCost(MulOpCode, LHS->getType());
+            IsIntVec ? std::nullopt : std::optional(FMF), CostKind) +
+        TTI.getArithmeticInstrCost(MulOpCode, LHS->getType(), CostKind);
     InstructionCost SequentialAddCost =
-        TTI.getArithmeticInstrCost(AddOpCode, ElementType) *
+        TTI.getArithmeticInstrCost(AddOpCode, ElementType, CostKind) *
             (LShape.NumColumns - 1) +
-        TTI.getArithmeticInstrCost(MulOpCode, ElementType) *
+        TTI.getArithmeticInstrCost(MulOpCode, ElementType, CostKind) *
             (LShape.NumColumns);
     if ((LHSCost + ReductionCost - SequentialAddCost) > InstructionCost(0))
       return;
@@ -1783,7 +1747,8 @@ public:
 
     // Similarly, if the vector is small enough that we don't want
     // to split further.
-    if (VecTy->getPrimitiveSizeInBits() <= SplitMatmulRemainderOverThreshold)
+    if (VecTy->getPrimitiveSizeInBits() <=
+        Opts.matrix_split_matmul_remainder_over_threshold)
       return Remainder;
 
     // Gradually lower the vectorization factor to cover the
@@ -1951,7 +1916,7 @@ public:
     // condition holds, they alias, otherwise they are guaranteed to not
     // overlap.
     Check1->getTerminator()->eraseFromParent();
-    Builder.SetInsertPoint(Check1, Check1->begin());
+    Builder.SetInsertPoint(Check1->begin());
 
     auto *VT = cast<FixedVectorType>(Load->getType());
     // Use an array type for the alloca, to avoid potentially huge alignment
@@ -1970,10 +1935,10 @@ public:
     setExplicitlyUnknownBranchWeightsIfProfiled(*BR2, DEBUG_TYPE);
 
     // Copy load operand to new alloca.
-    Builder.SetInsertPoint(Copy, Copy->begin());
+    Builder.SetInsertPoint(Copy->begin());
     Builder.CreateMemCpy(Alloca, Alloca->getAlign(), Load->getPointerOperand(),
                          Load->getAlign(), LoadLoc.Size.getValue());
-    Builder.SetInsertPoint(Fusion, Fusion->begin());
+    Builder.SetInsertPoint(Fusion->begin());
     PHINode *PHI = Builder.CreatePHI(Load->getPointerOperandType(), 3);
     PHI->addIncoming(Load->getPointerOperand(), Check0);
     PHI->addIncoming(Load->getPointerOperand(), Check1);
@@ -1989,7 +1954,7 @@ public:
   }
 
   bool isFusionProfitable(CallInst *MatMul) {
-    if (ForceFusion)
+    if (Opts.force_fuse_matrix)
       return true;
 
     ShapeInfo LShape(MatMul->getArgOperand(2), MatMul->getArgOperand(3));
@@ -2037,7 +2002,8 @@ public:
     auto *EltType = cast<FixedVectorType>(MatMul->getType())->getElementType();
 
     // Create the main tiling loop nest.
-    TileInfo TI(LShape.NumRows, RShape.NumColumns, LShape.NumColumns, TileSize);
+    TileInfo TI(LShape.NumRows, RShape.NumColumns, LShape.NumColumns,
+                Opts.fuse_matrix_tile_size);
     DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
     Instruction *InsertI = cast<Instruction>(MatMul);
     BasicBlock *Start = InsertI->getParent();
@@ -2046,14 +2012,14 @@ public:
     IRBuilder<> Builder(MatMul);
     BasicBlock *InnerBody = TI.CreateTiledLoops(Start, End, Builder, DTU, *LI);
 
-    Type *TileVecTy =
-        FixedVectorType::get(MatMul->getType()->getScalarType(), TileSize);
+    Type *TileVecTy = FixedVectorType::get(MatMul->getType()->getScalarType(),
+                                           Opts.fuse_matrix_tile_size);
     MatrixTy TileResult;
     // Insert in the inner loop header.
     Builder.SetInsertPoint(TI.KLoop.Header->getTerminator());
     // Create PHI nodes for the result columns to accumulate across iterations.
     SmallVector<PHINode *, 4> ColumnPhis;
-    for (unsigned I = 0; I < TileSize; I++) {
+    for (unsigned I = 0; I < Opts.fuse_matrix_tile_size; I++) {
       auto *Phi = Builder.CreatePHI(TileVecTy, 2, "result.vec." + Twine(I));
       Phi->addIncoming(ConstantAggregateZero::get(TileVecTy),
                        TI.RowLoop.Header->getSingleSuccessor());
@@ -2067,10 +2033,12 @@ public:
     // Load tiles of the operands.
     MatrixTy A =
         loadMatrix(LPtr, {}, false, LShape, TI.RowLoop.Index, TI.KLoop.Index,
-                   {TileSize, TileSize}, EltType, Builder);
+                   {Opts.fuse_matrix_tile_size, Opts.fuse_matrix_tile_size},
+                   EltType, Builder);
     MatrixTy B =
         loadMatrix(RPtr, {}, false, RShape, TI.KLoop.Index, TI.ColumnLoop.Index,
-                   {TileSize, TileSize}, EltType, Builder);
+                   {Opts.fuse_matrix_tile_size, Opts.fuse_matrix_tile_size},
+                   EltType, Builder);
     emitMatrixMultiply(TileResult, A, B, Builder, true, false,
                        getFastMathFlags(MatMul));
     // Store result after the inner loop is done.
@@ -2086,7 +2054,8 @@ public:
     // is enough work per iteration.
     // FIXME: The unroller should make this decision directly instead, but
     // currently the cost-model is not up to the task.
-    unsigned InnerLoopUnrollCount = std::min(10u, LShape.NumColumns / TileSize);
+    unsigned InnerLoopUnrollCount =
+        std::min(10u, LShape.NumColumns / Opts.fuse_matrix_tile_size);
     addStringMetadataToLoop(LI->getLoopFor(TI.KLoop.Header),
                             "llvm.loop.unroll.count", InnerLoopUnrollCount);
   }
@@ -2094,7 +2063,7 @@ public:
   void emitSIMDTiling(CallInst *MatMul, LoadInst *LoadOp0, LoadInst *LoadOp1,
                       StoreInst *Store,
                       SmallPtrSetImpl<Instruction *> &FusedInsts) {
-    assert(MatrixLayout == MatrixLayoutTy::ColumnMajor &&
+    assert(Opts.matrix_default_layout == MatrixLayoutTy::ColumnMajor &&
            "Tiling only supported for column-major matrixes at the moment!");
     if (!isFusionProfitable(MatMul))
       return;
@@ -2114,20 +2083,21 @@ public:
     // Use loop-based tiling when the number of expected operations exceeds
     // threshold.
     unsigned NumOps = getNumNativeVectorOps(EltType, R, M, C);
-    bool UseLoops =
-        (NumOps > TileLoopsThreshold) && R % TileSize == 0 && C % TileSize == 0;
+    bool UseLoops = (NumOps > Opts.fuse_matrix_loops_threshold) &&
+                    R % Opts.fuse_matrix_tile_size == 0 &&
+                    C % Opts.fuse_matrix_tile_size == 0;
     if (UseLoops)
       createTiledLoops(MatMul, APtr, LShape, BPtr, RShape, Store);
     else {
       IRBuilder<> Builder(Store);
-      for (unsigned J = 0; J < C; J += TileSize)
-        for (unsigned I = 0; I < R; I += TileSize) {
-          const unsigned TileR = std::min(R - I, unsigned(TileSize));
-          const unsigned TileC = std::min(C - J, unsigned(TileSize));
+      for (unsigned J = 0; J < C; J += Opts.fuse_matrix_tile_size)
+        for (unsigned I = 0; I < R; I += Opts.fuse_matrix_tile_size) {
+          const unsigned TileR = std::min(R - I, Opts.fuse_matrix_tile_size);
+          const unsigned TileC = std::min(C - J, Opts.fuse_matrix_tile_size);
           MatrixTy Res = getZeroMatrix(EltType, TileR, TileC);
 
-          for (unsigned K = 0; K < M; K += TileSize) {
-            const unsigned TileM = std::min(M - K, unsigned(TileSize));
+          for (unsigned K = 0; K < M; K += Opts.fuse_matrix_tile_size) {
+            const unsigned TileM = std::min(M - K, Opts.fuse_matrix_tile_size);
             MatrixTy A =
                 loadMatrix(APtr, LoadOp0->getAlign(), LoadOp0->isVolatile(),
                            LShape, getIndex(APtr, I), getIndex(APtr, K),
@@ -2176,7 +2146,7 @@ public:
   LowerMatrixMultiplyFused(CallInst *MatMul,
                            SmallPtrSetImpl<Instruction *> &FusedInsts,
                            SmallVector<IntrinsicInst *, 16> &LifetimeEnds) {
-    if (!FuseMatrix || !DT || TileSize == 0)
+    if (!Opts.fuse_matrix || !DT || Opts.fuse_matrix_tile_size == 0)
       return;
 
     assert(AA && LI && "Analyses should be available");
@@ -2186,7 +2156,7 @@ public:
 
     // We can fold the transpose into the operand that is used to fetch scalars.
     Value *T;
-    if (MatrixLayout == MatrixLayoutTy::ColumnMajor
+    if (Opts.matrix_default_layout == MatrixLayoutTy::ColumnMajor
             ? match(B, m_Intrinsic<Intrinsic::matrix_transpose>(m_Value(T)))
             : match(A, m_Intrinsic<Intrinsic::matrix_transpose>(m_Value(T)))) {
       IRBuilder<> Builder(MatMul);
@@ -2202,7 +2172,7 @@ public:
       MatrixTy MB;
 
       Value *Transpose;
-      if (MatrixLayout == MatrixLayoutTy::ColumnMajor) {
+      if (Opts.matrix_default_layout == MatrixLayoutTy::ColumnMajor) {
         MA = getMatrix(A, ShapeInfo(R, M), Builder);
         MB = getMatrix(T, ShapeInfo(C, M), Builder);
         Transpose = B;
@@ -2230,7 +2200,8 @@ public:
       return;
     }
 
-    if (!MatMul->hasOneUse() || MatrixLayout != MatrixLayoutTy::ColumnMajor)
+    if (!MatMul->hasOneUse() ||
+        Opts.matrix_default_layout != MatrixLayoutTy::ColumnMajor)
       return;
 
     // Lower {ld, ld} -> matmul -> st chains.  No need to call finalizeLowering

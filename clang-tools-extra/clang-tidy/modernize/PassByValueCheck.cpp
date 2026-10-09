@@ -115,15 +115,15 @@ static bool paramReferredExactlyOnce(const CXXConstructorDecl *Ctor,
     ///
     /// Stops the AST traversal if more than one usage is found.
     bool VisitDeclRefExpr(DeclRefExpr *D) {
-      if (const ParmVarDecl *To = dyn_cast<ParmVarDecl>(D->getDecl())) {
-        if (To == ParamDecl) {
-          ++Count;
-          if (Count > 1U) {
-            // No need to look further, used more than once.
-            return false;
-          }
+      if (const ParmVarDecl *To = dyn_cast<ParmVarDecl>(D->getDecl());
+          To && To == ParamDecl) {
+        ++Count;
+        if (Count > 1U) {
+          // No need to look further, used more than once.
+          return false;
         }
       }
+
       return true;
     }
 

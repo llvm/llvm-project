@@ -117,8 +117,7 @@ public:
                                      mlir::OpBuilder &builder) const override;
 
   clang::CharUnits
-  getArrayCookieSizeImpl(mlir::Type elementType,
-                         const mlir::DataLayout &dataLayout) const override;
+  getArrayCookieSizeImpl(clang::CharUnits elementAlign) const override;
 
   mlir::Value readArrayCookieImpl(mlir::Location loc, mlir::Value allocPtr,
                                   clang::CharUnits cookieSize,
@@ -190,9 +189,10 @@ mlir::Type LowerItaniumCXXABI::lowerMethodType(
 
   // Note that clang CodeGen emits struct{ptrdiff_t, ptrdiff_t} for member
   // function pointers. Let's follow this approach.
-  return cir::StructType::get(type.getContext(), {ptrdiffCIRTy, ptrdiffCIRTy},
-                              /*packed=*/false, /*padded=*/false,
-                              /*is_class=*/false);
+  mlir::Type members[] = {ptrdiffCIRTy, ptrdiffCIRTy};
+  return cir::StructType::get(type.getContext(), members, /*packed=*/false,
+                              /*is_class=*/false,
+                              cir::RecordType::getAllDataKinds(members));
 }
 
 mlir::TypedAttr LowerItaniumCXXABI::lowerDataMemberConstant(
@@ -705,6 +705,8 @@ mlir::Value LowerItaniumCXXABI::lowerMethodToBoolCast(
 
 static void buildBadCastCall(mlir::OpBuilder &builder, mlir::Location loc,
                              mlir::FlatSymbolRefAttr badCastFuncRef) {
+  // TODO(cir): set the runtime calling convention to this call.
+  assert(!cir::MissingFeatures::opFuncCallingConv());
   auto callOp = cir::CallOp::create(builder, loc, badCastFuncRef,
                                     /*resType=*/cir::VoidType(),
                                     /*operands=*/mlir::ValueRange{});
@@ -738,6 +740,9 @@ static mlir::Value buildDynamicCastAfterNullCheck(cir::DynamicCastOp op,
 
   mlir::FlatSymbolRefAttr dynCastFuncRef = castInfo.getRuntimeFunc();
   mlir::Value dynCastFuncArgs[4] = {srcPtr, srcRtti, destRtti, offsetHint};
+
+  // TODO(cir): set the runtime calling convention to this call.
+  assert(!cir::MissingFeatures::opFuncCallingConv());
 
   mlir::Value castedPtr = cir::CallOp::create(builder, loc, dynCastFuncRef,
                                               voidPtrTy, dynCastFuncArgs)
@@ -888,14 +893,12 @@ LowerItaniumCXXABI::lowerVTableGetTypeInfo(cir::VTableGetTypeInfoOp op,
 }
 
 clang::CharUnits LowerItaniumCXXABI::getArrayCookieSizeImpl(
-    mlir::Type elementType, const mlir::DataLayout &dataLayout) const {
+    clang::CharUnits elementAlign) const {
   // The array cookie is a size_t; pad that up to the element alignment.
   // The cookie is actually right-justified in that space.
   clang::CharUnits sizeOfSizeT =
       clang::CharUnits::fromQuantity(getPtrSizeInBits() / 8);
-  clang::CharUnits eltAlign = clang::CharUnits::fromQuantity(
-      dataLayout.getTypePreferredAlignment(elementType));
-  return std::max(sizeOfSizeT, eltAlign);
+  return std::max(sizeOfSizeT, elementAlign);
 }
 
 mlir::Value LowerItaniumCXXABI::readArrayCookieImpl(

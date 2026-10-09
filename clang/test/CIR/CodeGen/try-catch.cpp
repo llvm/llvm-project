@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
+// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefixes=LLVM,SHARED
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=OGCG,SHARED
 
 void empty_try_block_with_catch_all() {
   try {} catch (...) {}
@@ -40,6 +40,7 @@ void try_catch_with_empty_catch_all() {
   }
 }
 
+// CIR: cir.func {{.*}} @_Z30try_catch_with_empty_catch_allv() personality(@__gxx_personality_v0)
 // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
 // CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
 // CIR: cir.store{{.*}} %[[CONST_1]], %[[A_ADDR]] : !s32i, !cir.ptr<!s32i
@@ -54,7 +55,9 @@ void try_catch_with_empty_catch_all() {
 // CIR:   }
 // CIR: }
 
-// LLVM:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
+// CIR: cir.func private dso_local @__gxx_personality_v0(...) -> !s32i
+
+// LLVM:   %[[A_ADDR:.*]] = alloca i32, align 4
 // LLVM:   store i32 1, ptr %[[A_ADDR]], align 4
 // LLVM:   br label %[[BB_2:.*]]
 // LLVM: [[BB_2]]:
@@ -96,7 +99,7 @@ void try_catch_with_empty_catch_all_2() {
 // CIR:   }
 // CIR: }
 
-// LLVM:   %[[A_ADDR]] = alloca i32, i64 1, align 4
+// LLVM:   %[[A_ADDR]] = alloca i32, align 4
 // LLVM:   store i32 1, ptr %[[A_ADDR]], align 4
 // LLVM:   br label %[[BB_2:.*]]
 // LLVM: [[BB_2]]:
@@ -141,9 +144,9 @@ void try_catch_with_alloca() {
 // CIR:   }
 // CIR: }
 
-// LLVM:  %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:  %[[B_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:  %[[C_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:  %[[A_ADDR:.*]] = alloca i32, align 4
+// LLVM:  %[[B_ADDR:.*]] = alloca i32, align 4
+// LLVM:  %[[C_ADDR:.*]] = alloca i32, align 4
 // LLVM:  br label %[[LABEL_1:.*]]
 // LLVM: [[LABEL_1]]:
 // LLVM:  br label %[[LABEL_2:.*]]
@@ -1118,9 +1121,9 @@ void call_function_inside_try_catch_with_ref_ptr_of_record_exception_type() {
 // CIR:     %[[CALL:.*]] = cir.call @_Z8divisionv() : () -> (!s32i {llvm.noundef})
 // CIR:     cir.yield
 // CIR:   } catch [type #cir.global_view<@_ZTIP6Record> : !cir.ptr<!u8i>] (%[[EH_TOKEN:.*]]: !cir.eh_token {{.*}}) {
-// CIR:     %[[CATCH_TOKEN:.*]], %[[EXN_PTR:.*]] = cir.begin_catch %[[EH_TOKEN]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CIR-NEXT:     %[[CATCH_TOKEN:.*]], %[[EXN_PTR:.*]] = cir.begin_catch %[[EH_TOKEN]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
 // CIR:     cir.cleanup.scope {
-// CIR:       cir.init_catch_param reference %[[EXN_PTR]] to %{{.*}} : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!cir.ptr<!rec_Record>>>
+// CIR:       cir.init_catch_param reference_to_record_pointer %[[EXN_PTR]] to %[[E_ADDR]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!cir.ptr<!rec_Record>>>
 // CIR:       cir.yield
 // CIR:     } cleanup all {
 // CIR:       cir.end_catch %[[CATCH_TOKEN]] : !cir.catch_token
@@ -1133,6 +1136,8 @@ void call_function_inside_try_catch_with_ref_ptr_of_record_exception_type() {
 // CIR: }
 
 // LLVM: define {{.*}} void @_Z68call_function_inside_try_catch_with_ref_ptr_of_record_exception_typev() {{.*}} personality ptr @__gxx_personality_v0
+// LLVM:   %[[EXN_BYREF_TMP:.*]] = alloca ptr, align 8
+// LLVM:   %[[E_ADDR:.*]] = alloca ptr, align 8
 // LLVM:   br label %[[TRY_SCOPE:.*]]
 // LLVM: [[TRY_SCOPE]]:
 // LLVM:   br label %[[TRY_BEGIN:.*]]
@@ -1160,10 +1165,12 @@ void call_function_inside_try_catch_with_ref_ptr_of_record_exception_type() {
 // LLVM: [[BEGIN_CATCH]]:
 // LLVM:   %[[EXN_OBJ_PHI2:.*]] = phi ptr [ %[[EXN_OBJ_PHI1:.*]], %[[DISPATCH:.*]] ]
 // LLVM:   %[[EH_SELECTOR_PHI2:.*]] = phi i32 [ %[[EH_SELECTOR_PHI1:.*]], %[[DISPATCH:.*]] ]
-// LLVM:   %[[TOKEN:.*]] = call ptr @__cxa_begin_catch(ptr %[[EXN_OBJ_PHI2]])
+// LLVM-NEXT:   %[[TOKEN:.*]] = call ptr @__cxa_begin_catch(ptr %[[EXN_OBJ_PHI2]])
 // LLVM:   br label %[[CATCH_BODY:.*]]
 // LLVM: [[CATCH_BODY]]:
-// LLVM:   br label %[[END_CATCH:.*]]
+// LLVM-NEXT:   store ptr %[[TOKEN]], ptr %[[EXN_BYREF_TMP]], align 8
+// LLVM-NEXT:   store ptr %[[EXN_BYREF_TMP]], ptr %[[E_ADDR]], align 8
+// LLVM-NEXT:   br label %[[END_CATCH:.*]]
 // LLVM: [[END_CATCH]]:
 // LLVM:   call void @__cxa_end_catch()
 // LLVM:   br label %[[END_DISPATCH:.*]]
@@ -1374,9 +1381,9 @@ int init_catch_param_with_type_int() {
 // CIR:   cir.return %[[TMP_RET]] : !s32i
 
 // LLVM: define {{.*}} i32 @_Z30init_catch_param_with_type_intv() {{.*}} personality ptr @__gxx_personality_v0
-// LLVM:   %[[X_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:   %[[RET_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:   %[[RV_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[X_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[RET_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[RV_ADDR:.*]] = alloca i32, align 4
 // LLVM:   br label %[[TRY_SCOPE:.*]]
 // LLVM: [[TRY_SCOPE]]:
 // LLVM:   br label %[[TRY_BEGIN:.*]]
@@ -1516,9 +1523,9 @@ int init_catch_param_with_type_int_ptr() {
 // CIR:   cir.return %[[TMP_RET]] : !s32i
 
 // LLVM: define {{.*}} i32 @_Z34init_catch_param_with_type_int_ptrv() {{.*}} personality ptr @__gxx_personality_v0
-// LLVM:   %[[X_ADDR:.*]] = alloca ptr, i64 1, align 8
-// LLVM:   %[[RET_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:   %[[RV_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[X_ADDR:.*]] = alloca ptr, align 8
+// LLVM:   %[[RET_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[RV_ADDR:.*]] = alloca i32, align 4
 // LLVM:   br label %[[TRY_SCOPE:.*]]
 // LLVM: [[TRY_SCOPE]]:
 // LLVM:   br label %[[TRY_BEGIN:.*]]
@@ -1635,10 +1642,10 @@ int init_catch_param_with_ref_to_ptr_to_non_record() {
 // CIR:       %[[CALL:.*]] = cir.call @_Z8divisionv() : () -> (!s32i {llvm.noundef})
 // CIR:       cir.yield
 // CIR:     } catch [type #cir.global_view<@_ZTIPi> : !cir.ptr<!u8i>] (%[[TOKEN:.*]]: !cir.eh_token {{.*}}) {
-// CIR:       cir.construct_catch_param reference %[[TOKEN]] to %[[P_ADDR]] using : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+// CIR:       cir.construct_catch_param reference_to_pointer %[[TOKEN]] to %[[P_ADDR]] using : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
 // CIR:       %[[CATCH_TOKEN:.*]], %[[EXN_PTR:.*]] = cir.begin_catch %{{.*}} : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
 // CIR:       cir.cleanup.scope {
-// CIR:         cir.init_catch_param reference %[[EXN_PTR]] to %[[P_ADDR]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+// CIR:         cir.init_catch_param reference_to_pointer %[[EXN_PTR]] to %[[P_ADDR]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
 // CIR:         %[[TMP_P:.*]] = cir.load %[[P_ADDR]] : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>, !cir.ptr<!cir.ptr<!s32i>>
 // CIR:         %[[DEREF_P:.*]] = cir.load deref {{.*}} %[[TMP_P]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CIR:         %[[P_VAL:.*]] = cir.load {{.*}} %[[DEREF_P]] : !cir.ptr<!s32i>, !s32i
@@ -1659,9 +1666,9 @@ int init_catch_param_with_ref_to_ptr_to_non_record() {
 // CIR:   cir.return %[[TMP_RET]] : !s32i
 
 // LLVM: define {{.*}} i32 @_Z46init_catch_param_with_ref_to_ptr_to_non_recordv() {{.*}} personality ptr @__gxx_personality_v0
-// LLVM:   %[[P_ADDR:.*]] = alloca ptr, i64 1, align 8
-// LLVM:   %[[RET_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:   %[[RV_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[P_ADDR:.*]] = alloca ptr, align 8
+// LLVM:   %[[RET_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[RV_ADDR:.*]] = alloca i32, align 4
 // LLVM:   br label %[[TRY_SCOPE:.*]]
 // LLVM: [[TRY_SCOPE]]:
 // LLVM:   br label %[[TRY_BEGIN:.*]]
@@ -1800,6 +1807,8 @@ void direct_inside_try_catch_with_exception_type() {
 // LLVM:   store i32 42, ptr %[[EXN]]
 // LLVM:   invoke void @__cxa_throw(ptr %[[EXN]], ptr @_ZTIi, ptr null)
 // LLVM:           to label %[[UNREACHABLE:.*]] unwind label %[[LANDING_PAD:.*]]
+// LLVM: [[UNREACHABLE]]:
+// LLVM:   unreachable
 // LLVM: [[LANDING_PAD]]:
 // LLVM:   %[[LP:.*]] = landingpad { ptr, i32 }
 // LLVM:                   catch ptr @_ZTIi
@@ -1828,8 +1837,6 @@ void direct_inside_try_catch_with_exception_type() {
 // LLVM:   br label %[[TRY_CONT:.*]]
 // LLVM: [[TRY_CONT]]:
 // LLVM:   ret void
-// LLVM: [[UNREACHABLE]]:
-// LLVM:   unreachable
 
 // OGCG: define {{.*}} void @_Z43direct_inside_try_catch_with_exception_typev() {{.*}} personality ptr @__gxx_personality_v0 {
 // OGCG:   %[[EXN_SLOT:.*]] = alloca ptr
@@ -1859,3 +1866,189 @@ void direct_inside_try_catch_with_exception_type() {
 // OGCG:   resume { ptr, i32 }
 // OGCG: [[UNREACHABLE]]:
 // OGCG:   unreachable
+
+const void *init_catch_param_with_ref_to_nullptr() {
+  try {
+    division();
+  } catch (const decltype(nullptr) &n) {
+    return &n;
+  }
+  return nullptr;
+}
+
+// CIR: cir.func {{.*}} @_Z36init_catch_param_with_ref_to_nullptrv() {{.*}} personality(@__gxx_personality_v0)
+// CIR:   %[[N_ADDR:.*]] = cir.alloca "n" {{.*}} const : !cir.ptr<!cir.ptr<!cir.ptr<!void>>>
+// CIR:   } catch [type #cir.global_view<@_ZTIDn> : !cir.ptr<!u8i>] (%[[TOKEN:.*]]: !cir.eh_token {{.*}}) {
+// CIR-NEXT: %[[CATCH_TOKEN:.*]], %[[EXN_PTR:.*]] = cir.begin_catch %[[TOKEN]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CIR:     cir.init_catch_param reference %[[EXN_PTR]] to %[[N_ADDR]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!cir.ptr<!void>>>
+
+// SHARED: define {{.*}} ptr @_Z36init_catch_param_with_ref_to_nullptrv() {{.*}} personality ptr @__gxx_personality_v0
+// SHARED:   %[[EXN_PTR:.*]] = call ptr @__cxa_begin_catch(ptr %{{.*}})
+// SHARED:   store ptr %[[EXN_PTR]], ptr %[[N_ADDR:.*]], align 8
+// SHARED-NEXT:   %[[N:.*]] = load ptr, ptr %[[N_ADDR]], align 8
+// SHARED-NEXT:   store ptr %[[N]], ptr %{{.*}}, align 8
+
+const void *init_catch_param_with_ref_to_void_ptr() {
+  try {
+    division();
+  } catch (void *const &p) {
+    return &p;
+  }
+  return nullptr;
+}
+
+// CIR: cir.func {{.*}} @_Z37init_catch_param_with_ref_to_void_ptrv() {{.*}} personality(@__gxx_personality_v0)
+// CIR:   %[[P_ADDR:.*]] = cir.alloca "p" {{.*}} const : !cir.ptr<!cir.ptr<!cir.ptr<!void>>>
+// CIR:   } catch [type #cir.global_view<@_ZTIPv> : !cir.ptr<!u8i>] (%[[TOKEN:.*]]: !cir.eh_token {{.*}}) {
+// CIR-NEXT: cir.construct_catch_param reference_to_pointer %[[TOKEN]] to %[[P_ADDR]] using : !cir.ptr<!cir.ptr<!cir.ptr<!void>>>
+// CIR-NEXT: %[[CATCH_TOKEN:.*]], %[[EXN_PTR:.*]] = cir.begin_catch %[[TOKEN]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CIR:     cir.init_catch_param reference_to_pointer %[[EXN_PTR]] to %[[P_ADDR]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!cir.ptr<!void>>>
+
+// SHARED: define {{.*}} ptr @_Z37init_catch_param_with_ref_to_void_ptrv() {{.*}} personality ptr @__gxx_personality_v0
+// LLVM:   %[[EXN_OBJ:.*]] = getelementptr i8, ptr %[[EXN:.*]], i64 32
+// LLVM-NEXT:   store ptr %[[EXN_OBJ]], ptr %[[P_ADDR:.+]], align 8
+// LLVM-NEXT:   %{{.*}} = call ptr @__cxa_begin_catch(ptr %[[EXN]])
+// LLVM-NEXT:   br label %[[CATCH_BODY:.+]]
+// LLVM:      [[CATCH_BODY]]:
+// LLVM-NEXT:   %{{.+}} = load ptr, ptr %[[P_ADDR]], align 8
+
+// OGCG:   %{{.*}} = call ptr @__cxa_begin_catch(ptr %[[EXN:.*]])
+// OGCG-NEXT:   %[[EXN_OBJ:.*]] = getelementptr i8, ptr %[[EXN]], i32 32
+// OGCG-NEXT:   store ptr %[[EXN_OBJ]], ptr %[[P_ADDR:.+]], align 8
+// OGCG-NEXT:   %{{.+}} = load ptr, ptr %[[P_ADDR]], align 8
+
+const void *init_catch_param_with_ref_to_atomic_record_ptr() {
+  try {
+    division();
+  } catch (_Atomic(Record) *const &p) {
+    return &p;
+  }
+  return nullptr;
+}
+
+// CIR: cir.func {{.*}} @_Z46init_catch_param_with_ref_to_atomic_record_ptrv() {{.*}} personality(@__gxx_personality_v0)
+// CIR:   %[[P_ADDR:.*]] = cir.alloca "p" {{.*}} const : !cir.ptr<!cir.ptr<!cir.ptr<!rec_Record>>>
+// CIR:   } catch [type #cir.global_view<@_ZTIPU7_Atomic6Record> : !cir.ptr<!u8i>] (%[[TOKEN:.*]]: !cir.eh_token {{.*}}) {
+// CIR-NEXT: cir.construct_catch_param reference_to_pointer %[[TOKEN]] to %[[P_ADDR]] using : !cir.ptr<!cir.ptr<!cir.ptr<!rec_Record>>>
+// CIR-NEXT: %[[CATCH_TOKEN:.*]], %[[EXN_PTR:.*]] = cir.begin_catch %[[TOKEN]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CIR:     cir.init_catch_param reference_to_pointer %[[EXN_PTR]] to %[[P_ADDR]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!cir.ptr<!rec_Record>>>
+
+// SHARED: define {{.*}} ptr @_Z46init_catch_param_with_ref_to_atomic_record_ptrv() {{.*}} personality ptr @__gxx_personality_v0
+// LLVM:   %[[EXN_OBJ:.*]] = getelementptr i8, ptr %[[EXN:.*]], i64 32
+// LLVM-NEXT:   store ptr %[[EXN_OBJ]], ptr %[[P_ADDR:.+]], align 8
+// LLVM-NEXT:   %{{.*}} = call ptr @__cxa_begin_catch(ptr %[[EXN]])
+// LLVM-NEXT:   br label %[[CATCH_BODY:.+]]
+// LLVM:      [[CATCH_BODY]]:
+// LLVM-NEXT:   %{{.+}} = load ptr, ptr %[[P_ADDR]], align 8
+
+// OGCG:   %{{.*}} = call ptr @__cxa_begin_catch(ptr %[[EXN:.*]])
+// OGCG-NEXT:   %[[EXN_OBJ:.*]] = getelementptr i8, ptr %[[EXN]], i32 32
+// OGCG-NEXT:   store ptr %[[EXN_OBJ]], ptr %[[P_ADDR:.+]], align 8
+// OGCG-NEXT:   %{{.+}} = load ptr, ptr %[[P_ADDR]], align 8
+
+const void *init_catch_param_with_ref_to_ptr_to_member_function_ptr() {
+  try {
+    division();
+  } catch (int (Record::**const &p)()) {
+    return &p;
+  }
+  return nullptr;
+}
+
+// CIR: cir.func {{.*}} @_Z55init_catch_param_with_ref_to_ptr_to_member_function_ptrv() {{.*}} personality(@__gxx_personality_v0)
+// CIR:   %[[P_ADDR:.*]] = cir.alloca "p" {{.*}} const : !cir.ptr<!cir.ptr<!cir.ptr<!rec_anon_struct>>>
+// CIR:   } catch [type #cir.global_view<@_ZTIPM6RecordFivE> : !cir.ptr<!u8i>] (%[[TOKEN:.*]]: !cir.eh_token {{.*}}) {
+// CIR-NEXT: cir.construct_catch_param reference_to_pointer %[[TOKEN]] to %[[P_ADDR]] using : !cir.ptr<!cir.ptr<!cir.ptr<!rec_anon_struct>>>
+// CIR-NEXT: %[[CATCH_TOKEN:.*]], %[[EXN_PTR:.*]] = cir.begin_catch %[[TOKEN]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CIR:     cir.init_catch_param reference_to_pointer %[[EXN_PTR]] to %[[P_ADDR]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!cir.ptr<!rec_anon_struct>>>
+
+// SHARED: define {{.*}} ptr @_Z55init_catch_param_with_ref_to_ptr_to_member_function_ptrv() {{.*}} personality ptr @__gxx_personality_v0
+// LLVM:   %[[EXN_OBJ:.*]] = getelementptr i8, ptr %[[EXN:.*]], i64 32
+// LLVM-NEXT:   store ptr %[[EXN_OBJ]], ptr %[[P_ADDR:.+]], align 8
+// LLVM-NEXT:   %{{.*}} = call ptr @__cxa_begin_catch(ptr %[[EXN]])
+// LLVM-NEXT:   br label %[[CATCH_BODY:.+]]
+// LLVM:      [[CATCH_BODY]]:
+// LLVM-NEXT:   %{{.+}} = load ptr, ptr %[[P_ADDR]], align 8
+
+// OGCG:   %{{.*}} = call ptr @__cxa_begin_catch(ptr %[[EXN:.*]])
+// OGCG-NEXT:   %[[EXN_OBJ:.*]] = getelementptr i8, ptr %[[EXN]], i32 32
+// OGCG-NEXT:   store ptr %[[EXN_OBJ]], ptr %[[P_ADDR:.+]], align 8
+// OGCG-NEXT:   %{{.+}} = load ptr, ptr %[[P_ADDR]], align 8
+
+Record gr;
+
+int init_catch_param_with_ref_to_member_function_ptr() {
+  try {
+    division();
+  } catch (int (Record::*const &mfp)()) {
+    return (gr.*mfp)();
+  }
+  return 0;
+}
+
+// CIR: cir.func {{.*}} @_Z48init_catch_param_with_ref_to_member_function_ptrv() {{.*}} personality(@__gxx_personality_v0)
+// CIR:   %[[MFP_ADDR:.*]] = cir.alloca "mfp" {{.*}} const : !cir.ptr<!cir.ptr<!rec_anon_struct>>
+// CIR:   } catch [type #cir.global_view<@_ZTIM6RecordFivE> : !cir.ptr<!u8i>] (%[[TOKEN:.*]]: !cir.eh_token {{.*}}) {
+// CIR-NEXT: %[[CATCH_TOKEN:.*]], %[[EXN_PTR:.*]] = cir.begin_catch %[[TOKEN]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CIR:     cir.init_catch_param reference %[[EXN_PTR]] to %[[MFP_ADDR]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!rec_anon_struct>>
+
+// SHARED: define {{.*}} i32 @_Z48init_catch_param_with_ref_to_member_function_ptrv() {{.*}} personality ptr @__gxx_personality_v0
+// SHARED:   %[[EXN_PTR:.*]] = call ptr @__cxa_begin_catch(ptr %{{.*}})
+// SHARED:   store ptr %[[EXN_PTR]], ptr %[[MFP_ADDR:.*]], align 8
+// SHARED-NEXT:   %[[MFP:.*]] = load ptr, ptr %[[MFP_ADDR]], align 8
+// SHARED-NEXT:   %{{.*}} = load { i64, i64 }, ptr %[[MFP]], align 8
+
+void init_catch_param_with_ref_to_ptr_to_ptr_to_record() {
+  try {
+    division();
+  } catch (Record **&pp) {
+  }
+}
+
+// CIR: cir.func {{.*}} @_Z49init_catch_param_with_ref_to_ptr_to_ptr_to_recordv(){{.*}} personality(@__gxx_personality_v0)
+// CIR:   %[[PP_ADDR:.*]] = cir.alloca "pp" {{.*}} const : !cir.ptr<!cir.ptr<!cir.ptr<!cir.ptr<!rec_Record>>>>
+// CIR:   } catch [type #cir.global_view<@_ZTIPP6Record> : !cir.ptr<!u8i>] (%[[TOKEN:.*]]: !cir.eh_token {{.*}}) {
+// CIR-NEXT: cir.construct_catch_param reference_to_pointer %[[TOKEN]] to %[[PP_ADDR]] using : !cir.ptr<!cir.ptr<!cir.ptr<!cir.ptr<!rec_Record>>>>
+// CIR-NEXT: %[[CATCH_TOKEN:.*]], %[[EXN_PTR:.*]] = cir.begin_catch %[[TOKEN]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CIR:     cir.init_catch_param reference_to_pointer %[[EXN_PTR]] to %[[PP_ADDR]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.ptr<!rec_Record>>>>
+
+// SHARED: define {{.*}} void @_Z49init_catch_param_with_ref_to_ptr_to_ptr_to_recordv() {{.*}} personality ptr @__gxx_personality_v0
+// LLVM:   %[[PP_ADDR:.*]] = alloca ptr, align 8
+// LLVM:   %[[EXN_OBJ:.*]] = getelementptr i8, ptr %[[EXN:.*]], i64 32
+// LLVM-NEXT:   store ptr %[[EXN_OBJ]], ptr %[[PP_ADDR]], align 8
+// LLVM-NEXT:   %{{.*}} = call ptr @__cxa_begin_catch(ptr %[[EXN]])
+// LLVM-NEXT:   br label %[[CATCH_BODY:.+]]
+// LLVM:      [[CATCH_BODY]]:
+// LLVM-NEXT:   br label
+// OGCG:   %{{.*}} = alloca i32, align 4
+// OGCG-NEXT:   %[[PP_ADDR:.*]] = alloca ptr, align 8
+// OGCG:   %{{.*}} = call ptr @__cxa_begin_catch(ptr %[[EXN:.*]])
+// OGCG-NEXT:   %[[EXN_OBJ:.*]] = getelementptr i8, ptr %[[EXN]], i32 32
+// OGCG-NEXT:   store ptr %[[EXN_OBJ]], ptr %[[PP_ADDR]], align 8
+
+union Union {
+  int i;
+};
+
+void init_catch_param_with_ref_to_union_ptr() {
+  try {
+    division();
+  } catch (Union *&up) {
+  }
+}
+
+// CIR: cir.func {{.*}} @_Z38init_catch_param_with_ref_to_union_ptrv(){{.*}} personality(@__gxx_personality_v0)
+// CIR:   %[[UP_ADDR:.*]] = cir.alloca "up" {{.*}} const : !cir.ptr<!cir.ptr<!cir.ptr<!rec_Union>>>
+// CIR:   } catch [type #cir.global_view<@_ZTIP5Union> : !cir.ptr<!u8i>] (%[[TOKEN:.*]]: !cir.eh_token {{.*}}) {
+// CIR-NEXT: %[[CATCH_TOKEN:.*]], %[[EXN_PTR:.*]] = cir.begin_catch %[[TOKEN]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CIR:     cir.init_catch_param reference_to_record_pointer %[[EXN_PTR]] to %[[UP_ADDR]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!cir.ptr<!rec_Union>>>
+
+// SHARED: define {{.*}} void @_Z38init_catch_param_with_ref_to_union_ptrv() {{.*}} personality ptr @__gxx_personality_v0
+// LLVM:   %[[TMP:.*]] = alloca ptr, align 8
+// LLVM-NEXT:   %[[UP_ADDR:.*]] = alloca ptr, align 8
+// OGCG:   %{{.*}} = alloca i32, align 4
+// OGCG-NEXT:   %[[UP_ADDR:.*]] = alloca ptr, align 8
+// OGCG-NEXT:   %[[TMP:.*]] = alloca ptr, align 8
+// SHARED:   %[[EXN_PTR:.*]] = call ptr @__cxa_begin_catch(ptr %{{.*}})
+// SHARED:   store ptr %[[EXN_PTR]], ptr %[[TMP]], align 8
+// SHARED-NEXT:   store ptr %[[TMP]], ptr %[[UP_ADDR]], align 8

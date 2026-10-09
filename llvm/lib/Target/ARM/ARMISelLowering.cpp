@@ -105,7 +105,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <cstdlib>
 #include <iterator>
 #include <limits>
 #include <optional>
@@ -1690,7 +1689,7 @@ ARMTargetLowering::getEffectiveCallingConv(CallingConv::ID CC,
                                            bool isVarArg) const {
   switch (CC) {
   default:
-    report_fatal_error("Unsupported calling convention");
+    // Unknown CCs are rejected when calling convention lowering is required.
   case CallingConv::ARM_AAPCS:
   case CallingConv::ARM_APCS:
   case CallingConv::GHC:
@@ -1706,16 +1705,15 @@ ARMTargetLowering::getEffectiveCallingConv(CallingConv::ID CC,
     return isVarArg ? CallingConv::ARM_AAPCS : CallingConv::ARM_AAPCS_VFP;
   case CallingConv::C:
   case CallingConv::Tail:
-    if (!getTM().isAAPCS_ABI())
+    if (!Subtarget->isAAPCS_ABI())
       return CallingConv::ARM_APCS;
-    else if (Subtarget->hasFPRegs() && !Subtarget->isThumb1Only() &&
-             Subtarget->isTargetHardFloat() && !isVarArg)
+    else if (Subtarget->isTargetHardFloat() && !isVarArg)
       return CallingConv::ARM_AAPCS_VFP;
     else
       return CallingConv::ARM_AAPCS;
   case CallingConv::Fast:
   case CallingConv::CXX_FAST_TLS:
-    if (!getTM().isAAPCS_ABI()) {
+    if (!Subtarget->isAAPCS_ABI()) {
       if (Subtarget->hasFPRegs() && !Subtarget->isThumb1Only() && !isVarArg)
         return CallingConv::Fast;
       return CallingConv::ARM_APCS;
@@ -2844,7 +2842,7 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
   // cannot rely on the linker replacing the tail call with a return.
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
     const GlobalValue *GV = G->getGlobal();
-    const Triple &TT = getTargetMachine().getTargetTriple();
+    const Triple &TT = GV->getParent()->getTargetTriple();
     if (GV->hasExternalWeakLinkage() &&
         (!TT.isOSWindows() || TT.isOSBinFormatELF() ||
          TT.isOSBinFormatMachO())) {
@@ -7157,232 +7155,6 @@ static bool isVTBLMask(ArrayRef<int> M, EVT VT) {
   return VT == MVT::v8i8 && M.size() == 8;
 }
 
-static unsigned SelectPairHalf(unsigned Elements, ArrayRef<int> Mask,
-                               unsigned Index) {
-  if (Mask.size() == Elements * 2)
-    return Index / Elements;
-  return Mask[Index] == 0 ? 0 : 1;
-}
-
-// Checks whether the shuffle mask represents a vector transpose (VTRN) by
-// checking that pairs of elements in the shuffle mask represent the same index
-// in each vector, incrementing the expected index by 2 at each step.
-// e.g. For v1,v2 of type v4i32 a valid shuffle mask is: [0, 4, 2, 6]
-//  v1={a,b,c,d} => x=shufflevector v1, v2 shufflemask => x={a,e,c,g}
-//  v2={e,f,g,h}
-// WhichResult gives the offset for each element in the mask based on which
-// of the two results it belongs to.
-//
-// The transpose can be represented either as:
-// result1 = shufflevector v1, v2, result1_shuffle_mask
-// result2 = shufflevector v1, v2, result2_shuffle_mask
-// where v1/v2 and the shuffle masks have the same number of elements
-// (here WhichResult (see below) indicates which result is being checked)
-//
-// or as:
-// results = shufflevector v1, v2, shuffle_mask
-// where both results are returned in one vector and the shuffle mask has twice
-// as many elements as v1/v2 (here WhichResult will always be 0 if true) here we
-// want to check the low half and high half of the shuffle mask as if it were
-// the other case
-static bool isVTRNMask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
-  unsigned EltSz = VT.getScalarSizeInBits();
-  if (EltSz == 64)
-    return false;
-
-  unsigned NumElts = VT.getVectorNumElements();
-  if ((M.size() != NumElts && M.size() != NumElts * 2) || NumElts % 2 != 0)
-    return false;
-
-  // If the mask is twice as long as the input vector then we need to check the
-  // upper and lower parts of the mask with a matching value for WhichResult
-  // FIXME: A mask with only even values will be rejected in case the first
-  // element is undefined, e.g. [-1, 4, 2, 6] will be rejected, because only
-  // M[0] is used to determine WhichResult
-  for (unsigned i = 0; i < M.size(); i += NumElts) {
-    WhichResult = SelectPairHalf(NumElts, M, i);
-    for (unsigned j = 0; j < NumElts; j += 2) {
-      if ((M[i+j] >= 0 && (unsigned) M[i+j] != j + WhichResult) ||
-          (M[i+j+1] >= 0 && (unsigned) M[i+j+1] != j + NumElts + WhichResult))
-        return false;
-    }
-  }
-
-  if (M.size() == NumElts*2)
-    WhichResult = 0;
-
-  return true;
-}
-
-/// isVTRN_v_undef_Mask - Special case of isVTRNMask for canonical form of
-/// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
-/// Mask is e.g., <0, 0, 2, 2> instead of <0, 4, 2, 6>.
-static bool isVTRN_v_undef_Mask(ArrayRef<int> M, EVT VT, unsigned &WhichResult){
-  unsigned EltSz = VT.getScalarSizeInBits();
-  if (EltSz == 64)
-    return false;
-
-  unsigned NumElts = VT.getVectorNumElements();
-  if ((M.size() != NumElts && M.size() != NumElts * 2) || NumElts % 2 != 0)
-    return false;
-
-  for (unsigned i = 0; i < M.size(); i += NumElts) {
-    WhichResult = SelectPairHalf(NumElts, M, i);
-    for (unsigned j = 0; j < NumElts; j += 2) {
-      if ((M[i+j] >= 0 && (unsigned) M[i+j] != j + WhichResult) ||
-          (M[i+j+1] >= 0 && (unsigned) M[i+j+1] != j + WhichResult))
-        return false;
-    }
-  }
-
-  if (M.size() == NumElts*2)
-    WhichResult = 0;
-
-  return true;
-}
-
-// Checks whether the shuffle mask represents a vector unzip (VUZP) by checking
-// that the mask elements are either all even and in steps of size 2 or all odd
-// and in steps of size 2.
-// e.g. For v1,v2 of type v4i32 a valid shuffle mask is: [0, 2, 4, 6]
-//  v1={a,b,c,d} => x=shufflevector v1, v2 shufflemask => x={a,c,e,g}
-//  v2={e,f,g,h}
-// Requires similar checks to that of isVTRNMask with
-// respect the how results are returned.
-static bool isVUZPMask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
-  unsigned EltSz = VT.getScalarSizeInBits();
-  if (EltSz == 64)
-    return false;
-
-  unsigned NumElts = VT.getVectorNumElements();
-  if (M.size() != NumElts && M.size() != NumElts*2)
-    return false;
-
-  for (unsigned i = 0; i < M.size(); i += NumElts) {
-    WhichResult = SelectPairHalf(NumElts, M, i);
-    for (unsigned j = 0; j < NumElts; ++j) {
-      if (M[i+j] >= 0 && (unsigned) M[i+j] != 2 * j + WhichResult)
-        return false;
-    }
-  }
-
-  if (M.size() == NumElts*2)
-    WhichResult = 0;
-
-  // VUZP.32 for 64-bit vectors is a pseudo-instruction alias for VTRN.32.
-  if (VT.is64BitVector() && EltSz == 32)
-    return false;
-
-  return true;
-}
-
-/// isVUZP_v_undef_Mask - Special case of isVUZPMask for canonical form of
-/// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
-/// Mask is e.g., <0, 2, 0, 2> instead of <0, 2, 4, 6>,
-static bool isVUZP_v_undef_Mask(ArrayRef<int> M, EVT VT, unsigned &WhichResult){
-  unsigned EltSz = VT.getScalarSizeInBits();
-  if (EltSz == 64)
-    return false;
-
-  unsigned NumElts = VT.getVectorNumElements();
-  if (M.size() != NumElts && M.size() != NumElts*2)
-    return false;
-
-  unsigned Half = NumElts / 2;
-  for (unsigned i = 0; i < M.size(); i += NumElts) {
-    WhichResult = SelectPairHalf(NumElts, M, i);
-    for (unsigned j = 0; j < NumElts; j += Half) {
-      unsigned Idx = WhichResult;
-      for (unsigned k = 0; k < Half; ++k) {
-        int MIdx = M[i + j + k];
-        if (MIdx >= 0 && (unsigned) MIdx != Idx)
-          return false;
-        Idx += 2;
-      }
-    }
-  }
-
-  if (M.size() == NumElts*2)
-    WhichResult = 0;
-
-  // VUZP.32 for 64-bit vectors is a pseudo-instruction alias for VTRN.32.
-  if (VT.is64BitVector() && EltSz == 32)
-    return false;
-
-  return true;
-}
-
-// Checks whether the shuffle mask represents a vector zip (VZIP) by checking
-// that pairs of elements of the shufflemask represent the same index in each
-// vector incrementing sequentially through the vectors.
-// e.g. For v1,v2 of type v4i32 a valid shuffle mask is: [0, 4, 1, 5]
-//  v1={a,b,c,d} => x=shufflevector v1, v2 shufflemask => x={a,e,b,f}
-//  v2={e,f,g,h}
-// Requires similar checks to that of isVTRNMask with respect the how results
-// are returned.
-static bool isVZIPMask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
-  unsigned EltSz = VT.getScalarSizeInBits();
-  if (EltSz == 64)
-    return false;
-
-  unsigned NumElts = VT.getVectorNumElements();
-  if ((M.size() != NumElts && M.size() != NumElts * 2) || NumElts % 2 != 0)
-    return false;
-
-  for (unsigned i = 0; i < M.size(); i += NumElts) {
-    WhichResult = SelectPairHalf(NumElts, M, i);
-    unsigned Idx = WhichResult * NumElts / 2;
-    for (unsigned j = 0; j < NumElts; j += 2) {
-      if ((M[i+j] >= 0 && (unsigned) M[i+j] != Idx) ||
-          (M[i+j+1] >= 0 && (unsigned) M[i+j+1] != Idx + NumElts))
-        return false;
-      Idx += 1;
-    }
-  }
-
-  if (M.size() == NumElts*2)
-    WhichResult = 0;
-
-  // VZIP.32 for 64-bit vectors is a pseudo-instruction alias for VTRN.32.
-  if (VT.is64BitVector() && EltSz == 32)
-    return false;
-
-  return true;
-}
-
-/// isVZIP_v_undef_Mask - Special case of isVZIPMask for canonical form of
-/// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
-/// Mask is e.g., <0, 0, 1, 1> instead of <0, 4, 1, 5>.
-static bool isVZIP_v_undef_Mask(ArrayRef<int> M, EVT VT, unsigned &WhichResult){
-  unsigned EltSz = VT.getScalarSizeInBits();
-  if (EltSz == 64)
-    return false;
-
-  unsigned NumElts = VT.getVectorNumElements();
-  if ((M.size() != NumElts && M.size() != NumElts * 2) || NumElts % 2 != 0)
-    return false;
-
-  for (unsigned i = 0; i < M.size(); i += NumElts) {
-    WhichResult = SelectPairHalf(NumElts, M, i);
-    unsigned Idx = WhichResult * NumElts / 2;
-    for (unsigned j = 0; j < NumElts; j += 2) {
-      if ((M[i+j] >= 0 && (unsigned) M[i+j] != Idx) ||
-          (M[i+j+1] >= 0 && (unsigned) M[i+j+1] != Idx))
-        return false;
-      Idx += 1;
-    }
-  }
-
-  if (M.size() == NumElts*2)
-    WhichResult = 0;
-
-  // VZIP.32 for 64-bit vectors is a pseudo-instruction alias for VTRN.32.
-  if (VT.is64BitVector() && EltSz == 32)
-    return false;
-
-  return true;
-}
-
 /// Check if \p ShuffleMask is a NEON two-result shuffle (VZIP, VUZP, VTRN),
 /// and return the corresponding ARMISD opcode if it is, or 0 if it isn't.
 static unsigned isNEONTwoResultShuffleMask(ArrayRef<int> ShuffleMask, EVT VT,
@@ -10860,16 +10632,16 @@ void ARMTargetLowering::SetupEntryBlockForSjLj(MachineInstr &MI,
     // Set the low bit because of thumb mode.
     Register NewVReg2 = MRI->createVirtualRegister(TRC);
     BuildMI(*MBB, MI, dl, TII->get(ARM::t2ORRri), NewVReg2)
-        .addReg(NewVReg1, RegState::Kill)
+        .addReg(NewVReg1)
         .addImm(0x01)
         .add(predOps(ARMCC::AL))
         .add(condCodeOp());
     Register NewVReg3 = MRI->createVirtualRegister(TRC);
     BuildMI(*MBB, MI, dl, TII->get(ARM::tPICADD), NewVReg3)
-      .addReg(NewVReg2, RegState::Kill)
-      .addImm(PCLabelId);
+        .addReg(NewVReg2)
+        .addImm(PCLabelId);
     BuildMI(*MBB, MI, dl, TII->get(ARM::t2STRi12))
-        .addReg(NewVReg3, RegState::Kill)
+        .addReg(NewVReg3)
         .addFrameIndex(FI)
         .addImm(36) // &jbuf[1] :: pc
         .addMemOperand(FIMMOSt)
@@ -10889,8 +10661,8 @@ void ARMTargetLowering::SetupEntryBlockForSjLj(MachineInstr &MI,
         .add(predOps(ARMCC::AL));
     Register NewVReg2 = MRI->createVirtualRegister(TRC);
     BuildMI(*MBB, MI, dl, TII->get(ARM::tPICADD), NewVReg2)
-      .addReg(NewVReg1, RegState::Kill)
-      .addImm(PCLabelId);
+        .addReg(NewVReg1)
+        .addImm(PCLabelId);
     // Set the low bit because of thumb mode.
     Register NewVReg3 = MRI->createVirtualRegister(TRC);
     BuildMI(*MBB, MI, dl, TII->get(ARM::tMOVi8), NewVReg3)
@@ -10900,16 +10672,16 @@ void ARMTargetLowering::SetupEntryBlockForSjLj(MachineInstr &MI,
     Register NewVReg4 = MRI->createVirtualRegister(TRC);
     BuildMI(*MBB, MI, dl, TII->get(ARM::tORR), NewVReg4)
         .addReg(ARM::CPSR, RegState::Define)
-        .addReg(NewVReg2, RegState::Kill)
-        .addReg(NewVReg3, RegState::Kill)
+        .addReg(NewVReg2)
+        .addReg(NewVReg3)
         .add(predOps(ARMCC::AL));
     Register NewVReg5 = MRI->createVirtualRegister(TRC);
     BuildMI(*MBB, MI, dl, TII->get(ARM::tADDframe), NewVReg5)
             .addFrameIndex(FI)
             .addImm(36); // &jbuf[1] :: pc
     BuildMI(*MBB, MI, dl, TII->get(ARM::tSTRi))
-        .addReg(NewVReg4, RegState::Kill)
-        .addReg(NewVReg5, RegState::Kill)
+        .addReg(NewVReg4)
+        .addReg(NewVReg5)
         .addImm(0)
         .addMemOperand(FIMMOSt)
         .add(predOps(ARMCC::AL));
@@ -10926,11 +10698,11 @@ void ARMTargetLowering::SetupEntryBlockForSjLj(MachineInstr &MI,
         .add(predOps(ARMCC::AL));
     Register NewVReg2 = MRI->createVirtualRegister(TRC);
     BuildMI(*MBB, MI, dl, TII->get(ARM::PICADD), NewVReg2)
-        .addReg(NewVReg1, RegState::Kill)
+        .addReg(NewVReg1)
         .addImm(PCLabelId)
         .add(predOps(ARMCC::AL));
     BuildMI(*MBB, MI, dl, TII->get(ARM::STRi12))
-        .addReg(NewVReg2, RegState::Kill)
+        .addReg(NewVReg2)
         .addFrameIndex(FI)
         .addImm(36) // &jbuf[1] :: pc
         .addMemOperand(FIMMOSt)
@@ -11083,16 +10855,16 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
 
     Register NewVReg4 = MRI->createVirtualRegister(TRC);
     BuildMI(DispContBB, dl, TII->get(ARM::t2ADDrs), NewVReg4)
-        .addReg(NewVReg3, RegState::Kill)
+        .addReg(NewVReg3)
         .addReg(NewVReg1)
         .addImm(ARM_AM::getSORegOpc(ARM_AM::lsl, 2))
         .add(predOps(ARMCC::AL))
         .add(condCodeOp());
 
     BuildMI(DispContBB, dl, TII->get(ARM::t2BR_JT))
-      .addReg(NewVReg4, RegState::Kill)
-      .addReg(NewVReg1)
-      .addJumpTableIndex(MJTI);
+        .addReg(NewVReg4)
+        .addReg(NewVReg1)
+        .addJumpTableIndex(MJTI);
   } else if (Subtarget->isThumb()) {
     Register NewVReg1 = MRI->createVirtualRegister(TRC);
     BuildMI(DispatchBB, dl, TII->get(ARM::tLDRspi), NewVReg1)
@@ -11146,7 +10918,7 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
     Register NewVReg4 = MRI->createVirtualRegister(TRC);
     BuildMI(DispContBB, dl, TII->get(ARM::tADDrr), NewVReg4)
         .addReg(ARM::CPSR, RegState::Define)
-        .addReg(NewVReg2, RegState::Kill)
+        .addReg(NewVReg2)
         .addReg(NewVReg3)
         .add(predOps(ARMCC::AL));
 
@@ -11156,7 +10928,7 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
 
     Register NewVReg5 = MRI->createVirtualRegister(TRC);
     BuildMI(DispContBB, dl, TII->get(ARM::tLDRi), NewVReg5)
-        .addReg(NewVReg4, RegState::Kill)
+        .addReg(NewVReg4)
         .addImm(0)
         .addMemOperand(JTMMOLd)
         .add(predOps(ARMCC::AL));
@@ -11166,14 +10938,14 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
       NewVReg6 = MRI->createVirtualRegister(TRC);
       BuildMI(DispContBB, dl, TII->get(ARM::tADDrr), NewVReg6)
           .addReg(ARM::CPSR, RegState::Define)
-          .addReg(NewVReg5, RegState::Kill)
+          .addReg(NewVReg5)
           .addReg(NewVReg3)
           .add(predOps(ARMCC::AL));
     }
 
     BuildMI(DispContBB, dl, TII->get(ARM::tBR_JTr))
-      .addReg(NewVReg6, RegState::Kill)
-      .addJumpTableIndex(MJTI);
+        .addReg(NewVReg6)
+        .addJumpTableIndex(MJTI);
   } else {
     Register NewVReg1 = MRI->createVirtualRegister(TRC);
     BuildMI(DispatchBB, dl, TII->get(ARM::LDRi12), NewVReg1)
@@ -11223,7 +10995,7 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
           .add(predOps(ARMCC::AL));
       BuildMI(DispatchBB, dl, TII->get(ARM::CMPrr))
           .addReg(NewVReg1)
-          .addReg(VReg1, RegState::Kill)
+          .addReg(VReg1)
           .add(predOps(ARMCC::AL));
     }
 
@@ -11248,7 +11020,7 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
                                  MachineMemOperand::MOLoad, 4, Align(4));
     Register NewVReg5 = MRI->createVirtualRegister(TRC);
     BuildMI(DispContBB, dl, TII->get(ARM::LDRrs), NewVReg5)
-        .addReg(NewVReg3, RegState::Kill)
+        .addReg(NewVReg3)
         .addReg(NewVReg4)
         .addImm(0)
         .addMemOperand(JTMMOLd)
@@ -11256,13 +11028,13 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
 
     if (IsPositionIndependent) {
       BuildMI(DispContBB, dl, TII->get(ARM::BR_JTadd))
-        .addReg(NewVReg5, RegState::Kill)
-        .addReg(NewVReg4)
-        .addJumpTableIndex(MJTI);
+          .addReg(NewVReg5)
+          .addReg(NewVReg4)
+          .addJumpTableIndex(MJTI);
     } else {
       BuildMI(DispContBB, dl, TII->get(ARM::BR_JTr))
-        .addReg(NewVReg5, RegState::Kill)
-        .addJumpTableIndex(MJTI);
+          .addReg(NewVReg5)
+          .addJumpTableIndex(MJTI);
     }
   }
 
@@ -11753,6 +11525,7 @@ ARMTargetLowering::EmitLowered__chkstk(MachineInstr &MI,
     BuildMI(*MBB, MI, DL, TII.get(ARM::tBL))
         .add(predOps(ARMCC::AL))
         .addExternalSymbol(ChkStk)
+        .setOperandDead(3) // implicit-def $lr
         .addReg(ARM::R4, RegState::Implicit | RegState::Kill)
         .addReg(ARM::R4, RegState::Implicit | RegState::Define)
         .addReg(ARM::R12,
@@ -11768,7 +11541,8 @@ ARMTargetLowering::EmitLowered__chkstk(MachineInstr &MI,
         .addExternalSymbol(ChkStk);
     BuildMI(*MBB, MI, DL, TII.get(gettBLXrOpcode(*MBB->getParent())))
         .add(predOps(ARMCC::AL))
-        .addReg(Reg, RegState::Kill)
+        .addReg(Reg)
+        .setOperandDead(3) // implicit-def $lr
         .addReg(ARM::R4, RegState::Implicit | RegState::Kill)
         .addReg(ARM::R4, RegState::Implicit | RegState::Define)
         .addReg(ARM::R12,
@@ -11871,14 +11645,14 @@ static Register genTPEntry(MachineBasicBlock *TpEntry,
 
   Register LsrDestReg = MRI.createVirtualRegister(&ARM::rGPRRegClass);
   BuildMI(TpEntry, Dl, TII->get(ARM::t2LSRri), LsrDestReg)
-      .addUse(AddDestReg, RegState::Kill)
+      .addUse(AddDestReg)
       .addImm(4)
       .add(predOps(ARMCC::AL))
       .addReg(0);
 
   Register TotalIterationsReg = MRI.createVirtualRegister(&ARM::GPRlrRegClass);
   BuildMI(TpEntry, Dl, TII->get(ARM::t2WhileLoopSetup), TotalIterationsReg)
-      .addUse(LsrDestReg, RegState::Kill);
+      .addUse(LsrDestReg);
 
   BuildMI(TpEntry, Dl, TII->get(ARM::t2WhileLoopStart))
       .addUse(TotalIterationsReg)
@@ -12493,6 +12267,7 @@ void ARMTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
   MachineOperand &MO = MI.getOperand(ccOutIdx);
   MO.setReg(ARM::CPSR);
   MO.setIsDef(true);
+  MO.setIsDead(deadCPSR);
 }
 
 //===----------------------------------------------------------------------===//
@@ -13488,7 +13263,7 @@ static SDValue PerformVSetCCToVCTPCombine(SDNode *N,
       !DCI.DAG.getTargetLoweringInfo().isTypeLegal(VT))
     return SDValue();
 
-  if (CC == ISD::SETUGE) {
+  if (CC == ISD::SETUGT) {
     std::swap(Op0, Op1);
     CC = ISD::SETULT;
   }
@@ -13512,9 +13287,6 @@ static SDValue PerformVSetCCToVCTPCombine(SDNode *N,
 
   unsigned Opc;
   switch (VT.getVectorNumElements()) {
-  case 2:
-    Opc = Intrinsic::arm_mve_vctp64;
-    break;
   case 4:
     Opc = Intrinsic::arm_mve_vctp32;
     break;
@@ -20712,7 +20484,7 @@ RCPair ARMTargetLowering::getRegForInlineAsmConstraint(
 
   // r14 is an alias of lr.
   if (StringRef("{r14}").equals_insensitive(Constraint))
-    return std::make_pair(unsigned(ARM::LR), getRegClassFor(MVT::i32));
+    Constraint = "{lr}";
 
   auto RCP = TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
   if (isIncompatibleReg(RCP.first, VT))
@@ -20906,25 +20678,27 @@ static RTLIB::Libcall getDivRemLibcall(
   return LC;
 }
 
-static TargetLowering::ArgListTy getDivRemArgList(
-    const SDNode *N, LLVMContext *Context, const ARMSubtarget *Subtarget) {
+static TargetLowering::ArgListTy
+getDivRemArgList(const SDNode *N, FunctionType *FuncTy,
+                 const AttributeList &FuncAttrs, RTLIB::LibcallImpl LCImpl) {
   assert((N->getOpcode() == ISD::SDIVREM || N->getOpcode() == ISD::UDIVREM ||
           N->getOpcode() == ISD::SREM    || N->getOpcode() == ISD::UREM) &&
          "Unhandled Opcode in getDivRemArgList");
-  bool isSigned = N->getOpcode() == ISD::SDIVREM ||
-                  N->getOpcode() == ISD::SREM;
-  TargetLowering::ArgListTy Args;
-  for (unsigned i = 0, e = N->getNumOperands(); i != e; ++i) {
-    EVT ArgVT = N->getOperand(i).getValueType();
-    Type *ArgTy = ArgVT.getTypeForEVT(*Context);
-    TargetLowering::ArgListEntry Entry(N->getOperand(i), ArgTy);
-    Entry.IsSExt = isSigned;
-    Entry.IsZExt = !isSigned;
-    Args.push_back(Entry);
+  SDValue Ops[2] = {N->getOperand(0), N->getOperand(1)};
+
+  // The Windows __rt_*div* helpers take the divisor before the dividend.
+  switch (LCImpl) {
+  case RTLIB::impl___rt_sdiv:
+  case RTLIB::impl___rt_udiv:
+  case RTLIB::impl___rt_sdiv64:
+  case RTLIB::impl___rt_udiv64:
+    std::swap(Ops[0], Ops[1]);
+    break;
+  default:
+    break;
   }
-  if (Subtarget->getTargetTriple().isOSWindows() && Args.size() >= 2)
-    std::swap(Args[0], Args[1]);
-  return Args;
+
+  return TargetLowering::getArgListForFunctionType(FuncTy, FuncAttrs, Ops);
 }
 
 SDValue ARMTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
@@ -20951,8 +20725,6 @@ SDValue ARMTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
     }
   }
 
-  Type *Ty = VT.getTypeForEVT(*DAG.getContext());
-
   // If the target has hardware divide, use divide + multiply + subtract:
   //     div = a / b
   //     rem = a - b * div
@@ -20976,17 +20748,22 @@ SDValue ARMTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
   RTLIB::Libcall LC = getDivRemLibcall(Op.getNode(),
                                        VT.getSimpleVT().SimpleTy);
   RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
+  if (LCImpl == RTLIB::Unsupported)
+    return SDValue();
+
+  auto [FuncTy, FuncAttrs] =
+      DAG.getLibcalls().getRuntimeLibcallsInfo().getFunctionTy(
+          *DAG.getContext(), getTM().getTargetTriple(), DAG.getDataLayout(),
+          LCImpl);
+  Type *RetTy = FuncTy->getReturnType();
 
   SDValue InChain = DAG.getEntryNode();
 
-  TargetLowering::ArgListTy Args = getDivRemArgList(Op.getNode(),
-                                                    DAG.getContext(),
-                                                    Subtarget);
+  TargetLowering::ArgListTy Args =
+      getDivRemArgList(Op.getNode(), FuncTy, FuncAttrs, LCImpl);
 
   SDValue Callee =
       DAG.getExternalSymbol(LCImpl, getPointerTy(DAG.getDataLayout()));
-
-  Type *RetTy = StructType::get(Ty, Ty);
 
   if (getTM().getTargetTriple().isOSWindows())
     InChain = WinDBZCheckDenominator(DAG, Op.getNode(), InChain);
@@ -21016,29 +20793,21 @@ SDValue ARMTargetLowering::LowerREM(SDNode *N, SelectionDAG &DAG) const {
                            Result[0], Result[1]);
   }
 
-  // Build return types (div and rem)
-  std::vector<Type*> RetTyParams;
-  Type *RetTyElement;
-
-  switch (VT.getSimpleVT().SimpleTy) {
-  default: llvm_unreachable("Unexpected request for libcall!");
-  case MVT::i8:   RetTyElement = Type::getInt8Ty(*DAG.getContext());  break;
-  case MVT::i16:  RetTyElement = Type::getInt16Ty(*DAG.getContext()); break;
-  case MVT::i32:  RetTyElement = Type::getInt32Ty(*DAG.getContext()); break;
-  case MVT::i64:  RetTyElement = Type::getInt64Ty(*DAG.getContext()); break;
-  }
-
-  RetTyParams.push_back(RetTyElement);
-  RetTyParams.push_back(RetTyElement);
-  ArrayRef<Type*> ret = ArrayRef<Type*>(RetTyParams);
-  Type *RetTy = StructType::get(*DAG.getContext(), ret);
-
   RTLIB::Libcall LC = getDivRemLibcall(N, N->getValueType(0).getSimpleVT().
                                                              SimpleTy);
   RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
+  if (LCImpl == RTLIB::Unsupported)
+    return SDValue();
+
+  auto [FuncTy, FuncAttrs] =
+      DAG.getLibcalls().getRuntimeLibcallsInfo().getFunctionTy(
+          *DAG.getContext(), getTM().getTargetTriple(), DAG.getDataLayout(),
+          LCImpl);
+  Type *RetTy = FuncTy->getReturnType();
+
   SDValue InChain = DAG.getEntryNode();
-  TargetLowering::ArgListTy Args = getDivRemArgList(N, DAG.getContext(),
-                                                    Subtarget);
+  TargetLowering::ArgListTy Args =
+      getDivRemArgList(N, FuncTy, FuncAttrs, LCImpl);
   bool isSigned = N->getOpcode() == ISD::SREM;
 
   SDValue Callee =
@@ -21496,12 +21265,15 @@ bool ARMTargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
   return true;
 }
 
-bool ARMTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                                                unsigned Index) const {
+TargetLowering::ExtractSubvectorCost
+ARMTargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                           unsigned Index) const {
   if (!isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, ResVT))
-    return false;
+    return ExtractSubvectorCost::Expensive;
 
-  return (Index == 0 || Index == ResVT.getVectorNumElements());
+  if (Index == 0 || Index == ResVT.getVectorNumElements())
+    return ExtractSubvectorCost::Free;
+  return ExtractSubvectorCost::Expensive;
 }
 
 Instruction *ARMTargetLowering::makeDMB(IRBuilderBase &Builder,
@@ -21778,7 +21550,7 @@ ARMTargetLowering::preferredShiftLegalizationStrategy(
 Value *ARMTargetLowering::emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy,
                                          Value *Addr,
                                          AtomicOrdering Ord) const {
-  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Module *M = Builder.getModule();
   bool IsAcquire = isAcquireOrStronger(Ord);
 
   // Since i64 isn't legal and intrinsics don't get type-lowered, the ldrexd
@@ -21820,7 +21592,7 @@ void ARMTargetLowering::emitAtomicCmpXchgNoStoreLLBalance(
 Value *ARMTargetLowering::emitStoreConditional(IRBuilderBase &Builder,
                                                Value *Val, Value *Addr,
                                                AtomicOrdering Ord) const {
-  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Module *M = Builder.getModule();
   bool IsRelease = isReleaseOrStronger(Ord);
 
   // Since the intrinsics must have legal type, the i64 intrinsics take two
@@ -22296,19 +22068,17 @@ bool ARMTargetLowering::functionArgumentNeedsConsecutiveRegisters(
 }
 
 Register ARMTargetLowering::getExceptionPointerRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   // Platforms which do not use SjLj EH may return values in these registers
   // via the personality function.
-  ExceptionHandling EM = getTargetMachine().getExceptionModel();
-  return EM == ExceptionHandling::SjLj ? Register() : ARM::R0;
+  return EH == ExceptionHandling::SjLj ? Register() : ARM::R0;
 }
 
 Register ARMTargetLowering::getExceptionSelectorRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   // Platforms which do not use SjLj EH may return values in these registers
   // via the personality function.
-  ExceptionHandling EM = getTargetMachine().getExceptionModel();
-  return EM == ExceptionHandling::SjLj ? Register() : ARM::R1;
+  return EH == ExceptionHandling::SjLj ? Register() : ARM::R1;
 }
 
 void ARMTargetLowering::initializeSplitCSR(MachineBasicBlock *Entry) const {

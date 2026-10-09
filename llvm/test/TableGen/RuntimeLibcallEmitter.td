@@ -6,21 +6,18 @@ include "llvm/IR/RuntimeLibcallsImpl.td"
 def SHL_I32 : RuntimeLibcall;
 def SRL_I64 : RuntimeLibcall;
 
-def SQRT_F128 : RuntimeLibcall;
+def SQRT_F128 : RuntimeLibcall<LDbl, [LDbl]>;
 def SQRT_F80 : RuntimeLibcall;
-def BZERO : RuntimeLibcall;
-def MEMCPY : RuntimeLibcall;
-def MEMSET : RuntimeLibcall;
-def CALLOC : RuntimeLibcall;
+def BZERO : RuntimeLibcall<Void, [Ptr, SizeT]>;
+def MEMCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
+def MEMSET : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
+def CALLOC : RuntimeLibcall<Ptr, [SizeT, SizeT]>;
 
-// Test default names.
-let IsDefault = true in {
-  def __ashlsi3 : RuntimeLibcallImpl<SHL_I32>;
-  def __lshrdi3 : RuntimeLibcallImpl<SRL_I64>;
+def __ashlsi3 : RuntimeLibcallImpl<SHL_I32>;
+def __lshrdi3 : RuntimeLibcallImpl<SRL_I64>;
 
-  def sqrtl_f128 : RuntimeLibcallImpl<SQRT_F128, "sqrtl">;
-  def sqrtl_f80 : RuntimeLibcallImpl<SQRT_F80, "sqrtl">;
-}
+def sqrtl_f128 : RuntimeLibcallImpl<SQRT_F128, "sqrtl">;
+def sqrtl_f80 : RuntimeLibcallImpl<SQRT_F80, "sqrtl">;
 
 // Ignore non-default in initDefaultLibCallNames.
 def bzero : RuntimeLibcallImpl<BZERO>;
@@ -112,6 +109,38 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-NEXT:  sqrtl_f80 = 8, // sqrtl
 // CHECK-NEXT: };
 // CHECK-NEXT: constexpr size_t NumLibcallImpls = 9;
+// CHECK-EMPTY:
+// CHECK-NEXT:enum FuncArgTypeID : char {
+// CHECK-NEXT:  NoFuncArgType = 0,
+// CHECK-NEXT:  Bool,
+// CHECK-NEXT:  Dbl,
+// CHECK-NEXT:  Ellip,
+// CHECK-NEXT:  Floating,
+// CHECK-NEXT:  Flt,
+// CHECK-NEXT:  Int,
+// CHECK-NEXT:  Int16,
+// CHECK-NEXT:  Int32,
+// CHECK-NEXT:  Int64,
+// CHECK-NEXT:  IntPlus,
+// CHECK-NEXT:  IntX,
+// CHECK-NEXT:  LDbl,
+// CHECK-NEXT:  LLong,
+// CHECK-NEXT:  Long,
+// CHECK-NEXT:  Ptr,
+// CHECK-NEXT:  SSizeT,
+// CHECK-NEXT:  Same,
+// CHECK-NEXT:  SizeT,
+// CHECK-NEXT:  Struct,
+// CHECK-NEXT:  UInt,
+// CHECK-NEXT:  UInt16,
+// CHECK-NEXT:  UInt32,
+// CHECK-NEXT:  UInt64,
+// CHECK-NEXT:  UIntPlus,
+// CHECK-NEXT:  UIntX,
+// CHECK-NEXT:  ULLong,
+// CHECK-NEXT:  ULong,
+// CHECK-NEXT:  Void,
+// CHECK-NEXT:};
 // CHECK-NEXT: } // End namespace RTLIB
 // CHECK-NEXT: } // End namespace llvm
 // CHECK-EMPTY:
@@ -210,7 +239,32 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK: return enum_seq(RTLIB::Unsupported, RTLIB::Unsupported);
 // CHECK-NEXT: }
 
-// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, EABI EABIVersion, StringRef ABIName) {
+// CHECK:#ifdef GET_INIT_RUNTIME_LIBCALL_SIGNATURES
+// CHECK-NEXT:#undef GET_INIT_RUNTIME_LIBCALL_SIGNATURES
+// CHECK-EMPTY:
+// CHECK-EMPTY:
+// CHECK-NEXT:const FuncArgTypeID RTLIB::RuntimeLibcallsInfo::SignatureTable[] = {
+// CHECK-NEXT:  /* 0 */ LDbl, LDbl, NoFuncArgType,
+// CHECK-NEXT:  /* 3 */ Ptr, Ptr, Int, SizeT, NoFuncArgType,
+// CHECK-NEXT:  /* 8 */ Ptr, Ptr, Ptr, SizeT, NoFuncArgType,
+// CHECK-NEXT:  /* 13 */ Void, Ptr, SizeT, NoFuncArgType,
+// CHECK-NEXT:  /* 17 */ Ptr, SizeT, SizeT, NoFuncArgType,
+// CHECK-NEXT:};
+// CHECK-EMPTY:
+// CHECK-NEXT:const uint16_t RTLIB::RuntimeLibcallsInfo::SignatureOffset[] = {
+// CHECK-NEXT:  13, // BZERO
+// CHECK-NEXT:  17, // CALLOC
+// CHECK-NEXT:  8, // MEMCPY
+// CHECK-NEXT:  3, // MEMSET
+// CHECK-NEXT:  2, // SHL_I32
+// CHECK-NEXT:  2, // SQRT_F80
+// CHECK-NEXT:  0, // SQRT_F128
+// CHECK-NEXT:  2, // SRL_I64
+// CHECK-NEXT:};
+// CHECK-EMPTY:
+// CHECK-NEXT:#endif // GET_INIT_RUNTIME_LIBCALL_SIGNATURES
+
+// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
 // CHECK-EMPTY:
 // CHECK-NEXT: if (TT.getArch() == Triple::blah) {
 // CHECK-NEXT:     static constexpr LibcallImplBitset SystemAvailableImpls({

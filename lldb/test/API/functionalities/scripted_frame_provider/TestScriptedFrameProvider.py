@@ -10,7 +10,8 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import TestBase
 from lldbsuite.test import lldbutil
 
-@skipIfWasm  # multithreaded C++ inferior; wasm has no threads or exceptions
+
+@requireNotWasm("multithreaded C++ inferior; wasm has no threads or exceptions")
 class ScriptedFrameProviderTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -864,6 +865,23 @@ class ScriptedFrameProviderTestCase(TestBase):
         # We don't see `variable_in_main` here, because it doesn't have the synthetic flag.
         self.assertEqual(variables.GetSize(), 1)
         self.assertEqual(variables.GetValueAtIndex(0).name, "_handler_one")
+
+        # A variable reports the ValueType the frame classified it as, not the
+        # one that follows from how its ValueObject was built. `_handler_one`
+        # comes from an expression, so the two differ.
+        self.assertEqual(
+            variables.GetValueAtIndex(0).GetValueType(),
+            lldb.eValueTypeVariableLocal | lldb.eValueTypeSyntheticFlag,
+        )
+        # Classifying a variable must not cost its data or its type.
+        self.assertEqual(variables.GetValueAtIndex(0).GetValueAsUnsigned(), 1)
+        self.assertEqual(variables.GetValueAtIndex(0).GetTypeName(), "uint32_t")
+        # Reaching the same variable by name has to agree with the enumeration.
+        self.assertEqual(
+            frame0.FindVariable("_handler_one").GetValueType(),
+            lldb.eValueTypeVariableLocal | lldb.eValueTypeSyntheticFlag,
+        )
+        self.assertEqual(frame0.FindVariable("_handler_one").GetValueAsUnsigned(), 1)
 
         # Check the `frame variable` command(s) handle synthetic variables the
         # way we expect by printing them.

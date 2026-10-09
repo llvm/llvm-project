@@ -196,6 +196,8 @@ StringRef ARMTargetInfo::getCPUAttr() const {
     return "9_6A";
   case llvm::ARM::ArchKind::ARMV9_7A:
     return "9_7A";
+  case llvm::ARM::ArchKind::ARMV9_8A:
+    return "9_8A";
   case llvm::ARM::ArchKind::ARMV8MBaseline:
     return "8M_BASE";
   case llvm::ARM::ArchKind::ARMV8MMainline:
@@ -325,9 +327,8 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
 
   if (Triple.getOS() == llvm::Triple::Linux ||
       Triple.getOS() == llvm::Triple::UnknownOS)
-    this->MCountName = Opts.EABIVersion == llvm::EABI::GNU
-                           ? "llvm.arm.gnu.eabi.mcount"
-                           : "\01mcount";
+    this->MCountName =
+        Triple.isGNUEnvironment() ? "llvm.arm.gnu.eabi.mcount" : "\01mcount";
 
   SoftFloatABI = llvm::is_contained(Opts.FeaturesAsWritten, "+soft-float-abi");
 }
@@ -870,6 +871,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::ARM::ArchKind::ARMV9_5A:
   case llvm::ARM::ArchKind::ARMV9_6A:
   case llvm::ARM::ArchKind::ARMV9_7A:
+  case llvm::ARM::ArchKind::ARMV9_8A:
     // Filter __arm_cdp, __arm_ldcl, __arm_stcl in arm_acle.h
     FeatureCoprocBF = FEATURE_COPROC_B1 | FEATURE_COPROC_B3;
     break;
@@ -1041,6 +1043,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::ARM::ArchKind::ARMV9_5A:
   case llvm::ARM::ArchKind::ARMV9_6A:
   case llvm::ARM::ArchKind::ARMV9_7A:
+  case llvm::ARM::ArchKind::ARMV9_8A:
     getTargetDefinesARMV83A(Opts, Builder);
     break;
   }
@@ -1112,22 +1115,30 @@ static constexpr std::array<Builtin::Info, NumCDEBuiltins> BuiltinInfos = {
 } // namespace CDE
 } // namespace
 
-static constexpr llvm::StringTable BuiltinStrings =
-    CLANG_BUILTIN_STR_TABLE_START
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
-#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_STR_TABLE
-#include "clang/Basic/BuiltinsARM.def"
-    ; // namespace clang
+namespace clang {
+namespace ARM {
 
-static constexpr auto BuiltinInfos = Builtin::MakeInfos<NumARMBuiltins>({
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define LANGBUILTIN CLANG_LANGBUILTIN_ENTRY
-#define LIBBUILTIN CLANG_LIBBUILTIN_ENTRY
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsARM.def"
-});
+#define GET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsARM.inc"
+#undef GET_BUILTIN_STR_TABLE
+
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/BuiltinsARM.inc"
+#undef GET_BUILTIN_INFOS
+};
+
+static constexpr Builtin::Info PrefixedBuiltinInfos[] = {
+#define GET_BUILTIN_PREFIXED_INFOS
+#include "clang/Basic/BuiltinsARM.inc"
+#undef GET_BUILTIN_PREFIXED_INFOS
+};
+
+static_assert((std::size(BuiltinInfos) + std::size(PrefixedBuiltinInfos)) ==
+              NumARMBuiltins);
+
+} // namespace ARM
+} // namespace clang
 
 llvm::SmallVector<Builtin::InfosShard>
 ARMTargetInfo::getTargetBuiltins() const {
@@ -1137,7 +1148,8 @@ ARMTargetInfo::getTargetBuiltins() const {
        "__builtin_neon_"},
       {&MVE::BuiltinStrings, MVE::BuiltinInfos, "__builtin_arm_mve_"},
       {&CDE::BuiltinStrings, CDE::BuiltinInfos, "__builtin_arm_cde_"},
-      {&BuiltinStrings, BuiltinInfos},
+      {&ARM::BuiltinStrings, ARM::BuiltinInfos},
+      {&ARM::BuiltinStrings, ARM::PrefixedBuiltinInfos, "__builtin_arm_"},
   };
 }
 

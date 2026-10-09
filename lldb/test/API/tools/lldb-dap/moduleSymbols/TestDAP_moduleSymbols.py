@@ -2,7 +2,7 @@
 Test lldb-dap moduleSymbols request
 """
 
-from lldbsuite.test.decorators import skipIfWindows
+from lldbsuite.test.decorators import *
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs, ModuleSymbolsArgs
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 

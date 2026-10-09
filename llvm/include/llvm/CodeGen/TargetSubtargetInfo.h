@@ -31,6 +31,7 @@
 namespace llvm {
 
 class APInt;
+class BitVector;
 class MachineFunction;
 class ScheduleDAGMutation;
 class CallLowering;
@@ -42,6 +43,7 @@ class InstructionSelector;
 class LegalizerInfo;
 class LibcallLoweringInfo;
 class MachineInstr;
+struct MachinePipelinerPolicy;
 struct MachineSchedPolicy;
 struct MCReadAdvanceEntry;
 struct MCSchedModel;
@@ -252,6 +254,10 @@ public:
   /// allocation.
   virtual bool enablePostRAMachineScheduler() const;
 
+  /// True if the subtarget should run a machine scheduler before PHI
+  /// elimination.
+  virtual bool enableSSAMachineScheduler() const;
+
   /// True if the subtarget should run the atomic expansion pass.
   virtual bool enableAtomicExpand() const;
 
@@ -275,6 +281,9 @@ public:
   /// in post-ra scheduling.
   virtual void overridePostRASchedPolicy(MachineSchedPolicy &Policy,
                                          const SchedRegion &Region) const {}
+
+  /// Override generic software pipelining policy.
+  virtual void overridePipelinerPolicy(MachinePipelinerPolicy &Policy) const {}
 
   // Perform target-specific adjustments to the latency of a schedule
   // dependency.
@@ -353,13 +362,12 @@ public:
   /// This is called after a .mir file was loaded.
   virtual void mirFileLoaded(MachineFunction &MF) const;
 
-  /// True if the register allocator should use the allocation orders exactly as
-  /// written in the tablegen descriptions, false if it should allocate
-  /// the specified physical register later if is it callee-saved.
-  virtual bool ignoreCSRForAllocationOrder(const MachineFunction &MF,
-                                           MCRegister PhysReg) const {
-    return false;
-  }
+  /// Constructs a Mask of physical registers whose allocation orders should be
+  /// used exactly as written in the TableGen descriptions, rather than
+  /// allocating them later if they are callee-saved. Mask is empty on entry
+  /// and must either remain empty or cover all physical registers.
+  virtual void getCSRAllocationOrderMask(const MachineFunction &MF,
+                                         BitVector &Mask) const {}
 
   /// Classify a global function reference. This mainly used to fetch target
   /// special flags for lowering a function address. For example mark a function

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/ImmutableSet.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "gtest/gtest.h"
 #include <algorithm>
 #include <numeric>

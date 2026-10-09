@@ -27,6 +27,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include "llvm/TargetParser/Triple.h"
 #include <forward_list>
 #include <map>
@@ -42,10 +43,6 @@ class OpenMPIRBuilder;
 class Loop;
 class LoopAnalysis;
 class LoopInfo;
-
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 
 /// Move the instruction after an InsertPoint to the beginning of another
 /// BasicBlock.
@@ -132,6 +129,11 @@ public:
   /// Separator used between all of the rest consecutive parts of s name.
   std::optional<StringRef> Separator;
 
+  /// Flag for specifying whether the no-signed-wrap (nsw) flag should be added
+  /// to loop induction variable arithmetic. Set when the frontend guarantees
+  /// that signed integer overflow is undefined (with -fno-wrapv).
+  std::optional<bool> NoSignedWrap;
+
   // Grid Value for the GPU target.
   std::optional<omp::GV> GridValue;
 
@@ -175,6 +177,9 @@ public:
   }
 
   unsigned getDefaultTargetAS() const { return DefaultTargetAS; }
+
+  bool hasNoSignedWrap() const { return NoSignedWrap.value_or(false); }
+  void setNoSignedWrap(bool Value) { NoSignedWrap = Value; }
 
   CallingConv::ID getRuntimeCC() const { return RuntimeCC; }
 
@@ -508,8 +513,8 @@ public:
   /// Create a new OpenMPIRBuilder operating on the given module \p M. This will
   /// not have an effect on \p M (see initialize)
   OpenMPIRBuilder(Module &M)
-      : M(M), Builder(M.getContext()), OffloadInfoManager(this),
-        T(M.getTargetTriple()), IsFinalized(false) {}
+      : M(M), Builder(M), OffloadInfoManager(this), T(M.getTargetTriple()),
+        IsFinalized(false) {}
   LLVM_ABI ~OpenMPIRBuilder();
 
   class AtomicInfo : public llvm::AtomicInfo {
@@ -736,7 +741,6 @@ public:
   struct LocationDescription {
     LocationDescription(const IRBuilderBase &IRB)
         : IP(IRB.saveIP()), DL(IRB.getCurrentDebugLocation()) {}
-    LocationDescription(const InsertPointTy &IP) : IP(IP) {}
     LocationDescription(const InsertPointTy &IP, const DebugLoc &DL)
         : IP(IP), DL(DL) {}
     InsertPointTy IP;
@@ -1172,13 +1176,17 @@ private:
   ///                 preheader of the loop.
   /// \param LoopType Information about type of loop worksharing.
   ///                 It corresponds to type of loop workshare OpenMP pragma.
+  /// \param NeedsBarrier Indicates whether a barrier must be inserted after
+  ///                     the loop.
   /// \param NoLoop   If true, no-loop code is generated.
+  /// \param NeedsLastIter  If true, the last iteration variable is emitted.
   ///
   /// \returns Point where to insert code after the workshare construct.
-  InsertPointTy applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
-                                         InsertPointTy AllocaIP,
-                                         omp::WorksharingLoopType LoopType,
-                                         bool NoLoop);
+  InsertPointOrErrorTy
+  applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
+                           InsertPointTy AllocaIP,
+                           omp::WorksharingLoopType LoopType, bool NeedsBarrier,
+                           bool NoLoop, bool NeedsLastIter);
 
   /// Modifies the canonical loop to be a statically-scheduled workshare loop.
   ///
@@ -1336,8 +1344,8 @@ public:
   /// \param NoLoop If true, no-loop code is generated.
   /// \param HasDistSchedule Defines if the clause being lowered is
   /// dist_schedule as this is handled slightly differently
-  ///
   /// \param DistScheduleChunkSize The chunk size for dist_schedule loop
+  /// \param NeedsLastIter  If true, the last iteration variable is emitted.
   ///
   /// \returns Point where to insert code after the workshare construct.
   LLVM_ABI InsertPointOrErrorTy applyWorkshareLoop(
@@ -1350,7 +1358,7 @@ public:
       omp::WorksharingLoopType LoopType =
           omp::WorksharingLoopType::ForStaticLoop,
       bool NoLoop = false, bool HasDistSchedule = false,
-      Value *DistScheduleChunkSize = nullptr);
+      Value *DistScheduleChunkSize = nullptr, bool NeedsLastIter = false);
 
   /// Tile a loop nest.
   ///
@@ -1572,8 +1580,10 @@ public:
   ///
   /// \param Loc The location where the taskwait directive was encountered.
   /// \param Dependencies dependencies as specified by the 'depend' clause.
+  /// \param IsNowait True when a 'nowait' clause is present
   LLVM_ABI void createTaskwait(const LocationDescription &Loc,
-                               DependenciesInfo Dependencies = {});
+                               DependenciesInfo Dependencies = {},
+                               bool IsNowait = false);
 
   ///  Return the LLVM struct type matching runtime `kmp_task_affinity_info_t`.
   /// `{ kmp_intptr_t base_addr; size_t len; flags (bitfield storage as i32) }`
@@ -1620,6 +1630,8 @@ public:
   /// \param TaskContextStructPtrVal If non-null, a pointer to  to be placed
   ///                                immediately after the {lower bound, upper
   ///                                bound, step} values in the task data.
+  /// \param FreeAgent If `true`, the generated tasks are eligible to be
+  ///                  executed by a free-agent thread (threadset(omp_pool)).
   LLVM_ABI InsertPointOrErrorTy createTaskloop(
       const LocationDescription &Loc, InsertPointTy AllocaIP,
       ArrayRef<BasicBlock *> DeallocBlocks, BodyGenCallbackTy BodyGenCB,
@@ -1629,7 +1641,7 @@ public:
       int Sched = 0, Value *Final = nullptr, bool Mergeable = false,
       Value *Priority = nullptr, uint64_t NumOfCollapseLoops = 1,
       TaskDupCallbackTy DupCB = nullptr,
-      Value *TaskContextStructPtrVal = nullptr);
+      Value *TaskContextStructPtrVal = nullptr, bool FreeAgent = false);
 
   /// Generator for `#omp task`
   ///
@@ -1656,13 +1668,16 @@ public:
   /// \param Mergeable	 If the given task is `mergeable`
   /// \param priority `priority-value' specifies the execution order of the
   ///                 tasks that is generated by the construct
+  /// \param FreeAgent If `true`, the task is eligible to be executed by a
+  ///                  free-agent thread (threadset(omp_pool)).
   LLVM_ABI InsertPointOrErrorTy createTask(
       const LocationDescription &Loc, InsertPointTy AllocaIP,
       ArrayRef<BasicBlock *> DeallocBlocks, BodyGenCallbackTy BodyGenCB,
       bool Tied = true, Value *Final = nullptr, Value *IfCondition = nullptr,
       const DependenciesInfo &Dependencies = {},
       const AffinityData &Affinities = {}, bool Mergeable = false,
-      Value *EventHandle = nullptr, Value *Priority = nullptr);
+      Value *EventHandle = nullptr, Value *Priority = nullptr,
+      bool FreeAgent = false);
 
   /// Generator for the taskgroup construct
   ///
@@ -1830,7 +1845,8 @@ private:
   Value *castValueToType(InsertPointTy AllocaIP, Value *From, Type *ToType);
 
   /// This function creates calls to one of two shuffle functions to copy
-  /// variables between lanes in a warp.
+  /// variables between lanes in a warp. The returned value has \p ElementType,
+  /// even though the shuffle runtime functions operate on 32- or 64-bit values.
   Value *createRuntimeShuffleFunction(InsertPointTy AllocaIP, Value *Element,
                                       Type *ElementType, Value *Offset);
 
@@ -2519,7 +2535,7 @@ public:
   bool updateToLocation(const LocationDescription &Loc) {
     Builder.restoreIP(Loc.IP);
     Builder.SetCurrentDebugLocation(Loc.DL);
-    return Loc.IP.getBlock() != nullptr;
+    return Loc.IP.isValid();
   }
 
   /// Return the function declaration for the runtime function with \p FnID.
@@ -2549,7 +2565,7 @@ public:
   /// Return the (LLVM-IR) string describing the DebugLoc \p DL. Use \p F as
   /// fallback if \p DL does not specify the function name.
   LLVM_ABI Constant *getOrCreateSrcLocStr(DebugLoc DL, uint32_t &SrcLocStrSize,
-                                          Function *F = nullptr);
+                                          const Function *F = nullptr);
 
   /// Return the (LLVM-IR) string describing the source location \p Loc.
   LLVM_ABI Constant *getOrCreateSrcLocStr(const LocationDescription &Loc,
@@ -2833,9 +2849,9 @@ public:
     omp::OMPTgtExecModeFlags ExecFlags =
         omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC;
     SmallVector<int32_t, 3> MaxTeams = {-1};
-    int32_t MinTeams = 1;
+    SmallVector<int32_t, 3> MinTeams = {1};
     SmallVector<int32_t, 3> MaxThreads = {-1};
-    int32_t MinThreads = 1;
+    SmallVector<int32_t, 3> MinThreads = {1};
     int32_t ReductionDataSize = 0;
   };
 
@@ -2846,13 +2862,13 @@ public:
   /// launch OpenMP RTL function.
   struct TargetKernelRuntimeAttrs {
     SmallVector<Value *, 3> MaxTeams = {nullptr};
-    Value *MinTeams = nullptr;
+    SmallVector<Value *, 3> MinTeams = {nullptr};
     SmallVector<Value *, 3> TargetThreadLimit = {nullptr};
     SmallVector<Value *, 3> TeamsThreadLimit = {nullptr};
 
     /// 'parallel' construct 'num_threads' clause value, if present and it is an
     /// SPMD kernel.
-    Value *MaxThreads = nullptr;
+    SmallVector<Value *> MaxThreads = {nullptr};
 
     /// Total number of iterations of the SPMD or Generic-SPMD kernel or null if
     /// it is a generic kernel.
@@ -2881,7 +2897,8 @@ public:
     bool HasNoWait = false;
     /// True if the kernel strictly requires the number of blocks and threads
     /// above to run.
-    bool StrictBlocksAndThreads = false;
+    bool StrictBlocks = false;
+    bool StrictThreads = false;
     /// The fallback mechanism for the shared memory.
     omp::OMPDynGroupprivateFallbackType DynCGroupMemFallback =
         omp::OMPDynGroupprivateFallbackType::Abort;
@@ -2891,12 +2908,13 @@ public:
     TargetKernelArgs(unsigned NumTargetItems, TargetDataRTArgs RTArgs,
                      Value *NumIterations, ArrayRef<Value *> NumTeams,
                      ArrayRef<Value *> NumThreads, Value *DynCGroupMem,
-                     bool HasNoWait, bool StrictBlocksAndThreads,
+                     bool HasNoWait, bool StrictBlocks, bool StrictThreads,
                      omp::OMPDynGroupprivateFallbackType DynCGroupMemFallback)
         : NumTargetItems(NumTargetItems), RTArgs(RTArgs),
           NumIterations(NumIterations), NumTeams(NumTeams),
           NumThreads(NumThreads), DynCGroupMem(DynCGroupMem),
-          HasNoWait(HasNoWait), StrictBlocksAndThreads(StrictBlocksAndThreads),
+          HasNoWait(HasNoWait), StrictBlocks(StrictBlocks),
+          StrictThreads(StrictThreads),
           DynCGroupMemFallback(DynCGroupMemFallback) {}
   };
 
@@ -3533,6 +3551,19 @@ public:
   ///
   ///{
 
+  /// Create (or update) the '<kernel>_kernel_environment' global describing
+  /// the launch configuration of the kernel at the current insertion point,
+  ///
+  /// \param Loc The insert and source location description.
+  /// \param Attrs Structure containing the default attributes, including
+  ///        numbers of threads and teams to launch the kernel with.
+  ///
+  /// \returns the (possibly address-space-cast) kernel environment constant,
+  ///          or nullptr if \p Loc has no valid insertion point.
+  LLVM_ABI Constant *emitKernelEnvironment(
+      const LocationDescription &Loc,
+      const llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs &Attrs);
+
   /// Create a runtime call for kmpc_target_init
   ///
   /// \param Loc The insert and source location description.
@@ -3807,6 +3838,14 @@ public:
   /// cgroup.
   /// \param DynCGroupMem The fallback mechanism to execute if the requested
   /// cgroup memory cannot be provided.
+  /// \param OutlinedFnLoc Location scoped to the DISubprogram that the caller
+  ///        will attach to the outlined function. \p Loc is scoped to the
+  ///        parent function, so it cannot be used for code emitted inside the
+  ///        outlined function. If this is empty, such code is emitted without a
+  ///        debug location.
+  /// \param RTLocOverride Optional runtime source-location identifier to report
+  ///        to the offload runtime for the kernel launch. When null, a default
+  ///        source-location identifier is used.
   LLVM_ABI InsertPointOrErrorTy createTarget(
       const LocationDescription &Loc, bool IsOffloadEntry,
       OpenMPIRBuilder::InsertPointTy AllocaIP,
@@ -3822,7 +3861,8 @@ public:
       const DependenciesInfo &Dependencies = {}, bool HasNowait = false,
       Value *DynCGroupMem = nullptr,
       omp::OMPDynGroupprivateFallbackType DynCGroupMemFallback =
-          omp::OMPDynGroupprivateFallbackType::Abort);
+          omp::OMPDynGroupprivateFallbackType::Abort,
+      DebugLoc OutlinedFnLoc = {}, Value *RTLocOverride = nullptr);
 
   /// Returns __kmpc_for_static_init_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned. Will create a distribute call
@@ -4198,13 +4238,13 @@ public:
   /// \param PostInsertBefore Where to insert BBs that execute after the body.
   /// \param Name      Base name used to derive BB
   ///                  and instruction names.
+  /// \param IsCollapsed  Whether this is a collapsed loop.
   ///
   /// \returns The CanonicalLoopInfo that represents the emitted loop.
-  LLVM_ABI CanonicalLoopInfo *createLoopSkeleton(DebugLoc DL, Value *TripCount,
-                                                 Function *F,
-                                                 BasicBlock *PreInsertBefore,
-                                                 BasicBlock *PostInsertBefore,
-                                                 const Twine &Name = {});
+  LLVM_ABI CanonicalLoopInfo *
+  createLoopSkeleton(DebugLoc DL, Value *TripCount, Function *F,
+                     BasicBlock *PreInsertBefore, BasicBlock *PostInsertBefore,
+                     const Twine &Name = {}, bool IsCollapsed = false);
   /// OMP Offload Info Metadata name string
   const std::string ompOffloadInfoName = "omp_offload.info";
 
@@ -4255,10 +4295,13 @@ public:
   ///
   ///  - The skeleton’s unconditional branch from the loop body is removed
   ///    before invoking \p BodyGen.
-  ///  - \p BodyGen may freely emit instructions and temporarily introduce
-  ///    control flow.
-  ///  - If the loop body does not end with a terminator after \p BodyGen
-  ///    returns, a branch to the latch is inserted to restore canonical form.
+  ///  - \p BodyGen may freely emit instructions and introduce control flow
+  ///    within the loop body.
+  ///  - If the body leaves exactly one block without a terminator after
+  ///    \p BodyGen returns, a branch to the latch is inserted there. Otherwise,
+  ///    some block of the body must already branch to the latch.
+  ///  - The body must not branch to blocks that existed before \p BodyGen ran,
+  ///    other than the body block and the latch.
   ///
   /// \param Loc The location where the iterator modifier was encountered.
   /// \param TripCount Number of loop iterations.
@@ -4580,21 +4623,21 @@ public:
   OpenMPIRBuilder::InsertPointTy getPreheaderIP() const {
     assert(isValid() && "Requires a valid canonical loop");
     BasicBlock *Preheader = getPreheader();
-    return {Preheader, std::prev(Preheader->end())};
+    return std::prev(Preheader->end());
   };
 
   /// Return the insertion point for user code in the body.
   OpenMPIRBuilder::InsertPointTy getBodyIP() const {
     assert(isValid() && "Requires a valid canonical loop");
     BasicBlock *Body = getBody();
-    return {Body, Body->begin()};
+    return Body->begin();
   };
 
   /// Return the insertion point for user code after the loop.
   OpenMPIRBuilder::InsertPointTy getAfterIP() const {
     assert(isValid() && "Requires a valid canonical loop");
     BasicBlock *After = getAfter();
-    return {After, After->begin()};
+    return After->begin();
   };
 
   Function *getFunction() const {

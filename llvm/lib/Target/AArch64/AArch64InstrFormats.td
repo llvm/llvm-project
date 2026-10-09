@@ -470,6 +470,15 @@ def uimm6_32b : Operand<i32>, ImmLeaf<i32, [{ return Imm >= 0 && Imm < 64; }]> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
+class AdjImmAsmOperand<string name, string diagnostic, int adjustment,
+                       int low, int high> : AsmOperandClass {
+  let Name = name;
+  let DiagnosticType = diagnostic;
+  let RenderMethod = "addAdjImmOperands<" # adjustment # ">";
+  let PredicateMethod = "isImmInRange<" # !sub(low, adjustment) # "," #
+                        !sub(high, adjustment) # ">";
+}
+
 def CmpBranchUImm6Operand_32b
     : ComplexPattern<i32, 1, "SelectCmpBranchUImm6Operand", [imm]> {
   let WantsParent = true;
@@ -486,39 +495,56 @@ def CmpBranchBExtOperand
 def CmpBranchHExtOperand
     : ComplexPattern<i32, 2, "SelectCmpBranchExtOperand<false>", []> {}
 
-def UImm6Plus1Operand : AsmOperandClass {
-  let Name = "UImm6P1";
-  let DiagnosticType = "InvalidImm1_64";
-  let RenderMethod = "addImmOperands";
-  let ParserMethod = "tryParseAdjImm0_63<-1>";
-  let PredicateMethod = "isImmInRange<0,63>";
-}
-
-def UImm6Minus1Operand : AsmOperandClass {
-  let Name = "UImm6M1";
-  let DiagnosticType = "InvalidImmM1_62";
-  let RenderMethod = "addImmOperands";
-  let ParserMethod = "tryParseAdjImm0_63<1>";
-  let PredicateMethod = "isImmInRange<0,63>";
-}
-
 def uimm6p1_32b : Operand<i32> {
-  let ParserMatchClass = UImm6Plus1Operand;
+  let ParserMatchClass =
+      AdjImmAsmOperand<"UImm6P1", "InvalidImm1_64", -1, 0, 63>;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def uimm6p1_64b : Operand<i64> {
-  let ParserMatchClass = UImm6Plus1Operand;
+  let ParserMatchClass =
+      AdjImmAsmOperand<"UImm6P1", "InvalidImm1_64", -1, 0, 63>;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def uimm6m1_32b : Operand<i32> {
-  let ParserMatchClass = UImm6Minus1Operand;
+  let ParserMatchClass =
+      AdjImmAsmOperand<"UImm6M1", "InvalidImmM1_62", 1, 0, 63>;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def uimm6m1_64b : Operand<i64> {
-  let ParserMatchClass = UImm6Minus1Operand;
+  let ParserMatchClass =
+      AdjImmAsmOperand<"UImm6M1", "InvalidImmM1_62", 1, 0, 63>;
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
+def uimm9 : Operand<i64> {
+  let ParserMatchClass = AsmImmRange<0, 511>;
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
+def uimm9p1 : Operand<i64> {
+  let ParserMatchClass =
+      AdjImmAsmOperand<"UImm9P1", "InvalidImm1_512", -1, 0, 511>;
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
+def uimm9m1 : Operand<i64> {
+  let ParserMatchClass =
+      AdjImmAsmOperand<"UImm9M1", "InvalidImmM1_510", 1, 0, 511>;
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
+def simm9p1 : Operand<i64> {
+  let ParserMatchClass =
+      AdjImmAsmOperand<"SImm9P1", "InvalidImmM255_256", -1, -256, 255>;
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
+def simm9m1 : Operand<i64> {
+  let ParserMatchClass =
+      AdjImmAsmOperand<"SImm9M1", "InvalidImmM257_254", 1, -256, 255>;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
@@ -881,6 +907,7 @@ class fixedpoint_recip_i32<ValueType FloatVT>
     ComplexPattern<FloatVT, 1, "SelectCVTFixedPosRecipOperand<32>", [fpimm, ld]> {
   let EncoderMethod = "getFixedPointScaleOpValue";
   let DecoderMethod = "DecodeFixedPointScaleImm32";
+  let ParserMatchClass = Imm1_32Operand;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
@@ -889,6 +916,7 @@ class fixedpoint_recip_i64<ValueType FloatVT>
     ComplexPattern<FloatVT, 1, "SelectCVTFixedPosRecipOperand<64>", [fpimm, ld]> {
   let EncoderMethod = "getFixedPointScaleOpValue";
   let DecoderMethod = "DecodeFixedPointScaleImm64";
+  let ParserMatchClass = Imm1_64Operand;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
@@ -1122,6 +1150,7 @@ def imm0_31 : Operand<i64>, ImmLeaf<i64, [{
   return ((uint64_t)Imm) < 32;
 }]> {
   let ParserMatchClass = Imm0_31Operand;
+  let MCOperandPredicate = [{ return MCOp.isImm() && isUInt<5>(MCOp.getImm()); }];
 }
 
 // timm0_31 predicate - same ass imm0_31, but use TargetConstant (TimmLeaf)
@@ -2014,7 +2043,6 @@ def pstatefield4_op : Operand<i32> {
 }
 
 // Instructions to modify PSTATE, no input reg
-let Defs = [NZCV] in
 class PstateWriteSimple<dag iops, string asm, string operands>
   : SimpleSystemI<0, iops, asm, operands> {
 
@@ -2747,6 +2775,16 @@ class BaseShift<bit size, bits<2> shift_type, RegisterClass regtype, string asm,
   let Inst{11-10} = shift_type;
 }
 
+// ComplexPattern to match shift amounts with redundant AND masks.
+// AArch64 shift instructions only use the low 5 bits (i32) or 6 bits (i64),
+// so AND masks that exactly cover a narrow type are redundant.
+def shiftMask32 : ComplexPattern<i32, 1, "SelectShiftMask<32>", [], [], 0>;
+def gi_shift_mask32 : GIComplexOperandMatcher<s32, "selectShiftMask<32>">,
+                      GIComplexPatternEquiv<shiftMask32>;
+def shiftMask64 : ComplexPattern<i64, 1, "SelectShiftMask<64>", [], [], 0>;
+def gi_shift_mask64 : GIComplexOperandMatcher<s64, "selectShiftMask<64>">,
+                      GIComplexPatternEquiv<shiftMask64>;
+
 multiclass Shift<bits<2> shift_type, string asm, SDNode OpNode> {
   def Wr : BaseShift<0b0, shift_type, GPR32, asm>;
 
@@ -2772,6 +2810,11 @@ multiclass Shift<bits<2> shift_type, string asm, SDNode OpNode> {
   def : Pat<(i64 (OpNode GPR64:$Rn, (i64 (zext GPR32:$Rm)))),
             (!cast<Instruction>(NAME # "Xr") GPR64:$Rn,
                 (SUBREG_TO_REG GPR32:$Rm, sub_32))>;
+
+  def : Pat<(i32 (OpNode GPR32:$Rn, shiftMask32:$Rm)),
+            (!cast<Instruction>(NAME # "Wr") GPR32:$Rn, shiftMask32:$Rm)>;
+  def : Pat<(i64 (OpNode GPR64:$Rn, shiftMask64:$Rm)),
+            (!cast<Instruction>(NAME # "Xr") GPR64:$Rn, shiftMask64:$Rm)>;
 }
 
 class ShiftAlias<string asm, Instruction inst, RegisterClass regtype>
@@ -5022,7 +5065,7 @@ class LoadStoreExclusiveSimple<bits<2> sz, bit o2, bit L, bit o1, bit o0,
 }
 
 // Simple load acquires don't set the exclusive monitor
-let mayLoad = 1, mayStore = 0 in
+let mayLoad = 1, mayStore = 0, hasSideEffects = 0 in
 class LoadAcquire<bits<2> sz, bit o2, bit L, bit o1, bit o0,
                   RegisterClass regtype, string asm>
     : LoadStoreExclusiveSimple<sz, o2, L, o1, o0, (outs regtype:$Rt),
@@ -5160,7 +5203,7 @@ multiclass StoreUnprivilegedLSUI<bits<2> sz, RegisterClass regtype, string asm> 
 }
 
 // Simple store release operations do not check the exclusive monitor.
-let mayLoad = 0, mayStore = 1 in
+let mayLoad = 0, mayStore = 1, hasSideEffects = 0 in
 class StoreRelease<bits<2> sz, bit o2, bit L, bit o1, bit o0,
                    RegisterClass regtype, string asm>
     : LoadStoreExclusiveSimple<sz, o2, L, o1, o0, (outs),
@@ -7684,8 +7727,8 @@ multiclass SIMDWideThreeVectorBHS<bit U, bits<4> opc, string asm,
 //----------------------------------------------------------------------------
 
 class BaseSIMDBitwiseExtract<bit size, RegisterOperand regtype, ValueType vty,
-                             string asm, string kind>
-  : I<(outs regtype:$Rd), (ins regtype:$Rn, regtype:$Rm, i32imm:$imm), asm,
+                             Operand immtype, string asm, string kind>
+  : I<(outs regtype:$Rd), (ins regtype:$Rn, regtype:$Rm, immtype:$imm), asm,
       "{\t$Rd" # kind # ", $Rn" # kind # ", $Rm" # kind # ", $imm" #
       "|" # kind # "\t$Rd, $Rn, $Rm, $imm}", "",
       [(set (vty regtype:$Rd),
@@ -7708,10 +7751,10 @@ class BaseSIMDBitwiseExtract<bit size, RegisterOperand regtype, ValueType vty,
 
 
 multiclass SIMDBitwiseExtract<string asm> {
-  def v8i8  : BaseSIMDBitwiseExtract<0, V64, v8i8, asm, ".8b"> {
+  def v8i8  : BaseSIMDBitwiseExtract<0, V64, v8i8, imm32_0_7, asm, ".8b"> {
     let imm{3} = 0;
   }
-  def v16i8 : BaseSIMDBitwiseExtract<1, V128, v16i8, asm, ".16b">;
+  def v16i8 : BaseSIMDBitwiseExtract<1, V128, v16i8, imm32_0_15, asm, ".16b">;
 }
 
 //----------------------------------------------------------------------------
@@ -12736,40 +12779,40 @@ multiclass STOPregisterLSUI<string asm, string instr> {
                     !cast<Instruction>(instr # "X")>;
 }
 
-class LoadStore64B_base<bits<3> opc, string asm_inst, string asm_ops,
+class LoadStore64B_base<bits<2> ar, bits<3> opc, string asm_inst, string asm_ops,
                         dag iops, dag oops, list<dag> pat>
     : I<oops, iops, asm_inst, asm_ops, "", pat>,
       Sched<[]> /* FIXME: fill in scheduling details once known */ {
   bits<5> Rt;
   bits<5> Rn;
-  let Inst{31-21} = 0b11111000001;
+  let Inst{31-24} = 0b11111000;
+  let Inst{23-22} = ar;
+  let Inst{21}    = 1;
   let Inst{15}    = 1;
   let Inst{14-12} = opc;
   let Inst{11-10} = 0b00;
   let Inst{9-5}   = Rn;
   let Inst{4-0}   = Rt;
-
-  let Predicates = [HasV8_7a];
 }
 
-class LoadStore64B<bits<3> opc, string asm_inst, dag iops, dag oops,
+class LoadStore64B<bits<2> ar, bits<3> opc, string asm_inst, dag iops, dag oops,
                       list<dag> pat = []>
-    : LoadStore64B_base<opc, asm_inst, "\t$Rt, [$Rn]", iops, oops, pat> {
+    : LoadStore64B_base<ar, opc, asm_inst, "\t$Rt, [$Rn]", iops, oops, pat> {
   let Inst{20-16} = 0b11111;
 }
 
-multiclass LoadStore64B<bits<3> opc, string asm_inst,
+multiclass LoadStore64B<bits<2> ar, bits<3> opc, string asm_inst,
                         bit may_load, bit may_store,
                         dag iops, dag oops,
                         list<dag> pat = []> {
   let mayLoad = may_load, mayStore = may_store in
-  def "" : LoadStore64B<opc, asm_inst, iops, oops, pat>;
+  def "" : LoadStore64B<ar, opc, asm_inst, iops, oops, pat>;
   def : InstAlias<asm_inst # "\t$Rt, [$Rn, #0]",
                   (!cast<Instruction>(NAME) GPR64x8:$Rt, GPR64sp:$Rn)>;
 }
 
-class Store64BV<bits<3> opc, string asm_inst, list<dag> pat = []>
-    : LoadStore64B_base<opc, asm_inst, "\t$Rs, $Rt, [$Rn]",
+class Store64BV<bits<2> ar, bits<3> opc, string asm_inst, list<dag> pat = []>
+    : LoadStore64B_base<ar, opc, asm_inst, "\t$Rs, $Rt, [$Rn]",
                        (ins GPR64x8:$Rt, GPR64sp:$Rn), (outs GPR64:$Rs), pat> {
   bits<5> Rs;
   let Inst{20-16} = Rs;
@@ -13641,4 +13684,100 @@ multiclass TENTER<string asm> {
 multiclass TEXIT<string asm> {
   def NAME : TEXITInst<asm>;
   def      : InstAlias<asm, (!cast<Instruction>(NAME) 0), 1>;
+}
+
+//----------------------------------------------------------------------------
+// Conditional Fault instructions (FEAT_CFLT)
+//----------------------------------------------------------------------------
+
+class BaseCondFLT
+    : I<(outs), (ins ccode:$cond, uimm16:$imm),
+        "flt", ".$cond\t$imm", "", []>, Sched<[]> {
+  bits<4> cond;
+  bits<16> imm;
+  let Inst{31-21} = 0b11010100001;
+  let Inst{20-5}  = imm;
+  let Inst{4}     = 1;
+  let Inst{3-0}   = cond;
+
+  let Uses = [NZCV];
+}
+
+class BaseFLT<bit sf, dag iops, string asm, string operands>
+    : I<(outs), iops, asm, operands, "", []>, Sched<[]> {
+  bits<2> reason;
+  bits<5> Rt;
+  let Inst{31}    = sf;
+  let Inst{30-24} = 0b1110110;
+  let Inst{15-12} = 0b0000;
+  let Inst{11-10} = reason;
+  let Inst{4-0}   = Rt;
+}
+
+class BaseCFLTImm<RegisterClass regtype, bit sf, Operand immtype,
+                  bits<3> cc, string asm>
+    : BaseFLT<sf, (ins imm0_3:$reason, regtype:$Rt, immtype:$imm),
+              asm, "\t$reason, $Rt, $imm"> {
+  bits<9> imm;
+  let Inst{23-21} = cc;
+  let Inst{20-16} = imm{8-4};
+  let Inst{9}     = 0;
+  let Inst{8-5}   = imm{3-0};
+}
+
+class BaseCFLTReg<RegisterClass regtype, bit sf, bits<3> cc, string asm>
+    : BaseFLT<sf, (ins imm0_3:$reason, regtype:$Rt, regtype:$Rm),
+              asm, "\t$reason, $Rt, $Rm"> {
+  bits<5> Rm;
+  let Inst{23-21} = cc;
+  let Inst{20-16} = Rm;
+  let Inst{9-5}   = 0b10000;
+}
+
+multiclass CFLTImm<bits<3> cc, string asm, Operand immtype> {
+  def Wi : BaseCFLTImm<GPR32, 0, immtype, cc, asm>;
+  def Xi : BaseCFLTImm<GPR64, 1, immtype, cc, asm>;
+}
+
+multiclass CFLTReg<bits<3> cc, string asm> {
+  def Wr : BaseCFLTReg<GPR32sp, 0, cc, asm>;
+  def Xr : BaseCFLTReg<GPR64sp, 1, cc, asm>;
+}
+
+multiclass CFLTRegAlias<string mnemonic, string inst> {
+  def : InstAlias<mnemonic # "\t$reason, $Rm, $Rt",
+                  (!cast<Instruction>(inst # "Wr") imm0_3:$reason,
+                   GPR32sp:$Rt, GPR32sp:$Rm), 0>;
+  def : InstAlias<mnemonic # "\t$reason, $Rm, $Rt",
+                  (!cast<Instruction>(inst # "Xr") imm0_3:$reason,
+                   GPR64sp:$Rt, GPR64sp:$Rm), 0>;
+}
+
+multiclass CFLTImmAlias<string mnemonic, string inst, Operand immtype> {
+  def : InstAlias<mnemonic # "\t$reason, $Rt, $imm",
+                  (!cast<Instruction>(inst # "Wi") imm0_3:$reason,
+                   GPR32:$Rt, immtype:$imm), 0>;
+  def : InstAlias<mnemonic # "\t$reason, $Rt, $imm",
+                  (!cast<Instruction>(inst # "Xi") imm0_3:$reason,
+                   GPR64:$Rt, immtype:$imm), 0>;
+}
+
+class BaseTFLT<RegisterClass regtype, Operand immtype, bit op,
+               string asm>
+    : BaseFLT<0, (ins imm0_3:$reason, regtype:$Rt, immtype:$bit_off),
+              asm, "\t$reason, $Rt, $bit_off"> {
+  bits<6> bit_off;
+  let Inst{31} = bit_off{5};
+  let Inst{23-19} = bit_off{4-0};
+  let Inst{18-16} = 0b000;
+  let Inst{9-6}   = 0b1001;
+  let Inst{5}     = op;
+}
+
+multiclass TFLT<bit op, string asm> {
+  def NAME : BaseTFLT<GPR64, imm0_63, op, asm>;
+
+  def : InstAlias<asm # "\t$reason, $Rt, $imm",
+                  (!cast<Instruction>(NAME) imm0_3:$reason,
+                   GPR64as32:$Rt, imm0_31:$imm), 1>;
 }

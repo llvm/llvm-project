@@ -26,7 +26,7 @@
 #include <__variant/monostate.h>
 
 #if _LIBCPP_HAS_LOCALIZATION
-#  include <__locale>
+#  include <__locale_dir/locale.h>
 #  include <__optional/nullopt_t.h>
 #  include <__optional/optional.h>
 #endif

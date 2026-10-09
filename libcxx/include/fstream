@@ -197,7 +197,8 @@ typedef basic_fstream<wchar_t> wfstream;
 #    include <__assert>
 #    include <__filesystem/path.h>
 #    include <__fwd/fstream.h>
-#    include <__locale>
+#    include <__locale_dir/codecvt.h>
+#    include <__locale_dir/locale.h>
 #    include <__memory/addressof.h>
 #    include <__memory/unique_ptr.h>
 #    include <__ostream/basic_ostream.h>
@@ -214,6 +215,14 @@ typedef basic_fstream<wchar_t> wfstream;
 
 #    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #      pragma GCC system_header
+#    endif
+
+#    if defined(_AIX)
+// On AIX, fopen64/fseeko64/ftello64 are not guaranteed to always be declared, so we declare them
+// here. We use `__asm__` to avoid colliding with the declaration in the header in any way.
+extern "C" FILE* __libcpp_fopen64(const char*, const char*) __asm__("fopen64");
+extern "C" long long __libcpp_ftello64(FILE*) __asm__("ftello64");
+extern "C" int __libcpp_fseeko64(FILE*, long long, int) __asm__("fseeko64");
 #    endif
 
 _LIBCPP_PUSH_MACROS
@@ -431,6 +440,7 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI static int __fseek(FILE* __file, pos_type __offset, int __whence);
   _LIBCPP_HIDE_FROM_ABI static pos_type __ftell(FILE* __file);
+  _LIBCPP_HIDE_FROM_ABI static FILE* __fopen(const char* __name, const char* __mode);
 
   _LIBCPP_EXPORTED_FROM_ABI friend FILE* __get_ostream_file(ostream&);
 
@@ -779,6 +789,17 @@ const wchar_t* basic_filebuf<_CharT, _Traits>::__make_mdwstring(ios_base::openmo
 #    endif
 
 template <class _CharT, class _Traits>
+FILE* basic_filebuf<_CharT, _Traits>::__fopen(const char* __name, const char* __mode) {
+#    if defined(_AIX)
+  return ::__libcpp_fopen64(__name, __mode);
+#    elif defined(__GLIBC__)
+  return ::fopen64(__name, __mode);
+#    else
+  return std::fopen(__name, __mode);
+#    endif
+}
+
+template <class _CharT, class _Traits>
 basic_filebuf<_CharT, _Traits>* basic_filebuf<_CharT, _Traits>::open(const char* __s, ios_base::openmode __mode) {
   if (__file_)
     return nullptr;
@@ -786,7 +807,7 @@ basic_filebuf<_CharT, _Traits>* basic_filebuf<_CharT, _Traits>::open(const char*
   if (!__mdstr)
     return nullptr;
 
-  return __adopt_file(std::fopen(__s, __mdstr), __mode);
+  return __adopt_file(__fopen(__s, __mdstr), __mode);
 }
 
 template <class _CharT, class _Traits>
@@ -1066,6 +1087,10 @@ int basic_filebuf<_CharT, _Traits>::__fseek(FILE* __file, pos_type __offset, int
   return _fseeki64(__file, __offset, __whence);
 #    elif _LIBCPP_LIBC_NEWLIB
   return fseek(__file, __offset, __whence);
+#    elif defined(_AIX)
+  return ::__libcpp_fseeko64(__file, __offset, __whence);
+#    elif defined(__GLIBC__)
+  return ::fseeko64(__file, __offset, __whence);
 #    else
   return ::fseeko(__file, __offset, __whence);
 #    endif
@@ -1077,6 +1102,10 @@ typename basic_filebuf<_CharT, _Traits>::pos_type basic_filebuf<_CharT, _Traits>
   return _ftelli64(__file);
 #    elif _LIBCPP_LIBC_NEWLIB
   return ftell(__file);
+#    elif defined(_AIX)
+  return ::__libcpp_ftello64(__file);
+#    elif defined(__GLIBC__)
+  return ::ftello64(__file);
 #    else
   return ftello(__file);
 #    endif
