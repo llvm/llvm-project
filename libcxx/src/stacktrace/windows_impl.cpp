@@ -133,10 +133,11 @@ struct _SymInitScope {
 
 void _Trace::__windows_impl(size_t skip, size_t max_depth) {
 #  if defined(_M_IX86)
-  // Not supported on 32-bit x86
-  return;
-#  endif
-
+  // Not supported on 32-bit x86: RtlCaptureContext's frame-pointer capture is unreliable there
+  // (see availability.py's comment on `availability-stacktrace-missing`).
+  (void)skip;
+  (void)max_depth;
+#  else
   static BOOL loaded_dll_funcs_ = load_funcs();
   if (!loaded_dll_funcs_) {
     return;
@@ -202,24 +203,19 @@ void _Trace::__windows_impl(size_t skip, size_t max_depth) {
   CONTEXT ccx;
   RtlCaptureContext(&ccx);
 
-#  if defined(_M_AMD64)
+#    if defined(_M_AMD64)
   STACKFRAME64 frame{};
   frame.AddrPC.Offset    = ccx.Rip;
   frame.AddrStack.Offset = ccx.Rsp;
   frame.AddrFrame.Offset = ccx.Rbp;
-#  elif defined(_M_ARM64)
+#    elif defined(_M_ARM64)
   STACKFRAME64 frame{};
   frame.AddrPC.Offset    = ccx.Pc;
   frame.AddrStack.Offset = ccx.Sp;
   frame.AddrFrame.Offset = ccx.Fp;
-#  elif defined(_M_IX86)
-  STACKFRAME frame{};
-  frame.AddrPC.Offset    = ccx.Eip;
-  frame.AddrStack.Offset = ccx.Esp;
-  frame.AddrFrame.Offset = ccx.Ebp;
-#  else
-#    error unrecognized architecture
-#  endif
+#    else
+#      error unrecognized architecture
+#    endif
 
   frame.AddrPC.Mode    = AddrModeFlat;
   frame.AddrStack.Mode = AddrModeFlat;
@@ -270,11 +266,11 @@ void _Trace::__windows_impl(size_t skip, size_t max_depth) {
     sym->SizeOfStruct    = sizeof(IMAGEHLP_SYMBOL);
     sym->MaxNameLength   = __max_sym_len;
 
-#  if defined(_WIN64)
+#    if defined(_WIN64)
     DWORD64 symdisp{};
-#  else
+#    else
     DWORD symdisp{};
-#  endif
+#    endif
     IMAGEHLP_LINE line;
     if (SymGetSymFromAddr(proc, entry.__addr_, &symdisp, sym)) {
       entry.__desc_ = sym->Name;
@@ -287,6 +283,7 @@ void _Trace::__windows_impl(size_t skip, size_t max_depth) {
       entry.__line_ = line.LineNumber;
     }
   }
+#  endif // defined(_M_IX86)
 }
 
 } // namespace __stacktrace
