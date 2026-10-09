@@ -15,6 +15,7 @@
 #ifndef LLVM_CODEGEN_LIVEVARIABLES_H
 #define LLVM_CODEGEN_LIVEVARIABLES_H
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -45,6 +46,10 @@ class LiveVariables {
   // physical register. This is a purely local property, because all physical
   // register references are presumed dead across basic blocks.
   std::vector<MachineInstr *> PhysRegUse;
+
+  /// Track physical registers referenced in the current block, used as a
+  /// compile-time guard.
+  BitVector TrackedRegs;
 
   // DistanceMap - Keep track the distance of a MI from the start of the
   // current basic block.
