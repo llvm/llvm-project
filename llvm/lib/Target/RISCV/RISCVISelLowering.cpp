@@ -2049,6 +2049,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasStdExtZbkb())
     setTargetDAGCombine(ISD::BITREVERSE);
 
+  if (Subtarget.hasStdExtZbc() && Subtarget.is64Bit())
+    setTargetDAGCombine(ISD::SRL);
+
   if (Subtarget.hasStdExtFOrZfinx())
     setTargetDAGCombine({ISD::ZERO_EXTEND, ISD::FP_TO_SINT, ISD::FP_TO_UINT,
                          ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT});
@@ -6891,7 +6894,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
         unsigned Opc = SplatVT.isFloatingPoint() ? RISCVISD::VFMV_V_F_VL
                                                  : RISCVISD::VMV_V_X_VL;
         SDValue Splat =
-            DAG.getNode(Opc, DL, SplatVT, DAG.getUNDEF(ContainerVT), V, VL);
+            DAG.getNode(Opc, DL, SplatVT, DAG.getUNDEF(SplatVT), V, VL);
         Splat = DAG.getBitcast(ContainerVT, Splat);
         return convertFromScalableVector(VT, Splat, DAG, Subtarget);
       }
@@ -7990,18 +7993,20 @@ static SDValue lowerFMAXIMUM_FMINIMUM(SDValue Op, SelectionDAG &DAG,
 
   SDValue NewY = Y;
   if (!XIsNeverNan) {
-    SDValue XIsNonNan = DAG.getNode(RISCVISD::SETCC_VL, DL, Mask.getValueType(),
-                                    {X, X, DAG.getCondCode(ISD::SETOEQ),
-                                     DAG.getUNDEF(ContainerVT), Mask, VL});
+    SDValue XIsNonNan =
+        DAG.getNode(RISCVISD::SETCC_VL, DL, Mask.getValueType(),
+                    {X, X, DAG.getCondCode(ISD::SETOEQ),
+                     DAG.getUNDEF(Mask.getValueType()), Mask, VL});
     NewY = DAG.getNode(RISCVISD::VMERGE_VL, DL, ContainerVT, XIsNonNan, Y, X,
                        DAG.getUNDEF(ContainerVT), VL);
   }
 
   SDValue NewX = X;
   if (!YIsNeverNan) {
-    SDValue YIsNonNan = DAG.getNode(RISCVISD::SETCC_VL, DL, Mask.getValueType(),
-                                    {Y, Y, DAG.getCondCode(ISD::SETOEQ),
-                                     DAG.getUNDEF(ContainerVT), Mask, VL});
+    SDValue YIsNonNan =
+        DAG.getNode(RISCVISD::SETCC_VL, DL, Mask.getValueType(),
+                    {Y, Y, DAG.getCondCode(ISD::SETOEQ),
+                     DAG.getUNDEF(Mask.getValueType()), Mask, VL});
     NewX = DAG.getNode(RISCVISD::VMERGE_VL, DL, ContainerVT, YIsNonNan, X, Y,
                        DAG.getUNDEF(ContainerVT), VL);
   }
@@ -11803,11 +11808,12 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
     if (isNullConstant(Idx)) {
       // First slide in the lo value, then the hi in above it. We use slide1down
       // to avoid the register group overlap constraint of vslide1up.
+      SDValue I32Vec = DAG.getBitcast(I32ContainerVT, Vec);
       ValInVec = DAG.getNode(RISCVISD::VSLIDE1DOWN_VL, DL, I32ContainerVT,
-                             Vec, Vec, ValLo, I32Mask, InsertI64VL);
+                             I32Vec, I32Vec, ValLo, I32Mask, InsertI64VL);
       // If the source vector is undef don't pass along the tail elements from
       // the previous slide1down.
-      SDValue Tail = Vec.isUndef() ? Vec : ValInVec;
+      SDValue Tail = Vec.isUndef() ? I32Vec : ValInVec;
       ValInVec = DAG.getNode(RISCVISD::VSLIDE1DOWN_VL, DL, I32ContainerVT,
                              Tail, ValInVec, ValHi, I32Mask, InsertI64VL);
       // Bitcast back to the right container type.
@@ -13147,10 +13153,6 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     SDValue Rs1 = Op.getOperand(1);
     SDValue Rs2 = Op.getOperand(2);
     if (Subtarget.is64Bit()) {
-      if (VT == MVT::v2i32 && !Rs1.getValueType().isVector()) {
-        unsigned WOpc = IsSigned ? RISCVISD::PNCLIPP_W : RISCVISD::PNCLIPUP_W;
-        return DAG.getNode(WOpc, DL, VT, Rs1, Rs2);
-      }
       unsigned Opc = IsSigned ? RISCVISD::PNCLIPP : RISCVISD::PNCLIPUP;
       return DAG.getNode(Opc, DL, VT, Rs1, Rs2);
     }
@@ -18360,28 +18362,15 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       if (!Subtarget.is64Bit() || N->getValueType(0) != MVT::i32)
         return;
 
-      // Extend inputs to XLen, and shift by 32. This will add 64 trailing zeros
-      // to the full 128-bit clmul result of multiplying two xlen values.
-      // Perform clmulr or clmulh on the shifted values. Finally, extract the
-      // upper 32 bits.
-      //
-      // The alternative is to mask the inputs to 32 bits and use clmul, but
-      // that requires two shifts to mask each input without zext.w.
-      // FIXME: If the inputs are known zero extended or could be freely
-      // zero extended, the mask form would be better.
+      // Zero extend the inputs, use a clmul, then shift the result.
       SDValue NewOp0 =
-          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+          DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, N->getOperand(1));
       SDValue NewOp1 =
-          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
-      NewOp0 = DAG.getNode(ISD::SHL, DL, MVT::i64, NewOp0,
-                           DAG.getConstant(32, DL, MVT::i64));
-      NewOp1 = DAG.getNode(ISD::SHL, DL, MVT::i64, NewOp1,
-                           DAG.getConstant(32, DL, MVT::i64));
-      unsigned Opc =
-          IntNo == Intrinsic::riscv_clmulh ? ISD::CLMULH : ISD::CLMULR;
-      SDValue Res = DAG.getNode(Opc, DL, MVT::i64, NewOp0, NewOp1);
+          DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, N->getOperand(2));
+      unsigned ShAmt = IntNo == Intrinsic::riscv_clmulh ? 32 : 31;
+      SDValue Res = DAG.getNode(ISD::CLMUL, DL, MVT::i64, NewOp0, NewOp1);
       Res = DAG.getNode(ISD::SRL, DL, MVT::i64, Res,
-                        DAG.getConstant(32, DL, MVT::i64));
+                        DAG.getConstant(ShAmt, DL, MVT::i64));
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       return;
     }
@@ -18977,10 +18966,13 @@ static SDValue transformAddImmMulImm(SDNode *N, SelectionDAG &DAG,
 // srem (zext, zext) -> zext (srem (zext, zext))
 // urem (zext, zext) -> zext (urem (zext, zext))
 //
-// where the sum of the extend widths match, and the the range of the bin op
+// add/sub/mul/sdiv/srem (sext, ext) -> sext (binop (sext, ext))
+// add/sub/mul/sdiv/srem (ext, sext) -> sext (binop (ext, sext))
+//
+// where the sum of the extend widths match, and the range of the bin op
 // fits inside the width of the narrower bin op. (For profitability on rvv, we
 // use a power of two for both inner and outer extend.)
-static SDValue combineBinOpOfZExt(SDNode *N, SelectionDAG &DAG) {
+static SDValue combineBinOpOfExt(SDNode *N, SelectionDAG &DAG) {
 
   EVT VT = N->getValueType(0);
   if (!VT.isVector() || !DAG.getTargetLoweringInfo().isTypeLegal(VT))
@@ -18988,9 +18980,16 @@ static SDValue combineBinOpOfZExt(SDNode *N, SelectionDAG &DAG) {
 
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
-  if (N0.getOpcode() != ISD::ZERO_EXTEND || N1.getOpcode() != ISD::ZERO_EXTEND)
+  unsigned N0Opc = N0.getOpcode();
+  unsigned N1Opc = N1.getOpcode();
+  if ((N0Opc != ISD::ZERO_EXTEND && N0Opc != ISD::SIGN_EXTEND) ||
+      (N1Opc != ISD::ZERO_EXTEND && N1Opc != ISD::SIGN_EXTEND))
     return SDValue();
   if (!N0.hasOneUse() || !N1.hasOneUse())
+    return SDValue();
+
+  bool AnySExt = N0Opc == ISD::SIGN_EXTEND || N1Opc == ISD::SIGN_EXTEND;
+  if ((N->getOpcode() == ISD::UDIV || N->getOpcode() == ISD::UREM) && AnySExt)
     return SDValue();
 
   SDValue Src0 = N0.getOperand(0);
@@ -19005,16 +19004,15 @@ static SDValue combineBinOpOfZExt(SDNode *N, SelectionDAG &DAG) {
   EVT ElemVT = VT.getVectorElementType().getHalfSizedIntegerVT(C);
   EVT NarrowVT = EVT::getVectorVT(C, ElemVT, VT.getVectorElementCount());
 
-  Src0 = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(Src0), NarrowVT, Src0);
-  Src1 = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(Src1), NarrowVT, Src1);
+  Src0 = DAG.getNode(N0Opc, SDLoc(Src0), NarrowVT, Src0);
+  Src1 = DAG.getNode(N1Opc, SDLoc(Src1), NarrowVT, Src1);
 
-  // Src0 and Src1 are zero extended, so they're always positive if signed.
-  //
-  // sub can produce a negative from two positive operands, so it needs sign
-  // extended. Other nodes produce a positive from two positive operands, so
-  // zero extend instead.
-  unsigned OuterExtend =
-      N->getOpcode() == ISD::SUB ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+  // If both operands are zero extended they're always positive, and every node
+  // except sub produces a positive from two positive operands, so zero extend
+  // instead.
+  unsigned OuterExtend = AnySExt || N->getOpcode() == ISD::SUB
+                             ? ISD::SIGN_EXTEND
+                             : ISD::ZERO_EXTEND;
 
   return DAG.getNode(
       OuterExtend, SDLoc(N), VT,
@@ -19363,7 +19361,7 @@ static SDValue performADDCombine(SDNode *N,
     return V;
   if (SDValue V = combinePExtWideningAddSub(N, DAG, Subtarget))
     return V;
-  if (SDValue V = combineBinOpOfZExt(N, DAG))
+  if (SDValue V = combineBinOpOfExt(N, DAG))
     return V;
   if (SDValue V = combineAddMulParts(N, DAG, Subtarget))
     return V;
@@ -19521,7 +19519,7 @@ static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG,
     return V;
   if (SDValue V = combinePExtWideningAddSub(N, DAG, Subtarget))
     return V;
-  if (SDValue V = combineBinOpOfZExt(N, DAG))
+  if (SDValue V = combineBinOpOfExt(N, DAG))
     return V;
   if (SDValue V = combineSubShiftToOrcB(N, DAG, Subtarget))
     return V;
@@ -20575,7 +20573,7 @@ static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(AddSubOpc, DL, VT, N0, MulVal);
   }
 
-  if (SDValue V = combineBinOpOfZExt(N, DAG))
+  if (SDValue V = combineBinOpOfExt(N, DAG))
     return V;
 
   if (SDValue V = combinePExtWideningMul(N, DAG, Subtarget))
@@ -23045,6 +23043,36 @@ static SDValue performVEXT_VLCombine(SDNode *N,
   return DCI.DAG.getNode(Opcode, SDLoc(N), DstVT, Src, Mask, VL);
 }
 
+// Combine (srl (clmul (and X, 0xffffffff), (and Y, 0xffffffff)), 31) ->
+// (srl (clmulr (shl X, 32), (shl Y, 32)), 32). This avoids needing two
+// shifts to zero extend each input.
+static SDValue performSRLCombine(SDNode *N,
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const RISCVSubtarget &Subtarget) {
+  assert(N->getOpcode() == ISD::SRL && "Unexpected opcode");
+
+  if (!DCI.isAfterLegalizeDAG() || N->getValueType(0) != MVT::i64 ||
+      !Subtarget.is64Bit() || !Subtarget.hasStdExtZbc())
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+
+  using namespace SDPatternMatch;
+  SDValue X, Y;
+  if (!sd_match(N, m_Srl(m_OneUse(m_Clmul(
+                             m_And(m_Value(X), m_SpecificInt(0xffffffff)),
+                             m_And(m_Value(Y), m_SpecificInt(0xffffffff)))),
+                         m_SpecificInt(31))))
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue ShAmt = DAG.getConstant(32, DL, MVT::i64);
+  X = DAG.getNode(ISD::SHL, DL, MVT::i64, X, ShAmt);
+  Y = DAG.getNode(ISD::SHL, DL, MVT::i64, Y, ShAmt);
+  SDValue Res = DAG.getNode(ISD::CLMULR, DL, MVT::i64, X, Y);
+  return DAG.getNode(ISD::SRL, DL, MVT::i64, Res, ShAmt);
+}
+
 static SDValue performSRACombine(SDNode *N, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
   assert(N->getOpcode() == ISD::SRA && "Unexpected opcode");
@@ -25118,7 +25146,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::UDIV:
   case ISD::SREM:
   case ISD::UREM:
-    if (SDValue V = combineBinOpOfZExt(N, DAG))
+    if (SDValue V = combineBinOpOfExt(N, DAG))
       return V;
     break;
   case ISD::FMUL: {
@@ -25646,10 +25674,12 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     [[fallthrough]];
   case ISD::SRL:
   case ISD::SHL: {
-    if (N->getOpcode() == ISD::SHL) {
+    if (N->getOpcode() == ISD::SRL)
+      if (SDValue V = performSRLCombine(N, DCI, Subtarget))
+        return V;
+    if (N->getOpcode() == ISD::SHL)
       if (SDValue V = performSHLCombine(N, DCI, Subtarget))
         return V;
-    }
     SDValue ShAmt = N->getOperand(1);
     if (ShAmt.getOpcode() == RISCVISD::SPLAT_VECTOR_SPLIT_I64_VL) {
       // We don't need the upper 32 bits of a 64-bit element for a shift amount.

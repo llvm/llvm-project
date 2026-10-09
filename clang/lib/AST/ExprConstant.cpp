@@ -22420,14 +22420,17 @@ static bool doEvaluateConstantExpr(Expr::EvalResult &Result,
       Result.Val.hasValue())
     return true;
 
+  EvaluationMode EM = Kind == ConstantExprKind::Initializer
+                          ? EvaluationMode::IgnoreSideEffects
+                          : EvaluationMode::ConstantExpression;
   if (Ctx.getLangOpts().EnableNewConstInterp) {
-    interp::EvalSettings Settings(EvaluationMode::ConstantExpression, Result,
-                                  SProxy, Kind);
+    interp::EvalSettings Settings(EM, Result, SProxy, Kind);
     Settings.InConstantContext = true;
-    return Ctx.getInterpContext().evaluate(Settings, E, Result.Val);
+    return Ctx.getInterpContext().evaluate(Settings, E, Result.Val) &&
+           !Result.HasSideEffects;
   }
 
-  EvalInfo Info(Ctx, SProxy, Result, EvaluationMode::ConstantExpression);
+  EvalInfo Info(Ctx, SProxy, Result, EM);
   Info.InConstantContext = true;
 
   // The type of the object we're initializing is 'const T' for a class NTTP.
@@ -22456,7 +22459,8 @@ static bool doEvaluateConstantExpr(Expr::EvalResult &Result,
   if (!Info.discardCleanups())
     llvm_unreachable("Unhandled cleanup; missing full expression marker?");
 
-  if (!CheckConstantExpression(Info, E->getExprLoc(), getStorageType(Ctx, E),
+  if (Result.HasSideEffects ||
+      !CheckConstantExpression(Info, E->getExprLoc(), getStorageType(Ctx, E),
                                Result.Val, Kind))
     return false;
   if (!CheckMemoryLeaks(Info))

@@ -3359,10 +3359,11 @@ bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind, bool Fatal) {
     return !Fatal;
   case CastKind::Volatile:
     if (!S.checkingPotentialConstantExpression()) {
-      const auto *E = cast<CastExpr>(S.Current->getExpr(OpPC));
-      if (S.getLangOpts().CPlusPlus)
+      const auto *E = S.Current->getExpr(OpPC);
+      const auto *CE = dyn_cast<CastExpr>(E);
+      if (CE && S.getLangOpts().CPlusPlus)
         S.FFDiag(E, diag::note_constexpr_access_volatile_type)
-            << AK_Read << E->getSubExpr()->getType();
+            << AK_Read << CE->getSubExpr()->getType();
       else
         S.FFDiag(E);
     }

@@ -100,6 +100,8 @@ class PHIEliminationImpl {
   bool SplitPHIEdges(MachineFunction &MF, MachineBasicBlock &MBB,
                      MachineLoopInfo *MLI, MachineDomTreeUpdater &MDTU);
 
+  void computeLiveOutSets(const MachineFunction &MF);
+
   bool isLiveIn(Register Reg, const MachineBasicBlock *MBB);
   bool isLiveOutPastPHIs(Register Reg, const MachineBasicBlock *MBB);
 
@@ -121,11 +123,12 @@ class PHIEliminationImpl {
       DenseMap<MachineInstr *, Register, MachineInstrExpressionTrait>;
   LoweredPHIMap LoweredPHIs;
 
-  MachineFunctionPass *P = nullptr;
-  MachineFunctionAnalysisManager *MFAM = nullptr;
+  // A set of live-out regs for each MBB which is used to update LIS
+  // efficiently also with large functions.
+  std::vector<SparseBitVector<>> LiveOutSets;
 
 public:
-  PHIEliminationImpl(MachineFunctionPass *P) : P(P) {
+  PHIEliminationImpl(MachineFunctionPass *P) {
     auto *SIWrapper = P->getAnalysisIfAvailable<SlotIndexesWrapperPass>();
     auto *LISWrapper = P->getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
     auto *MLIWrapper = P->getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
@@ -154,8 +157,7 @@ public:
         MDT(AM.getCachedResult<MachineDominatorTreeAnalysis>(MF)),
         PDT(AM.getCachedResult<MachinePostDominatorTreeAnalysis>(MF)),
         MBPI(AM.getCachedResult<MachineBranchProbabilityAnalysis>(MF)),
-        MBFI(AM.getCachedResult<MachineBlockFrequencyAnalysis>(MF)), MFAM(&AM) {
-  }
+        MBFI(AM.getCachedResult<MachineBlockFrequencyAnalysis>(MF)) {}
 
   bool run(MachineFunction &MF);
 };
@@ -731,11 +733,10 @@ bool PHIEliminationImpl::SplitPHIEdges(MachineFunction &MF,
       }
       if (!ShouldSplit && !SplitAllCriticalEdges)
         continue;
-      MachineBasicBlock *NewBB;
-      if (P)
-        NewBB = PreMBB->SplitCriticalEdge(&MBB, *P, nullptr, &MDTU);
-      else
-        NewBB = PreMBB->SplitCriticalEdge(&MBB, *MFAM, nullptr, &MDTU);
+      if (LiveOutSets.empty())
+        computeLiveOutSets(MF);
+      MachineBasicBlock *NewBB =
+          PreMBB->SplitCriticalEdge(&MBB, {LIS, SI, MLI, &LiveOutSets}, &MDTU);
       if (!NewBB) {
         LLVM_DEBUG(dbgs() << "Failed to split critical edge.\n");
         continue;
@@ -752,6 +753,21 @@ bool PHIEliminationImpl::SplitPHIEdges(MachineFunction &MF,
     }
   }
   return Changed;
+}
+
+void PHIEliminationImpl::computeLiveOutSets(const MachineFunction &MF) {
+  LiveOutSets.resize(MF.getNumBlockIDs());
+  for (unsigned Idx = 0, NumVRegs = MRI->getNumVirtRegs(); Idx != NumVRegs;
+       ++Idx) {
+    Register Reg = Register::index2VirtReg(Idx);
+    if (!LIS->hasInterval(Reg))
+      continue;
+    for (const LiveRange::Segment &S : LIS->getInterval(Reg)) {
+      for (const MachineBasicBlock *MBB = LIS->getMBBFromIndex(S.start);
+           MBB && LIS->getMBBEndIdx(MBB) <= S.end; MBB = MBB->getNextNode())
+        LiveOutSets[MBB->getNumber()].set(Idx);
+    }
+  }
 }
 
 bool PHIEliminationImpl::isLiveIn(Register Reg, const MachineBasicBlock *MBB) {

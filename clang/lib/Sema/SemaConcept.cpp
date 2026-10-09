@@ -2605,7 +2605,10 @@ bool Sema::IsAtLeastAsConstrained(const NamedDecl *D1,
     auto IsExpectedEntity = [](const FunctionDecl *FD) {
       FunctionDecl::TemplatedKind Kind = FD->getTemplatedKind();
       return Kind == FunctionDecl::TK_NonTemplate ||
-             Kind == FunctionDecl::TK_FunctionTemplate;
+             Kind == FunctionDecl::TK_FunctionTemplate ||
+             (Kind == FunctionDecl::TK_MemberSpecialization &&
+              FD->getInstantiatedFromMemberFunction()
+                      ->getOverloadedOperator() == OO_Spaceship);
     };
     const auto *FD2 = dyn_cast<FunctionDecl>(D2);
     assert(IsExpectedEntity(FD1) && FD2 && IsExpectedEntity(FD2) &&
