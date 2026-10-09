@@ -312,7 +312,7 @@ class PrologEpilogSGPRSpillBuilder {
   const DebugLoc &DL;
   Register FrameReg;
   ArrayRef<int16_t> SplitParts;
-  unsigned NumSubRegs;
+  size_t NumSubRegs;
   unsigned EltSize = 4;
   bool IsFramePtrPrologSpill;
   bool NeedsFrameMoves;
@@ -504,8 +504,7 @@ public:
         NeedsFrameMoves(MF.needsFrameMoves()) {
     const TargetRegisterClass *RC = TRI.getPhysRegBaseClass(SuperReg);
     SplitParts = TRI.getRegSplitParts(RC, EltSize);
-    NumSubRegs =
-        static_cast<unsigned>(SplitParts.empty() ? 1 : SplitParts.size());
+    NumSubRegs = SplitParts.empty() ? 1 : SplitParts.size();
 
     assert(SuperReg != AMDGPU::M0 && "m0 should never spill");
   }
@@ -597,8 +596,7 @@ void SIFrameLowering::emitEntryFunctionFlatScratchInit(
     unsigned Offset =
         MF.getFunction().getCallingConv() == CallingConv::AMDGPU_CS ? 16 : 0;
     const GCNSubtarget &Subtarget = MF.getSubtarget<GCNSubtarget>();
-    unsigned EncodedOffset = static_cast<unsigned>(
-        AMDGPU::convertSMRDOffsetUnits(Subtarget, Offset));
+    uint64_t EncodedOffset = AMDGPU::convertSMRDOffsetUnits(Subtarget, Offset);
     BuildMI(MBB, I, DL, LoadDwordX2, FlatScrInit)
         .addReg(FlatScrInit)
         .addImm(EncodedOffset) // offset
@@ -978,8 +976,7 @@ void SIFrameLowering::emitEntryFunctionScratchRsrcRegSetup(
         16, Align(4));
     unsigned Offset = Fn.getCallingConv() == CallingConv::AMDGPU_CS ? 16 : 0;
     const GCNSubtarget &Subtarget = MF.getSubtarget<GCNSubtarget>();
-    unsigned EncodedOffset = static_cast<unsigned>(
-        AMDGPU::convertSMRDOffsetUnits(Subtarget, Offset));
+    uint64_t EncodedOffset = AMDGPU::convertSMRDOffsetUnits(Subtarget, Offset);
     BuildMI(MBB, I, DL, LoadDwordX4, ScratchRsrcReg)
       .addReg(Rsrc01)
       .addImm(EncodedOffset) // offset

@@ -401,7 +401,7 @@ insertUndefLaneMask(MachineBasicBlock *MBB, MachineRegisterInfo *MRI,
 static bool isVRegCompatibleReg(const SIRegisterInfo &TRI,
                                 const MachineRegisterInfo &MRI,
                                 Register Reg) {
-  unsigned Size = static_cast<unsigned>(TRI.getRegSizeInBits(Reg, MRI));
+  uint64_t Size = TRI.getRegSizeInBits(Reg, MRI);
   return Size == 1 || Size == 32;
 }
 #endif

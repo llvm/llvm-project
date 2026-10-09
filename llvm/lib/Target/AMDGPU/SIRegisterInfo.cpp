@@ -665,8 +665,7 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   unsigned TotalNumSGPRs = AMDGPU::SGPR_32RegClass.getNumRegs();
   for (const TargetRegisterClass &RC : regclasses()) {
     if (RC.isBaseClass() && isSGPRClass(&RC)) {
-      unsigned NumRegs =
-          static_cast<unsigned>(divideCeil(getRegSizeInBits(RC), 32));
+      uint64_t NumRegs = divideCeil(getRegSizeInBits(RC), 32);
       for (MCPhysReg Reg : RC) {
         unsigned Index = getHWRegIndex(Reg);
         if (Index + NumRegs > MaxNumSGPRs && Index < TotalNumSGPRs &&
@@ -728,8 +727,7 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   for (const TargetRegisterClass &RC : regclasses()) {
     if (RC.isBaseClass() && isVGPRClass(&RC)) {
-      unsigned NumRegs =
-          static_cast<unsigned>(divideCeil(getRegSizeInBits(RC), 32));
+      uint64_t NumRegs = divideCeil(getRegSizeInBits(RC), 32);
       for (MCPhysReg Reg : RC) {
         unsigned Index = getHWRegIndex(Reg);
         if (Index + NumRegs > MaxNumVGPRs)
@@ -743,8 +741,7 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     MaxNumAGPRs = 0;
   for (const TargetRegisterClass &RC : regclasses()) {
     if (RC.isBaseClass() && isAGPRClass(&RC)) {
-      unsigned NumRegs =
-          static_cast<unsigned>(divideCeil(getRegSizeInBits(RC), 32));
+      uint64_t NumRegs = divideCeil(getRegSizeInBits(RC), 32);
       for (MCPhysReg Reg : RC) {
         unsigned Index = getHWRegIndex(Reg);
         if (Index + NumRegs > MaxNumAGPRs)
