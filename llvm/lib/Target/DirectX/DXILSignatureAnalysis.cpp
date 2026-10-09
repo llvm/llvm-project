@@ -28,19 +28,17 @@ using namespace llvm;
 using namespace llvm::dxil;
 using namespace llvm::hlsl;
 
-namespace {
-
-Error signatureError(const Twine &Message) {
+static Error signatureError(const Twine &Message) {
   return createStringError(inconvertibleErrorCode(), Message);
 }
 
-bool isSignatureAccess(const IntrinsicInst &I) {
+static bool isSignatureAccess(const IntrinsicInst &I) {
   return I.getIntrinsicID() == Intrinsic::dx_load_input ||
          I.getIntrinsicID() == Intrinsic::dx_store_output;
 }
 
 // Validate widths before fromMetadata extracts integer values or narrows them.
-Error checkElementNode(const MDNode *Node) {
+static Error checkElementNode(const MDNode *Node) {
   if (!Node || Node->getNumOperands() != 13)
     return signatureError("expected a 13-operand signature element");
   for (unsigned I = 0; I != 13; ++I) {
@@ -65,16 +63,17 @@ Error checkElementNode(const MDNode *Node) {
   return Error::success();
 }
 
-bool isIntegerComponent(ElementType Type) {
+static bool isIntegerComponent(ElementType Type) {
   return Type == ElementType::I1 || Type == ElementType::I16 ||
          Type == ElementType::U16 || Type == ElementType::I32 ||
          Type == ElementType::U32;
 }
 
-Error parseSignature(Metadata *MD,
-                     SmallVectorImpl<SemanticSignatureElement> &Out,
-                     ModuleSignatureInfo &Info, Triple::EnvironmentType Stage,
-                     IOType IO, unsigned &Extent) {
+static Error parseSignature(Metadata *MD,
+                            SmallVectorImpl<SemanticSignatureElement> &Out,
+                            ModuleSignatureInfo &Info,
+                            Triple::EnvironmentType Stage, IOType IO,
+                            unsigned &Extent) {
   if (!MD)
     return Error::success();
   auto *List = dyn_cast<MDNode>(MD);
@@ -182,7 +181,7 @@ Error parseSignature(Metadata *MD,
   return Error::success();
 }
 
-Error analyzeAccess(const IntrinsicInst &I, EntrySignature &Sig) {
+static Error analyzeAccess(const IntrinsicInst &I, EntrySignature &Sig) {
   bool Input = I.getIntrinsicID() == Intrinsic::dx_load_input;
   auto &Elements = Input ? Sig.Inputs : Sig.Outputs;
   auto *ID = dyn_cast<ConstantInt>(I.getArgOperand(0));
@@ -249,7 +248,7 @@ Error analyzeAccess(const IntrinsicInst &I, EntrySignature &Sig) {
   return Error::success();
 }
 
-void buildDependencyMap(EntrySignature &Sig) {
+static void buildDependencyMap(EntrySignature &Sig) {
   // Each output vector needs four component bits, so one 32-bit word holds
   // eight vectors. Adding seven rounds up to include a partially filled word.
   unsigned Words = (Sig.OutputVectors + 7) / 8;
@@ -276,8 +275,8 @@ void buildDependencyMap(EntrySignature &Sig) {
       }
 }
 
-Expected<ModuleSignatureInfo> analyzeModule(Module &M,
-                                            const ModuleMetadataInfo &MMI) {
+static Expected<ModuleSignatureInfo>
+analyzeModule(Module &M, const ModuleMetadataInfo &MMI) {
   ModuleSignatureInfo Info;
   if (NamedMDNode *Table = M.getNamedMetadata("dx.semantic.signatures")) {
     for (const MDNode *Record : Table->operands()) {
@@ -337,8 +336,8 @@ Expected<ModuleSignatureInfo> analyzeModule(Module &M,
   return std::move(Info);
 }
 
-ModuleSignatureInfo collectSignatures(Module &M,
-                                      const ModuleMetadataInfo &MMI) {
+static ModuleSignatureInfo collectSignatures(Module &M,
+                                             const ModuleMetadataInfo &MMI) {
   auto Result = analyzeModule(M, MMI);
   if (!Result) {
     M.getContext().emitError("Invalid semantic signature: " +
@@ -348,9 +347,9 @@ ModuleSignatureInfo collectSignatures(Module &M,
   return std::move(*Result);
 }
 
-MDNode *emitSignature(LLVMContext &Ctx,
-                      ArrayRef<SemanticSignatureElement> Elements,
-                      VersionTuple ValidatorVersion) {
+static MDNode *emitSignature(LLVMContext &Ctx,
+                             ArrayRef<SemanticSignatureElement> Elements,
+                             VersionTuple ValidatorVersion) {
   if (Elements.empty())
     return nullptr;
   auto I32 = [&](uint32_t V) {
@@ -383,7 +382,7 @@ MDNode *emitSignature(LLVMContext &Ctx,
   return MDNode::get(Ctx, Nodes);
 }
 
-dxbc::SigComponentType getComponentType(ElementType Type, bool Legacy) {
+static dxbc::SigComponentType getComponentType(ElementType Type, bool Legacy) {
   switch (Type) {
   case ElementType::I1:
     return Legacy ? dxbc::SigComponentType::Unknown
@@ -405,7 +404,7 @@ dxbc::SigComponentType getComponentType(ElementType Type, bool Legacy) {
   }
 }
 
-dxbc::D3DSystemValue getSystemValue(dxbc::PSV::SemanticKind Kind) {
+static dxbc::D3DSystemValue getSystemValue(dxbc::PSV::SemanticKind Kind) {
   using KindTy = dxbc::PSV::SemanticKind;
   switch (Kind) {
   case KindTy::Arbitrary:
@@ -431,7 +430,7 @@ dxbc::D3DSystemValue getSystemValue(dxbc::PSV::SemanticKind Kind) {
 // metadata. The validator then recreates ISG1/OSG1 from those normalized names
 // and compares the parts byte-for-byte, so the container must use the same
 // spelling even if HLSL (or the source metadata) used a different casing.
-StringRef getContainerSemanticName(const SemanticSignatureElement &E) {
+static StringRef getContainerSemanticName(const SemanticSignatureElement &E) {
   using Kind = dxbc::PSV::SemanticKind;
   switch (E.SemanticKind) {
   case Kind::Arbitrary:
@@ -453,9 +452,9 @@ StringRef getContainerSemanticName(const SemanticSignatureElement &E) {
   }
 }
 
-void buildSignature(mcdxbc::Signature &Sig,
-                    ArrayRef<SemanticSignatureElement> Elements, bool Input,
-                    bool Native16, bool Legacy) {
+static void buildSignature(mcdxbc::Signature &Sig,
+                           ArrayRef<SemanticSignatureElement> Elements,
+                           bool Input, bool Native16, bool Legacy) {
   for (const auto &E : Elements) {
     uint8_t Mask = E.getDeclaredMask();
     uint8_t ExclusiveMask =
@@ -470,9 +469,9 @@ void buildSignature(mcdxbc::Signature &Sig,
   }
 }
 
-void buildPSVElements(SmallVectorImpl<mcdxbc::PSVSignatureElement> &Dest,
-                      ArrayRef<SemanticSignatureElement> Elements,
-                      bool Legacy) {
+static void buildPSVElements(SmallVectorImpl<mcdxbc::PSVSignatureElement> &Dest,
+                             ArrayRef<SemanticSignatureElement> Elements,
+                             bool Legacy) {
   for (const auto &E : Elements) {
     auto Type = getComponentType(E.CompType, Legacy);
     // SigComponentType and PSV ComponentType share COMPONENT_TYPE definitions.
@@ -485,8 +484,6 @@ void buildPSVElements(SmallVectorImpl<mcdxbc::PSVSignatureElement> &Dest,
                     E.DynIndexMask, static_cast<uint8_t>(E.GSStream)});
   }
 }
-
-} // namespace
 
 MDTuple *EntrySignature::getAsMetadata(LLVMContext &Ctx,
                                        VersionTuple ValidatorVersion) const {
