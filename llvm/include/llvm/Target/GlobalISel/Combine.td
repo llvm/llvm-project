@@ -1274,11 +1274,11 @@ def trunc_shift: GICombineRule <
   (apply [{ Helper.applyCombineTruncOfShift(*${root}, ${matchinfo}); }])
 >;
 
-// Simplify operands of AND/OR under their demanded bits.
-// Targets opt in explicitly.
+// Simplify operands of logical operations and constant shifts under their
+// demanded bits. Targets opt in explicitly.
 def simplify_demanded_bits : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_AND, G_OR):$root,
+  (match (wip_match_opcode G_AND, G_OR, G_SHL, G_LSHR, G_ASHR):$root,
          [{ return Helper.matchSimplifyDemandedBits(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFnNoErase(*${root}, ${matchinfo}); }])>;
 
