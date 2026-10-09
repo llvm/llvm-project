@@ -374,6 +374,10 @@ Makes programs 10x faster by doing Special New Thing.
   sequence. The latter API may fail if the indices cannot be converted into
   ptradd representation.
 
+* Added `LLVMIsDSOLocal()` and `LLVMSetDSOLocal()` to query and set the
+  `dso_local` runtime preemption specifier on global values (global variables,
+  functions and aliases).
+
 ### Changes to the CodeGen infrastructure
 
 * Fixed a crash
