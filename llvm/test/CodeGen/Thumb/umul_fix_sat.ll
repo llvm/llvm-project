@@ -424,16 +424,17 @@ define i64 @func8(i64 %x, i64 %y) nounwind {
 ; ARM-NEXT:    bl __aeabi_lmul
 ; ARM-NEXT:    adds r0, r0, r5
 ; ARM-NEXT:    adcs r1, r7
-; ARM-NEXT:    lsls r1, r1, #1
-; ARM-NEXT:    lsrs r5, r0, #31
-; ARM-NEXT:    adds r2, r1, r5
-; ARM-NEXT:    lsls r0, r0, #1
-; ARM-NEXT:    ldr r1, [sp] @ 4-byte Reload
+; ARM-NEXT:    lsls r2, r1, #1
+; ARM-NEXT:    lsrs r3, r0, #31
+; ARM-NEXT:    adds r3, r2, r3
 ; ARM-NEXT:    lsrs r1, r1, #31
-; ARM-NEXT:    adds r3, r0, r1
-; ARM-NEXT:    mvns r1, r4
-; ARM-NEXT:    cmp r5, #0
-; ARM-NEXT:    mov r0, r1
+; ARM-NEXT:    lsls r0, r0, #1
+; ARM-NEXT:    ldr r2, [sp] @ 4-byte Reload
+; ARM-NEXT:    lsrs r2, r2, #31
+; ARM-NEXT:    adds r2, r0, r2
+; ARM-NEXT:    mvns r0, r4
+; ARM-NEXT:    cmp r1, #0
+; ARM-NEXT:    mov r1, r0
 ; ARM-NEXT:    beq .LBB8_3
 ; ARM-NEXT:  @ %bb.1:
 ; ARM-NEXT:    beq .LBB8_4
@@ -441,10 +442,10 @@ define i64 @func8(i64 %x, i64 %y) nounwind {
 ; ARM-NEXT:    add sp, #12
 ; ARM-NEXT:    pop {r4, r5, r6, r7, pc}
 ; ARM-NEXT:  .LBB8_3:
-; ARM-NEXT:    mov r0, r3
+; ARM-NEXT:    mov r1, r3
 ; ARM-NEXT:    bne .LBB8_2
 ; ARM-NEXT:  .LBB8_4:
-; ARM-NEXT:    mov r1, r2
+; ARM-NEXT:    mov r0, r2
 ; ARM-NEXT:    add sp, #12
 ; ARM-NEXT:    pop {r4, r5, r6, r7, pc}
   %tmp = call i64 @llvm.umul.fix.sat.i64(i64 %x, i64 %y, i32 63)
