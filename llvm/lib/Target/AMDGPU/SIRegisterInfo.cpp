@@ -4596,13 +4596,12 @@ MCPhysReg SIRegisterInfo::get32BitRegister(MCPhysReg Reg) const {
   for (const TargetRegisterClass *RC :
        {&AMDGPU::VGPR_32RegClass, &AMDGPU::SReg_32RegClass,
         &AMDGPU::AGPR_32RegClass}) {
-    if (MCPhysReg Super =
-            static_cast<MCPhysReg>(getMatchingSuperReg(Reg, AMDGPU::lo16, RC)))
+    if (MCPhysReg Super = getMatchingSuperReg(Reg, AMDGPU::lo16, RC))
       return Super;
   }
-  if (MCPhysReg Super = static_cast<MCPhysReg>(
-          getMatchingSuperReg(Reg, AMDGPU::hi16, &AMDGPU::VGPR_32RegClass))) {
-    return Super;
+  if (MCPhysReg Super = getMatchingSuperReg(Reg, AMDGPU::hi16,
+                                            &AMDGPU::VGPR_32RegClass)) {
+      return Super;
   }
 
   return AMDGPU::NoRegister;
