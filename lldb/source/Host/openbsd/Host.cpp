@@ -19,9 +19,11 @@
 
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Host/posix/GetProcessList.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/NameMatches.h"
 #include "lldb/Utility/ProcessInfo.h"
@@ -127,29 +129,16 @@ uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
                                  ProcessInstanceInfoList &process_infos) {
   std::vector<struct kinfo_proc> kinfos;
 
-  int mib[3] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL};
-
-  size_t pid_data_size = 0;
-  if (::sysctl(mib, 3, NULL, &pid_data_size, NULL, 0) != 0)
+  if (llvm::Error error = GetProcessList(kinfos)) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Host | LLDBLog::Process), std::move(error),
+                   "failed to read process list: {0}");
     return 0;
-
-  // Add a few extra in case a few more show up
-  const size_t estimated_pid_count =
-      (pid_data_size / sizeof(struct kinfo_proc)) + 10;
-
-  kinfos.resize(estimated_pid_count);
-  pid_data_size = kinfos.size() * sizeof(struct kinfo_proc);
-
-  if (::sysctl(mib, 3, &kinfos[0], &pid_data_size, NULL, 0) != 0)
-    return 0;
-
-  const size_t actual_pid_count = (pid_data_size / sizeof(struct kinfo_proc));
+  }
 
   bool all_users = match_info.GetMatchAllUsers();
   const ::pid_t our_pid = getpid();
   const uid_t our_uid = getuid();
-  for (size_t i = 0; i < actual_pid_count; i++) {
-    const struct kinfo_proc &kinfo = kinfos[i];
+  for (const struct kinfo_proc &kinfo : kinfos) {
     const bool kinfo_user_matches = (all_users || (kinfo.p_ruid == our_uid) ||
                                      // Special case, if lldb is being run as
                                      // root we can attach to anything.
