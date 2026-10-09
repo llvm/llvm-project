@@ -1324,13 +1324,11 @@ bool AtomicExpandImpl::expandPartwordCmpXchg(AtomicCmpXchgInst *CI) {
   // addIncoming is done first so that any replaceAllUsesWith calls during
   // normalization correctly update the PHI incoming value.
   InitLoaded->setVolatile(CI->isVolatile());
-  if (TLI->shouldIssueAtomicLoadForAtomicEmulationLoop()) {
-    InitLoaded->setAtomic(AtomicOrdering::Monotonic, CI->getSyncScopeID());
-    // The newly created load might need to be lowered further. Because it is
-    // created in the same block as the atomicrmw, the AtomicExpand loop will
-    // not process it again.
-    processAtomicInstr(InitLoaded);
-  }
+  InitLoaded->setAtomic(AtomicOrdering::Monotonic, CI->getSyncScopeID());
+  // The newly created load might need to be lowered further. Because it is
+  // created in the same block as the atomicrmw, the AtomicExpand loop will
+  // not process it again.
+  processAtomicInstr(InitLoaded);
 
   // Mask/Or the expected and new values into place in the loaded word.
   Value *FullWord_NewVal = Builder.CreateOr(Loaded_MaskOut, NewVal_Shifted);
@@ -1873,13 +1871,11 @@ Value *AtomicExpandImpl::insertRMWCmpXchgLoop(
   // addIncoming is done first so that any replaceAllUsesWith calls during
   // normalization correctly update the PHI incoming value.
   InitLoaded->setVolatile(IsVolatile);
-  if (TLI->shouldIssueAtomicLoadForAtomicEmulationLoop()) {
-    InitLoaded->setAtomic(AtomicOrdering::Monotonic, SSID);
-    // The newly created load might need to be lowered further. Because it is
-    // created in the same block as the atomicrmw, the AtomicExpand loop will
-    // not process it again.
-    processAtomicInstr(InitLoaded);
-  }
+  InitLoaded->setAtomic(AtomicOrdering::Monotonic, SSID);
+  // The newly created load might need to be lowered further. Because it is
+  // created in the same block as the atomicrmw, the AtomicExpand loop will
+  // not process it again.
+  processAtomicInstr(InitLoaded);
 
   Value *NewVal = PerformOp(Builder, Loaded);
 
