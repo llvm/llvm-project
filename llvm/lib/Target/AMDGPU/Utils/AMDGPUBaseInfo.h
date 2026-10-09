@@ -1783,6 +1783,12 @@ bool isIntrinsicSourceOfDivergence(unsigned IntrID);
 /// \returns true if the intrinsic is uniform
 bool isIntrinsicAlwaysUniform(unsigned IntrID);
 
+/// Given \p BaseName, the base name of a buffer intrinsic that takes its
+/// resource as a <4 x i32>, \returns the base name of the deprecation
+/// replacement that takes a ptr addrspace(8), or "" if \p BaseName does not
+/// look like such an intrinsic.
+std::string getPtrBufferIntrinsicName(StringRef BaseName);
+
 /// \returns a register class for the physical register \p Reg if it is a VGPR
 /// or nullptr otherwise.
 const MCRegisterClass *getVGPRPhysRegClass(MCRegister Reg,

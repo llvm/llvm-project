@@ -3366,6 +3366,15 @@ bool isIntrinsicAlwaysUniform(unsigned IntrID) {
   return lookupAlwaysUniform(IntrID);
 }
 
+std::string getPtrBufferIntrinsicName(StringRef BaseName) {
+  if (BaseName == "llvm.amdgcn.s.buffer.load")
+    return "llvm.amdgcn.ptr.s.buffer.load";
+  for (StringRef Prefix : {"llvm.amdgcn.raw.", "llvm.amdgcn.struct."})
+    if (BaseName.starts_with(Prefix))
+      return (Prefix + "ptr." + BaseName.drop_front(Prefix.size())).str();
+  return "";
+}
+
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
                                                   uint8_t NumComponents,
                                                   uint8_t NumFormat,
