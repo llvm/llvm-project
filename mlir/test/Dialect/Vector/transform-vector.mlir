@@ -142,8 +142,7 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// Regression test for a crash in the lowering of a contraction with a scalar
-// result when unit reduction dims appear on only one operand after folding.
+// Regression test for a crash in the lowering of a contraction with a scalar result 
 // see https://github.com/llvm/llvm-project/issues/228971
 
 // CHECK-LABEL: func.func @contract_scalar_result_unit_dims_lowering
