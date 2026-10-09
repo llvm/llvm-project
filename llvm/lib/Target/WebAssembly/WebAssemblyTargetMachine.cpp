@@ -193,6 +193,10 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
   basicCheckForEHAndSjLj(this);
   initAsmInfo();
 
+  // WebAssembly does not run RegAllocFast; tied operands must be lowered by
+  // TwoAddressInstructionPass.
+  setEnableTiedFastRegAlloc(false);
+
   LLT::setUseExtended(true);
 
   // Note that we don't use setRequiresStructuredCFG(true). It disables
@@ -326,7 +330,7 @@ void WebAssemblyPassConfig::addIRPasses() {
     addPass(createWebAssemblyLowerEmscriptenEHSjLjLegacyPass(EnableEmEH));
 
   // Expand indirectbr instructions to switches.
-  addPass(createIndirectBrExpandPass());
+  addPass(createIndirectBrExpandPass(getOptLevel()));
 
   // Try to expand `vecreduce_{and, or}` into `{any, all}_true`.
   addPass(createWebAssemblyReduceToAnyAllTrueLegacyPass(
