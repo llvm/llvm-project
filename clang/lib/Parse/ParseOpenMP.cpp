@@ -2614,10 +2614,11 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   case OMPD_metadirective: {
     ConsumeToken();
     SmallVector<VariantMatchInfo, 4> VMIs;
+    SmallVector<OMPTraitInfo *, 4> TraitInfos;
 
     // First iteration of parsing all clauses of metadirective.
-    // This iteration only parses and collects all context selector ignoring the
-    // associated directives.
+    // This iteration only parses and collects all context selectors ignoring
+    // the associated directives.
     TentativeParsingAction TPA(*this);
     ASTContext &ASTContext = Actions.getASTContext();
 
@@ -2693,6 +2694,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       TI.getAsVariantMatchInfo(ASTContext, VMI);
 
       VMIs.push_back(VMI);
+      TraitInfos.push_back(&TI);
     }
 
     TPA.Revert();
@@ -2711,6 +2713,153 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
 
     // A single match is returned for OpenMP 5.0
     int BestIdx = getBestVariantMatchForContext(VMIs, OMPCtx);
+
+    // Check if we have user conditions with non-constant expressions that
+    // require runtime selection.
+    bool HasUserCondition = llvm::any_of(VMIs, [](const VariantMatchInfo &VMI) {
+      return VMI.HasNonConstantUserCondition;
+    });
+
+    // Different directives have different data-sharing attributes, so each
+    // variant needs its own CapturedStmt with proper DSA context.
+    // We manually cache body tokens and inject them for each variant parse.
+    if (HasUserCondition) {
+      SmallVector<OpenMPClauseKind, 4> ClauseKinds;
+      SmallVector<OpenMPDirectiveKind, 4> DirectiveKinds;
+      SmallVector<SmallVector<OMPClause *, 5>, 4> DirectiveClauses;
+
+      BalancedDelimiterTracker T(*this, tok::l_paren,
+                                 tok::annot_pragma_openmp_end);
+      while (Tok.isNot(tok::annot_pragma_openmp_end)) {
+        OpenMPClauseKind CKind = Tok.isAnnotation()
+                                     ? OMPC_unknown
+                                     : getOpenMPClauseKind(PP.getSpelling(Tok));
+        SourceLocation ClauseLoc = ConsumeToken();
+
+        // Parse '('.
+        T.consumeOpen();
+
+        if (CKind == OMPC_when) {
+          OMPTraitInfo &TI = Actions.getASTContext().getNewOMPTraitInfo();
+          parseOMPContextSelectors(ClauseLoc, TI);
+
+          // Parse ':'.
+          if (Tok.is(tok::colon))
+            ConsumeAnyToken();
+        }
+
+        OpenMPDirectiveKind DKind = OMPD_unknown;
+        SmallVector<OMPClause *, 5> Clauses;
+
+        if (!Tok.is(tok::r_paren)) {
+          // Parse directive kind (e.g., 'parallel', 'single').
+          DKind = parseOpenMPDirectiveKind(*this);
+
+          if (Tok.isNot(tok::annot_pragma_openmp_end) &&
+              Tok.isNot(tok::r_paren))
+            ConsumeAnyToken();
+
+          // Open temporary DSA block so clauses have an active directive frame.
+          if (DKind != OMPD_unknown)
+            Actions.OpenMP().StartOpenMPDSABlock(DKind, DeclarationNameInfo(),
+                                                 getCurScope(), ClauseLoc);
+
+          // Parse clauses for this directive variant.
+          while (Tok.isNot(tok::r_paren) &&
+                 Tok.isNot(tok::annot_pragma_openmp_end)) {
+            // Skip optional commas between clauses.
+            if (Tok.is(tok::comma))
+              ConsumeAnyToken();
+
+            OpenMPClauseKind ClauseKind =
+                Tok.isAnnotation() ? OMPC_unknown
+                                   : getOpenMPClauseKind(PP.getSpelling(Tok));
+
+            if (ClauseKind == OMPC_unknown)
+              break;
+
+            Actions.OpenMP().StartOpenMPClause(ClauseKind);
+            OMPClause *Clause =
+                ParseOpenMPClause(DKind, ClauseKind,
+                                  /* FirstClause */ Clauses.empty());
+            Actions.OpenMP().EndOpenMPClause();
+
+            if (Clause)
+              Clauses.push_back(Clause);
+          }
+
+          // Close the temporary DSA block for header parsing.
+          if (DKind != OMPD_unknown)
+            Actions.OpenMP().EndOpenMPDSABlock(nullptr);
+        }
+
+        // Parse ')' or recover to pragma end on syntax error.
+        if (T.consumeClose())
+          T.skipToEnd();
+
+        ClauseKinds.push_back(CKind);
+        DirectiveKinds.push_back(DKind);
+        DirectiveClauses.push_back(Clauses);
+      }
+
+      SourceLocation EndLoc = Tok.getLocation();
+      ConsumeAnnotationToken();
+
+      // Parse the body separately for each variant to establish proper DSA.
+      SmallVector<Stmt *, 4> VariantBodies;
+
+      for (unsigned I : llvm::seq<unsigned>(DirectiveKinds.size())) {
+        std::optional<TentativeParsingAction> TPA;
+        if (I < DirectiveKinds.size() - 1)
+          TPA.emplace(*this);
+
+        const bool HasDirective = (DirectiveKinds[I] != OMPD_unknown);
+
+        if (HasDirective) {
+          Actions.OpenMP().StartOpenMPDSABlock(
+              DirectiveKinds[I], DeclarationNameInfo(), getCurScope(), Loc);
+          Actions.OpenMP().ActOnOpenMPRegionStart(DirectiveKinds[I],
+                                                  getCurScope());
+        }
+
+        StmtResult Body;
+        ParsingOpenMPDirectiveRAII NormalScope(*this, /*Value=*/false);
+        {
+          Sema::CompoundScopeRAII Scope(Actions);
+          Body = ParseStatement();
+        }
+        if (Body.isInvalid()) {
+          if (HasDirective)
+            Actions.OpenMP().EndOpenMPDSABlock(nullptr);
+          if (TPA)
+            TPA->Revert();
+          return StmtError();
+        }
+        if (HasDirective) {
+          Body =
+              Actions.OpenMP().ActOnOpenMPRegionEnd(Body, DirectiveClauses[I]);
+          if (Body.isInvalid()) {
+            Actions.OpenMP().EndOpenMPDSABlock(nullptr);
+            if (TPA)
+              TPA->Revert();
+            return StmtError();
+          }
+
+          Actions.OpenMP().EndOpenMPDSABlock(Body.get());
+        }
+        VariantBodies.push_back(Body.get());
+        if (TPA)
+          TPA->Revert();
+      }
+
+      // Convert DirectiveClauses to ArrayRef<ArrayRef<OMPClause *>>.
+      SmallVector<ArrayRef<OMPClause *>, 4> ClausesArrayRefs;
+      for (const auto &Clauses : DirectiveClauses)
+        ClausesArrayRefs.push_back(Clauses);
+      return Actions.OpenMP().ActOnOpenMPMetaDirective(
+          Loc, EndLoc, TraitInfos, ClauseKinds, DirectiveKinds,
+          ClausesArrayRefs, VariantBodies);
+    }
 
     int Idx = 0;
     // In OpenMP 5.0 metadirective is either replaced by another directive or
