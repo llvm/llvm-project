@@ -2551,9 +2551,9 @@ cc_library(
         ],
     ),
     hdrs = [
-        "include/llvm/LinkAllPasses.h",
         "include/llvm/CodeGen/RegAllocEvictModels.h",
         "include/llvm/CodeGen/regalloc_Model1.h",
+        "include/llvm/LinkAllPasses.h",
     ] + glob(
         [
             "include/llvm/CodeGen/**/*.h",
