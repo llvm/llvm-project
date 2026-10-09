@@ -1841,7 +1841,7 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
   int V1Size =
       cast<VectorType>(V1->getType())->getElementCount().getKnownMinValue();
   for (int Elem : Mask)
-    if (Elem != PoisonMaskElem && Elem >= V1Size * 2)
+    if (Elem != PoisonMaskElem && Elem >= (int64_t)V1Size * 2)
       return false;
 
   if (isa<ScalableVectorType>(V1->getType()))
@@ -1962,7 +1962,7 @@ static bool isSingleSourceMaskImpl(ArrayRef<int> Mask, int NumOpElts) {
   for (int I : Mask) {
     if (I == -1)
       continue;
-    assert(I >= 0 && I < (NumOpElts * 2) &&
+    assert(I >= 0 && I < ((int64_t)NumOpElts * 2) &&
            "Out-of-bounds shuffle mask element");
     UsesLHS |= (I < NumOpElts);
     UsesRHS |= (I >= NumOpElts);
