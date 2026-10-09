@@ -9,6 +9,7 @@
 #include "AArch64PrologueEpilogue.h"
 #include "AArch64FrameLowering.h"
 #include "AArch64MachineFunctionInfo.h"
+#include "AArch64PointerAuth.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/ADT/Statistic.h"
@@ -1374,6 +1375,9 @@ void AArch64EpilogueEmitter::emitEpilogue() {
                                               MF.getFunction().isVarArg());
   unsigned FixedObject = AFL.getFixedObjectSize(MF, AFI, IsWin64, IsFunclet);
 
+  const bool AuthenticateReturnAddressEarly =
+      !IsFunclet && AFL.authenticatesReturnAddressEarly(MF, MBB);
+
   int64_t AfterCSRPopSize = ArgumentStackToRestore;
   auto PrologueSaveSize = AFI->getCalleeSavedStackSize() + FixedObject;
   // We cannot rely on the local stack size set in emitPrologue if the function
@@ -1415,8 +1419,13 @@ void AArch64EpilogueEmitter::emitEpilogue() {
     AfterCSRPopSize += FixedObject;
   }
 
-  // Assume we can't combine the last pop with the sp restore.
-  if (!CombineSPBump && ProloguePopSize != 0) {
+  // Assume we can't combine the last pop with the sp restore. If the return
+  // address is authenticated early, it wasn't restored, so the last pop may
+  // not exist, and in any case the SP adjustment is made explicitly.
+  if (!CombineSPBump && ProloguePopSize != 0 &&
+      AuthenticateReturnAddressEarly) {
+    AfterCSRPopSize += ProloguePopSize;
+  } else if (!CombineSPBump && ProloguePopSize != 0) {
     MachineBasicBlock::iterator Pop = std::prev(MBB.getFirstTerminator());
     while (Pop->getOpcode() == TargetOpcode::CFI_INSTRUCTION ||
            AArch64InstrInfo::isSEHInstruction(*Pop) ||
@@ -1469,6 +1478,13 @@ void AArch64EpilogueEmitter::emitEpilogue() {
       fixupCalleeSaveRestoreStackOffset(*FirstGPRRestoreI,
                                         AFI->getLocalStackSize());
   }
+
+  // The unwind info can't describe authenticating the return address in an
+  // epilogue that leaves SP somewhere other than where it was on entry, so do
+  // it before the epilogue starts instead.
+  if (AuthenticateReturnAddressEarly)
+    emitEarlyReturnAddressAuthentication(FirstGPRRestoreI, MFI.getStackSize(),
+                                         PrologueSaveSize);
 
   if (NeedsWinCFI) {
     // Note that there are cases where we insert SEH opcodes in the
@@ -1744,6 +1760,96 @@ void AArch64EpilogueEmitter::emitShadowCallStackEpilogue(
         .buildRestore(AArch64::X18);
 }
 
+void AArch64EpilogueEmitter::emitEarlyReturnAddressAuthentication(
+    MachineBasicBlock::iterator MBBI, int64_t StackSize,
+    int64_t PrologueSaveSize) {
+  // Windows unwind info describes authenticating the return address with a
+  // pac_sign_lr unwind code, which the unwinder applies using the SP it has at
+  // that point; that is only the SP the return address was signed with if the
+  // epilogue ends with SP back at its entry value. When it doesn't, we
+  // authenticate the return address here instead, in the body, where the
+  // prologue's unwind codes apply and the return address is still signed. The
+  // epilogue's unwind codes then have no pac_sign_lr, and nor do they restore
+  // LR: the authenticated return address stays in LR (it is never written back
+  // to the stack) and the epilogue doesn't reload it. There is no window in
+  // which the unwinder sees the wrong state: this sequence is immediately
+  // before the start of the epilogue, so the prologue's codes apply to every
+  // instruction up to and including the last of it, which recover the signed
+  // return address from its slot on the stack, and the epilogue's apply after.
+  if (AFI->hasSVEStackSize())
+    report_fatal_error("Can't handle a tail call that changes the stack "
+                       "argument size in a function with SVE stack objects "
+                       "that signs its return address on Windows");
+
+  // The return address is only on the stack if it was spilled.
+  std::optional<int> LRFrameIdx;
+  for (const CalleeSavedInfo &CSI : MFI.getCalleeSavedInfo())
+    if (CSI.getReg() == AArch64::LR)
+      LRFrameIdx = CSI.getFrameIdx();
+
+  // When the frame is addressed via the FP, the return address is in the frame
+  // record, at FP + 8. We don't refer to its frame index there because the SP
+  // is not reliable as a base, and the frame index of a callee-saved register
+  // isn't always recognised as one on Windows when there is a tail call
+  // reserve.
+  bool UseFP = MFI.hasVarSizedObjects() || AFI->isStackRealigned();
+
+  // Compute the SP the return address was signed with, which is SP on entry.
+  if (UseFP)
+    emitFrameOffset(
+        MBB, MBBI, DL, AArch64::X16, AArch64::FP,
+        StackOffset::getFixed(PrologueSaveSize -
+                              AFI->getCalleeSaveBaseToFrameRecordOffset()),
+        TII, MachineInstr::NoFlags);
+  else
+    emitFrameOffset(MBB, MBBI, DL, AArch64::X16, AArch64::SP,
+                    StackOffset::getFixed(StackSize), TII,
+                    MachineInstr::NoFlags);
+
+  // LR holds whatever the last call left in it; get the signed return address.
+  // The authentication sequence expects it in X17 if it works on that and moves
+  // the result to LR, which saves a copy.
+  bool InX17 = AArch64PAuth::authenticatesLRViaX17(
+      AFI->branchProtectionPAuthLR(), Subtarget.hasPAuth());
+  Register SignedLR = InX17 ? Register(AArch64::X17) : Register(AArch64::LR);
+  if (LRFrameIdx) {
+    MachineInstrBuilder MIB =
+        BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRXui), SignedLR);
+    if (UseFP)
+      MIB.addReg(AArch64::FP).addImm(1);
+    else
+      MIB.addFrameIndex(*LRFrameIdx).addImm(0);
+    MIB.addMemOperand(MF.getMachineMemOperand(
+        MachinePointerInfo::getFixedStack(MF, *LRFrameIdx),
+        MachineMemOperand::MOLoad, 8, Align(8)));
+  } else if (InX17) {
+    // The return address was never spilled, so it is still in LR.
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), AArch64::X17)
+        .addReg(AArch64::XZR)
+        .addReg(AArch64::LR)
+        .addImm(0);
+  }
+
+  auto Builder =
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::PAUTH_EPILOGUE_ENTRY_SP));
+  Builder.addReg(AArch64::X16, RegState::Implicit);
+  if (InX17) {
+    Builder.addReg(AArch64::X17, RegState::Implicit);
+    // The pseudo's implicit use of LR is not a real one here; the signed return
+    // address is in X17, and LR only gets written.
+    Builder->findRegisterUseOperand(AArch64::LR, &RegInfo)->setIsUndef();
+  }
+  Builder.addReg(AArch64::X17, RegState::ImplicitDefine);
+  if (AFI->branchProtectionPAuthLR())
+    Builder.addReg(AArch64::X15, RegState::ImplicitDefine);
+
+  // This takes the place of the pseudo that would otherwise go at the end.
+  for (MachineInstr &MI : llvm::make_early_inc_range(MBB))
+    if (MI.getOpcode() == AArch64::PAUTH_EPILOGUE)
+      MI.eraseFromParent();
+  AuthenticatedReturnAddressEarly = true;
+}
+
 void AArch64EpilogueEmitter::emitCalleeSavedRestores(
     MachineBasicBlock::iterator MBBI, bool SVE) const {
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
@@ -1774,9 +1880,12 @@ void AArch64EpilogueEmitter::finalizeEpilogue() const {
   if (AFI->shouldSignReturnAddress(MF)) {
     // If pac-ret+leaf is in effect, PAUTH_EPILOGUE pseudo instructions
     // are inserted by emitPacRetPlusLeafHardening().
-    if (!AFL.shouldSignReturnAddressEverywhere(MF))
+    if (!AFL.shouldSignReturnAddressEverywhere(MF) &&
+        !AuthenticatedReturnAddressEarly)
       TII->createPauthEpilogueInstr(MBB, DL);
-    // AArch64PointerAuth pass will insert SEH_PACSignLR
+    // AArch64PointerAuth pass will insert SEH_PACSignLR, unless the return
+    // address was authenticated early (see
+    // emitEarlyReturnAddressAuthentication()).
     HasWinCFI |= NeedsWinCFI;
   }
   if (HasWinCFI) {
