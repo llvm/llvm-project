@@ -240,7 +240,9 @@ AnyValue Library::executePrintf(ArrayRef<AnyValue> Args) {
     }
 
     bool TypeMismatch =
-        (StringRef("diuoxXc").contains(Specifier) && !Arg.isInteger()) ||
+        (StringRef("diuoxXc").contains(Specifier) &&
+         !(Arg.isInteger() && (Arg.asInteger().getBitWidth() == 32 ||
+                               Arg.asInteger().getBitWidth() == 64))) ||
         (StringRef("feEgGaA").contains(Specifier) &&
          !(Arg.isFloat() &&
            &Arg.asFloat().getSemantics() == &APFloat::IEEEdouble())) ||
