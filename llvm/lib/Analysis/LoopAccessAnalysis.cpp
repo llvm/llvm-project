@@ -4039,9 +4039,6 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
     StrideBase = C->getOperand();
 
   ScalarEvolution *SE = PSE->getSE();
-  if (!SE->isAvailableAtLoopEntry(StrideBase, TheLoop))
-    return;
-
   const SCEV *MaxBTC = PSE->getSymbolicMaxBackedgeTakenCount();
   if (!LoopGuards)
     LoopGuards.emplace(ScalarEvolution::LoopGuards::collect(TheLoop, *SE));
