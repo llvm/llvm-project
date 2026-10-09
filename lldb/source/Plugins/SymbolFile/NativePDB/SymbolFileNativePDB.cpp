@@ -9,6 +9,7 @@
 #include "SymbolFileNativePDB.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
+#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/CPlusPlus/MSVCUndecoratedNameParser.h"
 #include "Plugins/ObjectFile/PDB/ObjectFilePDB.h"
 #include "Plugins/SymbolFile/PDB/SymbolFilePDB.h"
@@ -2223,8 +2224,14 @@ void SymbolFileNativePDB::FindGlobalVariables(
 
   CacheGlobalBaseNames();
 
+  llvm::StringRef context;
+  llvm::StringRef basename;
+  if (!CPlusPlusLanguage::ExtractContextAndIdentifier(name.GetStringRef(),
+                                                      context, basename))
+    basename = name.GetStringRef();
+
   std::vector<uint32_t> results;
-  m_global_variable_base_names.GetValues(name, results);
+  m_global_variable_base_names.GetValues(ConstString(basename), results);
 
   size_t n_matches = 0;
   for (uint32_t gid : results) {
@@ -2236,6 +2243,9 @@ void SymbolFileNativePDB::FindGlobalVariables(
 
     VariableSP var = GetOrCreateGlobalVariable(global);
     if (!var)
+      continue;
+    if (!context.empty() &&
+        !var->GetName().GetStringRef().contains(name.GetStringRef()))
       continue;
     variables.AddVariable(var);
 
