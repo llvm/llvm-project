@@ -16,13 +16,13 @@ subroutine f00(x, y, obj, objs)
   !$omp task depend(depobj: x)
   !$omp end task
 
-  ! Array sections cannot be specified.
-  !ERROR: Array sections cannot be specified in a DEPEND clause with the DEPOBJ dependence type
+  ! An array section is not a depend object (not scalar).
+  !ERROR: A list item in a DEPEND clause with the DEPOBJ dependence type must be a depend object (a scalar integer variable of kind omp_depend_kind)
   !$omp task depend(depobj: objs(1:3))
   !$omp end task
 
-  ! A whole array is not a depend object.
-  !ERROR: Array sections cannot be specified in a DEPEND clause with the DEPOBJ dependence type
+  ! A whole array is not a depend object (not scalar).
+  !ERROR: A list item in a DEPEND clause with the DEPOBJ dependence type must be a depend object (a scalar integer variable of kind omp_depend_kind)
   !$omp task depend(depobj: y)
   !$omp end task
 

@@ -5272,16 +5272,14 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
       if (!expr) {
         return;
       }
-      if (expr->Rank() != 0) {
-        context_.Say(GetContext().clauseSource,
-            "Array sections cannot be specified in a DEPEND clause with the DEPOBJ dependence type"_err_en_US);
-        return;
-      }
       // A depend object is a scalar integer of omp_depend_kind (c_intptr_t).
+      // Rank() != 0 also catches whole arrays, not just array sections, so use
+      // a single diagnostic describing the required depend-object type.
       std::optional<evaluate::DynamicType> type{expr->GetType()};
       int depobjKind{static_cast<int>(
           context_.targetCharacteristics().integerKindForPointer())};
-      if (!type || type->category() != evaluate::TypeCategory::Integer ||
+      if (expr->Rank() != 0 || !type ||
+          type->category() != evaluate::TypeCategory::Integer ||
           type->kind() != depobjKind) {
         context_.Say(GetContext().clauseSource,
             "A list item in a DEPEND clause with the DEPOBJ dependence type must be a depend object (a scalar integer variable of kind omp_depend_kind)"_err_en_US);
