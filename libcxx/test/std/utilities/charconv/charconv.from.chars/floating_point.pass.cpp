@@ -17,6 +17,7 @@
 //                              double& value, chars_format fmt = chars_format::general)
 
 #include <array>
+#include <cassert>
 #include <charconv>
 #include <cmath>
 #include <cstring>
@@ -24,8 +25,8 @@
 #include <stdexcept>
 #include <system_error>
 
-#include "charconv_test_helpers.h"
 #include "test_macros.h"
+#include "type_algorithms.h"
 
 template <class F>
 void test_infinity(std::chars_format fmt) {
@@ -326,1193 +327,1183 @@ void test_fmt_independent(std::chars_format fmt) {
 }
 
 template <class F>
-struct test_basics {
-  void operator()() {
-    for (auto fmt : {std::chars_format::scientific,
-                     std::chars_format::fixed,
-                     /*std::chars_format::hex,*/ std::chars_format::general})
-      test_fmt_independent<F>(fmt);
-  }
-};
+void test_basics() {
+  for (auto fmt : {std::chars_format::scientific,
+                   std::chars_format::fixed,
+                   /*std::chars_format::hex,*/ std::chars_format::general})
+    test_fmt_independent<F>(fmt);
+}
 
 template <class F>
-struct test_fixed {
-  void operator()() {
-    std::from_chars_result r;
-    F x = 0.25;
+void test_fixed() {
+  std::from_chars_result r;
+  F x = 0.25;
 
-    // *** Failures
+  // *** Failures
 
-    { // Starts with invalid character
-      std::array s = {' ', '1'};
-      for (auto c : "abcdefghijklmnopqrstuvwxyz"
-                    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                    "`~!@#$%^&*()_=[]{}\\|;:'\",/<>? \t\v\r\n") {
-        s[0] = c;
-        r    = std::from_chars(s.data(), s.data() + s.size(), x, std::chars_format::fixed);
+  { // Starts with invalid character
+    std::array s = {' ', '1'};
+    for (auto c : "abcdefghijklmnopqrstuvwxyz"
+                  "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                  "`~!@#$%^&*()_=[]{}\\|;:'\",/<>? \t\v\r\n") {
+      s[0] = c;
+      r    = std::from_chars(s.data(), s.data() + s.size(), x, std::chars_format::fixed);
 
-        assert(r.ec == std::errc::invalid_argument);
-        assert(r.ptr == s.data());
-        assert(x == F(0.25));
-      }
+      assert(r.ec == std::errc::invalid_argument);
+      assert(r.ptr == s.data());
+      assert(x == F(0.25));
     }
+  }
 
-    // *** Success
+  // *** Success
 
-    { // number followed by non-numeric values
-      const char* s = "001x";
+  { // number followed by non-numeric values
+    const char* s = "001x";
 
-      // the expected form of the subject sequence is a nonempty sequence of
-      // decimal digits optionally containing a decimal-point character, then
-      // an optional exponent part as defined in 6.4.4.3, excluding any digit
-      // separators (6.4.4.2); (C23 7.24.1.5)
+    // the expected form of the subject sequence is a nonempty sequence of
+    // decimal digits optionally containing a decimal-point character, then
+    // an optional exponent part as defined in 6.4.4.3, excluding any digit
+    // separators (6.4.4.2); (C23 7.24.1.5)
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 3);
+    assert(x == F(1.0));
+  }
+  { // no leading digit
+    const char* s = ".5";
+
+    // the expected form of the subject sequence is a nonempty sequence of
+    // decimal digits optionally containing a decimal-point character, then
+    // an optional exponent part as defined in 6.4.4.3, excluding any digit
+    // separators (6.4.4.2); (C23 7.24.1.5)
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 2);
+    assert(x == F(0.5));
+  }
+  { // negative sign and no leading digit
+    const char* s = "-.5";
+
+    // the expected form of the subject sequence is a nonempty sequence of
+    // decimal digits optionally containing a decimal-point character, then
+    // an optional exponent part as defined in 6.4.4.3, excluding any digit
+    // separators (6.4.4.2); (C23 7.24.1.5)
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 3);
+    assert(x == F(-0.5));
+  }
+
+  { // double decimal point
+    const char* s = "1.25.78";
+
+    // This number is halfway between two float values.
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 4);
+    assert(x == F(1.25));
+  }
+  { // exponent no sign
+    const char* s = "1.5e10";
+    r             = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
+
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 3);
+    assert(x == F(1.5));
+  }
+  { // exponent capitalized no sign
+    const char* s = "1.5E10";
+    r             = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
+
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 3);
+    assert(x == F(1.5));
+  }
+  { // exponent + sign
+    const char* s = "1.5e+10";
+    r             = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
+
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 3);
+    assert(x == F(1.5));
+  }
+  { // exponent - sign
+    const char* s = "1.5e-10";
+    r             = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
+
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 3);
+    assert(x == F(1.5));
+  }
+  { // Exponent no number
+    const char* s = "1.5e";
+
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 3);
+    assert(x == F(1.5));
+  }
+  { // Exponent sign no number
+    {
+      const char* s = "1.5e+";
+
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 3);
-      assert(x == F(1.0));
-    }
-    { // no leading digit
-      const char* s = ".5";
-
-      // the expected form of the subject sequence is a nonempty sequence of
-      // decimal digits optionally containing a decimal-point character, then
-      // an optional exponent part as defined in 6.4.4.3, excluding any digit
-      // separators (6.4.4.2); (C23 7.24.1.5)
-      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 2);
-      assert(x == F(0.5));
-    }
-    { // negative sign and no leading digit
-      const char* s = "-.5";
-
-      // the expected form of the subject sequence is a nonempty sequence of
-      // decimal digits optionally containing a decimal-point character, then
-      // an optional exponent part as defined in 6.4.4.3, excluding any digit
-      // separators (6.4.4.2); (C23 7.24.1.5)
-      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 3);
-      assert(x == F(-0.5));
-    }
-
-    { // double decimal point
-      const char* s = "1.25.78";
-
-      // This number is halfway between two float values.
-      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 4);
-      assert(x == F(1.25));
-    }
-    { // exponent no sign
-      const char* s = "1.5e10";
-      r             = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
-
       assert(r.ec == std::errc{});
       assert(r.ptr == s + 3);
       assert(x == F(1.5));
     }
-    { // exponent capitalized no sign
-      const char* s = "1.5E10";
-      r             = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
-
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 3);
-      assert(x == F(1.5));
-    }
-    { // exponent + sign
-      const char* s = "1.5e+10";
-      r             = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
-
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 3);
-      assert(x == F(1.5));
-    }
-    { // exponent - sign
-      const char* s = "1.5e-10";
-      r             = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
-
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 3);
-      assert(x == F(1.5));
-    }
-    { // Exponent no number
-      const char* s = "1.5e";
+    {
+      const char* s = "1.5e-";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
       assert(r.ec == std::errc{});
       assert(r.ptr == s + 3);
       assert(x == F(1.5));
     }
-    { // Exponent sign no number
-      {
-        const char* s = "1.5e+";
+  }
+  { // Exponent with whitespace
+    {
+      const char* s = "1.5e +1";
 
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 3);
-        assert(x == F(1.5));
-      }
-      {
-        const char* s = "1.5e-";
-
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 3);
-        assert(x == F(1.5));
-      }
-    }
-    { // Exponent with whitespace
-      {
-        const char* s = "1.5e +1";
-
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 3);
-        assert(x == F(1.5));
-      }
-      {
-        const char* s = "1.5e+ 1";
-
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 3);
-        assert(x == F(1.5));
-      }
-      {
-        const char* s = "1.5e -1";
-
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 3);
-        assert(x == F(1.5));
-      }
-      {
-        const char* s = "1.5e- 1";
-
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 3);
-        assert(x == F(1.5));
-      }
-    }
-    { // double exponent
-      const char* s = "1.25e0e12";
-      r             = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
-
+      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
       assert(r.ec == std::errc{});
-      assert(r.ptr == s + 4);
-      assert(x == F(1.25));
+      assert(r.ptr == s + 3);
+      assert(x == F(1.5));
     }
-    { // Exponent double sign
-      {
-        const char* s = "1.25e++12";
+    {
+      const char* s = "1.5e+ 1";
 
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 4);
-        assert(x == F(1.25));
-      }
-      {
-        const char* s = "1.25e+-12";
-
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 4);
-        assert(x == F(1.25));
-      }
-      {
-        const char* s = "1.25e-+12";
-
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 4);
-        assert(x == F(1.25));
-      }
-      {
-        const char* s = "1.25e--12";
-
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 4);
-        assert(x == F(1.25));
-      }
+      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
+      assert(r.ec == std::errc{});
+      assert(r.ptr == s + 3);
+      assert(x == F(1.5));
     }
-    { // exponent hex prefix
-      const char* s = "1.25e0x12";
+    {
+      const char* s = "1.5e -1";
+
+      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
+      assert(r.ec == std::errc{});
+      assert(r.ptr == s + 3);
+      assert(x == F(1.5));
+    }
+    {
+      const char* s = "1.5e- 1";
+
+      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
+      assert(r.ec == std::errc{});
+      assert(r.ptr == s + 3);
+      assert(x == F(1.5));
+    }
+  }
+  { // double exponent
+    const char* s = "1.25e0e12";
+    r             = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
+
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 4);
+    assert(x == F(1.25));
+  }
+  { // Exponent double sign
+    {
+      const char* s = "1.25e++12";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
       assert(r.ec == std::errc{});
       assert(r.ptr == s + 4);
       assert(x == F(1.25));
     }
-    { // This number is halfway between two float values.
-      const char* s = "20040229";
+    {
+      const char* s = "1.25e+-12";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
       assert(r.ec == std::errc{});
-      assert(r.ptr == s + 8);
-      assert(x == F(20040229));
+      assert(r.ptr == s + 4);
+      assert(x == F(1.25));
     }
-    { // Shifting mantissa exponent and no exponent
-      const char* s = "123.456";
+    {
+      const char* s = "1.25e-+12";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
       assert(r.ec == std::errc{});
-      assert(r.ptr == s + 7);
-      assert(x == F(1.23456e2));
+      assert(r.ptr == s + 4);
+      assert(x == F(1.25));
     }
-    { // Shifting mantissa exponent and an exponent
-      const char* s = "123.456e3";
-      r             = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
+    {
+      const char* s = "1.25e--12";
 
+      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
       assert(r.ec == std::errc{});
-      assert(r.ptr == s + 7);
-      assert(x == F(123.456));
+      assert(r.ptr == s + 4);
+      assert(x == F(1.25));
     }
-    { // Mantissa overflow
-      {
-        const char* s = "0.111111111111111111111111111111111111111111";
+  }
+  { // exponent hex prefix
+    const char* s = "1.25e0x12";
 
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + std::strlen(s));
-        assert(x == F(0.111111111111111111111111111111111111111111));
-      }
-      {
-        const char* s = "111111111111.111111111111111111111111111111111111111111";
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 4);
+    assert(x == F(1.25));
+  }
+  { // This number is halfway between two float values.
+    const char* s = "20040229";
 
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + std::strlen(s));
-        assert(x == F(111111111111.111111111111111111111111111111111111111111));
-      }
-    }
-    { // Negative value
-      const char* s = "-0.25";
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 8);
+    assert(x == F(20040229));
+  }
+  { // Shifting mantissa exponent and no exponent
+    const char* s = "123.456";
+
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 7);
+    assert(x == F(1.23456e2));
+  }
+  { // Shifting mantissa exponent and an exponent
+    const char* s = "123.456e3";
+    r             = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
+
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 7);
+    assert(x == F(123.456));
+  }
+  { // Mantissa overflow
+    {
+      const char* s = "0.111111111111111111111111111111111111111111";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
       assert(r.ec == std::errc{});
       assert(r.ptr == s + std::strlen(s));
-      assert(x == F(-0.25));
+      assert(x == F(0.111111111111111111111111111111111111111111));
+    }
+    {
+      const char* s = "111111111111.111111111111111111111111111111111111111111";
+
+      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
+      assert(r.ec == std::errc{});
+      assert(r.ptr == s + std::strlen(s));
+      assert(x == F(111111111111.111111111111111111111111111111111111111111));
     }
   }
-};
+  { // Negative value
+    const char* s = "-0.25";
+
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::fixed);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + std::strlen(s));
+    assert(x == F(-0.25));
+  }
+}
 
 template <class F>
-struct test_scientific {
-  void operator()() {
-    std::from_chars_result r;
-    F x = 0.25;
+void test_scientific() {
+  std::from_chars_result r;
+  F x = 0.25;
 
-    // *** Failures
+  // *** Failures
 
-    { // Starts with invalid character
-      std::array s = {' ', '1', 'e', '0'};
-      for (auto c : "abcdefghijklmnopqrstuvwxyz"
-                    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                    "`~!@#$%^&*()_=[]{}\\|;:'\",/<>? \t\v\r\n") {
-        s[0] = c;
-        r    = std::from_chars(s.data(), s.data() + s.size(), x, std::chars_format::scientific);
+  { // Starts with invalid character
+    std::array s = {' ', '1', 'e', '0'};
+    for (auto c : "abcdefghijklmnopqrstuvwxyz"
+                  "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                  "`~!@#$%^&*()_=[]{}\\|;:'\",/<>? \t\v\r\n") {
+      s[0] = c;
+      r    = std::from_chars(s.data(), s.data() + s.size(), x, std::chars_format::scientific);
 
-        assert(r.ec == std::errc::invalid_argument);
-        assert(r.ptr == s.data());
-        assert(x == F(0.25));
-      }
+      assert(r.ec == std::errc::invalid_argument);
+      assert(r.ptr == s.data());
+      assert(x == F(0.25));
     }
-    { // No exponent
-      const char* s = "1.23";
-      r             = std::from_chars(s, s + strlen(s), x, std::chars_format::scientific);
+  }
+  { // No exponent
+    const char* s = "1.23";
+    r             = std::from_chars(s, s + strlen(s), x, std::chars_format::scientific);
 
+    assert(r.ec == std::errc::invalid_argument);
+    assert(r.ptr == s);
+    assert(x == F(0.25));
+  }
+  { // Exponent no number
+    const char* s = "1.23e";
+    r             = std::from_chars(s, s + strlen(s), x, std::chars_format::scientific);
+
+    assert(r.ec == std::errc::invalid_argument);
+    assert(r.ptr == s);
+    assert(x == F(0.25));
+  }
+  { // Exponent sign no number
+    {
+      const char* s = "1.5e+";
+
+      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
       assert(r.ec == std::errc::invalid_argument);
       assert(r.ptr == s);
       assert(x == F(0.25));
     }
-    { // Exponent no number
-      const char* s = "1.23e";
-      r             = std::from_chars(s, s + strlen(s), x, std::chars_format::scientific);
+    {
+      const char* s = "1.5e-";
 
+      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
       assert(r.ec == std::errc::invalid_argument);
       assert(r.ptr == s);
       assert(x == F(0.25));
     }
-    { // Exponent sign no number
-      {
-        const char* s = "1.5e+";
-
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
-        assert(r.ec == std::errc::invalid_argument);
-        assert(r.ptr == s);
-        assert(x == F(0.25));
-      }
-      {
-        const char* s = "1.5e-";
-
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
-        assert(r.ec == std::errc::invalid_argument);
-        assert(r.ptr == s);
-        assert(x == F(0.25));
-      }
-    }
-    { // Exponent with whitespace
-      {
-        const char* s = "1.5e +1";
-
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
-        assert(r.ec == std::errc::invalid_argument);
-        assert(r.ptr == s);
-        assert(x == F(0.25));
-      }
-      {
-        const char* s = "1.5e+ 1";
-
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
-        assert(r.ec == std::errc::invalid_argument);
-        assert(r.ptr == s);
-        assert(x == F(0.25));
-      }
-      {
-        const char* s = "1.5e -1";
-
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
-        assert(r.ec == std::errc::invalid_argument);
-        assert(r.ptr == s);
-        assert(x == F(0.25));
-      }
-      {
-        const char* s = "1.5e- 1";
-
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
-        assert(r.ec == std::errc::invalid_argument);
-        assert(r.ptr == s);
-        assert(x == F(0.25));
-      }
-    }
-    { // exponent double sign
-      {
-        const char* s = "1.25e++12";
-
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
-        assert(r.ec == std::errc::invalid_argument);
-        assert(r.ptr == s);
-        assert(x == F(0.25));
-      }
-      {
-        const char* s = "1.25e+-12";
-
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
-        assert(r.ec == std::errc::invalid_argument);
-        assert(r.ptr == s);
-        assert(x == F(0.25));
-      }
-      {
-        const char* s = "1.25e-+12";
-
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
-        assert(r.ec == std::errc::invalid_argument);
-        assert(r.ptr == s);
-        assert(x == F(0.25));
-      }
-      {
-        const char* s = "1.25e--12";
-
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
-        assert(r.ec == std::errc::invalid_argument);
-        assert(r.ptr == s);
-        assert(x == F(0.25));
-      }
-    }
-
-    // *** Success
-
-    { // number followed by non-numeric values
-      const char* s = "001e0x";
-
-      // the expected form of the subject sequence is a nonempty sequence of
-      // decimal digits optionally containing a decimal-point character, then
-      // an optional exponent part as defined in 6.4.4.3, excluding any digit
-      // separators (6.4.4.2); (C23 7.24.1.5)
-      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 5);
-      assert(x == F(1.0));
-    }
-
-    { // double decimal point
-      const char* s = "1.25e0.78";
-
-      // This number is halfway between two float values.
-      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 6);
-      assert(x == F(1.25));
-    }
-
-    { // exponent no sign
-      const char* s = "1.5e10";
+  }
+  { // Exponent with whitespace
+    {
+      const char* s = "1.5e +1";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 6);
-      assert(x == F(1.5e10));
+      assert(r.ec == std::errc::invalid_argument);
+      assert(r.ptr == s);
+      assert(x == F(0.25));
     }
-    { // exponent capitalized no sign
-      const char* s = "1.5E10";
+    {
+      const char* s = "1.5e+ 1";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 6);
-      assert(x == F(1.5e10));
+      assert(r.ec == std::errc::invalid_argument);
+      assert(r.ptr == s);
+      assert(x == F(0.25));
     }
-    { // exponent + sign
-      const char* s = "1.5e+10";
+    {
+      const char* s = "1.5e -1";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 7);
-      assert(x == F(1.5e10));
+      assert(r.ec == std::errc::invalid_argument);
+      assert(r.ptr == s);
+      assert(x == F(0.25));
     }
-    { // exponent - sign
-      const char* s = "1.5e-10";
+    {
+      const char* s = "1.5e- 1";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 7);
-      assert(x == F(1.5e-10));
+      assert(r.ec == std::errc::invalid_argument);
+      assert(r.ptr == s);
+      assert(x == F(0.25));
     }
-    { // exponent hex prefix -> e0
-      const char* s = "1.25e0x12";
+  }
+  { // exponent double sign
+    {
+      const char* s = "1.25e++12";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 6);
-      assert(x == F(1.25));
+      assert(r.ec == std::errc::invalid_argument);
+      assert(r.ptr == s);
+      assert(x == F(0.25));
     }
-    { // double exponent
-      const char* s = "1.25e0e12";
+    {
+      const char* s = "1.25e+-12";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 6);
-      assert(x == F(1.25));
+      assert(r.ec == std::errc::invalid_argument);
+      assert(r.ptr == s);
+      assert(x == F(0.25));
     }
-    { // This number is halfway between two float values.
-      const char* s = "20040229e0";
+    {
+      const char* s = "1.25e-+12";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 10);
-      assert(x == F(20040229));
+      assert(r.ec == std::errc::invalid_argument);
+      assert(r.ptr == s);
+      assert(x == F(0.25));
     }
-    { // Shifting mantissa exponent and an exponent
-      const char* s = "123.456e3";
+    {
+      const char* s = "1.25e--12";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 9);
-      assert(x == F(1.23456e5));
+      assert(r.ec == std::errc::invalid_argument);
+      assert(r.ptr == s);
+      assert(x == F(0.25));
     }
-    { // Mantissa overflow
-      {
-        const char* s = "0.111111111111111111111111111111111111111111e0";
+  }
 
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + std::strlen(s));
-        assert(x == F(0.111111111111111111111111111111111111111111));
-      }
-      {
-        const char* s = "111111111111.111111111111111111111111111111111111111111e0";
+  // *** Success
 
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + std::strlen(s));
-        assert(x == F(111111111111.111111111111111111111111111111111111111111));
-      }
-    }
-    { // Negative value
-      const char* s = "-0.25e0";
+  { // number followed by non-numeric values
+    const char* s = "001e0x";
+
+    // the expected form of the subject sequence is a nonempty sequence of
+    // decimal digits optionally containing a decimal-point character, then
+    // an optional exponent part as defined in 6.4.4.3, excluding any digit
+    // separators (6.4.4.2); (C23 7.24.1.5)
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 5);
+    assert(x == F(1.0));
+  }
+
+  { // double decimal point
+    const char* s = "1.25e0.78";
+
+    // This number is halfway between two float values.
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 6);
+    assert(x == F(1.25));
+  }
+
+  { // exponent no sign
+    const char* s = "1.5e10";
+
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 6);
+    assert(x == F(1.5e10));
+  }
+  { // exponent capitalized no sign
+    const char* s = "1.5E10";
+
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 6);
+    assert(x == F(1.5e10));
+  }
+  { // exponent + sign
+    const char* s = "1.5e+10";
+
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 7);
+    assert(x == F(1.5e10));
+  }
+  { // exponent - sign
+    const char* s = "1.5e-10";
+
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 7);
+    assert(x == F(1.5e-10));
+  }
+  { // exponent hex prefix -> e0
+    const char* s = "1.25e0x12";
+
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 6);
+    assert(x == F(1.25));
+  }
+  { // double exponent
+    const char* s = "1.25e0e12";
+
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 6);
+    assert(x == F(1.25));
+  }
+  { // This number is halfway between two float values.
+    const char* s = "20040229e0";
+
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 10);
+    assert(x == F(20040229));
+  }
+  { // Shifting mantissa exponent and an exponent
+    const char* s = "123.456e3";
+
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 9);
+    assert(x == F(1.23456e5));
+  }
+  { // Mantissa overflow
+    {
+      const char* s = "0.111111111111111111111111111111111111111111e0";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
       assert(r.ec == std::errc{});
       assert(r.ptr == s + std::strlen(s));
-      assert(x == F(-0.25));
+      assert(x == F(0.111111111111111111111111111111111111111111));
     }
-    { // value is too big -> +inf
-      const char* s = "1e9999999999999999999999999999999999999999";
+    {
+      const char* s = "111111111111.111111111111111111111111111111111111111111e0";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
-      assert(r.ec == std::errc::result_out_of_range);
-      assert(r.ptr == s + strlen(s));
-      assert(x == std::numeric_limits<F>::infinity());
-    }
-    { // negative value is too big -> -inf
-      const char* s = "-1e9999999999999999999999999999999999999999";
-
-      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
-      assert(r.ec == std::errc::result_out_of_range);
-      assert(r.ptr == s + strlen(s));
-      assert(x == -std::numeric_limits<F>::infinity());
-    }
-    { // value is too small -> 0
-      const char* s = "1e-9999999999999999999999999999999999999999";
-
-      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
-      assert(r.ec == std::errc::result_out_of_range);
-      assert(r.ptr == s + strlen(s));
-      assert(x == F(0.0));
-    }
-    { // negative value is too small -> -0
-      const char* s = "-1e-9999999999999999999999999999999999999999";
-
-      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
-      assert(r.ec == std::errc::result_out_of_range);
-      assert(r.ptr == s + strlen(s));
-      assert(x == F(-0.0));
+      assert(r.ec == std::errc{});
+      assert(r.ptr == s + std::strlen(s));
+      assert(x == F(111111111111.111111111111111111111111111111111111111111));
     }
   }
-};
+  { // Negative value
+    const char* s = "-0.25e0";
+
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + std::strlen(s));
+    assert(x == F(-0.25));
+  }
+  { // value is too big -> +inf
+    const char* s = "1e9999999999999999999999999999999999999999";
+
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
+    assert(r.ec == std::errc::result_out_of_range);
+    assert(r.ptr == s + strlen(s));
+    assert(x == std::numeric_limits<F>::infinity());
+  }
+  { // negative value is too big -> -inf
+    const char* s = "-1e9999999999999999999999999999999999999999";
+
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
+    assert(r.ec == std::errc::result_out_of_range);
+    assert(r.ptr == s + strlen(s));
+    assert(x == -std::numeric_limits<F>::infinity());
+  }
+  { // value is too small -> 0
+    const char* s = "1e-9999999999999999999999999999999999999999";
+
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
+    assert(r.ec == std::errc::result_out_of_range);
+    assert(r.ptr == s + strlen(s));
+    assert(x == F(0.0));
+  }
+  { // negative value is too small -> -0
+    const char* s = "-1e-9999999999999999999999999999999999999999";
+
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::scientific);
+    assert(r.ec == std::errc::result_out_of_range);
+    assert(r.ptr == s + strlen(s));
+    assert(x == F(-0.0));
+  }
+}
 
 template <class F>
-struct test_general {
-  void operator()() {
-    std::from_chars_result r;
-    F x = 0.25;
+void test_general() {
+  std::from_chars_result r;
+  F x = 0.25;
 
-    // *** Failures
+  // *** Failures
 
-    { // Starts with invalid character
-      std::array s = {' ', '1'};
-      for (auto c : "abcdefghijklmnopqrstuvwxyz"
-                    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                    "`~!@#$%^&*()_=[]{}\\|;:'\",/<>? \t\v\r\n") {
-        s[0] = c;
-        r    = std::from_chars(s.data(), s.data() + s.size(), x);
+  { // Starts with invalid character
+    std::array s = {' ', '1'};
+    for (auto c : "abcdefghijklmnopqrstuvwxyz"
+                  "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                  "`~!@#$%^&*()_=[]{}\\|;:'\",/<>? \t\v\r\n") {
+      s[0] = c;
+      r    = std::from_chars(s.data(), s.data() + s.size(), x);
 
-        assert(r.ec == std::errc::invalid_argument);
-        assert(r.ptr == s.data());
-        assert(x == F(0.25));
-      }
+      assert(r.ec == std::errc::invalid_argument);
+      assert(r.ptr == s.data());
+      assert(x == F(0.25));
     }
+  }
 
-    // *** Success
+  // *** Success
 
-    { // number followed by non-numeric values
-      const char* s = "001x";
+  { // number followed by non-numeric values
+    const char* s = "001x";
 
-      // the expected form of the subject sequence is a nonempty sequence of
-      // decimal digits optionally containing a decimal-point character, then
-      // an optional exponent part as defined in 6.4.4.3, excluding any digit
-      // separators (6.4.4.2); (C23 7.24.1.5)
-      r = std::from_chars(s, s + std::strlen(s), x);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 3);
-      assert(x == F(1.0));
-    }
-    { // no leading digit
-      const char* s = ".5e0";
+    // the expected form of the subject sequence is a nonempty sequence of
+    // decimal digits optionally containing a decimal-point character, then
+    // an optional exponent part as defined in 6.4.4.3, excluding any digit
+    // separators (6.4.4.2); (C23 7.24.1.5)
+    r = std::from_chars(s, s + std::strlen(s), x);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 3);
+    assert(x == F(1.0));
+  }
+  { // no leading digit
+    const char* s = ".5e0";
 
-      // the expected form of the subject sequence is a nonempty sequence of
-      // decimal digits optionally containing a decimal-point character, then
-      // an optional exponent part as defined in 6.4.4.3, excluding any digit
-      // separators (6.4.4.2); (C23 7.24.1.5)
-      r = std::from_chars(s, s + std::strlen(s), x);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 4);
-      assert(x == F(0.5));
-    }
-    { // negative sign and no leading digit
-      const char* s = "-.5e0";
+    // the expected form of the subject sequence is a nonempty sequence of
+    // decimal digits optionally containing a decimal-point character, then
+    // an optional exponent part as defined in 6.4.4.3, excluding any digit
+    // separators (6.4.4.2); (C23 7.24.1.5)
+    r = std::from_chars(s, s + std::strlen(s), x);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 4);
+    assert(x == F(0.5));
+  }
+  { // negative sign and no leading digit
+    const char* s = "-.5e0";
 
-      // the expected form of the subject sequence is a nonempty sequence of
-      // decimal digits optionally containing a decimal-point character, then
-      // an optional exponent part as defined in 6.4.4.3, excluding any digit
-      // separators (6.4.4.2); (C23 7.24.1.5)
-      r = std::from_chars(s, s + std::strlen(s), x);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 5);
-      assert(x == F(-0.5));
-    }
-    { // no leading digit
-      const char* s = ".5";
+    // the expected form of the subject sequence is a nonempty sequence of
+    // decimal digits optionally containing a decimal-point character, then
+    // an optional exponent part as defined in 6.4.4.3, excluding any digit
+    // separators (6.4.4.2); (C23 7.24.1.5)
+    r = std::from_chars(s, s + std::strlen(s), x);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 5);
+    assert(x == F(-0.5));
+  }
+  { // no leading digit
+    const char* s = ".5";
 
-      // the expected form of the subject sequence is a nonempty sequence of
-      // decimal digits optionally containing a decimal-point character, then
-      // an optional exponent part as defined in 6.4.4.3, excluding any digit
-      // separators (6.4.4.2); (C23 7.24.1.5)
-      r = std::from_chars(s, s + std::strlen(s), x);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 2);
-      assert(x == F(0.5));
-    }
-    { // negative sign and no leading digit
-      const char* s = "-.5";
+    // the expected form of the subject sequence is a nonempty sequence of
+    // decimal digits optionally containing a decimal-point character, then
+    // an optional exponent part as defined in 6.4.4.3, excluding any digit
+    // separators (6.4.4.2); (C23 7.24.1.5)
+    r = std::from_chars(s, s + std::strlen(s), x);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 2);
+    assert(x == F(0.5));
+  }
+  { // negative sign and no leading digit
+    const char* s = "-.5";
 
-      // the expected form of the subject sequence is a nonempty sequence of
-      // decimal digits optionally containing a decimal-point character, then
-      // an optional exponent part as defined in 6.4.4.3, excluding any digit
-      // separators (6.4.4.2); (C23 7.24.1.5)
-      r = std::from_chars(s, s + std::strlen(s), x);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 3);
-      assert(x == F(-0.5));
-    }
-    { // double decimal point
-      const char* s = "1.25.78";
+    // the expected form of the subject sequence is a nonempty sequence of
+    // decimal digits optionally containing a decimal-point character, then
+    // an optional exponent part as defined in 6.4.4.3, excluding any digit
+    // separators (6.4.4.2); (C23 7.24.1.5)
+    r = std::from_chars(s, s + std::strlen(s), x);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 3);
+    assert(x == F(-0.5));
+  }
+  { // double decimal point
+    const char* s = "1.25.78";
 
-      // This number is halfway between two float values.
-      r = std::from_chars(s, s + std::strlen(s), x);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 4);
-      assert(x == F(1.25));
-    }
-    { // exponent no sign
-      const char* s = "1.5e10";
+    // This number is halfway between two float values.
+    r = std::from_chars(s, s + std::strlen(s), x);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 4);
+    assert(x == F(1.25));
+  }
+  { // exponent no sign
+    const char* s = "1.5e10";
 
-      r = std::from_chars(s, s + std::strlen(s), x);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 6);
-      assert(x == F(1.5e10));
-    }
-    { // exponent capitalized no sign
-      const char* s = "1.5E10";
+    r = std::from_chars(s, s + std::strlen(s), x);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 6);
+    assert(x == F(1.5e10));
+  }
+  { // exponent capitalized no sign
+    const char* s = "1.5E10";
 
-      r = std::from_chars(s, s + std::strlen(s), x);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 6);
-      assert(x == F(1.5e10));
-    }
-    { // exponent + sign
-      const char* s = "1.5e+10";
+    r = std::from_chars(s, s + std::strlen(s), x);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 6);
+    assert(x == F(1.5e10));
+  }
+  { // exponent + sign
+    const char* s = "1.5e+10";
 
-      r = std::from_chars(s, s + std::strlen(s), x);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 7);
-      assert(x == F(1.5e10));
-    }
-    { // exponent - sign
-      const char* s = "1.5e-10";
+    r = std::from_chars(s, s + std::strlen(s), x);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 7);
+    assert(x == F(1.5e10));
+  }
+  { // exponent - sign
+    const char* s = "1.5e-10";
 
-      r = std::from_chars(s, s + std::strlen(s), x);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 7);
-      assert(x == F(1.5e-10));
-    }
-    { // Exponent no number
-      const char* s = "1.5e";
+    r = std::from_chars(s, s + std::strlen(s), x);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 7);
+    assert(x == F(1.5e-10));
+  }
+  { // Exponent no number
+    const char* s = "1.5e";
+
+    r = std::from_chars(s, s + std::strlen(s), x);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 3);
+    assert(x == F(1.5));
+  }
+  { // Exponent sign no number
+    {
+      const char* s = "1.5e+";
 
       r = std::from_chars(s, s + std::strlen(s), x);
       assert(r.ec == std::errc{});
       assert(r.ptr == s + 3);
       assert(x == F(1.5));
     }
-    { // Exponent sign no number
-      {
-        const char* s = "1.5e+";
-
-        r = std::from_chars(s, s + std::strlen(s), x);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 3);
-        assert(x == F(1.5));
-      }
-      {
-        const char* s = "1.5e-";
-
-        r = std::from_chars(s, s + std::strlen(s), x);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 3);
-        assert(x == F(1.5));
-      }
-    }
-    { // Exponent with whitespace
-      {
-        const char* s = "1.5e +1";
-
-        r = std::from_chars(s, s + std::strlen(s), x);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 3);
-        assert(x == F(1.5));
-      }
-      {
-        const char* s = "1.5e+ 1";
-
-        r = std::from_chars(s, s + std::strlen(s), x);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 3);
-        assert(x == F(1.5));
-      }
-      {
-        const char* s = "1.5e -1";
-
-        r = std::from_chars(s, s + std::strlen(s), x);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 3);
-        assert(x == F(1.5));
-      }
-      {
-        const char* s = "1.5e- 1";
-
-        r = std::from_chars(s, s + std::strlen(s), x);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 3);
-        assert(x == F(1.5));
-      }
-    }
-    { // exponent double sign
-      {
-        const char* s = "1.25e++12";
-
-        r = std::from_chars(s, s + std::strlen(s), x);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 4);
-        assert(x == F(1.25));
-      }
-      {
-        const char* s = "1.25e+-12";
-
-        r = std::from_chars(s, s + std::strlen(s), x);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 4);
-        assert(x == F(1.25));
-      }
-      {
-        const char* s = "1.25e-+12";
-
-        r = std::from_chars(s, s + std::strlen(s), x);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 4);
-        assert(x == F(1.25));
-      }
-      {
-        const char* s = "1.25e--12";
-
-        r = std::from_chars(s, s + std::strlen(s), x);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 4);
-        assert(x == F(1.25));
-      }
-    }
-    { // exponent hex prefix -> e0
-      const char* s = "1.25e0x12";
+    {
+      const char* s = "1.5e-";
 
       r = std::from_chars(s, s + std::strlen(s), x);
       assert(r.ec == std::errc{});
-      assert(r.ptr == s + 6);
+      assert(r.ptr == s + 3);
+      assert(x == F(1.5));
+    }
+  }
+  { // Exponent with whitespace
+    {
+      const char* s = "1.5e +1";
+
+      r = std::from_chars(s, s + std::strlen(s), x);
+      assert(r.ec == std::errc{});
+      assert(r.ptr == s + 3);
+      assert(x == F(1.5));
+    }
+    {
+      const char* s = "1.5e+ 1";
+
+      r = std::from_chars(s, s + std::strlen(s), x);
+      assert(r.ec == std::errc{});
+      assert(r.ptr == s + 3);
+      assert(x == F(1.5));
+    }
+    {
+      const char* s = "1.5e -1";
+
+      r = std::from_chars(s, s + std::strlen(s), x);
+      assert(r.ec == std::errc{});
+      assert(r.ptr == s + 3);
+      assert(x == F(1.5));
+    }
+    {
+      const char* s = "1.5e- 1";
+
+      r = std::from_chars(s, s + std::strlen(s), x);
+      assert(r.ec == std::errc{});
+      assert(r.ptr == s + 3);
+      assert(x == F(1.5));
+    }
+  }
+  { // exponent double sign
+    {
+      const char* s = "1.25e++12";
+
+      r = std::from_chars(s, s + std::strlen(s), x);
+      assert(r.ec == std::errc{});
+      assert(r.ptr == s + 4);
       assert(x == F(1.25));
     }
-    { // double exponent
-      const char* s = "1.25e0e12";
+    {
+      const char* s = "1.25e+-12";
 
       r = std::from_chars(s, s + std::strlen(s), x);
       assert(r.ec == std::errc{});
-      assert(r.ptr == s + 6);
+      assert(r.ptr == s + 4);
       assert(x == F(1.25));
     }
-    { // This number is halfway between two float values.
-      const char* s = "20040229";
+    {
+      const char* s = "1.25e-+12";
 
       r = std::from_chars(s, s + std::strlen(s), x);
       assert(r.ec == std::errc{});
-      assert(r.ptr == s + 8);
-      assert(x == F(20040229));
+      assert(r.ptr == s + 4);
+      assert(x == F(1.25));
     }
-    { // Shifting mantissa exponent and no exponent
-      const char* s = "123.456";
+    {
+      const char* s = "1.25e--12";
 
       r = std::from_chars(s, s + std::strlen(s), x);
       assert(r.ec == std::errc{});
-      assert(r.ptr == s + 7);
-      assert(x == F(1.23456e2));
+      assert(r.ptr == s + 4);
+      assert(x == F(1.25));
     }
-    { // Shifting mantissa exponent and an exponent
-      const char* s = "123.456e3";
+  }
+  { // exponent hex prefix -> e0
+    const char* s = "1.25e0x12";
 
-      r = std::from_chars(s, s + std::strlen(s), x);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 9);
-      assert(x == F(1.23456e5));
-    }
-    { // Mantissa overflow
-      {
-        const char* s = "0.111111111111111111111111111111111111111111";
+    r = std::from_chars(s, s + std::strlen(s), x);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 6);
+    assert(x == F(1.25));
+  }
+  { // double exponent
+    const char* s = "1.25e0e12";
 
-        r = std::from_chars(s, s + std::strlen(s), x);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + std::strlen(s));
-        assert(x == F(0.111111111111111111111111111111111111111111));
-      }
-      {
-        const char* s = "111111111111.111111111111111111111111111111111111111111";
+    r = std::from_chars(s, s + std::strlen(s), x);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 6);
+    assert(x == F(1.25));
+  }
+  { // This number is halfway between two float values.
+    const char* s = "20040229";
 
-        r = std::from_chars(s, s + std::strlen(s), x);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + std::strlen(s));
-        assert(x == F(111111111111.111111111111111111111111111111111111111111));
-      }
-    }
-    { // Negative value
-      const char* s = "-0.25";
+    r = std::from_chars(s, s + std::strlen(s), x);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 8);
+    assert(x == F(20040229));
+  }
+  { // Shifting mantissa exponent and no exponent
+    const char* s = "123.456";
+
+    r = std::from_chars(s, s + std::strlen(s), x);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 7);
+    assert(x == F(1.23456e2));
+  }
+  { // Shifting mantissa exponent and an exponent
+    const char* s = "123.456e3";
+
+    r = std::from_chars(s, s + std::strlen(s), x);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 9);
+    assert(x == F(1.23456e5));
+  }
+  { // Mantissa overflow
+    {
+      const char* s = "0.111111111111111111111111111111111111111111";
 
       r = std::from_chars(s, s + std::strlen(s), x);
       assert(r.ec == std::errc{});
       assert(r.ptr == s + std::strlen(s));
-      assert(x == F(-0.25));
+      assert(x == F(0.111111111111111111111111111111111111111111));
     }
-    { // value is too big -> +inf
-      const char* s = "1e9999999999999999999999999999999999999999";
+    {
+      const char* s = "111111111111.111111111111111111111111111111111111111111";
 
       r = std::from_chars(s, s + std::strlen(s), x);
-      assert(r.ec == std::errc::result_out_of_range);
-      assert(r.ptr == s + strlen(s));
-      assert(x == std::numeric_limits<F>::infinity());
-    }
-    { // negative value is too big -> -inf
-      const char* s = "-1e9999999999999999999999999999999999999999";
-
-      r = std::from_chars(s, s + std::strlen(s), x);
-      assert(r.ec == std::errc::result_out_of_range);
-      assert(r.ptr == s + strlen(s));
-      assert(x == -std::numeric_limits<F>::infinity());
-    }
-    { // value is too small -> 0
-      const char* s = "1e-9999999999999999999999999999999999999999";
-
-      r = std::from_chars(s, s + std::strlen(s), x);
-      assert(r.ec == std::errc::result_out_of_range);
-      assert(r.ptr == s + strlen(s));
-      assert(x == F(0.0));
-    }
-    { // negative value is too small -> -0
-      const char* s = "-1e-9999999999999999999999999999999999999999";
-
-      r = std::from_chars(s, s + std::strlen(s), x);
-      assert(r.ec == std::errc::result_out_of_range);
-      assert(r.ptr == s + strlen(s));
-      assert(x == F(-0.0));
+      assert(r.ec == std::errc{});
+      assert(r.ptr == s + std::strlen(s));
+      assert(x == F(111111111111.111111111111111111111111111111111111111111));
     }
   }
-};
+  { // Negative value
+    const char* s = "-0.25";
+
+    r = std::from_chars(s, s + std::strlen(s), x);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + std::strlen(s));
+    assert(x == F(-0.25));
+  }
+  { // value is too big -> +inf
+    const char* s = "1e9999999999999999999999999999999999999999";
+
+    r = std::from_chars(s, s + std::strlen(s), x);
+    assert(r.ec == std::errc::result_out_of_range);
+    assert(r.ptr == s + strlen(s));
+    assert(x == std::numeric_limits<F>::infinity());
+  }
+  { // negative value is too big -> -inf
+    const char* s = "-1e9999999999999999999999999999999999999999";
+
+    r = std::from_chars(s, s + std::strlen(s), x);
+    assert(r.ec == std::errc::result_out_of_range);
+    assert(r.ptr == s + strlen(s));
+    assert(x == -std::numeric_limits<F>::infinity());
+  }
+  { // value is too small -> 0
+    const char* s = "1e-9999999999999999999999999999999999999999";
+
+    r = std::from_chars(s, s + std::strlen(s), x);
+    assert(r.ec == std::errc::result_out_of_range);
+    assert(r.ptr == s + strlen(s));
+    assert(x == F(0.0));
+  }
+  { // negative value is too small -> -0
+    const char* s = "-1e-9999999999999999999999999999999999999999";
+
+    r = std::from_chars(s, s + std::strlen(s), x);
+    assert(r.ec == std::errc::result_out_of_range);
+    assert(r.ptr == s + strlen(s));
+    assert(x == F(-0.0));
+  }
+}
 
 template <class F>
-struct test_hex {
-  void operator()() {
-    std::from_chars_result r;
-    F x = 0.25;
+void test_hex() {
+  std::from_chars_result r;
+  F x = 0.25;
 
-    // *** Failures
+  // *** Failures
 
-    { // Starts with invalid character
-      std::array s = {' ', '1', 'e', '0'};
-      for (auto c : "ghijklmnopqrstuvwxyz"
-                    "GHIJKLMNOPQRSTUVWXYZ"
-                    "`~!@#$%^&*()_=[]{}\\|;:'\",/<>? \t\v\r\n") {
-        s[0] = c;
-        r    = std::from_chars(s.data(), s.data() + s.size(), x, std::chars_format::hex);
+  { // Starts with invalid character
+    std::array s = {' ', '1', 'e', '0'};
+    for (auto c : "ghijklmnopqrstuvwxyz"
+                  "GHIJKLMNOPQRSTUVWXYZ"
+                  "`~!@#$%^&*()_=[]{}\\|;:'\",/<>? \t\v\r\n") {
+      s[0] = c;
+      r    = std::from_chars(s.data(), s.data() + s.size(), x, std::chars_format::hex);
 
-        assert(r.ec == std::errc::invalid_argument);
-        assert(r.ptr == s.data());
-        assert(x == F(0.25));
-      }
+      assert(r.ec == std::errc::invalid_argument);
+      assert(r.ptr == s.data());
+      assert(x == F(0.25));
     }
+  }
 
-    // *** Success
+  // *** Success
 
-    { // number followed by non-numeric values
-      const char* s = "001x";
+  { // number followed by non-numeric values
+    const char* s = "001x";
 
-      // the expected form of the subject sequence is a nonempty sequence of
-      // decimal digits optionally containing a decimal-point character, then
-      // an optional exponent part as defined in 6.4.4.3, excluding any digit
-      // separators (6.4.4.2); (C23 7.24.1.5)
-      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 3);
-      assert(x == F(1.0));
-    }
-    { // no leading digit
-      const char* s = ".5p0";
+    // the expected form of the subject sequence is a nonempty sequence of
+    // decimal digits optionally containing a decimal-point character, then
+    // an optional exponent part as defined in 6.4.4.3, excluding any digit
+    // separators (6.4.4.2); (C23 7.24.1.5)
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 3);
+    assert(x == F(1.0));
+  }
+  { // no leading digit
+    const char* s = ".5p0";
 
-      // the expected form of the subject sequence is a nonempty sequence of
-      // decimal digits optionally containing a decimal-point character, then
-      // an optional exponent part as defined in 6.4.4.3, excluding any digit
-      // separators (6.4.4.2); (C23 7.24.1.5)
-      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 4);
-      assert(x == F(0x0.5p0));
-    }
-    { // negative sign and no leading digit
-      const char* s = "-.5p0";
+    // the expected form of the subject sequence is a nonempty sequence of
+    // decimal digits optionally containing a decimal-point character, then
+    // an optional exponent part as defined in 6.4.4.3, excluding any digit
+    // separators (6.4.4.2); (C23 7.24.1.5)
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 4);
+    assert(x == F(0x0.5p0));
+  }
+  { // negative sign and no leading digit
+    const char* s = "-.5p0";
 
-      // the expected form of the subject sequence is a nonempty sequence of
-      // decimal digits optionally containing a decimal-point character, then
-      // an optional exponent part as defined in 6.4.4.3, excluding any digit
-      // separators (6.4.4.2); (C23 7.24.1.5)
-      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 5);
-      assert(x == F(-0x0.5p0));
-    }
-    { // no leading digit
-      const char* s = ".5";
+    // the expected form of the subject sequence is a nonempty sequence of
+    // decimal digits optionally containing a decimal-point character, then
+    // an optional exponent part as defined in 6.4.4.3, excluding any digit
+    // separators (6.4.4.2); (C23 7.24.1.5)
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 5);
+    assert(x == F(-0x0.5p0));
+  }
+  { // no leading digit
+    const char* s = ".5";
 
-      // the expected form of the subject sequence is a nonempty sequence of
-      // decimal digits optionally containing a decimal-point character, then
-      // an optional exponent part as defined in 6.4.4.3, excluding any digit
-      // separators (6.4.4.2); (C23 7.24.1.5)
-      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 2);
-      assert(x == F(0x0.5p0));
-    }
-    { // negative sign and no leading digit
-      const char* s = "-.5";
+    // the expected form of the subject sequence is a nonempty sequence of
+    // decimal digits optionally containing a decimal-point character, then
+    // an optional exponent part as defined in 6.4.4.3, excluding any digit
+    // separators (6.4.4.2); (C23 7.24.1.5)
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 2);
+    assert(x == F(0x0.5p0));
+  }
+  { // negative sign and no leading digit
+    const char* s = "-.5";
 
-      // the expected form of the subject sequence is a nonempty sequence of
-      // decimal digits optionally containing a decimal-point character, then
-      // an optional exponent part as defined in 6.4.4.3, excluding any digit
-      // separators (6.4.4.2); (C23 7.24.1.5)
-      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 3);
-      assert(x == F(-0x0.5p0));
-    }
-    { // double decimal point
-      const char* s = "1.25.78";
+    // the expected form of the subject sequence is a nonempty sequence of
+    // decimal digits optionally containing a decimal-point character, then
+    // an optional exponent part as defined in 6.4.4.3, excluding any digit
+    // separators (6.4.4.2); (C23 7.24.1.5)
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 3);
+    assert(x == F(-0x0.5p0));
+  }
+  { // double decimal point
+    const char* s = "1.25.78";
 
-      // This number is halfway between two float values.
-      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 4);
-      assert(x == F(0x1.25p0));
-    }
-    { // exponent no sign
-      const char* s = "1.5p10";
+    // This number is halfway between two float values.
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 4);
+    assert(x == F(0x1.25p0));
+  }
+  { // exponent no sign
+    const char* s = "1.5p10";
 
-      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 6);
-      assert(x == F(0x1.5p10));
-    }
-    { // exponent capitalized no sign
-      const char* s = "1.5P10";
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 6);
+    assert(x == F(0x1.5p10));
+  }
+  { // exponent capitalized no sign
+    const char* s = "1.5P10";
 
-      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 6);
-      assert(x == F(0x1.5p10));
-    }
-    { // exponent + sign
-      const char* s = "1.5p+10";
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 6);
+    assert(x == F(0x1.5p10));
+  }
+  { // exponent + sign
+    const char* s = "1.5p+10";
 
-      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 7);
-      assert(x == F(0x1.5p10));
-    }
-    { // exponent - sign
-      const char* s = "1.5p-10";
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 7);
+    assert(x == F(0x1.5p10));
+  }
+  { // exponent - sign
+    const char* s = "1.5p-10";
 
-      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 7);
-      assert(x == F(0x1.5p-10));
-    }
-    { // Exponent no number
-      const char* s = "1.5p";
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 7);
+    assert(x == F(0x1.5p-10));
+  }
+  { // Exponent no number
+    const char* s = "1.5p";
+
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 3);
+    assert(x == F(0x1.5p0));
+  }
+  { // Exponent sign no number
+    {
+      const char* s = "1.5p+";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
       assert(r.ec == std::errc{});
       assert(r.ptr == s + 3);
       assert(x == F(0x1.5p0));
     }
-    { // Exponent sign no number
-      {
-        const char* s = "1.5p+";
-
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 3);
-        assert(x == F(0x1.5p0));
-      }
-      {
-        const char* s = "1.5p-";
-
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 3);
-        assert(x == F(0x1.5p0));
-      }
-    }
-    { // Exponent with whitespace
-      {
-        const char* s = "1.5p +1";
-
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 3);
-        assert(x == F(0x1.5p0));
-      }
-      {
-        const char* s = "1.5p+ 1";
-
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 3);
-        assert(x == F(0x1.5p0));
-      }
-      {
-        const char* s = "1.5p -1";
-
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 3);
-        assert(x == F(0x1.5p0));
-      }
-      {
-        const char* s = "1.5p- 1";
-
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 3);
-        assert(x == F(0x1.5p0));
-      }
-    }
-    { // Exponent double sign
-      {
-        const char* s = "1.25p++12";
-
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 4);
-        assert(x == F(0x1.25p0));
-      }
-      {
-        const char* s = "1.25p+-12";
-
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 4);
-        assert(x == F(0x1.25p0));
-      }
-      {
-        const char* s = "1.25p-+12";
-
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 4);
-        assert(x == F(0x1.25p0));
-      }
-      {
-        const char* s = "1.25p--12";
-
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + 4);
-        assert(x == F(0x1.25p0));
-      }
-    }
-    { // exponent hex prefix -> p0
-      const char* s = "1.25p0x12";
+    {
+      const char* s = "1.5p-";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
       assert(r.ec == std::errc{});
-      assert(r.ptr == s + 6);
+      assert(r.ptr == s + 3);
+      assert(x == F(0x1.5p0));
+    }
+  }
+  { // Exponent with whitespace
+    {
+      const char* s = "1.5p +1";
+
+      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
+      assert(r.ec == std::errc{});
+      assert(r.ptr == s + 3);
+      assert(x == F(0x1.5p0));
+    }
+    {
+      const char* s = "1.5p+ 1";
+
+      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
+      assert(r.ec == std::errc{});
+      assert(r.ptr == s + 3);
+      assert(x == F(0x1.5p0));
+    }
+    {
+      const char* s = "1.5p -1";
+
+      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
+      assert(r.ec == std::errc{});
+      assert(r.ptr == s + 3);
+      assert(x == F(0x1.5p0));
+    }
+    {
+      const char* s = "1.5p- 1";
+
+      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
+      assert(r.ec == std::errc{});
+      assert(r.ptr == s + 3);
+      assert(x == F(0x1.5p0));
+    }
+  }
+  { // Exponent double sign
+    {
+      const char* s = "1.25p++12";
+
+      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
+      assert(r.ec == std::errc{});
+      assert(r.ptr == s + 4);
       assert(x == F(0x1.25p0));
     }
-    { // double exponent
-      const char* s = "1.25p0p12";
+    {
+      const char* s = "1.25p+-12";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
       assert(r.ec == std::errc{});
-      assert(r.ptr == s + 6);
+      assert(r.ptr == s + 4);
       assert(x == F(0x1.25p0));
     }
-    { // This number is halfway between two float values.
-      const char* s = "131CA25";
+    {
+      const char* s = "1.25p-+12";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
       assert(r.ec == std::errc{});
-      assert(r.ptr == s + 7);
-      assert(x == F(0x131CA25p0));
+      assert(r.ptr == s + 4);
+      assert(x == F(0x1.25p0));
     }
-    { // Shifting mantissa exponent and no exponent
-      const char* s = "123.456";
+    {
+      const char* s = "1.25p--12";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
       assert(r.ec == std::errc{});
-      assert(r.ptr == s + 7);
-      assert(x == F(0x123.456p0));
+      assert(r.ptr == s + 4);
+      assert(x == F(0x1.25p0));
     }
-    { // Shifting mantissa exponent and an exponent
-      const char* s = "123.456p3";
+  }
+  { // exponent hex prefix -> p0
+    const char* s = "1.25p0x12";
 
-      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
-      assert(r.ec == std::errc{});
-      assert(r.ptr == s + 9);
-      assert(x == F(0x123.456p3));
-    }
-    { // Mantissa overflow
-      {
-        const char* s = "0.111111111111111111111111111111111111111111";
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 6);
+    assert(x == F(0x1.25p0));
+  }
+  { // double exponent
+    const char* s = "1.25p0p12";
 
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + std::strlen(s));
-        assert(x == F(0x0.111111111111111111111111111111111111111111p0));
-      }
-      {
-        const char* s = "111111111111.111111111111111111111111111111111111111111";
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 6);
+    assert(x == F(0x1.25p0));
+  }
+  { // This number is halfway between two float values.
+    const char* s = "131CA25";
 
-        r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
-        assert(r.ec == std::errc{});
-        assert(r.ptr == s + std::strlen(s));
-        assert(x == F(0x111111111111.111111111111111111111111111111111111111111p0));
-      }
-    }
-    { // Negative value
-      const char* s = "-0.25";
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 7);
+    assert(x == F(0x131CA25p0));
+  }
+  { // Shifting mantissa exponent and no exponent
+    const char* s = "123.456";
+
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 7);
+    assert(x == F(0x123.456p0));
+  }
+  { // Shifting mantissa exponent and an exponent
+    const char* s = "123.456p3";
+
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + 9);
+    assert(x == F(0x123.456p3));
+  }
+  { // Mantissa overflow
+    {
+      const char* s = "0.111111111111111111111111111111111111111111";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
       assert(r.ec == std::errc{});
       assert(r.ptr == s + std::strlen(s));
-      assert(x == F(-0x0.25p0));
+      assert(x == F(0x0.111111111111111111111111111111111111111111p0));
     }
-    { // value is too big -> +inf
-      const char* s = "1p9999999999999999999999999999999999999999";
+    {
+      const char* s = "111111111111.111111111111111111111111111111111111111111";
 
       r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
-      assert(r.ec == std::errc::result_out_of_range);
-      assert(r.ptr == s + strlen(s));
-      assert(x == std::numeric_limits<F>::infinity());
-    }
-    { // negative value is too big -> -inf
-      const char* s = "-1p9999999999999999999999999999999999999999";
-
-      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
-      assert(r.ec == std::errc::result_out_of_range);
-      assert(r.ptr == s + strlen(s));
-      assert(x == -std::numeric_limits<F>::infinity());
-    }
-    { // value is too small -> 0
-      const char* s = "1p-9999999999999999999999999999999999999999";
-
-      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
-      assert(r.ec == std::errc::result_out_of_range);
-      assert(r.ptr == s + strlen(s));
-      assert(x == F(0.0));
-    }
-    { // negative value is too small -> -0
-      const char* s = "-1p-9999999999999999999999999999999999999999";
-
-      r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
-      assert(r.ec == std::errc::result_out_of_range);
-      assert(r.ptr == s + strlen(s));
-      assert(x == F(-0.0));
+      assert(r.ec == std::errc{});
+      assert(r.ptr == s + std::strlen(s));
+      assert(x == F(0x111111111111.111111111111111111111111111111111111111111p0));
     }
   }
-};
+  { // Negative value
+    const char* s = "-0.25";
+
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
+    assert(r.ec == std::errc{});
+    assert(r.ptr == s + std::strlen(s));
+    assert(x == F(-0x0.25p0));
+  }
+  { // value is too big -> +inf
+    const char* s = "1p9999999999999999999999999999999999999999";
+
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
+    assert(r.ec == std::errc::result_out_of_range);
+    assert(r.ptr == s + strlen(s));
+    assert(x == std::numeric_limits<F>::infinity());
+  }
+  { // negative value is too big -> -inf
+    const char* s = "-1p9999999999999999999999999999999999999999";
+
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
+    assert(r.ec == std::errc::result_out_of_range);
+    assert(r.ptr == s + strlen(s));
+    assert(x == -std::numeric_limits<F>::infinity());
+  }
+  { // value is too small -> 0
+    const char* s = "1p-9999999999999999999999999999999999999999";
+
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
+    assert(r.ec == std::errc::result_out_of_range);
+    assert(r.ptr == s + strlen(s));
+    assert(x == F(0.0));
+  }
+  { // negative value is too small -> -0
+    const char* s = "-1p-9999999999999999999999999999999999999999";
+
+    r = std::from_chars(s, s + std::strlen(s), x, std::chars_format::hex);
+    assert(r.ec == std::errc::result_out_of_range);
+    assert(r.ptr == s + strlen(s));
+    assert(x == F(-0.0));
+  }
+}
 
 // The test
 //   test/std/utilities/charconv/charconv.msvc/test.cpp
@@ -1546,13 +1537,20 @@ void test_random_errors() {
   }
 }
 
-int main(int, char**) {
-  run<test_basics>(all_floats);
-  run<test_scientific>(all_floats);
-  run<test_fixed>(all_floats);
-  run<test_general>(all_floats);
+struct Test {
+  template <class FloatT>
+  void operator()() {
+    test_basics<FloatT>();
+    test_scientific<FloatT>();
+    test_fixed<FloatT>();
+    test_general<FloatT>();
+    test_hex<FloatT>();
+  }
+};
 
-  run<test_hex>(all_floats);
+int main(int, char**) {
+  //TODO: Make this floating_point_types
+  types::for_each(types::type_list<float, double>{}, Test());
 
   test_random_errors();
 
