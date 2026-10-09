@@ -1453,14 +1453,14 @@ private:
 
   /// An input file recorded by a loaded module file. \c InputID is the file's
   /// ID within the module's input file table.
-  struct LoadedInputModuleFile {
+  struct LoadedModuleInputFile {
     ModuleFile *F;
     unsigned InputID;
   };
 
   /// Input files of loaded modules, keyed by the size the module recorded for
   /// them. A size does not identify a file, so a lookup must confirm the match.
-  std::optional<llvm::DenseMap<off_t, SmallVector<LoadedInputModuleFile, 1>>>
+  std::optional<llvm::DenseMap<off_t, SmallVector<LoadedModuleInputFile, 1>>>
       LoadedInputFiles;
 
   void buildLoadedInputFiles();

@@ -1890,7 +1890,7 @@ InputFileLoc ASTReader::getLoadedFileLoc(StringRef Path, off_t Size) {
   OptionalFileEntryRef Wanted;
   bool TriedWanted = false;
 
-  for (const LoadedInputModuleFile &In : Known->second) {
+  for (const LoadedModuleInputFile &In : Known->second) {
     InputFileInfo FI = getInputFileInfo(*In.F, In.InputID);
 
     StringRef Unresolved = FI.UnresolvedImportedFilename;
