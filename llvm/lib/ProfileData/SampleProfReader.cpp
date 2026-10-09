@@ -673,11 +673,12 @@ SampleProfileReaderBinary::readSampleContextFromTable() {
 }
 
 std::error_code
-SampleProfileReaderBinary::readVTableTypeCountMap(TypeCountMap &M) {
+SampleProfileReaderBinary::readVTableTypeCountMap(TypeCountMap &M,
+                                                  bool Merge) {
   auto NumVTableTypes = readNumber<uint32_t>();
   if (std::error_code EC = NumVTableTypes.getError())
     return EC;
-  M.reserve(*NumVTableTypes);
+  M.reserve(M.size() + *NumVTableTypes);
 
   for (uint32_t I = 0; I < *NumVTableTypes; ++I) {
     auto VTableType(readStringFromTable());
@@ -687,6 +688,16 @@ SampleProfileReaderBinary::readVTableTypeCountMap(TypeCountMap &M) {
     auto VTableSamples = readNumber<uint64_t>();
     if (std::error_code EC = VTableSamples.getError())
       return EC;
+
+    if (Merge) {
+      // Several profile locations were collapsed into \p M (FS-discriminator
+      // masking), so a type may legitimately appear more than once; accumulate
+      // like body and callsite samples are accumulated.
+      uint64_t &Count = M[*VTableType];
+      Count = SaturatingAdd(Count, *VTableSamples);
+      continue;
+    }
+
     // The source profile should not have duplicate vtable records at the same
     // location. In case duplicate vtables are found, reader can emit a warning
     // but continue processing the profile.
@@ -727,9 +738,17 @@ SampleProfileReaderBinary::readCallsiteVTableProf(FunctionSamples &FProfile) {
 
     // Here we handle FS discriminators:
     const uint32_t DiscriminatorVal = (*Discriminator) & getDiscriminatorMask();
+    LineLocation Loc(*LineOffset, DiscriminatorVal);
 
-    if (std::error_code EC = readVTableTypeCountMap(FProfile.getTypeSamplesAt(
-            LineLocation(*LineOffset, DiscriminatorVal))))
+    // With FS discriminators, distinct raw locations in the profile may map
+    // to the same masked location. Body and callsite samples are accumulated
+    // in that case (see readProfile), so do the same for vtable counts
+    // instead of diagnosing them as duplicates.
+    const bool Merge =
+        ProfileIsFS && FProfile.findCallsiteTypeSamplesAt(Loc) != nullptr;
+
+    if (std::error_code EC =
+            readVTableTypeCountMap(FProfile.getTypeSamplesAt(Loc), Merge))
       return EC;
   }
   return sampleprof_error::success;
