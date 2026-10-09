@@ -46,34 +46,28 @@ define void @conditional_store_load_same_invariant_via_phi(ptr %p0, ptr %p1, ptr
 ;
 ; MAXDEP1-LABEL: 'conditional_store_load_same_invariant_via_phi'
 ; MAXDEP1-NEXT:    loop:
-; MAXDEP1-NEXT:      Memory dependences are safe with run-time checks
 ; MAXDEP1-NEXT:      Too many dependences, not recorded
 ; MAXDEP1-NEXT:      Run-time memory checks:
 ; MAXDEP1-NEXT:      Check 0:
 ; MAXDEP1-NEXT:        Comparing group GRP0:
 ; MAXDEP1-NEXT:        ptr %p2
 ; MAXDEP1-NEXT:        Against group GRP1:
-; MAXDEP1-NEXT:          %gep1 = getelementptr i32, ptr %phip, i64 %iv
+; MAXDEP1-NEXT:          %gep0 = getelementptr i32, ptr %p0, i64 %iv
 ; MAXDEP1-NEXT:      Check 1:
 ; MAXDEP1-NEXT:        Comparing group GRP0:
 ; MAXDEP1-NEXT:        ptr %p2
 ; MAXDEP1-NEXT:        Against group GRP2:
-; MAXDEP1-NEXT:          %gep0 = getelementptr i32, ptr %p0, i64 %iv
-; MAXDEP1-NEXT:      Check 2:
-; MAXDEP1-NEXT:        Comparing group GRP1:
 ; MAXDEP1-NEXT:          %gep1 = getelementptr i32, ptr %phip, i64 %iv
-; MAXDEP1-NEXT:        Against group GRP2:
-; MAXDEP1-NEXT:          %gep0 = getelementptr i32, ptr %p0, i64 %iv
 ; MAXDEP1-NEXT:      Grouped accesses:
 ; MAXDEP1-NEXT:        Group GRP0:
 ; MAXDEP1-NEXT:          (Low: %p2 High: (4 + %p2))
 ; MAXDEP1-NEXT:            Member: %p2
 ; MAXDEP1-NEXT:        Group GRP1:
-; MAXDEP1-NEXT:          (Low: %phip High: ((4 * %n) + %phip))
-; MAXDEP1-NEXT:            Member: {%phip,+,4}<%loop>
-; MAXDEP1-NEXT:        Group GRP2:
 ; MAXDEP1-NEXT:          (Low: %p0 High: ((4 * %n) + %p0))
 ; MAXDEP1-NEXT:            Member: {%p0,+,4}<%loop>
+; MAXDEP1-NEXT:        Group GRP2:
+; MAXDEP1-NEXT:          (Low: %phip High: ((4 * %n) + %phip))
+; MAXDEP1-NEXT:            Member: {%phip,+,4}<%loop>
 ; MAXDEP1-EMPTY:
 ; MAXDEP1-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; MAXDEP1-NEXT:      SCEV assumptions:
@@ -155,47 +149,31 @@ define void @store_load_same_invariant_via_different_geps(ptr %p0, ptr %p1, ptr 
 ;
 ; MAXDEP1-LABEL: 'store_load_same_invariant_via_different_geps'
 ; MAXDEP1-NEXT:    loop:
-; MAXDEP1-NEXT:      Memory dependences are safe with run-time checks
 ; MAXDEP1-NEXT:      Too many dependences, not recorded
 ; MAXDEP1-NEXT:      Run-time memory checks:
 ; MAXDEP1-NEXT:      Check 0:
 ; MAXDEP1-NEXT:        Comparing group GRP0:
+; MAXDEP1-NEXT:          %gep.ld = getelementptr i32, ptr %base, i64 1
 ; MAXDEP1-NEXT:          %gep.st = getelementptr i32, ptr %base, i64 1
 ; MAXDEP1-NEXT:        Against group GRP1:
-; MAXDEP1-NEXT:          %gep1 = getelementptr i32, ptr %phip, i64 %iv
+; MAXDEP1-NEXT:          %gep0 = getelementptr i32, ptr %p0, i64 %iv
 ; MAXDEP1-NEXT:      Check 1:
 ; MAXDEP1-NEXT:        Comparing group GRP0:
+; MAXDEP1-NEXT:          %gep.ld = getelementptr i32, ptr %base, i64 1
 ; MAXDEP1-NEXT:          %gep.st = getelementptr i32, ptr %base, i64 1
 ; MAXDEP1-NEXT:        Against group GRP2:
-; MAXDEP1-NEXT:          %gep0 = getelementptr i32, ptr %p0, i64 %iv
-; MAXDEP1-NEXT:      Check 2:
-; MAXDEP1-NEXT:        Comparing group GRP0:
-; MAXDEP1-NEXT:          %gep.st = getelementptr i32, ptr %base, i64 1
-; MAXDEP1-NEXT:        Against group GRP3:
-; MAXDEP1-NEXT:          %gep.ld = getelementptr i32, ptr %base, i64 1
-; MAXDEP1-NEXT:      Check 3:
-; MAXDEP1-NEXT:        Comparing group GRP1:
 ; MAXDEP1-NEXT:          %gep1 = getelementptr i32, ptr %phip, i64 %iv
-; MAXDEP1-NEXT:        Against group GRP2:
-; MAXDEP1-NEXT:          %gep0 = getelementptr i32, ptr %p0, i64 %iv
-; MAXDEP1-NEXT:      Check 4:
-; MAXDEP1-NEXT:        Comparing group GRP1:
-; MAXDEP1-NEXT:          %gep1 = getelementptr i32, ptr %phip, i64 %iv
-; MAXDEP1-NEXT:        Against group GRP3:
-; MAXDEP1-NEXT:          %gep.ld = getelementptr i32, ptr %base, i64 1
 ; MAXDEP1-NEXT:      Grouped accesses:
 ; MAXDEP1-NEXT:        Group GRP0:
 ; MAXDEP1-NEXT:          (Low: (4 + %base) High: (8 + %base))
 ; MAXDEP1-NEXT:            Member: (4 + %base)
+; MAXDEP1-NEXT:            Member: (4 + %base)
 ; MAXDEP1-NEXT:        Group GRP1:
-; MAXDEP1-NEXT:          (Low: %phip High: ((4 * %n) + %phip))
-; MAXDEP1-NEXT:            Member: {%phip,+,4}<%loop>
-; MAXDEP1-NEXT:        Group GRP2:
 ; MAXDEP1-NEXT:          (Low: %p0 High: ((4 * %n) + %p0))
 ; MAXDEP1-NEXT:            Member: {%p0,+,4}<%loop>
-; MAXDEP1-NEXT:        Group GRP3:
-; MAXDEP1-NEXT:          (Low: (4 + %base) High: (8 + %base))
-; MAXDEP1-NEXT:            Member: (4 + %base)
+; MAXDEP1-NEXT:        Group GRP2:
+; MAXDEP1-NEXT:          (Low: %phip High: ((4 * %n) + %phip))
+; MAXDEP1-NEXT:            Member: {%phip,+,4}<%loop>
 ; MAXDEP1-EMPTY:
 ; MAXDEP1-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; MAXDEP1-NEXT:      SCEV assumptions:
@@ -281,31 +259,25 @@ define void @phi_with_loads_from_same_addr(ptr %p0, ptr %p1, ptr %x, i64 %n, i1 
 ;
 ; MAXDEP1-LABEL: 'phi_with_loads_from_same_addr'
 ; MAXDEP1-NEXT:    loop:
-; MAXDEP1-NEXT:      Memory dependences are safe with run-time checks
 ; MAXDEP1-NEXT:      Too many dependences, not recorded
 ; MAXDEP1-NEXT:      Run-time memory checks:
 ; MAXDEP1-NEXT:      Check 0:
 ; MAXDEP1-NEXT:        Comparing group GRP0:
 ; MAXDEP1-NEXT:          %ld1 = load ptr, ptr %x, align 8
 ; MAXDEP1-NEXT:        Against group GRP1:
-; MAXDEP1-NEXT:          %gep1 = getelementptr i32, ptr %phip, i64 %iv
+; MAXDEP1-NEXT:          %gep0 = getelementptr i32, ptr %p0, i64 %iv
 ; MAXDEP1-NEXT:      Check 1:
 ; MAXDEP1-NEXT:        Comparing group GRP0:
 ; MAXDEP1-NEXT:          %ld1 = load ptr, ptr %x, align 8
 ; MAXDEP1-NEXT:        Against group GRP2:
-; MAXDEP1-NEXT:          %gep0 = getelementptr i32, ptr %p0, i64 %iv
+; MAXDEP1-NEXT:          %gep1 = getelementptr i32, ptr %phip, i64 %iv
 ; MAXDEP1-NEXT:      Check 2:
 ; MAXDEP1-NEXT:        Comparing group GRP0:
 ; MAXDEP1-NEXT:          %ld1 = load ptr, ptr %x, align 8
 ; MAXDEP1-NEXT:        Against group GRP3:
 ; MAXDEP1-NEXT:          %ld2 = load ptr, ptr %x, align 8
 ; MAXDEP1-NEXT:      Check 3:
-; MAXDEP1-NEXT:        Comparing group GRP1:
-; MAXDEP1-NEXT:          %gep1 = getelementptr i32, ptr %phip, i64 %iv
-; MAXDEP1-NEXT:        Against group GRP2:
-; MAXDEP1-NEXT:          %gep0 = getelementptr i32, ptr %p0, i64 %iv
-; MAXDEP1-NEXT:      Check 4:
-; MAXDEP1-NEXT:        Comparing group GRP1:
+; MAXDEP1-NEXT:        Comparing group GRP2:
 ; MAXDEP1-NEXT:          %gep1 = getelementptr i32, ptr %phip, i64 %iv
 ; MAXDEP1-NEXT:        Against group GRP3:
 ; MAXDEP1-NEXT:          %ld2 = load ptr, ptr %x, align 8
@@ -314,11 +286,11 @@ define void @phi_with_loads_from_same_addr(ptr %p0, ptr %p1, ptr %x, i64 %n, i1 
 ; MAXDEP1-NEXT:          (Low: %ld1 High: (4 + %ld1))
 ; MAXDEP1-NEXT:            Member: %ld1
 ; MAXDEP1-NEXT:        Group GRP1:
-; MAXDEP1-NEXT:          (Low: %phip High: ((4 * %n) + %phip))
-; MAXDEP1-NEXT:            Member: {%phip,+,4}<%loop>
-; MAXDEP1-NEXT:        Group GRP2:
 ; MAXDEP1-NEXT:          (Low: %p0 High: ((4 * %n) + %p0))
 ; MAXDEP1-NEXT:            Member: {%p0,+,4}<%loop>
+; MAXDEP1-NEXT:        Group GRP2:
+; MAXDEP1-NEXT:          (Low: %phip High: ((4 * %n) + %phip))
+; MAXDEP1-NEXT:            Member: {%phip,+,4}<%loop>
 ; MAXDEP1-NEXT:        Group GRP3:
 ; MAXDEP1-NEXT:          (Low: %ld2 High: (4 + %ld2))
 ; MAXDEP1-NEXT:            Member: %ld2

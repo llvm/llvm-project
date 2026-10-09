@@ -3389,9 +3389,8 @@ bool MemoryDepChecker::areDepsSafe(const DepCandidates &DepCands,
             mergeInStatus(Dependence::isSafeForVectorization(Type));
 
             // Gather dependences unless we accumulated MaxDependences
-            // dependences.  In that case return as soon as we find the first
-            // unsafe dependence.  This puts a limit on this quadratic
-            // algorithm.
+            // dependences. After that, keep checking without recording until a
+            // dependence is Unsafe.
             if (RecordDependences) {
               if (Type != Dependence::NoDep)
                 Dependences.emplace_back(A.second, B.second, Type);
@@ -3403,7 +3402,8 @@ bool MemoryDepChecker::areDepsSafe(const DepCandidates &DepCands,
                            << "Too many dependences, stopped recording\n");
               }
             }
-            if (!RecordDependences && !isSafeForVectorization())
+            if (!RecordDependences &&
+                Status == VectorizationSafetyStatus::Unsafe)
               return false;
           }
         ++OI;
