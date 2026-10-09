@@ -6555,7 +6555,8 @@ std::pair<bool /*Changed*/, bool /*CFGChanged*/> SROA::runSROA(Function &F) {
 }
 
 PreservedAnalyses SROAPass::run(Function &F, FunctionAnalysisManager &AM) {
-  DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  Function &Fn = F;
+  DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(Fn);
   AssumptionCache &AC = AM.getResult<AssumptionAnalysis>(F);
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   auto [Changed, CFGChanged] =
