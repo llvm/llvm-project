@@ -1621,6 +1621,9 @@ def : InstAlias<"stshh strm", (HINT 49), 1>;
 def : InstAlias<"shuh", (HINT 50), 1>;
 def : InstAlias<"shuh ph", (HINT 51), 1>;
 def : InstAlias<"stcph", (HINT 52), 1>;
+def : InstAlias<"srls", (HINT 54)>;
+def : InstAlias<"srls stshstrm", (HINT 55)>;
+def : InstAlias<"slbnd", (HINT 56)>;
 
 // In order to be able to write readable assembly, LLVM should accept assembly
 // inputs that use Branch Target Identification mnemonics, even with BTI disabled.
