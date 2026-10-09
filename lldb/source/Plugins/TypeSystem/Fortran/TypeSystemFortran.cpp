@@ -97,7 +97,7 @@ bool TypeSystemFortran::SupportsLanguage(lldb::LanguageType language) {
 
 /// Returns the type name upper-cased to follow Fortran's general style.
 ConstString TypeSystemFortran::GetTypeName(opaque_compiler_type_t type,
-                                           bool BaseOnly) {
+                                           bool base_only) {
   if (!type)
     return ConstString();
 
@@ -160,11 +160,18 @@ TypeSystemFortran::CreateBaseType(llvm::dwarf::TypeKind dwarf_encoding,
 CompilerType TypeSystemFortran::GetOrCreateFortranBaseType(int kind,
                                                            uint64_t bitsize,
                                                            ConstString name) {
+  FoldingSetNodeID id;
+  FortranType::Profile(id, kind, bitsize);
+  FoldingSetInsertToken token;
+  FortranType *candidate_type = m_basic_types.lookup(id, token);
+  if (candidate_type)
+    return CompilerType(weak_from_this(), (void *)candidate_type);
+
   auto new_type_up = std::make_unique<FortranType>(kind, bitsize, name);
-  FortranType *fortran_type = m_basic_types.getOrInsert(new_type_up.get());
-  if (fortran_type == new_type_up.get())
-    m_types.push_back(std::move(new_type_up));
-  return CompilerType(weak_from_this(), (void *)fortran_type);
+  candidate_type = new_type_up.get();
+  m_basic_types.insert(candidate_type, token);
+  m_types.push_back(std::move(new_type_up));
+  return CompilerType(weak_from_this(), (void *)candidate_type);
 }
 
 lldb::TypeClass
@@ -234,8 +241,6 @@ TypeSystemFortran::GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type) {
       return eBasicTypeFloatComplex;
     case 128:
       return eBasicTypeDoubleComplex;
-    case 256:
-      return eBasicTypeLongDoubleComplex;
     default:
       return eBasicTypeInvalid;
     }
@@ -280,9 +285,6 @@ CompilerType TypeSystemFortran::GetBasicTypeFromAST(BasicType basic_type) {
   case eBasicTypeDoubleComplex:
     return GetOrCreateFortranBaseType(FortranType::KIND_COMPLEX, 128,
                                       ConstString("COMPLEX(KIND=8)"));
-  case eBasicTypeLongDoubleComplex:
-    return GetOrCreateFortranBaseType(FortranType::KIND_COMPLEX, 256,
-                                      ConstString("COMPLEX(KIND=16)"));
   default:
     return CompilerType();
   }
