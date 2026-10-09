@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
+#include "llvm/TargetParser/Triple.h"
 #include <optional>
 
 using namespace clang;
@@ -417,8 +418,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 
   // For bare-metal none-elf.
-  if (T.getOS() == llvm::Triple::UnknownOS && T.getEnvironmentName() == "elf" &&
-      Opts.CPlusPlus) {
+  if (T.getOS() == llvm::Triple::UnknownOS &&
+      T.getEnvironment() == llvm::Triple::UnknownEnvironment &&
+      T.getObjectFormat() == llvm::Triple::ELF && Opts.CPlusPlus) {
     Builder.defineMacro("_GNU_SOURCE");
   }
 
