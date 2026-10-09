@@ -243,6 +243,12 @@ public:
                       static_cast<const Constant *>(this)->stripPointerCasts());
   }
 
+  bool
+  containsMatchingElement(function_ref<bool(const Constant *)> PredFn) const;
+
+  bool
+  containsUndefinedElement(function_ref<bool(const Constant *)> HasFn) const;
+
   /// Try to replace undefined constant C or undefined elements in C with
   /// Replacement. If no changes are made, the constant C is returned.
   LLVM_ABI static Constant *replaceUndefsWith(Constant *C,
