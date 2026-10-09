@@ -76,6 +76,15 @@ def emit_bzero : GICombineRule<
                                                            CInfo.EnableMinSize); }]),
   (apply [{ llvm::AArch64GISelUtils::applyEmitBZero(*${root}, B); }])>;
 
+// Convert load + shuffles to ld2/ld3/ld4
+let Predicates = [HasNEON] in
+def deinterleave_load : GICombineRule<
+  (defs root:$root, register_vector_matchinfo:$matchinfo),
+  (match (G_LOAD $value, $addr):$root,
+         [{ return matchDeinterleavingLoad(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applyDeinterleavingLoad(*${root}, MRI, B, ${matchinfo}); }])
+>;
+
 def AArch64PreLegalizerCombiner: GICombiner<
   "AArch64PreLegalizerCombinerImpl", [all_combines,
                                       select_zero_true,
@@ -92,7 +101,7 @@ def AArch64PreLegalizerCombiner: GICombiner<
                                       push_mul_through_sext,
                                       simplify_uaddo,
                                       memcpy_family_combines,
-                                      emit_bzero]> {
+                                      emit_bzero, deinterleave_load]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 

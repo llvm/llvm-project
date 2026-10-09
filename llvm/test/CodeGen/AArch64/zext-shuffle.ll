@@ -706,49 +706,15 @@ define <8 x i64> @zext_load_add(ptr %p) {
 ;
 ; CHECK-GI-LABEL: zext_load_add:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldp q2, q4, [x0, #16]
-; CHECK-GI-NEXT:    ldr q5, [x0]
-; CHECK-GI-NEXT:    ldr q1, [x0, #48]
-; CHECK-GI-NEXT:    mov v0.h[0], v5.h[0]
-; CHECK-GI-NEXT:    mov v6.h[0], v5.h[1]
-; CHECK-GI-NEXT:    mov v7.h[0], v5.h[2]
-; CHECK-GI-NEXT:    mov v3.h[0], v4.h[0]
-; CHECK-GI-NEXT:    mov v16.h[0], v5.h[3]
-; CHECK-GI-NEXT:    mov v17.h[0], v4.h[1]
-; CHECK-GI-NEXT:    mov v18.h[0], v4.h[2]
-; CHECK-GI-NEXT:    mov v19.h[0], v4.h[3]
-; CHECK-GI-NEXT:    mov v0.h[1], v5.h[4]
-; CHECK-GI-NEXT:    mov v6.h[1], v5.h[5]
-; CHECK-GI-NEXT:    mov v7.h[1], v5.h[6]
-; CHECK-GI-NEXT:    mov v3.h[1], v4.h[4]
-; CHECK-GI-NEXT:    mov v16.h[1], v5.h[7]
-; CHECK-GI-NEXT:    mov v17.h[1], v4.h[5]
-; CHECK-GI-NEXT:    mov v18.h[1], v4.h[6]
-; CHECK-GI-NEXT:    mov v19.h[1], v4.h[7]
-; CHECK-GI-NEXT:    mov v0.h[2], v2.h[0]
-; CHECK-GI-NEXT:    mov v6.h[2], v2.h[1]
-; CHECK-GI-NEXT:    mov v7.h[2], v2.h[2]
-; CHECK-GI-NEXT:    mov v3.h[2], v1.h[0]
-; CHECK-GI-NEXT:    mov v16.h[2], v2.h[3]
-; CHECK-GI-NEXT:    mov v17.h[2], v1.h[1]
-; CHECK-GI-NEXT:    mov v18.h[2], v1.h[2]
-; CHECK-GI-NEXT:    mov v19.h[2], v1.h[3]
-; CHECK-GI-NEXT:    mov v0.h[3], v2.h[4]
-; CHECK-GI-NEXT:    mov v6.h[3], v2.h[5]
-; CHECK-GI-NEXT:    mov v7.h[3], v2.h[6]
-; CHECK-GI-NEXT:    mov v3.h[3], v1.h[4]
-; CHECK-GI-NEXT:    mov v16.h[3], v2.h[7]
-; CHECK-GI-NEXT:    mov v17.h[3], v1.h[5]
-; CHECK-GI-NEXT:    mov v18.h[3], v1.h[6]
-; CHECK-GI-NEXT:    mov v19.h[3], v1.h[7]
-; CHECK-GI-NEXT:    uaddl v1.4s, v0.4h, v6.4h
-; CHECK-GI-NEXT:    uaddl v2.4s, v7.4h, v16.4h
-; CHECK-GI-NEXT:    uaddl v3.4s, v3.4h, v17.4h
-; CHECK-GI-NEXT:    uaddl v4.4s, v18.4h, v19.4h
-; CHECK-GI-NEXT:    uaddl v0.2d, v1.2s, v2.2s
-; CHECK-GI-NEXT:    uaddl2 v1.2d, v1.4s, v2.4s
-; CHECK-GI-NEXT:    uaddl v2.2d, v3.2s, v4.2s
-; CHECK-GI-NEXT:    uaddl2 v3.2d, v3.4s, v4.4s
+; CHECK-GI-NEXT:    ld4 { v0.8h, v1.8h, v2.8h, v3.8h }, [x0]
+; CHECK-GI-NEXT:    uaddl v4.4s, v0.4h, v1.4h
+; CHECK-GI-NEXT:    uaddl v5.4s, v2.4h, v3.4h
+; CHECK-GI-NEXT:    uaddl2 v6.4s, v0.8h, v1.8h
+; CHECK-GI-NEXT:    uaddl2 v3.4s, v2.8h, v3.8h
+; CHECK-GI-NEXT:    uaddl v0.2d, v4.2s, v5.2s
+; CHECK-GI-NEXT:    uaddl2 v1.2d, v4.4s, v5.4s
+; CHECK-GI-NEXT:    uaddl v2.2d, v6.2s, v3.2s
+; CHECK-GI-NEXT:    uaddl2 v3.2d, v6.4s, v3.4s
 ; CHECK-GI-NEXT:    ret
     %l = load <32 x i16>, ptr %p
     %s1 = shufflevector <32 x i16> %l, <32 x i16> undef, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
@@ -986,92 +952,59 @@ define <8 x double> @uitofp_load_fadd(ptr %p) {
 ;
 ; CHECK-GI-LABEL: uitofp_load_fadd:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldp q5, q1, [x0]
-; CHECK-GI-NEXT:    ldp q3, q0, [x0, #32]
-; CHECK-GI-NEXT:    mov v2.h[0], v5.h[0]
-; CHECK-GI-NEXT:    mov v6.h[0], v5.h[1]
-; CHECK-GI-NEXT:    mov v16.h[0], v5.h[2]
-; CHECK-GI-NEXT:    mov v4.h[0], v3.h[0]
-; CHECK-GI-NEXT:    mov v7.h[0], v3.h[1]
-; CHECK-GI-NEXT:    mov v17.h[0], v3.h[2]
-; CHECK-GI-NEXT:    mov v18.h[0], v5.h[3]
-; CHECK-GI-NEXT:    mov v19.h[0], v3.h[3]
-; CHECK-GI-NEXT:    mov v2.h[1], v5.h[4]
-; CHECK-GI-NEXT:    mov v6.h[1], v5.h[5]
-; CHECK-GI-NEXT:    mov v16.h[1], v5.h[6]
-; CHECK-GI-NEXT:    mov v4.h[1], v3.h[4]
-; CHECK-GI-NEXT:    mov v7.h[1], v3.h[5]
-; CHECK-GI-NEXT:    mov v17.h[1], v3.h[6]
-; CHECK-GI-NEXT:    mov v18.h[1], v5.h[7]
-; CHECK-GI-NEXT:    mov v19.h[1], v3.h[7]
-; CHECK-GI-NEXT:    mov v2.h[2], v1.h[0]
-; CHECK-GI-NEXT:    mov v6.h[2], v1.h[1]
-; CHECK-GI-NEXT:    mov v16.h[2], v1.h[2]
-; CHECK-GI-NEXT:    mov v4.h[2], v0.h[0]
-; CHECK-GI-NEXT:    mov v7.h[2], v0.h[1]
-; CHECK-GI-NEXT:    mov v17.h[2], v0.h[2]
-; CHECK-GI-NEXT:    mov v18.h[2], v1.h[3]
-; CHECK-GI-NEXT:    mov v19.h[2], v0.h[3]
-; CHECK-GI-NEXT:    mov v2.h[3], v1.h[4]
-; CHECK-GI-NEXT:    mov v6.h[3], v1.h[5]
-; CHECK-GI-NEXT:    mov v16.h[3], v1.h[6]
-; CHECK-GI-NEXT:    mov v4.h[3], v0.h[4]
-; CHECK-GI-NEXT:    mov v7.h[3], v0.h[5]
-; CHECK-GI-NEXT:    mov v17.h[3], v0.h[6]
-; CHECK-GI-NEXT:    mov v18.h[3], v1.h[7]
-; CHECK-GI-NEXT:    mov v19.h[3], v0.h[7]
-; CHECK-GI-NEXT:    ushll v2.4s, v2.4h, #0
-; CHECK-GI-NEXT:    ushll v0.4s, v6.4h, #0
-; CHECK-GI-NEXT:    ushll v1.4s, v4.4h, #0
-; CHECK-GI-NEXT:    ushll v3.4s, v7.4h, #0
-; CHECK-GI-NEXT:    ushll v4.4s, v16.4h, #0
-; CHECK-GI-NEXT:    ushll v5.4s, v17.4h, #0
-; CHECK-GI-NEXT:    ushll v16.4s, v18.4h, #0
-; CHECK-GI-NEXT:    ushll v19.4s, v19.4h, #0
-; CHECK-GI-NEXT:    ushll v6.2d, v2.2s, #0
-; CHECK-GI-NEXT:    ushll2 v2.2d, v2.4s, #0
-; CHECK-GI-NEXT:    ushll v17.2d, v0.2s, #0
-; CHECK-GI-NEXT:    ushll v7.2d, v1.2s, #0
-; CHECK-GI-NEXT:    ushll2 v1.2d, v1.4s, #0
-; CHECK-GI-NEXT:    ushll2 v0.2d, v0.4s, #0
-; CHECK-GI-NEXT:    ushll v18.2d, v3.2s, #0
-; CHECK-GI-NEXT:    ushll2 v3.2d, v3.4s, #0
-; CHECK-GI-NEXT:    ushll v20.2d, v4.2s, #0
-; CHECK-GI-NEXT:    ushll2 v4.2d, v4.4s, #0
-; CHECK-GI-NEXT:    ushll v21.2d, v5.2s, #0
-; CHECK-GI-NEXT:    ushll2 v5.2d, v5.4s, #0
-; CHECK-GI-NEXT:    ushll v22.2d, v16.2s, #0
+; CHECK-GI-NEXT:    ld4 { v0.8h, v1.8h, v2.8h, v3.8h }, [x0]
+; CHECK-GI-NEXT:    ushll v4.4s, v0.4h, #0
+; CHECK-GI-NEXT:    ushll2 v5.4s, v0.8h, #0
+; CHECK-GI-NEXT:    ushll v6.4s, v1.4h, #0
+; CHECK-GI-NEXT:    ushll2 v7.4s, v1.8h, #0
+; CHECK-GI-NEXT:    ushll v16.4s, v2.4h, #0
+; CHECK-GI-NEXT:    ushll2 v17.4s, v2.8h, #0
+; CHECK-GI-NEXT:    ushll v18.4s, v3.4h, #0
+; CHECK-GI-NEXT:    ushll2 v0.4s, v3.8h, #0
+; CHECK-GI-NEXT:    ushll v1.2d, v4.2s, #0
+; CHECK-GI-NEXT:    ushll2 v2.2d, v4.4s, #0
+; CHECK-GI-NEXT:    ushll v3.2d, v5.2s, #0
+; CHECK-GI-NEXT:    ushll2 v4.2d, v5.4s, #0
+; CHECK-GI-NEXT:    ushll v5.2d, v6.2s, #0
+; CHECK-GI-NEXT:    ushll2 v6.2d, v6.4s, #0
+; CHECK-GI-NEXT:    ushll v19.2d, v7.2s, #0
+; CHECK-GI-NEXT:    ushll2 v7.2d, v7.4s, #0
+; CHECK-GI-NEXT:    ushll v20.2d, v16.2s, #0
 ; CHECK-GI-NEXT:    ushll2 v16.2d, v16.4s, #0
-; CHECK-GI-NEXT:    ushll v23.2d, v19.2s, #0
-; CHECK-GI-NEXT:    ushll2 v19.2d, v19.4s, #0
-; CHECK-GI-NEXT:    ucvtf v6.2d, v6.2d
-; CHECK-GI-NEXT:    ucvtf v2.2d, v2.2d
-; CHECK-GI-NEXT:    ucvtf v7.2d, v7.2d
+; CHECK-GI-NEXT:    ushll v21.2d, v17.2s, #0
+; CHECK-GI-NEXT:    ushll2 v17.2d, v17.4s, #0
+; CHECK-GI-NEXT:    ushll v22.2d, v18.2s, #0
+; CHECK-GI-NEXT:    ushll2 v18.2d, v18.4s, #0
+; CHECK-GI-NEXT:    ushll v23.2d, v0.2s, #0
+; CHECK-GI-NEXT:    ushll2 v0.2d, v0.4s, #0
 ; CHECK-GI-NEXT:    ucvtf v1.2d, v1.2d
-; CHECK-GI-NEXT:    ucvtf v17.2d, v17.2d
-; CHECK-GI-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-GI-NEXT:    ucvtf v18.2d, v18.2d
+; CHECK-GI-NEXT:    ucvtf v2.2d, v2.2d
 ; CHECK-GI-NEXT:    ucvtf v3.2d, v3.2d
-; CHECK-GI-NEXT:    ucvtf v20.2d, v20.2d
 ; CHECK-GI-NEXT:    ucvtf v4.2d, v4.2d
-; CHECK-GI-NEXT:    ucvtf v21.2d, v21.2d
 ; CHECK-GI-NEXT:    ucvtf v5.2d, v5.2d
-; CHECK-GI-NEXT:    ucvtf v22.2d, v22.2d
-; CHECK-GI-NEXT:    ucvtf v16.2d, v16.2d
-; CHECK-GI-NEXT:    ucvtf v23.2d, v23.2d
+; CHECK-GI-NEXT:    ucvtf v6.2d, v6.2d
 ; CHECK-GI-NEXT:    ucvtf v19.2d, v19.2d
-; CHECK-GI-NEXT:    fadd v6.2d, v6.2d, v17.2d
-; CHECK-GI-NEXT:    fadd v2.2d, v2.2d, v0.2d
-; CHECK-GI-NEXT:    fadd v7.2d, v7.2d, v18.2d
-; CHECK-GI-NEXT:    fadd v3.2d, v1.2d, v3.2d
-; CHECK-GI-NEXT:    fadd v0.2d, v20.2d, v22.2d
-; CHECK-GI-NEXT:    fadd v1.2d, v4.2d, v16.2d
-; CHECK-GI-NEXT:    fadd v4.2d, v21.2d, v23.2d
-; CHECK-GI-NEXT:    fadd v5.2d, v5.2d, v19.2d
-; CHECK-GI-NEXT:    fadd v0.2d, v6.2d, v0.2d
-; CHECK-GI-NEXT:    fadd v1.2d, v2.2d, v1.2d
-; CHECK-GI-NEXT:    fadd v2.2d, v7.2d, v4.2d
-; CHECK-GI-NEXT:    fadd v3.2d, v3.2d, v5.2d
+; CHECK-GI-NEXT:    ucvtf v7.2d, v7.2d
+; CHECK-GI-NEXT:    ucvtf v20.2d, v20.2d
+; CHECK-GI-NEXT:    ucvtf v16.2d, v16.2d
+; CHECK-GI-NEXT:    ucvtf v21.2d, v21.2d
+; CHECK-GI-NEXT:    ucvtf v17.2d, v17.2d
+; CHECK-GI-NEXT:    ucvtf v22.2d, v22.2d
+; CHECK-GI-NEXT:    ucvtf v18.2d, v18.2d
+; CHECK-GI-NEXT:    ucvtf v23.2d, v23.2d
+; CHECK-GI-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-GI-NEXT:    fadd v1.2d, v1.2d, v5.2d
+; CHECK-GI-NEXT:    fadd v2.2d, v2.2d, v6.2d
+; CHECK-GI-NEXT:    fadd v3.2d, v3.2d, v19.2d
+; CHECK-GI-NEXT:    fadd v4.2d, v4.2d, v7.2d
+; CHECK-GI-NEXT:    fadd v5.2d, v20.2d, v22.2d
+; CHECK-GI-NEXT:    fadd v6.2d, v16.2d, v18.2d
+; CHECK-GI-NEXT:    fadd v7.2d, v21.2d, v23.2d
+; CHECK-GI-NEXT:    fadd v16.2d, v17.2d, v0.2d
+; CHECK-GI-NEXT:    fadd v0.2d, v1.2d, v5.2d
+; CHECK-GI-NEXT:    fadd v1.2d, v2.2d, v6.2d
+; CHECK-GI-NEXT:    fadd v2.2d, v3.2d, v7.2d
+; CHECK-GI-NEXT:    fadd v3.2d, v4.2d, v16.2d
 ; CHECK-GI-NEXT:    ret
     %l = load <32 x i16>, ptr %p
     %s1 = shufflevector <32 x i16> %l, <32 x i16> undef, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
