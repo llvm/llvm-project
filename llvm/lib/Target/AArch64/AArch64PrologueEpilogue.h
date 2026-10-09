@@ -191,6 +191,13 @@ private:
   void emitShadowCallStackEpilogue(MachineBasicBlock::iterator MBBI,
                                    const DebugLoc &DL) const;
 
+  /// Authenticate the return address before the epilogue starts. Used on
+  /// Windows when the epilogue leaves SP at a different value from the one the
+  /// return address was signed with.
+  void emitEarlyReturnAddressAuthentication(MachineBasicBlock::iterator MBBI,
+                                            int64_t StackSize,
+                                            int64_t PrologueSaveSize);
+
   void emitCalleeSavedRestores(MachineBasicBlock::iterator MBBI,
                                bool SVE) const;
 
@@ -206,6 +213,10 @@ private:
 
   MachineBasicBlock::iterator SEHEpilogueStartI;
   DebugLoc DL;
+
+  /// Whether emitEarlyReturnAddressAuthentication took care of authenticating
+  /// the return address.
+  bool AuthenticatedReturnAddressEarly = false;
 };
 
 } // namespace llvm
