@@ -1622,3 +1622,43 @@ define <vscale x 8 x i64> @vwadd_wx_splat_sext(<vscale x 8 x i64> %va, i32 %b) {
   %ve = add <vscale x 8 x i64> %va, %splat
   ret <vscale x 8 x i64> %ve
 }
+
+define <vscale x 4 x i32> @vwadd_sext_chain_nxv4i8_nxv4i32(<vscale x 4 x i32> %acc, <vscale x 4 x i8> %a, <vscale x 4 x i8> %b, <vscale x 4 x i8> %c, <vscale x 4 x i8> %d) {
+; CHECK-LABEL: vwadd_sext_chain_nxv4i8_nxv4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vsext.vf2 v14, v12
+; CHECK-NEXT:    vsext.vf2 v12, v10
+; CHECK-NEXT:    vsext.vf2 v10, v11
+; CHECK-NEXT:    vwadd.wv v8, v8, v12
+; CHECK-NEXT:    vwadd.wv v8, v8, v10
+; CHECK-NEXT:    vsext.vf2 v10, v13
+; CHECK-NEXT:    vwadd.wv v8, v8, v14
+; CHECK-NEXT:    vwadd.wv v8, v8, v10
+; CHECK-NEXT:    ret
+  %sa = sext <vscale x 4 x i8> %a to <vscale x 4 x i32>
+  %sb = sext <vscale x 4 x i8> %b to <vscale x 4 x i32>
+  %sc = sext <vscale x 4 x i8> %c to <vscale x 4 x i32>
+  %sd = sext <vscale x 4 x i8> %d to <vscale x 4 x i32>
+  %s0 = add <vscale x 4 x i32> %acc, %sa
+  %s1 = add <vscale x 4 x i32> %s0, %sb
+  %s2 = add <vscale x 4 x i32> %s1, %sc
+  %s3 = add <vscale x 4 x i32> %s2, %sd
+  ret <vscale x 4 x i32> %s3
+}
+
+; Don't reassociate and break the vadd.vi pattern
+define <vscale x 4 x i32> @vwaddu_zext_chain_nxv4i1_nxv4i32(<vscale x 4 x i32> %acc, <vscale x 4 x i1> %a, <vscale x 4 x i1> %b) {
+; CHECK-LABEL: vwaddu_zext_chain_nxv4i1_nxv4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vadd.vi v8, v8, 1, v0.t
+; CHECK-NEXT:    vmv1r.v v0, v10
+; CHECK-NEXT:    vadd.vi v8, v8, 1, v0.t
+; CHECK-NEXT:    ret
+  %za = zext <vscale x 4 x i1> %a to <vscale x 4 x i32>
+  %zb = zext <vscale x 4 x i1> %b to <vscale x 4 x i32>
+  %s0 = add <vscale x 4 x i32> %acc, %za
+  %s1 = add <vscale x 4 x i32> %s0, %zb
+  ret <vscale x 4 x i32> %s1
+}
