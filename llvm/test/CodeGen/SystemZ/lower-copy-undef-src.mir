@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z13 -run-pass=postrapseudos -o - %s | FileCheck %s
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z13 -run-pass=post-ra-pseudos -o - %s | FileCheck %s
 #
 # Test that a COPY with an undef source operand gets handled like an identity
 # copy rather than lowered into a target instruction with the undef flag

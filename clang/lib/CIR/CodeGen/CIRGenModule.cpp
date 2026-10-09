@@ -36,7 +36,6 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "clang/CodeGenUtils/ModuleUtils.h"
 #include "clang/CodeGenUtils/RecordLayoutUtils.h"
 #include "llvm/ADT/STLExtras.h"
@@ -673,6 +672,12 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
   // to benefit from cache locality. Deferring code generation is necessary to
   // avoid adding initializers to external declarations.
   if (mustBeEmitted(global) && mayBeEmittedEagerly(global)) {
+    // Make sure we don't double-emit this declaration.
+    if (auto existing = dyn_cast_if_present<cir::CIRGlobalValueInterface>(
+            getGlobalValue(getMangledName(gd)));
+        existing && !existing.isDeclaration())
+      return;
+
     // Emit the definition if it can't be deferred.
     emitGlobalDefinition(gd);
     return;
@@ -1040,7 +1045,7 @@ LangAS CIRGenModule::getGlobalVarAddressSpace(const VarDecl *d) {
 
   if (langOpts.SYCLIsDevice &&
       (!d || d->getType().getAddressSpace() == LangAS::Default))
-    errorNYI("SYCL global address space");
+    return LangAS::sycl_global;
 
   if (langOpts.CUDA && langOpts.CUDAIsDevice) {
     if (d) {
@@ -1133,7 +1138,8 @@ static mlir::Attribute createNewGlobalView(CIRGenModule &cgm,
     newPtrTy = cast<cir::PointerType>(attr.getType());
 
   if (newPtrTy)
-    return bld.getGlobalViewAttr(newPtrTy, newGlob, newInds);
+    return bld.getGlobalViewAttr(newPtrTy, newGlob, newInds,
+                                 attr.getAddressPoint());
 
   // This may be unreachable in practice, but keep it as errorNYI while CIR
   // is still under development.
@@ -1448,7 +1454,8 @@ mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty,
   mlir::Value addr = cir::GetGlobalOp::create(
       builder, getLoc(d->getSourceRange()), ptrTy, g.getSymNameAttr(),
       tlsAccess,
-      /*static_local=*/g.getStaticLocalGuard().has_value());
+      /*static_local=*/g.getDynamicInitGuard().has_value() &&
+          d->isLocalVarDecl());
   return castGlobalToDeclAddrSpace(addr, *d);
 }
 
@@ -2155,6 +2162,7 @@ void CIRGenModule::replaceUsesOfNonProtoTypeWithRealFunction(
         realCallOp = builder.createIndirectCallOp(
             noProtoCallOp.getLoc(), casted, callFnType, callOperands);
       }
+      realCallOp.setCallingConv(noProtoCallOp.getCallingConv());
 
       // Replace old no proto call with fixed call.
       noProtoCallOp.replaceAllUsesWith(realCallOp);
@@ -2210,8 +2218,10 @@ static cir::GlobalOp
 generateStringLiteral(mlir::Location loc, mlir::TypedAttr c,
                       cir::GlobalLinkageKind lt, CIRGenModule &cgm,
                       StringRef globalName, CharUnits alignment) {
-  mlir::ptr::MemorySpaceAttrInterface addrSpace = cir::toCIRAddressSpaceAttr(
-      cgm.getMLIRContext(), cgm.getGlobalConstantAddressSpace());
+  LangAS as = CodeGenUtils::getGlobalConstantAddressSpace(cgm.getLangOpts(),
+                                                          cgm.getTarget());
+  mlir::ptr::MemorySpaceAttrInterface addrSpace =
+      cir::toCIRAddressSpaceAttr(cgm.getMLIRContext(), as);
 
   // Create a global variable for this string
   // FIXME(cir): check for insertion point in module level.
@@ -2315,19 +2325,6 @@ CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *s,
       getTypes().getPointerAddressSpace(s->getType()));
 
   return builder.getGlobalViewAttr(ptrTy, gv);
-}
-
-LangAS CIRGenModule::getGlobalConstantAddressSpace() const {
-  LangAS as =
-      CodeGenUtils::getGlobalConstantAddressSpace(langOpts, getTarget());
-  // CIR cannot represent SYCL address spaces yet.
-  /// TODO: Remove this wrapper once CIR supports the global constant address
-  /// space for SYCL.
-  if (as == LangAS::sycl_global) {
-    errorNYI("SYCL global constant address space");
-    return LangAS::Default;
-  }
-  return as;
 }
 
 // TODO(cir): this could be a common AST helper for both CIR and LLVM codegen.
@@ -3747,7 +3744,7 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
     // library entity.
     setFuncInfoAttr(func, funcDecl);
 
-    if (this->getLangOpts().OpenACC) {
+    if (funcDecl && this->getLangOpts().OpenACC) {
       // We only have to handle this attribute, since OpenACCAnnotAttrs are
       // handled via the end-of-TU work.
       for (const auto *attr :

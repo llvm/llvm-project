@@ -734,7 +734,7 @@ llvm.func @subranges(%arg: !llvm.ptr) {
 #sty1 = #llvm.di_string_type<tag = DW_TAG_string_type, name = "character(*)",
  sizeInBits = 32, alignInBits = 8, stringLength = #var,
  stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>,
- stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>>
+ stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>, charType = #bt>
 #var1 = #llvm.di_local_variable<scope = #sp, name = "str1", type = #sty1>
 #sty2 = #llvm.di_string_type<tag = DW_TAG_string_type>
 #var2 = #llvm.di_local_variable<scope = #sp, name = "str2", type = #sty2>
@@ -748,8 +748,9 @@ llvm.func @string_ty(%arg0: !llvm.ptr) {
 #loc1 = loc("test.f90":1:1)
 #loc2 = loc(fused<#sp>[#loc1])
 
-// CHECK-DAG: !DIStringType(name: "character(*)", stringLength: ![[VAR:[0-9]+]], stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref), size: 32, align: 8)
+// CHECK-DAG: !DIStringType(name: "character(*)", stringLength: ![[VAR:[0-9]+]], stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref), size: 32, align: 8, charType: ![[CHARTYPE:[0-9]+]])
 // CHECK-DAG: ![[VAR]] = !DILocalVariable(name: "string_size"{{.*}} flags: DIFlagArtificial)
+// CHECK-DAG: ![[CHARTYPE]] = !DIBasicType(name: "int", size: 32)
 // CHECK-DAG: !DIStringType()
 // -----
 

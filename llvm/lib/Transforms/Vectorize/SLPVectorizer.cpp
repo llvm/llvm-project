@@ -2903,6 +2903,11 @@ private:
     /// Checks if the current node is a gather node.
     bool isGather() const { return State == NeedToGather; }
 
+    /// Checks if the current node is in reverse order.
+    bool isReverse() const {
+      return !ReorderIndices.empty() && isReverseOrder(ReorderIndices);
+    }
+
     /// A vector of scalars.
     ValueList Scalars;
 
@@ -6852,7 +6857,7 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
   if (TE.State == TreeEntry::StridedVectorize && !TopToBottom &&
       (!TE.UserTreeIndex || !TE.UserTreeIndex.UserTE->hasState() ||
        !Instruction::isBinaryOp(TE.UserTreeIndex.UserTE->getOpcode())) &&
-      (TE.ReorderIndices.empty() || isReverseOrder(TE.ReorderIndices)))
+      (TE.ReorderIndices.empty() || TE.isReverse()))
     return std::nullopt;
   if (TE.State == TreeEntry::SplitVectorize ||
       ((TE.State == TreeEntry::Vectorize ||
@@ -8092,8 +8097,7 @@ Instruction *BoUpSLP::getRootEntryInstruction(const TreeEntry &Entry) const {
   if (Entry.hasState() &&
       (Entry.getOpcode() == Instruction::Store ||
        Entry.getOpcode() == Instruction::Load) &&
-      Entry.State == TreeEntry::StridedVectorize &&
-      !Entry.ReorderIndices.empty() && isReverseOrder(Entry.ReorderIndices))
+      Entry.State == TreeEntry::StridedVectorize && Entry.isReverse())
     return dyn_cast<Instruction>(Entry.Scalars[Entry.ReorderIndices.front()]);
   return dyn_cast<Instruction>(Entry.Scalars.front());
 }
@@ -13532,6 +13536,33 @@ uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
 
 uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop, bool CountExtracts) {
   uint64_t Total = 0;
+  // The alternate op, fused with the multiplication by the target, is counted
+  // with the multiplication node, the same way as the scalar fmas.
+  auto IsFusedAlt = [&](const TreeEntry &TE) {
+    if (!TE.hasState() || TE.State != TreeEntry::Vectorize ||
+        DeletedNodes.contains(&TE) || TransformedToGatherNodes.contains(&TE) ||
+        !TE.isAltShuffle() || TE.hasReassocScalars() ||
+        !TE.getMainOp()->getType()->isFloatingPointTy() ||
+        !TE.getOperations().isAddSubLikeOp())
+      return false;
+    Type *ScalarTy = TE.getMainOp()->getType();
+    auto *VecTy = cast<VectorType>(getWidenedType(ScalarTy, TE.Scalars.size()));
+    SmallBitVector OpcodeMask(getAltInstrMask(
+        TE.Scalars, ScalarTy, TE.getOpcode(), TE.getAltOpcode()));
+    return TTI->isLegalAltInstr(VecTy, TE.getOpcode(), TE.getAltOpcode(),
+                                OpcodeMask, TE.Scalars) &&
+           canConvertToFMA(TE.Scalars, TE.getOperations(), *DT, *DL, *TTI, *TLI,
+                           *this)
+               .isValid();
+  };
+  // The scalar count already credits the fused scalars as fmas, so only a tree
+  // with the fused alternate op is counted at the level of the machine
+  // instructions. Doing the same for the other trees changes their VF=2
+  // decisions.
+  const bool HasFusedAlt =
+      any_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &Ptr) {
+        return IsFusedAlt(*Ptr);
+      });
   // Source vector -> max scale among the gather entries sharing it, so the
   // combined shufflevector is still weighted like an in-loop entry below.
   SmallDenseMap<Value *, uint64_t, 4> GatherExtractSourceVecs;
@@ -13572,10 +13603,11 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop, bool CountExtracts) {
           VecScale = std::max(VecScale, Scale);
         }
       } else {
-        for (Value *V : TE.Scalars) {
-          if (!isConstant(V))
-            ++Count;
-        }
+        // A splat is a single broadcast.
+        if (HasFusedAlt && isSplat(TE.Scalars))
+          Count = !isConstant(TE.Scalars.front());
+        else
+          Count = TE.Scalars.size() - count_if(TE.Scalars, isConstant);
       }
       Total = SaturatingMultiplyAdd<uint64_t>(Count, Scale, Total);
       continue;
@@ -13596,6 +13628,8 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop, bool CountExtracts) {
       Total = SaturatingMultiplyAdd<uint64_t>(Count, Scale, Total);
       continue;
     }
+    if (IsFusedAlt(TE))
+      continue;
     if (TE.State == TreeEntry::SplitVectorize)
       Count += 2;
     else if (TE.hasReassocScalars())
@@ -13629,6 +13663,15 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop, bool CountExtracts) {
     if (ExternalUsesAsOriginalScalar.contains(EU.Scalar))
       continue;
     if (!CountedExtracts.insert(EU.Scalar).second)
+      continue;
+    // The extract of the lane, which is free in the target, is not emitted.
+    Type *ScalarTy = EU.Scalar->getType();
+    if (HasFusedAlt && !MinBWs.contains(&EU.E) &&
+        VectorType::isValidElementType(ScalarTy) &&
+        TTI->getVectorInstrCost(
+            Instruction::ExtractElement,
+            getWidenedType(ScalarTy, EU.E.getVectorFactor()), CostKind,
+            EU.Lane) == TTI::TCC_Free)
       continue;
     ++Total;
   }
@@ -14717,7 +14760,7 @@ void BoUpSLP::transformNodes() {
       Align CommonAlignment = computeCommonAlignment<LoadInst>(E.Scalars);
       // Check if profitable to represent consecutive load + reverse as strided
       // load with stride -1.
-      if (!E.ReorderIndices.empty() && isReverseOrder(E.ReorderIndices) &&
+      if (E.isReverse() &&
           TTI->isLegalStridedLoadStore(VecTy, CommonAlignment)) {
         SmallVector<int> Mask;
         inversePermutation(E.ReorderIndices, Mask);
@@ -14760,7 +14803,7 @@ void BoUpSLP::transformNodes() {
       Align CommonAlignment = computeCommonAlignment<StoreInst>(E.Scalars);
       // Check if profitable to represent consecutive load + reverse as strided
       // load with stride -1.
-      if (!E.ReorderIndices.empty() && isReverseOrder(E.ReorderIndices) &&
+      if (E.isReverse() &&
           TTI->isLegalStridedLoadStore(VecTy, CommonAlignment)) {
         SmallVector<int> Mask;
         inversePermutation(E.ReorderIndices, Mask);
@@ -16579,8 +16622,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   InstructionCost CommonCost = 0;
   SmallVector<int> Mask;
   if (!E->ReorderIndices.empty() && E->State != TreeEntry::CompressVectorize &&
-      (E->State != TreeEntry::StridedVectorize ||
-       !isReverseOrder(E->ReorderIndices))) {
+      (E->State != TreeEntry::StridedVectorize || !E->isReverse())) {
     SmallVector<int> NewMask;
     if (E->getOpcode() == Instruction::Store) {
       // For stores the order is actually a mask.
@@ -17601,8 +17643,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         assert(StridedLoadTy && "Missing StridedPointerInfo for tree entry.");
         Align CommonAlignment =
             computeCommonAlignment<LoadInst>(UniqueValues.getArrayRef());
-        bool IsReverse =
-            !E->ReorderIndices.empty() && isReverseOrder(E->ReorderIndices);
+        bool IsReverse = E->isReverse();
         Value *Stride = getStrideBytesIfConstant(SPtrInfo.StrideVal, ScalarTy,
                                                  *DL, IsReverse);
         VecLdCost = TTI->getMemIntrinsicInstrCost(
@@ -17994,9 +18035,10 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       // If this pattern is supported by the target then we consider the
       // order.
       if (TTIRef.isLegalAltInstr(cast<VectorType>(VecTy), Opcode0, Opcode1,
-                                 OpcodeMask)) {
-        InstructionCost AltVecCost = TTIRef.getAltInstrCost(
-            cast<VectorType>(VecTy), Opcode0, Opcode1, OpcodeMask, CostKind);
+                                 OpcodeMask, E->Scalars)) {
+        InstructionCost AltVecCost =
+            TTIRef.getAltInstrCost(cast<VectorType>(VecTy), Opcode0, Opcode1,
+                                   OpcodeMask, CostKind, E->Scalars);
         return AltVecCost < VecCost ? AltVecCost : VecCost;
       }
       // TODO: Check the reverse order too.
@@ -19872,8 +19914,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
     SmallVector<int> Mask;
     if (!TE->ReorderIndices.empty() &&
         TE->State != TreeEntry::CompressVectorize &&
-        (TE->State != TreeEntry::StridedVectorize ||
-         !isReverseOrder(TE->ReorderIndices))) {
+        (TE->State != TreeEntry::StridedVectorize || !TE->isReverse())) {
       SmallVector<int> NewMask;
       if (TE->getOpcode() == Instruction::Store) {
         // For stores the order is actually a mask.
@@ -23868,8 +23909,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     return Vec;
   }
 
-  bool IsReverseOrder =
-      !E->ReorderIndices.empty() && isReverseOrder(E->ReorderIndices);
+  bool IsReverseOrder = E->isReverse();
   auto FinalShuffle = [&](Value *V, const TreeEntry *E) {
     if (isa<StructType>(ScalarTy)) {
       // TODO: Reordering of struct types is not supported.
@@ -23953,6 +23993,41 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     auto *I = dyn_cast<Instruction>(V);
     if (!I)
       return V;
+    // A lane may be emitted in negated form (sub C, x as add x, -C, or an
+    // add/sub lane with swapped operands) when all its uses are
+    // sign-insensitive (icmp eq/ne 0 or abs). The value stays correct for
+    // such uses, but nsw/nuw of the original instruction do not cover the
+    // negated overflow conditions.
+    if (E->State == TreeEntry::Vectorize && E->getNumOperands() == 2 &&
+        I->getType()->isIntOrIntVectorTy() &&
+        (Opcode == Instruction::Add || Opcode == Instruction::Sub)) {
+      auto IsNegatedLane = [&](Instruction *LaneI, unsigned Lane) {
+        unsigned LaneOpcode = LaneI->getOpcode();
+        if (LaneOpcode != Instruction::Add && LaneOpcode != Instruction::Sub)
+          return false;
+        Value *L = E->getOperand(0)[Lane];
+        Value *R = E->getOperand(1)[Lane];
+        if (LaneOpcode == Opcode)
+          // Only a sub lane emitted with swapped operands is negated.
+          return Opcode == Instruction::Sub && L == LaneI->getOperand(1) &&
+                 R == LaneI->getOperand(0) && L != R;
+        if (Opcode == Instruction::Add)
+          // sub C, x emitted as x + -C.
+          return isa<Constant>(LaneI->getOperand(0)) &&
+                 !isa<Constant>(LaneI->getOperand(1));
+        // add x, C emitted as -C - x.
+        return isa<Constant>(L) && !isa<Constant>(R);
+      };
+      if (any_of(enumerate(E->Scalars), [&](const auto &P) {
+            auto *LaneI = dyn_cast<Instruction>(P.value());
+            return LaneI &&
+                   (!E->hasCopyableElements() ||
+                    !E->isCopyableElement(LaneI)) &&
+                   (VL.empty() || is_contained(VL, LaneI)) &&
+                   IsNegatedLane(LaneI, P.index());
+          }))
+        I->dropPoisonGeneratingFlags();
+    }
     I = ::propagateMetadata(I, UniqueInsts.getArrayRef());
     // For copyable elements the lane is synthesized using a binop identity
     // value, so the operand at that lane is the copyable scalar's value.
@@ -24128,6 +24203,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           return NewPhi;
         }
 
+        Builder.SetInsertPoint(IBB->getTerminator());
+        Builder.SetCurrentDebugLocation(getDebugLocFromPHI(*PH));
         auto Res = VisitedBBs.try_emplace(IBB, I);
         if (!Res.second) {
           TreeEntry *OpTE = getOperandEntry(E, I);
@@ -24137,12 +24214,15 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             NewPhi->addIncoming(VecOp, IBB);
             assert(!OpTE->VectorizedValue && "Expected no vectorized value.");
             OpTE->VectorizedValue = VecOp;
+            // The combined nodes of the reused gather node still must be
+            // emitted.
+            if (OpTE->isGather() && !DeletedNodes.contains(OpTE))
+              for (auto [EIdx, _] : OpTE->CombinedEntriesWithIndices)
+                (void)vectorizeTree(VectorizableTree[EIdx].get());
             continue;
           }
         }
 
-        Builder.SetInsertPoint(IBB->getTerminator());
-        Builder.SetCurrentDebugLocation(getDebugLocFromPHI(*PH));
         Value *Vec = vectorizeOperand(E, I);
         if (VecTy != Vec->getType()) {
           assert((It != MinBWs.end() || getOperandEntry(E, I)->isGather() ||
@@ -25075,8 +25155,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       } else {
         assert(E->State == TreeEntry::StridedVectorize &&
                "Expected either strided, masked or consecutive stores.");
-        bool IsReverseOrder =
-            !E->ReorderIndices.empty() && isReverseOrder(E->ReorderIndices);
+        bool IsReverseOrder = E->isReverse();
         if (IsReverseOrder) {
           SI = cast<StoreInst>(E->Scalars[E->ReorderIndices.front()]);
           Ptr = SI->getPointerOperand();
@@ -28728,13 +28807,15 @@ bool BoUpSLP::collectValuesToDemote(
     // If we are truncating the result of this SHL, and if it's a shift of an
     // inrange amount, we can always perform a SHL in a smaller type.
     auto ShlChecker = [&](unsigned BitWidth, unsigned) {
-      return all_of(
-          make_isa_range<Instruction>(E.Scalars), [&](Instruction *I) {
-            if (E.isCopyableElement(I))
-              return true;
-            KnownBits AmtKnownBits = computeKnownBits(I->getOperand(1), *DL);
-            return AmtKnownBits.getMaxValue().ult(BitWidth);
-          });
+      // Check the node operands rather than the scalar instructions: lanes
+      // converted from another opcode (e.g. mul by a power of 2) are emitted
+      // with the converted shift amounts.
+      return all_of(E.getOperand(1), [&](Value *V) {
+        if (isa<PoisonValue>(V))
+          return true;
+        KnownBits AmtKnownBits = computeKnownBits(V, *DL);
+        return AmtKnownBits.getMaxValue().ult(BitWidth);
+      });
     };
     return TryProcessInstruction(
         BitWidth, {getOperandEntry(&E, 0), getOperandEntry(&E, 1)}, ShlChecker);
