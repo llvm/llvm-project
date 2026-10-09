@@ -2043,15 +2043,12 @@ def riscv_mhraccsu : RVSDNode<"MHRACCSU", SDT_RISCVSameTernary>;
 // word of the result.
 def SDT_RISCVMulHighAccumulateByHalves
     : SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
-                           SDTCisSameAs<0, 2>]>;
-def riscv_mhacc_h_b0 : RVSDNode<"MHACC_H_B0", SDT_RISCVMulHighAccumulateByHalves>;
-def riscv_mhacc_h_b1 : RVSDNode<"MHACC_H_B1", SDT_RISCVMulHighAccumulateByHalves>;
-def riscv_mhaccsu_h_b0 : RVSDNode<"MHACCSU_H_B0", SDT_RISCVMulHighAccumulateByHalves>;
-def riscv_mhaccsu_h_b1 : RVSDNode<"MHACCSU_H_B1", SDT_RISCVMulHighAccumulateByHalves>;
-def riscv_mhacc_w_h0 : RVSDNode<"MHACC_W_H0", SDT_RISCVMulHighAccumulateByHalves>;
-def riscv_mhacc_w_h1 : RVSDNode<"MHACC_W_H1", SDT_RISCVMulHighAccumulateByHalves>;
-def riscv_mhaccsu_w_h0 : RVSDNode<"MHACCSU_W_H0", SDT_RISCVMulHighAccumulateByHalves>;
-def riscv_mhaccsu_w_h1 : RVSDNode<"MHACCSU_W_H1", SDT_RISCVMulHighAccumulateByHalves>;
+                           SDTCisSameAs<0, 2>,
+                           SDTCisSameSizeAs<0, 3>]>;
+def riscv_mhacc_half_0 : RVSDNode<"MHACC_HALF_0", SDT_RISCVMulHighAccumulateByHalves>;
+def riscv_mhacc_half_1 : RVSDNode<"MHACC_HALF_1", SDT_RISCVMulHighAccumulateByHalves>;
+def riscv_mhaccsu_half_0 : RVSDNode<"MHACCSU_HALF_0", SDT_RISCVMulHighAccumulateByHalves>;
+def riscv_mhaccsu_half_1 : RVSDNode<"MHACCSU_HALF_1", SDT_RISCVMulHighAccumulateByHalves>;
 
 // Multiply packed elements and horizontally combine each adjacent group.
 def SDT_RISCVHorizontalMul
@@ -2454,6 +2451,20 @@ let Predicates = [HasStdExtP] in {
             (PPAIROE_B GPR:$rs, GPR:$rs)>;
   def : Pat<(XLenVecI16VT (riscv_ppairoe_h GPR:$rs1, GPR:$rs2)),
             (PPAIROE_H GPR:$rs1, GPR:$rs2)>;
+
+  // 16-bit multiply high accumulate patterns
+  def : Pat<(XLenVecI16VT (riscv_mhacc_half_0 GPR:$rd, GPR:$rs1,
+                                              (XLenVecI8VT GPR:$rs2))),
+            (PMHACC_H_B0 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (riscv_mhacc_half_1 GPR:$rd, GPR:$rs1,
+                                              (XLenVecI8VT GPR:$rs2))),
+            (PMHACC_H_B1 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (riscv_mhaccsu_half_0 GPR:$rd, GPR:$rs1,
+                                                (XLenVecI8VT GPR:$rs2))),
+            (PMHACCSU_H_B0 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (riscv_mhaccsu_half_1 GPR:$rd, GPR:$rs1,
+                                                (XLenVecI8VT GPR:$rs2))),
+            (PMHACCSU_H_B1 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
   // Packed byte multiply halves patterns.
   def : Pat<(XLenVecI16VT (riscv_pmul_halves_00 (XLenVecI8VT GPR:$rs1),
@@ -3142,37 +3153,19 @@ let append Predicates = [IsRV32] in {
   def : Pat<(XLenVT (riscv_nclipu XLenVT:$lo, XLenVT:$hi, timm:$imm)),
             (NCLIPIU (BuildGPRPair GPR:$lo, GPR:$hi), timm:$imm)>;
 
-  // 16-bit multiply high accumulate patterns
-  def : Pat<(XLenVecI16VT (riscv_mhacc_h_b0 (XLenVecI16VT GPR:$rd),
-                                            (XLenVecI16VT GPR:$rs1),
-                                            (XLenVecI8VT GPR:$rs2))),
-            (PMHACC_H_B0 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(XLenVecI16VT (riscv_mhacc_h_b1 (XLenVecI16VT GPR:$rd),
-                                            (XLenVecI16VT GPR:$rs1),
-                                            (XLenVecI8VT GPR:$rs2))),
-            (PMHACC_H_B1 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(XLenVecI16VT (riscv_mhaccsu_h_b0 (XLenVecI16VT GPR:$rd),
-                                              (XLenVecI16VT GPR:$rs1),
-                                              (XLenVecI8VT GPR:$rs2))),
-            (PMHACCSU_H_B0 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(XLenVecI16VT (riscv_mhaccsu_h_b1 (XLenVecI16VT GPR:$rd),
-                                              (XLenVecI16VT GPR:$rs1),
-                                              (XLenVecI8VT GPR:$rs2))),
-            (PMHACCSU_H_B1 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-
   // Packed multiply high accumulate, scalar halfword (RV32). The packed
   // intrinsic expands to a pair of these, one per result word.
-  def : Pat<(XLenVT (riscv_mhacc_w_h0 (XLenVT GPR:$rd), (XLenVT GPR:$rs1),
-                                      (v2i16 GPR:$rs2))),
+  def : Pat<(XLenVT (riscv_mhacc_half_0 GPR:$rd, GPR:$rs1,
+                                        (v2i16 GPR:$rs2))),
             (MHACC_H0 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(XLenVT (riscv_mhacc_w_h1 (XLenVT GPR:$rd), (XLenVT GPR:$rs1),
-                                      (v2i16 GPR:$rs2))),
+  def : Pat<(XLenVT (riscv_mhacc_half_1 GPR:$rd, GPR:$rs1,
+                                        (v2i16 GPR:$rs2))),
             (MHACC_H1 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(XLenVT (riscv_mhaccsu_w_h0 (XLenVT GPR:$rd), (XLenVT GPR:$rs1),
-                                        (v2i16 GPR:$rs2))),
+  def : Pat<(XLenVT (riscv_mhaccsu_half_0 GPR:$rd, GPR:$rs1,
+                                          (v2i16 GPR:$rs2))),
             (MHACCSU_H0 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(XLenVT (riscv_mhaccsu_w_h1 (XLenVT GPR:$rd), (XLenVT GPR:$rs1),
-                                        (v2i16 GPR:$rs2))),
+  def : Pat<(XLenVT (riscv_mhaccsu_half_1 GPR:$rd, GPR:$rs1,
+                                          (v2i16 GPR:$rs2))),
             (MHACCSU_H1 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
   // Packed "Q-format" multiply parts accumulate, scalar halfword (RV32).
@@ -3341,40 +3334,19 @@ let append Predicates = [IsRV64] in {
   def : PatMulPartsAcc<riscv_pmaccsu_halves_00, PMACCSU_W_H00, v2i32, v4i16>;
   def : PatMulPartsAcc<riscv_pmaccsu_halves_11, PMACCSU_W_H11, v2i32, v4i16>;
 
-  // Packed multiply high accumulate patterns (v4i16 form)
-  def : Pat<(v4i16 (riscv_mhacc_h_b0 (v4i16 GPR:$rd),
-                                     (v4i16 GPR:$rs1),
-                                     (v8i8 GPR:$rs2))),
-            (PMHACC_H_B0 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v4i16 (riscv_mhacc_h_b1 (v4i16 GPR:$rd),
-                                     (v4i16 GPR:$rs1),
-                                     (v8i8 GPR:$rs2))),
-            (PMHACC_H_B1 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v4i16 (riscv_mhaccsu_h_b0 (v4i16 GPR:$rd),
-                                       (v4i16 GPR:$rs1),
-                                       (v8i8 GPR:$rs2))),
-            (PMHACCSU_H_B0 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v4i16 (riscv_mhaccsu_h_b1 (v4i16 GPR:$rd),
-                                       (v4i16 GPR:$rs1),
-                                       (v8i8 GPR:$rs2))),
-            (PMHACCSU_H_B1 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
   // Packed multiply high accumulate patterns (v2i32 form)
-  def : Pat<(v2i32 (riscv_mhacc_w_h0 (v2i32 GPR:$rd),
-                                     (v2i32 GPR:$rs1),
-                                     (v4i16 GPR:$rs2))),
+  def : Pat<(v2i32 (riscv_mhacc_half_0 GPR:$rd, GPR:$rs1,
+                                       (v4i16 GPR:$rs2))),
             (PMHACC_W_H0 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v2i32 (riscv_mhacc_w_h1 (v2i32 GPR:$rd),
-                                     (v2i32 GPR:$rs1),
-                                     (v4i16 GPR:$rs2))),
+  def : Pat<(v2i32 (riscv_mhacc_half_1 GPR:$rd, GPR:$rs1,
+                                       (v4i16 GPR:$rs2))),
             (PMHACC_W_H1 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v2i32 (riscv_mhaccsu_w_h0 (v2i32 GPR:$rd),
-                                       (v2i32 GPR:$rs1),
-                                       (v4i16 GPR:$rs2))),
+  def : Pat<(v2i32 (riscv_mhaccsu_half_0 GPR:$rd, GPR:$rs1,
+                                         (v4i16 GPR:$rs2))),
             (PMHACCSU_W_H0 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v2i32 (riscv_mhaccsu_w_h1 (v2i32 GPR:$rd),
-                                       (v2i32 GPR:$rs1),
-                                       (v4i16 GPR:$rs2))),
+  def : Pat<(v2i32 (riscv_mhaccsu_half_1 GPR:$rd, GPR:$rs1,
+                                         (v4i16 GPR:$rs2))),
             (PMHACCSU_W_H1 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
   // Scalar word multiply-parts accumulate patterns.

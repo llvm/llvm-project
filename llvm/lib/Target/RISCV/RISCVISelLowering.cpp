@@ -12495,21 +12495,17 @@ static unsigned getRVPMulHighAccumulateByHalvesOpcode(unsigned IntNo) {
     llvm_unreachable("Unexpected RISC-V packed multiply high accumulate by "
                      "halves intrinsic");
   case Intrinsic::riscv_pmhacc_b0:
-    return RISCVISD::MHACC_H_B0;
-  case Intrinsic::riscv_pmhacc_b1:
-    return RISCVISD::MHACC_H_B1;
-  case Intrinsic::riscv_pmhaccsu_b0:
-    return RISCVISD::MHACCSU_H_B0;
-  case Intrinsic::riscv_pmhaccsu_b1:
-    return RISCVISD::MHACCSU_H_B1;
   case Intrinsic::riscv_pmhacc_h0:
-    return RISCVISD::MHACC_W_H0;
+    return RISCVISD::MHACC_HALF_0;
+  case Intrinsic::riscv_pmhacc_b1:
   case Intrinsic::riscv_pmhacc_h1:
-    return RISCVISD::MHACC_W_H1;
+    return RISCVISD::MHACC_HALF_1;
+  case Intrinsic::riscv_pmhaccsu_b0:
   case Intrinsic::riscv_pmhaccsu_h0:
-    return RISCVISD::MHACCSU_W_H0;
+    return RISCVISD::MHACCSU_HALF_0;
+  case Intrinsic::riscv_pmhaccsu_b1:
   case Intrinsic::riscv_pmhaccsu_h1:
-    return RISCVISD::MHACCSU_W_H1;
+    return RISCVISD::MHACCSU_HALF_1;
   }
 }
 
