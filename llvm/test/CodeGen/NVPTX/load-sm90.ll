@@ -9,9 +9,9 @@ define i8 @notatomic_i8_generic(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i8_generic_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i8_generic_param_0];
 ; CHECK-NEXT:    ld.b8 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load i8, ptr %addr
     ret i8 %retval
@@ -24,9 +24,9 @@ define i8 @notatomic_i8_generic_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i8_generic_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i8_generic_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b8 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile i8, ptr %addr
     ret i8 %retval
@@ -39,9 +39,9 @@ define i16 @notatomic_i16_generic(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i16_generic_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i16_generic_param_0];
 ; CHECK-NEXT:    ld.b16 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load i16, ptr %addr
     ret i16 %retval
@@ -54,9 +54,9 @@ define i16 @notatomic_i16_generic_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i16_generic_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i16_generic_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b16 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile i16, ptr %addr
     ret i16 %retval
@@ -69,9 +69,9 @@ define i32 @notatomic_i32_generic(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i32_generic_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i32_generic_param_0];
 ; CHECK-NEXT:    ld.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load i32, ptr %addr
     ret i32 %retval
@@ -84,9 +84,9 @@ define i32 @notatomic_i32_generic_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i32_generic_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i32_generic_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile i32, ptr %addr
     ret i32 %retval
@@ -98,9 +98,9 @@ define i64 @notatomic_i64_generic(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i64_generic_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i64_generic_param_0];
 ; CHECK-NEXT:    ld.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load i64, ptr %addr
     ret i64 %retval
@@ -112,9 +112,9 @@ define i64 @notatomic_i64_generic_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i64_generic_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i64_generic_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load volatile i64, ptr %addr
     ret i64 %retval
@@ -126,9 +126,9 @@ define i128 @notatomic_i128_generic(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i128_generic_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i128_generic_param_0];
 ; CHECK-NEXT:    ld.v2.b64 {%rd2, %rd3}, [%rd1];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %retval = load i128, ptr %addr
     ret i128 %retval
@@ -140,9 +140,9 @@ define i128 @notatomic_i128_generic_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i128_generic_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i128_generic_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.v2.b64 {%rd2, %rd3}, [%rd1];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %retval = load volatile i128, ptr %addr
     ret i128 %retval
@@ -155,9 +155,9 @@ define half @notatomic_half_generic(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_half_generic_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_half_generic_param_0];
 ; CHECK-NEXT:    ld.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load half, ptr %addr
     ret half %retval
@@ -170,9 +170,9 @@ define half @notatomic_half_generic_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_half_generic_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_half_generic_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile half, ptr %addr
     ret half %retval
@@ -185,9 +185,9 @@ define bfloat @notatomic_bfloat_generic(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_bfloat_generic_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_bfloat_generic_param_0];
 ; CHECK-NEXT:    ld.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load bfloat, ptr %addr
     ret bfloat %retval
@@ -200,9 +200,9 @@ define bfloat @notatomic_bfloat_generic_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_bfloat_generic_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_bfloat_generic_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile bfloat, ptr %addr
     ret bfloat %retval
@@ -215,9 +215,9 @@ define float @notatomic_float_generic(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_float_generic_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_float_generic_param_0];
 ; CHECK-NEXT:    ld.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load float, ptr %addr
     ret float %retval
@@ -230,9 +230,9 @@ define float @notatomic_float_generic_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_float_generic_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_float_generic_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile float, ptr %addr
     ret float %retval
@@ -244,9 +244,9 @@ define double @notatomic_double_generic(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_double_generic_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_double_generic_param_0];
 ; CHECK-NEXT:    ld.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load double, ptr %addr
     ret double %retval
@@ -258,9 +258,9 @@ define double @notatomic_double_generic_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_double_generic_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_double_generic_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load volatile double, ptr %addr
     ret double %retval
@@ -273,9 +273,9 @@ define i8 @notatomic_i8_global(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i8_global_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i8_global_param_0];
 ; CHECK-NEXT:    ld.global.b8 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load i8, ptr addrspace(1) %addr
     ret i8 %retval
@@ -288,9 +288,9 @@ define i8 @notatomic_i8_global_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i8_global_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i8_global_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.global.b8 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile i8, ptr addrspace(1) %addr
     ret i8 %retval
@@ -303,9 +303,9 @@ define i16 @notatomic_i16_global(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i16_global_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i16_global_param_0];
 ; CHECK-NEXT:    ld.global.b16 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load i16, ptr addrspace(1) %addr
     ret i16 %retval
@@ -318,9 +318,9 @@ define i16 @notatomic_i16_global_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i16_global_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i16_global_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.global.b16 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile i16, ptr addrspace(1) %addr
     ret i16 %retval
@@ -333,9 +333,9 @@ define i32 @notatomic_i32_global(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i32_global_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i32_global_param_0];
 ; CHECK-NEXT:    ld.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load i32, ptr addrspace(1) %addr
     ret i32 %retval
@@ -348,9 +348,9 @@ define i32 @notatomic_i32_global_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i32_global_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i32_global_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile i32, ptr addrspace(1) %addr
     ret i32 %retval
@@ -362,9 +362,9 @@ define i64 @notatomic_i64_global(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i64_global_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i64_global_param_0];
 ; CHECK-NEXT:    ld.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load i64, ptr addrspace(1) %addr
     ret i64 %retval
@@ -376,9 +376,9 @@ define i64 @notatomic_i64_global_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i64_global_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i64_global_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load volatile i64, ptr addrspace(1) %addr
     ret i64 %retval
@@ -390,9 +390,9 @@ define i128 @notatomic_i128_global(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i128_global_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i128_global_param_0];
 ; CHECK-NEXT:    ld.global.v2.b64 {%rd2, %rd3}, [%rd1];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %retval = load i128, ptr addrspace(1) %addr
     ret i128 %retval
@@ -404,9 +404,9 @@ define i128 @notatomic_i128_global_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i128_global_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i128_global_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.global.v2.b64 {%rd2, %rd3}, [%rd1];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %retval = load volatile i128, ptr addrspace(1) %addr
     ret i128 %retval
@@ -419,9 +419,9 @@ define half @notatomic_half_global(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_half_global_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_half_global_param_0];
 ; CHECK-NEXT:    ld.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load half, ptr addrspace(1) %addr
     ret half %retval
@@ -434,9 +434,9 @@ define half @notatomic_half_global_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_half_global_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_half_global_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile half, ptr addrspace(1) %addr
     ret half %retval
@@ -449,9 +449,9 @@ define bfloat @notatomic_bfloat_global(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_bfloat_global_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_bfloat_global_param_0];
 ; CHECK-NEXT:    ld.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load bfloat, ptr addrspace(1) %addr
     ret bfloat %retval
@@ -464,9 +464,9 @@ define bfloat @notatomic_bfloat_global_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_bfloat_global_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_bfloat_global_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile bfloat, ptr addrspace(1) %addr
     ret bfloat %retval
@@ -479,9 +479,9 @@ define float @notatomic_float_global(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_float_global_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_float_global_param_0];
 ; CHECK-NEXT:    ld.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load float, ptr addrspace(1) %addr
     ret float %retval
@@ -494,9 +494,9 @@ define float @notatomic_float_global_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_float_global_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_float_global_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile float, ptr addrspace(1) %addr
     ret float %retval
@@ -508,9 +508,9 @@ define double @notatomic_double_global(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_double_global_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_double_global_param_0];
 ; CHECK-NEXT:    ld.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load double, ptr addrspace(1) %addr
     ret double %retval
@@ -522,9 +522,9 @@ define double @notatomic_double_global_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_double_global_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_double_global_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load volatile double, ptr addrspace(1) %addr
     ret double %retval
@@ -537,9 +537,9 @@ define i8 @notatomic_i8_shared(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i8_shared_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i8_shared_param_0];
 ; CHECK-NEXT:    ld.shared.b8 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load i8, ptr addrspace(3) %addr
     ret i8 %retval
@@ -552,9 +552,9 @@ define i8 @notatomic_i8_shared_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i8_shared_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i8_shared_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b8 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile i8, ptr addrspace(3) %addr
     ret i8 %retval
@@ -567,9 +567,9 @@ define i16 @notatomic_i16_shared(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i16_shared_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i16_shared_param_0];
 ; CHECK-NEXT:    ld.shared.b16 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load i16, ptr addrspace(3) %addr
     ret i16 %retval
@@ -582,9 +582,9 @@ define i16 @notatomic_i16_shared_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i16_shared_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i16_shared_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b16 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile i16, ptr addrspace(3) %addr
     ret i16 %retval
@@ -597,9 +597,9 @@ define i32 @notatomic_i32_shared(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i32_shared_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i32_shared_param_0];
 ; CHECK-NEXT:    ld.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load i32, ptr addrspace(3) %addr
     ret i32 %retval
@@ -612,9 +612,9 @@ define i32 @notatomic_i32_shared_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i32_shared_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i32_shared_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile i32, ptr addrspace(3) %addr
     ret i32 %retval
@@ -626,9 +626,9 @@ define i64 @notatomic_i64_shared(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i64_shared_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i64_shared_param_0];
 ; CHECK-NEXT:    ld.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load i64, ptr addrspace(3) %addr
     ret i64 %retval
@@ -640,9 +640,9 @@ define i64 @notatomic_i64_shared_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i64_shared_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i64_shared_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load volatile i64, ptr addrspace(3) %addr
     ret i64 %retval
@@ -654,9 +654,9 @@ define i128 @notatomic_i128_shared(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i128_shared_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i128_shared_param_0];
 ; CHECK-NEXT:    ld.shared.v2.b64 {%rd2, %rd3}, [%rd1];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %retval = load i128, ptr addrspace(3) %addr
     ret i128 %retval
@@ -668,9 +668,9 @@ define i128 @notatomic_i128_shared_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i128_shared_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i128_shared_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.v2.b64 {%rd2, %rd3}, [%rd1];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %retval = load volatile i128, ptr addrspace(3) %addr
     ret i128 %retval
@@ -683,9 +683,9 @@ define half @notatomic_half_shared(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_half_shared_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_half_shared_param_0];
 ; CHECK-NEXT:    ld.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load half, ptr addrspace(3) %addr
     ret half %retval
@@ -698,9 +698,9 @@ define half @notatomic_half_shared_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_half_shared_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_half_shared_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile half, ptr addrspace(3) %addr
     ret half %retval
@@ -713,9 +713,9 @@ define bfloat @notatomic_bfloat_shared(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_bfloat_shared_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_bfloat_shared_param_0];
 ; CHECK-NEXT:    ld.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load bfloat, ptr addrspace(3) %addr
     ret bfloat %retval
@@ -728,9 +728,9 @@ define bfloat @notatomic_bfloat_shared_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_bfloat_shared_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_bfloat_shared_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile bfloat, ptr addrspace(3) %addr
     ret bfloat %retval
@@ -743,9 +743,9 @@ define float @notatomic_float_shared(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_float_shared_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_float_shared_param_0];
 ; CHECK-NEXT:    ld.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load float, ptr addrspace(3) %addr
     ret float %retval
@@ -758,9 +758,9 @@ define float @notatomic_float_shared_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_float_shared_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_float_shared_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile float, ptr addrspace(3) %addr
     ret float %retval
@@ -772,9 +772,9 @@ define double @notatomic_double_shared(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_double_shared_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_double_shared_param_0];
 ; CHECK-NEXT:    ld.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load double, ptr addrspace(3) %addr
     ret double %retval
@@ -786,9 +786,9 @@ define double @notatomic_double_shared_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_double_shared_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_double_shared_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load volatile double, ptr addrspace(3) %addr
     ret double %retval
@@ -801,9 +801,9 @@ define i8 @notatomic_i8_const(ptr addrspace(4) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i8_const_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i8_const_param_0];
 ; CHECK-NEXT:    ld.const.b8 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load i8, ptr addrspace(4) %addr
     ret i8 %retval
@@ -816,9 +816,9 @@ define i8 @notatomic_i8_const_volatile(ptr addrspace(4) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i8_const_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i8_const_volatile_param_0];
 ; CHECK-NEXT:    ld.const.b8 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile i8, ptr addrspace(4) %addr
     ret i8 %retval
@@ -831,9 +831,9 @@ define i16 @notatomic_i16_const(ptr addrspace(4) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i16_const_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i16_const_param_0];
 ; CHECK-NEXT:    ld.const.b16 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load i16, ptr addrspace(4) %addr
     ret i16 %retval
@@ -846,9 +846,9 @@ define i16 @notatomic_i16_const_volatile(ptr addrspace(4) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i16_const_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i16_const_volatile_param_0];
 ; CHECK-NEXT:    ld.const.b16 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile i16, ptr addrspace(4) %addr
     ret i16 %retval
@@ -861,9 +861,9 @@ define i32 @notatomic_i32_const(ptr addrspace(4) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i32_const_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i32_const_param_0];
 ; CHECK-NEXT:    ld.const.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load i32, ptr addrspace(4) %addr
     ret i32 %retval
@@ -876,9 +876,9 @@ define i32 @notatomic_i32_const_volatile(ptr addrspace(4) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i32_const_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i32_const_volatile_param_0];
 ; CHECK-NEXT:    ld.const.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile i32, ptr addrspace(4) %addr
     ret i32 %retval
@@ -890,9 +890,9 @@ define i64 @notatomic_i64_const(ptr addrspace(4) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i64_const_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i64_const_param_0];
 ; CHECK-NEXT:    ld.const.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load i64, ptr addrspace(4) %addr
     ret i64 %retval
@@ -904,9 +904,9 @@ define i64 @notatomic_i64_const_volatile(ptr addrspace(4) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i64_const_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i64_const_volatile_param_0];
 ; CHECK-NEXT:    ld.const.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load volatile i64, ptr addrspace(4) %addr
     ret i64 %retval
@@ -918,9 +918,9 @@ define i128 @notatomic_i128_const(ptr addrspace(4) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i128_const_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i128_const_param_0];
 ; CHECK-NEXT:    ld.const.v2.b64 {%rd2, %rd3}, [%rd1];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %retval = load i128, ptr addrspace(4) %addr
     ret i128 %retval
@@ -932,9 +932,9 @@ define i128 @notatomic_i128_const_volatile(ptr addrspace(4) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i128_const_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i128_const_volatile_param_0];
 ; CHECK-NEXT:    ld.const.v2.b64 {%rd2, %rd3}, [%rd1];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %retval = load volatile i128, ptr addrspace(4) %addr
     ret i128 %retval
@@ -947,9 +947,9 @@ define half @notatomic_half_const(ptr addrspace(4) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_half_const_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_half_const_param_0];
 ; CHECK-NEXT:    ld.const.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load half, ptr addrspace(4) %addr
     ret half %retval
@@ -962,9 +962,9 @@ define half @notatomic_half_const_volatile(ptr addrspace(4) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_half_const_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_half_const_volatile_param_0];
 ; CHECK-NEXT:    ld.const.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile half, ptr addrspace(4) %addr
     ret half %retval
@@ -977,9 +977,9 @@ define bfloat @notatomic_bfloat_const(ptr addrspace(4) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_bfloat_const_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_bfloat_const_param_0];
 ; CHECK-NEXT:    ld.const.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load bfloat, ptr addrspace(4) %addr
     ret bfloat %retval
@@ -992,9 +992,9 @@ define bfloat @notatomic_bfloat_const_volatile(ptr addrspace(4) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_bfloat_const_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_bfloat_const_volatile_param_0];
 ; CHECK-NEXT:    ld.const.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile bfloat, ptr addrspace(4) %addr
     ret bfloat %retval
@@ -1007,9 +1007,9 @@ define float @notatomic_float_const(ptr addrspace(4) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_float_const_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_float_const_param_0];
 ; CHECK-NEXT:    ld.const.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load float, ptr addrspace(4) %addr
     ret float %retval
@@ -1022,9 +1022,9 @@ define float @notatomic_float_const_volatile(ptr addrspace(4) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_float_const_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_float_const_volatile_param_0];
 ; CHECK-NEXT:    ld.const.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile float, ptr addrspace(4) %addr
     ret float %retval
@@ -1036,9 +1036,9 @@ define double @notatomic_double_const(ptr addrspace(4) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_double_const_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_double_const_param_0];
 ; CHECK-NEXT:    ld.const.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load double, ptr addrspace(4) %addr
     ret double %retval
@@ -1050,9 +1050,9 @@ define double @notatomic_double_const_volatile(ptr addrspace(4) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_double_const_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_double_const_volatile_param_0];
 ; CHECK-NEXT:    ld.const.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load volatile double, ptr addrspace(4) %addr
     ret double %retval
@@ -1069,13 +1069,12 @@ define i8 @notatomic_i8_local() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot72;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1094,13 +1093,12 @@ define i8 @notatomic_i8_local_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot73;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1119,13 +1117,12 @@ define i16 @notatomic_i16_local() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot74;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1144,13 +1141,12 @@ define i16 @notatomic_i16_local_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot75;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1169,13 +1165,12 @@ define i32 @notatomic_i32_local() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot76;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1194,13 +1189,12 @@ define i32 @notatomic_i32_local_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot77;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1219,13 +1213,12 @@ define i64 @notatomic_i64_local() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot78;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1244,13 +1237,12 @@ define i64 @notatomic_i64_local_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot79;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1269,13 +1261,12 @@ define i128 @notatomic_i128_local() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot80;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1294,13 +1285,12 @@ define i128 @notatomic_i128_local_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot81;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1320,13 +1310,12 @@ define half @notatomic_half_local() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot82;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1346,13 +1335,12 @@ define half @notatomic_half_local_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot83;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1372,13 +1360,12 @@ define bfloat @notatomic_bfloat_local() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot84;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1398,13 +1385,12 @@ define bfloat @notatomic_bfloat_local_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot85;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1423,13 +1409,12 @@ define float @notatomic_float_local() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot86;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1448,13 +1433,12 @@ define float @notatomic_float_local_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot87;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1473,13 +1457,12 @@ define double @notatomic_double_local() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot88;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1498,13 +1481,12 @@ define double @notatomic_double_local_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot89;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1519,9 +1501,9 @@ define i8 @notatomic_i8_param(ptr addrspace(101) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i8_param_param_0];
-; CHECK-NEXT:    ld.param.b8 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i8_param_param_0];
+; CHECK-NEXT:    ld.param::entry.b8 %r1, [%rd1];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load i8, ptr addrspace(101) %addr
     ret i8 %retval
@@ -1534,9 +1516,9 @@ define i8 @notatomic_i8_param_volatile(ptr addrspace(101) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i8_param_volatile_param_0];
-; CHECK-NEXT:    ld.param.b8 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i8_param_volatile_param_0];
+; CHECK-NEXT:    ld.param::entry.b8 %r1, [%rd1];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile i8, ptr addrspace(101) %addr
     ret i8 %retval
@@ -1549,9 +1531,9 @@ define i16 @notatomic_i16_param(ptr addrspace(101) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i16_param_param_0];
-; CHECK-NEXT:    ld.param.b16 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i16_param_param_0];
+; CHECK-NEXT:    ld.param::entry.b16 %r1, [%rd1];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load i16, ptr addrspace(101) %addr
     ret i16 %retval
@@ -1564,9 +1546,9 @@ define i16 @notatomic_i16_param_volatile(ptr addrspace(101) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i16_param_volatile_param_0];
-; CHECK-NEXT:    ld.param.b16 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i16_param_volatile_param_0];
+; CHECK-NEXT:    ld.param::entry.b16 %r1, [%rd1];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile i16, ptr addrspace(101) %addr
     ret i16 %retval
@@ -1579,9 +1561,9 @@ define i32 @notatomic_i32_param(ptr addrspace(101) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i32_param_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i32_param_param_0];
+; CHECK-NEXT:    ld.param::entry.b32 %r1, [%rd1];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load i32, ptr addrspace(101) %addr
     ret i32 %retval
@@ -1594,9 +1576,9 @@ define i32 @notatomic_i32_param_volatile(ptr addrspace(101) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i32_param_volatile_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i32_param_volatile_param_0];
+; CHECK-NEXT:    ld.param::entry.b32 %r1, [%rd1];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile i32, ptr addrspace(101) %addr
     ret i32 %retval
@@ -1608,9 +1590,9 @@ define i64 @notatomic_i64_param(ptr addrspace(101) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i64_param_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i64_param_param_0];
+; CHECK-NEXT:    ld.param::entry.b64 %rd2, [%rd1];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load i64, ptr addrspace(101) %addr
     ret i64 %retval
@@ -1622,9 +1604,9 @@ define i64 @notatomic_i64_param_volatile(ptr addrspace(101) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i64_param_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i64_param_volatile_param_0];
+; CHECK-NEXT:    ld.param::entry.b64 %rd2, [%rd1];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load volatile i64, ptr addrspace(101) %addr
     ret i64 %retval
@@ -1636,9 +1618,9 @@ define i128 @notatomic_i128_param(ptr addrspace(101) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i128_param_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [%rd1];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i128_param_param_0];
+; CHECK-NEXT:    ld.param::entry.v2.b64 {%rd2, %rd3}, [%rd1];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %retval = load i128, ptr addrspace(101) %addr
     ret i128 %retval
@@ -1650,9 +1632,9 @@ define i128 @notatomic_i128_param_volatile(ptr addrspace(101) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i128_param_volatile_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [%rd1];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_i128_param_volatile_param_0];
+; CHECK-NEXT:    ld.param::entry.v2.b64 {%rd2, %rd3}, [%rd1];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %retval = load volatile i128, ptr addrspace(101) %addr
     ret i128 %retval
@@ -1665,9 +1647,9 @@ define half @notatomic_half_param(ptr addrspace(101) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_half_param_param_0];
-; CHECK-NEXT:    ld.param.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_half_param_param_0];
+; CHECK-NEXT:    ld.param::entry.b16 %rs1, [%rd1];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load half, ptr addrspace(101) %addr
     ret half %retval
@@ -1680,9 +1662,9 @@ define half @notatomic_half_param_volatile(ptr addrspace(101) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_half_param_volatile_param_0];
-; CHECK-NEXT:    ld.param.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_half_param_volatile_param_0];
+; CHECK-NEXT:    ld.param::entry.b16 %rs1, [%rd1];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile half, ptr addrspace(101) %addr
     ret half %retval
@@ -1695,9 +1677,9 @@ define bfloat @notatomic_bfloat_param(ptr addrspace(101) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_bfloat_param_param_0];
-; CHECK-NEXT:    ld.param.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_bfloat_param_param_0];
+; CHECK-NEXT:    ld.param::entry.b16 %rs1, [%rd1];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load bfloat, ptr addrspace(101) %addr
     ret bfloat %retval
@@ -1710,9 +1692,9 @@ define bfloat @notatomic_bfloat_param_volatile(ptr addrspace(101) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_bfloat_param_volatile_param_0];
-; CHECK-NEXT:    ld.param.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_bfloat_param_volatile_param_0];
+; CHECK-NEXT:    ld.param::entry.b16 %rs1, [%rd1];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile bfloat, ptr addrspace(101) %addr
     ret bfloat %retval
@@ -1725,9 +1707,9 @@ define float @notatomic_float_param(ptr addrspace(101) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_float_param_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_float_param_param_0];
+; CHECK-NEXT:    ld.param::entry.b32 %r1, [%rd1];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load float, ptr addrspace(101) %addr
     ret float %retval
@@ -1740,9 +1722,9 @@ define float @notatomic_float_param_volatile(ptr addrspace(101) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_float_param_volatile_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_float_param_volatile_param_0];
+; CHECK-NEXT:    ld.param::entry.b32 %r1, [%rd1];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load volatile float, ptr addrspace(101) %addr
     ret float %retval
@@ -1754,9 +1736,9 @@ define double @notatomic_double_param(ptr addrspace(101) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_double_param_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_double_param_param_0];
+; CHECK-NEXT:    ld.param::entry.b64 %rd2, [%rd1];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load double, ptr addrspace(101) %addr
     ret double %retval
@@ -1768,9 +1750,9 @@ define double @notatomic_double_param_volatile(ptr addrspace(101) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_double_param_volatile_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [notatomic_double_param_volatile_param_0];
+; CHECK-NEXT:    ld.param::entry.b64 %rd2, [%rd1];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load volatile double, ptr addrspace(101) %addr
     ret double %retval
@@ -1784,10 +1766,10 @@ define i8 @unordered_i8_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_generic_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr %addr syncscope("") unordered, align 1
     ret i8 %retval
@@ -1801,10 +1783,10 @@ define i8 @unordered_i8_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_generic_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr %addr syncscope("block") unordered, align 1
     ret i8 %retval
@@ -1818,10 +1800,10 @@ define i8 @unordered_i8_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_generic_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr %addr syncscope("cluster") unordered, align 1
     ret i8 %retval
@@ -1835,10 +1817,10 @@ define i8 @unordered_i8_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_generic_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr %addr syncscope("device") unordered, align 1
     ret i8 %retval
@@ -1852,10 +1834,10 @@ define i8 @unordered_i8_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr %addr syncscope("") unordered, align 1
     ret i8 %retval
@@ -1869,10 +1851,10 @@ define i8 @unordered_i8_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr %addr syncscope("block") unordered, align 1
     ret i8 %retval
@@ -1886,10 +1868,10 @@ define i8 @unordered_i8_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr %addr syncscope("cluster") unordered, align 1
     ret i8 %retval
@@ -1903,10 +1885,10 @@ define i8 @unordered_i8_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr %addr syncscope("device") unordered, align 1
     ret i8 %retval
@@ -1920,10 +1902,10 @@ define i16 @unordered_i16_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_generic_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr %addr syncscope("") unordered, align 2
     ret i16 %retval
@@ -1937,10 +1919,10 @@ define i16 @unordered_i16_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_generic_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr %addr syncscope("block") unordered, align 2
     ret i16 %retval
@@ -1954,10 +1936,10 @@ define i16 @unordered_i16_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_generic_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr %addr syncscope("cluster") unordered, align 2
     ret i16 %retval
@@ -1971,10 +1953,10 @@ define i16 @unordered_i16_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_generic_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr %addr syncscope("device") unordered, align 2
     ret i16 %retval
@@ -1988,10 +1970,10 @@ define i16 @unordered_i16_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr %addr syncscope("") unordered, align 2
     ret i16 %retval
@@ -2005,10 +1987,10 @@ define i16 @unordered_i16_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr %addr syncscope("block") unordered, align 2
     ret i16 %retval
@@ -2022,10 +2004,10 @@ define i16 @unordered_i16_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr %addr syncscope("cluster") unordered, align 2
     ret i16 %retval
@@ -2039,10 +2021,10 @@ define i16 @unordered_i16_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr %addr syncscope("device") unordered, align 2
     ret i16 %retval
@@ -2055,9 +2037,9 @@ define i32 @unordered_i32_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_generic_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr %addr syncscope("") unordered, align 4
     ret i32 %retval
@@ -2070,9 +2052,9 @@ define i32 @unordered_i32_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_generic_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr %addr syncscope("block") unordered, align 4
     ret i32 %retval
@@ -2085,9 +2067,9 @@ define i32 @unordered_i32_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_generic_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr %addr syncscope("cluster") unordered, align 4
     ret i32 %retval
@@ -2100,9 +2082,9 @@ define i32 @unordered_i32_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_generic_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr %addr syncscope("device") unordered, align 4
     ret i32 %retval
@@ -2115,9 +2097,9 @@ define i32 @unordered_i32_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr %addr syncscope("") unordered, align 4
     ret i32 %retval
@@ -2130,9 +2112,9 @@ define i32 @unordered_i32_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr %addr syncscope("block") unordered, align 4
     ret i32 %retval
@@ -2145,9 +2127,9 @@ define i32 @unordered_i32_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr %addr syncscope("cluster") unordered, align 4
     ret i32 %retval
@@ -2160,9 +2142,9 @@ define i32 @unordered_i32_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr %addr syncscope("device") unordered, align 4
     ret i32 %retval
@@ -2174,9 +2156,9 @@ define i64 @unordered_i64_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_generic_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr %addr syncscope("") unordered, align 8
     ret i64 %retval
@@ -2188,9 +2170,9 @@ define i64 @unordered_i64_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_generic_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr %addr syncscope("block") unordered, align 8
     ret i64 %retval
@@ -2202,9 +2184,9 @@ define i64 @unordered_i64_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_generic_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr %addr syncscope("cluster") unordered, align 8
     ret i64 %retval
@@ -2216,9 +2198,9 @@ define i64 @unordered_i64_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_generic_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr %addr syncscope("device") unordered, align 8
     ret i64 %retval
@@ -2230,9 +2212,9 @@ define i64 @unordered_i64_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr %addr syncscope("") unordered, align 8
     ret i64 %retval
@@ -2244,9 +2226,9 @@ define i64 @unordered_i64_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr %addr syncscope("block") unordered, align 8
     ret i64 %retval
@@ -2258,9 +2240,9 @@ define i64 @unordered_i64_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr %addr syncscope("cluster") unordered, align 8
     ret i64 %retval
@@ -2272,9 +2254,9 @@ define i64 @unordered_i64_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr %addr syncscope("device") unordered, align 8
     ret i64 %retval
@@ -2286,7 +2268,7 @@ define i128 @unordered_i128_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i128_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_generic_sys_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -2295,7 +2277,7 @@ define i128 @unordered_i128_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    atom.relaxed.sys.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr %addr syncscope("") unordered, align 16
     ret i128 %retval
@@ -2307,7 +2289,7 @@ define i128 @unordered_i128_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i128_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_generic_cta_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -2316,7 +2298,7 @@ define i128 @unordered_i128_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    atom.relaxed.cta.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr %addr syncscope("block") unordered, align 16
     ret i128 %retval
@@ -2328,7 +2310,7 @@ define i128 @unordered_i128_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i128_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_generic_cluster_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -2337,7 +2319,7 @@ define i128 @unordered_i128_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    atom.relaxed.cluster.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr %addr syncscope("cluster") unordered, align 16
     ret i128 %retval
@@ -2349,7 +2331,7 @@ define i128 @unordered_i128_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i128_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_generic_gpu_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -2358,7 +2340,7 @@ define i128 @unordered_i128_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    atom.relaxed.gpu.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr %addr syncscope("device") unordered, align 16
     ret i128 %retval
@@ -2370,7 +2352,7 @@ define i128 @unordered_i128_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i128_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -2379,7 +2361,7 @@ define i128 @unordered_i128_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    atom.relaxed.sys.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr %addr syncscope("") unordered, align 16
     ret i128 %retval
@@ -2391,7 +2373,7 @@ define i128 @unordered_i128_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i128_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -2400,7 +2382,7 @@ define i128 @unordered_i128_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    atom.relaxed.cta.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr %addr syncscope("block") unordered, align 16
     ret i128 %retval
@@ -2412,7 +2394,7 @@ define i128 @unordered_i128_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i128_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -2421,7 +2403,7 @@ define i128 @unordered_i128_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    atom.relaxed.cluster.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr %addr syncscope("cluster") unordered, align 16
     ret i128 %retval
@@ -2433,7 +2415,7 @@ define i128 @unordered_i128_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i128_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -2442,7 +2424,7 @@ define i128 @unordered_i128_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    atom.relaxed.gpu.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr %addr syncscope("device") unordered, align 16
     ret i128 %retval
@@ -2455,9 +2437,9 @@ define half @unordered_half_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_generic_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr %addr syncscope("") unordered, align 2
     ret half %retval
@@ -2470,9 +2452,9 @@ define half @unordered_half_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_generic_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr %addr syncscope("block") unordered, align 2
     ret half %retval
@@ -2485,9 +2467,9 @@ define half @unordered_half_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_generic_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr %addr syncscope("cluster") unordered, align 2
     ret half %retval
@@ -2500,9 +2482,9 @@ define half @unordered_half_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_generic_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr %addr syncscope("device") unordered, align 2
     ret half %retval
@@ -2515,9 +2497,9 @@ define half @unordered_half_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr %addr syncscope("") unordered, align 2
     ret half %retval
@@ -2530,9 +2512,9 @@ define half @unordered_half_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr %addr syncscope("block") unordered, align 2
     ret half %retval
@@ -2545,9 +2527,9 @@ define half @unordered_half_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr %addr syncscope("cluster") unordered, align 2
     ret half %retval
@@ -2560,9 +2542,9 @@ define half @unordered_half_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr %addr syncscope("device") unordered, align 2
     ret half %retval
@@ -2575,9 +2557,9 @@ define bfloat @unordered_bfloat_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_generic_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr %addr syncscope("") unordered, align 2
     ret bfloat %retval
@@ -2590,9 +2572,9 @@ define bfloat @unordered_bfloat_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_generic_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr %addr syncscope("block") unordered, align 2
     ret bfloat %retval
@@ -2605,9 +2587,9 @@ define bfloat @unordered_bfloat_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_generic_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr %addr syncscope("cluster") unordered, align 2
     ret bfloat %retval
@@ -2620,9 +2602,9 @@ define bfloat @unordered_bfloat_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_generic_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr %addr syncscope("device") unordered, align 2
     ret bfloat %retval
@@ -2635,9 +2617,9 @@ define bfloat @unordered_bfloat_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr %addr syncscope("") unordered, align 2
     ret bfloat %retval
@@ -2650,9 +2632,9 @@ define bfloat @unordered_bfloat_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr %addr syncscope("block") unordered, align 2
     ret bfloat %retval
@@ -2665,9 +2647,9 @@ define bfloat @unordered_bfloat_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr %addr syncscope("cluster") unordered, align 2
     ret bfloat %retval
@@ -2680,9 +2662,9 @@ define bfloat @unordered_bfloat_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr %addr syncscope("device") unordered, align 2
     ret bfloat %retval
@@ -2695,9 +2677,9 @@ define float @unordered_float_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_generic_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr %addr syncscope("") unordered, align 4
     ret float %retval
@@ -2710,9 +2692,9 @@ define float @unordered_float_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_generic_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr %addr syncscope("block") unordered, align 4
     ret float %retval
@@ -2725,9 +2707,9 @@ define float @unordered_float_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_generic_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr %addr syncscope("cluster") unordered, align 4
     ret float %retval
@@ -2740,9 +2722,9 @@ define float @unordered_float_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_generic_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr %addr syncscope("device") unordered, align 4
     ret float %retval
@@ -2755,9 +2737,9 @@ define float @unordered_float_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr %addr syncscope("") unordered, align 4
     ret float %retval
@@ -2770,9 +2752,9 @@ define float @unordered_float_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr %addr syncscope("block") unordered, align 4
     ret float %retval
@@ -2785,9 +2767,9 @@ define float @unordered_float_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr %addr syncscope("cluster") unordered, align 4
     ret float %retval
@@ -2800,9 +2782,9 @@ define float @unordered_float_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr %addr syncscope("device") unordered, align 4
     ret float %retval
@@ -2814,9 +2796,9 @@ define double @unordered_double_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_generic_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr %addr syncscope("") unordered, align 8
     ret double %retval
@@ -2828,9 +2810,9 @@ define double @unordered_double_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_generic_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr %addr syncscope("block") unordered, align 8
     ret double %retval
@@ -2842,9 +2824,9 @@ define double @unordered_double_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_generic_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr %addr syncscope("cluster") unordered, align 8
     ret double %retval
@@ -2856,9 +2838,9 @@ define double @unordered_double_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_generic_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr %addr syncscope("device") unordered, align 8
     ret double %retval
@@ -2870,9 +2852,9 @@ define double @unordered_double_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr %addr syncscope("") unordered, align 8
     ret double %retval
@@ -2884,9 +2866,9 @@ define double @unordered_double_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr %addr syncscope("block") unordered, align 8
     ret double %retval
@@ -2898,9 +2880,9 @@ define double @unordered_double_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr %addr syncscope("cluster") unordered, align 8
     ret double %retval
@@ -2912,9 +2894,9 @@ define double @unordered_double_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr %addr syncscope("device") unordered, align 8
     ret double %retval
@@ -2928,10 +2910,10 @@ define i8 @unordered_i8_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_global_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(1) %addr syncscope("") unordered, align 1
     ret i8 %retval
@@ -2945,10 +2927,10 @@ define i8 @unordered_i8_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_global_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(1) %addr syncscope("block") unordered, align 1
     ret i8 %retval
@@ -2962,10 +2944,10 @@ define i8 @unordered_i8_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_global_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(1) %addr syncscope("cluster") unordered, align 1
     ret i8 %retval
@@ -2979,10 +2961,10 @@ define i8 @unordered_i8_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_global_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(1) %addr syncscope("device") unordered, align 1
     ret i8 %retval
@@ -2996,10 +2978,10 @@ define i8 @unordered_i8_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_global_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(1) %addr syncscope("") unordered, align 1
     ret i8 %retval
@@ -3013,10 +2995,10 @@ define i8 @unordered_i8_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_global_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(1) %addr syncscope("block") unordered, align 1
     ret i8 %retval
@@ -3030,10 +3012,10 @@ define i8 @unordered_i8_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(1) %addr syncscope("cluster") unordered, align 1
     ret i8 %retval
@@ -3047,10 +3029,10 @@ define i8 @unordered_i8_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(1) %addr syncscope("device") unordered, align 1
     ret i8 %retval
@@ -3064,10 +3046,10 @@ define i16 @unordered_i16_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_global_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(1) %addr syncscope("") unordered, align 2
     ret i16 %retval
@@ -3081,10 +3063,10 @@ define i16 @unordered_i16_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_global_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(1) %addr syncscope("block") unordered, align 2
     ret i16 %retval
@@ -3098,10 +3080,10 @@ define i16 @unordered_i16_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_global_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(1) %addr syncscope("cluster") unordered, align 2
     ret i16 %retval
@@ -3115,10 +3097,10 @@ define i16 @unordered_i16_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_global_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(1) %addr syncscope("device") unordered, align 2
     ret i16 %retval
@@ -3132,10 +3114,10 @@ define i16 @unordered_i16_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_global_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(1) %addr syncscope("") unordered, align 2
     ret i16 %retval
@@ -3149,10 +3131,10 @@ define i16 @unordered_i16_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_global_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(1) %addr syncscope("block") unordered, align 2
     ret i16 %retval
@@ -3166,10 +3148,10 @@ define i16 @unordered_i16_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(1) %addr syncscope("cluster") unordered, align 2
     ret i16 %retval
@@ -3183,10 +3165,10 @@ define i16 @unordered_i16_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(1) %addr syncscope("device") unordered, align 2
     ret i16 %retval
@@ -3199,9 +3181,9 @@ define i32 @unordered_i32_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_global_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(1) %addr syncscope("") unordered, align 4
     ret i32 %retval
@@ -3214,9 +3196,9 @@ define i32 @unordered_i32_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_global_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(1) %addr syncscope("block") unordered, align 4
     ret i32 %retval
@@ -3229,9 +3211,9 @@ define i32 @unordered_i32_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_global_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(1) %addr syncscope("cluster") unordered, align 4
     ret i32 %retval
@@ -3244,9 +3226,9 @@ define i32 @unordered_i32_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_global_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(1) %addr syncscope("device") unordered, align 4
     ret i32 %retval
@@ -3259,9 +3241,9 @@ define i32 @unordered_i32_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_global_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(1) %addr syncscope("") unordered, align 4
     ret i32 %retval
@@ -3274,9 +3256,9 @@ define i32 @unordered_i32_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_global_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(1) %addr syncscope("block") unordered, align 4
     ret i32 %retval
@@ -3289,9 +3271,9 @@ define i32 @unordered_i32_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(1) %addr syncscope("cluster") unordered, align 4
     ret i32 %retval
@@ -3304,9 +3286,9 @@ define i32 @unordered_i32_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(1) %addr syncscope("device") unordered, align 4
     ret i32 %retval
@@ -3318,9 +3300,9 @@ define i64 @unordered_i64_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_global_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(1) %addr syncscope("") unordered, align 8
     ret i64 %retval
@@ -3332,9 +3314,9 @@ define i64 @unordered_i64_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_global_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(1) %addr syncscope("block") unordered, align 8
     ret i64 %retval
@@ -3346,9 +3328,9 @@ define i64 @unordered_i64_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_global_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(1) %addr syncscope("cluster") unordered, align 8
     ret i64 %retval
@@ -3360,9 +3342,9 @@ define i64 @unordered_i64_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_global_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(1) %addr syncscope("device") unordered, align 8
     ret i64 %retval
@@ -3374,9 +3356,9 @@ define i64 @unordered_i64_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_global_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(1) %addr syncscope("") unordered, align 8
     ret i64 %retval
@@ -3388,9 +3370,9 @@ define i64 @unordered_i64_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_global_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(1) %addr syncscope("block") unordered, align 8
     ret i64 %retval
@@ -3402,9 +3384,9 @@ define i64 @unordered_i64_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(1) %addr syncscope("cluster") unordered, align 8
     ret i64 %retval
@@ -3416,9 +3398,9 @@ define i64 @unordered_i64_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(1) %addr syncscope("device") unordered, align 8
     ret i64 %retval
@@ -3430,7 +3412,7 @@ define i128 @unordered_i128_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i128_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_global_sys_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -3439,7 +3421,7 @@ define i128 @unordered_i128_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.relaxed.sys.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(1) %addr syncscope("") unordered, align 16
     ret i128 %retval
@@ -3451,7 +3433,7 @@ define i128 @unordered_i128_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i128_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_global_cta_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -3460,7 +3442,7 @@ define i128 @unordered_i128_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(1) %addr syncscope("block") unordered, align 16
     ret i128 %retval
@@ -3472,7 +3454,7 @@ define i128 @unordered_i128_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i128_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_global_cluster_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -3481,7 +3463,7 @@ define i128 @unordered_i128_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.relaxed.cluster.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(1) %addr syncscope("cluster") unordered, align 16
     ret i128 %retval
@@ -3493,7 +3475,7 @@ define i128 @unordered_i128_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i128_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_global_gpu_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -3502,7 +3484,7 @@ define i128 @unordered_i128_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.relaxed.gpu.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(1) %addr syncscope("device") unordered, align 16
     ret i128 %retval
@@ -3514,7 +3496,7 @@ define i128 @unordered_i128_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i128_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_global_sys_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -3523,7 +3505,7 @@ define i128 @unordered_i128_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.relaxed.sys.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(1) %addr syncscope("") unordered, align 16
     ret i128 %retval
@@ -3535,7 +3517,7 @@ define i128 @unordered_i128_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i128_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_global_cta_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -3544,7 +3526,7 @@ define i128 @unordered_i128_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(1) %addr syncscope("block") unordered, align 16
     ret i128 %retval
@@ -3556,7 +3538,7 @@ define i128 @unordered_i128_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i128_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -3565,7 +3547,7 @@ define i128 @unordered_i128_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.relaxed.cluster.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(1) %addr syncscope("cluster") unordered, align 16
     ret i128 %retval
@@ -3577,7 +3559,7 @@ define i128 @unordered_i128_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i128_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -3586,7 +3568,7 @@ define i128 @unordered_i128_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.relaxed.gpu.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(1) %addr syncscope("device") unordered, align 16
     ret i128 %retval
@@ -3599,9 +3581,9 @@ define half @unordered_half_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_global_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(1) %addr syncscope("") unordered, align 2
     ret half %retval
@@ -3614,9 +3596,9 @@ define half @unordered_half_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_global_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(1) %addr syncscope("block") unordered, align 2
     ret half %retval
@@ -3629,9 +3611,9 @@ define half @unordered_half_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_global_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(1) %addr syncscope("cluster") unordered, align 2
     ret half %retval
@@ -3644,9 +3626,9 @@ define half @unordered_half_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_global_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(1) %addr syncscope("device") unordered, align 2
     ret half %retval
@@ -3659,9 +3641,9 @@ define half @unordered_half_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_global_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(1) %addr syncscope("") unordered, align 2
     ret half %retval
@@ -3674,9 +3656,9 @@ define half @unordered_half_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_global_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(1) %addr syncscope("block") unordered, align 2
     ret half %retval
@@ -3689,9 +3671,9 @@ define half @unordered_half_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(1) %addr syncscope("cluster") unordered, align 2
     ret half %retval
@@ -3704,9 +3686,9 @@ define half @unordered_half_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(1) %addr syncscope("device") unordered, align 2
     ret half %retval
@@ -3719,9 +3701,9 @@ define bfloat @unordered_bfloat_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_global_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(1) %addr syncscope("") unordered, align 2
     ret bfloat %retval
@@ -3734,9 +3716,9 @@ define bfloat @unordered_bfloat_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_global_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(1) %addr syncscope("block") unordered, align 2
     ret bfloat %retval
@@ -3749,9 +3731,9 @@ define bfloat @unordered_bfloat_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_global_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(1) %addr syncscope("cluster") unordered, align 2
     ret bfloat %retval
@@ -3764,9 +3746,9 @@ define bfloat @unordered_bfloat_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_global_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(1) %addr syncscope("device") unordered, align 2
     ret bfloat %retval
@@ -3779,9 +3761,9 @@ define bfloat @unordered_bfloat_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_global_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(1) %addr syncscope("") unordered, align 2
     ret bfloat %retval
@@ -3794,9 +3776,9 @@ define bfloat @unordered_bfloat_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_global_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(1) %addr syncscope("block") unordered, align 2
     ret bfloat %retval
@@ -3809,9 +3791,9 @@ define bfloat @unordered_bfloat_global_cluster_volatile(ptr addrspace(1) %addr) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(1) %addr syncscope("cluster") unordered, align 2
     ret bfloat %retval
@@ -3824,9 +3806,9 @@ define bfloat @unordered_bfloat_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(1) %addr syncscope("device") unordered, align 2
     ret bfloat %retval
@@ -3839,9 +3821,9 @@ define float @unordered_float_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_global_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(1) %addr syncscope("") unordered, align 4
     ret float %retval
@@ -3854,9 +3836,9 @@ define float @unordered_float_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_global_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(1) %addr syncscope("block") unordered, align 4
     ret float %retval
@@ -3869,9 +3851,9 @@ define float @unordered_float_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_global_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(1) %addr syncscope("cluster") unordered, align 4
     ret float %retval
@@ -3884,9 +3866,9 @@ define float @unordered_float_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_global_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(1) %addr syncscope("device") unordered, align 4
     ret float %retval
@@ -3899,9 +3881,9 @@ define float @unordered_float_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_global_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(1) %addr syncscope("") unordered, align 4
     ret float %retval
@@ -3914,9 +3896,9 @@ define float @unordered_float_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_global_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(1) %addr syncscope("block") unordered, align 4
     ret float %retval
@@ -3929,9 +3911,9 @@ define float @unordered_float_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(1) %addr syncscope("cluster") unordered, align 4
     ret float %retval
@@ -3944,9 +3926,9 @@ define float @unordered_float_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(1) %addr syncscope("device") unordered, align 4
     ret float %retval
@@ -3958,9 +3940,9 @@ define double @unordered_double_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_global_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(1) %addr syncscope("") unordered, align 8
     ret double %retval
@@ -3972,9 +3954,9 @@ define double @unordered_double_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_global_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(1) %addr syncscope("block") unordered, align 8
     ret double %retval
@@ -3986,9 +3968,9 @@ define double @unordered_double_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_global_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(1) %addr syncscope("cluster") unordered, align 8
     ret double %retval
@@ -4000,9 +3982,9 @@ define double @unordered_double_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_global_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(1) %addr syncscope("device") unordered, align 8
     ret double %retval
@@ -4014,9 +3996,9 @@ define double @unordered_double_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_global_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(1) %addr syncscope("") unordered, align 8
     ret double %retval
@@ -4028,9 +4010,9 @@ define double @unordered_double_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_global_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(1) %addr syncscope("block") unordered, align 8
     ret double %retval
@@ -4042,9 +4024,9 @@ define double @unordered_double_global_cluster_volatile(ptr addrspace(1) %addr) 
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(1) %addr syncscope("cluster") unordered, align 8
     ret double %retval
@@ -4056,9 +4038,9 @@ define double @unordered_double_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(1) %addr syncscope("device") unordered, align 8
     ret double %retval
@@ -4072,10 +4054,10 @@ define i8 @unordered_i8_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_shared_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(3) %addr syncscope("") unordered, align 1
     ret i8 %retval
@@ -4089,10 +4071,10 @@ define i8 @unordered_i8_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_shared_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(3) %addr syncscope("block") unordered, align 1
     ret i8 %retval
@@ -4106,10 +4088,10 @@ define i8 @unordered_i8_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_shared_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(3) %addr syncscope("cluster") unordered, align 1
     ret i8 %retval
@@ -4123,10 +4105,10 @@ define i8 @unordered_i8_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_shared_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(3) %addr syncscope("device") unordered, align 1
     ret i8 %retval
@@ -4140,10 +4122,10 @@ define i8 @unordered_i8_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(3) %addr syncscope("") unordered, align 1
     ret i8 %retval
@@ -4157,10 +4139,10 @@ define i8 @unordered_i8_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(3) %addr syncscope("block") unordered, align 1
     ret i8 %retval
@@ -4174,10 +4156,10 @@ define i8 @unordered_i8_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(3) %addr syncscope("cluster") unordered, align 1
     ret i8 %retval
@@ -4191,10 +4173,10 @@ define i8 @unordered_i8_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i8_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i8_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(3) %addr syncscope("device") unordered, align 1
     ret i8 %retval
@@ -4208,10 +4190,10 @@ define i16 @unordered_i16_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_shared_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(3) %addr syncscope("") unordered, align 2
     ret i16 %retval
@@ -4225,10 +4207,10 @@ define i16 @unordered_i16_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_shared_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(3) %addr syncscope("block") unordered, align 2
     ret i16 %retval
@@ -4242,10 +4224,10 @@ define i16 @unordered_i16_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_shared_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(3) %addr syncscope("cluster") unordered, align 2
     ret i16 %retval
@@ -4259,10 +4241,10 @@ define i16 @unordered_i16_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_shared_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(3) %addr syncscope("device") unordered, align 2
     ret i16 %retval
@@ -4276,10 +4258,10 @@ define i16 @unordered_i16_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(3) %addr syncscope("") unordered, align 2
     ret i16 %retval
@@ -4293,10 +4275,10 @@ define i16 @unordered_i16_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(3) %addr syncscope("block") unordered, align 2
     ret i16 %retval
@@ -4310,10 +4292,10 @@ define i16 @unordered_i16_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(3) %addr syncscope("cluster") unordered, align 2
     ret i16 %retval
@@ -4327,10 +4309,10 @@ define i16 @unordered_i16_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i16_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i16_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(3) %addr syncscope("device") unordered, align 2
     ret i16 %retval
@@ -4343,9 +4325,9 @@ define i32 @unordered_i32_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_shared_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(3) %addr syncscope("") unordered, align 4
     ret i32 %retval
@@ -4358,9 +4340,9 @@ define i32 @unordered_i32_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_shared_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(3) %addr syncscope("block") unordered, align 4
     ret i32 %retval
@@ -4373,9 +4355,9 @@ define i32 @unordered_i32_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_shared_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(3) %addr syncscope("cluster") unordered, align 4
     ret i32 %retval
@@ -4388,9 +4370,9 @@ define i32 @unordered_i32_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_shared_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(3) %addr syncscope("device") unordered, align 4
     ret i32 %retval
@@ -4403,9 +4385,9 @@ define i32 @unordered_i32_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(3) %addr syncscope("") unordered, align 4
     ret i32 %retval
@@ -4418,9 +4400,9 @@ define i32 @unordered_i32_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(3) %addr syncscope("block") unordered, align 4
     ret i32 %retval
@@ -4433,9 +4415,9 @@ define i32 @unordered_i32_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(3) %addr syncscope("cluster") unordered, align 4
     ret i32 %retval
@@ -4448,9 +4430,9 @@ define i32 @unordered_i32_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i32_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i32_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(3) %addr syncscope("device") unordered, align 4
     ret i32 %retval
@@ -4462,9 +4444,9 @@ define i64 @unordered_i64_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_shared_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(3) %addr syncscope("") unordered, align 8
     ret i64 %retval
@@ -4476,9 +4458,9 @@ define i64 @unordered_i64_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_shared_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(3) %addr syncscope("block") unordered, align 8
     ret i64 %retval
@@ -4490,9 +4472,9 @@ define i64 @unordered_i64_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_shared_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(3) %addr syncscope("cluster") unordered, align 8
     ret i64 %retval
@@ -4504,9 +4486,9 @@ define i64 @unordered_i64_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_shared_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(3) %addr syncscope("device") unordered, align 8
     ret i64 %retval
@@ -4518,9 +4500,9 @@ define i64 @unordered_i64_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(3) %addr syncscope("") unordered, align 8
     ret i64 %retval
@@ -4532,9 +4514,9 @@ define i64 @unordered_i64_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(3) %addr syncscope("block") unordered, align 8
     ret i64 %retval
@@ -4546,9 +4528,9 @@ define i64 @unordered_i64_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(3) %addr syncscope("cluster") unordered, align 8
     ret i64 %retval
@@ -4560,9 +4542,9 @@ define i64 @unordered_i64_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i64_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(3) %addr syncscope("device") unordered, align 8
     ret i64 %retval
@@ -4574,7 +4556,7 @@ define i128 @unordered_i128_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i128_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_shared_sys_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -4583,7 +4565,7 @@ define i128 @unordered_i128_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.relaxed.sys.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(3) %addr syncscope("") unordered, align 16
     ret i128 %retval
@@ -4595,7 +4577,7 @@ define i128 @unordered_i128_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i128_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_shared_cta_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -4604,7 +4586,7 @@ define i128 @unordered_i128_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.relaxed.cta.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(3) %addr syncscope("block") unordered, align 16
     ret i128 %retval
@@ -4616,7 +4598,7 @@ define i128 @unordered_i128_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i128_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_shared_cluster_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -4625,7 +4607,7 @@ define i128 @unordered_i128_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.relaxed.cluster.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(3) %addr syncscope("cluster") unordered, align 16
     ret i128 %retval
@@ -4637,7 +4619,7 @@ define i128 @unordered_i128_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i128_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_shared_gpu_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -4646,7 +4628,7 @@ define i128 @unordered_i128_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.relaxed.gpu.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(3) %addr syncscope("device") unordered, align 16
     ret i128 %retval
@@ -4658,7 +4640,7 @@ define i128 @unordered_i128_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i128_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -4667,7 +4649,7 @@ define i128 @unordered_i128_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.relaxed.sys.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(3) %addr syncscope("") unordered, align 16
     ret i128 %retval
@@ -4679,7 +4661,7 @@ define i128 @unordered_i128_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i128_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -4688,7 +4670,7 @@ define i128 @unordered_i128_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.relaxed.cta.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(3) %addr syncscope("block") unordered, align 16
     ret i128 %retval
@@ -4700,7 +4682,7 @@ define i128 @unordered_i128_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i128_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -4709,7 +4691,7 @@ define i128 @unordered_i128_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.relaxed.cluster.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(3) %addr syncscope("cluster") unordered, align 16
     ret i128 %retval
@@ -4721,7 +4703,7 @@ define i128 @unordered_i128_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i128_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_i128_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -4730,7 +4712,7 @@ define i128 @unordered_i128_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.relaxed.gpu.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(3) %addr syncscope("device") unordered, align 16
     ret i128 %retval
@@ -4743,9 +4725,9 @@ define half @unordered_half_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_shared_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(3) %addr syncscope("") unordered, align 2
     ret half %retval
@@ -4758,9 +4740,9 @@ define half @unordered_half_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_shared_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(3) %addr syncscope("block") unordered, align 2
     ret half %retval
@@ -4773,9 +4755,9 @@ define half @unordered_half_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_shared_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(3) %addr syncscope("cluster") unordered, align 2
     ret half %retval
@@ -4788,9 +4770,9 @@ define half @unordered_half_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_shared_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(3) %addr syncscope("device") unordered, align 2
     ret half %retval
@@ -4803,9 +4785,9 @@ define half @unordered_half_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(3) %addr syncscope("") unordered, align 2
     ret half %retval
@@ -4818,9 +4800,9 @@ define half @unordered_half_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(3) %addr syncscope("block") unordered, align 2
     ret half %retval
@@ -4833,9 +4815,9 @@ define half @unordered_half_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(3) %addr syncscope("cluster") unordered, align 2
     ret half %retval
@@ -4848,9 +4830,9 @@ define half @unordered_half_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_half_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_half_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(3) %addr syncscope("device") unordered, align 2
     ret half %retval
@@ -4863,9 +4845,9 @@ define bfloat @unordered_bfloat_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_shared_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(3) %addr syncscope("") unordered, align 2
     ret bfloat %retval
@@ -4878,9 +4860,9 @@ define bfloat @unordered_bfloat_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_shared_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(3) %addr syncscope("block") unordered, align 2
     ret bfloat %retval
@@ -4893,9 +4875,9 @@ define bfloat @unordered_bfloat_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_shared_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(3) %addr syncscope("cluster") unordered, align 2
     ret bfloat %retval
@@ -4908,9 +4890,9 @@ define bfloat @unordered_bfloat_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_shared_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(3) %addr syncscope("device") unordered, align 2
     ret bfloat %retval
@@ -4923,9 +4905,9 @@ define bfloat @unordered_bfloat_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(3) %addr syncscope("") unordered, align 2
     ret bfloat %retval
@@ -4938,9 +4920,9 @@ define bfloat @unordered_bfloat_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(3) %addr syncscope("block") unordered, align 2
     ret bfloat %retval
@@ -4953,9 +4935,9 @@ define bfloat @unordered_bfloat_shared_cluster_volatile(ptr addrspace(3) %addr) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(3) %addr syncscope("cluster") unordered, align 2
     ret bfloat %retval
@@ -4968,9 +4950,9 @@ define bfloat @unordered_bfloat_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_bfloat_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_bfloat_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(3) %addr syncscope("device") unordered, align 2
     ret bfloat %retval
@@ -4983,9 +4965,9 @@ define float @unordered_float_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_shared_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(3) %addr syncscope("") unordered, align 4
     ret float %retval
@@ -4998,9 +4980,9 @@ define float @unordered_float_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_shared_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(3) %addr syncscope("block") unordered, align 4
     ret float %retval
@@ -5013,9 +4995,9 @@ define float @unordered_float_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_shared_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(3) %addr syncscope("cluster") unordered, align 4
     ret float %retval
@@ -5028,9 +5010,9 @@ define float @unordered_float_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_shared_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(3) %addr syncscope("device") unordered, align 4
     ret float %retval
@@ -5043,9 +5025,9 @@ define float @unordered_float_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(3) %addr syncscope("") unordered, align 4
     ret float %retval
@@ -5058,9 +5040,9 @@ define float @unordered_float_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(3) %addr syncscope("block") unordered, align 4
     ret float %retval
@@ -5073,9 +5055,9 @@ define float @unordered_float_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(3) %addr syncscope("cluster") unordered, align 4
     ret float %retval
@@ -5088,9 +5070,9 @@ define float @unordered_float_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_float_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_float_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(3) %addr syncscope("device") unordered, align 4
     ret float %retval
@@ -5102,9 +5084,9 @@ define double @unordered_double_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_shared_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(3) %addr syncscope("") unordered, align 8
     ret double %retval
@@ -5116,9 +5098,9 @@ define double @unordered_double_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_shared_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(3) %addr syncscope("block") unordered, align 8
     ret double %retval
@@ -5130,9 +5112,9 @@ define double @unordered_double_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_shared_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(3) %addr syncscope("cluster") unordered, align 8
     ret double %retval
@@ -5144,9 +5126,9 @@ define double @unordered_double_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_shared_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(3) %addr syncscope("device") unordered, align 8
     ret double %retval
@@ -5158,9 +5140,9 @@ define double @unordered_double_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(3) %addr syncscope("") unordered, align 8
     ret double %retval
@@ -5172,9 +5154,9 @@ define double @unordered_double_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(3) %addr syncscope("block") unordered, align 8
     ret double %retval
@@ -5186,9 +5168,9 @@ define double @unordered_double_shared_cluster_volatile(ptr addrspace(3) %addr) 
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(3) %addr syncscope("cluster") unordered, align 8
     ret double %retval
@@ -5200,9 +5182,9 @@ define double @unordered_double_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [unordered_double_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(3) %addr syncscope("device") unordered, align 8
     ret double %retval
@@ -5219,13 +5201,12 @@ define i8 @unordered_i8_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot324;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5244,13 +5225,12 @@ define i8 @unordered_i8_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot325;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5269,13 +5249,12 @@ define i8 @unordered_i8_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot326;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5294,13 +5273,12 @@ define i8 @unordered_i8_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot327;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5319,13 +5297,12 @@ define i8 @unordered_i8_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot328;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5344,13 +5321,12 @@ define i8 @unordered_i8_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot329;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5369,13 +5345,12 @@ define i8 @unordered_i8_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot330;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5394,13 +5369,12 @@ define i8 @unordered_i8_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot331;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5419,13 +5393,12 @@ define i16 @unordered_i16_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot332;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5444,13 +5417,12 @@ define i16 @unordered_i16_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot333;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5469,13 +5441,12 @@ define i16 @unordered_i16_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot334;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5494,13 +5465,12 @@ define i16 @unordered_i16_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot335;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5519,13 +5489,12 @@ define i16 @unordered_i16_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot336;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5544,13 +5513,12 @@ define i16 @unordered_i16_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot337;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5569,13 +5537,12 @@ define i16 @unordered_i16_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot338;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5594,13 +5561,12 @@ define i16 @unordered_i16_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot339;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5619,13 +5585,12 @@ define i32 @unordered_i32_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot340;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5644,13 +5609,12 @@ define i32 @unordered_i32_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot341;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5669,13 +5633,12 @@ define i32 @unordered_i32_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot342;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5694,13 +5657,12 @@ define i32 @unordered_i32_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot343;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5719,13 +5681,12 @@ define i32 @unordered_i32_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot344;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5744,13 +5705,12 @@ define i32 @unordered_i32_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot345;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5769,13 +5729,12 @@ define i32 @unordered_i32_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot346;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5794,13 +5753,12 @@ define i32 @unordered_i32_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot347;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5819,13 +5777,12 @@ define i64 @unordered_i64_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot348;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5844,13 +5801,12 @@ define i64 @unordered_i64_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot349;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5869,13 +5825,12 @@ define i64 @unordered_i64_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot350;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5894,13 +5849,12 @@ define i64 @unordered_i64_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot351;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5919,13 +5873,12 @@ define i64 @unordered_i64_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot352;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5944,13 +5897,12 @@ define i64 @unordered_i64_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot353;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5969,13 +5921,12 @@ define i64 @unordered_i64_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot354;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5994,13 +5945,12 @@ define i64 @unordered_i64_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot355;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6019,13 +5969,12 @@ define i128 @unordered_i128_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot356;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6044,13 +5993,12 @@ define i128 @unordered_i128_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot357;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6069,13 +6017,12 @@ define i128 @unordered_i128_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot358;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6094,13 +6041,12 @@ define i128 @unordered_i128_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot359;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6119,13 +6065,12 @@ define i128 @unordered_i128_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot360;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6144,13 +6089,12 @@ define i128 @unordered_i128_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot361;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6169,13 +6113,12 @@ define i128 @unordered_i128_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot362;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6194,13 +6137,12 @@ define i128 @unordered_i128_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot363;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6220,13 +6162,12 @@ define half @unordered_half_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot364;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6246,13 +6187,12 @@ define half @unordered_half_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot365;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6272,13 +6212,12 @@ define half @unordered_half_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot366;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6298,13 +6237,12 @@ define half @unordered_half_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot367;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6324,13 +6262,12 @@ define half @unordered_half_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot368;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6350,13 +6287,12 @@ define half @unordered_half_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot369;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6376,13 +6312,12 @@ define half @unordered_half_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot370;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6402,13 +6337,12 @@ define half @unordered_half_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot371;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6428,13 +6362,12 @@ define bfloat @unordered_bfloat_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot372;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6454,13 +6387,12 @@ define bfloat @unordered_bfloat_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot373;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6480,13 +6412,12 @@ define bfloat @unordered_bfloat_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot374;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6506,13 +6437,12 @@ define bfloat @unordered_bfloat_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot375;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6532,13 +6462,12 @@ define bfloat @unordered_bfloat_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot376;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6558,13 +6487,12 @@ define bfloat @unordered_bfloat_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot377;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6584,13 +6512,12 @@ define bfloat @unordered_bfloat_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot378;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6610,13 +6537,12 @@ define bfloat @unordered_bfloat_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot379;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6635,13 +6561,12 @@ define float @unordered_float_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot380;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6660,13 +6585,12 @@ define float @unordered_float_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot381;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6685,13 +6609,12 @@ define float @unordered_float_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot382;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6710,13 +6633,12 @@ define float @unordered_float_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot383;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6735,13 +6657,12 @@ define float @unordered_float_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot384;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6760,13 +6681,12 @@ define float @unordered_float_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot385;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6785,13 +6705,12 @@ define float @unordered_float_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot386;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6810,13 +6729,12 @@ define float @unordered_float_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot387;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6835,13 +6753,12 @@ define double @unordered_double_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot388;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6860,13 +6777,12 @@ define double @unordered_double_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot389;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6885,13 +6801,12 @@ define double @unordered_double_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot390;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6910,13 +6825,12 @@ define double @unordered_double_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot391;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6935,13 +6849,12 @@ define double @unordered_double_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot392;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6960,13 +6873,12 @@ define double @unordered_double_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot393;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -6985,13 +6897,12 @@ define double @unordered_double_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot394;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -7010,13 +6921,12 @@ define double @unordered_double_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot395;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -7032,10 +6942,10 @@ define i8 @monotonic_i8_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_generic_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr %addr syncscope("") monotonic, align 1
     ret i8 %retval
@@ -7049,10 +6959,10 @@ define i8 @monotonic_i8_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_generic_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr %addr syncscope("block") monotonic, align 1
     ret i8 %retval
@@ -7066,10 +6976,10 @@ define i8 @monotonic_i8_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_generic_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr %addr syncscope("cluster") monotonic, align 1
     ret i8 %retval
@@ -7083,10 +6993,10 @@ define i8 @monotonic_i8_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_generic_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr %addr syncscope("device") monotonic, align 1
     ret i8 %retval
@@ -7100,10 +7010,10 @@ define i8 @monotonic_i8_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr %addr syncscope("") monotonic, align 1
     ret i8 %retval
@@ -7117,10 +7027,10 @@ define i8 @monotonic_i8_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr %addr syncscope("block") monotonic, align 1
     ret i8 %retval
@@ -7134,10 +7044,10 @@ define i8 @monotonic_i8_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr %addr syncscope("cluster") monotonic, align 1
     ret i8 %retval
@@ -7151,10 +7061,10 @@ define i8 @monotonic_i8_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr %addr syncscope("device") monotonic, align 1
     ret i8 %retval
@@ -7168,10 +7078,10 @@ define i16 @monotonic_i16_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_generic_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr %addr syncscope("") monotonic, align 2
     ret i16 %retval
@@ -7185,10 +7095,10 @@ define i16 @monotonic_i16_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_generic_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr %addr syncscope("block") monotonic, align 2
     ret i16 %retval
@@ -7202,10 +7112,10 @@ define i16 @monotonic_i16_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_generic_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr %addr syncscope("cluster") monotonic, align 2
     ret i16 %retval
@@ -7219,10 +7129,10 @@ define i16 @monotonic_i16_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_generic_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr %addr syncscope("device") monotonic, align 2
     ret i16 %retval
@@ -7236,10 +7146,10 @@ define i16 @monotonic_i16_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr %addr syncscope("") monotonic, align 2
     ret i16 %retval
@@ -7253,10 +7163,10 @@ define i16 @monotonic_i16_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr %addr syncscope("block") monotonic, align 2
     ret i16 %retval
@@ -7270,10 +7180,10 @@ define i16 @monotonic_i16_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr %addr syncscope("cluster") monotonic, align 2
     ret i16 %retval
@@ -7287,10 +7197,10 @@ define i16 @monotonic_i16_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr %addr syncscope("device") monotonic, align 2
     ret i16 %retval
@@ -7303,9 +7213,9 @@ define i32 @monotonic_i32_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_generic_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr %addr syncscope("") monotonic, align 4
     ret i32 %retval
@@ -7318,9 +7228,9 @@ define i32 @monotonic_i32_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_generic_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr %addr syncscope("block") monotonic, align 4
     ret i32 %retval
@@ -7333,9 +7243,9 @@ define i32 @monotonic_i32_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_generic_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr %addr syncscope("cluster") monotonic, align 4
     ret i32 %retval
@@ -7348,9 +7258,9 @@ define i32 @monotonic_i32_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_generic_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr %addr syncscope("device") monotonic, align 4
     ret i32 %retval
@@ -7363,9 +7273,9 @@ define i32 @monotonic_i32_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr %addr syncscope("") monotonic, align 4
     ret i32 %retval
@@ -7378,9 +7288,9 @@ define i32 @monotonic_i32_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr %addr syncscope("block") monotonic, align 4
     ret i32 %retval
@@ -7393,9 +7303,9 @@ define i32 @monotonic_i32_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr %addr syncscope("cluster") monotonic, align 4
     ret i32 %retval
@@ -7408,9 +7318,9 @@ define i32 @monotonic_i32_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr %addr syncscope("device") monotonic, align 4
     ret i32 %retval
@@ -7422,9 +7332,9 @@ define i64 @monotonic_i64_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_generic_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr %addr syncscope("") monotonic, align 8
     ret i64 %retval
@@ -7436,9 +7346,9 @@ define i64 @monotonic_i64_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_generic_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr %addr syncscope("block") monotonic, align 8
     ret i64 %retval
@@ -7450,9 +7360,9 @@ define i64 @monotonic_i64_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_generic_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr %addr syncscope("cluster") monotonic, align 8
     ret i64 %retval
@@ -7464,9 +7374,9 @@ define i64 @monotonic_i64_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_generic_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr %addr syncscope("device") monotonic, align 8
     ret i64 %retval
@@ -7478,9 +7388,9 @@ define i64 @monotonic_i64_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr %addr syncscope("") monotonic, align 8
     ret i64 %retval
@@ -7492,9 +7402,9 @@ define i64 @monotonic_i64_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr %addr syncscope("block") monotonic, align 8
     ret i64 %retval
@@ -7506,9 +7416,9 @@ define i64 @monotonic_i64_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr %addr syncscope("cluster") monotonic, align 8
     ret i64 %retval
@@ -7520,9 +7430,9 @@ define i64 @monotonic_i64_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr %addr syncscope("device") monotonic, align 8
     ret i64 %retval
@@ -7534,7 +7444,7 @@ define i128 @monotonic_i128_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i128_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_generic_sys_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -7543,7 +7453,7 @@ define i128 @monotonic_i128_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    atom.relaxed.sys.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr %addr syncscope("") monotonic, align 16
     ret i128 %retval
@@ -7555,7 +7465,7 @@ define i128 @monotonic_i128_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i128_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_generic_cta_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -7564,7 +7474,7 @@ define i128 @monotonic_i128_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    atom.relaxed.cta.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr %addr syncscope("block") monotonic, align 16
     ret i128 %retval
@@ -7576,7 +7486,7 @@ define i128 @monotonic_i128_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i128_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_generic_cluster_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -7585,7 +7495,7 @@ define i128 @monotonic_i128_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    atom.relaxed.cluster.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr %addr syncscope("cluster") monotonic, align 16
     ret i128 %retval
@@ -7597,7 +7507,7 @@ define i128 @monotonic_i128_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i128_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_generic_gpu_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -7606,7 +7516,7 @@ define i128 @monotonic_i128_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    atom.relaxed.gpu.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr %addr syncscope("device") monotonic, align 16
     ret i128 %retval
@@ -7618,7 +7528,7 @@ define i128 @monotonic_i128_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i128_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -7627,7 +7537,7 @@ define i128 @monotonic_i128_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    atom.relaxed.sys.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr %addr syncscope("") monotonic, align 16
     ret i128 %retval
@@ -7639,7 +7549,7 @@ define i128 @monotonic_i128_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i128_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -7648,7 +7558,7 @@ define i128 @monotonic_i128_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    atom.relaxed.cta.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr %addr syncscope("block") monotonic, align 16
     ret i128 %retval
@@ -7660,7 +7570,7 @@ define i128 @monotonic_i128_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i128_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -7669,7 +7579,7 @@ define i128 @monotonic_i128_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    atom.relaxed.cluster.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr %addr syncscope("cluster") monotonic, align 16
     ret i128 %retval
@@ -7681,7 +7591,7 @@ define i128 @monotonic_i128_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i128_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -7690,7 +7600,7 @@ define i128 @monotonic_i128_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    atom.relaxed.gpu.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr %addr syncscope("device") monotonic, align 16
     ret i128 %retval
@@ -7703,9 +7613,9 @@ define half @monotonic_half_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_generic_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr %addr syncscope("") monotonic, align 2
     ret half %retval
@@ -7718,9 +7628,9 @@ define half @monotonic_half_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_generic_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr %addr syncscope("block") monotonic, align 2
     ret half %retval
@@ -7733,9 +7643,9 @@ define half @monotonic_half_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_generic_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr %addr syncscope("cluster") monotonic, align 2
     ret half %retval
@@ -7748,9 +7658,9 @@ define half @monotonic_half_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_generic_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr %addr syncscope("device") monotonic, align 2
     ret half %retval
@@ -7763,9 +7673,9 @@ define half @monotonic_half_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr %addr syncscope("") monotonic, align 2
     ret half %retval
@@ -7778,9 +7688,9 @@ define half @monotonic_half_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr %addr syncscope("block") monotonic, align 2
     ret half %retval
@@ -7793,9 +7703,9 @@ define half @monotonic_half_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr %addr syncscope("cluster") monotonic, align 2
     ret half %retval
@@ -7808,9 +7718,9 @@ define half @monotonic_half_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr %addr syncscope("device") monotonic, align 2
     ret half %retval
@@ -7823,9 +7733,9 @@ define bfloat @monotonic_bfloat_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_generic_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr %addr syncscope("") monotonic, align 2
     ret bfloat %retval
@@ -7838,9 +7748,9 @@ define bfloat @monotonic_bfloat_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_generic_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr %addr syncscope("block") monotonic, align 2
     ret bfloat %retval
@@ -7853,9 +7763,9 @@ define bfloat @monotonic_bfloat_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_generic_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr %addr syncscope("cluster") monotonic, align 2
     ret bfloat %retval
@@ -7868,9 +7778,9 @@ define bfloat @monotonic_bfloat_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_generic_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr %addr syncscope("device") monotonic, align 2
     ret bfloat %retval
@@ -7883,9 +7793,9 @@ define bfloat @monotonic_bfloat_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr %addr syncscope("") monotonic, align 2
     ret bfloat %retval
@@ -7898,9 +7808,9 @@ define bfloat @monotonic_bfloat_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr %addr syncscope("block") monotonic, align 2
     ret bfloat %retval
@@ -7913,9 +7823,9 @@ define bfloat @monotonic_bfloat_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr %addr syncscope("cluster") monotonic, align 2
     ret bfloat %retval
@@ -7928,9 +7838,9 @@ define bfloat @monotonic_bfloat_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr %addr syncscope("device") monotonic, align 2
     ret bfloat %retval
@@ -7943,9 +7853,9 @@ define float @monotonic_float_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_generic_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr %addr syncscope("") monotonic, align 4
     ret float %retval
@@ -7958,9 +7868,9 @@ define float @monotonic_float_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_generic_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr %addr syncscope("block") monotonic, align 4
     ret float %retval
@@ -7973,9 +7883,9 @@ define float @monotonic_float_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_generic_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr %addr syncscope("cluster") monotonic, align 4
     ret float %retval
@@ -7988,9 +7898,9 @@ define float @monotonic_float_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_generic_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr %addr syncscope("device") monotonic, align 4
     ret float %retval
@@ -8003,9 +7913,9 @@ define float @monotonic_float_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr %addr syncscope("") monotonic, align 4
     ret float %retval
@@ -8018,9 +7928,9 @@ define float @monotonic_float_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr %addr syncscope("block") monotonic, align 4
     ret float %retval
@@ -8033,9 +7943,9 @@ define float @monotonic_float_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr %addr syncscope("cluster") monotonic, align 4
     ret float %retval
@@ -8048,9 +7958,9 @@ define float @monotonic_float_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr %addr syncscope("device") monotonic, align 4
     ret float %retval
@@ -8062,9 +7972,9 @@ define double @monotonic_double_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_generic_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr %addr syncscope("") monotonic, align 8
     ret double %retval
@@ -8076,9 +7986,9 @@ define double @monotonic_double_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_generic_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr %addr syncscope("block") monotonic, align 8
     ret double %retval
@@ -8090,9 +8000,9 @@ define double @monotonic_double_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_generic_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr %addr syncscope("cluster") monotonic, align 8
     ret double %retval
@@ -8104,9 +8014,9 @@ define double @monotonic_double_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_generic_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr %addr syncscope("device") monotonic, align 8
     ret double %retval
@@ -8118,9 +8028,9 @@ define double @monotonic_double_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr %addr syncscope("") monotonic, align 8
     ret double %retval
@@ -8132,9 +8042,9 @@ define double @monotonic_double_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr %addr syncscope("block") monotonic, align 8
     ret double %retval
@@ -8146,9 +8056,9 @@ define double @monotonic_double_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr %addr syncscope("cluster") monotonic, align 8
     ret double %retval
@@ -8160,9 +8070,9 @@ define double @monotonic_double_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr %addr syncscope("device") monotonic, align 8
     ret double %retval
@@ -8176,10 +8086,10 @@ define i8 @monotonic_i8_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_global_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(1) %addr syncscope("") monotonic, align 1
     ret i8 %retval
@@ -8193,10 +8103,10 @@ define i8 @monotonic_i8_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_global_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(1) %addr syncscope("block") monotonic, align 1
     ret i8 %retval
@@ -8210,10 +8120,10 @@ define i8 @monotonic_i8_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_global_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 1
     ret i8 %retval
@@ -8227,10 +8137,10 @@ define i8 @monotonic_i8_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_global_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(1) %addr syncscope("device") monotonic, align 1
     ret i8 %retval
@@ -8244,10 +8154,10 @@ define i8 @monotonic_i8_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_global_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(1) %addr syncscope("") monotonic, align 1
     ret i8 %retval
@@ -8261,10 +8171,10 @@ define i8 @monotonic_i8_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_global_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(1) %addr syncscope("block") monotonic, align 1
     ret i8 %retval
@@ -8278,10 +8188,10 @@ define i8 @monotonic_i8_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 1
     ret i8 %retval
@@ -8295,10 +8205,10 @@ define i8 @monotonic_i8_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(1) %addr syncscope("device") monotonic, align 1
     ret i8 %retval
@@ -8312,10 +8222,10 @@ define i16 @monotonic_i16_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_global_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(1) %addr syncscope("") monotonic, align 2
     ret i16 %retval
@@ -8329,10 +8239,10 @@ define i16 @monotonic_i16_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_global_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(1) %addr syncscope("block") monotonic, align 2
     ret i16 %retval
@@ -8346,10 +8256,10 @@ define i16 @monotonic_i16_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_global_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 2
     ret i16 %retval
@@ -8363,10 +8273,10 @@ define i16 @monotonic_i16_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_global_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(1) %addr syncscope("device") monotonic, align 2
     ret i16 %retval
@@ -8380,10 +8290,10 @@ define i16 @monotonic_i16_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_global_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(1) %addr syncscope("") monotonic, align 2
     ret i16 %retval
@@ -8397,10 +8307,10 @@ define i16 @monotonic_i16_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_global_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(1) %addr syncscope("block") monotonic, align 2
     ret i16 %retval
@@ -8414,10 +8324,10 @@ define i16 @monotonic_i16_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 2
     ret i16 %retval
@@ -8431,10 +8341,10 @@ define i16 @monotonic_i16_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(1) %addr syncscope("device") monotonic, align 2
     ret i16 %retval
@@ -8447,9 +8357,9 @@ define i32 @monotonic_i32_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_global_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(1) %addr syncscope("") monotonic, align 4
     ret i32 %retval
@@ -8462,9 +8372,9 @@ define i32 @monotonic_i32_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_global_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(1) %addr syncscope("block") monotonic, align 4
     ret i32 %retval
@@ -8477,9 +8387,9 @@ define i32 @monotonic_i32_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_global_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 4
     ret i32 %retval
@@ -8492,9 +8402,9 @@ define i32 @monotonic_i32_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_global_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(1) %addr syncscope("device") monotonic, align 4
     ret i32 %retval
@@ -8507,9 +8417,9 @@ define i32 @monotonic_i32_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_global_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(1) %addr syncscope("") monotonic, align 4
     ret i32 %retval
@@ -8522,9 +8432,9 @@ define i32 @monotonic_i32_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_global_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(1) %addr syncscope("block") monotonic, align 4
     ret i32 %retval
@@ -8537,9 +8447,9 @@ define i32 @monotonic_i32_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 4
     ret i32 %retval
@@ -8552,9 +8462,9 @@ define i32 @monotonic_i32_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(1) %addr syncscope("device") monotonic, align 4
     ret i32 %retval
@@ -8566,9 +8476,9 @@ define i64 @monotonic_i64_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_global_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(1) %addr syncscope("") monotonic, align 8
     ret i64 %retval
@@ -8580,9 +8490,9 @@ define i64 @monotonic_i64_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_global_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(1) %addr syncscope("block") monotonic, align 8
     ret i64 %retval
@@ -8594,9 +8504,9 @@ define i64 @monotonic_i64_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_global_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 8
     ret i64 %retval
@@ -8608,9 +8518,9 @@ define i64 @monotonic_i64_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_global_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(1) %addr syncscope("device") monotonic, align 8
     ret i64 %retval
@@ -8622,9 +8532,9 @@ define i64 @monotonic_i64_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_global_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(1) %addr syncscope("") monotonic, align 8
     ret i64 %retval
@@ -8636,9 +8546,9 @@ define i64 @monotonic_i64_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_global_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(1) %addr syncscope("block") monotonic, align 8
     ret i64 %retval
@@ -8650,9 +8560,9 @@ define i64 @monotonic_i64_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 8
     ret i64 %retval
@@ -8664,9 +8574,9 @@ define i64 @monotonic_i64_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(1) %addr syncscope("device") monotonic, align 8
     ret i64 %retval
@@ -8678,7 +8588,7 @@ define i128 @monotonic_i128_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i128_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_global_sys_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -8687,7 +8597,7 @@ define i128 @monotonic_i128_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.relaxed.sys.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(1) %addr syncscope("") monotonic, align 16
     ret i128 %retval
@@ -8699,7 +8609,7 @@ define i128 @monotonic_i128_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i128_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_global_cta_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -8708,7 +8618,7 @@ define i128 @monotonic_i128_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(1) %addr syncscope("block") monotonic, align 16
     ret i128 %retval
@@ -8720,7 +8630,7 @@ define i128 @monotonic_i128_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i128_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_global_cluster_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -8729,7 +8639,7 @@ define i128 @monotonic_i128_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.relaxed.cluster.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 16
     ret i128 %retval
@@ -8741,7 +8651,7 @@ define i128 @monotonic_i128_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i128_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_global_gpu_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -8750,7 +8660,7 @@ define i128 @monotonic_i128_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.relaxed.gpu.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(1) %addr syncscope("device") monotonic, align 16
     ret i128 %retval
@@ -8762,7 +8672,7 @@ define i128 @monotonic_i128_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i128_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_global_sys_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -8771,7 +8681,7 @@ define i128 @monotonic_i128_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.relaxed.sys.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(1) %addr syncscope("") monotonic, align 16
     ret i128 %retval
@@ -8783,7 +8693,7 @@ define i128 @monotonic_i128_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i128_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_global_cta_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -8792,7 +8702,7 @@ define i128 @monotonic_i128_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(1) %addr syncscope("block") monotonic, align 16
     ret i128 %retval
@@ -8804,7 +8714,7 @@ define i128 @monotonic_i128_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i128_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -8813,7 +8723,7 @@ define i128 @monotonic_i128_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.relaxed.cluster.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 16
     ret i128 %retval
@@ -8825,7 +8735,7 @@ define i128 @monotonic_i128_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i128_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -8834,7 +8744,7 @@ define i128 @monotonic_i128_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.relaxed.gpu.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(1) %addr syncscope("device") monotonic, align 16
     ret i128 %retval
@@ -8847,9 +8757,9 @@ define half @monotonic_half_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_global_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(1) %addr syncscope("") monotonic, align 2
     ret half %retval
@@ -8862,9 +8772,9 @@ define half @monotonic_half_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_global_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(1) %addr syncscope("block") monotonic, align 2
     ret half %retval
@@ -8877,9 +8787,9 @@ define half @monotonic_half_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_global_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 2
     ret half %retval
@@ -8892,9 +8802,9 @@ define half @monotonic_half_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_global_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(1) %addr syncscope("device") monotonic, align 2
     ret half %retval
@@ -8907,9 +8817,9 @@ define half @monotonic_half_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_global_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(1) %addr syncscope("") monotonic, align 2
     ret half %retval
@@ -8922,9 +8832,9 @@ define half @monotonic_half_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_global_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(1) %addr syncscope("block") monotonic, align 2
     ret half %retval
@@ -8937,9 +8847,9 @@ define half @monotonic_half_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 2
     ret half %retval
@@ -8952,9 +8862,9 @@ define half @monotonic_half_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(1) %addr syncscope("device") monotonic, align 2
     ret half %retval
@@ -8967,9 +8877,9 @@ define bfloat @monotonic_bfloat_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_global_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(1) %addr syncscope("") monotonic, align 2
     ret bfloat %retval
@@ -8982,9 +8892,9 @@ define bfloat @monotonic_bfloat_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_global_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(1) %addr syncscope("block") monotonic, align 2
     ret bfloat %retval
@@ -8997,9 +8907,9 @@ define bfloat @monotonic_bfloat_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_global_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 2
     ret bfloat %retval
@@ -9012,9 +8922,9 @@ define bfloat @monotonic_bfloat_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_global_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(1) %addr syncscope("device") monotonic, align 2
     ret bfloat %retval
@@ -9027,9 +8937,9 @@ define bfloat @monotonic_bfloat_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_global_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(1) %addr syncscope("") monotonic, align 2
     ret bfloat %retval
@@ -9042,9 +8952,9 @@ define bfloat @monotonic_bfloat_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_global_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(1) %addr syncscope("block") monotonic, align 2
     ret bfloat %retval
@@ -9057,9 +8967,9 @@ define bfloat @monotonic_bfloat_global_cluster_volatile(ptr addrspace(1) %addr) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 2
     ret bfloat %retval
@@ -9072,9 +8982,9 @@ define bfloat @monotonic_bfloat_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(1) %addr syncscope("device") monotonic, align 2
     ret bfloat %retval
@@ -9087,9 +8997,9 @@ define float @monotonic_float_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_global_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(1) %addr syncscope("") monotonic, align 4
     ret float %retval
@@ -9102,9 +9012,9 @@ define float @monotonic_float_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_global_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(1) %addr syncscope("block") monotonic, align 4
     ret float %retval
@@ -9117,9 +9027,9 @@ define float @monotonic_float_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_global_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 4
     ret float %retval
@@ -9132,9 +9042,9 @@ define float @monotonic_float_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_global_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(1) %addr syncscope("device") monotonic, align 4
     ret float %retval
@@ -9147,9 +9057,9 @@ define float @monotonic_float_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_global_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(1) %addr syncscope("") monotonic, align 4
     ret float %retval
@@ -9162,9 +9072,9 @@ define float @monotonic_float_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_global_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(1) %addr syncscope("block") monotonic, align 4
     ret float %retval
@@ -9177,9 +9087,9 @@ define float @monotonic_float_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 4
     ret float %retval
@@ -9192,9 +9102,9 @@ define float @monotonic_float_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(1) %addr syncscope("device") monotonic, align 4
     ret float %retval
@@ -9206,9 +9116,9 @@ define double @monotonic_double_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_global_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(1) %addr syncscope("") monotonic, align 8
     ret double %retval
@@ -9220,9 +9130,9 @@ define double @monotonic_double_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_global_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(1) %addr syncscope("block") monotonic, align 8
     ret double %retval
@@ -9234,9 +9144,9 @@ define double @monotonic_double_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_global_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 8
     ret double %retval
@@ -9248,9 +9158,9 @@ define double @monotonic_double_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_global_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(1) %addr syncscope("device") monotonic, align 8
     ret double %retval
@@ -9262,9 +9172,9 @@ define double @monotonic_double_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_global_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(1) %addr syncscope("") monotonic, align 8
     ret double %retval
@@ -9276,9 +9186,9 @@ define double @monotonic_double_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_global_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(1) %addr syncscope("block") monotonic, align 8
     ret double %retval
@@ -9290,9 +9200,9 @@ define double @monotonic_double_global_cluster_volatile(ptr addrspace(1) %addr) 
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 8
     ret double %retval
@@ -9304,9 +9214,9 @@ define double @monotonic_double_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.mmio.relaxed.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(1) %addr syncscope("device") monotonic, align 8
     ret double %retval
@@ -9320,10 +9230,10 @@ define i8 @monotonic_i8_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_shared_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(3) %addr syncscope("") monotonic, align 1
     ret i8 %retval
@@ -9337,10 +9247,10 @@ define i8 @monotonic_i8_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_shared_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(3) %addr syncscope("block") monotonic, align 1
     ret i8 %retval
@@ -9354,10 +9264,10 @@ define i8 @monotonic_i8_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_shared_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 1
     ret i8 %retval
@@ -9371,10 +9281,10 @@ define i8 @monotonic_i8_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_shared_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(3) %addr syncscope("device") monotonic, align 1
     ret i8 %retval
@@ -9388,10 +9298,10 @@ define i8 @monotonic_i8_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(3) %addr syncscope("") monotonic, align 1
     ret i8 %retval
@@ -9405,10 +9315,10 @@ define i8 @monotonic_i8_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(3) %addr syncscope("block") monotonic, align 1
     ret i8 %retval
@@ -9422,10 +9332,10 @@ define i8 @monotonic_i8_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 1
     ret i8 %retval
@@ -9439,10 +9349,10 @@ define i8 @monotonic_i8_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i8_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i8_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(3) %addr syncscope("device") monotonic, align 1
     ret i8 %retval
@@ -9456,10 +9366,10 @@ define i16 @monotonic_i16_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_shared_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(3) %addr syncscope("") monotonic, align 2
     ret i16 %retval
@@ -9473,10 +9383,10 @@ define i16 @monotonic_i16_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_shared_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(3) %addr syncscope("block") monotonic, align 2
     ret i16 %retval
@@ -9490,10 +9400,10 @@ define i16 @monotonic_i16_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_shared_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 2
     ret i16 %retval
@@ -9507,10 +9417,10 @@ define i16 @monotonic_i16_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_shared_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(3) %addr syncscope("device") monotonic, align 2
     ret i16 %retval
@@ -9524,10 +9434,10 @@ define i16 @monotonic_i16_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(3) %addr syncscope("") monotonic, align 2
     ret i16 %retval
@@ -9541,10 +9451,10 @@ define i16 @monotonic_i16_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(3) %addr syncscope("block") monotonic, align 2
     ret i16 %retval
@@ -9558,10 +9468,10 @@ define i16 @monotonic_i16_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 2
     ret i16 %retval
@@ -9575,10 +9485,10 @@ define i16 @monotonic_i16_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i16_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i16_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(3) %addr syncscope("device") monotonic, align 2
     ret i16 %retval
@@ -9591,9 +9501,9 @@ define i32 @monotonic_i32_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_shared_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(3) %addr syncscope("") monotonic, align 4
     ret i32 %retval
@@ -9606,9 +9516,9 @@ define i32 @monotonic_i32_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_shared_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(3) %addr syncscope("block") monotonic, align 4
     ret i32 %retval
@@ -9621,9 +9531,9 @@ define i32 @monotonic_i32_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_shared_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 4
     ret i32 %retval
@@ -9636,9 +9546,9 @@ define i32 @monotonic_i32_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_shared_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(3) %addr syncscope("device") monotonic, align 4
     ret i32 %retval
@@ -9651,9 +9561,9 @@ define i32 @monotonic_i32_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(3) %addr syncscope("") monotonic, align 4
     ret i32 %retval
@@ -9666,9 +9576,9 @@ define i32 @monotonic_i32_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(3) %addr syncscope("block") monotonic, align 4
     ret i32 %retval
@@ -9681,9 +9591,9 @@ define i32 @monotonic_i32_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 4
     ret i32 %retval
@@ -9696,9 +9606,9 @@ define i32 @monotonic_i32_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i32_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i32_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(3) %addr syncscope("device") monotonic, align 4
     ret i32 %retval
@@ -9710,9 +9620,9 @@ define i64 @monotonic_i64_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_shared_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(3) %addr syncscope("") monotonic, align 8
     ret i64 %retval
@@ -9724,9 +9634,9 @@ define i64 @monotonic_i64_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_shared_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(3) %addr syncscope("block") monotonic, align 8
     ret i64 %retval
@@ -9738,9 +9648,9 @@ define i64 @monotonic_i64_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_shared_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 8
     ret i64 %retval
@@ -9752,9 +9662,9 @@ define i64 @monotonic_i64_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_shared_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(3) %addr syncscope("device") monotonic, align 8
     ret i64 %retval
@@ -9766,9 +9676,9 @@ define i64 @monotonic_i64_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(3) %addr syncscope("") monotonic, align 8
     ret i64 %retval
@@ -9780,9 +9690,9 @@ define i64 @monotonic_i64_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(3) %addr syncscope("block") monotonic, align 8
     ret i64 %retval
@@ -9794,9 +9704,9 @@ define i64 @monotonic_i64_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 8
     ret i64 %retval
@@ -9808,9 +9718,9 @@ define i64 @monotonic_i64_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i64_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(3) %addr syncscope("device") monotonic, align 8
     ret i64 %retval
@@ -9822,7 +9732,7 @@ define i128 @monotonic_i128_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i128_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_shared_sys_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -9831,7 +9741,7 @@ define i128 @monotonic_i128_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.relaxed.sys.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(3) %addr syncscope("") monotonic, align 16
     ret i128 %retval
@@ -9843,7 +9753,7 @@ define i128 @monotonic_i128_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i128_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_shared_cta_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -9852,7 +9762,7 @@ define i128 @monotonic_i128_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.relaxed.cta.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(3) %addr syncscope("block") monotonic, align 16
     ret i128 %retval
@@ -9864,7 +9774,7 @@ define i128 @monotonic_i128_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i128_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_shared_cluster_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -9873,7 +9783,7 @@ define i128 @monotonic_i128_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.relaxed.cluster.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 16
     ret i128 %retval
@@ -9885,7 +9795,7 @@ define i128 @monotonic_i128_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i128_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_shared_gpu_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -9894,7 +9804,7 @@ define i128 @monotonic_i128_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.relaxed.gpu.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(3) %addr syncscope("device") monotonic, align 16
     ret i128 %retval
@@ -9906,7 +9816,7 @@ define i128 @monotonic_i128_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i128_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -9915,7 +9825,7 @@ define i128 @monotonic_i128_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.relaxed.sys.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(3) %addr syncscope("") monotonic, align 16
     ret i128 %retval
@@ -9927,7 +9837,7 @@ define i128 @monotonic_i128_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i128_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -9936,7 +9846,7 @@ define i128 @monotonic_i128_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.relaxed.cta.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(3) %addr syncscope("block") monotonic, align 16
     ret i128 %retval
@@ -9948,7 +9858,7 @@ define i128 @monotonic_i128_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i128_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -9957,7 +9867,7 @@ define i128 @monotonic_i128_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.relaxed.cluster.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 16
     ret i128 %retval
@@ -9969,7 +9879,7 @@ define i128 @monotonic_i128_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i128_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_i128_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -9978,7 +9888,7 @@ define i128 @monotonic_i128_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.relaxed.gpu.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(3) %addr syncscope("device") monotonic, align 16
     ret i128 %retval
@@ -9991,9 +9901,9 @@ define half @monotonic_half_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_shared_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(3) %addr syncscope("") monotonic, align 2
     ret half %retval
@@ -10006,9 +9916,9 @@ define half @monotonic_half_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_shared_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(3) %addr syncscope("block") monotonic, align 2
     ret half %retval
@@ -10021,9 +9931,9 @@ define half @monotonic_half_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_shared_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 2
     ret half %retval
@@ -10036,9 +9946,9 @@ define half @monotonic_half_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_shared_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(3) %addr syncscope("device") monotonic, align 2
     ret half %retval
@@ -10051,9 +9961,9 @@ define half @monotonic_half_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(3) %addr syncscope("") monotonic, align 2
     ret half %retval
@@ -10066,9 +9976,9 @@ define half @monotonic_half_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(3) %addr syncscope("block") monotonic, align 2
     ret half %retval
@@ -10081,9 +9991,9 @@ define half @monotonic_half_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 2
     ret half %retval
@@ -10096,9 +10006,9 @@ define half @monotonic_half_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_half_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_half_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(3) %addr syncscope("device") monotonic, align 2
     ret half %retval
@@ -10111,9 +10021,9 @@ define bfloat @monotonic_bfloat_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_shared_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(3) %addr syncscope("") monotonic, align 2
     ret bfloat %retval
@@ -10126,9 +10036,9 @@ define bfloat @monotonic_bfloat_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_shared_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(3) %addr syncscope("block") monotonic, align 2
     ret bfloat %retval
@@ -10141,9 +10051,9 @@ define bfloat @monotonic_bfloat_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_shared_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 2
     ret bfloat %retval
@@ -10156,9 +10066,9 @@ define bfloat @monotonic_bfloat_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_shared_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(3) %addr syncscope("device") monotonic, align 2
     ret bfloat %retval
@@ -10171,9 +10081,9 @@ define bfloat @monotonic_bfloat_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(3) %addr syncscope("") monotonic, align 2
     ret bfloat %retval
@@ -10186,9 +10096,9 @@ define bfloat @monotonic_bfloat_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(3) %addr syncscope("block") monotonic, align 2
     ret bfloat %retval
@@ -10201,9 +10111,9 @@ define bfloat @monotonic_bfloat_shared_cluster_volatile(ptr addrspace(3) %addr) 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 2
     ret bfloat %retval
@@ -10216,9 +10126,9 @@ define bfloat @monotonic_bfloat_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_bfloat_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_bfloat_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(3) %addr syncscope("device") monotonic, align 2
     ret bfloat %retval
@@ -10231,9 +10141,9 @@ define float @monotonic_float_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_shared_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(3) %addr syncscope("") monotonic, align 4
     ret float %retval
@@ -10246,9 +10156,9 @@ define float @monotonic_float_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_shared_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(3) %addr syncscope("block") monotonic, align 4
     ret float %retval
@@ -10261,9 +10171,9 @@ define float @monotonic_float_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_shared_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 4
     ret float %retval
@@ -10276,9 +10186,9 @@ define float @monotonic_float_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_shared_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(3) %addr syncscope("device") monotonic, align 4
     ret float %retval
@@ -10291,9 +10201,9 @@ define float @monotonic_float_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(3) %addr syncscope("") monotonic, align 4
     ret float %retval
@@ -10306,9 +10216,9 @@ define float @monotonic_float_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(3) %addr syncscope("block") monotonic, align 4
     ret float %retval
@@ -10321,9 +10231,9 @@ define float @monotonic_float_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 4
     ret float %retval
@@ -10336,9 +10246,9 @@ define float @monotonic_float_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_float_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_float_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(3) %addr syncscope("device") monotonic, align 4
     ret float %retval
@@ -10350,9 +10260,9 @@ define double @monotonic_double_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_shared_sys_param_0];
 ; CHECK-NEXT:    ld.relaxed.sys.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(3) %addr syncscope("") monotonic, align 8
     ret double %retval
@@ -10364,9 +10274,9 @@ define double @monotonic_double_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_shared_cta_param_0];
 ; CHECK-NEXT:    ld.relaxed.cta.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(3) %addr syncscope("block") monotonic, align 8
     ret double %retval
@@ -10378,9 +10288,9 @@ define double @monotonic_double_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_shared_cluster_param_0];
 ; CHECK-NEXT:    ld.relaxed.cluster.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 8
     ret double %retval
@@ -10392,9 +10302,9 @@ define double @monotonic_double_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_shared_gpu_param_0];
 ; CHECK-NEXT:    ld.relaxed.gpu.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(3) %addr syncscope("device") monotonic, align 8
     ret double %retval
@@ -10406,9 +10316,9 @@ define double @monotonic_double_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(3) %addr syncscope("") monotonic, align 8
     ret double %retval
@@ -10420,9 +10330,9 @@ define double @monotonic_double_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(3) %addr syncscope("block") monotonic, align 8
     ret double %retval
@@ -10434,9 +10344,9 @@ define double @monotonic_double_shared_cluster_volatile(ptr addrspace(3) %addr) 
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 8
     ret double %retval
@@ -10448,9 +10358,9 @@ define double @monotonic_double_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [monotonic_double_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(3) %addr syncscope("device") monotonic, align 8
     ret double %retval
@@ -10467,13 +10377,12 @@ define i8 @monotonic_i8_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot612;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10492,13 +10401,12 @@ define i8 @monotonic_i8_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot613;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10517,13 +10425,12 @@ define i8 @monotonic_i8_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot614;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10542,13 +10449,12 @@ define i8 @monotonic_i8_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot615;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10567,13 +10473,12 @@ define i8 @monotonic_i8_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot616;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10592,13 +10497,12 @@ define i8 @monotonic_i8_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot617;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10617,13 +10521,12 @@ define i8 @monotonic_i8_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot618;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10642,13 +10545,12 @@ define i8 @monotonic_i8_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot619;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10667,13 +10569,12 @@ define i16 @monotonic_i16_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot620;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10692,13 +10593,12 @@ define i16 @monotonic_i16_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot621;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10717,13 +10617,12 @@ define i16 @monotonic_i16_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot622;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10742,13 +10641,12 @@ define i16 @monotonic_i16_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot623;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10767,13 +10665,12 @@ define i16 @monotonic_i16_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot624;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10792,13 +10689,12 @@ define i16 @monotonic_i16_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot625;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10817,13 +10713,12 @@ define i16 @monotonic_i16_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot626;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10842,13 +10737,12 @@ define i16 @monotonic_i16_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot627;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10867,13 +10761,12 @@ define i32 @monotonic_i32_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot628;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10892,13 +10785,12 @@ define i32 @monotonic_i32_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot629;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10917,13 +10809,12 @@ define i32 @monotonic_i32_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot630;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10942,13 +10833,12 @@ define i32 @monotonic_i32_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot631;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10967,13 +10857,12 @@ define i32 @monotonic_i32_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot632;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10992,13 +10881,12 @@ define i32 @monotonic_i32_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot633;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11017,13 +10905,12 @@ define i32 @monotonic_i32_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot634;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11042,13 +10929,12 @@ define i32 @monotonic_i32_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot635;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11067,13 +10953,12 @@ define i64 @monotonic_i64_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot636;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11092,13 +10977,12 @@ define i64 @monotonic_i64_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot637;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11117,13 +11001,12 @@ define i64 @monotonic_i64_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot638;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11142,13 +11025,12 @@ define i64 @monotonic_i64_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot639;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11167,13 +11049,12 @@ define i64 @monotonic_i64_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot640;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11192,13 +11073,12 @@ define i64 @monotonic_i64_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot641;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11217,13 +11097,12 @@ define i64 @monotonic_i64_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot642;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11242,13 +11121,12 @@ define i64 @monotonic_i64_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot643;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11267,13 +11145,12 @@ define i128 @monotonic_i128_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot644;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11292,13 +11169,12 @@ define i128 @monotonic_i128_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot645;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11317,13 +11193,12 @@ define i128 @monotonic_i128_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot646;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11342,13 +11217,12 @@ define i128 @monotonic_i128_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot647;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11367,13 +11241,12 @@ define i128 @monotonic_i128_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot648;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11392,13 +11265,12 @@ define i128 @monotonic_i128_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot649;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11417,13 +11289,12 @@ define i128 @monotonic_i128_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot650;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11442,13 +11313,12 @@ define i128 @monotonic_i128_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot651;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11468,13 +11338,12 @@ define half @monotonic_half_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot652;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11494,13 +11363,12 @@ define half @monotonic_half_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot653;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11520,13 +11388,12 @@ define half @monotonic_half_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot654;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11546,13 +11413,12 @@ define half @monotonic_half_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot655;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11572,13 +11438,12 @@ define half @monotonic_half_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot656;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11598,13 +11463,12 @@ define half @monotonic_half_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot657;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11624,13 +11488,12 @@ define half @monotonic_half_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot658;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11650,13 +11513,12 @@ define half @monotonic_half_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot659;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11676,13 +11538,12 @@ define bfloat @monotonic_bfloat_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot660;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11702,13 +11563,12 @@ define bfloat @monotonic_bfloat_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot661;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11728,13 +11588,12 @@ define bfloat @monotonic_bfloat_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot662;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11754,13 +11613,12 @@ define bfloat @monotonic_bfloat_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot663;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11780,13 +11638,12 @@ define bfloat @monotonic_bfloat_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot664;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11806,13 +11663,12 @@ define bfloat @monotonic_bfloat_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot665;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11832,13 +11688,12 @@ define bfloat @monotonic_bfloat_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot666;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11858,13 +11713,12 @@ define bfloat @monotonic_bfloat_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot667;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11883,13 +11737,12 @@ define float @monotonic_float_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot668;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11908,13 +11761,12 @@ define float @monotonic_float_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot669;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11933,13 +11785,12 @@ define float @monotonic_float_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot670;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11958,13 +11809,12 @@ define float @monotonic_float_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot671;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -11983,13 +11833,12 @@ define float @monotonic_float_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot672;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -12008,13 +11857,12 @@ define float @monotonic_float_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot673;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -12033,13 +11881,12 @@ define float @monotonic_float_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot674;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -12058,13 +11905,12 @@ define float @monotonic_float_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot675;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -12083,13 +11929,12 @@ define double @monotonic_double_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot676;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -12108,13 +11953,12 @@ define double @monotonic_double_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot677;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -12133,13 +11977,12 @@ define double @monotonic_double_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot678;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -12158,13 +12001,12 @@ define double @monotonic_double_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot679;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -12183,13 +12025,12 @@ define double @monotonic_double_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot680;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -12208,13 +12049,12 @@ define double @monotonic_double_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot681;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -12233,13 +12073,12 @@ define double @monotonic_double_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot682;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -12258,13 +12097,12 @@ define double @monotonic_double_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot683;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -12280,10 +12118,10 @@ define i8 @acquire_i8_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i8_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i8_generic_sys_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr %addr syncscope("") acquire, align 1
     ret i8 %retval
@@ -12297,10 +12135,10 @@ define i8 @acquire_i8_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i8_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i8_generic_cta_param_0];
 ; CHECK-NEXT:    ld.acquire.cta.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr %addr syncscope("block") acquire, align 1
     ret i8 %retval
@@ -12314,10 +12152,10 @@ define i8 @acquire_i8_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i8_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i8_generic_cluster_param_0];
 ; CHECK-NEXT:    ld.acquire.cluster.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr %addr syncscope("cluster") acquire, align 1
     ret i8 %retval
@@ -12331,10 +12169,10 @@ define i8 @acquire_i8_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i8_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i8_generic_gpu_param_0];
 ; CHECK-NEXT:    ld.acquire.gpu.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr %addr syncscope("device") acquire, align 1
     ret i8 %retval
@@ -12348,10 +12186,10 @@ define i8 @acquire_i8_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i8_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i8_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr %addr syncscope("") acquire, align 1
     ret i8 %retval
@@ -12365,10 +12203,10 @@ define i8 @acquire_i8_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i8_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i8_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr %addr syncscope("block") acquire, align 1
     ret i8 %retval
@@ -12382,10 +12220,10 @@ define i8 @acquire_i8_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i8_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i8_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr %addr syncscope("cluster") acquire, align 1
     ret i8 %retval
@@ -12399,10 +12237,10 @@ define i8 @acquire_i8_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i8_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i8_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr %addr syncscope("device") acquire, align 1
     ret i8 %retval
@@ -12416,10 +12254,10 @@ define i16 @acquire_i16_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i16_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i16_generic_sys_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr %addr syncscope("") acquire, align 2
     ret i16 %retval
@@ -12433,10 +12271,10 @@ define i16 @acquire_i16_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i16_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i16_generic_cta_param_0];
 ; CHECK-NEXT:    ld.acquire.cta.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr %addr syncscope("block") acquire, align 2
     ret i16 %retval
@@ -12450,10 +12288,10 @@ define i16 @acquire_i16_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i16_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i16_generic_cluster_param_0];
 ; CHECK-NEXT:    ld.acquire.cluster.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr %addr syncscope("cluster") acquire, align 2
     ret i16 %retval
@@ -12467,10 +12305,10 @@ define i16 @acquire_i16_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i16_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i16_generic_gpu_param_0];
 ; CHECK-NEXT:    ld.acquire.gpu.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr %addr syncscope("device") acquire, align 2
     ret i16 %retval
@@ -12484,10 +12322,10 @@ define i16 @acquire_i16_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i16_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i16_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr %addr syncscope("") acquire, align 2
     ret i16 %retval
@@ -12501,10 +12339,10 @@ define i16 @acquire_i16_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i16_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i16_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr %addr syncscope("block") acquire, align 2
     ret i16 %retval
@@ -12518,10 +12356,10 @@ define i16 @acquire_i16_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i16_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i16_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr %addr syncscope("cluster") acquire, align 2
     ret i16 %retval
@@ -12535,10 +12373,10 @@ define i16 @acquire_i16_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i16_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i16_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr %addr syncscope("device") acquire, align 2
     ret i16 %retval
@@ -12551,9 +12389,9 @@ define i32 @acquire_i32_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i32_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i32_generic_sys_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr %addr syncscope("") acquire, align 4
     ret i32 %retval
@@ -12566,9 +12404,9 @@ define i32 @acquire_i32_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i32_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i32_generic_cta_param_0];
 ; CHECK-NEXT:    ld.acquire.cta.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr %addr syncscope("block") acquire, align 4
     ret i32 %retval
@@ -12581,9 +12419,9 @@ define i32 @acquire_i32_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i32_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i32_generic_cluster_param_0];
 ; CHECK-NEXT:    ld.acquire.cluster.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr %addr syncscope("cluster") acquire, align 4
     ret i32 %retval
@@ -12596,9 +12434,9 @@ define i32 @acquire_i32_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i32_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i32_generic_gpu_param_0];
 ; CHECK-NEXT:    ld.acquire.gpu.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr %addr syncscope("device") acquire, align 4
     ret i32 %retval
@@ -12611,9 +12449,9 @@ define i32 @acquire_i32_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i32_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i32_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr %addr syncscope("") acquire, align 4
     ret i32 %retval
@@ -12626,9 +12464,9 @@ define i32 @acquire_i32_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i32_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i32_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr %addr syncscope("block") acquire, align 4
     ret i32 %retval
@@ -12641,9 +12479,9 @@ define i32 @acquire_i32_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i32_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i32_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr %addr syncscope("cluster") acquire, align 4
     ret i32 %retval
@@ -12656,9 +12494,9 @@ define i32 @acquire_i32_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i32_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i32_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr %addr syncscope("device") acquire, align 4
     ret i32 %retval
@@ -12670,9 +12508,9 @@ define i64 @acquire_i64_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i64_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i64_generic_sys_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr %addr syncscope("") acquire, align 8
     ret i64 %retval
@@ -12684,9 +12522,9 @@ define i64 @acquire_i64_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i64_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i64_generic_cta_param_0];
 ; CHECK-NEXT:    ld.acquire.cta.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr %addr syncscope("block") acquire, align 8
     ret i64 %retval
@@ -12698,9 +12536,9 @@ define i64 @acquire_i64_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i64_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i64_generic_cluster_param_0];
 ; CHECK-NEXT:    ld.acquire.cluster.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr %addr syncscope("cluster") acquire, align 8
     ret i64 %retval
@@ -12712,9 +12550,9 @@ define i64 @acquire_i64_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i64_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i64_generic_gpu_param_0];
 ; CHECK-NEXT:    ld.acquire.gpu.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr %addr syncscope("device") acquire, align 8
     ret i64 %retval
@@ -12726,9 +12564,9 @@ define i64 @acquire_i64_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i64_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i64_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr %addr syncscope("") acquire, align 8
     ret i64 %retval
@@ -12740,9 +12578,9 @@ define i64 @acquire_i64_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i64_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i64_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr %addr syncscope("block") acquire, align 8
     ret i64 %retval
@@ -12754,9 +12592,9 @@ define i64 @acquire_i64_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i64_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i64_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr %addr syncscope("cluster") acquire, align 8
     ret i64 %retval
@@ -12768,9 +12606,9 @@ define i64 @acquire_i64_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i64_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i64_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr %addr syncscope("device") acquire, align 8
     ret i64 %retval
@@ -12782,7 +12620,7 @@ define i128 @acquire_i128_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i128_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_generic_sys_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -12791,7 +12629,7 @@ define i128 @acquire_i128_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    atom.acquire.sys.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr %addr syncscope("") acquire, align 16
     ret i128 %retval
@@ -12803,7 +12641,7 @@ define i128 @acquire_i128_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i128_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_generic_cta_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -12812,7 +12650,7 @@ define i128 @acquire_i128_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    atom.acquire.cta.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr %addr syncscope("block") acquire, align 16
     ret i128 %retval
@@ -12824,7 +12662,7 @@ define i128 @acquire_i128_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i128_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_generic_cluster_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -12833,7 +12671,7 @@ define i128 @acquire_i128_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    atom.acquire.cluster.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr %addr syncscope("cluster") acquire, align 16
     ret i128 %retval
@@ -12845,7 +12683,7 @@ define i128 @acquire_i128_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i128_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_generic_gpu_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -12854,7 +12692,7 @@ define i128 @acquire_i128_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    atom.acquire.gpu.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr %addr syncscope("device") acquire, align 16
     ret i128 %retval
@@ -12866,7 +12704,7 @@ define i128 @acquire_i128_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i128_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -12875,7 +12713,7 @@ define i128 @acquire_i128_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    atom.acquire.sys.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr %addr syncscope("") acquire, align 16
     ret i128 %retval
@@ -12887,7 +12725,7 @@ define i128 @acquire_i128_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i128_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -12896,7 +12734,7 @@ define i128 @acquire_i128_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    atom.acquire.cta.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr %addr syncscope("block") acquire, align 16
     ret i128 %retval
@@ -12908,7 +12746,7 @@ define i128 @acquire_i128_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i128_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -12917,7 +12755,7 @@ define i128 @acquire_i128_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    atom.acquire.cluster.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr %addr syncscope("cluster") acquire, align 16
     ret i128 %retval
@@ -12929,7 +12767,7 @@ define i128 @acquire_i128_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i128_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -12938,7 +12776,7 @@ define i128 @acquire_i128_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    atom.acquire.gpu.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr %addr syncscope("device") acquire, align 16
     ret i128 %retval
@@ -12951,9 +12789,9 @@ define half @acquire_half_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_half_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_half_generic_sys_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr %addr syncscope("") acquire, align 2
     ret half %retval
@@ -12966,9 +12804,9 @@ define half @acquire_half_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_half_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_half_generic_cta_param_0];
 ; CHECK-NEXT:    ld.acquire.cta.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr %addr syncscope("block") acquire, align 2
     ret half %retval
@@ -12981,9 +12819,9 @@ define half @acquire_half_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_half_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_half_generic_cluster_param_0];
 ; CHECK-NEXT:    ld.acquire.cluster.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr %addr syncscope("cluster") acquire, align 2
     ret half %retval
@@ -12996,9 +12834,9 @@ define half @acquire_half_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_half_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_half_generic_gpu_param_0];
 ; CHECK-NEXT:    ld.acquire.gpu.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr %addr syncscope("device") acquire, align 2
     ret half %retval
@@ -13011,9 +12849,9 @@ define half @acquire_half_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_half_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_half_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr %addr syncscope("") acquire, align 2
     ret half %retval
@@ -13026,9 +12864,9 @@ define half @acquire_half_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_half_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_half_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr %addr syncscope("block") acquire, align 2
     ret half %retval
@@ -13041,9 +12879,9 @@ define half @acquire_half_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_half_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_half_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr %addr syncscope("cluster") acquire, align 2
     ret half %retval
@@ -13056,9 +12894,9 @@ define half @acquire_half_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_half_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_half_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr %addr syncscope("device") acquire, align 2
     ret half %retval
@@ -13071,9 +12909,9 @@ define bfloat @acquire_bfloat_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_bfloat_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_bfloat_generic_sys_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr %addr syncscope("") acquire, align 2
     ret bfloat %retval
@@ -13086,9 +12924,9 @@ define bfloat @acquire_bfloat_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_bfloat_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_bfloat_generic_cta_param_0];
 ; CHECK-NEXT:    ld.acquire.cta.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr %addr syncscope("block") acquire, align 2
     ret bfloat %retval
@@ -13101,9 +12939,9 @@ define bfloat @acquire_bfloat_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_bfloat_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_bfloat_generic_cluster_param_0];
 ; CHECK-NEXT:    ld.acquire.cluster.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr %addr syncscope("cluster") acquire, align 2
     ret bfloat %retval
@@ -13116,9 +12954,9 @@ define bfloat @acquire_bfloat_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_bfloat_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_bfloat_generic_gpu_param_0];
 ; CHECK-NEXT:    ld.acquire.gpu.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr %addr syncscope("device") acquire, align 2
     ret bfloat %retval
@@ -13131,9 +12969,9 @@ define bfloat @acquire_bfloat_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_bfloat_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_bfloat_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr %addr syncscope("") acquire, align 2
     ret bfloat %retval
@@ -13146,9 +12984,9 @@ define bfloat @acquire_bfloat_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_bfloat_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_bfloat_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr %addr syncscope("block") acquire, align 2
     ret bfloat %retval
@@ -13161,9 +12999,9 @@ define bfloat @acquire_bfloat_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_bfloat_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_bfloat_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr %addr syncscope("cluster") acquire, align 2
     ret bfloat %retval
@@ -13176,9 +13014,9 @@ define bfloat @acquire_bfloat_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_bfloat_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_bfloat_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr %addr syncscope("device") acquire, align 2
     ret bfloat %retval
@@ -13191,9 +13029,9 @@ define float @acquire_float_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_float_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_float_generic_sys_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr %addr syncscope("") acquire, align 4
     ret float %retval
@@ -13206,9 +13044,9 @@ define float @acquire_float_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_float_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_float_generic_cta_param_0];
 ; CHECK-NEXT:    ld.acquire.cta.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr %addr syncscope("block") acquire, align 4
     ret float %retval
@@ -13221,9 +13059,9 @@ define float @acquire_float_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_float_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_float_generic_cluster_param_0];
 ; CHECK-NEXT:    ld.acquire.cluster.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr %addr syncscope("cluster") acquire, align 4
     ret float %retval
@@ -13236,9 +13074,9 @@ define float @acquire_float_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_float_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_float_generic_gpu_param_0];
 ; CHECK-NEXT:    ld.acquire.gpu.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr %addr syncscope("device") acquire, align 4
     ret float %retval
@@ -13251,9 +13089,9 @@ define float @acquire_float_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_float_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_float_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr %addr syncscope("") acquire, align 4
     ret float %retval
@@ -13266,9 +13104,9 @@ define float @acquire_float_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_float_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_float_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr %addr syncscope("block") acquire, align 4
     ret float %retval
@@ -13281,9 +13119,9 @@ define float @acquire_float_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_float_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_float_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr %addr syncscope("cluster") acquire, align 4
     ret float %retval
@@ -13296,9 +13134,9 @@ define float @acquire_float_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_float_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_float_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr %addr syncscope("device") acquire, align 4
     ret float %retval
@@ -13310,9 +13148,9 @@ define double @acquire_double_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_double_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_double_generic_sys_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr %addr syncscope("") acquire, align 8
     ret double %retval
@@ -13324,9 +13162,9 @@ define double @acquire_double_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_double_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_double_generic_cta_param_0];
 ; CHECK-NEXT:    ld.acquire.cta.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr %addr syncscope("block") acquire, align 8
     ret double %retval
@@ -13338,9 +13176,9 @@ define double @acquire_double_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_double_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_double_generic_cluster_param_0];
 ; CHECK-NEXT:    ld.acquire.cluster.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr %addr syncscope("cluster") acquire, align 8
     ret double %retval
@@ -13352,9 +13190,9 @@ define double @acquire_double_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_double_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_double_generic_gpu_param_0];
 ; CHECK-NEXT:    ld.acquire.gpu.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr %addr syncscope("device") acquire, align 8
     ret double %retval
@@ -13366,9 +13204,9 @@ define double @acquire_double_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_double_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_double_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr %addr syncscope("") acquire, align 8
     ret double %retval
@@ -13380,9 +13218,9 @@ define double @acquire_double_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_double_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_double_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr %addr syncscope("block") acquire, align 8
     ret double %retval
@@ -13394,9 +13232,9 @@ define double @acquire_double_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_double_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_double_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr %addr syncscope("cluster") acquire, align 8
     ret double %retval
@@ -13408,9 +13246,9 @@ define double @acquire_double_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_double_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_double_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr %addr syncscope("device") acquire, align 8
     ret double %retval
@@ -13424,10 +13262,10 @@ define i8 @acquire_i8_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i8_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i8_global_sys_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(1) %addr syncscope("") acquire, align 1
     ret i8 %retval
@@ -13441,10 +13279,10 @@ define i8 @acquire_i8_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i8_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i8_global_cta_param_0];
 ; CHECK-NEXT:    ld.acquire.cta.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(1) %addr syncscope("block") acquire, align 1
     ret i8 %retval
@@ -13458,10 +13296,10 @@ define i8 @acquire_i8_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i8_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i8_global_cluster_param_0];
 ; CHECK-NEXT:    ld.acquire.cluster.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(1) %addr syncscope("cluster") acquire, align 1
     ret i8 %retval
@@ -13475,10 +13313,10 @@ define i8 @acquire_i8_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i8_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i8_global_gpu_param_0];
 ; CHECK-NEXT:    ld.acquire.gpu.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(1) %addr syncscope("device") acquire, align 1
     ret i8 %retval
@@ -13492,10 +13330,10 @@ define i8 @acquire_i8_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i8_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i8_global_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(1) %addr syncscope("") acquire, align 1
     ret i8 %retval
@@ -13509,10 +13347,10 @@ define i8 @acquire_i8_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i8_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i8_global_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(1) %addr syncscope("block") acquire, align 1
     ret i8 %retval
@@ -13526,10 +13364,10 @@ define i8 @acquire_i8_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i8_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i8_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(1) %addr syncscope("cluster") acquire, align 1
     ret i8 %retval
@@ -13543,10 +13381,10 @@ define i8 @acquire_i8_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i8_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i8_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(1) %addr syncscope("device") acquire, align 1
     ret i8 %retval
@@ -13560,10 +13398,10 @@ define i16 @acquire_i16_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i16_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i16_global_sys_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(1) %addr syncscope("") acquire, align 2
     ret i16 %retval
@@ -13577,10 +13415,10 @@ define i16 @acquire_i16_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i16_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i16_global_cta_param_0];
 ; CHECK-NEXT:    ld.acquire.cta.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(1) %addr syncscope("block") acquire, align 2
     ret i16 %retval
@@ -13594,10 +13432,10 @@ define i16 @acquire_i16_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i16_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i16_global_cluster_param_0];
 ; CHECK-NEXT:    ld.acquire.cluster.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(1) %addr syncscope("cluster") acquire, align 2
     ret i16 %retval
@@ -13611,10 +13449,10 @@ define i16 @acquire_i16_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i16_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i16_global_gpu_param_0];
 ; CHECK-NEXT:    ld.acquire.gpu.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(1) %addr syncscope("device") acquire, align 2
     ret i16 %retval
@@ -13628,10 +13466,10 @@ define i16 @acquire_i16_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i16_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i16_global_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(1) %addr syncscope("") acquire, align 2
     ret i16 %retval
@@ -13645,10 +13483,10 @@ define i16 @acquire_i16_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i16_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i16_global_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(1) %addr syncscope("block") acquire, align 2
     ret i16 %retval
@@ -13662,10 +13500,10 @@ define i16 @acquire_i16_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i16_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i16_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(1) %addr syncscope("cluster") acquire, align 2
     ret i16 %retval
@@ -13679,10 +13517,10 @@ define i16 @acquire_i16_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i16_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i16_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(1) %addr syncscope("device") acquire, align 2
     ret i16 %retval
@@ -13695,9 +13533,9 @@ define i32 @acquire_i32_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i32_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i32_global_sys_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(1) %addr syncscope("") acquire, align 4
     ret i32 %retval
@@ -13710,9 +13548,9 @@ define i32 @acquire_i32_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i32_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i32_global_cta_param_0];
 ; CHECK-NEXT:    ld.acquire.cta.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(1) %addr syncscope("block") acquire, align 4
     ret i32 %retval
@@ -13725,9 +13563,9 @@ define i32 @acquire_i32_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i32_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i32_global_cluster_param_0];
 ; CHECK-NEXT:    ld.acquire.cluster.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(1) %addr syncscope("cluster") acquire, align 4
     ret i32 %retval
@@ -13740,9 +13578,9 @@ define i32 @acquire_i32_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i32_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i32_global_gpu_param_0];
 ; CHECK-NEXT:    ld.acquire.gpu.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(1) %addr syncscope("device") acquire, align 4
     ret i32 %retval
@@ -13755,9 +13593,9 @@ define i32 @acquire_i32_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i32_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i32_global_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(1) %addr syncscope("") acquire, align 4
     ret i32 %retval
@@ -13770,9 +13608,9 @@ define i32 @acquire_i32_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i32_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i32_global_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(1) %addr syncscope("block") acquire, align 4
     ret i32 %retval
@@ -13785,9 +13623,9 @@ define i32 @acquire_i32_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i32_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i32_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(1) %addr syncscope("cluster") acquire, align 4
     ret i32 %retval
@@ -13800,9 +13638,9 @@ define i32 @acquire_i32_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i32_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i32_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(1) %addr syncscope("device") acquire, align 4
     ret i32 %retval
@@ -13814,9 +13652,9 @@ define i64 @acquire_i64_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i64_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i64_global_sys_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(1) %addr syncscope("") acquire, align 8
     ret i64 %retval
@@ -13828,9 +13666,9 @@ define i64 @acquire_i64_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i64_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i64_global_cta_param_0];
 ; CHECK-NEXT:    ld.acquire.cta.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(1) %addr syncscope("block") acquire, align 8
     ret i64 %retval
@@ -13842,9 +13680,9 @@ define i64 @acquire_i64_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i64_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i64_global_cluster_param_0];
 ; CHECK-NEXT:    ld.acquire.cluster.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(1) %addr syncscope("cluster") acquire, align 8
     ret i64 %retval
@@ -13856,9 +13694,9 @@ define i64 @acquire_i64_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i64_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i64_global_gpu_param_0];
 ; CHECK-NEXT:    ld.acquire.gpu.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(1) %addr syncscope("device") acquire, align 8
     ret i64 %retval
@@ -13870,9 +13708,9 @@ define i64 @acquire_i64_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i64_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i64_global_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(1) %addr syncscope("") acquire, align 8
     ret i64 %retval
@@ -13884,9 +13722,9 @@ define i64 @acquire_i64_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i64_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i64_global_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(1) %addr syncscope("block") acquire, align 8
     ret i64 %retval
@@ -13898,9 +13736,9 @@ define i64 @acquire_i64_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i64_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i64_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(1) %addr syncscope("cluster") acquire, align 8
     ret i64 %retval
@@ -13912,9 +13750,9 @@ define i64 @acquire_i64_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i64_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i64_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(1) %addr syncscope("device") acquire, align 8
     ret i64 %retval
@@ -13926,7 +13764,7 @@ define i128 @acquire_i128_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i128_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_global_sys_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -13935,7 +13773,7 @@ define i128 @acquire_i128_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.acquire.sys.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(1) %addr syncscope("") acquire, align 16
     ret i128 %retval
@@ -13947,7 +13785,7 @@ define i128 @acquire_i128_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i128_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_global_cta_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -13956,7 +13794,7 @@ define i128 @acquire_i128_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.acquire.cta.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(1) %addr syncscope("block") acquire, align 16
     ret i128 %retval
@@ -13968,7 +13806,7 @@ define i128 @acquire_i128_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i128_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_global_cluster_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -13977,7 +13815,7 @@ define i128 @acquire_i128_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.acquire.cluster.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(1) %addr syncscope("cluster") acquire, align 16
     ret i128 %retval
@@ -13989,7 +13827,7 @@ define i128 @acquire_i128_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i128_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_global_gpu_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -13998,7 +13836,7 @@ define i128 @acquire_i128_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.acquire.gpu.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(1) %addr syncscope("device") acquire, align 16
     ret i128 %retval
@@ -14010,7 +13848,7 @@ define i128 @acquire_i128_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i128_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_global_sys_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -14019,7 +13857,7 @@ define i128 @acquire_i128_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.acquire.sys.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(1) %addr syncscope("") acquire, align 16
     ret i128 %retval
@@ -14031,7 +13869,7 @@ define i128 @acquire_i128_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i128_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_global_cta_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -14040,7 +13878,7 @@ define i128 @acquire_i128_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.acquire.cta.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(1) %addr syncscope("block") acquire, align 16
     ret i128 %retval
@@ -14052,7 +13890,7 @@ define i128 @acquire_i128_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i128_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -14061,7 +13899,7 @@ define i128 @acquire_i128_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.acquire.cluster.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(1) %addr syncscope("cluster") acquire, align 16
     ret i128 %retval
@@ -14073,7 +13911,7 @@ define i128 @acquire_i128_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i128_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -14082,7 +13920,7 @@ define i128 @acquire_i128_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.acquire.gpu.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(1) %addr syncscope("device") acquire, align 16
     ret i128 %retval
@@ -14095,9 +13933,9 @@ define half @acquire_half_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_half_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_half_global_sys_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(1) %addr syncscope("") acquire, align 2
     ret half %retval
@@ -14110,9 +13948,9 @@ define half @acquire_half_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_half_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_half_global_cta_param_0];
 ; CHECK-NEXT:    ld.acquire.cta.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(1) %addr syncscope("block") acquire, align 2
     ret half %retval
@@ -14125,9 +13963,9 @@ define half @acquire_half_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_half_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_half_global_cluster_param_0];
 ; CHECK-NEXT:    ld.acquire.cluster.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(1) %addr syncscope("cluster") acquire, align 2
     ret half %retval
@@ -14140,9 +13978,9 @@ define half @acquire_half_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_half_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_half_global_gpu_param_0];
 ; CHECK-NEXT:    ld.acquire.gpu.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(1) %addr syncscope("device") acquire, align 2
     ret half %retval
@@ -14155,9 +13993,9 @@ define half @acquire_half_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_half_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_half_global_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(1) %addr syncscope("") acquire, align 2
     ret half %retval
@@ -14170,9 +14008,9 @@ define half @acquire_half_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_half_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_half_global_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(1) %addr syncscope("block") acquire, align 2
     ret half %retval
@@ -14185,9 +14023,9 @@ define half @acquire_half_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_half_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_half_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(1) %addr syncscope("cluster") acquire, align 2
     ret half %retval
@@ -14200,9 +14038,9 @@ define half @acquire_half_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_half_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_half_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(1) %addr syncscope("device") acquire, align 2
     ret half %retval
@@ -14215,9 +14053,9 @@ define bfloat @acquire_bfloat_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_bfloat_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_bfloat_global_sys_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(1) %addr syncscope("") acquire, align 2
     ret bfloat %retval
@@ -14230,9 +14068,9 @@ define bfloat @acquire_bfloat_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_bfloat_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_bfloat_global_cta_param_0];
 ; CHECK-NEXT:    ld.acquire.cta.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(1) %addr syncscope("block") acquire, align 2
     ret bfloat %retval
@@ -14245,9 +14083,9 @@ define bfloat @acquire_bfloat_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_bfloat_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_bfloat_global_cluster_param_0];
 ; CHECK-NEXT:    ld.acquire.cluster.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(1) %addr syncscope("cluster") acquire, align 2
     ret bfloat %retval
@@ -14260,9 +14098,9 @@ define bfloat @acquire_bfloat_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_bfloat_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_bfloat_global_gpu_param_0];
 ; CHECK-NEXT:    ld.acquire.gpu.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(1) %addr syncscope("device") acquire, align 2
     ret bfloat %retval
@@ -14275,9 +14113,9 @@ define bfloat @acquire_bfloat_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_bfloat_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_bfloat_global_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(1) %addr syncscope("") acquire, align 2
     ret bfloat %retval
@@ -14290,9 +14128,9 @@ define bfloat @acquire_bfloat_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_bfloat_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_bfloat_global_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(1) %addr syncscope("block") acquire, align 2
     ret bfloat %retval
@@ -14305,9 +14143,9 @@ define bfloat @acquire_bfloat_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_bfloat_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_bfloat_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(1) %addr syncscope("cluster") acquire, align 2
     ret bfloat %retval
@@ -14320,9 +14158,9 @@ define bfloat @acquire_bfloat_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_bfloat_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_bfloat_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(1) %addr syncscope("device") acquire, align 2
     ret bfloat %retval
@@ -14335,9 +14173,9 @@ define float @acquire_float_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_float_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_float_global_sys_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(1) %addr syncscope("") acquire, align 4
     ret float %retval
@@ -14350,9 +14188,9 @@ define float @acquire_float_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_float_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_float_global_cta_param_0];
 ; CHECK-NEXT:    ld.acquire.cta.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(1) %addr syncscope("block") acquire, align 4
     ret float %retval
@@ -14365,9 +14203,9 @@ define float @acquire_float_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_float_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_float_global_cluster_param_0];
 ; CHECK-NEXT:    ld.acquire.cluster.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(1) %addr syncscope("cluster") acquire, align 4
     ret float %retval
@@ -14380,9 +14218,9 @@ define float @acquire_float_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_float_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_float_global_gpu_param_0];
 ; CHECK-NEXT:    ld.acquire.gpu.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(1) %addr syncscope("device") acquire, align 4
     ret float %retval
@@ -14395,9 +14233,9 @@ define float @acquire_float_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_float_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_float_global_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(1) %addr syncscope("") acquire, align 4
     ret float %retval
@@ -14410,9 +14248,9 @@ define float @acquire_float_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_float_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_float_global_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(1) %addr syncscope("block") acquire, align 4
     ret float %retval
@@ -14425,9 +14263,9 @@ define float @acquire_float_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_float_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_float_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(1) %addr syncscope("cluster") acquire, align 4
     ret float %retval
@@ -14440,9 +14278,9 @@ define float @acquire_float_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_float_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_float_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(1) %addr syncscope("device") acquire, align 4
     ret float %retval
@@ -14454,9 +14292,9 @@ define double @acquire_double_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_double_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_double_global_sys_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(1) %addr syncscope("") acquire, align 8
     ret double %retval
@@ -14468,9 +14306,9 @@ define double @acquire_double_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_double_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_double_global_cta_param_0];
 ; CHECK-NEXT:    ld.acquire.cta.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(1) %addr syncscope("block") acquire, align 8
     ret double %retval
@@ -14482,9 +14320,9 @@ define double @acquire_double_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_double_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_double_global_cluster_param_0];
 ; CHECK-NEXT:    ld.acquire.cluster.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(1) %addr syncscope("cluster") acquire, align 8
     ret double %retval
@@ -14496,9 +14334,9 @@ define double @acquire_double_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_double_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_double_global_gpu_param_0];
 ; CHECK-NEXT:    ld.acquire.gpu.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(1) %addr syncscope("device") acquire, align 8
     ret double %retval
@@ -14510,9 +14348,9 @@ define double @acquire_double_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_double_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_double_global_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(1) %addr syncscope("") acquire, align 8
     ret double %retval
@@ -14524,9 +14362,9 @@ define double @acquire_double_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_double_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_double_global_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(1) %addr syncscope("block") acquire, align 8
     ret double %retval
@@ -14538,9 +14376,9 @@ define double @acquire_double_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_double_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_double_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(1) %addr syncscope("cluster") acquire, align 8
     ret double %retval
@@ -14552,9 +14390,9 @@ define double @acquire_double_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_double_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_double_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(1) %addr syncscope("device") acquire, align 8
     ret double %retval
@@ -14568,10 +14406,10 @@ define i8 @acquire_i8_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i8_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i8_shared_sys_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(3) %addr syncscope("") acquire, align 1
     ret i8 %retval
@@ -14585,10 +14423,10 @@ define i8 @acquire_i8_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i8_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i8_shared_cta_param_0];
 ; CHECK-NEXT:    ld.acquire.cta.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(3) %addr syncscope("block") acquire, align 1
     ret i8 %retval
@@ -14602,10 +14440,10 @@ define i8 @acquire_i8_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i8_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i8_shared_cluster_param_0];
 ; CHECK-NEXT:    ld.acquire.cluster.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(3) %addr syncscope("cluster") acquire, align 1
     ret i8 %retval
@@ -14619,10 +14457,10 @@ define i8 @acquire_i8_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i8_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i8_shared_gpu_param_0];
 ; CHECK-NEXT:    ld.acquire.gpu.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(3) %addr syncscope("device") acquire, align 1
     ret i8 %retval
@@ -14636,10 +14474,10 @@ define i8 @acquire_i8_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i8_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i8_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(3) %addr syncscope("") acquire, align 1
     ret i8 %retval
@@ -14653,10 +14491,10 @@ define i8 @acquire_i8_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i8_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i8_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(3) %addr syncscope("block") acquire, align 1
     ret i8 %retval
@@ -14670,10 +14508,10 @@ define i8 @acquire_i8_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i8_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i8_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(3) %addr syncscope("cluster") acquire, align 1
     ret i8 %retval
@@ -14687,10 +14525,10 @@ define i8 @acquire_i8_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i8_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i8_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(3) %addr syncscope("device") acquire, align 1
     ret i8 %retval
@@ -14704,10 +14542,10 @@ define i16 @acquire_i16_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i16_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i16_shared_sys_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(3) %addr syncscope("") acquire, align 2
     ret i16 %retval
@@ -14721,10 +14559,10 @@ define i16 @acquire_i16_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i16_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i16_shared_cta_param_0];
 ; CHECK-NEXT:    ld.acquire.cta.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(3) %addr syncscope("block") acquire, align 2
     ret i16 %retval
@@ -14738,10 +14576,10 @@ define i16 @acquire_i16_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i16_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i16_shared_cluster_param_0];
 ; CHECK-NEXT:    ld.acquire.cluster.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(3) %addr syncscope("cluster") acquire, align 2
     ret i16 %retval
@@ -14755,10 +14593,10 @@ define i16 @acquire_i16_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i16_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i16_shared_gpu_param_0];
 ; CHECK-NEXT:    ld.acquire.gpu.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(3) %addr syncscope("device") acquire, align 2
     ret i16 %retval
@@ -14772,10 +14610,10 @@ define i16 @acquire_i16_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i16_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i16_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(3) %addr syncscope("") acquire, align 2
     ret i16 %retval
@@ -14789,10 +14627,10 @@ define i16 @acquire_i16_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i16_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i16_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(3) %addr syncscope("block") acquire, align 2
     ret i16 %retval
@@ -14806,10 +14644,10 @@ define i16 @acquire_i16_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i16_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i16_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(3) %addr syncscope("cluster") acquire, align 2
     ret i16 %retval
@@ -14823,10 +14661,10 @@ define i16 @acquire_i16_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i16_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i16_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(3) %addr syncscope("device") acquire, align 2
     ret i16 %retval
@@ -14839,9 +14677,9 @@ define i32 @acquire_i32_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i32_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i32_shared_sys_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(3) %addr syncscope("") acquire, align 4
     ret i32 %retval
@@ -14854,9 +14692,9 @@ define i32 @acquire_i32_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i32_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i32_shared_cta_param_0];
 ; CHECK-NEXT:    ld.acquire.cta.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(3) %addr syncscope("block") acquire, align 4
     ret i32 %retval
@@ -14869,9 +14707,9 @@ define i32 @acquire_i32_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i32_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i32_shared_cluster_param_0];
 ; CHECK-NEXT:    ld.acquire.cluster.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(3) %addr syncscope("cluster") acquire, align 4
     ret i32 %retval
@@ -14884,9 +14722,9 @@ define i32 @acquire_i32_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i32_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i32_shared_gpu_param_0];
 ; CHECK-NEXT:    ld.acquire.gpu.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(3) %addr syncscope("device") acquire, align 4
     ret i32 %retval
@@ -14899,9 +14737,9 @@ define i32 @acquire_i32_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i32_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i32_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(3) %addr syncscope("") acquire, align 4
     ret i32 %retval
@@ -14914,9 +14752,9 @@ define i32 @acquire_i32_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i32_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i32_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(3) %addr syncscope("block") acquire, align 4
     ret i32 %retval
@@ -14929,9 +14767,9 @@ define i32 @acquire_i32_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i32_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i32_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(3) %addr syncscope("cluster") acquire, align 4
     ret i32 %retval
@@ -14944,9 +14782,9 @@ define i32 @acquire_i32_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i32_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i32_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(3) %addr syncscope("device") acquire, align 4
     ret i32 %retval
@@ -14958,9 +14796,9 @@ define i64 @acquire_i64_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i64_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i64_shared_sys_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(3) %addr syncscope("") acquire, align 8
     ret i64 %retval
@@ -14972,9 +14810,9 @@ define i64 @acquire_i64_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i64_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i64_shared_cta_param_0];
 ; CHECK-NEXT:    ld.acquire.cta.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(3) %addr syncscope("block") acquire, align 8
     ret i64 %retval
@@ -14986,9 +14824,9 @@ define i64 @acquire_i64_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i64_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i64_shared_cluster_param_0];
 ; CHECK-NEXT:    ld.acquire.cluster.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(3) %addr syncscope("cluster") acquire, align 8
     ret i64 %retval
@@ -15000,9 +14838,9 @@ define i64 @acquire_i64_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i64_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i64_shared_gpu_param_0];
 ; CHECK-NEXT:    ld.acquire.gpu.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(3) %addr syncscope("device") acquire, align 8
     ret i64 %retval
@@ -15014,9 +14852,9 @@ define i64 @acquire_i64_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i64_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i64_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(3) %addr syncscope("") acquire, align 8
     ret i64 %retval
@@ -15028,9 +14866,9 @@ define i64 @acquire_i64_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i64_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i64_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(3) %addr syncscope("block") acquire, align 8
     ret i64 %retval
@@ -15042,9 +14880,9 @@ define i64 @acquire_i64_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i64_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i64_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(3) %addr syncscope("cluster") acquire, align 8
     ret i64 %retval
@@ -15056,9 +14894,9 @@ define i64 @acquire_i64_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i64_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i64_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(3) %addr syncscope("device") acquire, align 8
     ret i64 %retval
@@ -15070,7 +14908,7 @@ define i128 @acquire_i128_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i128_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_shared_sys_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -15079,7 +14917,7 @@ define i128 @acquire_i128_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.acquire.sys.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(3) %addr syncscope("") acquire, align 16
     ret i128 %retval
@@ -15091,7 +14929,7 @@ define i128 @acquire_i128_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i128_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_shared_cta_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -15100,7 +14938,7 @@ define i128 @acquire_i128_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.acquire.cta.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(3) %addr syncscope("block") acquire, align 16
     ret i128 %retval
@@ -15112,7 +14950,7 @@ define i128 @acquire_i128_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i128_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_shared_cluster_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -15121,7 +14959,7 @@ define i128 @acquire_i128_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.acquire.cluster.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(3) %addr syncscope("cluster") acquire, align 16
     ret i128 %retval
@@ -15133,7 +14971,7 @@ define i128 @acquire_i128_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i128_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_shared_gpu_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -15142,7 +14980,7 @@ define i128 @acquire_i128_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.acquire.gpu.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(3) %addr syncscope("device") acquire, align 16
     ret i128 %retval
@@ -15154,7 +14992,7 @@ define i128 @acquire_i128_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i128_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -15163,7 +15001,7 @@ define i128 @acquire_i128_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.acquire.sys.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(3) %addr syncscope("") acquire, align 16
     ret i128 %retval
@@ -15175,7 +15013,7 @@ define i128 @acquire_i128_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i128_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -15184,7 +15022,7 @@ define i128 @acquire_i128_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.acquire.cta.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(3) %addr syncscope("block") acquire, align 16
     ret i128 %retval
@@ -15196,7 +15034,7 @@ define i128 @acquire_i128_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i128_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -15205,7 +15043,7 @@ define i128 @acquire_i128_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.acquire.cluster.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(3) %addr syncscope("cluster") acquire, align 16
     ret i128 %retval
@@ -15217,7 +15055,7 @@ define i128 @acquire_i128_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_i128_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_i128_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
@@ -15226,7 +15064,7 @@ define i128 @acquire_i128_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.acquire.gpu.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(3) %addr syncscope("device") acquire, align 16
     ret i128 %retval
@@ -15239,9 +15077,9 @@ define half @acquire_half_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_half_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_half_shared_sys_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(3) %addr syncscope("") acquire, align 2
     ret half %retval
@@ -15254,9 +15092,9 @@ define half @acquire_half_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_half_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_half_shared_cta_param_0];
 ; CHECK-NEXT:    ld.acquire.cta.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(3) %addr syncscope("block") acquire, align 2
     ret half %retval
@@ -15269,9 +15107,9 @@ define half @acquire_half_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_half_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_half_shared_cluster_param_0];
 ; CHECK-NEXT:    ld.acquire.cluster.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(3) %addr syncscope("cluster") acquire, align 2
     ret half %retval
@@ -15284,9 +15122,9 @@ define half @acquire_half_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_half_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_half_shared_gpu_param_0];
 ; CHECK-NEXT:    ld.acquire.gpu.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(3) %addr syncscope("device") acquire, align 2
     ret half %retval
@@ -15299,9 +15137,9 @@ define half @acquire_half_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_half_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_half_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(3) %addr syncscope("") acquire, align 2
     ret half %retval
@@ -15314,9 +15152,9 @@ define half @acquire_half_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_half_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_half_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(3) %addr syncscope("block") acquire, align 2
     ret half %retval
@@ -15329,9 +15167,9 @@ define half @acquire_half_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_half_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_half_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(3) %addr syncscope("cluster") acquire, align 2
     ret half %retval
@@ -15344,9 +15182,9 @@ define half @acquire_half_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_half_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_half_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(3) %addr syncscope("device") acquire, align 2
     ret half %retval
@@ -15359,9 +15197,9 @@ define bfloat @acquire_bfloat_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_bfloat_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_bfloat_shared_sys_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(3) %addr syncscope("") acquire, align 2
     ret bfloat %retval
@@ -15374,9 +15212,9 @@ define bfloat @acquire_bfloat_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_bfloat_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_bfloat_shared_cta_param_0];
 ; CHECK-NEXT:    ld.acquire.cta.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(3) %addr syncscope("block") acquire, align 2
     ret bfloat %retval
@@ -15389,9 +15227,9 @@ define bfloat @acquire_bfloat_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_bfloat_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_bfloat_shared_cluster_param_0];
 ; CHECK-NEXT:    ld.acquire.cluster.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(3) %addr syncscope("cluster") acquire, align 2
     ret bfloat %retval
@@ -15404,9 +15242,9 @@ define bfloat @acquire_bfloat_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_bfloat_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_bfloat_shared_gpu_param_0];
 ; CHECK-NEXT:    ld.acquire.gpu.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(3) %addr syncscope("device") acquire, align 2
     ret bfloat %retval
@@ -15419,9 +15257,9 @@ define bfloat @acquire_bfloat_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_bfloat_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_bfloat_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(3) %addr syncscope("") acquire, align 2
     ret bfloat %retval
@@ -15434,9 +15272,9 @@ define bfloat @acquire_bfloat_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_bfloat_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_bfloat_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(3) %addr syncscope("block") acquire, align 2
     ret bfloat %retval
@@ -15449,9 +15287,9 @@ define bfloat @acquire_bfloat_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_bfloat_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_bfloat_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(3) %addr syncscope("cluster") acquire, align 2
     ret bfloat %retval
@@ -15464,9 +15302,9 @@ define bfloat @acquire_bfloat_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_bfloat_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_bfloat_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(3) %addr syncscope("device") acquire, align 2
     ret bfloat %retval
@@ -15479,9 +15317,9 @@ define float @acquire_float_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_float_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_float_shared_sys_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(3) %addr syncscope("") acquire, align 4
     ret float %retval
@@ -15494,9 +15332,9 @@ define float @acquire_float_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_float_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_float_shared_cta_param_0];
 ; CHECK-NEXT:    ld.acquire.cta.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(3) %addr syncscope("block") acquire, align 4
     ret float %retval
@@ -15509,9 +15347,9 @@ define float @acquire_float_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_float_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_float_shared_cluster_param_0];
 ; CHECK-NEXT:    ld.acquire.cluster.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(3) %addr syncscope("cluster") acquire, align 4
     ret float %retval
@@ -15524,9 +15362,9 @@ define float @acquire_float_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_float_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_float_shared_gpu_param_0];
 ; CHECK-NEXT:    ld.acquire.gpu.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(3) %addr syncscope("device") acquire, align 4
     ret float %retval
@@ -15539,9 +15377,9 @@ define float @acquire_float_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_float_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_float_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(3) %addr syncscope("") acquire, align 4
     ret float %retval
@@ -15554,9 +15392,9 @@ define float @acquire_float_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_float_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_float_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(3) %addr syncscope("block") acquire, align 4
     ret float %retval
@@ -15569,9 +15407,9 @@ define float @acquire_float_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_float_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_float_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(3) %addr syncscope("cluster") acquire, align 4
     ret float %retval
@@ -15584,9 +15422,9 @@ define float @acquire_float_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_float_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_float_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(3) %addr syncscope("device") acquire, align 4
     ret float %retval
@@ -15598,9 +15436,9 @@ define double @acquire_double_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_double_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_double_shared_sys_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(3) %addr syncscope("") acquire, align 8
     ret double %retval
@@ -15612,9 +15450,9 @@ define double @acquire_double_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_double_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_double_shared_cta_param_0];
 ; CHECK-NEXT:    ld.acquire.cta.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(3) %addr syncscope("block") acquire, align 8
     ret double %retval
@@ -15626,9 +15464,9 @@ define double @acquire_double_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_double_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_double_shared_cluster_param_0];
 ; CHECK-NEXT:    ld.acquire.cluster.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(3) %addr syncscope("cluster") acquire, align 8
     ret double %retval
@@ -15640,9 +15478,9 @@ define double @acquire_double_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_double_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_double_shared_gpu_param_0];
 ; CHECK-NEXT:    ld.acquire.gpu.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(3) %addr syncscope("device") acquire, align 8
     ret double %retval
@@ -15654,9 +15492,9 @@ define double @acquire_double_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_double_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_double_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(3) %addr syncscope("") acquire, align 8
     ret double %retval
@@ -15668,9 +15506,9 @@ define double @acquire_double_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_double_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_double_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(3) %addr syncscope("block") acquire, align 8
     ret double %retval
@@ -15682,9 +15520,9 @@ define double @acquire_double_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_double_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_double_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(3) %addr syncscope("cluster") acquire, align 8
     ret double %retval
@@ -15696,9 +15534,9 @@ define double @acquire_double_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [acquire_double_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [acquire_double_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    ld.acquire.sys.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(3) %addr syncscope("device") acquire, align 8
     ret double %retval
@@ -15715,13 +15553,12 @@ define i8 @acquire_i8_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot900;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15740,13 +15577,12 @@ define i8 @acquire_i8_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot901;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15765,13 +15601,12 @@ define i8 @acquire_i8_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot902;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15790,13 +15625,12 @@ define i8 @acquire_i8_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot903;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15815,13 +15649,12 @@ define i8 @acquire_i8_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot904;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15840,13 +15673,12 @@ define i8 @acquire_i8_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot905;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15865,13 +15697,12 @@ define i8 @acquire_i8_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot906;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15890,13 +15721,12 @@ define i8 @acquire_i8_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot907;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15915,13 +15745,12 @@ define i16 @acquire_i16_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot908;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15940,13 +15769,12 @@ define i16 @acquire_i16_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot909;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15965,13 +15793,12 @@ define i16 @acquire_i16_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot910;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -15990,13 +15817,12 @@ define i16 @acquire_i16_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot911;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16015,13 +15841,12 @@ define i16 @acquire_i16_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot912;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16040,13 +15865,12 @@ define i16 @acquire_i16_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot913;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16065,13 +15889,12 @@ define i16 @acquire_i16_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot914;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16090,13 +15913,12 @@ define i16 @acquire_i16_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot915;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16115,13 +15937,12 @@ define i32 @acquire_i32_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot916;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16140,13 +15961,12 @@ define i32 @acquire_i32_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot917;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16165,13 +15985,12 @@ define i32 @acquire_i32_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot918;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16190,13 +16009,12 @@ define i32 @acquire_i32_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot919;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16215,13 +16033,12 @@ define i32 @acquire_i32_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot920;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16240,13 +16057,12 @@ define i32 @acquire_i32_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot921;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16265,13 +16081,12 @@ define i32 @acquire_i32_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot922;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16290,13 +16105,12 @@ define i32 @acquire_i32_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot923;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16315,13 +16129,12 @@ define i64 @acquire_i64_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot924;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16340,13 +16153,12 @@ define i64 @acquire_i64_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot925;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16365,13 +16177,12 @@ define i64 @acquire_i64_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot926;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16390,13 +16201,12 @@ define i64 @acquire_i64_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot927;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16415,13 +16225,12 @@ define i64 @acquire_i64_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot928;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16440,13 +16249,12 @@ define i64 @acquire_i64_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot929;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16465,13 +16273,12 @@ define i64 @acquire_i64_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot930;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16490,13 +16297,12 @@ define i64 @acquire_i64_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot931;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16515,13 +16321,12 @@ define i128 @acquire_i128_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot932;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16540,13 +16345,12 @@ define i128 @acquire_i128_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot933;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16565,13 +16369,12 @@ define i128 @acquire_i128_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot934;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16590,13 +16393,12 @@ define i128 @acquire_i128_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot935;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16615,13 +16417,12 @@ define i128 @acquire_i128_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot936;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16640,13 +16441,12 @@ define i128 @acquire_i128_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot937;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16665,13 +16465,12 @@ define i128 @acquire_i128_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot938;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16690,13 +16489,12 @@ define i128 @acquire_i128_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot939;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16716,13 +16514,12 @@ define half @acquire_half_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot940;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16742,13 +16539,12 @@ define half @acquire_half_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot941;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16768,13 +16564,12 @@ define half @acquire_half_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot942;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16794,13 +16589,12 @@ define half @acquire_half_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot943;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16820,13 +16614,12 @@ define half @acquire_half_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot944;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16846,13 +16639,12 @@ define half @acquire_half_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot945;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16872,13 +16664,12 @@ define half @acquire_half_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot946;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16898,13 +16689,12 @@ define half @acquire_half_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot947;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16924,13 +16714,12 @@ define bfloat @acquire_bfloat_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot948;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16950,13 +16739,12 @@ define bfloat @acquire_bfloat_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot949;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -16976,13 +16764,12 @@ define bfloat @acquire_bfloat_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot950;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17002,13 +16789,12 @@ define bfloat @acquire_bfloat_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot951;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17028,13 +16814,12 @@ define bfloat @acquire_bfloat_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot952;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17054,13 +16839,12 @@ define bfloat @acquire_bfloat_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot953;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17080,13 +16864,12 @@ define bfloat @acquire_bfloat_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot954;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17106,13 +16889,12 @@ define bfloat @acquire_bfloat_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot955;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17131,13 +16913,12 @@ define float @acquire_float_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot956;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17156,13 +16937,12 @@ define float @acquire_float_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot957;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17181,13 +16961,12 @@ define float @acquire_float_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot958;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17206,13 +16985,12 @@ define float @acquire_float_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot959;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17231,13 +17009,12 @@ define float @acquire_float_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot960;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17256,13 +17033,12 @@ define float @acquire_float_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot961;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17281,13 +17057,12 @@ define float @acquire_float_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot962;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17306,13 +17081,12 @@ define float @acquire_float_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot963;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17331,13 +17105,12 @@ define double @acquire_double_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot964;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17356,13 +17129,12 @@ define double @acquire_double_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot965;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17381,13 +17153,12 @@ define double @acquire_double_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot966;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17406,13 +17177,12 @@ define double @acquire_double_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot967;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17431,13 +17201,12 @@ define double @acquire_double_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot968;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17456,13 +17225,12 @@ define double @acquire_double_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot969;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17481,13 +17249,12 @@ define double @acquire_double_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot970;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17506,13 +17273,12 @@ define double @acquire_double_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot971;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17528,11 +17294,11 @@ define i8 @seq_cst_i8_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_generic_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr %addr syncscope("") seq_cst, align 1
     ret i8 %retval
@@ -17546,11 +17312,11 @@ define i8 @seq_cst_i8_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_generic_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    ld.acquire.cta.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr %addr syncscope("block") seq_cst, align 1
     ret i8 %retval
@@ -17564,11 +17330,11 @@ define i8 @seq_cst_i8_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_generic_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    ld.acquire.cluster.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr %addr syncscope("cluster") seq_cst, align 1
     ret i8 %retval
@@ -17582,11 +17348,11 @@ define i8 @seq_cst_i8_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_generic_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    ld.acquire.gpu.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr %addr syncscope("device") seq_cst, align 1
     ret i8 %retval
@@ -17600,11 +17366,11 @@ define i8 @seq_cst_i8_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr %addr syncscope("") seq_cst, align 1
     ret i8 %retval
@@ -17618,11 +17384,11 @@ define i8 @seq_cst_i8_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr %addr syncscope("block") seq_cst, align 1
     ret i8 %retval
@@ -17636,11 +17402,11 @@ define i8 @seq_cst_i8_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr %addr syncscope("cluster") seq_cst, align 1
     ret i8 %retval
@@ -17654,11 +17420,11 @@ define i8 @seq_cst_i8_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr %addr syncscope("device") seq_cst, align 1
     ret i8 %retval
@@ -17672,11 +17438,11 @@ define i16 @seq_cst_i16_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_generic_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr %addr syncscope("") seq_cst, align 2
     ret i16 %retval
@@ -17690,11 +17456,11 @@ define i16 @seq_cst_i16_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_generic_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    ld.acquire.cta.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr %addr syncscope("block") seq_cst, align 2
     ret i16 %retval
@@ -17708,11 +17474,11 @@ define i16 @seq_cst_i16_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_generic_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    ld.acquire.cluster.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr %addr syncscope("cluster") seq_cst, align 2
     ret i16 %retval
@@ -17726,11 +17492,11 @@ define i16 @seq_cst_i16_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_generic_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    ld.acquire.gpu.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr %addr syncscope("device") seq_cst, align 2
     ret i16 %retval
@@ -17744,11 +17510,11 @@ define i16 @seq_cst_i16_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr %addr syncscope("") seq_cst, align 2
     ret i16 %retval
@@ -17762,11 +17528,11 @@ define i16 @seq_cst_i16_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr %addr syncscope("block") seq_cst, align 2
     ret i16 %retval
@@ -17780,11 +17546,11 @@ define i16 @seq_cst_i16_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr %addr syncscope("cluster") seq_cst, align 2
     ret i16 %retval
@@ -17798,11 +17564,11 @@ define i16 @seq_cst_i16_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr %addr syncscope("device") seq_cst, align 2
     ret i16 %retval
@@ -17815,10 +17581,10 @@ define i32 @seq_cst_i32_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_generic_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr %addr syncscope("") seq_cst, align 4
     ret i32 %retval
@@ -17831,10 +17597,10 @@ define i32 @seq_cst_i32_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_generic_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    ld.acquire.cta.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr %addr syncscope("block") seq_cst, align 4
     ret i32 %retval
@@ -17847,10 +17613,10 @@ define i32 @seq_cst_i32_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_generic_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    ld.acquire.cluster.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr %addr syncscope("cluster") seq_cst, align 4
     ret i32 %retval
@@ -17863,10 +17629,10 @@ define i32 @seq_cst_i32_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_generic_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    ld.acquire.gpu.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr %addr syncscope("device") seq_cst, align 4
     ret i32 %retval
@@ -17879,10 +17645,10 @@ define i32 @seq_cst_i32_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr %addr syncscope("") seq_cst, align 4
     ret i32 %retval
@@ -17895,10 +17661,10 @@ define i32 @seq_cst_i32_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr %addr syncscope("block") seq_cst, align 4
     ret i32 %retval
@@ -17911,10 +17677,10 @@ define i32 @seq_cst_i32_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr %addr syncscope("cluster") seq_cst, align 4
     ret i32 %retval
@@ -17927,10 +17693,10 @@ define i32 @seq_cst_i32_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr %addr syncscope("device") seq_cst, align 4
     ret i32 %retval
@@ -17942,10 +17708,10 @@ define i64 @seq_cst_i64_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_generic_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr %addr syncscope("") seq_cst, align 8
     ret i64 %retval
@@ -17957,10 +17723,10 @@ define i64 @seq_cst_i64_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_generic_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    ld.acquire.cta.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr %addr syncscope("block") seq_cst, align 8
     ret i64 %retval
@@ -17972,10 +17738,10 @@ define i64 @seq_cst_i64_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_generic_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    ld.acquire.cluster.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr %addr syncscope("cluster") seq_cst, align 8
     ret i64 %retval
@@ -17987,10 +17753,10 @@ define i64 @seq_cst_i64_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_generic_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    ld.acquire.gpu.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr %addr syncscope("device") seq_cst, align 8
     ret i64 %retval
@@ -18002,10 +17768,10 @@ define i64 @seq_cst_i64_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr %addr syncscope("") seq_cst, align 8
     ret i64 %retval
@@ -18017,10 +17783,10 @@ define i64 @seq_cst_i64_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr %addr syncscope("block") seq_cst, align 8
     ret i64 %retval
@@ -18032,10 +17798,10 @@ define i64 @seq_cst_i64_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr %addr syncscope("cluster") seq_cst, align 8
     ret i64 %retval
@@ -18047,10 +17813,10 @@ define i64 @seq_cst_i64_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr %addr syncscope("device") seq_cst, align 8
     ret i64 %retval
@@ -18062,7 +17828,7 @@ define i128 @seq_cst_i128_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i128_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_generic_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
@@ -18072,7 +17838,7 @@ define i128 @seq_cst_i128_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    atom.acquire.sys.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr %addr syncscope("") seq_cst, align 16
     ret i128 %retval
@@ -18084,7 +17850,7 @@ define i128 @seq_cst_i128_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i128_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_generic_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
@@ -18094,7 +17860,7 @@ define i128 @seq_cst_i128_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    atom.acquire.cta.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr %addr syncscope("block") seq_cst, align 16
     ret i128 %retval
@@ -18106,7 +17872,7 @@ define i128 @seq_cst_i128_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i128_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_generic_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
@@ -18116,7 +17882,7 @@ define i128 @seq_cst_i128_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    atom.acquire.cluster.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr %addr syncscope("cluster") seq_cst, align 16
     ret i128 %retval
@@ -18128,7 +17894,7 @@ define i128 @seq_cst_i128_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i128_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_generic_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
@@ -18138,7 +17904,7 @@ define i128 @seq_cst_i128_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    atom.acquire.gpu.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr %addr syncscope("device") seq_cst, align 16
     ret i128 %retval
@@ -18150,7 +17916,7 @@ define i128 @seq_cst_i128_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i128_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
@@ -18160,7 +17926,7 @@ define i128 @seq_cst_i128_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    atom.acquire.sys.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr %addr syncscope("") seq_cst, align 16
     ret i128 %retval
@@ -18172,7 +17938,7 @@ define i128 @seq_cst_i128_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i128_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
@@ -18182,7 +17948,7 @@ define i128 @seq_cst_i128_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    atom.acquire.cta.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr %addr syncscope("block") seq_cst, align 16
     ret i128 %retval
@@ -18194,7 +17960,7 @@ define i128 @seq_cst_i128_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i128_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
@@ -18204,7 +17970,7 @@ define i128 @seq_cst_i128_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    atom.acquire.cluster.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr %addr syncscope("cluster") seq_cst, align 16
     ret i128 %retval
@@ -18216,7 +17982,7 @@ define i128 @seq_cst_i128_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i128_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
@@ -18226,7 +17992,7 @@ define i128 @seq_cst_i128_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    atom.acquire.gpu.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr %addr syncscope("device") seq_cst, align 16
     ret i128 %retval
@@ -18239,10 +18005,10 @@ define half @seq_cst_half_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_generic_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr %addr syncscope("") seq_cst, align 2
     ret half %retval
@@ -18255,10 +18021,10 @@ define half @seq_cst_half_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_generic_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    ld.acquire.cta.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr %addr syncscope("block") seq_cst, align 2
     ret half %retval
@@ -18271,10 +18037,10 @@ define half @seq_cst_half_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_generic_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    ld.acquire.cluster.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr %addr syncscope("cluster") seq_cst, align 2
     ret half %retval
@@ -18287,10 +18053,10 @@ define half @seq_cst_half_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_generic_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    ld.acquire.gpu.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr %addr syncscope("device") seq_cst, align 2
     ret half %retval
@@ -18303,10 +18069,10 @@ define half @seq_cst_half_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr %addr syncscope("") seq_cst, align 2
     ret half %retval
@@ -18319,10 +18085,10 @@ define half @seq_cst_half_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr %addr syncscope("block") seq_cst, align 2
     ret half %retval
@@ -18335,10 +18101,10 @@ define half @seq_cst_half_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr %addr syncscope("cluster") seq_cst, align 2
     ret half %retval
@@ -18351,10 +18117,10 @@ define half @seq_cst_half_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr %addr syncscope("device") seq_cst, align 2
     ret half %retval
@@ -18367,10 +18133,10 @@ define bfloat @seq_cst_bfloat_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_generic_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr %addr syncscope("") seq_cst, align 2
     ret bfloat %retval
@@ -18383,10 +18149,10 @@ define bfloat @seq_cst_bfloat_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_generic_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    ld.acquire.cta.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr %addr syncscope("block") seq_cst, align 2
     ret bfloat %retval
@@ -18399,10 +18165,10 @@ define bfloat @seq_cst_bfloat_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_generic_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    ld.acquire.cluster.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr %addr syncscope("cluster") seq_cst, align 2
     ret bfloat %retval
@@ -18415,10 +18181,10 @@ define bfloat @seq_cst_bfloat_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_generic_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    ld.acquire.gpu.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr %addr syncscope("device") seq_cst, align 2
     ret bfloat %retval
@@ -18431,10 +18197,10 @@ define bfloat @seq_cst_bfloat_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr %addr syncscope("") seq_cst, align 2
     ret bfloat %retval
@@ -18447,10 +18213,10 @@ define bfloat @seq_cst_bfloat_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr %addr syncscope("block") seq_cst, align 2
     ret bfloat %retval
@@ -18463,10 +18229,10 @@ define bfloat @seq_cst_bfloat_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr %addr syncscope("cluster") seq_cst, align 2
     ret bfloat %retval
@@ -18479,10 +18245,10 @@ define bfloat @seq_cst_bfloat_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr %addr syncscope("device") seq_cst, align 2
     ret bfloat %retval
@@ -18495,10 +18261,10 @@ define float @seq_cst_float_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_generic_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr %addr syncscope("") seq_cst, align 4
     ret float %retval
@@ -18511,10 +18277,10 @@ define float @seq_cst_float_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_generic_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    ld.acquire.cta.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr %addr syncscope("block") seq_cst, align 4
     ret float %retval
@@ -18527,10 +18293,10 @@ define float @seq_cst_float_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_generic_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    ld.acquire.cluster.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr %addr syncscope("cluster") seq_cst, align 4
     ret float %retval
@@ -18543,10 +18309,10 @@ define float @seq_cst_float_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_generic_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    ld.acquire.gpu.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr %addr syncscope("device") seq_cst, align 4
     ret float %retval
@@ -18559,10 +18325,10 @@ define float @seq_cst_float_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr %addr syncscope("") seq_cst, align 4
     ret float %retval
@@ -18575,10 +18341,10 @@ define float @seq_cst_float_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr %addr syncscope("block") seq_cst, align 4
     ret float %retval
@@ -18591,10 +18357,10 @@ define float @seq_cst_float_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr %addr syncscope("cluster") seq_cst, align 4
     ret float %retval
@@ -18607,10 +18373,10 @@ define float @seq_cst_float_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr %addr syncscope("device") seq_cst, align 4
     ret float %retval
@@ -18622,10 +18388,10 @@ define double @seq_cst_double_generic_sys(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_generic_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_generic_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr %addr syncscope("") seq_cst, align 8
     ret double %retval
@@ -18637,10 +18403,10 @@ define double @seq_cst_double_generic_cta(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_generic_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_generic_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    ld.acquire.cta.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr %addr syncscope("block") seq_cst, align 8
     ret double %retval
@@ -18652,10 +18418,10 @@ define double @seq_cst_double_generic_cluster(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_generic_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_generic_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    ld.acquire.cluster.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr %addr syncscope("cluster") seq_cst, align 8
     ret double %retval
@@ -18667,10 +18433,10 @@ define double @seq_cst_double_generic_gpu(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_generic_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_generic_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    ld.acquire.gpu.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr %addr syncscope("device") seq_cst, align 8
     ret double %retval
@@ -18682,10 +18448,10 @@ define double @seq_cst_double_generic_sys_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_generic_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr %addr syncscope("") seq_cst, align 8
     ret double %retval
@@ -18697,10 +18463,10 @@ define double @seq_cst_double_generic_cta_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_generic_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr %addr syncscope("block") seq_cst, align 8
     ret double %retval
@@ -18712,10 +18478,10 @@ define double @seq_cst_double_generic_cluster_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr %addr syncscope("cluster") seq_cst, align 8
     ret double %retval
@@ -18727,10 +18493,10 @@ define double @seq_cst_double_generic_gpu_volatile(ptr %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr %addr syncscope("device") seq_cst, align 8
     ret double %retval
@@ -18744,11 +18510,11 @@ define i8 @seq_cst_i8_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_global_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(1) %addr syncscope("") seq_cst, align 1
     ret i8 %retval
@@ -18762,11 +18528,11 @@ define i8 @seq_cst_i8_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_global_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    ld.acquire.cta.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(1) %addr syncscope("block") seq_cst, align 1
     ret i8 %retval
@@ -18780,11 +18546,11 @@ define i8 @seq_cst_i8_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_global_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    ld.acquire.cluster.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 1
     ret i8 %retval
@@ -18798,11 +18564,11 @@ define i8 @seq_cst_i8_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_global_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    ld.acquire.gpu.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(1) %addr syncscope("device") seq_cst, align 1
     ret i8 %retval
@@ -18816,11 +18582,11 @@ define i8 @seq_cst_i8_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_global_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(1) %addr syncscope("") seq_cst, align 1
     ret i8 %retval
@@ -18834,11 +18600,11 @@ define i8 @seq_cst_i8_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_global_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(1) %addr syncscope("block") seq_cst, align 1
     ret i8 %retval
@@ -18852,11 +18618,11 @@ define i8 @seq_cst_i8_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 1
     ret i8 %retval
@@ -18870,11 +18636,11 @@ define i8 @seq_cst_i8_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(1) %addr syncscope("device") seq_cst, align 1
     ret i8 %retval
@@ -18888,11 +18654,11 @@ define i16 @seq_cst_i16_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_global_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(1) %addr syncscope("") seq_cst, align 2
     ret i16 %retval
@@ -18906,11 +18672,11 @@ define i16 @seq_cst_i16_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_global_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    ld.acquire.cta.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(1) %addr syncscope("block") seq_cst, align 2
     ret i16 %retval
@@ -18924,11 +18690,11 @@ define i16 @seq_cst_i16_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_global_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    ld.acquire.cluster.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 2
     ret i16 %retval
@@ -18942,11 +18708,11 @@ define i16 @seq_cst_i16_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_global_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    ld.acquire.gpu.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(1) %addr syncscope("device") seq_cst, align 2
     ret i16 %retval
@@ -18960,11 +18726,11 @@ define i16 @seq_cst_i16_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_global_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(1) %addr syncscope("") seq_cst, align 2
     ret i16 %retval
@@ -18978,11 +18744,11 @@ define i16 @seq_cst_i16_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_global_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(1) %addr syncscope("block") seq_cst, align 2
     ret i16 %retval
@@ -18996,11 +18762,11 @@ define i16 @seq_cst_i16_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 2
     ret i16 %retval
@@ -19014,11 +18780,11 @@ define i16 @seq_cst_i16_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(1) %addr syncscope("device") seq_cst, align 2
     ret i16 %retval
@@ -19031,10 +18797,10 @@ define i32 @seq_cst_i32_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_global_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(1) %addr syncscope("") seq_cst, align 4
     ret i32 %retval
@@ -19047,10 +18813,10 @@ define i32 @seq_cst_i32_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_global_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    ld.acquire.cta.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(1) %addr syncscope("block") seq_cst, align 4
     ret i32 %retval
@@ -19063,10 +18829,10 @@ define i32 @seq_cst_i32_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_global_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    ld.acquire.cluster.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 4
     ret i32 %retval
@@ -19079,10 +18845,10 @@ define i32 @seq_cst_i32_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_global_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    ld.acquire.gpu.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(1) %addr syncscope("device") seq_cst, align 4
     ret i32 %retval
@@ -19095,10 +18861,10 @@ define i32 @seq_cst_i32_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_global_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(1) %addr syncscope("") seq_cst, align 4
     ret i32 %retval
@@ -19111,10 +18877,10 @@ define i32 @seq_cst_i32_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_global_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(1) %addr syncscope("block") seq_cst, align 4
     ret i32 %retval
@@ -19127,10 +18893,10 @@ define i32 @seq_cst_i32_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 4
     ret i32 %retval
@@ -19143,10 +18909,10 @@ define i32 @seq_cst_i32_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(1) %addr syncscope("device") seq_cst, align 4
     ret i32 %retval
@@ -19158,10 +18924,10 @@ define i64 @seq_cst_i64_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_global_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(1) %addr syncscope("") seq_cst, align 8
     ret i64 %retval
@@ -19173,10 +18939,10 @@ define i64 @seq_cst_i64_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_global_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    ld.acquire.cta.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(1) %addr syncscope("block") seq_cst, align 8
     ret i64 %retval
@@ -19188,10 +18954,10 @@ define i64 @seq_cst_i64_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_global_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    ld.acquire.cluster.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 8
     ret i64 %retval
@@ -19203,10 +18969,10 @@ define i64 @seq_cst_i64_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_global_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    ld.acquire.gpu.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(1) %addr syncscope("device") seq_cst, align 8
     ret i64 %retval
@@ -19218,10 +18984,10 @@ define i64 @seq_cst_i64_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_global_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(1) %addr syncscope("") seq_cst, align 8
     ret i64 %retval
@@ -19233,10 +18999,10 @@ define i64 @seq_cst_i64_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_global_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(1) %addr syncscope("block") seq_cst, align 8
     ret i64 %retval
@@ -19248,10 +19014,10 @@ define i64 @seq_cst_i64_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 8
     ret i64 %retval
@@ -19263,10 +19029,10 @@ define i64 @seq_cst_i64_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(1) %addr syncscope("device") seq_cst, align 8
     ret i64 %retval
@@ -19278,7 +19044,7 @@ define i128 @seq_cst_i128_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i128_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_global_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
@@ -19288,7 +19054,7 @@ define i128 @seq_cst_i128_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.acquire.sys.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(1) %addr syncscope("") seq_cst, align 16
     ret i128 %retval
@@ -19300,7 +19066,7 @@ define i128 @seq_cst_i128_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i128_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_global_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
@@ -19310,7 +19076,7 @@ define i128 @seq_cst_i128_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.acquire.cta.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(1) %addr syncscope("block") seq_cst, align 16
     ret i128 %retval
@@ -19322,7 +19088,7 @@ define i128 @seq_cst_i128_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i128_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_global_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
@@ -19332,7 +19098,7 @@ define i128 @seq_cst_i128_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.acquire.cluster.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 16
     ret i128 %retval
@@ -19344,7 +19110,7 @@ define i128 @seq_cst_i128_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i128_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_global_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
@@ -19354,7 +19120,7 @@ define i128 @seq_cst_i128_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.acquire.gpu.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(1) %addr syncscope("device") seq_cst, align 16
     ret i128 %retval
@@ -19366,7 +19132,7 @@ define i128 @seq_cst_i128_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i128_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_global_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
@@ -19376,7 +19142,7 @@ define i128 @seq_cst_i128_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.acquire.sys.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(1) %addr syncscope("") seq_cst, align 16
     ret i128 %retval
@@ -19388,7 +19154,7 @@ define i128 @seq_cst_i128_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i128_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_global_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
@@ -19398,7 +19164,7 @@ define i128 @seq_cst_i128_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.acquire.cta.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(1) %addr syncscope("block") seq_cst, align 16
     ret i128 %retval
@@ -19410,7 +19176,7 @@ define i128 @seq_cst_i128_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i128_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
@@ -19420,7 +19186,7 @@ define i128 @seq_cst_i128_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.acquire.cluster.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 16
     ret i128 %retval
@@ -19432,7 +19198,7 @@ define i128 @seq_cst_i128_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i128_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
@@ -19442,7 +19208,7 @@ define i128 @seq_cst_i128_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    atom.acquire.gpu.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(1) %addr syncscope("device") seq_cst, align 16
     ret i128 %retval
@@ -19455,10 +19221,10 @@ define half @seq_cst_half_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_global_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(1) %addr syncscope("") seq_cst, align 2
     ret half %retval
@@ -19471,10 +19237,10 @@ define half @seq_cst_half_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_global_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    ld.acquire.cta.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(1) %addr syncscope("block") seq_cst, align 2
     ret half %retval
@@ -19487,10 +19253,10 @@ define half @seq_cst_half_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_global_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    ld.acquire.cluster.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 2
     ret half %retval
@@ -19503,10 +19269,10 @@ define half @seq_cst_half_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_global_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    ld.acquire.gpu.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(1) %addr syncscope("device") seq_cst, align 2
     ret half %retval
@@ -19519,10 +19285,10 @@ define half @seq_cst_half_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_global_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(1) %addr syncscope("") seq_cst, align 2
     ret half %retval
@@ -19535,10 +19301,10 @@ define half @seq_cst_half_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_global_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(1) %addr syncscope("block") seq_cst, align 2
     ret half %retval
@@ -19551,10 +19317,10 @@ define half @seq_cst_half_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 2
     ret half %retval
@@ -19567,10 +19333,10 @@ define half @seq_cst_half_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(1) %addr syncscope("device") seq_cst, align 2
     ret half %retval
@@ -19583,10 +19349,10 @@ define bfloat @seq_cst_bfloat_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_global_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(1) %addr syncscope("") seq_cst, align 2
     ret bfloat %retval
@@ -19599,10 +19365,10 @@ define bfloat @seq_cst_bfloat_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_global_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    ld.acquire.cta.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(1) %addr syncscope("block") seq_cst, align 2
     ret bfloat %retval
@@ -19615,10 +19381,10 @@ define bfloat @seq_cst_bfloat_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_global_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    ld.acquire.cluster.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 2
     ret bfloat %retval
@@ -19631,10 +19397,10 @@ define bfloat @seq_cst_bfloat_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_global_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    ld.acquire.gpu.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(1) %addr syncscope("device") seq_cst, align 2
     ret bfloat %retval
@@ -19647,10 +19413,10 @@ define bfloat @seq_cst_bfloat_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_global_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(1) %addr syncscope("") seq_cst, align 2
     ret bfloat %retval
@@ -19663,10 +19429,10 @@ define bfloat @seq_cst_bfloat_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_global_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(1) %addr syncscope("block") seq_cst, align 2
     ret bfloat %retval
@@ -19679,10 +19445,10 @@ define bfloat @seq_cst_bfloat_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 2
     ret bfloat %retval
@@ -19695,10 +19461,10 @@ define bfloat @seq_cst_bfloat_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(1) %addr syncscope("device") seq_cst, align 2
     ret bfloat %retval
@@ -19711,10 +19477,10 @@ define float @seq_cst_float_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_global_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(1) %addr syncscope("") seq_cst, align 4
     ret float %retval
@@ -19727,10 +19493,10 @@ define float @seq_cst_float_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_global_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    ld.acquire.cta.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(1) %addr syncscope("block") seq_cst, align 4
     ret float %retval
@@ -19743,10 +19509,10 @@ define float @seq_cst_float_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_global_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    ld.acquire.cluster.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 4
     ret float %retval
@@ -19759,10 +19525,10 @@ define float @seq_cst_float_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_global_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    ld.acquire.gpu.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(1) %addr syncscope("device") seq_cst, align 4
     ret float %retval
@@ -19775,10 +19541,10 @@ define float @seq_cst_float_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_global_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(1) %addr syncscope("") seq_cst, align 4
     ret float %retval
@@ -19791,10 +19557,10 @@ define float @seq_cst_float_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_global_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(1) %addr syncscope("block") seq_cst, align 4
     ret float %retval
@@ -19807,10 +19573,10 @@ define float @seq_cst_float_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 4
     ret float %retval
@@ -19823,10 +19589,10 @@ define float @seq_cst_float_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(1) %addr syncscope("device") seq_cst, align 4
     ret float %retval
@@ -19838,10 +19604,10 @@ define double @seq_cst_double_global_sys(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_global_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_global_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(1) %addr syncscope("") seq_cst, align 8
     ret double %retval
@@ -19853,10 +19619,10 @@ define double @seq_cst_double_global_cta(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_global_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_global_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    ld.acquire.cta.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(1) %addr syncscope("block") seq_cst, align 8
     ret double %retval
@@ -19868,10 +19634,10 @@ define double @seq_cst_double_global_cluster(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_global_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_global_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    ld.acquire.cluster.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 8
     ret double %retval
@@ -19883,10 +19649,10 @@ define double @seq_cst_double_global_gpu(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_global_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_global_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    ld.acquire.gpu.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(1) %addr syncscope("device") seq_cst, align 8
     ret double %retval
@@ -19898,10 +19664,10 @@ define double @seq_cst_double_global_sys_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_global_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_global_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(1) %addr syncscope("") seq_cst, align 8
     ret double %retval
@@ -19913,10 +19679,10 @@ define double @seq_cst_double_global_cta_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_global_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_global_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(1) %addr syncscope("block") seq_cst, align 8
     ret double %retval
@@ -19928,10 +19694,10 @@ define double @seq_cst_double_global_cluster_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_global_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 8
     ret double %retval
@@ -19943,10 +19709,10 @@ define double @seq_cst_double_global_gpu_volatile(ptr addrspace(1) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_global_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.global.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(1) %addr syncscope("device") seq_cst, align 8
     ret double %retval
@@ -19960,11 +19726,11 @@ define i8 @seq_cst_i8_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_shared_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(3) %addr syncscope("") seq_cst, align 1
     ret i8 %retval
@@ -19978,11 +19744,11 @@ define i8 @seq_cst_i8_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_shared_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    ld.acquire.cta.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(3) %addr syncscope("block") seq_cst, align 1
     ret i8 %retval
@@ -19996,11 +19762,11 @@ define i8 @seq_cst_i8_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_shared_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    ld.acquire.cluster.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 1
     ret i8 %retval
@@ -20014,11 +19780,11 @@ define i8 @seq_cst_i8_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_shared_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    ld.acquire.gpu.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i8, ptr addrspace(3) %addr syncscope("device") seq_cst, align 1
     ret i8 %retval
@@ -20032,11 +19798,11 @@ define i8 @seq_cst_i8_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(3) %addr syncscope("") seq_cst, align 1
     ret i8 %retval
@@ -20050,11 +19816,11 @@ define i8 @seq_cst_i8_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(3) %addr syncscope("block") seq_cst, align 1
     ret i8 %retval
@@ -20068,11 +19834,11 @@ define i8 @seq_cst_i8_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 1
     ret i8 %retval
@@ -20086,11 +19852,11 @@ define i8 @seq_cst_i8_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i8_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i8_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i8, ptr addrspace(3) %addr syncscope("device") seq_cst, align 1
     ret i8 %retval
@@ -20104,11 +19870,11 @@ define i16 @seq_cst_i16_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_shared_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(3) %addr syncscope("") seq_cst, align 2
     ret i16 %retval
@@ -20122,11 +19888,11 @@ define i16 @seq_cst_i16_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_shared_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    ld.acquire.cta.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(3) %addr syncscope("block") seq_cst, align 2
     ret i16 %retval
@@ -20140,11 +19906,11 @@ define i16 @seq_cst_i16_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_shared_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    ld.acquire.cluster.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 2
     ret i16 %retval
@@ -20158,11 +19924,11 @@ define i16 @seq_cst_i16_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_shared_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    ld.acquire.gpu.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i16, ptr addrspace(3) %addr syncscope("device") seq_cst, align 2
     ret i16 %retval
@@ -20176,11 +19942,11 @@ define i16 @seq_cst_i16_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(3) %addr syncscope("") seq_cst, align 2
     ret i16 %retval
@@ -20194,11 +19960,11 @@ define i16 @seq_cst_i16_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(3) %addr syncscope("block") seq_cst, align 2
     ret i16 %retval
@@ -20212,11 +19978,11 @@ define i16 @seq_cst_i16_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 2
     ret i16 %retval
@@ -20230,11 +19996,11 @@ define i16 @seq_cst_i16_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i16_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i16_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i16, ptr addrspace(3) %addr syncscope("device") seq_cst, align 2
     ret i16 %retval
@@ -20247,10 +20013,10 @@ define i32 @seq_cst_i32_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_shared_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(3) %addr syncscope("") seq_cst, align 4
     ret i32 %retval
@@ -20263,10 +20029,10 @@ define i32 @seq_cst_i32_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_shared_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    ld.acquire.cta.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(3) %addr syncscope("block") seq_cst, align 4
     ret i32 %retval
@@ -20279,10 +20045,10 @@ define i32 @seq_cst_i32_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_shared_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    ld.acquire.cluster.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 4
     ret i32 %retval
@@ -20295,10 +20061,10 @@ define i32 @seq_cst_i32_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_shared_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    ld.acquire.gpu.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i32, ptr addrspace(3) %addr syncscope("device") seq_cst, align 4
     ret i32 %retval
@@ -20311,10 +20077,10 @@ define i32 @seq_cst_i32_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(3) %addr syncscope("") seq_cst, align 4
     ret i32 %retval
@@ -20327,10 +20093,10 @@ define i32 @seq_cst_i32_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(3) %addr syncscope("block") seq_cst, align 4
     ret i32 %retval
@@ -20343,10 +20109,10 @@ define i32 @seq_cst_i32_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 4
     ret i32 %retval
@@ -20359,10 +20125,10 @@ define i32 @seq_cst_i32_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i32_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i32_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i32, ptr addrspace(3) %addr syncscope("device") seq_cst, align 4
     ret i32 %retval
@@ -20374,10 +20140,10 @@ define i64 @seq_cst_i64_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_shared_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(3) %addr syncscope("") seq_cst, align 8
     ret i64 %retval
@@ -20389,10 +20155,10 @@ define i64 @seq_cst_i64_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_shared_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    ld.acquire.cta.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(3) %addr syncscope("block") seq_cst, align 8
     ret i64 %retval
@@ -20404,10 +20170,10 @@ define i64 @seq_cst_i64_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_shared_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    ld.acquire.cluster.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 8
     ret i64 %retval
@@ -20419,10 +20185,10 @@ define i64 @seq_cst_i64_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_shared_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    ld.acquire.gpu.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic i64, ptr addrspace(3) %addr syncscope("device") seq_cst, align 8
     ret i64 %retval
@@ -20434,10 +20200,10 @@ define i64 @seq_cst_i64_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(3) %addr syncscope("") seq_cst, align 8
     ret i64 %retval
@@ -20449,10 +20215,10 @@ define i64 @seq_cst_i64_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(3) %addr syncscope("block") seq_cst, align 8
     ret i64 %retval
@@ -20464,10 +20230,10 @@ define i64 @seq_cst_i64_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 8
     ret i64 %retval
@@ -20479,10 +20245,10 @@ define i64 @seq_cst_i64_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i64_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i64, ptr addrspace(3) %addr syncscope("device") seq_cst, align 8
     ret i64 %retval
@@ -20494,7 +20260,7 @@ define i128 @seq_cst_i128_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i128_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_shared_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
@@ -20504,7 +20270,7 @@ define i128 @seq_cst_i128_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.acquire.sys.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(3) %addr syncscope("") seq_cst, align 16
     ret i128 %retval
@@ -20516,7 +20282,7 @@ define i128 @seq_cst_i128_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i128_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_shared_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
@@ -20526,7 +20292,7 @@ define i128 @seq_cst_i128_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.acquire.cta.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(3) %addr syncscope("block") seq_cst, align 16
     ret i128 %retval
@@ -20538,7 +20304,7 @@ define i128 @seq_cst_i128_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i128_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_shared_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
@@ -20548,7 +20314,7 @@ define i128 @seq_cst_i128_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.acquire.cluster.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 16
     ret i128 %retval
@@ -20560,7 +20326,7 @@ define i128 @seq_cst_i128_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i128_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_shared_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
@@ -20570,7 +20336,7 @@ define i128 @seq_cst_i128_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.acquire.gpu.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic i128, ptr addrspace(3) %addr syncscope("device") seq_cst, align 16
     ret i128 %retval
@@ -20582,7 +20348,7 @@ define i128 @seq_cst_i128_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i128_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
@@ -20592,7 +20358,7 @@ define i128 @seq_cst_i128_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.acquire.sys.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(3) %addr syncscope("") seq_cst, align 16
     ret i128 %retval
@@ -20604,7 +20370,7 @@ define i128 @seq_cst_i128_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i128_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
@@ -20614,7 +20380,7 @@ define i128 @seq_cst_i128_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.acquire.cta.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(3) %addr syncscope("block") seq_cst, align 16
     ret i128 %retval
@@ -20626,7 +20392,7 @@ define i128 @seq_cst_i128_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i128_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
@@ -20636,7 +20402,7 @@ define i128 @seq_cst_i128_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.acquire.cluster.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 16
     ret i128 %retval
@@ -20648,7 +20414,7 @@ define i128 @seq_cst_i128_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i128_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_i128_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    mov.b64 %rd2, 0;
 ; CHECK-NEXT:    {
@@ -20658,7 +20424,7 @@ define i128 @seq_cst_i128_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    atom.acquire.gpu.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd3, %rd4}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile i128, ptr addrspace(3) %addr syncscope("device") seq_cst, align 16
     ret i128 %retval
@@ -20671,10 +20437,10 @@ define half @seq_cst_half_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_shared_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(3) %addr syncscope("") seq_cst, align 2
     ret half %retval
@@ -20687,10 +20453,10 @@ define half @seq_cst_half_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_shared_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    ld.acquire.cta.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(3) %addr syncscope("block") seq_cst, align 2
     ret half %retval
@@ -20703,10 +20469,10 @@ define half @seq_cst_half_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_shared_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    ld.acquire.cluster.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 2
     ret half %retval
@@ -20719,10 +20485,10 @@ define half @seq_cst_half_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_shared_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    ld.acquire.gpu.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic half, ptr addrspace(3) %addr syncscope("device") seq_cst, align 2
     ret half %retval
@@ -20735,10 +20501,10 @@ define half @seq_cst_half_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(3) %addr syncscope("") seq_cst, align 2
     ret half %retval
@@ -20751,10 +20517,10 @@ define half @seq_cst_half_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(3) %addr syncscope("block") seq_cst, align 2
     ret half %retval
@@ -20767,10 +20533,10 @@ define half @seq_cst_half_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 2
     ret half %retval
@@ -20783,10 +20549,10 @@ define half @seq_cst_half_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_half_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_half_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile half, ptr addrspace(3) %addr syncscope("device") seq_cst, align 2
     ret half %retval
@@ -20799,10 +20565,10 @@ define bfloat @seq_cst_bfloat_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_shared_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(3) %addr syncscope("") seq_cst, align 2
     ret bfloat %retval
@@ -20815,10 +20581,10 @@ define bfloat @seq_cst_bfloat_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_shared_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    ld.acquire.cta.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(3) %addr syncscope("block") seq_cst, align 2
     ret bfloat %retval
@@ -20831,10 +20597,10 @@ define bfloat @seq_cst_bfloat_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_shared_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    ld.acquire.cluster.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 2
     ret bfloat %retval
@@ -20847,10 +20613,10 @@ define bfloat @seq_cst_bfloat_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_shared_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    ld.acquire.gpu.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic bfloat, ptr addrspace(3) %addr syncscope("device") seq_cst, align 2
     ret bfloat %retval
@@ -20863,10 +20629,10 @@ define bfloat @seq_cst_bfloat_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(3) %addr syncscope("") seq_cst, align 2
     ret bfloat %retval
@@ -20879,10 +20645,10 @@ define bfloat @seq_cst_bfloat_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(3) %addr syncscope("block") seq_cst, align 2
     ret bfloat %retval
@@ -20895,10 +20661,10 @@ define bfloat @seq_cst_bfloat_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 2
     ret bfloat %retval
@@ -20911,10 +20677,10 @@ define bfloat @seq_cst_bfloat_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_bfloat_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_bfloat_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b16 %rs1, [%rd1];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile bfloat, ptr addrspace(3) %addr syncscope("device") seq_cst, align 2
     ret bfloat %retval
@@ -20927,10 +20693,10 @@ define float @seq_cst_float_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_shared_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(3) %addr syncscope("") seq_cst, align 4
     ret float %retval
@@ -20943,10 +20709,10 @@ define float @seq_cst_float_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_shared_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    ld.acquire.cta.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(3) %addr syncscope("block") seq_cst, align 4
     ret float %retval
@@ -20959,10 +20725,10 @@ define float @seq_cst_float_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_shared_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    ld.acquire.cluster.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 4
     ret float %retval
@@ -20975,10 +20741,10 @@ define float @seq_cst_float_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_shared_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    ld.acquire.gpu.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic float, ptr addrspace(3) %addr syncscope("device") seq_cst, align 4
     ret float %retval
@@ -20991,10 +20757,10 @@ define float @seq_cst_float_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(3) %addr syncscope("") seq_cst, align 4
     ret float %retval
@@ -21007,10 +20773,10 @@ define float @seq_cst_float_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(3) %addr syncscope("block") seq_cst, align 4
     ret float %retval
@@ -21023,10 +20789,10 @@ define float @seq_cst_float_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 4
     ret float %retval
@@ -21039,10 +20805,10 @@ define float @seq_cst_float_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_float_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_float_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b32 %r1, [%rd1];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile float, ptr addrspace(3) %addr syncscope("device") seq_cst, align 4
     ret float %retval
@@ -21054,10 +20820,10 @@ define double @seq_cst_double_shared_sys(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_shared_sys_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_shared_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(3) %addr syncscope("") seq_cst, align 8
     ret double %retval
@@ -21069,10 +20835,10 @@ define double @seq_cst_double_shared_cta(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_shared_cta_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_shared_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    ld.acquire.cta.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(3) %addr syncscope("block") seq_cst, align 8
     ret double %retval
@@ -21084,10 +20850,10 @@ define double @seq_cst_double_shared_cluster(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_shared_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    ld.acquire.cluster.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 8
     ret double %retval
@@ -21099,10 +20865,10 @@ define double @seq_cst_double_shared_gpu(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_shared_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_shared_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    ld.acquire.gpu.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic double, ptr addrspace(3) %addr syncscope("device") seq_cst, align 8
     ret double %retval
@@ -21114,10 +20880,10 @@ define double @seq_cst_double_shared_sys_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_shared_sys_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(3) %addr syncscope("") seq_cst, align 8
     ret double %retval
@@ -21129,10 +20895,10 @@ define double @seq_cst_double_shared_cta_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_shared_cta_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(3) %addr syncscope("block") seq_cst, align 8
     ret double %retval
@@ -21144,10 +20910,10 @@ define double @seq_cst_double_shared_cluster_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 8
     ret double %retval
@@ -21159,10 +20925,10 @@ define double @seq_cst_double_shared_gpu_volatile(ptr addrspace(3) %addr) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [seq_cst_double_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.acquire.sys.shared.b64 %rd2, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %retval = load atomic volatile double, ptr addrspace(3) %addr syncscope("device") seq_cst, align 8
     ret double %retval
@@ -21179,13 +20945,12 @@ define i8 @seq_cst_i8_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1188;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21204,13 +20969,12 @@ define i8 @seq_cst_i8_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1189;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21229,13 +20993,12 @@ define i8 @seq_cst_i8_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1190;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21254,13 +21017,12 @@ define i8 @seq_cst_i8_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1191;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21279,13 +21041,12 @@ define i8 @seq_cst_i8_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1192;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21304,13 +21065,12 @@ define i8 @seq_cst_i8_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1193;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21329,13 +21089,12 @@ define i8 @seq_cst_i8_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1194;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21354,13 +21113,12 @@ define i8 @seq_cst_i8_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1195;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b8 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b8 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21379,13 +21137,12 @@ define i16 @seq_cst_i16_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1196;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21404,13 +21161,12 @@ define i16 @seq_cst_i16_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1197;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21429,13 +21185,12 @@ define i16 @seq_cst_i16_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1198;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21454,13 +21209,12 @@ define i16 @seq_cst_i16_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1199;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21479,13 +21233,12 @@ define i16 @seq_cst_i16_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1200;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21504,13 +21257,12 @@ define i16 @seq_cst_i16_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1201;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21529,13 +21281,12 @@ define i16 @seq_cst_i16_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1202;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21554,13 +21305,12 @@ define i16 @seq_cst_i16_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1203;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b16 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21579,13 +21329,12 @@ define i32 @seq_cst_i32_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1204;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21604,13 +21353,12 @@ define i32 @seq_cst_i32_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1205;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21629,13 +21377,12 @@ define i32 @seq_cst_i32_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1206;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21654,13 +21401,12 @@ define i32 @seq_cst_i32_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1207;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21679,13 +21425,12 @@ define i32 @seq_cst_i32_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1208;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21704,13 +21449,12 @@ define i32 @seq_cst_i32_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1209;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21729,13 +21473,12 @@ define i32 @seq_cst_i32_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1210;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21754,13 +21497,12 @@ define i32 @seq_cst_i32_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1211;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21779,13 +21521,12 @@ define i64 @seq_cst_i64_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1212;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21804,13 +21545,12 @@ define i64 @seq_cst_i64_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1213;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21829,13 +21569,12 @@ define i64 @seq_cst_i64_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1214;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21854,13 +21593,12 @@ define i64 @seq_cst_i64_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1215;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21879,13 +21617,12 @@ define i64 @seq_cst_i64_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1216;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21904,13 +21641,12 @@ define i64 @seq_cst_i64_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1217;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21929,13 +21665,12 @@ define i64 @seq_cst_i64_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1218;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21954,13 +21689,12 @@ define i64 @seq_cst_i64_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1219;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -21979,13 +21713,12 @@ define i128 @seq_cst_i128_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1220;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22004,13 +21737,12 @@ define i128 @seq_cst_i128_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1221;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22029,13 +21761,12 @@ define i128 @seq_cst_i128_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1222;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22054,13 +21785,12 @@ define i128 @seq_cst_i128_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1223;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22079,13 +21809,12 @@ define i128 @seq_cst_i128_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1224;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22104,13 +21833,12 @@ define i128 @seq_cst_i128_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1225;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22129,13 +21857,12 @@ define i128 @seq_cst_i128_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1226;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22154,13 +21881,12 @@ define i128 @seq_cst_i128_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1227;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SP];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%SPL];
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
     %slot = alloca i128, align 16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22180,13 +21906,12 @@ define half @seq_cst_half_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1228;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22206,13 +21931,12 @@ define half @seq_cst_half_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1229;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22232,13 +21956,12 @@ define half @seq_cst_half_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1230;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22258,13 +21981,12 @@ define half @seq_cst_half_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1231;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22284,13 +22006,12 @@ define half @seq_cst_half_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1232;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22310,13 +22031,12 @@ define half @seq_cst_half_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1233;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22336,13 +22056,12 @@ define half @seq_cst_half_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1234;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22362,13 +22081,12 @@ define half @seq_cst_half_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1235;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22388,13 +22106,12 @@ define bfloat @seq_cst_bfloat_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1236;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22414,13 +22131,12 @@ define bfloat @seq_cst_bfloat_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1237;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22440,13 +22156,12 @@ define bfloat @seq_cst_bfloat_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1238;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22466,13 +22181,12 @@ define bfloat @seq_cst_bfloat_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1239;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22492,13 +22206,12 @@ define bfloat @seq_cst_bfloat_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1240;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22518,13 +22231,12 @@ define bfloat @seq_cst_bfloat_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1241;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22544,13 +22256,12 @@ define bfloat @seq_cst_bfloat_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1242;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22570,13 +22281,12 @@ define bfloat @seq_cst_bfloat_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1243;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b16 %rs1, [%SP];
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    ld.local.b16 %rs1, [%SPL];
+; CHECK-NEXT:    st.param::func.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22595,13 +22305,12 @@ define float @seq_cst_float_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1244;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22620,13 +22329,12 @@ define float @seq_cst_float_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1245;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22645,13 +22353,12 @@ define float @seq_cst_float_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1246;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22670,13 +22377,12 @@ define float @seq_cst_float_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1247;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22695,13 +22401,12 @@ define float @seq_cst_float_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1248;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22720,13 +22425,12 @@ define float @seq_cst_float_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1249;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22745,13 +22449,12 @@ define float @seq_cst_float_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1250;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22770,13 +22473,12 @@ define float @seq_cst_float_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1251;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.local.b32 %r2, [%SPL];
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22795,13 +22497,12 @@ define double @seq_cst_double_local_sys() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1252;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22820,13 +22521,12 @@ define double @seq_cst_double_local_cta() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1253;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22845,13 +22545,12 @@ define double @seq_cst_double_local_cluster() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1254;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22870,13 +22569,12 @@ define double @seq_cst_double_local_gpu() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1255;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22895,13 +22593,12 @@ define double @seq_cst_double_local_sys_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1256;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22920,13 +22617,12 @@ define double @seq_cst_double_local_cta_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1257;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22945,13 +22641,12 @@ define double @seq_cst_double_local_cluster_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1258;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -22970,13 +22665,12 @@ define double @seq_cst_double_local_gpu_volatile() {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1259;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    ld.local.b64 %rd2, [%SP];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.local.b64 %rd2, [%SPL];
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)

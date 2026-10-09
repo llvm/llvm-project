@@ -8145,26 +8145,18 @@ AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
   if (auto *CI = dyn_cast<AtomicCmpXchgInst>(I);
       CI && CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent &&
       cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() >=
-          STI.getMinCmpXchgSizeInBits())
+          STI.getMinCmpXchgSizeInBits()) {
     return AtomicOrdering::Acquire;
-<<<<<<< HEAD
-  else if (auto *RI = dyn_cast<AtomicRMWInst>(I);
-           RI && RI->getOrdering() == AtomicOrdering::SequentiallyConsistent) {
+  } else if (auto *RI = dyn_cast<AtomicRMWInst>(I);
+             RI &&
+             RI->getOrdering() == AtomicOrdering::SequentiallyConsistent) {
     AtomicExpansionKind ExpansionKind = shouldExpandAtomicRMWInIR(RI);
     if (ExpansionKind == AtomicExpansionKind::None ||
         ExpansionKind == AtomicExpansionKind::Expand)
       return AtomicOrdering::Acquire;
+  } else if (isa<LoadInst>(I)) {
+    return AtomicOrdering::Acquire;
   }
-  if (auto *LI = dyn_cast<LoadInst>(I);
-           LI && STI.hasMemoryOrdering())
-=======
-  if (auto *RI = dyn_cast<AtomicRMWInst>(I);
-      RI && RI->getOrdering() == AtomicOrdering::SequentiallyConsistent &&
-      shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::None)
-    return AtomicOrdering::Acquire;
-  if (auto *LI = dyn_cast<LoadInst>(I); LI && STI.hasMemoryOrdering())
->>>>>>> fe883a4cd0679 (clang-format)
-    return AtomicOrdering::Acquire;
 
   return AtomicOrdering::Monotonic;
 }

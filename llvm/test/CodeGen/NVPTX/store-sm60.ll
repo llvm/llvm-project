@@ -722,13 +722,12 @@ define void @notatomic_i8_local(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot48;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [notatomic_i8_local_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -748,13 +747,12 @@ define void @notatomic_i8_local_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot49;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [notatomic_i8_local_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -774,13 +772,12 @@ define void @notatomic_i16_local(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot50;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_i16_local_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -800,13 +797,12 @@ define void @notatomic_i16_local_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot51;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_i16_local_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -825,13 +821,12 @@ define void @notatomic_i32_local(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot52;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [notatomic_i32_local_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -850,13 +845,12 @@ define void @notatomic_i32_local_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot53;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [notatomic_i32_local_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -875,13 +869,12 @@ define void @notatomic_i64_local(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot54;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i64_local_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -900,13 +893,12 @@ define void @notatomic_i64_local_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot55;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_i64_local_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -926,13 +918,12 @@ define void @notatomic_half_local(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot56;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_half_local_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -952,13 +943,12 @@ define void @notatomic_half_local_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot57;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_half_local_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -978,13 +968,12 @@ define void @notatomic_bfloat_local(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot58;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_bfloat_local_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1004,13 +993,12 @@ define void @notatomic_bfloat_local_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot59;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [notatomic_bfloat_local_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1029,13 +1017,12 @@ define void @notatomic_float_local(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot60;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [notatomic_float_local_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1054,13 +1041,12 @@ define void @notatomic_float_local_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot61;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [notatomic_float_local_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1079,13 +1065,12 @@ define void @notatomic_double_local(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot62;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_double_local_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -1104,13 +1089,12 @@ define void @notatomic_double_local_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot63;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [notatomic_double_local_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -3962,13 +3946,12 @@ define void @unordered_i8_local_sys(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot256;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -3988,13 +3971,12 @@ define void @unordered_i8_local_cta(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot257;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4014,13 +3996,12 @@ define void @unordered_i8_local_cluster(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot258;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4040,13 +4021,12 @@ define void @unordered_i8_local_gpu(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot259;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4066,13 +4046,12 @@ define void @unordered_i8_local_sys_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot260;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4092,13 +4071,12 @@ define void @unordered_i8_local_cta_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot261;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4118,13 +4096,12 @@ define void @unordered_i8_local_cluster_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot262;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4144,13 +4121,12 @@ define void @unordered_i8_local_gpu_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot263;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [unordered_i8_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4170,13 +4146,12 @@ define void @unordered_i16_local_sys(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot264;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4196,13 +4171,12 @@ define void @unordered_i16_local_cta(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot265;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4222,13 +4196,12 @@ define void @unordered_i16_local_cluster(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot266;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4248,13 +4221,12 @@ define void @unordered_i16_local_gpu(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot267;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4274,13 +4246,12 @@ define void @unordered_i16_local_sys_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot268;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4300,13 +4271,12 @@ define void @unordered_i16_local_cta_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot269;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4326,13 +4296,12 @@ define void @unordered_i16_local_cluster_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot270;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4352,13 +4321,12 @@ define void @unordered_i16_local_gpu_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot271;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_i16_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4377,13 +4345,12 @@ define void @unordered_i32_local_sys(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot272;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [unordered_i32_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4402,13 +4369,12 @@ define void @unordered_i32_local_cta(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot273;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [unordered_i32_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4427,13 +4393,12 @@ define void @unordered_i32_local_cluster(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot274;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [unordered_i32_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4452,13 +4417,12 @@ define void @unordered_i32_local_gpu(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot275;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [unordered_i32_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4477,13 +4441,12 @@ define void @unordered_i32_local_sys_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot276;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [unordered_i32_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4502,13 +4465,12 @@ define void @unordered_i32_local_cta_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot277;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [unordered_i32_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4527,13 +4489,12 @@ define void @unordered_i32_local_cluster_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot278;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [unordered_i32_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4552,13 +4513,12 @@ define void @unordered_i32_local_gpu_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot279;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [unordered_i32_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4577,13 +4537,12 @@ define void @unordered_i64_local_sys(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot280;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4602,13 +4561,12 @@ define void @unordered_i64_local_cta(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot281;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4627,13 +4585,12 @@ define void @unordered_i64_local_cluster(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot282;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4652,13 +4609,12 @@ define void @unordered_i64_local_gpu(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot283;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4677,13 +4633,12 @@ define void @unordered_i64_local_sys_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot284;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4702,13 +4657,12 @@ define void @unordered_i64_local_cta_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot285;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4727,13 +4681,12 @@ define void @unordered_i64_local_cluster_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot286;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4752,13 +4705,12 @@ define void @unordered_i64_local_gpu_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot287;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_i64_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4778,13 +4730,12 @@ define void @unordered_half_local_sys(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot288;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4804,13 +4755,12 @@ define void @unordered_half_local_cta(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot289;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4830,13 +4780,12 @@ define void @unordered_half_local_cluster(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot290;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4856,13 +4805,12 @@ define void @unordered_half_local_gpu(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot291;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4882,13 +4830,12 @@ define void @unordered_half_local_sys_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot292;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4908,13 +4855,12 @@ define void @unordered_half_local_cta_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot293;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4934,13 +4880,12 @@ define void @unordered_half_local_cluster_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot294;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4960,13 +4905,12 @@ define void @unordered_half_local_gpu_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot295;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_half_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -4986,13 +4930,12 @@ define void @unordered_bfloat_local_sys(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot296;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5012,13 +4955,12 @@ define void @unordered_bfloat_local_cta(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot297;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5038,13 +4980,12 @@ define void @unordered_bfloat_local_cluster(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot298;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5064,13 +5005,12 @@ define void @unordered_bfloat_local_gpu(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot299;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5090,13 +5030,12 @@ define void @unordered_bfloat_local_sys_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot300;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5116,13 +5055,12 @@ define void @unordered_bfloat_local_cta_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot301;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5142,13 +5080,12 @@ define void @unordered_bfloat_local_cluster_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot302;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5168,13 +5105,12 @@ define void @unordered_bfloat_local_gpu_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot303;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [unordered_bfloat_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5193,13 +5129,12 @@ define void @unordered_float_local_sys(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot304;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [unordered_float_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5218,13 +5153,12 @@ define void @unordered_float_local_cta(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot305;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [unordered_float_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5243,13 +5177,12 @@ define void @unordered_float_local_cluster(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot306;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [unordered_float_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5268,13 +5201,12 @@ define void @unordered_float_local_gpu(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot307;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [unordered_float_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5293,13 +5225,12 @@ define void @unordered_float_local_sys_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot308;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [unordered_float_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5318,13 +5249,12 @@ define void @unordered_float_local_cta_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot309;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [unordered_float_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5343,13 +5273,12 @@ define void @unordered_float_local_cluster_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot310;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [unordered_float_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5368,13 +5297,12 @@ define void @unordered_float_local_gpu_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot311;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [unordered_float_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5393,13 +5321,12 @@ define void @unordered_double_local_sys(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot312;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5418,13 +5345,12 @@ define void @unordered_double_local_cta(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot313;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5443,13 +5369,12 @@ define void @unordered_double_local_cluster(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot314;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5468,13 +5393,12 @@ define void @unordered_double_local_gpu(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot315;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5493,13 +5417,12 @@ define void @unordered_double_local_sys_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot316;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5518,13 +5441,12 @@ define void @unordered_double_local_cta_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot317;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5543,13 +5465,12 @@ define void @unordered_double_local_cluster_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot318;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -5568,13 +5489,12 @@ define void @unordered_double_local_gpu_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot319;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [unordered_double_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -8426,13 +8346,12 @@ define void @monotonic_i8_local_sys(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot512;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -8452,13 +8371,12 @@ define void @monotonic_i8_local_cta(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot513;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -8478,13 +8396,12 @@ define void @monotonic_i8_local_cluster(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot514;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -8504,13 +8421,12 @@ define void @monotonic_i8_local_gpu(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot515;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -8530,13 +8446,12 @@ define void @monotonic_i8_local_sys_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot516;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -8556,13 +8471,12 @@ define void @monotonic_i8_local_cta_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot517;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -8582,13 +8496,12 @@ define void @monotonic_i8_local_cluster_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot518;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -8608,13 +8521,12 @@ define void @monotonic_i8_local_gpu_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot519;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [monotonic_i8_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -8634,13 +8546,12 @@ define void @monotonic_i16_local_sys(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot520;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -8660,13 +8571,12 @@ define void @monotonic_i16_local_cta(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot521;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -8686,13 +8596,12 @@ define void @monotonic_i16_local_cluster(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot522;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -8712,13 +8621,12 @@ define void @monotonic_i16_local_gpu(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot523;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -8738,13 +8646,12 @@ define void @monotonic_i16_local_sys_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot524;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -8764,13 +8671,12 @@ define void @monotonic_i16_local_cta_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot525;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -8790,13 +8696,12 @@ define void @monotonic_i16_local_cluster_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot526;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -8816,13 +8721,12 @@ define void @monotonic_i16_local_gpu_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot527;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_i16_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -8841,13 +8745,12 @@ define void @monotonic_i32_local_sys(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot528;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_i32_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -8866,13 +8769,12 @@ define void @monotonic_i32_local_cta(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot529;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_i32_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -8891,13 +8793,12 @@ define void @monotonic_i32_local_cluster(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot530;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_i32_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -8916,13 +8817,12 @@ define void @monotonic_i32_local_gpu(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot531;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_i32_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -8941,13 +8841,12 @@ define void @monotonic_i32_local_sys_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot532;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_i32_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -8966,13 +8865,12 @@ define void @monotonic_i32_local_cta_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot533;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_i32_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -8991,13 +8889,12 @@ define void @monotonic_i32_local_cluster_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot534;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_i32_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9016,13 +8913,12 @@ define void @monotonic_i32_local_gpu_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot535;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_i32_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9041,13 +8937,12 @@ define void @monotonic_i64_local_sys(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot536;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9066,13 +8961,12 @@ define void @monotonic_i64_local_cta(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot537;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9091,13 +8985,12 @@ define void @monotonic_i64_local_cluster(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot538;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9116,13 +9009,12 @@ define void @monotonic_i64_local_gpu(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot539;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9141,13 +9033,12 @@ define void @monotonic_i64_local_sys_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot540;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9166,13 +9057,12 @@ define void @monotonic_i64_local_cta_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot541;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9191,13 +9081,12 @@ define void @monotonic_i64_local_cluster_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot542;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9216,13 +9105,12 @@ define void @monotonic_i64_local_gpu_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot543;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_i64_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9242,13 +9130,12 @@ define void @monotonic_half_local_sys(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot544;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9268,13 +9155,12 @@ define void @monotonic_half_local_cta(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot545;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9294,13 +9180,12 @@ define void @monotonic_half_local_cluster(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot546;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9320,13 +9205,12 @@ define void @monotonic_half_local_gpu(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot547;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9346,13 +9230,12 @@ define void @monotonic_half_local_sys_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot548;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9372,13 +9255,12 @@ define void @monotonic_half_local_cta_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot549;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9398,13 +9280,12 @@ define void @monotonic_half_local_cluster_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot550;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9424,13 +9305,12 @@ define void @monotonic_half_local_gpu_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot551;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_half_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9450,13 +9330,12 @@ define void @monotonic_bfloat_local_sys(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot552;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9476,13 +9355,12 @@ define void @monotonic_bfloat_local_cta(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot553;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9502,13 +9380,12 @@ define void @monotonic_bfloat_local_cluster(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot554;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9528,13 +9405,12 @@ define void @monotonic_bfloat_local_gpu(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot555;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9554,13 +9430,12 @@ define void @monotonic_bfloat_local_sys_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot556;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9580,13 +9455,12 @@ define void @monotonic_bfloat_local_cta_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot557;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9606,13 +9480,12 @@ define void @monotonic_bfloat_local_cluster_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot558;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9632,13 +9505,12 @@ define void @monotonic_bfloat_local_gpu_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot559;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [monotonic_bfloat_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9657,13 +9529,12 @@ define void @monotonic_float_local_sys(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot560;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_float_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9682,13 +9553,12 @@ define void @monotonic_float_local_cta(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot561;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_float_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9707,13 +9577,12 @@ define void @monotonic_float_local_cluster(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot562;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_float_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9732,13 +9601,12 @@ define void @monotonic_float_local_gpu(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot563;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_float_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9757,13 +9625,12 @@ define void @monotonic_float_local_sys_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot564;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_float_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9782,13 +9649,12 @@ define void @monotonic_float_local_cta_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot565;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_float_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9807,13 +9673,12 @@ define void @monotonic_float_local_cluster_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot566;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_float_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9832,13 +9697,12 @@ define void @monotonic_float_local_gpu_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot567;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [monotonic_float_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9857,13 +9721,12 @@ define void @monotonic_double_local_sys(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot568;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9882,13 +9745,12 @@ define void @monotonic_double_local_cta(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot569;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9907,13 +9769,12 @@ define void @monotonic_double_local_cluster(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot570;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9932,13 +9793,12 @@ define void @monotonic_double_local_gpu(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot571;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9957,13 +9817,12 @@ define void @monotonic_double_local_sys_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot572;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -9982,13 +9841,12 @@ define void @monotonic_double_local_cta_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot573;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10007,13 +9865,12 @@ define void @monotonic_double_local_cluster_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot574;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -10032,13 +9889,12 @@ define void @monotonic_double_local_gpu_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot575;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [monotonic_double_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13082,13 +12938,12 @@ define void @release_i8_local_sys(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot768;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13108,13 +12963,12 @@ define void @release_i8_local_cta(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot769;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13134,13 +12988,12 @@ define void @release_i8_local_cluster(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot770;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13160,13 +13013,12 @@ define void @release_i8_local_gpu(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot771;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13186,13 +13038,12 @@ define void @release_i8_local_sys_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot772;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13212,13 +13063,12 @@ define void @release_i8_local_cta_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot773;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13238,13 +13088,12 @@ define void @release_i8_local_cluster_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot774;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13264,13 +13113,12 @@ define void @release_i8_local_gpu_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot775;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [release_i8_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13290,13 +13138,12 @@ define void @release_i16_local_sys(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot776;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13316,13 +13163,12 @@ define void @release_i16_local_cta(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot777;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13342,13 +13188,12 @@ define void @release_i16_local_cluster(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot778;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13368,13 +13213,12 @@ define void @release_i16_local_gpu(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot779;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13394,13 +13238,12 @@ define void @release_i16_local_sys_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot780;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13420,13 +13263,12 @@ define void @release_i16_local_cta_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot781;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13446,13 +13288,12 @@ define void @release_i16_local_cluster_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot782;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13472,13 +13313,12 @@ define void @release_i16_local_gpu_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot783;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [release_i16_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13497,13 +13337,12 @@ define void @release_i32_local_sys(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot784;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [release_i32_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13522,13 +13361,12 @@ define void @release_i32_local_cta(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot785;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [release_i32_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13547,13 +13385,12 @@ define void @release_i32_local_cluster(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot786;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [release_i32_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13572,13 +13409,12 @@ define void @release_i32_local_gpu(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot787;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [release_i32_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13597,13 +13433,12 @@ define void @release_i32_local_sys_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot788;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [release_i32_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13622,13 +13457,12 @@ define void @release_i32_local_cta_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot789;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [release_i32_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13647,13 +13481,12 @@ define void @release_i32_local_cluster_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot790;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [release_i32_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13672,13 +13505,12 @@ define void @release_i32_local_gpu_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot791;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [release_i32_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13697,13 +13529,12 @@ define void @release_i64_local_sys(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot792;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13722,13 +13553,12 @@ define void @release_i64_local_cta(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot793;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13747,13 +13577,12 @@ define void @release_i64_local_cluster(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot794;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13772,13 +13601,12 @@ define void @release_i64_local_gpu(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot795;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13797,13 +13625,12 @@ define void @release_i64_local_sys_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot796;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13822,13 +13649,12 @@ define void @release_i64_local_cta_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot797;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13847,13 +13673,12 @@ define void @release_i64_local_cluster_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot798;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13872,13 +13697,12 @@ define void @release_i64_local_gpu_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot799;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [release_i64_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13898,13 +13722,12 @@ define void @release_half_local_sys(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot800;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13924,13 +13747,12 @@ define void @release_half_local_cta(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot801;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13950,13 +13772,12 @@ define void @release_half_local_cluster(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot802;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -13976,13 +13797,12 @@ define void @release_half_local_gpu(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot803;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14002,13 +13822,12 @@ define void @release_half_local_sys_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot804;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14028,13 +13847,12 @@ define void @release_half_local_cta_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot805;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14054,13 +13872,12 @@ define void @release_half_local_cluster_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot806;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14080,13 +13897,12 @@ define void @release_half_local_gpu_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot807;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [release_half_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14106,13 +13922,12 @@ define void @release_bfloat_local_sys(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot808;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14132,13 +13947,12 @@ define void @release_bfloat_local_cta(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot809;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14158,13 +13972,12 @@ define void @release_bfloat_local_cluster(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot810;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14184,13 +13997,12 @@ define void @release_bfloat_local_gpu(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot811;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14210,13 +14022,12 @@ define void @release_bfloat_local_sys_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot812;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14236,13 +14047,12 @@ define void @release_bfloat_local_cta_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot813;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14262,13 +14072,12 @@ define void @release_bfloat_local_cluster_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot814;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14288,13 +14097,12 @@ define void @release_bfloat_local_gpu_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot815;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [release_bfloat_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14313,13 +14121,12 @@ define void @release_float_local_sys(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot816;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [release_float_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14338,13 +14145,12 @@ define void @release_float_local_cta(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot817;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [release_float_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14363,13 +14169,12 @@ define void @release_float_local_cluster(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot818;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [release_float_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14388,13 +14193,12 @@ define void @release_float_local_gpu(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot819;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [release_float_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14413,13 +14217,12 @@ define void @release_float_local_sys_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot820;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [release_float_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14438,13 +14241,12 @@ define void @release_float_local_cta_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot821;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [release_float_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14463,13 +14265,12 @@ define void @release_float_local_cluster_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot822;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [release_float_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14488,13 +14289,12 @@ define void @release_float_local_gpu_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot823;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [release_float_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14513,13 +14313,12 @@ define void @release_double_local_sys(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot824;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14538,13 +14337,12 @@ define void @release_double_local_cta(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot825;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14563,13 +14361,12 @@ define void @release_double_local_cluster(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot826;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14588,13 +14385,12 @@ define void @release_double_local_gpu(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot827;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14613,13 +14409,12 @@ define void @release_double_local_sys_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot828;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14638,13 +14433,12 @@ define void @release_double_local_cta_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot829;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14663,13 +14457,12 @@ define void @release_double_local_cluster_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot830;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -14688,13 +14481,12 @@ define void @release_double_local_gpu_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot831;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [release_double_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17738,13 +17530,12 @@ define void @seq_cst_i8_local_sys(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1024;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17764,13 +17555,12 @@ define void @seq_cst_i8_local_cta(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1025;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17790,13 +17580,12 @@ define void @seq_cst_i8_local_cluster(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1026;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17816,13 +17605,12 @@ define void @seq_cst_i8_local_gpu(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1027;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17842,13 +17630,12 @@ define void @seq_cst_i8_local_sys_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1028;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17868,13 +17655,12 @@ define void @seq_cst_i8_local_cta_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1029;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17894,13 +17680,12 @@ define void @seq_cst_i8_local_cluster_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1030;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17920,13 +17705,12 @@ define void @seq_cst_i8_local_gpu_volatile(i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1031;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b8 %rs1, [seq_cst_i8_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b8 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b8 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i8, align 1, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17946,13 +17730,12 @@ define void @seq_cst_i16_local_sys(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1032;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17972,13 +17755,12 @@ define void @seq_cst_i16_local_cta(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1033;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -17998,13 +17780,12 @@ define void @seq_cst_i16_local_cluster(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1034;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18024,13 +17805,12 @@ define void @seq_cst_i16_local_gpu(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1035;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18050,13 +17830,12 @@ define void @seq_cst_i16_local_sys_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1036;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18076,13 +17855,12 @@ define void @seq_cst_i16_local_cta_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1037;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18102,13 +17880,12 @@ define void @seq_cst_i16_local_cluster_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1038;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18128,13 +17905,12 @@ define void @seq_cst_i16_local_gpu_volatile(i16 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1039;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_i16_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i16, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18153,13 +17929,12 @@ define void @seq_cst_i32_local_sys(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1040;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_i32_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18178,13 +17953,12 @@ define void @seq_cst_i32_local_cta(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1041;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_i32_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18203,13 +17977,12 @@ define void @seq_cst_i32_local_cluster(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1042;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_i32_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18228,13 +18001,12 @@ define void @seq_cst_i32_local_gpu(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1043;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_i32_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18253,13 +18025,12 @@ define void @seq_cst_i32_local_sys_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1044;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_i32_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18278,13 +18049,12 @@ define void @seq_cst_i32_local_cta_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1045;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_i32_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18303,13 +18073,12 @@ define void @seq_cst_i32_local_cluster_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1046;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_i32_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18328,13 +18097,12 @@ define void @seq_cst_i32_local_gpu_volatile(i32 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1047;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_i32_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca i32, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18353,13 +18121,12 @@ define void @seq_cst_i64_local_sys(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1048;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18378,13 +18145,12 @@ define void @seq_cst_i64_local_cta(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1049;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18403,13 +18169,12 @@ define void @seq_cst_i64_local_cluster(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1050;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18428,13 +18193,12 @@ define void @seq_cst_i64_local_gpu(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1051;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18453,13 +18217,12 @@ define void @seq_cst_i64_local_sys_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1052;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18478,13 +18241,12 @@ define void @seq_cst_i64_local_cta_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1053;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18503,13 +18265,12 @@ define void @seq_cst_i64_local_cluster_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1054;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18528,13 +18289,12 @@ define void @seq_cst_i64_local_gpu_volatile(i64 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1055;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_i64_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca i64, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18554,13 +18314,12 @@ define void @seq_cst_half_local_sys(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1056;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18580,13 +18339,12 @@ define void @seq_cst_half_local_cta(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1057;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18606,13 +18364,12 @@ define void @seq_cst_half_local_cluster(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1058;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18632,13 +18389,12 @@ define void @seq_cst_half_local_gpu(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1059;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18658,13 +18414,12 @@ define void @seq_cst_half_local_sys_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1060;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18684,13 +18439,12 @@ define void @seq_cst_half_local_cta_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1061;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18710,13 +18464,12 @@ define void @seq_cst_half_local_cluster_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1062;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18736,13 +18489,12 @@ define void @seq_cst_half_local_gpu_volatile(half %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1063;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_half_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca half, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18762,13 +18514,12 @@ define void @seq_cst_bfloat_local_sys(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1064;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18788,13 +18539,12 @@ define void @seq_cst_bfloat_local_cta(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1065;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18814,13 +18564,12 @@ define void @seq_cst_bfloat_local_cluster(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1066;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18840,13 +18589,12 @@ define void @seq_cst_bfloat_local_gpu(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1067;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18866,13 +18614,12 @@ define void @seq_cst_bfloat_local_sys_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1068;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18892,13 +18639,12 @@ define void @seq_cst_bfloat_local_cta_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1069;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18918,13 +18664,12 @@ define void @seq_cst_bfloat_local_cluster_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1070;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18944,13 +18689,12 @@ define void @seq_cst_bfloat_local_gpu_volatile(bfloat %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1071;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b16 %rs1, [seq_cst_bfloat_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b16 [%SP], %rs1;
+; CHECK-NEXT:    st.local.b16 [%SPL], %rs1;
 ; CHECK-NEXT:    ret;
     %slot = alloca bfloat, align 2, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18969,13 +18713,12 @@ define void @seq_cst_float_local_sys(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1072;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_float_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -18994,13 +18737,12 @@ define void @seq_cst_float_local_cta(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1073;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_float_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -19019,13 +18761,12 @@ define void @seq_cst_float_local_cluster(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1074;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_float_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -19044,13 +18785,12 @@ define void @seq_cst_float_local_gpu(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1075;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_float_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -19069,13 +18809,12 @@ define void @seq_cst_float_local_sys_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1076;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_float_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -19094,13 +18833,12 @@ define void @seq_cst_float_local_cta_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1077;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_float_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -19119,13 +18857,12 @@ define void @seq_cst_float_local_cluster_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1078;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_float_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -19144,13 +18881,12 @@ define void @seq_cst_float_local_gpu_volatile(float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1079;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %r2, [seq_cst_float_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd1, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd1, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b32 [%SP], %r2;
+; CHECK-NEXT:    st.local.b32 [%SPL], %r2;
 ; CHECK-NEXT:    ret;
     %slot = alloca float, align 4, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -19169,13 +18905,12 @@ define void @seq_cst_double_local_sys(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1080;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_local_sys_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -19194,13 +18929,12 @@ define void @seq_cst_double_local_cta(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1081;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_local_cta_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -19219,13 +18953,12 @@ define void @seq_cst_double_local_cluster(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1082;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_local_cluster_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -19244,13 +18977,12 @@ define void @seq_cst_double_local_gpu(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1083;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_local_gpu_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -19269,13 +19001,12 @@ define void @seq_cst_double_local_sys_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1084;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_local_sys_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -19294,13 +19025,12 @@ define void @seq_cst_double_local_cta_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1085;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_local_cta_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -19319,13 +19049,12 @@ define void @seq_cst_double_local_cluster_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1086;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_local_cluster_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
@@ -19344,13 +19073,12 @@ define void @seq_cst_double_local_gpu_volatile(double %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1087;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [seq_cst_double_local_gpu_volatile_param_0];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    // end inline asm
-; CHECK-NEXT:    st.local.b64 [%SP], %rd1;
+; CHECK-NEXT:    st.local.b64 [%SPL], %rd1;
 ; CHECK-NEXT:    ret;
     %slot = alloca double, align 8, addrspace(5)
     call void asm sideeffect "", "r"(ptr addrspace(5) %slot)
