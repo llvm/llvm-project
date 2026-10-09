@@ -795,7 +795,7 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
     MCRegister PhysReg = *I;
     assert(!Regs[Pos].second);
     assert(PhysReg);
-    if (!canAllocatePhysReg(CostPerUseLimit, PhysReg)) {
+    if (!canAllocatePhysReg(VirtReg, CostPerUseLimit, PhysReg)) {
       continue;
     }
     if (loadInterferenceFeatures(VirtReg, PhysReg, I.isHint(), FixedRegisters,
