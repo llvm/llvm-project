@@ -3109,9 +3109,8 @@ public:
   void setLabelDecl(LabelDecl *S) { TargetLabel = S; }
 
   /// If this is a named break/continue, get the loop or switch statement
-  /// that this targets. May return std::nullopt if the loop has a label
-  /// but its LabelStmt has not yet been created. Otherwise, Stmt * will
-  /// be a non-null pointer to the loop or switch statement under the label.
+  /// that this targets. May return null if the target LabelStmt has not
+  /// yet been created.
   /// \pre `isNamed()`
   const Stmt *getNamedLoopOrSwitch() const;
 
