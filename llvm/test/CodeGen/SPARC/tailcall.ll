@@ -289,6 +289,50 @@ entry:
   ret void
 }
 
+; Test register + register pattern.
+
+define void @addrr_test(ptr %base, i32 %off) #1 {
+; V8-LABEL: addrr_test:
+; V8:       ! %bb.0: ! %entry
+; V8-NEXT:    save %sp, -96, %sp
+; V8-NEXT:    add %i0, %i1, %i0
+; V8-NEXT:    jmp %i0
+; V8-NEXT:    restore
+;
+; V9-LABEL: addrr_test:
+; V9:       ! %bb.0: ! %entry
+; V9-NEXT:    save %sp, -128, %sp
+; V9-NEXT:    sra %i1, 0, %i1
+; V9-NEXT:    add %i0, %i1, %i0
+; V9-NEXT:    jmp %i0
+; V9-NEXT:    restore
+entry:
+  %tp = getelementptr i8, ptr %base, i32 %off
+  tail call void %tp() #1
+  ret void
+}
+
+; Test immediate target pattern.
+
+define void @imm_target_test() #1 {
+; V8-LABEL: imm_target_test:
+; V8:       ! %bb.0: ! %entry
+; V8-NEXT:    save %sp, -96, %sp
+; V8-NEXT:    sethi 1, %i0
+; V8-NEXT:    jmp %i0
+; V8-NEXT:    restore
+;
+; V9-LABEL: imm_target_test:
+; V9:       ! %bb.0: ! %entry
+; V9-NEXT:    save %sp, -128, %sp
+; V9-NEXT:    mov 1024, %i0
+; V9-NEXT:    jmp %i0
+; V9-NEXT:    restore
+entry:
+  tail call void inttoptr (i32 1024 to ptr)() #1
+  ret void
+}
+
 %struct.a = type { i32, i32 }
 @dest = global [2 x i8] zeroinitializer
 
