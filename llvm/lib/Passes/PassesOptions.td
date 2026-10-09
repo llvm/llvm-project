@@ -10,6 +10,13 @@ include "llvm/Option/LibraryOptions.td"
 
 def PassesOptions : OptionsStruct;
 
+// PassBuilder.cpp
+defm : FlagOrEnumField<"print-pipeline-passes",
+  "std::optional<PrintPipelinePassesFormat>", "std::nullopt", "text,tree",
+  ["PrintPipelinePassesFormat::Text", "PrintPipelinePassesFormat::Tree"],
+  "PrintPipelinePassesFormat::Text",
+  "Print string describing the pipeline (best-effort only): =text for a '-passes' compatible string, =tree for a tree-like structure">;
+
 // PassBuilderPipelines.cpp
 defm : EnumField<"attributor-enable", "AttributorRunOption", "AttributorRunOption::NONE",
   "full,light,module,module-light,cgscc,cgscc-light,none",
