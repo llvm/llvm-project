@@ -1756,10 +1756,20 @@ public:
   /// dependency checking (i.e. ShouldRetryWithRuntimeChecks).
   bool isDependencyCheckNeeded() const { return !CheckDeps.empty(); }
 
-  /// We decided that no dependence analysis would be used.  Reset the state.
+  /// We decided to check the dependences at runtime instead. Reset the state,
+  /// keeping only the dependences that the runtime checks do not cover.
   void resetDepChecks(MemoryDepChecker &DepChecker) {
     CheckDeps.clear();
-    DepChecker.clearDependences();
+    // Accesses through the same pointer or in a common dependence class are
+    // not checked against each other, so their dependences remain relevant:
+    // the interleaved access analysis, for example, must not reorder them.
+    DepChecker.removeDependencesIf(
+        [&](const MemoryDepChecker::Dependence &Dep) {
+          MemAccessInfo Src = DepChecker.getAccess(Dep.Source);
+          MemAccessInfo Dst = DepChecker.getAccess(Dep.Destination);
+          return Src.getPointer() != Dst.getPointer() &&
+                 !DepCands.isEquivalent(Src, Dst);
+        });
   }
 
   ArrayRef<MemAccessInfo> getDependenciesToCheck() const { return CheckDeps; }
@@ -3797,7 +3807,6 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
         return false;
       }
 
-      // Clear the dependency checks. They are no longer needed.
       Accesses.resetDepChecks(*DepChecker);
 
       DepsAreSafe = true;
