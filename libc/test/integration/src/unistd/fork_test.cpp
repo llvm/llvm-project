@@ -32,7 +32,7 @@
 void fork_and_wait_normal_exit() {
   pid_t pid = LIBC_NAMESPACE::fork();
   if (pid == 0)
-    return; // Just end without any thing special.
+    LIBC_NAMESPACE::internal::exit(0);
   ASSERT_TRUE(pid > 0);
   int status;
   pid_t cpid = LIBC_NAMESPACE::wait(&status);
@@ -44,7 +44,7 @@ void fork_and_wait_normal_exit() {
 void fork_and_wait4_normal_exit() {
   pid_t pid = LIBC_NAMESPACE::fork();
   if (pid == 0)
-    return; // Just end without any thing special.
+    LIBC_NAMESPACE::internal::exit(0);
   ASSERT_TRUE(pid > 0);
   int status;
   struct rusage usage;
@@ -59,7 +59,7 @@ void fork_and_wait4_normal_exit() {
 void fork_and_waitid_normal_exit() {
   pid_t pid = LIBC_NAMESPACE::fork();
   if (pid == 0)
-    return; // Just end without any thing special.
+    LIBC_NAMESPACE::internal::exit(0);
   ASSERT_TRUE(pid > 0);
   siginfo_t info;
   info.si_pid = 0;
@@ -75,7 +75,7 @@ void fork_and_waitid_normal_exit() {
 void fork_and_waitpid_normal_exit() {
   pid_t pid = LIBC_NAMESPACE::fork();
   if (pid == 0)
-    return; // Just end without any thing special.
+    LIBC_NAMESPACE::internal::exit(0);
   ASSERT_TRUE(pid > 0);
   int status;
   pid_t cpid = LIBC_NAMESPACE::waitpid(pid, &status, 0);
@@ -162,7 +162,7 @@ void fork_with_atfork_callbacks() {
     // behavior is observed.
     if (child != DONE || prepare != DONE || parent == DONE)
       LIBC_NAMESPACE::raise(SIGUSR1);
-    return;
+    LIBC_NAMESPACE::internal::exit(0);
   }
 
   ASSERT_TRUE(pid > 0);

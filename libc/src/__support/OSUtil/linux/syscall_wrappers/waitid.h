@@ -29,11 +29,7 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> waitid(idtype_t idtype, id_t id, siginfo_t *infop,
                                 int options, struct rusage *rusage = nullptr) {
-#ifdef SYS_waitid
   return syscall_checked<int>(SYS_waitid, idtype, id, infop, options, rusage);
-#else
-#error "waitid syscall not available."
-#endif
 }
 
 } // namespace linux_syscalls
