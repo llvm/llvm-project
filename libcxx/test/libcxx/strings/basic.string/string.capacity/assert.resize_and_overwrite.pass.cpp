@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++23
+// REQUIRES: can-test-hardening-assertions-fast
+// Execution would continue into an out-of-bounds write.
+// UNSUPPORTED: libcpp-assertion-semantic={{ignore|observe}}
+
 // <string>
 
 // template<class Operation>
 // constexpr void resize_and_overwrite(size_type n, Operation op); // since C++23
 
 // The result r of the operation must satisfy 0 <= r <= n.
-
-// REQUIRES: std-at-least-c++23
-// REQUIRES: can-test-hardening-assertions-fast
-// Execution would continue into an out-of-bounds write.
-// UNSUPPORTED: libcpp-assertion-semantic={{ignore|observe}}
 
 #include <cstddef>
 #include <string>
