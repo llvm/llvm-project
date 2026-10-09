@@ -1047,6 +1047,34 @@ struct _BinaryOp<_Op, valarray<_Tp>, valarray<_Tp> > {
   _LIBCPP_HIDE_FROM_ABI size_t size() const { return __a0_.size(); }
 };
 
+// Bounds checks for the subscripts that return a slice_array, gslice_array, mask_array or indirect_array.
+
+// Whether start() + i * stride() is below __n for every i < size(), computed without overflow.
+inline _LIBCPP_HIDE_FROM_ABI bool __slice_in_bounds(const slice& __sl, size_t __n) {
+  if (__sl.size() == 0)
+    return true;
+  if (__sl.start() >= __n)
+    return false;
+  return __sl.stride() == 0 || __sl.size() - 1 <= (__n - 1 - __sl.start()) / __sl.stride();
+}
+
+inline _LIBCPP_HIDE_FROM_ABI bool __indices_in_bounds(const size_t* __first, const size_t* __last, size_t __n) {
+  for (; __first != __last; ++__first)
+    if (*__first >= __n)
+      return false;
+  return true;
+}
+
+// Whether the mask [__first, __last) selects no position at or past __n.
+inline _LIBCPP_HIDE_FROM_ABI bool __mask_in_bounds(const bool* __first, const bool* __last, size_t __n) {
+  if (static_cast<size_t>(__last - __first) <= __n)
+    return true;
+  for (__first += __n; __first != __last; ++__first)
+    if (*__first)
+      return false;
+  return true;
+}
+
 // slice_array
 
 template <class _Tp>
@@ -2224,6 +2252,8 @@ inline __val_expr<__slice_expr<const valarray<_Tp>&> > valarray<_Tp>::operator[]
 
 template <class _Tp>
 inline slice_array<_Tp> valarray<_Tp>::operator[](slice __s) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+      std::__slice_in_bounds(__s, size()), "valarray::operator[](slice) selects elements out of bounds");
   return slice_array<value_type>(__s, *this);
 }
 
@@ -2234,6 +2264,8 @@ inline __val_expr<__indirect_expr<const valarray<_Tp>&> > valarray<_Tp>::operato
 
 template <class _Tp>
 inline gslice_array<_Tp> valarray<_Tp>::operator[](const gslice& __gs) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(std::__indices_in_bounds(__gs.__1d_.__begin_, __gs.__1d_.__end_, size()),
+                                      "valarray::operator[](gslice) selects elements out of bounds");
   return gslice_array<value_type>(__gs, *this);
 }
 
@@ -2246,6 +2278,8 @@ inline __val_expr<__indirect_expr<const valarray<_Tp>&> > valarray<_Tp>::operato
 
 template <class _Tp>
 inline gslice_array<_Tp> valarray<_Tp>::operator[](gslice&& __gs) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(std::__indices_in_bounds(__gs.__1d_.__begin_, __gs.__1d_.__end_, size()),
+                                      "valarray::operator[](gslice) selects elements out of bounds");
   return gslice_array<value_type>(std::move(__gs), *this);
 }
 
@@ -2258,6 +2292,8 @@ inline __val_expr<__mask_expr<const valarray<_Tp>&> > valarray<_Tp>::operator[](
 
 template <class _Tp>
 inline mask_array<_Tp> valarray<_Tp>::operator[](const valarray<bool>& __vb) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(std::__mask_in_bounds(__vb.__begin_, __vb.__end_, size()),
+                                      "valarray::operator[](valarray<bool>) selects elements out of bounds");
   return mask_array<value_type>(__vb, *this);
 }
 
@@ -2270,6 +2306,8 @@ inline __val_expr<__mask_expr<const valarray<_Tp>&> > valarray<_Tp>::operator[](
 
 template <class _Tp>
 inline mask_array<_Tp> valarray<_Tp>::operator[](valarray<bool>&& __vb) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(std::__mask_in_bounds(__vb.__begin_, __vb.__end_, size()),
+                                      "valarray::operator[](valarray<bool>) selects elements out of bounds");
   return mask_array<value_type>(std::move(__vb), *this);
 }
 
@@ -2283,6 +2321,8 @@ valarray<_Tp>::operator[](const valarray<size_t>& __vs) const {
 
 template <class _Tp>
 inline indirect_array<_Tp> valarray<_Tp>::operator[](const valarray<size_t>& __vs) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(std::__indices_in_bounds(__vs.__begin_, __vs.__end_, size()),
+                                      "valarray::operator[](valarray<size_t>) selects elements out of bounds");
   return indirect_array<value_type>(__vs, *this);
 }
 
@@ -2295,6 +2335,8 @@ inline __val_expr<__indirect_expr<const valarray<_Tp>&> > valarray<_Tp>::operato
 
 template <class _Tp>
 inline indirect_array<_Tp> valarray<_Tp>::operator[](valarray<size_t>&& __vs) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(std::__indices_in_bounds(__vs.__begin_, __vs.__end_, size()),
+                                      "valarray::operator[](valarray<size_t>) selects elements out of bounds");
   return indirect_array<value_type>(std::move(__vs), *this);
 }
 
