@@ -61,8 +61,8 @@ multiclass EnumField<string name, string type, code default, string values,
     EnumValues<values, enumerators>, HelpText<help>;
 }
 
-// An EnumField also set to <bare> by -<name> without a value. It never consumes
-// the next argument.
+// An EnumField that -<name> alone sets to <bare>; <default> applies when the
+// option is absent. -<name> doesn't consume the next argument.
 multiclass FlagOrEnumField<string name, string type, code default,
                            string values, list<code> enumerators, code bare,
                            string help> {
