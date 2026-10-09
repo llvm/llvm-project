@@ -52808,11 +52808,10 @@ static MVT getFPLogicBoolVecVT(SDValue Op, const X86Subtarget &Subtarget) {
   if (!sd_match(Op, m_SetCC(CC, m_Value(LHS), m_Value())))
     return MVT();
 
-  // v8f16 compares are only legal with AVX512VL.
   EVT FPVT = LHS.getValueType();
   if (!((Subtarget.hasSSE1() && FPVT == MVT::f32) ||
         (Subtarget.hasSSE2() && FPVT == MVT::f64) ||
-        (Subtarget.hasFP16() && Subtarget.hasVLX() && FPVT == MVT::f16)))
+        (Subtarget.hasFP16() && FPVT == MVT::f16)))
     return MVT();
 
   // The vector ISA for FP predicates is incomplete before AVX, so converting
