@@ -119,6 +119,8 @@ static tysan_type_descriptor *getRootTD(tysan_type_descriptor *TD) {
         TD = nullptr;
     } else if (TD->Tag == TYSAN_MEMBER_TD) {
       TD = TD->Member.Access;
+    } else if (TD->Tag == TYSAN_CONSERVATIVE_ALIAS_TD) {
+      return RootTD;
     } else {
       CHECK(false && "invalid enum value");
       break;
@@ -133,7 +135,7 @@ static bool walkAliasTree(tysan_type_descriptor *TDA,
                           tysan_type_descriptor *TDB, uptr OffsetA,
                           uptr OffsetB) {
   do {
-    if (TDA == TDB)
+    if (TDA == TDB || TDA->Tag == TYSAN_CONSERVATIVE_ALIAS_TD)
       return OffsetA == OffsetB;
 
     if (TDA->Tag == TYSAN_STRUCT_TD) {
@@ -213,7 +215,8 @@ static bool isAliasingLegalWithOffset(tysan_type_descriptor *TDA,
 
 static bool isAliasingLegal(tysan_type_descriptor *TDA,
                             tysan_type_descriptor *TDB, uptr OffsetB = 0) {
-  if (TDA == TDB || !TDB || !TDA)
+  if (TDA == TDB || !TDB || !TDA || TDA->Tag == TYSAN_CONSERVATIVE_ALIAS_TD ||
+      TDB->Tag == TYSAN_CONSERVATIVE_ALIAS_TD)
     return true;
 
   // Aliasing is legal is the two types have different root nodes.
