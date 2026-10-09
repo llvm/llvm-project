@@ -1394,7 +1394,10 @@ static Instruction *foldClampRangeOfTwo(IntrinsicInst *II,
   // max (min X, 42), 41 --> X > 41 ? 42 : 41
   // min (max X, 42), 43 --> X < 43 ? 42 : 43
   Value *Cmp = Builder.CreateICmp(Pred, X, I1);
-  return SelectInst::Create(Cmp, ConstantInt::get(II->getType(), *C0), I1);
+  auto *SI = SelectInst::Create(Cmp, ConstantInt::get(II->getType(), *C0), I1);
+  setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE,
+                                              II->getFunction());
+  return SI;
 }
 
 /// If this min/max has a constant operand and an operand that is a matching
