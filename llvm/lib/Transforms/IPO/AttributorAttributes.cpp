@@ -11868,6 +11868,11 @@ struct AAPotentialValuesCallSiteReturned : AAPotentialValuesImpl {
           // Nothing to do as long as no value was determined.
           continue;
         }
+        // A caller value that reaches the call through the callee's returned
+        // values may be the instance of a deeper, recursive frame.
+        if (!*CallerV && AA::isValidInScope(*V, Caller) &&
+            !AA::isDynamicallyUnique(A, *this, *V))
+          return false;
         V = *CallerV ? *CallerV : V;
         if (*CallerV && AA::isDynamicallyUnique(A, *this, *V)) {
           if (recurseForValue(A, IRPosition::value(*V), S))
