@@ -914,6 +914,10 @@ features cannot lower the translation-unit ABI level;
   the initializer of another specialization of the same variable template.
   (#GH134148)
 
+- Fixed an assertion failure in partial ordering of function templates whose
+  parameters use pack-indexed template template parameters (`TT...[N]<int>`)
+  with different template parameter lists. (#GH228870)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
