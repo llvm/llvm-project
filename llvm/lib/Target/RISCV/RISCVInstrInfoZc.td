@@ -89,13 +89,8 @@ def negstackadj : RISCVOp<OtherVT> {
   }];
 }
 
-def zcmp_mv_sreg : RegisterOperand<GPRS07> {
-  let DecoderMethod = "decodeZcmpMvSRegOperand";
-  let hasCompleteDecoder = false;
-}
-
-def zcmp_mvsa01_rs2 : RegisterOperand<GPRS07> {
-  let DecoderMethod = "decodeZcmpMvsa01Rs2Operand";
+def mvsa01_rs2 : RegisterOperand<GPRS07> {
+  let DecoderMethod = "decodeMvsa01Rs2Operand";
   let hasCompleteDecoder = false;
 }
 
@@ -221,13 +216,12 @@ let DecoderNamespace = "ZcOverlap", Predicates = [HasStdExtZcmp],
     hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 let Defs = [X10, X11] in
 def CM_MVA01S : RVInst16CA<0b101011, 0b11, OPC_C2, (outs),
-                            (ins zcmp_mv_sreg:$rs1, zcmp_mv_sreg:$rs2),
-                            "cm.mva01s", "$rs1, $rs2">,
+                            (ins GPRS07:$rs1, GPRS07:$rs2), "cm.mva01s", "$rs1, $rs2">,
                 Sched<[WriteIALU, WriteIALU, ReadIALU, ReadIALU]>;
 
 let Uses = [X10, X11] in
 def CM_MVSA01 : RVInst16CA<0b101011, 0b01, OPC_C2,
-                            (outs zcmp_mv_sreg:$rs1, zcmp_mvsa01_rs2:$rs2),
+                            (outs GPRS07:$rs1, mvsa01_rs2:$rs2),
                             (ins), "cm.mvsa01", "$rs1, $rs2">,
                 Sched<[WriteIALU, WriteIALU, ReadIALU, ReadIALU]>;
 } // DecoderNamespace = "ZcOverlap", Predicates = [HasStdExtZcmp]...
