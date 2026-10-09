@@ -325,6 +325,13 @@ bool CompilerType::HasPointerAuthQualifier() const {
   return false;
 }
 
+std::optional<uint32_t> CompilerType::GetTargetAddressSpace() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetTargetAddressSpace(m_type);
+  return std::nullopt;
+}
+
 bool CompilerType::IsPointerToScalarType() const {
   if (!IsValid())
     return false;
