@@ -15,7 +15,6 @@
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 
 #include <optional>
