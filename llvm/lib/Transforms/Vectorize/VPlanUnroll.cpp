@@ -124,6 +124,11 @@ public:
 };
 } // namespace
 
+bool VPUser::usesScalars(const VPValue *Op) const {
+  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  return vputils::usesFirstLaneOnly(this, Op);
+}
+
 static void addStartIndexForScalarSteps(VPScalarIVStepsRecipe *Steps,
                                         unsigned Part, VPlan &Plan) {
   if (Part == 0)
@@ -1001,7 +1006,7 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
       /// Users that only demand the first lane can use the definition for lane
       /// 0.
       DefR->replaceUsesWithIf(LaneDefs[0], [DefR](VPUser &U) {
-        if (U.usesFirstLaneOnly(DefR))
+        if (vputils::usesFirstLaneOnly(&U, DefR))
           return true;
         auto *VPI = dyn_cast<VPInstruction>(&U);
         return VPI && Instruction::isCast(VPI->getOpcode());

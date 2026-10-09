@@ -44,6 +44,14 @@ class VPRegionValue;
 class VPRegionBlock;
 class VPSingleDefRecipe;
 
+/// An enumeration capturing a boolean non-recursive result, along with a state
+/// to recurse.
+enum class VPRecurseResult {
+  True = (1 << 0),
+  False = (1 << 1),
+  Recurse = (1 << 2),
+};
+
 /// This is the base class of the VPlan Def/Use graph, used for modeling the
 /// data flow into, within and out of the VPlan. VPValues can stand for live-ins
 /// coming from the input IR, symbolic values and values defined by recipes.
@@ -478,18 +486,14 @@ public:
 
   /// Returns true if the VPUser uses scalars of operand \p Op. Conservatively
   /// returns if only first (scalar) lane is used, as default.
-  virtual bool usesScalars(const VPValue *Op) const {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return usesFirstLaneOnly(Op);
-  }
+  virtual bool usesScalars(const VPValue *Op) const;
 
-  /// Returns true if the VPUser only uses the first lane of operand \p Op.
-  /// Conservatively returns false.
-  virtual bool usesFirstLaneOnly(const VPValue *Op) const {
+  /// Returns a VPRecurseResult indicating whether the VPUser only uses the
+  /// first lane of operand \p Op. Conservatively returns False.
+  virtual VPRecurseResult usesFirstLaneOnly(const VPValue *Op) const {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
-    return false;
+    return VPRecurseResult::False;
   }
 
   /// Returns true if the VPUser only uses the first part of operand \p Op.
