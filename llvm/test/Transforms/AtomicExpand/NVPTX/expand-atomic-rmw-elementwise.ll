@@ -22,13 +22,16 @@ entry:
 define <2 x float> @fadd_v2f32_elementwise(ptr addrspace(3) %addr, <2 x float> %val) {
 ; CHECK-LABEL: @fadd_v2f32_elementwise(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LO_VAL:%.*]] = extractelement <2 x float> [[VAL:%.*]], i64 0
-; CHECK-NEXT:    [[HI_VAL:%.*]] = extractelement <2 x float> [[VAL]], i64 1
-; CHECK-NEXT:    [[HI_PTR:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[ADDR:%.*]], i64 1
+; CHECK-NEXT:    [[LO_VAL1:%.*]] = shufflevector <2 x float> [[VAL:%.*]], <2 x float> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[HI_VAL1:%.*]] = shufflevector <2 x float> [[VAL]], <2 x float> poison, <1 x i32> <i32 1>
+; CHECK-NEXT:    [[HI_PTR:%.*]] = getelementptr inbounds <1 x float>, ptr addrspace(3) [[ADDR:%.*]], i64 1
+; CHECK-NEXT:    [[LO_VAL:%.*]] = extractelement <1 x float> [[LO_VAL1]], i64 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr addrspace(3) [[ADDR]], float [[LO_VAL]] monotonic, align 8
+; CHECK-NEXT:    [[LANE_OLD:%.*]] = insertelement <1 x float> poison, float [[TMP0]], i64 0
+; CHECK-NEXT:    [[HI_VAL:%.*]] = extractelement <1 x float> [[HI_VAL1]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr addrspace(3) [[HI_PTR]], float [[HI_VAL]] monotonic, align 4
-; CHECK-NEXT:    [[LO_OLD:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i64 0
-; CHECK-NEXT:    [[HI_OLD:%.*]] = insertelement <2 x float> [[LO_OLD]], float [[TMP1]], i64 1
+; CHECK-NEXT:    [[LANE_OLD3:%.*]] = insertelement <1 x float> poison, float [[TMP1]], i64 0
+; CHECK-NEXT:    [[HI_OLD:%.*]] = shufflevector <1 x float> [[LANE_OLD]], <1 x float> [[LANE_OLD3]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    ret <2 x float> [[HI_OLD]]
 ;
 entry:
@@ -40,13 +43,16 @@ entry:
 define <2 x i32> @add_metadata_v2i32_elementwise(ptr %addr, <2 x i32> %val) {
 ; CHECK-LABEL: @add_metadata_v2i32_elementwise(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LO_VAL:%.*]] = extractelement <2 x i32> [[VAL:%.*]], i64 0
-; CHECK-NEXT:    [[HI_VAL:%.*]] = extractelement <2 x i32> [[VAL]], i64 1
-; CHECK-NEXT:    [[HI_PTR:%.*]] = getelementptr inbounds i32, ptr [[ADDR:%.*]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw add ptr [[ADDR]], i32 [[LO_VAL]] monotonic, align 8, !mmra [[META0:![0-9]+]]
-; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[HI_PTR]], i32 [[HI_VAL]] monotonic, align 4, !mmra [[META0]]
-; CHECK-NEXT:    [[LO_OLD:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i64 0
-; CHECK-NEXT:    [[HI_OLD:%.*]] = insertelement <2 x i32> [[LO_OLD]], i32 [[TMP1]], i64 1
+; CHECK-NEXT:    [[LO_VAL:%.*]] = shufflevector <2 x i32> [[VAL:%.*]], <2 x i32> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[HI_VAL:%.*]] = shufflevector <2 x i32> [[VAL]], <2 x i32> poison, <1 x i32> <i32 1>
+; CHECK-NEXT:    [[HI_PTR:%.*]] = getelementptr inbounds <1 x i32>, ptr [[ADDR:%.*]], i64 1
+; CHECK-NEXT:    [[LANE_VAL:%.*]] = extractelement <1 x i32> [[LO_VAL]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw add ptr [[ADDR]], i32 [[LANE_VAL]] monotonic, align 8, !mmra [[META0:![0-9]+]]
+; CHECK-NEXT:    [[LANE_OLD:%.*]] = insertelement <1 x i32> poison, i32 [[TMP0]], i64 0
+; CHECK-NEXT:    [[LANE_VAL2:%.*]] = extractelement <1 x i32> [[HI_VAL]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[HI_PTR]], i32 [[LANE_VAL2]] monotonic, align 4, !mmra [[META0]]
+; CHECK-NEXT:    [[LANE_OLD3:%.*]] = insertelement <1 x i32> poison, i32 [[TMP1]], i64 0
+; CHECK-NEXT:    [[HI_OLD:%.*]] = shufflevector <1 x i32> [[LANE_OLD]], <1 x i32> [[LANE_OLD3]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    ret <2 x i32> [[HI_OLD]]
 ;
 entry:
@@ -58,13 +64,16 @@ entry:
 define <2 x float> @fadd_volatile_v2f32_elementwise(ptr addrspace(3) %addr, <2 x float> %val) {
 ; CHECK-LABEL: @fadd_volatile_v2f32_elementwise(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LO_VAL:%.*]] = extractelement <2 x float> [[VAL:%.*]], i64 0
-; CHECK-NEXT:    [[HI_VAL:%.*]] = extractelement <2 x float> [[VAL]], i64 1
-; CHECK-NEXT:    [[HI_PTR:%.*]] = getelementptr inbounds float, ptr addrspace(3) [[ADDR:%.*]], i64 1
+; CHECK-NEXT:    [[LO_VAL1:%.*]] = shufflevector <2 x float> [[VAL:%.*]], <2 x float> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[HI_VAL1:%.*]] = shufflevector <2 x float> [[VAL]], <2 x float> poison, <1 x i32> <i32 1>
+; CHECK-NEXT:    [[HI_PTR:%.*]] = getelementptr inbounds <1 x float>, ptr addrspace(3) [[ADDR:%.*]], i64 1
+; CHECK-NEXT:    [[LO_VAL:%.*]] = extractelement <1 x float> [[LO_VAL1]], i64 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw volatile fadd ptr addrspace(3) [[ADDR]], float [[LO_VAL]] monotonic, align 8
+; CHECK-NEXT:    [[LANE_OLD:%.*]] = insertelement <1 x float> poison, float [[TMP0]], i64 0
+; CHECK-NEXT:    [[HI_VAL:%.*]] = extractelement <1 x float> [[HI_VAL1]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw volatile fadd ptr addrspace(3) [[HI_PTR]], float [[HI_VAL]] monotonic, align 4
-; CHECK-NEXT:    [[LO_OLD:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i64 0
-; CHECK-NEXT:    [[HI_OLD:%.*]] = insertelement <2 x float> [[LO_OLD]], float [[TMP1]], i64 1
+; CHECK-NEXT:    [[LANE_OLD3:%.*]] = insertelement <1 x float> poison, float [[TMP1]], i64 0
+; CHECK-NEXT:    [[HI_OLD:%.*]] = shufflevector <1 x float> [[LANE_OLD]], <1 x float> [[LANE_OLD3]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    ret <2 x float> [[HI_OLD]]
 ;
 entry:
@@ -81,20 +90,26 @@ define <4 x i32> @add_acq_rel_v4i32_elementwise(ptr %addr, <4 x i32> %val) {
 ; CHECK-NEXT:    [[LO_VAL:%.*]] = shufflevector <4 x i32> [[VAL:%.*]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[HI_VAL:%.*]] = shufflevector <4 x i32> [[VAL]], <4 x i32> poison, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[HI_PTR:%.*]] = getelementptr inbounds <2 x i32>, ptr [[ADDR:%.*]], i64 1
-; CHECK-NEXT:    [[LO_VAL2:%.*]] = extractelement <2 x i32> [[LO_VAL]], i64 0
-; CHECK-NEXT:    [[HI_VAL3:%.*]] = extractelement <2 x i32> [[LO_VAL]], i64 1
-; CHECK-NEXT:    [[HI_PTR4:%.*]] = getelementptr inbounds i32, ptr [[ADDR]], i64 1
+; CHECK-NEXT:    [[LO_VAL3:%.*]] = shufflevector <2 x i32> [[LO_VAL]], <2 x i32> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[HI_VAL4:%.*]] = shufflevector <2 x i32> [[LO_VAL]], <2 x i32> poison, <1 x i32> <i32 1>
+; CHECK-NEXT:    [[HI_PTR4:%.*]] = getelementptr inbounds <1 x i32>, ptr [[ADDR]], i64 1
+; CHECK-NEXT:    [[LO_VAL2:%.*]] = extractelement <1 x i32> [[LO_VAL3]], i64 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw add ptr [[ADDR]], i32 [[LO_VAL2]] syncscope("block") monotonic, align 16
+; CHECK-NEXT:    [[LANE_OLD:%.*]] = insertelement <1 x i32> poison, i32 [[TMP0]], i64 0
+; CHECK-NEXT:    [[HI_VAL3:%.*]] = extractelement <1 x i32> [[HI_VAL4]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[HI_PTR4]], i32 [[HI_VAL3]] syncscope("block") monotonic, align 4
-; CHECK-NEXT:    [[LO_OLD:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i64 0
-; CHECK-NEXT:    [[HI_OLD:%.*]] = insertelement <2 x i32> [[LO_OLD]], i32 [[TMP1]], i64 1
-; CHECK-NEXT:    [[LO_VAL5:%.*]] = extractelement <2 x i32> [[HI_VAL]], i64 0
-; CHECK-NEXT:    [[HI_VAL6:%.*]] = extractelement <2 x i32> [[HI_VAL]], i64 1
-; CHECK-NEXT:    [[HI_PTR7:%.*]] = getelementptr inbounds i32, ptr [[HI_PTR]], i64 1
+; CHECK-NEXT:    [[LANE_OLD6:%.*]] = insertelement <1 x i32> poison, i32 [[TMP1]], i64 0
+; CHECK-NEXT:    [[HI_OLD:%.*]] = shufflevector <1 x i32> [[LANE_OLD]], <1 x i32> [[LANE_OLD6]], <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[LO_VAL7:%.*]] = shufflevector <2 x i32> [[HI_VAL]], <2 x i32> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[HI_VAL8:%.*]] = shufflevector <2 x i32> [[HI_VAL]], <2 x i32> poison, <1 x i32> <i32 1>
+; CHECK-NEXT:    [[HI_PTR7:%.*]] = getelementptr inbounds <1 x i32>, ptr [[HI_PTR]], i64 1
+; CHECK-NEXT:    [[LO_VAL5:%.*]] = extractelement <1 x i32> [[LO_VAL7]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw add ptr [[HI_PTR]], i32 [[LO_VAL5]] syncscope("block") monotonic, align 8
+; CHECK-NEXT:    [[LANE_OLD12:%.*]] = insertelement <1 x i32> poison, i32 [[TMP2]], i64 0
+; CHECK-NEXT:    [[HI_VAL6:%.*]] = extractelement <1 x i32> [[HI_VAL8]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = atomicrmw add ptr [[HI_PTR7]], i32 [[HI_VAL6]] syncscope("block") monotonic, align 4
-; CHECK-NEXT:    [[LO_OLD8:%.*]] = insertelement <2 x i32> poison, i32 [[TMP2]], i64 0
-; CHECK-NEXT:    [[HI_OLD9:%.*]] = insertelement <2 x i32> [[LO_OLD8]], i32 [[TMP3]], i64 1
+; CHECK-NEXT:    [[LANE_OLD14:%.*]] = insertelement <1 x i32> poison, i32 [[TMP3]], i64 0
+; CHECK-NEXT:    [[HI_OLD9:%.*]] = shufflevector <1 x i32> [[LANE_OLD12]], <1 x i32> [[LANE_OLD14]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[OLD1:%.*]] = shufflevector <2 x i32> [[HI_OLD]], <2 x i32> [[HI_OLD9]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    fence syncscope("block") acquire
 ; CHECK-NEXT:    ret <4 x i32> [[OLD1]]

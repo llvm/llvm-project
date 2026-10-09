@@ -7854,14 +7854,19 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
     uint64_t VecBytes = DL.getTypeStoreSize(VecTy).getFixedValue();
     uint64_t VecBits = DL.getTypeStoreSizeInBits(VecTy).getFixedValue();
 
-    // Prefer a single whole-value exchange whenever the vector is a legal
-    // atomic size. AtomicExpand will cast it to the corresponding integer type
-    // and re-query this hook. Otherwise, split it until each piece is legal.
-    if (Op == AtomicRMWInst::BinOp::Xchg)
-      return VecBits <= getMaxAtomicSizeInBitsSupported() &&
-                     AI->getAlign().value() >= VecBytes
-                 ? AtomicExpansionKind::CmpXChg
-                 : AtomicExpansionKind::Expand;
+    if (Op == AtomicRMWInst::BinOp::Xchg) {
+      // Split exchanges that are too wide or insufficiently aligned until
+      // each piece can be lowered atomically.
+      if (VecBits > getMaxAtomicSizeInBitsSupported() ||
+          AI->getAlign().value() < VecBytes)
+        return AtomicExpansionKind::Expand;
+
+      // Expand subword exchanges to a masked cmpxchg loop.
+      if (VecBits < getMinCmpXchgSizeInBits())
+        return AtomicExpansionKind::CmpXChg;
+
+      return AtomicExpansionKind::None;
+    }
 
     // If the scalar lane op is natively supported or expands to one, return
     // Expand so halving eventually bottoms out at the scalar base case. The
@@ -7960,6 +7965,8 @@ AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
   else if (auto *RI = dyn_cast<AtomicRMWInst>(I);
            RI && RI->getOrdering() == AtomicOrdering::SequentiallyConsistent) {
     AtomicExpansionKind ExpansionKind = shouldExpandAtomicRMWInIR(RI);
+    // A non-elementwise `Expand` means we are expanding sub(x) to add(-x).
+    // The atomic add will have acquire ordering.
     if (ExpansionKind == AtomicExpansionKind::None ||
         (ExpansionKind == AtomicExpansionKind::Expand && !RI->isElementwise()))
       return AtomicOrdering::Acquire;

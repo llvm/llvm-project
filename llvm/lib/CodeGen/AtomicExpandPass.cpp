@@ -664,11 +664,9 @@ AtomicExpandImpl::convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI) {
 /// normal atomic expansion pipeline. The target's shouldExpandAtomicRMWInIR()
 /// is re-queried at the halved width and may return any expansion kind there
 /// (e.g. None to preserve as a native vector atomic, Expand to keep halving,
-/// CmpXChg to emit one wide cmpxchg loop at the halved width). Three cases:
+/// CmpXChg to emit one wide cmpxchg loop at the halved width). Two cases:
 ///   N == 1: collapse directly to one scalar atomicrmw T
-///   N == 2: split into two scalar atomicrmw T (low at Ptr, high at
-///           gep inbounds T, Ptr, 1); reassemble via two insertelement's.
-///   N  > 2: split into two atomicrmw elementwise <N/2 x T> (low at Ptr, high
+///   N  > 1: split into two atomicrmw elementwise <N/2 x T> (low at Ptr, high
 ///           at gep inbounds <N/2 x T>, Ptr, 1); reassemble via a
 ///           shufflevector.
 /// Note that halving works because the vectors must always be a power of two.
@@ -716,33 +714,7 @@ void AtomicExpandImpl::expandElementwiseAtomicRMW(AtomicRMWInst *AI) {
     return;
   }
 
-  const uint64_t LaneBytes = DL->getTypeStoreSize(LaneTy).getFixedValue();
-
-  // N == 2 base case: split directly into two scalar atomicrmw T, one per
-  // lane.
-  if (NumLanes == 2) {
-    Value *LoVal = Builder.CreateExtractElement(Val, IdxZero, "lo.val");
-    Value *HiVal = Builder.CreateExtractElement(Val, IdxOne, "hi.val");
-    Value *HiPtr = Builder.CreateInBoundsGEP(LaneTy, Ptr, IdxOne, "hi.ptr");
-    Align LoAlign = AI->getAlign();
-    Align HiAlign = commonAlignment(LoAlign, LaneBytes);
-
-    AtomicRMWInst *LoRMW =
-        CreateRMWInstruction(Ptr, LoVal, LoAlign, /*Elementwise=*/false);
-    AtomicRMWInst *HiRMW =
-        CreateRMWInstruction(HiPtr, HiVal, HiAlign, /*Elementwise=*/false);
-
-    Value *Result = PoisonValue::get(VecTy);
-    Result = Builder.CreateInsertElement(Result, LoRMW, IdxZero, "lo.old");
-    Result = Builder.CreateInsertElement(Result, HiRMW, IdxOne, "hi.old");
-    AI->replaceAllUsesWith(Result);
-    AI->eraseFromParent();
-    processAtomicInstr(LoRMW);
-    processAtomicInstr(HiRMW);
-    return;
-  }
-
-  // N > 2: split into two <N/2 x T> elementwise atomicrmws and recurse via
+  // N > 1: split into two <N/2 x T> elementwise atomicrmws and recurse via
   // processAtomicInstr().
   assert(isPowerOf2_32(NumLanes) &&
          "elementwise atomicrmw vector length must be a power of two");

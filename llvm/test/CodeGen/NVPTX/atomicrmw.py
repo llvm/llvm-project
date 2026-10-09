@@ -188,8 +188,11 @@ if __name__ == "__main__":
                 for operation, datatype, ordering, vector_size in product(
                     ["add", "nand"], ["i8", "i32"], ORDERINGS, vector_sizes
                 ):
-                    if ordering == "acq_rel":
-                        # These cases are part of Slice 1.
+                    if ordering == "acq_rel" or (
+                        elementwise and ordering == "seq_cst"
+                    ):
+                        # The acq_rel cases are part of Slice 1. Elementwise
+                        # atomicrmw does not support seq_cst ordering.
                         continue
                     print_atomicrmw(
                         fp,
