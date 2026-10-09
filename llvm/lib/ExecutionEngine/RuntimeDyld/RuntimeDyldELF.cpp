@@ -1457,7 +1457,7 @@ bool RuntimeDyldELF::resolveRISCVShortBranch(
   // offsets in the range [-0x80000800, 0x7ffff7ff]. If the distance between the
   // source and the target is out of this range, a stub is required.
   int64_t Delta = TargetOffset + Value.Addend - SourceOffset;
-  if (!isInt<32>(Delta + 0x800))
+  if (!isInt<32>((uint64_t)Delta + 0x800))
     return false;
 
   RelocationEntry RE(SectionID, SourceOffset, RelI->getType(), Value.Addend);
