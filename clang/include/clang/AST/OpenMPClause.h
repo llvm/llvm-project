@@ -49,6 +49,54 @@ namespace clang {
 
 class ASTContext;
 
+/// One item in an OpenMP 'adjust_args' parameter list.
+struct OMPAdjustArgsItem {
+  /// One bound of a parameter range.
+  struct Bound {
+    enum BoundKind : uint8_t { Omitted, Expression, NumArgs };
+
+    BoundKind Kind = Omitted;
+    /// The bound expression, or the logical offset for a NumArgs bound.
+    Expr *E = nullptr;
+    bool IsSubtraction = false;
+  };
+
+  enum ItemKind : uint8_t { Single, Range };
+
+  ItemKind Kind = Single;
+  /// A named parameter or positional expression for a Single item.
+  Expr *E = nullptr;
+  Bound Lower;
+  Bound Upper;
+};
+
+/// The source-level contents of one OpenMP 'adjust_args' clause.
+class OMPAdjustArgsClause final
+    : private llvm::TrailingObjects<OMPAdjustArgsClause, OMPAdjustArgsItem> {
+  friend TrailingObjects;
+
+  unsigned NumItems;
+
+  OMPAdjustArgsClause(OpenMPAdjustArgsOpKind AdjustOp,
+                      OpenMPNeedDevicePtrModifier NeedDevicePtrModifier,
+                      unsigned NumItems)
+      : NumItems(NumItems), AdjustOp(AdjustOp),
+        NeedDevicePtrModifier(NeedDevicePtrModifier) {}
+
+public:
+  OpenMPAdjustArgsOpKind AdjustOp;
+  OpenMPNeedDevicePtrModifier NeedDevicePtrModifier;
+
+  static OMPAdjustArgsClause *
+  Create(const ASTContext &C, OpenMPAdjustArgsOpKind AdjustOp,
+         OpenMPNeedDevicePtrModifier NeedDevicePtrModifier,
+         ArrayRef<OMPAdjustArgsItem> Items);
+
+  ArrayRef<OMPAdjustArgsItem> items() const {
+    return {getTrailingObjects(), NumItems};
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // AST classes for clauses.
 //===----------------------------------------------------------------------===//
@@ -10684,6 +10732,28 @@ public:
   /// Build an empty clause.
   OMPXBareClause() = default;
 };
+
+/// Resolve one 'adjust_args' parameter-list item to the 1-based argument
+/// positions it identifies (OpenMP 6.0 [5.2.1]).
+///
+/// \param Item     A named item, positional item, or parameter range.
+/// \param FD       The base function the OMPDeclareVariantAttr is attached to.
+/// \param NumArgs  The value of 'omp_num_args' at the point of resolution:
+///                 \c max(FD->getNumParams(), Call->getNumArgs()) at a call
+///                 site, or \c FD->getNumParams() with no call site available
+///                 (OpenMP 6.0 [20.1]).
+/// \param Positions Resolved positions are appended here, ascending. Positions
+///                 outside [1, NumArgs] are silently dropped
+///                 (OpenMP 6.0 [9.6.2]).
+/// \returns false if \p Item is not a resolvable item shape, or if a bound is
+///          dependent or not a constant expression.
+///
+/// Emits no diagnostics; callers are responsible for diagnosing invalid items
+/// before calling this function.
+bool resolveOMPAdjustArgsItem(const OMPAdjustArgsItem &Item,
+                              const FunctionDecl *FD, unsigned NumArgs,
+                              const ASTContext &Ctx,
+                              SmallVectorImpl<unsigned> &Positions);
 
 } // namespace clang
 

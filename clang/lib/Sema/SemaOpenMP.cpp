@@ -7760,9 +7760,7 @@ void SemaOpenMP::ActOnFinishedFunctionDefinitionInOpenMPDeclareVariantScope(
   OMPDeclareVariantScope &DVScope = OMPDeclareVariantScopes.back();
   auto *OMPDeclareVariantA = OMPDeclareVariantAttr::CreateImplicit(
       getASTContext(), VariantFuncRef, DVScope.TI,
-      /*NothingArgs=*/nullptr, /*NothingArgsSize=*/0,
-      /*NeedDevicePtrArgs=*/nullptr, /*NeedDevicePtrArgsSize=*/0,
-      /*NeedDeviceAddrArgs=*/nullptr, /*NeedDeviceAddrArgsSize=*/0,
+      /*AdjustArgs=*/nullptr, /*AdjustArgsSize=*/0,
       /*AppendArgs=*/nullptr, /*AppendArgsSize=*/0);
   for (FunctionDecl *BaseFD : Bases)
     BaseFD->addAttr(OMPDeclareVariantA);
@@ -8263,11 +8261,74 @@ static bool checkPreferTypeArgs(SemaOpenMP &S, const OMPInteropInfo &Info) {
   return true;
 }
 
+enum class OMPAdjustArgsVal { Known, Dependent, Invalid };
+
+/// Check one 'adjust_args' integer expression for the constant property plus
+/// either the positive or the non-negative property (OpenMP 6.0 [5.2.1]).
+static OMPAdjustArgsVal checkOMPAdjustArgsValue(SemaOpenMP &S, Expr *E,
+                                                bool StrictlyPositive,
+                                                llvm::APSInt &Result) {
+  if (E->isInstantiationDependent())
+    return OMPAdjustArgsVal::Dependent; // re-checked on instantiation
+  if (S.SemaRef.VerifyIntegerConstantExpression(E, &Result).isInvalid())
+    return OMPAdjustArgsVal::Invalid; // already diagnosed
+  if (StrictlyPositive ? !Result.isStrictlyPositive() : Result.isNegative()) {
+    S.Diag(E->getExprLoc(), diag::err_omp_negative_expression_in_clause)
+        << getOpenMPClauseNameForDiag(OMPC_adjust_args)
+        << (StrictlyPositive ? 1 : 0) << E->getSourceRange();
+    return OMPAdjustArgsVal::Invalid;
+  }
+  if (!Result.isRepresentableByInt64()) {
+    S.Diag(E->getExprLoc(), diag::err_omp_large_expression_in_clause)
+        << getOpenMPClauseNameForDiag(OMPC_adjust_args) << E->getSourceRange();
+    return OMPAdjustArgsVal::Invalid;
+  }
+  return OMPAdjustArgsVal::Known;
+}
+
+/// Check one bound of a parameter range 'lb:ub' (OpenMP 6.0 [5.2.1]).
+/// A plain bound has the positive property, checked via
+/// checkOMPAdjustArgsValue. An 'omp_num_args' bound's logical_offset has the
+/// non-negative property instead, so it is checked with a different lower
+/// bound.
+static bool checkOMPAdjustArgsBound(SemaOpenMP &S,
+                                    const OMPAdjustArgsItem::Bound &Bound) {
+  if (Bound.Kind == OMPAdjustArgsItem::Bound::Omitted)
+    return true;
+  if (Bound.Kind == OMPAdjustArgsItem::Bound::NumArgs && !Bound.E)
+    return true;
+
+  assert((Bound.Kind == OMPAdjustArgsItem::Bound::Expression ||
+          Bound.Kind == OMPAdjustArgsItem::Bound::NumArgs) &&
+         Bound.E && "expected an adjust_args bound expression");
+  llvm::APSInt Result;
+  bool StrictlyPositive = Bound.Kind == OMPAdjustArgsItem::Bound::Expression;
+  return checkOMPAdjustArgsValue(S, Bound.E, StrictlyPositive, Result) !=
+         OMPAdjustArgsVal::Invalid;
+}
+
+static bool checkOMPAdjustArgsRange(SemaOpenMP &S,
+                                    const OMPAdjustArgsItem &Range) {
+  assert(Range.Kind == OMPAdjustArgsItem::Range &&
+         "expected an adjust_args range");
+  return checkOMPAdjustArgsBound(S, Range.Lower) &&
+         checkOMPAdjustArgsBound(S, Range.Upper);
+}
+
+static SourceLocation getOMPAdjustArgsItemLoc(const OMPAdjustArgsItem &Item,
+                                              SourceLocation FallbackLoc) {
+  if (Item.E)
+    return Item.E->getExprLoc();
+  if (Item.Lower.E)
+    return Item.Lower.E->getExprLoc();
+  if (Item.Upper.E)
+    return Item.Upper.E->getExprLoc();
+  return FallbackLoc;
+}
+
 void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
     FunctionDecl *FD, Expr *VariantRef, OMPTraitInfo &TI,
-    ArrayRef<Expr *> AdjustArgsNothing,
-    ArrayRef<Expr *> AdjustArgsNeedDevicePtr,
-    ArrayRef<Expr *> AdjustArgsNeedDeviceAddr,
+    ArrayRef<OMPAdjustArgsClause *> AdjustArgs,
     ArrayRef<OMPInteropInfo> AppendArgs, SourceLocation AdjustArgsLoc,
     SourceLocation AppendArgsLoc, SourceRange SR) {
 
@@ -8276,18 +8337,13 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
   // dispatch selector of the construct selector set appears in the match
   // clause.
 
-  SmallVector<Expr *, 8> AllAdjustArgs;
-  llvm::append_range(AllAdjustArgs, AdjustArgsNothing);
-  llvm::append_range(AllAdjustArgs, AdjustArgsNeedDevicePtr);
-  llvm::append_range(AllAdjustArgs, AdjustArgsNeedDeviceAddr);
-
-  if (!AllAdjustArgs.empty() || !AppendArgs.empty()) {
+  if (!AdjustArgs.empty() || !AppendArgs.empty()) {
     VariantMatchInfo VMI;
     TI.getAsVariantMatchInfo(getASTContext(), VMI);
     if (!llvm::is_contained(
             VMI.ConstructTraits,
             llvm::omp::TraitProperty::construct_dispatch_dispatch)) {
-      if (!AllAdjustArgs.empty())
+      if (!AdjustArgs.empty())
         Diag(AdjustArgsLoc, diag::err_omp_clause_requires_dispatch_construct)
             << getOpenMPClauseNameForDiag(OMPC_adjust_args);
       if (!AppendArgs.empty())
@@ -8297,46 +8353,128 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
     }
   }
 
-  // OpenMP 5.1 [2.3.5, declare variant directive, Restrictions]
-  // Each argument can only appear in a single adjust_args clause for each
-  // declare variant directive.
-  llvm::SmallPtrSet<const VarDecl *, 4> AdjustVars;
+  // OpenMP 6.0 [5.2.1]: each parameter list item may be specified only once
+  // across all clauses of the same type in a directive. A range has the effect
+  // of specifying each of its parameter positions individually.
+  llvm::SmallPtrSet<const VarDecl *, 4> AdjustVars; // named items
+  llvm::SmallSet<uint64_t, 4> AdjustPositions; // positions, including ranges
 
-  for (Expr *E : AllAdjustArgs) {
-    E = E->IgnoreParenImpCasts();
-    if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
-      if (const auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl())) {
-        const VarDecl *CanonPVD = PVD->getCanonicalDecl();
-        if (FD->getNumParams() > PVD->getFunctionScopeIndex() &&
-            FD->getParamDecl(PVD->getFunctionScopeIndex())
-                    ->getCanonicalDecl() == CanonPVD) {
-          // It's a parameter of the function, check duplicates.
-          if (!AdjustVars.insert(CanonPVD).second) {
-            Diag(DRE->getLocation(), diag::err_omp_adjust_arg_multiple_clauses)
-                << PVD;
+  for (const OMPAdjustArgsClause *Clause : AdjustArgs) {
+    if (Clause->NeedDevicePtrModifier != OMPC_NEED_DEVICE_PTR_unknown &&
+        Clause->AdjustOp != OMPC_ADJUST_ARGS_need_device_ptr) {
+      Diag(AdjustArgsLoc, diag::err_omp_unexpected_clause_modifier)
+          << getOpenMPClauseName(OMPC_adjust_args);
+      return;
+    }
+    for (const OMPAdjustArgsItem &ItemInfo : Clause->items()) {
+      if (ItemInfo.Kind == OMPAdjustArgsItem::Range) {
+        if (!checkOMPAdjustArgsRange(*this, ItemInfo))
+          continue;
+        SmallVector<unsigned, 8> Positions;
+        if (resolveOMPAdjustArgsItem(ItemInfo, FD, FD->getNumParams(),
+                                     getASTContext(), Positions)) {
+          for (unsigned Pos : Positions) {
+            if (!AdjustPositions.insert(Pos).second) {
+              Diag(getOMPAdjustArgsItemLoc(ItemInfo, AdjustArgsLoc),
+                   diag::err_omp_adjust_arg_multiple_clauses)
+                  << Pos;
+              return;
+            }
+          }
+        }
+        continue;
+      }
+
+      assert(ItemInfo.E && "expected an adjust_args expression");
+      Expr *Item = ItemInfo.E->IgnoreParenImpCasts();
+
+      // A named parameter list item — unchanged from OpenMP 5.1.
+      if (const auto *DRE = dyn_cast<DeclRefExpr>(Item)) {
+        if (const auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl())) {
+          const VarDecl *CanonPVD = PVD->getCanonicalDecl();
+          if (FD->getNumParams() > PVD->getFunctionScopeIndex() &&
+              FD->getParamDecl(PVD->getFunctionScopeIndex())
+                      ->getCanonicalDecl() == CanonPVD) {
+            if (!AdjustVars.insert(CanonPVD).second) {
+              Diag(DRE->getLocation(),
+                   diag::err_omp_adjust_arg_multiple_clauses)
+                  << PVD;
+              return;
+            }
+            continue;
+          }
+        }
+      }
+
+      if (getLangOpts().OpenMP < 60) {
+        // Anything that is not a function parameter is an error before 6.0.
+        Diag(Item->getExprLoc(), diag::err_omp_param_or_this_in_clause)
+            << FD << 0;
+        return;
+      }
+
+      // OpenMP 6.0 [5.2.1]: the position of a parameter, given as a
+      // positive constant integer expression. A dependent item is skipped
+      // here and rechecked when the template is instantiated.
+      if (Item->isTypeDependent() || Item->getType()->isIntegerType()) {
+        llvm::APSInt Pos;
+        switch (checkOMPAdjustArgsValue(*this, Item,
+                                        /*StrictlyPositive=*/true, Pos)) {
+        case OMPAdjustArgsVal::Invalid:
+          return;
+        case OMPAdjustArgsVal::Dependent:
+          continue;
+        case OMPAdjustArgsVal::Known:
+          if (!AdjustPositions.insert(Pos.getZExtValue()).second) {
+            Diag(Item->getExprLoc(), diag::err_omp_adjust_arg_multiple_clauses)
+                << Pos;
             return;
           }
           continue;
         }
       }
+
+      if (isa<DeclRefExpr>(Item)) {
+        Diag(Item->getExprLoc(), diag::err_omp_param_or_this_in_clause)
+            << FD << 0;
+        return;
+      }
+
+      // Not a name or a position: neither form OpenMP 6.0 allows for a
+      // non-range item.
+      Diag(Item->getExprLoc(), diag::err_omp_adjust_args_invalid_item);
+      return;
     }
-    // Anything that is not a function parameter is an error.
-    Diag(E->getExprLoc(), diag::err_omp_param_or_this_in_clause) << FD << 0;
-    return;
   }
 
-  // OpenMP 6.0 [9.6.2 (page 332, line 31-33, adjust_args clause, Restrictions]
-  // If the `need_device_addr` adjust-op modifier is present, each list item
-  // that appears in the clause must refer to an argument in the declaration of
-  // the function variant that has a reference type
+  // OpenMP 6.0 [9.6.2]: if the need_device_addr adjust-op modifier
+  // is present, each list item that appears in the clause must refer to an
+  // argument in the declaration of the function variant that has a reference
+  // type. Unlike the need_device_ptr restriction, this one is not scoped to
+  // named items ("that refers to a specific named argument" is absent here),
+  // so positions and ranges are checked too, via the shared item-to-positions
+  // resolver.
   if (getLangOpts().OpenMP >= 60) {
-    for (Expr *E : AdjustArgsNeedDeviceAddr) {
-      E = E->IgnoreParenImpCasts();
-      if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
-        if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-          if (!VD->getType()->isReferenceType())
-            Diag(E->getExprLoc(),
-                 diag::err_omp_non_by_ref_need_device_addr_modifier_argument);
+    for (const OMPAdjustArgsClause *Clause : AdjustArgs) {
+      if (Clause->AdjustOp != OMPC_ADJUST_ARGS_need_device_addr)
+        continue;
+      for (const OMPAdjustArgsItem &Item : Clause->items()) {
+        SmallVector<unsigned, 8> Positions;
+        // With no call site in hand, 'omp_num_args' is the declared parameter
+        // count (OpenMP 6.0 [20.1]). Positions past it denote variadic
+        // actuals, which have no declared parameter to check against, and are
+        // dropped by the resolver (OpenMP 6.0 [9.6.2]).
+        resolveOMPAdjustArgsItem(Item, FD, FD->getNumParams(), getASTContext(),
+                                 Positions);
+        for (unsigned Pos : Positions) {
+          QualType ParamTy = FD->getParamDecl(Pos - 1)->getType();
+          if (ParamTy->isReferenceType() || ParamTy->isDependentType())
+            continue;
+          Diag(getOMPAdjustArgsItemLoc(Item, AdjustArgsLoc.isValid()
+                                                 ? AdjustArgsLoc
+                                                 : SR.getBegin()),
+               diag::err_omp_non_by_ref_need_device_addr_modifier_argument);
+          break; // One diagnostic per written item.
         }
       }
     }
@@ -8351,11 +8489,7 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
 
   auto *NewAttr = OMPDeclareVariantAttr::CreateImplicit(
       getASTContext(), VariantRef, &TI,
-      const_cast<Expr **>(AdjustArgsNothing.data()), AdjustArgsNothing.size(),
-      const_cast<Expr **>(AdjustArgsNeedDevicePtr.data()),
-      AdjustArgsNeedDevicePtr.size(),
-      const_cast<Expr **>(AdjustArgsNeedDeviceAddr.data()),
-      AdjustArgsNeedDeviceAddr.size(),
+      const_cast<OMPAdjustArgsClause **>(AdjustArgs.data()), AdjustArgs.size(),
       const_cast<OMPInteropInfo *>(AppendArgs.data()), AppendArgs.size(), SR);
   FD->addAttr(NewAttr);
 }
