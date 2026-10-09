@@ -133,7 +133,7 @@ using namespace LiveDebugValues;
 
 // SSAUpdaterImple sets DEBUG_TYPE, change it.
 #undef DEBUG_TYPE
-#define DEBUG_TYPE "livedebugvalues"
+#define DEBUG_TYPE "live-debug-values"
 
 // Act more like the VarLoc implementation, by propagating some locations too
 // far and ignoring some transfers.
@@ -1466,7 +1466,7 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
         // debug values.
         if (MO.isReg()) {
           DebugOps.push_back(DbgOpStore.insert(MTracker->readReg(MO.getReg())));
-        } else if (MO.isImm() || MO.isFPImm() || MO.isCImm()) {
+        } else if (MO.isImm() || MO.isFPImm() || MO.isCImm() || MO.isGlobal()) {
           DebugOps.push_back(DbgOpStore.insert(MO));
         } else {
           llvm_unreachable("Unexpected debug operand type.");

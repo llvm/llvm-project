@@ -63,7 +63,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "twoaddressinstruction"
+#define DEBUG_TYPE "two-address-instruction"
 
 STATISTIC(NumTwoAddressInstrs, "Number of two-address instructions");
 STATISTIC(NumCommuted        , "Number of instructions commuted to coalesce");
@@ -796,7 +796,7 @@ bool TwoAddressInstructionImpl::convertInstTo3Addr(
     MachineBasicBlock::iterator &mi, MachineBasicBlock::iterator &nmi,
     Register RegA, Register RegB, unsigned &Dist) {
   MachineInstrSpan MIS(mi, MBB);
-  MachineInstr *NewMI = TII->convertToThreeAddress(*mi, nullptr, LIS);
+  MachineInstr *NewMI = TII->convertToThreeAddress(*mi, LIS);
   if (!NewMI)
     return false;
 
@@ -2065,7 +2065,7 @@ void TwoAddressInstructionImpl::eliminateRegSequence(
           if (DefVN != VN)
             continue;
           LaneBitmask LaneMask = TRI->getSubRegIndexLaneMask(SubReg);
-          if ((UndefLanes & LaneMask).any())
+          if ((LaneMask & UndefLanes) == LaneMask)
             UseOp.setIsUndef(true);
         }
         LIS->removeInterval(DstReg);

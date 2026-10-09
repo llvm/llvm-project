@@ -776,6 +776,20 @@ add_header_library(
 )
 
 add_header_library(
+  fchownat
+  HDRS
+    fchownat.h
+  DEPENDS
+    libc.hdr.types.gid_t
+    libc.hdr.types.uid_t
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   ftruncate
   HDRS
     ftruncate.h
@@ -1537,6 +1551,55 @@ add_header_library(
     libc.hdr.types.sigset_t
     libc.hdr.types.size_t
     libc.hdr.types.struct_timespec
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  inotify_init
+  HDRS
+    inotify_init.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  inotify_init1
+  HDRS
+    inotify_init1.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  inotify_add_watch
+  HDRS
+    inotify_add_watch.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  inotify_rm_watch
+  HDRS
+    inotify_rm_watch.h
+  DEPENDS
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common

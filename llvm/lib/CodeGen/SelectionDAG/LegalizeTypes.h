@@ -361,6 +361,7 @@ private:
   SDValue PromoteIntRes_READ_REGISTER(SDNode *N);
   SDValue PromoteIntRes_VECTOR_FIND_LAST_ACTIVE(SDNode *N);
   SDValue PromoteIntRes_GET_ACTIVE_LANE_MASK(SDNode *N);
+  SDValue PromoteIntRes_MASK_BEFOREFIRST(SDNode *N);
   SDValue PromoteIntRes_VECTOR_MATCH(SDNode *N);
   SDValue PromoteIntRes_PARTIAL_REDUCE_MLA(SDNode *N);
   SDValue PromoteIntRes_LOOP_DEPENDENCE_MASK(SDNode *N);
@@ -670,6 +671,7 @@ private:
   // Float Result Expansion.
   void ExpandFloatResult(SDNode *N, unsigned ResNo);
   void ExpandFloatRes_ConstantFP(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandFloatRes_NoLibcall(SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_Unary(SDNode *N, RTLIB::Libcall LC,
                             SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_Binary(SDNode *N, RTLIB::Libcall LC,
@@ -935,6 +937,7 @@ private:
 
   void SplitVecRes_BITCAST(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_LOOP_DEPENDENCE_MASK(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void SplitVecRes_MASK_BEFOREFIRST(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_BUILD_VECTOR(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_CONCAT_VECTORS(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_EXTRACT_SUBVECTOR(SDNode *N, SDValue &Lo, SDValue &Hi);

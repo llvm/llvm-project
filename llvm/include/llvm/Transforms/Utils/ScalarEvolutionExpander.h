@@ -151,7 +151,6 @@ class SCEVExpander : public SCEVUseVisitor<SCEVExpander, Value *> {
   // expansion.
   class SCEVInsertPointGuard {
     IRBuilderBase &Builder;
-    AssertingVH<BasicBlock> Block;
     BasicBlock::iterator Point;
     DebugLoc DbgLoc;
     SCEVExpander *SE;
@@ -161,7 +160,7 @@ class SCEVExpander : public SCEVUseVisitor<SCEVExpander, Value *> {
 
   public:
     SCEVInsertPointGuard(IRBuilderBase &B, SCEVExpander *SE)
-        : Builder(B), Block(B.GetInsertBlock()), Point(B.GetInsertPoint()),
+        : Builder(B), Point(B.GetInsertPoint()),
           DbgLoc(B.getCurrentDebugLocation()), SE(SE) {
       SE->InsertPointGuards.push_back(this);
     }
@@ -172,7 +171,7 @@ class SCEVExpander : public SCEVUseVisitor<SCEVExpander, Value *> {
       // ScalarEvolutionExpander.
       assert(SE->InsertPointGuards.back() == this);
       SE->InsertPointGuards.pop_back();
-      Builder.restoreIP(IRBuilderBase::InsertPoint(Block, Point));
+      Builder.restoreIP(Point);
       Builder.SetCurrentDebugLocation(DbgLoc);
     }
 
@@ -197,7 +196,7 @@ public:
       : SE(SE), DL(SE.getDataLayout()), IVName(Name),
         PreserveLCSSA(PreserveLCSSA), IVIncInsertLoop(nullptr),
         IVIncInsertPos(nullptr), CanonicalMode(true), LSRMode(false),
-        Builder(SE.getContext(), InstSimplifyFolder(DL),
+        Builder(SE.getModule(), InstSimplifyFolder(DL),
                 IRBuilderCallbackInserter(
                     [this](Instruction *I) { rememberInstruction(I); })) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -412,9 +411,7 @@ public:
     Builder.SetInsertPoint(IP);
   }
 
-  void setInsertPoint(BasicBlock::iterator IP) {
-    Builder.SetInsertPoint(IP->getParent(), IP);
-  }
+  void setInsertPoint(BasicBlock::iterator IP) { Builder.SetInsertPoint(IP); }
 
   /// Clear the current insertion point. This is useful if the instruction
   /// that had been serving as the insertion point may have been deleted.
