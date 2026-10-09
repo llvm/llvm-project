@@ -1308,7 +1308,7 @@ SymbolFileDWARFDebugMap::GetSeparateDebugInfoFiles() {
                                                oso_file, oso_object,
                                                /*must_exist=*/false)) {
       spec.GetFileSpec() = oso_file;
-      spec.GetObjectName() = oso_object;
+      spec.GetObjectName() = oso_object.GetStringRef().str();
     } else {
       spec.GetFileSpec() = FileSpec(info.oso_path.GetStringRef());
     }
