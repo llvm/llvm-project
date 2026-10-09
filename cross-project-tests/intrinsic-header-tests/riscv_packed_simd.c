@@ -23,6 +23,10 @@ uint32_t test_rev_32(uint32_t a) { return __riscv_rev_32(a); }
 // RV64-LABEL: test_rev_64:
 // RV64:        rev{{[[:space:]]}}
 uint64_t test_rev_64(uint64_t a) { return __riscv_rev_64(a); }
+
+// RV64-LABEL: test_rev16_64:
+// RV64:        rev16{{[[:space:]]}}
+uint64_t test_rev16_64(uint64_t a) { return __riscv_rev16_64(a); }
 #endif
 
 // CHECK-LABEL: test_sadd_i32:

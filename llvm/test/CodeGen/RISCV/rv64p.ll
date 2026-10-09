@@ -1796,3 +1796,14 @@ define i64 @and_mul_32bitsplat(i64 %x) {
   %b = mul i64 %a, u0x0080402010080400
   ret i64 %b
 }
+
+declare i64 @llvm.riscv.rev16.64(i64)
+
+define i64 @rev16_intrinsic(i64 %x) {
+; CHECK-LABEL: rev16_intrinsic:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    rev16 a0, a0
+; CHECK-NEXT:    ret
+  %r = call i64 @llvm.riscv.rev16.64(i64 %x)
+  ret i64 %r
+}

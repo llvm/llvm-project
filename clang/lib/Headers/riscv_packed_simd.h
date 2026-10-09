@@ -420,6 +420,7 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
 __packed_unary_builtin(rev_32, uint32_t, __builtin_bitreverse32)
 #if __riscv_xlen == 64
 __packed_unary_builtin(rev_64, uint64_t, __builtin_bitreverse64)
+__packed_unary_builtin(rev16_64, uint64_t, __builtin_riscv_rev16_64)
 #endif
 
 /* Scalar Saturating Addition and Subtraction */
