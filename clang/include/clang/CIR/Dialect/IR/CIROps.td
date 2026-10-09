@@ -6677,6 +6677,56 @@ def CIR_MatrixColumnMajorLoadOp : CIR_Op<"matrix.column_major_load", [
 }
 
 //===----------------------------------------------------------------------===//
+// MatrixMultiplyOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MatrixMultiplyOp : CIR_Op<"matrix.multiply", [
+  Pure,
+  AllMatchSameOperatorTrait<["lhs", "rhs", "result"],
+    "::mlir::cast<cir::MatrixType>($_self.getType()).getElementType()",
+    "element type">,
+  PredOpTrait<"left operand column count matches right operand row count",
+    CPred<"::mlir::cast<cir::MatrixType>($_op.getOperand(0).getType())"
+          ".getNumColumns() == "
+          "::mlir::cast<cir::MatrixType>($_op.getOperand(1).getType())"
+          ".getNumRows()">>,
+  PredOpTrait<"result is left operand rows by right operand columns",
+    CPred<"::mlir::cast<cir::MatrixType>($_op.getResult(0).getType())"
+          ".getNumRows() == "
+          "::mlir::cast<cir::MatrixType>($_op.getOperand(0).getType())"
+          ".getNumRows() && "
+          "::mlir::cast<cir::MatrixType>($_op.getResult(0).getType())"
+          ".getNumColumns() == "
+          "::mlir::cast<cir::MatrixType>($_op.getOperand(1).getType())"
+          ".getNumColumns()">>
+]> {
+  let summary = "Matrix multiplication";
+  let description = [{
+    The `cir.matrix.multiply` operation multiplies two matrices and
+    corresponds to the `llvm.matrix.multiply` intrinsic in LLVM IR.
+
+    The left-hand operand must have dimensions `M x K`, the right-hand operand
+    `K x N`, and the result `M x N`. All three must share an element type.
+
+    ```
+    %res = cir.matrix.multiply %lhs, %rhs
+        : (!cir.matrix<2 x 3 x !cir.float>, !cir.matrix<3 x 4 x !cir.float>)
+        -> !cir.matrix<2 x 4 x !cir.float>
+    ```
+  }];
+
+  let arguments = (ins CIR_MatrixType:$lhs, CIR_MatrixType:$rhs);
+  let results = (outs CIR_MatrixType:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs attr-dict
+    `:` `(` qualified(type($lhs)) `,` qualified(type($rhs)) `)`
+    `->` qualified(type($result))
+  }];
+
+}
+
+//===----------------------------------------------------------------------===//
 // MatrixColumnMajorStoreOp
 //===----------------------------------------------------------------------===//
 

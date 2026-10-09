@@ -2248,8 +2248,12 @@ mlir::Value ScalarExprEmitter::emitMul(const BinOpInfo &ops) {
     }
   }
   if (ops.fullType->isConstantMatrixType()) {
+    if (isa<cir::MatrixType>(ops.lhs.getType()) &&
+        isa<cir::MatrixType>(ops.rhs.getType()))
+      return builder.createMatrixMultiply(loc, ops.lhs, ops.rhs);
+
     assert(!cir::MissingFeatures::matrixType());
-    cgf.cgm.errorNYI("ScalarExprEmitter::emitMul: matrix types");
+    cgf.cgm.errorNYI("ScalarExprEmitter::emitMul: matrix scalar multiply");
     return {};
   }
   if (ops.compType->isUnsignedIntegerType() &&

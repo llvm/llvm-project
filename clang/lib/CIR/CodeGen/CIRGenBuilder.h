@@ -842,6 +842,16 @@ public:
                                                 stride, isVolatile);
   }
 
+  /// Multiply an MxK matrix by a KxN matrix, producing an MxN matrix.
+  cir::MatrixMultiplyOp createMatrixMultiply(mlir::Location loc,
+                                             mlir::Value lhs, mlir::Value rhs) {
+    auto lhsTy = mlir::cast<cir::MatrixType>(lhs.getType());
+    auto rhsTy = mlir::cast<cir::MatrixType>(rhs.getType());
+    auto resultTy = cir::MatrixType::get(
+        lhsTy.getElementType(), lhsTy.getNumRows(), rhsTy.getNumColumns());
+    return cir::MatrixMultiplyOp::create(*this, loc, resultTy, lhs, rhs);
+  }
+
   cir::MatrixTransposeOp createMatrixTranspose(mlir::Location loc,
                                                mlir::Value matrix) {
     auto inputTy = mlir::cast<cir::MatrixType>(matrix.getType());

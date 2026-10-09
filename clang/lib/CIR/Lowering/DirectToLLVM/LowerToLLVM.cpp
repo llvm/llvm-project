@@ -5393,6 +5393,18 @@ mlir::LogicalResult CIRToLLVMMatrixColumnMajorStoreOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMMatrixMultiplyOpLowering::matchAndRewrite(
+    cir::MatrixMultiplyOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  cir::MatrixType lhsTy = op.getLhs().getType();
+  cir::MatrixType rhsTy = op.getRhs().getType();
+  mlir::Type resultTy = typeConverter->convertType(op.getResult().getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::MatrixMultiplyOp>(
+      op, resultTy, adaptor.getLhs(), adaptor.getRhs(), lhsTy.getNumRows(),
+      lhsTy.getNumColumns(), rhsTy.getNumColumns());
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMMatrixTransposeOpLowering::matchAndRewrite(
     cir::MatrixTransposeOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
