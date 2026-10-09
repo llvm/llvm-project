@@ -13,7 +13,7 @@ define void @alloca_address_stored(ptr noalias %dst, i64 %n) {
 ; VF4IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
 ; VF4IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF4IC2:       [[VECTOR_PH]]:
-; VF4IC2-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 7
+; VF4IC2-NEXT:    [[TMP0:%.*]] = urem i64 [[N]], 8
 ; VF4IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
 ; VF4IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF4IC2:       [[VECTOR_BODY]]:
@@ -30,18 +30,18 @@ define void @alloca_address_stored(ptr noalias %dst, i64 %n) {
 ; VF4IC2-NEXT:    [[TMP13:%.*]] = alloca [8 x i8], align 16
 ; VF4IC2-NEXT:    [[TMP16:%.*]] = alloca [8 x i8], align 16
 ; VF4IC2-NEXT:    [[TMP25:%.*]] = alloca [8 x i8], align 16
-; VF4IC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP9]], i64 0
-; VF4IC2-NEXT:    [[TMP14:%.*]] = insertelement <4 x ptr> [[BROADCAST_SPLATINSERT]], ptr [[TMP13]], i64 1
-; VF4IC2-NEXT:    [[TMP15:%.*]] = insertelement <4 x ptr> [[TMP14]], ptr [[TMP16]], i64 2
-; VF4IC2-NEXT:    [[BROADCAST_SPLAT:%.*]] = insertelement <4 x ptr> [[TMP15]], ptr [[TMP25]], i64 3
+; VF4IC2-NEXT:    [[TMP15:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP9]], i32 0
+; VF4IC2-NEXT:    [[TMP26:%.*]] = insertelement <4 x ptr> [[TMP15]], ptr [[TMP13]], i32 1
+; VF4IC2-NEXT:    [[TMP29:%.*]] = insertelement <4 x ptr> [[TMP26]], ptr [[TMP16]], i32 2
+; VF4IC2-NEXT:    [[BROADCAST_SPLAT:%.*]] = insertelement <4 x ptr> [[TMP29]], ptr [[TMP25]], i32 3
 ; VF4IC2-NEXT:    [[TMP17:%.*]] = alloca [8 x i8], align 16
 ; VF4IC2-NEXT:    [[TMP18:%.*]] = alloca [8 x i8], align 16
 ; VF4IC2-NEXT:    [[TMP19:%.*]] = alloca [8 x i8], align 16
 ; VF4IC2-NEXT:    [[TMP20:%.*]] = alloca [8 x i8], align 16
-; VF4IC2-NEXT:    [[TMP21:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP17]], i64 0
-; VF4IC2-NEXT:    [[TMP22:%.*]] = insertelement <4 x ptr> [[TMP21]], ptr [[TMP18]], i64 1
-; VF4IC2-NEXT:    [[TMP23:%.*]] = insertelement <4 x ptr> [[TMP22]], ptr [[TMP19]], i64 2
-; VF4IC2-NEXT:    [[TMP24:%.*]] = insertelement <4 x ptr> [[TMP23]], ptr [[TMP20]], i64 3
+; VF4IC2-NEXT:    [[TMP23:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP17]], i32 0
+; VF4IC2-NEXT:    [[TMP30:%.*]] = insertelement <4 x ptr> [[TMP23]], ptr [[TMP18]], i32 1
+; VF4IC2-NEXT:    [[TMP31:%.*]] = insertelement <4 x ptr> [[TMP30]], ptr [[TMP19]], i32 2
+; VF4IC2-NEXT:    [[TMP24:%.*]] = insertelement <4 x ptr> [[TMP31]], ptr [[TMP20]], i32 3
 ; VF4IC2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds ptr, ptr [[DST]], i64 [[INDEX]]
 ; VF4IC2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds ptr, ptr [[TMP10]], i64 4
 ; VF4IC2-NEXT:    store <4 x ptr> [[BROADCAST_SPLAT]], ptr [[TMP10]], align 8
@@ -68,7 +68,7 @@ define void @alloca_address_stored(ptr noalias %dst, i64 %n) {
 ; VF1IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
 ; VF1IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF1IC2:       [[VECTOR_PH]]:
-; VF1IC2-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 1
+; VF1IC2-NEXT:    [[TMP0:%.*]] = urem i64 [[N]], 2
 ; VF1IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
 ; VF1IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF1IC2:       [[VECTOR_BODY]]:
@@ -119,52 +119,52 @@ define void @two_allocas_different_types(ptr noalias %dst.a, ptr noalias %dst.b,
 ; VF4IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
 ; VF4IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF4IC2:       [[VECTOR_PH]]:
-; VF4IC2-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 7
+; VF4IC2-NEXT:    [[TMP0:%.*]] = urem i64 [[N]], 8
 ; VF4IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
 ; VF4IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF4IC2:       [[VECTOR_BODY]]:
-; VF4IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF4IC2-NEXT:    [[TMP13:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF4IC2-NEXT:    [[TMP1:%.*]] = alloca i32, align 4
 ; VF4IC2-NEXT:    [[TMP8:%.*]] = alloca i32, align 4
 ; VF4IC2-NEXT:    [[TMP33:%.*]] = alloca i32, align 4
 ; VF4IC2-NEXT:    [[TMP34:%.*]] = alloca i32, align 4
-; VF4IC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP1]], i64 0
-; VF4IC2-NEXT:    [[TMP35:%.*]] = insertelement <4 x ptr> [[BROADCAST_SPLATINSERT]], ptr [[TMP8]], i64 1
-; VF4IC2-NEXT:    [[TMP7:%.*]] = insertelement <4 x ptr> [[TMP35]], ptr [[TMP33]], i64 2
-; VF4IC2-NEXT:    [[BROADCAST_SPLAT:%.*]] = insertelement <4 x ptr> [[TMP7]], ptr [[TMP34]], i64 3
+; VF4IC2-NEXT:    [[TMP21:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP1]], i32 0
+; VF4IC2-NEXT:    [[TMP7:%.*]] = insertelement <4 x ptr> [[TMP21]], ptr [[TMP8]], i32 1
+; VF4IC2-NEXT:    [[TMP29:%.*]] = insertelement <4 x ptr> [[TMP7]], ptr [[TMP33]], i32 2
+; VF4IC2-NEXT:    [[TMP37:%.*]] = insertelement <4 x ptr> [[TMP29]], ptr [[TMP34]], i32 3
 ; VF4IC2-NEXT:    [[TMP9:%.*]] = alloca i32, align 4
 ; VF4IC2-NEXT:    [[TMP10:%.*]] = alloca i32, align 4
 ; VF4IC2-NEXT:    [[TMP11:%.*]] = alloca i32, align 4
 ; VF4IC2-NEXT:    [[TMP12:%.*]] = alloca i32, align 4
-; VF4IC2-NEXT:    [[TMP13:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP9]], i64 0
-; VF4IC2-NEXT:    [[TMP14:%.*]] = insertelement <4 x ptr> [[TMP13]], ptr [[TMP10]], i64 1
-; VF4IC2-NEXT:    [[TMP15:%.*]] = insertelement <4 x ptr> [[TMP14]], ptr [[TMP11]], i64 2
-; VF4IC2-NEXT:    [[TMP16:%.*]] = insertelement <4 x ptr> [[TMP15]], ptr [[TMP12]], i64 3
+; VF4IC2-NEXT:    [[TMP14:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP9]], i32 0
+; VF4IC2-NEXT:    [[TMP15:%.*]] = insertelement <4 x ptr> [[TMP14]], ptr [[TMP10]], i32 1
+; VF4IC2-NEXT:    [[TMP38:%.*]] = insertelement <4 x ptr> [[TMP15]], ptr [[TMP11]], i32 2
+; VF4IC2-NEXT:    [[TMP16:%.*]] = insertelement <4 x ptr> [[TMP38]], ptr [[TMP12]], i32 3
 ; VF4IC2-NEXT:    [[TMP17:%.*]] = alloca i64, align 4
 ; VF4IC2-NEXT:    [[TMP18:%.*]] = alloca i64, align 4
 ; VF4IC2-NEXT:    [[TMP19:%.*]] = alloca i64, align 4
 ; VF4IC2-NEXT:    [[TMP20:%.*]] = alloca i64, align 4
-; VF4IC2-NEXT:    [[TMP21:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP17]], i64 0
-; VF4IC2-NEXT:    [[TMP22:%.*]] = insertelement <4 x ptr> [[TMP21]], ptr [[TMP18]], i64 1
-; VF4IC2-NEXT:    [[TMP23:%.*]] = insertelement <4 x ptr> [[TMP22]], ptr [[TMP19]], i64 2
-; VF4IC2-NEXT:    [[TMP24:%.*]] = insertelement <4 x ptr> [[TMP23]], ptr [[TMP20]], i64 3
+; VF4IC2-NEXT:    [[TMP22:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP17]], i32 0
+; VF4IC2-NEXT:    [[TMP23:%.*]] = insertelement <4 x ptr> [[TMP22]], ptr [[TMP18]], i32 1
+; VF4IC2-NEXT:    [[TMP24:%.*]] = insertelement <4 x ptr> [[TMP23]], ptr [[TMP19]], i32 2
+; VF4IC2-NEXT:    [[TMP41:%.*]] = insertelement <4 x ptr> [[TMP24]], ptr [[TMP20]], i32 3
 ; VF4IC2-NEXT:    [[TMP25:%.*]] = alloca i64, align 4
 ; VF4IC2-NEXT:    [[TMP26:%.*]] = alloca i64, align 4
 ; VF4IC2-NEXT:    [[TMP27:%.*]] = alloca i64, align 4
 ; VF4IC2-NEXT:    [[TMP28:%.*]] = alloca i64, align 4
-; VF4IC2-NEXT:    [[TMP29:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP25]], i64 0
-; VF4IC2-NEXT:    [[TMP30:%.*]] = insertelement <4 x ptr> [[TMP29]], ptr [[TMP26]], i64 1
-; VF4IC2-NEXT:    [[TMP31:%.*]] = insertelement <4 x ptr> [[TMP30]], ptr [[TMP27]], i64 2
-; VF4IC2-NEXT:    [[TMP32:%.*]] = insertelement <4 x ptr> [[TMP31]], ptr [[TMP28]], i64 3
-; VF4IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds ptr, ptr [[DST_A]], i64 [[INDEX]]
-; VF4IC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds ptr, ptr [[TMP2]], i64 4
-; VF4IC2-NEXT:    store <4 x ptr> [[BROADCAST_SPLAT]], ptr [[TMP2]], align 8
+; VF4IC2-NEXT:    [[TMP30:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP25]], i32 0
+; VF4IC2-NEXT:    [[TMP31:%.*]] = insertelement <4 x ptr> [[TMP30]], ptr [[TMP26]], i32 1
+; VF4IC2-NEXT:    [[TMP42:%.*]] = insertelement <4 x ptr> [[TMP31]], ptr [[TMP27]], i32 2
+; VF4IC2-NEXT:    [[TMP32:%.*]] = insertelement <4 x ptr> [[TMP42]], ptr [[TMP28]], i32 3
+; VF4IC2-NEXT:    [[TMP35:%.*]] = getelementptr inbounds ptr, ptr [[DST_A]], i64 [[TMP13]]
+; VF4IC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds ptr, ptr [[TMP35]], i64 4
+; VF4IC2-NEXT:    store <4 x ptr> [[TMP37]], ptr [[TMP35]], align 8
 ; VF4IC2-NEXT:    store <4 x ptr> [[TMP16]], ptr [[TMP3]], align 8
-; VF4IC2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds ptr, ptr [[DST_B]], i64 [[INDEX]]
-; VF4IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds ptr, ptr [[TMP4]], i64 4
-; VF4IC2-NEXT:    store <4 x ptr> [[TMP24]], ptr [[TMP4]], align 8
+; VF4IC2-NEXT:    [[TMP39:%.*]] = getelementptr inbounds ptr, ptr [[DST_B]], i64 [[TMP13]]
+; VF4IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds ptr, ptr [[TMP39]], i64 4
+; VF4IC2-NEXT:    store <4 x ptr> [[TMP41]], ptr [[TMP39]], align 8
 ; VF4IC2-NEXT:    store <4 x ptr> [[TMP32]], ptr [[TMP5]], align 8
-; VF4IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; VF4IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP13]], 8
 ; VF4IC2-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VF4IC2-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF4IC2:       [[MIDDLE_BLOCK]]:
@@ -178,7 +178,7 @@ define void @two_allocas_different_types(ptr noalias %dst.a, ptr noalias %dst.b,
 ; VF1IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
 ; VF1IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF1IC2:       [[VECTOR_PH]]:
-; VF1IC2-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 1
+; VF1IC2-NEXT:    [[TMP0:%.*]] = urem i64 [[N]], 2
 ; VF1IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
 ; VF1IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF1IC2:       [[VECTOR_BODY]]:
