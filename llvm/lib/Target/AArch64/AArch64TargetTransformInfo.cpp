@@ -6914,10 +6914,10 @@ InstructionCost AArch64TTIImpl::getExtendedReductionCost(
                                          CostKind);
 }
 
-InstructionCost
-AArch64TTIImpl::getMulAccReductionCost(bool IsUnsigned, unsigned RedOpcode,
-                                       Type *ResTy, VectorType *VecTy,
-                                       TTI::TargetCostKind CostKind) const {
+InstructionCost AArch64TTIImpl::getMulAccReductionCost(
+    bool IsUnsigned, unsigned RedOpcode, Type *ResTy, VectorType *VecTy,
+    TTI::TargetCostKind CostKind, TTI::CastContextHint CCH,
+    bool SameOperands) const {
   EVT VecVT = TLI->getValueType(DL, VecTy);
   EVT ResVT = TLI->getValueType(DL, ResTy);
 
@@ -6933,8 +6933,29 @@ AArch64TTIImpl::getMulAccReductionCost(bool IsUnsigned, unsigned RedOpcode,
       return LT.first + 2;
   }
 
+  // Otherwise the extends fold into a widening multiply (smull/umull) of
+  // twice the source width, as costed for mul(ext, ext).
+  auto *ExtTy = VectorType::get(ResTy, VecTy);
+  unsigned SrcEltSize = VecTy->getScalarSizeInBits();
+  unsigned DstEltSize = ResTy->getScalarSizeInBits();
+  if (RedOpcode == Instruction::Add && useNeonVector(ExtTy) &&
+      (DstEltSize == 16 || DstEltSize == 32 || DstEltSize == 64) &&
+      SrcEltSize * 2 <= DstEltSize) {
+    auto *MulTy = cast<VectorType>(VecTy->getWithNewBitWidth(SrcEltSize * 2));
+    if (MulTy->getPrimitiveSizeInBits() > 64) {
+      InstructionCost MulCost =
+          MulTy == ExtTy
+              ? getTypeLegalizationCost(ExtTy).first
+              : getArithmeticInstrCost(Instruction::Mul, MulTy, CostKind) +
+                    getCastInstrCost(Instruction::ZExt, ExtTy, MulTy,
+                                     TTI::CastContextHint::None, CostKind);
+      return MulCost + getArithmeticReductionCost(RedOpcode, ExtTy,
+                                                  std::nullopt, CostKind);
+    }
+  }
+
   return BaseT::getMulAccReductionCost(IsUnsigned, RedOpcode, ResTy, VecTy,
-                                       CostKind);
+                                       CostKind, CCH, SameOperands);
 }
 
 InstructionCost

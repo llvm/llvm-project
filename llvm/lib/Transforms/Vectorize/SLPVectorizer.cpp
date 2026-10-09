@@ -628,6 +628,26 @@ public:
     return std::nullopt;
   }
 
+  /// Describes a root node mul(ext(A), ext(B)) that only feeds an add
+  /// reduction, so the reduction is costed as a multiply-accumulate.
+  struct MulAccRootInfo {
+    /// The element type of A and B.
+    Type *SrcTy;
+    bool IsUnsigned;
+    /// A and B are the same value, so a single extend is emitted.
+    bool SameOperands;
+    /// The context of the extended operands.
+    TTI::CastContextHint CCH;
+  };
+
+  /// Returns the multiply-accumulate description of the root node, if the
+  /// root multiply and its extended operands fold into the reduction.
+  std::optional<MulAccRootInfo> getMulAccRootInfo() const;
+
+  /// Returns true if \p TE is an extended operand of the multiply-accumulate
+  /// root that is only used by the root, so it is not emitted on its own.
+  bool isFoldedMulAccExtend(const TreeEntry &TE) const;
+
   /// Checks if the root graph node can be emitted with narrower bitwidth at
   /// codegen and returns it signedness, if so.
   bool isSignedMinBitwidthRootNode() const {
@@ -16177,6 +16197,65 @@ const BoUpSLP::TreeEntry *BoUpSLP::getOperandEntry(const TreeEntry *E,
   return Op;
 }
 
+std::optional<BoUpSLP::MulAccRootInfo> BoUpSLP::getMulAccRootInfo() const {
+  if (!UserIgnoreList || VectorizableTree.empty())
+    return std::nullopt;
+  // Narrowed, combined, alternate or reused nodes are emitted differently.
+  auto IsPlainNode = [&](const TreeEntry &TE) {
+    return TE.State == TreeEntry::Vectorize && !TE.isAltShuffle() &&
+           !TE.hasCopyableElements() &&
+           TE.CombinedOp == TreeEntry::NotCombinedOp &&
+           TE.ReuseShuffleIndices.empty() && !MinBWs.contains(&TE);
+  };
+  const TreeEntry &Root = getRootNode();
+  // The multiply is emitted only as part of the reduction.
+  if (!IsPlainNode(Root) || Root.getOpcode() != Instruction::Mul ||
+      getReductionType()->getElementType() != Root.Scalars.front()->getType() ||
+      !all_of(*UserIgnoreList,
+              [](Value *V) {
+                return cast<Instruction>(V)->getOpcode() == Instruction::Add;
+              }) ||
+      !all_of(Root.Scalars, [&](Value *V) {
+        return isa<Instruction>(V) && all_of(V->users(), [&](User *U) {
+                 return UserIgnoreList->contains(U);
+               });
+      }))
+    return std::nullopt;
+  const TreeEntry *LHS = getOperandEntry(&Root, 0);
+  const TreeEntry *RHS = getOperandEntry(&Root, 1);
+  unsigned ExtOpcode = LHS->hasState() ? LHS->getOpcode() : 0;
+  if (ExtOpcode != Instruction::ZExt && ExtOpcode != Instruction::SExt)
+    return std::nullopt;
+  Type *SrcTy = cast<CastInst>(LHS->getMainOp())->getSrcTy();
+  TTI::CastContextHint CCH = getCastContextHint(*getOperandEntry(LHS, 0));
+  auto IsFoldableExt = [&](const TreeEntry *TE) {
+    if (!IsPlainNode(*TE) || TE->getOpcode() != ExtOpcode ||
+        cast<CastInst>(TE->getMainOp())->getSrcTy() != SrcTy)
+      return false;
+    const TreeEntry *Op = getOperandEntry(TE, 0);
+    return !MinBWs.contains(Op) && getCastContextHint(*Op) == CCH;
+  };
+  // A square reuses the vectorized extend for both operands.
+  bool SameOperands =
+      RHS == LHS || (RHS->isGather() && RHS->Scalars == LHS->Scalars);
+  if (!IsFoldableExt(LHS) || (!SameOperands && !IsFoldableExt(RHS)))
+    return std::nullopt;
+  return MulAccRootInfo{SrcTy, ExtOpcode == Instruction::ZExt, SameOperands,
+                        CCH};
+}
+
+bool BoUpSLP::isFoldedMulAccExtend(const TreeEntry &TE) const {
+  if (!TE.UserTreeIndex || TE.UserTreeIndex.UserTE->Idx != 0 ||
+      !getMulAccRootInfo())
+    return false;
+  // Extends with other users are still emitted for them.
+  ArrayRef<Value *> RootScalars = getRootNodeScalars();
+  return all_of(TE.Scalars, [&](Value *V) {
+    return all_of(V->users(),
+                  [&](User *U) { return is_contained(RootScalars, U); });
+  });
+}
+
 TTI::CastContextHint BoUpSLP::getCastContextHint(const TreeEntry &TE) const {
   if (TE.State == TreeEntry::ScatterVectorize ||
       TE.State == TreeEntry::StridedVectorize)
@@ -17156,6 +17235,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       if (IsArithmeticExtendedReduction &&
           (VecOpcode == Instruction::ZExt || VecOpcode == Instruction::SExt))
         return CommonCost;
+      // Costed by the reduction as a multiply-accumulate.
+      if (isFoldedMulAccExtend(*E))
+        return CommonCost;
       return CommonCost +
              TTI->getCastInstrCost(VecOpcode, VecTy, SrcVecTy, CCH, CostKind,
                                    VecOpcode == Opcode ? VI : nullptr);
@@ -17563,6 +17645,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       return ScalarCost;
     };
     auto GetVectorCost = [=](InstructionCost CommonCost) {
+      // Costed by the reduction as a multiply-accumulate.
+      if (E->Idx == 0 && ShuffleOrOp == Instruction::Mul && getMulAccRootInfo())
+        return CommonCost;
       // And peephole only applies to plain 2-operand nodes.
       if (ShuffleOrOp == Instruction::And && It != MinBWs.end() &&
           !E->hasReassocScalars()) {
@@ -34270,6 +34355,13 @@ private:
                   cast<VectorType>(getWidenedType(RType, ReduxWidth)), FMF,
                   CostKind);
             }
+            if (RdxKind == RecurKind::Add)
+              if (std::optional<BoUpSLP::MulAccRootInfo> MulAcc =
+                      R.getMulAccRootInfo())
+                VectorCost = TTI->getMulAccReductionCost(
+                    MulAcc->IsUnsigned, RdxOpcode, RedTy,
+                    cast<VectorType>(getWidenedType(MulAcc->SrcTy, ReduxWidth)),
+                    CostKind, MulAcc->CCH, MulAcc->SameOperands);
             RdxOpCost = VectorCost;
           }
         } else {
@@ -34329,6 +34421,21 @@ private:
             VectorCost += TTI->getCastInstrCost(
                 Opcode, VectorTy, RVecTy, TTI::CastContextHint::None, CostKind);
           }
+          // The multiply-accumulate folds only into the final reduction, so
+          // this part emits its multiply and extends.
+          if (RdxKind == RecurKind::Add)
+            if (std::optional<BoUpSLP::MulAccRootInfo> MulAcc =
+                    R.getMulAccRootInfo()) {
+              auto *SrcVecTy =
+                  cast<VectorType>(getWidenedType(MulAcc->SrcTy, ReduxWidth));
+              VectorCost += TTI->getArithmeticInstrCost(Instruction::Mul,
+                                                        VectorTy, CostKind);
+              VectorCost += (MulAcc->SameOperands ? 1 : 2) *
+                            TTI->getCastInstrCost(
+                                MulAcc->IsUnsigned ? Instruction::ZExt
+                                                   : Instruction::SExt,
+                                VectorTy, SrcVecTy, MulAcc->CCH, CostKind);
+            }
         }
       }
       Type *ScalarCostTy =

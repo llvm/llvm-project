@@ -1048,7 +1048,9 @@ public:
 
   virtual InstructionCost
   getMulAccReductionCost(bool IsUnsigned, unsigned RedOpcode, Type *ResTy,
-                         VectorType *Ty, TTI::TargetCostKind CostKind) const {
+                         VectorType *Ty, TTI::TargetCostKind CostKind,
+                         TTI::CastContextHint CCH = TTI::CastContextHint::None,
+                         bool SameOperands = false) const {
     return 1;
   }
 

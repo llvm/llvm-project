@@ -1842,9 +1842,15 @@ public:
   /// optional extensions. This is the cost of as:
   /// * ResTy vecreduce.add/sub(mul (A, B)) or,
   /// * ResTy vecreduce.add/sub(mul(ext(Ty A), ext(Ty B)).
+  /// \p CCH is the context of the extended operands, used to cost the
+  /// extensions when the pattern is not lowered as a single operation.
+  /// \p SameOperands is true if A and B are the same value, so a single
+  /// extension is needed.
   LLVM_ABI InstructionCost
   getMulAccReductionCost(bool IsUnsigned, unsigned RedOpcode, Type *ResTy,
-                         VectorType *Ty, TTI::TargetCostKind CostKind) const;
+                         VectorType *Ty, TTI::TargetCostKind CostKind,
+                         TTI::CastContextHint CCH = TTI::CastContextHint::None,
+                         bool SameOperands = false) const;
 
   /// Calculate the cost of an extended reduction pattern, similar to
   /// getArithmeticReductionCost of a reduction with an extension.
