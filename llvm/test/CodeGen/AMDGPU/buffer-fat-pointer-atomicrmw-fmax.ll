@@ -7951,12 +7951,12 @@ define void @buffer_fat_ptr_agent_atomic_fmax_noret_v2bf16__offset__amdgpu_no_fi
 ; GFX12-FAKE16-NEXT:    v_add3_u32 v6, v6, v0, 0x7fff
 ; GFX12-FAKE16-NEXT:    v_cmp_u_f32_e64 s4, v0, v0
 ; GFX12-FAKE16-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX12-FAKE16-NEXT:    v_cndmask_b32_e32 v5, v7, v9, vcc_lo
 ; GFX12-FAKE16-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-FAKE16-NEXT:    v_cndmask_b32_e64 v0, v6, v8, s4
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-FAKE16-NEXT:    v_perm_b32 v0, v5, v0, 0x7060302
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-FAKE16-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v5, v0
 ; GFX12-FAKE16-NEXT:    buffer_atomic_cmpswap_b32 v[5:6], v4, s[0:3], null offen offset:1024 th:TH_ATOMIC_RETURN
 ; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
@@ -8105,7 +8105,7 @@ define void @buffer_fat_ptr_agent_atomic_fmax_noret_v2bf16__offset__amdgpu_no_fi
 ; GFX11-FAKE16-NEXT:    v_add3_u32 v6, v6, v0, 0x7fff
 ; GFX11-FAKE16-NEXT:    v_add3_u32 v7, v7, v5, 0x7fff
 ; GFX11-FAKE16-NEXT:    v_cmp_u_f32_e64 s4, v0, v0
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e32 v5, v7, v9, vcc_lo
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e64 v0, v6, v8, s4
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)

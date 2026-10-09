@@ -260,7 +260,6 @@ define amdgpu_cs void @atomic_load_f32x2_monotonic_agent_offset_min(ptr addrspac
 ; GFX11-LABEL: atomic_load_f32x2_monotonic_agent_offset_min:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfffff000, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
 ; GFX11-NEXT:    flat_load_b64 v[0:1], v[0:1] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -352,7 +351,6 @@ define amdgpu_cs void @atomic_load_i16x2_monotonic_agent_offset_min(ptr addrspac
 ; GFX11-LABEL: atomic_load_i16x2_monotonic_agent_offset_min:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfffff000, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
 ; GFX11-NEXT:    flat_load_b32 v0, v[0:1] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)

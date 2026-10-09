@@ -1370,7 +1370,7 @@ define amdgpu_kernel void @select_v2f16_imm_c(
 ; GFX11-TRUE16-NEXT:    v_cmp_nlt_f16_e32 vcc_lo, v1.l, v0.l
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v2
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX11-TRUE16-NEXT:    v_cmp_nlt_f16_e64 s0, v4.l, v3.l
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0x3800, v2.l, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.h, 0x3900, v0.l, s0
@@ -1542,7 +1542,7 @@ define amdgpu_kernel void @select_v2f16_imm_d(
 ; GFX11-TRUE16-NEXT:    v_cmp_lt_f16_e32 vcc_lo, v1.l, v0.l
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v2
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX11-TRUE16-NEXT:    v_cmp_lt_f16_e64 s0, v4.l, v3.l
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0x3800, v2.l, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.h, 0x3900, v0.l, s0
@@ -1677,10 +1677,8 @@ define <4 x half> @v_vselect_v4f16(<4 x half> %a, <4 x half> %b, <4 x i32> %cond
 ; GFX11-TRUE16-NEXT:    v_cmp_eq_u32_e64 s1, 0, v5
 ; GFX11-TRUE16-NEXT:    v_cmp_eq_u32_e64 s2, 0, v7
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.l, v3.l, v1.l, vcc_lo
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, v2.l, v0.l, s0
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, v2.h, v0.h, s1
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.h, v3.h, v1.h, s2
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2065,7 +2063,6 @@ define <16 x half> @v_vselect_v16f16(<16 x half> %a, <16 x half> %b, <16 x i32> 
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v3.h, v11.h, v3.h, s5
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_cmp_eq_u32_e64 s0, 0, v31
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v7.h, v15.h, v7.h, s0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;

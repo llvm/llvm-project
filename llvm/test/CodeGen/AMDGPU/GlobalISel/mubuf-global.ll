@@ -235,7 +235,6 @@ define amdgpu_ps void @mubuf_store_vgpr_ptr_offset4294967296(ptr addrspace(1) %p
 ; GFX12-LABEL: mubuf_store_vgpr_ptr_offset4294967296:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, 4, v1, vcc_lo
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
@@ -269,7 +268,6 @@ define amdgpu_ps void @mubuf_store_vgpr_ptr_offset4294967297(ptr addrspace(1) %p
 ; GFX12-LABEL: mubuf_store_vgpr_ptr_offset4294967297:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 4
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, 4, v1, vcc_lo
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
@@ -381,7 +379,7 @@ define amdgpu_ps void @mubuf_store_vgpr_ptr_sgpr_offset(ptr addrspace(1) %ptr, i
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_lshl_b64 s[0:1], s[2:3], 2
 ; GFX12-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
@@ -419,7 +417,7 @@ define amdgpu_ps void @mubuf_store_vgpr_ptr_sgpr_offset_offset256(ptr addrspace(
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_lshl_b64 s[0:1], s[2:3], 2
 ; GFX12-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
@@ -458,7 +456,7 @@ define amdgpu_ps void @mubuf_store_vgpr_ptr_sgpr_offset256_offset(ptr addrspace(
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_lshl_b64 s[0:1], s[2:3], 2
 ; GFX12-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
@@ -502,7 +500,7 @@ define amdgpu_ps void @mubuf_store_sgpr_ptr_vgpr_offset(ptr addrspace(1) inreg %
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[0:1]
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, v3, v1, vcc_lo
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
@@ -546,7 +544,7 @@ define amdgpu_ps void @mubuf_store_sgpr_ptr_vgpr_offset_offset4095(ptr addrspace
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[0:1]
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, v3, v1, vcc_lo
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-NEXT:    global_store_b32 v[0:1], v2, off offset:16380
@@ -590,7 +588,7 @@ define amdgpu_ps void @mubuf_store_sgpr_ptr_offset4095_vgpr_offset(ptr addrspace
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[0:1]
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, v3, v1, vcc_lo
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-NEXT:    global_store_b32 v[0:1], v2, off offset:16380
@@ -833,7 +831,6 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_offset4294967296(ptr addrspace(1) %p
 ; GFX12-LABEL: mubuf_load_vgpr_ptr_offset4294967296:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, 4, v1, vcc_lo
 ; GFX12-NEXT:    global_load_b32 v0, v[0:1], off scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -867,7 +864,6 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_offset4294967297(ptr addrspace(1) %p
 ; GFX12-LABEL: mubuf_load_vgpr_ptr_offset4294967297:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 4
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, 4, v1, vcc_lo
 ; GFX12-NEXT:    global_load_b32 v0, v[0:1], off scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -980,7 +976,7 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset(ptr addrspace(1) %ptr, i
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_lshl_b64 s[0:1], s[2:3], 2
 ; GFX12-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
 ; GFX12-NEXT:    global_load_b32 v0, v[0:1], off scope:SCOPE_SYS
@@ -1018,7 +1014,7 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset_offset256(ptr addrspace(
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_lshl_b64 s[0:1], s[2:3], 2
 ; GFX12-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
 ; GFX12-NEXT:    global_load_b32 v0, v[0:1], off offset:1024 scope:SCOPE_SYS
@@ -1057,7 +1053,7 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset256_offset(ptr addrspace(
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_lshl_b64 s[0:1], s[2:3], 2
 ; GFX12-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
 ; GFX12-NEXT:    global_load_b32 v0, v[0:1], off offset:1024 scope:SCOPE_SYS
@@ -1101,7 +1097,7 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_vgpr_offset(ptr addrspace(1) inreg %
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[0:1]
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, v3, v1, vcc_lo
 ; GFX12-NEXT:    global_load_b32 v0, v[0:1], off scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -1145,7 +1141,7 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_vgpr_offset_offset4095(ptr addrspace
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[0:1]
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, v3, v1, vcc_lo
 ; GFX12-NEXT:    global_load_b32 v0, v[0:1], off offset:16380 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -1189,7 +1185,7 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4095_vgpr_offset(ptr addrspace
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[0:1]
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, v3, v1, vcc_lo
 ; GFX12-NEXT:    global_load_b32 v0, v[0:1], off offset:16380 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -1360,7 +1356,6 @@ define amdgpu_ps float @mubuf_atomicrmw_vgpr_ptr_offset4294967296(ptr addrspace(
 ; GFX12-LABEL: mubuf_atomicrmw_vgpr_ptr_offset4294967296:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, 4, v1, vcc_lo
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 2
 ; GFX12-NEXT:    global_atomic_add_u32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
@@ -1410,7 +1405,7 @@ define amdgpu_ps float @mubuf_atomicrmw_sgpr_ptr_vgpr_offset(ptr addrspace(1) in
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[0:1]
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, v3, v1, vcc_lo
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 2
 ; GFX12-NEXT:    global_atomic_add_u32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
@@ -1643,7 +1638,7 @@ define amdgpu_ps float @mubuf_cmpxchg_sgpr_ptr_vgpr_offset(ptr addrspace(1) inre
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[0:1]
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v4, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, v5, v1, vcc_lo
 ; GFX12-NEXT:    global_atomic_cmpswap_b32 v0, v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0

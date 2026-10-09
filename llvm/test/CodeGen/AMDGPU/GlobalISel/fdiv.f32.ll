@@ -511,13 +511,13 @@ define float @v_fdiv_f32_ulp25(float %a, float %b) #1 {
 ; GFX11-FLUSH:       ; %bb.0:
 ; GFX11-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-FLUSH-NEXT:    v_cmp_lt_f32_e64 s0, 0x6f800000, |v1|
-; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_cndmask_b32_e64 v2, 1.0, 0x2f800000, s0
+; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_mul_f32_e32 v1, v1, v2
-; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_rcp_f32_e32 v1, v1
 ; GFX11-FLUSH-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-FLUSH-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_mul_f32_e32 v0, v2, v0
 ; GFX11-FLUSH-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv float %a, %b, !fpmath !0
@@ -1637,7 +1637,6 @@ define <2 x float> @v_fdiv_v2f32_ulp25(<2 x float> %a, <2 x float> %b) #1 {
 ; GFX11-FLUSH:       ; %bb.0:
 ; GFX11-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-FLUSH-NEXT:    v_cmp_lt_f32_e64 s0, 0x6f800000, |v2|
-; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_cndmask_b32_e64 v4, 1.0, 0x2f800000, s0
 ; GFX11-FLUSH-NEXT:    v_cmp_lt_f32_e64 s0, 0x6f800000, |v3|
 ; GFX11-FLUSH-NEXT:    v_cndmask_b32_e64 v5, 1.0, 0x2f800000, s0

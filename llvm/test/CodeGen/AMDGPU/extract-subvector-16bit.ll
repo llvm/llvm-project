@@ -458,10 +458,9 @@ define <4 x half> @vec_8xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX11-TRUE16-NEXT:    v_cmp_ge_f16_e64 s0, 0.5, v0.h
 ; GFX11-TRUE16-NEXT:    v_cmp_nge_f16_e64 s1, 0.5, v1.l
 ; GFX11-TRUE16-NEXT:    v_cmp_ge_f16_e64 s2, 0.5, v1.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, v2.l, 0x3d00, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, v2.l, 0x3d00, s0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.h, 0x3d00, v2.l, s1
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.l, v2.l, 0x3d00, s2
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -1105,10 +1104,9 @@ define <4 x half> @vec_16xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX11-TRUE16-NEXT:    v_cmp_ge_f16_e64 s0, 0.5, v0.h
 ; GFX11-TRUE16-NEXT:    v_cmp_nge_f16_e64 s1, 0.5, v1.l
 ; GFX11-TRUE16-NEXT:    v_cmp_ge_f16_e64 s2, 0.5, v1.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, v2.l, 0x3d00, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, v2.l, 0x3d00, s0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.h, 0x3d00, v2.l, s1
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v1.l, v2.l, 0x3d00, s2
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]

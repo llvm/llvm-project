@@ -530,7 +530,7 @@ define void @s_maximum_f64(double inreg %src0, double inreg %src1) #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_max_f64 v[0:1], s[0:1], s[2:3]
 ; GFX11-NEXT:    v_cmp_u_f64_e64 s0, s[0:1], s[2:3]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, 0x7ff80000, s0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s0
 ; GFX11-NEXT:    ;;#ASMSTART
@@ -643,7 +643,7 @@ define <2 x double> @v_maximum_v2f64(<2 x double> %src0, <2 x double> %src1) #0 
 ; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[0:1], v[4:5]
 ; GFX11-NEXT:    v_max_f64 v[4:5], v[2:3], v[6:7]
 ; GFX11-NEXT:    v_cmp_u_f64_e64 s0, v[2:3], v[6:7]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, v8, 0, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, v9, 0x7ff80000, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, v4, 0, s0
@@ -807,7 +807,7 @@ define <2 x double> @v_maximum_v2f64__nsz(<2 x double> %src0, <2 x double> %src1
 ; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[0:1], v[4:5]
 ; GFX11-NEXT:    v_max_f64 v[4:5], v[2:3], v[6:7]
 ; GFX11-NEXT:    v_cmp_u_f64_e64 s0, v[2:3], v[6:7]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, v8, 0, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, v9, 0x7ff80000, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, v4, 0, s0
@@ -999,7 +999,7 @@ define void @s_maximum_v2f64(<2 x double> inreg %src0, <2 x double> inreg %src1)
 ; GFX11-NEXT:    v_cmp_u_f64_e64 s2, s[2:3], s[18:19]
 ; GFX11-NEXT:    v_max_f64 v[4:5], s[0:1], s[16:17]
 ; GFX11-NEXT:    v_cmp_u_f64_e64 s0, s[0:1], s[16:17]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v3, v1, 0x7ff80000, s2
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, v0, 0, s2
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, v5, 0x7ff80000, s0
@@ -2132,7 +2132,7 @@ define <8 x double> @v_maximum_v8f64(<8 x double> %src0, <8 x double> %src1) #0 
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_max_f64 v[28:29], v[14:15], v[30:31]
 ; GFX11-NEXT:    v_cmp_u_f64_e64 s6, v[14:15], v[30:31]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v14, v28, 0, s6
 ; GFX11-NEXT:    v_cndmask_b32_e64 v15, v29, 0x7ff80000, s6
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]

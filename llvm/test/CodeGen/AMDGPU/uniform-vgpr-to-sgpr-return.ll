@@ -21,7 +21,7 @@ define amdgpu_ps i64 @uniform_v_to_s_i64(double inreg %a, double inreg %b) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_max_f64 v[0:1], s[0:1], s[2:3]
 ; GFX11-NEXT:    v_cmp_u_f64_e64 s0, s[0:1], s[2:3]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, 0x7ff80000, s0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -79,7 +79,7 @@ define amdgpu_ps double @uniform_v_to_s_double(double inreg %a, double inreg %b)
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_max_f64 v[0:1], s[0:1], s[2:3]
 ; GFX11-NEXT:    v_cmp_u_f64_e64 s0, s[0:1], s[2:3]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, 0x7ff80000, s0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)

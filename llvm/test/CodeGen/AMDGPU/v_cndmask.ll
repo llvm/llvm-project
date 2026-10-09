@@ -247,7 +247,7 @@ define amdgpu_kernel void @fcmp_sgprX_k0_select_k1_sgprZ_f32(ptr addrspace(1) %o
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x4c
 ; GFX11-NEXT:    s_load_b64 s[2:3], s[4:5], 0x24
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_nlg_f32_e64 s[4:5], s0, 0
@@ -327,7 +327,7 @@ define amdgpu_kernel void @fcmp_sgprX_k0_select_k1_sgprX_f32(ptr addrspace(1) %o
 ; GFX11-NEXT:    s_load_b32 s6, s[4:5], 0x2c
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_nlg_f32_e64 s[2:3], s6, 0
@@ -405,7 +405,7 @@ define amdgpu_kernel void @fcmp_sgprX_k0_select_k0_sgprZ_f32(ptr addrspace(1) %o
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x4c
 ; GFX11-NEXT:    s_load_b64 s[2:3], s[4:5], 0x24
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_nlg_f32_e64 s[4:5], s0, 0
@@ -485,7 +485,7 @@ define amdgpu_kernel void @fcmp_sgprX_k0_select_k0_sgprX_f32(ptr addrspace(1) %o
 ; GFX11-NEXT:    s_load_b32 s6, s[4:5], 0x2c
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_nlg_f32_e64 s[2:3], s6, 0

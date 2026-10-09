@@ -61,7 +61,7 @@ define amdgpu_kernel void @d16_load_same_order_group(ptr %in1, ptr %in2) {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b64 v[0:1], 1, v[0:1]
 ; GFX11-NEXT:    v_add_co_u32 v4, vcc_lo, s2, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v5, null, s3, v1, vcc_lo
 ; GFX11-NEXT:    flat_load_d16_b16 v0, v[2:3]
 ; GFX11-NEXT:    flat_load_d16_hi_b16 v0, v[4:5]
@@ -82,7 +82,7 @@ define amdgpu_kernel void @d16_load_same_order_group(ptr %in1, ptr %in2) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[0:1], 1, v[0:1]
 ; GFX12-NEXT:    v_add_co_u32 v4, vcc_lo, s2, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v5, null, s3, v1, vcc_lo
 ; GFX12-NEXT:    flat_load_d16_b16 v0, v[2:3]
 ; GFX12-NEXT:    flat_load_d16_hi_b16 v0, v[4:5]

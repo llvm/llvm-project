@@ -93,19 +93,17 @@ define i32 @ucmp_i128(i128 %a, i128 %b) {
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc_lo
 ; GFX12-GISEL-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[2:3], v[6:7]
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX12-GISEL-NEXT:    v_cmp_lt_u64_e64 s0, v[2:3], v[6:7]
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc_lo
 ; GFX12-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[2:3], v[6:7]
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s0
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e32 v2, v9, v8, vcc_lo
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_sub_nc_u32_e32 v0, v2, v0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %r = call i32 @llvm.ucmp.i32.i128(i128 %a, i128 %b)

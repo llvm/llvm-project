@@ -2689,7 +2689,6 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX1200-NEXT:    v_or_b16 v8.h, v11.l, v10.l
 ; GFX1200-NEXT:    v_and_b16 v9.l, v12.l, 1
 ; GFX1200-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX1200-NEXT:    v_cndmask_b32_e64 v13, 0, 1, s2
 ; GFX1200-NEXT:    v_cmp_o_f16_e64 s2, v1.h, v1.h
 ; GFX1200-NEXT:    v_cndmask_b16 v1.h, 0, v4.h, s0
@@ -2745,7 +2744,7 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX1200-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v1.h, v6.l, v1.h, s0
 ; GFX1200-NEXT:    v_cmp_eq_f16_e64 s0, 0, v0.l
-; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX1200-NEXT:    v_cndmask_b16 v2.h, v4.h, v2.h, s3
 ; GFX1200-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v1.h, v1.h, v5.h, s0

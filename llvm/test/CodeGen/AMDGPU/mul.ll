@@ -4078,16 +4078,16 @@ define amdgpu_kernel void @v_mul_i128(ptr addrspace(1) %out, ptr addrspace(1) %a
 ; GFX11-NEXT:    v_mad_u64_u32 v[2:3], null, v0, v5, v[9:10]
 ; GFX11-NEXT:    v_add3_u32 v14, v14, v16, v11
 ; GFX11-NEXT:    v_mul_lo_u32 v11, v7, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX11-NEXT:    v_add_co_u32 v3, s0, v12, v3
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v4, null, 0, 0, s0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_mad_u64_u32 v[9:10], null, v6, v0, v[13:14]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_mad_u64_u32 v[6:7], null, v1, v5, v[3:4]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_add3_u32 v0, v11, v10, v17
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_add_co_u32 v10, vcc_lo, v6, v9
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v11, null, v7, v0, vcc_lo
 ; GFX11-NEXT:    v_mov_b32_e32 v9, v2
 ; GFX11-NEXT:    global_store_b128 v15, v[8:11], s[2:3]
@@ -4157,11 +4157,12 @@ define amdgpu_kernel void @v_mul_i128(ptr addrspace(1) %out, ptr addrspace(1) %a
 ; GFX12-SSASCHED-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-SSASCHED-NEXT:    v_add3_u32 v3, v7, v3, v4
 ; GFX12-SSASCHED-NEXT:    v_add_co_u32 v10, s0, v12, v10
-; GFX12-SSASCHED-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-SSASCHED-NEXT:    v_add_co_ci_u32_e64 v11, null, 0, 0, s0
+; GFX12-SSASCHED-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-SSASCHED-NEXT:    v_mad_co_u64_u32 v[0:1], null, v1, v5, v[10:11]
 ; GFX12-SSASCHED-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-SSASCHED-NEXT:    v_add_co_u32 v10, vcc_lo, v0, v2
+; GFX12-SSASCHED-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-SSASCHED-NEXT:    v_add_co_ci_u32_e64 v11, null, v1, v3, vcc_lo
 ; GFX12-SSASCHED-NEXT:    global_store_b128 v13, v[8:11], s[2:3]
 ; GFX12-SSASCHED-NEXT:    s_endpgm
@@ -4230,16 +4231,16 @@ define amdgpu_kernel void @v_mul_i128(ptr addrspace(1) %out, ptr addrspace(1) %a
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX13-NEXT:    v_mad_co_u64_u32 v[9:10], null, v0, v5, v[9:10]
 ; GFX13-NEXT:    v_add3_u32 v3, v3, v14, v11
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX13-NEXT:    v_add_co_u32 v10, s0, v12, v10
 ; GFX13-NEXT:    v_add_co_ci_u32_e64 v11, null, 0, 0, s0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX13-NEXT:    v_mad_co_u64_u32 v[2:3], null, v6, v0, v[2:3]
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX13-NEXT:    v_mad_co_u64_u32 v[0:1], null, v1, v5, v[10:11]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX13-NEXT:    v_add3_u32 v3, v7, v3, v4
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX13-NEXT:    v_add_co_u32 v10, vcc_lo, v0, v2
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_add_co_ci_u32_e64 v11, null, v1, v3, vcc_lo
 ; GFX13-NEXT:    global_store_b128 v13, v[8:11], s[2:3] scale_offset
 ; GFX13-NEXT:    s_endpgm
