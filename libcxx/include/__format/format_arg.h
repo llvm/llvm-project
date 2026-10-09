@@ -254,26 +254,26 @@ public:
   // These constructors contain the exact storage type used. If adjustments are
   // required, these will be done in __create_format_arg.
 
-  _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value() noexcept : __monostate_() {}
-  _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value(bool __value) noexcept : __boolean_(__value) {}
-  _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value(_CharT __value) noexcept : __char_type_(__value) {}
-  _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value(int __value) noexcept : __int_(__value) {}
-  _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value(unsigned __value) noexcept : __unsigned_(__value) {}
-  _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value(long long __value) noexcept : __long_long_(__value) {}
-  _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value(unsigned long long __value) noexcept
+  _LIBCPP_HIDE_FROM_ABI constexpr __basic_format_arg_value() noexcept : __monostate_() {}
+  _LIBCPP_HIDE_FROM_ABI constexpr __basic_format_arg_value(bool __value) noexcept : __boolean_(__value) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr __basic_format_arg_value(_CharT __value) noexcept : __char_type_(__value) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr __basic_format_arg_value(int __value) noexcept : __int_(__value) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr __basic_format_arg_value(unsigned __value) noexcept : __unsigned_(__value) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr __basic_format_arg_value(long long __value) noexcept : __long_long_(__value) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr __basic_format_arg_value(unsigned long long __value) noexcept
       : __unsigned_long_long_(__value) {}
 #  if _LIBCPP_HAS_INT128
-  _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value(__int128_t __value) noexcept : __i128_(__value) {}
-  _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value(__uint128_t __value) noexcept : __u128_(__value) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr __basic_format_arg_value(__int128_t __value) noexcept : __i128_(__value) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr __basic_format_arg_value(__uint128_t __value) noexcept : __u128_(__value) {}
 #  endif
-  _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value(float __value) noexcept : __float_(__value) {}
-  _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value(double __value) noexcept : __double_(__value) {}
-  _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value(long double __value) noexcept : __long_double_(__value) {}
-  _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value(const _CharT* __value) noexcept : __const_char_type_ptr_(__value) {}
-  _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value(basic_string_view<_CharT> __value) noexcept
+  _LIBCPP_HIDE_FROM_ABI constexpr __basic_format_arg_value(float __value) noexcept : __float_(__value) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr __basic_format_arg_value(double __value) noexcept : __double_(__value) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr __basic_format_arg_value(long double __value) noexcept : __long_double_(__value) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr __basic_format_arg_value(const _CharT* __value) noexcept : __const_char_type_ptr_(__value) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr __basic_format_arg_value(basic_string_view<_CharT> __value) noexcept
       : __string_view_(__value) {}
-  _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value(const void* __value) noexcept : __ptr_(__value) {}
-  _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value(__handle&& __value) noexcept : __handle_(std::move(__value)) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr __basic_format_arg_value(const void* __value) noexcept : __ptr_(__value) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr __basic_format_arg_value(__handle&& __value) noexcept : __handle_(std::move(__value)) {}
 };
 
 template <class _Context>

@@ -27,7 +27,7 @@ constexpr bool test() {
   assert(std::format("hello") == "hello");
 
   // Integers
-  // assert(std::format("{}", 42) == "42");
+  assert(std::format("{}", 42) == "42");
   // assert(std::format("{}", -42) == "-42");
   // assert(std::format("{:x}", 255u) == "ff");
   // assert(std::format("{:>5}", 42) == "   42");
