@@ -22,7 +22,9 @@ set(COPYPROF_NOINST_TEST_SOURCES
   copyprof_allocator_test.cpp
   copyprof_interceptors_test.cpp
   copyprof_shadow_test.cpp
-  copyprof_state_test.cpp)
+  copyprof_state_test.cpp
+  copyprof_report_buffer_test.cpp
+  copyprof_report_sink_test.cpp)
 
 include_directories(.. ../..)
 

@@ -3,12 +3,16 @@
 set(COPYPROF_SOURCES
   copyprof.cpp
   copyprof_allocator.cpp
+  copyprof_flags.cpp
   copyprof_interceptors.cpp
   copyprof_interceptors_memintrinsics.cpp
   copyprof_malloc_linux.cpp
   copyprof_preinit.cpp
   copyprof_per_object_state.cpp
+  copyprof_report_buffer.cpp
   copyprof_reporting.cpp
+  copyprof_report_sink.cpp
+  copyprof_stdout_backend.cpp
   copyprof_shadow.cpp
   copyprof_stack.cpp
   copyprof_state.cpp
@@ -20,11 +24,17 @@ set(COPYPROF_CXX_SOURCES
 
 set(COPYPROF_HEADERS
   copyprof_allocator.h
+  copyprof_flags.h
   copyprof_interceptors.h
   copyprof_interface_internal.h
   copyprof_internal.h
   copyprof_per_object_state.h
+  copyprof_report.h
+  copyprof_report_backend.h
+  copyprof_report_buffer.h
   copyprof_reporting.h
+  copyprof_report_sink.h
+  copyprof_stdout_backend.h
   copyprof_shadow.h
   copyprof_state.h
 )
