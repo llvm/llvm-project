@@ -8430,7 +8430,6 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
       W.printNumber("Version", CGInfo.FormatVersionNumber);
       W.printBoolean("IsIndirectTarget", CGInfo.IsIndirectTarget);
       W.printHex("TypeID", CGInfo.FunctionTypeID);
-      W.printNumber("NumDirectCallees", CGInfo.DirectCallees.size());
       {
         ListScope DCs(W, "DirectCallees");
         for (uint64_t CalleePC : CGInfo.DirectCallees) {
@@ -8438,7 +8437,6 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
           PrintFunc(CalleePC);
         }
       }
-      W.printNumber("NumIndirectTargetTypeIDs", CGInfo.IndirectTypeIDs.size());
       SmallVector<uint64_t, 4> IndirectTypeIDsList(
           CGInfo.IndirectTypeIDs.begin(), CGInfo.IndirectTypeIDs.end());
       W.printHexList("IndirectTypeIDs", ArrayRef(IndirectTypeIDsList));
