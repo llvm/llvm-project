@@ -63,6 +63,7 @@
 #include <algorithm>
 #include <bitset>
 #include <cctype>
+#include <list>
 #include <numeric>
 using namespace llvm;
 
@@ -5013,10 +5014,10 @@ static SDValue concatSubVectors(SDValue V1, SDValue V2, SelectionDAG &DAG,
   EVT SubVT = V1.getValueType();
   EVT SubSVT = SubVT.getScalarType();
   unsigned SubNumElts = SubVT.getVectorNumElements();
-  unsigned SubVectorWidth = SubVT.getSizeInBits();
+  unsigned SubVecWidth = SubVT.getSizeInBits();
   EVT VT = EVT::getVectorVT(*DAG.getContext(), SubSVT, 2 * SubNumElts);
-  SDValue V = insertSubVector(DAG.getUNDEF(VT), V1, 0, DAG, dl, SubVectorWidth);
-  return insertSubVector(V, V2, SubNumElts, DAG, dl, SubVectorWidth);
+  SDValue V = insertSubVector(DAG.getPOISON(VT), V1, 0, DAG, dl, SubVecWidth);
+  return insertSubVector(V, V2, SubNumElts, DAG, dl, SubVecWidth);
 }
 
 /// Returns a vector of specified type with all bits set.
@@ -51324,11 +51325,6 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
   if (isPowerOf2_64(C.getZExtValue()))
     return SDValue();
 
-  // Optimize a single multiply with constant into two operations in order to
-  // implement it with two cheaper instructions, e.g. LEA + SHL, LEA + LEA.
-  if (!Subtarget.getCLOpts().mul_constant_optimization)
-    return SDValue();
-
   // An imul is usually smaller than the alternative sequence.
   if (DAG.getMachineFunction().getFunction().hasMinSize())
     return SDValue();
@@ -51336,6 +51332,8 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
   if (DCI.isBeforeLegalize() || DCI.isCalledByLegalizer())
     return SDValue();
 
+  // Optimize a single multiply with constant into two operations in order to
+  // implement it with two cheaper instructions, e.g. LEA + SHL, LEA + LEA.
   int64_t SignMulAmt = C.getSExtValue();
   assert(SignMulAmt != INT64_MIN && "Int min should have been handled!");
   uint64_t AbsMulAmt = SignMulAmt < 0 ? -SignMulAmt : SignMulAmt;

@@ -13546,8 +13546,7 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop, bool CountExtracts) {
         !TE.getOperations().isAddSubLikeOp())
       return false;
     Type *ScalarTy = TE.getMainOp()->getType();
-    auto *VecTy =
-        cast<VectorType>(getWidenedType(ScalarTy, TE.getVectorFactor()));
+    auto *VecTy = cast<VectorType>(getWidenedType(ScalarTy, TE.Scalars.size()));
     SmallBitVector OpcodeMask(getAltInstrMask(
         TE.Scalars, ScalarTy, TE.getOpcode(), TE.getAltOpcode()));
     return TTI->isLegalAltInstr(VecTy, TE.getOpcode(), TE.getAltOpcode(),

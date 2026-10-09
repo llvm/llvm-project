@@ -243,9 +243,12 @@ DeviceTy::loadBinary(__tgt_device_image *Img) {
   if (!CallTablePairOrErr)
     return CallTablePairOrErr.takeError();
 
+  // Debug flags for the device runtime.
+  static Int32Envar OMPX_DebugKind("LIBOMPTARGET_DEVICE_RTL_DEBUG");
+
   GenericDeviceTy &GenericDevice = RTL->getDevice(RTLDeviceID);
   DeviceEnvironmentTy DeviceEnvironment;
-  DeviceEnvironment.DeviceDebugKind = GenericDevice.getDebugKind();
+  DeviceEnvironment.DeviceDebugKind = OMPX_DebugKind.get();
   DeviceEnvironment.NumDevices = RTL->getNumDevices();
   // TODO: The device ID used here is not the real device ID used by OpenMP.
   DeviceEnvironment.DeviceNum = RTLDeviceID;
@@ -554,6 +557,19 @@ static uint32_t getEffectiveNumThreads(GenericDeviceTy &GenericDevice,
                                                : KernelEnv.PreferredNumThreads);
 }
 
+/// Get the maximum number of blocks the device can launch for a kernel using
+/// \p NumThreads threads per block, further limited by OMP_NUM_TEAMS if the
+/// user set it.
+static uint32_t getDeviceBlockLimit(GenericDeviceTy &GenericDevice,
+                                    uint32_t NumThreads) {
+  static Int32Envar OMP_NumTeams("OMP_NUM_TEAMS");
+
+  uint32_t BlockLimit = GenericDevice.getBlockLimit(NumThreads);
+  if (OMP_NumTeams > 0)
+    return std::min(BlockLimit, uint32_t(OMP_NumTeams));
+  return BlockLimit;
+}
+
 /// Get the effective number of blocks for the kernel based on the
 /// user-defined number of blocks and the loop trip count.
 /// The number of threads \p EffectiveNumThreads can be adjusted by this
@@ -573,7 +589,7 @@ getEffectiveNumBlocks(GenericDeviceTy &GenericDevice, uint32_t UserNumBlocks,
   // reusing blocks until the requested count has been served.
   if (UserNumBlocks > 0)
     return std::min(UserNumBlocks,
-                    GenericDevice.getBlockLimit(EffectiveNumThreads));
+                    getDeviceBlockLimit(GenericDevice, EffectiveNumThreads));
 
   // Return the number of blocks required to cover the loop iterations.
   if (KernelEnv.isNoLoopMode())
@@ -651,7 +667,7 @@ getEffectiveNumBlocks(GenericDeviceTy &GenericDevice, uint32_t UserNumBlocks,
   if (GenericDevice.getReuseBlocksForHighTripCount())
     PreferredNumBlocks = std::min(TripCountNumBlocks, DefaultNumBlocks);
   return std::min(PreferredNumBlocks,
-                  GenericDevice.getBlockLimit(EffectiveNumThreads));
+                  getDeviceBlockLimit(GenericDevice, EffectiveNumThreads));
 }
 
 /// Build the base KernelLaunchArgsTy for a launch from the public
