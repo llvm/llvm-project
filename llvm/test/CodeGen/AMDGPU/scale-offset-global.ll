@@ -578,11 +578,70 @@ define amdgpu_ps void @global_atomicrmw_b32_idxprom(ptr addrspace(1) align 4 inr
 ; GFX1250-NEXT:    global_atomic_add_u32 v0, v1, s[0:1] scale_offset scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
 ;
-; GFX13-LABEL: global_atomicrmw_b32_idxprom:
-; GFX13:       ; %bb.0: ; %entry
-; GFX13-NEXT:    v_mov_b32_e32 v1, 1
-; GFX13-NEXT:    global_atomic_add_u32 v0, v1, s[0:1] scale_offset scope:SCOPE_SYS
-; GFX13-NEXT:    s_endpgm
+; GFX13-SDAG-LABEL: global_atomicrmw_b32_idxprom:
+; GFX13-SDAG:       ; %bb.0: ; %entry
+; GFX13-SDAG-NEXT:    s_mov_b32 s2, exec_lo
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-SDAG-NEXT:    s_and_saveexec_b32 s3, s2
+; GFX13-SDAG-NEXT:    s_cbranch_execz .LBB20_3
+; GFX13-SDAG-NEXT:  ; %bb.1:
+; GFX13-SDAG-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GFX13-SDAG-NEXT:    v_mbcnt_lo_u32_b32 v4, -1, 0
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-SDAG-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[0:1]
+; GFX13-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, s0, v0
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v1, vcc_lo
+; GFX13-SDAG-NEXT:    v_wave_match_b32 v2, v0, v0
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-SDAG-NEXT:    v_wave_match_b32 v3, v1, v1
+; GFX13-SDAG-NEXT:    v_and_b32_e32 v2, v2, v3
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX13-SDAG-NEXT:    v_clz_i32_u32_e32 v3, v2
+; GFX13-SDAG-NEXT:    v_exclusive_scan_sum_i32 v2, 1, v2
+; GFX13-SDAG-NEXT:    v_sub_nc_u32_e32 v3, 31, v3
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v4, v3
+; GFX13-SDAG-NEXT:    s_and_b32 exec_lo, exec_lo, vcc_lo
+; GFX13-SDAG-NEXT:    s_cbranch_execz .LBB20_3
+; GFX13-SDAG-NEXT:  ; %bb.2:
+; GFX13-SDAG-NEXT:    v_add_nc_u32_e32 v2, 1, v2
+; GFX13-SDAG-NEXT:    global_atomic_add_u32 v[0:1], v2, off scope:SCOPE_SYS
+; GFX13-SDAG-NEXT:  .LBB20_3:
+; GFX13-SDAG-NEXT:    s_endpgm
+;
+; GFX13-GISEL-LABEL: global_atomicrmw_b32_idxprom:
+; GFX13-GISEL:       ; %bb.0: ; %entry
+; GFX13-GISEL-NEXT:    s_mov_b32 s2, exec_lo
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-GISEL-NEXT:    s_and_saveexec_b32 s3, s2
+; GFX13-GISEL-NEXT:    s_cbranch_execz .LBB20_3
+; GFX13-GISEL-NEXT:  ; %bb.1:
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v4, s1 :: v_dual_ashrrev_i32 v1, 31, v0
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v3, s0
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-GISEL-NEXT:    v_lshlrev_b64_e32 v[1:2], 2, v[0:1]
+; GFX13-GISEL-NEXT:    v_add_co_u32 v1, vcc_lo, v3, v1
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX13-GISEL-NEXT:    v_add_co_ci_u32_e64 v2, null, v4, v2, vcc_lo
+; GFX13-GISEL-NEXT:    v_mbcnt_lo_u32_b32 v3, -1, 0
+; GFX13-GISEL-NEXT:    v_wave_match_b32 v1, v1, v1
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-GISEL-NEXT:    v_wave_match_b32 v2, v2, v2
+; GFX13-GISEL-NEXT:    v_and_b32_e32 v1, v1, v2
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX13-GISEL-NEXT:    v_clz_i32_u32_e32 v2, v1
+; GFX13-GISEL-NEXT:    v_exclusive_scan_sum_i32 v1, 1, v1
+; GFX13-GISEL-NEXT:    v_sub_nc_u32_e32 v2, 31, v2
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v2
+; GFX13-GISEL-NEXT:    s_and_b32 exec_lo, exec_lo, vcc_lo
+; GFX13-GISEL-NEXT:    s_cbranch_execz .LBB20_3
+; GFX13-GISEL-NEXT:  ; %bb.2:
+; GFX13-GISEL-NEXT:    v_add_nc_u32_e32 v1, 1, v1
+; GFX13-GISEL-NEXT:    global_atomic_add_u32 v0, v1, s[0:1] scale_offset scope:SCOPE_SYS
+; GFX13-GISEL-NEXT:  .LBB20_3:
+; GFX13-GISEL-NEXT:    s_endpgm
 entry:
   %idxprom = sext i32 %idx to i64
   %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %p, i64 %idxprom
