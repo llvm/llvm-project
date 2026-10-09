@@ -53,11 +53,11 @@
 ; SPLIT5-CHECK4: define amdgpu_kernel void @ABC()
 
 define amdgpu_kernel void @A() {
-  store volatile i64 42, ptr null
-  store volatile i64 42, ptr null
-  store volatile i64 42, ptr null
-  store volatile i64 42, ptr null
-  store volatile i64 42, ptr null
+  store volatile i64 42, ptr addrspace(1) null
+  store volatile i64 42, ptr addrspace(1) null
+  store volatile i64 42, ptr addrspace(1) null
+  store volatile i64 42, ptr addrspace(1) null
+  store volatile i64 42, ptr addrspace(1) null
   call void @HelperA()
   ret void
 }
@@ -69,10 +69,10 @@ define internal void @HelperA() {
 }
 
 define amdgpu_kernel void @B() {
-  store volatile i64 42, ptr null
-  store volatile i64 42, ptr null
-  store volatile i64 42, ptr null
-  store volatile i64 42, ptr null
+  store volatile i64 42, ptr addrspace(1) null
+  store volatile i64 42, ptr addrspace(1) null
+  store volatile i64 42, ptr addrspace(1) null
+  store volatile i64 42, ptr addrspace(1) null
   call void @HelperB()
   ret void
 }
@@ -85,14 +85,14 @@ define internal void @HelperB() {
 }
 
 define amdgpu_kernel void @C() {
-  store volatile i64 42, ptr null
-  store volatile i64 42, ptr null
-  store volatile i64 42, ptr null
-  store volatile i64 42, ptr null
-  store volatile i64 42, ptr null
-  store volatile i64 42, ptr null
-  store volatile i64 42, ptr null
-  store volatile i64 42, ptr null
+  store volatile i64 42, ptr addrspace(1) null
+  store volatile i64 42, ptr addrspace(1) null
+  store volatile i64 42, ptr addrspace(1) null
+  store volatile i64 42, ptr addrspace(1) null
+  store volatile i64 42, ptr addrspace(1) null
+  store volatile i64 42, ptr addrspace(1) null
+  store volatile i64 42, ptr addrspace(1) null
+  store volatile i64 42, ptr addrspace(1) null
   call void @HelperC()
   ret void
 }
