@@ -160,10 +160,7 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice,
 GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
                                  int32_t NumDevices,
                                  const llvm::omp::GV &OMPGridValues)
-    : Plugin(Plugin), OMP_TeamLimit("OMP_TEAM_LIMIT"),
-      OMP_NumTeams("OMP_NUM_TEAMS"),
-      OMP_TeamsThreadLimit("OMP_TEAMS_THREAD_LIMIT"),
-      OMPX_DebugKind("LIBOMPTARGET_DEVICE_RTL_DEBUG"),
+    : Plugin(Plugin),
       // Do not initialize the following two envars since they depend on the
       // device initialization. These cannot be consulted until the device is
       // initialized correctly. We initialize them in GenericDeviceTy::init().
@@ -232,16 +229,6 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin,
     OMPX_TargetHeapSize = std::move(*HeapSizeEnvarOrErr);
   }
 
-  // Update the maximum number of teams and threads after the device
-  // initialization sets the corresponding hardware limit.
-  if (OMP_NumTeams > 0)
-    GridValues.GV_Max_Teams =
-        std::min(GridValues.GV_Max_Teams, uint32_t(OMP_NumTeams));
-
-  if (OMP_TeamsThreadLimit > 0)
-    GridValues.GV_Max_WG_Size =
-        std::min(GridValues.GV_Max_WG_Size, uint32_t(OMP_TeamsThreadLimit));
-
   return Plugin::success();
 }
 
@@ -253,6 +240,7 @@ Error GenericDeviceTy::unloadBinary(DeviceImageTy *Image) {
 
   if (!ProfOrErr->empty()) {
     // Dump out profdata
+    static Int32Envar OMPX_DebugKind("LIBOMPTARGET_DEVICE_RTL_DEBUG");
     if ((OMPX_DebugKind.get() & uint32_t(DeviceDebugKind::PGODump)) ==
         uint32_t(DeviceDebugKind::PGODump))
       ProfOrErr->dump();
