@@ -227,6 +227,13 @@ static cl::opt<unsigned> MaxLoopGuardCollectionDepth(
     "scalar-evolution-max-loop-guard-collection-depth", cl::Hidden,
     cl::desc("Maximum depth for recursive loop guard collection"), cl::init(1));
 
+static cl::opt<unsigned> MaxGuardDomTreeSteps(
+    "scalar-evolution-max-guard-dom-tree-steps", cl::Hidden,
+    cl::desc(
+        "Maximum number of immediate dominator steps taken to find guarding "
+        "conditions."),
+    cl::init(8));
+
 static cl::opt<bool>
 ClassifyExpressions("scalar-evolution-classify-expressions",
     cl::Hidden, cl::init(true),
@@ -10947,6 +10954,30 @@ ScalarEvolution::getPredecessorWithUniqueSuccessorForBB(const BasicBlock *BB)
   return {nullptr, BB};
 }
 
+/// Walk through immediate dominators of \p BB to try to find additional
+/// dominating conditions.
+static void
+collectFromDominatingBranches(const DominatorTree &DT, const BasicBlock *BB,
+                              function_ref<void(Value *, bool)> ProcessCond) {
+  const DomTreeNode *Node = DT.getNode(BB);
+  for (unsigned I = 0; Node && I != MaxGuardDomTreeSteps; ++I) {
+    const BasicBlock *ChildBB = Node->getBlock();
+    Node = Node->getIDom();
+    if (!Node)
+      break;
+    auto *Br = dyn_cast<CondBrInst>(Node->getBlock()->getTerminator());
+    if (!Br)
+      continue;
+
+    // If ChildBB is neither or both of the successors, no fact is implied.
+    bool EnterIfTrue = Br->getSuccessor(0) == ChildBB;
+    if (EnterIfTrue == (Br->getSuccessor(1) == ChildBB))
+      continue;
+    if (DT.dominates(BasicBlockEdge(Node->getBlock(), ChildBB), BB))
+      ProcessCond(Br->getCondition(), EnterIfTrue);
+  }
+}
+
 /// SCEV structural equivalence is usually sufficient for testing whether two
 /// expressions are equal, however for the purposes of looking for a condition
 /// guarding a loop, it can be useful to be a little more general, since a
@@ -16133,6 +16164,13 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
     if (Depth > 0 && NumCollectedConditions == 2)
       break;
   }
+
+  if (!Pair.first)
+    collectFromDominatingBranches(SE.DT, Pair.second,
+                                  [&](Value *Cond, bool EnterIfTrue) {
+                                    Terms.emplace_back(Cond, EnterIfTrue);
+                                  });
+
   // Finally, if we stopped climbing the predecessor chain because
   // there wasn't a unique one to continue, try to collect conditions
   // for PHINodes by recursively following all of their incoming
