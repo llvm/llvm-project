@@ -190,4 +190,3 @@ add_entrypoint_object(
     libc.src.errno.errno
     libc.src.__support.macros.config
 )
-
