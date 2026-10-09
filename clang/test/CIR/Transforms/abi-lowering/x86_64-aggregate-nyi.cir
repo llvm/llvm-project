@@ -205,10 +205,11 @@ module attributes {
   // CHECK: not yet implemented for type '!cir.vector<3 x !cir.long_double<!cir.f80>>
 
   // A union is moved as a value of its storage type, so a member holding data
-  // past the 10 bytes a long double stores would lose it.  A member reaching
-  // byte 11 is refused next to a long double, and so is an x87 value held any
-  // other way, in a record, a _Complex, a vector or an array, even next to one
-  // of the same type.  A record holding such a union is refused with it.
+  // past the 10 bytes an x87 double extended value stores would lose it.  A
+  // member reaching byte 11 is refused next to one, and so is a double
+  // extended value held any other way, in a record, a _Complex, a vector or an
+  // array, even next to one of the same type.  A record holding such a union
+  // is refused with it.
   cir.func @take_union_x87_scalar(%arg0: !rec_UX87Scalar) {
     cir.return
   }
@@ -221,9 +222,9 @@ module attributes {
 
   // CHECK: not yet implemented for type '!cir.union<"UX87Nested"
 
-  // A member that ties the long double on alignment and size, listed first,
-  // becomes the storage type in its place, so the union is refused even
-  // though that member's data ends within the 10 bytes.
+  // A member that ties the double extended member on alignment and size,
+  // listed first, becomes the storage type in its place, so the union is
+  // refused even though that member's data ends within the 10 bytes.
   cir.func @take_union_x87_displaced(%arg0: !rec_UX87Displaced) {
     cir.return
   }

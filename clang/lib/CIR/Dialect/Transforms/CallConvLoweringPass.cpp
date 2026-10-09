@@ -159,26 +159,27 @@ static bool hasIncompleteRecordByValue(mlir::Type ty) {
   return false;
 }
 
-/// Whether \p ty has the x87 80-bit format, wrapped in LongDoubleType or not.
-static bool isX87LongDouble(mlir::Type ty) {
+/// Whether \p ty has the x87 double extended format, wrapped in LongDoubleType
+/// or not.
+static bool isX87DoubleExtended(mlir::Type ty) {
   auto fpTy = dyn_cast<cir::FPTypeInterface>(ty);
   return fpTy &&
          &fpTy.getFloatSemantics() == &llvm::APFloat::x87DoubleExtended();
 }
 
-/// Whether \p ty is, or holds by value, an x87 long double, alone or as the
-/// element of a _Complex or a vector.
-static bool holdsX87LongDouble(mlir::Type ty) {
+/// Whether \p ty is, or holds by value, an x87 double extended value, alone or
+/// as the element of a _Complex or a vector.
+static bool holdsX87DoubleExtended(mlir::Type ty) {
   if (isa<cir::FPTypeInterface>(ty))
-    return isX87LongDouble(ty);
+    return isX87DoubleExtended(ty);
   if (auto complexTy = dyn_cast<cir::ComplexType>(ty))
-    return holdsX87LongDouble(complexTy.getElementType());
+    return isX87DoubleExtended(complexTy.getElementType());
   if (auto vecTy = dyn_cast<cir::VectorType>(ty))
-    return holdsX87LongDouble(vecTy.getElementType());
+    return isX87DoubleExtended(vecTy.getElementType());
   if (auto arrTy = dyn_cast<cir::ArrayType>(ty))
-    return arrTy.getSize() && holdsX87LongDouble(arrTy.getElementType());
+    return arrTy.getSize() && holdsX87DoubleExtended(arrTy.getElementType());
   if (auto recTy = dyn_cast<cir::RecordType>(ty))
-    return llvm::any_of(recTy.getMembers(), holdsX87LongDouble);
+    return llvm::any_of(recTy.getMembers(), holdsX87DoubleExtended);
   return false;
 }
 
@@ -308,20 +309,20 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
         return false;
       // A union is moved as a value of its storage type, and an x87 value
       // stores fewer bytes than it occupies, so the bytes another member
-      // holds past them would be lost.  A long double stores its first 10
-      // bytes, so it can share a union with other long double members and
+      // holds past them would be lost.  A double extended member stores its
+      // first 10 bytes, so it can share a union with other such members and
       // with members whose data ends within those bytes, provided it is the
       // storage type.  An x87 value held any other way, in a _Complex, a
       // vector, a record or an array, is measured at its full storage, which
       // reaches past them.
-      if (members.size() > 1 && llvm::any_of(members, holdsX87LongDouble)) {
+      if (members.size() > 1 && llvm::any_of(members, holdsX87DoubleExtended)) {
         uint64_t x87StoreBytes = llvm::APFloat::semanticsSizeInBits(
                                      llvm::APFloat::x87DoubleExtended()) /
                                  8;
-        if (!isX87LongDouble(
+        if (!isX87DoubleExtended(
                 mlir::cast<cir::UnionType>(recTy).getUnionStorageType(dl)) ||
             !llvm::all_of(members, [&](mlir::Type m) {
-              return isX87LongDouble(m) ||
+              return isX87DoubleExtended(m) ||
                      getDataExtentInBytes(m, dl) <= x87StoreBytes;
             }))
           return false;
