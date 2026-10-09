@@ -43,11 +43,6 @@ using namespace lldb_private::platform_gdb_server;
 LLDB_PLUGIN_DEFINE_ADV(PlatformRemoteGDBServer, PlatformGDB)
 
 static bool g_initialized = false;
-// UnixSignals does not store the signal names or descriptions itself.
-// It holds onto StringRefs. Becaue we may get signal information dynamically
-// from the remote, these strings need persistent storage client-side.
-static std::mutex g_signal_string_mutex;
-static llvm::StringSet<> g_signal_string_storage;
 
 void PlatformRemoteGDBServer::Initialize() {
   Platform::Initialize();
