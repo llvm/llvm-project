@@ -1544,3 +1544,32 @@ namespace GH197403 {
   }
   static_assert(test() == 0);
 }
+
+namespace GH223064 {
+  struct A {
+    int n;
+  };
+  struct B : A {} b[2];
+
+  constexpr int *base_array_element() {
+    A *p = b;
+    return &static_cast<B *>(p)[1].n;
+  }
+  static_assert(base_array_element() == &b[1].n);
+
+  struct Padding {
+    int pad;
+  };
+  struct C : Padding, B {} c[2];
+
+  constexpr int *indirect_nonfirst_base_array_element() {
+    A *p = c;
+    return &static_cast<C *>(p)[1].n;
+  }
+  static_assert(indirect_nonfirst_base_array_element() == &c[1].n);
+
+  constexpr int *out_of_bounds(A *p) {
+    return &static_cast<B *>(p)[2].n; // expected-note {{cannot access base class of pointer past the end of object}}
+  }
+  static_assert(out_of_bounds(b) == nullptr); // expected-error {{static assertion is not an integral constant expression}} \ expected-note {{in call to 'out_of_bounds(&b[0])'}}
+}
