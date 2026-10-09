@@ -50,6 +50,13 @@ using namespace llvm::VPlanPatternMatch;
 
 namespace llvm {
 extern cl::opt<unsigned> ForceTargetInstructionCost;
+
+static void setExplicitlyUnknownBranchWeightsIfProfiled(Value *V,
+                                                        StringRef PassName) {
+  auto *SI = dyn_cast<SelectInst>(V);
+  if (SI && !SI->getMetadata(LLVMContext::MD_prof))
+    setExplicitlyUnknownBranchWeightsIfProfiled(*SI, PassName);
+}
 } // namespace llvm
 
 bool VPRecipeBase::mayWriteToMemory() const {
@@ -774,17 +781,16 @@ Value *VPInstruction::generate(VPTransformState &State,
     Value *A = State.get(getOperand(0), GenerateSingleScalar);
     return Builder.CreateNot(A, Name);
   }
-  case VPInstruction::LogicalAnd: {
-    // TODO: Use IsSingleScalar to produce a scalar value.
-    Value *A = State.get(getOperand(0));
-    Value *B = State.get(getOperand(1));
-    return Builder.CreateLogicalAnd(A, B, Name);
-  }
+  case VPInstruction::LogicalAnd:
   case VPInstruction::LogicalOr: {
     // TODO: Use IsSingleScalar to produce a scalar value.
     Value *A = State.get(getOperand(0));
     Value *B = State.get(getOperand(1));
-    return Builder.CreateLogicalOr(A, B, Name);
+    Value *Sel = getOpcode() == VPInstruction::LogicalAnd
+                     ? Builder.CreateLogicalAnd(A, B, Name)
+                     : Builder.CreateLogicalOr(A, B, Name);
+    setExplicitlyUnknownBranchWeightsIfProfiled(Sel, DEBUG_TYPE);
+    return Sel;
   }
   case Instruction::ExtractElement: {
     assert(GenerateSingleScalar &&
@@ -826,8 +832,10 @@ Value *VPInstruction::generate(VPTransformState &State,
     Value *Op2 = State.get(getOperand(2), GenerateSingleScalar);
     Value *Sel =
         Builder.CreateSelectFMF(Cond, Op1, Op2, getFastMathFlagsOrNone(), Name);
-    if (auto *I = dyn_cast<Instruction>(Sel))
+    if (auto *I = dyn_cast<Instruction>(Sel)) {
       applyMetadata(*I);
+      setExplicitlyUnknownBranchWeightsIfProfiled(Sel, DEBUG_TYPE);
+    }
     return Sel;
   }
   case VPInstruction::ActiveLaneMask:
@@ -1103,7 +1111,7 @@ Value *VPInstruction::generate(VPTransformState &State,
                              State.get(getOperand(Idx)), VectorIdx);
       if (Res) {
         Value *Cmp = Builder.CreateICmpUGE(LaneToExtract, VectorStart);
-        Res = Builder.CreateSelect(Cmp, Ext, Res);
+        Res = Builder.CreateSelectWithUnknownProfile(Cmp, Ext, Res, DEBUG_TYPE);
       } else {
         Res = Ext;
       }
@@ -1140,7 +1148,8 @@ Value *VPInstruction::generate(VPTransformState &State,
           TrailingZeros);
       if (Res) {
         Value *Cmp = Builder.CreateICmpNE(TrailingZeros, RuntimeVF);
-        Res = Builder.CreateSelect(Cmp, Current, Res);
+        Res = Builder.CreateSelectWithUnknownProfile(Cmp, Current, Res,
+                                                     DEBUG_TYPE);
       } else {
         Res = Current;
       }
@@ -1164,9 +1173,10 @@ Value *VPInstruction::generate(VPTransformState &State,
       Value *Mask = State.get(getOperand(Idx + 1));
       Type *VTy = Data->getType();
 
-      if (State.VF.isScalar())
-        Result = Builder.CreateSelect(Mask, Data, Result);
-      else
+      if (State.VF.isScalar()) {
+        Result = Builder.CreateSelectWithUnknownProfile(Mask, Data, Result,
+                                                        DEBUG_TYPE);
+      } else
         Result = Builder.CreateIntrinsic(
             Intrinsic::experimental_vector_extract_last_active, {VTy},
             {Data, Mask, Result});
@@ -3001,6 +3011,7 @@ void VPWidenRecipe::execute(VPTransformState &State) {
       if (isa<FPMathOperator>(I))
         applyFlags(*I);
       applyMetadata(*I);
+      setExplicitlyUnknownBranchWeightsIfProfiled(Sel, DEBUG_TYPE);
     }
     break;
   }
@@ -3564,7 +3575,8 @@ void VPReductionRecipe::execute(VPTransformState &State) {
     if (State.VF.isVector())
       Start = State.Builder.CreateVectorSplat(VecTy->getElementCount(), Start);
 
-    Value *Select = State.Builder.CreateSelect(NewCond, NewVecOp, Start);
+    Value *Select = State.Builder.CreateSelectWithUnknownProfile(
+        NewCond, NewVecOp, Start, DEBUG_TYPE);
     NewVecOp = Select;
   }
   Value *NewRed;
