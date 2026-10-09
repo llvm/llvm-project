@@ -141,7 +141,8 @@ def note_constexpr_past_end : Note<
 def note_constexpr_past_end_subobject : Note<
   "cannot %select{access base class of|access derived class of|access field of|"
   "access array element of|ERROR|"
-  "access real component of|access imaginary component of}0 "
+  "access real component of|access imaginary component of|"
+  "access vector element of}0 "
   "pointer past the end of object">;
 def note_non_null_attribute_failed : Note<
   "null passed to a callee that requires a non-null argument">;
@@ -149,7 +150,7 @@ def note_constexpr_null_subobject : Note<
   "cannot %select{access base class of|access derived class of|access field of|"
   "access array element of|perform pointer arithmetic on|"
   "access real component of|"
-  "access imaginary component of}0 null pointer">;
+  "access imaginary component of|access vector element of}0 null pointer">;
 def note_constexpr_null_callee
     : Note<"%0 evaluates to a null function pointer">;
 def note_constexpr_function_param_value_unknown : Note<
