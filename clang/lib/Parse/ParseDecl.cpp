@@ -6768,8 +6768,8 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
     // a free-function prototype (e.g. `void f(int *__counted_by(n), int n)`)
     // has no record to complete into, and late-parsing there would leave a
     // CountAttributedType with a null count in the AST. Such parameters fall
-    // back to eager handling instead. A function-pointer parameter inside a
-    // struct field is still late-parsed, since that record completes it.
+    // back to eager handling instead, as do those of a function-pointer field:
+    // ParseFunctionDeclarator hides the record from the parameter clause.
     bool LateParsingContext =
         (D.getContext() == DeclaratorContext::Member ||
          D.getContext() == DeclaratorContext::Prototype) &&
@@ -7563,10 +7563,18 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
     MaybeParseCXX11Attributes(FnAttrs);
     ProhibitAttributes(FnAttrs);
   } else {
-    if (Tok.isNot(tok::r_paren))
-      ParseParameterDeclarationClause(D, FirstArgAttrs, ParamInfo, EllipsisLoc);
-    else if (RequiresArg)
-      Diag(Tok, diag::err_argument_required_after_attribute);
+    {
+      // A parameter's count names parameters, not the fields of an enclosing
+      // record, so it is not late-parsed with them: parameters are parsed
+      // eagerly.
+      llvm::SaveAndRestore<SmallVectorImpl<LateParsedTypeAttribute *> *> Record(
+          CurRecordLateParsedTypeAttrs, nullptr);
+      if (Tok.isNot(tok::r_paren))
+        ParseParameterDeclarationClause(D, FirstArgAttrs, ParamInfo,
+                                        EllipsisLoc);
+      else if (RequiresArg)
+        Diag(Tok, diag::err_argument_required_after_attribute);
+    }
 
     // OpenCL disallows functions without a prototype, but it doesn't enforce
     // strict prototypes as in C23 because it allows a function definition to

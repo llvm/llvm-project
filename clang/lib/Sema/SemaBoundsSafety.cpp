@@ -54,6 +54,16 @@ Sema::BoundsAttrFlags Sema::BoundsAttrFlags::get(AttributeCommonInfo::Kind K) {
   return Flags;
 }
 
+DeclRefExpr *Sema::getCountDeclRef(Expr *E, bool &IsDeref) {
+  IsDeref = false;
+  if (auto *UO = dyn_cast<UnaryOperator>(E);
+      UO && UO->getOpcode() == UO_Deref) {
+    E = UO->getSubExpr()->IgnoreImpCasts();
+    IsDeref = true;
+  }
+  return dyn_cast<DeclRefExpr>(E);
+}
+
 static const RecordDecl *GetEnclosingNamedOrTopAnonRecord(const FieldDecl *FD) {
   const auto *RD = FD->getParent();
   // An unnamed struct is treated as anonymous struct at this point.
@@ -169,8 +179,14 @@ bool Sema::ValidateBoundsAttrTypeShape(QualType Ty, SourceLocation AttrLoc,
 
 bool Sema::ValidateBoundsAttrTypeForTypePosition(
     QualType Ty, AttributeCommonInfo::Kind AttrKind, SourceLocation AttrLoc,
-    SourceRange AttrRange, unsigned PointerNestLevel, BoundsAttrFlags &Flags) {
+    SourceRange AttrRange, unsigned PointerNestLevel, BoundsAttrFlags &Flags,
+    bool IsParameter) {
   Flags = BoundsAttrFlags::get(AttrKind);
+
+  // An array parameter adjusts to a pointer, which is what the attribute
+  // describes. Whether the array may have a size is checked on the parameter.
+  if (IsParameter && Ty->isArrayType())
+    Ty = getASTContext().getArrayDecayedType(Ty);
 
   // Preserve the counted_by kind for the GNU void pointer extension to match
   // the field path. The count is still interpreted as a byte size.
@@ -180,11 +196,8 @@ bool Sema::ValidateBoundsAttrTypeForTypePosition(
     return false;
 
   // Currently, only attributes at the outermost level of the declared type
-  // are supported.
-  //
-  // FIXME: Support indirect parameters such as:
-  //   void f(int *__counted_by(*len) *buf, int *len);
-  // See https://github.com/llvm/llvm-project/issues/166411.
+  // are supported. The caller passes zero for the pointer that a parameter
+  // points to, as for an out parameter: `int *__counted_by(*len) *buf`.
   if (PointerNestLevel > 0) {
     Diag(AttrLoc, diag::err_counted_by_on_nested_pointer)
         << getBoundsAttrKind(Flags);
@@ -267,6 +280,153 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
       Diag(CountFD->getBeginLoc(),
            diag::note_flexible_array_counted_by_attr_field)
           << CountFD << CountFD->getSourceRange();
+      return true;
+    }
+  }
+  return false;
+}
+
+bool Sema::CheckCountedByAttrOnParam(QualType ParamTy, Expr *E,
+                                     bool CountInBytes, bool OrNull) {
+  // An invalid count was already diagnosed.
+  if (E->containsErrors())
+    return true;
+
+  // A second count would replace the first, or hide it.
+  if (ParamTy->getAs<CountAttributedType>()) {
+    Diag(E->getBeginLoc(), diag::err_count_attr_more_than_one);
+    return true;
+  }
+
+  // An array parameter adjusts to a pointer, which the count then describes.
+  // An array with an explicit size is not supported: in the -fbounds-safety
+  // programming model, its size becomes that pointer's count.
+  unsigned Kind = getCountAttrKind(CountInBytes, OrNull);
+  if (ParamTy->isArrayType() && !ParamTy->isIncompleteArrayType()) {
+    Diag(E->getBeginLoc(), diag::err_count_attr_on_sized_array_param) << Kind;
+    return true;
+  }
+
+  if (!E->getType()->isIntegerType() || E->getType()->isBooleanType()) {
+    Diag(E->getBeginLoc(), diag::err_count_attr_argument_not_integer)
+        << Kind << E->getSourceRange();
+    return true;
+  }
+
+  bool IsDeref;
+  auto *DRE = getCountDeclRef(E, IsDeref);
+  if (!DRE) {
+    Diag(E->getBeginLoc(),
+         diag::err_count_attr_only_support_simple_decl_reference)
+        << Kind << E->getSourceRange();
+    return true;
+  }
+
+  // The parameters of an enclosing function declarator are in scope too.
+  if (!isa<ParmVarDecl>(DRE->getDecl())) {
+    Diag(E->getBeginLoc(), diag::err_count_attr_refer_to_non_param)
+        << E->getSourceRange();
+    return true;
+  }
+  return false;
+}
+
+void Sema::AdjustCountedArrayParamType(ParmVarDecl *PVD,
+                                       const CountAttributedType *CATy) {
+  if (!CATy->desugar()->isArrayType())
+    return;
+  // The parameter's type is already adjusted, with the qualifiers written
+  // outside the count moved to the element (C99 6.7.3p8), but the decayed
+  // pointer does not carry the count. Put it back on the pointer.
+  PVD->setType(Context.getCountAttributedType(
+      PVD->getType(), CATy->getCountExpr(), CATy->isCountInBytes(),
+      CATy->isOrNull(), CATy->getCoupledDecls()));
+}
+
+/// Whether the count \p E in a declaration of \p FD names a parameter of a
+/// function, block or method whose body encloses that declaration.
+static bool namesEnclosingParam(Expr *E, const FunctionDecl *FD) {
+  bool IsDeref;
+  const DeclRefExpr *DRE = Sema::getCountDeclRef(E, IsDeref);
+  const auto *PVD = DRE ? dyn_cast<ParmVarDecl>(DRE->getDecl()) : nullptr;
+  if (!PVD)
+    return false;
+  // The parameters of a prototype written in that body, such as a typedef's,
+  // have the same context, so check that this is one of the body's own.
+  const DeclContext *DC = PVD->getDeclContext();
+  ArrayRef<ParmVarDecl *> Params;
+  if (const auto *F = dyn_cast<FunctionDecl>(DC))
+    Params = F->parameters();
+  else if (const auto *B = dyn_cast<BlockDecl>(DC))
+    Params = B->parameters();
+  else if (const auto *M = dyn_cast<ObjCMethodDecl>(DC))
+    Params = M->parameters();
+  return llvm::is_contained(Params, PVD) &&
+         DC->LexicallyEncloses(FD->getLexicalDeclContext());
+}
+
+/// Whether \p New and \p Old, counts in two declarations \p NewFD and \p OldFD
+/// of a function, name the same thing. A parameter compares by its position
+/// and type, so the counts of both declarations can name their own parameters,
+/// or those of the typedef they were declared with, if those have the same
+/// type, qualifiers included. A parameter of an enclosing body is not in
+/// either function's parameter list, so it compares by identity.
+static bool isSameCount(const ASTContext &Ctx, Expr *New, Expr *Old,
+                        const FunctionDecl *NewFD, const FunctionDecl *OldFD) {
+  if (!namesEnclosingParam(New, NewFD) && !namesEnclosingParam(Old, OldFD))
+    return Ctx.hasSameExpr(New, Old);
+  bool NewIsDeref, OldIsDeref;
+  const DeclRefExpr *NewDRE = Sema::getCountDeclRef(New, NewIsDeref);
+  const DeclRefExpr *OldDRE = Sema::getCountDeclRef(Old, OldIsDeref);
+  return NewDRE && OldDRE && NewIsDeref == OldIsDeref &&
+         NewDRE->getDecl() == OldDRE->getDecl();
+}
+
+/// Of \p New and \p Old, the types of one parameter in two declarations
+/// \p NewFD and \p OldFD of a function, the count at the outermost pointer
+/// level where they differ, or null if they agree. Only pointers are followed,
+/// so counts below an _Atomic pointer or in a callback's parameters are not
+/// compared.
+static const CountAttributedType *
+findConflictingCount(const ASTContext &Ctx, QualType New, QualType Old,
+                     const FunctionDecl *NewFD, const FunctionDecl *OldFD) {
+  for (; New->isPointerType() && Old->isPointerType();
+       New = New->getPointeeType(), Old = Old->getPointeeType()) {
+    const auto *NewCATy = New->getAs<CountAttributedType>();
+    const auto *OldCATy = Old->getAs<CountAttributedType>();
+    if (!NewCATy && !OldCATy)
+      continue;
+    if (!NewCATy || !OldCATy)
+      return NewCATy ? NewCATy : OldCATy;
+
+    if (NewCATy->isOrNull() != OldCATy->isOrNull())
+      return NewCATy;
+    // A count of one-byte elements is a size.
+    if (NewCATy->isCountInBytes() != OldCATy->isCountInBytes()) {
+      QualType Pointee = NewCATy->getPointeeType();
+      if (!Pointee->isVoidType() && (Pointee->isIncompleteType() ||
+                                     !Ctx.getTypeSizeInChars(Pointee).isOne()))
+        return NewCATy;
+    }
+    assert(NewCATy->getCountExpr() && OldCATy->getCountExpr());
+    if (!isSameCount(Ctx, NewCATy->getCountExpr(), OldCATy->getCountExpr(),
+                     NewFD, OldFD))
+      return NewCATy;
+  }
+  return nullptr;
+}
+
+bool Sema::CheckCountAttributedRedeclaration(const FunctionDecl *New,
+                                             const FunctionDecl *Old) {
+  for (unsigned I = 0, E = std::min(New->getNumParams(), Old->getNumParams());
+       I != E; ++I) {
+    const ParmVarDecl *NewParam = New->getParamDecl(I);
+    if (const CountAttributedType *CATy =
+            findConflictingCount(Context, NewParam->getType(),
+                                 Old->getParamDecl(I)->getType(), New, Old)) {
+      Diag(NewParam->getBeginLoc(),
+           diag::err_count_attr_conflicting_redeclaration)
+          << CATy->getKind();
       return true;
     }
   }
