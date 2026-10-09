@@ -40,3 +40,15 @@ func.func @atomic_capture(%x: memref<i32>, %v: memref<i32>) {
   }
   return
 }
+
+// -----
+
+// acc.atomic.write declares a write on the location designated by `x`. `expr`
+// is a value rather than a location, so it carries no effect.
+
+func.func @atomic_write(%x: memref<i32>, %v: i32) {
+  // expected-remark @below {{found an instance of 'write' on op operand 0, on resource '<Default>'}}
+  acc.atomic.write %x = %v : memref<i32>, i32
+  return
+}
+
