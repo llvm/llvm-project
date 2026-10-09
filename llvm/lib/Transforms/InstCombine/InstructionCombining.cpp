@@ -1406,8 +1406,8 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   bool RHSIsSelect = match(RHS, m_Select(m_Value(D), m_Value(E), m_Value(F)));
   if (!LHSIsSelect && !RHSIsSelect)
     return nullptr;
-  bool BothSelectsOneUse = LHSIsSelect && RHSIsSelect &&
-                               LHS->hasOneUse() && RHS->hasOneUse();
+  bool BothSelectsOneUse =
+      LHSIsSelect && RHSIsSelect && LHS->hasOneUse() && RHS->hasOneUse();
 
   SelectInst *SI = cast<SelectInst>(LHSIsSelect ? LHS : RHS);
 
