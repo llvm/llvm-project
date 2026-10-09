@@ -610,6 +610,7 @@ LoadInst *AtomicExpandImpl::convertAtomicLoadToIntegerType(LoadInst *LI) {
   Value *Addr = LI->getPointerOperand();
 
   auto *NewLI = Builder.CreateLoad(NewTy, Addr, LI->getProperties());
+  copyMetadataForAtomic(*NewLI, *LI);
   LLVM_DEBUG(dbgs() << "Replaced " << *LI << " with " << *NewLI << "\n");
 
   Value *NewVal = LI->getType()->isPtrOrPtrVectorTy()
@@ -730,6 +731,7 @@ bool AtomicExpandImpl::expandAtomicLoadToCmpXchg(LoadInst *LI) {
       AtomicCmpXchgInst::getStrongestFailureOrdering(Order),
       LI->getSyncScopeID());
   Pair->setVolatile(LI->isVolatile());
+  copyMetadataForAtomic(*Pair, *LI);
   Value *Loaded = Builder.CreateExtractValue(Pair, 0, "loaded");
   if (NeedBitcast)
     Loaded = Builder.CreateBitCast(Loaded, Ty);
@@ -1324,6 +1326,7 @@ bool AtomicExpandImpl::expandPartwordCmpXchg(AtomicCmpXchgInst *CI) {
   // addIncoming is done first so that any replaceAllUsesWith calls during
   // normalization correctly update the PHI incoming value.
   InitLoaded->setVolatile(CI->isVolatile());
+  copyMetadataForAtomic(*InitLoaded, *CI);
   if (TLI->shouldIssueAtomicLoadForAtomicEmulationLoop()) {
     InitLoaded->setAtomic(AtomicOrdering::Monotonic, CI->getSyncScopeID());
     // The newly created load might need to be lowered further. Because it is
@@ -1345,6 +1348,7 @@ bool AtomicExpandImpl::expandPartwordCmpXchg(AtomicCmpXchgInst *CI) {
   // expecting the underlying cmpxchg to be a machine instruction,
   // which is strong anyways.
   NewCI->setWeak(CI->isWeak());
+  copyMetadataForAtomic(*NewCI, *CI);
 
   Value *OldVal = Builder.CreateExtractValue(NewCI, 0);
   Value *Success = Builder.CreateExtractValue(NewCI, 1);
@@ -1523,6 +1527,7 @@ AtomicExpandImpl::convertCmpXchgToIntegerType(AtomicCmpXchgInst *CI) {
       CI->getFailureOrdering(), CI->getSyncScopeID());
   NewCI->setVolatile(CI->isVolatile());
   NewCI->setWeak(CI->isWeak());
+  copyMetadataForAtomic(*NewCI, *CI);
   LLVM_DEBUG(dbgs() << "Replaced " << *CI << " with " << *NewCI << "\n");
 
   Value *OldVal = Builder.CreateExtractValue(NewCI, 0);
@@ -1873,6 +1878,8 @@ Value *AtomicExpandImpl::insertRMWCmpXchgLoop(
   // addIncoming is done first so that any replaceAllUsesWith calls during
   // normalization correctly update the PHI incoming value.
   InitLoaded->setVolatile(IsVolatile);
+  if (MetadataSrc)
+    copyMetadataForAtomic(*InitLoaded, *MetadataSrc);
   if (TLI->shouldIssueAtomicLoadForAtomicEmulationLoop()) {
     InitLoaded->setAtomic(AtomicOrdering::Monotonic, SSID);
     // The newly created load might need to be lowered further. Because it is
