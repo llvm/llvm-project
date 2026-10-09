@@ -1673,12 +1673,6 @@ public:
                         __tgt_async_info *AsyncInfoPtr,
                         GenericProfilerTy *ProfilerPtr = nullptr);
 
-  /// Synchronize an asyncrhonous queue with the plugin runtime.
-  int32_t synchronize(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);
-
-  /// Query the current state of an asynchronous queue.
-  int32_t query_async(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);
-
   /// Creates an event in the given plugin if supported.
   int32_t create_event(int32_t DeviceId, void **EventPtr);
 

@@ -86,6 +86,11 @@ DeviceTy::~DeviceTy() {
 }
 
 llvm::Error DeviceTy::init() {
+  if (auto Res = olCreateContext(1, &DeviceHandle, &Context))
+    return createError(ErrorCode::BackendFailure,
+                       "failed to create context for device %d: %s", DeviceID,
+                       Res->Details);
+
   OMPT_IF_BUILT_AND_INITIALIZED({
     GenericDeviceTy &GenericDevice = RTL->getDevice(RTLDeviceID);
     std::string ComputeUnitKind = GenericDevice.getComputeUnitKind();
@@ -122,6 +127,20 @@ llvm::Error DeviceTy::init() {
                          "failed to initialize RR in device %d\n", DeviceID);
   }
 
+  return llvm::Error::success();
+}
+
+llvm::Error DeviceTy::deinit() {
+  OMPT_IF_BUILT_AND_INITIALIZED(
+      { performOmptCallback(device_finalize, DeviceID); });
+
+  if (!Context)
+    return llvm::Error::success();
+  if (auto Res = olDestroyContext(Context))
+    return createError(ErrorCode::BackendFailure,
+                       "failed to destroy context for device %d: %s", DeviceID,
+                       Res->Details);
+  Context = nullptr;
   return llvm::Error::success();
 }
 
@@ -885,11 +904,27 @@ bool DeviceTy::isDataExchangable(const DeviceTy &DstDevice) {
 }
 
 int32_t DeviceTy::synchronize(AsyncInfoTy &AsyncInfo) {
-  return RTL->synchronize(RTLDeviceID, AsyncInfo);
+  ol_queue_handle_t Queue = AsyncInfo.getQueue();
+  if (!Queue)
+    return OFFLOAD_SUCCESS;
+  if (auto Res = olSyncQueue(Queue)) {
+    REPORT() << "Failure to synchronize stream " << Queue << ": "
+             << Res->Details;
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t DeviceTy::queryAsync(AsyncInfoTy &AsyncInfo) {
-  return RTL->query_async(RTLDeviceID, AsyncInfo);
+  ol_queue_handle_t Queue = AsyncInfo.getQueue();
+  if (!Queue)
+    return OFFLOAD_SUCCESS;
+  bool IsComplete;
+  if (auto Res = olQueryQueue(Queue, &IsComplete)) {
+    REPORT() << "Failure to query stream " << Queue << ": " << Res->Details;
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t DeviceTy::createEvent(void **Event) {
