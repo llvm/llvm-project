@@ -14,6 +14,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Expression/DWARFExpressionList.h"
+#include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -67,11 +68,45 @@ ValueObjectVariable::ValueObjectVariable(ExecutionContextScope *exe_scope,
 
 ValueObjectVariable::~ValueObjectVariable() = default;
 
+/// Returns a type system to use when the variable's own type does not
+/// resolve. Returns null only if the target has no type system either.
+static lldb::TypeSystemSP GetFallbackTypeSystem(Variable &variable,
+                                                lldb::TargetSP target_sp) {
+  SymbolContext sc;
+  variable.CalculateSymbolContext(&sc);
+  if (sc.comp_unit && sc.module_sp) {
+    lldb::LanguageType language = sc.comp_unit->GetLanguage();
+    llvm::Expected<lldb::TypeSystemSP> type_system =
+        sc.module_sp->GetTypeSystemForLanguage(language);
+    if (type_system)
+      return *type_system;
+    llvm::consumeError(type_system.takeError());
+  }
+
+  // Fall back to the target's own C++ type system, the same default the
+  // expression evaluator uses.
+  if (target_sp) {
+    llvm::Expected<lldb::TypeSystemSP> type_system =
+        target_sp->GetScratchTypeSystemForLanguage(
+            lldb::eLanguageTypeC_plus_plus);
+    if (type_system)
+      return *type_system;
+    llvm::consumeError(type_system.takeError());
+  }
+
+  return nullptr;
+}
+
 CompilerType ValueObjectVariable::GetCompilerTypeImpl() {
   Type *var_type = m_variable_sp->GetType();
   if (var_type)
     return var_type->GetForwardCompilerType();
-  return CompilerType();
+
+  // The type didn't resolve. Stay invalid, but attach a fallback type
+  // system.
+  return CompilerType(CompilerType::TypeSystemSPWrapper(
+                          GetFallbackTypeSystem(*m_variable_sp, GetTargetSP())),
+                      nullptr);
 }
 
 ConstString ValueObjectVariable::GetTypeName() {

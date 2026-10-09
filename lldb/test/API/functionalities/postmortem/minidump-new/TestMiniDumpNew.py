@@ -167,28 +167,34 @@ class MiniDumpNewTestCase(TestBase):
         stop_description = thread.stop_description
         self.assertEqual(stop_description, "")
 
-    def check_register_unsigned(self, set, name, expected):
+    def check_register_unsigned(self, set, name, expected, bits=64):
         reg_value = set.GetChildMemberWithName(name)
         self.assertTrue(
             reg_value.IsValid(), 'Verify we have a register named "%s"' % (name)
         )
-        self.assertEqual(
-            reg_value.GetValueAsUnsigned(),
-            expected,
-            'Verify "%s" == %i' % (name, expected),
+        self.assertIn(bits, (32, 64), "bits must be 32 or 64")
+        error = lldb.SBError()
+        data = reg_value.GetData()
+        got = (
+            data.GetUnsignedInt64(error, 0)
+            if bits == 64
+            else data.GetUnsignedInt32(error, 0)
         )
+        self.assertEqual(got, expected, 'Verify "%s" == %i' % (name, expected))
 
-    def check_register_string_value(self, set, name, expected, format):
+    def check_register_data_hex(self, set, name, expected):
         reg_value = set.GetChildMemberWithName(name)
         self.assertTrue(
             reg_value.IsValid(), 'Verify we have a register named "%s"' % (name)
         )
-        if format is not None:
-            reg_value.SetFormat(format)
+        data = reg_value.GetData()
+        error = lldb.SBError()
+        got = "0x" + "".join(
+            "%2.2x" % data.GetUnsignedInt8(error, i)
+            for i in range(data.GetByteSize() - 1, -1, -1)
+        )
         self.assertEqual(
-            reg_value.GetValue(),
-            expected,
-            'Verify "%s" has string value "%s"' % (name, expected),
+            got, expected, 'Verify "%s" has string value "%s"' % (name, expected)
         )
 
     def test_arm64_registers(self):
@@ -208,7 +214,7 @@ class MiniDumpNewTestCase(TestBase):
             v = i + 1 | i + 2 << 32 | i + 3 << 48
             w = i + 1
             self.check_register_unsigned(gpr, "x%i" % (i), v)
-            self.check_register_unsigned(gpr, "w%i" % (i), w)
+            self.check_register_unsigned(gpr, "w%i" % (i), w, bits=32)
         # Verify arg1 - arg8 register values
         for i in range(1, 9):
             v = i | i + 1 << 32 | i + 2 << 48
@@ -223,8 +229,8 @@ class MiniDumpNewTestCase(TestBase):
         v = i + 1 | i + 2 << 32 | i + 3 << 48
         self.check_register_unsigned(gpr, "sp", v)
         self.check_register_unsigned(gpr, "pc", 0x1000)
-        self.check_register_unsigned(gpr, "cpsr", 0x11223344)
-        self.check_register_unsigned(gpr, "psr", 0x11223344)
+        self.check_register_unsigned(gpr, "cpsr", 0x11223344, bits=32)
+        self.check_register_unsigned(gpr, "psr", 0x11223344, bits=32)
 
         # Verify the FPR registers are all correct
         fpr = registers.GetValueAtIndex(1)
@@ -241,12 +247,12 @@ class MiniDumpNewTestCase(TestBase):
                 s += "%2.2x" % (j)
             for j in range(i + 1, i - 1, -1):
                 h += "%2.2x" % (j)
-            self.check_register_string_value(fpr, "v%i" % (i), v, lldb.eFormatHex)
-            self.check_register_string_value(fpr, "d%i" % (i), d, lldb.eFormatHex)
-            self.check_register_string_value(fpr, "s%i" % (i), s, lldb.eFormatHex)
-            self.check_register_string_value(fpr, "h%i" % (i), h, lldb.eFormatHex)
-        self.check_register_unsigned(fpr, "fpsr", 0x55667788)
-        self.check_register_unsigned(fpr, "fpcr", 0x99AABBCC)
+            self.check_register_data_hex(fpr, "v%i" % (i), v)
+            self.check_register_data_hex(fpr, "d%i" % (i), d)
+            self.check_register_data_hex(fpr, "s%i" % (i), s)
+            self.check_register_data_hex(fpr, "h%i" % (i), h)
+        self.check_register_unsigned(fpr, "fpsr", 0x55667788, bits=32)
+        self.check_register_unsigned(fpr, "fpcr", 0x99AABBCC, bits=32)
 
     def verify_arm_registers(self, apple=False):
         """
@@ -268,18 +274,18 @@ class MiniDumpNewTestCase(TestBase):
         # Verify r0 - r15 register values
         gpr = registers.GetValueAtIndex(0)
         for i in range(1, 16):
-            self.check_register_unsigned(gpr, "r%i" % (i), i + 1)
+            self.check_register_unsigned(gpr, "r%i" % (i), i + 1, bits=32)
         # Verify arg1 - arg4 register values
         for i in range(1, 5):
-            self.check_register_unsigned(gpr, "arg%i" % (i), i)
+            self.check_register_unsigned(gpr, "arg%i" % (i), i, bits=32)
         if apple:
-            self.check_register_unsigned(gpr, "fp", 0x08)
+            self.check_register_unsigned(gpr, "fp", 0x08, bits=32)
         else:
-            self.check_register_unsigned(gpr, "fp", 0x0C)
-        self.check_register_unsigned(gpr, "lr", 0x0F)
-        self.check_register_unsigned(gpr, "sp", 0x0E)
-        self.check_register_unsigned(gpr, "pc", 0x10)
-        self.check_register_unsigned(gpr, "cpsr", 0x11223344)
+            self.check_register_unsigned(gpr, "fp", 0x0C, bits=32)
+        self.check_register_unsigned(gpr, "lr", 0x0F, bits=32)
+        self.check_register_unsigned(gpr, "sp", 0x0E, bits=32)
+        self.check_register_unsigned(gpr, "pc", 0x10, bits=32)
+        self.check_register_unsigned(gpr, "cpsr", 0x11223344, bits=32)
 
         # Verify the FPR registers are all correct
         fpr = registers.GetValueAtIndex(1)
@@ -292,10 +298,10 @@ class MiniDumpNewTestCase(TestBase):
         for i in range(32):
             i_val = (i >> 1) + 1
             if i & 1:
-                value = "%#8.8x" % (i_val | i_val << 16)
+                value = i_val | i_val << 16
             else:
-                value = "%#8.8x" % (i_val | i_val << 8)
-            self.check_register_string_value(fpr, "s%i" % (i), value, lldb.eFormatHex)
+                value = i_val | i_val << 8
+            self.check_register_unsigned(fpr, "s%i" % (i), value, bits=32)
         # Check q0 - q15
         for i in range(15):
             a = i * 2 + 1
@@ -303,7 +309,7 @@ class MiniDumpNewTestCase(TestBase):
             value = (
                 "0x00%2.2x00%2.2x0000%2.2x%2.2x" "00%2.2x00%2.2x0000%2.2x%2.2x"
             ) % (b, b, b, b, a, a, a, a)
-            self.check_register_string_value(fpr, "q%i" % (i), value, lldb.eFormatHex)
+            self.check_register_data_hex(fpr, "q%i" % (i), value)
 
     def test_linux_arm_registers(self):
         """Test Linux ARM registers from a breakpad created minidump.
