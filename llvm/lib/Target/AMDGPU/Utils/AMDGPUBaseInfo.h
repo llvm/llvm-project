@@ -119,10 +119,6 @@ struct MFMA_F8F6F4_Info {
   uint8_t NumRegsSrcB;
 };
 
-struct CvtScaleF32_F32F16ToF8F4_Info {
-  unsigned Opcode;
-};
-
 /// Normalized WMMA or SWMMAC family used to select co-execution rules.
 enum class WMMAVariant {
   Unknown = 0,
@@ -304,16 +300,6 @@ unsigned getOccupancyWithNumSGPRs(unsigned SGPRs, unsigned MaxWaves,
                                   unsigned TotalNumSGPRs, unsigned Granule,
                                   unsigned TrapReserve);
 
-/// \returns Number of VGPR blocks needed for given subtarget \p STI when
-/// \p NumVGPRs are used. We actually return the number of blocks -1, since
-/// that's what we encode.
-///
-/// For subtargets which support it, \p EnableWavefrontSize32 should match the
-/// ENABLE_WAVEFRONT_SIZE32 kernel descriptor field.
-unsigned getEncodedNumVGPRBlocks(
-    const MCSubtargetInfo &STI, unsigned NumVGPRs,
-    std::optional<bool> EnableWavefrontSize32 = std::nullopt);
-
 /// \returns Number of VGPR blocks that need to be allocated for the given
 /// subtarget \p STI when \p NumVGPRs are used.
 unsigned getAllocatedNumVGPRBlocks(
@@ -331,13 +317,16 @@ struct EncodingField {
   static constexpr unsigned Width = HighBit - LowBit + 1;
 
   using ValueType = unsigned;
+  static_assert(Width <= sizeof(ValueType) * 8);
   static constexpr ValueType Default = D;
 
   ValueType Value;
   constexpr EncodingField(ValueType Value) : Value(Value) {}
 
   constexpr uint64_t encode() const { return Value; }
-  static ValueType decode(uint64_t Encoded) { return Encoded; }
+  static ValueType decode(uint64_t Encoded) {
+    return static_cast<ValueType>(Encoded);
+  }
 };
 
 // Represents a single bit in an encoded value.
@@ -357,7 +346,7 @@ template <typename... Fields> struct EncodingFields {
 };
 
 LLVM_READONLY
-inline bool hasNamedOperand(uint64_t Opcode, OpName NamedIdx) {
+inline bool hasNamedOperand(uint32_t Opcode, OpName NamedIdx) {
   return getNamedOperandIdx(Opcode, NamedIdx) != -1;
 }
 
@@ -595,6 +584,30 @@ const MFMA_F8F6F4_Info *getWMMA_F8F6F4_WithFormatArgs(unsigned FmtA,
 LLVM_READONLY
 bool isValidWMMAScaleFmtCombination(unsigned AFmt, unsigned AScale,
                                     unsigned BFmt, unsigned BScale);
+
+/// \returns the matrix_a_fmt and matrix_b_fmt operands of an f8f6f4 WMMA.
+/// Works on both MCInst and MachineInstr.
+template <typename InstT>
+std::pair<unsigned, unsigned> getWMMAMatrixFmts(const InstT &MI) {
+  unsigned Opc = MI.getOpcode();
+  int AIdx = getNamedOperandIdx(Opc, OpName::matrix_a_fmt);
+  int BIdx = getNamedOperandIdx(Opc, OpName::matrix_b_fmt);
+  assert(AIdx != -1 && BIdx != -1 && "expected an f8f6f4 WMMA");
+  return {static_cast<unsigned>(MI.getOperand(AIdx).getImm()),
+          static_cast<unsigned>(MI.getOperand(BIdx).getImm())};
+}
+
+/// \returns true if either matrix input of an f8f6f4 WMMA is f8.
+template <typename InstT> bool isWMMAAnyF8(const InstT &MI) {
+  auto [AFmt, BFmt] = getWMMAMatrixFmts(MI);
+  return AFmt <= WMMA::MATRIX_FMT_BF8 || BFmt <= WMMA::MATRIX_FMT_BF8;
+}
+
+/// \returns true if both matrix inputs of an f8f6f4 WMMA are f4.
+template <typename InstT> bool isWMMABothF4(const InstT &MI) {
+  auto [AFmt, BFmt] = getWMMAMatrixFmts(MI);
+  return AFmt == WMMA::MATRIX_FMT_FP4 && BFmt == WMMA::MATRIX_FMT_FP4;
+}
 
 LLVM_READONLY
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
@@ -964,14 +977,9 @@ bool isDPMACCInstruction(unsigned Opc);
 LLVM_READONLY
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc);
 
-LLVM_READONLY
-unsigned mapWMMA3AddrTo2AddrOpcode(unsigned Opc);
-
 void initDefaultAMDKernelCodeT(AMDGPUMCKernelCodeT &Header,
                                const MCSubtargetInfo &STI);
 
-bool isGroupSegment(const GlobalValue *GV);
-bool isGlobalSegment(const GlobalValue *GV);
 bool isReadOnlySegment(const GlobalValue *GV);
 
 /// \returns True if constants should be emitted to .text section for given
@@ -1178,7 +1186,9 @@ using HwregOffset = EncodingField<10, 6>;
 struct HwregSize : EncodingField<15, 11, 32> {
   using EncodingField::EncodingField;
   constexpr uint64_t encode() const { return Value - 1; }
-  static ValueType decode(uint64_t Encoded) { return Encoded + 1; }
+  static ValueType decode(uint64_t Encoded) {
+    return static_cast<ValueType>(Encoded + 1);
+  }
 };
 
 using HwregEncoding = EncodingFields<HwregId, HwregOffset, HwregSize>;
@@ -1478,7 +1488,6 @@ constexpr bool mayTailCallThisCC(CallingConv::ID CC) {
   }
 }
 
-bool hasXNACK(const MCSubtargetInfo &STI);
 bool hasMIMG_R128(const MCSubtargetInfo &STI);
 bool hasA16(const MCSubtargetInfo &STI);
 bool hasG16(const MCSubtargetInfo &STI);
@@ -1583,9 +1592,6 @@ bool isKImmOperand(const MCInstrDesc &Desc, unsigned OpNo);
 
 /// Is this floating-point operand?
 bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo);
-
-/// Does this operand support only inlinable literals?
-bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo);
 
 /// Get the size in bits of a register from the register class \p RC.
 unsigned getRegBitWidth(unsigned RCID);
@@ -1761,10 +1767,6 @@ inline bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, unsigned DC) {
   return false;
 }
 
-/// \returns true if an instruction may have a 64-bit VGPR operand.
-bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
-                             const MCSubtargetInfo &ST);
-
 /// \returns true if an instruction is a DP ALU DPP without any 64-bit operands.
 bool isDPALU_DPP32BitOpc(unsigned Opc);
 
@@ -1812,11 +1814,6 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc);
 /// \returns true if a memory instruction supports scale_offset modifier.
 bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode);
 
-/// \returns lds block size in terms of dwords. \p
-/// This is used to calculate the lds size encoded for PAL metadata 3.0+ which
-/// must be defined in terms of bytes.
-unsigned getLdsDwGranularity(const MCSubtargetInfo &ST);
-
 class ClusterDimsAttr {
 public:
   enum class Kind { Unknown, NoCluster, VariableDims, FixedDims };
@@ -1834,8 +1831,6 @@ public:
   bool isVariableDims() const { return getKind() == Kind::VariableDims; }
 
   void setUnknown() { *this = ClusterDimsAttr(Kind::Unknown); }
-
-  void setNoCluster() { *this = ClusterDimsAttr(Kind::NoCluster); }
 
   void setVariableDims() { *this = ClusterDimsAttr(Kind::VariableDims); }
 

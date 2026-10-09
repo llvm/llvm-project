@@ -80,12 +80,54 @@ public:
   /// store a derived object and return that as an ABICompatInfo reference.
   virtual const ABICompatInfo &getABICompatInfo() const = 0;
 
+  /// Address space in which indirect arguments are allocated (the target's
+  /// alloca/stack space).
+  virtual unsigned getAllocaAddrSpace() const { return 0; }
+
+  /// Whether the target has a 128-bit integer type. Default true.
+  virtual bool hasInt128Type() const { return true; }
+
+  /// Width of `long long` in bits. Default 64.
+  virtual unsigned getLongLongWidth() const { return 64; }
+
+  /// Alignment of the widest integer the target's data layout gives an
+  /// alignment to. An integer wider than that one is aligned to this. Default
+  /// 16, the alignment of i128 on AArch64 and x86-64.
+  virtual llvm::Align getMaxIntegerAlign() const { return llvm::Align(16); }
+
 protected:
   LLVM_ABI RecordArgABI getRecordArgABI(const RecordType *RT) const;
   LLVM_ABI RecordArgABI getRecordArgABI(const Type *Ty) const;
   LLVM_ABI bool isPromotableInteger(const IntegerType *IT) const;
-  LLVM_ABI ArgInfo getNaturalAlignIndirect(const Type *Ty,
+
+  /// Bit width above which a _BitInt cannot stay in registers.
+  unsigned getBitIntRegThreshold() const {
+    return hasInt128Type() ? 128 : getLongLongWidth();
+  }
+  LLVM_ABI ArgInfo getNaturalAlignIndirect(const Type *Ty, unsigned AddrSpace,
                                            bool ByVal = true) const;
+
+  /// An array of \p NumBytes i8 elements, the padding element of a
+  /// coerce-and-expand type.
+  LLVM_ABI const Type *getI8Array(uint64_t NumBytes) const;
+
+  /// In-memory form of \p Ty. A record becomes one field list: non-empty
+  /// bases and fields in offset order. Padding is an array of i8. The result
+  /// is packed when a member offset or the record size is not a multiple of
+  /// the converted member alignment, and then every gap is an explicit array.
+  /// Any other record has an array only where that alignment does not already
+  /// produce the gap, and for the tail that alignment is capped at
+  /// getMaxIntegerAlign(). A record with a virtual base has no layout here. An
+  /// array is rebuilt when its element type changes. Any other type is
+  /// returned unchanged.
+  LLVM_ABI const Type *convertTypeForMem(const Type *Ty) const;
+
+  /// A record with one field per element of \p Elems, each at offset 0.
+  /// \p Packed selects a packed record, which has no alignment padding
+  /// between fields.
+  LLVM_ABI const Type *getStructOfTypes(ArrayRef<const Type *> Elems,
+                                        bool Packed) const;
+
   LLVM_ABI bool isAggregateTypeForABI(const Type *Ty) const;
 
   /// If Ty is a transparent union, return its first field type; otherwise
@@ -130,6 +172,10 @@ protected:
 
 LLVM_ABI std::unique_ptr<TargetInfo> createBPFTargetInfo(TypeBuilder &TB);
 
+LLVM_ABI std::unique_ptr<TargetInfo>
+createAMDGPUTargetInfo(TypeBuilder &TB,
+                       bool CoerceGenericPtrArgToGlobal = false);
+
 /// The AVX ABI level for X86 targets.
 enum class X86AVXABILevel {
   None,
@@ -156,6 +202,9 @@ struct AArch64ABIOptions {
   AArch64ABIKind Kind = AArch64ABIKind::AAPCS;
   bool IsILP32 = false;
   bool IsCXX = false;
+  bool IsMachO = false;
+  bool IsAndroidOrOHOS = false;
+  bool IsWindowsArm64EC = false;
   bool IsMicrosoftCXXABI = false;
   ABICompatInfo CompatInfo;
 

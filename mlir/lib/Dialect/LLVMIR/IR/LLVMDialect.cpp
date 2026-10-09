@@ -59,6 +59,19 @@ static NamedAttrList getAttrsForPrinting(Operation *op) {
   return attrs;
 }
 
+// TODO: Split inherent attributes from discardable attributes in the assembly
+// syntax of GlobalOp and AliasOp. For now, print the selected inherent
+// attributes in the regular attribute dictionary.
+static NamedAttrList
+getAttrsForPrinting(Operation *op, ArrayRef<StringAttr> inherentAttrNames) {
+  NamedAttrList attrs(op->getRawDictionaryAttrs());
+  for (StringAttr name : inherentAttrNames)
+    if (std::optional<Attribute> attr = op->getInherentAttr(name);
+        attr && *attr)
+      attrs.set(name, *attr);
+  return attrs;
+}
+
 static auto processFMFAttr(ArrayRef<NamedAttribute> attrs) {
   SmallVector<NamedAttribute, 8> filteredAttrs(
       llvm::make_filter_range(attrs, [&](NamedAttribute attr) {
@@ -697,7 +710,7 @@ static void destructureIndices(Type currType, ArrayRef<GEPArg> indices,
 
 void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
                   Type elementType, Value basePtr, ArrayRef<GEPArg> indices,
-                  GEPNoWrapFlags noWrapFlags,
+                  GEPNoWrapFlags noWrapFlags, ConstantRangeAttr inrange,
                   ArrayRef<NamedAttribute> attributes) {
   SmallVector<int32_t> rawConstantIndices;
   SmallVector<Value> dynamicIndices;
@@ -710,16 +723,17 @@ void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
   result.getOrAddProperties<Properties>().noWrapFlags = noWrapFlags;
   result.getOrAddProperties<Properties>().elem_type =
       TypeAttr::get(elementType);
+  result.getOrAddProperties<Properties>().inrange = inrange;
   result.addOperands(basePtr);
   result.addOperands(dynamicIndices);
 }
 
 void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
                   Type elementType, Value basePtr, ValueRange indices,
-                  GEPNoWrapFlags noWrapFlags,
+                  GEPNoWrapFlags noWrapFlags, ConstantRangeAttr inrange,
                   ArrayRef<NamedAttribute> attributes) {
   build(builder, result, resultType, elementType, basePtr,
-        SmallVector<GEPArg>(indices), noWrapFlags, attributes);
+        SmallVector<GEPArg>(indices), noWrapFlags, inrange, attributes);
 }
 
 ParseResult mlir::LLVM::parseGEPIndices(
@@ -820,6 +834,27 @@ LogicalResult LLVM::GEPOp::verify() {
 
   if (getNoWrapFlags() == GEPNoWrapFlags::inboundsFlag)
     return emitOpError("'inbounds_flag' cannot be used directly.");
+
+  // LLVM stores `inrange` only on GetElementPtrConstantExpr, whose operands
+  // are already Constants. This dialect has one GEP operation, so proving the
+  // base and indices are constant expressions means walking SSA. A local check
+  // rejects valid cases such as a nested constant GEP base or a `ptrtoint`
+  // index.
+  if (auto inrange = getInrangeAttr()) {
+    auto pointerType =
+        cast<LLVMPointerType>(extractVectorElementType(getBase().getType()));
+    DataLayout dataLayout = DataLayout::closest(*this);
+    std::optional<uint64_t> indexWidth =
+        dataLayout.getTypeIndexBitwidth(pointerType);
+    assert(indexWidth && "pointers always return an index bitwidth");
+    if (inrange.getLower().getBitWidth() != *indexWidth)
+      return emitOpError("'inrange' bitwidth ")
+             << inrange.getLower().getBitWidth()
+             << " must match the pointer index bitwidth (" << *indexWidth
+             << ") specified in the datalayout";
+    if (inrange.getLower().sge(inrange.getUpper()))
+      return emitOpError("expected 'inrange' end to be larger than start");
+  }
 
   return verifyStructIndices(getElemType(), getIndices(),
                              [&] { return emitOpError(); });
@@ -1169,10 +1204,11 @@ MutableOperandRange CallOp::getArgOperandsMutable() {
 /// Verify that an inlinable callsite of a debug-info-bearing function in a
 /// debug-info-bearing function has a debug location attached to it. This
 /// mirrors an LLVM IR verifier.
-static LogicalResult verifyCallOpDebugInfo(CallOp callOp, LLVMFuncOp callee) {
+template <typename OpTy>
+static LogicalResult verifyCallOpDebugInfo(OpTy callOp, LLVMFuncOp callee) {
   if (callee.isExternal())
     return success();
-  auto parentFunc = callOp->getParentOfType<FunctionOpInterface>();
+  auto parentFunc = callOp->template getParentOfType<FunctionOpInterface>();
   if (!parentFunc)
     return success();
 
@@ -1263,35 +1299,37 @@ static LogicalResult verifyOperandBundles(OpType &op) {
 
 LogicalResult CallOp::verify() { return verifyOperandBundles(*this); }
 
-LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
-  if (failed(verifyCallOpVarCalleeType(*this)))
+template <typename OpTy>
+static LogicalResult
+verifyCallOpSymbolUses(OpTy callOp, SymbolTableCollection &symbolTable) {
+  if (failed(verifyCallOpVarCalleeType(callOp)))
     return failure();
-
   // Type for the callee, we'll get it differently depending if it is a direct
   // or indirect call.
   Type fnType;
 
   // If this is an indirect call, the callee attribute is missing.
-  FlatSymbolRefAttr calleeName = getCalleeAttr();
+  FlatSymbolRefAttr calleeName = callOp.getCalleeAttr();
   if (!calleeName) {
     // Note: `verifyCallOpVarCalleeType` has already checked that there is a
     // callee operand.
-    auto ptrType = llvm::dyn_cast<LLVMPointerType>(getOperand(0).getType());
+    auto ptrType =
+        llvm::dyn_cast<LLVMPointerType>(callOp.getOperand(0).getType());
     if (!ptrType)
-      return emitOpError("indirect call expects a pointer as callee: ")
-             << getOperand(0).getType();
+      return callOp.emitOpError("indirect call expects a pointer as callee: ")
+             << callOp.getOperand(0).getType();
 
     // Nothing else to verify: an indirect callee cannot be resolved.
     return success();
   } else {
     Operation *callee =
-        symbolTable.lookupNearestSymbolFrom(*this, calleeName.getAttr());
+        symbolTable.lookupNearestSymbolFrom(callOp, calleeName.getAttr());
     if (!callee)
-      return emitOpError()
+      return callOp.emitOpError()
              << "'" << calleeName.getValue()
              << "' does not reference a symbol in the current scope";
     if (auto fn = dyn_cast<LLVMFuncOp>(callee)) {
-      if (failed(verifyCallOpDebugInfo(*this, fn)))
+      if (failed(verifyCallOpDebugInfo(callOp, fn)))
         return failure();
       fnType = fn.getFunctionType();
     } else if (auto ifunc = dyn_cast<IFuncOp>(callee)) {
@@ -1300,9 +1338,9 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
       // Aliases can alias functions, so calling through an alias is valid.
       // The function type is determined by the call's operands and result
       // types.
-      fnType = getCalleeFunctionType();
+      fnType = callOp.getCalleeFunctionType();
     } else {
-      return emitOpError()
+      return callOp.emitOpError()
              << "'" << calleeName.getValue()
              << "' does not reference a valid LLVM function, IFunc, or alias";
     }
@@ -1310,29 +1348,33 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 
   LLVMFunctionType funcType = llvm::dyn_cast<LLVMFunctionType>(fnType);
   if (!funcType)
-    return emitOpError("callee does not have a functional type: ") << fnType;
+    return callOp.emitOpError("callee does not have a functional type: ")
+           << fnType;
 
-  if (funcType.isVarArg() && !getVarCalleeType())
-    return emitOpError() << "missing var_callee_type attribute for vararg call";
+  if (funcType.isVarArg() && !callOp.getVarCalleeType())
+    return callOp.emitOpError()
+           << "missing var_callee_type attribute for vararg call";
 
   // Verify the result types. These checks are more specific than what
   // `verifyCallOpInterface` can report, so they are run first.
-  if (getNumResults() == 0 &&
+  if (callOp.getNumResults() == 0 &&
       !llvm::isa<LLVM::LLVMVoidType>(funcType.getReturnType()))
-    return emitOpError() << "expected function call to produce a value";
+    return callOp.emitOpError() << "expected function call to produce a value";
 
-  if (getNumResults() != 0 &&
+  if (callOp.getNumResults() != 0 &&
       llvm::isa<LLVM::LLVMVoidType>(funcType.getReturnType()))
-    return emitOpError()
+    return callOp.emitOpError()
            << "calling function with void result must not produce values";
 
-  if (getNumResults() > 1)
-    return emitOpError()
+  if (callOp.getNumResults() > 1)
+    return callOp.emitOpError()
            << "expected LLVM function call to produce 0 or 1 result";
 
-  if (getNumResults() && getResult().getType() != funcType.getReturnType())
-    return emitOpError() << "result type mismatch: " << getResult().getType()
-                         << " != " << funcType.getReturnType();
+  if (callOp.getNumResults() &&
+      callOp.getResult().getType() != funcType.getReturnType())
+    return callOp.emitOpError()
+           << "result type mismatch: " << callOp.getResult().getType()
+           << " != " << funcType.getReturnType();
 
   // Verify that the operand types match the callee. Note that this does not
   // need to special-case a variadic callee: the variadic arguments are not
@@ -1340,8 +1382,12 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   SmallVector<Type, 1> calleeResultTypes;
   if (!llvm::isa<LLVM::LLVMVoidType>(funcType.getReturnType()))
     calleeResultTypes.push_back(funcType.getReturnType());
-  return call_interface_impl::verifyCallOpInterface(*this, funcType.getParams(),
-                                                    calleeResultTypes);
+  return call_interface_impl::verifyCallOpInterface(
+      callOp, funcType.getParams(), calleeResultTypes);
+}
+
+LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  return verifyCallOpSymbolUses(*this, symbolTable);
 }
 
 void CallOp::print(OpAsmPrinter &p) {
@@ -1657,10 +1703,11 @@ MutableOperandRange InvokeOp::getArgOperandsMutable() {
                                           getArgOperandsImpl(*this).size());
 }
 
-LogicalResult InvokeOp::verify() {
-  if (failed(verifyCallOpVarCalleeType(*this)))
-    return failure();
+LogicalResult InvokeOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  return verifyCallOpSymbolUses(*this, symbolTable);
+}
 
+LogicalResult InvokeOp::verify() {
   Block *unwindDest = getUnwindDest();
   if (unwindDest->empty())
     return emitError("must have at least one operation in unwind destination");
@@ -2480,7 +2527,13 @@ void GlobalOp::print(OpAsmPrinter &p) {
   // default syntax here, even though it is an inherent attribute
   // (as defined in https://mlir.llvm.org/docs/LangRef/#attributes)
   p.printOptionalAttrDict(
-      (*this)->getAttrs(),
+      getAttrsForPrinting(
+          *this, {getDsoLocalAttrName(), getExternallyInitializedAttrName(),
+                  getAlignmentAttrName(), getAddrSpaceAttrName(),
+                  getSectionAttrName(), getAssociatedAttrName(),
+                  getAbsoluteSymbolAttrName(), getDbgExprsAttrName(),
+                  getTargetSpecificAttrsAttrName(), getSymVisibilityAttrName()})
+          .getAttrs(),
       {getSymNameAttrName(), getGlobalTypeAttrName(), getConstantAttrName(),
        getValueAttrName(), getLinkageAttrName(), getUnnamedAddrAttrName(),
        getTlsModeAttrName(), getVisibility_AttrName(), getComdatAttrName()});
@@ -2498,11 +2551,12 @@ void GlobalOp::print(OpAsmPrinter &p) {
 }
 
 static LogicalResult verifyComdat(Operation *op,
-                                  std::optional<SymbolRefAttr> attr) {
+                                  std::optional<SymbolRefAttr> attr,
+                                  SymbolTableCollection &symbolTable) {
   if (!attr)
     return success();
 
-  auto *comdatSelector = SymbolTable::lookupNearestSymbolFrom(op, *attr);
+  auto *comdatSelector = symbolTable.lookupNearestSymbolFrom(op, *attr);
   if (!isa_and_nonnull<ComdatSelectorOp>(comdatSelector))
     return op->emitError() << "expected comdat symbol";
 
@@ -2663,6 +2717,10 @@ static bool isZeroAttribute(Attribute value) {
   return false;
 }
 
+LogicalResult GlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  return verifyComdat(*this, getComdat(), symbolTable);
+}
+
 LogicalResult GlobalOp::verify() {
   bool validType = isCompatibleOuterType(getType())
                        ? !llvm::isa<LLVMVoidType, TokenType, LLVMMetadataType,
@@ -2712,9 +2770,6 @@ LogicalResult GlobalOp::verify() {
                            << "' linkage";
     }
   }
-
-  if (failed(verifyComdat(*this, getComdat())))
-    return failure();
 
   std::optional<uint64_t> alignAttr = getAlignment();
   if (alignAttr.has_value()) {
@@ -2861,10 +2916,13 @@ void AliasOp::print(OpAsmPrinter &p) {
   printCommonGlobalAndAlias<AliasOp>(p, *this);
 
   p.printSymbolName(getSymName());
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          {getSymNameAttrName(), getAliasTypeAttrName(),
-                           getLinkageAttrName(), getUnnamedAddrAttrName(),
-                           getTlsModeAttrName(), getVisibility_AttrName()});
+  p.printOptionalAttrDict(
+      getAttrsForPrinting(*this,
+                          {getDsoLocalAttrName(), getSymVisibilityAttrName()})
+          .getAttrs(),
+      {getSymNameAttrName(), getAliasTypeAttrName(), getLinkageAttrName(),
+       getUnnamedAddrAttrName(), getTlsModeAttrName(),
+       getVisibility_AttrName()});
 
   // Print the trailing type.
   p << " : " << getType() << ' ';
@@ -3333,6 +3391,10 @@ void LLVMFuncOp::print(OpAsmPrinter &p) {
   }
 }
 
+LogicalResult LLVMFuncOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  return verifyComdat(*this, getComdat(), symbolTable);
+}
+
 // Verifies LLVM- and implementation-specific properties of the LLVM func Op:
 // - functions don't have 'common' linkage
 // - external functions have 'external' or 'extern_weak' linkage;
@@ -3342,9 +3404,6 @@ LogicalResult LLVMFuncOp::verify() {
     return emitOpError() << "functions cannot have '"
                          << stringifyLinkage(LLVM::Linkage::Common)
                          << "' linkage";
-
-  if (failed(verifyComdat(*this, getComdat())))
-    return failure();
 
   if (isExternal()) {
     if (getFunctionEntryCountAttr())
@@ -4052,6 +4111,10 @@ Value LLVM::AddrSpaceCastOp::getViewSource() { return getArg(); }
 OpFoldResult LLVM::GEPOp::fold(FoldAdaptor adaptor) {
   GEPIndicesAdaptor<ArrayRef<Attribute>> indices(getRawConstantIndicesAttr(),
                                                  adaptor.getDynamicIndices());
+
+  // Avoid losing inrange information.
+  if (getInrangeAttr())
+    return {};
 
   // gep %x:T, 0 -> %x
   if (getBase().getType() == getType() && indices.size() == 1)

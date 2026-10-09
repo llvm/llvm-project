@@ -49,6 +49,7 @@
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Support/NVVMAttributes.h"
@@ -60,6 +61,8 @@
 #include <numeric>
 
 using namespace llvm;
+
+#define DEBUG_TYPE "auto-upgrade"
 
 static cl::opt<bool>
     DisableAutoUpgradeDebugInfo("disable-auto-upgrade-debug-info",
@@ -212,6 +215,8 @@ static bool shouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
             Name.starts_with("pmin") ||       // Added in 3.9
             Name.starts_with("pmovsx") ||     // Added in 3.9
             Name.starts_with("pmovzx") ||     // Added in 3.9
+            Name.starts_with("pmulh.w") ||    // Added in 24.0
+            Name.starts_with("pmulhu.w") ||   // Added in 24.0
             Name == "pmul.dq" ||              // Added in 7.0
             Name == "pmulu.dq" ||             // Added in 7.0
             Name.starts_with("psll.dq") ||    // Added in 3.7
@@ -438,6 +443,8 @@ static bool shouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
             Name == "kxor.w" ||                 // Added in 7.0
             Name.starts_with("padds.") ||       // Added in 8.0
             Name.starts_with("pbroadcast") ||   // Added in 3.9
+            Name.starts_with("pmulh.w") ||      // Added in 24.0
+            Name.starts_with("pmulhu.w") ||     // Added in 24.0
             Name.starts_with("prol") ||         // Added in 8.0
             Name.starts_with("pror") ||         // Added in 8.0
             Name.starts_with("psll.dq") ||      // Added in 3.9
@@ -490,6 +497,8 @@ static bool shouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
             Name == "pmaxu.b" ||           // Added in 3.9
             Name == "pmins.w" ||           // Added in 3.9
             Name == "pminu.b" ||           // Added in 3.9
+            Name == "pmulh.w" ||           // Added in 24.0
+            Name == "pmulhu.w" ||          // Added in 24.0
             Name == "pmulu.dq" ||          // Added in 7.0
             Name.starts_with("pshuf") ||   // Added in 3.9
             Name.starts_with("psll.dq") || // Added in 3.7
@@ -985,6 +994,21 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
       if (ID != Intrinsic::not_intrinsic) {
         NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID,
                                                   F->arg_begin()->getType());
+        return true;
+      }
+
+      Intrinsic::ID MinMaxID =
+          StringSwitch<Intrinsic::ID>(Name.split('.').first)
+              .Case("smax", Intrinsic::smax)
+              .Case("smin", Intrinsic::smin)
+              .Case("umax", Intrinsic::umax)
+              .Case("umin", Intrinsic::umin)
+              .Default(Intrinsic::not_intrinsic);
+      if (MinMaxID != Intrinsic::not_intrinsic) {
+        if (F->arg_size() != 2 || !F->getReturnType()->isIntOrIntVectorTy())
+          return false; // Invalid IR.
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), MinMaxID,
+                                                  F->getReturnType());
         return true;
       }
 
@@ -1505,8 +1529,16 @@ static bool isLegacyNVPTXBF16IntSignature(Function *F, Intrinsic::ID IID) {
   return true;
 }
 
+// Overloaded fadd/fmul intrinsic IDs, indexed by [`.ftz`][`.sat`].
+static constexpr Intrinsic::ID NVVMFAddIIDs[2][2] = {
+    {Intrinsic::nvvm_fadd, Intrinsic::nvvm_fadd_sat},
+    {Intrinsic::nvvm_fadd_ftz, Intrinsic::nvvm_fadd_ftz_sat}};
+static constexpr Intrinsic::ID NVVMFMulIIDs[2][2] = {
+    {Intrinsic::nvvm_fmul, Intrinsic::nvvm_fmul_sat},
+    {Intrinsic::nvvm_fmul_ftz, Intrinsic::nvvm_fmul_ftz_sat}};
+
 static std::optional<std::pair<Intrinsic::ID, RoundingMode>>
-getNVVMFAddUpgrade(StringRef Name) {
+getNVVMFPArithUpgrade(StringRef Name, const Intrinsic::ID (&IIDs)[2][2]) {
   auto [Modifiers, Type] = Name.rsplit('.');
   if (!is_contained({"f", "d", "f16", "v2f16"}, Type))
     return std::nullopt;
@@ -1521,16 +1553,13 @@ getNVVMFAddUpgrade(StringRef Name) {
   if (!RoundingMode)
     return std::nullopt;
 
-  Intrinsic::ID IID = StringSwitch<Intrinsic::ID>(Modifiers.drop_front(2))
-                          .Case("", Intrinsic::nvvm_fadd)
-                          .Case(".ftz", Intrinsic::nvvm_fadd_ftz)
-                          .Case(".sat", Intrinsic::nvvm_fadd_sat)
-                          .Case(".ftz.sat", Intrinsic::nvvm_fadd_ftz_sat)
-                          .Default(Intrinsic::not_intrinsic);
-  if (IID == Intrinsic::not_intrinsic)
+  StringRef Rest = Modifiers.drop_front(2);
+  const bool IsFTZ = Rest.consume_front(".ftz");
+  const bool IsSat = Rest.consume_front(".sat");
+  if (!Rest.empty())
     return std::nullopt;
 
-  return std::make_pair(IID, *RoundingMode);
+  return std::make_pair(IIDs[IsFTZ][IsSat], *RoundingMode);
 }
 
 static Intrinsic::ID shouldUpgradeNVPTXMBarrierInitIntrinsic(StringRef Name) {
@@ -1650,13 +1679,11 @@ static bool convertIntrinsicValidType(StringRef Name,
   return false;
 }
 
-static unsigned getFullArgCountForDefaultArgUpgrade(Function *F,
-                                                    Intrinsic::ID IID) {
+static unsigned
+getFullArgCountForDefaultArgUpgrade(Function *F, Intrinsic::ID IID,
+                                    SmallVectorImpl<Type *> &OverloadTys) {
   auto [FirstDefault, Defaults] = Intrinsic::getAllDefaultArgValues(IID);
   if (Defaults.empty())
-    return 0;
-
-  if (Intrinsic::isOverloaded(IID))
     return 0;
 
   unsigned FullArgCount = FirstDefault + Defaults.size();
@@ -1665,18 +1692,25 @@ static unsigned getFullArgCountForDefaultArgUpgrade(Function *F,
   if (F->arg_size() < FirstDefault || F->arg_size() >= FullArgCount)
     return 0;
 
+  unsigned NumMissingTrailingParams = FullArgCount - F->arg_size();
+  if (!Intrinsic::isSignatureValid(IID, F->getFunctionType(), OverloadTys,
+                                   NumMissingTrailingParams))
+    return 0;
+
   return FullArgCount;
 }
 
 static bool upgradeIntrinsicWithDefaultArgs(Function *F, Function *&NewFn) {
   Intrinsic::ID IID = F->getIntrinsicID();
+  SmallVector<Type *, 4> OverloadTys;
 
-  unsigned FullArgCount = getFullArgCountForDefaultArgUpgrade(F, IID);
+  unsigned FullArgCount =
+      getFullArgCountForDefaultArgUpgrade(F, IID, OverloadTys);
   if (FullArgCount == 0)
     return false;
 
   rename(F);
-  NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+  NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID, OverloadTys);
   assert(NewFn->arg_size() == FullArgCount &&
          "total number of default args does not match intrinsic signature");
   return true;
@@ -2048,6 +2082,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
                 .Cases({"min.s", "min.i", "min.ll"}, Intrinsic::smin)
                 .Cases({"max.us", "max.ui", "max.ull"}, Intrinsic::umax)
                 .Cases({"min.us", "min.ui", "min.ull"}, Intrinsic::umin)
+                .Cases({"mulhi.s", "mulhi.i", "mulhi.ll"}, Intrinsic::smulh)
+                .Cases({"mulhi.us", "mulhi.ui", "mulhi.ull"}, Intrinsic::umulh)
                 .Default(Intrinsic::not_intrinsic);
         if (IID != Intrinsic::not_intrinsic) {
           NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
@@ -2166,7 +2202,10 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         Expand = Name == "f" || Name == "ftz.f" || Name == "d";
       else if (Name.consume_front("add."))
         // nvvm.add.<rnd>{.ftz}{.sat}.{f,d,f16,v2f16}
-        Expand = getNVVMFAddUpgrade(Name).has_value();
+        Expand = getNVVMFPArithUpgrade(Name, NVVMFAddIIDs).has_value();
+      else if (Name.consume_front("mul."))
+        // nvvm.mul.<rnd>{.ftz}{.sat}.{f,d,f16,v2f16}
+        Expand = getNVVMFPArithUpgrade(Name, NVVMFMulIIDs).has_value();
       else if (Name.consume_front("ex2.approx."))
         // nvvm.ex2.approx.{f,ftz.f,d,f16x2}
         Expand =
@@ -2325,6 +2364,15 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       NewFn = nullptr;
       return true;
     }
+    if (Name.starts_with("strip.invariant.group")) {
+      // For clang's usage it would be safe to just drop the
+      // strip.invariant.group, but to be conservative replace with the
+      // stronger launder.invariant.group instead.
+      NewFn = Intrinsic::getOrInsertDeclaration(
+          F->getParent(), Intrinsic::launder_invariant_group,
+          F->getReturnType());
+      return true;
+    }
     break;
 
   case 't':
@@ -2462,8 +2510,7 @@ GlobalVariable *llvm::UpgradeGlobalVariable(GlobalVariable *GV) {
   if (!STy || STy->getNumElements() != 2)
     return nullptr;
 
-  LLVMContext &C = GV->getContext();
-  IRBuilder<> IRB(C);
+  IRBuilder<> IRB(*GV->getParent());
   auto EltTy = StructType::get(STy->getElementType(0), STy->getElementType(1),
                                IRB.getPtrTy());
   Constant *Init = GV->getInitializer();
@@ -3026,24 +3073,16 @@ static bool upgradeAVX512MaskToSelect(StringRef Name, IRBuilder<> &Builder,
       IID = Intrinsic::x86_avx512_pmul_hr_sw_512;
     else
       llvm_unreachable("Unexpected intrinsic");
-  } else if (Name.starts_with("pmulh.w.")) {
-    if (VecWidth == 128)
-      IID = Intrinsic::x86_sse2_pmulh_w;
-    else if (VecWidth == 256)
-      IID = Intrinsic::x86_avx2_pmulh_w;
-    else if (VecWidth == 512)
-      IID = Intrinsic::x86_avx512_pmulh_w_512;
-    else
-      llvm_unreachable("Unexpected intrinsic");
-  } else if (Name.starts_with("pmulhu.w.")) {
-    if (VecWidth == 128)
-      IID = Intrinsic::x86_sse2_pmulhu_w;
-    else if (VecWidth == 256)
-      IID = Intrinsic::x86_avx2_pmulhu_w;
-    else if (VecWidth == 512)
-      IID = Intrinsic::x86_avx512_pmulhu_w_512;
-    else
-      llvm_unreachable("Unexpected intrinsic");
+  } else if (Name.starts_with("pmulh.w")) {
+    assert((VecWidth == 128 || VecWidth == 256 || VecWidth == 512) &&
+           "Unexpected intrinsic");
+    Rep = upgradeX86BinaryIntrinsics(Builder, CI, Intrinsic::smulh);
+    return true;
+  } else if (Name.starts_with("pmulhu.w")) {
+    assert((VecWidth == 128 || VecWidth == 256 || VecWidth == 512) &&
+           "Unexpected intrinsic");
+    Rep = upgradeX86BinaryIntrinsics(Builder, CI, Intrinsic::umulh);
+    return true;
   } else if (Name.starts_with("pmaddw.d.")) {
     if (VecWidth == 128)
       IID = Intrinsic::x86_sse2_pmadd_wd;
@@ -3227,6 +3266,19 @@ void llvm::UpgradeInlineAsmString(std::string *AsmStr) {
   }
 }
 
+static Value *upgradeNVVMFPArithCall(IRBuilder<> &Builder, CallBase *CI,
+                                     StringRef Name,
+                                     const Intrinsic::ID (&IIDs)[2][2]) {
+  auto Result = getNVVMFPArithUpgrade(Name, IIDs);
+  assert(Result && "unsupported nvvm.add.*/nvvm.mul.* intrinsic");
+  auto [IID, RoundingMode] = *Result;
+  Value *A = CI->getArgOperand(0);
+  return Builder.CreateIntrinsic(
+      A->getType(), IID,
+      {A, CI->getArgOperand(1),
+       Builder.getInt32(static_cast<int>(RoundingMode))});
+}
+
 static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
                                        Function *F, IRBuilder<> &Builder) {
   Value *Rep = nullptr;
@@ -3249,14 +3301,10 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Rep = Builder.CreateUnaryIntrinsic(IID, CI->getArgOperand(0));
   } else if (Name.consume_front("add.")) {
     // nvvm.add.<rnd>{.ftz}{.sat}.{f,d,f16,v2f16}
-    auto FAdd = getNVVMFAddUpgrade(Name);
-    assert(FAdd && "unsupported nvvm.add.* intrinsic");
-    auto [IID, RoundingMode] = *FAdd;
-    Value *A = CI->getArgOperand(0);
-    Rep = Builder.CreateIntrinsic(
-        A->getType(), IID,
-        {A, CI->getArgOperand(1),
-         Builder.getInt32(static_cast<int>(RoundingMode))});
+    Rep = upgradeNVVMFPArithCall(Builder, CI, Name, NVVMFAddIIDs);
+  } else if (Name.consume_front("mul.")) {
+    // nvvm.mul.<rnd>{.ftz}{.sat}.{f,d,f16,v2f16}
+    Rep = upgradeNVVMFPArithCall(Builder, CI, Name, NVVMFMulIIDs);
   } else if (Name.consume_front("ex2.approx.")) {
     // nvvm.ex2.approx.{f,ftz.f,d,f16x2}
     Intrinsic::ID IID = Name.starts_with("ftz") ? Intrinsic::nvvm_ex2_approx_ftz
@@ -3742,6 +3790,12 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
              Name == "sse41.pminud" || Name.starts_with("avx2.pminu") ||
              Name.starts_with("avx512.mask.pminu")) {
     Rep = upgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::umin);
+  } else if (Name == "sse2.pmulh.w" || Name.starts_with("avx2.pmulh.w") ||
+             Name.starts_with("avx512.pmulh.w")) {
+    Rep = upgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::smulh);
+  } else if (Name == "sse2.pmulhu.w" || Name.starts_with("avx2.pmulhu.w") ||
+             Name.starts_with("avx512.pmulhu.w")) {
+    Rep = upgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::umulh);
   } else if (Name == "sse2.pmulu.dq" || Name == "avx2.pmulu.dq" ||
              Name == "avx512.pmulu.dq.512" ||
              Name.starts_with("avx512.mask.pmulu.dq.")) {
@@ -5731,10 +5785,9 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     return;
 
   LLVMContext &C = CI->getContext();
-  IRBuilder<> Builder(C);
+  IRBuilder<> Builder(CI->getIterator());
   if (isa<FPMathOperator>(CI))
     Builder.setFastMathFlags(CI->getFastMathFlags());
-  Builder.SetInsertPoint(CI->getParent(), CI->getIterator());
 
   if (!NewFn) {
     // Get the Function's name.
@@ -6641,6 +6694,28 @@ MDNode *llvm::UpgradeTBAANode(MDNode &MD) {
   return MDNode::get(Context, Elts);
 }
 
+MDNode *llvm::UpgradeTBAAStructNode(MDNode &MD) {
+  // !tbaa.struct is a list of (offset, size, tag) triples. Upgrade any
+  // old-style scalar field tag to struct-path form via UpgradeTBAANode.
+  unsigned NumOperands = MD.getNumOperands();
+  if (NumOperands == 0 || NumOperands % 3 != 0)
+    return &MD; // Malformed; leave it for the verifier to reject.
+
+  SmallVector<Metadata *, 12> Elts(MD.op_begin(), MD.op_end());
+  bool Changed = false;
+  for (unsigned I = 2; I < NumOperands; I += 3) {
+    auto *Tag = dyn_cast_or_null<MDNode>(Elts[I]);
+    if (!Tag)
+      continue;
+    MDNode *Upgraded = UpgradeTBAANode(*Tag);
+    if (Upgraded == Tag)
+      continue;
+    Elts[I] = Upgraded;
+    Changed = true;
+  }
+  return Changed ? MDNode::get(MD.getContext(), Elts) : &MD;
+}
+
 Instruction *llvm::UpgradeBitCastInst(unsigned Opc, Value *V, Type *DestTy,
                                       Instruction *&Temp) {
   if (Opc != Instruction::BitCast)
@@ -6918,7 +6993,7 @@ void llvm::UpgradeARCRuntime(Module &M) {
       if (!CI || CI->getCalledFunction() != Fn)
         continue;
 
-      IRBuilder<> Builder(CI->getParent(), CI->getIterator());
+      IRBuilder<> Builder(CI->getIterator());
       FunctionType *NewFuncTy = NewFn->getFunctionType();
       SmallVector<Value *, 2> Args;
 
@@ -7183,8 +7258,10 @@ bool llvm::UpgradeModuleFlags(Module &M) {
 
     // Upgrade branch protection and return address signing module flags. The
     // module flag behavior for these fields were Error and now they are Min.
+    // The one exception is "sign-return-address-harden".
     if (ID->getString() == "branch-target-enforcement" ||
-        ID->getString().starts_with("sign-return-address")) {
+        (ID->getString().starts_with("sign-return-address") &&
+         ID->getString() != "sign-return-address-harden")) {
       if (auto *Behavior =
               mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(0))) {
         if (Behavior->getLimitedValue() == Module::Error) {
@@ -7523,8 +7600,11 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
 // Check if the function attribute is not present and set it.
 static void setFunctionAttrIfNotSet(Function &F, StringRef FnAttrName,
                                     StringRef Value) {
-  if (!F.hasFnAttribute(FnAttrName))
+  if (!F.hasFnAttribute(FnAttrName)) {
     F.addFnAttr(FnAttrName, Value);
+    LLVM_DEBUG(dbgs() << "Set attribute: " << FnAttrName << "=\"" << Value
+                      << "\", function: " << F.getName() << "\n");
+  }
 }
 
 // Check if the function attribute is not present and set it if needed.
@@ -7532,17 +7612,31 @@ static void setFunctionAttrIfNotSet(Function &F, StringRef FnAttrName,
 // If the attribute is "true" resets it to a valueless attribute.
 static void ConvertFunctionAttr(Function &F, bool Set, StringRef FnAttrName) {
   if (!F.hasFnAttribute(FnAttrName)) {
-    if (Set)
+    if (Set) {
       F.addFnAttr(FnAttrName);
+      LLVM_DEBUG(dbgs() << "Added attribute: " << FnAttrName
+                        << ", function: " << F.getName() << "\n");
+    }
   } else {
     auto A = F.getFnAttribute(FnAttrName);
-    if ("false" == A.getValueAsString())
+    if ("false" == A.getValueAsString()) {
       F.removeFnAttr(FnAttrName);
-    else if ("true" == A.getValueAsString()) {
+      LLVM_DEBUG(dbgs() << "Removed attribute: " << FnAttrName
+                        << "=\"false\", function: " << F.getName() << "\n");
+    } else if ("true" == A.getValueAsString()) {
       F.removeFnAttr(FnAttrName);
       F.addFnAttr(FnAttrName);
+      LLVM_DEBUG(dbgs() << "Converted attribute: " << FnAttrName
+                        << "=\"true\", function: " << F.getName() << "\n");
     }
   }
+}
+
+static void ConvertModuleFlag(Module &M, Module::ModFlagBehavior Behavior,
+                              StringRef Key, uint32_t Val) {
+  M.setModuleFlag(Behavior, Key, Val);
+  LLVM_DEBUG(dbgs() << "Converted module flag: " << "{" << Behavior << ", "
+                    << Key << ", " << Val << "}\n");
 }
 
 void llvm::copyModuleAttrToFunctions(Module &M) {
@@ -7584,6 +7678,9 @@ void llvm::copyModuleAttrToFunctions(Module &M) {
       *ValPtr = CI->getZExtValue();
       if (*ValPtr == 2)
         return;
+
+      LLVM_DEBUG(dbgs() << "Found module flag: " << IDStr << "(" << *ValPtr
+                        << ")\n");
     }
   }
 
@@ -7620,17 +7717,19 @@ void llvm::copyModuleAttrToFunctions(Module &M) {
   }
 
   if (BTE)
-    M.setModuleFlag(llvm::Module::Min, "branch-target-enforcement", 2);
+    ConvertModuleFlag(M, llvm::Module::Min, "branch-target-enforcement", 2);
   if (BPPLR)
-    M.setModuleFlag(llvm::Module::Min, "branch-protection-pauth-lr", 2);
+    ConvertModuleFlag(M, llvm::Module::Min, "branch-protection-pauth-lr", 2);
   if (GCS)
-    M.setModuleFlag(llvm::Module::Min, "guarded-control-stack", 2);
+    ConvertModuleFlag(M, llvm::Module::Min, "guarded-control-stack", 2);
   if (SRA) {
-    M.setModuleFlag(llvm::Module::Min, "sign-return-address", 2);
+    ConvertModuleFlag(M, llvm::Module::Min, "sign-return-address", 2);
     if (SRAALLValue == 1)
-      M.setModuleFlag(llvm::Module::Min, "sign-return-address-all", 2);
-    if (SRABKeyValue == 1)
-      M.setModuleFlag(llvm::Module::Min, "sign-return-address-with-bkey", 2);
+      ConvertModuleFlag(M, llvm::Module::Min, "sign-return-address-all", 2);
+    if (SRABKeyValue == 1) {
+      ConvertModuleFlag(M, llvm::Module::Min, "sign-return-address-with-bkey",
+                        2);
+    }
   }
 }
 
@@ -7859,6 +7958,15 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     if (Pos == StringRef::npos)
       Pos = Res.size();
     Res.insert(Pos, "-f64:32:64");
+  }
+
+  // ARM data layout upgrades.
+  // Add -Fi8 if a -F has not already been specified.
+  if (T.isARM() && !DL.empty() && !DL.contains("Fi") && !DL.contains("Fn")) {
+    const StringRef p3232 = "p:32:32";
+    size_t Pos = Res.find(p3232);
+    if (Pos != StringRef::npos)
+      Res.insert(Pos + p3232.size(), "-Fi8");
   }
 
   if (!T.isX86())

@@ -43,58 +43,6 @@ using namespace llvm::omp::target::ompt;
 #endif
 using namespace llvm::omp::target::debug;
 
-int AsyncInfoTy::synchronize() {
-  int Result = OFFLOAD_SUCCESS;
-  if (!isQueueEmpty()) {
-    switch (SyncType) {
-    case SyncTy::BLOCKING:
-      // If we have a queue we need to synchronize it now.
-      Result = Device.synchronize(*this);
-      assert(AsyncInfo.Queue == nullptr &&
-             "The device plugin should have nulled the queue to indicate there "
-             "are no outstanding actions!");
-      break;
-    case SyncTy::NON_BLOCKING:
-      Result = Device.queryAsync(*this);
-      break;
-    }
-  }
-
-  // Run any pending post-processing function registered on this async object.
-  if (Result == OFFLOAD_SUCCESS && isQueueEmpty()) {
-    ODBG(ODT_DataTransfer)
-        << "Synchronization complete, running post-processing";
-    Result = runPostProcessing();
-  }
-
-  return Result;
-}
-
-void *&AsyncInfoTy::getVoidPtrLocation() {
-  BufferLocations.push_back(nullptr);
-  return BufferLocations.back();
-}
-
-bool AsyncInfoTy::isDone() const { return isQueueEmpty(); }
-
-int32_t AsyncInfoTy::runPostProcessing() {
-  size_t Size = PostProcessingFunctions.size();
-  for (size_t I = 0; I < Size; ++I) {
-    const int Result = PostProcessingFunctions[I]();
-    if (Result != OFFLOAD_SUCCESS)
-      return Result;
-  }
-
-  // Clear the vector up until the last known function, since post-processing
-  // procedures might add new procedures themselves.
-  const auto *PrevBegin = PostProcessingFunctions.begin();
-  PostProcessingFunctions.erase(PrevBegin, PrevBegin + Size);
-
-  return OFFLOAD_SUCCESS;
-}
-
-bool AsyncInfoTy::isQueueEmpty() const { return AsyncInfo.Queue == nullptr; }
-
 /* All begin addresses for partially mapped structs must be aligned, up to 16,
  * in order to ensure proper alignment of members. E.g.
  *
@@ -267,20 +215,19 @@ void *targetLockExplicit(void *HostPtr, size_t Size, int DeviceNum,
     return NULL;
   }
 
-  void *RC = NULL;
-
   auto DeviceOrErr = PM->getDevice(DeviceNum);
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
-  int32_t Err = 0;
-  Err = DeviceOrErr->RTL->data_lock(DeviceNum, HostPtr, Size, &RC);
-  if (Err) {
-    ODBG(ODT_Interface) << "Could not lock ptr " << HostPtr;
+  // Register and page-lock the memory.
+  auto LockedPtrOrErr = DeviceOrErr->registerMemory(HostPtr, Size);
+  if (!LockedPtrOrErr) {
+    ODBG(ODT_Interface) << "Could not lock ptr " << HostPtr << ": "
+                        << toString(LockedPtrOrErr.takeError());
     return nullptr;
   }
-  ODBG(ODT_Interface) << Name << " returns device ptr " << RC;
-  return RC;
+  ODBG(ODT_Interface) << Name << " returns device ptr " << *LockedPtrOrErr;
+  return *LockedPtrOrErr;
 }
 
 void targetUnlockExplicit(void *HostPtr, int DeviceNum, const char *Name) {
@@ -291,7 +238,10 @@ void targetUnlockExplicit(void *HostPtr, int DeviceNum, const char *Name) {
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
-  DeviceOrErr->RTL->data_unlock(DeviceNum, HostPtr);
+  // Unregister and unlock the memory.
+  if (auto Err = DeviceOrErr->unregisterMemory(HostPtr))
+    ODBG(ODT_Interface) << "Could not unlock ptr " << HostPtr << ": "
+                        << toString(std::move(Err));
   ODBG(ODT_Interface) << Name << " returns";
 }
 

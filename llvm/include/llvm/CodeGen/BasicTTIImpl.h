@@ -68,7 +68,8 @@ class ScalarEvolution;
 class SCEV;
 class TargetMachine;
 
-extern LLVM_ABI cl::opt<unsigned> PartialUnrollingThreshold;
+/// Returns -partial-unrolling-threshold if specified.
+LLVM_ABI std::optional<unsigned> getPartialUnrollingThreshold();
 
 /// Base class which can be used to help build a TTI implementation.
 ///
@@ -443,7 +444,7 @@ public:
   }
 
   bool isNoopAddrSpaceCast(unsigned FromAS, unsigned ToAS) const override {
-    return getTLI()->getTargetMachine().isNoopAddrSpaceCast(FromAS, ToAS);
+    return getTLI()->getTargetMachine().isNoopAddrSpaceCast(DL, FromAS, ToAS);
   }
 
   unsigned getAssumedAddrSpace(const Value *V) const override {
@@ -763,8 +764,8 @@ public:
 
     unsigned MaxOps;
     const TargetSubtargetInfo *ST = getST();
-    if (PartialUnrollingThreshold.getNumOccurrences() > 0)
-      MaxOps = PartialUnrollingThreshold;
+    if (std::optional<unsigned> Threshold = getPartialUnrollingThreshold())
+      MaxOps = *Threshold;
     else if (ST->getSchedModel().LoopMicroOpBufferSize > 0)
       MaxOps = ST->getSchedModel().LoopMicroOpBufferSize;
     else
@@ -1094,7 +1095,7 @@ public:
       TTI::OperandValueInfo Opd1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Opd2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = {},
-      const Instruction *CxtI = nullptr) const override {
+      const Instruction *CtxI = nullptr) const override {
     // Check if any of the operands are vector operands.
     const TargetLoweringBase *TLI = getTLI();
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -1104,7 +1105,7 @@ public:
     if (CostKind != TTI::TCK_RecipThroughput)
       return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind,
                                            Opd1Info, Opd2Info,
-                                           Args, CxtI);
+                                           Args, CtxI);
 
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
 
@@ -1155,7 +1156,7 @@ public:
     if (auto *VTy = dyn_cast<FixedVectorType>(Ty)) {
       InstructionCost Cost = thisT()->getArithmeticInstrCost(
           Opcode, VTy->getScalarType(), CostKind, Opd1Info, Opd2Info,
-          Args, CxtI);
+          Args, CtxI);
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values.
       SmallVector<Type *> Tys(Args.size(), Ty);
@@ -1226,7 +1227,7 @@ public:
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
                  TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
-                 const Instruction *CxtI = nullptr,
+                 const Instruction *CtxI = nullptr,
                  TTI::VectorInstrContext VIC =
                      TTI::VectorInstrContext::None) const override {
     switch (improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp)) {
@@ -1333,7 +1334,7 @@ public:
       }
       break;
     case Instruction::AddrSpaceCast:
-      if (TLI->isFreeAddrSpaceCast(Src->getPointerAddressSpace(),
+      if (TLI->isFreeAddrSpaceCast(DL, Src->getPointerAddressSpace(),
                                    Dst->getPointerAddressSpace()))
         return 0;
       break;
@@ -2022,6 +2023,7 @@ public:
     case Intrinsic::experimental_vp_strided_store: {
       const Value *Data = Args[0];
       const Value *Ptr = Args[1];
+      const Value *Stride = Args[2];
       const Value *Mask = Args[3];
       const Value *EVL = Args[4];
       bool VarMask = !isa<Constant>(Mask) || !isa<Constant>(EVL);
@@ -2030,11 +2032,12 @@ public:
           I->getParamAlign(1).value_or(thisT()->DL.getABITypeAlign(EltTy));
       return thisT()->getMemIntrinsicInstrCost(
           MemIntrinsicCostAttributes(IID, Data->getType(), Ptr, VarMask,
-                                     Alignment, I),
+                                     Alignment, I, Stride),
           CostKind);
     }
     case Intrinsic::experimental_vp_strided_load: {
       const Value *Ptr = Args[0];
+      const Value *Stride = Args[1];
       const Value *Mask = Args[2];
       const Value *EVL = Args[3];
       bool VarMask = !isa<Constant>(Mask) || !isa<Constant>(EVL);
@@ -2042,7 +2045,8 @@ public:
       Align Alignment =
           I->getParamAlign(0).value_or(thisT()->DL.getABITypeAlign(EltTy));
       return thisT()->getMemIntrinsicInstrCost(
-          MemIntrinsicCostAttributes(IID, RetTy, Ptr, VarMask, Alignment, I),
+          MemIntrinsicCostAttributes(IID, RetTy, Ptr, VarMask, Alignment, I,
+                                     Stride),
           CostKind);
     }
     case Intrinsic::stepvector: {
@@ -2519,6 +2523,13 @@ public:
       Align TyAlign = thisT()->DL.getABITypeAlign(Ty);
       return thisT()->getMemIntrinsicInstrCost(
           MemIntrinsicCostAttributes(IID, Ty, TyAlign, 0), CostKind);
+    }
+    case Intrinsic::speculative_load: {
+      const IntrinsicInst *I = ICA.getInst();
+      Align Alignment = I ? I->getParamAlign(0).valueOrOne() : Align(1);
+      unsigned AS = Tys[0]->getPointerAddressSpace();
+      return thisT()->getMemIntrinsicInstrCost(
+          MemIntrinsicCostAttributes(IID, RetTy, Alignment, AS), CostKind);
     }
     case Intrinsic::experimental_vp_strided_store: {
       auto *Ty = cast<VectorType>(ICA.getArgTypes()[0]);
@@ -3131,12 +3142,28 @@ public:
       InstructionCost MulCost =
           thisT()->getArithmeticInstrCost(Instruction::Mul, RetTy, CostKind);
 
-      // When the multiplication with holes approach is used, that emits 16
-      // MULs, 8 + 4 ANDs, 12 XORs and 3 ORs.
-      if (BW >= 32 && BW <= 64 &&
+      // When the multiplication with holes approach is used, it splits the
+      // operands into S phases (the smallest stride with ceil(BW/S) <= 2^S) and
+      // emits S*S MULs, 3*S ANDs, S*(S-1) XORs and S-1 ORs.
+      //
+      // * BW <= 8 uses S = 2
+      // * BW <= 24 uses S = 3
+      // * BW <= 64 uses S = 4
+      // * BW <= 160 uses S = 5
+      // * BW <= 384 uses S = 6
+      unsigned S = 1;
+      while (S < 32 && divideCeil(BW, S) > (1u << S))
+        ++S;
+
+      // The naive algorithm usually uses AND+MUL+XOR per bit.
+      unsigned NaiveCost = 3 * BW;
+      unsigned HolesCost = S * S + 3 * S + S * (S - 1) + (S - 1);
+
+      if (HolesCost < NaiveCost &&
           TLI->isOperationLegalOrCustom(ISD::MUL,
                                         TLI->getValueType(DL, RetTy))) {
-        return 16 * MulCost + 12 * AndCost + 12 * XorCost + 3 * OrCost;
+        return S * S * MulCost + 3 * S * AndCost + S * (S - 1) * XorCost +
+               (S - 1) * OrCost;
       }
 
       InstructionCost PerBitCostMul = AndCost + MulCost + XorCost;
@@ -3276,6 +3303,10 @@ public:
     }
     case Intrinsic::vp_load_ff:
       return InstructionCost::getInvalid();
+    case Intrinsic::speculative_load:
+      // Speculative loads are lowered to regular loads of the full type.
+      return thisT()->getMemoryOpCost(Instruction::Load, DataTy, Alignment,
+                                      MICA.getAddressSpace(), CostKind);
     default:
       llvm_unreachable("unexpected intrinsic");
     }

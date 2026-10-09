@@ -92,8 +92,9 @@ static bool recordCanPassInRegs(ModuleOp modOp, cir::RecordType recTy) {
 /// Whether the classifier could give this type the SSEUP class, looking
 /// through arrays and records at the types they hold.
 static bool mayReachSseUp(mlir::Type ty, const DataLayout &dl) {
+  // The classifier sizes a vector with its width rounded up to a power of two.
   if (isa<cir::VectorType>(ty))
-    return dl.getTypeSizeInBits(ty).getFixedValue() >= 128;
+    return llvm::PowerOf2Ceil(dl.getTypeSizeInBits(ty).getFixedValue()) >= 128;
   if (auto fpTy = dyn_cast<cir::FPTypeInterface>(ty))
     return &fpTy.getFloatSemantics() == &llvm::APFloat::IEEEquad();
   if (auto arrTy = dyn_cast<cir::ArrayType>(ty))
@@ -205,11 +206,10 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
     // x86_64 has no calling convention for one.
     if (vecTy.getIsScalable())
       return false;
-    // The classifier sizes a vector as element count times element width, so
-    // an element is only usable where that width is the one clang gives it.
-    // It is not for bool (a bit to clang, a byte here), for a _BitInt narrower
-    // than a byte (clang rounds to the storage container), or for x87 long
-    // double (80 bits here against clang's 128).
+    // mapCIRType maps a bool as a one-bit integer, so a bool vector is sized
+    // one bit per element, as clang packs it.  Vectors of a _BitInt whose
+    // width is not a whole number of bytes, or of x87 long double, are not
+    // handled yet.
     mlir::Type elemTy = vecTy.getElementType();
     if (auto elemInt = dyn_cast<cir::IntType>(elemTy)) {
       if (elemInt.getWidth() % 8)
@@ -217,14 +217,9 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
     } else if (auto elemFp = dyn_cast<cir::FPTypeInterface>(elemTy)) {
       if (&elemFp.getFloatSemantics() == &llvm::APFloat::x87DoubleExtended())
         return false;
-    } else {
+    } else if (!isa<cir::BoolType>(elemTy)) {
       return false;
     }
-    // Clang also rounds the vector's own width up to a power of two, and the
-    // classifier branches on the exact width, so a three-char vector would be
-    // classified at 24 bits where clang uses 32.
-    if (!llvm::isPowerOf2_64(dl.getTypeSizeInBits(ty).getFixedValue()))
-      return false;
     return isSupportedType(elemTy, dl);
   }
   if (auto arrTy = dyn_cast<cir::ArrayType>(ty))
@@ -308,7 +303,10 @@ static mlir::Type abiTypeToCIR(const llvm::abi::Type *ty, MLIRContext *ctx) {
   return llvm::TypeSwitch<const llvm::abi::Type *, mlir::Type>(ty)
       .Case(
           [&](const llvm::abi::VoidType *) { return cir::VoidType::get(ctx); })
-      .Case([&](const llvm::abi::IntegerType *intTy) {
+      .Case([&](const llvm::abi::IntegerType *intTy) -> mlir::Type {
+        // mapCIRType maps a bool as a one-bit integer.
+        if (intTy->isBool())
+          return cir::BoolType::get(ctx);
         return cir::IntType::get(ctx, intTy->getSizeInBits().getFixedValue(),
                                  intTy->isSigned(), intTy->isBitInt());
       })
@@ -373,8 +371,9 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
                                  llvm::Align(dl.getTypeABIAlignment(type)));
       })
       .Case([&](cir::BoolType) {
-        return tb.getIntegerType(dl.getTypeSizeInBits(type),
-                                 llvm::Align(dl.getTypeABIAlignment(type)),
+        // A bool is a one-bit integer to the classifier, as QualTypeMapper
+        // maps it, so a bool vector is sized one bit per element.
+        return tb.getIntegerType(1, llvm::Align(dl.getTypeABIAlignment(type)),
                                  /*Signed=*/false);
       })
       .Case([&](cir::VoidType) { return tb.getVoidType(); })
@@ -631,6 +630,10 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
   if (info.isIndirect())
     return ArgClassification::getIndirect(info.getIndirectAlign(),
                                           info.getIndirectByVal());
+  // AArch64 pure scalable aggregates use CoerceAndExpand. This bridge lowers
+  // x86_64 classifications only.
+  assert(!info.isCoerceAndExpand() &&
+         "CoerceAndExpand is not expected for x86_64");
   assert(info.isIgnore() && "Unexpected classification");
   return ArgClassification::getIgnore();
 }
@@ -800,6 +803,29 @@ static std::optional<FunctionClassification> classifyX86_64VariadicCall(
       modOp, [&]() { return op->emitOpError(); });
 }
 
+/// Whether \p fc gives the callee access to memory through a pointer the ABI
+/// introduced: an sret slot for an indirect return, or an indirect argument.
+static bool hasIndirectSlot(const FunctionClassification &fc) {
+  if (fc.returnInfo.kind == ArgKind::Indirect)
+    return true;
+  return llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
+    return ac.kind == ArgKind::Indirect;
+  });
+}
+
+/// Record on \p op that the memory its pointer arguments address may be read
+/// and written.  Absent effects already allow that, since an absent attribute
+/// means the effects are unknown, so they are left absent.
+template <typename OpTy> static void widenForArgMemory(OpTy op) {
+  cir::MemoryEffectsAttr effects = op.getMemoryEffectsAttr();
+  if (!effects)
+    return;
+  op.setMemoryEffectsAttr(cir::MemoryEffectsAttr::get(
+      effects.getContext(), effects.getOther(), cir::ModRefInfo::ModRef,
+      effects.getInaccessibleMem(), effects.getErrnoMem(),
+      effects.getTargetMem0(), effects.getTargetMem1()));
+}
+
 #ifndef NDEBUG
 /// Whether \p callFc classifies a call's leading arguments and its return
 /// exactly as \p calleeFc classifies the callee's declared parameters and
@@ -897,18 +923,6 @@ cir::FuncOp lookupCallee(Operation *callOp, SymbolTable &symbolTable) {
   return symbolTable.lookup<cir::FuncOp>(callee.getValue());
 }
 
-/// The signature an indirect call reaches its callee through, or a null type
-/// for a direct call.  The callee's pointer-to-function shape is asserted
-/// rather than verified: the dialect checks operand types against the callee
-/// only for a direct call, so IR that breaks it fails here instead of in the
-/// verifier.
-cir::FuncType indirectCalleeType(cir::CIRCallOpInterface call) {
-  if (!call.isIndirect())
-    return {};
-  return cast<cir::FuncType>(
-      cast<cir::PointerType>(call.getIndirectCall().getType()).getPointee());
-}
-
 void CallConvLoweringPass::runOnOperation() {
   ModuleOp moduleOp = getOperation();
   MLIRContext *ctx = &getContext();
@@ -933,7 +947,7 @@ void CallConvLoweringPass::runOnOperation() {
   DataLayout dl(moduleOp);
   CIRABIRewriteContext rewriteCtx(moduleOp, dl);
   // A non-byval indirect parameter's slot outlives the rewrite that retypes
-  // the parameter, so that a call forwarding the parameter can still recognise
+  // the parameter, so that a call forwarding the parameter can still recognize
   // it.  Draining on scope exit collapses those slots whichever way this
   // function returns.
   llvm::scope_exit drainParamSlots(
@@ -1076,14 +1090,27 @@ void CallConvLoweringPass::runOnOperation() {
     addressTakers[callee].push_back(getGlobal);
   });
 
-  // Restate every non-byval indirect parameter's slot alignment as the one the
-  // ABI promises for that parameter, before anything reads a slot.  A call is
-  // rewritten together with its callee rather than with the function
-  // containing it, so a call forwarding such a parameter can be reached before
-  // the parameter's own function is rewritten.  Doing this up front makes the
-  // forwarding decision independent of the order the two were declared in.
-  for (auto &kv : classifications)
-    rewriteCtx.normalizeParameterSlotAlignments(kv.first, kv.second);
+  // Restate every non-byval indirect parameter's slot alignment and route any
+  // use of such a parameter as a call argument through a load of that slot,
+  // before any definition or call site is rewritten.  Doing this up front
+  // makes the forwarding decision independent of the order the callee and its
+  // caller were declared in.
+  for (auto &kv : classifications) {
+    if (failed(rewriteCtx.prepareNonByvalParameters(kv.first, kv.second))) {
+      signalPassFailure();
+      return;
+    }
+  }
+
+  // An sret slot or an indirect argument is a pointer the source never
+  // wrote, and an ellipsis can carry one the declared parameters do not
+  // describe.  The callee reads and writes that memory whatever const or
+  // pure recorded about it, so the recorded effects have to widen.
+  for (auto &kv : classifications) {
+    cir::FuncOp func = kv.first;
+    if (hasIndirectSlot(kv.second) || func.getFunctionType().isVarArg())
+      widenForArgMemory(func);
+  }
 
   // Rewrite each function together with every direct call to it and every op
   // holding its address.  By the time we move on to function F+1, F's
@@ -1113,6 +1140,8 @@ void CallConvLoweringPass::runOnOperation() {
                "a call site's declared parameters must be classified the same "
                "way as the callee's");
       }
+      if (hasIndirectSlot(*callFc))
+        widenForArgMemory(cast<cir::CIRCallOpInterface>(callOp));
       if (failed(rewriteCtx.rewriteCallSite(callOp, *callFc, builder))) {
         signalPassFailure();
         return;
@@ -1130,7 +1159,7 @@ void CallConvLoweringPass::runOnOperation() {
   // cached as the next one to visit.
   SmallVector<cir::CIRCallOpInterface> indirectCalls;
   moduleOp.walk([&](cir::CIRCallOpInterface c) {
-    if (indirectCalleeType(c))
+    if (c.isIndirect())
       indirectCalls.push_back(c);
   });
   for (cir::CIRCallOpInterface c : indirectCalls) {
@@ -1143,7 +1172,7 @@ void CallConvLoweringPass::runOnOperation() {
       signalPassFailure();
       return;
     }
-    cir::FuncType funcTy = indirectCalleeType(c);
+    cir::FuncType funcTy = getIndirectCalleeType(c);
     auto classifySignature =
         [&](mlir::TypeRange argTypes) -> std::optional<FunctionClassification> {
       // A callee resolved at run time carries no features of its own, so the
@@ -1161,32 +1190,24 @@ void CallConvLoweringPass::runOnOperation() {
     };
 
     // An argument passed through an ellipsis has no counterpart in the
-    // pointee's parameter list, so classify the call's own operands to learn
-    // what the ABI does with it.  If nothing in the full list needs a rewrite
-    // the call already carries its wire form and can stand as written.
-    // Anything else needs a rewrite the pointee's signature cannot describe,
-    // since it has no entry for the arguments past the ellipsis.
-    if (c.getNumArgOperands() > funcTy.getNumInputs()) {
-      std::optional<FunctionClassification> callFc =
-          classifySignature(c.getArgOperands().getTypes());
-      if (!callFc) {
-        signalPassFailure();
-        return;
-      }
-      if (!callFc->needsRewrite())
-        continue;
-      c->emitOpError() << "variadic arguments to an indirect call not yet "
-                          "implemented in CallConvLowering";
-      signalPassFailure();
-      return;
-    }
-
+    // pointee's parameter list.  On x86_64 such a call is classified from its
+    // own operands, as a direct one is.  Under target=test it is classified
+    // from the pointee alone, and rewriteCallSite reports the call.
+    bool classifyCallSite =
+        isX86 && c.getNumArgOperands() > funcTy.getNumInputs();
     std::optional<FunctionClassification> fc =
-        classifySignature(funcTy.getInputs());
+        classifyCallSite
+            ? classifyX86_64VariadicCall(
+                  c, funcTy, dl, *x86TypeMapper,
+                  x86TargetFor(avxLevelFor(c->getParentOfType<cir::FuncOp>())),
+                  moduleOp)
+            : classifySignature(funcTy.getInputs());
     if (!fc) {
       signalPassFailure();
       return;
     }
+    if (hasIndirectSlot(*fc))
+      widenForArgMemory(c);
     if (failed(rewriteCtx.rewriteCallSite(c.getOperation(), *fc, builder))) {
       signalPassFailure();
       return;
