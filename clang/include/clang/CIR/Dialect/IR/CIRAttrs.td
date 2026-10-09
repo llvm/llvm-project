@@ -1455,6 +1455,51 @@ def CIR_UnwindTableKindAttr : CIR_EnumAttr<CIR_UnwindTableKind, "uwtable"> {
 }
 
 //===----------------------------------------------------------------------===//
+// FramePointerKind
+//===----------------------------------------------------------------------===//
+def CIR_FramePointerKind : CIR_I32Enum<"FramePointerKind",
+                                       "Frame Pointer Kind", [
+  I32EnumCase<"None", 0, "none">,
+  I32EnumCase<"NonLeaf", 1, "non_leaf">,
+  I32EnumCase<"All", 2, "all">,
+  I32EnumCase<"Reserved", 3, "reserved">,
+  I32EnumCase<"NonLeafNoReserve", 4, "non_leaf_no_reserve">
+]>;
+
+def CIR_FramePointerKindAttr
+    : CIR_EnumAttr<CIR_FramePointerKind, "frame_pointer"> {
+  let summary = "Encodes the frame pointer kind for a function or a module.";
+
+  let description = [{
+    This mirrors the FramePointerKind enum of the LLVM dialect.  On a
+    `cir.func` it is the `frame_pointer` attribute and lowers to the
+    `frame-pointer` function attribute in LLVM IR.  As the value of the
+    module attribute `cir.frame_pointer` it lowers to the `frame-pointer`
+    module flag, which LLVM gives to the functions it synthesizes.  A
+    function or module without the attribute behaves as `none`.
+
+    `none` lets the frame pointer be eliminated.  `all` keeps the frame
+    pointer, and `non_leaf` keeps it if the function calls other functions.
+    `reserved` lets the frame pointer be eliminated but keeps its register
+    from being used for anything else, so the register either points to a
+    valid frame record for the current function or is left unmodified.
+    `non_leaf_no_reserve` is `non_leaf`, except that a leaf function may use
+    the frame pointer register as a general-purpose register.
+
+    Example:
+
+    ```
+    module attributes {cir.frame_pointer = #cir.frame_pointer<all>} {
+      cir.func private @f() attributes {frame_pointer = #cir.frame_pointer<all>}
+      cir.func private @g() attributes {
+        frame_pointer = #cir.frame_pointer<non_leaf>
+      }
+    }
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // GloblCtorAttr
 //===----------------------------------------------------------------------===//
 

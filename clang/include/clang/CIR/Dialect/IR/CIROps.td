@@ -4362,7 +4362,8 @@ def CIR_FuncOp : CIR_Op<"func", [
     CIR_OptionalPriorityAttr:$global_dtor_priority,
     OptionalAttr<CIR_FuncInfoAttr>:$func_info,
     OptionalAttr<CIR_AnnotationArrayAttr>:$annotations,
-    OptionalAttr<CIR_UnwindTableKindAttr>:$uwtable
+    OptionalAttr<CIR_UnwindTableKindAttr>:$uwtable,
+    OptionalAttr<CIR_FramePointerKindAttr>:$frame_pointer
   );
 
   let regions = (region AnyRegion:$body);

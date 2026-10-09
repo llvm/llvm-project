@@ -1,0 +1,19 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+module attributes {cir.frame_pointer = #cir.frame_pointer<all>} {
+}
+
+// -----
+
+// expected-error@+1 {{expects 'cir.frame_pointer' to be a #cir.frame_pointer attribute}}
+module attributes {cir.frame_pointer = 2 : i32} {
+}
+
+// -----
+
+module {
+  // expected-error@+1 {{expects 'cir.frame_pointer' attribute to be attached to 'builtin.module'}}
+  cir.func @f() attributes {cir.frame_pointer = #cir.frame_pointer<all>} {
+    cir.return
+  }
+}

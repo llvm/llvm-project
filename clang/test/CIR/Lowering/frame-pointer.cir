@@ -1,0 +1,96 @@
+// RUN: cir-opt %s -cir-to-llvm --split-input-file -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-translate %s -cir-to-llvmir --disable-cc-lowering --split-input-file | FileCheck %s -check-prefix=LLVM
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func @fp_none() attributes {frame_pointer = #cir.frame_pointer<none>} {
+    cir.return
+  }
+  cir.func @fp_non_leaf() attributes {frame_pointer = #cir.frame_pointer<non_leaf>} {
+    cir.return
+  }
+  cir.func @fp_all() attributes {frame_pointer = #cir.frame_pointer<all>} {
+    cir.return
+  }
+  cir.func @fp_reserved() attributes {frame_pointer = #cir.frame_pointer<reserved>} {
+    cir.return
+  }
+  cir.func @fp_non_leaf_no_reserve() attributes {frame_pointer = #cir.frame_pointer<non_leaf_no_reserve>} {
+    cir.return
+  }
+  cir.func private @fp_decl() attributes {frame_pointer = #cir.frame_pointer<all>}
+  cir.func @fp_absent() {
+    cir.return
+  }
+}
+
+// MLIR: llvm.func @fp_none() attributes {frame_pointer = #llvm.framePointerKind<none>
+// MLIR: llvm.func @fp_non_leaf() attributes {frame_pointer = #llvm.framePointerKind<"non-leaf">
+// MLIR: llvm.func @fp_all() attributes {frame_pointer = #llvm.framePointerKind<all>
+// MLIR: llvm.func @fp_reserved() attributes {frame_pointer = #llvm.framePointerKind<reserved>
+// MLIR: llvm.func @fp_non_leaf_no_reserve() attributes {frame_pointer = #llvm.framePointerKind<"non-leaf-no-reserve">
+// MLIR: llvm.func @fp_decl() attributes {frame_pointer = #llvm.framePointerKind<all>
+// MLIR: llvm.func @fp_absent()
+// MLIR-NOT: frame_pointer
+// MLIR: module attributes {cir.frame_pointer = #cir.frame_pointer<none>
+// MLIR: module attributes {cir.frame_pointer = #cir.frame_pointer<non_leaf>
+// MLIR: module attributes {cir.frame_pointer = #cir.frame_pointer<all>
+// MLIR: module attributes {cir.frame_pointer = #cir.frame_pointer<reserved>
+// MLIR: module attributes {cir.frame_pointer = #cir.frame_pointer<non_leaf_no_reserve>
+
+// LLVM: define void @fp_none() #[[NONE:[0-9]+]]
+// LLVM: define void @fp_non_leaf() #[[NON_LEAF:[0-9]+]]
+// LLVM: define void @fp_all() #[[ALL:[0-9]+]]
+// LLVM: define void @fp_reserved() #[[RESERVED:[0-9]+]]
+// LLVM: define void @fp_non_leaf_no_reserve() #[[NLNR:[0-9]+]]
+// LLVM: declare void @fp_decl() #[[ALL]]
+// LLVM: define void @fp_absent() {
+// LLVM: attributes #[[NONE]] = { "frame-pointer"="none" }
+// LLVM: attributes #[[NON_LEAF]] = { "frame-pointer"="non-leaf" }
+// LLVM: attributes #[[ALL]] = { "frame-pointer"="all" }
+// LLVM: attributes #[[RESERVED]] = { "frame-pointer"="reserved" }
+// LLVM: attributes #[[NLNR]] = { "frame-pointer"="non-leaf-no-reserve" }
+// LLVM-NOT: !"frame-pointer"
+// LLVM: ; ModuleID
+
+// -----
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu", cir.frame_pointer = #cir.frame_pointer<none>} {
+}
+
+// LLVM: !{i32 7, !"frame-pointer", i32 0}
+// LLVM-NOT: !"frame-pointer"
+// LLVM: ; ModuleID
+
+// -----
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu", cir.frame_pointer = #cir.frame_pointer<non_leaf>} {
+}
+
+// LLVM: !{i32 7, !"frame-pointer", i32 1}
+// LLVM-NOT: !"frame-pointer"
+// LLVM: ; ModuleID
+
+// -----
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu", cir.frame_pointer = #cir.frame_pointer<all>} {
+}
+
+// LLVM: !{i32 7, !"frame-pointer", i32 2}
+// LLVM-NOT: !"frame-pointer"
+// LLVM: ; ModuleID
+
+// -----
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu", cir.frame_pointer = #cir.frame_pointer<reserved>} {
+}
+
+// LLVM: !{i32 7, !"frame-pointer", i32 3}
+// LLVM-NOT: !"frame-pointer"
+// LLVM: ; ModuleID
+
+// -----
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu", cir.frame_pointer = #cir.frame_pointer<non_leaf_no_reserve>} {
+}
+
+// LLVM: !{i32 7, !"frame-pointer", i32 4}

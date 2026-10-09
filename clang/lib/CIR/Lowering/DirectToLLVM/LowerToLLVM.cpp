@@ -305,6 +305,26 @@ convertUWTableKind(cir::UnwindTableKind kind) {
   llvm_unreachable("Unknown CIR unwind table kind");
 }
 
+static mlir::LLVM::framePointerKind::FramePointerKind
+convertFramePointerKind(cir::FramePointerKind kind) {
+  using CIR = cir::FramePointerKind;
+  using LLVM = mlir::LLVM::framePointerKind::FramePointerKind;
+
+  switch (kind) {
+  case CIR::None:
+    return LLVM::None;
+  case CIR::NonLeaf:
+    return LLVM::NonLeaf;
+  case CIR::All:
+    return LLVM::All;
+  case CIR::Reserved:
+    return LLVM::Reserved;
+  case CIR::NonLeafNoReserve:
+    return LLVM::NonLeafNoReserve;
+  }
+  llvm_unreachable("Unknown CIR frame pointer kind");
+}
+
 mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
     cir::CopyOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -2932,6 +2952,11 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
   if (std::optional<cir::UnwindTableKind> uwtableKind = op.getUwtable())
     fn.setUwtableKindAttr(mlir::LLVM::UWTableKindAttr::get(
         fn.getContext(), convertUWTableKind(*uwtableKind)));
+
+  if (std::optional<cir::FramePointerKind> framePointerKind =
+          op.getFramePointer())
+    fn.setFramePointerAttr(mlir::LLVM::FramePointerKindAttr::get(
+        fn.getContext(), convertFramePointerKind(*framePointerKind)));
 
   // Function attributes with no dedicated field on the LLVM dialect's
   // LLVMFuncOp are routed through the `passthrough` array. The MLIR LLVM IR

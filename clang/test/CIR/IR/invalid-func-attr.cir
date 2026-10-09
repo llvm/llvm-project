@@ -37,3 +37,22 @@ module {
     cir.return
   }
 }
+
+// -----
+
+module {
+  // expected-error@+1 {{attribute 'frame_pointer' must be a #cir.frame_pointer attribute}}
+  cir.func @badFramePointerKind() attributes {frame_pointer = "all"} {
+    cir.return
+  }
+}
+
+// -----
+
+module {
+  // expected-error@+2 {{expected one of [none, non_leaf, all, reserved, non_leaf_no_reserve] for Frame Pointer Kind, got: bogus}}
+  // expected-error@+1 {{failed to parse CIR_FramePointerKindAttr parameter 'value' which is to be a `::cir::FramePointerKind`}}
+  cir.func @badFramePointerSpelling() attributes {frame_pointer = #cir.frame_pointer<bogus>} {
+    cir.return
+  }
+}
