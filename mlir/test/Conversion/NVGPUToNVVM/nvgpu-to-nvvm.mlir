@@ -528,6 +528,34 @@ func.func @mma_sp_sync_ui8_16864(%arg0: vector<4x4xui8>,
   return %d : vector<2x2xi32>
 }
 
+// CHECK-LABEL: func @mma_sp_sync_i4_16864(
+func.func @mma_sp_sync_i4_16864(%arg0: vector<2x8xi4>,
+                                %arg1: vector<2x8xi4>,
+                                %arg2: vector<2x2xi32>,
+                                %arg3: vector<2xi16>) -> vector<2x2xi32> {
+
+  // CHECK: %[[d:.+]] = llvm.inline_asm has_side_effects asm_dialect = att
+  // CHECK-SAME: "mma.sp.sync.aligned.m16n8k64.row.col.satfinite.s32.s4.s4.s32 {$0,$1,$2,$3},{$4,$5},{$6,$7},{$8,$9,$10,$11},$12,0x0;"
+
+  %d = nvgpu.mma.sp.sync(%arg0, %arg1, %arg2) metadata(%arg3) mmaShape = [16, 8, 64] :
+    (vector<2x8xi4>, vector<2x8xi4>, vector<2x2xi32>) -> vector<2x2xi32>
+  return %d : vector<2x2xi32>
+}
+
+// CHECK-LABEL: func @mma_sp_sync_ui4_16864(
+func.func @mma_sp_sync_ui4_16864(%arg0: vector<2x8xui4>,
+                                 %arg1: vector<2x8xui4>,
+                                 %arg2: vector<2x2xi32>,
+                                 %arg3: vector<2xi16>) -> vector<2x2xi32> {
+
+  // CHECK: %[[d:.+]] = llvm.inline_asm has_side_effects asm_dialect = att
+  // CHECK-SAME: "mma.sp.sync.aligned.m16n8k64.row.col.satfinite.s32.u4.u4.s32 {$0,$1,$2,$3},{$4,$5},{$6,$7},{$8,$9,$10,$11},$12,0x0;"
+
+  %d = nvgpu.mma.sp.sync(%arg0, %arg1, %arg2) metadata(%arg3) mmaShape = [16, 8, 64] :
+    (vector<2x8xui4>, vector<2x8xui4>, vector<2x2xi32>) -> vector<2x2xi32>
+  return %d : vector<2x2xi32>
+}
+
 !barrierType = !nvgpu.mbarrier.group<memorySpace = #gpu.address_space<workgroup>>
 !tokenType = !nvgpu.mbarrier.token
 
