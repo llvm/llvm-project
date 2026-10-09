@@ -36,3 +36,12 @@
 // RUN: echo -e 'Checks: "-*,clang-analyzer-optin.cplusplus.UninitializedObject"\nCheckOptions:\n clang-analyzer-optin.cplusplus.UninitializedObject.Pedantic: true' > %t.MyClangTidyConfigCSABad
 // RUN: not clang-tidy --verify-config --config-file=%t.MyClangTidyConfigCSABad 2>&1 | FileCheck %s -check-prefix=CHECK-VERIFY-CSA-BAD -implicit-check-not='{{warnings|error}}'
 // CHECK-VERIFY-CSA-BAD: command-line option '-config': warning: unknown check option 'clang-analyzer-optin.cplusplus.UninitializedObject.Pedantic'; did you mean 'clang-analyzer-optin.cplusplus.UninitializedObject:Pedantic' [-verify-config]
+
+// RUN: not clang-tidy -verify-config --config='{HeaderFilterRegex: "(?!x)", ExcludeHeaderFilterRegex: "("}' 2>&1 | FileCheck %s -check-prefix=CHECK-VERIFY-REGEX -implicit-check-not='{{warning|error}}:'
+// CHECK-VERIFY-REGEX-DAG: command-line option '-config': warning: invalid HeaderFilterRegex '(?!x)': repetition-operator operand invalid [-verify-config]
+// CHECK-VERIFY-REGEX-DAG: command-line option '-config': warning: invalid ExcludeHeaderFilterRegex '(': parentheses not balanced [-verify-config]
+
+// RUN: not clang-tidy -verify-config --config='' -header-filter='(?!x)' 2>&1 | FileCheck %s -check-prefix=CHECK-VERIFY-REGEX-CLI -implicit-check-not='{{warning|error}}:'
+// CHECK-VERIFY-REGEX-CLI: warning: invalid HeaderFilterRegex '(?!x)': repetition-operator operand invalid [-verify-config]
+
+// RUN: clang-tidy -verify-config --config='{HeaderFilterRegex: "", ExcludeHeaderFilterRegex: ""}' | FileCheck %s -check-prefix=CHECK-VERIFY-OK

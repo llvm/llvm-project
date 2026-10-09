@@ -237,6 +237,17 @@ static bool parseFileExtensions(llvm::ArrayRef<std::string> AllFileExtensions,
   return true;
 }
 
+// An invalid llvm::Regex never matches, so a filter that fails to compile
+// would silently match no header. An empty filter is not a valid llvm::Regex
+// either, but it intentionally matches nothing and is not an error.
+static std::optional<std::string>
+getFilterRegexError(const std::optional<std::string> &Regex) {
+  std::string Error;
+  if (!Regex || Regex->empty() || llvm::Regex(*Regex).isValid(Error))
+    return std::nullopt;
+  return Error;
+}
+
 void ClangTidyContext::setCurrentFile(StringRef File) {
   CurrentFile = std::string(File);
   CurrentOptions = getOptionsForFile(CurrentFile);
@@ -245,16 +256,30 @@ void ClangTidyContext::setCurrentFile(StringRef File) {
   WarningAsErrorFilter = std::make_unique<CachedGlobList>(
       StringRef(getOptions().WarningsAsErrors.value_or("")));
   static const std::vector<std::string> EmptyFileExtensions;
+  // The constructor calls this before a DiagnosticsEngine is attached, so only
+  // report configuration problems once one exists, i.e. for analyzed files.
   if (!parseFileExtensions(getOptions().HeaderFileExtensions
                                ? *getOptions().HeaderFileExtensions
                                : EmptyFileExtensions,
-                           HeaderFileExtensions))
+                           HeaderFileExtensions) &&
+      DiagEngine)
     this->configurationDiag("Invalid header file extensions");
   if (!parseFileExtensions(getOptions().ImplementationFileExtensions
                                ? *getOptions().ImplementationFileExtensions
                                : EmptyFileExtensions,
-                           ImplementationFileExtensions))
+                           ImplementationFileExtensions) &&
+      DiagEngine)
     this->configurationDiag("Invalid implementation file extensions");
+  if (const std::optional<std::string> Error =
+          getFilterRegexError(getOptions().HeaderFilterRegex);
+      Error && DiagEngine)
+    this->configurationDiag("Invalid header filter regex '%0': %1")
+        << *getOptions().HeaderFilterRegex << *Error;
+  if (const std::optional<std::string> Error =
+          getFilterRegexError(getOptions().ExcludeHeaderFilterRegex);
+      Error && DiagEngine)
+    this->configurationDiag("Invalid exclude header filter regex '%0': %1")
+        << *getOptions().ExcludeHeaderFilterRegex << *Error;
 }
 
 void ClangTidyContext::setASTContext(ASTContext *Context) {
