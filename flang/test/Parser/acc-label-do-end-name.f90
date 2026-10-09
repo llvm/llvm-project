@@ -1,7 +1,7 @@
 ! RUN: not %flang_fc1 -fopenacc -fsyntax-only %s 2>&1 | FileCheck %s --implicit-check-not="Unexpected DO construct name"
 
-! A labeled DO statement has no construct name, so the END DO statement that
-! terminates it must not specify one, also when the loop is associated with an
+! The END DO statement that terminates an unnamed labeled DO loop must not
+! specify a construct name (C1135), also when the loop is associated with an
 ! OpenACC loop or combined construct.
 
 subroutine combined(a, n)
@@ -38,4 +38,16 @@ subroutine shared(a, n, m)
       a(i, j) = 0
 40 end do bar
 ! CHECK: :[[@LINE-1]]:11: error: Unexpected DO construct name 'bar'
+end subroutine
+
+! A named labeled DO loop may be terminated by an END DO statement with the
+! same name.
+
+subroutine named(a, n)
+  integer :: n, i
+  real :: a(n)
+  !$acc parallel loop
+  foo: do 50 i = 1, n
+    a(i) = 0
+50 end do foo
 end subroutine

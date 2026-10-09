@@ -126,3 +126,12 @@ subroutine kernels_serial(c, np)
     c(n) = 1
 200 end do
 end subroutine
+
+subroutine named_label_do(c, np)
+  integer :: np, n
+  real :: c(np)
+  !$acc parallel loop
+  foo: do 100 n = 1, np
+    c(n) = 0
+100 end do foo
+end subroutine

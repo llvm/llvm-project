@@ -237,9 +237,10 @@ private:
 
     // The terminating statement may be an END DO statement; the DO construct
     // built below has its own synthetic one, so turn it into a CONTINUE
-    // statement to keep its label and source.  A labeled DO statement has no
-    // construct name, so diagnose a name on the END DO statement before it is
-    // lost (C1135).
+    // statement to keep its label and source.  Only an unnamed labeled DO
+    // statement is parsed here (a named one is parsed as a DO construct), so
+    // a construct name on the END DO statement is not allowed (C1135);
+    // diagnose it before it is lost.
     if (auto *last{std::get_if<ExecutableConstruct>(&body.back().u)}) {
       if (auto *endDoStmt{
               std::get_if<Statement<common::Indirection<EndDoStmt>>>(
