@@ -23,7 +23,6 @@ using namespace llvm;
 #define DEBUG_TYPE "riscv-lpad-setup"
 #define PASS_NAME "RISC-V Landing Pad Setup"
 
-
 namespace {
 
 class RISCVLandingPadSetup : public MachineFunctionPass {

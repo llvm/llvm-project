@@ -125,7 +125,6 @@ bool RISCVPreAllocZilsdOpt::runOnMachineFunction(MachineFunction &MF) {
   if (!STI->getCLOpts().zilsd_opt || skipFunction(MF.getFunction()))
     return false;
 
-
   // Only run on RV32 with Zilsd extension
   if (STI->is64Bit() || !STI->hasStdExtZilsd())
     return false;
