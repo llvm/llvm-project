@@ -3669,14 +3669,16 @@ static mlir::LLVM::CallIntrinsicOp
 createConstrainedFCmpCall(mlir::ConversionPatternRewriter &rewriter,
                           mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
                           cir::CmpOpKind kind, cir::FenvAttr fenv,
-                          mlir::Type llvmResTy) {
+                          mlir::Type llvmResTy,
+                          std::optional<bool> signaling = std::nullopt) {
   llvm::SmallVector<mlir::Value, 4> callOperands = {
       lhs, rhs,
       createFenvMetadataValue(rewriter, loc,
                               convertCmpKindToConstrainedFCmpPredicate(kind)),
       createFenvMetadataValue(rewriter, loc,
                               getConstrainedExceptMetadata(fenv))};
-  llvm::StringRef intrinsicName = isSignalingConstrainedFCmp(kind)
+  bool isSignaling = signaling.value_or(isSignalingConstrainedFCmp(kind));
+  llvm::StringRef intrinsicName = isSignaling
                                       ? "llvm.experimental.constrained.fcmps"
                                       : "llvm.experimental.constrained.fcmp";
   return createCallLLVMIntrinsicOp(rewriter, loc, intrinsicName, llvmResTy,
@@ -5179,7 +5181,8 @@ mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
                                            rewriter.getI1Type());
       bitResult = createConstrainedFCmpCall(rewriter, op.getLoc(),
                                             adaptor.getLhs(), adaptor.getRhs(),
-                                            op.getKind(), fenv, i1VecTy)
+                                            op.getKind(), fenv, i1VecTy,
+                                            op.getSignaling())
                       .getResult(0);
     } else {
       bitResult = mlir::LLVM::FCmpOp::create(

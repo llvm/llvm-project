@@ -6384,11 +6384,18 @@ def CIR_VecCmpOp : CIR_Op<"vec.cmp",
     The `cir.vec.cmp` operation does an element-wise comparison of two vectors
     of the same type. The result is a vector of the same size as the operands
     whose element type is the signed integral type that is the same size as the
-    element type of the operands. The values in the result are 0 or -1.
+    element type of the operands or a vector of one bit signed integers.
+    The values in the result are 0 or -1.
 
     The optional `fenv` attribute describes constraints on the floating-point
     handling of the operation. It is only valid for floating-point vector
     comparisons.
+
+    The optional `signaling` attribute overrides whether a floating-point
+    comparison raises an invalid exception for quiet NaN operands if fenv
+    attribute is present.
+    If `signaling` attribute is absent, the signaling behavior is determined by
+    the comparison kind.
 
     ```
     %eq = cir.vec.cmp(eq, %vec_a, %vec_b) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
@@ -6401,20 +6408,22 @@ def CIR_VecCmpOp : CIR_Op<"vec.cmp",
     CIR_CmpOpKindAttr:$kind,
     CIR_VectorType:$lhs,
     CIR_VectorType:$rhs,
-    OptionalAttr<CIR_FenvAttr>:$fenv
+    OptionalAttr<CIR_FenvAttr>:$fenv,
+    OptionalAttr<BoolAttr>:$signaling
   );
 
   let results = (outs CIR_VectorType:$result);
 
   let assemblyFormat = [{
     `(` enum($kind) `,` $lhs `,` $rhs `)` `:` qualified(type($lhs)) `,`
-    qualified(type($result)) (`fenv` `` $fenv^)? attr-dict
+    qualified(type($result)) (`fenv` `` $fenv^)? (`signaling` $signaling^)? attr-dict
   }];
 
   let builders = [
     OpBuilder<(ins "mlir::Type":$result, "cir::CmpOpKind":$kind,
                    "mlir::Value":$lhs, "mlir::Value":$rhs), [{
-      build($_builder, $_state, result, kind, lhs, rhs, cir::FenvAttr{});
+      build($_builder, $_state, result, kind, lhs, rhs, cir::FenvAttr{},
+            mlir::BoolAttr{});
     }]>
   ];
 
