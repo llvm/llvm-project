@@ -2650,6 +2650,22 @@ LLVMBool LLVMIntrinsicIsOverloaded(unsigned ID) {
   return llvm::Intrinsic::isOverloaded(IID);
 }
 
+LLVMBool LLVMIntrinsicGetOverloadTypes(unsigned ID, LLVMTypeRef FunctionTy,
+                                       LLVMTypeRef *OverloadTypes,
+                                       size_t *OverloadCount) {
+  auto IID = llvm_map_to_intrinsic_id(ID);
+  if (IID == Intrinsic::not_intrinsic)
+    return false;
+  SmallVector<Type *, 4> OverloadTys;
+  if (!llvm::Intrinsic::isSignatureValid(
+          IID, unwrap<FunctionType>(FunctionTy), OverloadTys))
+    return false;
+  *OverloadCount = OverloadTys.size();
+  if (OverloadTypes)
+    llvm::copy(OverloadTys, unwrap(OverloadTypes));
+  return true;
+}
+
 unsigned LLVMGetFunctionCallConv(LLVMValueRef Fn) {
   return unwrap<Function>(Fn)->getCallingConv();
 }

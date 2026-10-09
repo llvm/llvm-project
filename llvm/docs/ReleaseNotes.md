@@ -350,6 +350,11 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the C API
 
+* Added `LLVMIntrinsicGetOverloadTypes()`, which checks a function type against
+  the signature of an intrinsic and returns the intrinsic's overload types for
+  it, so that an overloaded intrinsic can be declared from its base name and
+  the type of a call to it.
+
 * `LLVMAlignOf()` and `LLVMSizeOf()` have been deprecated. Create a constant
   based on the result of `LLVMABIAlignmentOfType()` or `LLVMABISizeOfType()`
   instead.
