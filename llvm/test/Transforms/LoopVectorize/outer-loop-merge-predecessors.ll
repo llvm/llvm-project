@@ -20,13 +20,17 @@ define void @outer_loop_with_inner_block_chain(ptr noalias %dst, ptr noalias %sr
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[OUTER_LATCH6]] ]
 ; CHECK-NEXT:    br label %[[INNER_HEADER3:.*]]
 ; CHECK:       [[INNER_HEADER3]]:
-; CHECK-NEXT:    [[INNER_IV4:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP4:%.*]], %[[INNER_HEADER3]] ]
-; CHECK-NEXT:    [[SUM5:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP3:%.*]], %[[INNER_HEADER3]] ]
+; CHECK-NEXT:    [[INNER_IV4:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP4:%.*]], %[[INNER_LATCH7:.*]] ]
+; CHECK-NEXT:    [[SUM5:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP3:%.*]], %[[INNER_LATCH7]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i64> [[INNER_IV4]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i64> [[TMP1]], [[VEC_IND]]
 ; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds i32, ptr [[SRC]], <4 x i64> [[TMP2]]
+; CHECK-NEXT:    br label %[[INNER_BODY6:.*]]
+; CHECK:       [[INNER_BODY6]]:
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true), <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP3]] = add <4 x i32> [[SUM5]], [[WIDE_MASKED_GATHER]]
+; CHECK-NEXT:    br label %[[INNER_LATCH7]]
+; CHECK:       [[INNER_LATCH7]]:
 ; CHECK-NEXT:    [[TMP4]] = add nuw nsw <4 x i64> [[INNER_IV4]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i64> [[TMP4]], [[BROADCAST_SPLAT2]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP5]], i64 0
