@@ -158,8 +158,13 @@ following conditions:
 - Either both loads originate from converged dynamic instances in the same wave,
   or they originate from different participating workgroups.
 
-The actual combining of these load operations depends on target-defined matching
-criteria, timeout, availability of tracking slots, etc.
+Convergence implies that within a wave, the multicast does not combine two
+operations performed by the same thread, or two operations performed by
+different threads but at different points in the execution.
+
+The actual combining of these load operations depends on implementation details
+such as target-defined matching criteria, timeout, availability of tracking
+slots, etc.
 
 A load operation that is not combined into a multicast load eventually
 completes, either as part of a subsequent multicast load or by itself.
