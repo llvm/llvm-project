@@ -29,6 +29,22 @@ module attributes {
   // CHECK: cir.func{{.*}} @v128(%arg0: !cir.vector<4 x !cir.float>) -> !cir.vector<4 x !cir.float>
   // CHECK-NEXT: cir.return %arg0
 
+  // A one-element vector of long double fills one xmm register the same way,
+  // in either underlying format, and keeps its long double element.
+  cir.func @v128_x87(%arg0: !cir.vector<1 x !cir.long_double<!cir.f80>>) -> !cir.vector<1 x !cir.long_double<!cir.f80>> {
+    cir.return %arg0 : !cir.vector<1 x !cir.long_double<!cir.f80>>
+  }
+
+  // CHECK: cir.func{{.*}} @v128_x87(%arg0: !cir.vector<1 x !cir.long_double<!cir.f80>>) -> !cir.vector<1 x !cir.long_double<!cir.f80>>
+  // CHECK-NEXT: cir.return %arg0
+
+  cir.func @v128_quad(%arg0: !cir.vector<1 x !cir.long_double<!cir.f128>>) -> !cir.vector<1 x !cir.long_double<!cir.f128>> {
+    cir.return %arg0 : !cir.vector<1 x !cir.long_double<!cir.f128>>
+  }
+
+  // CHECK: cir.func{{.*}} @v128_quad(%arg0: !cir.vector<1 x !cir.long_double<!cir.f128>>) -> !cir.vector<1 x !cir.long_double<!cir.f128>>
+  // CHECK-NEXT: cir.return %arg0
+
   // The classifier does not look inside a vector when picking the type for an
   // SSE eightbyte, so it falls back to double rather than to the two-element
   // vector that take_ff below gets for the same eightbyte.
@@ -140,6 +156,8 @@ module attributes {
 }
 
 // LLVM: define <4 x float> @v128(<4 x float> %{{[^,)]+}})
+// LLVM: define <1 x x86_fp80> @v128_x87(<1 x x86_fp80> %{{[^,)]+}})
+// LLVM: define <1 x fp128> @v128_quad(<1 x fp128> %{{[^,)]+}})
 // LLVM: define double @v64(double %{{[^,)]+}})
 // LLVM: define i32 @v32(i32 %{{[^,)]+}})
 // LLVM: define void @v256(ptr noundef byval(<8 x float>) align 32 %{{[^,)]+}})
