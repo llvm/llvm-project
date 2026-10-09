@@ -1,4 +1,4 @@
-//===- ObjectFactories.cpp - Create a Binary from a file of any format ----===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -24,7 +24,7 @@
 #include "llvm/Object/WindowsResource.h"
 
 using namespace llvm;
-using namespace object;
+using namespace llvm::object;
 
 Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
                                                        LLVMContext *Context,
