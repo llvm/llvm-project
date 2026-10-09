@@ -377,10 +377,6 @@ public:
   TargetLoweringBase::AtomicExpansionKind
   shouldExpandAtomicCmpXchgInIR(const AtomicCmpXchgInst *AI) const override;
 
-  bool shouldIssueAtomicLoadForAtomicEmulationLoop() const override {
-    return false;
-  }
-
   bool useLoadStackGuardNode(const Module &M) const override;
   bool useStackGuardMixFP() const override;
   SDValue emitStackGuardMixFP(SelectionDAG &DAG, SDValue Val,

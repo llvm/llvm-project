@@ -252,10 +252,6 @@ public:
     return AtomicExpansionKind::None;
   }
 
-  bool shouldIssueAtomicLoadForAtomicEmulationLoop() const override {
-    return false;
-  }
-
   static CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool IsVarArg);
   static CCAssignFn *CCAssignFnForReturn(CallingConv::ID CC, bool IsVarArg);
 

@@ -917,10 +917,6 @@ namespace llvm {
     LoadInst *
     lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const override;
 
-    bool shouldIssueAtomicLoadForAtomicEmulationLoop() const override {
-      return false;
-    }
-
     bool needsCmpXchgNb(Type *MemType) const;
 
     void SetupEntryBlockForSjLj(MachineInstr &MI, MachineBasicBlock *MBB,
