@@ -486,3 +486,9 @@ Parse sqlite3Prepare_sParse;
 void sqlite3Prepare(void) {
   memset( ((char *)&sqlite3Prepare_sParse) + sizeof(int), 0, sizeof(int));
 }
+
+int strcmp(const char *, const char *);
+const union u {
+  char c[2];
+} str[] = {"", ""};
+const int strcmpFoo = strcmp((const char *)str, (const char *)str); // all-error {{not a compile-time constant}}
